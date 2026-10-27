@@ -2,8 +2,18 @@ class GiftCardsController < ApplicationController
   include AccountableResource
 
   before_action :require_preview_features!, only: %i[new create]
+  before_action :set_account, only: :credentials
 
   permitted_accountable_attributes(:id, :card_format, :expires_on, :face_value, :card_number, :pin, :redeem_url)
+
+  # The overview shows a card's PIN masked. It is sent only on request, so it
+  # is not part of the account page, and not cached.
+  def credentials
+    return head :not_found unless @account.gift_card&.credentials_visible_to?(Current.user)
+
+    response.headers["Cache-Control"] = "no-store"
+    render partial: "gift_cards/credentials", locals: { account: @account, revealed: params[:reveal].present? }
+  end
 
   private
     # A card's initial amount is what it was worth when received: the entered

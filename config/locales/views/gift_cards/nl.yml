@@ -4,6 +4,15 @@ nl:
     card_formats:
       digital: Digitaal
       physical: Fysiek
+    credentials:
+      card_number: Kaartnummer of code
+      copied: Gekopieerd
+      copy: Kopiëren
+      hide: Verbergen
+      open_redeem_url: Openen
+      pin: Pincode
+      redeem_url: Inwissellink
+      show: Tonen
     edit:
       edit: "%{account} bewerken"
     form:
@@ -26,9 +35,6 @@ nl:
       overview:
         card_details: Kaartgegevens
         card_format: Vorm
-        card_number: Kaartnummer of code
-        copied: Gekopieerd
-        copy: Kopiëren
         edit_account_details: Cadeaukaart bewerken
         expired: Verlopen
         expires_in:
@@ -38,9 +44,6 @@ nl:
         expires_on: Vervalt op
         initial_amount: Beginbedrag
         no_expiry: Geen vervaldatum
-        open_redeem_url: Openen
-        pin: Pincode
-        redeem_url: Inwissellink
         remaining: Resterend
         spent: Besteed
         unknown: Onbekend

@@ -22,6 +22,9 @@ class GiftCard < ApplicationRecord
   # means to redeem the card.
   CREDENTIAL_PERMISSIONS = %i[owner full_control].freeze
 
+  # Stands in for the PIN until the user asks to see it.
+  MASK = "••••".freeze
+
   if encryption_ready?
     encrypts :card_number
     encrypts :pin
@@ -86,6 +89,14 @@ class GiftCard < ApplicationRecord
 
   def visible_redeem_url_for(user)
     redeem_url if credentials_visible_to?(user)
+  end
+
+  # The visible codes as shown before the PIN is revealed. The card number
+  # is shown in full, since it is needed to tell cards apart and to use them.
+  def masked_codes_for(user)
+    codes = visible_codes_for(user)
+    codes[:pin] &&= MASK
+    codes
   end
 
   # Removed from the result rather than passed as `except`, which an explicit

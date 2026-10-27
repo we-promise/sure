@@ -4,6 +4,15 @@ en:
     card_formats:
       digital: Digital
       physical: Physical
+    credentials:
+      card_number: Card number or code
+      copied: Copied
+      copy: Copy
+      hide: Hide
+      open_redeem_url: Open
+      pin: PIN
+      redeem_url: Redeem link
+      show: Show
     edit:
       edit: Edit %{account}
     form:
@@ -26,9 +35,6 @@ en:
       overview:
         card_details: Card details
         card_format: Format
-        card_number: Card number or code
-        copied: Copied
-        copy: Copy
         edit_account_details: Edit gift card details
         expired: Expired
         expires_in:
@@ -38,9 +44,6 @@ en:
         expires_on: Expires on
         initial_amount: Initial amount
         no_expiry: No expiry date
-        open_redeem_url: Open
-        pin: PIN
-        redeem_url: Redeem link
         remaining: Remaining
         spent: Spent
         unknown: Unknown

@@ -83,6 +83,11 @@ class GiftCardTest < ActiveSupport::TestCase
     assert_nil @gift_card.spent_amount
   end
 
+  test "masks only the PIN" do
+    @gift_card.update!(card_number: "ABCD-EFGH-4821", pin: "9876")
+    assert_equal({ card_number: "ABCD-EFGH-4821", pin: GiftCard::MASK }, @gift_card.masked_codes_for(@account.owner))
+  end
+
   test "the initial amount is kept at its currency's precision" do
     @gift_card.update!(face_value: 100.1234, face_value_currency: "USD")
     assert_equal 100.12, @gift_card.reload.face_value

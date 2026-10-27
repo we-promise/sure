@@ -32,45 +32,10 @@
   <% end %>
 </div>
 
-<% codes = gift_card.visible_codes_for(Current.user) %>
-<% redeem_url = gift_card.visible_redeem_url_for(Current.user) %>
-
-<% if codes.any? || redeem_url.present? %>
+<% if gift_card.visible_codes_for(Current.user).any? || gift_card.visible_redeem_url_for(Current.user).present? %>
   <div class="mt-4">
     <%= render DS::Disclosure.new(title: t(".card_details"), align: :left) do %>
-      <dl class="space-y-2 px-3">
-        <% codes.each do |attribute, value| %>
-          <%= render DS::DetailRow.new(label: t(".#{attribute}"), align: :center) do |row| %>
-            <% row.with_value do %>
-              <span class="flex items-center gap-2" data-controller="clipboard" data-clipboard-copied-text-value="<%= t(".copied") %>">
-                <code class="font-mono text-sm text-primary break-all privacy-sensitive" data-clipboard-target="source"><%= value %></code>
-                <%= render DS::Button.new(
-                  text: t(".copy"),
-                  variant: :ghost,
-                  icon: "copy",
-                  size: :sm,
-                  data: { action: "clipboard#copy" }
-                ) %>
-              </span>
-            <% end %>
-          <% end %>
-        <% end %>
-
-        <% if redeem_url.present? %>
-          <%= render DS::DetailRow.new(label: t(".redeem_url"), align: :center) do |row| %>
-            <% row.with_value do %>
-              <%= render DS::Link.new(
-                text: t(".open_redeem_url"),
-                href: redeem_url,
-                icon: "external-link",
-                variant: "ghost",
-                size: "sm",
-                target: "_blank"
-              ) %>
-            <% end %>
-          <% end %>
-        <% end %>
-      </dl>
+      <%= render "gift_cards/credentials", account: account, revealed: false %>
     <% end %>
   </div>
 <% end %>

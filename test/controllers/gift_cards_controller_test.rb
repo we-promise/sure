@@ -201,13 +201,43 @@ class GiftCardsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "shows the overview with the card details" do
-    @account.gift_card.update!(expires_on: Date.current + 5.days, card_number: "SHOW-ME")
+  test "the overview shows the card details with the PIN masked" do
+    @account.gift_card.update!(card_number: "ABCD-EFGH-4821", pin: "9876", redeem_url: "https://shop.example/r/URL-SECRET")
 
     get account_path(@account, tab: "overview")
 
     assert_response :success
-    assert_select "code", text: "SHOW-ME"
+    assert_select "code", text: "ABCD-EFGH-4821"
+    assert_select "code", text: GiftCard::MASK
+    assert_select "a[href=?]", "https://shop.example/r/URL-SECRET"
+    assert_no_match "9876", response.body
+    assert_select "a[href=?]", credentials_gift_card_path(@account, reveal: true)
+  end
+
+  test "the PIN is revealed on request, uncached" do
+    @account.gift_card.update!(card_number: "ABCD-EFGH-4821", pin: "9876")
+
+    get credentials_gift_card_path(@account, reveal: true)
+
+    assert_response :success
+    assert_equal "no-store", response.headers["Cache-Control"]
+    assert_select "code", text: "9876"
+
+    get credentials_gift_card_path(@account)
+    assert_no_match "9876", response.body
+  end
+
+  test "shares that cannot act on the card cannot reveal its details" do
+    @account.gift_card.update!(card_number: "SECRET-CODE")
+    member = users(:family_member)
+    share = @account.account_shares.find_or_initialize_by(user: member)
+    share.update!(permission: "read_write")
+    sign_in member
+
+    get credentials_gift_card_path(@account, reveal: true)
+
+    assert_response :not_found
+    assert_no_match "SECRET-CODE", response.body
   end
 
   test "after a currency change the overview leaves spending unknown" do

@@ -83,6 +83,25 @@ class AccountsTest < ApplicationSystemTestCase
     assert_equal "CODE-1234", gift_card.card_number
   end
 
+  test "a gift card's PIN is masked until revealed" do
+    account = @user.family.accounts.create!(
+      name: "Bookstore", balance: 50, currency: "USD", owner: @user,
+      accountable: GiftCard.new(card_number: "ABCD-EFGH-4821", pin: "9876")
+    )
+
+    visit account_path(account, tab: "overview")
+    find("summary", text: "Card details").click
+    assert_text "ABCD-EFGH-4821"
+    assert_text GiftCard::MASK
+    assert_no_text "9876"
+
+    click_on "Show"
+    assert_text "9876"
+
+    click_on "Hide"
+    assert_no_text "9876"
+  end
+
   test "can create other asset account" do
     assert_account_created("OtherAsset")
   end
