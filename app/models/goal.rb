@@ -98,6 +98,9 @@ class Goal < ApplicationRecord
   # they belong to are the same fact. Still inside the save transaction, so a
   # later failure takes both back.
   after_save :apply_state_change_side_effects, if: :saved_change_to_state?
+  # kind and progress_basis together pick what current_balance measures, so a
+  # goal read before converting it must not keep reporting the old basis.
+  after_save :reset_state_dependent_caches!, if: -> { saved_change_to_kind? || saved_change_to_progress_basis? }
 
   monetize :target_amount
 
@@ -1374,9 +1377,11 @@ class Goal < ApplicationRecord
       errors.add(:linked_accounts, :must_be_fundable)
     end
 
-    # Goals funded by an investment account default to the contributions basis
-    # (so a market swing doesn't move them); depository-only goals stay on the
-    # balance basis. Only auto-set when the basis is still the default.
+    # One-off goals funded by an investment account default to the
+    # contributions basis (so a market swing doesn't move them); depository-only
+    # goals stay on the balance basis. Maintained reserves are skipped: they
+    # always measure market value, since that is what the floor protects. Only
+    # auto-set when the basis is still the default.
     def default_progress_basis_for_investment
       return if maintained?
       return unless goal_accounts.any? { |ga| ga.account&.investment? }

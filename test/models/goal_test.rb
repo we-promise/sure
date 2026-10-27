@@ -902,14 +902,14 @@ class GoalTest < ActiveSupport::TestCase
     goal = @family.goals.create!(name: "Convertible", target_amount: 20_000, currency: "USD") do |g|
       g.goal_accounts.build(account: account)
     end
-    assert_equal BigDecimal("7000"), Goal.find(goal.id).current_balance.to_d
+    assert_equal BigDecimal("7000"), goal.current_balance.to_d # memoize the contributions figure
 
     goal.update!(kind: "maintained")
-    assert_equal BigDecimal("10000"), Goal.find(goal.id).current_balance.to_d
+    assert_equal BigDecimal("10000"), goal.current_balance.to_d, "stale memo would still report contributions"
 
     goal.update!(kind: "one_off")
     assert_equal "contributions", goal.reload.progress_basis
-    assert_equal BigDecimal("7000"), Goal.find(goal.id).current_balance.to_d
+    assert_equal BigDecimal("7000"), goal.current_balance.to_d
   end
 
   test "reopen transitions a completed goal back to active" do
