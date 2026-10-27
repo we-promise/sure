@@ -47,28 +47,6 @@ module BillsHelper
     Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider.present?
   end
 
-  # Pay-period markers keyed by the id of the FIRST occurrence inside each
-  # period, so the section template can drop a marker between groups without
-  # pre-bucketing the rows. Each marker carries its period and the summed
-  # obligations due inside it. Dated like the rail, so a snoozed row counts
-  # toward the period it sits in.
-  def bills_pay_period_markers(occurrences, pay_periods)
-    return {} if pay_periods.blank?
-
-    seen = Set.new
-    occurrences.each_with_object({}) do |occurrence, markers|
-      index = pay_periods.index { |p| occurrence.effective_due_on.between?(p.starts_on, p.ends_on) }
-      next unless index && seen.add?(index)
-
-      period = pay_periods[index]
-      markers[occurrence.id] = {
-        period: period,
-        due_total: occurrences.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
-                              .sum { |o| o.resolved_expected_amount.abs }
-      }
-    end
-  end
-
   # The month bar reads paid | overdue | still to come. Overdue money is a
   # subset of what remains, so the slices are derived rather than three
   # independent totals.
