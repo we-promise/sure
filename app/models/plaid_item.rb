@@ -162,6 +162,12 @@ class PlaidItem < ApplicationRecord
     supported_products.include?(product)
   end
 
+  # available_products only says the institution offers a product. Calling one
+  # the user did not consent to in Link fails with ADDITIONAL_CONSENT_REQUIRED.
+  def consented_to_product?(product)
+    consented_products.include?(product)
+  end
+
   private
     def transactions_refresh_cache_key
       "plaid_item:#{id}:transactions_refresh_requested"
@@ -213,8 +219,15 @@ class PlaidItem < ApplicationRecord
     # the transactions fetch entirely and those accounts imported balances and
     # liabilities but no transactions at all.
     def supported_products
+      (available_products + consented_products).map(&:to_s).uniq
+    end
+
+    # Link's initial `products` are billed when the item is created; products
+    # granted through `additional_consented_products` stay in consented_products
+    # until their first call bills them.
+    def consented_products
       consented = raw_payload.is_a?(Hash) ? Array(raw_payload["consented_products"]) : []
 
-      (available_products + billed_products + consented).map(&:to_s).uniq
+      (billed_products + consented).map(&:to_s).uniq
     end
 end
