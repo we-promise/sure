@@ -478,7 +478,7 @@ class Goal < ApplicationRecord
   end
 
   def contributions_basis?
-    progress_basis == "contributions"
+    progress_basis == "contributions" && !maintained?
   end
 
   def one_off?
@@ -1378,6 +1378,7 @@ class Goal < ApplicationRecord
     # (so a market swing doesn't move them); depository-only goals stay on the
     # balance basis. Only auto-set when the basis is still the default.
     def default_progress_basis_for_investment
+      return if maintained?
       return unless goal_accounts.any? { |ga| ga.account&.investment? }
       return unless progress_basis.blank? || progress_basis == "balance"
 

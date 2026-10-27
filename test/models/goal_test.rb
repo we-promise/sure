@@ -874,6 +874,44 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal BigDecimal("10000"), goal.market_value_money.amount
   end
 
+  test "a reserve on an investment account counts market value toward its floor" do
+    account = Account.create!(family: @family, accountable: Investment.new, name: "Reserve brokerage", currency: "USD", balance: 12_000)
+    account.balances.create!(date: 10.days.ago.to_date, balance: 12_000, currency: "USD", net_market_flows: 9_000)
+    goal = @family.goals.create!(name: "Invested reserve", kind: "maintained", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    assert_not goal.contributions_basis?
+    assert_equal BigDecimal("12000"), goal.current_balance.to_d
+    assert_equal :funded, goal.status
+  end
+
+  test "a reserve stored on the contributions basis still reads market value" do
+    account = Account.create!(family: @family, accountable: Investment.new, name: "Legacy brokerage", currency: "USD", balance: 12_000)
+    account.balances.create!(date: 10.days.ago.to_date, balance: 12_000, currency: "USD", net_market_flows: 9_000)
+    goal = @family.goals.create!(name: "Legacy reserve", kind: "maintained", target_amount: 10_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    goal.update_column(:progress_basis, "contributions")
+    goal.reload
+    assert_equal BigDecimal("12000"), goal.current_balance.to_d
+  end
+
+  test "converting between one-off and reserve switches the investment progress basis" do
+    account = Account.create!(family: @family, accountable: Investment.new, name: "Convertible brokerage", currency: "USD", balance: 10_000)
+    account.balances.create!(date: 10.days.ago.to_date, balance: 10_000, currency: "USD", net_market_flows: 3_000)
+    goal = @family.goals.create!(name: "Convertible", target_amount: 20_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+    assert_equal BigDecimal("7000"), Goal.find(goal.id).current_balance.to_d
+
+    goal.update!(kind: "maintained")
+    assert_equal BigDecimal("10000"), Goal.find(goal.id).current_balance.to_d
+
+    goal.update!(kind: "one_off")
+    assert_equal "contributions", goal.reload.progress_basis
+    assert_equal BigDecimal("7000"), Goal.find(goal.id).current_balance.to_d
+  end
+
   test "reopen transitions a completed goal back to active" do
     fresh = goals(:emergency_fund)
     fresh.complete!

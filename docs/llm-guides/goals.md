@@ -100,6 +100,8 @@ its currency at request time. `Goal#current_balance` preserves native account
 allocations and shared-pool limits before conversion. Investment-backed goals
 default to contribution progress, excluding cumulative market gains from their
 backing; `market_value_money` separately shows the current market value.
+Maintained reserves always use the balance basis: a floor is about what the
+account holds today, so market gains count toward it.
 
 A `GoalPledge` is an intent: amount, account, kind, status, expires_at.
 The status enum is `open` / `matched` / `cancelled` / `expired`. The kind
