@@ -432,6 +432,19 @@ MARKET_DATA_SYNC_TIMEZONE=UTC     # IANA name such as Europe/Berlin; unknown nam
 
 **Upgrading from an earlier version:** the import used to be a fixed entry in `config/schedule.yml`. It is now created by the worker when it starts, from the settings above. Without any change on your side it keeps running at 22:00 UTC, Monday to Friday. If prices stop updating after an upgrade, open `/sidekiq` (see [Inspecting background jobs](#inspecting-background-jobs-sidekiq)), check that the **Cron** tab lists `import_market_data`, and look for `[MarketDataScheduler]` lines in the worker log (`docker compose logs worker`). Saving the import time once on the settings page recreates the job.
 
+## Monitoring
+
+Sure answers two unauthenticated health URLs:
+
+- `/up` returns `200` once the web process has booted. It doesn't check anything else, so use it for container and deploy health checks: a database or worker outage then can't block the deploy that fixes it.
+- `/health` checks the database, Redis and the background worker in parallel, each with a 3-second timeout, and returns JSON for uptime monitors:
+
+  ```json
+  { "errors": [] }
+  ```
+
+  The status is `200` when `errors` is empty and `503` when it isn't. Each error is a short fixed phrase such as `"db: check failed"`, `"redis: timeout after 3000ms"` or `"worker: no scheduled job enqueued in 3h"`. Exception details go to the web log, never into the response. The worker counts as down when no Sidekiq process is running, when its scheduler hasn't enqueued a cron job for 2 hours, or when a job has waited over an hour on the `scheduled` or `high_priority` queue.
+
 ## How to update your app
 
 The mechanism that updates your self-hosted Sure app is the GHCR (Github Container Registry) Docker image that you see in the `compose.yml` file:
