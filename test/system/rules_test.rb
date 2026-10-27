@@ -333,6 +333,10 @@ class RulesTest < ApplicationSystemTestCase
     visit rules_path
 
     row = find("##{ActionView::RecordIdentifier.dom_id(rule)}")
+    # Search, filters and the group controls sit above the list and push the
+    # row below the fold of a phone screen, where Selenium does not count it
+    # as visible.
+    scroll_to(row)
     viewport_width = page.evaluate_script("document.documentElement.clientWidth")
 
     row_right = row.native.rect.x + row.native.rect.width
