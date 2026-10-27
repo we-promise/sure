@@ -12,6 +12,13 @@ class HoldingTest < ActiveSupport::TestCase
     @amzn, @nvda = load_holdings
   end
 
+  test "stores prices below 0.0001 without rounding them to zero" do
+    holding = holdings(:one)
+    holding.update!(price: "0.000002891")
+
+    assert_equal BigDecimal("0.000002891"), holding.reload.price
+  end
+
   test "calculates portfolio weight" do
     expected_amzn_weight = 3240.0 / @account.balance * 100
     expected_nvda_weight = 3720.0 / @account.balance * 100
