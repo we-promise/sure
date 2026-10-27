@@ -13,6 +13,8 @@ ru:
         value_placeholder: Введите значение
   rules:
     back_to_rules: К правилам
+    all_rules: все правила
+    menu_actions: Действия
     condition_summary: Если %{field} %{operator} %{value}
     if: ЕСЛИ
     for: ДЛЯ

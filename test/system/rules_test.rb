@@ -59,6 +59,8 @@ class RulesTest < ApplicationSystemTestCase
       assert_text "Правило обновлено"
 
       rule.update!(name: nil, effective_date: Date.new(2026, 10, 26))
+      rule.rule_runs.create!(execution_type: "manual", status: "success", executed_at: Time.utc(2026, 10, 26, 12),
+        transactions_queued: 0, transactions_processed: 0, transactions_modified: 0, pending_jobs_count: 0)
       visit edit_rule_path(rule)
       assert_selector "dialog h2", text: "Изменить правило для операций"
       visit rules_path
@@ -68,9 +70,40 @@ class RulesTest < ApplicationSystemTestCase
         assert_text "октября"
         assert_no_text "Oct"
       end
+      page.scroll_to(find("table"), align: :center)
+      within "table" do
+        assert_text "октября"
+        assert_no_text "Oct"
+      end
+      page.scroll_to(find("##{ActionView::RecordIdentifier.dom_id(rule)}"), align: :center)
       assert_no_selector ".translation_missing"
       assert_operator page.evaluate_script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), :<=, 0
       save_screenshot(Rails.root.join("tmp/screenshots/russian-rule-list-#{width}.png"))
+
+      within "##{ActionView::RecordIdentifier.dom_id(rule)}" do
+        find("button[aria-label='Действия']").click
+        click_on "Удалить"
+      end
+      within "#confirm-dialog" do
+        assert_selector "h3", text: "Удалить правило?"
+        assert_button "Удалить правило"
+        assert_no_text(/\brule\b/)
+        assert_operator page.evaluate_script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), :<=, 0
+        save_screenshot(Rails.root.join("tmp/screenshots/russian-rule-delete-#{width}.png"))
+        find("button[value='cancel']").click
+      end
+      assert_selector "##{ActionView::RecordIdentifier.dom_id(rule)}"
+      within "main" do
+        find("button[aria-label='Действия']", match: :first).click
+        click_on "Удалить все правила"
+      end
+      within "#confirm-dialog" do
+        assert_selector "h3", text: "Удалить все правила?"
+        assert_button "Удалить все правила"
+        assert_no_text(/all rules/)
+        find("button[value='cancel']").click
+      end
+      assert Rule.exists?(rule.id)
     end
   end
 

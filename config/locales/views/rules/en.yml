@@ -2,6 +2,8 @@
 en:
   rules:
     back_to_rules: Back to rules
+    all_rules: all rules
+    menu_actions: Actions
     condition_summary: If %{field} %{operator} %{value}
     if: IF
     for: FOR
