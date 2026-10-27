@@ -18,7 +18,7 @@
 <% if verb == :pay %>
   <%= render "recurring_transactions/pay_link", recurring_transaction: occurrence.recurring_transaction %>
 <% elsif verb %>
-  <% label = verb == :find_payment && occurrence.recurring_transaction.typed_income? ? "bills.find_income" : "bills.#{verb}" %>
+  <% label = occurrence.recurring_transaction.typed_income? && { find_payment: "bills.find_income", manage_payments: "bills.manage_income" }[verb] || "bills.#{verb}" %>
   <%= render DS::Link.new(
         text: t(label),
         icon: BillsHelper::VERB_ICONS[verb],
