@@ -1,0 +1,20 @@
+<%# locals: (account:) %>
+
+<% if account.multi_currency_breakdown? %>
+  <%= render DS::Card.new(class: "gap-2", data: { testid: "currency-breakdown" }) do %>
+    <div>
+      <h4 class="text-secondary text-sm"><%= t(".title") %></h4>
+      <p class="text-xs text-subdued"><%= t(".description") %></p>
+    </div>
+    <dl class="space-y-2">
+      <% account.native_currency_balances.each do |balance| %>
+        <%= render DS::DetailRow.new(
+          label: balance.currency.iso_code,
+          value: format_money(balance),
+          align: :center,
+          value_class: "font-medium privacy-sensitive"
+        ) %>
+      <% end %>
+    </dl>
+  <% end %>
+<% end %>
