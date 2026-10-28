@@ -56,7 +56,7 @@ class ReleaseHighlightsControllerTest < ActionDispatch::IntegrationTest
 
   test "dismissing a hotfix after its base release survives the next request" do
     @user.update!(preferences: { "last_seen_release_tag" => "v0.7.5" })
-    Sure.stubs(:version).returns(Semver.new("0.7.5-hotfix.1"))
+    Sure.stubs(:version).returns(Calver.new("0.7.5-hotfix.1"))
 
     patch release_highlight_dismiss_path, params: { tag: "v0.7.5-hotfix.1" }, as: :json
     assert_response :ok
@@ -65,7 +65,7 @@ class ReleaseHighlightsControllerTest < ActionDispatch::IntegrationTest
     get release_highlight_path
     assert_response :no_content
 
-    Sure.stubs(:version).returns(Semver.new("0.7.5"))
+    Sure.stubs(:version).returns(Calver.new("0.7.5"))
     get release_highlight_path
     assert_response :no_content
   end
