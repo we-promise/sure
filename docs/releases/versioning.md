@@ -1,19 +1,32 @@
 # CalVer transition: October–December 2026
 
 The next release is **`v2026.10.28`**, with **`v0.7.6`** as a temporary
-compatibility alias. `.sure-version` and Helm metadata use the canonical date.
+compatibility alias. Release tags supply the canonical date to every build.
 Git tags include `v`; Docker tags and chart versions do not.
 
-Use the actual UTC release date, not a fixed month-end date. If the release
-moves to another day, update `.sure-version`, the chart version/appVersion and
-`COMPATIBILITY_RELEASE` together before tagging. Keep that date fixed for retries.
+`.sure-version` is generated build metadata, ignored by Git. The Docker workflow
+writes it into the build context before packaging; Rails, Sentry and backups
+continue reading that immutable file inside the image. Source checkouts without
+it use `0.0.0-dev` (with the commit SHA available separately). Local Docker builds
+can generate the file explicitly to label their image; without it they are dev builds.
+
+Tagged releases derive their version from the tag, so retries retain the same
+identity. Untagged Docker builds use the original workflow run's UTC date and
+run number (`YYYY.M.D-alpha.N`); retries retain both. They keep the existing SHA/
+nightly registry tags and do not promote `stable` or `latest`.
+
+Desktop and mobile release builds also derive their versions from the release
+tag. Standalone mobile branch builds retain their explicit pubspec version.
+Release chart packages are stamped from the release tag; chart-only releases
+select an existing image through Chart.yaml appVersion. No version write-back
+commits or channel-state files are needed.
 
 ## Releasing
 
 1. Bring this change to the existing `v0.7.6-release-branch` before release.
    Keep the current process: fixes land on `main`, are tested as alphas, then
    are cherry-picked to the maintained release branch.
-2. Set `.sure-version` and both Helm version fields to the release date.
+2. Choose the actual UTC release date for the canonical tag.
    In `publish.yml`, set `COMPATIBILITY_RELEASE` to that date and
    `COMPATIBILITY_VERSION` to the next unused legacy version.
 3. Push only the canonical tag. The workflow creates/verifies the legacy Git

@@ -17,7 +17,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
       assert success
       assert_includes output, "publish=false"
       assert_includes output, "release=false"
-      assert_not resolve(dir, "2026.10.28", ref: "refs/tags/v0.7.7").first
+      assert_not resolve(dir, "2026.10.28", ref: "refs/tags/vgarbage").first
     end
   end
 
@@ -48,6 +48,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         success, output = resolve(dir, "2026.10.28", event: event, ref: "refs/heads/main")
         assert success
         assert_includes output, "release=false"
+        assert_includes output, "version=2026.10.28-alpha.42"
         assert_not_includes output, "type=raw"
         assert_includes output, "type=schedule,pattern=nightly" if event == "schedule"
       end
@@ -76,6 +77,17 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     end
   end
 
+  test "release tag wins over build date and is embedded without a tracked file" do
+    with_repo do |dir|
+      success, output = resolve(dir, "2026.10.28", extra_env: { "BUILD_DATE" => "2026.11.1" })
+      assert success
+      assert_includes output, "version=2026.10.28"
+      assert_not File.exist?(File.join(dir, ".sure-version"))
+      assert run_step(dir, "build", "version_file", "VERSION" => "2026.10.28").first
+      assert_equal "2026.10.28\n", File.read(File.join(dir, ".sure-version"))
+    end
+  end
+
   private
     def workflow
       @workflow ||= YAML.load_file(Rails.root.join(".github/workflows/publish.yml"))
@@ -88,10 +100,10 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     end
 
     def resolve(dir, version, event: "push", ref: "refs/tags/v#{version}", extra_env: {})
-      File.write(File.join(dir, ".sure-version"), version)
       path = File.join(dir, "output")
       File.write(path, "")
       env = { "COMPATIBILITY_RELEASE" => "2026.10.28", "COMPATIBILITY_VERSION" => "0.7.6",
+        "BUILD_DATE" => "2026.10.28", "GITHUB_RUN_NUMBER" => "42",
         "GITHUB_EVENT_NAME" => event,
         "GITHUB_REF" => ref, "GITHUB_OUTPUT" => path }.merge(extra_env)
       success, error = run_step(dir, "prepare", "release", env)
