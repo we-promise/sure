@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_28_170154) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -688,6 +688,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.string "last_psu_ip"
     t.string "name"
     t.boolean "pending_account_setup", default: false
+    t.boolean "preserve_distinct_booked_references", default: false, null: false
     t.string "psu_type"
     t.jsonb "raw_institution_payload"
     t.jsonb "raw_payload"
