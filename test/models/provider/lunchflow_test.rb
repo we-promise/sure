@@ -16,6 +16,17 @@ class Provider::LunchflowTest < ActiveSupport::TestCase
     @provider.get_account_transactions("acct-1", start_date: Date.new(2026, 7, 30), end_date: Date.new(2026, 8, 31))
   end
 
+  test "omits the date filter when no start date is given" do
+    success = response(200, { transactions: [] }.to_json, "OK")
+
+    Provider::Lunchflow.expects(:get).with(
+      "https://www.lunchflow.app/api/v1/accounts/acct-1/transactions",
+      anything
+    ).returns(success)
+
+    @provider.get_account_transactions("acct-1")
+  end
+
   test "retries a wrapped GoCardless rate limit and preserves its type" do
     rate_limited = response(
       503,

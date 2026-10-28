@@ -257,7 +257,7 @@ class LunchflowItem::Importer
       start_date = determine_sync_start_date(lunchflow_account)
       include_pending = Rails.configuration.x.lunchflow.include_pending
 
-      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date} (include_pending=#{include_pending})"
+      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date || "the beginning"} (include_pending=#{include_pending})"
 
       begin
         # Fetch transactions
@@ -498,30 +498,12 @@ class LunchflowItem::Importer
       end
     end
 
+    # Returns nil on an account's first sync, which fetches its full history.
     def determine_sync_start_date(lunchflow_account)
-      # Check if this account has any stored transactions
-      # If not, treat it as a first sync for this account even if the item has been synced before
-      has_stored_transactions = lunchflow_account.raw_transactions_payload.to_a.any?
+      first_sync = lunchflow_account.raw_transactions_payload.to_a.empty? || lunchflow_item.last_synced_at.nil?
+      return if first_sync
 
-      if has_stored_transactions
-        # Account has been synced before, use item-level logic with buffer
-        # For subsequent syncs, fetch from last sync date with a buffer
-        if lunchflow_item.last_synced_at
-          lunchflow_item.last_synced_at - 7.days
-        else
-          # Fallback if item hasn't been synced but account has transactions
-          90.days.ago
-        end
-      else
-        # Account has no stored transactions - this is a first sync for this account
-        # Use account creation date or a generous historical window
-        account_baseline = lunchflow_account.created_at || Time.current
-        first_sync_window = [ account_baseline - 7.days, 90.days.ago ].max
-
-        # Use the more recent of: (account created - 7 days) or (90 days ago)
-        # This caps old accounts at 90 days while respecting recent account creation dates
-        first_sync_window
-      end
+      lunchflow_item.last_synced_at - 7.days
     end
 
     def handle_error(error_message)
