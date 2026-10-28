@@ -1181,7 +1181,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
   # a ghost link and Apply the primary submit.
   test "the extra repayments form ends in the design system's form actions" do
     clear_href = account_path(@account, tab: "extra_repayments")
-    form = "form[method='get'][action='#{account_path(@account)}']"
+    form = "form#extra_repayments_form[method='get']"
 
     get account_path(@account, tab: "extra_repayments")
     assert_select "#{form} button[type='submit']", count: 1 do |buttons|

@@ -22,7 +22,7 @@
         currency shown and fixed, and a select for how often. GET, so the
         figures below are a link that can be shared or reloaded. %>
     <%= styled_form_with url: account_path(account), method: :get, scope: :extra_payment,
-                         data: { turbo_action: "advance" }, class: "space-y-2" do |f| %>
+                         id: "extra_repayments_form", data: { turbo_action: "advance" }, class: "space-y-2" do |f| %>
       <%= hidden_field_tag :tab, "extra_repayments", id: nil %>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <%= f.money_field :amount,
