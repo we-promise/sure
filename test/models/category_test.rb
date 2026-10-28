@@ -107,6 +107,15 @@ class CategoryTest < ActiveSupport::TestCase
     assert_equal parent.color, category.color, "subcategories inherit their parent's color"
   end
 
+  test "changing a parent's color updates its subcategories" do
+    parent = categories(:food_and_drink)
+    subcategory = @family.categories.create!(name: "Color Child", color: "#000000", parent: parent)
+
+    parent.update!(color: "#123456")
+
+    assert_equal "#123456", subcategory.reload.color
+  end
+
   test "subcategory can only be one level deep" do
     category = categories(:subcategory)
 
