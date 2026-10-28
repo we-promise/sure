@@ -74,17 +74,17 @@ export default class extends Controller {
     const width = this.element.clientWidth;
     const height = this.element.clientHeight - this._legendHeight();
 
-    // The legend must be in the DOM to be measured
-    if (width < 50 || height < 50) {
-      this._teardown();
-      return;
-    }
-
     // Room on the right for the axis labels ($0, $1.5K, …), like the
     // reference design; the curves run to the axis, not the card edge.
     const margin = { top: 8, right: 48, bottom: 20, left: 4 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
+
+    // The legend must be in the DOM to be measured
+    if (width < 50 || height < 50 || innerWidth <= 0 || innerHeight <= 0) {
+      this._teardown();
+      return;
+    }
 
     const svg = d3
       .select(this.element)
