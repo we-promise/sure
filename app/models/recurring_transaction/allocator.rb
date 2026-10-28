@@ -48,10 +48,12 @@ class RecurringTransaction
 
     # What guard_entry_capacity! would leave of each entry for another bill,
     # for many entries in one query. Entries no bill uses yet are omitted.
-    def self.remaining_by_entry(entries)
+    # Pass a narrower allocations scope to count only the bills a viewer can
+    # see; the guard itself always counts every allocation.
+    def self.remaining_by_entry(entries, allocations: RecurringAllocation.all)
       by_id = entries.index_by(&:id)
 
-      RecurringAllocation.where(entry_id: by_id.keys).group(:entry_id).pluck(
+      allocations.where(entry_id: by_id.keys).group(:entry_id).pluck(
         :entry_id,
         Arel.sql("SUM(COALESCE(source_amount, allocated_amount))"),
         Arel.sql("BOOL_OR(source_amount IS NULL)")
