@@ -21,13 +21,44 @@ class LunchflowItem::ImporterStartDateTest < ActiveSupport::TestCase
     import_transactions
   end
 
-  test "later syncs fetch from a week before the last sync" do
-    last_sync = Time.zone.parse("2026-10-20 06:00")
+  test "later syncs resume a week before the account's last successful fetch" do
+    synced_through = Time.zone.parse("2026-10-10 06:00")
     store_previous_transaction
-    @item.stubs(:last_synced_at).returns(last_sync)
-    expect_fetch_from(last_sync - 7.days)
+    @lunchflow_account.update!(transactions_synced_through: synced_through)
+    @item.stubs(:last_synced_at).returns(Time.zone.parse("2026-10-20 06:00"))
+    expect_fetch_from(synced_through - 7.days)
 
     import_transactions
+  end
+
+  test "accounts without a fetch marker refetch the full history" do
+    store_previous_transaction
+    @item.stubs(:last_synced_at).returns(Time.zone.parse("2026-10-20 06:00"))
+    expect_fetch_from(nil)
+
+    import_transactions
+  end
+
+  test "a successful fetch records when it ran" do
+    expect_fetch_from(nil)
+
+    travel_to Time.zone.parse("2026-10-28 06:00") do
+      import_transactions
+    end
+
+    assert_equal Time.zone.parse("2026-10-28 06:00"), @lunchflow_account.reload.transactions_synced_through
+  end
+
+  test "a failed fetch keeps the previous marker" do
+    synced_through = Time.zone.parse("2026-10-10 06:00")
+    @lunchflow_account.update!(transactions_synced_through: synced_through)
+    @provider.expects(:get_account_transactions)
+      .raises(Provider::Lunchflow::LunchflowError.new("Rate limited", :rate_limited))
+
+    result = import_transactions
+
+    assert_not result[:success]
+    assert_equal synced_through, @lunchflow_account.reload.transactions_synced_through
   end
 
   private

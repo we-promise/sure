@@ -255,6 +255,7 @@ class LunchflowItem::Importer
 
     def fetch_and_store_transactions(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
+      fetch_started_at = Time.current
       include_pending = Rails.configuration.x.lunchflow.include_pending
 
       Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date || "the beginning"} (include_pending=#{include_pending})"
@@ -389,6 +390,8 @@ class LunchflowItem::Importer
           Rails.logger.warn "LunchflowItem::Importer - Failed to fetch holdings for account #{lunchflow_account.account_id}: #{e.message}"
         end
 
+        lunchflow_account.update!(transactions_synced_through: fetch_started_at)
+
         { success: true, transactions_count: transactions_count }
       rescue Provider::Lunchflow::LunchflowError => e
         Rails.logger.error "LunchflowItem::Importer - Lunchflow API error for account #{lunchflow_account.id}: #{e.message}"
@@ -498,12 +501,14 @@ class LunchflowItem::Importer
       end
     end
 
-    # Returns nil on an account's first sync, which fetches its full history.
+    # Returns nil until the account has a successful fetch on record, which
+    # fetches its full history. Later syncs resume from that fetch, so one that
+    # keeps failing doesn't leave a gap once the item sync completes.
     def determine_sync_start_date(lunchflow_account)
-      first_sync = lunchflow_account.raw_transactions_payload.to_a.empty? || lunchflow_item.last_synced_at.nil?
-      return if first_sync
+      synced_through = lunchflow_account.transactions_synced_through
+      return if lunchflow_account.raw_transactions_payload.to_a.empty? || synced_through.nil?
 
-      lunchflow_item.last_synced_at - 7.days
+      synced_through - 7.days
     end
 
     def handle_error(error_message)
