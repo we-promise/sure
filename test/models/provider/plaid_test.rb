@@ -52,7 +52,7 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     request = mock
     Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
       params[:products] == [ "transactions" ] &&
-        params[:required_if_supported_products].nil? &&
+        params[:optional_products].nil? &&
         params[:additional_consented_products] == [ "investments" ]
     end.returns(request)
     @plaid.client.expects(:link_token_create).with(request).returns("response")
@@ -65,11 +65,12 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     )
   end
 
-  test "requests liabilities only if supported for a credit card link" do
+  test "requests liabilities as an optional product for a credit card link" do
     request = mock
     Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
       params[:products] == [ "transactions" ] &&
-        params[:required_if_supported_products] == [ "liabilities" ] &&
+        params[:optional_products] == [ "liabilities" ] &&
+        params[:required_if_supported_products].nil? &&
         params[:additional_consented_products] == [ "investments" ]
     end.returns(request)
     @plaid.client.expects(:link_token_create).with(request).returns("response")
@@ -86,7 +87,7 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     request = mock
     Plaid::LinkTokenCreateRequest.expects(:new).with do |params|
       params[:products] == [ "liabilities" ] &&
-        params[:required_if_supported_products].nil? &&
+        params[:optional_products].nil? &&
         params[:additional_consented_products] == [ "transactions", "investments" ]
     end.returns(request)
     @plaid.client.expects(:link_token_create).with(request).returns("response")
