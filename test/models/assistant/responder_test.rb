@@ -41,6 +41,49 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     assert_equal 8, Assistant::Responder::DEFAULT_MAX_TOOL_CALL_ITERATIONS
   end
 
+  test "streamed chunks that are only whitespace are emitted so the spaces before numbers survive" do
+    reply = Provider::LlmConcept::ChatResponse.new(
+      id: "1", model: "gpt-4.1",
+      messages: [ Provider::LlmConcept::ChatMessage.new(id: "1", output_text: "as of 10-22-2026") ],
+      function_requests: []
+    )
+
+    @llm.stubs(:chat_response).with do |_prompt, **kwargs|
+      [ "as", " of", " ", "10", "-", "22", "-", "202", "6" ].each do |text|
+        kwargs[:streamer].call(Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text, usage: nil))
+      end
+      true
+    end.returns(provider_success_response(reply))
+
+    streamed = []
+    @responder.on(:output_text) { |text| streamed << text }
+    @responder.respond
+
+    assert_equal "as of 10-22-2026", streamed.join
+  end
+
+  test "leading whitespace-only chunks are held back and emitted with the first non-blank chunk" do
+    reply = Provider::LlmConcept::ChatResponse.new(
+      id: "1", model: "gpt-4.1",
+      messages: [ Provider::LlmConcept::ChatMessage.new(id: "1", output_text: "\n Hello there") ],
+      function_requests: []
+    )
+
+    @llm.stubs(:chat_response).with do |_prompt, **kwargs|
+      [ "\n", " ", "Hello", " ", "there" ].each do |text|
+        kwargs[:streamer].call(Provider::LlmConcept::ChatStreamChunk.new(type: "output_text", data: text, usage: nil))
+      end
+      true
+    end.returns(provider_success_response(reply))
+
+    streamed = []
+    @responder.on(:output_text) { |text| streamed << text }
+    @responder.respond
+
+    assert_equal "\n Hello", streamed.first
+    assert_equal "\n Hello there", streamed.join
+  end
+
   test "final round requests forbid tool calls via tool_choice while keeping tool definitions" do
     function_request = Provider::LlmConcept::ChatFunctionRequest.new(
       id: "1", call_id: "1", function_name: "echo", function_args: "{}"

@@ -18,6 +18,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unauthorized", JSON.parse(response.body)["error"]
     assert response.headers["WWW-Authenticate"].present?, "Must include WWW-Authenticate header"
     assert_includes response.headers["WWW-Authenticate"], "oauth-protected-resource"
+    assert_includes response.headers["WWW-Authenticate"], "scope=\"read_write\""
   end
 
   test "returns 401 with wrong token" do
