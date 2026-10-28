@@ -58,6 +58,8 @@ class Provider::Plaid
     else
       request_params[:transactions] = { days_requested: MAX_HISTORY_DAYS }
       request_params[:products] = [ get_primary_product(accountable_type) ]
+      required_if_supported = get_required_if_supported_products(accountable_type)
+      request_params[:required_if_supported_products] = required_if_supported if required_if_supported.any?
       request_params[:additional_consented_products] = get_additional_consented_products(accountable_type)
     end
 
@@ -186,25 +188,34 @@ class Provider::Plaid
     end
 
     # The primary Plaid product to request for a given Sure account type.
-    # Investments map to the `investments` product, liability accounts
-    # (CreditCard/Loan) to `liabilities`, everything else to `transactions`.
+    # Investments map to the `investments` product, loans to `liabilities`,
+    # everything else (including credit cards) to `transactions`.
     def get_primary_product(accountable_type)
       return "transactions" if eu?
 
       case accountable_type
       when "Investment"
         "investments"
-      when "CreditCard", "Loan"
+      when "Loan"
         "liabilities"
       else
         "transactions"
       end
     end
 
+    # Credit cards ask for `liabilities` (APR, statement balance, minimum
+    # payment) only when the issuer supports it, so issuers that offer
+    # transactions without liabilities can still be linked.
+    def get_required_if_supported_products(accountable_type)
+      return [] if eu?
+
+      accountable_type == "CreditCard" ? [ "liabilities" ] : []
+    end
+
     # Additional Plaid products to consent to alongside the primary product.
     #
-    # We only request the `liabilities` product when the account being linked is
-    # itself a liability (CreditCard/Loan). Plaid's Link filters out any
+    # Only liability links request the `liabilities` product: loans as the
+    # primary product, credit cards if supported. Plaid's Link filters out any
     # institution that does not support every requested product, so asking for
     # `liabilities` on e.g. an Investment link silently hides investment-only
     # brokerages like E*TRADE that don't offer it.
