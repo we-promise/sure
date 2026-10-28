@@ -283,7 +283,7 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
       scheduled_payoff_date projected_payoff_date months_saved interest_saved balloon labels aria_description
     ], payload.keys
     assert_equal %i[actual scheduled projected], payload[:visible]
-    assert_equal %i[actual scheduled projected principal interest today interactive_chart], payload[:labels].keys
+    assert_equal %i[actual scheduled projected principal interest interest_share principal_share today interactive_chart], payload[:labels].keys
   end
 
   test "an extra projection draws its own line, named in the legend and the description" do

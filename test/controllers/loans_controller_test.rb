@@ -531,7 +531,14 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal baseline.except(*described), with_extra.except("extra", "extra_payoff_date", *described)
     assert_equal baseline["visible"] + [ "extra" ], with_extra["visible"]
     assert_equal baseline["labels"].merge("extra" => I18n.t("UI.account.chart.loan.extra")), with_extra["labels"]
-    assert with_extra["aria_description"].start_with?(baseline["aria_description"])
+    # Sentences, not the whole string: #4387 appends the interest/principal
+    # share sentence to every description and the what-if sentence lands
+    # before it, so a start_with? over the full string fails by construction.
+    # The invariant the test means: the extra repayment adds its one sentence
+    # and every baseline sentence still appears.
+    sentences = ->(d) { d.split(/(?<=\.)\s+/) }
+    assert_equal 1, (sentences.(with_extra["aria_description"]) - sentences.(baseline["aria_description"])).size
+    assert_empty sentences.(baseline["aria_description"]) - sentences.(with_extra["aria_description"])
   end
 
   test "a loan with no schedule renders the page without a loan chart" do
