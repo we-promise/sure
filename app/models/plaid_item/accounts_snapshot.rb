@@ -106,7 +106,23 @@ class PlaidItem::AccountsSnapshot
     end
 
     def liabilities_data
+      return @liabilities_data if defined?(@liabilities_data)
       return nil unless can_fetch_liabilities?
-      @liabilities_data ||= plaid_provider.get_item_liabilities(plaid_item.access_token)
+
+      @liabilities_data = plaid_provider.get_item_liabilities(plaid_item.access_token)
+    rescue Plaid::ApiError => e
+      # Credit card links ask for liabilities only if the issuer supports them,
+      # but Link records the consent either way, so consent alone can't gate
+      # this call. Skip the optional data instead of failing the whole sync.
+      raise unless products_not_supported?(e)
+
+      @liabilities_data = nil
+    end
+
+    def products_not_supported?(error)
+      body = JSON.parse(error.response_body.to_s)
+      body.is_a?(Hash) && body["error_code"] == "PRODUCTS_NOT_SUPPORTED"
+    rescue JSON::ParserError
+      false
     end
 end

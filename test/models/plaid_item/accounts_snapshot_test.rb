@@ -192,6 +192,51 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
     @snapshot.get_account_data("123")
   end
 
+  test "skips liabilities the institution does not support without failing the sync" do
+    # A Credit Card link asks for liabilities only if supported, and Link records
+    # the consent even when the issuer lacks it (e.g. Bilt Rewards).
+    @plaid_item.update!(
+      available_products: [],
+      billed_products: [ "transactions" ],
+      raw_payload: { "consented_products" => [ "transactions", "liabilities" ] }
+    )
+
+    @snapshot.expects(:accounts).returns([
+      OpenStruct.new(account_id: "123", type: "credit", subtype: "credit card"),
+      OpenStruct.new(account_id: "456", type: "credit", subtype: "credit card")
+    ]).at_least_once
+
+    @plaid_provider.expects(:get_transactions).with(@plaid_item.access_token, next_cursor: nil).returns(
+      OpenStruct.new(
+        added: [],
+        modified: [],
+        removed: [],
+        cursor: "test_cursor_1"
+      )
+    ).once
+    @plaid_provider.expects(:get_item_investments).never
+    @plaid_provider.expects(:get_item_liabilities).with(@plaid_item.access_token).raises(
+      Plaid::ApiError.new(code: 400, response_body: { "error_code" => "PRODUCTS_NOT_SUPPORTED" }.to_json)
+    ).once
+
+    assert_nil @snapshot.get_account_data("123").liabilities_data
+    assert_nil @snapshot.get_account_data("456").liabilities_data
+  end
+
+  test "still raises other liabilities errors" do
+    @plaid_item.update!(available_products: [], billed_products: [ "liabilities" ])
+
+    @snapshot.expects(:accounts).returns([
+      OpenStruct.new(account_id: "123", type: "credit", subtype: "credit card")
+    ]).at_least_once
+
+    @plaid_provider.expects(:get_item_liabilities).raises(
+      Plaid::ApiError.new(code: 400, response_body: { "error_code" => "ITEM_LOGIN_REQUIRED" }.to_json)
+    )
+
+    assert_raises(Plaid::ApiError) { @snapshot.get_account_data("123") }
+  end
+
   test "does not fetch liabilities the institution offers but the user did not consent to" do
     # A Depository link consents to transactions and investments only. Plaid
     # still lists liabilities in available_products when the institution
