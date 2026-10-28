@@ -101,6 +101,8 @@ class Provider::MansaTest < ActiveSupport::TestCase
     @provider.stubs(:client).returns(mock_client = mock)
     mock_client.expects(:get).never
 
+    @provider.expects(:enforce_daily_limit!).never
+
     result = @provider.search_securities("AAPL", exchange_operating_mic: "XNYS")
 
     assert result.success?
@@ -136,6 +138,8 @@ class Provider::MansaTest < ActiveSupport::TestCase
     @provider.stubs(:client).returns(mock_client = mock)
     mock_client.expects(:get).never
 
+    @provider.expects(:enforce_daily_limit!).never
+
     result = @provider.fetch_security_price(symbol: "AAPL", exchange_operating_mic: "XNYS", date: Date.current)
 
     assert_not result.success?
@@ -144,6 +148,7 @@ class Provider::MansaTest < ActiveSupport::TestCase
   end
 
   test "fetch_security_price requires a MIC rather than guessing an exchange" do
+    @provider.expects(:enforce_daily_limit!).never
     @provider.stubs(:client).returns(mock_client = mock)
     mock_client.expects(:get).never
 

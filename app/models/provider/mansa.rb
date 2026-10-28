@@ -109,14 +109,14 @@ class Provider::Mansa < Provider
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     with_provider_response do
-      enforce_daily_limit!
-      throttle_request
-
       # A blank MIC (the trade-form combobox never passes one) searches every
       # Mansa exchange. A present MIC Mansa doesn't cover returns nothing
       # rather than broadening the search to unrelated exchanges.
       mansa_exchange = mansa_exchange_for(exchange_operating_mic)
       next [] if exchange_operating_mic.present? && mansa_exchange.nil?
+
+      enforce_daily_limit!
+      throttle_request
 
       response = client.get("#{base_url}/api/v1/markets/search") do |req|
         req.params["q"] = symbol
@@ -217,9 +217,6 @@ class Provider::Mansa < Provider
     attr_reader :api_key
 
     def fetch_quote!(symbol:, exchange_operating_mic:)
-      enforce_daily_limit!
-      throttle_request
-
       # Quotes are per-exchange, and the same ticker can list on several
       # Mansa exchanges, so there's no safe exchange to assume without a MIC.
       if exchange_operating_mic.blank?
@@ -228,6 +225,9 @@ class Provider::Mansa < Provider
 
       mansa_exchange = mansa_exchange_for(exchange_operating_mic)
       raise InvalidSecurityPriceError, "Mansa does not support exchange #{exchange_operating_mic}" if mansa_exchange.nil?
+
+      enforce_daily_limit!
+      throttle_request
 
       response = client.get("#{base_url}/api/v1/markets/exchanges/#{mansa_exchange}/stocks/#{CGI.escape(symbol)}")
 
