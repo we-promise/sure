@@ -46,6 +46,7 @@ fr:
         amount_required: Définissez une cible supérieure à zéro.
         name_required: Donnez un nom à votre objectif.
       earmark:
+        converted: Cette affectation ≈ {amount}.
         headroom: "Il reste {left} affectables sur ce compte."
         prorata: "Vos objectifs sur ce compte totalisent {total} pour un solde de {balance} : ils progresseront au prorata."
         whole_balance: Ce compte financera le solde restant après les autres affectations.
@@ -69,6 +70,7 @@ fr:
         target_balance_hint: "D'après vos dépenses mensuelles médianes sur le nombre de mois ci-dessus. Recalculé chaque mois."
         target_date: Date cible
         whole_balance: "Vide : tout le solde"
+        currency_conversion_hint: Les comptes peuvent utiliser des devises différentes. Les totaux sont convertis en %{currency} ; les affectations restent dans la devise de chaque compte.
       save: Enregistrer les modifications
       subtypes:
         cd: Compte à terme
@@ -112,6 +114,7 @@ fr:
         one: 1 en attente
         other: "%{count} en attente"
       pending_pledge: Promesse en attente
+      partial_total: Certains soldes ne sont pas comptés (pas encore de taux de change)
     index:
       archived_section:
         heading: Archivés
@@ -203,6 +206,8 @@ fr:
         transaction_already_claimed: Cette sortie a déjà été attribuée.
         transaction_not_found: Cette sortie n'est plus disponible.
         no_linked_account: Cet objectif n'a plus de compte de financement.
+        missing_exchange_rate: 'Aucun taux de change n''est encore disponible pour la devise de ce compte : cette dépense ne peut donc pas être enregistrée.'
+      goal_currency_hint: Saisissez le montant en %{currency}. Pour un compte dans une autre devise, il est converti au taux du jour avant d'être déduit de l'affectation de ce compte.
     unattributed_outflows:
       heading: De l'argent est sorti de ces comptes
       body: Si une partie a servi à %{goal}, dites-le et elle cessera de compter comme un retard.
@@ -245,10 +250,12 @@ fr:
         body: Effectuez un virement sur votre compte lié. Sure le détectera lors de la prochaine synchronisation. Ou mettez à jour manuellement le solde du compte.
         heading: Aucun dépôt pour l'instant
       funding_accounts:
+        converted: "≈ %{amount}"
         earmarked_of: "%{earmarked} affectés sur %{balance}"
         empty:
           body: Modifiez l'objectif pour lier les comptes de dépôt sur lesquels vous épargnez.
           heading: Aucun compte de financement lié pour l'instant
+        rate_unavailable: 'Pas encore de taux de change : ce compte n''est donc pas compté.'
       funding_accounts_heading: Comptes de financement
       funding_last_30d: 30 derniers jours
       funding_last_90d: 90 derniers jours
@@ -344,3 +351,9 @@ fr:
       success: Objectif restauré.
     update:
       success: Objectif mis à jour.
+    currency_warning:
+      body:
+        one: 'Aucun taux de change %{from} → %{to} n''est encore disponible : les soldes en %{from} sont donc exclus de ce total.'
+        other: 'Aucun taux de change de %{from} vers %{to} n''est encore disponible : ces soldes sont donc exclus de ce total.'
+      settings_link: Paramètres du fournisseur de taux de change
+      title: Certains soldes ne sont pas comptés

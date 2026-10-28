@@ -6,6 +6,28 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     @admin_user = create_user!(@family, "demo-admin@example.com")
   end
 
+  %i[generate_default_data! generate_empty_data! generate_new_user_data!].each do |mode|
+    test "#{mode} enables AI and preview features for both demo users without a provider" do
+      User.find_by!(email: "user@example.com").update!(email: "existing-user@example.com")
+      User.any_instance.stubs(:ai_available?).returns(false)
+      generator = Demo::Generator.new(seed: 42)
+      %i[create_realistic_categories! create_realistic_accounts! create_realistic_transactions!
+         generate_budget_auto_fill! generate_goals! create_monitoring_api_key!].each do |step|
+        generator.stubs(step)
+      end
+
+      generator.public_send(mode, skip_clear: true)
+
+      family = User.find_by!(email: "user@example.com").family
+      assert_equal %w[admin member], family.users.order(:role).pluck(:role)
+      family.users.each do |user|
+        assert user.ai_enabled, "#{user.role} should have AI enabled"
+        assert user.show_ai_sidebar?, "#{user.role} should start with the AI sidebar open"
+        assert user.preview_features_enabled?, "#{user.role} should have preview access"
+      end
+    end
+  end
+
   test "production sample reset includes Wallet in the normal accounts and transactions phases" do
     Rails.stubs(:env).returns(ActiveSupport::EnvironmentInquirer.new("production"))
     generator = Demo::Generator.new(seed: 42)

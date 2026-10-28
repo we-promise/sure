@@ -395,6 +395,15 @@ class Family < ApplicationRecord
     AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
   end
 
+  # The calendar date `time` falls on where the family lives. A background job
+  # runs in the app's zone (UTC unless configured), so a sync that dates what it
+  # finds by `Date.current` can land a day off the user's calendar. A blank or
+  # unknown zone falls back to the app's, as Localize#resolved_timezone does.
+  def local_date(time = Time.current)
+    zone = timezone.present? ? ActiveSupport::TimeZone[timezone] : nil
+    time.in_time_zone(zone || Time.zone).to_date
+  end
+
   def uses_custom_month_start?
     month_start_day != 1
   end
