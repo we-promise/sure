@@ -347,6 +347,25 @@ class LoanTest < ActiveSupport::TestCase
                  loan.variable_rate_update_for(Loan::MAX_INTEREST_RATE, as_of: as_of)[:variable_rate_schedule])
   end
 
+  test "a balance input change during a running sync requests a full follow-up" do
+    account = build_loan_account(balance: 80_000, down_payment: 20_000)
+    sync = Sync.create!(syncable: account, status: :syncing)
+
+    assert_no_difference -> { Sync.where(syncable: account).count } do
+      account.loan.update!(principal_only_transfers: true)
+    end
+
+    assert sync.reload.full_resync_requested?
+  end
+
+  test "a balance input change with no running sync starts a sync" do
+    account = build_loan_account(balance: 80_000, down_payment: 20_000)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      account.loan.update!(principal_only_transfers: true)
+    end
+  end
+
   private
     # A loan imported part way through its life: the principal it was written
     # for is recorded, and the only valuation the account carries is the

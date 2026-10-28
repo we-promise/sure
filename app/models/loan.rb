@@ -336,7 +336,19 @@ class Loan < ApplicationRecord
 
   private def sync_balance_after_change
     @balance_inputs_changed = false
-    account&.sync_later
+    return unless account
+
+    # A running sync cannot widen its window, so reusing it would keep the
+    # balance seeded from the old window. Mark it for a full sync after it
+    # finishes.
+    if (sync = account.syncs.where(status: "syncing").first)
+      sync.update!(full_resync_requested: true)
+      # The sync can finish between the lookup and the update. Its own
+      # completion check may already have run, so queue the full sync here.
+      account.sync_later unless sync.reload.syncing?
+    else
+      account.sync_later
+    end
   end
 
   private def forget_balance_input_change
