@@ -1,8 +1,12 @@
 # CalVer transition: October–December 2026
 
-The next release is **`v2026.10.31`**, with **`v0.7.6`** as a temporary
+The next release is **`v2026.10.28`**, with **`v0.7.6`** as a temporary
 compatibility alias. `.sure-version` and Helm metadata use the canonical date.
 Git tags include `v`; Docker tags and chart versions do not.
+
+Use the actual UTC release date, not a fixed month-end date. If the release
+moves to another day, update `.sure-version`, the chart version/appVersion and
+`COMPATIBILITY_RELEASE` together before tagging. Keep that date fixed for retries.
 
 ## Releasing
 

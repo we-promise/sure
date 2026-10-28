@@ -39,7 +39,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   # Update this pair for each compatibility release through December.
-  COMPATIBILITY_RELEASE: '2026.10.31'
+  COMPATIBILITY_RELEASE: '2026.10.28'
   COMPATIBILITY_VERSION: '0.7.6'
 
 permissions:

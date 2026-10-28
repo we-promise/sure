@@ -10,20 +10,20 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
 
   test "canonical tag publishes while its compatibility alias is a no-op" do
     with_repo do |dir|
-      success, output = resolve(dir, "2026.10.31")
+      success, output = resolve(dir, "2026.10.28")
       assert success
       %w[release=true compatibility_version=0.7.6 type=raw,value=stable type=raw,value=0.7.6].each { |line| assert_includes output, line }
-      success, output = resolve(dir, "2026.10.31", ref: "refs/tags/v0.7.6")
+      success, output = resolve(dir, "2026.10.28", ref: "refs/tags/v0.7.6")
       assert success
       assert_includes output, "publish=false"
       assert_includes output, "release=false"
-      assert_not resolve(dir, "2026.10.31", ref: "refs/tags/v0.7.7").first
+      assert_not resolve(dir, "2026.10.28", ref: "refs/tags/v0.7.7").first
     end
   end
 
   test "alpha publishes latest while beta and rc do not promote stable" do
     with_repo do |dir|
-      %w[2026.11.2-alpha 2026.11.2-alpha.12 2026.10.31-beta 2026.10.31-rc.2].each do |version|
+      %w[2026.11.2-alpha 2026.11.2-alpha.12 2026.10.28-beta 2026.10.28-rc.2].each do |version|
         success, output = resolve(dir, version)
         assert success, version
         assert_includes output, "release=true"
@@ -36,7 +36,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
 
   test "invalid dates padding and hotfix modifiers are rejected" do
     with_repo do |dir|
-      %w[2026.11.02 2026.11.0 2026.2.29 2026.4.31 2026.10.31-hotfix.1 2026.10.31-1].each do |version|
+      %w[2026.11.02 2026.11.0 2026.2.29 2026.4.31 2026.10.28-hotfix.1 2026.10.28-1].each do |version|
         assert_not resolve(dir, version).first, version
       end
     end
@@ -45,7 +45,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
   test "non-release builds and January do not emit compatibility tags" do
     with_repo do |dir|
       [ "push", "schedule", "workflow_dispatch" ].each do |event|
-        success, output = resolve(dir, "2026.10.31", event: event, ref: "refs/heads/main")
+        success, output = resolve(dir, "2026.10.28", event: event, ref: "refs/heads/main")
         assert success
         assert_includes output, "release=false"
         assert_not_includes output, "type=raw"
@@ -91,7 +91,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
       File.write(File.join(dir, ".sure-version"), version)
       path = File.join(dir, "output")
       File.write(path, "")
-      env = { "COMPATIBILITY_RELEASE" => "2026.10.31", "COMPATIBILITY_VERSION" => "0.7.6",
+      env = { "COMPATIBILITY_RELEASE" => "2026.10.28", "COMPATIBILITY_VERSION" => "0.7.6",
         "GITHUB_EVENT_NAME" => event,
         "GITHUB_REF" => ref, "GITHUB_OUTPUT" => path }.merge(extra_env)
       success, error = run_step(dir, "prepare", "release", env)
