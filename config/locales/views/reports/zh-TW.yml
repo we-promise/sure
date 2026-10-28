@@ -6,7 +6,6 @@ zh-TW:
       subtitle: 深入洞察您的財務健康狀況
       export: 匯出 CSV
       print_report: 列印報表
-      drag_to_reorder: 拖曳以重新排列區塊
       toggle_section: 切換區塊顯示狀態
       periods:
         monthly: 按月
@@ -178,25 +177,14 @@ zh-TW:
       net_flow: 淨流量
       net_flow_description: 淨變動總額
     google_sheets_instructions:
-      title_with_key: ✅ 複製 Google 試算表用的網址
-      title_no_key: ⚠️ 需要 API 金鑰
-      ready: 您的 CSV URL（含 API 金鑰）已就緒。
-      steps: '若要匯入 Google 試算表：
-
-        1. 建立一個新的 Google 試算表
-
-        2. 在 A1 儲存格中輸入下方公式
-
-        3. 按下 Enter 鍵'
-      security_warning: 此 URL 包含您的 API 金鑰。請妥善保管！
+      title_no_key: 需要 API 金鑰
       need_key: 若要將資料匯入 Google 試算表，您需要一個 API 金鑰。
       step1: 前往「設定」→「API 金鑰」
       step2: 建立一個具備「讀取」權限的新 API 金鑰
       step3: 複製該 API 金鑰
-      step4: 將其加入此 URL 結尾：?api_key=您的金鑰
+      step4: 將其加入此 URL 結尾：&api_key=您的金鑰
       example: 範例
       then_use: 接著在 Google 試算表中使用帶有 =IMPORTDATA() 的完整連結。
-      open_sheets: 開啟 Google 試算表
       go_to_api_keys: 前往 API 金鑰設定
       close: 我知道了
     print:

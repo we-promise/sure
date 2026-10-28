@@ -344,6 +344,104 @@ jobs:
             "${WORKER_DEPLOY_HOOK_URL}"
 
 
+  deploy_app:
+    name: Deploy stable to Render sure-app
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    needs: [merge]
+
+    timeout-minutes: 15
+    runs-on: 'ubuntu-24.04'
+
+    environment:
+      name: stable
+      url: https://sure-web-6y53.onrender.com
+
+    concurrency:
+      group: render-sure-app-stable
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Verify Render deployment configuration
+        env:
+          APP_URL: https://sure-web-6y53.onrender.com
+          WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WEB_DEPLOY_HOOK_URL }}
+          WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WORKER_DEPLOY_HOOK_URL }}
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected a stable vMAJOR.MINOR.PATCH tag." >&2
+            exit 1
+          fi
+
+          missing=()
+          [[ -n "${APP_URL}" ]] || missing+=(RENDER_APP_URL)
+          [[ -n "${WEB_DEPLOY_HOOK_URL}" ]] || missing+=(RENDER_APP_WEB_DEPLOY_HOOK_URL)
+          [[ -n "${WORKER_DEPLOY_HOOK_URL}" ]] || missing+=(RENDER_APP_WORKER_DEPLOY_HOOK_URL)
+
+          if (( ${#missing[@]} > 0 )); then
+            printf 'Missing stable environment configuration: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Deploy web service
+        env:
+          WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WEB_DEPLOY_HOOK_URL }}
+        shell: bash
+        run: |
+          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${GITHUB_REF_NAME#v}"
+          curl --fail-with-body --silent --show-error \
+            --get \
+            --data-urlencode "imgURL=${image}" \
+            "${WEB_DEPLOY_HOOK_URL}"
+
+      - name: Wait for web service
+        env:
+          APP_URL: https://sure-web-6y53.onrender.com
+        shell: bash
+        run: |
+          app_url="${APP_URL%/}"
+
+          # Render deploy hooks are asynchronous. Give the deployment time to
+          # start before polling the public health endpoint.
+          sleep 60
+
+          for attempt in {1..24}; do
+            if curl --fail --silent --show-error --max-time 15 "${app_url}/up" > /dev/null; then
+              echo "App web service is healthy."
+              exit 0
+            fi
+
+            echo "Health check attempt ${attempt}/24 failed; retrying in 15 seconds."
+            sleep 15
+          done
+
+          echo "App web service did not become healthy in time." >&2
+          exit 1
+
+      - name: Smoke test sign-in page
+        env:
+          APP_URL: https://sure-web-6y53.onrender.com
+        shell: bash
+        run: |
+          curl --fail --location --silent --show-error --max-time 30 \
+            "${APP_URL%/}/sessions/new" > /dev/null
+
+      - name: Deploy worker
+        env:
+          WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WORKER_DEPLOY_HOOK_URL }}
+        shell: bash
+        run: |
+          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${GITHUB_REF_NAME#v}"
+          curl --fail-with-body --silent --show-error \
+            --get \
+            --data-urlencode "imgURL=${image}" \
+            "${WORKER_DEPLOY_HOOK_URL}"
+
+
   helm:
     name: Package Helm chart
     if: startsWith(github.ref, 'refs/tags/v')

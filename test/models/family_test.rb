@@ -8,6 +8,28 @@ class FamilyTest < ActiveSupport::TestCase
     @syncable = families(:dylan_family)
   end
 
+  test "local_date is the date in the family's zone" do
+    family = families(:dylan_family)
+    evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
+
+    family.update!(timezone: "Australia/Sydney")
+    assert_equal Date.new(2026, 1, 16), family.local_date(evening_utc)
+
+    family.update!(timezone: "America/New_York")
+    assert_equal Date.new(2026, 1, 15), family.local_date(Time.utc(2026, 1, 16, 3, 0, 0))
+  end
+
+  test "local_date falls back to the app's zone for a blank or unknown zone" do
+    family = families(:dylan_family)
+    evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
+
+    family.update_column(:timezone, nil)
+    assert_equal evening_utc.in_time_zone(Time.zone).to_date, family.local_date(evening_utc)
+
+    family.update_column(:timezone, "Mars/Olympus_Mons")
+    assert_equal evening_utc.in_time_zone(Time.zone).to_date, family.local_date(evening_utc)
+  end
+
   test "investment_contributions_category creates category when missing" do
     family = families(:dylan_family)
     family.categories.where(name: Category.investment_contributions_name).destroy_all
