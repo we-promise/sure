@@ -155,7 +155,9 @@ class LlmUsage < ApplicationRecord
 
     long_context = pricing[:long_context]
     cache_read_multiplier = pricing.fetch(:cache_read_multiplier, 0.10)
-    if apply_long_context_pricing && long_context && prompt_tokens > long_context[:threshold]
+    # The long-context threshold counts every input token, cached ones included.
+    total_input_tokens = prompt_tokens + cache_creation_tokens.to_i + cache_read_tokens.to_i
+    if apply_long_context_pricing && long_context && total_input_tokens > long_context[:threshold]
       pricing = long_context
     end
 

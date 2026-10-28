@@ -168,9 +168,9 @@ class LlmUsageTest < ActiveSupport::TestCase
   end
 
   test "calculate_cost keeps cache hits at 0.1x for Claude models without a cache multiplier" do
-    read = LlmUsage.calculate_cost(model: "claude-haiku-5-5", prompt_tokens: 0, completion_tokens: 0, cache_read_tokens: 1_000_000)
+    read = LlmUsage.calculate_cost(model: "claude-haiku-5-5", prompt_tokens: 0, completion_tokens: 0, cache_read_tokens: 50_000)
 
-    assert_in_delta 0.01, read, 0.000001
+    assert_in_delta 0.0005, read, 0.000001
   end
 
   test "calculate_cost applies Haiku 5.5's higher rate to prompts over 100,000 tokens" do
@@ -179,6 +179,15 @@ class LlmUsageTest < ActiveSupport::TestCase
 
     assert_in_delta 0.015, short, 0.000001
     assert_in_delta 0.0750005, long, 0.000001
+  end
+
+  test "calculate_cost counts cached input tokens toward Haiku 5.5's 100,000-token threshold" do
+    cost = LlmUsage.calculate_cost(
+      model: "claude-haiku-5-5", prompt_tokens: 60_000, completion_tokens: 10_000, cache_read_tokens: 50_000
+    )
+
+    # Long-context rates: 60K input at $0.50 + 10K output at $2.50 + 50K cache reads at 0.1 * $0.50.
+    assert_in_delta 0.03 + 0.025 + 0.0025, cost, 0.000001
   end
 
   {
