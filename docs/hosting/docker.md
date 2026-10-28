@@ -445,6 +445,8 @@ Sure answers two unauthenticated health URLs:
 
   The status is `200` when `errors` is empty and `503` when it isn't. Each error is a short fixed phrase such as `"db: check failed"`, `"redis: timeout after 3000ms"` or `"worker: no scheduled job enqueued in 3h"`. Exception details go to the web log, never into the response. The worker counts as down when no Sidekiq process is running, when its scheduler hasn't enqueued a cron job for 2 hours, or when a job has waited over an hour on the `scheduled` or `high_priority` queue.
 
+  In production, `/health` allows 60 requests per minute from each IP address and returns `429` beyond that, so poll it no more than once every few seconds.
+
 ## How to update your app
 
 The mechanism that updates your self-hosted Sure app is the GHCR (Github Container Registry) Docker image that you see in the `compose.yml` file:
