@@ -64,13 +64,13 @@ class BillsController < ApplicationController
     @overdue, upcoming = active_open.partition { |occurrence| occurrence.derived_state == :overdue }
     # Snooze-aware, like the rail (bills_row_date): rows list in rail order,
     # and a bill snoozed past the month's end belongs after it.
-    @this_month, later = upcoming.partition { |occurrence| occurrence.effective_due_on <= month_end }
+    @this_month, @after_month = upcoming.partition { |occurrence| occurrence.effective_due_on <= month_end }
     @overdue = @overdue.sort_by(&:effective_due_on)
     @dormant = @dormant.sort_by(&:effective_due_on)
 
     # Beyond this month, one row per series: a weekly bill's next six
     # occurrences are not six separate things to think about yet.
-    @later = later.group_by(&:recurring_transaction_id)
+    @later = @after_month.group_by(&:recurring_transaction_id)
                   .values
                   .map { |group| group.min_by(&:effective_due_on) }
                   .sort_by(&:effective_due_on)

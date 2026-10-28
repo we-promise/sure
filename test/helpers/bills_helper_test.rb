@@ -442,6 +442,18 @@ class BillsHelperTest < ActionView::TestCase
     assert_equal 120, markers["gym"][:due_total]
   end
 
+  test "a pay period running past the month counts the bills due after it" do
+    period = OpenStruct.new(starts_on: Date.new(2026, 10, 26), ends_on: Date.new(2026, 11, 20))
+    rent = stub_occurrence("Rent", 900, id: "rent", due_on: Date.new(2026, 10, 28))
+    power = stub_occurrence("Power", 80, id: "power", due_on: Date.new(2026, 11, 5))
+    gym = stub_occurrence("Gym", 40, id: "gym", due_on: Date.new(2026, 11, 25))
+
+    markers = bills_pay_period_markers([ rent ], [ period ], counted: [ rent, power, gym ])
+
+    assert_equal %w[rent], markers.keys
+    assert_equal 980, markers["rent"][:due_total]
+  end
+
   test "no pay periods means no markers" do
     occurrence = stub_occurrence("Rent", 1, id: "x", due_on: Date.current)
 
