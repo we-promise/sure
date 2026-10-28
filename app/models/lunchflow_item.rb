@@ -14,6 +14,7 @@ class LunchflowItem < ApplicationRecord
 
   validates :name, presence: true
   validates :api_key, presence: true, on: :create
+  validate :sync_start_date_not_in_future
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -169,4 +170,12 @@ class LunchflowItem < ApplicationRecord
   rescue URI::InvalidURIError
     DEFAULT_BASE_URL
   end
+
+  private
+
+    def sync_start_date_not_in_future
+      return if sync_start_date.blank? || sync_start_date.to_date <= Date.current
+
+      errors.add(:sync_start_date, :invalid)
+    end
 end
