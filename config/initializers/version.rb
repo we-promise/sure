@@ -1,7 +1,7 @@
 module Sure
   class << self
     def version
-      Semver.new(semver)
+      Calver.new(version_string)
     end
 
     def commit_sha
@@ -15,7 +15,7 @@ module Sure
     end
 
     private
-      def semver
+      def version_string
         stripped_content = Rails.root.join(".sure-version").read.strip
         stripped_content.presence || "0.0.0-dev"
       rescue Errno::ENOENT

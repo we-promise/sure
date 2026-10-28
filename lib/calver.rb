@@ -1,5 +1,6 @@
-# Light wrapper around Gem::Version to support tag parsing
-class Semver
+# Wraps Gem::Version for CalVer release tags, while accepting legacy tags and
+# development versions. Numeric version ordering does not validate calendar dates.
+class Calver
   attr_reader :version
 
   def initialize(version_string)

@@ -682,7 +682,7 @@ class User < ApplicationRecord
   def parsed_release_tag_version!(tag)
     raise ArgumentError, "invalid release tag" unless tag.to_s.match?(/\Av\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.-]+)?\z/)
 
-    Semver.from_release_tag(tag).version
+    Calver.from_release_tag(tag).version
   end
 
   def parsed_release_tag_version(tag)
