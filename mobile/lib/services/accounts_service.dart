@@ -8,6 +8,10 @@ class AccountsService {
 
   final http.Client _client;
 
+  /// The page size older versions fetched; a cache of exactly this many
+  /// accounts may be a truncated first page.
+  static const int legacyPageSize = 25;
+
   /// The API caps `per_page` at 100.
   static const int maxPerPage = 100;
 
@@ -41,14 +45,13 @@ class AccountsService {
       accounts.addAll((result['accounts'] as List<dynamic>).cast<Account>());
       pagination = result['pagination'] as Map<String, dynamic>?;
       totalPages = (pagination?['total_pages'] as num?)?.toInt() ?? 1;
+      if (totalPages > maxPages) {
+        return {
+          'success': false,
+          'error': 'Too many account pages to load ($totalPages)',
+        };
+      }
       page++;
-    }
-
-    if (totalPages > maxPages) {
-      return {
-        'success': false,
-        'error': 'Too many account pages to load ($totalPages)',
-      };
     }
 
     return {

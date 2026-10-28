@@ -110,9 +110,13 @@ class AccountsProvider with ChangeNotifier {
         notifyListeners();
       }
 
-      // If online and (force sync or no cached data), fetch from server
+      // If online and (force sync, no cached data, or a cache that may be the
+      // truncated first page older versions saved), fetch from server
       final isOnline = _connectivityService?.isOnline ?? false;
-      if (isOnline && (forceSync || cachedAccounts.isEmpty)) {
+      final maybeTruncated =
+          cachedAccounts.length == AccountsService.legacyPageSize;
+      if (isOnline &&
+          (forceSync || cachedAccounts.isEmpty || maybeTruncated)) {
         final result = await _accountsService.getAllAccounts(
           accessToken: accessToken,
         );

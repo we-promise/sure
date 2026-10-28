@@ -109,14 +109,19 @@ void main() {
     });
 
     test('stops instead of following an absurd total_pages', () async {
+      final log = <http.Request>[];
       final service = AccountsService(
-        client: accountsClient(total: AccountsService.maxPages * 100 + 1),
+        client: accountsClient(
+          total: AccountsService.maxPages * 100 + 1,
+          log: log,
+        ),
       );
 
       final result = await service.getAllAccounts(accessToken: 'token');
 
       expect(result['success'], isFalse);
       expect(result.containsKey('accounts'), isFalse);
+      expect(log, hasLength(1));
     });
   });
 }
