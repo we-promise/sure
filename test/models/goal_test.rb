@@ -900,6 +900,16 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal "transfer", crypto.default_pledge_kind
   end
 
+  test "a valuation delta on a crypto account never matches a pledge" do
+    crypto = accounts(:crypto)
+    goal = goals(:vacation_italy)
+    goal.goal_accounts.create!(account: crypto)
+    pledge = goal.goal_pledges.create!(account: crypto, amount: 100, kind: "manual_save")
+    entry = crypto.entries.create!(name: "Reconciliation", date: Date.current, amount: 1100, currency: crypto.currency,
+                                   entryable: Valuation.new(kind: "reconciliation"))
+    assert_not pledge.matches?(entry, valuation_delta: 100)
+  end
+
   test "adding an investment account via update flips a depository goal to contributions" do
     goal = goals(:emergency_fund)
     assert_equal "balance", goal.progress_basis
