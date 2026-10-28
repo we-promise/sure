@@ -1,4 +1,7 @@
 class MercuryItem::Importer
+  TRANSACTIONS_PAGE_SIZE = 1000
+  MAX_TRANSACTION_PAGES = 100
+
   attr_reader :mercury_item, :mercury_provider
 
   def initialize(mercury_item, mercury_provider:)
@@ -192,10 +195,7 @@ class MercuryItem::Importer
 
       begin
         # Fetch transactions
-        transactions_data = mercury_provider.get_account_transactions(
-          mercury_account.account_id,
-          start_date: start_date
-        )
+        transactions_data = fetch_account_transactions(mercury_account, start_date)
 
         # Validate response structure
         unless transactions_data.is_a?(Hash)
@@ -280,6 +280,35 @@ class MercuryItem::Importer
         Rails.logger.error e.backtrace.join("\n")
         { success: false, transactions_count: 0, error: "Unexpected error: #{e.message}" }
       end
+    end
+
+    def fetch_account_transactions(mercury_account, start_date)
+      transactions = []
+
+      MAX_TRANSACTION_PAGES.times do |page|
+        data = mercury_provider.get_account_transactions(
+          mercury_account.account_id,
+          start_date: start_date,
+          offset: page * TRANSACTIONS_PAGE_SIZE,
+          limit: TRANSACTIONS_PAGE_SIZE
+        )
+        return data unless data.is_a?(Hash)
+
+        batch = Array(data[:transactions])
+        transactions.concat(batch)
+        return data.merge(transactions: transactions) if batch.size < TRANSACTIONS_PAGE_SIZE
+      end
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Stopped fetching transactions for account #{mercury_account.account_id} after #{MAX_TRANSACTION_PAGES} pages",
+        source: self.class.name,
+        provider_key: "mercury",
+        family: mercury_item.family,
+        metadata: { account_id: mercury_account.account_id, fetched_count: transactions.count }
+      )
+      { transactions: transactions }
     end
 
     def determine_sync_start_date(mercury_account)

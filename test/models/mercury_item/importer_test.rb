@@ -69,6 +69,44 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
+  # pagination
+  # ---------------------------------------------------------------------------
+
+  test "fetches every page of transactions for an account" do
+    _account, mercury_account = create_linked_account("acc_paged")
+    page_size = MercuryItem::Importer::TRANSACTIONS_PAGE_SIZE
+    first_page = Array.new(page_size) { |i| tx_payload("tx_#{i}") }
+    last_page = [ tx_payload("tx_last_1"), tx_payload("tx_last_2") ]
+
+    @provider.stubs(:get_accounts).returns({ accounts: [ account_payload("acc_paged", "Checking") ] })
+    @provider.expects(:get_account_transactions)
+             .with("acc_paged", has_entries(offset: 0, limit: page_size))
+             .returns({ transactions: first_page, total: page_size + 2 })
+    @provider.expects(:get_account_transactions)
+             .with("acc_paged", has_entries(offset: page_size, limit: page_size))
+             .returns({ transactions: last_page, total: page_size + 2 })
+
+    result = run_import
+
+    assert_equal page_size + 2, result[:transactions_imported]
+    assert_equal page_size + 2, mercury_account.reload.raw_transactions_payload.size
+  end
+
+  test "requests a single page when the first one is not full" do
+    _account, mercury_account = create_linked_account("acc_short")
+
+    @provider.stubs(:get_accounts).returns({ accounts: [ account_payload("acc_short", "Checking") ] })
+    @provider.expects(:get_account_transactions)
+             .with("acc_short", has_entries(offset: 0))
+             .once
+             .returns({ transactions: [ tx_payload("tx_only") ], total: 1 })
+
+    run_import
+
+    assert_equal [ "tx_only" ], mercury_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+  end
+
+  # ---------------------------------------------------------------------------
   # sync window
   # ---------------------------------------------------------------------------
 
