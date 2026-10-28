@@ -957,7 +957,9 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     get reports_path(period_type: :monthly, currency: "eur")
     assert_response :ok
 
-    assert_select "form[data-controller=auto-submit-form][aria-label=?] input[type=hidden][name=currency][value=EUR][data-auto-submit-form-target=auto][data-autosubmit-trigger-event=change]", I18n.t("reports.index.currency.label")
+    assert_select "form[data-controller=auto-submit-form][aria-label=?] input[type=hidden][name=currency][value=EUR]", I18n.t("reports.index.currency.label")
+    # DS::Select submits the form itself; an auto-submit target would submit it twice
+    assert_select "input[type=hidden][name=currency][data-auto-submit-form-target]", count: 0
     assert_select "tr[data-category='category-#{category.id}']", text: /€50\.00/
     assert_select "tr[data-category='category-#{category.id}']", text: /\$100\.00/, count: 0
 
@@ -1013,6 +1015,17 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     assert_select "input[type=hidden][name=currency]", count: 0
+  end
+
+  test "index offers no other currency to a family that never chose its enabled currencies" do
+    @family.update!(enabled_currencies: nil)
+    category = create_currency_probe_spending(amount: 100, rate: 0.5)
+
+    get reports_path(period_type: :monthly, currency: "EUR")
+    assert_response :ok
+
+    assert_select "input[type=hidden][name=currency]", count: 0
+    assert_select "tr[data-category='category-#{category.id}']", text: /\$100\.00/
   end
 
   test "export transactions uses the currency named in the URL" do

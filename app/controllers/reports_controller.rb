@@ -249,8 +249,15 @@ class ReportsController < ApplicationController
       end
     end
 
+    # Only currencies the family picked in Settings → Preferences. A family that
+    # never narrowed its list has every ISO currency "enabled", which would
+    # offer conversions it has no exchange rates for, so it gets just its own.
     def report_currency_options
-      @report_currency_options ||= Current.family.enabled_currency_codes
+      @report_currency_options ||= if Current.family.custom_enabled_currencies?
+        Current.family.enabled_currency_codes
+      else
+        [ Current.family.primary_currency_code ]
+      end
     end
 
     # Carries a non-default report currency through the page's own links;
