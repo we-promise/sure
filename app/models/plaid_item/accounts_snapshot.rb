@@ -138,11 +138,10 @@ class PlaidItem::AccountsSnapshot
     # records the consent even when Plaid can't add it: the issuer lacks it, or
     # the user withheld the OAuth permission. Consent alone can't gate the call,
     # so skip the data instead of failing the whole sync. Once liabilities was
-    # added to the Item (loans, or a card where it worked), errors still raise.
+    # added to the Item (loans, or a card where it worked), errors still raise
+    # rather than clearing the liabilities already stored.
     def liabilities_unavailable?(error_code)
-      return true if error_code == "PRODUCTS_NOT_SUPPORTED"
-
-      %w[ACCESS_NOT_GRANTED NO_LIABILITY_ACCOUNTS].include?(error_code) &&
+      %w[PRODUCTS_NOT_SUPPORTED ACCESS_NOT_GRANTED NO_LIABILITY_ACCOUNTS].include?(error_code) &&
         plaid_item.billed_products.map(&:to_s).exclude?("liabilities")
     end
 

@@ -313,18 +313,21 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
     end
   end
 
-  test "raises ACCESS_NOT_GRANTED once liabilities was added to the item" do
+  test "still raises unavailable-liabilities errors once liabilities was added to the item" do
     @plaid_item.update!(available_products: [], billed_products: [ "liabilities" ])
 
-    @snapshot.expects(:accounts).returns([
-      OpenStruct.new(account_id: "123", type: "loan", subtype: "student")
-    ]).at_least_once
+    %w[PRODUCTS_NOT_SUPPORTED ACCESS_NOT_GRANTED NO_LIABILITY_ACCOUNTS].each do |error_code|
+      provider = mock
+      snapshot = PlaidItem::AccountsSnapshot.new(@plaid_item, plaid_provider: provider)
+      snapshot.expects(:accounts).returns([
+        OpenStruct.new(account_id: "123", type: "loan", subtype: "student")
+      ]).at_least_once
+      provider.expects(:get_item_liabilities).raises(
+        Plaid::ApiError.new(code: 400, response_body: { "error_code" => error_code }.to_json)
+      )
 
-    @plaid_provider.expects(:get_item_liabilities).raises(
-      Plaid::ApiError.new(code: 400, response_body: { "error_code" => "ACCESS_NOT_GRANTED" }.to_json)
-    )
-
-    assert_raises(Plaid::ApiError) { @snapshot.get_account_data("123") }
+      assert_raises(Plaid::ApiError) { snapshot.get_account_data("123") }
+    end
   end
 
   test "does not fetch liabilities the institution offers but the user did not consent to" do
