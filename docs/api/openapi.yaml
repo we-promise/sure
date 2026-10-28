@@ -1733,6 +1733,7 @@ components:
       type: object
       required:
       - id
+      - entry_id
       - date
       - amount
       - amount_decimal
@@ -1750,6 +1751,11 @@ components:
         id:
           type: string
           format: uuid
+        entry_id:
+          type: string
+          format: uuid
+          description: Id of the underlying entry. Web routes for a single transaction,
+            such as /transactions/{entry_id}, use this id rather than id.
         date:
           type: string
           format: date
