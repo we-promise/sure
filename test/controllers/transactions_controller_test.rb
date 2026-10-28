@@ -2141,6 +2141,12 @@ end
     assert_select "#transaction-search-filters li p", text: account.id, count: 0
   end
 
+  test "index renders a blank account filter value without failing" do
+    get transactions_url(q: { account_ids: [ "" ], accounts: [ "" ] })
+
+    assert_response :success
+  end
+
   test "index offers the attachment filter in the filter menu" do
     get transactions_url
 
