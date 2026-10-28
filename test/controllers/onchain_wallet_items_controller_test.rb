@@ -66,6 +66,35 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "first-key", @family.reload.onchain_wallet_item.sochain_api_key
   end
 
+  test "a first link that tracks nothing leaves no connection and still takes a key" do
+    stub_wallet_with_token
+
+    assert_no_difference "OnchainWalletItem.count" do
+      post link_wallet_onchain_wallet_items_url, params: {
+        chain: OnchainTestHelper::FAKE_CHAIN,
+        address: OnchainTestHelper::FAKE_ADDRESS,
+        sochain_api_key: "first-key"
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_nil @family.reload.onchain_wallet_item
+    assert_select "form[action=?] input[type=hidden][name=sochain_api_key][value=?]", link_wallet_onchain_wallet_items_path, "first-key"
+
+    get new_wallet_onchain_wallet_items_url
+    assert_select "input[type=password][name=sochain_api_key]"
+
+    post link_wallet_onchain_wallet_items_url, params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      assets: [ "native" ],
+      sochain_api_key: "second-key"
+    }
+
+    assert_redirected_to accounts_path
+    assert_equal "second-key", @family.reload.onchain_wallet_item.sochain_api_key
+  end
+
   test "the first-link key never replaces a saved connection's key" do
     item = create_onchain_wallet_item(family: @family, sochain_api_key: "saved-key")
     stub_wallet_with_token
