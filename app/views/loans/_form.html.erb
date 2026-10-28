@@ -16,9 +16,12 @@
          data-controller="loan-rate-changes"
          data-loan-rate-changes-fixed-type-value="<%= Loan::FIXED_RATE_TYPE %>">
       <div class="flex items-center gap-2">
+        <%# A loan has no currency column: both amounts are read in the account's
+            currency (Loan#original_balance), so no picker is offered here. %>
         <%= loan_form.money_field :initial_balance,
                                  label: t("loans.form.initial_balance"),
-                                 default_currency: Current.family.currency,
+                                 currency_value_override: account.currency,
+                                 hide_currency: true,
                                  required: true %>
       </div>
 
@@ -44,7 +47,8 @@
             leverage figure on the overview readable. %>
         <%= loan_form.money_field :down_payment,
                                  label: t("loans.form.down_payment"),
-                                 default_currency: Current.family.currency %>
+                                 currency_value_override: account.currency,
+                                 hide_currency: true %>
       </div>
 
       <div class="flex items-center gap-2">
