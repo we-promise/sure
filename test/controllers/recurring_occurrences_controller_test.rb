@@ -298,6 +298,40 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       "the rest of that charge can still pay another bill; over-allocation is refused when it is written"
   end
 
+  test "a transaction another bill partly uses shows what is left of it" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 25, currency: "USD", name: "Netflix charge",
+      entryable: Transaction.new(merchant: merchants(:netflix))
+    )
+    earlier = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: Date.current - 25, due_on: Date.current - 25, currency: "USD"
+    )
+    RecurringTransaction::Allocator.new(earlier).allocate!(entry: entry, amount: 10)
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "span", text: I18n.t("recurring_occurrences.show.amount_left", amount: "$15.00")
+    assert_select "form[action=?] button:not([disabled])", recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id)
+  end
+
+  test "a transaction other bills use in full is shown but cannot be linked" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 10, currency: "USD", name: "Netflix charge",
+      entryable: Transaction.new(merchant: merchants(:netflix))
+    )
+    earlier = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: Date.current - 25, due_on: Date.current - 25, currency: "USD"
+    )
+    RecurringTransaction::Allocator.new(earlier).allocate!(entry: entry, amount: 10)
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "form[action=?] button[disabled]", recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id)
+    assert_select "span", text: I18n.t("recurring_occurrences.show.used_up")
+  end
+
   test "searching looks past the date window" do
     old = accounts(:depository).entries.create!(
       date: @occurrence.due_on - 300, amount: 15.99, currency: "USD",
