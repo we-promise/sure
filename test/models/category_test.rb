@@ -110,10 +110,15 @@ class CategoryTest < ActiveSupport::TestCase
   test "changing a parent's color updates its subcategories" do
     parent = categories(:food_and_drink)
     subcategory = @family.categories.create!(name: "Color Child", color: "#000000", parent: parent)
+    previous_updated_at = subcategory.updated_at
 
-    parent.update!(color: "#123456")
+    travel 1.second do
+      parent.update!(color: "#123456")
+    end
 
-    assert_equal "#123456", subcategory.reload.color
+    subcategory.reload
+    assert_equal "#123456", subcategory.color
+    assert_operator subcategory.updated_at, :>, previous_updated_at
   end
 
   test "subcategory can only be one level deep" do
