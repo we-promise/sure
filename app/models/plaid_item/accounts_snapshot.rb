@@ -127,13 +127,23 @@ class PlaidItem::AccountsSnapshot
 
       @liabilities_data = plaid_provider.get_item_liabilities(plaid_item.access_token)
     rescue Plaid::ApiError => e
-      # Credit card links ask for liabilities as an optional product, and Link
-      # records the consent even when the issuer lacks it, so consent alone
-      # can't gate this call. Skip the data instead of failing the whole sync.
-      raise unless products_not_supported?(e)
+      error_code = plaid_error_code(e)
+      raise unless liabilities_unavailable?(error_code)
 
-      log_liabilities_not_supported
+      log_liabilities_unavailable(error_code)
       @liabilities_data = nil
+    end
+
+    # Credit card links ask for liabilities as an optional product, and Link
+    # records the consent even when Plaid can't add it: the issuer lacks it, or
+    # the user withheld the OAuth permission. Consent alone can't gate the call,
+    # so skip the data instead of failing the whole sync. Once liabilities was
+    # added to the Item (loans, or a card where it worked), errors still raise.
+    def liabilities_unavailable?(error_code)
+      return true if error_code == "PRODUCTS_NOT_SUPPORTED"
+
+      %w[ACCESS_NOT_GRANTED NO_LIABILITY_ACCOUNTS].include?(error_code) &&
+        plaid_item.billed_products.map(&:to_s).exclude?("liabilities")
     end
 
     def log_account_without_balance(account)
@@ -153,25 +163,26 @@ class PlaidItem::AccountsSnapshot
       )
     end
 
-    def log_liabilities_not_supported
+    def log_liabilities_unavailable(error_code)
       DebugLogEntry.capture(
         category: "provider_sync",
         level: "info",
-        message: "Plaid liabilities not supported by the institution",
+        message: "Plaid liabilities unavailable for this item",
         source: self.class.name,
         provider_key: "plaid",
         family: plaid_item.family,
         metadata: {
           plaid_item_id: plaid_item.id,
-          institution_id: plaid_item.institution_id
+          institution_id: plaid_item.institution_id,
+          error_code: error_code
         }
       )
     end
 
-    def products_not_supported?(error)
+    def plaid_error_code(error)
       body = JSON.parse(error.response_body.to_s)
-      body.is_a?(Hash) && body["error_code"] == "PRODUCTS_NOT_SUPPORTED"
+      body["error_code"] if body.is_a?(Hash)
     rescue JSON::ParserError
-      false
+      nil
     end
 end
