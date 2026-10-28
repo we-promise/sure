@@ -2131,6 +2131,16 @@ end
     assert_select "#entry_#{@entry.id}", count: 0
   end
 
+  test "index names the account on an account_ids filter chip" do
+    account = @entry.account
+
+    get transactions_url(q: { account_ids: [ account.id ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: account.name, count: 1
+    assert_select "#transaction-search-filters li p", text: account.id, count: 0
+  end
+
   test "index offers the attachment filter in the filter menu" do
     get transactions_url
 
