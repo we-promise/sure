@@ -101,6 +101,17 @@ class Assistant::Function::UploadAccountStatement < Assistant::Function
     prepared = AccountStatement.prepare_upload!(upload_for(content, filename))
     statement = AccountStatement.create_from_prepared_upload!(family: family, account: account, prepared_upload: prepared)
 
+    # The vault links an existing unlinked statement instead of raising when an
+    # account is given, so a statement that was not just created is a duplicate.
+    unless statement.previously_new_record?
+      return {
+        success: true,
+        duplicate: true,
+        statement: statement_payload(statement),
+        message: "This document is already in the vault (same SHA-256). It is now linked to #{account.name}; nothing new was created."
+      }
+    end
+
     {
       success: true,
       duplicate: false,
