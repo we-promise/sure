@@ -3,6 +3,8 @@ class Account < ApplicationRecord
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
 
+  before_save :lock_valuable_currency_change, if: :valuable_currency_change?
+
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
 
@@ -908,9 +910,23 @@ class Account < ApplicationRecord
   private
 
     def valuable_currency_unchanged
-      if valuable? && persisted? && will_save_change_to_currency? && valuable.lots.exists?
-        errors.add(:currency, I18n.t("valuables.errors.currency_locked"))
-      end
+      return unless valuable_currency_change?
+      errors.add(:currency, I18n.t("valuables.errors.currency_locked")) if valuable.lots.exists?
+    end
+
+    def valuable_currency_change?
+      valuable? && persisted? && will_save_change_to_currency?
+    end
+
+    # ValuableItem saves lock the account row before they write. Take the same
+    # lock before this check, so an item cannot land between the check and the
+    # currency update.
+    def lock_valuable_currency_change
+      self.class.lock.find(id)
+      return unless valuable.lots.exists?
+
+      errors.add(:currency, I18n.t("valuables.errors.currency_locked"))
+      throw :abort
     end
 
     # perform_later raises (the Sidekiq adapter re-raises RedisClient errors) or

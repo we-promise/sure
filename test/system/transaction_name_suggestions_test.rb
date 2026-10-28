@@ -88,7 +88,12 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
   private
     def select_starbucks
       fill_in "entry_name", with: "Starb"
-      find(".hw-combobox [role='option']", text: "Starbucks").click
+      assert_selector ".hw-combobox [role='option']", text: "Starbucks"
+      assert_selector ".hw-combobox [role='option']", count: 1
+
+      # Pick with keys so an async option re-render cannot detach the node
+      # before the click.
+      find("#entry_name").send_keys(:arrow_down, :enter)
       assert_field "entry_name", with: "Starbucks"
     end
 
