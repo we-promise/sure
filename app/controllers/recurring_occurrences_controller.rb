@@ -17,6 +17,7 @@ class RecurringOccurrencesController < ApplicationController
     # The amount-nearness list is the fallback, so it must not repeat what the
     # ranked list promoted. The extra fetch keeps it full after subtraction.
     @other_entries = candidate_entries.reject { |entry| ranked_ids.include?(entry.id) }.first(FALLBACK_SHOWN)
+    @remaining_by_entry = RecurringTransaction::Allocator.remaining_by_entry(@ranked_candidates.map(&:first) + @other_entries)
 
     render layout: dialog_layout
   end

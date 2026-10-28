@@ -28,6 +28,9 @@ tr:
       no_candidates: Bağlanabilecek yakın tarihli işlem yok.
       no_search_results: '%{query} ile eşleşen sonuç yok.'
       link_payment: Ödemeyi bağla
+      amount_left: "%{amount} kaldı"
+      used_up: Zaten kullanıldı
+      used_up_hint: Diğer faturalar bu işlemin tutarının tamamını zaten kullanıyor.
       not_this_one: Bu değil
       cant_find: İşlemi bulamıyor musunuz?
       manual_explainer: Burada eşleşen bir işlem olmadığında, yapıldığını bildiğiniz bir ödemeyi kaydedin.
