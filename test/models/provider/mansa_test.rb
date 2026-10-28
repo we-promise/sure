@@ -49,16 +49,15 @@ class Provider::MansaTest < ActiveSupport::TestCase
     assert_equal "NGN", security.currency
   end
 
-  test "search_securities always scopes to NGX even with no MIC given, matching the real controller call" do
-    # Sure's actual trade-form combobox never passes exchange_operating_mic on
-    # search (see app/views/trades/_form.html.erb) — this test calls the
-    # provider exactly that way, which the original PR's only search test
-    # didn't (it passed exchange_operating_mic: "XNSA" explicitly and so
-    # never exercised the real controller -> provider path).
+  test "search_securities searches every exchange when no MIC is given, matching the real controller call" do
+    # Sure's trade-form combobox never passes exchange_operating_mic on search
+    # (see app/views/trades/_form.html.erb).
     body = {
       success: true,
       data: [
-        { ticker: "MTNN", name: "MTN Nigeria Communications Plc", exchange: "NGX", currency: "NGN" }
+        { ticker: "MTNN", name: "MTN Nigeria Communications Plc", exchange: "NGX", currency: "NGN" },
+        { ticker: "MTN", name: "MTN Group Ltd", exchange: "JSE", currency: "ZAR" },
+        { ticker: "MTNZ", name: "MTN Zambia", exchange: "LuSE", currency: "ZMW" }
       ]
     }.to_json
 
@@ -68,20 +67,37 @@ class Provider::MansaTest < ActiveSupport::TestCase
     @provider.stubs(:client).returns(mock_client = mock)
     mock_client.expects(:get).yields(fake_request).returns(mock_response)
 
-    result = @provider.search_securities("MTNN")
+    result = @provider.search_securities("MTN")
 
     assert result.success?
-    # The actual bug: without this, an unscoped search could return matches
-    # from other African exchanges this adapter has no verified MIC for.
-    assert_equal "NGX", fake_request.params["exchange"]
-    assert_equal "XNSA", result.data.first.exchange_operating_mic
+    assert_not fake_request.params.key?("exchange")
+    assert_equal %w[XNSA XJSE XLUS], result.data.map(&:exchange_operating_mic)
+    assert_equal %w[NG ZA ZM], result.data.map(&:country_code)
   end
 
-  test "search_securities returns nothing for an explicit MIC Mansa doesn't cover, rather than guessing NGX" do
-    # A blank MIC (no data to go on) falls back to NGX — but an explicit,
-    # present MIC we can't map (e.g. a caller checking a NYSE-listed security
-    # while Mansa happens to be enabled) must not silently search NGX and
-    # return unrelated results.
+  test "search_securities scopes to the Mansa exchange for an explicit MIC" do
+    body = {
+      success: true,
+      data: [ { ticker: "MTN", name: "MTN Group Ltd", exchange: "JSE", currency: "ZAR" } ]
+    }.to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(body)
+    fake_request = Struct.new(:params).new({})
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).yields(fake_request).returns(mock_response)
+
+    result = @provider.search_securities("MTN", exchange_operating_mic: "XJSE")
+
+    assert result.success?
+    assert_equal "JSE", fake_request.params["exchange"]
+    assert_equal "XJSE", result.data.first.exchange_operating_mic
+  end
+
+  test "search_securities returns nothing for an explicit MIC Mansa doesn't cover" do
+    # An explicit MIC we can't map (e.g. a caller checking a NYSE-listed
+    # security while Mansa happens to be enabled) must not broaden to an
+    # unscoped search and return unrelated results.
     @provider.stubs(:client).returns(mock_client = mock)
     mock_client.expects(:get).never
 
@@ -92,14 +108,12 @@ class Provider::MansaTest < ActiveSupport::TestCase
   end
 
   test "search_securities drops a result on an exchange this adapter can't map to a real MIC" do
-    # Defensive: even though the request above always explicitly scopes to a
-    # single exchange, this proves a stray result from an unmapped exchange
-    # (e.g. Mansa's search broadening the filter) never gets saved with
+    # A result from an exchange Mansa adds later must never get saved with
     # Mansa's own exchange code standing in for a real ISO MIC.
     body = {
       success: true,
       data: [
-        { ticker: "SOMETICKER", name: "Some Johannesburg Company", exchange: "JSE", currency: "ZAR" }
+        { ticker: "SOMETICKER", name: "Some New Exchange Company", exchange: "NEWX", currency: "USD" }
       ]
     }.to_json
 
@@ -108,7 +122,7 @@ class Provider::MansaTest < ActiveSupport::TestCase
     @provider.stubs(:client).returns(mock_client = mock)
     mock_client.stubs(:get).returns(mock_response)
 
-    result = @provider.search_securities("Some Johannesburg Company", exchange_operating_mic: "XNSA")
+    result = @provider.search_securities("Some New Exchange Company")
 
     assert result.success?
     assert_equal [], result.data
@@ -127,6 +141,37 @@ class Provider::MansaTest < ActiveSupport::TestCase
     assert_not result.success?
     assert_instance_of Provider::Mansa::Error, result.error
     assert_match(/does not support exchange XNYS/, result.error.message)
+  end
+
+  test "fetch_security_price requires a MIC rather than guessing an exchange" do
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).never
+
+    result = @provider.fetch_security_price(symbol: "MTNN", exchange_operating_mic: nil, date: Date.current)
+
+    assert_not result.success?
+    assert_match(/requires an exchange/, result.error.message)
+  end
+
+  test "fetch_security_price requests the quote from the security's own Mansa exchange" do
+    body = {
+      success: true,
+      data: { ticker: "ZCCM", name: "ZCCM Investments Holdings", price: 92.5 },
+      meta: { exchange: "LuSE", currency: "ZMW" }
+    }.to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(body)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get)
+      .with("https://mansaapi.com/api/v1/markets/exchanges/LuSE/stocks/ZCCM")
+      .returns(mock_response)
+
+    result = @provider.fetch_security_price(symbol: "ZCCM", exchange_operating_mic: "XLUS", date: Date.current)
+
+    assert result.success?
+    assert_equal "ZMW", result.data.currency
+    assert_equal "XLUS", result.data.exchange_operating_mic
   end
 
   test "fetch_security_price reads currency from meta, not data" do

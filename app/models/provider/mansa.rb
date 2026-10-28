@@ -1,9 +1,10 @@
-# Mansa API (mansaapi.com) — African stock exchange data, including NGX
-# (Nigerian Exchange). Added because none of Sure's existing securities
-# providers cover NGX: TwelveData/YahooFinance don't list it, and EODHD's own
-# MIC-code map in this codebase (see Provider::Eodhd::MIC_TO_EODHD_EXCHANGE)
-# has no XNSA entry despite EODHD's marketing pages listing Nigeria as a
-# covered exchange generally — confirmed absent, not just unconfirmed.
+# Mansa API (mansaapi.com) — African stock exchange data across the 20
+# exchanges Mansa tracks (NGX, JSE, NSE, GSE, BRVM, EGX, ...). Added because
+# none of Sure's existing securities providers cover NGX: TwelveData/
+# YahooFinance don't list it, and EODHD's own MIC-code map in this codebase
+# (see Provider::Eodhd::MIC_TO_EODHD_EXCHANGE) has no XNSA entry despite
+# EODHD's marketing pages listing Nigeria as a covered exchange generally —
+# confirmed absent, not just unconfirmed.
 #
 # Free tier: 100 requests/day, no card required, covers quotes/search/exchange
 # metadata. Per-stock historical OHLCV (the /history endpoint) requires a paid
@@ -43,24 +44,36 @@ class Provider::Mansa < Provider
     0
   end
 
-  # Only NGX is confirmed working end-to-end (this is the exchange the fleet
-  # actually needs). Mansa's API covers 21 African exchanges total — extend
-  # this map once another one is actually verified against a live response,
-  # rather than guessing MIC codes for exchanges nobody has tested here.
+  # ISO 10383 operating MIC => Mansa exchange code, covering every exchange
+  # listed at https://mansamarkets.com/developers. BVMAC has no MIC of its
+  # own; it absorbed the Douala Stock Exchange and trades from Douala, so it
+  # uses that exchange's MIC (XDSX).
   MIC_TO_MANSA_EXCHANGE = {
-    "XNSA" => "NGX"
+    "XNSA" => "NGX",   # Nigeria
+    "XGHA" => "GSE",   # Ghana
+    "XNAI" => "NSE",   # Kenya
+    "XJSE" => "JSE",   # South Africa
+    "XMSW" => "MSE",   # Malawi
+    "RSEX" => "RSE",   # Rwanda
+    "XCAI" => "EGX",   # Egypt
+    "XCAS" => "CSE",   # Morocco
+    "XDSX" => "BVMAC", # Central Africa (CEMAC)
+    "XLUS" => "LuSE",  # Zambia
+    "XUGA" => "USE",   # Uganda
+    "XZIM" => "ZSE",   # Zimbabwe
+    "XMAU" => "SEM",   # Mauritius
+    "XSWA" => "ESE",   # Eswatini
+    "XBVC" => "BVC",   # Cape Verde
+    "XALG" => "SGBV",  # Algeria
+    "XNAM" => "NSX",   # Namibia
+    "XBRV" => "BRVM",  # West Africa (UEMOA)
+    "XDAR" => "DSE",   # Tanzania
+    "XBOT" => "BSE"    # Botswana
   }.freeze
 
-  MANSA_EXCHANGE_TO_MIC = MIC_TO_MANSA_EXCHANGE.invert.freeze
-
-  # The only exchange verified end-to-end (see above). Used to scope any
-  # search/quote request that doesn't specify a MIC we recognize — Sure's own
-  # trade-form combobox never passes exchange_operating_mic on search at all
-  # (see app/views/trades/_form.html.erb), so leaving this unscoped would let
-  # Mansa return matches from other African exchanges this adapter has no
-  # verified MIC mapping for, which would then persist Mansa's own exchange
-  # code (e.g. "JSE") into exchange_operating_mic instead of a real ISO MIC.
-  DEFAULT_MANSA_EXCHANGE = "NGX"
+  # Keyed by upcased code so "LuSE" and "LUSE" both resolve, since Mansa's
+  # docs don't say whether exchange codes in responses are case-normalized.
+  MANSA_EXCHANGE_TO_MIC = MIC_TO_MANSA_EXCHANGE.to_h { |mic, code| [ code.upcase, mic ] }.freeze
 
   def initialize(api_key)
     @api_key = api_key # pipelock:ignore
@@ -99,18 +112,15 @@ class Provider::Mansa < Provider
       enforce_daily_limit!
       throttle_request
 
-      mansa_exchange = MIC_TO_MANSA_EXCHANGE[exchange_operating_mic]
-      # A blank MIC (the real UI's normal case — see DEFAULT_MANSA_EXCHANGE's
-      # comment) falls back to NGX. A *present* MIC that isn't XNSA means the
-      # caller wants a specific exchange Mansa doesn't cover here — searching
-      # NGX anyway would silently return the wrong exchange's results, so
-      # return nothing instead of guessing.
+      # A blank MIC (the trade-form combobox never passes one) searches every
+      # Mansa exchange. A present MIC Mansa doesn't cover returns nothing
+      # rather than broadening the search to unrelated exchanges.
+      mansa_exchange = mansa_exchange_for(exchange_operating_mic)
       next [] if exchange_operating_mic.present? && mansa_exchange.nil?
-      mansa_exchange ||= DEFAULT_MANSA_EXCHANGE
 
       response = client.get("#{base_url}/api/v1/markets/search") do |req|
         req.params["q"] = symbol
-        req.params["exchange"] = mansa_exchange
+        req.params["exchange"] = mansa_exchange if mansa_exchange
         req.params["limit"] = 25
       end
 
@@ -118,14 +128,11 @@ class Provider::Mansa < Provider
       check_api_error!(parsed)
       results = parsed.dig("data") || []
 
-      # Skip anything that doesn't map to a verified real MIC rather than
-      # falling back to Mansa's own exchange code — better to drop a result
-      # than to persist a non-ISO string into exchange_operating_mic. In
-      # practice this shouldn't happen since the request above is always
-      # explicitly scoped to a single exchange, but it's cheap insurance
-      # against Mansa's search ignoring/broadening the exchange filter.
+      # Drop anything on an exchange we can't map to a real MIC (e.g. one
+      # Mansa adds later) rather than persisting Mansa's own exchange code
+      # into exchange_operating_mic.
       results.filter_map do |security|
-        mic = MANSA_EXCHANGE_TO_MIC[security.dig("exchange")]
+        mic = MANSA_EXCHANGE_TO_MIC[security.dig("exchange").to_s.upcase]
         next unless mic
 
         Security.new(
@@ -133,7 +140,7 @@ class Provider::Mansa < Provider
           name: security.dig("name"),
           logo_url: nil,
           exchange_operating_mic: mic,
-          country_code: nil,
+          country_code: ::Security::EXCHANGES.dig(mic, "country"),
           currency: security.dig("currency")
         )
       end
@@ -213,15 +220,14 @@ class Provider::Mansa < Provider
       enforce_daily_limit!
       throttle_request
 
-      mansa_exchange = MIC_TO_MANSA_EXCHANGE[exchange_operating_mic]
-      # Same principle as search_securities: a present-but-unmapped MIC means
-      # don't silently fetch an NGX quote and let the caller mislabel it as
-      # coming from whatever exchange was actually asked for. Only a blank
-      # MIC (no data to go on at all) gets the NGX default.
-      if exchange_operating_mic.present? && mansa_exchange.nil?
-        raise InvalidSecurityPriceError, "Mansa does not support exchange #{exchange_operating_mic}"
+      # Quotes are per-exchange, and the same ticker can list on several
+      # Mansa exchanges, so there's no safe exchange to assume without a MIC.
+      if exchange_operating_mic.blank?
+        raise InvalidSecurityPriceError, "Mansa requires an exchange to fetch a quote for #{symbol}"
       end
-      mansa_exchange ||= DEFAULT_MANSA_EXCHANGE
+
+      mansa_exchange = mansa_exchange_for(exchange_operating_mic)
+      raise InvalidSecurityPriceError, "Mansa does not support exchange #{exchange_operating_mic}" if mansa_exchange.nil?
 
       response = client.get("#{base_url}/api/v1/markets/exchanges/#{mansa_exchange}/stocks/#{CGI.escape(symbol)}")
 
@@ -235,6 +241,10 @@ class Provider::Mansa < Provider
       # endpoint specifically (confirmed live — see class comment). Merge it
       # in so callers can keep reading `quote.dig("currency")` uniformly.
       quote.merge("currency" => parsed.dig("meta", "currency"))
+    end
+
+    def mansa_exchange_for(exchange_operating_mic)
+      MIC_TO_MANSA_EXCHANGE[exchange_operating_mic.to_s.upcase]
     end
 
     def base_url

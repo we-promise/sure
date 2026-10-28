@@ -174,11 +174,11 @@ fr:
         max_items_per_call_help: "Limite supérieure pour les lots d'auto-catégorisation / détection de marchand. Par défaut : 25. Avec les fournisseurs compatibles OpenAI, les lots plus grands sont automatiquement découpés pour tenir dans la fenêtre de contexte."
         max_items_per_call_label: Nombre maximum d'éléments par lot (Optionnel)
       mansa_settings:
-        description: Saisissez la clé API fournie par Mansa API. Couvre le NGX (Bourse du Nigeria), qu'aucun autre fournisseur proposé ici ne prend en charge. Mansa couvre aussi d'autres bourses africaines, mais seul le NGX a été vérifié avec cette intégration.
+        description: Saisissez la clé API fournie par Mansa API. Couvre 20 bourses africaines, dont le NGX (Bourse du Nigeria), la JSE, la NSE (Kenya), la GSE (Ghana) et la BRVM, dont plusieurs ne sont prises en charge par aucun autre fournisseur proposé ici.
         env_configured_message: Configuré avec succès via la variable d'environnement MANSA_API_KEY.
         label: Clé API
         placeholder: Saisissez votre clé API Mansa ici
-        rate_limit_warning: 'L''offre gratuite de Mansa est limitée à 100 appels API par jour et ne fournit que les cotations actuelles : les cours historiques nécessitent un forfait payant. Seul le NGX (Bourse du Nigeria) a été vérifié avec cette intégration ; les autres bourses africaines couvertes par Mansa ne sont pas encore prises en charge ici.'
+        rate_limit_warning: 'L''offre gratuite de Mansa est limitée à 100 appels API par jour et ne fournit que les cotations actuelles : les cours historiques nécessitent un forfait payant.'
         show_details: "(afficher les détails)"
         step_1_html: Rendez-vous sur <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> et obtenez votre clé API gratuite (aucune carte requise).
         step_2: Copiez votre clé API et collez-la ci-dessous.
@@ -241,7 +241,7 @@ fr:
         requires_api_key: nécessite une clé API
         requires_api_key_alpha_vantage: nécessite une clé API, limite de 25 appels/jour
         requires_api_key_eodhd: nécessite une clé API, limite de 20 appels/jour
-        requires_api_key_mansa: nécessite une clé API, offre gratuite de 100 appels/jour (NGX, Bourse du Nigeria, uniquement)
+        requires_api_key_mansa: "nécessite une clé API, offre gratuite de 100 appels/jour (bourses africaines : NGX, JSE, NSE, GSE, BRVM, etc.)"
         securities_description: Activez un ou plusieurs fournisseurs pour récupérer les cours des actions, ETF et fonds communs. Lors d'une recherche, tous les fournisseurs activés sont interrogés et les résultats sont fusionnés.
         securities_title: Fournisseurs de titres
         tinkoff_invest_hint: requiert un jeton en lecture seule -- cours des actions/fonds/obligations russes + logos des marques
