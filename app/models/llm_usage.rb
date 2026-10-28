@@ -121,6 +121,15 @@ class LlmUsage < ApplicationRecord
     },
     # Source: https://platform.claude.com/docs/en/about-claude/pricing
     "anthropic" => {
+      # Claude 5.5 rows checked against the pricing page on 2026-10-28.
+      # Cache hits on Opus 5.5 and Sonnet 5.5 bill at 0.05x the input price (cache_read_multiplier).
+      "claude-opus-5-5" => { prompt: 4.00, completion: 20.00, cache_read_multiplier: 0.05 },
+      "claude-sonnet-5-5" => { prompt: 2.00, completion: 10.00, cache_read_multiplier: 0.05 },
+      # Haiku 5.5 prompts over 100,000 tokens bill at the higher rate for the whole request.
+      "claude-haiku-5-5" => {
+        prompt: 0.10, completion: 0.50,
+        long_context: { threshold: 100_000, prompt: 0.50, completion: 2.50 }
+      },
       "claude-opus-4-7" => { prompt: 5.00, completion: 25.00 },
       "claude-opus-4-6" => { prompt: 5.00, completion: 25.00 },
       "claude-sonnet-4-6" => { prompt: 3.00, completion: 15.00 },
@@ -145,6 +154,7 @@ class LlmUsage < ApplicationRecord
     end
 
     long_context = pricing[:long_context]
+    cache_read_multiplier = pricing.fetch(:cache_read_multiplier, 0.10)
     if apply_long_context_pricing && long_context && prompt_tokens > long_context[:threshold]
       pricing = long_context
     end
@@ -163,7 +173,7 @@ class LlmUsage < ApplicationRecord
     cache_read_cost = 0.0
     if provider == "anthropic"
       cache_creation_cost = (cache_creation_tokens.to_i * pricing[:prompt] * 1.25) / 1_000_000.0
-      cache_read_cost = (cache_read_tokens.to_i * pricing[:prompt] * 0.10) / 1_000_000.0
+      cache_read_cost = (cache_read_tokens.to_i * pricing[:prompt] * cache_read_multiplier) / 1_000_000.0
     end
 
     cost = (prompt_cost + completion_cost + cache_creation_cost + cache_read_cost).round(6)

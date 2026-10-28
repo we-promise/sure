@@ -146,6 +146,42 @@ class LlmUsageTest < ActiveSupport::TestCase
   end
 
   {
+    "claude-opus-5-5" => [ 4.0, 20.0 ],
+    "claude-sonnet-5-5" => [ 2.0, 10.0 ]
+  }.each do |model, (input, output)|
+    test "calculate_cost prices #{model} at its published rates" do
+      cost = LlmUsage.calculate_cost(model: model, prompt_tokens: 1_000_000, completion_tokens: 100_000)
+
+      assert_in_delta input + output * 0.1, cost, 0.000001
+    end
+  end
+
+  %w[claude-opus-5-5 claude-sonnet-5-5].each do |model|
+    test "calculate_cost bills #{model} cache hits at 0.05x the input rate" do
+      input = LlmUsage.find_pricing("anthropic", model)[:prompt]
+      read = LlmUsage.calculate_cost(model: model, prompt_tokens: 0, completion_tokens: 0, cache_read_tokens: 1_000_000)
+      write = LlmUsage.calculate_cost(model: model, prompt_tokens: 0, completion_tokens: 0, cache_creation_tokens: 1_000_000)
+
+      assert_in_delta input * 0.05, read, 0.000001
+      assert_in_delta input * 1.25, write, 0.000001
+    end
+  end
+
+  test "calculate_cost keeps cache hits at 0.1x for Claude models without a cache multiplier" do
+    read = LlmUsage.calculate_cost(model: "claude-haiku-5-5", prompt_tokens: 0, completion_tokens: 0, cache_read_tokens: 1_000_000)
+
+    assert_in_delta 0.01, read, 0.000001
+  end
+
+  test "calculate_cost applies Haiku 5.5's higher rate to prompts over 100,000 tokens" do
+    short = LlmUsage.calculate_cost(model: "claude-haiku-5-5", prompt_tokens: 100_000, completion_tokens: 10_000)
+    long = LlmUsage.calculate_cost(model: "claude-haiku-5-5", prompt_tokens: 100_001, completion_tokens: 10_000)
+
+    assert_in_delta 0.015, short, 0.000001
+    assert_in_delta 0.0750005, long, 0.000001
+  end
+
+  {
     "gpt-5.6-sol" => [ 6.0, 11.0 ],
     "gpt-5.6-terra" => [ 3.2, 5.8 ],
     "gpt-5.6-luna" => [ 0.32, 0.58 ],

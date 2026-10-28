@@ -1148,7 +1148,7 @@ Rates are USD per million tokens at the Standard tier. The source coverage is:
 | GPT-5.2/5.1 Chat aliases | [GPT-5.2 Chat](https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest), [GPT-5.1 Chat](https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest) |
 | o1-mini | [o1-mini](https://developers.openai.com/api/docs/models/o1-mini) |
 | Gemini 4 Argon, 3.8/3.7/3.6/3.5 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro, 3 Flash, 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
-| Claude Opus 4.6/4.7, Sonnet 4.5/4.6, Haiku 4.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
+| Claude Opus 5.5, Sonnet 5.5, Haiku 5.5, Opus 4.6/4.7, Sonnet 4.5/4.6, Haiku 4.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
 
 #### Dated pricing changes
 
@@ -1160,6 +1160,9 @@ Rates are USD per million tokens at the Standard tier. The source coverage is:
 | GPT-5.6 Sol | $4 / $20 | August 21, 2026: price reduction; promotion available at least through November 21, 2026 |
 | GPT-5.6 Terra | $2 / $12 | July 30, 2026: price reduction |
 | GPT-5.6 Luna | $0.20 / $1.20 | July 30, 2026: price reduction |
+| Claude Opus 5.5 | $4 / $20 | October 28, 2026: rates read from the pricing page; cache hits at 0.05x the input price |
+| Claude Sonnet 5.5 | $2 / $10 | October 28, 2026: rates read from the pricing page; cache hits at 0.05x the input price |
+| Claude Haiku 5.5 | $0.10 / $0.50 | October 28, 2026: rates read from the pricing page; $0.50 / $2.50 for prompts over 100,000 tokens |
 | Claude Opus 4.7 | $5 / $25 | April 16, 2026: published launch rate; corrects Sure's erroneous $15 / $75 |
 | Claude Opus 4.6 | $5 / $25 | February 5, 2026: published base launch rate; corrects Sure's erroneous $15 / $75 |
 
@@ -1186,6 +1189,8 @@ $4.00 / $18.00 above 200,000 input tokens. Gemini 3.8 Flash, 3.7 Flash, and
 Gemini 3.5 Flash is $1.50 / $9.00, Gemini 3.5 Flash-Lite is $0.30 / $2.50,
 Gemini 3.1 Flash-Lite is $0.25 / $1.50, Gemini 3 Flash is $0.50 / $3.00,
 and Gemini 2.5 Flash remains $0.30 / $2.50.
+Claude Haiku 5.5 is $0.10 / $0.50, rising to $0.50 / $2.50 for prompts over
+100,000 input tokens. Claude Opus 5.5 ($4 / $20) and Sonnet 5.5 ($2 / $10) and
 Claude 4.6/4.7 use standard rates throughout their context window.
 
 Sure estimates individual requests using these tiers. Aggregate categorization
