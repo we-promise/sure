@@ -455,6 +455,7 @@ class BillsHelperTest < ActionView::TestCase
   end
 
   test "a pay period total converts each bill into the family currency and leaves out one with no rate" do
+    ExchangeRate.stubs(:provider).returns(nil)
     period = OpenStruct.new(starts_on: Date.new(2026, 10, 26), ends_on: Date.new(2026, 11, 20))
     rent = stub_occurrence("Rent", 900, id: "rent", due_on: Date.new(2026, 10, 28))
     gym = stub_occurrence("Gym", 40, id: "gym", due_on: Date.new(2026, 11, 2), currency: "EUR")
