@@ -39,6 +39,29 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
     end
   end
 
+  test "keeps an already imported account that reports no balance" do
+    @plaid_item.plaid_accounts.create!(
+      plaid_id: "card",
+      name: "Card",
+      plaid_type: "credit",
+      currency: "USD",
+      current_balance: 120.5
+    )
+    card = OpenStruct.new(
+      account_id: "card",
+      type: "credit",
+      subtype: "credit card",
+      balances: OpenStruct.new(current: nil, available: nil)
+    )
+    @plaid_provider.expects(:get_item_accounts).with(@plaid_item.access_token).returns(
+      OpenStruct.new(accounts: [ card ])
+    ).once
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_equal [ "card" ], @snapshot.accounts.map(&:account_id)
+    end
+  end
+
   test "fetches transactions data if item supports transactions and any accounts present" do
     @plaid_item.update!(available_products: [ "transactions" ], billed_products: [])
 
@@ -216,8 +239,8 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
   end
 
   test "skips liabilities the institution does not support without failing the sync" do
-    # A Credit Card link asks for liabilities only if supported, and Link records
-    # the consent even when the issuer lacks it (e.g. Bilt Rewards).
+    # A Credit Card link asks for liabilities as an optional product, and Link
+    # records the consent even when the issuer lacks it (e.g. Bilt Rewards).
     @plaid_item.update!(
       available_products: [],
       billed_products: [ "transactions" ],
@@ -242,8 +265,10 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
       Plaid::ApiError.new(code: 400, response_body: { "error_code" => "PRODUCTS_NOT_SUPPORTED" }.to_json)
     ).once
 
-    assert_nil @snapshot.get_account_data("123").liabilities_data
-    assert_nil @snapshot.get_account_data("456").liabilities_data
+    assert_difference -> { DebugLogEntry.where(source: "PlaidItem::AccountsSnapshot").count }, 1 do
+      assert_nil @snapshot.get_account_data("123").liabilities_data
+      assert_nil @snapshot.get_account_data("456").liabilities_data
+    end
   end
 
   test "still raises other liabilities errors" do

@@ -10,13 +10,20 @@ class PlaidItem::AccountsSnapshot
   # Plaid reports no balance at all for some payment-only accounts, such as
   # limited purpose or bill pay accounts that the user can't deselect in Link.
   # PlaidAccount requires a balance and there is nothing to show for them, so
-  # they are left out instead of failing the whole item import.
+  # new ones are left out instead of failing the whole item import. Accounts
+  # already imported stay in: a missing balance there still fails the sync
+  # rather than leaving the stored balance and transactions silently stale.
   def accounts
-    @accounts ||= plaid_provider.get_item_accounts(plaid_item.access_token).accounts.select do |account|
-      next true if account.balances&.current.present? || account.balances&.available.present?
+    @accounts ||= begin
+      imported = plaid_item.plaid_accounts.pluck(:plaid_id)
 
-      log_account_without_balance(account)
-      false
+      plaid_provider.get_item_accounts(plaid_item.access_token).accounts.select do |account|
+        next true if imported.include?(account.account_id)
+        next true if account.balances&.current.present? || account.balances&.available.present?
+
+        log_account_without_balance(account)
+        false
+      end
     end
   end
 
@@ -120,11 +127,12 @@ class PlaidItem::AccountsSnapshot
 
       @liabilities_data = plaid_provider.get_item_liabilities(plaid_item.access_token)
     rescue Plaid::ApiError => e
-      # Credit card links ask for liabilities only if the issuer supports them,
-      # but Link records the consent either way, so consent alone can't gate
-      # this call. Skip the optional data instead of failing the whole sync.
+      # Credit card links ask for liabilities as an optional product, and Link
+      # records the consent even when the issuer lacks it, so consent alone
+      # can't gate this call. Skip the data instead of failing the whole sync.
       raise unless products_not_supported?(e)
 
+      log_liabilities_not_supported
       @liabilities_data = nil
     end
 
@@ -141,6 +149,21 @@ class PlaidItem::AccountsSnapshot
           plaid_account_id: account.account_id,
           type: account.type,
           subtype: account.subtype
+        }
+      )
+    end
+
+    def log_liabilities_not_supported
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "info",
+        message: "Plaid liabilities not supported by the institution",
+        source: self.class.name,
+        provider_key: "plaid",
+        family: plaid_item.family,
+        metadata: {
+          plaid_item_id: plaid_item.id,
+          institution_id: plaid_item.institution_id
         }
       )
     end
