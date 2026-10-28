@@ -104,6 +104,7 @@ fr:
         account_type_cash: "Compte espèces"
         account_type_crypto: "Compte crypto"
         title: Compte disponible
+        account_type_crypto: Compte crypto
       buttons:
         back_to_settings: Retour aux paramètres
         create_selected_accounts: Créer les comptes sélectionnés
