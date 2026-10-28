@@ -26,7 +26,7 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
 
     get root_path
     assert_response :success
-    assert_select "#cashflow-sankey-chart + #cashflow-preview", count: 1
+    assert_select "#cashflow-sankey-chart + form[action='#{dashboard_preferences_path}'] + #cashflow-preview", count: 1
     assert_select "#cashflow-preview[data-sankey-preview-sure-version-value=?]", Rails.root.join(".sure-version").read.strip
     assert_select "#cashflow-preview [data-controller='preview-sankey-chart']", count: 2
     assert_select "#cashflow-preview [data-cash-flow-url-value*='/dashboard/cash_flow?']", count: 1
