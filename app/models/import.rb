@@ -701,6 +701,13 @@ class Import < ApplicationRecord
       # First, normalize spaces and remove any characters that aren't numbers, delimiters, separators, or minus signs
       sanitized = value.to_s.strip
 
+      # Accounting notation, "(1,234.56)" or "($1,234.56)", means a negative amount
+      negative = false
+      if (wrapped = sanitized.match(/\A[^\d()\-]*\(([^()]*)\)[^\d()\-]*\z/))
+        negative = true
+        sanitized = wrapped[1].strip
+      end
+
       # Handle French/Scandinavian format specially
       if format[:delimiter] == " "
         # The thousands "space" can be an ASCII space, a non-breaking space
@@ -735,6 +742,8 @@ class Import < ApplicationRecord
       unless sanitized =~ /\A-?\d+\.?\d*\z/
         return ""
       end
+
+      sanitized = "-#{sanitized}" if negative && !sanitized.start_with?("-") && !sanitized.to_d.zero?
 
       sanitized
     end
