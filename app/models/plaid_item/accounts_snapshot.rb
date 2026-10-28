@@ -7,8 +7,17 @@ class PlaidItem::AccountsSnapshot
     @plaid_provider = plaid_provider
   end
 
+  # Plaid reports no balance at all for some payment-only accounts, such as
+  # limited purpose or bill pay accounts that the user can't deselect in Link.
+  # PlaidAccount requires a balance and there is nothing to show for them, so
+  # they are left out instead of failing the whole item import.
   def accounts
-    @accounts ||= plaid_provider.get_item_accounts(plaid_item.access_token).accounts
+    @accounts ||= plaid_provider.get_item_accounts(plaid_item.access_token).accounts.select do |account|
+      next true if account.balances&.current.present? || account.balances&.available.present?
+
+      log_account_without_balance(account)
+      false
+    end
   end
 
   def get_account_data(account_id)
@@ -117,6 +126,23 @@ class PlaidItem::AccountsSnapshot
       raise unless products_not_supported?(e)
 
       @liabilities_data = nil
+    end
+
+    def log_account_without_balance(account)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "info",
+        message: "Skipped Plaid account without a balance",
+        source: self.class.name,
+        provider_key: "plaid",
+        family: plaid_item.family,
+        metadata: {
+          plaid_item_id: plaid_item.id,
+          plaid_account_id: account.account_id,
+          type: account.type,
+          subtype: account.subtype
+        }
+      )
     end
 
     def products_not_supported?(error)

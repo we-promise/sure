@@ -16,6 +16,29 @@ class PlaidItem::AccountsSnapshotTest < ActiveSupport::TestCase
     @snapshot.accounts
   end
 
+  test "leaves out accounts that report no balance" do
+    card = OpenStruct.new(
+      account_id: "card",
+      type: "credit",
+      subtype: "credit card",
+      balances: OpenStruct.new(current: 120.5, available: nil)
+    )
+    bill_pay = OpenStruct.new(
+      account_id: "bill_pay",
+      type: "depository",
+      subtype: "checking",
+      balances: OpenStruct.new(current: nil, available: nil)
+    )
+    @plaid_provider.expects(:get_item_accounts).with(@plaid_item.access_token).returns(
+      OpenStruct.new(accounts: [ card, bill_pay ])
+    ).once
+
+    assert_difference -> { DebugLogEntry.where(source: "PlaidItem::AccountsSnapshot").count }, 1 do
+      assert_equal [ "card" ], @snapshot.accounts.map(&:account_id)
+      assert_equal [ "card" ], @snapshot.accounts.map(&:account_id)
+    end
+  end
+
   test "fetches transactions data if item supports transactions and any accounts present" do
     @plaid_item.update!(available_products: [ "transactions" ], billed_products: [])
 
