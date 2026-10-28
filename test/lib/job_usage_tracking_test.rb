@@ -1,10 +1,10 @@
 require "test_helper"
-require Rails.root.join("lib/daily_job_usage_tracking")
+require Rails.root.join("lib/job_usage_tracking")
 
-class DailyJobUsageTrackingTest < ActiveSupport::TestCase
+class JobUsageTrackingTest < ActiveSupport::TestCase
   test "server execution captures without forwarding job metadata and preserves return value" do
     Usage.expects(:capture).with("job_served_daily").once
-    result = DailyJobUsageTracking.new.call(Object.new, { "class" => "PrivateJob", "args" => [ "private" ] }, "private_queue") { :done }
+    result = JobUsageTracking.new.call(Object.new, { "class" => "PrivateJob", "args" => [ "private" ] }, "private_queue") { :done }
     assert_equal :done, result
   end
 
@@ -12,7 +12,7 @@ class DailyJobUsageTrackingTest < ActiveSupport::TestCase
     Usage.expects(:capture).with("job_served_daily").twice
     2.times do
       assert_raises(ArgumentError) do
-        DailyJobUsageTracking.new.call(nil, {}, nil) { raise ArgumentError, "job failed" }
+        JobUsageTracking.new.call(nil, {}, nil) { raise ArgumentError, "job failed" }
       end
     end
   end

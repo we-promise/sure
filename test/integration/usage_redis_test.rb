@@ -13,7 +13,7 @@ class UsageRedisTest < ActiveSupport::TestCase
     Rails.configuration.x.posthog.stubs(:feedback_enabled).returns(true)
     secret = SecureRandom.hex(32)
     Rails.application.key_generator.stubs(:generate_key).with("daily-installation-usage").returns(secret)
-    results_key = "daily-usage-test:#{SecureRandom.hex(16)}"
+    results_key = "usage-test:#{SecureRandom.hex(16)}"
     daily_id = OpenSSL::HMAC.hexdigest("SHA256", secret, "2031-01-01")
     expected_events = %w[ai_assistant_served_daily job_served_daily mcp_call_served_daily]
     claim_keys = expected_events.map { |event| "daily-installation-usage:#{event}:#{daily_id}" }
@@ -28,7 +28,7 @@ class UsageRedisTest < ActiveSupport::TestCase
         writer.close
         reader.read(1)
         10.times do
-          DailyJobUsageTracking.new.call(nil, {}, nil) { true }
+          JobUsageTracking.new.call(nil, {}, nil) { true }
           Usage.capture("ai_assistant_served_daily")
           Usage.capture("mcp_call_served_daily")
         end

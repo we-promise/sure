@@ -1,4 +1,4 @@
-module DailyWebUsageTracking
+module WebUsageTracking
   extend ActiveSupport::Concern
 
   included do
