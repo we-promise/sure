@@ -5,7 +5,7 @@ module TransactionsHelper
   # @return [Array<Hash>] the filters offered above the transaction list, each
   #   with the key its partial is named for, a translated label and an icon
   def transaction_search_filters(exclude: [])
-    [
+    filters = [
       { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },
       { key: "date_filter", label: t("transactions.search.filters.date"), icon: "calendar" },
       { key: "type_filter", label: t("transactions.search.filters.type"), icon: "tag" },
@@ -16,7 +16,13 @@ module TransactionsHelper
       { key: "merchant_filter", label: t("transactions.search.filters.merchant"), icon: "store" },
       { key: "ai_filter", label: t("transactions.search.filters.ai"), icon: "sparkles" },
       { key: "attachment_filter", label: t("transactions.search.filters.attachment"), icon: "paperclip" }
-    ].reject { |filter| exclude.include?(filter[:key]) }
+    ]
+
+    if Current.family&.manual_reconciliation?
+      filters.insert(4, { key: "reconcile_status_filter", label: t("transactions.search.filters.reconcile_status"), icon: "check-circle" })
+    end
+
+    filters.reject { |filter| exclude.include?(filter[:key]) }
   end
 
   # @param label [String] a stored investment_activity_label such as "Sweep In"
@@ -61,6 +67,30 @@ module TransactionsHelper
     entry.split_child? && Current.user.show_split_grouped? && params_grouped == "true"
   end
 
+  # Single source of truth for how each reconciled_status renders — used by
+  # both the transaction row/detail badge (_reconcile_badge.html.erb) and the
+  # bulk-reconcile selection-bar menu (_selection_bar.html.erb), so the two
+  # can't silently drift out of sync.
+  RECONCILE_STATUS_PRESENTATION = {
+    "unreconciled" => { tone: :neutral, icon: "circle", text_class: "text-secondary" },
+    "cleared" => { tone: :warning, icon: "circle-dot", text_class: "text-warning" },
+    "reconciled" => { tone: :success, icon: "check-circle", text_class: "text-success" }
+  }.freeze
+
+  def reconcile_status_tone(status)
+    RECONCILE_STATUS_PRESENTATION.fetch(status, RECONCILE_STATUS_PRESENTATION["unreconciled"])[:tone]
+  end
+
+  def reconcile_status_icon(status)
+    RECONCILE_STATUS_PRESENTATION.fetch(status, RECONCILE_STATUS_PRESENTATION["unreconciled"])[:icon]
+  end
+
+  # Foreground token for the compact, icon-only indicator rendered in the
+  # transaction list row, where there is no room for a labelled pill.
+  def reconcile_status_text_class(status)
+    RECONCILE_STATUS_PRESENTATION.fetch(status, RECONCILE_STATUS_PRESENTATION["unreconciled"])[:text_class]
+  end
+
   # Whether the current user may annotate (e.g. re-tag) entries on this
   # account. Memoized per request so list rows don't query per row.
   def can_annotate_account?(account)
@@ -68,6 +98,20 @@ module TransactionsHelper
 
     @annotatable_account_ids ||= Account.annotatable_by(Current.user).pluck(:id).to_set
     @annotatable_account_ids.include?(account.id)
+  end
+
+  # Whether the current user may cycle the manual reconciliation status.
+  # TransactionsController#reconcile requires write access (see
+  # require_account_permission! in AccountAuthorizable), so the badge must
+  # only be offered on accounts the user owns or holds full_control on --
+  # otherwise the click is rejected and the status never advances. Matches
+  # the "write" predicate rather than the annotate one, since reconciling is
+  # not an annotation. Memoized per request so list rows don't query per row.
+  def can_reconcile_account?(account)
+    return false unless Current.user
+
+    @reconcilable_account_ids ||= Account.writable_by(Current.user).pluck(:id).to_set
+    @reconcilable_account_ids.include?(account.id)
   end
 
   # ---- Transaction extra details helpers ----

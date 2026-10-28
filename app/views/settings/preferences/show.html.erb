@@ -27,6 +27,29 @@
     <% end %>
   </div>
 <% end %>
+<% if Current.user.admin? && preview_features_enabled? %>
+  <%= settings_section title: t(".transactions_title"), subtitle: t(".transactions_subtitle") do %>
+    <div>
+      <%= styled_form_with model: @user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
+        <%= form.hidden_field :redirect_to, value: "preferences" %>
+        <%= form.fields_for :family do |family_form| %>
+          <div class="flex items-center justify-between gap-4">
+            <div class="space-y-1">
+              <p class="text-sm flex items-center gap-1.5" id="manual_reconciliation_label">
+                <%= t(".manual_reconciliation") %>
+                <%= render DS::Pill.new(label: t("shared.preview"), size: :sm) %>
+              </p>
+              <p class="text-secondary text-sm"><%= t(".manual_reconciliation_hint") %></p>
+            </div>
+            <%= family_form.toggle :manual_reconciliation,
+                "aria-labelledby": "manual_reconciliation_label",
+                data: { auto_submit_form_target: "auto" } %>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
 <%= settings_section title: t(".budget_title"), subtitle: t(".budget_subtitle") do %>
   <div>
     <%= styled_form_with model: @user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
