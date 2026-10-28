@@ -1,6 +1,9 @@
 require "test_helper"
 
 class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+  include ActionView::RecordIdentifier
+
   setup do
     sign_in users(:family_admin)
     @entry = entries(:transaction)
@@ -108,6 +111,38 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal category, outflow.reload.category
   end
 
+  test "refreshes the read-only investment inflow when a contribution outflow's category changes" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    patch_category(outflow_entry, categories(:income))
+
+    assert_counterpart_streams(inflow_entry.transaction, categories(:income))
+  end
+
+  test "refreshes the read-only investment outflow when a withdrawal's cash leg category changes" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    patch_category(inflow_entry, categories(:income))
+
+    assert_equal categories(:income), inflow_entry.transaction.reload.category
+    assert_counterpart_streams(outflow_entry.transaction, categories(:income))
+  end
+
+  test "refuses a category on the investment outflow of a withdrawal" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    patch_category(outflow_entry, categories(:income))
+
+    assert_response :unprocessable_entity
+    assert_nil outflow_entry.transaction.reload.category
+  end
+
   private
     def create_contribution_transfer
       outflow = Transaction.create!(kind: "investment_contribution")
@@ -116,5 +151,19 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
       Entry.create!(account: accounts(:investment), entryable: inflow, name: "Contribution", amount: -500, currency: "USD", date: Date.current)
       Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
       [ outflow, inflow ]
+    end
+    def patch_category(entry, category)
+      patch transaction_category_url(entry),
+        params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: entry.transaction.id, category_id: category.id } } },
+        as: :turbo_stream
+    end
+
+    def assert_counterpart_streams(counterpart, category)
+      assert_response :success
+      [ dom_id(counterpart, "category_menu_desktop"), dom_id(counterpart, "category_menu_mobile"), "category_name_mobile_#{counterpart.id}" ].each do |target|
+        stream = response.body[/<turbo-stream action="replace" target="#{target}">.*?<\/turbo-stream>/m]
+        assert stream, "expected a replacement for #{target}"
+        assert_includes stream, category.name
+      end
     end
 end

@@ -9,6 +9,126 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:transaction)
   end
 
+  test "clearing a withdrawal's cash leg category refreshes the read-only investment outflow" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement", category: categories(:income))
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    patch transaction_url(inflow_entry),
+      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: inflow_entry.transaction.id, category_id: nil } } },
+      as: :turbo_stream
+
+    assert_response :success
+    assert_nil inflow_entry.transaction.reload.category
+    stream = response.body[/<turbo-stream action="replace" target="#{dom_id(outflow_entry.transaction, "category_menu_desktop")}">.*?<\/turbo-stream>/m]
+    assert stream, "expected a replacement for the outflow's category menu"
+    assert_not_includes stream, categories(:income).name
+  end
+
+  test "the transactions list shows the cash leg of an investment withdrawal, with its category picker" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(inflow_entry.transaction, "category_menu_desktop")} turbo-frame#category_dropdown", count: 1
+    assert_select "##{dom_id(outflow_entry.transaction, "category_menu_desktop")}", count: 0
+    assert_select "turbo-frame##{dom_id(inflow_entry)} p", text: /\+\/-/
+    assert_select "turbo-frame##{dom_id(inflow_entry)} p.text-green-600", count: 0
+  end
+
+  test "the transactions list shows a withdrawal once, on its cash leg's date" do
+    outflow_entry = create_transaction(date: 3.days.ago.to_date, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "#entry-group-#{Date.current} turbo-frame##{dom_id(inflow_entry)}", count: 1
+    assert_select "turbo-frame##{dom_id(outflow_entry)}", count: 0
+  end
+
+  test "the transactions list shows a pending withdrawal's outflow with the cash leg's category read-only" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, category: categories(:income))
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    get transactions_url
+
+    assert_response :success
+    # Its desktop column shows the investment activity label, as for any
+    # non-transfer row on an investment account; the mobile cell shows the category.
+    assert_select "##{dom_id(outflow_entry.transaction, "category_menu_mobile")}", text: /#{categories(:income).name}/
+    assert_select "##{dom_id(outflow_entry.transaction, "category_menu_mobile")} turbo-frame#category_dropdown", count: 0
+    assert_select "turbo-frame##{dom_id(inflow_entry)}", count: 0
+  end
+
+  test "the transactions list keeps the outflow of a withdrawal whose cash leg has a stale kind" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+    inflow_entry.transaction.update_column(:kind, "standard")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(outflow_entry.transaction, "category_menu_desktop")}", count: 1
+    assert_select "##{dom_id(inflow_entry.transaction, "category_menu_desktop")}", count: 0
+  end
+
+  test "the transactions list keeps the outflow of a withdrawal whose investment leg has a stale kind" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+    outflow_entry.transaction.update_column(:kind, "standard")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(outflow_entry)}", count: 1
+    assert_select "turbo-frame##{dom_id(inflow_entry)}", count: 0
+  end
+
+  test "the transactions list keeps the outflow of a pending withdrawal with mixed kinds" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(outflow_entry)}", count: 1
+    assert_select "turbo-frame##{dom_id(inflow_entry)}", count: 0
+  end
+
+  test "the transactions list keeps showing the outflow of an investment contribution" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(outflow_entry.transaction, "category_menu_desktop")}", count: 1
+    assert_select "##{dom_id(inflow_entry.transaction, "category_menu_desktop")}", count: 0
+  end
+
+  test "ignores a category sent for the investment outflow of a withdrawal" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    patch transaction_url(outflow_entry),
+      params: { entry: { entryable_type: "Transaction", entryable_attributes: { id: outflow_entry.transaction.id, category_id: categories(:income).id } } },
+      as: :turbo_stream
+
+    assert_response :success
+    assert_nil outflow_entry.transaction.reload.category
+  end
+
   # Bills has always linked out to transactions. Until now nothing linked back,
   # so a transaction that settled a bill was a dead end. The link-back is part
   # of the preview-gated bills surface, so the viewer needs the flag.
@@ -2246,7 +2366,7 @@ end
     assert_response :success
     assert_select "button#category_id_trigger[disabled]", text: /#{categories(:income).name}/
     assert_select "input[type=hidden][name='entry[entryable_attributes][category_id]'][disabled]"
-    assert_match I18n.t("transactions.show.category_set_on_outflow"), response.body
+    assert_match I18n.t("transactions.show.category_set_on_counterpart"), response.body
   end
 
   test "does not offer guests to create a rule through a transaction update" do

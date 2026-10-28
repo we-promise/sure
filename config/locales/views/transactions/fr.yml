@@ -300,8 +300,8 @@ fr:
       applied_to_unreviewed: À vérifier
       attachments: Pièces jointes
       category_label: Catégorie
-      category_set_on_hidden_outflow: Ceci est le côté entrant d'un transfert. Sa catégorie appartient au côté sortant, sur un compte auquel vous n'avez pas accès, et ne peut être modifiée que là.
-      category_set_on_outflow: Ceci est le côté entrant d'un transfert. Sa catégorie appartient au côté sortant et ne peut être modifiée que là, pour que les budgets ne la comptent qu'une fois.
+      category_set_on_hidden_counterpart: La catégorie appartient à l'autre côté de ce transfert, sur un compte auquel vous n'avez pas accès, et ne peut être modifiée que là.
+      category_set_on_counterpart: La catégorie appartient à l'autre côté de ce transfert et ne peut être modifiée que là.
       convert: Convertir
       convert_to_trade_button: Convertir en transaction boursière
       convert_to_trade_description: Convertissez cette transaction en une transaction boursière d'achat ou de vente avec les détails du titre pour le suivi du portefeuille.
@@ -388,7 +388,7 @@ fr:
       split_child_tooltip: Partie d'une transaction fractionnée
       split_tooltip: Cette transaction a été fractionnée en plusieurs entrées
     transaction_category:
-      set_on_outflow: La catégorie appartient au côté sortant de ce transfert et ne peut être modifiée que là
+      set_on_counterpart: La catégorie appartient à l'autre côté de ce transfert et ne peut être modifiée que là
     transfer_match:
       auto_matched: Correspondance automatique
       auto_matched_short: C/A

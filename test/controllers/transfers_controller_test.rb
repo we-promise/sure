@@ -594,6 +594,32 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ tag.id ], JSON.parse(response.body)["tag_ids"]
   end
 
+  test "the transfer drawer sets and locks a contribution's category on its outflow" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "investment_contribution")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: -500, kind: "funds_movement")
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    patch transfer_url(transfer), params: { transfer: { category_id: categories(:food_and_drink).id } }
+
+    outflow = outflow_entry.transaction.reload
+    assert_equal categories(:food_and_drink), outflow.category
+    assert outflow.locked?(:category_id)
+    assert_nil inflow_entry.transaction.reload.category
+  end
+
+  test "the transfer drawer sets and locks a withdrawal's category on its cash inflow" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    patch transfer_url(transfer), params: { transfer: { category_id: categories(:income).id } }
+
+    inflow = inflow_entry.transaction.reload
+    assert_equal categories(:income), inflow.category
+    assert inflow.locked?(:category_id)
+    assert_nil outflow_entry.transaction.reload.category
+  end
+
   test "update transfer tags ignores tags from other families" do
     transfer = transfers(:one)
     family_tag = tags(:one)
@@ -817,6 +843,34 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, %(action="redirect")
     assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+  end
+
+  test "confirming an investment withdrawal reloads the page so the list shows its cash leg" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500)
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    patch transfer_url(transfer),
+          params: { transfer: { status: "confirmed" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html", "Referer" => transactions_url }
+
+    assert_response :success
+    assert_includes response.body, %(action="redirect")
+    assert transfer.reload.confirmed?
+  end
+
+  test "confirming a plain transfer updates its rows in place" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:connected), amount: -500)
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
+
+    patch transfer_url(transfer),
+          params: { transfer: { status: "confirmed" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html", "Referer" => transactions_url }
+
+    assert_response :success
+    assert_not_includes response.body, %(action="redirect")
+    assert transfer.reload.confirmed?
   end
 
   test "turning the investment contribution back on restores it" do
