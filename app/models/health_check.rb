@@ -21,8 +21,27 @@ class HealthCheck
   # Its message is published as-is, so raise it only with a literal reason.
   class Failure < StandardError; end
 
-  def self.errors
-    new.errors
+  @threads = {}
+  @threads_lock = Mutex.new
+
+  class << self
+    def errors
+      new.errors
+    end
+
+    # A check whose earlier run is still going is joined again rather than
+    # started twice, so a hung dependency ties up one thread (and at most one
+    # database connection) per process however often /health is polled.
+    def thread_for(name)
+      @threads_lock.synchronize do
+        @threads[name] = yield unless @threads[name]&.alive?
+        @threads[name]
+      end
+    end
+
+    def reset
+      @threads_lock.synchronize { @threads.clear }
+    end
   end
 
   def initialize(timeout: TIMEOUT)
@@ -31,9 +50,11 @@ class HealthCheck
 
   # Runs every check in parallel and returns "<component>: <reason>" strings.
   # A check still running at the deadline is reported as a timeout and left to
-  # finish in the background.
+  # finish in the background, where the next request can pick it up.
   def errors
-    threads = CHECKS.to_h { |name, check| [ name, Thread.new { run(name, check) } ] }
+    threads = CHECKS.to_h do |name, check|
+      [ name, self.class.thread_for(name) { Thread.new { run(name, check) } } ]
+    end
     deadline = monotonic_now + @timeout
 
     threads.filter_map do |name, thread|
@@ -56,8 +77,15 @@ class HealthCheck
       "#{name}: check failed"
     end
 
+    # The deadline only stops waiting; the statement timeout makes Postgres
+    # cancel a slow query so its connection goes back to the pool.
     def check_db
-      ActiveRecord::Base.connection_pool.with_connection { |connection| connection.select_value("SELECT 1") }
+      ActiveRecord::Base.connection_pool.with_connection do |connection|
+        connection.transaction do
+          connection.execute("SET LOCAL statement_timeout = #{(@timeout * 1000).round}")
+          connection.select_value("SELECT 1")
+        end
+      end
     end
 
     def check_redis

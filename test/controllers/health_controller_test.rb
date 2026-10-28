@@ -3,6 +3,7 @@ require "test_helper"
 class HealthControllerTest < ActionDispatch::IntegrationTest
   setup do
     stub_healthy_sidekiq
+    HealthCheck.reset
   end
 
   test "reports no errors when every dependency is healthy" do
