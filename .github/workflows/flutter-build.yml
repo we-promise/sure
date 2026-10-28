@@ -41,7 +41,13 @@ jobs:
       - name: Resolve app version
         shell: bash
         run: |
-          version="$(tr -d '[:space:]' < .sure-version)"
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(sed -n 's/^version: *//p' mobile/pubspec.yaml)"
+            version="${version%%+*}"
+          fi
+          printf '%s\n' "$version" > .sure-version
           echo "SURE_BUILD_NAME=${version%%-*}" >> "$GITHUB_ENV"
 
       - name: Get dependencies
@@ -144,7 +150,13 @@ jobs:
       - name: Resolve app version
         shell: bash
         run: |
-          version="$(tr -d '[:space:]' < .sure-version)"
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(sed -n 's/^version: *//p' mobile/pubspec.yaml)"
+            version="${version%%+*}"
+          fi
+          printf '%s\n' "$version" > .sure-version
           echo "SURE_BUILD_NAME=${version%%-*}" >> "$GITHUB_ENV"
 
       - name: Get dependencies

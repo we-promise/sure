@@ -28,20 +28,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Read the canonical version from .sure-version (single source of truth)
-          APP_SEMVER=$(cat .sure-version | tr -d '[:space:]')
+          # Chart-only releases explicitly select an existing app image in Chart.yaml.
+          APP_SEMVER=$(sed -n 's/^appVersion: "\{0,1\}\([^" ]*\)"\{0,1\}/\1/p' charts/sure/Chart.yaml)
           if [ -z "$APP_SEMVER" ]; then
-            echo "::error::Could not read version from .sure-version"
+            echo "::error::Could not read version from charts/sure/Chart.yaml appVersion"
             exit 1
           fi
-          echo "App version from .sure-version: $APP_SEMVER"
+          echo "App version from charts/sure/Chart.yaml appVersion: $APP_SEMVER"
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             # Use the app version as the chart version (monorepo: versions stay in sync)
             TAG_NAME="chart-v${APP_SEMVER}"
 
             if git rev-parse "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
-              echo "::error::Tag ${TAG_NAME} already exists. Bump the version in .sure-version and charts/sure/Chart.yaml first."
+              echo "::error::Tag ${TAG_NAME} already exists. Bump the version in charts/sure/Chart.yaml first."
               exit 1
             fi
 

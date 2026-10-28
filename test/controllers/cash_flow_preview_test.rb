@@ -27,7 +27,7 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :success
     assert_select "#cashflow-sankey-chart + form[action='#{dashboard_preferences_path}'] + #cashflow-preview", count: 1
-    assert_select "#cashflow-preview[data-sankey-preview-sure-version-value=?]", Rails.root.join(".sure-version").read.strip
+    assert_select "#cashflow-preview[data-sankey-preview-sure-version-value=?]", Sure.version.to_s
     assert_select "#cashflow-preview [data-controller='preview-sankey-chart']", count: 2
     assert_select "#cashflow-preview [data-cash-flow-url-value*='/dashboard/cash_flow?']", count: 1
     assert_equal legacy, css_select("[data-controller='sankey-chart']").map { |chart| chart["data-sankey-chart-data-value"] }
@@ -93,7 +93,7 @@ class CashFlowPreviewTest < ActionDispatch::IntegrationTest
     Rails.configuration.x.posthog.stubs(:development_enabled).returns(true)
     get root_path
     assert_select "head script", text: /posthog.init\('configured-test-project'/
-    assert_select "head script", text: /client.register\(\{ sure_version: #{Regexp.escape(Rails.root.join(".sure-version").read.strip.to_json)}/
+    assert_select "head script", text: /client.register\(\{ sure_version: #{Regexp.escape(Sure.version.to_s.to_json)}/
   end
 
   test "managed app and demo use the configured environment survey without the shared feedback client" do

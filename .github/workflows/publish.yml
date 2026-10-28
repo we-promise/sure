@@ -52,7 +52,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
     outputs:
+      version: ${{ steps.release.outputs.version }}
+      commit: ${{ steps.release.outputs.commit }}
       publish: ${{ steps.release.outputs.publish }}
       release: ${{ steps.release.outputs.release }}
       stable: ${{ steps.release.outputs.stable }}
@@ -65,15 +68,28 @@ jobs:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ github.event.inputs.ref || github.sha }}
+      - name: Read original workflow date
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          created=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .created_at)
+          echo "BUILD_DATE=$(date -u -d "$created" +%Y.%-m.%-d)" >> "$GITHUB_ENV"
+
       - name: Resolve release tags
         id: release
         shell: bash
         run: |
           set -euo pipefail
-          version="$(tr -d '[:space:]' < .sure-version)"
-          # Historical refs remain buildable through workflow_dispatch.
+          # Legacy tags are aliases only; they must never start another release.
+          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/v0.* ]]; then
+            printf '%s\n' 'publish=false' 'release=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          version="${BUILD_DATE}-alpha.${GITHUB_RUN_NUMBER}"
+          # Release identity comes from the immutable tag, never the retry date.
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* ]]; then
+            version="${GITHUB_REF#refs/tags/v}"
             [[ "$version" =~ ^[2-9][0-9]{3}\.[1-9][0-9]?\.[1-9][0-9]?(-(alpha|beta|rc)(\.(0|[1-9][0-9]*))?)?$ ]] || exit 1
             base="${version%%-*}"
             [[ "$(date -u -d "${base//./-}" +%Y.%-m.%-d)" == "$base" ]] || exit 1
@@ -87,16 +103,11 @@ jobs:
           fi
           publish=true; release=false
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* ]]; then
-            if [[ "$GITHUB_REF" == "refs/tags/v${version}" ]]; then
-              release=true
-            elif [[ -n "$compatibility" && "$GITHUB_REF" == "refs/tags/v${compatibility}" ]]; then
-              publish=false
-            else
-              echo "Tag does not match .sure-version or its compatibility alias." >&2
-              exit 1
-            fi
+            release=true
           fi
           {
+            echo "version=$version"
+            echo "commit=$(git rev-parse HEAD)"
             printf '%s\n' "publish=$publish" "release=$release" "stable=$stable" "alpha=$alpha"
             printf '%s\n' "compatibility_version=$compatibility"
             echo "release_name=v${version}${compatibility:+ — compatibility: v${compatibility}}"
@@ -153,7 +164,13 @@ jobs:
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           persist-credentials: false
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ needs.prepare.outputs.commit }}
+
+      - name: Generate embedded version
+        id: version_file
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: printf '%s\n' "$VERSION" > .sure-version
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
@@ -177,7 +194,7 @@ jobs:
           flavor: latest=false
           tags: ${{ needs.prepare.outputs.image_tags }}
           labels: |
-            org.opencontainers.image.version=${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
             org.opencontainers.image.created=${{ steps.date.outputs.date }}
             org.opencontainers.image.ref.name=${{ github.ref_name }}
             org.opencontainers.image.vendor=we-promise
@@ -189,7 +206,7 @@ jobs:
         id: build
         with:
           context: .
-          build-args: BUILD_COMMIT_SHA=${{ github.sha }}
+          build-args: BUILD_COMMIT_SHA=${{ needs.prepare.outputs.commit }}
           platforms: 'linux/${{ matrix.platform }}'
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }}
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }},mode=max
@@ -273,6 +290,8 @@ jobs:
           TAGS: ${{ needs.build.outputs.tags }}
           DIGESTS_DIR: ${{ runner.temp }}/digests
           REF_NAME: ${{ github.ref_name }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          COMMIT: ${{ needs.prepare.outputs.commit }}
         shell: bash -xeuo pipefail {0}
         run: |
           tag_args=()
@@ -289,7 +308,7 @@ jobs:
           annotations=(
             "index:org.opencontainers.image.created=$(date -Iseconds)"
             'index:org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}'
-            'index:org.opencontainers.image.revision=${{ github.sha }}'
+            "index:org.opencontainers.image.revision=${COMMIT}"
             "index:org.opencontainers.image.ref.name=${REF_NAME}"
             'index:org.opencontainers.image.vendor=we-promise'
             'index:org.opencontainers.image.licenses=AGPL-3.0'
@@ -300,9 +319,7 @@ jobs:
           for annotation in "${annotations[@]}"; do
             annotation_args+=("--annotation=${annotation}")
           done
-          if [[ $GITHUB_REF_TYPE == "tag" ]]; then
-            annotation_args+=("--annotation=index:org.opencontainers.image.version=$GITHUB_REF_NAME")
-          fi
+          annotation_args+=("--annotation=index:org.opencontainers.image.version=$VERSION")
 
           attempts=0
           until docker buildx imagetools create \
