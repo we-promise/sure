@@ -108,7 +108,7 @@ class Assistant::Function::UploadAccountStatement < Assistant::Function
         success: true,
         duplicate: true,
         statement: statement_payload(statement),
-        message: "This document is already in the vault (same SHA-256). It is now linked to #{account.name}; nothing new was created."
+        message: "This document is already in the vault. It is now linked to #{account.name}; nothing new was created."
       }
     end
 
