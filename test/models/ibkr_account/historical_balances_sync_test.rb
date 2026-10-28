@@ -249,6 +249,62 @@ class IbkrAccount::HistoricalBalancesSyncTest < ActiveSupport::TestCase
     assert_equal BigDecimal("2700.00"), day2.end_non_cash_balance
   end
 
+  test "trade commissions are not counted as market loss" do
+    # Δnon_cash=200 on Day 2. Buy 100 at CHF 1.50 (value 150) with a CHF 2 fee:
+    # entry.amount=152 (value + fee), but only the value moves holdings, so nmf = 200 - 150 = 50.
+    @ibkr_account.update!(
+      raw_equity_summary_payload: [
+        { report_date: "2026-05-07", total: "3000.00" },
+        { report_date: "2026-05-08", total: "3200.00" }
+      ]
+    )
+    seed_balance(date: Date.new(2026, 5, 7), balance: 3000.00, cash_balance: 500.00)
+    seed_balance(date: Date.new(2026, 5, 8), balance: 3200.00, cash_balance: 500.00)
+
+    security = Security.create!(ticker: "FEE_BUY", name: "Fee Buy Stock")
+    @account.entries.create!(
+      name: "Buy 100 FEE_BUY",
+      date: Date.new(2026, 5, 8),
+      amount: 152.00,
+      currency: "CHF",
+      entryable: Trade.new(security: security, qty: 100, price: 1.5, currency: "CHF", fee: 2)
+    )
+
+    IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
+
+    day2 = @account.balances.find_by!(date: Date.new(2026, 5, 8), currency: "CHF")
+    assert_equal BigDecimal("50"), day2.net_market_flows
+    assert_equal BigDecimal("2700.00"), day2.end_non_cash_balance
+  end
+
+  test "sell commissions are not counted as market loss" do
+    # Sell 100 at CHF 1.50 with a CHF 2 fee: entry.amount=-148 (proceeds minus fee), value -150.
+    # Δnon_cash=-500, so nmf = -500 - (-150) = -350.
+    @ibkr_account.update!(
+      raw_equity_summary_payload: [
+        { report_date: "2026-05-07", total: "3000.00" },
+        { report_date: "2026-05-08", total: "2700.00" }
+      ]
+    )
+    seed_balance(date: Date.new(2026, 5, 7), balance: 3000.00, cash_balance: 500.00)
+    seed_balance(date: Date.new(2026, 5, 8), balance: 2700.00, cash_balance: 700.00)
+
+    security = Security.create!(ticker: "FEE_SELL", name: "Fee Sell Stock")
+    @account.entries.create!(
+      name: "Sell 100 FEE_SELL",
+      date: Date.new(2026, 5, 8),
+      amount: -148.00,
+      currency: "CHF",
+      entryable: Trade.new(security: security, qty: -100, price: 1.5, currency: "CHF", fee: 2)
+    )
+
+    IbkrAccount::HistoricalBalancesSync.new(@ibkr_account).sync!
+
+    day2 = @account.balances.find_by!(date: Date.new(2026, 5, 8), currency: "CHF")
+    assert_equal BigDecimal("-350"), day2.net_market_flows
+    assert_equal BigDecimal("2000.00"), day2.end_non_cash_balance
+  end
+
   test "applies fx_rate_to_base when trade currency differs from account currency" do
     # Trade in EUR with fx_rate_to_base=1.1 → CHF 165, not CHF 150
     # Day 1: non_cash=2500, Day 2: non_cash=2700 (Δ=200)

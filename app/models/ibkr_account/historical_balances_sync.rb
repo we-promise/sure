@@ -177,7 +177,9 @@ class IbkrAccount::HistoricalBalancesSync
             .includes(:entryable)
             .each_with_object(Hash.new(0)) do |entry, flows|
               custom_rate = entry.entryable.exchange_rate
-              base_amount = Money.new(entry.amount, entry.currency)
+              # The entry amount carries the commission (see ActivitiesProcessor),
+              # but holdings value does not, so only the traded value is a flow.
+              base_amount = Money.new(entry.amount - entry.entryable.fee, entry.currency)
                 .exchange_to(account_currency, custom_rate: custom_rate, date: entry.date)
                 .amount
               flows[entry.date] += base_amount
