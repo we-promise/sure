@@ -68,6 +68,7 @@ fr:
       earmarked: Déjà fléché vers des objectifs
       free: Réellement libre
       goals_link: Voir les objectifs
+      currency_warning: Les soldes en %{currencies} ne sont pas inclus, car aucun taux de change vers %{currency} n'est encore disponible.
     switcher:
       aria_label: "Changer de budget"
       household: "Commun"
