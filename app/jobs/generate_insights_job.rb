@@ -54,10 +54,9 @@ class GenerateInsightsJob < ApplicationJob
       # refresh) always gets its list and button restored.
       I18n.with_locale(family.locale) { broadcast_feed(family) }
       Array(notifiable_insights).each do |insight|
-        DeliverInsightNotificationJob.enqueue_for(insight)
-        DeliverWebPushNotificationJob.enqueue_for(insight)
+        WebPushDelivery.enqueue_insight_deliveries(insight)
       end
-      DeliverWebPushNotificationJob.retry_enqueue_failures_for(family)
+      WebPushDelivery.retry_enqueue_failures_for(family)
     end
 
     def broadcast_feed(family)
@@ -103,77 +102,82 @@ class GenerateInsightsJob < ApplicationJob
       writer = Insight::BodyWriter.new
 
       generated_insights.filter_map do |generated|
-        metadata = normalize_json(generated.metadata)
-        facts = normalize_json(generated.facts)
-        existing = family.insights.find_by(dedup_key: generated.dedup_key)
+        # The version and its event-time recipients commit together. Broadcasts
+        # and job enqueueing happen later and cannot strand a saved event.
+        Insight.transaction(requires_new: true) do
+          metadata = normalize_json(generated.metadata)
+          facts = normalize_json(generated.facts)
+          existing = family.insights.lock.find_by(dedup_key: generated.dedup_key)
 
-        notifiable = if existing.nil?
-          family.insights.create!(
-            insight_type: generated.insight_type,
-            priority: generated.priority,
-            status: "active",
-            title: generated.title,
-            body: writer.write(generated),
-            metadata: metadata,
-            facts: facts,
-            currency: generated.currency,
-            period_start: generated.period_start,
-            period_end: generated.period_end,
-            generated_at: Time.current,
-            dedup_key: generated.dedup_key
-          )
-        elsif !existing.expired? && existing.metadata != metadata &&
-              existing.metadata.except(*ACCOUNT_SCOPE_KEYS) == metadata.except(*ACCOUNT_SCOPE_KEYS)
-          # Only the accounts behind the insight changed (a share granted or
-          # revoked, or a row written before these keys existed). The prose
-          # may quote figures from the old set, so it is rewritten, but the
-          # signal itself did not change: read and dismissed state stay.
-          existing.update!(title: generated.title, body: writer.write(generated), metadata: metadata,
-                           facts: facts, generated_at: Time.current)
-          nil
-        elsif existing.metadata != metadata
-          # The numbers changed materially: refresh the prose and resurface the
-          # insight even if the user had read or dismissed the stale version.
-          existing.update!(
-            priority: generated.priority,
-            status: "active",
-            title: generated.title,
-            body: writer.write(generated),
-            metadata: metadata,
-            facts: facts,
-            notification_version: existing.notification_version + 1,
-            period_start: generated.period_start,
-            period_end: generated.period_end,
-            generated_at: Time.current,
-            read_at: nil,
-            dismissed_at: nil
-          )
-          existing
-        elsif existing.expired?
-          # The condition cleared earlier and has now returned with the same
-          # numbers. Expiry was the system's doing, not the user's, so the
-          # insight resurfaces, with the body filled from the current facts.
-          existing.update!(title: generated.title, body: writer.write(generated), status: "active", facts: facts,
-                           notification_version: existing.notification_version + 1, generated_at: Time.current, read_at: nil)
-          existing
-        else
-          # Same signal, same numbers: don't undo the user's read/dismissed
-          # state and don't notify again. Facts still refresh — they're
-          # display values (key figure, link labels), and keeping them current
-          # is exactly why they're not part of the material-change comparison.
-          # The body is the template filled with those facts, so it refreshes
-          # with them; otherwise the prose keeps last week's amounts.
-          #
-          # The title refreshes with them. It is built from I18n and the
-          # generator's own data, not written by the model, so keeping it
-          # current costs nothing — and a title naming a goal or a category
-          # the user has since renamed is simply wrong on the page. Rename is
-          # not a reason to resurface, so status and read state stay untouched.
-          existing.update!(title: generated.title, body: writer.write(generated), facts: facts, generated_at: Time.current)
-          nil
+          notifiable = if existing.nil?
+            family.insights.create!(
+              insight_type: generated.insight_type,
+              priority: generated.priority,
+              status: "active",
+              title: generated.title,
+              body: writer.write(generated),
+              metadata: metadata,
+              facts: facts,
+              currency: generated.currency,
+              period_start: generated.period_start,
+              period_end: generated.period_end,
+              generated_at: Time.current,
+              dedup_key: generated.dedup_key
+            )
+          elsif !existing.expired? && existing.metadata != metadata &&
+                existing.metadata.except(*ACCOUNT_SCOPE_KEYS) == metadata.except(*ACCOUNT_SCOPE_KEYS)
+            # Only the accounts behind the insight changed (a share granted or
+            # revoked, or a row written before these keys existed). The prose
+            # may quote figures from the old set, so it is rewritten, but the
+            # signal itself did not change: read and dismissed state stay, and
+            # no one is notified again.
+            existing.update!(title: generated.title, body: writer.write(generated), metadata: metadata,
+                             facts: facts, generated_at: Time.current)
+            nil
+          elsif existing.metadata != metadata
+            # The numbers changed materially: refresh the prose and resurface the
+            # insight even if the user had read or dismissed the stale version.
+            existing.update!(
+              priority: generated.priority,
+              status: "active",
+              title: generated.title,
+              body: writer.write(generated),
+              metadata: metadata,
+              facts: facts,
+              notification_version: existing.notification_version + 1,
+              period_start: generated.period_start,
+              period_end: generated.period_end,
+              generated_at: Time.current,
+              read_at: nil,
+              dismissed_at: nil
+            )
+            existing
+          elsif existing.expired?
+            # The condition cleared earlier and has now returned with the same
+            # numbers. Expiry was the system's doing, not the user's, so the
+            # insight resurfaces, with the body filled from the current facts.
+            existing.update!(title: generated.title, body: writer.write(generated), status: "active", facts: facts,
+                             notification_version: existing.notification_version + 1, generated_at: Time.current, read_at: nil)
+            existing
+          else
+            # Same signal, same numbers: don't undo the user's read/dismissed
+            # state and don't notify again. Facts still refresh — they're
+            # display values (key figure, link labels), and keeping them current
+            # is exactly why they're not part of the material-change comparison.
+            # The body is the template filled with those facts, so it refreshes
+            # with them; otherwise the prose keeps last week's amounts.
+            #
+            # The title refreshes with them. It is built from I18n and the
+            # generator's own data, not written by the model, so keeping it
+            # current costs nothing — and a title naming a goal or a category
+            # the user has since renamed is simply wrong on the page. Rename is
+            # not a reason to resurface, so status and read state stay untouched.
+            existing.update!(title: generated.title, body: writer.write(generated), facts: facts, generated_at: Time.current)
+            nil
+          end
+          WebPushDelivery.record_for_insight!(notifiable) if notifiable
+          notifiable
         end
-        WebPushDelivery.record_for_insight!(notifiable) if notifiable
-        notifiable
       rescue ActiveRecord::RecordNotUnique
         # A concurrent run created the same dedup_key first; it owns this row.
         nil

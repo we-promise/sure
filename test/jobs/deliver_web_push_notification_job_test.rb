@@ -15,6 +15,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
   end
 
   test "enqueues only once for a subscription and material insight version" do
+    assert_no_enqueued_jobs { WebPushDelivery.record_for_insight!(@insight) }
     assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
       2.times { DeliverWebPushNotificationJob.enqueue_for(@insight) }
     end
@@ -61,6 +62,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
   test "a material version can be delivered again without replaying the old version" do
     first = enqueue_delivery
     @insight.increment!(:notification_version)
+    WebPushDelivery.record_for_insight!(@insight.reload)
     assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
       DeliverWebPushNotificationJob.enqueue_for(@insight.reload)
     end
@@ -73,9 +75,13 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     @insight.update!(insight_type: "budget_at_risk")
     %w[high medium].each do |priority|
       @insight.update!(priority: priority)
-      assert_no_enqueued_jobs { DeliverWebPushNotificationJob.enqueue_for(@insight) }
+      assert_no_enqueued_jobs do
+        WebPushDelivery.record_for_insight!(@insight)
+        DeliverWebPushNotificationJob.enqueue_for(@insight)
+      end
     end
     @user.update!(preferences: @user.preferences.merge("web_push_budget_warnings_enabled" => true))
+    WebPushDelivery.record_for_insight!(@insight)
     assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
       DeliverWebPushNotificationJob.enqueue_for(@insight)
     end
@@ -87,7 +93,10 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
       { insight_type: "spending_anomaly", priority: "medium" },
       { insight_type: "budget_at_risk", priority: "low" } ].each do |attributes|
       @insight.update!(attributes)
-      assert_no_enqueued_jobs { DeliverWebPushNotificationJob.enqueue_for(@insight) }
+      assert_no_enqueued_jobs do
+        WebPushDelivery.record_for_insight!(@insight)
+        DeliverWebPushNotificationJob.enqueue_for(@insight)
+      end
     end
   end
 
@@ -206,7 +215,9 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
   end
 
   test "an unclaimed pending delivery is recovered without waiting for the claim timeout" do
-    delivery = WebPushDelivery.for_insight(@subscription, @insight)
+    WebPushDelivery.record_for_insight!(@insight)
+    delivery = WebPushDelivery.find_by!(web_push_subscription: @subscription, insight: @insight,
+      insight_version: @insight.notification_version)
     assert_nil delivery.enqueued_at
     assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
       DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
@@ -253,6 +264,7 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
 
   private
     def enqueue_delivery
+      WebPushDelivery.record_for_insight!(@insight)
       DeliverWebPushNotificationJob.enqueue_for(@insight)
       WebPushDelivery.find_by!(web_push_subscription: @subscription, insight: @insight,
         insight_version: @insight.notification_version)

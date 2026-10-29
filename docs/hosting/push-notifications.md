@@ -164,7 +164,9 @@ locale and link to the same-origin `/insights#insight_<id>` page. The service wo
 displays a visible notification, including for malformed payloads, and caches only
 the existing offline assets; it does not cache financial pages.
 
-A durable delivery ledger records each subscription and material insight version.
+A durable delivery ledger records each eligible subscription together with its
+material insight version in the same database transaction. Recipients are fixed
+at that event: later device registration or budget opt-in does not add a backlog.
 Routine generator refreshes do not create a new version. Send-time checks repeat
 session, user, preview, budget preference, family, active insight, version, and
 shared-account visibility checks. Retries and ordinary duplicate jobs reuse the

@@ -12,12 +12,11 @@ class DeliverWebPushNotificationJob < ApplicationJob
   def self.enqueue_for(insight)
     return unless WebPush::Client.configured? && insight.active?
 
-    WebPushSubscription.joins(:user).where(users: { family_id: insight.family_id, active: true })
-      .includes(:user, :session).find_each do |subscription|
-      next unless subscription.eligible_for?(insight)
-      delivery = WebPushDelivery.for_insight(subscription, insight)
-      next unless delivery.previously_new_record? || delivery.status_enqueue_failed?
-      delivery.enqueue!
+    deliveries = WebPushDelivery.where(insight: insight, insight_version: insight.notification_version)
+    deliveries.where(status: :enqueue_failed)
+      .or(deliveries.where(status: :pending, enqueued_at: nil))
+      .find_each do |delivery|
+      delivery.enqueue! if delivery.eligible?
     end
   end
 
@@ -26,10 +25,10 @@ class DeliverWebPushNotificationJob < ApplicationJob
   def self.retry_enqueue_failures_for(family)
     WebPushDelivery.joins(web_push_subscription: :user)
       .where(users: { family_id: family.id })
-      .where("web_push_deliveries.status = 'enqueue_failed' OR (web_push_deliveries.status = 'pending' AND (enqueued_at IS NULL OR enqueued_at < ?))", 15.minutes.ago)
+      .where("web_push_deliveries.status = 'enqueue_failed' OR (web_push_deliveries.status = 'pending' AND (enqueued_at IS NULL OR enqueued_at < ?))", WebPushDelivery::CLAIM_TIMEOUT.ago)
       .find_each do |delivery|
       if delivery.eligible?
-        delivery.enqueue!
+        delivery.enqueue!(recover: true)
       else
         delivery.with_lock { delivery.update!(status: :skipped) if delivery.status_pending? || delivery.status_enqueue_failed? }
       end

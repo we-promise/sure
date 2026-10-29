@@ -6,17 +6,30 @@ class WebPushDelivery < ApplicationRecord
     rejected: "rejected", failed: "failed", enqueue_failed: "enqueue_failed" }, prefix: true
 
   TEST_SEND_WINDOW = 15.minutes
+  CLAIM_TIMEOUT = 15.minutes
+
+  # Called inside the insight version's transaction. Recipient eligibility is
+  # captured at the event, so later registration or opt-in cannot add a backlog.
+  def self.record_for_insight!(insight)
+    return unless WebPush::Client.configured? && insight.active?
+
+    WebPushSubscription.joins(:user).where(users: { family_id: insight.family_id, active: true })
+      .includes(:user, :session).find_each do |subscription|
+      for_insight(subscription, insight) if subscription.eligible_for?(insight)
+    end
+  end
 
   def self.for_insight(subscription, insight)
     create_or_find_by!(web_push_subscription: subscription, insight: insight,
       insight_version: insight.notification_version)
   end
 
-  def enqueue!
+  def enqueue!(recover: false)
     # Claim before contacting Redis. A process crash can leave this pending;
     # the next generation pass recovers claims older than the retry window.
     with_lock do
-      return false unless status_pending? || status_enqueue_failed?
+      claim_available = enqueued_at.nil? || (recover && enqueued_at < CLAIM_TIMEOUT.ago)
+      return false unless status_enqueue_failed? || (status_pending? && claim_available)
       update!(status: :pending, enqueued_at: Time.current)
     end
     job = DeliverWebPushNotificationJob.perform_later(web_push_delivery_id: id)
