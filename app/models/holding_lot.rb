@@ -36,6 +36,16 @@ class HoldingLot < ApplicationRecord
     !manual_total_cost.nil?
   end
 
+  # The places the cost editor shows a saved total to: the currency's, or as
+  # many as the column keeps when the total needs them, so saving the form
+  # unchanged keeps it.
+  def manual_total_cost_precision
+    places = Money::Currency.new(currency).default_precision
+    return places if manual_total_cost.nil? || manual_total_cost.round(places) == manual_total_cost
+
+    self.class.columns_hash["manual_total_cost"].scale
+  end
+
   class << self
     # Replaces an account's lots with `rows`, within `security_ids` when given,
     # keeping each lot's row (and id) by its key: the source entry for a derived
