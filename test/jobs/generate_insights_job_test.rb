@@ -1,6 +1,9 @@
 require "test_helper"
+require Rails.root.join("test/support/web_push_test_helper")
 
 class GenerateInsightsJobTest < ActiveJob::TestCase
+  include WebPushTestHelper
+
   setup do
     @family = families(:dylan_family)
     enable_preview_features(@family)
@@ -169,6 +172,96 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
     assert_equal original_version + 1, insight.reload.notification_version
+  end
+
+  test "a failed broadcast leaves an atomic unclaimed delivery that an unchanged rerun recovers once" do
+    subscription = register_web_push(user: @family.users.first)
+    WebPush::Client.stubs(:configured?).returns(true)
+    stub_generated([ generated_insight(priority: "high") ])
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to).raises(StandardError, "Broadcast unavailable")
+
+    assert_raises(StandardError) { GenerateInsightsJob.perform_now(family_id: @family.id) }
+
+    insight = @family.insights.find_by!(dedup_key: "idle_cash:test-account:2026-07")
+    deliveries = WebPushDelivery.where(web_push_subscription: subscription, insight: insight,
+      insight_version: insight.notification_version)
+    assert_equal 1, deliveries.count
+    delivery = deliveries.first!
+    assert_nil delivery.enqueued_at
+    assert_equal "pending", delivery.status
+
+    Turbo::StreamsChannel.stubs(:broadcast_replace_to).returns(nil)
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+    assert_equal [ delivery.id ], deliveries.pluck(:id)
+  end
+
+  test "a ledger failure rolls back a newly generated insight and its version" do
+    register_web_push(user: @family.users.first)
+    WebPush::Client.stubs(:configured?).returns(true)
+    stub_generated([ generated_insight(priority: "high") ])
+    WebPushDelivery.stubs(:for_insight).raises(ActiveRecord::RecordInvalid.new(WebPushDelivery.new))
+
+    assert_no_difference [ "Insight.count", "WebPushDelivery.count" ] do
+      assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+        GenerateInsightsJob.perform_now(family_id: @family.id)
+      end
+    end
+  end
+
+  test "a ledger failure rolls back a material insight change with its delivery records" do
+    register_web_push(user: @family.users.first)
+    WebPush::Client.stubs(:configured?).returns(true)
+    stub_generated([ generated_insight(priority: "high") ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    insight = @family.insights.find_by!(dedup_key: "idle_cash:test-account:2026-07")
+    original_metadata = insight.metadata
+    original_version = insight.notification_version
+    stub_generated([ generated_insight(balance: 7500.0, priority: "high") ])
+    WebPushDelivery.stubs(:for_insight).raises(ActiveRecord::RecordInvalid.new(WebPushDelivery.new))
+
+    assert_no_difference "WebPushDelivery.count" do
+      assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+        GenerateInsightsJob.perform_now(family_id: @family.id)
+      end
+    end
+    assert_equal original_version, insight.reload.notification_version
+    assert_equal original_metadata, insight.metadata
+  end
+
+  test "a device registered after an insight event receives no backlog" do
+    WebPush::Client.stubs(:configured?).returns(true)
+    stub_generated([ generated_insight(priority: "high") ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    insight = @family.insights.find_by!(dedup_key: "idle_cash:test-account:2026-07")
+    subscription = register_web_push(user: @family.users.first)
+
+    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.enqueue_for(insight)
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+    assert_empty subscription.web_push_deliveries
+  end
+
+  test "budget warning opt in after an insight event receives no backlog" do
+    user = @family.users.first
+    subscription = register_web_push(user: user)
+    WebPush::Client.stubs(:configured?).returns(true)
+    generated = generated_insight(priority: "high").with(insight_type: "budget_at_risk")
+    stub_generated([ generated ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    insight = @family.insights.find_by!(dedup_key: generated.dedup_key)
+    user.update!(preferences: user.preferences.merge("web_push_budget_warnings_enabled" => true))
+
+    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.enqueue_for(insight)
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+    assert_empty subscription.web_push_deliveries
   end
 
   test "re-running with unchanged numbers does not duplicate or rewrite" do

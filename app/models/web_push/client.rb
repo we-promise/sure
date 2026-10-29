@@ -21,7 +21,7 @@ class WebPush::Client
     contact_url = subject.is_a?(URI::HTTPS) && subject.host.present? && subject.userinfo.nil?
     return false unless contact_email || contact_url
     WebPush::VapidKey.from_keys(values[:public_key], values[:private_key]).curve.check_key
-  rescue URI::InvalidURIError, OpenSSL::OpenSSLError, ArgumentError
+  rescue URI::Error, OpenSSL::OpenSSLError, ArgumentError
     false
   end
 
