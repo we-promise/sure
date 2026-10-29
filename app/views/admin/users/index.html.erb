@@ -93,7 +93,7 @@
                       <td class="px-4 py-3">
                         <div class="flex items-center gap-3">
                           <div class="w-8 h-8 shrink-0">
-                            <%= render "settings/user_avatar", avatar_url: user.profile_image&.variant(:small)&.url, initials: user.initials, lazy: true %>
+                            <%= render "settings/user_avatar", avatar_url: admin_user_avatar_url(user), initials: user.initials, lazy: true %>
                           </div>
                           <div>
                             <div class="flex items-center gap-2">
