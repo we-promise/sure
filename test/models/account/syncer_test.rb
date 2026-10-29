@@ -27,6 +27,24 @@ class Account::SyncerTest < ActiveSupport::TestCase
     assert account.syncs.where.not(id: sync.id).sole.pending?
   end
 
+  # Post-sync runs after a failed sync too. The method change is restated by
+  # the next sync that completes, so a failure must not queue one: each
+  # failure would otherwise queue another.
+  test "a failed sync after a cost basis method change starts no further sync" do
+    account = accounts(:investment)
+    account.syncs.create!(status: "completed", completed_at: 1.hour.ago, data: { "cost_basis_method" => "average" })
+    Account.where(id: account.id).update_all(cost_basis_method: "fifo")
+    sync = account.syncs.create!
+    Account::MarketDataImporter.any_instance.stubs(:import_all)
+    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(StandardError, "provider down")
+
+    assert_no_difference -> { account.syncs.count } do
+      sync.perform
+    end
+
+    assert sync.reload.failed?
+  end
+
   test "an unchanged cost basis method starts no further sync" do
     account = accounts(:investment)
     sync = account.syncs.create!
