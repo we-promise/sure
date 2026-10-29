@@ -3,10 +3,7 @@ class Vehicle < ApplicationRecord
 
   attribute :mileage_unit, :string, default: "mi"
 
-  # The purchase price and date live on the account's opening anchor, which is
-  # what `purchase_price` and `trend` read. These carry them in from the form:
-  # `initial_balance` is picked up by `Account.create_and_sync` on create, and
-  # both are written to the anchor here on update. Blank leaves it untouched.
+  # Form inputs for the purchase price and date, stored on the opening anchor.
   attribute :initial_balance, :decimal
   attribute :purchase_date, :date
 
