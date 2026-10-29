@@ -64,6 +64,28 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # Rails' upsert with update_only moves updated_at only when a listed column
+  # changes, for both kinds of lot.
+  test "re-materializing moves a lot's updated_at only when the lot changes" do
+    travel_to TODAY do
+      build_reverse_fixture
+      materialize(:reverse)
+      derived = HoldingLot.derived.find_by!(security: @opening, acquired_on: d(3))
+      opening = HoldingLot.opening.find_by!(security: @opening)
+      stale = 1.day.ago.change(usec: 0)
+      HoldingLot.where(id: [ derived.id, opening.id ]).update_all(updated_at: stale)
+
+      materialize(:reverse)
+      assert_equal [ stale, stale ], [ derived.reload.updated_at, opening.reload.updated_at ], "nothing changed"
+
+      trade(@opening, -2, 30, 8)
+      @account.holdings.find_by!(security: @opening, date: d(10)).update!(qty: 12, amount: 360)
+      materialize(:reverse)
+      assert_operator derived.reload.updated_at, :>, stale, "the sale relieved the lot"
+      assert_operator opening.reload.updated_at, :>, stale, "the opening lot was restated"
+    end
+  end
+
   test "a sale with nothing held, then a transfer-in, keeps the stored lots equal to the position" do
     travel_to TODAY do
       setup_account
