@@ -1,7 +1,7 @@
 require "test_helper"
 
 class VehiclesControllerTest < ActionDispatch::IntegrationTest
-  include AccountableResourceInterfaceTest
+  include AccountableResourceInterfaceTest, EntriesTestHelper
 
   setup do
     sign_in @user = users(:family_admin)
@@ -70,7 +70,8 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
             year: 2021,
             mileage_value: 20000,
             mileage_unit: "mi",
-            purchase_price: 32000
+            initial_balance: 32000,
+            purchase_date: 3.years.ago.to_date
           }
         }
       }
@@ -82,9 +83,90 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Updated Lender", @account[:institution_name]
     assert_equal "updatedlender.example", @account[:institution_domain]
     assert_equal "Updated lease notes", @account[:notes]
+    assert_equal 32000, @account.opening_anchor_balance
+    assert_equal 3.years.ago.to_date, @account.opening_anchor_date
 
     assert_redirected_to account_path(@account)
     assert_equal "Vehicle account updated", flash[:notice]
     assert_enqueued_with(job: SyncJob)
+  end
+
+  test "creates with a purchase price below the current value" do
+    post vehicles_path, params: {
+      account: {
+        name: "Vehicle",
+        balance: 30000,
+        currency: "USD",
+        opening_balance_date: 1.year.ago.to_date,
+        accountable_type: "Vehicle",
+        accountable_attributes: { make: "Toyota", initial_balance: 35000 }
+      }
+    }
+
+    account = Account.order(:created_at).last
+    assert_equal 30000, account.balance
+    assert_equal 35000, account.opening_anchor_balance
+    assert_equal 1.year.ago.to_date, account.opening_anchor_date
+    assert_equal 30000, account.valuations.reconciliation.first.entry.amount
+    assert_equal Money.new(35000, "USD"), account.vehicle.purchase_price
+    assert_empty account.vehicle.locked_attributes.keys & %w[initial_balance purchase_date]
+  end
+
+  test "edit form shows the purchase price and date" do
+    @account.set_opening_anchor_balance(balance: 21000, date: 2.years.ago.to_date)
+
+    get edit_vehicle_path(@account)
+
+    assert_response :success
+    assert_select "input[name='account[accountable_attributes][initial_balance]'][value='21000.00']"
+    assert_select "input[name='account[accountable_attributes][purchase_date]'][value='#{2.years.ago.to_date}']"
+  end
+
+  test "updates the purchase price without touching the purchase date" do
+    @account.set_opening_anchor_balance(balance: 0, date: 2.years.ago.to_date)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        accountable_attributes: { id: @account.accountable_id, initial_balance: 21000, purchase_date: "" }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert_equal 21000, @account.reload.opening_anchor_balance
+    assert_equal 2.years.ago.to_date, @account.opening_anchor_date
+  end
+
+  test "leaves the opening anchor alone when the purchase fields are blank" do
+    @account.set_opening_anchor_balance(balance: 21000, date: 2.years.ago.to_date)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        name: "Renamed",
+        accountable_attributes: { id: @account.accountable_id, initial_balance: "", purchase_date: "" }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert_equal "Renamed", @account.reload.name
+    assert_equal 21000, @account.opening_anchor_balance
+    assert_equal 2.years.ago.to_date, @account.opening_anchor_date
+  end
+
+  test "rejects a purchase date that is not before the oldest entry" do
+    @account.set_opening_anchor_balance(balance: 21000, date: 2.years.ago.to_date)
+    create_valuation(account: @account, date: 1.year.ago.to_date, amount: 19000)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        name: "Renamed",
+        accountable_attributes: { id: @account.accountable_id, initial_balance: 25000, purchase_date: 6.months.ago.to_date }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Purchase date must be before the account&#39;s oldest entry"
+    assert_equal "Honda Accord", @account.reload.name
+    assert_equal 21000, @account.opening_anchor_balance
+    assert_equal 2.years.ago.to_date, @account.opening_anchor_date
   end
 end

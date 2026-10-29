@@ -11,6 +11,9 @@ en:
       mileage_unit: Unit
       model: Model
       model_placeholder: Camry
+      purchase_date: Purchase date
+      purchase_price: Purchase price
+      purchase_price_placeholder: '25000'
       year: Year
       year_placeholder: '2023'
       mileage_unit_kilometers: Kilometers
