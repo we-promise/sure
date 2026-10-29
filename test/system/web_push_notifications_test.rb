@@ -32,6 +32,7 @@ class WebPushNotificationsTest < ApplicationSystemTestCase
     client.expects(:deliver).returns(:accepted)
     DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
     assert_text I18n.t("web_push.status.accepted"), wait: 10
+    capture_notification_card
 
     click_on I18n.t("web_push.disable")
     assert_text I18n.t("web_push.status.disabled")
@@ -48,6 +49,15 @@ class WebPushNotificationsTest < ApplicationSystemTestCase
   end
 
   private
+    def capture_notification_card
+      card = "[data-controller='web-push']"
+      find(card).native.save_screenshot(Rails.root.join("tmp", "web-push-notifications-desktop.png"))
+      page.current_window.resize_to(390, 844)
+      find(card).native.save_screenshot(Rails.root.join("tmp", "web-push-notifications-mobile.png"))
+    ensure
+      reset_viewport
+    end
+
     # Browser/OS push permission is outside Selenium's portable API. Replace that
     # boundary only; clicks, CSRF, Rails registration, status polling and deletion
     # still use the real application. This does not prove phone presentation.

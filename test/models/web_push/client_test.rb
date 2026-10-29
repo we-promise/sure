@@ -65,5 +65,4 @@ class WebPushClientTest < ActiveSupport::TestCase
       ClimateControl.modify(values.merge(invalid)) { assert_not WebPush::Client.configured? }
     end
   end
-
 end
