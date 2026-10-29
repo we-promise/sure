@@ -7,7 +7,7 @@ class Vehicle < ApplicationRecord
   attribute :initial_balance, :decimal
   attribute :purchase_date, :date
   # The price the form showed. The account's balance is saved first and can
-  # rewrite a same-day opening anchor, so an edit is judged against this.
+  # rewrite a same-day opening anchor, so edits are judged against this.
   attribute :initial_balance_shown, :decimal
 
   validate :purchase_date_is_valid, if: :persisted?
@@ -48,8 +48,11 @@ class Vehicle < ApplicationRecord
   private
     # The form posts both fields prefilled on every edit, so only a value that
     # differs from what was shown (or, without that, stored) counts as an edit.
+    # Both sides are rounded as the money field displays them.
     def purchase_price_edited?
-      initial_balance.present? && initial_balance != (initial_balance_shown || purchase_price.amount)
+      return false if initial_balance.blank?
+
+      round_to_currency(initial_balance) != round_to_currency(initial_balance_shown || purchase_price.amount)
     end
 
     def purchase_date_edited?
@@ -69,28 +72,40 @@ class Vehicle < ApplicationRecord
     end
 
     def update_purchase_anchor
-      price_edited = purchase_price_edited?
       current_balance = account.balance
+      anchor_balance = purchase_price_edited? ? initial_balance : unedited_anchor_balance
 
       result = account.set_opening_anchor_balance(
-        balance: price_edited ? initial_balance : unedited_anchor_balance,
+        balance: anchor_balance,
         date: (purchase_date if purchase_date_edited?)
       )
       raise_purchase_error(result.error) unless result.success?
-      self.initial_balance_shown = nil
 
-      keep_current_balance(current_balance) if price_edited
+      # Applied; a later save of this record, such as lock_saved_attributes!,
+      # must not apply them again against the anchor they just moved.
+      self.initial_balance = self.purchase_date = self.initial_balance_shown = nil
+
+      keep_current_balance(current_balance) if anchor_balance != current_balance
     end
 
-    # A valuation can predate the anchor, and then it is the purchase price
-    # shown; moving only the date keeps the anchor's own balance.
+    # Moving only the date keeps the anchor's own balance, which is not the
+    # price shown when a valuation predates the anchor. A same-day anchor is
+    # also today's balance, which the account update may just have rewritten;
+    # the price shown is what it held before.
     def unedited_anchor_balance
-      account.has_opening_anchor? ? account.opening_anchor_balance : purchase_price.amount
+      return purchase_price.amount unless account.has_opening_anchor?
+      return initial_balance_shown if initial_balance_shown && account.opening_anchor_date == Date.current
+
+      account.opening_anchor_balance
+    end
+
+    def round_to_currency(amount)
+      amount.round(Money::Currency.new(account.currency).default_precision)
     end
 
     # With no valuation between the anchor and today, the anchor carries
-    # forward to today, so the new purchase price would become the current
-    # value too. Pin today's value, as Account.create_and_sync does on create.
+    # forward to today, so a new anchor balance would become the current value
+    # too. Pin today's value, as Account.create_and_sync does on create.
     def keep_current_balance(balance)
       anchor_date = account.opening_anchor_date
       return unless anchor_date < Date.current

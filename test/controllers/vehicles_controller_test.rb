@@ -284,6 +284,60 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 15000, @account.opening_anchor_balance
   end
 
+  test "moving a same-day purchase date while changing the balance keeps both" do
+    @account.set_opening_anchor_balance(balance: 18000, date: Date.current)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        balance: 15000,
+        accountable_attributes: {
+          id: @account.accountable_id, initial_balance: "18000.00", initial_balance_shown: "18000.00", purchase_date: 1.year.ago.to_date
+        }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    @account.reload
+    assert_equal [ 18000, 1.year.ago.to_date ], [ @account.opening_anchor_balance, @account.opening_anchor_date ]
+    assert_equal 15000, @account.balance
+    reconciliation = @account.valuations.reconciliation.first.entry
+    assert_equal [ Date.current, 15000 ], [ reconciliation.date, reconciliation.amount ]
+  end
+
+  test "a date-only edit alongside other details keeps the anchor's own balance" do
+    @account.set_opening_anchor_balance(balance: 21000, date: 1.year.ago.to_date)
+    create_valuation(account: @account, date: 2.years.ago.to_date, amount: 22000)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id, make: "Honda", initial_balance: "22000.00", initial_balance_shown: "22000.00",
+          purchase_date: 3.years.ago.to_date
+        }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    @account.reload
+    assert_equal [ 21000, 3.years.ago.to_date ], [ @account.opening_anchor_balance, @account.opening_anchor_date ]
+  end
+
+  test "a price shown rounded to the currency's precision is not an edit" do
+    @account.set_opening_anchor_balance(balance: 21000.1234, date: 2.years.ago.to_date)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        name: "Renamed",
+        accountable_attributes: {
+          id: @account.accountable_id, initial_balance: "21000.12", initial_balance_shown: "21000.1234", purchase_date: 2.years.ago.to_date
+        }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert_equal 21000.1234.to_d, @account.reload.opening_anchor_balance
+  end
+
   test "leaves the opening anchor alone when the purchase fields are blank" do
     @account.set_opening_anchor_balance(balance: 21000, date: 2.years.ago.to_date)
 
