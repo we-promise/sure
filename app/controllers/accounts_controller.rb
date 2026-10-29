@@ -1,7 +1,7 @@
 class AccountsController < ApplicationController
   include StreamExtensions
 
-  before_action :set_account, only: %i[show sparkline sync set_default remove_default]
+  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
@@ -83,6 +83,11 @@ class AccountsController < ApplicationController
   end
 
   def show
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.accounts"), accounts_path ],
+      [ @account.name, nil ]
+    ]
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     # One reference date for everything on the page that is date-sensitive:
@@ -91,8 +96,8 @@ class AccountsController < ApplicationController
     # date beside a table shaded against another.
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
-    @q = params.fetch(:q, {}).permit(:search, :uncategorized, status: [])
-    entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
+    @q = activity_search_params
+    entries = @account.entries.excluding_split_parents.search(@q, family).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -151,11 +156,7 @@ class AccountsController < ApplicationController
     end
 
     entry_ids = @entries.map(&:id)
-    @split_parent_entry_ids = if entry_ids.any?
-      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
-    else
-      Set.new
-    end
+    @split_parent_entry_ids = Entry.split_parent_ids_among(entry_ids)
 
     # Load split parent entries for grouped display (only when grouping is enabled)
     @split_parents = if Current.user.show_split_grouped?
@@ -198,6 +199,27 @@ class AccountsController < ApplicationController
     redirect_to account_path(@account)
   end
 
+  # Mirrors TransactionsController#clear_filter, but simpler: the account
+  # activity feed has no cross-request stored filters to update, so this only
+  # needs to redirect with one param removed from the current query string.
+  def clear_filter
+    q_params = activity_search_params.to_h
+
+    param_key = params[:param_key]
+    param_value = params[:param_value]
+
+    if q_params[param_key].is_a?(Array)
+      q_params[param_key].delete(param_value)
+      q_params.delete(param_key) if q_params[param_key].empty?
+    else
+      q_params.delete(param_key)
+    end
+
+    q_params.delete("amount_operator") unless q_params["amount"].present?
+
+    redirect_to account_path(@account, q: q_params.presence, tab: "activity", page: params[:page], per_page: params[:per_page])
+  end
+
   def sparkline
     etag_key = @account.family.build_cache_key("#{@account.id}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
 
@@ -206,6 +228,15 @@ class AccountsController < ApplicationController
     if stale?(etag: etag_key, last_modified: @account.family.latest_sync_completed_at)
       @sparkline_series = @account.sparkline_series
       render layout: false
+    end
+  end
+
+  # Saves the drag-and-drop order of one account group for the current user.
+  def reorder
+    if Current.user.update_manual_account_order(params[:group], params[:account_ids])
+      head :ok
+    else
+      head :unprocessable_entity
     end
   end
 
@@ -375,6 +406,15 @@ class AccountsController < ApplicationController
 
     def family
       Current.family
+    end
+
+    def activity_search_params
+      q = params.fetch(:q, {}).permit(
+        :search, :start_date, :end_date, :amount, :amount_operator,
+        categories: [], tags: [], merchants: [], types: [], status: []
+      )
+      q.delete(:amount_operator) unless q[:amount].present?
+      q
     end
 
     # Shares the "per page" preference with TransactionsController's

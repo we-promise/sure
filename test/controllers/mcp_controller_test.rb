@@ -18,6 +18,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unauthorized", JSON.parse(response.body)["error"]
     assert response.headers["WWW-Authenticate"].present?, "Must include WWW-Authenticate header"
     assert_includes response.headers["WWW-Authenticate"], "oauth-protected-resource"
+    assert_includes response.headers["WWW-Authenticate"], "scope=\"read_write\""
   end
 
   test "returns 401 with wrong token" do
@@ -319,6 +320,9 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_includes tool_names, "get_income_statement"
       assert_includes tool_names, "update_transaction"
       assert_includes tool_names, "update_budget"
+      assert_includes tool_names, "get_transfer_match_candidates"
+      assert_includes tool_names, "match_transfer"
+      assert_includes tool_names, "review_transfer"
 
       # Each tool has required fields
       tools.each do |tool|

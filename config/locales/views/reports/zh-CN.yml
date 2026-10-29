@@ -6,7 +6,6 @@ zh-CN:
       subtitle: 您财务健康状况的全面洞察
       export: 导出 CSV
       print_report: 打印报表
-      drag_to_reorder: 拖动以重新排序模块
       toggle_section: 切换模块可见性
       periods:
         monthly: 按月
@@ -177,19 +176,14 @@ zh-CN:
       net_flow: 净流入
       net_flow_description: 总净变化
     google_sheets_instructions:
-      title_with_key: ✅ 复制 Google 表格 URL
-      title_no_key: ⚠️ 需要 API 密钥
-      ready: 您的 CSV URL（含 API 密钥）已准备好。
-      steps: "导入到 Google 表格的步骤：\n1. 新建一个 Google 表格\n2. 在 A1 单元格中输入下方公式\n3. 按回车"
-      security_warning: "此 URL 包含您的 API 密钥，请妥善保管！"
+      title_no_key: 需要 API 密钥
       need_key: 要导入数据到 Google 表格，您需要一个 API 密钥。
       step1: 前往 设置 → API 密钥
       step2: 创建一个具有“read”权限的新 API 密钥
       step3: 复制该 API 密钥
-      step4: 将其添加到此 URL 中：?api_key=YOUR_KEY
+      step4: 将其添加到此 URL 中：&api_key=YOUR_KEY
       example: 示例
       then_use: 然后在 Google 表格中使用完整 URL 和 =IMPORTDATA()。
-      open_sheets: 打开 Google 表格
       go_to_api_keys: 前往 API 密钥
       close: 知道了
     print:

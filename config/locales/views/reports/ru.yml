@@ -25,26 +25,16 @@ ru:
       example: Пример
       go_to_api_keys: Перейти к API-ключам
       need_key: Чтобы импортировать данные в Google Sheets, вам нужен API-ключ.
-      open_sheets: Открыть Google Sheets
-      ready: Ваш URL для CSV (с API-ключом) готов.
-      security_warning: Этот URL включает ваш API-ключ. Держите его в безопасности!
       step1: Перейдите в Настройки → API-ключи
       step2: Создайте новый API-ключ с разрешением "чтение"
       step3: Скопируйте API-ключ
-      step4: 'Добавьте его в этот URL как: ?api_key=YOUR_KEY'
-      steps: |-
-        Чтобы импортировать в Google Sheets:
-        1. Создайте новый Google Sheet
-        2. В ячейке A1 введите формулу, показанную ниже
-        3. Нажмите Enter
+      step4: 'Добавьте его в этот URL как: &api_key=YOUR_KEY'
       then_use: Затем используйте полный URL с =IMPORTDATA() в Google Sheets.
-      title_no_key: "⚠️ Требуется API-ключ"
-      title_with_key: "✅ Скопируйте URL для Google Sheets"
+      title_no_key: "Требуется API-ключ"
     index:
       date_range:
         from: С
         to: По
-      drag_to_reorder: Перетащите для изменения порядка разделов
       export: Экспорт CSV
       next_decade: Следующее десятилетие
       next_period: Следующий период
