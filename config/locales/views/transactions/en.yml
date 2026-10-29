@@ -349,6 +349,7 @@ en:
           ai_history: AI history
           attachment_with: With attachment
           attachment_without: Without attachment
+          unknown_account: Unknown account
         attachment_filter:
           with: With attachment
           without: Without attachment
