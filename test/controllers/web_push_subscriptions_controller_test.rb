@@ -3,6 +3,7 @@ require Rails.root.join("test/support/web_push_test_helper")
 
 class WebPushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
   include WebPushTestHelper
+  include ActiveJob::TestHelper
 
   setup do
     @user = users(:family_admin)
