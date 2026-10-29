@@ -132,6 +132,23 @@ module ImportInterfaceTest
     end
   end
 
+  test "keeps a parenthesized amount unsigned when a type column sets the direction" do
+    import = Import.find(imports(:transaction).id)
+    import.update!(
+      number_format: "1,234.56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "custom_column",
+      amount_type_inflow_value: "credit"
+    )
+    import.update!(raw_file_str: "date,amount,name\n01/01/2024,\"(1,234.56)\",Test")
+    import.generate_rows_from_csv
+
+    assert_equal "1234.56", import.reload.rows.first.amount
+  end
+
   test "parses French/Scandinavian number format correctly" do
     import = imports(:transaction)
     import.update!(
