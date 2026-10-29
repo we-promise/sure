@@ -193,7 +193,7 @@ zh-CN:
       title: 取消与提供商的连接？
       description_html: 您即将把 <strong>%{account_name}</strong> 与 <strong>%{provider_name}</strong> 取消连接。这将把它转换为手动账户。
       warning_title: 这意味着什么
-      warning_wallet_connection: 此 Apple Wallet 连接中的所有账户都将被取消关联。它们的交易和余额将被保留。您可以通过 Sure iOS 应用通过新的 Wallet 设置重新连接。
+      warning_wallet_connection: 此 Apple Wallet 连接中的所有账户都将被取消关联。它们的交易和余额将被保留。您可以通过 Sure iOS 应用中的新 Wallet 设置重新连接。
       warning_no_sync: 该账户将不再自动与您的提供商同步
       warning_manual_updates: 您需要手动添加交易并更新余额
       warning_transactions_kept: 所有现有交易和余额都将保留
