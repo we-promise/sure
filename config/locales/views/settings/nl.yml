@@ -5,6 +5,7 @@ nl:
       payments:
         renewal: "Uw bijdrage wordt voortgezet op %{date}."
   settings:
+    encryption_migration_guide: Handleiding voor het instellen van versleuteling en migratie
     ai_prompts:
       show:
         page_title: AI Prompts
@@ -121,6 +122,7 @@ nl:
       accounts_label: Accounts
       advanced_section_title: Geavanceerd
       ai_prompts_label: AI Prompts
+      auto_matches_label: Automatische matching
       api_key_label: API Key
       payment_label: Betaling
       categories_label: Categorieën
