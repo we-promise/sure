@@ -12,7 +12,6 @@ nl:
       welcome: "Welkom terug, %{name}"
       subtitle: "Dit gebeurt er met uw financiën"
       new: "Nieuw"
-      drag_to_reorder: "Sleep om sectie te herschikken"
       toggle_section: "Zichtbaarheid sectie wijzigen"
       net_worth_chart:
         data_not_available: Gegevens niet beschikbaar voor de geselecteerde periode

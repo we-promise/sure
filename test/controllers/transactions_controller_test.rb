@@ -325,6 +325,86 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "a blank auto-generated name is not silently kept when another field fails validation" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    # Name is blank but a category is selected, so Entry#set_default_name
+    # fills it in during validation; the date is deliberately out of the
+    # supported range so the record still fails to save for an unrelated
+    # reason (an invalid currency would break rendering the money field
+    # itself, not just validation). The re-rendered form must show the name
+    # field blank again (not the generated text), or a resubmission after
+    # changing the category would save that now-stale name instead of a
+    # fresh one.
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "",
+        date: 40.years.ago.to_date,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        entryable_attributes: { category_id: categories(:food_and_drink).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='entry[name]'][value='']"
+  end
+
+  test "an explicitly provided name survives a failed submission unchanged" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "Explicit name",
+        date: 40.years.ago.to_date,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        entryable_attributes: { category_id: categories(:food_and_drink).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='entry[name]'][value='Explicit name']"
+  end
+
+  test "recent name suggestions never include entries from accounts inaccessible to the current user" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    private_account = Account.create!(
+      family: @entry.account.family,
+      owner: users(:family_member),
+      name: "Family Member Private Account",
+      balance: 100,
+      currency: "USD",
+      accountable: Depository.new,
+      status: "active"
+    )
+    create_transaction(account: private_account, name: "Private Merchant XYZ")
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "Private Merchant XYZ", response.body
+  end
+
+  test "recent name suggestions exclude the unknown-name fallback in every supported locale, not just the current one" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    create_transaction(account: @entry.account, name: I18n.t("transactions.unknown_name", locale: :en))
+    create_transaction(account: @entry.account, name: I18n.t("transactions.unknown_name", locale: :de))
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match I18n.t("transactions.unknown_name", locale: :de), response.body
+  end
+
   # Regression: the sync window must start at the old date, or the incremental
   # balance calculation counts the moved transaction twice.
   test "moving a transaction later syncs from its original date" do
@@ -338,6 +418,59 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_equal 2.days.ago.to_date, @entry.reload.date
+  end
+
+  test "name_suggestions returns matching past transaction names with their usual category" do
+    get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
+
+    assert_response :success
+    assert_match "Starbucks", response.body
+    assert_match "data-category-id=\"#{categories(:food_and_drink).id}\"", response.body
+  end
+
+  test "name_suggestions starts with recent names and categories when auto naming is enabled" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_match "Starbucks", response.body
+    assert_match "data-category-id=\"#{categories(:food_and_drink).id}\"", response.body
+
+    get name_suggestions_transactions_url(q: "zz"), as: :turbo_stream
+    assert_no_match "Starbucks", response.body
+  end
+
+  test "name_suggestions does not load recent names when auto naming is disabled" do
+    @entry.account.family.update!(auto_generate_transaction_names: false)
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "Starbucks", response.body
+  end
+
+  test "name_suggestions returns no options when no past transaction matches" do
+    get name_suggestions_transactions_url(q: "no such merchant"), as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "no such merchant", response.body
+  end
+
+  test "name_suggestions only considers transactions from accounts accessible to the current user" do
+    # accounts(:investment) is owned by family_admin and not shared with family_member
+    create_transaction(account: accounts(:investment), name: "Private Yacht Purchase", category: categories(:income))
+
+    sign_in users(:family_member)
+
+    get name_suggestions_transactions_url(q: "Private Yacht"), as: :turbo_stream
+    assert_response :success
+    assert_no_match "Private Yacht", response.body
+
+    # depository is shared with family_member, so its transactions remain suggestible
+    get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
+    assert_response :success
+    assert_match "Starbucks", response.body
   end
 
   test "updates with transaction details" do

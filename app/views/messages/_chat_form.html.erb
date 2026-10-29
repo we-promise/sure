@@ -1,18 +1,22 @@
 <%# locals: (chat: nil, message_hint: nil) %>
 
-<div id="chat-form" class="space-y-2">
+<div id="chat-form" class="space-y-2"
+     data-controller="chat-reservation"
+     data-chat-reservation-url-value="<%= chat_reservation_path %>">
+  <div class="chat-reservation" role="status" aria-live="polite"></div>
+
   <% model = chat && chat.persisted? ? [chat, Message.new] : Chat.new %>
 
   <%= form_with model: model,
                 class: "flex lg:flex-col gap-2 bg-container px-2 py-1.5 rounded-full lg:rounded-lg shadow-border-xs",
-                data: { chat_target: "form" } do |f| %>
+                data: { chat_target: "form", action: "submit->chat-reservation#hide" } do |f| %>
 
     <%# In the future, this will be a dropdown with different AI models %>
     <%= f.hidden_field :ai_model, value: default_ai_model %>
 
     <%= f.text_area :content, placeholder: t(".placeholder"), value: message_hint, autofocus: message_hint.present?,
                   class: "w-full border-0 focus:ring-0 text-sm resize-none px-1 bg-transparent",
-                  data: { chat_target: "input", action: "input->chat#autoResize keydown->chat#handleInputKeyDown" },
+                  data: { chat_target: "input", action: "input->chat#autoResize focus->chat-reservation#hold input->chat-reservation#hold keydown->chat#handleInputKeyDown" },
                   rows: 1 %>
 
     <div class="flex items-center justify-between gap-1">
