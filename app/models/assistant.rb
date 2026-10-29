@@ -47,6 +47,7 @@ module Assistant
     Function::UpdateTag,
     Function::CreateCategory,
     Function::UpdateCategory,
+    Function::DeleteCategory,
     Function::SuggestSecurityClassification
   ].freeze
 
@@ -89,6 +90,7 @@ module Assistant
         Function::GetCategories,
         Function::CreateCategory,
         Function::UpdateCategory,
+        Function::DeleteCategory,
         Function::GetMerchants,
         Function::GetRules,
         Function::GetRuleOptions,
@@ -99,6 +101,9 @@ module Assistant
         Function::UpdateTransaction,
         Function::CreateTransaction,
         Function::DeleteTransaction,
+        Function::GetTransferMatchCandidates,
+        Function::MatchTransfer,
+        Function::ReviewTransfer,
         Function::UpdateBudget
       ]
 

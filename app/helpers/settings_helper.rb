@@ -17,6 +17,7 @@ module SettingsHelper
     { name: -> { t("settings.settings_nav.statement_vault_label") }, path: :account_statements_path, condition: :admin_user? },
     # Advanced section
     { name: -> { t("settings.settings_nav.ai_prompts_label") }, path: :settings_ai_prompts_path, condition: :admin_user? },
+    { name: -> { t("settings.settings_nav.classifier_label") }, path: :settings_classifier_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.llm_usage_label") }, path: :settings_llm_usage_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.api_key_label") }, path: :settings_api_keys_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.self_hosting_label") }, path: :settings_hosting_path, condition: :self_hosted_and_admin? },
