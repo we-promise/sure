@@ -97,7 +97,7 @@ class Loan
         # the not-converged notice can quote.
         balloon: projection.applicable? && !projection.converged? ? projection.balloon_amount.amount.to_f : nil,
         labels: labels,
-        aria_description: aria_description(actual: series[:actual], scheduled: series[:scheduled])
+        aria_description: aria_description(series)
       }
     end
 
@@ -234,7 +234,8 @@ class Loan
       # shading under the scheduled line in words when that line is drawn, and
       # the principal and interest split the tooltip adds when the window holds
       # a scheduled payment to split.
-      def aria_description(actual:, scheduled:)
+      def aria_description(series)
+        actual, scheduled = series.values_at(:actual, :scheduled)
         description = I18n.t(
           "UI.account.chart.loan.aria_description",
           current_balance: projection.current_balance.format,
@@ -253,11 +254,9 @@ class Loan
         description = [ description, interest_share_sentence ].join(" ") if visible?(scheduled)
 
         # The tooltip's split of each scheduled payment is not drawn anywhere
-        # else, so the description says it is there. A window with no payment
-        # in it -- one past the last scheduled repayment, or one starting on
-        # it, where the point clips -- has no split to show: the tooltip then
-        # stops at plotted dates that carry none.
-        return description unless payment_in_window?(scheduled)
+        # else, so the description says it is there, whenever the tooltip can
+        # reach one.
+        return description unless split_reachable?(series)
 
         [ description, I18n.t(
           "UI.account.chart.loan.aria_composition",
@@ -266,16 +265,30 @@ class Loan
         ) ].join(" ")
       end
 
-      # The split rides on the payment points only; the opening point is the
-      # amount borrowed and carries none. A point sitting exactly on a window's
-      # start edge is clipped away, the way #visible? reads a series that ends
-      # on the start; a point on the end edge is inside the drawn window, the
-      # way #4387 reads the final repayment entering a window.
-      def payment_in_window?(scheduled)
-        scheduled.any? do |point|
-          date = Date.iso8601(point[:date])
-          point.key?(:principal) && date > domain_start && date <= domain_end
-        end
+      # Whether the tooltip shows a split at any of its stops, read as the
+      # chart controller reads them. The split rides on the payment points
+      # only; the opening point is the amount borrowed and carries none.
+      # The stops are the scheduled dates in the window, both edges included,
+      # or every plotted date in it when there are none; at a stop within the
+      # schedule's span the scheduled row shows its nearest point, the earlier
+      # on a tie, and past either end it shows nothing.
+      def split_reachable?(series)
+        drawn = series.values.select { |points| points.size > 1 }
+        scheduled = series[:scheduled].map { |point| [ Date.iso8601(point[:date]), point.key?(:principal) ] }
+        return false unless drawn.include?(series[:scheduled])
+
+        in_window = scheduled.select { |date, _| date.between?(domain_start, domain_end) }
+        return in_window.any? { |_, split| split } if in_window.any?
+
+        drawn.flatten.map { |point| Date.iso8601(point[:date]) }.uniq
+          .select { |date| date.between?(domain_start, domain_end) && date.between?(scheduled.first[0], scheduled.last[0]) }
+          .any? { |date| nearest_scheduled(scheduled, date)[1] }
+      end
+
+      def nearest_scheduled(scheduled, date)
+        after = scheduled.index { |point_date, _| point_date >= date } || scheduled.size - 1
+        before = scheduled[[ after - 1, 0 ].max]
+        (date - before[0]) <= (scheduled[after][0] - date) ? before : scheduled[after]
       end
 
       # Interest over what was paid, across the first twelve payments and the

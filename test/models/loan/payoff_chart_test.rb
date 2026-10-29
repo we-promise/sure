@@ -253,10 +253,9 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     assert_includes whole_life[:aria_description], composition_sentence
   end
 
-  # The window's start edge clips its point away, the way #4387 reads a series
-  # that ends on the start, so a window opening on the final repayment has no
-  # reachable tooltip to promise.
-  test "the accessible description does not mention the split for a window starting on the final repayment" do
+  # The tooltip stops at a payment on the window's start edge, as the chart
+  # controller includes it, and shows its split, so the description says so.
+  test "the accessible description mentions the split for a window starting on the final repayment" do
     loan = build_loan
     final = loan.amortization_schedule.payoff_date
     as_of = final + 5
@@ -265,7 +264,23 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     payload = Loan::PayoffChart.new(loan, as_of: as_of, period: window).payload
 
     assert_equal final.iso8601, payload[:scheduled].last[:date], "the final repayment must sit on the window's start"
-    assert_not_includes payload[:aria_description], composition_sentence
+    assert_includes payload[:aria_description], composition_sentence
+  end
+
+  # A window between two payments holds none, so the tooltip stops at the
+  # plotted dates in it, and the scheduled row there shows the nearest
+  # payment's split.
+  test "the accessible description mentions the split for a window between two payments" do
+    loan = build_loan
+    dates = loan.amortization_schedule.payments.map(&:date)
+    gap_start = dates[5] + 1
+    window = Period.new(key: "current_month", start_date: gap_start, end_date: dates[6] - 1)
+
+    payload = Loan::PayoffChart.new(loan, as_of: dates[6] - 1, period: window).payload
+
+    assert_empty payload[:scheduled].select { |point| Date.iso8601(point[:date]).between?(gap_start, dates[6] - 1) },
+      "the window must hold no scheduled point for this test to mean anything"
+    assert_includes payload[:aria_description], composition_sentence
   end
 
   test "the accessible description dates recorded history when it starts after origination" do
