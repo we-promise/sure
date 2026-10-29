@@ -22,6 +22,7 @@ export default class extends Controller {
     maxMessage: String,
     separator: String,
     separatorCurrency: String,
+    currencySource: String,
   };
 
   requestSequence = 0;
@@ -133,6 +134,15 @@ export default class extends Controller {
   handleCurrencyChange(e) {
     const selectedCurrency = e.target.value;
     this.updateAmount(selectedCurrency);
+  }
+
+  // A field with its currency picker hidden can follow another field's
+  // picker, named by a CSS selector, so its symbol and precision match.
+  followCurrencySource(e) {
+    if (!(e.target instanceof Element)) return;
+    if (!e.target.matches(this.currencySourceValue)) return;
+
+    this.updateAmount(e.target.value);
   }
 
   updateAmount(currency) {

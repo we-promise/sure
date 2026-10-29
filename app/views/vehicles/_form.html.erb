@@ -35,7 +35,8 @@
                                      label: t("vehicles.form.purchase_price"),
                                      placeholder: t("vehicles.form.purchase_price_placeholder"),
                                      currency_value_override: account.currency,
-                                     value: vehicle_form.object.initial_balance || (account.opening_anchor_balance if account.persisted?),
+                                     currency_source: "select[name='account[currency]']",
+                                     value: vehicle_form.object.initial_balance || (vehicle_form.object.purchase_price.amount if account.persisted?),
                                      hide_currency: true %>
           <% if account.persisted? %>
             <%= vehicle_form.date_field :purchase_date,

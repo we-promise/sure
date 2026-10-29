@@ -136,6 +136,105 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2.years.ago.to_date, @account.opening_anchor_date
   end
 
+  test "keeps the current value when only the purchase price changes" do
+    @account.set_opening_anchor_balance(balance: 18000, date: 2.years.ago.to_date)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        accountable_attributes: { id: @account.accountable_id, initial_balance: 25000, purchase_date: 2.years.ago.to_date }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    @account.reload
+    assert_equal 25000, @account.opening_anchor_balance
+    assert_equal 18000, @account.balance
+    reconciliation = @account.valuations.reconciliation.first.entry
+    assert_equal [ Date.current, 18000 ], [ reconciliation.date, reconciliation.amount ]
+  end
+
+  test "an edit that resubmits the prefilled purchase fields changes nothing" do
+    @account.set_opening_anchor_balance(balance: 21000, date: 2.years.ago.to_date)
+    clear_enqueued_jobs
+
+    assert_no_difference "Entry.count" do
+      patch vehicle_path(@account), params: {
+        account: {
+          name: "Renamed",
+          accountable_attributes: { id: @account.accountable_id, initial_balance: "21000.00", purchase_date: 2.years.ago.to_date }
+        }
+      }
+    end
+
+    assert_redirected_to account_path(@account)
+    assert_equal "Renamed", @account.reload.name
+    assert_no_enqueued_jobs only: SyncJob
+  end
+
+  test "an edit of a vehicle without an opening anchor does not invent one" do
+    assert_not @account.has_opening_anchor?
+
+    get edit_vehicle_path(@account)
+    assert_select "input[name='account[accountable_attributes][initial_balance]'][value='18000.00']"
+
+    assert_no_difference "Entry.count" do
+      patch vehicle_path(@account), params: {
+        account: {
+          name: "Renamed",
+          accountable_attributes: { id: @account.accountable_id, initial_balance: "18000.00", purchase_date: @account.opening_anchor_date }
+        }
+      }
+    end
+
+    assert_redirected_to account_path(@account)
+    assert_equal "Renamed", @account.reload.name
+  end
+
+  test "moving the purchase date of a vehicle without an anchor keeps its purchase price" do
+    create_valuation(account: @account, date: 1.year.ago.to_date, amount: 20000)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        accountable_attributes: { id: @account.accountable_id, initial_balance: "20000.00", purchase_date: 2.years.ago.to_date }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert_equal 20000, @account.reload.opening_anchor_balance
+    assert_equal 2.years.ago.to_date, @account.opening_anchor_date
+    assert_equal Money.new(20000, "USD"), @account.vehicle.purchase_price
+  end
+
+  test "an unchanged purchase date is not revalidated against older entries" do
+    @account.set_opening_anchor_balance(balance: 21000, date: 1.year.ago.to_date)
+    create_valuation(account: @account, date: 2.years.ago.to_date, amount: 22000)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        name: "Renamed",
+        accountable_attributes: { id: @account.accountable_id, purchase_date: 1.year.ago.to_date }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert_equal "Renamed", @account.reload.name
+  end
+
+  test "rejects a purchase date that is not a date" do
+    @account.set_opening_anchor_balance(balance: 21000, date: 2.years.ago.to_date)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        name: "Renamed",
+        accountable_attributes: { id: @account.accountable_id, purchase_date: "not-a-date" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal "Honda Accord", @account.reload.name
+    assert_equal 2.years.ago.to_date, @account.opening_anchor_date
+  end
+
   test "leaves the opening anchor alone when the purchase fields are blank" do
     @account.set_opening_anchor_balance(balance: 21000, date: 2.years.ago.to_date)
 

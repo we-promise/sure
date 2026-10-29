@@ -7,8 +7,14 @@ class Vehicle < ApplicationRecord
   attribute :initial_balance, :decimal
   attribute :purchase_date, :date
 
-  validate :purchase_date_precedes_entries, if: :persisted?
-  after_update :update_purchase_anchor, if: -> { saved_change_to_initial_balance? || saved_change_to_purchase_date? }
+  validate :purchase_date_is_valid, if: :persisted?
+  after_update :update_purchase_anchor, if: -> { purchase_price_edited? || purchase_date_edited? }
+
+  # An unparseable purchase date casts to nil, which reads as unchanged, and
+  # the account would then skip validating this record.
+  def changed_for_autosave?
+    super || invalid_purchase_date?
+  end
 
   def mileage
     Measurement.new(mileage_value, mileage_unit) if mileage_value.present?
@@ -37,24 +43,55 @@ class Vehicle < ApplicationRecord
   end
 
   private
-    def purchase_date_precedes_entries
-      return if purchase_date.blank?
+    # The form posts both fields prefilled on every edit, so only a value that
+    # differs from what is stored counts as an edit.
+    def purchase_price_edited?
+      initial_balance.present? && initial_balance != purchase_price.amount
+    end
 
-      if Account::OpeningBalanceManager.new(account).date_error(purchase_date)
+    def purchase_date_edited?
+      purchase_date.present? && purchase_date != account.opening_anchor_date
+    end
+
+    def invalid_purchase_date?
+      purchase_date.nil? && purchase_date_before_type_cast.present?
+    end
+
+    def purchase_date_is_valid
+      if invalid_purchase_date?
+        errors.add(:purchase_date, :invalid)
+      elsif purchase_date_edited? && Account::OpeningBalanceManager.new(account).date_error(purchase_date)
         errors.add(:purchase_date, :must_precede_entries)
       end
     end
 
     def update_purchase_anchor
-      return if initial_balance.nil? && purchase_date.nil?
+      price_edited = purchase_price_edited?
+      current_balance = account.balance
 
       result = account.set_opening_anchor_balance(
-        balance: initial_balance || account.opening_anchor_balance,
-        date: purchase_date
+        balance: price_edited ? initial_balance : purchase_price.amount,
+        date: (purchase_date if purchase_date_edited?)
       )
-      return if result.success?
+      raise_purchase_error(result.error) unless result.success?
 
-      errors.add(:base, result.error)
+      keep_current_balance(current_balance) if price_edited
+    end
+
+    # With no later valuation the anchor carries forward to today, so the new
+    # purchase price would become the current value too. Pin today's value, as
+    # Account.create_and_sync does on create.
+    def keep_current_balance(balance)
+      anchor_date = account.opening_anchor_date
+      return unless anchor_date < Date.current
+      return if account.entries.valuations.where("entries.date > ?", anchor_date).exists?
+
+      result = Account::ReconciliationManager.new(account).reconcile_balance(balance: balance, date: Date.current)
+      raise_purchase_error(result.error_message) unless result.success?
+    end
+
+    def raise_purchase_error(message)
+      errors.add(:base, message)
       raise ActiveRecord::RecordInvalid.new(self)
     end
 
