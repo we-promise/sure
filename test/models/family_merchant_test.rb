@@ -3,6 +3,8 @@
 require "test_helper"
 
 class FamilyMerchantTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @family = families(:dylan_family)
   end
@@ -30,6 +32,18 @@ class FamilyMerchantTest < ActiveSupport::TestCase
 
     assert_not merchant.reload.logo.attached?
     assert_equal "https://cdn.example/logo.png", merchant.logo_url
+  end
+
+  test "remove_logo enqueues the blob purge only after the save commits" do
+    merchant = FamilyMerchant.create!(family: @family, name: "Committed Purge Merchant")
+    merchant.logo.attach(io: file_fixture("profile_image.png").open, filename: "logo.png", content_type: "image/png")
+
+    FamilyMerchant.transaction do
+      merchant.update!(remove_logo: true)
+      assert_no_enqueued_jobs only: ActiveStorage::PurgeJob
+    end
+
+    assert_enqueued_jobs 1, only: ActiveStorage::PurgeJob
   end
 
   test "preserves user-selected color on creation" do

@@ -43,7 +43,7 @@ class FamilyMerchant < Merchant
 
   private
     def purge_logo
-      logo.purge_later
+      self.logo_attachment = nil
       self.remove_logo = false
     end
 
