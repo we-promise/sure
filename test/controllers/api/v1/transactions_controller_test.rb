@@ -822,8 +822,21 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
         params: { transaction: { tag_ids: [ "not-a-uuid" ] } },
         headers: api_headers(@api_key)
 
-    assert_not_equal 200, response.status
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
     assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "create with a malformed tag id is refused and creates nothing" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Tagged", amount: 25.00, date: Date.current,
+                                    currency: "USD", nature: "expense", tag_ids: [ "not-a-uuid" ] } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
   end
 
   test "should clear tags when empty tag_ids explicitly provided in update" do
