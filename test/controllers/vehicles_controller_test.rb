@@ -175,7 +175,7 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
 
     patch vehicle_path(@account), params: {
       account: {
-        accountable_attributes: { id: @account.accountable_id, initial_balance: "22000.00", purchase_date: 3.years.ago.to_date }
+        accountable_attributes: { id: @account.accountable_id, initial_balance: "21000.00", purchase_date: 3.years.ago.to_date }
       }
     }
 
@@ -311,7 +311,7 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     patch vehicle_path(@account), params: {
       account: {
         accountable_attributes: {
-          id: @account.accountable_id, make: "Honda", initial_balance: "22000.00", initial_balance_shown: "22000.00",
+          id: @account.accountable_id, make: "Honda", initial_balance: "21000.00", initial_balance_shown: "21000.00",
           purchase_date: 3.years.ago.to_date
         }
       }
@@ -320,6 +320,23 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(@account)
     @account.reload
     assert_equal [ 21000, 3.years.ago.to_date ], [ @account.opening_anchor_balance, @account.opening_anchor_date ]
+  end
+
+  test "the purchase price is the opening anchor even when a valuation predates it" do
+    @account.set_opening_anchor_balance(balance: 21000, date: 1.year.ago.to_date)
+    create_valuation(account: @account, date: 2.years.ago.to_date, amount: 22000)
+
+    get edit_vehicle_path(@account)
+    assert_select "input[name='account[accountable_attributes][initial_balance]'][value='21000.00']"
+
+    patch vehicle_path(@account), params: {
+      account: {
+        accountable_attributes: { id: @account.accountable_id, initial_balance: "25000.00", initial_balance_shown: "21000.00" }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert_equal Money.new(25000, "USD"), @account.reload.vehicle.purchase_price
   end
 
   test "a price shown rounded to the currency's precision is not an edit" do

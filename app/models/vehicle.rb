@@ -23,12 +23,16 @@ class Vehicle < ApplicationRecord
     Measurement.new(mileage_value, mileage_unit) if mileage_value.present?
   end
 
+  # The opening anchor ("Original purchase price") is what the form edits, so
+  # it is the purchase price even when a valuation predates it.
   def purchase_price
+    return Money.new(account.opening_anchor_balance, account.currency) if account.has_opening_anchor?
+
     first_valuation_amount
   end
 
   def trend
-    Trend.new(current: account.balance_money, previous: first_valuation_amount)
+    Trend.new(current: account.balance_money, previous: purchase_price)
   end
 
   class << self
@@ -88,15 +92,13 @@ class Vehicle < ApplicationRecord
       keep_current_balance(current_balance) if anchor_balance != current_balance
     end
 
-    # Moving only the date keeps the anchor's own balance, which is not the
-    # price shown when a valuation predates the anchor. A same-day anchor is
-    # also today's balance, which the account update may just have rewritten;
-    # the price shown is what it held before.
+    # Moving only the date keeps the purchase price. A same-day anchor is also
+    # today's balance, which the account update may just have rewritten; the
+    # price shown is what it held before.
     def unedited_anchor_balance
-      return purchase_price.amount unless account.has_opening_anchor?
       return initial_balance_shown if initial_balance_shown && account.opening_anchor_date == Date.current
 
-      account.opening_anchor_balance
+      purchase_price.amount
     end
 
     def round_to_currency(amount)
