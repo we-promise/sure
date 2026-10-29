@@ -5,4 +5,4 @@ en:
       success: Lot cost updated.
       error: Enter what the parcel cost in total, zero or more.
     unlock:
-      success: Lot cost returned to the trade's price.
+      success: Manual cost cleared.

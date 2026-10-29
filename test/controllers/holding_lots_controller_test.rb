@@ -44,6 +44,7 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
     post unlock_holding_lot_path(@holding, @lot)
 
     assert_redirected_to account_path(@account, tab: "holdings")
+    assert_equal "Manual cost cleared.", flash[:notice], "a lot with no trade price returns to unknown, not a price"
     assert_nil @lot.reload.manual_total_cost
     assert_equal BigDecimal("15.2"), @holding.reload.cost_basis
   end
@@ -121,6 +122,8 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
   test "the drawer lists the position's lots, and only while they add up to it" do
     get holding_path(@holding)
     assert_select "form[action='#{holding_lot_path(@holding, @lot)}']", count: 1
+    # The row shows a cost per unit while its editor takes the lot's total.
+    assert_select "summary", text: /\$20\.00 per unit/
 
     @lot.update_columns(qty: @lot.qty - 1)
     get holding_path(@holding)
