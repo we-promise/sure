@@ -27,9 +27,14 @@ class Account::Syncer
   private
     # A method saved while this run was calculating left its figures on the
     # old one, and the form's sync_later folded into this run. Once it has
-    # completed, a new sync restates them.
+    # completed, a new sync restates them. Post-sync also runs after a failed
+    # sync; that one queues nothing, since each failure would queue another,
+    # and the next sync to complete restates the figures.
     def restate_if_cost_basis_method_changed
-      used = account.syncs.completed.order(:created_at).last&.data&.dig("cost_basis_method")
+      latest = account.syncs.ordered.first
+      return unless latest&.completed?
+
+      used = latest.data&.dig("cost_basis_method")
       return if used.nil? || used == Account.where(id: account.id).pick(:cost_basis_method)
 
       account.sync_later
