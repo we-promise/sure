@@ -71,6 +71,10 @@ en:
           aria_extra_payoff: Projected payoff with the extra repayment %{date}.
           extra: With extra repayment
           aria_actual_history_starts: Recorded balance history begins %{date}.
+          aria_interest_share: Across the first year's repayments about %{first}% of the amount paid is interest; across the final year's, about %{last}%.
+          aria_interest_share_overall: Across all the repayments about %{share}% of the amount paid is interest.
+          interest_share: Interest share
+          principal_share: Principal share
           projected_payoff: Projected payoff
           months_saved:
             one: "%{count} month sooner than scheduled"
