@@ -1121,7 +1121,7 @@ class Account::ProviderImportAdapter
     def account_linked_to_any_goal?
       return @account_linked_to_any_goal if defined?(@account_linked_to_any_goal)
 
-      @account_linked_to_any_goal = account.goal_accounts.exists?
+      @account_linked_to_any_goal = account.linked_to_goal?
     end
 
     # Writes provider-owned metadata onto the transaction.

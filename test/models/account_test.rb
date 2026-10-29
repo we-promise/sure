@@ -1210,6 +1210,16 @@ class AccountTest < ActiveSupport::TestCase
     assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
   end
 
+  test "linked_to_goal? is true only for an account linked to a goal" do
+    account = @family.accounts.create!(name: "Goal savings", balance: 0, currency: "USD", accountable: Depository.new)
+
+    assert_not account.linked_to_goal?
+
+    goals(:vacation_italy).goal_accounts.create!(account: account)
+
+    assert account.linked_to_goal?
+  end
+
   private
     def create_loan_with_start_date(start_date, opening_balance_date)
       Account.create_and_sync(
