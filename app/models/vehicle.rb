@@ -70,7 +70,7 @@ class Vehicle < ApplicationRecord
       current_balance = account.balance
 
       result = account.set_opening_anchor_balance(
-        balance: price_edited ? initial_balance : purchase_price.amount,
+        balance: price_edited ? initial_balance : unedited_anchor_balance,
         date: (purchase_date if purchase_date_edited?)
       )
       raise_purchase_error(result.error) unless result.success?
@@ -78,13 +78,19 @@ class Vehicle < ApplicationRecord
       keep_current_balance(current_balance) if price_edited
     end
 
-    # With no later valuation the anchor carries forward to today, so the new
-    # purchase price would become the current value too. Pin today's value, as
-    # Account.create_and_sync does on create.
+    # A valuation can predate the anchor, and then it is the purchase price
+    # shown; moving only the date keeps the anchor's own balance.
+    def unedited_anchor_balance
+      account.has_opening_anchor? ? account.opening_anchor_balance : purchase_price.amount
+    end
+
+    # With no valuation between the anchor and today, the anchor carries
+    # forward to today, so the new purchase price would become the current
+    # value too. Pin today's value, as Account.create_and_sync does on create.
     def keep_current_balance(balance)
       anchor_date = account.opening_anchor_date
       return unless anchor_date < Date.current
-      return if account.entries.valuations.where("entries.date > ?", anchor_date).exists?
+      return if account.entries.valuations.where(date: (anchor_date + 1)..Date.current).exists?
 
       result = Account::ReconciliationManager.new(account).reconcile_balance(balance: balance, date: Date.current)
       raise_purchase_error(result.error_message) unless result.success?

@@ -287,11 +287,20 @@ export default class extends Controller {
   // is not the selected currency, so the paste falls back to the unhinted
   // heuristic instead of settling it with another currency's separator.
   #pasteSeparator() {
-    if (this.hasCurrencyTarget && this.currencyTarget.value !== this.separatorCurrencyValue) {
+    const picker = this.hasCurrencyTarget
+      ? this.currencyTarget
+      : this.#currencySourceElement();
+    if (picker && picker.value !== this.separatorCurrencyValue) {
       return undefined;
     }
 
     return this.separatorValue;
+  }
+
+  #currencySourceElement() {
+    if (!this.hasCurrencySourceValue) return null;
+
+    return this.form?.querySelector(this.currencySourceValue) ?? null;
   }
 
   // The amount input's step already carries the selected currency's precision,

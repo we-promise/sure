@@ -153,6 +153,36 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ Date.current, 18000 ], [ reconciliation.date, reconciliation.amount ]
   end
 
+  test "a future valuation does not stop the current value being kept" do
+    @account.set_opening_anchor_balance(balance: 18000, date: 2.years.ago.to_date)
+    create_valuation(account: @account, date: 1.month.from_now.to_date, amount: 15000)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        accountable_attributes: { id: @account.accountable_id, initial_balance: 25000, purchase_date: 2.years.ago.to_date }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    today = @account.reload.entries.valuations.find_by(date: Date.current)
+    assert_equal 18000, today&.amount
+  end
+
+  test "moving only the purchase date keeps the anchor's balance when a valuation predates it" do
+    @account.set_opening_anchor_balance(balance: 21000, date: 1.year.ago.to_date)
+    create_valuation(account: @account, date: 2.years.ago.to_date, amount: 22000)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        accountable_attributes: { id: @account.accountable_id, initial_balance: "22000.00", purchase_date: 3.years.ago.to_date }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert_equal 21000, @account.reload.opening_anchor_balance
+    assert_equal 3.years.ago.to_date, @account.opening_anchor_date
+  end
+
   test "an edit that resubmits the prefilled purchase fields changes nothing" do
     @account.set_opening_anchor_balance(balance: 21000, date: 2.years.ago.to_date)
     clear_enqueued_jobs
