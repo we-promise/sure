@@ -127,6 +127,30 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{holding_lot_path(@holding, @lot)}']", count: 0
   end
 
+  # The lots are today's: an earlier row of the same position, even one that
+  # held the same quantity, does not offer them.
+  test "an earlier holding of the position lists no lots" do
+    earlier = @account.holdings.find_by!(security: @security, date: 1.day.ago.to_date)
+    assert_equal @holding.qty, earlier.qty, "the quantity alone cannot tell them apart"
+
+    get holding_path(earlier)
+    assert_select "form[action^='#{holding_path(earlier)}/lots']", count: 0
+    get holding_path(@holding)
+    assert_select "form[action='#{holding_lot_path(@holding, @lot)}']", count: 1
+  end
+
+  # The editor shows a saved total to the places it was stored at, so saving
+  # the form unchanged keeps it.
+  test "the cost editor reopens a sub-cent total as it was saved" do
+    patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: "600.0001" } }
+    get holding_path(@holding)
+    assert_select "input[name='holding_lot[total_cost_basis]'][value='600.0001']", count: 1
+
+    patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: "600" } }
+    get holding_path(@holding)
+    assert_select "input[name='holding_lot[total_cost_basis]'][value='600.00']", count: 1
+  end
+
   private
     def materialize
       Holding::Materializer.new(@account.reload, strategy: :forward, security_ids: [ @security.id ]).materialize_holdings
