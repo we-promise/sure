@@ -42,7 +42,7 @@ class WebPushNotificationsTest < ApplicationSystemTestCase
 
   test "budget warning opt in is saved independently from device registration" do
     visit settings_preferences_path
-    find("label[for='user_web_push_budget_warnings_enabled']").click
+    find("#user_web_push_budget_warnings_enabled + label").click
     assert_selector "#user_web_push_budget_warnings_enabled[checked]"
     assert @user.reload.web_push_budget_warnings_enabled?
     assert_empty @user.web_push_subscriptions
@@ -89,6 +89,6 @@ class WebPushNotificationsTest < ApplicationSystemTestCase
         } });
         controller.connect().then(complete);
       JS
-      page.execute_async_script(script, attributes.stringify_keys)
+      page.driver.browser.execute_async_script(script, attributes.stringify_keys)
     end
 end
