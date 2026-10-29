@@ -43,7 +43,6 @@ vi:
       welcome: "Chào mừng trở lại, %{name}"
       subtitle: "Đây là tình hình tài chính của bạn"
       new: "Mới"
-      drag_to_reorder: "Kéo để sắp xếp lại phần"
       toggle_section: "Bật/tắt hiển thị phần"
       net_worth_chart:
         data_not_available: Dữ liệu không khả dụng cho khoảng thời gian đã chọn

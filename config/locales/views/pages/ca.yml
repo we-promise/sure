@@ -49,7 +49,6 @@ ca:
         load_error: No s'ha pogut carregar el flux de caixa. Torna-ho a provar.
         retry: Torna-ho a provar
         zoom_out: Torna al flux de caixa complet
-      drag_to_reorder: Arrossega per reordenar la secció
       investment_summary:
         add_investment: Afegeix un compte d'inversió per seguir la teva cartera
         contributions: Aportacions
