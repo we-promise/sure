@@ -80,16 +80,23 @@ class Provider::TwelveData < Provider
     with_provider_response do
       # Try to fetch the currency pair via the time_series API (consumes 1 credit) - this might not return anything as the API does not provide time series data for all possible currency pairs
       throttle_request
-      response = client.get("#{base_url}/time_series") do |req|
-        req.params["symbol"] = "#{from}/#{to}"
-        req.params["start_date"] = start_date.to_s
-        req.params["end_date"] = end_date.to_s
-        req.params["interval"] = "1day"
-      end
+      begin
+        response = client.get("#{base_url}/time_series") do |req|
+          req.params["symbol"] = "#{from}/#{to}"
+          req.params["start_date"] = start_date.to_s
+          req.params["end_date"] = end_date.to_s
+          req.params["interval"] = "1day"
+        end
 
-      parsed = JSON.parse(response.body)
-      check_api_error!(parsed)
-      data = parsed.dig("values")
+        parsed = JSON.parse(response.body)
+        check_api_error!(parsed)
+        data = parsed.dig("values")
+      rescue Faraday::BadRequestError, Faraday::ResourceNotFound
+        # Pairs Twelve Data only serves as a cross (e.g. KGS/EUR) are rejected
+        # here with an HTTP 4xx, which the raise_error middleware turns into an
+        # exception before the cross fallback below could run.
+        data = nil
+      end
 
       # If currency pair is not available, try to fetch via the time_series/cross API (consumes 5 credits)
       if data.nil?
