@@ -177,4 +177,19 @@ test "budget warnings default off and are saved only for this user" do
   patch settings_preferences_url, params: { user: { web_push_budget_warnings_enabled: "0" } }
   assert_not user.reload.web_push_budget_warnings_enabled?
 end
+  test "browser registration inventory contains only current session ids and digests" do
+    require Rails.root.join("test/support/web_push_test_helper")
+    extend WebPushTestHelper
+    user = users(:family_admin)
+    user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
+    current_session = Current.session
+    device = register_web_push(user: user, session: current_session)
+    other = register_web_push(user: user, endpoint: "https://fcm.googleapis.com/other")
+    get settings_preferences_url
+    inventory = JSON.parse(css_select("[data-web-push-registrations-value]").first["data-web-push-registrations-value"])
+    assert_equal({ device.id => device.endpoint_digest }, inventory)
+    assert_not_includes inventory.keys, other.id
+    assert_not_includes response.body, device.endpoint
+    assert_not_includes response.body, device.auth
+  end
 end

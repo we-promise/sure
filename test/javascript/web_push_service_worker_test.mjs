@@ -48,6 +48,14 @@ test("a push visibly displays its generic server-localized message", async () =>
   assert.equal(state.shown[0].options.data.path, path);
 });
 
+test("notification titles respect the server product name", async () => {
+  const state = worker();
+  await dispatch(state, "push", {
+    data: { json: () => ({ title: "Sure Community", body: "A new financial alert is available." }) },
+  });
+  assert.equal(state.shown[0].title, "Sure Community");
+});
+
 test("an empty or malformed push still displays a visible notification", async () => {
   for (const data of [undefined, { json: () => { throw new SyntaxError("bad payload"); } }]) {
     const state = worker();

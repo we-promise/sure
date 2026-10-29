@@ -82,9 +82,9 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification("Sure", {
+    self.registration.showNotification(typeof payload.title === "string" && payload.title ? payload.title : "Sure", {
       body: typeof payload.body === "string" ? payload.body : "",
-      icon: "/logo-offline.svg",
+      icon: "/android-chrome-192x192.png",
       tag: typeof payload.tag === "string" ? payload.tag : "sure-financial-alert",
       data: { path: insightNotificationPath(payload.data?.path) },
     }),

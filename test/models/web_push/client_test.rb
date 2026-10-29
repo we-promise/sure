@@ -53,4 +53,17 @@ class WebPushClientTest < ActiveSupport::TestCase
     assert_equal :rejected, WebPush::Client.new.deliver(subscription: @subscription, payload: {})
   end
 
+  test "configuration validates a real VAPID pair and contact URI" do
+    WebPush::Client.unstub(:vapid)
+    key = WebPush.generate_key
+    values = { WEB_PUSH_VAPID_PUBLIC_KEY: key.public_key, WEB_PUSH_VAPID_PRIVATE_KEY: key.private_key,
+      WEB_PUSH_VAPID_SUBJECT: "mailto:operator@example.test" }
+    ClimateControl.modify(values) { assert WebPush::Client.configured? }
+    [ { WEB_PUSH_VAPID_PRIVATE_KEY: nil }, { WEB_PUSH_VAPID_PUBLIC_KEY: "invalid" },
+      { WEB_PUSH_VAPID_SUBJECT: "http://example.test" }, { WEB_PUSH_VAPID_SUBJECT: "mailto:" },
+      { WEB_PUSH_VAPID_PRIVATE_KEY: WebPush.generate_key.private_key } ].each do |invalid|
+      ClimateControl.modify(values.merge(invalid)) { assert_not WebPush::Client.configured? }
+    end
+  end
+
 end

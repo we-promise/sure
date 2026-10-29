@@ -1,0 +1,38 @@
+en:
+  web_push:
+    title: Browser notifications
+    description: Receive new high-priority insights on this browser or installed app. Notifications hide financial details on your lock screen.
+    enable: Enable this device
+    disable: Disable this device
+    test: Test this device
+    preview: Preview
+    session_notice: Notifications stop when you sign out or your session expires after 30 days of inactivity. Open Sure regularly to keep your session active.
+    ios_guidance: On iPhone or iPad, open Sure in Safari, choose Share → Add to Home Screen, then enable notifications from the installed app. Requires iOS or iPadOS 16.4 or later.
+    budget_title: Budget warnings
+    budget_description: Also notify me when existing budget insights report categories near their limit or over budget. Off by default; applies to my enabled browser devices.
+    notification:
+      body: A new financial alert is available. Open Sure to review it.
+      test_body: Your test notification has arrived. Open Sure to continue.
+    status:
+      checking: Checking this device…
+      enabled: Notifications are enabled for this device and session.
+      disabled: Notifications are disabled for this device.
+      denied: Notifications are blocked in browser settings. Allow them there, then enable this device again.
+      unsupported: This browser does not support notifications. Use a compatible browser or installed app over HTTPS.
+      unconfigured: Browser notifications have not been configured on this server.
+      queued: Test queued. Waiting for the push service to accept it.
+      accepted: Accepted by the push service. Check this device for the notification; acceptance does not confirm it was displayed.
+      skipped: Test skipped because this session, preview access, or notification configuration changed. Enable this device and try again.
+      rejected: The push service rejected this test. Disable this device, then enable it again.
+      failed: The test could not be delivered. Try again later.
+      enqueue_failed: The test could not be queued. Try again later.
+      pending: Test queued or retrying. Delivery may take a moment.
+      expired: The test is still queued. Check background workers or try another test later.
+    errors:
+      registration: Could not register this device. Try disabling it, then enabling it again.
+      preview: Enable preview features before using browser notifications.
+      unconfigured: Browser notifications have not been configured on this server.
+      rate_limited: Please wait 30 seconds before testing this device again.
+      enqueue: Could not queue the test notification. Try again later.
+      request: Could not update browser notifications. Check your connection and try again.
+      permission: Notification permission was not granted.

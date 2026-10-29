@@ -21,6 +21,21 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     assert_equal 1, WebPushDelivery.where(web_push_subscription: @subscription, insight: @insight).count
   end
 
+  test "an enqueue failure can be recovered by a later generation pass" do
+    DeliverWebPushNotificationJob.stubs(:perform_later).returns(false)
+    delivery = enqueue_delivery
+    assert_equal "enqueue_failed", delivery.reload.status
+    delivery.update_columns(created_at: 2.days.ago)
+    DeliverWebPushNotificationJob.unstub(:perform_later)
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    end
+    assert_equal "pending", delivery.reload.status
+    @client.expects(:deliver).returns(:accepted)
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    assert_equal "accepted", delivery.reload.status
+  end
+
   test "delivers generic lock screen content and a same origin insight link" do
     delivery = enqueue_delivery
     @client.expects(:deliver).with do |subscription:, payload:|

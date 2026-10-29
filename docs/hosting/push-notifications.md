@@ -88,3 +88,96 @@ registration error state, and navigation for insight/test notification taps.
 Durable insight delivery tracking and recovery across enqueue failures are a
 separate implementation step. Provisioning and live sandbox/TestFlight acceptance
 must be completed before declaring push delivery ready for rollout.
+
+# Browser and installed PWA notifications
+
+Browser Web Push is a separate preview feature available in both managed and
+self-hosted installations. It does not require an Apple Developer account or
+change the hosted-only native APNs restrictions above. It reuses existing
+insights; it does not introduce additional financial analysis or thresholds.
+
+## Configure Web Push
+
+Run the included database migration and set these variables in the secret store
+for both Rails and Sidekiq:
+
+| Variable | Purpose |
+| --- | --- |
+| `WEB_PUSH_VAPID_PUBLIC_KEY` | URL-safe Base64 public VAPID key; shared with browsers |
+| `WEB_PUSH_VAPID_PRIVATE_KEY` | Matching URL-safe Base64 private VAPID key; server-side only |
+| `WEB_PUSH_VAPID_SUBJECT` | Operator contact URI, such as `mailto:operator@example.com` or an HTTPS URL |
+
+Generate the key pair once with the maintained `web-push` gem, for example from
+your deployment's Rails console using `WebPush.generate_key`. Store its
+`public_key` and `private_key` in your secret store. Keep the same pair on web and
+worker processes and across deploys. Never commit the private key. Rotating the
+pair requires browsers to disable and enable notifications again.
+
+The application must be served over HTTPS, and workers must consume `scheduled`.
+Allow outbound TLS on port 443 to the browser push services: `fcm.googleapis.com`,
+`updates.push.services.mozilla.com`, subdomains of `push.apple.com`, and subdomains
+of `notify.windows.com`. Registration accepts only those HTTPS destinations,
+without user info, fragments, or nonstandard ports. Provider redirects are rejected.
+The `web-push` gem handles encryption and VAPID signing; Sure does not implement
+its own notification cryptography. Endpoints and subscription keys are filtered
+from request logs and encrypted at rest when Rails encryption is configured.
+
+## Enable and verify a device
+
+1. Sign in, turn on **Settings → Preferences → Enable preview features**, then
+   select **Enable this device** in **Browser notifications**. Permission is
+   requested only from that button. Each browser profile or installed app must
+   opt in separately.
+2. On iPhone and iPad, use Safari's **Share → Add to Home Screen**, open the
+   installed app, sign in there, and enable notifications there. Web Push requires
+   iOS/iPadOS 16.4 or later. Other browser and operating system support varies.
+3. Select **Test this device**. Only the registration bound to this browser's
+   current Sure session can be tested. The control is limited to once per
+   30 seconds per registration.
+4. Wait for the displayed result, then check the actual device. **Queued** means
+   the background job was queued. **Accepted by the push service** means the
+   provider accepted it; it does not prove that the operating system displayed
+   it. Browser permission, Focus/Do Not Disturb, and OS settings affect display.
+
+Notifications are bound to the authenticated Sure session. Signing out, revoking
+that session, deactivating the account, or **30 days of session inactivity** stops
+delivery. Open Sure regularly to refresh the existing session; after expiry,
+sign in and enable this device again. The normal session timeout is unchanged.
+Disabling preview features also stops sends. Use **Disable this device** before
+changing accounts on shared devices. When a browser is registered under another
+session or user, the existing subscription's two secret keys prove continuity;
+Sure replaces the old row so queued jobs cannot reach the new account through it.
+
+## Alerts, privacy, and delivery behavior
+
+An enabled device receives new or materially resurfaced, high-priority active
+insights visible to the family. Enabling a device does not send a backlog.
+**Budget warnings** is an independent per-user preference, off by default. It
+adds the existing medium- and high-priority `budget_at_risk` insights for near-limit
+and over-budget conditions on that user's enabled browser devices. Turning it
+off suppresses both priorities. `budget_on_track` is never pushed. Existing
+financial generators and category thresholds are unchanged.
+
+Lock-screen payloads contain the product name and generic localized text, with
+no balances, categories, accounts, or insight prose. They use the family's
+locale and link to the same-origin `/insights#insight_<id>` page. The service worker
+displays a visible notification, including for malformed payloads, and caches only
+the existing offline assets; it does not cache financial pages.
+
+A durable delivery ledger records each subscription and material insight version.
+Routine generator refreshes do not create a new version. Send-time checks repeat
+session, user, preview, budget preference, family, active insight, version, and
+shared-account visibility checks. Retries and ordinary duplicate jobs reuse the
+same ledger entry. HTTP 404/410 removes an invalid subscription. Connection
+failures, HTTP 429, and HTTP 5xx receive up to five attempts with bounded backoff;
+other rejections are terminal. Each send has connection and read timeouts and a
+five-minute provider TTL.
+
+The existing insight generation pass also recovers enqueue failures or pending
+claims abandoned for more than 15 minutes that are still eligible. Records that
+are no longer eligible become skipped. It does not replay terminal results
+or turn old insights into a backlog. Recovery runs when generation next runs;
+there is no additional scheduler. A provider acceptance followed by a process
+crash before the database update can still result in a duplicate send. Stable
+notification tags collapse ordinary duplicate presentations where the browser
+supports them; this is not an exactly-once transport guarantee.
