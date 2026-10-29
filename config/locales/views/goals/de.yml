@@ -48,6 +48,7 @@ de:
         target_amount: Zielbetrag
         target_date: Zieldatum
         whole_balance: "Leer: ganzer Saldo"
+        progress_basis: Was für dieses Ziel zählt
       save: Änderungen speichern
       subtypes:
         cd: Festgeld
@@ -58,6 +59,14 @@ de:
         savings: Sparkonto
       suggested_no_date: Setz eine Frist, um ein Zieldatum hochzurechnen.
       suggested_with_date: Spar {monthly}/Monat über {accounts}, um es rechtzeitig zu schaffen.
+      progress_basis_locked: Dieses Ziel ist abgeschlossen. Öffne es wieder, um zu ändern, was dafür zählt.
+      progress_bases:
+        balance:
+          label: Was die Konten heute wert sind
+          hint: Marktwert. Gewinne und Verluste aus Investments zählen für das Ziel.
+        contributions:
+          label: Nur was ich eingezahlt habe
+          hint: Nettoeinlagen. Marktgewinne und -verluste bleiben außen vor.
     goal_card:
       accounts:
         one: 1 Konto
@@ -258,6 +267,12 @@ de:
         of_target: vom Ziel
         saved: Gespart
         to_go: "%{amount} fehlen"
+        basis:
+          balance: Zählt, was die Konten heute wert sind
+          contributions: Zählt nur, was du eingezahlt hast
+        basis_at_completion:
+          balance: Zählte, was die Konten beim Abschluss des Ziels wert waren
+          contributions: Zählte nur, was du bis zum Abschluss des Ziels eingezahlt hattest
       status_callout:
         behind: spar %{amount}/Monat mehr, um aufzuholen
         behind_covered: offene Zusagen schließen die Lücke

@@ -144,6 +144,12 @@ zh-CN:
         of_target: 目标进度
         market_value: 市值 %{amount}
         aria_label: 目标已完成 %{percent}%。已存 %{target} 中的 %{amount}。
+        basis:
+          balance: 计入账户当前的价值
+          contributions: 仅计入你投入的资金
+        basis_at_completion:
+          balance: 按目标完成时账户的价值计入
+          contributions: 仅计入目标完成时你已投入的资金
       projection:
         heading: 预测
         legend_saved: 已存
@@ -270,6 +276,7 @@ zh-CN:
         whole_balance: "留空即全部余额"
         earmark_for: 为「%{account}」预留的金额
         earmark_hint: 留空则使用该账户的全部余额。
+        progress_basis: 此目标计入什么
       subtypes:
         checking: 支票账户
         savings: 储蓄账户
@@ -277,3 +284,11 @@ zh-CN:
         cd: 定期存单
         money_market: 货币市场
         other: 其他
+      progress_basis_locked: 此目标已完成。重新打开后才能更改计入方式。
+      progress_bases:
+        balance:
+          label: 账户当前的价值
+          hint: 市值。投资收益和亏损计入目标。
+        contributions:
+          label: 仅我投入的资金
+          hint: 净投入。不计市场收益和亏损。

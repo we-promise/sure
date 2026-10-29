@@ -101,8 +101,11 @@ class Goal::CurrencyConversionTest < ActiveSupport::TestCase
     goal = goal_on("USD", [ [ eur, nil ] ])
     goal.market_flows = { eur.id => 200 }
     rate("EUR", "USD", 1.2)
+    assert_equal 1_200, goal.current_balance
 
-    assert goal.contributions_basis?
+    # The basis is the user's choice, never inferred from the account type.
+    goal.update!(progress_basis: "contributions")
+
     assert_equal 960, goal.current_balance
     assert_equal 1_200, goal.market_value_money.amount
   end

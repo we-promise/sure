@@ -57,6 +57,7 @@ tr:
         target_balance: Hedef bakiye
         target_balance_pending: Kaydettiğinizde hesaplanır
         target_balance_hint: Yukarıdaki ay sayısı ve medyan aylık harcamanızdan hesaplanır. Her ay güncellenir.
+        progress_basis: Bu hedefe neler sayılır
       save: Değişiklikleri kaydet
       subtypes:
         cd: Vadeli mevduat
@@ -83,6 +84,14 @@ tr:
         prorata: Bu hesaptaki hedefleriniz {balance} bakiyeye karşılık toplam {total} tutarında — orantılı olarak ilerleyecekler.
         whole_balance: Bu hesap, diğer ayrılan tutarlardan sonra kalan bakiyenin tamamıyla bu hedefi finanse edecek.
         whole_balance_alone: Bu hedef, bu hesabın tüm bakiyesini kullanacak.
+      progress_basis_locked: Bu hedef tamamlandı. Nelerin sayılacağını değiştirmek için hedefi yeniden açın.
+      progress_bases:
+        balance:
+          label: Hesapların bugünkü değeri
+          hint: Piyasa değeri. Yatırım kazançları ve kayıpları hedefe sayılır.
+        contributions:
+          label: Yalnızca yatırdığım tutar
+          hint: Net katkılar. Piyasa kazançları ve kayıpları hariç tutulur.
     goal_card:
       accounts:
         one: "%{count} hesap"
@@ -305,6 +314,12 @@ tr:
         to_go: "%{amount} kaldı"
         including_used: Kullanılan %{amount} dahil
         aria_label_with_used: Hedef %{percent}% tamamlandı. Kullanılan %{used} dahil, %{target} hedefinin %{amount} kadarı.
+        basis:
+          balance: Hesapların bugünkü değerini sayar
+          contributions: Yalnızca yatırdığınız tutarı sayar
+        basis_at_completion:
+          balance: Hedef tamamlandığında hesapların değerini saydı
+          contributions: Hedef tamamlandığında yalnızca yatırdığınız tutarı saydı
       status_callout:
         behind: yakalamak için ayda %{amount} daha fazla biriktirin
         behind_covered: bekleyen taahhütler farkı kapatıyor

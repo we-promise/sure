@@ -177,6 +177,12 @@ ca:
         market_value: 'Valor de mercat: %{amount}'
         aria_label: Objectiu completat al %{percent}%. %{amount} estalviats de %{target}.
         aria_label_with_used: Objectiu completat al %{percent}%. %{amount} de %{target}, incloent-hi %{used} ja utilitzats.
+        basis:
+          balance: Compta el que valen avui els comptes
+          contributions: Compta només el que hi has aportat
+        basis_at_completion:
+          balance: Comptava el que valien els comptes quan es va completar l'objectiu
+          contributions: Comptava només el que hi havies aportat quan es va completar l'objectiu
       projection:
         heading: Projecció
         legend_saved: Estalviat
@@ -336,6 +342,7 @@ ca:
         whole_balance: "Buit: tot el saldo"
         earmark_for: Import reservat de %{account}
         earmark_hint: Deixa un import en blanc per destinar-hi tot el saldo d'aquell compte.
+        progress_basis: Què compta per a aquest objectiu
       subtypes:
         checking: Compte corrent
         savings: Estalvis
@@ -343,3 +350,11 @@ ca:
         cd: Dipòsit a termini
         money_market: Mercat monetari
         other: Altres
+      progress_basis_locked: Aquest objectiu està completat. Torna'l a obrir per canviar què hi compta.
+      progress_bases:
+        balance:
+          label: El que valen avui els comptes
+          hint: Valor de mercat. Els guanys i les pèrdues de les inversions compten per a l'objectiu.
+        contributions:
+          label: Només el que hi he aportat
+          hint: Aportacions netes. Els guanys i les pèrdues del mercat no hi compten.
