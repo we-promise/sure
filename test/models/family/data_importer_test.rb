@@ -1920,6 +1920,26 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 1200.0, @family.budgets.first.budgeted_spending.to_f
   end
 
+  test "does not overwrite a budget the user explicitly set to zero" do
+    @family.budgets.create!(
+      start_date: Date.parse("2024-01-01"), end_date: Date.parse("2024-01-31"),
+      budgeted_spending: 0, expected_income: 0, currency: "USD"
+    )
+
+    ndjson = build_ndjson([
+      {
+        type: "Budget",
+        data: {
+          id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31",
+          budgeted_spending: "3000.00", expected_income: "5000.00", currency: "USD"
+        }
+      }
+    ])
+
+    assert_raises(ActiveRecord::RecordInvalid) { Family::DataImporter.new(@family, ndjson).import! }
+    assert_equal 0.0, @family.budgets.first.budgeted_spending.to_f
+  end
+
   test "does not reuse the household default for an exported personal budget" do
     default_budget = @family.budgets.create!(
       start_date: Date.parse("2024-01-01"), end_date: Date.parse("2024-01-31"), currency: "USD"

@@ -1339,13 +1339,13 @@ class Family::DataImporter
     end
 
     # A new family already has the household budget for the current period, with zeroed category
-    # rows. Reuse it instead of colliding on the unique period; a budget that holds a plan is left
-    # alone, so the import fails on the uniqueness validation rather than overwriting it. An exported
+    # rows. Reuse it instead of colliding on the unique period; a budget that holds a plan (any
+    # non-nil top-level amount, an explicit 0 included) is left alone, so the import fails on the uniqueness validation rather than overwriting it. An exported
     # personal budget (with a user) is never merged into the household budget.
     def untouched_household_budget(start_date, end_date)
       budget = @family.budgets.find_by(user_id: nil, start_date: start_date, end_date: end_date)
       return if budget.blank?
-      return if budget.budgeted_spending.to_d.nonzero? || budget.expected_income.to_d.nonzero?
+      return if budget.initialized? || budget.expected_income.present?
       return if budget.budget_categories.any? { |budget_category| budget_category.budgeted_spending.to_d.nonzero? }
 
       budget
