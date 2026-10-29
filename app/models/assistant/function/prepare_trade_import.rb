@@ -201,7 +201,7 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
     end
 
     def detect_date_format(parsed, date_header)
-      Import.detect_date_format(date_samples(parsed, date_header), candidates: date_format_candidates, fallback: family.date_format)
+      Import.detect_date_format(date_samples(parsed, date_header), candidates: date_format_candidates, fallback: family.date_format, limit: nil)
     end
 
     # The other formats that read every sample date, as different dates from
@@ -232,8 +232,10 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
       nil
     end
 
+    # Every row's date: a date the first rows leave ambiguous can be settled
+    # by a later one, and the chosen format must read every row.
     def date_samples(parsed, date_header)
-      parsed.first(50).map { |row| row[date_header] }
+      parsed.map { |row| row[date_header] }
     end
 
     def date_format_candidates

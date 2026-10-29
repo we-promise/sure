@@ -79,6 +79,21 @@ class Assistant::Function::PrepareTradeImportTest < ActiveSupport::TestCase
     assert_equal [], result[:date_format_alternatives]
   end
 
+  # Fifty distinct dates that read both ways, then one only month first can
+  # read: the whole file decides the format, not its first fifty dates.
+  test "a date past the first fifty that reads only month first decides the format" do
+    ambiguous = (1..12).to_a.product((1..12).to_a).first(50).map { |month, day| format("%02d/%02d/2025", month, day) }
+    lines = (ambiguous + [ "03/25/2026" ]).map { |date| "#{date},AAPL,1,150.00,USD,Bought Apple" }
+    csv = "Trade Date,Symbol,Quantity,Price,Currency,Description\n#{lines.join("\n")}\n"
+
+    result = @fn.call("csv_content" => csv, "account_id" => @account.id)
+
+    assert_equal "%m/%d/%Y", result[:date_format]
+    assert_equal 51, result[:valid_rows_count]
+    assert_empty result[:invalid_rows]
+    assert_equal false, result[:date_format_ambiguous]
+  end
+
   test "a date format the caller passes is not reported as ambiguous" do
     result = @fn.call("csv_content" => BROKER_CSV, "account_id" => @account.id, "date_format" => "%m/%d/%Y")
 
