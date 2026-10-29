@@ -19,7 +19,7 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
       blob_id = target.profile_image.blob.id
       ActiveStorage::VariantWithRecord.any_instance.stubs(:url).raises(error_class, "private-storage-detail")
       Rails.logger.expects(:warn).with(
-        "[Admin::Users] Avatar unavailable for user_id=#{target.id} (#{error_class})"
+        "[Users] Avatar unavailable for user_id=#{target.id} (#{error_class})"
       )
 
       get admin_users_url

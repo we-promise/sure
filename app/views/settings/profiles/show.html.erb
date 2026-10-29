@@ -48,7 +48,7 @@
         <% @users.each do |user| %>
           <div class="flex gap-2 mt-2 items-center bg-container p-4 shadow-border-xs rounded-lg">
             <div class="w-9 h-9 shrink-0">
-              <%= render "settings/user_avatar", avatar_url: user.profile_image&.variant(:small)&.url, initials: user.initials %>
+              <%= render "settings/user_avatar", avatar_url: user_avatar_url(user), initials: user.initials %>
             </div>
             <p class="text-primary font-medium text-sm"><%= user.display_name %></p>
             <%= render DS::Pill.new(label: t("users.roles.#{user.role}", default: user.role.humanize), tone: :gray, marker: false, size: :sm) %>
