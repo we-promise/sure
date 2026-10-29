@@ -9,6 +9,9 @@ fr:
     new:
       title: Saisir le solde du compte
     subtypes:
+      cash:
+        long: Espèces
+        short: Espèces
       cd:
         long: Certificat de dépôt
         short: CD
