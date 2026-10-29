@@ -63,12 +63,27 @@ end
 Sidekiq.configure_server do |config|
   config.redis = redis_config
 
+  # At startup: app classes aren't loadable yet when this file runs.
+  config.on(:startup) do
+    config[:fetch_class] = ChatReservation::Fetch
+    config[:labels] << BackgroundJobHealth::ONE_AI_THREAD_LABEL if BackgroundJobHealth.one_ai_thread_worker?(config)
+  end
+
   # Initialize auto-sync scheduler when Sidekiq server starts
   config.on(:startup) do
     AutoSyncScheduler.sync!
     Rails.logger.info("[AutoSyncScheduler] Initialized sync_all_accounts cron job")
   rescue => e
     Rails.logger.error("[AutoSyncScheduler] Failed to initialize: #{e.message}")
+  end
+
+  # Initialize market data (security price) import scheduler when Sidekiq server starts
+  config.on(:startup) do
+    MarketDataScheduler.sync!
+    Rails.logger.info("[MarketDataScheduler] Initialized import_market_data cron job")
+  rescue => e
+    Rails.logger.error("[MarketDataScheduler] Failed to initialize: #{e.message}")
+    MarketDataScheduler.capture_sync_failure(e, source: "Sidekiq startup")
   end
 end
 

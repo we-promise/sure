@@ -111,6 +111,111 @@ and change it to `true`
 RAILS_ASSUME_SSL: "true"
 ```
 
+#### Sending email (SMTP)
+
+Sure sends email through an SMTP server that you provide. Email is sent by the background worker (the `worker` service), not by `web`, so the worker must have these settings.
+
+On a self-hosted instance, Sure sends these emails:
+
+- Password reset links, when password sign-in is enabled.
+- A confirmation link when a user changes their email address, but only when **Require email confirmation** is on under Settings > Self-Hosting. When it is off, the new address is saved straight away and nothing is sent.
+- Rule notifications, from rules with a "Send email notification" action.
+- The follow-up email after a PDF import is processed.
+- A daily summary to every super admin after the demo family is refreshed, but only when **Enable daily demo family refresh** is on under Settings > Self-Hosting and a demo family has been selected for it. It is off by default.
+
+Invitations are never emailed on a self-hosted instance, even with SMTP set up. After you add a member, copy the invitation link from Settings > Profile Info and send it to them yourself.
+
+| Variable | What it does | Default when not set |
+|----------|--------------|----------------------|
+| `SMTP_ADDRESS` | Host name of your SMTP server, for example `smtp.example.com`. | None. Required to send email. |
+| `SMTP_PORT` | Port of your SMTP server. | `25` |
+| `SMTP_USERNAME` | User name for logging in to the SMTP server. | None (no login) |
+| `SMTP_PASSWORD` | Password for logging in to the SMTP server. | None |
+| `SMTP_TLS_ENABLED` | `true` uses TLS from the start of the connection (SMTPS, usually port 465). Any other value connects in plain text and switches to TLS with STARTTLS when the server offers it (usually port 587). | Off |
+| `SMTP_TLS_SKIP_VERIFY` | `true` turns off verification of the SMTP server's certificate. | Off (the certificate is verified) |
+| `SSL_CA_FILE` | Path inside the container to a CA certificate (PEM) for verifying a server with a self-signed or internal certificate. The file must be mounted into the containers; see **Using a custom CA certificate** below. | None |
+| `EMAIL_SENDER` | Address that emails are sent from, for example `sure@example.com`. | `sender@sure.local` |
+| `APP_DOMAIN` | Host name your instance is reached at, for example `sure.example.com`. Used to build links in emails. | None |
+
+A few things to watch:
+
+- `SMTP_TLS_ENABLED` and `SMTP_TLS_SKIP_VERIFY` are on only when the value is exactly the string `true`. `True`, `1` or `yes` all count as off.
+- If `EMAIL_SENDER` is not set, email goes out from `sender@sure.local`, which many mail servers reject. Set it to an address your SMTP server is allowed to send from.
+
+**Passing the settings to the containers**
+
+Docker Compose uses `.env` to fill in the `${...}` values in `compose.yml`. It does not pass `.env` to the containers as a whole. A variable set only in `.env` does not reach the app unless `compose.yml` lists it.
+
+Both `web` and `worker` merge the shared `x-rails-env` anchor, so add the keys there once and both services get them. If you run the AI setup from `compose.ai.yml` (see [Using the AI compose file](#using-the-ai-compose-file) below), that file has its own `x-rails-env` anchor with no SMTP keys, so add the same keys there instead:
+
+```yaml
+x-rails-env: &rails_env
+  # ...existing keys...
+  APP_DOMAIN: ${APP_DOMAIN}
+  EMAIL_SENDER: ${EMAIL_SENDER}
+  SMTP_ADDRESS: ${SMTP_ADDRESS}
+  SMTP_PORT: ${SMTP_PORT:-465}
+  SMTP_USERNAME: ${SMTP_USERNAME}
+  SMTP_PASSWORD: ${SMTP_PASSWORD}
+  SMTP_TLS_ENABLED: ${SMTP_TLS_ENABLED:-true}
++  # Only when an otherwise valid certificate uses an untrusted CA:
+  # SMTP_TLS_SKIP_VERIFY: ${SMTP_TLS_SKIP_VERIFY:-false}
+```
+
+Any other variable from the table reaches the app only if you add it to the anchor the same way. `SMTP_TLS_SKIP_VERIFY` is shown commented out because turning off certificate checks is a last resort; prefer `SSL_CA_FILE` (see **Using a custom CA certificate** below).
+
+The table above lists the app's own defaults. This snippet sets different ones for Compose: port 465 with TLS from the start of the connection (SMTPS), the same values `.env.example` ships with. For a server that uses STARTTLS on port 587, set `SMTP_PORT` and `SMTP_TLS_ENABLED` in `.env` as shown below.
+
+Then set the values in `.env`:
+
+```txt
+APP_DOMAIN="sure.example.com"
+EMAIL_SENDER="sure@example.com"
+SMTP_ADDRESS="smtp.example.com"
+SMTP_USERNAME="replacemewithyoursmtpusername"
+SMTP_PASSWORD="replacemewithyoursmtppassword"
+# For STARTTLS on port 587 instead of SMTPS on 465:
+# SMTP_PORT="587"
+# SMTP_TLS_ENABLED="false"
+```
+
++Set each key you list in the anchor that has no default in the plain `${VAR}` form. Docker Compose passes such a key that has no value in `.env` as an empty value, not as unset. An empty `EMAIL_SENDER` replaces the `sender@sure.local` fallback with an empty address, and an empty `SMTP_USERNAME` still makes the app try to log in. If your server needs no login, leave the `SMTP_USERNAME` and `SMTP_PASSWORD` lines out of the anchor. Keys written as `${VAR:-default}`, such as `SMTP_PORT` and `SMTP_TLS_ENABLED` above, are different: Compose uses the default when the `.env` value is unset or empty.
+
+**Using a custom CA certificate**
+
+If your SMTP server's certificate is signed by an internal CA or is self-signed, mount the CA certificate into the containers and point `SSL_CA_FILE` at it. Add `SSL_CA_FILE` to the anchor, and the volume to both `web` and `worker`, since both merge the anchor:
+
+```yaml
+x-rails-env: &rails_env
+  # ...existing keys...
+  SSL_CA_FILE: /certs/my-ca.crt
+
+services:
+  web:
+    volumes:
+      - app-storage:/rails/storage
+      - ./my-ca.crt:/certs/my-ca.crt:ro
+  worker:
+    volumes:
+      - app-storage:/rails/storage
+      - ./my-ca.crt:/certs/my-ca.crt:ro
+```
+
+The worker is the service that sends email, so it is the one that must have the file. The same setting is also used for other outbound HTTPS connections; see [Self-signed certificate support](oidc.md#self-signed-certificate-support) for the certificate format and troubleshooting.
+
+Pull request [#2811](https://github.com/we-promise/sure/pull/2811), which is still open, would pass `.env` to both services directly. If it is merged, listing the keys in the anchor is no longer needed.
+
+**Applying changes**
+
+Run `docker compose up -d` after changing `compose.yml` or `.env`. It recreates the containers whose settings changed. `docker compose restart` keeps the old environment, so new settings do not take effect.
+
+To check what the worker sees, without printing the password:
+
+```bash
+docker compose exec worker bin/rails runner 'p ActionMailer::Base.smtp_settings.slice(:address, :port, :user_name, :tls)'
+docker compose exec worker printenv EMAIL_SENDER APP_DOMAIN
+```
+
 #### WebAuthn MFA (passkeys and security keys)
 
 If you enable passkeys, Touch ID, Windows Hello, or hardware security keys as MFA credentials, pin the WebAuthn relying party settings in your `.env` file:
@@ -313,6 +418,20 @@ If you want to load sample/demo data on a small host:
 2. Apply the change with a **fresh deploy/restart of the worker**. Note for Render specifically: plan changes only take effect on the next deploy - they do **not** apply on a plain restart.
 3. Load the sample data, then optionally drop the worker back to the small plan with another fresh deploy.
 
+## Daily market data import
+
+Sure imports security prices once a day, Monday to Friday. By default the import runs at 22:00 UTC, about an hour after the New York close. To change the time or turn the import off, open **Settings > Self-Hosting** and use the market data import options under the sync settings. The time you save there is interpreted in your browser's timezone.
+
+You can also set the defaults in your `.env` file. A value saved on the settings page always takes precedence over these variables:
+
+```txt
+MARKET_DATA_SYNC_ENABLED=1        # 1 = on, anything else = off
+MARKET_DATA_SYNC_TIME=22:00       # HH:MM, 24-hour clock
+MARKET_DATA_SYNC_TIMEZONE=UTC     # IANA name such as Europe/Berlin; unknown names fall back to UTC
+```
+
+**Upgrading from an earlier version:** the import used to be a fixed entry in `config/schedule.yml`. It is now created by the worker when it starts, from the settings above. Without any change on your side it keeps running at 22:00 UTC, Monday to Friday. If prices stop updating after an upgrade, open `/sidekiq` (see [Inspecting background jobs](#inspecting-background-jobs-sidekiq)), check that the **Cron** tab lists `import_market_data`, and look for `[MarketDataScheduler]` lines in the worker log (`docker compose logs worker`). Saving the import time once on the settings page recreates the job.
+
 ## How to update your app
 
 The mechanism that updates your self-hosted Sure app is the GHCR (Github Container Registry) Docker image that you see in the `compose.yml` file:
@@ -334,6 +453,18 @@ docker compose run --rm backup create # Back up the current version (optional, r
 docker compose pull web worker # Pull the newest image for your tag
 docker compose up -d # Restart on the new version; database migrations run automatically
 ```
+
+### Upgrade note: instance-wide settings need a super admin
+
+Provider credentials (such as Plaid), the shared AI connection settings (LLM provider, endpoints, API keys and models), sync settings, and the external assistant connection are stored once for the whole instance and apply to every family. On an instance with more than one family, only a `super_admin` can change them. When there is a single family, its admins keep access. Family-scoped choices, such as which assistant a family uses, stay with that family's admins.
+
+Installs created before the first user was automatically made `super_admin` may have no super admin at all. If your instance has more than one family (for example, because someone else signed up), these instance-wide settings are hidden after the update and saving them returns "not authorized". Promote your own user once:
+
+```bash
+docker compose exec web bin/rails runner 'User.find_by!(email: "you@example.com").update!(role: :super_admin)'
+```
+
+After that, you can promote other users at `/admin/users`. See section 3.5 of the [OIDC guide](oidc.md) for the console variant.
 
 ## How to change which updates your app receives
 
