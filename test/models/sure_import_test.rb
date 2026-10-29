@@ -225,6 +225,31 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal "matched", @import.readback_verification["status"]
   end
 
+  test "readback matches when an untouched default budget is reused" do
+    category = @family.categories.create!(name: "Groceries", color: "#00FF00")
+    default_budget = @family.budgets.create!(
+      start_date: Date.parse("2024-01-01"), end_date: Date.parse("2024-01-31"), currency: "USD"
+    )
+    default_budget.budget_categories.create!(category: category, budgeted_spending: 0, currency: "USD")
+
+    attach_ndjson(build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: {
+        id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31",
+        budgeted_spending: "3000.00", expected_income: "5000.00", currency: "USD"
+      } },
+      { type: "BudgetCategory", data: {
+        id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", currency: "USD"
+      } }
+    ]))
+
+    @import.import!
+    @import.reload
+
+    assert_equal "matched", @import.readback_verification["status"]
+    assert_equal({ "categories" => 1, "budgets" => 1, "budget_categories" => 1 }, @import.readback_verification["reused_record_counts"])
+  end
+
   test "publishes import successfully" do
     attach_ndjson(build_ndjson([
       { type: "Account", data: {
