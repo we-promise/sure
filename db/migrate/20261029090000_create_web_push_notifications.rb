@@ -29,7 +29,7 @@ class CreateWebPushNotifications < ActiveRecord::Migration[8.1]
       "status IN ('pending', 'accepted', 'skipped', 'rejected', 'failed', 'enqueue_failed')",
       name: "chk_web_push_deliveries_status"
     add_check_constraint :web_push_deliveries,
-      "(insight_id IS NULL AND insight_version IS NULL) OR (insight_id IS NOT NULL AND insight_version > 0)",
+      "(insight_id IS NULL AND insight_version IS NULL) OR (insight_id IS NOT NULL AND insight_version IS NOT NULL AND insight_version > 0)",
       name: "chk_web_push_deliveries_insight_version"
   end
 end

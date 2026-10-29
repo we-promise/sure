@@ -37,7 +37,8 @@ class WebPush::Client
   rescue WebPush::InvalidSubscription, WebPush::ExpiredSubscription
     :gone
   rescue WebPush::TooManyRequests, WebPush::PushServiceError,
-      Net::OpenTimeout, Net::ReadTimeout, Timeout::Error, SocketError, IOError, SystemCallError
+      Net::OpenTimeout, Net::ReadTimeout, Net::HTTPBadResponse, Timeout::Error,
+      OpenSSL::SSL::SSLError, SocketError, IOError, SystemCallError
     # Provider exceptions include response bodies, and connection errors may
     # contain the endpoint. Neither belongs in Rails or Sidekiq retry logs.
     raise TransientError, "Browser push delivery temporarily unavailable", cause: nil

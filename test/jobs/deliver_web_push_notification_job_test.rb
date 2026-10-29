@@ -162,6 +162,88 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     assert_not_equal "accepted", delivery.reload.status
   end
 
+  test "five transient provider attempts fail terminally and cannot replay" do
+    delivery = enqueue_delivery
+    clear_enqueued_jobs
+    @client.expects(:deliver).raises(WebPush::Client::TransientError).times(5)
+
+    assert_performed_jobs 5, only: DeliverWebPushNotificationJob do
+      perform_enqueued_jobs only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.perform_later(web_push_delivery_id: delivery.id)
+      end
+    end
+
+    assert_equal "failed", delivery.reload.status
+    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+      DeliverWebPushNotificationJob.enqueue_for(@insight)
+    end
+    assert_equal "failed", delivery.reload.status
+  end
+
+  test "an abandoned pending claim is recovered after fifteen minutes" do
+    delivery = enqueue_delivery
+    clear_enqueued_jobs
+    travel 16.minutes do
+      assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+      end
+      assert_equal "pending", delivery.reload.status
+      assert_operator delivery.enqueued_at, :>, 1.minute.ago
+      @client.expects(:deliver).returns(:accepted)
+      DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      assert_equal "accepted", delivery.reload.status
+    end
+  end
+
+  test "recovery preserves a recent pending claim without queueing it twice" do
+    delivery = enqueue_delivery
+    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    end
+    assert_equal "pending", delivery.reload.status
+  end
+
+  test "an unclaimed pending delivery is recovered without waiting for the claim timeout" do
+    delivery = WebPushDelivery.for_insight(@subscription, @insight)
+    assert_nil delivery.enqueued_at
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    end
+    assert_equal "pending", delivery.reload.status
+    assert_not_nil delivery.enqueued_at
+  end
+
+  test "recovery marks newly ineligible pending work skipped" do
+    delivery = enqueue_delivery
+    clear_enqueued_jobs
+    @insight.mark_read!
+    @client.expects(:deliver).never
+    travel 16.minutes do
+      assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+        DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      end
+    end
+    assert_equal "skipped", delivery.reload.status
+  end
+
+  %w[accepted rejected failed skipped].each do |terminal_status|
+    test "recovery and job replays preserve a terminal #{terminal_status} result" do
+      delivery = enqueue_delivery
+      clear_enqueued_jobs
+      delivery.update!(status: terminal_status, enqueued_at: 1.day.ago)
+      @client.expects(:deliver).never
+      assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+        DeliverWebPushNotificationJob.enqueue_for(@insight)
+        DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      end
+      assert_equal terminal_status, delivery.reload.status
+    end
+  end
+
   test "configuration removed after enqueue prevents delivery" do
     delivery = enqueue_delivery
     WebPush::Client.stubs(:configured?).returns(false)
