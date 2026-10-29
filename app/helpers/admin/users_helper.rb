@@ -1,4 +1,5 @@
 module Admin::UsersHelper
+  # Returns the small avatar URL, or nil when optional storage cannot serve it.
   def admin_user_avatar_url(user)
     user.profile_image.variant(:small).url if user.profile_image.attached?
   rescue StandardError => error
