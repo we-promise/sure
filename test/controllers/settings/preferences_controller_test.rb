@@ -154,4 +154,27 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[name='user[family_attributes][manual_reconciliation]']", count: 0
   end
+
+test "browser notification card is preview gated" do
+  get settings_preferences_url
+  assert_select "[data-controller=web-push]", count: 0
+  user = users(:family_admin)
+  user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
+  get settings_preferences_url
+  assert_select "[data-controller=web-push]", count: 1
+  assert_select "input[name=user[web_push_budget_warnings_enabled]]"
+end
+
+test "budget warnings default off and are saved only for this user" do
+  user = users(:family_admin)
+  other = users(:family_member)
+  user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
+  assert_not user.web_push_budget_warnings_enabled?
+  patch settings_preferences_url, params: { user: { web_push_budget_warnings_enabled: "1" } }
+  assert_redirected_to settings_preferences_url
+  assert user.reload.web_push_budget_warnings_enabled?
+  assert_not other.reload.web_push_budget_warnings_enabled?
+  patch settings_preferences_url, params: { user: { web_push_budget_warnings_enabled: "0" } }
+  assert_not user.reload.web_push_budget_warnings_enabled?
+end
 end

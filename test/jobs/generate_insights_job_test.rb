@@ -148,6 +148,29 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     end
   end
 
+  test "browser push uses new and materially resurfaced insights but not routine refreshes" do
+    require Rails.root.join("test/support/web_push_test_helper")
+    extend WebPushTestHelper
+    user = @family.users.first
+    register_web_push(user: user)
+    WebPush::Client.stubs(:configured?).returns(true)
+    stub_generated([ generated_insight(priority: "high") ])
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+    insight = @family.insights.find_by!(dedup_key: "idle_cash:test-account:2026-07")
+    original_version = insight.notification_version
+    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+    assert_equal original_version, insight.reload.notification_version
+    insight.update!(status: "expired")
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+    assert_equal original_version + 1, insight.reload.notification_version
+  end
+
   test "re-running with unchanged numbers does not duplicate or rewrite" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
