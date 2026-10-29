@@ -837,6 +837,60 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_match(/previous_response_not_found/, response.error.message)
   end
 
+  test "streaming records the billed usage of a response.incomplete event" do
+    family = families(:dylan_family)
+    fake_responses = mock
+    fake_client = mock
+    fake_client.stubs(:responses).returns(fake_responses)
+    @subject.stubs(:client).returns(fake_client)
+
+    fake_responses.expects(:create).with do |*_args, **kwargs|
+      kwargs.dig(:parameters, :stream).call({
+        "type" => "response.incomplete",
+        "response" => {
+          "incomplete_details" => { "reason" => "max_output_tokens" },
+          "usage" => { "input_tokens" => 120, "output_tokens" => 80, "total_tokens" => 200 }
+        }
+      })
+      true
+    end.returns(nil)
+
+    assert_difference -> { family.llm_usages.count }, 1 do
+      response = @subject.chat_response("hi", model: @subject_model, streamer: proc { |_| }, family: family)
+
+      assert_not response.success?
+    end
+
+    usage = family.llm_usages.order(:created_at).last
+    assert_equal 120, usage.prompt_tokens
+    assert_equal 80, usage.completion_tokens
+    assert_equal 200, usage.total_tokens
+    assert_match(/incomplete/, usage.metadata["error"])
+  end
+
+  test "streaming records zero tokens when a failed response reports no usage" do
+    family = families(:dylan_family)
+    fake_responses = mock
+    fake_client = mock
+    fake_client.stubs(:responses).returns(fake_responses)
+    @subject.stubs(:client).returns(fake_client)
+
+    fake_responses.expects(:create).with do |*_args, **kwargs|
+      kwargs.dig(:parameters, :stream).call({
+        "type" => "response.failed",
+        "response" => { "error" => { "message" => "boom", "code" => "server_error" } }
+      })
+      true
+    end.returns(nil)
+
+    assert_difference -> { family.llm_usages.count }, 1 do
+      @subject.chat_response("hi", model: @subject_model, streamer: proc { |_| }, family: family)
+    end
+
+    usage = family.llm_usages.order(:created_at).last
+    assert_equal 0, usage.total_tokens
+  end
+
   test "streaming surfaces a useful error when the stream ends with no response and no error event" do
     fake_responses = mock
     fake_client = mock

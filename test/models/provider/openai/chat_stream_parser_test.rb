@@ -56,6 +56,40 @@ class Provider::Openai::ChatStreamParserTest < ActiveSupport::TestCase
     assert_equal "max_output_tokens", chunk.data.code
   end
 
+  test "response.incomplete keeps the usage the event reports" do
+    usage = { "input_tokens" => 120, "output_tokens" => 80, "total_tokens" => 200 }
+    chunk = Provider::Openai::ChatStreamParser.new(
+      {
+        "type" => "response.incomplete",
+        "response" => { "incomplete_details" => { "reason" => "max_output_tokens" }, "usage" => usage }
+      }
+    ).parsed
+
+    assert_equal "error", chunk.type
+    assert_equal usage, chunk.usage
+  end
+
+  test "response.failed keeps the usage the event reports" do
+    usage = { "input_tokens" => 50, "output_tokens" => 0, "total_tokens" => 50 }
+    chunk = Provider::Openai::ChatStreamParser.new(
+      {
+        "type" => "response.failed",
+        "response" => { "error" => { "message" => "boom", "code" => "server_error" }, "usage" => usage }
+      }
+    ).parsed
+
+    assert_equal "error", chunk.type
+    assert_equal usage, chunk.usage
+  end
+
+  test "response.incomplete without usage has no usage" do
+    chunk = Provider::Openai::ChatStreamParser.new(
+      { "type" => "response.incomplete", "response" => { "incomplete_details" => { "reason" => "max_output_tokens" } } }
+    ).parsed
+
+    assert_nil chunk.usage
+  end
+
   test "response.failed without details still surfaces an event-tagged error" do
     chunk = Provider::Openai::ChatStreamParser.new({ "type" => "response.failed" }).parsed
 
