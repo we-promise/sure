@@ -555,6 +555,19 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal "USD", series.values.last.value.currency.iso_code
   end
 
+  test "net contributions label their dates in the family's date format, as the value line does" do
+    account = lay_contributions_example
+    account.family.update!(date_format: "%Y-%m-%d")
+    Current.stubs(:family).returns(account.family)
+
+    builder = contributions_builder(account)
+    labels = I18n.with_locale(:en) { builder.net_contributions_series.values.map(&:date_formatted) }
+
+    expected = (@day_one..@day_one + 3).map { |date| date.strftime("%Y-%m-%d") }
+    assert_equal expected, labels
+    assert_equal I18n.with_locale(:en) { builder.balance_series.values.map(&:date_formatted) }, labels
+  end
+
   test "a withdrawal lowers net contributions by its amount on its date" do
     account = lay_contributions_example
 

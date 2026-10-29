@@ -111,7 +111,7 @@ class Balance::ChartSeriesBuilder
       money = Money.new(amount, currency)
       value = Series::Value.new(
         date: date,
-        date_formatted: I18n.l(date, format: :long),
+        date_formatted: Series.format_date(date),
         value: money,
         trend: Trend.new(current: money, previous: previous || money, favorable_direction: favorable_direction)
       )
