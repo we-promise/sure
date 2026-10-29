@@ -14,7 +14,7 @@
             </span>
             <span class="text-primary flex items-center gap-1">
               <span class="privacy-sensitive">
-                <%= lot.unit_cost ? format_money(Money.new(lot.unit_cost, lot.currency)) : t("holdings.lots.unknown") %>
+                <%= lot.unit_cost ? t("holdings.lots.per_unit", amount: format_money(Money.new(lot.unit_cost, lot.currency))) : t("holdings.lots.unknown") %>
               </span>
               <% if lot.manual_cost? %>
                 <%= icon "lock", size: "xs", class: "text-secondary" %>
