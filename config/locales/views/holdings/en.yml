@@ -55,12 +55,13 @@ en:
     lots:
       title: Lots
       opening: Held before the first trade
-      unknown: Unknown
+      unknown: Unknown per unit
+      per_unit: "%{amount} per unit"
       total_cost_label: Total paid for this lot
       total_cost_hint: What the whole parcel cost when you acquired it. Deleting
         its trade removes the lot and the cost you set.
       save: Save
-      unlock: Use the trade's price
+      unlock: Clear the manual cost
     missing_price_tooltip:
       description: This investment has missing values and we could not calculate
         its returns or value.
