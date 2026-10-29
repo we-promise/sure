@@ -585,6 +585,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.month_pulse.pulse_paid"), body
     assert_match I18n.t("bills.month_pulse.pulse_overdue"), body
     assert_match I18n.t("bills.month_pulse.pulse_next_seven"), body
+    assert_match I18n.t("bills.month_pulse.pulse_until", date: ApplicationController.helpers.format_date(6.days.from_now.to_date)), body
 
     # And it ends by saying what actually happens next.
     assert_match I18n.t("bills.month_pulse.next_up"), body
@@ -965,6 +966,32 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "$77.00", response.body
+  end
+
+  # The seven-day figure must count every occurrence inside the window, even
+  # when the window crosses the month end and one bill has two occurrences in it.
+  test "next seven days counts every occurrence across the month end" do
+    travel_to Date.new(2026, 10, 29) do
+      bill = create_bill(name: "Gym membership", amount: 25, manual: true,
+                         anchor_date: Date.new(2026, 11, 1), expected_day_of_month: 1,
+                         last_occurrence_date: Date.new(2026, 10, 1),
+                         next_expected_date: Date.new(2026, 11, 1))
+      # Creating the bill already materializes its first occurrence (Nov 1), so
+      # only add the second one and let find_or_create_by! reuse the first.
+      [ Date.new(2026, 11, 1), Date.new(2026, 11, 3) ].each do |due|
+        bill.recurring_occurrences.find_or_create_by!(original_due_on: due) do |occurrence|
+          occurrence.family = @family
+          occurrence.due_on = due
+          occurrence.currency = "USD"
+        end
+      end
+
+      get bills_url
+      assert_response :success
+
+      assert_match "$50.00", response.body
+      assert_match ApplicationController.helpers.format_date(Date.new(2026, 11, 4)), response.body
+    end
   end
 
   test "the all view lists every series and filters compose" do

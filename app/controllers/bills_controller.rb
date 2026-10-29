@@ -64,6 +64,7 @@ class BillsController < ApplicationController
     # Snooze-aware, like the rail (bills_row_date): rows list in rail order,
     # and a bill snoozed past the month's end belongs after it.
     @this_month, later = upcoming.partition { |occurrence| occurrence.effective_due_on <= month_end }
+    @open_upcoming = upcoming
     @overdue = @overdue.sort_by(&:effective_due_on)
     @dormant = @dormant.sort_by(&:effective_due_on)
 
@@ -512,7 +513,18 @@ class BillsController < ApplicationController
 
       @remaining_this_month, @unconvertible_count = total_of(owed_now) { |occurrence| occurrence.remaining_amount_money }
       @paid_this_month_total, _ = total_of(@paid_this_month) { |occurrence| occurrence.confirmed_allocated_money }
-      @due_next_seven, _ = total_of(owed_now.select { |occurrence| occurrence.effective_due_on <= today + 7 }) { |occurrence| occurrence.remaining_amount_money }
+      # The next seven days run across month boundaries, so they are not
+      # limited to this month's owed list. Overdue bills are excluded: they
+      # already have their own figure.
+      @next_seven_until = today + 6
+      window = @open_upcoming.select { |occurrence| occurrence.effective_due_on.between?(today, @next_seven_until) }
+      @due_next_seven, _ = total_of(window) { |occurrence| occurrence.remaining_amount_money }
+      # Bills beyond this month were not in the owed count above, so their
+      # conversion failures are added to it. The window reads every open bill,
+      # not the one-per-series @later list, so a second occurrence of the same
+      # bill inside the window is counted.
+      _, beyond_month_unconvertible = total_of(window - @this_month) { |occurrence| occurrence.remaining_amount_money }
+      @unconvertible_count += beyond_month_unconvertible
       @past_due_total, _ = total_of(@overdue) { |occurrence| occurrence.remaining_amount_money }
       @owed_count = owed_now.size
       @needs_action_count = owed_now.count { |occurrence| !occurrence.recurring_transaction.autopay? }

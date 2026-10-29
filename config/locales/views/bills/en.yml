@@ -82,6 +82,7 @@ en:
       pulse_paid: paid
       pulse_overdue: overdue
       pulse_next_seven: next 7 days
+      pulse_until: until %{date}
       pulse_bar_aria: "%{percent}% of this month's bills paid"
       next_up: Next up
       view_calendar: View calendar
