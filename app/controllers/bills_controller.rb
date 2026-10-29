@@ -306,6 +306,12 @@ class BillsController < ApplicationController
 
       if status.presence_in(LIFECYCLE_FILTERS)
         scope = scope.where(status: LIFECYCLE_STATUSES.fetch(status))
+      else
+        # A removed detected bill stays as an ended tombstone so detection
+        # does not recreate it. It is not a current bill, so keep it out of
+        # the default list and out of the payment-state filters. The Dismissed
+        # filter above is the way to find it.
+        scope = scope.where.not(status: :ended)
       end
 
       if (bill_type = params.dig(:q, :bill_type)).presence_in(RecurringTransaction.bill_types.keys)
@@ -321,6 +327,18 @@ class BillsController < ApplicationController
       end
 
       @all_series = filter_by_payment_state(@all_series, status) if status.presence_in(PAYMENT_FILTERS)
+
+      # A family whose only bills are dismissed tombstones gets an empty list.
+      # Say why, so the empty state can point at the Dismissed filter instead
+      # of telling the user to clear a filter they never set.
+      @dismissed_series_hidden = @all_series.empty? &&
+                                 status.blank? &&
+                                 params.dig(:q, :search).blank? &&
+                                 params.dig(:q, :bill_type).blank? &&
+                                 Current.family.recurring_transactions
+                                                .accessible_by(Current.user)
+                                                .ended
+                                                .exists?
 
       load_subscription_rollup if bill_type == "subscription"
     end
@@ -361,7 +379,9 @@ class BillsController < ApplicationController
       @recent_price_changes = RecurringPriceChange
                                 .joins(:recurring_transaction)
                                 .merge(RecurringTransaction.accessible_by(Current.user))
-                                .where(recurring_transactions: { family_id: Current.family.id })
+                                .where(recurring_transactions: { family_id: Current.family.id,
+                                                                 bill_type: "subscription" })
+                                .where.not(recurring_transactions: { status: "ended" })
                                 .where("effective_on >= ?", 1.year.ago.to_date)
                                 .includes(:recurring_transaction)
                                 .order(effective_on: :desc)
