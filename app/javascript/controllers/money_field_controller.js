@@ -137,10 +137,10 @@ export default class extends Controller {
   }
 
   // A field with its currency picker hidden can follow another field's
-  // picker, named by a CSS selector, so its symbol and precision match.
+  // picker in the same form, named by a CSS selector, so its symbol and
+  // precision match.
   followCurrencySource(e) {
-    if (!(e.target instanceof Element)) return;
-    if (!e.target.matches(this.currencySourceValue)) return;
+    if (e.target !== this.#currencySourceElement()) return;
 
     this.updateAmount(e.target.value);
   }

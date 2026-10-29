@@ -6,6 +6,9 @@ class Vehicle < ApplicationRecord
   # Form inputs for the purchase price and date, stored on the opening anchor.
   attribute :initial_balance, :decimal
   attribute :purchase_date, :date
+  # The price the form showed. The account's balance is saved first and can
+  # rewrite a same-day opening anchor, so an edit is judged against this.
+  attribute :initial_balance_shown, :decimal
 
   validate :purchase_date_is_valid, if: :persisted?
   after_update :update_purchase_anchor, if: -> { purchase_price_edited? || purchase_date_edited? }
@@ -44,9 +47,9 @@ class Vehicle < ApplicationRecord
 
   private
     # The form posts both fields prefilled on every edit, so only a value that
-    # differs from what is stored counts as an edit.
+    # differs from what was shown (or, without that, stored) counts as an edit.
     def purchase_price_edited?
-      initial_balance.present? && initial_balance != purchase_price.amount
+      initial_balance.present? && initial_balance != (initial_balance_shown || purchase_price.amount)
     end
 
     def purchase_date_edited?
@@ -74,6 +77,7 @@ class Vehicle < ApplicationRecord
         date: (purchase_date if purchase_date_edited?)
       )
       raise_purchase_error(result.error) unless result.success?
+      self.initial_balance_shown = nil
 
       keep_current_balance(current_balance) if price_edited
     end
@@ -104,7 +108,7 @@ class Vehicle < ApplicationRecord
     # Form inputs for the opening anchor, not vehicle details a provider could
     # overwrite.
     def ignored_enrichable_attributes
-      super + %w[initial_balance purchase_date]
+      super + %w[initial_balance initial_balance_shown purchase_date]
     end
 
     def first_valuation_amount

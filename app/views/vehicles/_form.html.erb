@@ -39,6 +39,8 @@
                                      value: vehicle_form.object.initial_balance || (vehicle_form.object.purchase_price.amount if account.persisted?),
                                      hide_currency: true %>
           <% if account.persisted? %>
+            <%= vehicle_form.hidden_field :initial_balance_shown,
+                                        value: vehicle_form.object.initial_balance_shown || vehicle_form.object.purchase_price.amount %>
             <%= vehicle_form.date_field :purchase_date,
                                       label: t("vehicles.form.purchase_date"),
                                       value: vehicle_form.object.purchase_date || account.opening_anchor_date %>

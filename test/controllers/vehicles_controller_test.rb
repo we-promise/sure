@@ -120,6 +120,7 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "input[name='account[accountable_attributes][initial_balance]'][value='21000.00']"
     assert_select "input[name='account[accountable_attributes][purchase_date]'][value='#{2.years.ago.to_date}']"
+    assert_select "input[type=hidden][name='account[accountable_attributes][initial_balance_shown]'][value='21000.0']"
   end
 
   test "updates the purchase price without touching the purchase date" do
@@ -263,6 +264,24 @@ class VehiclesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_equal "Honda Accord", @account.reload.name
     assert_equal 2.years.ago.to_date, @account.opening_anchor_date
+  end
+
+  test "a balance-only edit keeps the new balance when the anchor is dated today" do
+    @account.set_opening_anchor_balance(balance: 18000, date: Date.current)
+
+    patch vehicle_path(@account), params: {
+      account: {
+        balance: 15000,
+        accountable_attributes: {
+          id: @account.accountable_id, initial_balance: "18000.00", initial_balance_shown: "18000.00", purchase_date: Date.current
+        }
+      }
+    }
+
+    assert_redirected_to account_path(@account)
+    @account.reload
+    assert_equal 15000, @account.balance
+    assert_equal 15000, @account.opening_anchor_balance
   end
 
   test "leaves the opening anchor alone when the purchase fields are blank" do
