@@ -45,6 +45,29 @@ class LunchflowItemTest < ActiveSupport::TestCase
     assert_sync_status(:en, total: 3, linked: 1, unlinked: 2, expected: "1 synced, 2 need setup")
   end
 
+  # base_url decides where the app sends this connection's credentials, so a
+  # value pointing anywhere else is refused at save time and ignored at read
+  # time. Both layers matter: rows can be written by console or raw SQL.
+  test "refuses a base_url that is not the provider's own host" do
+    [
+      "https://evil.example.com/api/v1",
+      "http://169.254.169.254/",
+      "https://localhost/api/v1"
+    ].each do |value|
+      @lunchflow_item.base_url = value
+
+      assert_not @lunchflow_item.valid?, "#{value} must be refused"
+      assert_includes @lunchflow_item.errors.attribute_names, :base_url
+    end
+  end
+
+  test "a value that slipped past validation is not used" do
+    @lunchflow_item.update_column(:base_url, "https://evil.example.com/api/v1")
+
+    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.reload.effective_base_url
+  end
+end
+
   private
     def assert_sync_status(locale, total:, linked:, unlinked:, expected:)
       @lunchflow_item.stubs(:total_accounts_count).returns(total)
@@ -55,4 +78,3 @@ class LunchflowItemTest < ActiveSupport::TestCase
         assert_equal expected, @lunchflow_item.sync_status_summary
       end
     end
-end
