@@ -3,6 +3,18 @@ zh-CN:
   rules:
     no_action: 无操作
     no_condition: 无条件
+    notification_baseline_timed_out: 此规则仍处于关闭状态。检查它已匹配的交易耗时过长，如果不进行该检查，将会向所有这些交易发送电子邮件。请简化其条件，然后重新开启。
+    category_rule_cta:
+      close: 关闭
+      create_rule: 创建规则
+      description: 您可以创建规则来自动分类类似于此交易的交易
+      dont_show_again: 不再显示
+      hide_for_today: 今日隐藏
+      hide_for_today_hint: 今日隐藏将在 24 小时内暂停这些建议。
+      message: 已更新为 %{category_name}
+    classifier_rules:
+      category_classifier: 分类分类器
+      merchant_matcher: 商户匹配器
     rule:
       edit: 编辑
       re_apply_rule: 重新应用规则
@@ -17,6 +29,8 @@ zh-CN:
       action_label_to: 将 %{label} 设置为 %{value}
       all_past_and_future: 所有过去和未来的 %{resource}
       on_or_after: "%{resource} 在 %{date} 当日或之后"
+      stop_processing: 停止
+      stop_processing_hint: 列表靠后的规则不会更改此规则匹配的交易。
     form:
       rule_name_label: 规则名称（可选）
       rule_name_placeholder: 为此规则输入名称
@@ -26,18 +40,25 @@ zh-CN:
       all_past_and_future: 所有过去和未来的 %{resource}
       starting_from: 从……开始
       then: 然后
+      stop_processing_label: 停止处理后续规则
+      stop_processing_description: 列表中靠后的规则不会更改此规则匹配的交易。
     index:
       page_title: 规则
       delete_all_rules: 删除所有规则
       new_rule: 新建规则
       ai_cost_warning: 启用 AI 的规则操作会产生费用。请务必尽可能精确地筛选，以避免不必要的成本。
       rules_heading: 规则
+      order_hint: 规则按从上到下的顺序运行。一旦某条规则设置了交易上的某个字段，靠后的规则就不会再更改该字段。每个匹配的规则都会添加标签。拖动规则可更改顺序。
+      reorder_rule: "移动规则 %{name}。按 Enter 或空格键抓取，然后使用方向键移动。"
       no_rules_title: 还没有规则
       no_rules_description: 设置规则后，您每次账户同步时都可以对交易和其他数据执行操作。
     confirm:
       title: 确认更改
       title_with_name: 确认对“%{name}”的更改
       apply_notice_html: 您即将将此规则应用到 <span class="text-primary font-medium">%{count} %{resource}</span> 条符合所列条件的记录。若要继续此更改，请确认。
+      rules_above_notice:
+        one: 其上方处于激活状态的规则会优先运行，因此结果与完整运行相同。
+        other: 其上方处于激活状态的 %{count} 条规则会优先运行，因此结果与完整运行相同。
       ai_cost_title: AI 费用预估
       ai_cost_with_estimate_html: 这将使用 AI 对 %{count} 笔交易进行分类。预估费用：<span class="font-semibold">~$%{cost}</span>
       ai_cost_no_estimate_html: 这将使用 AI 对 %{count} 笔交易进行分类。
@@ -47,7 +68,24 @@ zh-CN:
       view_usage_history: 查看用量历史
       confirm_changes: 确认更改
     actions:
+      to_label: 为
       value_placeholder: 输入值
+      split:
+        type_fixed: 固定金额
+        type_percentage: 百分比
+        type_label: 分拆类型
+        add_split: 添加分拆
+        name_placeholder: 分拆名称
+        share_label: 分拆金额或百分比
+        category_label: 分拆分类
+        merchant_label: 分拆商户
+        tags_label: "分拆标签"
+        remove_split: "移除分拆"
+        hint: "固定分拆作为确切金额优先扣除。百分比分拆随后分配剩余资金。如果此处的每个分拆都使用固定金额，请同时添加与确切交易金额匹配的条件（例如“金额 = 42.00”），因为每笔匹配的交易都需要相同的总额以使固定金额相加平衡。分拆规则不能包含其他操作。"
+        fixed_summary_label: 固定
+        summary:
+          one: "%{count} 笔分拆"
+          other: "%{count} 笔分拆"
     update:
       success: 规则已更新
     destroy:
@@ -100,6 +138,21 @@ zh-CN:
         expense: 支出
         transfer: 转账
         equal_to: 等于
+      operators:
+        contains: 包含
+        does_not_contain: 不包含
+        starts_with: 开头为
+        ends_with: 结尾为
+        matches_regex: 匹配正则表达式
+        equal_to: 等于
+        is_equal_to: 等于
+        not_equal_to: 不等于
+        is_empty: 为空
+        is_not_empty: 不为空
+        greater_than: 大于
+        greater_or_equal_to: 大于或等于
+        less_than: 小于
+        less_than_or_equal_to: 小于或等于
   rule:
     conditions:
       condition_group:
@@ -109,3 +162,5 @@ zh-CN:
         any: 任一
         of_the_following_conditions: 以下条件
         add_condition: 添加条件
+      condition:
+        value_placeholder: 输入值
