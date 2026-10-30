@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/user.dart';
 import '../models/auth_tokens.dart';
+import '../models/sso_provider.dart';
 import '../services/auth_service.dart';
 import '../services/device_service.dart';
 import '../services/api_config.dart';
@@ -321,6 +322,9 @@ class AuthProvider with ChangeNotifier {
       return false;
     }
   }
+
+  Future<List<SsoProvider>?> fetchSsoProviders() =>
+      _authService.fetchSsoProviders();
 
   Future<void> startSsoLogin(String provider) async {
     _errorMessage = null;
