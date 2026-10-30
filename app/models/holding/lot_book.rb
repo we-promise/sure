@@ -139,7 +139,8 @@ class Holding::LotBook
   # quantity they must add up to, when it is no more than `bound`: the opening
   # lot, whose split round trip made it, or the last open lot once a sale has
   # taken the opening one. The lot's quantity is restated, as #rescale_lots
-  # does, so no sale is recorded and no other lot moves.
+  # does, so no sale or disposal is recorded and no other lot moves; a
+  # disposal already taken from it stays as recorded, under 10^-12 apart.
   def settle_opening(target, bound:)
     drift = target.to_d - open_qty
     return if drift.zero? || drift.abs > bound
