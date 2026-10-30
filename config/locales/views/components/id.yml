@@ -14,9 +14,9 @@ id:
           change_in_holdings_market: Perubahan kepemilikan (pergerakan harga pasar)
           change_in_holdings_trades: Perubahan kepemilikan (jual/beli)
           charges: Biaya
-          end_balance: Saldo akhir
-          end_principal: Pokok akhir
-          end_value: Nilai akhir
+          end_balance: Saldo sebelum penyesuaian
+          end_principal: Pokok sebelum penyesuaian
+          end_value: Nilai sebelum penyesuaian
           final_balance: Saldo akhir
           final_principal: Pokok akhir
           final_value: Nilai akhir
@@ -67,7 +67,7 @@ id:
           today: Hari ini
           interactive_chart: grafik interaktif
           no_payoff: tidak lunas dengan pembayaran saat ini
-          aria_description: Grafik saldo pinjaman. Saldo tercatat %{current_balance}. Perkiraan pelunasan awal %{scheduled_payoff_date}. Proyeksi pelunasan dari saldo hari ini %{projected_payoff_date}.
+          aria_description: Grafik saldo pinjaman. Saldo tercatat %{current_balance}. Perkiraan tanggal pelunasan terjadwal %{scheduled_payoff_date}. Proyeksi pelunasan dari saldo hari ini %{projected_payoff_date}.
           aria_actual_history_starts: Riwayat saldo tercatat dimulai sejak %{date}.
           aria_interest_share: Sepanjang pembayaran tahun pertama sekitar %{first}% dari jumlah yang dibayarkan adalah bunga; sepanjang tahun terakhir, sekitar %{last}%.
           aria_interest_share_overall: Di seluruh pembayaran sekitar %{share}% dari jumlah yang dibayarkan adalah bunga.
@@ -80,7 +80,7 @@ id:
           on_schedule: Sesuai jadwal
           interest_saved: Bunga yang dihemat
           not_converged: Dengan pembayaran saat ini saldo tidak akan lunas pada jatuh tempo awal; sisa %{balloon} masih terutang.
-          projection_basis: Membandingkan saldo tercatat hari ini dengan saldo jadwal pada hari yang sama. Pembayaran yang dibukukan sebelum tanggal jadwal terbaca lebih cepat hingga tanggal tersebut; pembayaran setelahnya terbaca tertinggal.
+          projection_basis: Membandingkan saldo tercatat hari ini dengan saldo terjadwal pada hari yang sama. Pembayaran yang dibukukan sebelum tanggal jadwal terbaca lebih cepat hingga tanggal tersebut; pembayaran setelahnya terbaca tertinggal.
           legend: Rangkaian grafik
           since_start: sejak pinjaman dimulai
         no_data_available: "Tidak ada data tersedia"
@@ -163,7 +163,7 @@ id:
     health:
       title: Kesehatan
       view_error_details: Lihat detail kesalahan
-      rate_limited: "Dibatasi batas kuota %{time_ago}"
+      rate_limited: "Terakhir mengalami pembatasan kuota: %{time_ago}"
       recently: baru-baru ini
       errors: "Kesalahan: %{count}"
       pending_reconciled:
