@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       chart_version:
-        description: Chart semver version (v-prefix allowed)
+        description: Chart version (v-prefix allowed)
         required: false
         type: string
       app_version:
