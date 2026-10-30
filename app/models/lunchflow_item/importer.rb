@@ -274,7 +274,7 @@ class LunchflowItem::Importer
         end
 
         # Validate response structure
-        unless transactions_data.is_a?(Hash)
+        unless transactions_data.is_a?(Hash) && transactions_data[:transactions].is_a?(Array)
           Rails.logger.error "LunchflowItem::Importer - Invalid transactions_data format for account #{lunchflow_account.account_id}"
           return { success: false, transactions_count: 0, error: "Invalid response format" }
         end

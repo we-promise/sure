@@ -61,6 +61,17 @@ class LunchflowItem::ImporterStartDateTest < ActiveSupport::TestCase
     assert_equal synced_through, @lunchflow_account.reload.transactions_synced_through
   end
 
+  test "a response without a transaction list keeps the previous marker" do
+    synced_through = Time.zone.parse("2026-10-10 06:00")
+    @lunchflow_account.update!(transactions_synced_through: synced_through)
+    @provider.expects(:get_account_transactions).returns({})
+
+    result = import_transactions
+
+    assert_not result[:success]
+    assert_equal synced_through, @lunchflow_account.reload.transactions_synced_through
+  end
+
   private
 
     def expect_fetch_from(start_date)
