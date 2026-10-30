@@ -3,7 +3,7 @@ zh-CN:
   rules:
     no_action: 无操作
     no_condition: 无条件
-    notification_baseline_timed_out: 此规则仍处于关闭状态。检查它已匹配的交易耗时过长，如果不进行该检查，将会向所有这些交易发送电子邮件。请简化其条件，然后重新开启。
+    notification_baseline_timed_out: 此规则仍处于关闭状态。检查它已匹配的历史交易耗时过长，若不进行检查，将会就所有这些匹配交易发送通知邮件。请简化其条件，然后重新开启。
     category_rule_cta:
       close: 关闭
       create_rule: 创建规则
@@ -13,7 +13,7 @@ zh-CN:
       hide_for_today_hint: 今日隐藏将在 24 小时内暂停这些建议。
       message: 已更新为 %{category_name}
     classifier_rules:
-      category_classifier: 分类分类器
+      category_classifier: 交易分类器
       merchant_matcher: 商户匹配器
     rule:
       edit: 编辑

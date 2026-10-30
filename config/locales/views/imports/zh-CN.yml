@@ -283,7 +283,7 @@ zh-CN:
       already_recorded: 已有记录
       already_recorded_hint: 与此账户已有的交易匹配，并标记为已核对。
       imported: 作为新记录导入
-      awaiting_review: 等待导入
+      awaiting_review: 待审核
       fully_reconciled:
         one: 无需导入任何内容 — 对账单上仅有的一笔交易已存在于记录中。
         other: 无需导入任何内容 — 所有 %{count} 笔交易均已存在于记录中。
