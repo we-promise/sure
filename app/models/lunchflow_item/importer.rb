@@ -501,14 +501,23 @@ class LunchflowItem::Importer
       end
     end
 
-    # Returns nil until the account has a successful fetch on record, which
-    # fetches its full history. Later syncs resume from that fetch, so one that
-    # keeps failing doesn't leave a gap once the item sync completes.
+    # Until the account has a successful fetch on record, starts from the chosen
+    # start date (nil fetches the full history). Later syncs resume from that
+    # fetch, so one that keeps failing doesn't leave a gap once the item sync
+    # completes, but never go back before the chosen start date.
     def determine_sync_start_date(lunchflow_account)
+      chosen_start = chosen_start_date
       synced_through = lunchflow_account.transactions_synced_through
-      return if lunchflow_account.raw_transactions_payload.to_a.empty? || synced_through.nil?
+      return chosen_start if lunchflow_account.raw_transactions_payload.to_a.empty? || synced_through.nil?
 
-      synced_through - 7.days
+      [ synced_through - 7.days, chosen_start ].compact.max
+    end
+
+    # The chosen start date as a day on the family's calendar. The panel saves it
+    # in the family's timezone, but syncs run in the app's zone.
+    def chosen_start_date
+      start = lunchflow_item.sync_start_date
+      start && lunchflow_item.family.local_date(start)
     end
 
     def handle_error(error_message)

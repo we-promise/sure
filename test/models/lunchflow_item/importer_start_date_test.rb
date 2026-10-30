@@ -39,6 +39,40 @@ class LunchflowItem::ImporterStartDateTest < ActiveSupport::TestCase
     import_transactions
   end
 
+  test "first sync starts at the chosen start date" do
+    @item.update!(sync_start_date: Date.new(2026, 1, 15))
+    expect_fetch_from(Date.new(2026, 1, 15))
+
+    import_transactions
+  end
+
+  test "the chosen start date is the day picked in the family's timezone" do
+    @item.family.update!(timezone: "Europe/Berlin")
+    Time.use_zone("Europe/Berlin") { @item.update!(sync_start_date: "2026-01-15") }
+    expect_fetch_from(Date.new(2026, 1, 15))
+
+    import_transactions
+  end
+
+  test "later syncs never go back before the chosen start date" do
+    @item.update!(sync_start_date: Date.new(2026, 10, 8))
+    store_previous_transaction
+    @lunchflow_account.update!(transactions_synced_through: Time.zone.parse("2026-10-10 06:00"))
+    expect_fetch_from(Date.new(2026, 10, 8))
+
+    import_transactions
+  end
+
+  test "later syncs resume from the last fetch when the chosen start date is older" do
+    synced_through = Time.zone.parse("2026-10-10 06:00")
+    @item.update!(sync_start_date: Date.new(2026, 1, 15))
+    store_previous_transaction
+    @lunchflow_account.update!(transactions_synced_through: synced_through)
+    expect_fetch_from(synced_through - 7.days)
+
+    import_transactions
+  end
+
   test "a successful fetch records when it ran" do
     expect_fetch_from(nil)
 
