@@ -6,7 +6,7 @@ class CashFlowTest < ApplicationSystemTestCase
   setup do
     @user = users(:family_admin)
     @month = Date.current.beginning_of_month
-    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true, "cashflow_preview_enabled" => true))
     parent = @user.family.categories.create!(name: "Sankey Shopping", color: "#123456")
     child = @user.family.categories.create!(name: "Sankey Groceries", parent: parent)
     account = @user.family.accounts.create!(name: "Sankey checking", currency: "USD", balance: 0, accountable: Depository.new)

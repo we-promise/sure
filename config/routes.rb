@@ -301,6 +301,8 @@ Rails.application.routes.draw do
   end
 
   # AI chats
+  resource :chat_reservation, only: :create
+
   resources :chats do
     resources :messages, only: :create do
       member do
@@ -566,13 +568,14 @@ Rails.application.routes.draw do
     resource :split, only: %i[new create edit update destroy] do
       post :itemize
     end
-    resource :transfer_match, only: %i[new create]
+    resource :transfer_match, only: %i[new create destroy]
     resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
     resources :attachments, only: %i[show create destroy], controller: :transaction_attachments
 
     collection do
       delete :clear_filter
+      get :name_suggestions
     end
 
     member do

@@ -957,11 +957,20 @@ RSpec.configure do |config|
           },
           Transaction: {
             type: :object,
-            required: %w[id date amount currency name classification account tags created_at updated_at],
+            required: %w[id entry_id date amount amount_decimal currency name classification kind excluded split_parent account tags created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
+              entry_id: {
+                type: :string,
+                format: :uuid,
+                description: 'Id of the underlying entry. Web routes for a single transaction, such as /transactions/{entry_id}, use this id rather than id.'
+              },
               date: { type: :string, format: :date },
-              amount: { type: :string },
+              amount: { type: :string, description: 'Formatted amount, rounded to the currency display precision' },
+              amount_decimal: {
+                type: :string,
+                description: 'Exact stored amount as an unrounded, locale-independent decimal string. Positive is an outflow, negative an inflow.'
+              },
               currency: { type: :string },
               name: { type: :string },
               notes: { type: :string, nullable: true },
@@ -969,6 +978,16 @@ RSpec.configure do |config|
               source: { type: :string, nullable: true },
               user_modified: { type: :boolean },
               classification: { type: :string },
+              kind: {
+                type: :string,
+                enum: Transaction.kinds.keys,
+                description: 'How budgets and reports treat the transaction. loan_payment counts as an expense; ' \
+                             'investment_contribution does too when the family counts investment contributions as ' \
+                             'spending, and is otherwise reported as invested and left out of spending and income; ' \
+                             'funds_movement, cc_payment and one_time are left out of budget totals.'
+              },
+              excluded: { type: :boolean, description: 'Whether the transaction is excluded from budget and report totals. Splitting a transaction marks it excluded.' },
+              split_parent: { type: :boolean, description: 'Whether the transaction has been split; its amount is then carried by its split children.' },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },
               merchant: { '$ref' => '#/components/schemas/Merchant', nullable: true },

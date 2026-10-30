@@ -52,6 +52,8 @@ class TransactionsController < ApplicationController
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
+    @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates(@transactions, user: Current.user)
+
     # Preload split parent data
     entry_ids = @transactions.map { |t| t.entry.id }
 
@@ -70,11 +72,7 @@ class TransactionsController < ApplicationController
     end
 
     # Preload which entries on this page are split parents (have children) to avoid N+1
-    @split_parent_entry_ids = if entry_ids.any?
-      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
-    else
-      Set.new
-    end
+    @split_parent_entry_ids = Entry.split_parent_ids_among(entry_ids)
 
     # Counts what the categorize wizard can act on, so read-only shares don't
     # keep the "Categorize" menu item visible.
@@ -139,6 +137,7 @@ class TransactionsController < ApplicationController
     if account.nil?
       @entry = Current.family.entries.new(entry_params)
       @entry.valid?
+      clear_stale_auto_generated_name!(@entry)
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
       return
@@ -168,6 +167,7 @@ class TransactionsController < ApplicationController
 
       respond_with_created_entry(@entry)
     else
+      clear_stale_auto_generated_name!(@entry)
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
     end
@@ -530,6 +530,19 @@ class TransactionsController < ApplicationController
     end
   end
 
+  def name_suggestions
+    unknown_names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t("transactions.unknown_name", locale: locale) }
+    transactions = Current.family.transactions.merge(Account.accessible_by(Current.user)).where.not(entries: { name: unknown_names })
+    query = params[:q].to_s.strip
+
+    @suggestions = if query.length < Transaction::MIN_LENGTH_FOR_NAME_SUGGESTION
+      names = recent_transaction_names.select { |name| name.downcase.include?(query.downcase) }
+      transactions.name_suggestions_for_names(names)
+    else
+      transactions.name_suggestions_for(query)
+    end
+  end
+
   private
     def uncategorized_count_cache_key
       "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
@@ -691,6 +704,16 @@ class TransactionsController < ApplicationController
       set_entry
     end
 
+    # Entry#set_default_name may have already filled in a category/merchant
+    # -derived name during this failed validation attempt. A blank
+    # submission must still render blank -- otherwise the generated text
+    # becomes the field's literal value, and if the user then changes the
+    # category/merchant and resubmits, that stale generated name (no longer
+    # blank) skips the callback entirely and gets saved as-is.
+    def clear_stale_auto_generated_name!(entry)
+      entry.name = "" if entry_params[:name].blank?
+    end
+
     def set_new_transaction_form_options
       accessible_accounts_scope = accessible_accounts
 
@@ -704,6 +727,41 @@ class TransactionsController < ApplicationController
       @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
       @merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
       @tags = Current.family.tags.alphabetically.to_a
+    end
+
+    # Autocomplete suggestions for the name field, only queried when the
+    # auto-generate setting is on: lets a user reuse an actual previous name
+    # instead of leaving the field blank (which would produce a generic
+    # fallback), the same way it curbs bulk-identical generated names.
+    def recent_transaction_names
+      return [] unless Current.family.auto_generate_transaction_names?
+
+      # Current.accessible_entries (not Entry.family_scope), so a non-admin
+      # family member never sees names from accounts that weren't shared
+      # with them -- family-wide settings still respect per-account sharing.
+      # Its underlying Account.accessible_by scope is itself a `.distinct`
+      # query, so ORDER BY created_at must stay in the pluck'd column list
+      # (a plain "pluck(:name)" here would hit Postgres's "SELECT DISTINCT
+      # ... ORDER BY expressions must appear in select list"); dedup by name
+      # happens in Ruby afterward instead.
+      #
+      # Checked across every supported locale (like Entry#generic_name?'s
+      # unknown-name check), not just the current one -- otherwise an old
+      # entry named under a different locale's fallback (e.g. "Unbekannte
+      # Transaktion") would still surface as a "recent name" suggestion. A
+      # full generic_name? reuse isn't practical here since it also needs a
+      # loaded entryable.category, which isn't available cheaply from a pluck.
+      unknown_names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t("transactions.unknown_name", locale: locale) }
+
+      Current.accessible_entries
+        .where(entryable_type: "Transaction")
+        .where.not(name: unknown_names)
+        .order(created_at: :desc)
+        .limit(200)
+        .pluck(:name, :created_at)
+        .map(&:first)
+        .uniq
+        .first(20)
     end
 
     # Filters entry_params based on the user's permission on the account.

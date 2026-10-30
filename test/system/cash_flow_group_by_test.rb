@@ -6,7 +6,7 @@ class CashFlowGroupByTest < ApplicationSystemTestCase
   setup do
     @user = users(:family_admin)
     @month = Date.current.beginning_of_month
-    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true, "cashflow_preview_enabled" => true))
     category = @user.family.categories.create!(name: "Group By Shopping", color: "#123456")
     account = @user.family.accounts.create!(name: "Group By Checking", currency: "USD", balance: 0, accountable: Depository.new)
     create_transaction(account: account, category: category, amount: 100, date: @month)
