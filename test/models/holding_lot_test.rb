@@ -162,12 +162,52 @@ class HoldingLotTest < ActiveSupport::TestCase
 
       lots = HoldingLot.where(account: @account, security: security)
       assert_equal BigDecimal("10"), lots.sum(:qty)
+      assert_includes HoldingLot.in_partition([ @account.id ], [ security.id ]), [ @account.id, security.id ]
       assert_equal [ BigDecimal("7"), BigDecimal("3") ], [ lots.opening.sole.qty, lots.derived.sole.qty ], "only the opening lot moved"
     end
   end
 
+  test "absorbing the residual records no disposal and moves no other lot under the average method" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("SPL4", 30)
+      trade(security, 2, 10, 2)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 3, denominator: 2, source: "manual")
+      @account.holdings.create!(security: security, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD", account_provider: @account_provider)
+
+      assert_no_difference "HoldingLotDisposal.count" do
+        materialize(:reverse)
+      end
+      lots = HoldingLot.where(account: @account, security: security)
+      assert_equal BigDecimal("3"), lots.derived.sole.qty
+      assert_equal BigDecimal("10"), lots.sum(:qty)
+      assert_includes HoldingLot.in_partition([ @account.id ], [ security.id ]), [ @account.id, security.id ]
+    end
+  end
+
+  # A FIFO sale takes the opening lot first; the rounding it carried is then
+  # in the lots left, and the last of them takes it.
+  test "once a fifo sale has taken the opening lot, the last open lot takes the residual" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      @account.update!(cost_basis_method: "fifo")
+      security = priced_security("SPL5", 30)
+      trade(security, 2, 10, 2)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 3, denominator: 2, source: "manual")
+      trade(security, -8, 30, 5)
+      @account.holdings.create!(security: security, date: d(10), qty: 2, price: 30, amount: 60, currency: "USD", account_provider: @account_provider)
+
+      materialize(:reverse)
+
+      assert_equal BigDecimal("2"), HoldingLot.where(account: @account, security: security).sum(:qty)
+      assert_includes HoldingLot.in_partition([ @account.id ], [ security.id ]), [ @account.id, security.id ]
+    end
+  end
+
   # Fixtures only ever leave 10^-18; a real gap is far wider and is not
-  # rounding, so it stays a difference the lots show.
+  # rounding, so it stays for in_partition to catch.
   test "the opening lot does not absorb a residual above the bound" do
     book = Holding::LotBook.new
     book.add_unknown(BigDecimal("10"))
