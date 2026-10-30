@@ -260,7 +260,7 @@ class Family < ApplicationRecord
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
   validate :currency_must_be_known, if: :currency_changed?
 
-  before_validation :normalize_currency, if: :currency_changed?
+  before_validation :normalize_currency
   before_validation :normalize_enabled_currencies!
   after_create_commit :add_classifier_rules
 

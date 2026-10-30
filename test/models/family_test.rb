@@ -371,6 +371,15 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "EUR", family.reload.currency
   end
 
+  test "an existing lowercase currency is saved as its ISO code" do
+    family = families(:dylan_family)
+    family.update_column(:currency, "eur")
+
+    family.update!(name: "Renamed family")
+
+    assert_equal "EUR", family.reload.currency
+  end
+
   test "rejects a blank or unknown currency" do
     family = families(:dylan_family)
 
