@@ -6,6 +6,7 @@ zh-CN:
       subtitle: 您财务健康状况的全面洞察
       export: 导出 CSV
       print_report: 打印报表
+      sections_aria: 报表各部分
       toggle_section: 切换模块可见性
       periods:
         monthly: 按月
@@ -19,6 +20,7 @@ zh-CN:
       showing_period: 显示从 %{start} 到 %{end} 的数据
       previous_period: 上一周期
       next_period: 下一周期
+      shortcut_hint: "%{action} (%{key})"
       today: 今天
       period_label:
         quarterly: "%{year} 年第 %{quarter} 季度"
@@ -137,6 +139,34 @@ zh-CN:
       total_liabilities: 负债
       no_assets: 暂无资产
       no_liabilities: 暂无负债
+    spending_vs_normal:
+      title: 支出对比常规
+      summary_html: "本期支出 %{total}。根据 %{baseline_start} 至 %{baseline_end} 的数据，如此长周期的常规支出为 %{normal}。"
+      summary_so_far_html: "截至目前支出 %{total}。根据 %{baseline_start} 至 %{baseline_end} 的数据，这些天数的常规支出为 %{normal}。"
+      no_history_html: "本期支出 %{total}。早前历史记录尚不足以确定常规水平。"
+      no_history_short: 尚无足够的历史记录用于对比。
+      no_spending: 本期无支出。
+      no_changes: 各分类支出均符合常规水平。
+      treemap_title: 资金流向
+      changes_title: 变化情况
+      direct: "%{category}（无子分类）"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}：%{amount}"
+        normal: "常规：%{amount}"
+        more: "较常规多 %{amount}（%{percent}）"
+        less: "较常规少 %{amount}（%{percent}）"
+        more_no_percent: "较常规多 %{amount}"
+        less_no_percent: "较常规少 %{amount}"
+        no_normal: 暂无更早的历史记录可供对比
+        open: 点击查看这些交易
+      legend:
+        less: 减少 50–100%
+        slightly_less: 减少 15–50%
+        normal: 接近常规
+        slightly_more: 增加 15–50%
+        more: 增加 50–100%
+        much_more: 增加 100%+
     investment_performance:
       title: 投资表现
       portfolio_value: 投资组合价值
