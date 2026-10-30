@@ -13,10 +13,12 @@ class Provider::AlphaVantage < Provider
   # Maximum requests per day (Alpha Vantage free tier limit)
   MAX_REQUESTS_PER_DAY = 25
 
-  # Returns `sector` and `industry` from its own metadata response, so the
-  # classification gate in `Security::Provided` must ask it.
+  # Its metadata response carries `sector` and `industry`, and they are stored
+  # when metadata is fetched anyway. It is not asked for them alone: OVERVIEW
+  # is a premium function, so a free key would fail every security on every
+  # sync and spend the daily allowance that prices need.
   def supplies_classification?
-    true
+    false
   end
 
   # Free tier "compact" returns ~100 trading days (~140 calendar days).

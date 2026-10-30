@@ -15,8 +15,14 @@ class Provider::SecurityCapabilityTest < ActiveSupport::TestCase
   # still has to be asked.
   BUILDS_CLASSIFICATION = /^\s*(sector|industry):/
 
+  # Read the sector from a metadata answer, but are never asked for one alone:
+  # Alpha Vantage's OVERVIEW is a premium function, so asking on a free key
+  # fails, is never stamped, and spends the shared daily allowance on every sync.
+  CLASSIFY_ONLY_WITH_METADATA = %w[Provider::AlphaVantage].freeze
+
   test "every provider that returns a classification declares it" do
-    mismatched = capability_mismatches(builds: BUILDS_CLASSIFICATION, declares: :supplies_classification?)
+    mismatched = capability_mismatches(builds: BUILDS_CLASSIFICATION, declares: :supplies_classification?) -
+      CLASSIFY_ONLY_WITH_METADATA
 
     assert_empty mismatched,
                  "these providers return sector/industry but answer false to supplies_classification?, " \
@@ -34,6 +40,13 @@ class Provider::SecurityCapabilityTest < ActiveSupport::TestCase
 
     assert_empty overclaiming,
                  "these providers declare a classification they never build: #{overclaiming.join(", ")}"
+  end
+
+  test "a provider whose classification costs a premium request is not asked for one" do
+    CLASSIFY_ONLY_WITH_METADATA.each do |name|
+      assert_not name.constantize.allocate.supplies_classification?,
+                 "#{name} would be asked for a classification on every sync"
+    end
   end
 
   private
