@@ -93,6 +93,28 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  # Under fifo each sale's basis is read from what it took from each lot. The
+  # card reads those for every sale in one query, not one per sale.
+  test "the card preloads the lot disposals its fifo sales read" do
+    date = Date.current.beginning_of_month
+    account = @family.accounts.create!(name: "Brokerage FIFO", balance: 10_000, currency: "USD",
+                                       cost_basis_method: "fifo", accountable: Investment.new)
+    security = Security.create!(ticker: "FIF#{SecureRandom.hex(3)}", name: "Fifo Listed")
+    create_trade(security, account: account, qty: 60, date: date - 20, price: 12)
+    create_trade(security, account: account, qty: 40, date: date - 10, price: 20)
+    create_trade(security, account: account, qty: -10, date: date, price: 25)
+    create_trade(security, account: account, qty: -60, date: date, price: 25)
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    queries = capture_sql_queries { get reports_path }
+
+    assert_response :ok
+    lines = css_select("[data-testid='realized-gain-line']").map(&:text).select { |text| text.include?(security.ticker) }
+    assert_equal 2, lines.size, "both sales must be listed, or this proves nothing"
+    assert lines.any? { |text| text.include?("$130.00") }, "10 x (25 - 12), the oldest lot"
+    assert_equal 1, queries.count { |sql| sql.include?(%("holding_lot_disposals")) }, "one preload, not one per sale"
+  end
+
   test "index renders successfully" do
     get reports_path
     assert_response :ok

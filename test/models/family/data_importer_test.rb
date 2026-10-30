@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Family::DataImporterTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @family = families(:empty)
   end
@@ -1310,6 +1312,122 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "manual", imported_holding.cost_basis_source
     assert imported_holding.cost_basis_locked
     assert imported_holding.security_locked
+  end
+
+  # Derived lots are rebuilt on every sync, so the file carries only what the
+  # user chose: a lot's cost, the lot a sale names, and the account's method.
+  test "export then import round-trips a user-set lot basis and a named lot" do
+    Family::DataImporter.new(@family, lot_export).import!
+
+    account = @family.accounts.find_by!(name: "Lot Round Trip")
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    trades = lot_trades(account)
+
+    assert_equal "fifo", account.cost_basis_method
+    assert_equal trades.fetch(40), trades.fetch(-10).trade.lot_source_entry, "the sale's named lot"
+    lot = HoldingLot.find_by!(source_entry: trades.fetch(60))
+    assert_equal 600, lot.manual_total_cost
+    assert_equal 10, lot.unit_cost, "the user's 600 over 60 units, after re-materialization"
+    assert_equal [ 60, 30 ], HoldingLot.where(account: account).order(:acquired_on).pluck(:qty).map(&:to_i), "the sale took the named lot, not the oldest"
+  end
+
+  # An account that sells by average keeps a stored choice and ignores it, so
+  # an export taken after a switch still carries it.
+  test "a named lot kept through a switch to average imports without failing the import" do
+    Family::DataImporter.new(@family, lot_export(switch_to: "average")).import!
+
+    account = @family.accounts.find_by!(name: "Lot Round Trip")
+    trades = lot_trades(account)
+    assert_equal "average", account.cost_basis_method
+    assert_equal trades.fetch(40), trades.fetch(-10).trade.reload.lot_source_entry
+  end
+
+  test "a sale and the lot it names restore their link when each arrives in its own chunk" do
+    lines = lot_export.split("\n")
+    session = @family.import_sessions.create!(expected_chunks: lines.size)
+
+    lines.each { |line| Family::DataImporter.new(@family, line, import_session: session).import! }
+
+    trades = lot_trades(@family.accounts.find_by!(name: "Lot Round Trip"))
+    assert_equal trades.fetch(40), trades.fetch(-10).trade.reload.lot_source_entry
+    assert_equal 600, HoldingLot.find_by!(source_entry: trades.fetch(60)).manual_total_cost
+  end
+
+  test "an unusable lot cost or lot name is dropped and counted, and the trade still imports" do
+    # Each edit names the check that tells its drop from a clean import, where
+    # the first buy's lot carries the user's 600 and the sale names the $20 lot.
+    cases = {
+      "a non-numeric cost" => [ ->(data) { data["lot_total_cost"] = "abc" if data["lot_total_cost"] }, :no_lot_cost ],
+      "a negative cost" => [ ->(data) { data["lot_total_cost"] = "-5" if data["lot_total_cost"] }, :no_lot_cost ],
+      "a cost on a sale" => [ ->(data) { data["lot_total_cost"] = "50" if data["qty"].to_d.negative? }, :only_the_buys_lot ],
+      "an unknown named lot" => [ ->(data) { data["lot_source_trade_id"] = SecureRandom.uuid if data["lot_source_trade_id"] }, :no_choice ],
+      "a sale naming itself" => [ ->(data) { data["lot_source_trade_id"] = data["id"] if data["lot_source_trade_id"] }, :no_choice ],
+      "a sale dated before its lot" => [ ->(data) { data["date"] = 5.days.ago.to_date.iso8601 if data["lot_source_trade_id"] }, :no_choice ],
+      "a sale of another security" => [ ->(data) { data.merge!("security_id" => SecureRandom.uuid, "ticker" => "OTHER#{SecureRandom.hex(2).upcase}") if data["lot_source_trade_id"] }, :no_choice ]
+    }
+
+    cases.each do |label, (edit, check)|
+      family = Family.create!(name: "Target #{label}", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+
+      result = Family::DataImporter.new(family, edit_trades(lot_export) { |data| edit.call(data) }).import!
+
+      account = family.accounts.find_by!(name: "Lot Round Trip")
+      trades = lot_trades(account)
+      assert_equal 3, trades.size, "#{label}: a trade was lost"
+      assert_equal 1, result[:summary].dig("trades", "skipped"), label
+      case check
+      when :no_lot_cost
+        assert_equal 0, HoldingLot.where(account: account).count, "#{label}: the cost was seeded"
+      when :only_the_buys_lot
+        assert_equal [ trades.fetch(60).id ], HoldingLot.where(account: account).pluck(:source_entry_id), "#{label}: a sale got a lot"
+      when :no_choice
+        assert_nil trades.fetch(-10).trade.reload.lot_source_entry_id, "#{label}: the choice was stored"
+        assert_equal 600, HoldingLot.find_by!(source_entry: trades.fetch(60)).manual_total_cost, "#{label}: the lot's cost went with it"
+      end
+    end
+  end
+
+  # A sale the user has since marked a transfer out names no lot, as the
+  # drawer would not let it.
+  # Labels are not in the export, so only a sale the user marked a transfer
+  # out after a session's first import can meet this; the session refuses it.
+  test "a session re-import refuses a named lot on a sale marked a transfer out" do
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    export = lot_export
+    Family::DataImporter.new(@family, export, import_session: session).import!
+    trades = lot_trades(@family.accounts.find_by!(name: "Lot Round Trip"))
+    sale = trades.fetch(-10).trade
+    assert_equal trades.fetch(40).id, sale.lot_source_entry_id, "precondition: the first import named the lot"
+    sale.update_columns(investment_activity_label: Trade::TRANSFER_LABEL)
+
+    assert_raises(Family::DataImporter::InvalidRecordError) do
+      Family::DataImporter.new(@family, export, import_session: session).import!
+    end
+  end
+
+  test "a session import raises on an unusable lot cost" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+
+    assert_raises(Family::DataImporter::InvalidRecordError) do
+      Family::DataImporter.new(@family, edit_trades(lot_export) { |data| data["lot_total_cost"] = "abc" if data["lot_total_cost"] }, import_session: session).import!
+    end
+  end
+
+  test "re-importing without the cost method keeps the account's own, and without a lot's cost or name clears them" do
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    export = lot_export
+    Family::DataImporter.new(@family, export, import_session: session).import!
+
+    cleared = edit_trades(export) { |data| data["lot_total_cost"] = nil; data["lot_source_trade_id"] = nil }
+    cleared = cleared.split("\n").map { |line| JSON.parse(line) }.each { |record| record["data"].delete("cost_basis_method") if record["type"] == "Account" }.map(&:to_json).join("\n")
+    Family::DataImporter.new(@family, cleared, import_session: session).import!
+
+    account = @family.accounts.find_by!(name: "Lot Round Trip")
+    trades = lot_trades(account)
+    assert_equal 1, @family.accounts.where(name: "Lot Round Trip").count, "precondition: the re-import updated the account"
+    assert_equal "fifo", account.cost_basis_method
+    assert_nil HoldingLot.find_by!(source_entry: trades.fetch(60)).manual_total_cost
+    assert_nil trades.fetch(-10).trade.reload.lot_source_entry_id
   end
 
   test "round trips raw balance history through full export" do
@@ -2977,6 +3095,41 @@ class Family::DataImporterTest < ActiveSupport::TestCase
   end
 
   private
+
+    # A FIFO account's export: 60 bought at $12 with the user's cost of $600,
+    # 40 at $20, and a sale of 10 that names the $20 lot.
+    def lot_export(switch_to: nil)
+      source = Family.create!(name: "Lot Source", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+      account = source.accounts.create!(name: "Lot Round Trip", accountable: Investment.new, balance: 0, cash_balance: 0, currency: "USD")
+      account.update!(cost_basis_method: "fifo")
+      security = Security.create!(ticker: "LRT#{SecureRandom.hex(3).upcase}", name: "Lot Round Trip")
+      Security::Price.insert_all((3.days.ago.to_date..Date.current).map { |date| { security_id: security.id, date: date, price: 30, currency: "USD" } })
+      first_buy = create_trade(security, account: account, qty: 60, price: 12, date: 3.days.ago.to_date)
+      second_buy = create_trade(security, account: account, qty: 40, price: 20, date: 2.days.ago.to_date)
+      # Sold on the day the named lot was bought, which a sale may do.
+      sale = create_trade(security, account: account, qty: -10, price: 25, date: 2.days.ago.to_date)
+      sale.trade.update!(lot_source_entry: second_buy)
+      # The sale gets the lowest trade id, so an export ordered by date and id
+      # alone would write it ahead of the lot it names, bought the same day.
+      low_id = "00000000-0000-4000-8000-#{SecureRandom.hex(6)}"
+      Trade.where(id: sale.entryable_id).update_all(id: low_id)
+      sale.update_columns(entryable_id: low_id)
+      Holding::Materializer.new(account.reload, strategy: :forward).materialize_holdings
+      HoldingLot.find_by!(source_entry: first_buy).set_manual_total_cost!(600)
+      account.update!(cost_basis_method: switch_to) if switch_to
+
+      ndjson = nil
+      Zip::File.open_buffer(Family::DataExporter.new(source).generate_export) { |zip| ndjson = zip.read("all.ndjson") }
+      ndjson
+    end
+
+    def edit_trades(ndjson)
+      ndjson.split("\n").map { |line| JSON.parse(line) }.each { |record| yield record["data"] if record["type"] == "Trade" }.map(&:to_json).join("\n")
+    end
+
+    def lot_trades(account)
+      account.entries.where(entryable_type: "Trade").includes(:entryable).index_by { |entry| entry.trade.qty.to_i }
+    end
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")

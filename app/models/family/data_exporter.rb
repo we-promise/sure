@@ -453,8 +453,15 @@ class Family::DataExporter
         }.to_json
       end
 
-      # Export trades with full data
-      @family.trades.includes(:security, entry: :account).find_each do |trade|
+      # Export trades with full data. Lots are rebuilt from trades on sync, so
+      # a trade carries only what the user set on its lot: the lot's total
+      # cost, and, on a sale, the trade whose lot it names to sell from. Trades
+      # go oldest first and buys before sales on a day, so a named lot is
+      # always ahead of its sale, even when an import arrives in chunks.
+      lot_total_costs = HoldingLot.derived.joins(:account).where(accounts: { family_id: @family.id })
+        .where.not(manual_total_cost: nil).pluck(:source_entry_id, :manual_total_cost).to_h
+      @family.trades.includes(:security, :lot_source_entry, entry: :account)
+        .order("entries.date ASC, trades.qty DESC, trades.id ASC").each do |trade|
         lines << {
           type: "Trade",
           data: {
@@ -470,6 +477,8 @@ class Family::DataExporter
             price: trade.price,
             amount: trade.entry.amount,
             currency: trade.currency,
+            lot_total_cost: lot_total_costs[trade.entry.id],
+            lot_source_trade_id: trade.lot_source_entry&.entryable_id,
             created_at: trade.created_at,
             updated_at: trade.updated_at
           }

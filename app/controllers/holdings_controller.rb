@@ -12,6 +12,11 @@ class HoldingsController < ApplicationController
 
   def show
     @last_price_updated = @holding.security.prices.maximum(:updated_at)
+    @lots = @holding.open_lots.to_a
+    # The lots partial gates its edit affordances on this; the controller has
+    # long enforced writes (require_holding_write_permission!), the pencil and
+    # form should not dangle for read-only shares.
+    @can_write_lots = Account.writable_by(Current.user).exists?(id: @holding.account_id)
   end
 
   def update
