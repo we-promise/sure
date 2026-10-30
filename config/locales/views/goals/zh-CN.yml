@@ -156,7 +156,7 @@ zh-CN:
       funding_last_30d: 最近 30 天
       funding_last_90d: 最近 90 天
       status_callout:
-        depleted: "低于目标余额 %{amount} — 请补充以恢复储备"
+        depleted: "比目标余额少 %{amount} — 请补充以恢复储备"
         behind: 每月多存 %{amount} 以赶上进度
         behind_covered: 待确认承诺可以补足差距
         on_track: 预计在 %{date} 左右达成目标
@@ -229,7 +229,7 @@ zh-CN:
         heading_reserve: 储备完好
         body_reserve: "你的储备金已达到目标余额，%{target} 中的 %{saved}。无需操作——资金保持预留状态。"
         heading: 目标已达成。做得不错。
-        body_reached: "你已达到 %{target} 中的 %{saved} 目标。该目标尚未关闭——资金仍为其预留。"
+        body_reached: "你已达到目标，已存 %{saved}（目标为 %{target}）。该目标尚未关闭——资金仍为其预留。"
         close_cta: 关闭此目标
         close_hint: 关闭会为同一账户上的其他目标释放预留资金。一旦实际用完这笔钱即可关闭。
         frozen: "于 %{date} 达成 · %{amount}"
