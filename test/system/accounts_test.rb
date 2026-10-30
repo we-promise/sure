@@ -158,11 +158,7 @@ class AccountsTest < ApplicationSystemTestCase
 
       click_button "Create Account"
 
-      within_testid("account-sidebar-tabs") do
-        click_on "All"
-        find("details", text: Accountable.from_type(accountable_type).display_name).click
-        assert_text account_name
-      end
+      assert_account_in_sidebar(accountable_type, account_name)
 
       visit accounts_url
       assert_text account_name
@@ -192,6 +188,29 @@ class AccountsTest < ApplicationSystemTestCase
       assert_equal updated_institution_name, created_account[:institution_name]
       assert_equal updated_institution_domain, created_account[:institution_domain]
       assert_equal updated_notes, created_account[:notes]
+    end
+
+    # The account page issues a Turbo morph refresh shortly after it loads.
+    # Reading the sidebar while that refresh is in flight can detach the node
+    # ("Node with given id does not belong to the document"), which Capybara
+    # does not retry. Retry until the account appears in the sidebar.
+    def assert_account_in_sidebar(accountable_type, account_name)
+      3.times do
+        begin
+          within_testid("account-sidebar-tabs") do
+            click_on "All"
+            details = find("details", text: Accountable.from_type(accountable_type).display_name)
+            details.click unless details[:open]
+            assert_text account_name
+          end
+          return
+        rescue Selenium::WebDriver::Error::WebDriverError => e
+          raise unless e.message.match?(
+            /does not belong to the document|stale element reference/i,
+          )
+        end
+      end
+      assert_text account_name
     end
 
     # Fill + submit the account edit dialog, retrying when a Turbo morph
