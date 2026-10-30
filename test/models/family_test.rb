@@ -2,9 +2,32 @@ require "test_helper"
 
 class FamilyTest < ActiveSupport::TestCase
   include SyncableInterfaceTest
+  include SqlQueryCapture
 
   def setup
     @syncable = families(:dylan_family)
+  end
+
+  test "local_date is the date in the family's zone" do
+    family = families(:dylan_family)
+    evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
+
+    family.update!(timezone: "Australia/Sydney")
+    assert_equal Date.new(2026, 1, 16), family.local_date(evening_utc)
+
+    family.update!(timezone: "America/New_York")
+    assert_equal Date.new(2026, 1, 15), family.local_date(Time.utc(2026, 1, 16, 3, 0, 0))
+  end
+
+  test "local_date falls back to the app's zone for a blank or unknown zone" do
+    family = families(:dylan_family)
+    evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
+
+    family.update_column(:timezone, nil)
+    assert_equal evening_utc.in_time_zone(Time.zone).to_date, family.local_date(evening_utc)
+
+    family.update_column(:timezone, "Mars/Olympus_Mons")
+    assert_equal evening_utc.in_time_zone(Time.zone).to_date, family.local_date(evening_utc)
   end
 
   test "investment_contributions_category creates category when missing" do
@@ -238,6 +261,53 @@ class FamilyTest < ActiveSupport::TestCase
     older_entry.destroy!
 
     assert_not_equal before_destroy, family.reload.entries_cache_version
+  end
+
+  test "build_cache_key changes when family currency changes" do
+    family = families(:empty)
+    before = family.build_cache_key("test_key")
+    family.update!(currency: "EUR")
+    after = family.reload.build_cache_key("test_key")
+
+    assert_not_equal before, after
+  end
+
+  test "build_cache_key changes through the account deletion lifecycle and does not revert" do
+    family = families(:dylan_family)
+    newer_account = accounts(:credit_card)
+    older_account = accounts(:depository)
+
+    newer_account.touch
+    k0 = family.build_cache_key("test_key")
+
+    older_account.mark_for_deletion!
+    k1 = family.reload.build_cache_key("test_key")
+
+    older_account.destroy!
+    k2 = family.reload.build_cache_key("test_key")
+
+    assert_not_equal k0, k1
+    assert_not_equal k1, k2
+    # Regression assertion for #4200: ensure key does not revert to pre-deletion state (k0)
+    assert_not_equal k0, k2
+  end
+
+  test "build_cache_key remains unchanged when nothing relevant has changed" do
+    family = families(:dylan_family)
+    key1 = family.build_cache_key("test_key", invalidate_on_data_updates: true)
+    key2 = family.reload.build_cache_key("test_key", invalidate_on_data_updates: true)
+
+    assert_equal key1, key2
+  end
+
+  test "accounts_status_version fetches count and max updated_at in a single query" do
+    family = families(:dylan_family)
+    queries = capture_sql_queries do
+      family.accounts_status_version
+    end
+
+    account_queries = queries.grep(/FROM "accounts"/i)
+    assert_equal 1, account_queries.size, "accounts_status_version should execute only one query"
   end
 
   test "default currency comes from country ISO data" do

@@ -48,6 +48,16 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal "disabled", @account.reload.status
   end
 
+  test "the failed-destroy restore leaves a status written since the record was loaded" do
+    @account.mark_for_deletion!
+    Account.where(id: @account.id).update_all(status: "active")
+
+    @account.restore_after_failed_destroy
+
+    assert @account.pending_deletion?
+    assert_equal "active", @account.reload.status
+  end
+
   test "disable from active is unchanged" do
     assert @account.active?
 

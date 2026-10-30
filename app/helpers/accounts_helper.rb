@@ -56,7 +56,7 @@ module AccountsHelper
       end
 
     [
-      family.build_cache_key("account_sidebar_tabs_v3", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v5", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
       active_tab,
@@ -71,7 +71,12 @@ module AccountsHelper
       # Brandfetch logo URLs carry the client id and the logo size, so
       # changing either in Settings must bust the cached sidebar too.
       Digest::SHA256.hexdigest(Setting.brand_fetch_client_id.to_s),
-      Setting.brand_fetch_logo_size
+      Setting.brand_fetch_logo_size,
+      # Changing the account order, or dragging an account in the manual
+      # order, must re-render the sidebar right away rather than after the
+      # 12h expiry.
+      Current.user&.default_account_order,
+      Current.user&.account_order&.manual? ? Digest::SHA256.hexdigest(Current.user.manual_account_order.to_json) : nil
     ]
   end
 

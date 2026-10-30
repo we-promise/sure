@@ -325,6 +325,86 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "a blank auto-generated name is not silently kept when another field fails validation" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    # Name is blank but a category is selected, so Entry#set_default_name
+    # fills it in during validation; the date is deliberately out of the
+    # supported range so the record still fails to save for an unrelated
+    # reason (an invalid currency would break rendering the money field
+    # itself, not just validation). The re-rendered form must show the name
+    # field blank again (not the generated text), or a resubmission after
+    # changing the category would save that now-stale name instead of a
+    # fresh one.
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "",
+        date: 40.years.ago.to_date,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        entryable_attributes: { category_id: categories(:food_and_drink).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='entry[name]'][value='']"
+  end
+
+  test "an explicitly provided name survives a failed submission unchanged" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "Explicit name",
+        date: 40.years.ago.to_date,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        entryable_attributes: { category_id: categories(:food_and_drink).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='entry[name]'][value='Explicit name']"
+  end
+
+  test "recent name suggestions never include entries from accounts inaccessible to the current user" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    private_account = Account.create!(
+      family: @entry.account.family,
+      owner: users(:family_member),
+      name: "Family Member Private Account",
+      balance: 100,
+      currency: "USD",
+      accountable: Depository.new,
+      status: "active"
+    )
+    create_transaction(account: private_account, name: "Private Merchant XYZ")
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "Private Merchant XYZ", response.body
+  end
+
+  test "recent name suggestions exclude the unknown-name fallback in every supported locale, not just the current one" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    create_transaction(account: @entry.account, name: I18n.t("transactions.unknown_name", locale: :en))
+    create_transaction(account: @entry.account, name: I18n.t("transactions.unknown_name", locale: :de))
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match I18n.t("transactions.unknown_name", locale: :de), response.body
+  end
+
   # Regression: the sync window must start at the old date, or the incremental
   # balance calculation counts the moved transaction twice.
   test "moving a transaction later syncs from its original date" do
@@ -338,6 +418,59 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_equal 2.days.ago.to_date, @entry.reload.date
+  end
+
+  test "name_suggestions returns matching past transaction names with their usual category" do
+    get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
+
+    assert_response :success
+    assert_match "Starbucks", response.body
+    assert_match "data-category-id=\"#{categories(:food_and_drink).id}\"", response.body
+  end
+
+  test "name_suggestions starts with recent names and categories when auto naming is enabled" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_match "Starbucks", response.body
+    assert_match "data-category-id=\"#{categories(:food_and_drink).id}\"", response.body
+
+    get name_suggestions_transactions_url(q: "zz"), as: :turbo_stream
+    assert_no_match "Starbucks", response.body
+  end
+
+  test "name_suggestions does not load recent names when auto naming is disabled" do
+    @entry.account.family.update!(auto_generate_transaction_names: false)
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "Starbucks", response.body
+  end
+
+  test "name_suggestions returns no options when no past transaction matches" do
+    get name_suggestions_transactions_url(q: "no such merchant"), as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "no such merchant", response.body
+  end
+
+  test "name_suggestions only considers transactions from accounts accessible to the current user" do
+    # accounts(:investment) is owned by family_admin and not shared with family_member
+    create_transaction(account: accounts(:investment), name: "Private Yacht Purchase", category: categories(:income))
+
+    sign_in users(:family_member)
+
+    get name_suggestions_transactions_url(q: "Private Yacht"), as: :turbo_stream
+    assert_response :success
+    assert_no_match "Private Yacht", response.body
+
+    # depository is shared with family_member, so its transactions remain suggestible
+    get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
+    assert_response :success
+    assert_match "Starbucks", response.body
   end
 
   test "updates with transaction details" do
@@ -412,7 +545,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_includes response.body, "A manual recurring transaction already exists for this pattern"
+    assert_includes response.body, I18n.t("recurring_transactions.already_covered")
     assert_select "button[disabled]", text: /Mark as Recurring/
   end
 
@@ -897,7 +1030,7 @@ end
     end
 
     assert_redirected_to transactions_path
-    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
   end
 
   test "mark_as_recurring allows a second manual recurring transaction with same merchant but different amount" do
@@ -984,7 +1117,139 @@ end
     end
 
     assert_redirected_to transactions_path
-    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
+  end
+
+  # Only hand-made rows used to count, so a bill that detection had already
+  # found never disabled the button (#4368).
+  test "mark_as_recurring refuses a transaction a detected bill already covers" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Betashares"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+
+    family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 100,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: false,
+      occurrence_count: 2
+    )
+
+    get transaction_url(entry)
+    assert_select "button[disabled][title=?]", I18n.t("recurring_transactions.already_covered"), text: /Mark as Recurring/
+    assert_select "##{ActionView::RecordIdentifier.dom_id(entry, :mark_recurring)} p",
+                  text: I18n.t("recurring_transactions.already_covered")
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(entry.entryable)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
+  end
+
+  # The covering series may be income, or only a suggestion, so the message
+  # must not tell the user a bill is tracking the payment.
+  test "mark_as_recurring does not call a suggested income a bill" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Acme Payroll"
+    entry = create_transaction(account: account, amount: -1840, merchant: merchant)
+    family.recurring_transactions.create!(
+      account: account, merchant: merchant, amount: -1840, currency: "USD", bill_type: "income",
+      expected_day_of_month: entry.date.day, last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now, status: "suggested", manual: false, occurrence_count: 2
+    )
+
+    get transaction_url(entry)
+    disabled = css_select("button[disabled]").find { |button| button.text.include?("Mark as Recurring") }
+    assert disabled, "the covering income must disable the button"
+    assert_no_match(/\bbill\b/i, disabled["title"])
+
+    post mark_as_recurring_transaction_path(entry.entryable)
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
+    assert_no_match(/\bbill\b/i, flash[:alert])
+  end
+
+  # An ended series no longer covers the payment, but the unique index still
+  # holds its key, so the create would fail. The button says so up front
+  # instead of failing after the POST.
+  test "mark_as_recurring is disabled when an ended series holds the same key" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Betashares"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+    RecurringTransaction.create_from_transaction(entry.entryable).update!(status: "ended")
+
+    get transaction_url(entry)
+    assert_select "button[disabled][title=?]", I18n.t("recurring_transactions.already_exists"), text: /Mark as Recurring/
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(entry.entryable)
+    end
+    assert_equal I18n.t("recurring_transactions.already_exists"), flash[:alert]
+  end
+
+  # Sharing is per account. A bill on an account this member was never given
+  # is not theirs to learn about, as in the add-bill dialog's own check, so
+  # it neither disables the button nor refuses the request.
+  test "mark_as_recurring ignores a covering bill on an account the user cannot see" do
+    member = users(:family_member)
+    entry = create_transaction(account: accounts(:depository), amount: 100, name: "PRIVATE PLAN")
+    hidden = families(:dylan_family).recurring_transactions.create!(
+      account: accounts(:investment), name: "Private Plan", amount: 100, currency: "USD",
+      expected_day_of_month: Date.current.day, last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current, status: "active", manual: true, occurrence_count: 1
+    )
+    hidden.recurring_occurrences.order(:due_on).first.allocations.create!(
+      entry: entry, allocated_amount: 100, currency: "USD", source: "user_created"
+    )
+    assert_equal hidden, families(:dylan_family).recurring_transactions.covering(entry), "precondition: the hidden bill covers the entry"
+
+    sign_in member
+    get transaction_url(entry)
+    assert_select "button[disabled]", text: /Mark as Recurring/, count: 0
+
+    assert_difference "RecurringTransaction.count", 1 do
+      post mark_as_recurring_transaction_path(entry.entryable)
+    end
+    assert_equal I18n.t("recurring_transactions.marked_as_recurring"), flash[:notice]
+  end
+
+  # The add-bill form checks and saves under the entry lock the Allocator
+  # takes. This path makes a series for the same transaction, so it holds the
+  # same lock, or the two could both see nothing and both create.
+  test "mark_as_recurring checks and creates while holding the entry lock" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: account, amount: 100, name: "FRESH CHARGE")
+    connection = ActiveRecord::Base.connection
+    outside = connection.open_transactions
+    seen = {}
+
+    TransactionsController.any_instance.stubs(:mark_recurring_blocked_message)
+      .with { seen[:check] = [ connection.open_transactions, entry_lock_held?(entry) ]; true }.returns(nil)
+    RecurringTransaction.stubs(:create_from_transaction)
+      .with { seen[:create] = [ connection.open_transactions, entry_lock_held?(entry) ]; true }.returns(true)
+    assert_not entry_lock_held?(entry), "precondition: nothing holds the entry lock before the request"
+
+    post mark_as_recurring_transaction_path(entry.entryable)
+
+    assert_equal I18n.t("recurring_transactions.marked_as_recurring"), flash[:notice]
+    assert_operator seen[:check].first, :>, outside, "the check ran outside a transaction"
+    assert_operator seen[:create].first, :>, outside, "the create ran outside a transaction"
+    assert seen[:check].last, "the check ran without the entry lock"
+    assert seen[:create].last, "the create ran without the entry lock"
   end
 
   test "mark_as_recurring shows already-exists alert when a concurrent request wins the race" do
@@ -1136,7 +1401,7 @@ end
     get new_transaction_url(duplicate_entry_id: @entry.id)
     assert_response :success
     assert_select "input[name='entry[name]'][value=?]", @entry.name
-    assert_select "input[type='number'][name='entry[amount]']" do |elements|
+    assert_select "input[type='text'][name='entry[amount]']" do |elements|
       assert_equal sprintf("%.2f", @entry.amount.abs), elements.first["value"]
     end
     assert_select "input[type='hidden'][name='entry[entryable_attributes][merchant_id]']"
@@ -1975,6 +2240,17 @@ end
   end
 
   private
+    # The Allocator's two-key advisory lock on this entry, held by this session.
+    def entry_lock_held?(entry)
+      ActiveRecord::Base.connection.select_value(ActiveRecord::Base.sanitize_sql_array([ <<~SQL, RecurringTransaction::Allocator::ENTRY_LOCK_NAMESPACE, RecurringTransaction::Allocator.entry_lock_id(entry) ]))
+        SELECT EXISTS (
+          SELECT 1 FROM pg_locks
+          WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted
+            AND classid = ? AND objid = ? AND objsubid = 2
+        )
+      SQL
+    end
+
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
     end

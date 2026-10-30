@@ -55,6 +55,10 @@ fr:
         invalid_coinbase_account: Compte Coinbase invalide
         only_manual: Seuls les comptes manuels peuvent être liés à Coinbase
       success: Compte Coinbase lié avec succès
+    select_accounts:
+      connection_unavailable: Cette connexion Coinbase n'est pas disponible. Choisissez-en une dans les paramètres des fournisseurs.
+      no_credentials_configured: Connectez Coinbase dans les paramètres des fournisseurs avant d'ajouter ses portefeuilles.
+      select_connection: Choisissez une connexion Coinbase dans les paramètres des fournisseurs.
     select_existing_account:
       balance: Solde
       cancel: Annuler

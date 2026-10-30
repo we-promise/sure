@@ -26,6 +26,9 @@ de:
     balance_desc:
       label: Saldo (absteigend)
       label_short: Saldo ↓
+    manual:
+      label: Manuell (per Ziehen sortieren)
+      label_short: Manuell
     name_asc:
       label: Name (A–Z)
       label_short: Name ↑
