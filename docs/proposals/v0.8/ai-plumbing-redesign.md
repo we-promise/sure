@@ -1,9 +1,17 @@
 # Sure — AI plumbing redesign
 
-Status: proposal · Target: `we-promise/sure` (`origin/main` @ `a6767e931`) · 2026-10-28
+Status: proposal, updated after the RubyLLM spike · Target: `we-promise/sure` (`origin/main` @ `a6767e931`) · 2026-10-28, updated 2026-10-30
 
 Audience: the Sure dev team. This document describes the structure the AI layer is moving to and
 the pull requests that get it there (section 19).
+
+**Product decisions and technical limits.** The RubyLLM spike (PR 1,
+[`rubyllm-spike-report.md`](rubyllm-spike-report.md)) sorted the plan's choices into product
+decisions, which are Sure's to make, and technical limits, which a server, gem or protocol
+imposes. Its decisions register gives the evidence for and against each product decision. None of
+them is final, and neither is any line of section 20: an "out of scope" line is a product
+decision too. Where the spike found that something the plan presented as a limit is a choice,
+the section says so.
 
 ## 1. What exists today (evidence)
 
@@ -465,7 +473,20 @@ preset and override any field. The merge rules:
   admin adds an endpoint. The config file never uses them: its `routes:` is the whole routing.
 
 If the RubyLLM spike is adopted (section 19), a preset's model list can be seeded from RubyLLM's
-model registry.
+model registry. The registry can lag the providers: in 2.1.1 it still listed a Veo model Google
+had retired, so a seeded list is a starting point, not a source of truth.
+
+**What the spike found about presets:**
+- **LM Studio** goes `strict` → `none` and skips `json_object`, which it refuses with a 400.
+- **Reasoning effort `none` maps per preset.** llama.cpp ignores `reasoning_effort` and needs
+  `thinking_budget_tokens: 0` (or `chat_template_kwargs: {enable_thinking: false}`); Ollama's
+  hybrid models and OpenRouter honour `none`; gpt-oss can't stop reasoning at all. Settings a
+  server can't honour are accepted silently, so the probe checks effort the way it checks JSON
+  mode: by looking for reasoning in the answer. OpenRouter's "reasoning is mandatory" 400 for
+  some models isn't a JSON-mode rejection, and the `auto` chain mustn't read it as one.
+- **llama.cpp OCR models need `--special`.** Without it, llama-server drops special tokens from
+  the text, and an OCR model's table tags (`<tr>`, `<td>`) with them, so table cells arrive
+  joined (`24.5039,975.50`). With it, the end-of-sequence token arrives too and is stripped.
 
 ### 4.4 The config file
 
@@ -830,8 +851,9 @@ end
   local host is busy, the call waits or re-enqueues (section 11); it doesn't move to the next
   entry.
 - **Failover: the endpoint is unhealthy.** On `Ai::Error::Timeout`, `Upstream`, `RateLimited`,
-  `Unreachable` or `Unauthorized`, the generation retries once on the next route on a different
-  server (a different normalised base URL), and the failed one is marked down.
+  `Unreachable`, `Unauthorized`, `NoCredit` or `ModelMissing`, the generation retries once on the
+  next route on a different server (a different normalised base URL), and the failed one is
+  marked down.
 - **Escalation: this model can't handle this request.** On `Ai::Error::InvalidOutput` or
   `ContextTooLong`, the generation retries once on the next route, which may be a bigger model on
   the **same** endpoint (a 3B and a 20B on one llama.cpp host). Nothing is marked down: the
@@ -847,10 +869,11 @@ end
   call skips it without waiting for the same timeout. A fresh failed probe result marks it down
   too. Connection failures (`Timeout`, `Upstream`, `Unreachable`) mark the **server**, keyed by
   normalised base URL (host and port: a chat server can be down while the embedding server on the
-  same host is up), so every endpoint row on that server is skipped. `RateLimited` and
-  `Unauthorized` mark only the **key**: the endpoint row with its own key, or the endpoint row and
-  family when a family brought its own (section 4.2). A quota or key problem is the key's, not the
-  server's, so one family's 429 never blocks another family or the instance key.
+  same host is up), so every endpoint row on that server is skipped. `RateLimited`,
+  `Unauthorized` and `NoCredit` mark only the **key**: the endpoint row with its own key, or the
+  endpoint row and family when a family brought its own (section 4.2). A quota or key problem is
+  the key's, not the server's, so one family's 429 never blocks another family or the instance
+  key. `ModelMissing` marks only that model on that endpoint.
 - **What the user sees.** Chat shows the serving model below the message input
   (`claude-sonnet-4-6 · Anthropic`) and says so after a failover
   (`claude-sonnet-4-6 · Anthropic (gpu unreachable)`) or an escalation
@@ -869,9 +892,25 @@ end
 - **Chat on a `responses_api` endpoint** continues the conversation with `previous_response_id`
   when the previous turn ran on the same endpoint. Otherwise, including after a failover, chat
   sends the history rebuilt from `messages`. Failover happens only at the start of a turn, never
-  in the middle of a stream, because a turn's provider state can't move.
-- **Bounded turns.** `Ai::Conversation` owns the tool loop, whatever the spike decides
-  (section 19), and bounds it twice: at most `Setting.ai_max_tool_rounds` rounds, with the last
+  in the middle of a stream. That's a product choice, not a limit: the spike moved a turn from
+  gpt-oss to Gemini after a tool call, using Google's placeholder signature, and RubyLLM's own
+  fallbacks switch models even after chunks have streamed. What it avoids is an answer half
+  written by one model and finished by another.
+- **Provider state follows its producer.** Each assistant message stores the route, endpoint and
+  model that produced it, and its provider state (reasoning text, `reasoning_details`, thinking
+  signatures) in `messages.provider_state` (section 18). Today only Gemini's tool-call
+  signatures have a home, in `tool_calls.extra_content`. `Ai::Conversation::History` sends that
+  state only to the same endpoint and model, and drops it otherwise. RubyLLM can't do this for
+  Sure: it strips another provider's content only when a message carries its own usage record of
+  who produced it, and messages rebuilt from Sure's tables don't. Without the rule, a local
+  model's reasoning, which can quote the family's data, goes to a cloud provider on the next
+  turn (spike: "Switching providers partway through a chat").
+- **Gemini and other models' tool calls.** Gemini refuses a tool round another model started
+  (400, missing `thought_signature`). On a Gemini route, `History` gives such a call Google's
+  documented placeholder signature, `skip_thought_signature_validator`, as RubyLLM's native
+  Gemini protocol does. Without it, a resumed or failed-over turn can't continue on Gemini.
+- **Bounded turns.** `Ai::Conversation` owns the tool loop, a product decision with the spike's
+  evidence on both sides (section 8.4), and bounds it twice: at most `Setting.ai_max_tool_rounds` rounds, with the last
   round sent without tools so the model must answer, and at most `Setting.ai_response_timeout`
   seconds for the whole turn, after which the turn stops and the message says so. Today's
   responder already caps rounds; the cap moves into the plumbing so every transport and the
@@ -881,6 +920,19 @@ end
   to an OpenAI-style vector store, and the manifest says whole files are sent. Otherwise chunks go
   to the route's embedding model and are stored in `Setting.vector_store_backend` (pgvector or
   Qdrant). `VECTOR_STORE_PROVIDER` is read through the deprecated ENV path (section 4.5).
+- **The OpenAI vector store adapter, fixed** (spike, live on the two sample statements):
+  - it waits for indexing and records the outcome as the document's status: indexing is
+    asynchronous, and today a document is `ready` before it can be found;
+  - it records an empty index (`usage_bytes: 0`, a scan with no text layer) as unreadable rather
+    than ready;
+  - removing a document, or the family, deletes the file from OpenAI's Files API. Today
+    `remove_file` only detaches it and `delete_store` leaves the files, so every uploaded
+    statement stays on OpenAI. That's a bug on `main` now;
+  - it uploads under the document's own filename, not a `Tempfile`'s, which search results
+    otherwise show the model;
+  - `search_documents` drops results below a score threshold: every search returned the one
+    indexed statement, relevant or not;
+  - its client is built by `Ai::Transport::Http`, so it gets the proxy, TLS settings and headers.
 
 ### 5.6 The external assistant
 
@@ -890,6 +942,11 @@ the `chat` route, and it serves only families whose chat mode is external (secti
 prompts, structured output and usage records, which an agent doesn't promise. An operator who
 wants every call to go through their own stack points a plain `compatible` endpoint at it for
 background work and keeps the agent for chat.
+
+The agent mode sends OpenClaw's own routing headers, `x-openclaw-agent-id` and
+`x-openclaw-session-key`, and keys the session per chat. Today's `X-Agent-Id` and
+`X-Session-Key` are ignored by OpenClaw, so every chat in a family shares one agent session, a
+bug on `main` now (spike: "The external assistant").
 
 ## 6. Consent and family settings
 
@@ -1039,8 +1096,11 @@ end
 
 ## 7. Transports — one structured-output primitive each
 
-Whether transports are hand-written or a thin adapter over RubyLLM is decided by the spike
-(section 19). The interface is the same either way, and Jev stays hand-written.
+The spike recommends a thin adapter over `ruby_llm` 2.1.1, pinned (section 19,
+[`rubyllm-spike-report.md`](rubyllm-spike-report.md)). Adopting it stays a product decision. The
+interface is the same either way, and Jev stays hand-written; the spike also ran Jev through
+RubyLLM's `judge` and through the `ruby_decision_model` gem, and the choice of client for Jev is
+open too.
 
 ```ruby
 class Ai::Transport::Base
@@ -1056,7 +1116,7 @@ end
 | Transport | `generate` strategy |
 |---|---|
 | `Compatible` with `responses_api` | `responses.create` + `text.format = json_schema, strict: true` |
-| `Compatible` without it | chat completions with the route's `json_mode` (the entry's override, otherwise the endpoint's) (`strict` → `json_object` → `none`). `auto` falls back when the null ratio exceeds 50% or a 400 comes back. Tolerant parsing (`<think>`, fenced JSON); a schema example is appended in `none` mode. |
+| `Compatible` without it | chat completions with the route's `json_mode` (the entry's override, otherwise the endpoint's) (`strict` → `json_object` → `none`). `auto` falls back when the null ratio exceeds 50% or a 400 about the JSON mode comes back; a 400 about anything else (an unsupported attachment, a missing model) ends the chain, since the next mode would resend the same request. Tolerant parsing (`<think>`, fenced JSON); a schema example is appended in `none` mode. |
 | `Anthropic` | `messages.create` with one tool whose `input_schema` is the schema, `tool_choice: {type: "tool"}`. Models that reject a forced tool get `auto`, an instruction to call it, and one retry when they answer with text (#4513). |
 | `Jev` | doesn't implement `generate`; implements `judge` |
 
@@ -1065,6 +1125,16 @@ end
   leaves it out when unset. When a request with `response_format` or an effort gets a 400, the
   JSON-mode fallback retries once without both (as #3605 does); a retry after unusable output
   keeps the effort. Probes never send it. `Anthropic` ignores it for now.
+- **Each attempt has a time budget**, as well as the turn. The `auto` chain multiplies a slow
+  model's time: on CPU, three attempts at one statement took 26 minutes (spike, WeVisOne).
+- **Attachments.** `Request#attachments` carries files: page images or a PDF (section 8.1). A
+  route that sends images needs `vision`; the router checks it before sending, because a
+  llama.cpp server without a vision projector answers images with a 500, which would count as an
+  outage. RubyLLM sends a PDF as a `file` part to every OpenAI-compatible server, and only
+  OpenRouter accepts it (and bills parsing it, even for free models); llama.cpp and Gemini's
+  compatible API refuse it. The adapter turns off RubyLLM's upload of large files to a
+  provider's Files API (`auto_upload_large_files = false`), where a statement would stay until
+  deleted. The `.ai` event records each file's name and size, never its bytes.
 - `Compatible` also implements `embed` and the vector store calls, and its agent mode for chat on
   an agent endpoint. It replaces `Provider::Openai`, the compatible code paths and
   `Assistant::External::Client`.
@@ -1072,7 +1142,16 @@ end
   headers, and it resolves the proxy once (`HTTPS_PROXY`, then `HTTP_PROXY`, honouring
   `NO_PROXY`) and passes it to every client, including Anthropic's. A contract test checks that
   every transport uses it. The `# pipelock:ignore` annotations collapse into this file and the
-  config loader.
+  config loader. The resolver skips loopback addresses, as Ruby's own lookup does; the spike
+  found Sure's sends `127.0.0.1` and `localhost` to the proxy. `NO_PROXY` matches a host exactly
+  as written (`127.0.0.1` doesn't cover `localhost`), which the settings help says.
+- **What the RubyLLM adapter sets** (spike, "Small fixes in Sure's adapter"): the system role for
+  both the `:openai` and `:openrouter` providers (`openai_use_system_role`), an explicit
+  `protocol:` (`:openai` defaults to the Responses API, a bare 404 on other compatible servers),
+  OpenRouter's app name and URL, `max_retries` and `request_timeout` from the endpoint, and a
+  check that `embed` returns one vector per text. The turn deadline is checked in the stream
+  callback, because Faraday's timeout is per read; the final round declares the tools with
+  `tool_choice: none`.
 - **Anthropic batches are token-sliced** like the others, using the model's `context_window`.
 - **Jev fans out inside one call.** Jev's API takes one transaction per request, and each request
   is latency-bound (~400–550 ms), so `judge` runs a batch on a bounded pool of
@@ -1272,6 +1351,35 @@ hook, for example `Family::AutoCategorizer#after_ai_applied(transaction_ids)`. T
 promises the hook. A rule that should run only after an AI rule is a rule-runner feature built on
 it, in its own PR (section 20).
 
+**PDF import (`extract_pdf`).** The spike ran two public sample statements (an OCR'd one and a
+scan) through every server it had (spike: "Bank statements as PDFs" and "OCR on llama.cpp").
+- **One input step before `generate`** replaces today's three per-provider classes:
+  `ExtractBankStatement.for_pdf` sends page images when the route's model has `vision`, the text
+  layer otherwise, and returns `Unavailable` (`no_text_layer`) for a scan with no vision model,
+  so an empty text layer is never sent. The PDF itself goes only to Anthropic, OpenAI, or
+  OpenRouter with a named parsing engine. Page images read both statements completely on every
+  vision model tried.
+- **Checks on every extraction**, which need no answer key: the opening balance plus every
+  transaction makes the closing balance; every amount appears in the text the model read; and the
+  date of at least half the rows is the last date printed shortly before that row's amount. On
+  every recorded extraction they passed all 14 right ones and failed all 12 wrong ones. A failing
+  extraction is held back, not imported. The date threshold is tuned on two statements, a
+  heuristic to revisit. A check that each date falls in the statement's period was tried and
+  dropped: models write the period to fit their dates.
+- **Local OCR is a two-step route:** an OCR model transcribes the pages, with a prompt per model
+  (models differ: one GGUF's chat template writes the model card's prompt, another's doesn't),
+  then any text model extracts. Unlimited-OCR-2 then Qwen3.6 read both statements completely on
+  CPU. One llama.cpp server holds one model at a time, so the transcribe step is its own route
+  entry, usually on its own endpoint.
+- **Rendering pages** is a product choice with a security side. `pdftoppm` in a child process,
+  as today, keeps poppler out of the worker's memory only if hardened: an empty environment
+  (today the child inherits the worker's API keys and database URL), its own process group
+  killed on a timeout, CPU and memory limits, a page range (today every page is rendered to send
+  five), and a size check after rendering, because `pdftoppm` writes a 1×1 page and exits 0 when
+  it can't allocate one. `ruby-vips`, already bundled, renders in process but needs Active
+  Storage's block on libvips's PDF loader lifted while it runs. Either way, a page over 25
+  million pixels is refused before rendering.
+
 ### 8.2 Shadow runs
 
 A shadow run is the same generation or judgement, run on the `shadow_<feature>` route, as an
@@ -1430,6 +1538,15 @@ What happens to today's chat classes in PR 3:
 - **Allowed emails.** An agent endpoint whose `agent_settings` lists allowed emails serves only
   those users; the router skips it for anyone else (section 5.3), as
   `Assistant::External.available_for?` does today.
+- **Which tools write.** Each `Assistant::Function` declares whether it writes; nothing marks it
+  today (19 of the 34 do, by name). Chat needs it to ask before a write, and MCP needs it for
+  `destructiveHint`.
+- **Who runs the tools is a product decision.** Sure's loop is 47 lines. RubyLLM's `ask` runs
+  tools with no code but with no round cap (12 rounds in the spike until its guard). Stepping
+  RubyLLM's loop with `run_tools` keeps Sure's bounds and adds approvals that pause the turn,
+  tools in parallel threads and resume after a dead worker, for about 40 more lines. RubyLLM's
+  durable agents run one step per job, but execution is at least once, so tools must be safe to
+  run twice, which Sure's write tools aren't today (spike: "RubyLLM running Sure's tools").
 
 ## 9. `Ai::Result` and `Ai::Error`
 
@@ -1456,6 +1573,8 @@ module Ai::Error
   RateLimited    = Class.new(Base)   # 429; failover + key mark, retryable
   Upstream       = Class.new(Base)   # 5xx; failover + down mark
   Unauthorized   = Class.new(Base)   # 401/403; failover + key mark, not retryable (the key is wrong)
+  NoCredit       = Class.new(Base)   # the key's balance is spent; failover + key mark, not retryable
+  ModelMissing   = Class.new(Base)   # the endpoint doesn't have the model (Ollama's 404); failover + model mark
   ContextTooLong = Class.new(Base)   # 400 saying the input is too long; escalation
   InvalidOutput  = Class.new(Base)   # parse / schema failure after the transport's fallbacks; escalation
   Refused        = Class.new(Base)   # any other 4xx; not retried anywhere
@@ -1464,9 +1583,17 @@ end
 
 Transports map SDK and Faraday errors into this taxonomy, including each provider's wording for a
 context-length 400. `Ai::Error` replaces `Provider::Error` and `Provider::Response`.
+
+`NoCredit` and `ModelMissing` are configuration problems, not refusals of one request, so they
+mark the key or the model rather than counting as `Refused`. A spent balance looks different on
+each provider, all recorded live in the spike: Anthropic answers a 400 "credit balance is too
+low" (which RubyLLM already raises as `PaymentRequiredError`), OpenAI a 429 `insufficient_quota`
+(which RubyLLM retries as a rate limit, so the adapter maps it before retrying), and OpenRouter a
+402. Anthropic also checks the balance before the model name, so on a spent key a health probe
+can't tell a bad model name from an empty balance.
 `Ai::GenerationJob` calls `call!` and uses
 `retry_on Ai::Error::RateLimited, Ai::Error::Timeout, Ai::Error::Upstream, Ai::Error::Unreachable, wait: :polynomially_longer`
-and `discard_on Ai::Error::Unavailable, Ai::Error::Refused, Ai::Error::Unauthorized, Ai::Error::ContextTooLong, Ai::Error::InvalidOutput, Ai::Error::Cancelled`.
+and `discard_on Ai::Error::Unavailable, Ai::Error::Refused, Ai::Error::Unauthorized, Ai::Error::NoCredit, Ai::Error::ModelMissing, Ai::Error::ContextTooLong, Ai::Error::InvalidOutput, Ai::Error::Cancelled`.
 A job whose feature became unavailable after it was queued (chat turned off, consent withdrawn)
 is discarded, and its reason is logged.
 These job-level policies apply after the in-call failover or escalation (section 5.4) has
@@ -1506,6 +1633,15 @@ ActiveSupport::Notifications.subscribe(/\A(generate|judge)\.ai\z/, Ai::Instrumen
 - Cancelled calls are recorded too, because a request that isn't streamed still costs money.
 - Secret redaction lives in one helper that every subscriber uses. What Langfuse traces contain
   doesn't change.
+- **Cached tokens.** RubyLLM's `input_tokens` excludes cached tokens, unlike the raw APIs: the
+  spike's 34-tool list showed as 512 input tokens where the prompt was 12,457. `Ai::Usage` keeps
+  both, and the prompt size is `input_tokens + cache_read_tokens`.
+- **Two tracing modes, never at once.** `content` (the default) sends Sure's `.ai` events to
+  Langfuse with prompts and outputs. `metadata` sends RubyLLM's own OpenTelemetry spans to any
+  OTLP backend: model, settings, finish reason, tokens and latency, with no prompts, tool results
+  or answers. It loses the route and prompt key, Sure's error class, and errors raised before
+  RubyLLM is called. An operator who wants cost and latency without sending financial data out
+  picks `metadata`.
 
 ## 11. `Ai::Sequencer` — interactive work first
 
@@ -1646,6 +1782,9 @@ and a PDF import.
   structured output, vision and embedding.
 - `AiHealth::Probe` keeps its caching, redaction, debug logging and `confirming_tools_refusal`
   logic, but stops building its own clients.
+- **A probe compares the model's name.** LM Studio answers a request for a model it doesn't have
+  with whichever model is loaded, and a 200, so a probe that checks only the status passes the
+  wrong model.
 - **Probes use the endpoint's timeout.** A separate short probe timeout made sense while probes
   blocked a web thread. As jobs they use `timeout_seconds` like production calls, so a slow local
   server (a CPU host loading a model, at 300 seconds) isn't marked down by a probe that gave up
@@ -1992,6 +2131,7 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | The `embed` route picks the vector adapter | `VECTOR_STORE_PROVIDER` defaulting from `LLM_PROVIDER` | The deprecated ENV path maps it | Check which adapter `embed` uses |
 | Smart-fill and smart-configure become asynchronous | Response shape of `smart_fills#create` and `smart_configurations#show` | System tests for both dialogs land first | The dialog shows progress |
 | `AssistantMessage` stores the route that served it | Adds a column the mobile API reads | Additive | — |
+| `messages.provider_state` (jsonb) holds each assistant message's producer and provider state | Nothing; Gemini's signatures move from `tool_calls.extra_content` | Additive; existing signatures copied | — |
 | The route chooses the chat model | The API's `model` parameter on chats and messages is accepted and ignored | None | API clients: `model` in the response says which model served the turn |
 | Cancel statuses | `cancelled` added to `Import` and `Message` statuses; `RecurringTransaction::Suggestion` added | Additive (string enums) | — |
 | The ENV override of the family confidence threshold goes | `CATEGORIZATION_CONFIDENCE_THRESHOLD` | None | Set it on the categorization page |
@@ -2021,6 +2161,16 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    `embed` call. Its result decides how PRs 2 and 3 are
    built. Either way it ends with a short note in `docs/llm-guides/ai-pipeline.md`: adopted or
    not, which criteria failed and what a later attempt would need.
+
+   **Done** ([`rubyllm-spike-report.md`](rubyllm-spike-report.md); evidence on
+   [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm), never merged).
+   Every criterion below passes or needs a small fix in Sure's adapter; none fails. It recommends
+   adopting `ruby_llm` 2.1.1, pinned, and adopting it stays a product decision. Beyond the
+   criteria it covered local servers in containers, the proxy, OpenRouter's free models,
+   reasoning switches, Jev, Sure's tools in RubyLLM's loop, switching providers mid-chat, PDF
+   import and local OCR, OpenAI vector stores, every RubyLLM 2.1 feature and its ecosystem gems,
+   and a decisions register. PR 2 records live cassettes for Anthropic's and OpenAI's successful
+   paths before relying on them: the spike's keys had no credits.
 2. **Generations: every AI call except chat.**
    - **Routing:** `Ai::Config`, built in memory in each process by `Ai::LegacyEnvConfig` from
      today's ENV and `Setting` fields with the table in section 4.5; `Ai::Routes`, `Ai::Router`,
@@ -2029,8 +2179,11 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `Sure/NoAiEnv`.
    - **Calls:** the transports' `generate`, `judge`, `embed` and `probe`, `Http`, `Ai::Generation`,
      `Ai::Judgement`, `Ai::Owner`, `Ai::Batch`, `Ai::Result`, `Ai::Error`, the instrumentation
-     subscribers with the correlation id, the proxy fix, prompt files with the key collapse,
-     reasoning effort on route entries (#3605).
+     subscribers with the correlation id, the proxy fix (with loopback skipped), prompt files with
+     the key collapse, reasoning effort on route entries (#3605) with its per-preset mapping, the
+     `NoCredit` and `ModelMissing` errors, and the per-attempt time budget.
+   - **PDF import:** the input step, the extraction checks and the page rendering (section 8.1);
+     the OpenAI vector store fixes (section 5.5).
    - **Jobs:** `Ai::GenerationJob` (with small batches) and `Ai::ShadowJob` replace the four AI
      job classes, which stay one release as shims; `Ai::Comparison` replaces
      `CategorizationComparison`. Lanes map onto today's two queues (interactive →
@@ -2057,7 +2210,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
 3. **Chat.** `Ai::Conversation` (section 8.4), `converse` and the agent mode on the transports,
    chat mode (read from today's `assistant_type` until PR 6), today's `mcp_only` rule as one line
    in `Ai::Consent` (section 6), `previous_response_id` on the same
-   endpoint, failover at the start of a turn, bounded turns, the serving route on each message,
+   endpoint, failover at the start of a turn, bounded turns, the serving route and
+   `provider_state` on each message with the drop-on-switch rule and Gemini's placeholder
+   signature (section 5.5), the write flag on each `Assistant::Function`, OpenClaw's headers,
    and every chat entry point behind `requires_ai :chat` ("Dig in with AI", the bills AI review,
    and #3442 if it merged first). Deletes what remains of `Provider::Openai` and
    `Provider::Anthropic`, `Chat.default_model`, `Assistant::Provided#get_model_provider` and the
@@ -2100,7 +2255,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
 
 **RubyLLM spike criteria.** RubyLLM is adopted under `Ai::Transport::*` only if every item holds
 or has a small fix. Whatever the result, Sure still owns the router, consent, the JSON-mode policy
-and failover.
+and failover. All held (the report gives each one's evidence); three needed a small fix: the URL
+normaliser, `<think>` stripping, and the Responses path, where vector stores stay on
+`ruby-openai`.
 
 - Models missing from RubyLLM's registry still work (`assume_model_exists`).
 - One URL normaliser handles `/v1` for every compatible server.
@@ -2144,6 +2301,11 @@ queue latency and the model server's queue depth (for llama.cpp, its Prometheus 
 
 ## 20. Not in scope
 
+Each line here is a product decision, and like every other one it stays open to evidence. The
+spike's decisions register already has evidence on some: RubyLLM's MCP client worked against
+Sure's own `/mcp` (for the MCP lines), and RubyLLM's Rails persistence was compared with Sure's
+chat tables (for the chat storage line).
+
 - Changing any feature's prompts or models.
 - The Ruby ML engines' internals, and the classifier settings page.
 - Suggestions instead of AI locks, and rule ordering (phases or an enrichment pipeline).
@@ -2163,3 +2325,9 @@ queue latency and the model server's queue depth (for llama.cpp, its Prometheus 
   transport options. Reasoning effort (#3605) is in scope for the `compatible` transport
   (section 4.2); mapping it onto Anthropic's thinking settings is a later transport option.
 - Replacing Langfuse, Sidekiq or rails-settings-cached.
+- A chat storage redesign, such as RubyLLM's `acts_as_chat`. The plumbing needs only the additive
+  `provider_state` column (section 18). RubyLLM's persistence pays off when RubyLLM runs the loop
+  (approvals and MCP input that survive restarts); it would also migrate data the mobile API
+  reads (#4421), touch how tool rounds are stored (#4133), and turn on RubyLLM's usage ledger,
+  which then records every call Sure makes. Revisit if a later proposal moves the loop into
+  RubyLLM.
