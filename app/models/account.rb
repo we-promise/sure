@@ -3,12 +3,15 @@ class Account < ApplicationRecord
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
 
+  before_save :lock_valuable_currency_change, if: :valuable_currency_change?
+
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
 
   after_destroy_commit :move_account_statements_to_inbox
 
   validates :name, :balance, :currency, presence: true
+  validate :valuable_currency_unchanged
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
   belongs_to :family
@@ -644,7 +647,7 @@ class Account < ApplicationRecord
     # Investment accounts never use manual_save: a positive valuation delta on a
     # brokerage is usually a market move, not a deposit, and would false-match a
     # pledge. They resolve on transfer (cash-inflow) entries only.
-    manual? && !investment? ? "manual_save" : "transfer"
+    manual? && !investment? && !valuable? ? "manual_save" : "transfer"
   end
 
   # Total fixed earmark this account currently has reserved across every goal
@@ -803,6 +806,20 @@ class Account < ApplicationRecord
     accountable_class.long_subtype_label_for(subtype) || accountable_class.display_name
   end
 
+  def supports_holdings?
+    investment? || crypto?
+  end
+
+  def supports_statements?
+    !valuable?
+  end
+
+  # Gems and Bullion balances are derived from their recorded items. They must
+  # not be changed by generic transactions, transfers, or reconciliations.
+  def supports_manual_entries?
+    !valuable?
+  end
+
   def supports_default?
     depository? || credit_card?
   end
@@ -836,7 +853,7 @@ class Account < ApplicationRecord
     case accountable_type
     when "Depository", "CreditCard"
       :cash
-    when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
+    when "Property", "Vehicle", "Valuable", "OtherAsset", "Loan", "OtherLiability"
       :non_cash
     when "Investment", "Crypto"
       :investment
@@ -891,6 +908,26 @@ class Account < ApplicationRecord
   end
 
   private
+
+    def valuable_currency_unchanged
+      return unless valuable_currency_change?
+      errors.add(:currency, I18n.t("valuables.errors.currency_locked")) if valuable.lots.exists?
+    end
+
+    def valuable_currency_change?
+      valuable? && persisted? && will_save_change_to_currency?
+    end
+
+    # ValuableItem saves lock the account row before they write. Take the same
+    # lock before this check, so an item cannot land between the check and the
+    # currency update.
+    def lock_valuable_currency_change
+      self.class.lock.find(id)
+      return unless valuable.lots.exists?
+
+      errors.add(:currency, I18n.t("valuables.errors.currency_locked"))
+      throw :abort
+    end
 
     # perform_later raises (the Sidekiq adapter re-raises RedisClient errors) or
     # returns false (ActiveJob::EnqueueError). Either way the status goes back.
