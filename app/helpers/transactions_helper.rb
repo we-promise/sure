@@ -70,6 +70,13 @@ module TransactionsHelper
     @annotatable_account_ids.include?(account.id)
   end
 
+  # The dashboard drill-down filters by account id, so its filter chips name
+  # the account rather than print the id. Memoized per request like the above.
+  def transaction_filter_account_name(account_id)
+    @transaction_filter_account_names ||= Current.user.accessible_accounts.pluck(:id, :name).to_h
+    @transaction_filter_account_names.fetch(account_id, account_id)
+  end
+
   # ---- Transaction extra details helpers ----
   # Returns a structured hash describing extra details for a transaction.
   # Input can be a Transaction or an Entry (responds_to :transaction).
