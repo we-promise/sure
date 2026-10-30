@@ -6,7 +6,7 @@ id:
     edit:
       title: Atur ulang kata sandi
     new:
-      requested: Silakan periksa email Anda untuk tautan mengatur ulang kata sandi Anda.
+      requested: Silakan periksa email Anda untuk tautan pengaturan ulang kata sandi.
       submit: Atur ulang kata sandi
       title: Atur ulang kata sandi
       back: Kembali

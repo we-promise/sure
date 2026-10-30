@@ -163,7 +163,7 @@ id:
     health:
       title: Kesehatan
       view_error_details: Lihat detail kesalahan
-      rate_limited: "Terakhir mengalami pembatasan kuota: %{time_ago}"
+      rate_limited: "Terakhir mengalami pembatasan laju: %{time_ago}"
       recently: baru-baru ini
       errors: "Kesalahan: %{count}"
       pending_reconciled:

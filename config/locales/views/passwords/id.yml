@@ -5,7 +5,7 @@ id:
     edit:
       password: Kata Sandi Baru
       password_challenge: Kata Sandi Saat Ini
-      submit: Atur Ulang Kata Sandi
+      submit: Perbarui Kata Sandi
       title: Perbarui Kata Sandi
     update:
-      success: Kata sandi Anda telah diatur ulang.
+      success: Kata sandi Anda telah diperbarui.
