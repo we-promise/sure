@@ -9,6 +9,14 @@ class Holding::ReverseCalculator
     @security_ids = security_ids
   end
 
+  # Every lot of each security, the opening lot included, once #calculate has run.
+  def lots_by_security
+    lots_from(@lot_books)
+  end
+
+  # Securities whose provider quantity is below what their trades add up to.
+  attr_reader :clamped_security_ids
+
   def calculate
     Rails.logger.tagged("Holding::ReverseCalculator") do
       precompute_cost_basis
@@ -127,13 +135,16 @@ class Holding::ReverseCalculator
       # Spans [start, end) during which a security still holds transferred-in units
       # of unknown cost. `end` is nil while a span is still open at the last trade.
       @unknown_spans = Hash.new { |h, k| h[k] = [] }
-      trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
+      @lot_books = Hash.new { |h, k| h[k] = Holding::LotBook.new }
       open_unknown_start = {}
 
       # get_trades is already chronological (date, then created_at, then id).
       # Re-sorting by date alone is unstable and could reorder same-day trades,
-      # which matters because the tracker is order-sensitive once sells relieve.
+      # which matters because the lot book is order-sensitive once sells relieve.
       trades = portfolio_cache.get_trades
+      # A scoped run (a remap, a price sync) replays only its own securities;
+      # the cache holds every trade in the account.
+      trades = trades.select { |te| @security_ids.include?(te.entryable.security_id) } if @security_ids
       events = replay_events(trades)
 
       # A reverse-synced account can hold shares before its first imported trade,
@@ -156,6 +167,10 @@ class Holding::ReverseCalculator
           positions[event.entryable.security_id] -= event.entryable.qty
         end
       end
+      # The snapshot covers the whole account; a scoped run books only its own.
+      baselines = snapshot.merge(positions)
+      baselines = baselines.slice(*@security_ids) if @security_ids
+      open_lots(baselines, traded: positions.keys)
 
       events.each do |event|
         if event.is_a?(Security::Split)
@@ -163,8 +178,8 @@ class Holding::ReverseCalculator
           next unless positions.key?(security_id)
 
           positions[security_id] = Security::Split.scale(positions[security_id], event.ratio)
-          trackers[security_id].split(event.ratio)
-          @cost_basis_snapshots[security_id] << [ event.ex_date, trackers[security_id].average_cost ]
+          @lot_books[security_id].split(event.ratio)
+          @cost_basis_snapshots[security_id] << [ event.ex_date, @lot_books[security_id].average_cost ]
           next
         end
 
@@ -179,20 +194,21 @@ class Holding::ReverseCalculator
           # transfers only remove units, so relieve them at the running average.
           if trade.qty.positive?
             open_unknown_start[security_id] ||= trade_entry.date
+            @lot_books[security_id].add_unknown(trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
           else
-            trackers[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
-            @cost_basis_snapshots[security_id] << [ trade_entry.date, trackers[security_id].average_cost ]
+            @lot_books[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
+            @cost_basis_snapshots[security_id] << [ trade_entry.date, @lot_books[security_id].average_cost ]
           end
         else
-          tracker = trackers[security_id]
+          book = @lot_books[security_id]
           # Buys raise the basis; sells relieve quantity at the running average, and a
           # full liquidation resets it so a later repurchase starts from a clean basis.
-          tracker.apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
+          book.apply(effective_trade_price(trade, date: trade_entry.date), trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
 
           # Record the basis after each trade — including nil once a position is fully
           # closed — so cost_basis_for returns nil for the sold-out span instead of a
           # stale figure carried forward from the last buy.
-          @cost_basis_snapshots[security_id] << [ trade_entry.date, tracker.average_cost ]
+          @cost_basis_snapshots[security_id] << [ trade_entry.date, book.average_cost ]
         end
 
         # Close an open unknown span only on a genuine downward crossing through
@@ -207,6 +223,31 @@ class Holding::ReverseCalculator
 
       # Spans still open at the last trade stay unknown through to the present.
       open_unknown_start.each { |security_id, start| @unknown_spans[security_id] << [ start, nil ] }
+
+      # Splitting the snapshot back and forward again rounds; the opening lot
+      # takes it (or the last open lot, once sold), so the lots add up to the
+      # provider's quantity.
+      snapshot.each do |security_id, qty|
+        next unless @lot_books.key?(security_id)
+
+        @lot_books[security_id].settle_opening(qty, bound: Holding::LotBook::OPENING_RESIDUAL_BOUND)
+      end
+    end
+
+    # Units held before the first imported trade (or, with no trades, all the
+    # provider reports) are the opening lot. Its cost is unknown to the trades,
+    # so it stays out of the average, and sales relieve it like any other lot.
+    # A traded position whose provider quantity is below its trades' total has
+    # nothing to open and is recorded as clamped.
+    def open_lots(baselines, traded:)
+      @clamped_security_ids = Set.new
+      baselines.each do |security_id, qty|
+        if qty.negative? && traded.include?(security_id)
+          @clamped_security_ids << security_id
+        else
+          @lot_books[security_id].add_unknown(qty)
+        end
+      end
     end
 
     # Trades and splits in the order they took effect. A split goes first on its
