@@ -1,7 +1,10 @@
 module TransactionsHelper
+  # @param exclude [Array<String>] filter keys to leave out (e.g. the account
+  #   tab doesn't apply to the account activity feed, which is already scoped
+  #   to one account)
   # @return [Array<Hash>] the filters offered above the transaction list, each
   #   with the key its partial is named for, a translated label and an icon
-  def transaction_search_filters
+  def transaction_search_filters(exclude: [])
     [
       { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },
       { key: "date_filter", label: t("transactions.search.filters.date"), icon: "calendar" },
@@ -13,7 +16,7 @@ module TransactionsHelper
       { key: "merchant_filter", label: t("transactions.search.filters.merchant"), icon: "store" },
       { key: "ai_filter", label: t("transactions.search.filters.ai"), icon: "sparkles" },
       { key: "attachment_filter", label: t("transactions.search.filters.attachment"), icon: "paperclip" }
-    ]
+    ].reject { |filter| exclude.include?(filter[:key]) }
   end
 
   # @param label [String] a stored investment_activity_label such as "Sweep In"
@@ -34,6 +37,20 @@ module TransactionsHelper
     transaction_search_filters[0]
   end
 
+  # Shared between the transactions page and the account activity feed's
+  # amount filter badge, so the label doesn't drift out of sync with the
+  # options offered in filters/_amount_filter.html.erb.
+  # @param operator [String, nil] "equal", "greater" or "less"
+  # @return [String] the translated operator label
+  def transaction_amount_operator_label(operator)
+    case operator
+    when "equal" then t("transactions.searches.search.equal_to")
+    when "greater" then t("transactions.searches.search.greater_than")
+    when "less" then t("transactions.searches.search.less_than")
+    else operator.to_s
+    end
+  end
+
   # A split child is only folded under its parent when the user asked for
   # grouping and the current view is rendering grouped.
   #
@@ -51,6 +68,13 @@ module TransactionsHelper
 
     @annotatable_account_ids ||= Account.annotatable_by(Current.user).pluck(:id).to_set
     @annotatable_account_ids.include?(account.id)
+  end
+
+  # The dashboard drill-down filters by account id, so its filter chips name
+  # the account rather than print the id. Memoized per request like the above.
+  def transaction_filter_account_name(account_id)
+    @transaction_filter_account_names ||= Current.user.accessible_accounts.pluck(:id, :name).to_h
+    @transaction_filter_account_names.fetch(account_id, account_id)
   end
 
   # ---- Transaction extra details helpers ----

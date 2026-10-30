@@ -3,10 +3,16 @@ zh-CN:
   transfers:
     create:
       success: 转账已创建
+      exchange_rate_unavailable: 所选货币和日期没有可用汇率
+      date_invalid: 无效
+      stale_form: 表单已提交且内容有所变更，请刷新页面后重试。
     destroy:
       success: 转账已移除
     form:
       amount: 金额
+      bank_charges: 银行手续费
+      outgoing_fee: 转出手续费
+      incoming_fee: 转入手续费
       date: 日期
       expense: 支出
       from: 转出账户
@@ -26,6 +32,8 @@ zh-CN:
       delete_subtitle: 此操作仅移除转账记录，不会删除底层交易数据。
       delete_title: 确认移除转账？
       details: 详情
+      investment_contribution_title: 投资投入
+      investment_contribution_subtitle: 在预算和报表中将此转账计为支出。若券商或加密账户仅将资金兑换为另一种货币，请关闭此项。
       note_label: 备注
       note_placeholder: 为此转账添加备注
       overview: 概览
@@ -40,6 +48,9 @@ zh-CN:
       category: 分类
       uncategorized: 未分类
       total: 总计
+      bank_charges: 银行手续费
+      source_fee: 转出方手续费
+      destination_fee: 转入方手续费
       transfer_amount: 转账金额
     update:
       success: 转账已更新
