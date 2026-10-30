@@ -135,12 +135,15 @@ class Provider::Mansa < Provider
         mic = MANSA_EXCHANGE_TO_MIC[security.dig("exchange").to_s.upcase]
         next unless mic
 
+        listing_country = ::Security::EXCHANGES.dig(mic, "country")
+        cross_border_pick = exchange_operating_mic.present? && country_code.present? && listing_country != country_code.upcase
+
         Security.new(
           symbol: security.dig("ticker"),
           name: security.dig("name"),
           logo_url: nil,
           exchange_operating_mic: mic,
-          country_code: ::Security::EXCHANGES.dig(mic, "country"),
+          country_code: (listing_country unless cross_border_pick),
           currency: security.dig("currency")
         )
       end

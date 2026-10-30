@@ -75,6 +75,54 @@ class Provider::MansaTest < ActiveSupport::TestCase
     assert_equal %w[NG ZA ZM], result.data.map(&:country_code)
   end
 
+  test "search_securities keeps listing countries for combobox searches without an exchange" do
+    stub_search_response(
+      { ticker: "MTNN", name: "MTN Nigeria Communications Plc", exchange: "NGX", currency: "NGN" },
+      { ticker: "MTN", name: "MTN Group Ltd", exchange: "JSE", currency: "ZAR" }
+    )
+
+    assert_equal %w[NG ZA], @provider.search_securities("MTN", country_code: "US").data.map(&:country_code)
+  end
+
+  test "search_securities blanks the country only for a cross-border search naming an exchange" do
+    stub_search_response({ ticker: "MTNN", name: "MTN Nigeria Communications Plc", exchange: "NGX", currency: "NGN" })
+
+    search = ->(country) { @provider.search_securities("MTNN", exchange_operating_mic: "XNSA", country_code: country).data.first.country_code }
+
+    assert_equal "NG", search.call("NG")
+    assert_equal "NG", search.call("ng")
+    assert_equal "NG", search.call(nil)
+    assert_nil search.call("US")
+  end
+
+  test "a typed ticker without an exchange does not resolve to a listing in another country" do
+    stub_search_response({ ticker: "MTNT", name: "MTN Typed", exchange: "NGX", currency: "NGN" })
+    Security.stubs(:providers).returns([ @provider ])
+
+    resolved = Security::Resolver.new("MTNT", country_code: "US").resolve
+
+    assert resolved.offline?
+    assert_nil resolved.exchange_operating_mic
+  end
+
+  test "a family in another country can resolve a listing without taking it offline" do
+    existing = Security.create!(ticker: "MTNN", exchange_operating_mic: "XNSA", country_code: "NG", price_provider: "mansa")
+    stub_search_response({ ticker: "MTNN", name: "MTN Nigeria Communications Plc", exchange: "NGX", currency: "NGN" })
+    Security.stubs(:providers).returns([ @provider ])
+    Setting.stubs(:enabled_securities_providers).returns([ "mansa" ])
+
+    resolved = Security::Resolver.new(
+      "MTNN",
+      exchange_operating_mic: "XNSA",
+      country_code: "US",
+      price_provider: "mansa"
+    ).resolve
+
+    assert_equal existing, resolved
+    assert_not resolved.reload.offline?
+    assert_equal "mansa", resolved.price_provider
+  end
+
   test "search_securities scopes to the Mansa exchange for an explicit MIC" do
     body = {
       success: true,
@@ -293,4 +341,12 @@ class Provider::MansaTest < ActiveSupport::TestCase
     assert_match(/NOT_FOUND/, error.message)
     assert_no_match(/=>/, error.message) # would appear in a raw Hash#to_s dump
   end
+
+  private
+    def stub_search_response(*listings)
+      mock_response = mock
+      mock_response.stubs(:body).returns({ success: true, data: listings }.to_json)
+      @provider.stubs(:client).returns(mock_client = mock)
+      mock_client.stubs(:get).returns(mock_response)
+    end
 end
