@@ -9,7 +9,8 @@ fr:
       safe_to_spend: Combien puis-je dépenser sans risque cette période ?
       subscriptions_up: Quels abonnements ont augmenté cette année ?
     all:
-      any_status: Tous les statuts
+      current_bills: Factures en cours
+      dismissed_hidden_description: Les factures terminées sont masquées.
       any_type: Tous les types
       col_actions: Actions
       col_amount: Montant
