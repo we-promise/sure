@@ -146,6 +146,7 @@ en:
       new_account_group: "New %{account_group}"
       expand_all: Expand all
       collapse_all: Collapse all
+      ownership_share: You count %{percentage} of this account
       reorder_account: "Move %{account}"
       reorder_hint: Drag to reorder. With the keyboard, press Enter, then the arrow keys.
       sort_mode:

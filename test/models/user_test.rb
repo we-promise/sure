@@ -1211,6 +1211,36 @@ class UserTest < ActiveSupport::TestCase
     assert_not ActiveStorage::Attachment.exists?(attachment_id)
   end
 
+  test "purging an owner gives the new owner their own co-owner percentage" do
+    owner = users(:family_admin)
+    co_owner = users(:family_member)
+    account = accounts(:depository)
+    account.update!(ownership_percentage: 60)
+    account.account_shares.find_by!(user: co_owner).update!(ownership_percentage: 40)
+
+    owner.purge
+
+    account.reload
+    assert_equal co_owner, account.owner
+    assert_equal 40, account.ownership_percentage
+    assert_not account.account_shares.exists?(user: co_owner)
+    assert_equal 0.4.to_d, account.ownership_fraction_for(co_owner)
+  end
+
+  test "purging an owner resets the percentage when the new owner had no share" do
+    owner = users(:family_admin)
+    co_owner = users(:family_member)
+    account = accounts(:property)
+    account.account_shares.where(user: co_owner).destroy_all
+    account.update!(ownership_percentage: 60)
+
+    owner.purge
+
+    account.reload
+    assert_equal co_owner, account.owner
+    assert_equal 100, account.ownership_percentage
+  end
+
   # Admin-initiated permanent removal (super-admin action)
   test "permanently_remove! deactivates, revokes all credentials, and schedules purge" do
     target = users(:family_member)

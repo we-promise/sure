@@ -31,6 +31,28 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "imports the owner's ownership percentage" do
+    result = Family::DataImporter.new(@family, build_ndjson([ account_record(ownership_percentage: "60.0") ])).import!
+
+    assert_equal 60, result[:accounts].first.ownership_percentage
+  end
+
+  test "keeps the default percentage when the export has none" do
+    result = Family::DataImporter.new(@family, build_ndjson([ account_record ])).import!
+
+    assert_equal 100, result[:accounts].first.ownership_percentage
+  end
+
+  test "skips an account whose ownership percentage is out of range or not a number" do
+    [ "150", "-5", "abc" ].each do |bad|
+      family = Family.create!(name: "Import #{bad}", currency: "USD", locale: "en", date_format: "%m-%d-%Y")
+      result = Family::DataImporter.new(family, build_ndjson([ account_record(ownership_percentage: bad) ])).import!
+
+      assert_empty result[:accounts], "#{bad.inspect} should not import"
+      assert_equal 1, result.dig(:summary, "accounts", "skipped")
+    end
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
@@ -2980,6 +3002,20 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")
+    end
+
+    def account_record(**data)
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Test Checking",
+          balance: "1500.00",
+          currency: "USD",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" }
+        }.merge(data)
+      }
     end
 
     # A bill, one non-monthly rule, a settled occurrence, and the payment that

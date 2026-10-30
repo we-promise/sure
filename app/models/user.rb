@@ -890,9 +890,24 @@ class User < ApplicationRecord
 
       return unless new_owner
 
-      Account.where(id: account_ids).update_all(owner_id: new_owner.id)
-      # Remove shares the new owner had for these accounts (they now own them)
-      AccountShare.where(account_id: account_ids, user_id: new_owner.id).delete_all
+      # The new owner keeps the percentage they already held as a co-owner. The
+      # departed owner's percentage must not carry over, and an account the new
+      # owner had no share in starts at the default of 100.
+      kept_percentages = AccountShare.where(account_id: account_ids, user_id: new_owner.id)
+                                     .pluck(:account_id, :ownership_percentage)
+                                     .group_by(&:last)
+                                     .transform_values { |pairs| pairs.map(&:first) }
+
+      transaction do
+        now = Time.current
+        # update_all skips callbacks, so touch updated_at: net worth cache keys depend on it.
+        Account.where(id: account_ids).update_all(owner_id: new_owner.id, ownership_percentage: 100, updated_at: now)
+        kept_percentages.each do |percentage, ids|
+          Account.where(id: ids).update_all(ownership_percentage: percentage, updated_at: now)
+        end
+        # Remove shares the new owner had for these accounts (they now own them)
+        AccountShare.where(account_id: account_ids, user_id: new_owner.id).delete_all
+      end
     end
 
     def deactivated_email
