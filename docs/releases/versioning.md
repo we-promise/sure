@@ -2,8 +2,8 @@
 
 The transition starts with the **`v0.7.7-alpha.2`** release, not the 0.7.6 train.
 Its primary version is **`vYYYY.M.D-alpha`**, using the actual UTC release date;
-`v0.7.7-alpha.2` is only a temporary compatibility alias. The configured example
-is `v2026.10.30-alpha`; update its date if the release happens later.
+`v0.7.7-alpha.2` is only a temporary compatibility alias. No release date is
+checked into the workflow or chart metadata.
 Release tags supply the canonical date to every build.
 Git tags include `v`; Docker tags and chart versions do not.
 
@@ -21,7 +21,9 @@ nightly registry tags and do not promote `stable` or `latest`.
 Desktop and mobile release builds also derive their versions from the release
 tag. Standalone mobile branch builds retain their explicit pubspec version.
 Release chart packages are stamped from the release tag; chart-only releases
-select an existing image through Chart.yaml appVersion. No version write-back
+select an existing immutable image via the `app_version` dispatch input (or an
+explicit Chart.yaml appVersion for chart-tag pushes). The checked-in chart has
+development defaults; it does not claim to be a dated release. No version write-back
 commits or channel-state files are needed.
 
 ## Releasing
@@ -29,19 +31,22 @@ commits or channel-state files are needed.
 1. Land this change on `main` before cutting the 0.7.7 alpha.2 candidate.
    Leave 0.7.6 and 0.7.7-alpha.1 unchanged. Carry it to the 0.7.7 release branch
    when that branch is cut; do not backport the transition to 0.7.6.
-2. Choose the actual UTC release date for the canonical tag.
-   In `publish.yml`, set `COMPATIBILITY_RELEASE` to the complete canonical version (including
-   `-alpha` for alpha releases) and `COMPATIBILITY_VERSION` to `0.7.7-alpha.2`.
-   For subsequent alphas and stable releases, update this same pair to
-   the next unused canonical and legacy versions (stable uses `0.7.7`).
+2. Generate the canonical tag from the UTC build day, once, when starting the release:
+   `tag="v$(date -u +%Y.%-m.%-d)-alpha"` (omit `-alpha` for stable).
+   Push that tag at the intended release commit; retries reuse it, even after midnight.
+   In `publish.yml`, `COMPATIBILITY_CHANNEL: alpha` selects alpha releases and
+   `COMPATIBILITY_VERSION: 0.7.7-alpha.2` supplies the legacy alias. No date edit is
+   needed. Before a subsequent release, advance the legacy alias; for stable set
+   the channel to `stable` and alias to `0.7.7`. Clear the alias to opt out.
 3. Push only the canonical tag. The workflow creates/verifies the legacy Git
    tag without force, publishes both Docker names against one manifest, and
    packages both Helm versions pointing to the canonical image.
 4. Verify both Docker names resolve to the same digest and check the canonical
    GitHub Release and its assets. There is no duplicate legacy GitHub Release.
 
-The alias applies only to the exact configured release, including its prerelease
-suffix. Untagged builds and other release versions never receive that alias. Manually
+The alias applies only to tagged 2026 releases in the selected channel. Untagged
+builds and the other channel never receive it. Advance the legacy alias before
+each new release: leaving an already-used alias fails safely rather than moving it. Manually
 pushing the alias does not trigger another build or deployment. An existing alias
 on another commit blocks publication; retries never move it. Platform-image
 digests may have been built before that check, but named images and charts have not.
