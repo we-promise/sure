@@ -90,6 +90,22 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
       "the preview-gated bill link must not render for a user without the flag"
   end
 
+  test "index points an unmatched transaction with a counterpart to the transfer matcher" do
+    outflow = create_transaction(account: accounts(:depository), name: "Hint outflow", amount: 500, date: Date.current)
+    inflow = create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
+    lone = create_transaction(account: accounts(:depository), name: "Hint lone", amount: 77, date: Date.current)
+
+    get transactions_url
+
+    assert_response :success
+    [ outflow, inflow ].each do |entry|
+      assert_select "a[href='#{new_transaction_transfer_match_path(entry)}'][data-turbo-frame=modal]",
+                    text: I18n.t("transactions.transaction.transfer_hint")
+    end
+    assert_select "a[href='#{new_transaction_transfer_match_path(lone)}']", count: 0
+    assert_select "##{dom_id(outflow.transaction, :transfer_hint)} form[action='#{transaction_transfer_match_path(outflow)}'] input[name=_method][value=delete]"
+  end
+
   test "the investment activity badge shows translated labels" do
     @user.update!(locale: "ru")
     accounts(:investment).entries.create!(
@@ -2129,6 +2145,22 @@ end
     assert_response :success
     assert_select "#transaction-search-filters li p", text: "Without attachment", count: 1
     assert_select "#entry_#{@entry.id}", count: 0
+  end
+
+  test "index names the account on an account_ids filter chip" do
+    account = @entry.account
+
+    get transactions_url(q: { account_ids: [ account.id ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: account.name, count: 1
+    assert_select "#transaction-search-filters li p", text: account.id, count: 0
+  end
+
+  test "index renders a blank account filter value without failing" do
+    get transactions_url(q: { account_ids: [ "" ], accounts: [ "" ] })
+
+    assert_response :success
   end
 
   test "index offers the attachment filter in the filter menu" do
