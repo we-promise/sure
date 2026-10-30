@@ -128,12 +128,30 @@ export default class extends Controller {
     setTimeout(() => { if (!this.isOpen && this.hasMenuTarget) this.menuTarget.classList.add("hidden") }, 150)
   }
 
+  // Mirrors the closed trigger markup in select.html.erb: options of the :logo
+  // variant carry a [data-select-logo] element that is shown next to the label.
+  renderTrigger(selectedElement, label) {
+    const logo = selectedElement.querySelector("[data-select-logo]")
+    if (!logo) {
+      this.buttonTarget.textContent = label
+      return
+    }
+
+    const wrapper = document.createElement("span")
+    wrapper.className = "flex items-center gap-2 min-w-0"
+    const text = document.createElement("span")
+    text.className = "truncate"
+    text.textContent = label
+    wrapper.append(logo.cloneNode(true), text)
+    this.buttonTarget.replaceChildren(wrapper)
+  }
+
   select(event) {
     const selectedElement = event.currentTarget
     const value = selectedElement.dataset.value
     const label = selectedElement.dataset.filterName || selectedElement.textContent.trim()
 
-    this.buttonTarget.textContent = label
+    this.renderTrigger(selectedElement, label)
     if (this.hasInputTarget) {
       this.inputTarget.value = value
       this.inputTarget.dispatchEvent(new Event("change", { bubbles: true }))
