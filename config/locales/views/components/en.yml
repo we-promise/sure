@@ -71,6 +71,7 @@ en:
           aria_actual_history_starts: Recorded balance history begins %{date}.
           aria_interest_share: Across the first year's repayments about %{first}% of the amount paid is interest; across the final year's, about %{last}%.
           aria_interest_share_overall: Across all the repayments about %{share}% of the amount paid is interest.
+          aria_composition: The tooltip on each scheduled payment splits it into %{principal} and %{interest}.
           interest_share: Interest share
           principal_share: Principal share
           projected_payoff: Projected payoff
