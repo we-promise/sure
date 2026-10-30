@@ -216,6 +216,27 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_equal "Holding 7", @security.constituents.find_by!(ticker: "T7").name
   end
 
+  # Securities are shared across families, so two syncs can replace the same
+  # fund at once. Neither DELETE sees the other's uncommitted rows, and the
+  # second INSERT then breaks the unique (security_id, ticker) index. Locking
+  # the security's row first makes the second wait and replace the first's set.
+  test "replacing a fund's holdings locks the security before deleting the old set" do
+    provider = capable_provider("provider")
+    @security.stubs(:price_data_provider).returns(provider)
+
+    statements = []
+    recorder = ->(*, payload) { statements << payload[:sql] }
+    ActiveSupport::Notifications.subscribed(recorder, "sql.active_record") do
+      @security.send(:store_constituents, [ constituent("AAA", "A", 100) ])
+    end
+
+    lock = statements.index { |sql| sql.match?(/\ASELECT .*"securities".* FOR UPDATE/m) }
+    delete = statements.index { |sql| sql.match?(/\ADELETE FROM "security_constituents"/) }
+
+    assert lock, "the security's row is never locked"
+    assert_operator lock, :<, delete, "the lock is taken after the old set is deleted"
+  end
+
   # -------------------------------------------------------- malformed lists
   #
   # One row the table refuses would raise out of `store_constituents`, roll
