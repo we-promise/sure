@@ -149,6 +149,112 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal(40) ] * 4, trades.map { |t| t.realized_gain_loss.value.amount }
   end
 
+  # A sale is measured against the day's closing snapshot. A purchase later the
+  # same day moved that to a price the units sold never cost: here the snapshot
+  # says 200, as the calculators store it, and the sale lost 700 on units that
+  # cost 100.
+  test "a sale is measured against what the units cost before a same-day repurchase" do
+    account, security = cross_currency_account
+    day = Date.new(2026, 3, 10)
+    create_trade(security, account: account, qty: 10, date: day, price: 100)
+    sale = create_trade(security, account: account, qty: -10, date: day, price: 130).entryable
+    create_trade(security, account: account, qty: 10, date: day, price: 200)
+    account.holdings.create!(security: security, date: day, qty: 10, price: 200,
+                             amount: BigDecimal(2000), currency: "USD", cost_basis: 200)
+
+    assert_equal BigDecimal(300), sale.realized_gain_loss.value.amount
+  end
+
+  # From the day before's snapshot, through the day's trades up to the sale:
+  # 10 held at 100, 10 more bought at 200, an average of 150 when 5 are sold at
+  # 180. The closing snapshot's 250 counts the purchase at 400 after the sale.
+  test "a sale's basis carries the day before's through the trades before it" do
+    account, security = cross_currency_account
+    day = Date.new(2026, 3, 10)
+    account.holdings.create!(security: security, date: day - 1, qty: 10, price: 100,
+                             amount: BigDecimal(1000), currency: "USD", cost_basis: 100)
+    create_trade(security, account: account, qty: 10, date: day, price: 200)
+    sale = create_trade(security, account: account, qty: -5, date: day, price: 180).entryable
+    create_trade(security, account: account, qty: 10, date: day, price: 400)
+    account.holdings.create!(security: security, date: day, qty: 25, price: 400,
+                             amount: BigDecimal(10_000), currency: "USD", cost_basis: 250)
+
+    # 5 * 180 - 5 * 150
+    assert_equal BigDecimal(150), sale.realized_gain_loss.value.amount
+  end
+
+  # Nothing after it that day: the closing snapshot is the basis at the sale,
+  # and whatever set it -- a provider, a user's lock -- still does.
+  test "a sale with nothing after it that day is measured against the closing snapshot" do
+    account, security = cross_currency_account
+    day = Date.new(2026, 3, 10)
+    account.holdings.create!(security: security, date: day - 1, qty: 10, price: 100,
+                             amount: BigDecimal(1000), currency: "USD", cost_basis: 100)
+    sale = create_trade(security, account: account, qty: -5, date: day, price: 180).entryable
+    account.holdings.create!(security: security, date: day, qty: 5, price: 180,
+                             amount: BigDecimal(900), currency: "USD", cost_basis: 120)
+
+    assert_equal BigDecimal(300), sale.realized_gain_loss.value.amount
+  end
+
+  # A dividend is a trade of no quantity. After a sale it moves neither units
+  # nor basis, so the sale is still the day's last and the closing snapshot,
+  # here 120, is its basis -- not the day before's 100.
+  test "a dividend after a sale leaves it measured against the closing snapshot" do
+    account, security = cross_currency_account
+    day = Date.new(2026, 3, 10)
+    account.holdings.create!(security: security, date: day - 1, qty: 10, price: 100,
+                             amount: BigDecimal(1000), currency: "USD", cost_basis: 100)
+    sale = create_trade(security, account: account, qty: -5, date: day, price: 180).entryable
+    create_trade(security, account: account, qty: 0, date: day, price: 1)
+    account.holdings.create!(security: security, date: day, qty: 5, price: 180,
+                             amount: BigDecimal(900), currency: "USD", cost_basis: 120)
+
+    assert_equal BigDecimal(300), sale.realized_gain_loss.value.amount
+  end
+
+  # No snapshot before the day is not always no position: a provider's units
+  # with no price that day leave none. The day's trades take nothing to 5 units
+  # where the closing snapshot holds 15, so the replay would start from the
+  # wrong position; the closing snapshot's 150 is used instead of the 200 the
+  # day's one purchase cost.
+  test "a sale whose day does not reconcile with its snapshots keeps the closing one" do
+    account, security = cross_currency_account
+    day = Date.new(2026, 3, 10)
+    create_trade(security, account: account, qty: 5, date: day, price: 200)
+    sale = create_trade(security, account: account, qty: -3, date: day, price: 180).entryable
+    create_trade(security, account: account, qty: 3, date: day, price: 300)
+    account.holdings.create!(security: security, date: day, qty: 15, price: 300,
+                             amount: BigDecimal(4500), currency: "USD", cost_basis: 150)
+
+    # 3 * 180 - 3 * 150
+    assert_equal BigDecimal(90), sale.realized_gain_loss.value.amount
+  end
+
+  test "preloading answers whether each disposal was traded again that day in one query" do
+    account, security = cross_currency_account
+
+    trades = (0..3).map do |offset|
+      date = Date.new(2026, 3, 10) + offset
+      account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                               amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+      sale = create_trade(security, account: account, qty: -2, date: date, price: 150).entryable
+      create_trade(security, account: account, qty: 1, date: date, price: 150) if offset.even?
+      sale
+    end
+
+    holdings = account.holdings.to_a
+    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, holdings) }
+
+    queries = capture_sql_queries do
+      Trade.preload_same_day_trades(trades)
+      trades.each { |trade| trade.realized_gain_loss }
+    end
+
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
+  end
+
   test "build_name generates buy trade name" do
     name = Trade.build_name("buy", 10, "AAPL")
     assert_equal "Buy 10.0 shares of AAPL", name
