@@ -241,7 +241,7 @@
             <% global_transfer = transaction.transfer? && view_ctx == "global" %>
             <%= content_tag :p,
                 global_transfer ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
-                class: ["privacy-sensitive", "text-green-600": entry.amount.negative? && !global_transfer] %>
+                class: ["privacy-sensitive", "text-success": entry.amount.negative? && !global_transfer] %>
           </div>
         </div>
       </div>

@@ -36,7 +36,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(inflow_entry.transaction, "category_menu_desktop")} turbo-frame#category_dropdown", count: 1
     assert_select "##{dom_id(outflow_entry.transaction, "category_menu_desktop")}", count: 0
     assert_select "turbo-frame##{dom_id(inflow_entry)} p", text: /\+\/-/
-    assert_select "turbo-frame##{dom_id(inflow_entry)} p.text-green-600", count: 0
+    assert_select "turbo-frame##{dom_id(inflow_entry)} p.text-success", count: 0
   end
 
   test "the transactions list shows a withdrawal once, on its cash leg's date" do
