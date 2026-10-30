@@ -140,14 +140,14 @@ zh-CN:
       no_assets: 暂无资产
       no_liabilities: 暂无负债
     spending_vs_normal:
-      title: 支出对比常规
+      title: 支出与常规水平对比
       summary_html: "本期支出 %{total}。根据 %{baseline_start} 至 %{baseline_end} 的数据，如此长周期的常规支出为 %{normal}。"
       summary_so_far_html: "截至目前支出 %{total}。根据 %{baseline_start} 至 %{baseline_end} 的数据，这些天数的常规支出为 %{normal}。"
       no_history_html: "本期支出 %{total}。早前历史记录尚不足以确定常规水平。"
       no_history_short: 尚无足够的历史记录用于对比。
       no_spending: 本期无支出。
       no_changes: 各分类支出均符合常规水平。
-      treemap_title: 资金流向
+      treemap_title: 支出分布
       changes_title: 变化情况
       direct: "%{category}（无子分类）"
       tooltip:
