@@ -99,6 +99,8 @@ module Family::AutoTransferMatchable
   end
 
   def auto_match_transfers!(account: nil, exchange_rate_tolerance: Family::AutoTransferMatchable.exchange_rate_tolerance)
+    return if auto_match_transfers_disabled?
+
     # Exclude already matched transfers. Cross-currency FX-tolerance matching is
     # restricted to provider-linked accounts ONLY on this automatic path -- a
     # coincidental amount/FX-rate match applied here has no human reviewing it

@@ -166,6 +166,7 @@ ru:
       date: Дата
       description: Описание
       description_placeholder: Опишите операцию
+      description_placeholder_optional: "Оставьте пустым, чтобы использовать название категории/продавца, или сначала выберите одно из них"
       details: Детали
       expense: Расход
       income: Доход

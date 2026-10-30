@@ -12,6 +12,7 @@ export default class extends Controller {
     "createForm",
     "createLabel",
     "createError",
+    "emptyMessage",
     "list",
     "createAsSubcategory",
     "parentPicker",
@@ -28,6 +29,7 @@ export default class extends Controller {
     autoSubmit: Boolean,
     createLabel: String,
     createErrorMessage: String,
+    locked: Boolean,
     parentPickerLabel: String,
   };
 
@@ -70,20 +72,26 @@ export default class extends Controller {
     const query = rawQuery.toLowerCase();
 
     let exactMatch = false;
+    let anyVisible = false;
 
     this.optionTargets.forEach((option) => {
       const name = option.dataset.categoryName.toLowerCase();
       const matches = name.includes(query);
 
       option.classList.toggle("hidden", !matches);
+      if (matches) anyVisible = true;
 
       if (name === query) exactMatch = true;
     });
 
-    const canCreate = rawQuery.length > 0 && !exactMatch;
+    const canCreate = !this.lockedValue && rawQuery.length > 0 && !exactMatch;
 
     this.createFormTarget.classList.toggle("hidden", !canCreate);
     this.createFormTarget.classList.toggle("flex", canCreate);
+
+    if (this.hasEmptyMessageTarget) {
+      this.emptyMessageTarget.classList.toggle("hidden", anyVisible || canCreate);
+    }
 
     if (this.hasCreateAsSubcategoryTarget) {
       // Nesting needs at least one top-level category to nest under.
@@ -97,22 +105,40 @@ export default class extends Controller {
   }
 
   handleSearchKeydown(event) {
+    if (event.key !== "Enter") return;
+
+    // The search box sits inside the surrounding form, so Enter must never
+    // fall through and submit it.
+    event.preventDefault();
+
     // With the parent picker open, Enter moves into it instead of creating a
-    // top-level category (or submitting the surrounding form).
-    if (event.key === "Enter" && this.#parentPickerOpen()) {
-      event.preventDefault();
+    // top-level category.
+    if (this.#parentPickerOpen()) {
       this.parentOptionTargets[0]?.focus();
       return;
     }
 
-    if (
-      event.key === "Enter" &&
-      !this.createFormTarget.classList.contains("hidden") &&
-      !this.creating
-    ) {
-      event.preventDefault();
-      this.createCategory();
+    if (!this.createFormTarget.classList.contains("hidden")) {
+      if (!this.creating) this.createCategory();
+      return;
     }
+
+    // Nothing to create (locked, or the name exists already): pick the match.
+    const query = this.searchTarget.value.trim().toLowerCase();
+    if (!query) return;
+
+    const visible = this.optionTargets.filter(
+      (option) => !option.classList.contains("hidden"),
+    );
+    const match =
+      visible.find(
+        (option) => option.dataset.categoryName.toLowerCase() === query,
+      ) ?? visible[0];
+    if (!match) return;
+
+    this.selectOption(match);
+    this.close();
+    this.submitForm();
   }
 
   // Escape from anywhere in the menu: leave the parent picker first, then
@@ -166,6 +192,12 @@ export default class extends Controller {
       this.selectionContainerTarget.textContent =
         option.dataset.categoryDisplayLabel;
     }
+
+    // Dispatched after the display text above is updated, not before --
+    // listeners (e.g. the transaction name preview) read the selection
+    // text synchronously off this event, so firing early would hand them
+    // the previous selection's label.
+    this.hiddenInputTarget.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   showParentPicker(event) {
@@ -211,7 +243,7 @@ export default class extends Controller {
   }
 
   async #create(parentId) {
-    if (this.creating) return;
+    if (this.creating || this.lockedValue) return;
 
     const name = this.searchTarget.value.trim();
     if (!name) return;

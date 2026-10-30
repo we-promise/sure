@@ -85,6 +85,33 @@ class DS::SelectTest < ViewComponent::TestCase
     assert_no_selector "input[type=hidden][name='transfer_match[account_id]']", visible: :all
   end
 
+  test "falls back to the placeholder, not the include_blank item's own label, when nothing is selected" do
+    render_inline DS::Select.new(
+      form: form_builder_for(Category.new, "category"),
+      method: :parent_id,
+      items: [ { value: 1, label: "Groceries" } ],
+      selected: nil,
+      placeholder: "Select a Category",
+      include_blank: "(none)"
+    )
+
+    assert_selector "button#parent_id_trigger", text: "Select a Category"
+    refute_selector "button#parent_id_trigger", text: "(none)"
+  end
+
+  test "shows the selected item's label when a real item is selected" do
+    render_inline DS::Select.new(
+      form: form_builder_for(Category.new, "category"),
+      method: :parent_id,
+      items: [ { value: 1, label: "Groceries" } ],
+      selected: 1,
+      placeholder: "Select a Category",
+      include_blank: "(none)"
+    )
+
+    assert_selector "button#parent_id_trigger", text: "Groceries"
+  end
+
   private
     def render_select(**options)
       with_request_url "/" do
@@ -94,5 +121,9 @@ class DS::SelectTest < ViewComponent::TestCase
 
     def form_builder
       ActionView::Helpers::FormBuilder.new(:transfer_match, nil, vc_test_controller.view_context, {})
+    end
+
+    def form_builder_for(object, name)
+      StyledFormBuilder.new(name, object, vc_test_controller.view_context, {})
     end
 end
