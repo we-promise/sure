@@ -72,17 +72,20 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
   end
 
   test "expanding a group loads its sparklines" do
+    # Allow the production request window plus a second for browser scheduling.
+    frame_wait = AccountsHelper::SPARKLINE_FRAME_TIMEOUT_MS / 1000.0 + 1
+
     visit root_path
 
     expand_first_group
 
-    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] [data-controller='time-series-chart']", minimum: 1
+    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] [data-controller='time-series-chart']", minimum: 1, wait: frame_wait
 
     # One completed account frame says nothing about the other requests. Keep
     # the production timeout and wait for every visible frame before checking
     # the sidebar; hidden lazy frames correctly remain incomplete.
     all(SPARKLINE_FRAME).each do |frame|
-      frame.assert_matches_selector "[complete]", wait: AccountsHelper::SPARKLINE_FRAME_TIMEOUT_MS / 1000.0
+      frame.assert_matches_selector "[complete]", wait: frame_wait
       frame.assert_selector "[data-controller='time-series-chart']"
     end
 
