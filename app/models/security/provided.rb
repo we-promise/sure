@@ -442,7 +442,14 @@ module Security::Provided
     # `constituent_rows_from` has already applied every rule the model and the
     # column would, so skipping validation here refuses nothing they would
     # accept. `Security::Constituent` has no callbacks for `delete_all` to skip.
+    #
+    # Securities are shared across families, so two syncs can replace one fund
+    # at once. The row lock makes the second wait and then replace the first's
+    # set, where its DELETE would otherwise miss the uncommitted rows and its
+    # INSERT break the unique index. `lock!` is not used: it reloads, and would
+    # drop attributes a failed `update` just left unsaved.
     transaction do
+      self.class.where(id: id).lock.pluck(:id)
       Security::Constituent.where(security_id: id).delete_all
       Security::Constituent.insert_all!(rows.map { |row| row.merge(security_id: id) }) if rows.any?
       update_column(:constituents_fetched_at, Time.current)
