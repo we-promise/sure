@@ -386,6 +386,9 @@ ru:
       split: Разделена
       split_child_tooltip: Часть разделенной операции
       split_tooltip: Эта операция была разделена на несколько записей
+      transfer_hint: Перевод?
+      transfer_hint_dismiss: Это не перевод
+      transfer_hint_tooltip: В другом счёте есть похожая встречная операция — нажмите, чтобы сопоставить их как перевод
     transfer_match:
       auto_matched: Автоматически сопоставлено
       auto_matched_short: А/С

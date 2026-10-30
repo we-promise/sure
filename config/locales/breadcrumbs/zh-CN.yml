@@ -16,7 +16,9 @@ zh-CN:
     budgets: 预算
     categories: 分类
     categorize: 分类
+    changelog: 更新日志
     chats: 聊天
+    classifier: 分类器
     coinbase_items: Coinbase
     coinstats_items: CoinStats
     credit_cards: 信用卡
@@ -29,6 +31,7 @@ zh-CN:
     exports: 导出
     family_exports: 导出
     family_merchants: 商户
+    feedback: 反馈
     guides: 指南
     holdings: 持仓
     home: 主页
@@ -46,10 +49,12 @@ zh-CN:
     llm_usages: LLM 用量
     loans: 贷款
     lunchflow_items: Lunch Flow
+    mcp: MCP 服务器
     merchants: 商户
     mercury_items: Mercury
     messages: 消息
     mfa: 双重验证
+    monobank_items: Monobank
     oidc_accounts: OIDC 账户
     onboardings: 入门
     other_assets: 其他资产
@@ -57,12 +62,14 @@ zh-CN:
     payments: 付款
     pending_duplicate_merges: 重复项审核
     plaid_items: Plaid
+    plan: 计划
     preferences: 偏好设置
     profile: 个人资料
     profiles: 个人资料
     properties: 房产
     providers: 提供商
     recurring_transactions: 循环交易
+    redbark_items: Redbark
     registrations: 注册
     reports: 报表
     rules: 规则
@@ -77,6 +84,7 @@ zh-CN:
     sso_identities: SSO 连接
     sso_providers: SSO 提供商
     subscriptions: 订阅
+    system_health: 系统健康
     tags: 标签
     trades: 交易
     transactions: 交易
