@@ -6,13 +6,28 @@ class Holding::ForwardCalculator
   def initialize(account, security_ids: nil)
     @account = account
     @security_ids = security_ids
-    # Track weighted-average cost basis per security, relieving sells so the
-    # figure stays correct after a position is fully sold and repurchased.
-    @cost_basis_trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
+    # The lots of each security, which also give the weighted-average cost
+    # basis, relieving sells so the figure stays correct after a position is
+    # fully sold and repurchased.
+    @lot_books = Hash.new { |h, k| h[k] = Holding::LotBook.new(method: account.cost_basis_method) }
     # Securities whose position has taken in a transfer. A coin moved in was
     # acquired at a price nothing here knows, and averaging the purchases alone
     # would apply their price to units that never cost it.
     @transferred_security_ids = Set.new
+  end
+
+  # Every lot of each security, once #calculate has run.
+  def lots_by_security
+    lots_from(@lot_books)
+  end
+
+  # What each sale of each security took from which lot, once #calculate has run.
+  def lot_disposals_by_security
+    disposals_from(@lot_books)
+  end
+
+  def clamped_security_ids
+    Set.new
   end
 
   def calculate
@@ -66,20 +81,20 @@ class Holding::ForwardCalculator
           currency: price.currency,
           amount: qty * price.price,
           cost_basis: cost_basis_for(security_id, price.currency),
-          cost_basis_unknown: @transferred_security_ids.include?(security_id)
+          cost_basis_unknown: cost_unknown?(security_id)
         )
       end.compact
     end
 
     # A split takes effect at the open of its ex-date, before that day's trades,
     # which are already in post-split shares (#249). It scales the position and
-    # its cost-basis tracker together, so total cost carries across unchanged.
+    # its lot book together, so total cost carries across unchanged.
     def apply_splits(opening_portfolio, date)
       opening_portfolio.to_h do |security_id, qty|
         ratio = portfolio_cache.get_split_ratio(security_id, date)
         next [ security_id, qty ] unless ratio
 
-        @cost_basis_trackers[security_id].split(ratio)
+        @lot_books[security_id].split(ratio)
         [ security_id, Security::Split.scale(qty, ratio) ]
       end
     end
@@ -107,11 +122,12 @@ class Holding::ForwardCalculator
           # (like a sell) rather than leaving them to contaminate a later buy.
           if trade.qty.positive?
             @transferred_security_ids << security_id
+            @lot_books[security_id].add_unknown(trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
           else
-            @cost_basis_trackers[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
+            @lot_books[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
           end
         else
-          @cost_basis_trackers[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
+          @lot_books[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
         end
 
         portfolio[security_id] = previous_quantity + trade.qty
@@ -128,8 +144,16 @@ class Holding::ForwardCalculator
     # Returns the current cost basis for a security, or nil if nothing is held
     # or the position contains transferred-in units of unknown cost.
     def cost_basis_for(security_id, currency)
-      return nil if @transferred_security_ids.include?(security_id)
+      return nil if cost_unknown?(security_id)
 
-      @cost_basis_trackers[security_id].average_cost
+      @lot_books[security_id].average_cost
+    end
+
+    # Under fifo a transfer-in stops mattering once its lot is sold, so the
+    # book answers; under average it is unknown until the position closes.
+    def cost_unknown?(security_id)
+      return @lot_books[security_id].unknown_cost? if account.cost_basis_fifo?
+
+      @transferred_security_ids.include?(security_id)
     end
 end
