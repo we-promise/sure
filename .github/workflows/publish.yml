@@ -39,8 +39,8 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   # Update this pair for each compatibility release through December.
-  COMPATIBILITY_RELEASE: '2026.10.28'
-  COMPATIBILITY_VERSION: '0.7.6'
+  COMPATIBILITY_RELEASE: '2026.10.30-alpha.2'
+  COMPATIBILITY_VERSION: '0.7.7-alpha.2'
 
 permissions:
   contents: write
@@ -97,9 +97,9 @@ jobs:
           stable=false; alpha=false; compatibility=""
           [[ "$version" == *-* ]] || stable=true
           [[ "$version" != *-alpha* ]] || alpha=true
-          if [[ "$stable" == true && "$version" == 2026.* && "$version" == "$COMPATIBILITY_RELEASE" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* && "$version" == 2026.* && "$version" == "$COMPATIBILITY_RELEASE" ]]; then
             compatibility="$COMPATIBILITY_VERSION"
-            [[ -z "$compatibility" || "$compatibility" =~ ^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 1
+            [[ -z "$compatibility" || "$compatibility" =~ ^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.(0|[1-9][0-9]*))?$ ]] || exit 1
           fi
           publish=true; release=false
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* ]]; then
@@ -258,7 +258,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$COMPATIBILITY_VERSION" =~ ^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 1
+          [[ "$COMPATIBILITY_VERSION" =~ ^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.(0|[1-9][0-9]*))?$ ]] || exit 1
           # A non-force push either creates the alias or leaves the existing tag intact.
           if ! git push origin "HEAD:refs/tags/v${COMPATIBILITY_VERSION}"; then
             git fetch --no-tags origin "refs/tags/v${COMPATIBILITY_VERSION}"

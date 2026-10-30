@@ -10,10 +10,10 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
 
   test "canonical tag publishes while its compatibility alias is a no-op" do
     with_repo do |dir|
-      success, output = resolve(dir, "2026.10.28")
+      success, output = resolve(dir, "2026.10.30-alpha.2")
       assert success
-      %w[release=true compatibility_version=0.7.6 type=raw,value=stable type=raw,value=0.7.6].each { |line| assert_includes output, line }
-      success, output = resolve(dir, "2026.10.28", ref: "refs/tags/v0.7.6")
+      %w[release=true compatibility_version=0.7.7-alpha.2 type=raw,value=latest type=raw,value=0.7.7-alpha.2].each { |line| assert_includes output, line }
+      success, output = resolve(dir, "2026.10.28", ref: "refs/tags/v0.7.7-alpha.2")
       assert success
       assert_includes output, "publish=false"
       assert_includes output, "release=false"
@@ -28,9 +28,31 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         assert success, version
         assert_includes output, "release=true"
         assert_not_includes output, "type=raw,value=stable"
-        assert_not_includes output, "type=raw,value=0.7.6"
+        assert_not_includes output, "type=raw,value=0.7.7"
         assert_includes output, "type=raw,value=latest" if version.include?("alpha")
       end
+    end
+  end
+
+  test "compatibility pair supports later train releases but matches exactly" do
+    with_repo do |dir|
+      %w[alpha.3 beta.1 rc.1 stable].each do |phase|
+        suffix = phase == "stable" ? "" : "-#{phase}"
+        version = "2026.11.2#{suffix}"
+        legacy = "0.7.7#{suffix}"
+        success, output = resolve(dir, version, extra_env: { "COMPATIBILITY_RELEASE" => version, "COMPATIBILITY_VERSION" => legacy })
+        assert success
+        assert_includes output, "compatibility_version=#{legacy}"
+      end
+      %w[2026.10.30 2026.10.30-alpha.1 2026.10.31-alpha.2].each do |version|
+        success, output = resolve(dir, version)
+        assert success
+        assert_not_includes output, "type=raw,value=0.7.7"
+      end
+      success, output = resolve(dir, "2026.10.30-alpha.2", ref: "refs/heads/main",
+        extra_env: { "BUILD_DATE" => "2026.10.30", "GITHUB_RUN_NUMBER" => "2" })
+      assert success
+      assert_not_includes output, "compatibility_version=0.7.7"
     end
   end
 
@@ -54,7 +76,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
       end
       success, output = resolve(dir, "2027.1.1", extra_env: { "COMPATIBILITY_RELEASE" => "2027.1.1" })
       assert success
-      assert_not_includes output, "type=raw,value=0.7.6"
+      assert_not_includes output, "type=raw,value=0.7.7"
       assert_includes output, "type=raw,value=stable"
     end
   end
@@ -64,16 +86,16 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
       remote = File.join(dir, "remote.git")
       git!(dir, "init", "--bare", remote)
       git!(dir, "remote", "add", "origin", remote)
-      2.times { assert run_step(dir, "merge", "compatibility", "COMPATIBILITY_VERSION" => "0.7.6").first }
+      2.times { assert run_step(dir, "merge", "compatibility", "COMPATIBILITY_VERSION" => "0.7.7-alpha.2").first }
       git!(dir, "tag", "-a", "v0.7.7", "-m", "annotated")
       git!(dir, "push", "origin", "v0.7.7")
       assert run_step(dir, "merge", "compatibility", "COMPATIBILITY_VERSION" => "0.7.7").first
-      original = git!(remote, "rev-parse", "v0.7.6")
+      original = git!(remote, "rev-parse", "v0.7.7-alpha.2")
       git!(dir, "commit", "--allow-empty", "-m", "different")
-      success, output = run_step(dir, "merge", "compatibility", "COMPATIBILITY_VERSION" => "0.7.6")
+      success, output = run_step(dir, "merge", "compatibility", "COMPATIBILITY_VERSION" => "0.7.7-alpha.2")
       assert_not success
       assert_includes output, "refusing to move"
-      assert_equal original, git!(remote, "rev-parse", "v0.7.6")
+      assert_equal original, git!(remote, "rev-parse", "v0.7.7-alpha.2")
     end
   end
 
@@ -102,7 +124,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     def resolve(dir, version, event: "push", ref: "refs/tags/v#{version}", extra_env: {})
       path = File.join(dir, "output")
       File.write(path, "")
-      env = { "COMPATIBILITY_RELEASE" => "2026.10.28", "COMPATIBILITY_VERSION" => "0.7.6",
+      env = { "COMPATIBILITY_RELEASE" => workflow.fetch("env").fetch("COMPATIBILITY_RELEASE"), "COMPATIBILITY_VERSION" => workflow.fetch("env").fetch("COMPATIBILITY_VERSION"),
         "BUILD_DATE" => "2026.10.28", "GITHUB_RUN_NUMBER" => "42",
         "GITHUB_EVENT_NAME" => event,
         "GITHUB_REF" => ref, "GITHUB_OUTPUT" => path }.merge(extra_env)
