@@ -99,6 +99,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return render_existing_idempotent_entry(existing_entry)
     end
 
+    return render_validation_error("Unknown tag id") if unknown_tag_ids?
+
     @entry = account.entries.new(entry_params_for_create)
 
     if @entry.save
@@ -143,6 +145,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       render json: { error: "validation_failed", message: "Split parent amount, date, and type cannot be changed directly. Use the split editor." }, status: :unprocessable_entity
       return
     end
+
+    return render_validation_error("Unknown tag id") if tags_provided? && unknown_tag_ids?
 
     Entry.transaction do
       if @entry.update(entry_params_for_update)
@@ -371,6 +375,13 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # This distinguishes between "user wants to update tags" vs "user didn't specify tags".
     def tags_provided?
       params[:transaction].key?(:tag_ids)
+    end
+
+    # Tags belong to a family: ids are resolved through the caller's own, so
+    # another family's tag is refused like one that does not exist.
+    def unknown_tag_ids?
+      ids = Array(transaction_params[:tag_ids]).compact_blank.uniq
+      ids.any? && current_resource_owner.family.tags.where(id: ids).count != ids.size
     end
 
     def split_financial_fields_changed?

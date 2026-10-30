@@ -803,6 +803,61 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_tags.map(&:id).sort, @transaction.tag_ids.sort
   end
 
+  # Tags belong to a family: another family's tag id is never linked.
+  test "update with another family's tag id is refused and leaves the tags unchanged" do
+    own_tag = @family.tags.first
+    @transaction.update!(tag_ids: [ own_tag.id ])
+    foreign_tag = families(:empty).tags.create!(name: "Foreign", color: "#e99537")
+
+    assert_no_difference -> { Tagging.where(tag_id: foreign_tag.id).count } do
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { tag_ids: [ own_tag.id, foreign_tag.id ] } },
+          headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal [ own_tag.id ], @transaction.reload.tag_ids
+  end
+
+  test "update with a tag id no family owns is refused and leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ SecureRandom.uuid ] } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "create with another family's tag id is refused and creates nothing" do
+    foreign_tag = families(:empty).tags.create!(name: "Foreign", color: "#e99537")
+
+    assert_no_difference [ "@account.entries.count", "Tagging.count" ] do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Tagged", amount: 25.00, date: Date.current,
+                                    currency: "USD", nature: "expense", tag_ids: [ foreign_tag.id ] } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "update with the family's own tags still assigns them" do
+    tags = @family.tags.limit(2).to_a
+    @transaction.update!(tag_ids: [])
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: tags.map(&:id) } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal tags.map(&:id).sort, @transaction.reload.tag_ids.sort
+  end
+
   test "should clear tags when empty tag_ids explicitly provided in update" do
     # Set up transaction with existing tags
     @transaction.tags = [ Tag.first, Tag.second ]
