@@ -501,6 +501,38 @@ class HoldingLotTest < ActiveSupport::TestCase
     assert_not HoldingLot.exists?(empty.id)
   end
 
+  # With nothing to merge into, the clamp row moves as any opening lot does.
+  # Dropping it would lose the flag that keeps the position's basis unknown.
+  test "an opening lot with no units and no target moves with its clamp" do
+    setup_account
+    old_security = priced_security("LOTZ", 30)
+    new_security = priced_security("LOTY", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 0, price: 30, amount: 0, currency: "USD")
+    empty = opening_lot(old_security, 0)
+    empty.update!(clamped: true)
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ new_security.id, true ], [ empty.reload.security_id, empty.clamped ]
+  end
+
+  # The drop is keyed on the units, not the clamp: an unclamped lot with no
+  # units is dropped as well.
+  test "an unclamped opening lot with no units is dropped, not merged" do
+    setup_account
+    old_security = priced_security("LOTZ", 30)
+    new_security = priced_security("LOTY", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 0, price: 30, amount: 0, currency: "USD")
+    empty = opening_lot(old_security, 0)
+    kept = opening_lot(new_security, 5)
+    kept.update!(unit_cost: 50)
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 5, 50 ], [ kept.reload.qty, kept.unit_cost ]
+    assert_not HoldingLot.exists?(empty.id)
+  end
+
   # --- User-set lot cost --------------------------------------------------------
 
   test "a user-set cost on a transfer-in lot resolves the position, forward" do
