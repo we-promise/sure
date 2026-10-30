@@ -17,8 +17,9 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
   GROUP_SPARKLINE_FRAME = "#{SPARKLINE_FRAME}[id$='_sparkline']"
 
   # The shipped window is ten seconds. Outliving it for real would add most of
-  # a minute to the system suite for a cosmetic badge, so the frames render
-  # with a short one and every wait below is proportional to it.
+  # a minute to the system suite for a cosmetic badge. Use the short window
+  # only to test unfetched or deliberately stalled frames, never as a response
+  # time requirement for real requests on a busy CI runner.
   SHORT_TIMEOUT_MS = 300
 
   # Holds sparkline responses open for as long as a test needs one pending.
@@ -60,8 +61,9 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
 
       wait_out_timeout_window
 
-      # No badge anywhere in the sidebar, group totals included.
-      assert_no_selector "#{SPARKLINE_FRAME} p", text: BADGE_TEXT, visible: :all
+      # Only the unfetched rows are under test. Visible group totals make real
+      # requests and may legitimately exceed the artificial 300 ms deadline.
+      assert_no_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: BADGE_TEXT, visible: :all
 
       # The rows nobody asked for still hold their loading placeholder, which
       # is an honest description of what they are doing.
@@ -70,17 +72,21 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
   end
 
   test "expanding a group loads its sparklines" do
-    with_short_sparkline_timeout do
-      visit root_path
+    visit root_path
 
-      expand_first_group
+    expand_first_group
 
-      assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] [data-controller='time-series-chart']", minimum: 1
+    assert_selector "#{ACCOUNT_SPARKLINE_FRAME}[complete] [data-controller='time-series-chart']", minimum: 1
 
-      wait_out_timeout_window
-
-      assert_no_selector "#{SPARKLINE_FRAME} p", text: BADGE_TEXT, visible: :all
+    # One completed account frame says nothing about the other requests. Keep
+    # the production timeout and wait for every visible frame before checking
+    # the sidebar; hidden lazy frames correctly remain incomplete.
+    all(SPARKLINE_FRAME).each do |frame|
+      frame.assert_matches_selector "[complete]", wait: AccountsHelper::SPARKLINE_FRAME_TIMEOUT_MS / 1000.0
+      frame.assert_selector "[data-controller='time-series-chart']"
     end
+
+    assert_no_selector "#{SPARKLINE_FRAME} p", text: BADGE_TEXT, visible: :all
   end
 
   # The frames above only prove markup arrived. The regression these two
