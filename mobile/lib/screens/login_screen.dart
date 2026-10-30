@@ -68,7 +68,16 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_ssoProvidersFuture == null ||
         _ssoProvidersBaseUrl != ApiConfig.baseUrl) {
       _ssoProvidersBaseUrl = ApiConfig.baseUrl;
-      _ssoProvidersFuture = authProvider.fetchSsoProviders();
+      // A failed fetch isn't cached, so the next rebuild (e.g. returning from
+      // settings) retries instead of keeping the Google fallback.
+      late final Future<List<SsoProvider>?> future;
+      future = authProvider.fetchSsoProviders().then((providers) {
+        if (providers == null && identical(_ssoProvidersFuture, future)) {
+          _ssoProvidersFuture = null;
+        }
+        return providers;
+      });
+      _ssoProvidersFuture = future;
     }
     return _ssoProvidersFuture!;
   }

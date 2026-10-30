@@ -151,10 +151,13 @@ module Api
         providers = Rails.configuration.x.auth.sso_providers.map do |provider|
           name = provider[:name].to_s
           strategy = provider[:strategy].to_s
-          default_label = if provider[:id].to_s == "google" || strategy == "google_oauth2"
+          id = provider[:id].to_s
+          default_label = if id == "google" || strategy == "google_oauth2"
             I18n.t("sessions.new.google_auth_connect")
+          elsif id.present?
+            I18n.t("sessions.new.#{id}", default: name.titleize)
           else
-            I18n.t("sessions.new.#{provider[:id]}", default: name.titleize)
+            name.titleize
           end
 
           { name: name, strategy: strategy, label: provider[:label].presence || default_label }

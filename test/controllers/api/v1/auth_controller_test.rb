@@ -1315,7 +1315,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     Rails.configuration.x.auth.stubs(:sso_providers).returns([
       { id: "authentik", name: "authentik", strategy: "openid_connect", label: "Authentik", client_secret: "shh", issuer: "https://idp.example.com" },
       { id: "oidc", name: "openid_connect", strategy: "openid_connect", label: "", client_secret: "shh" },
-      { id: "google", name: "google_oauth2", strategy: "google_oauth2", client_secret: "shh" }
+      { id: "google", name: "google_oauth2", strategy: "google_oauth2", client_secret: "shh" },
+      { name: "my_keycloak", strategy: "openid_connect" }
     ])
 
     get "/api/v1/auth/sso_providers"
@@ -1324,7 +1325,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal [
       { "name" => "authentik", "strategy" => "openid_connect", "label" => "Authentik" },
       { "name" => "openid_connect", "strategy" => "openid_connect", "label" => "Sign in with OpenID Connect" },
-      { "name" => "google_oauth2", "strategy" => "google_oauth2", "label" => "Sign in with Google" }
+      { "name" => "google_oauth2", "strategy" => "google_oauth2", "label" => "Sign in with Google" },
+      { "name" => "my_keycloak", "strategy" => "openid_connect", "label" => "My Keycloak" }
     ], JSON.parse(response.body)["providers"]
     assert_not_includes response.body, "shh"
   end
