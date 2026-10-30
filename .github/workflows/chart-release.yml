@@ -5,6 +5,11 @@ on:
     tags:
       - 'chart-v*'
   workflow_dispatch:
+    inputs:
+      app_version:
+        description: Existing immutable app image version to package (without v)
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -25,23 +30,27 @@ jobs:
       - name: Resolve chart release tag
         id: tag
         shell: bash
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
         run: |
           set -euo pipefail
 
-          # Chart-only releases explicitly select an existing app image in Chart.yaml.
+          # Chart-only releases select an existing image, never the dev defaults.
           APP_SEMVER=$(sed -n 's/^appVersion: "\{0,1\}\([^" ]*\)"\{0,1\}/\1/p' charts/sure/Chart.yaml)
-          if [ -z "$APP_SEMVER" ]; then
-            echo "::error::Could not read version from charts/sure/Chart.yaml appVersion"
+          APP_SEMVER="${APP_VERSION_INPUT:-$APP_SEMVER}"
+          APP_SEMVER="${APP_SEMVER#v}"
+          if [[ ! "$APP_SEMVER" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+(\.[0-9]+)?)?$ || "$APP_SEMVER" == 0.0.0-* ]]; then
+            echo "::error::Select an existing immutable app_version input, or pin Chart.yaml appVersion for a chart tag release."
             exit 1
           fi
-          echo "App version from charts/sure/Chart.yaml appVersion: $APP_SEMVER"
+          echo "Selected app version: $APP_SEMVER"
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             # Use the app version as the chart version (monorepo: versions stay in sync)
             TAG_NAME="chart-v${APP_SEMVER}"
 
             if git rev-parse "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
-              echo "::error::Tag ${TAG_NAME} already exists. Bump the version in charts/sure/Chart.yaml first."
+              echo "::error::Tag ${TAG_NAME} already exists. Use a new chart-v tag for another chart release of this app version."
               exit 1
             fi
 

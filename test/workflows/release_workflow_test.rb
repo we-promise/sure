@@ -29,22 +29,27 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         assert_includes output, "release=true"
         assert_includes output, "type=raw,value=#{channel}"
         assert_not_includes output, "type=raw,value=#{channel == 'latest' ? 'stable' : 'latest'}"
-        assert_not_includes output, "type=raw,value=0.7.7"
       end
     end
   end
 
-  test "compatibility pair supports later train releases but matches exactly" do
+  test "compatibility channel follows release dates without matching other channels" do
     with_repo do |dir|
       %w[alpha stable].each do |phase|
         suffix = phase == "stable" ? "" : "-#{phase}"
         version = "2026.11.2#{suffix}"
         legacy = phase == "stable" ? "0.7.7" : "0.7.7-alpha.3"
-        success, output = resolve(dir, version, extra_env: { "COMPATIBILITY_RELEASE" => version, "COMPATIBILITY_VERSION" => legacy })
+        success, output = resolve(dir, version, extra_env: { "COMPATIBILITY_CHANNEL" => phase, "COMPATIBILITY_VERSION" => legacy })
         assert success
         assert_includes output, "compatibility_version=#{legacy}"
       end
-      %w[2026.10.30 2026.10.31-alpha].each do |version|
+      %w[2026.10.31-alpha 2026.11.2-alpha 2026.12.31-alpha].each do |version|
+        success, output = resolve(dir, version, extra_env: { "BUILD_DATE" => "2027.1.2" })
+        assert success
+        assert_includes output, "version=#{version}"
+        assert_includes output, "compatibility_version=0.7.7-alpha.2"
+      end
+      %w[2026.10.30 2026.10.31].each do |version|
         success, output = resolve(dir, version)
         assert success
         assert_not_includes output, "type=raw,value=0.7.7"
@@ -74,7 +79,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         assert_not_includes output, "type=raw"
         assert_includes output, "type=schedule,pattern=nightly" if event == "schedule"
       end
-      success, output = resolve(dir, "2027.1.1", extra_env: { "COMPATIBILITY_RELEASE" => "2027.1.1" })
+      success, output = resolve(dir, "2027.1.1", extra_env: { "COMPATIBILITY_CHANNEL" => "stable" })
       assert success
       assert_not_includes output, "type=raw,value=0.7.7"
       assert_includes output, "type=raw,value=stable"
@@ -110,6 +115,46 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     end
   end
 
+  test "workflow creation date drives branch builds across month and year boundaries" do
+    with_repo do |dir|
+      gh = File.join(dir, "gh")
+      File.write(gh, "#!/bin/sh\nprintf '%s\\n' \"$CREATED_AT\"\n")
+      File.chmod(0755, gh)
+      env_file = File.join(dir, "env")
+      { "2026-11-01T00:00:01Z" => "2026.11.1", "2027-01-01T00:00:01Z" => "2027.1.1" }.each do |created, date|
+        File.write(env_file, "")
+        env = { "PATH" => "#{dir}:#{ENV.fetch('PATH')}", "CREATED_AT" => created,
+          "GITHUB_REPOSITORY" => "test/repo", "GITHUB_RUN_ID" => "42", "GITHUB_ENV" => env_file }
+        2.times { assert run_step(dir, "prepare", "build_date", env).first }
+        assert_equal [ "BUILD_DATE=#{date}", "BUILD_DATE=#{date}" ], File.readlines(env_file, chomp: true)
+        success, output = resolve(dir, date, ref: "refs/heads/main", extra_env: { "BUILD_DATE" => date })
+        assert success
+        assert_includes output, "version=#{date}-alpha"
+        assert_not_includes output, "compatibility_version=0.7.7"
+      end
+    end
+  end
+
+  test "chart-only release requires an existing image instead of development defaults" do
+    with_repo do |dir|
+      FileUtils.mkdir_p(File.join(dir, "charts/sure"))
+      FileUtils.cp(Rails.root.join("charts/sure/Chart.yaml"), File.join(dir, "charts/sure/Chart.yaml"))
+      script = YAML.load_file(Rails.root.join(".github/workflows/chart-release.yml"))
+        .fetch("jobs").fetch("prepare_release").fetch("steps").find { |step| step["id"] == "tag" }.fetch("run")
+      output_file = File.join(dir, "output")
+      env = { "GITHUB_EVENT_NAME" => "push", "GITHUB_REF_NAME" => "chart-v2026.11.2",
+        "GITHUB_OUTPUT" => output_file, "APP_VERSION_INPUT" => "" }
+      output, status = Open3.capture2e(env, "bash", "-c", script, chdir: dir)
+      assert_not status.success?
+      assert_includes output, "Select an existing immutable"
+      env["APP_VERSION_INPUT"] = "2026.11.1-alpha"
+      output, status = Open3.capture2e(env, "bash", "-c", script, chdir: dir)
+      assert status.success?, output
+      assert_includes File.read(output_file), "app_version=2026.11.1-alpha"
+      assert_includes File.read(output_file), "chart_version=2026.11.2"
+    end
+  end
+
   private
     def workflow
       @workflow ||= YAML.load_file(Rails.root.join(".github/workflows/publish.yml"))
@@ -124,7 +169,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     def resolve(dir, version, event: "push", ref: "refs/tags/v#{version}", extra_env: {})
       path = File.join(dir, "output")
       File.write(path, "")
-      env = { "COMPATIBILITY_RELEASE" => workflow.fetch("env").fetch("COMPATIBILITY_RELEASE"), "COMPATIBILITY_VERSION" => workflow.fetch("env").fetch("COMPATIBILITY_VERSION"),
+      env = { "COMPATIBILITY_CHANNEL" => workflow.fetch("env").fetch("COMPATIBILITY_CHANNEL"), "COMPATIBILITY_VERSION" => workflow.fetch("env").fetch("COMPATIBILITY_VERSION"),
         "BUILD_DATE" => "2026.10.28", "GITHUB_RUN_NUMBER" => "42",
         "GITHUB_EVENT_NAME" => event,
         "GITHUB_REF" => ref, "GITHUB_OUTPUT" => path }.merge(extra_env)

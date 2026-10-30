@@ -38,8 +38,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  # Update this pair for each compatibility release through December.
-  COMPATIBILITY_RELEASE: '2026.10.30-alpha'
+  # Select the release channel and legacy alias through December; no date pin.
+  COMPATIBILITY_CHANNEL: 'alpha'
   COMPATIBILITY_VERSION: '0.7.7-alpha.2'
 
 permissions:
@@ -70,6 +70,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.inputs.ref || github.sha }}
       - name: Read original workflow date
+        id: build_date
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -97,7 +98,9 @@ jobs:
           stable=false; alpha=false; compatibility=""
           [[ "$version" == *-* ]] || stable=true
           [[ "$version" != *-alpha ]] || alpha=true
-          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* && "$version" == 2026.* && "$version" == "$COMPATIBILITY_RELEASE" ]]; then
+          channel=stable
+          [[ "$alpha" != true ]] || channel=alpha
+          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* && "$version" == 2026.* && "$channel" == "$COMPATIBILITY_CHANNEL" ]]; then
             compatibility="$COMPATIBILITY_VERSION"
             [[ -z "$compatibility" || "$compatibility" =~ ^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.(0|[1-9][0-9]*))?$ ]] || exit 1
           fi

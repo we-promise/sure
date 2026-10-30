@@ -2,8 +2,9 @@ apiVersion: v2
 name: sure
 description: Official Helm chart for deploying the Sure Rails app (web + Sidekiq) on Kubernetes with optional HA PostgreSQL (CloudNativePG) and Redis.
 type: application
-version: 2026.10.30-alpha
-appVersion: "2026.10.30-alpha"
+# Development defaults only; release packaging stamps the resolved build version.
+version: 0.0.0-dev
+appVersion: "latest"
 
 kubeVersion: ">=1.25.0-0"
 
