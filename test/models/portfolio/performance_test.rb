@@ -825,7 +825,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_not_nil result.mwr
   end
 
-  # #444: a whole position journalled out on a day with no price is valued
+  # A whole position journalled out on a day with no price is valued
   # from the day before, so the money-weighted return sees the giveaway as
   # the outflow it was, not as a 500 loss.
   test "a position journalled out on an unpriced day gives a zero money weighted return" do
@@ -841,7 +841,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_in_delta 0.0, result.twr.to_f, 0.000001
   end
 
-  # A transfer to an account past its cut-off left the scope (#443). At the
+  # A transfer to an account past its cut-off leaves the scope. At the
   # metric surface that is a zero return, not a 40% loss.
   test "a transfer to an account past its cut off is not a loss at the metric surface" do
     day_three = @day_two + 1.day

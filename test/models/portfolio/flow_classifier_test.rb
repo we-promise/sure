@@ -166,9 +166,9 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
   end
 
   # The same corruption can make one transaction the outflow of one transfer
-  # and the inflow of another. #classify reads transfer_as_inflow first, so
-  # the lateral prefers the transfer the transaction is the inflow of, and
-  # only then the earliest; otherwise the two forms read different transfers.
+  # and the inflow of another. #classify reads the transfer it is the inflow
+  # of first, so the lateral prefers that one too, and only then the
+  # earliest; otherwise the two forms read different transfers.
   test "sql_joins reads the transfer a leg is the inflow of, as classify does" do
     transfer = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 400)
     inflow = transfer.inflow_transaction.entry
