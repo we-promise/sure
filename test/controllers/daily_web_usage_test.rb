@@ -165,6 +165,23 @@ class DailyWebUsageTest < ActionDispatch::IntegrationTest
     assert_empty @events
   end
 
+  test "disabled capture does not resolve an invalid family timezone again" do
+    @user.family.update_column(:timezone, "Invalid/Timezone")
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::NullStore.new)
+
+    [ false, true ].each do |feedback_enabled|
+      @config.stubs(:feedback_enabled).returns(feedback_enabled)
+
+      assert_difference "DebugLogEntry.count", 1 do
+        get settings_preferences_url
+      end
+
+      assert_response :success
+    end
+
+    assert_empty @events
+  end
+
   test "configured operator analytics does not receive a duplicate" do
     @config.stubs(:api_key).returns("public-test-key")
     get settings_preferences_url
