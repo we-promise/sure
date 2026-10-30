@@ -196,6 +196,7 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
 
     post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(key), as: :json
     assert_response :forbidden
+    assert_equal "You do not have write access to this account", JSON.parse(response.body)["message"]
     assert_not @entry.reload.split_parent?
   end
 

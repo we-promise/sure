@@ -883,6 +883,100 @@ end
     assert_response :unauthorized
   end
 
+  # Shared-account permission tests
+  test "a member with read-only access can read but not change or delete a shared transaction" do
+    key, entry = shared_member_key_and_entry("read_only")
+
+    get api_v1_transaction_url(entry.transaction), headers: api_headers(key)
+    assert_response :success
+
+    patch api_v1_transaction_url(entry.transaction), params: { transaction: { notes: "hi" } }, headers: api_headers(key)
+    assert_response :forbidden
+    assert_nil entry.reload.notes
+
+    assert_no_difference "Entry.count" do
+      delete api_v1_transaction_url(entry.transaction), headers: api_headers(key)
+    end
+    assert_response :forbidden
+    assert_equal "You do not have permission to delete this transaction", JSON.parse(response.body)["message"]
+  end
+
+  test "a read_write member can annotate but not change financial fields or delete" do
+    key, entry = shared_member_key_and_entry("read_write")
+
+    patch api_v1_transaction_url(entry.transaction), params: { transaction: { notes: "annotated" } }, headers: api_headers(key)
+    assert_response :success
+    assert_equal "annotated", entry.reload.notes
+
+    [ { amount: 999 }, { name: "Renamed" }, { date: 3.days.ago.to_date }, { notes: "x", amount: 999 } ].each do |attrs|
+      patch api_v1_transaction_url(entry.transaction), params: { transaction: attrs }, headers: api_headers(key)
+      assert_response :forbidden, "expected #{attrs.keys} to be refused"
+    end
+    assert_equal "annotated", entry.reload.notes
+    assert_equal 42, entry.amount
+
+    assert_no_difference "Entry.count" do
+      delete api_v1_transaction_url(entry.transaction), headers: api_headers(key)
+    end
+    assert_response :forbidden
+  end
+
+  test "a read_write member can change category, merchant and tags" do
+    key, entry = shared_member_key_and_entry("read_write")
+    category = @user.family.categories.first
+    merchant = @user.family.merchants.first || FamilyMerchant.create!(family: @user.family, name: "Shared Cafe")
+    tag = @user.family.tags.first || @user.family.tags.create!(name: "shared-tag")
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: { category_id: category.id, merchant_id: merchant.id, tag_ids: [ tag.id ] } },
+          headers: api_headers(key)
+
+    assert_response :success
+    transaction = entry.transaction.reload
+    assert_equal category.id, transaction.category_id
+    assert_equal merchant.id, transaction.merchant_id
+    assert_equal [ tag.id ], transaction.tag_ids
+  end
+
+  test "a read_write member cannot change description or user_modified" do
+    key, entry = shared_member_key_and_entry("read_write")
+
+    [ { description: "Renamed" }, { user_modified: true } ].each do |attrs|
+      patch api_v1_transaction_url(entry.transaction), params: { transaction: attrs }, headers: api_headers(key)
+      assert_response :forbidden, "expected #{attrs.keys} to be refused"
+      assert_equal "forbidden", JSON.parse(response.body)["error"]
+      assert_equal "You do not have permission to change this transaction", JSON.parse(response.body)["message"]
+    end
+    assert_equal "Shared txn", entry.reload.name
+  end
+
+  test "unpermitted keys are ignored for a read_write member, account_id included" do
+    key, entry = shared_member_key_and_entry("read_write")
+    other = @user.family.accounts.create!(name: "Other", owner: @user, balance: 0, currency: "USD", accountable: Depository.new)
+
+    patch api_v1_transaction_url(entry.transaction),
+          params: { transaction: { notes: "kept", account_id: other.id } },
+          headers: api_headers(key)
+
+    assert_response :success
+    entry.reload
+    assert_equal "kept", entry.notes
+    assert_not_equal other.id, entry.account_id
+  end
+
+  test "a full_control member can change and delete a shared transaction" do
+    key, entry = shared_member_key_and_entry("full_control")
+
+    patch api_v1_transaction_url(entry.transaction), params: { transaction: { name: "Renamed" } }, headers: api_headers(key)
+    assert_response :success
+    assert_equal "Renamed", entry.reload.name
+
+    assert_difference "Entry.count", -1 do
+      delete api_v1_transaction_url(entry.transaction), headers: api_headers(key)
+    end
+    assert_response :success
+  end
+
   # JSON structure tests
   test "transaction JSON should have expected structure" do
     get api_v1_transaction_url(@transaction), headers: api_headers(@api_key)
@@ -1073,6 +1167,19 @@ end
   end
 
   private
+
+    def shared_member_key_and_entry(permission)
+      member = users(:family_member)
+      member.api_keys.active.destroy_all
+      key = ApiKey.create!(user: member, name: "Member RW", key: ApiKey.generate_secure_key, scopes: %w[read_write], source: "web")
+      Redis.new.del("api_rate_limit:#{key.id}")
+
+      account = member.family.accounts.create!(name: "Admin Shared Checking", owner: @user, balance: 1_000,
+                                               currency: "USD", accountable: Depository.new)
+      account.account_shares.create!(user: member, permission: permission, include_in_finances: true)
+      entry = account.entries.create!(name: "Shared txn", amount: 42, currency: "USD", date: Date.current, entryable: Transaction.new)
+      [ key, entry ]
+    end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }

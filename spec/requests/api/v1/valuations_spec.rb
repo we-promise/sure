@@ -36,6 +36,7 @@ RSpec.describe 'API V1 Valuations', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Investment Account',
       balance: 10000,
       currency: 'USD',
@@ -57,6 +58,30 @@ RSpec.describe 'API V1 Valuations', type: :request do
 
   let!(:valuation) { valuation_entry.entryable }
   let!(:valuation_id) { valuation_entry.id }
+
+  let(:read_only_valuation_id) do
+    owner = family.users.create!(
+      email: 'api-owner@example.com',
+      password: 'password123',
+      password_confirmation: 'password123'
+    )
+    shared_account = Account.create!(
+      family: family,
+      owner: owner,
+      name: 'Shared Savings',
+      balance: 1000,
+      currency: 'USD',
+      accountable: Depository.create!
+    )
+    shared_account.account_shares.create!(user: user, permission: 'read_only', include_in_finances: true)
+    shared_account.entries.create!(
+      name: 'Shared Reconciliation',
+      date: Date.current,
+      amount: 1000,
+      currency: 'USD',
+      entryable: Valuation.new(kind: 'reconciliation')
+    ).id
+  end
 
   path '/api/v1/valuations' do
     get 'List valuations' do
@@ -319,6 +344,15 @@ RSpec.describe 'API V1 Valuations', type: :request do
             }
           }
         end
+
+        run_test!
+      end
+
+      response '403', 'account is shared with you without write access' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { read_only_valuation_id }
+        let(:body) { { valuation: { notes: 'Not allowed' } } }
 
         run_test!
       end
