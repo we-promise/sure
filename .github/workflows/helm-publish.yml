@@ -111,7 +111,7 @@ jobs:
           APP_VERSION: ${{ steps.version.outputs.app_version }}
         run: |
           set -euo pipefail
-          [[ "$COMPATIBILITY_VERSION" =~ ^0\.[0-9]+\.[0-9]+$ ]] || exit 1
+          [[ "$COMPATIBILITY_VERSION" =~ ^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.(0|[1-9][0-9]*))?$ ]] || exit 1
           helm package charts/sure --version "$COMPATIBILITY_VERSION" --app-version "$APP_VERSION" -d .cr-release-packages
 
       - name: Upload packaged chart artifact
