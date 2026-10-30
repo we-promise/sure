@@ -230,6 +230,32 @@ class Api::V1::BaseController < ApplicationController
       false
     end
 
+    # Account-level authorization for API writes. The token scope says what the
+    # KEY may do; this says what its owner may do to this account, which
+    # `Account.accessible_by` does not (it admits read-only shares). Renders a
+    # 403 { error: "forbidden", message: } and returns false when the owner of
+    # the credentials lacks `level` (:write, :annotate or :owner, see
+    # AccountPolicy#permits?); returns true otherwise. A visible-but-not-writable
+    # account is a 403, never a 404: the caller can already read it.
+    #
+    # `resource:` names the record being changed ("transaction", "trade") and
+    # yields "You do not have permission to delete|change this <resource>",
+    # choosing the verb from the action, so pass it only from update and
+    # destroy on an existing record. Without it the message is the
+    # account-level "You do not have write access to this account".
+    def require_api_account_permission!(account, level = :write, resource: nil)
+      return true if AccountPolicy.new(current_resource_owner, account).permits?(level)
+
+      message = if resource
+        "You do not have permission to #{action_name == 'destroy' ? 'delete' : 'change'} this #{resource}"
+      else
+        "You do not have write access to this account"
+      end
+
+      render_json({ error: "forbidden", message: message }, status: :forbidden)
+      false
+    end
+
     # Consistent JSON response method
     def render_json(data, status: :ok)
       render json: data, status: status
