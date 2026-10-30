@@ -95,6 +95,46 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
     assert @entry.reload.excluded?
   end
 
+  [ {}, { security_id: "__custom__" } ].each do |selection_params|
+    context = selection_params.empty? ? "direct combobox" : "custom ticker combobox"
+
+    test "#{context} pick outside the family's country resolves a new listing" do
+      @user.family.update!(country: "US")
+      Setting.stubs(:enabled_securities_providers).returns([ "mansa" ])
+      Security.expects(:search_provider)
+              .with("MTNN", exchange_operating_mic: "XNSA", technical_failure: anything)
+              .returns([ Security.new(ticker: "MTNN", exchange_operating_mic: "XNSA", country_code: "NG", price_provider: "mansa") ])
+
+      assert_difference "Trade.count", 1 do
+        post create_trade_from_transaction_transaction_url(@entry.transaction), params: selection_params.merge(
+          ticker: "MTNN|XNSA|mansa", qty: 2, price: 50, investment_activity_label: "Buy"
+        )
+      end
+
+      security = Security.find_by!(ticker: "MTNN", exchange_operating_mic: "XNSA")
+      assert_not security.offline?
+      assert_equal "NG", security.country_code
+      assert_equal "mansa", security.price_provider
+    end
+
+    test "#{context} pick outside the family's country keeps an existing listing online" do
+      @user.family.update!(country: "US")
+      Setting.stubs(:enabled_securities_providers).returns([ "mansa" ])
+      existing = Security.create!(ticker: "MTNN", exchange_operating_mic: "XNSA", country_code: "NG", price_provider: "mansa")
+
+      assert_difference "Trade.count", 1 do
+        post create_trade_from_transaction_transaction_url(@entry.transaction), params: selection_params.merge(
+          ticker: "MTNN|XNSA|mansa", qty: 2, price: 50, investment_activity_label: "Buy"
+        )
+      end
+
+      existing.reload
+      assert_not existing.offline?
+      assert_equal "NG", existing.country_code
+      assert_equal existing, @account.entries.where(entryable_type: "Trade").order(:created_at).last.trade.security
+    end
+  end
+
   test "invalid trade quantities leave the original transaction unchanged" do
     assert_no_difference "Trade.count" do
       post create_trade_from_transaction_transaction_url(@entry.transaction), params: {

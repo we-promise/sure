@@ -864,10 +864,10 @@ class TransactionsController < ApplicationController
             redirect_back_or_to transactions_path
             return nil
           end
+          # An explicit pick may be listed outside the family's country, so don't filter by it.
           Security::Resolver.new(
             parsed[:ticker].strip,
             exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
-            country_code: user_country,
             price_provider: parsed[:price_provider]
           ).resolve
         elsif params[:custom_ticker].present?
@@ -898,10 +898,10 @@ class TransactionsController < ApplicationController
           redirect_back_or_to transactions_path
           return nil
         end
+        # An explicit pick may be listed outside the family's country, so don't filter by it.
         Security::Resolver.new(
           parsed[:ticker].strip,
           exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
-          country_code: user_country,
           price_provider: parsed[:price_provider]
         ).resolve
       elsif params[:custom_ticker].present?
