@@ -331,7 +331,7 @@ class Family::DataImporter
           status: importable_account_status(data["status"])
         )
         # Older exports predate the choice and keep the account's own.
-        account.prefer_brandfetch_logo = data["prefer_brandfetch_logo"] == true if data.key?("prefer_brandfetch_logo")
+        account.logo_selection = data["logo_selection"] if Account.logo_selections.key?(data["logo_selection"])
 
         account.save!
 

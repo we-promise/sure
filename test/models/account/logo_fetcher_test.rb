@@ -70,14 +70,14 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     stub_request(:get, YANDEX_URL).to_return(status: 200, body: png(120))
     fetcher = Account::LogoFetcher.new(@account)
     fetcher.stubs(:icon_for).with do
-      Account.find(@account.id).update!(prefer_brandfetch_logo: true)
+      Account.find(@account.id).update!(logo_selection: "brandfetch")
       true
     end.returns(Account::LogoFetcher::Icon.new(key: "yandex", source: "yandex", name: nil, body: png(120), size: 120,
                                                content_type: "image/png", extension: "png"))
 
     assert_not fetcher.fetch(source: "yandex")
     assert_not @account.reload.logo.attached?
-    assert @account.prefer_brandfetch_logo?
+    assert @account.logo_brandfetch?
   end
 
   test "a picked icon replaces an automatic one attached while it downloaded" do
@@ -190,7 +190,7 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
   end
 
   test "attaches the chosen source and stops preferring Brandfetch" do
-    @account.update_columns(prefer_brandfetch_logo: true)
+    @account.update_columns(logo_selection: "brandfetch")
     stub_request(:get, YANDEX_URL).to_return(status: 200, body: png(120))
 
     assert Account::LogoFetcher.new(@account).fetch(source: "yandex")
@@ -198,7 +198,7 @@ class Account::LogoFetcherTest < ActiveSupport::TestCase
     @account.reload
     assert_equal "yandex", @account.logo_source
     assert_not @account.logo_auto?
-    assert_not @account.prefer_brandfetch_logo?
+    assert @account.logo_automatic?
     assert_not_requested :get, GOOGLE_URL
   end
 

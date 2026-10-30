@@ -1251,8 +1251,8 @@ class AccountTest < ActiveSupport::TestCase
     assert @account.errors.added?(:logo, :too_large, max_size: 1)
   end
 
-  test "prefer_brandfetch_logo shows Brandfetch while keeping the stored logo" do
-    @account.update!(institution_domain: "tbank.ru", prefer_brandfetch_logo: true)
+  test "choosing Brandfetch shows it while keeping the stored logo" do
+    @account.update!(institution_domain: "tbank.ru", logo_selection: "brandfetch")
     @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png")
 
     Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
@@ -1270,10 +1270,10 @@ class AccountTest < ActiveSupport::TestCase
     Account::LogoFetcher.any_instance.expects(:fetch).never
 
     assert @account.choose_logo("brandfetch")
-    assert @account.reload.prefer_brandfetch_logo?
+    assert @account.reload.logo_brandfetch?
 
     assert @account.choose_logo("stored")
-    assert_not @account.reload.prefer_brandfetch_logo?
+    assert @account.reload.logo_automatic?
     assert @account.logo.attached?
   end
 
@@ -1345,12 +1345,12 @@ class AccountTest < ActiveSupport::TestCase
   end
 
   test "choose_logo removes the stored logo" do
-    @account.update!(prefer_brandfetch_logo: true)
+    @account.update!(logo_selection: "brandfetch")
     @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
 
     assert @account.choose_logo("remove")
     assert_not @account.reload.logo.attached?
-    assert_not @account.prefer_brandfetch_logo?
+    assert @account.logo_automatic?
   end
 
   test "only empty or automatically picked logos are fetched automatically" do
@@ -1364,10 +1364,10 @@ class AccountTest < ActiveSupport::TestCase
                          metadata: { "logo_source" => "google", "logo_auto" => true })
     assert @account.logo_auto_fetchable?
 
-    @account.update!(prefer_brandfetch_logo: true)
+    @account.update!(logo_selection: "brandfetch")
     assert_not @account.logo_auto_fetchable?, "a chosen Brandfetch logo stays"
 
-    @account.update!(prefer_brandfetch_logo: false, institution_domain: nil)
+    @account.update!(logo_selection: "automatic", institution_domain: nil)
     assert_not @account.logo_auto_fetchable?
   end
 

@@ -82,7 +82,7 @@ module AccountsHelper
 
   # Where the icon shown for the account comes from, for the account form.
   def account_logo_caption(account)
-    key = if account.prefer_brandfetch_logo? && account.brandfetch_logo_url then "brandfetch"
+    key = if account.logo_brandfetch? && account.brandfetch_logo_url then "brandfetch"
     elsif account.stored_logo_url then account.logo_source || "uploaded"
     elsif account.brandfetch_logo_url then "brandfetch"
     else "none"
@@ -98,7 +98,7 @@ module AccountsHelper
   # while Brandfetch is shown instead, and Brandfetch when configured.
   # `source` is what Account#choose_logo receives when the form is saved.
   def account_logo_options(account, candidates)
-    shows_stored = !account.prefer_brandfetch_logo?
+    shows_stored = account.logo_automatic?
 
     options = candidates.map do |icon|
       LogoOption.new(

@@ -87,7 +87,7 @@ class Account::LogoFetcher
       else
         # Attachment and flags go into one save: attach saves on its own only
         # when the record has no other pending changes.
-        account.assign_attributes(prefer_brandfetch_logo: false, updated_at: Time.current)
+        account.assign_attributes(logo_selection: :automatic, updated_at: Time.current)
         account.logo.attach(
           io: StringIO.new(icon.body),
           filename: "#{fetched_for}.#{icon.extension}",
@@ -109,7 +109,7 @@ class Account::LogoFetcher
     end
 
     def logo_state
-      [ account.logo.attachment&.blob_id, account.prefer_brandfetch_logo?, account.logo_auto? ]
+      [ account.logo.attachment&.blob_id, account.logo_selection, account.logo_auto? ]
     end
 
     # A pick yields to an icon uploaded or picked meanwhile, to a Brandfetch
@@ -120,8 +120,8 @@ class Account::LogoFetcher
       return false if logo_state == logo_before
       return true if auto
 
-      blob_before, brandfetch_before, auto_before = logo_before
-      return true if account.prefer_brandfetch_logo? != brandfetch_before
+      blob_before, selection_before, auto_before = logo_before
+      return true if account.logo_selection != selection_before
 
       account.logo.attached? ? !account.logo_auto? : blob_before.present? && !auto_before
     end

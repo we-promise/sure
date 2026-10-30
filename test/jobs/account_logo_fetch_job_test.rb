@@ -61,7 +61,7 @@ class AccountLogoFetchJobTest < ActiveJob::TestCase
     @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "sberbank.ru.png",
                          metadata: { "logo_source" => "google", "logo_key" => "google", "logo_auto" => true })
     Account::LogoFetcher.any_instance.stubs(:fetch).with do
-      Account.find(@account.id).update!(prefer_brandfetch_logo: true)
+      Account.find(@account.id).update!(logo_selection: "brandfetch")
       true
     end.returns(false)
 

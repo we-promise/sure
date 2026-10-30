@@ -41,7 +41,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           balance: "1500.00",
           currency: "USD",
           institution_domain: "tbank.ru",
-          prefer_brandfetch_logo: true,
+          logo_selection: "brandfetch",
           accountable_type: "Depository",
           accountable: { subtype: "checking" }
         }
@@ -50,8 +50,29 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
 
-    assert account.reload.prefer_brandfetch_logo?
+    assert account.reload.logo_brandfetch?
     assert_not account.logo_auto_fetchable?
+  end
+
+  test "an unknown logo selection imports as the automatic one" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Test Checking",
+          balance: "1500.00",
+          currency: "USD",
+          logo_selection: "some-future-source",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" }
+        }
+      }
+    ])
+
+    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+
+    assert account.reload.logo_automatic?
   end
 
   test "imports non-destructive account status from ndjson" do

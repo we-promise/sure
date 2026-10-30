@@ -41,7 +41,7 @@ class AccountsHelperTest < ActionView::TestCase
                         metadata: { "logo_source" => "yandex", "logo_auto" => true })
     assert_equal I18n.t("accounts.logo_caption.yandex"), account_logo_caption(account)
 
-    account.update!(prefer_brandfetch_logo: true)
+    account.update!(logo_selection: "brandfetch")
     assert_equal I18n.t("accounts.logo_caption.brandfetch"), account_logo_caption(account)
   end
 

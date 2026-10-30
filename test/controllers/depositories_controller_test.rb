@@ -162,7 +162,7 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update uploads a logo that replaces Brandfetch" do
-    @account.update!(prefer_brandfetch_logo: true)
+    @account.update!(logo_selection: "brandfetch")
 
     patch depository_path(@account), params: {
       account: { logo: fixture_file_upload("square-placeholder.png", "image/png") }
@@ -170,7 +170,7 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to account_path(@account)
     assert @account.reload.logo.attached?
-    assert_not @account.prefer_brandfetch_logo?, "an upload is shown instead of Brandfetch"
+    assert @account.logo_automatic?, "an upload is shown instead of Brandfetch"
   end
 
   test "update rejects a logo that is not an image" do

@@ -24,7 +24,7 @@ class AccountLogoBackfillJob < ApplicationJob
     def accounts
       Account.visible
         .where.not(institution_domain: [ nil, "" ])
-        .where(prefer_brandfetch_logo: false)
+        .logo_automatic
         .where.missing(:logo_attachment)
         .order(:id)
     end

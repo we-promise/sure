@@ -9,6 +9,9 @@ module Account::Logoable
 
   included do
     has_one_attached :logo, dependent: :purge_later
+    # "brandfetch" shows the Brandfetch logo over a stored one, which is kept
+    # to switch back to.
+    enum :logo_selection, { automatic: "automatic", brandfetch: "brandfetch" }, default: :automatic, prefix: :logo
     # Only new uploads: logos stored before this check must not block saves.
     validate :logo_is_small_raster_image, if: -> { attachment_changes.key?("logo") && logo.attached? }
     # The account sidebar is cached by the accounts' updated_at, which an
@@ -27,7 +30,7 @@ module Account::Logoable
   attr_accessor :logo_chosen
 
   def logo_url
-    if prefer_brandfetch_logo? && brandfetch_logo_url
+    if logo_brandfetch? && brandfetch_logo_url
       brandfetch_logo_url
     else
       stored_logo_url || fallback_logo_url
@@ -83,18 +86,18 @@ module Account::Logoable
   # fallback, and the nightly fetch). Returns false when the choice could not apply.
   def choose_logo(choice)
     case choice
-    when "brandfetch" then brandfetch_logo_url.present? && update!(prefer_brandfetch_logo: true)
-    when "stored" then logo.attached? && update!(prefer_brandfetch_logo: false)
+    when "brandfetch" then brandfetch_logo_url.present? && update!(logo_selection: :brandfetch)
+    when "stored" then logo.attached? && update!(logo_selection: :automatic)
     when "remove"
       logo.purge if logo.attached?
-      update!(prefer_brandfetch_logo: false, updated_at: Time.current)
+      update!(logo_selection: :automatic, updated_at: Time.current)
     else Account::LogoFetcher.new(self).fetch(source: choice)
     end
   end
 
   # Sure only picks logos nobody chose: an empty slot or its own earlier pick.
   def logo_auto_fetchable?
-    institution_domain.present? && !prefer_brandfetch_logo? && (!logo.attached? || logo_auto?)
+    institution_domain.present? && logo_automatic? && (!logo.attached? || logo_auto?)
   end
 
   private
