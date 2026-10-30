@@ -258,7 +258,9 @@ class Family < ApplicationRecord
   validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
+  validate :currency_must_be_known, if: :currency_changed?
 
+  before_validation :normalize_currency
   before_validation :normalize_enabled_currencies!
   after_create_commit :add_classifier_rules
 
@@ -916,6 +918,14 @@ class Family < ApplicationRecord
       all_codes = Money::Currency.as_options.map(&:iso_code)
       all_selected = normalized_codes.size == all_codes.size && (normalized_codes - all_codes).empty?
       self.enabled_currencies = all_selected ? nil : normalized_codes
+    end
+
+    def normalize_currency
+      self.currency = self.class.normalize_currency_code(currency) || currency
+    end
+
+    def currency_must_be_known
+      errors.add(:currency, :invalid) if self.class.normalize_currency_code(currency).nil?
     end
 
     def normalize_currency_codes(values)
