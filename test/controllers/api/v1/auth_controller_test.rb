@@ -1313,16 +1313,18 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
   test "sso_providers lists configured providers without secrets" do
     Rails.configuration.x.auth.stubs(:sso_providers).returns([
-      { name: "openid_connect", strategy: "openid_connect", label: "Authentik", client_secret: "shh", issuer: "https://idp.example.com" },
-      { name: "google_oauth2", strategy: "google_oauth2", client_secret: "shh" }
+      { id: "authentik", name: "authentik", strategy: "openid_connect", label: "Authentik", client_secret: "shh", issuer: "https://idp.example.com" },
+      { id: "oidc", name: "openid_connect", strategy: "openid_connect", label: "", client_secret: "shh" },
+      { id: "google", name: "google_oauth2", strategy: "google_oauth2", client_secret: "shh" }
     ])
 
     get "/api/v1/auth/sso_providers"
 
     assert_response :success
     assert_equal [
-      { "name" => "openid_connect", "strategy" => "openid_connect", "label" => "Authentik" },
-      { "name" => "google_oauth2", "strategy" => "google_oauth2", "label" => "Google Oauth2" }
+      { "name" => "authentik", "strategy" => "openid_connect", "label" => "Authentik" },
+      { "name" => "openid_connect", "strategy" => "openid_connect", "label" => "Sign in with OpenID Connect" },
+      { "name" => "google_oauth2", "strategy" => "google_oauth2", "label" => "Sign in with Google" }
     ], JSON.parse(response.body)["providers"]
     assert_not_includes response.body, "shh"
   end

@@ -16,20 +16,6 @@ class LoginScreen extends StatefulWidget {
 
   const LoginScreen({super.key, this.onGoToSettings});
 
-  void _openSettings(BuildContext context) {
-    if (onGoToSettings != null) {
-      onGoToSettings!();
-      return;
-    }
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (routeContext) => BackendConfigScreen(
-          onConfigSaved: () => Navigator.of(routeContext).pop(),
-        ),
-      ),
-    );
-  }
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -59,6 +45,22 @@ class _LoginScreenState extends State<LoginScreen> {
           _emailFocus, _emailController, _emailPlaceholder));
     _passwordFocus.addListener(() => _clearPlaceholderOnFocus(
           _passwordFocus, _passwordController, _passwordPlaceholder));
+  }
+
+  Future<void> _openSettings() async {
+    if (widget.onGoToSettings != null) {
+      widget.onGoToSettings!();
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (routeContext) => BackendConfigScreen(
+          onConfigSaved: () => Navigator.of(routeContext).pop(),
+        ),
+      ),
+    );
+    // Rebuild so the backend URL card and SSO providers reflect the new server.
+    if (mounted) setState(() {});
   }
 
   /// Refetches when the backend URL changes (e.g. after editing settings).
@@ -363,8 +365,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
 
-                    const SizedBox(height: 16),
-
                     FutureBuilder<List<SsoProvider>?>(
                       future: _ssoProviders(
                           Provider.of<AuthProvider>(context, listen: false)),
@@ -379,6 +379,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         return Column(
                           children: [
+                            const SizedBox(height: 16),
                             // Divider with "or"
                             Row(
                               children: [
@@ -412,7 +413,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Backend URL info
                     InkWell(
-                      onTap: () => widget._openSettings(context),
+                      onTap: () => _openSettings(),
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         padding: const EdgeInsets.all(12),
@@ -471,7 +472,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: IconButton(
                 icon: const Icon(Icons.settings_outlined),
                 tooltip: l.loginBackendSettingsTooltip,
-                onPressed: () => widget._openSettings(context),
+                onPressed: () => _openSettings(),
               ),
             ),
           ],
@@ -600,7 +601,7 @@ class _SsoButton extends StatelessWidget {
                   width: 18,
                   height: 18,
                 )
-              : const Icon(Icons.key_outlined, size: 18),
+              : const Icon(Icons.login, size: 18),
           onPressed: authProvider.isLoading
               ? null
               : () => authProvider.startSsoLogin(provider.name),

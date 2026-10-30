@@ -87,6 +87,17 @@ void main() {
     expect(providers.last.isGoogle, true);
   });
 
+  test('fetchSsoProviders returns null for a malformed response', () async {
+    final providers = await _withServer(
+      '/api/v1/auth/sso_providers',
+      200,
+      {'unexpected': true},
+      () => AuthService().fetchSsoProviders(),
+    );
+
+    expect(providers, isNull);
+  });
+
   test('fetchSsoProviders returns null when the endpoint is missing', () async {
     final providers = await _withServer(
       '/some/other/path',

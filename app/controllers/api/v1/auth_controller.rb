@@ -145,14 +145,19 @@ module Api
 
       # Lists the providers GET /auth/mobile/:provider accepts, so clients can
       # render one button per provider. Only display fields are exposed; the
-      # provider config also carries client secrets.
+      # provider config also carries client secrets. Labels fall back the same
+      # way as the web sign-in page.
       def sso_providers
         providers = Rails.configuration.x.auth.sso_providers.map do |provider|
-          {
-            name: provider[:name].to_s,
-            strategy: provider[:strategy].to_s,
-            label: provider[:label].presence || provider[:name].to_s.titleize
-          }
+          name = provider[:name].to_s
+          strategy = provider[:strategy].to_s
+          default_label = if provider[:id].to_s == "google" || strategy == "google_oauth2"
+            I18n.t("sessions.new.google_auth_connect")
+          else
+            I18n.t("sessions.new.#{provider[:id]}", default: name.titleize)
+          end
+
+          { name: name, strategy: strategy, label: provider[:label].presence || default_label }
         end
 
         render json: { providers: providers }

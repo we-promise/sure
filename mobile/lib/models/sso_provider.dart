@@ -14,10 +14,11 @@ class SsoProvider {
 
   factory SsoProvider.fromJson(Map<String, dynamic> json) {
     final name = json['name'] as String;
+    final label = json['label'] as String? ?? '';
     return SsoProvider(
       name: name,
       strategy: json['strategy'] as String? ?? '',
-      label: json['label'] as String? ?? name,
+      label: label.isEmpty ? name : label,
     );
   }
 }
