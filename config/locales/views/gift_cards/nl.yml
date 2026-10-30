@@ -1,0 +1,46 @@
+---
+nl:
+  gift_cards:
+    card_formats:
+      digital: Digitaal
+      physical: Fysiek
+    edit:
+      edit: "%{account} bewerken"
+    form:
+      card_format: Vorm
+      card_number: Kaartnummer of code
+      expires_on: Vervalt op
+      face_value: Beginbedrag
+      face_value_hint: De waarde van de kaart toen je hem kreeg. Laat leeg als er
+        nog niets van is uitgegeven.
+      pin: Pincode
+      received_on: Ontvangen op
+      redeem_url: Inwissellink
+      redeem_url_hint: Waar je een digitale kaart inwisselt of het saldo bekijkt.
+      redeem_url_placeholder: https://
+      unencrypted_credentials: Versleuteling is niet ingesteld op deze server. Kaartnummer,
+        pincode en inwissellink worden daarom onversleuteld opgeslagen.
+    new:
+      title: Gegevens cadeaukaart invoeren
+    tabs:
+      overview:
+        card_details: Kaartgegevens
+        card_format: Vorm
+        card_number: Kaartnummer of code
+        copied: Gekopieerd
+        copy: Kopiëren
+        edit_account_details: Cadeaukaart bewerken
+        expired: Verlopen
+        expires_in:
+          one: Vervalt over %{count} dag
+          other: Vervalt over %{count} dagen
+          zero: Vervalt vandaag
+        expires_on: Vervalt op
+        initial_amount: Beginbedrag
+        no_expiry: Geen vervaldatum
+        open_redeem_url: Openen
+        pin: Pincode
+        redeem_url: Inwissellink
+        remaining: Resterend
+        spent: Besteed
+        unknown: Onbekend

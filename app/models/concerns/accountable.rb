@@ -1,7 +1,10 @@
 module Accountable
   extend ActiveSupport::Concern
 
-  TYPES = %w[Depository Investment Crypto Property Vehicle OtherAsset CreditCard Loan OtherLiability]
+  TYPES = %w[Depository Investment Crypto Property Vehicle GiftCard OtherAsset CreditCard Loan OtherLiability]
+
+  # Types still in preview: offered only to users who opted in.
+  PREVIEW_TYPES = %w[GiftCard].freeze
 
   # Define empty hash to ensure all accountables have this defined
   SUBTYPES = {}.freeze
@@ -9,6 +12,19 @@ module Accountable
   def self.from_type(type)
     return nil unless TYPES.include?(type)
     type.constantize
+  end
+
+  # The types a user can pick when creating or mapping an account.
+  def self.types_for(user)
+    user&.preview_features_enabled? ? TYPES : TYPES - PREVIEW_TYPES
+  end
+
+  # The account groups a user can set preferences for: the types they can
+  # create, plus any type of an account they can access, so turning preview
+  # features off never hides the group of an existing account.
+  def self.group_types_for(user)
+    held_types = user&.accessible_accounts&.distinct&.pluck(:accountable_type) || []
+    TYPES & (types_for(user) | held_types)
   end
 
   included do

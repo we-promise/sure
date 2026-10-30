@@ -31,6 +31,39 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "imports gift card details except the credentials" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-gift-card",
+          name: "Bookstore gift card",
+          balance: "20.00",
+          currency: "USD",
+          accountable_type: "GiftCard",
+          accountable: {
+            card_format: "digital",
+            expires_on: "2027-06-30",
+            face_value: "50.0",
+            face_value_currency: "EUR",
+            redeem_url: "https://books.example/redeem",
+            card_number: "SHOULD-NOT-IMPORT"
+          }
+        }
+      }
+    ])
+
+    gift_card = Family::DataImporter.new(@family, ndjson).import![:accounts].first.accountable
+
+    assert_instance_of GiftCard, gift_card
+    assert_equal "digital", gift_card.card_format
+    assert_equal Date.new(2027, 6, 30), gift_card.expires_on
+    assert_equal 50, gift_card.face_value
+    assert_equal "EUR", gift_card.face_value_currency
+    assert_nil gift_card.redeem_url
+    assert_nil gift_card.card_number
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {

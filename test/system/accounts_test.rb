@@ -68,6 +68,21 @@ class AccountsTest < ApplicationSystemTestCase
     end
   end
 
+  test "can create gift card account" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    visit root_url
+    open_new_account_modal
+
+    assert_account_created "GiftCard" do
+      select "Digital", from: "Format"
+      fill_in "Card number or code", with: "CODE-1234"
+    end
+
+    gift_card = Account.order(:created_at).last.gift_card
+    assert_equal "digital", gift_card.card_format
+    assert_equal "CODE-1234", gift_card.card_number
+  end
+
   test "can create other asset account" do
     assert_account_created("OtherAsset")
   end

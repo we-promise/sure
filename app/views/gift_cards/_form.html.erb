@@ -1,0 +1,54 @@
+<%# locals: (account:, url:) %>
+
+<%= render "accounts/form",
+           account: account,
+           url: url,
+           opening_balance_date: Time.zone.today,
+           opening_balance_date_label: t("gift_cards.form.received_on") do |form| %>
+  <%= render "shared/ruler", classes: "my-4" %>
+
+  <div class="space-y-2">
+    <%= form.fields_for :accountable do |gift_card_form| %>
+      <%# step "any": on a new card this field keeps the currency it was
+          rendered with when the balance currency changes, so it must not
+          round the amount to that currency's precision. %>
+      <%= gift_card_form.money_field :face_value,
+                                     label: t("gift_cards.form.face_value"),
+                                     label_tooltip: t("gift_cards.form.face_value_hint"),
+                                     currency_value_override: account.gift_card.face_value_currency || account.currency || Current.family.currency,
+                                     hide_currency: true,
+                                     step: "any",
+                                     min: 0 %>
+
+      <div class="flex items-center gap-2">
+        <%= gift_card_form.select :card_format,
+                                  GiftCard::CARD_FORMATS.map { |card_format| [ t("gift_cards.card_formats.#{card_format}"), card_format ] },
+                                  { label: t("gift_cards.form.card_format") } %>
+        <%= gift_card_form.date_field :expires_on, label: t("gift_cards.form.expires_on") %>
+      </div>
+
+      <% unless GiftCard.encryption_ready? %>
+        <%= render DS::Alert.new(variant: :warning) do %>
+          <p><%= t("gift_cards.form.unencrypted_credentials") %></p>
+          <%= render "settings/encryption_migration_guide" %>
+        <% end %>
+      <% end %>
+
+      <div class="flex items-center gap-2">
+        <%= gift_card_form.text_field :card_number,
+                                      label: t("gift_cards.form.card_number"),
+                                      autocomplete: "off",
+                                      spellcheck: false %>
+        <%= gift_card_form.text_field :pin,
+                                      label: t("gift_cards.form.pin"),
+                                      autocomplete: "off",
+                                      spellcheck: false %>
+      </div>
+
+      <%= gift_card_form.url_field :redeem_url,
+                                   label: t("gift_cards.form.redeem_url"),
+                                   placeholder: t("gift_cards.form.redeem_url_placeholder"),
+                                   help_text: t("gift_cards.form.redeem_url_hint") %>
+    <% end %>
+  </div>
+<% end %>

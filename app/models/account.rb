@@ -834,7 +834,11 @@ class Account < ApplicationRecord
   # "Investment" = A mix of both, including brokerage cash (liquid) and holdings (illiquid)
   def balance_type
     case accountable_type
-    when "Depository", "CreditCard"
+    # A gift card balance is tracked like cash, but it can only be spent at
+    # one store. It is intentionally left out of the spendable-cash lists
+    # (budget cash accounts, fundable goal accounts, cash insights and the
+    # paycheck planner), so Sure never suggests saving or investing it.
+    when "Depository", "CreditCard", "GiftCard"
       :cash
     when "Property", "Vehicle", "OtherAsset", "Loan", "OtherLiability"
       :non_cash

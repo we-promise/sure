@@ -1,0 +1,46 @@
+---
+en:
+  gift_cards:
+    card_formats:
+      digital: Digital
+      physical: Physical
+    edit:
+      edit: Edit %{account}
+    form:
+      card_format: Format
+      card_number: Card number or code
+      expires_on: Expires on
+      face_value: Initial amount
+      face_value_hint: The amount the card was worth when you got it. Leave empty
+        if nothing has been spent yet.
+      pin: PIN
+      received_on: Received on
+      redeem_url: Redeem link
+      redeem_url_hint: Where a digital card is redeemed or its balance is checked.
+      redeem_url_placeholder: https://
+      unencrypted_credentials: Encryption is not set up on this server, so the card
+        number, PIN and redeem link are stored unencrypted.
+    new:
+      title: Enter gift card details
+    tabs:
+      overview:
+        card_details: Card details
+        card_format: Format
+        card_number: Card number or code
+        copied: Copied
+        copy: Copy
+        edit_account_details: Edit gift card details
+        expired: Expired
+        expires_in:
+          one: Expires in %{count} day
+          other: Expires in %{count} days
+          zero: Expires today
+        expires_on: Expires on
+        initial_amount: Initial amount
+        no_expiry: No expiry date
+        open_redeem_url: Open
+        pin: PIN
+        redeem_url: Redeem link
+        remaining: Remaining
+        spent: Spent
+        unknown: Unknown
