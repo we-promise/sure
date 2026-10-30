@@ -118,6 +118,17 @@ class Holding < ApplicationRecord
     new_priority >= cost_basis_source_priority
   end
 
+  # The position's open lots, the opening lot first and then by acquisition.
+  # The stored lots are the position as it stands, so only its latest row
+  # shows them, and only while they add up to it (HoldingLot.in_partition).
+  def open_lots
+    return HoldingLot.none unless date == account.holdings.where(security_id: security_id).maximum(:date)
+    return HoldingLot.none unless HoldingLot.in_partition([ account_id ], [ security_id ]).include?([ account_id, security_id ])
+
+    HoldingLot.where(account_id: account_id, security_id: security_id).where("qty > 0")
+      .order(Arel.sql("acquired_on ASC NULLS FIRST"), :created_at)
+  end
+
   # Set cost_basis from user input (locks the value)
   def set_manual_cost_basis!(value)
     update!(
@@ -199,8 +210,10 @@ class Holding < ApplicationRecord
         end
       end
 
-      # Move all trades for old security to new security
+      # Move all trades for old security to new security, and their lots
       account.trades.where(security: old_security).update_all(security_id: new_security.id)
+      lots = account.holding_lots.where(security: old_security)
+      HoldingLot.move!(derived: lots.derived, opening: lots.opening, to: new_security)
     end
 
     # Reload self to reflect changes (may raise RecordNotFound if self was destroyed)
@@ -229,6 +242,8 @@ class Holding < ApplicationRecord
     transaction do
       # Move trades back (see note above about limitation)
       account.trades.where(security: current_security).update_all(security_id: original_security.id)
+      lots = account.holding_lots.where(security: current_security)
+      HoldingLot.move!(derived: lots.derived, opening: lots.opening.where(origin_security: original_security), to: original_security)
 
       # Reset ALL holdings that were remapped from this provider_security
       account.holdings.where(security: current_security, provider_security: original_security).find_each do |holding|
@@ -279,6 +294,10 @@ class Holding < ApplicationRecord
     # Calculates weighted average cost from buy trades.
     # Returns nil if no trades exist (cost basis is unknown).
     def calculate_avg_cost
+      # Fewer units than the trades bought (see Holding::ReverseCalculator), so
+      # no figure drawn from those trades is the position's.
+      return nil if HoldingLot.where(account_id: account_id, security_id: security_id, clamped: true).exists?
+
       trades = account.trades
         .with_entry
         .joins(ActiveRecord::Base.sanitize_sql_array([
@@ -291,6 +310,14 @@ class Holding < ApplicationRecord
         .where(security_id: security.id)
         .where("trades.qty > 0 AND entries.date <= ?", date)
 
+      # A trade whose lot the user has costed counts at that cost, a
+      # transfer-in included. The cost is already in the account's currency.
+      trades = trades.joins(<<~SQL.squish)
+        LEFT JOIN holding_lots lots ON lots.account_id = entries.account_id
+          AND lots.source_entry_id = entries.id
+          AND lots.manual_total_cost IS NOT NULL
+      SQL
+
       # An internal movement is not a purchase: securities moved in from elsewhere were
       # acquired at a price nothing here knows, so treating the day they
       # arrived as their cost states a number that looks authoritative and is
@@ -300,12 +327,12 @@ class Holding < ApplicationRecord
       # row. Averaging the purchases alone and applying that to every unit is
       # the same fabrication in a quieter form: buy one at 30k, receive one, and
       # the position would report 30k a unit for two units it did not cost that.
-      return nil if trades.where(investment_activity_label: Trade::INTERNAL_MOVEMENT_LABELS).exists?
+      return nil if trades.where(investment_activity_label: Trade::INTERNAL_MOVEMENT_LABELS, lots: { id: nil }).exists?
 
       # IS DISTINCT FROM, because `!=` is NULL for an unlabelled row and would
       # drop the ordinary purchases that carry no label at all.
       trades = trades.where(
-        "trades.investment_activity_label NOT IN (?) OR trades.investment_activity_label IS NULL",
+        "trades.investment_activity_label NOT IN (?) OR trades.investment_activity_label IS NULL OR lots.id IS NOT NULL",
         Trade::INTERNAL_MOVEMENT_LABELS
       )
 
@@ -336,9 +363,9 @@ class Holding < ApplicationRecord
       # missing, as it does in Money#exchange_to. Checked in the same query as
       # the totals rather than in another round trip.
       total_cost, total_qty, rate_missing = trades.pick(
-        Arel.sql("SUM((trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END)"),
+        Arel.sql("SUM(CASE WHEN lots.id IS NOT NULL THEN lots.manual_total_cost ELSE (trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END END)"),
         Arel.sql("SUM(trades.qty)"),
-        Arel.sql("BOOL_OR(#{foreign} AND (#{rate} IS NULL OR #{rate} <= 0))")
+        Arel.sql("BOOL_OR(lots.id IS NULL AND #{foreign} AND (#{rate} IS NULL OR #{rate} <= 0))")
       )
       return nil if rate_missing
 
