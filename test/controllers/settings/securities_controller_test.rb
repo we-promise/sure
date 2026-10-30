@@ -11,6 +11,9 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
+    assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  count: 1
   end
 
   test "hides encryption warning when encryption is configured" do
@@ -21,6 +24,9 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
+    assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  count: 0
   end
 
   test "does not show encryption warning in managed mode" do
@@ -30,6 +36,9 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
+    assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  count: 0
   end
 
   test "the disable-MFA control asks for the password" do
