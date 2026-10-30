@@ -49,12 +49,9 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
     @security.import_provider_details(include_classification: true)
   end
 
-  # The case that made keying the gate on `classification_source` wrong in both
-  # directions. An ETF is deliberately left without an asset class -- the
-  # wrapper does not imply one -- so it never gets a source. Keyed on the
-  # source, the gate would have stayed open and asked the provider again on
-  # every sync, for ever. Keyed on what the provider actually supplies, its
-  # answer closes the gate.
+  # An ETF is deliberately left without an asset class -- the wrapper does not
+  # imply one -- so it never gets a source. What the provider supplies, its
+  # sector, closes the gate instead.
   test "a wrapper the type map will not classify is still only asked once" do
     @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
     import(info(kind: "ETF", sector: "Technology", industry: "Consumer Electronics"))
@@ -186,8 +183,9 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
   end
 
   # `update` runs Security's validations, and a row can hold a value the model
-  # now refuses (`region` has no check constraint). The stamp used to be written
-  # anyway, so the gate closed for good on an answer that was never stored.
+  # now refuses (`region` has no check constraint). The stamp is written only
+  # once the answer is stored, or the gate would close on an answer that never
+  # landed.
   test "an answer the security could not store is not recorded, so the next sync asks again" do
     @security.update_columns(region: "atlantis")
     provider = stub_provider(info(sector: "Technology"))
@@ -292,8 +290,8 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
   # ------------------------------------------------ an empty answer is remembered
 
   # The gate closes only when a source, a sector or an industry fills, and an
-  # answer with none of them fills nothing. Without a record that the provider
-  # was asked, every sync asked again -- one of EODHD's 20 daily requests each.
+  # answer with none of them fills nothing. The stamp records that the provider
+  # was asked, so it is not asked again on every sync.
   test "a capable provider that answers with nothing is asked once" do
     @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
     provider = capable_provider("provider")
