@@ -256,7 +256,8 @@ en:
       empty_month: No bills due this month.
     all:
       search_placeholder: Search bills
-      any_status: Any status
+      current_bills: Current bills
+      dismissed_hidden_description: Dismissed bills are hidden.
       status_filters:
         overdue: Overdue
         due: Due soon
