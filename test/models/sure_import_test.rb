@@ -628,6 +628,20 @@ class SureImportTest < ActiveSupport::TestCase
     assert_includes codes, "missing_reference"
   end
 
+  test "preflight rejects duplicate budget category pairs" do
+    attach_ndjson(build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      { type: "Budget", data: { id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", currency: "USD" } },
+      { type: "BudgetCategory", data: { id: "bc-2", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "700.00", currency: "USD" } }
+    ]))
+
+    result = @import.sure_preflight
+
+    assert_not result.valid?
+    assert_includes result.errors.map { |error| error[:code] }, "duplicate_budget_category"
+  end
+
   test "preflight allows null rule names and treats orphaned rejected transfers as warnings" do
     attach_ndjson(build_ndjson([
       { type: "Rule", data: { id: "rule-1", name: nil, resource_type: "transaction" } },
