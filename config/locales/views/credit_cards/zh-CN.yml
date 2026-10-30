@@ -4,10 +4,10 @@ zh-CN:
     due:
       in_days:
         zero: 今天到期
-        one: 明天到期
+        "1": 明天到期
         other: "%{count} 天后到期"
       overdue:
-        one: 昨天到期
+        "1": 昨天到期
         other: "逾期 %{count} 天"
     edit:
       edit: 编辑%{account}
