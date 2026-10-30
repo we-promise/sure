@@ -382,8 +382,16 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     # Assigning an id that is not a uuid raises RecordNotFound, which the
     # actions' broad rescue answers with a 500. It is bad input.
+    #
+    # Read before `permit`, which drops anything but a list of strings where a
+    # list is permitted: the update would then clear every tag. `null`, `""`,
+    # `[]` and `[""]` still mean "no tags".
     def malformed_tag_ids?
-      Array(transaction_params[:tag_ids]).compact_blank.any? { |id| !id.to_s.match?(UUID_FORMAT) }
+      raw = params.dig(:transaction, :tag_ids)
+      return false if raw.nil? || raw == ""
+      return true unless raw.is_a?(Array)
+
+      raw.compact_blank.any? { |id| !id.is_a?(String) || !id.match?(UUID_FORMAT) }
     end
 
     def split_financial_fields_changed?
