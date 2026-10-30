@@ -11,6 +11,16 @@ class EntryScheduledSyncJobTest < ActiveJob::TestCase
     end
   end
 
+  test "schedule_for runs just after midnight in the family's timezone" do
+    families(:dylan_family).update!(timezone: "America/New_York")
+    entry = create_transaction(account: accounts(:depository), date: 3.days.from_now.to_date)
+    expected_run_at = entry.date.in_time_zone("America/New_York") + 5.minutes
+
+    assert_enqueued_with(job: EntryScheduledSyncJob, at: expected_run_at) do
+      EntryScheduledSyncJob.schedule_for(entry)
+    end
+  end
+
   test "schedule_for does nothing for a non-scheduled entry" do
     entry = create_transaction(account: accounts(:depository), date: Date.current)
 
