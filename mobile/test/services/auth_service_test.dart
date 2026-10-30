@@ -59,6 +59,69 @@ void main() {
     expect(await authService.getStoredTokens(), isNull);
     expect(await authService.getStoredUser(), isNull);
   });
+
+  test('fetchSsoProviders parses configured providers', () async {
+    final providers = await _withServer(
+      '/api/v1/auth/sso_providers',
+      200,
+      {
+        'providers': [
+          {
+            'name': 'openid_connect',
+            'strategy': 'openid_connect',
+            'label': 'Authentik',
+          },
+          {
+            'name': 'google_oauth2',
+            'strategy': 'google_oauth2',
+            'label': 'Google Oauth2',
+          },
+        ],
+      },
+      () => AuthService().fetchSsoProviders(),
+    );
+
+    expect(providers!.map((p) => p.name), ['openid_connect', 'google_oauth2']);
+    expect(providers.first.label, 'Authentik');
+    expect(providers.first.isGoogle, false);
+    expect(providers.last.isGoogle, true);
+  });
+
+  test('fetchSsoProviders returns null when the endpoint is missing', () async {
+    final providers = await _withServer(
+      '/some/other/path',
+      200,
+      {},
+      () => AuthService().fetchSsoProviders(),
+    );
+
+    expect(providers, isNull);
+  });
+}
+
+Future<T> _withServer<T>(
+  String path,
+  int statusCode,
+  Map<String, dynamic> responseBody,
+  Future<T> Function() body,
+) async {
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  final subscription = server.listen((request) async {
+    final matched = request.uri.path == path;
+    request.response
+      ..statusCode = matched ? statusCode : 404
+      ..headers.contentType = ContentType.json
+      ..write(jsonEncode(matched ? responseBody : {'error': 'Not found'}));
+    await request.response.close();
+  });
+
+  try {
+    ApiConfig.setBaseUrl('http://${server.address.host}:${server.port}');
+    return await body();
+  } finally {
+    await subscription.cancel();
+    await server.close(force: true);
+  }
 }
 
 Future<Map<String, dynamic>> _loginWithResponse(

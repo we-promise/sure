@@ -1310,4 +1310,29 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal family.id, invitee.family_id
     assert_equal 0, AccountShare.where(user: invitee).count
   end
+
+  test "sso_providers lists configured providers without secrets" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Authentik", client_secret: "shh", issuer: "https://idp.example.com" },
+      { name: "google_oauth2", strategy: "google_oauth2", client_secret: "shh" }
+    ])
+
+    get "/api/v1/auth/sso_providers"
+
+    assert_response :success
+    assert_equal [
+      { "name" => "openid_connect", "strategy" => "openid_connect", "label" => "Authentik" },
+      { "name" => "google_oauth2", "strategy" => "google_oauth2", "label" => "Google Oauth2" }
+    ], JSON.parse(response.body)["providers"]
+    assert_not_includes response.body, "shh"
+  end
+
+  test "sso_providers returns an empty list when no providers are configured" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([])
+
+    get "/api/v1/auth/sso_providers"
+
+    assert_response :success
+    assert_equal [], JSON.parse(response.body)["providers"]
+  end
 end

@@ -143,6 +143,21 @@ module Api
         end
       end
 
+      # Lists the providers GET /auth/mobile/:provider accepts, so clients can
+      # render one button per provider. Only display fields are exposed; the
+      # provider config also carries client secrets.
+      def sso_providers
+        providers = Rails.configuration.x.auth.sso_providers.map do |provider|
+          {
+            name: provider[:name].to_s,
+            strategy: provider[:strategy].to_s,
+            label: provider[:label].presence || provider[:name].to_s.titleize
+          }
+        end
+
+        render json: { providers: providers }
+      end
+
       def sso_exchange
         code = sso_exchange_params
 
