@@ -864,7 +864,12 @@ class TransactionsController < ApplicationController
             redirect_back_or_to transactions_path
             return nil
           end
-          resolve_ticker_param(parsed, user_country)
+          Security::Resolver.new(
+            parsed[:ticker].strip,
+            exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
+            country_code: user_country,
+            price_provider: parsed[:price_provider]
+          ).resolve
         elsif params[:custom_ticker].present?
           # Manual entry from combobox's name_when_new or fallback text field
           Security::Resolver.new(
@@ -893,7 +898,12 @@ class TransactionsController < ApplicationController
           redirect_back_or_to transactions_path
           return nil
         end
-        resolve_ticker_param(parsed, user_country)
+        Security::Resolver.new(
+          parsed[:ticker].strip,
+          exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
+          country_code: user_country,
+          price_provider: parsed[:price_provider]
+        ).resolve
       elsif params[:custom_ticker].present?
         # Manual entry from combobox's name_when_new (no existing holdings path)
         Security::Resolver.new(
@@ -907,18 +917,6 @@ class TransactionsController < ApplicationController
           redirect_back_or_to transactions_path
         end
       end
-    end
-
-    def resolve_ticker_param(parsed, user_country)
-      listing_picked = parsed[:exchange_operating_mic].present?
-
-      Security::Resolver.new(
-        parsed[:ticker].strip,
-        exchange_operating_mic: parsed[:exchange_operating_mic] || params[:exchange_operating_mic].presence,
-        country_code: (user_country unless listing_picked),
-        price_provider: parsed[:price_provider],
-        exact_only: listing_picked
-      ).resolve
     end
 
     # Validate submitted trade values and infer a missing value from the locked amount.

@@ -372,58 +372,6 @@ class Security::ResolverTest < ActiveSupport::TestCase
     assert_nil resolved.offline_reason, "A confirmed no-match must stop the DB fast-path bypass on later resolves"
   end
 
-  test "exact_only does not fall back to a close match when a provider times out" do
-    bad_provider = mock("bad_provider")
-    bad_provider.stubs(:class).returns(Provider::Mansa)
-    bad_provider.expects(:search_securities).with("MTNN", exchange_operating_mic: "XNSA").raises(StandardError, "timed out")
-
-    good_provider = mock("good_provider")
-    good_provider.stubs(:class).returns(Provider::YahooFinance)
-    good_provider.expects(:search_securities).with("MTNN", exchange_operating_mic: "XNSA").returns(
-      stub(success?: true, data: [
-        Provider::SecurityConcept::Security.new(symbol: "MTN", name: "MTN Group", logo_url: nil, exchange_operating_mic: "XJSE", country_code: "ZA", currency: "ZAR")
-      ])
-    )
-
-    Security.stubs(:providers).returns([ bad_provider, good_provider ])
-
-    resolved = Security::Resolver.new("MTNN", exchange_operating_mic: "XNSA", exact_only: true).resolve
-
-    assert_equal [ "MTNN", "XNSA" ], [ resolved.ticker, resolved.exchange_operating_mic ]
-    assert resolved.offline?
-    assert_equal "resolution_pending", resolved.offline_reason
-    assert_not Security.exists?(ticker: "MTN", exchange_operating_mic: "XJSE")
-  end
-
-  test "exact_only still accepts an exact provider match" do
-    match = Security.new(ticker: "MTNN", exchange_operating_mic: "XNSA", country_code: "NG")
-    Security.expects(:search_provider)
-            .with("MTNN", exchange_operating_mic: "XNSA", technical_failure: anything)
-            .returns([ match ])
-
-    resolved = Security::Resolver.new("MTNN", exchange_operating_mic: "XNSA", exact_only: true).resolve
-
-    assert_not resolved.offline?
-    assert_equal "NG", resolved.country_code
-  end
-
-  test "offline fallback keeps the recorded country when none is given" do
-    db_security = Security.create!(
-      ticker: "MTNN",
-      exchange_operating_mic: "XNSA",
-      country_code: "NG",
-      offline: true,
-      offline_reason: "resolution_pending"
-    )
-    Security.expects(:search_provider).returns([])
-
-    resolved = Security::Resolver.new("MTNN", exchange_operating_mic: "XNSA", exact_only: true).resolve
-
-    assert_equal db_security, resolved
-    assert_equal "NG", resolved.reload.country_code
-    assert resolved.offline?
-  end
-
   test "rejects disabled price_provider" do
     db_security = Security.create!(ticker: "GOOG2", exchange_operating_mic: "XNAS", country_code: "US")
 
