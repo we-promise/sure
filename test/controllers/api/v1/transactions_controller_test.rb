@@ -866,6 +866,23 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal before_ids, @transaction.reload.tag_ids.sort
   end
 
+  # `compact_blank` would drop an empty object or `false` before the check,
+  # and then `permit` drops the whole list, or the id writer drops `false`:
+  # either way the tags were cleared.
+  test "update with a blank non-string tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    [ [ @family.tags.first.id, {} ], [ false ] ].each do |tag_ids|
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { tag_ids: tag_ids } }.to_json,
+          headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+      assert_response :unprocessable_entity, "tag_ids: #{tag_ids.inspect}"
+      assert_equal before_ids, @transaction.reload.tag_ids.sort, "tag_ids: #{tag_ids.inspect}"
+    end
+  end
+
   test "update with an object for its tag ids leaves the tags unchanged" do
     @transaction.update!(tag_ids: [ @family.tags.first.id ])
     before_ids = @transaction.reload.tag_ids.sort

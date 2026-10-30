@@ -391,7 +391,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return false if raw.nil? || raw == ""
       return true unless raw.is_a?(Array)
 
-      raw.compact_blank.any? { |id| !id.is_a?(String) || !id.match?(UUID_FORMAT) }
+      raw.any? { |id| !id.is_a?(String) || (id.present? && !id.match?(UUID_FORMAT)) }
     end
 
     def split_financial_fields_changed?
