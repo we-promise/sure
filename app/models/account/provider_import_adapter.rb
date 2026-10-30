@@ -563,6 +563,9 @@ class Account::ProviderImportAdapter
         attributes[:cost_basis] = carried.cost_basis
         attributes[:cost_basis_source] = carried.cost_basis_source
         attributes[:cost_basis_locked] = true
+        # A copy of the user's lock, not a new statement of theirs: released
+        # with it, and never an anchor the calculators roll forward from.
+        attributes[:cost_basis_carried] = true
       elsif reconciled[:should_update]
         attributes[:cost_basis] = reconciled[:cost_basis]
         attributes[:cost_basis_source] = reconciled[:cost_basis_source]

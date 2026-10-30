@@ -546,9 +546,298 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     )
   end
 
+
+  # A manual basis is set on one snapshot row, the latest one the drawer
+  # shows. The next day's sync adds a new row for the same position, which
+  # must carry the user's figure rather than the calculated one.
+  test "a manual cost basis carries to the next day's row" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 2.days.ago.to_date)
+    materialize
+    latest_holding.set_manual_cost_basis!(150)
+    locked_date = latest_holding.date
+
+    travel_to 1.day.from_now do
+      materialize
+      assert_operator latest_holding.date, :>, locked_date, "no new row was written, so nothing was tested"
+      assert_equal 150, latest_holding.cost_basis.to_d, "the next day's row took the calculated figure"
+      assert_equal "manual", latest_holding.cost_basis_source
+      assert latest_holding.cost_basis_locked?
+    end
+  end
+
+  # The case a manual basis exists for: a transferred-in position has no
+  # basis this app can know, so the user supplies one.
+  test "a manual cost basis on a transferred-in position carries to the next day's row" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 2.days.ago.to_date)
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    materialize
+    assert_nil latest_holding.avg_cost, "precondition: a transfer leaves the basis unknown"
+    latest_holding.set_manual_cost_basis!(150)
+
+    travel_to 1.day.from_now do
+      materialize
+      assert_equal 150, latest_holding.avg_cost&.amount, "the user's figure did not survive the next day's sync"
+    end
+  end
+
+  # The locked per-share figure becomes the opening basis of the units held
+  # on the locked date; a later buy blends in at its own price.
+  test "a buy after a manual cost basis blends into the locked figure" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 2.days.ago.to_date)
+    materialize
+    latest_holding.set_manual_cost_basis!(150)
+
+    travel_to 1.day.from_now do
+      create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+      materialize
+      assert_equal 2, latest_holding.qty, "precondition: the later buy is not on the latest row"
+      assert_equal 175, latest_holding.cost_basis&.to_d, "expected (150 x 1 + 200 x 1) / 2"
+      assert_not latest_holding.cost_basis_locked?, "a row the trades moved on from is the calculation's, not the user's"
+    end
+  end
+
+  test "a buy after a manual cost basis on a transferred-in position blends into the locked figure" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 2.days.ago.to_date)
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    materialize
+    latest_holding.set_manual_cost_basis!(150)
+
+    travel_to 1.day.from_now do
+      create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+      materialize
+      assert_equal 175, latest_holding.avg_cost&.amount, "nil means the position went back to unknown"
+    end
+  end
+
+  # A sell relieves units at the running basis, so the per-share figure stays
+  # the user's, and the sale's realized gain is measured against it.
+  test "a sell after a manual cost basis keeps the per-share figure" do
+    create_trade(@aapl, account: @account, qty: 2, price: 200, date: 2.days.ago.to_date)
+    materialize
+    latest_holding.set_manual_cost_basis!(150)
+
+    travel_to 1.day.from_now do
+      sale = create_trade(@aapl, account: @account, qty: -1, price: 250, date: Date.current)
+      materialize
+      assert_equal 1, latest_holding.qty
+      assert_equal 150, latest_holding.cost_basis&.to_d
+      assert_equal 100, Trade.find(sale.entryable_id).realized_gain_loss&.value&.amount, "250 - 150, not 250 - 200"
+    end
+  end
+
+  test "a full close and repurchase after a manual cost basis starts fresh" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).set_manual_cost_basis!(150)
+    create_trade(@aapl, account: @account, qty: -1, price: 250, date: 2.days.ago.to_date)
+    create_trade(@aapl, account: @account, qty: 1, price: 300, date: 1.day.ago.to_date)
+
+    materialize
+
+    assert_equal 300, latest_holding.cost_basis&.to_d
+    assert_equal "calculated", latest_holding.cost_basis_source
+  end
+
+  test "the latest of two locked rows is the opening basis" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 4.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 4.days.ago.to_date).set_manual_cost_basis!(150)
+    @account.holdings.find_by!(security: @aapl, date: 2.days.ago.to_date).set_manual_cost_basis!(120)
+
+    materialize
+
+    assert_equal 120, latest_holding.cost_basis&.to_d
+    assert_equal 150, @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).cost_basis&.to_d, "the first lock still covers the day between"
+  end
+
+  test "a transfer-in after a manual cost basis makes the position unknown" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 2.days.ago.to_date)
+    materialize
+    latest_holding.set_manual_cost_basis!(150)
+
+    travel_to 1.day.from_now do
+      transfer = create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+      transfer.trade.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+      materialize
+      assert_nil latest_holding.avg_cost
+    end
+  end
+
+  test "unlocking stops the carry-forward" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 2.days.ago.to_date)
+    materialize
+    latest_holding.set_manual_cost_basis!(150)
+
+    travel_to 1.day.from_now do
+      materialize
+      latest_holding.unlock_cost_basis!
+      materialize
+      assert_equal 200, latest_holding.cost_basis&.to_d, "an earlier locked row was still rolled forward"
+      assert_equal "calculated", latest_holding.cost_basis_source
+    end
+  end
+
+  test "rows dated before a manual cost basis keep their calculated figure" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    materialize
+    before = @account.holdings.where(security: @aapl).where("date < ?", 1.day.ago.to_date).order(:date).pluck(:date, :cost_basis)
+    @account.holdings.find_by!(security: @aapl, date: 1.day.ago.to_date).set_manual_cost_basis!(150)
+
+    materialize
+
+    assert_equal before, @account.holdings.where(security: @aapl).where("date < ?", 1.day.ago.to_date).order(:date).pluck(:date, :cost_basis)
+  end
+
+  test "a manual cost basis leaves another security in the account alone" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 2.days.ago.to_date)
+    create_trade(@msft, account: @account, qty: 1, price: 300, date: 2.days.ago.to_date)
+    materialize
+    latest_holding.set_manual_cost_basis!(150)
+
+    travel_to 1.day.from_now do
+      create_trade(@msft, account: @account, qty: 1, price: 300, date: Date.current)
+      materialize
+      msft = @account.holdings.where(security: @msft).order(:date).last
+      assert_equal 300, msft.cost_basis&.to_d
+      assert_equal "calculated", msft.cost_basis_source
+    end
+  end
+
+  # A carried row is re-derived on every run: a trade later entered inside
+  # the carried span moves the position on from that date, and the rows
+  # after it are the calculation's, rolled forward from the user's figure.
+  test "a trade entered inside a carried span ends the carry from its date" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 4.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 4.days.ago.to_date).set_manual_cost_basis!(150)
+    materialize
+    assert latest_holding.cost_basis_carried?, "precondition: the lock was carried to today"
+
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 2.days.ago.to_date)
+    materialize
+
+    before_trade = @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date)
+    assert_equal [ 150, true, true ], [ before_trade.cost_basis.to_d, before_trade.cost_basis_locked?, before_trade.cost_basis_carried? ]
+    assert_equal 175, latest_holding.cost_basis&.to_d, "a stale carried row re-seeded the user's figure over the blend"
+    assert_not latest_holding.cost_basis_locked?
+    assert_not latest_holding.cost_basis_carried?
+  end
+
+  # A dividend is a qty 0 trade (Trade::CreateForm#create_income_trade): it
+  # moves no units and no cost, so the user's figure still describes them.
+  test "a dividend inside a carried span keeps the carry" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 4.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 4.days.ago.to_date).set_manual_cost_basis!(150)
+    materialize
+
+    dividend = create_trade(@aapl, account: @account, qty: 0, price: 0, date: 2.days.ago.to_date)
+    dividend.entryable.update!(investment_activity_label: "Dividend")
+    materialize
+
+    assert_equal [ 150, true, true ], [ latest_holding.cost_basis&.to_d, latest_holding.cost_basis_locked?, latest_holding.cost_basis_carried? ]
+  end
+
+  test "only the row the user locked is their lock; the rows it is carried onto are marked carried" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    materialize
+    locked = @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date)
+    locked.set_manual_cost_basis!(150)
+
+    materialize
+
+    assert_not locked.reload.cost_basis_carried?
+    later = @account.holdings.where(security: @aapl).where("date > ?", locked.date)
+    assert later.exists?
+    assert later.all?(&:cost_basis_carried?)
+  end
+
+  test "setting a figure on a carried row makes it the user's own lock" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).set_manual_cost_basis!(150)
+    materialize
+
+    latest_holding.set_manual_cost_basis!(140)
+
+    assert_not latest_holding.cost_basis_carried?
+    assert latest_holding.cost_basis_locked?
+  end
+
+  # A later lock is the user's own statement about later units, and stays
+  # when an earlier one is released.
+  test "unlocking an earlier lock keeps a later one the user set" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 4.days.ago.to_date)
+    materialize
+    first = @account.holdings.find_by!(security: @aapl, date: 4.days.ago.to_date)
+    first.set_manual_cost_basis!(150)
+    @account.holdings.find_by!(security: @aapl, date: 2.days.ago.to_date).set_manual_cost_basis!(120)
+    materialize
+
+    first.reload.unlock_cost_basis!
+    assert @account.holdings.find_by!(security: @aapl, date: 1.day.ago.to_date).cost_basis_locked?, "the later lock's carried rows were released with the earlier one"
+    materialize
+
+    assert_equal 120, latest_holding.cost_basis&.to_d
+    assert latest_holding.cost_basis_locked?
+    assert_equal 200, @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).cost_basis&.to_d, "the released lock's carried rows went back to the calculation"
+  end
+
+  # Unlocking releases the rows the figure was carried onto with nothing in
+  # its place, so a position the calculation cannot cost goes back to
+  # unknown rather than keeping the user's figure unlocked.
+  test "unlocking a transferred-in position's carried figure leaves it unknown" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).set_manual_cost_basis!(150)
+    materialize
+    assert latest_holding.cost_basis_carried?, "precondition"
+
+    latest_holding.unlock_cost_basis!
+    materialize
+
+    assert_nil latest_holding.avg_cost, "the user's figure stayed on a row nobody had locked"
+    assert_nil @account.holdings.find_by!(security: @aapl, date: 2.days.ago.to_date).avg_cost
+  end
+
+  # The lock covers the units held at the end of its date, so a trade entered
+  # on an earlier date changes what it covers, not whether it carries.
+  test "a trade entered before the lock date keeps the carry in the same sync" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).set_manual_cost_basis!(150)
+    materialize
+
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 4.days.ago.to_date)
+    materialize
+
+    assert_equal 2, latest_holding.qty
+    assert latest_holding.cost_basis_carried?, "the carry compared against the lock row's quantity before this sync"
+    assert_equal 150, latest_holding.cost_basis&.to_d
+  end
+
+  # Linked accounts rebuild their history backwards from the provider's
+  # snapshot, with their own replay of the trades.
+  test "a manual cost basis rolls forward on the reverse strategy too" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 2.days.ago.to_date)
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    Holding.create!(account: @account, security: @aapl, qty: 2, price: 200, amount: 400, currency: "USD", date: Date.current)
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+    @account.holdings.find_by!(security: @aapl, date: 1.day.ago.to_date).set_manual_cost_basis!(150)
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    assert_equal 175, @account.holdings.find_by!(security: @aapl, date: Date.current).cost_basis&.to_d
+  end
+
   private
 
     def latest_holding
       @account.holdings.where(security: @aapl).order(:date).last
+    end
+
+    def materialize
+      Holding::Materializer.new(@account.reload, strategy: :forward).materialize_holdings
     end
 end
