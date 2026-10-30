@@ -39,7 +39,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   # Update this pair for each compatibility release through December.
-  COMPATIBILITY_RELEASE: '2026.10.30-alpha.2'
+  COMPATIBILITY_RELEASE: '2026.10.30-alpha'
   COMPATIBILITY_VERSION: '0.7.7-alpha.2'
 
 permissions:
@@ -86,17 +86,17 @@ jobs:
             printf '%s\n' 'publish=false' 'release=false' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          version="${BUILD_DATE}-alpha.${GITHUB_RUN_NUMBER}"
+          version="${BUILD_DATE}-alpha"
           # Release identity comes from the immutable tag, never the retry date.
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* ]]; then
             version="${GITHUB_REF#refs/tags/v}"
-            [[ "$version" =~ ^[2-9][0-9]{3}\.[1-9][0-9]?\.[1-9][0-9]?(-(alpha|beta|rc)(\.(0|[1-9][0-9]*))?)?$ ]] || exit 1
+            [[ "$version" =~ ^[2-9][0-9]{3}\.[1-9][0-9]?\.[1-9][0-9]?(-alpha)?$ ]] || exit 1
             base="${version%%-*}"
             [[ "$(date -u -d "${base//./-}" +%Y.%-m.%-d)" == "$base" ]] || exit 1
           fi
           stable=false; alpha=false; compatibility=""
           [[ "$version" == *-* ]] || stable=true
-          [[ "$version" != *-alpha* ]] || alpha=true
+          [[ "$version" != *-alpha ]] || alpha=true
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* && "$version" == 2026.* && "$version" == "$COMPATIBILITY_RELEASE" ]]; then
             compatibility="$COMPATIBILITY_VERSION"
             [[ -z "$compatibility" || "$compatibility" =~ ^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.(0|[1-9][0-9]*))?$ ]] || exit 1

@@ -10,7 +10,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
 
   test "canonical tag publishes while its compatibility alias is a no-op" do
     with_repo do |dir|
-      success, output = resolve(dir, "2026.10.30-alpha.2")
+      success, output = resolve(dir, "2026.10.30-alpha")
       assert success
       %w[release=true compatibility_version=0.7.7-alpha.2 type=raw,value=latest type=raw,value=0.7.7-alpha.2].each { |line| assert_includes output, line }
       success, output = resolve(dir, "2026.10.28", ref: "refs/tags/v0.7.7-alpha.2")
@@ -21,44 +21,44 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     end
   end
 
-  test "alpha publishes latest while beta and rc do not promote stable" do
+  test "date-only alphas publish latest and clean dates publish stable" do
     with_repo do |dir|
-      %w[2026.11.2-alpha 2026.11.2-alpha.12 2026.10.28-beta 2026.10.28-rc.2].each do |version|
+      { "2026.11.2-alpha" => "latest", "2026.11.2" => "stable" }.each do |version, channel|
         success, output = resolve(dir, version)
         assert success, version
         assert_includes output, "release=true"
-        assert_not_includes output, "type=raw,value=stable"
+        assert_includes output, "type=raw,value=#{channel}"
+        assert_not_includes output, "type=raw,value=#{channel == 'latest' ? 'stable' : 'latest'}"
         assert_not_includes output, "type=raw,value=0.7.7"
-        assert_includes output, "type=raw,value=latest" if version.include?("alpha")
       end
     end
   end
 
   test "compatibility pair supports later train releases but matches exactly" do
     with_repo do |dir|
-      %w[alpha.3 beta.1 rc.1 stable].each do |phase|
+      %w[alpha stable].each do |phase|
         suffix = phase == "stable" ? "" : "-#{phase}"
         version = "2026.11.2#{suffix}"
-        legacy = "0.7.7#{suffix}"
+        legacy = phase == "stable" ? "0.7.7" : "0.7.7-alpha.3"
         success, output = resolve(dir, version, extra_env: { "COMPATIBILITY_RELEASE" => version, "COMPATIBILITY_VERSION" => legacy })
         assert success
         assert_includes output, "compatibility_version=#{legacy}"
       end
-      %w[2026.10.30 2026.10.30-alpha.1 2026.10.31-alpha.2].each do |version|
+      %w[2026.10.30 2026.10.31-alpha].each do |version|
         success, output = resolve(dir, version)
         assert success
         assert_not_includes output, "type=raw,value=0.7.7"
       end
-      success, output = resolve(dir, "2026.10.30-alpha.2", ref: "refs/heads/main",
+      success, output = resolve(dir, "2026.10.30-alpha", ref: "refs/heads/main",
         extra_env: { "BUILD_DATE" => "2026.10.30", "GITHUB_RUN_NUMBER" => "2" })
       assert success
       assert_not_includes output, "compatibility_version=0.7.7"
     end
   end
 
-  test "invalid dates padding and hotfix modifiers are rejected" do
+  test "invalid dates and all canonical suffixes other than alpha are rejected" do
     with_repo do |dir|
-      %w[2026.11.02 2026.11.0 2026.2.29 2026.4.31 2026.10.28-hotfix.1 2026.10.28-1].each do |version|
+      %w[2026.11.02 2026.11.0 2026.2.29 2026.4.31 2026.10.28-hotfix.1 2026.10.28-1 2026.10.30-alpha.2 2026.10.30-alpha.0 2026.10.30-beta 2026.10.30-rc.1].each do |version|
         assert_not resolve(dir, version).first, version
       end
     end
@@ -70,7 +70,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         success, output = resolve(dir, "2026.10.28", event: event, ref: "refs/heads/main")
         assert success
         assert_includes output, "release=false"
-        assert_includes output, "version=2026.10.28-alpha.42"
+        assert_includes output, "version=2026.10.28-alpha"
         assert_not_includes output, "type=raw"
         assert_includes output, "type=schedule,pattern=nightly" if event == "schedule"
       end
