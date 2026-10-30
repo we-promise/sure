@@ -4,7 +4,9 @@ export default class AttachmentUploadController extends Controller {
   static targets = ["fileInput", "submitButton", "fileName", "uploadText"]
   static values = {
     maxFiles: Number,
-    maxSize: Number
+    maxSize: Number,
+    locale: String,
+    labels: Object
   }
 
   connect() {
@@ -35,14 +37,14 @@ export default class AttachmentUploadController extends Controller {
       // Check file count
       if (files.length > this.maxFilesValue) {
         isValid = false
-        errorMessage = `Too many files (max ${this.maxFilesValue})`
+        errorMessage = this.labelsValue.too_many_files
       }
 
       // Check file sizes
       const oversizedFiles = files.filter(file => file.size > this.maxSizeValue)
       if (oversizedFiles.length > 0) {
         isValid = false
-        errorMessage = `File too large (max ${Math.round(this.maxSizeValue / 1024 / 1024)}MB)`
+        errorMessage = this.labelsValue.file_too_large
       }
     } else {
       if (this.hasUploadTextTarget) this.uploadTextTarget.classList.remove("hidden")
@@ -53,11 +55,13 @@ export default class AttachmentUploadController extends Controller {
 
     if (hasFiles && isValid) {
       const count = files.length
-      this.submitButtonTarget.textContent = count === 1 ? "Upload 1 file" : `Upload ${count} files`
+      const pluralCategory = new Intl.PluralRules(this.localeValue).select(count)
+      const template = this.labelsValue.upload_files[pluralCategory] || this.labelsValue.upload_files.other
+      this.submitButtonTarget.textContent = template.replace("%{count}", count)
     } else if (errorMessage) {
       this.submitButtonTarget.textContent = errorMessage
     } else {
-      this.submitButtonTarget.textContent = "Upload"
+      this.submitButtonTarget.textContent = this.labelsValue.upload
     }
   }
 }

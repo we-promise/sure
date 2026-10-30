@@ -228,6 +228,12 @@ export default class extends Controller {
   }
 
   _drawXAxisLabels() {
+    const formatDate = new Intl.DateTimeFormat(this.dataValue.locale, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }).format;
+
     // Add ticks
     this._d3Group
       .append("g")
@@ -240,7 +246,7 @@ export default class extends Controller {
             this._normalDataPoints[this._normalDataPoints.length - 1].date,
           ])
           .tickSize(0)
-          .tickFormat(d3.timeFormat("%b %d, %Y")),
+          .tickFormat(formatDate),
       )
       .select(".domain")
       .remove();

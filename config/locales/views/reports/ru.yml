@@ -12,7 +12,7 @@ ru:
         good: В норме
         over: Превышение бюджета
         warning: Близко к лимиту
-      suggested_daily: "%{amount} рекомендовано в день на оставшиеся %{days} дней"
+      suggested_daily: 'Рекомендуемый расход в день: %{amount}. Осталось дней: %{days}.'
       title: Выполнение бюджета
     empty_state:
       add_account: Добавить счёт
@@ -62,6 +62,8 @@ ru:
       title: Отчёты
       today: Сегодня
       toggle_section: Переключить видимость раздела
+      sections_aria: Разделы отчётов
+      shortcut_hint: '%{action} (%{key})'
     invalid_date_range: Дата окончания не может быть раньше даты начала. Даты были
       поменяны местами.
     investment_flows:
@@ -77,7 +79,7 @@ ru:
       accounts: Инвестиционные счета
       and_more: "+%{count} ещё"
       contributions: Пополнения за период
-      gains_by_tax_treatment: Доходы по налоговому режиму
+      gains_by_tax_treatment: 'Прибыль/убыток по налоговому режиму'
       holding: Актив
       holdings: Активы
       holdings_count:
@@ -88,7 +90,7 @@ ru:
       no_data: "-"
       period_return: Доходность за период
       portfolio_value: Стоимость портфеля
-      realized_gains: Реализованные доходы
+      realized_gains: 'Реализованная прибыль/убыток'
       return: Доходность
       sell_trades: Продажи
       sells_count:
@@ -96,25 +98,25 @@ ru:
         many: "%{count} продаж"
         one: "%{count} продажа"
         other: "%{count} продажи"
-      taxable_realized_note: Эти доходы могут облагаться налогами
+      taxable_realized_note: 'Эта реализованная прибыль может облагаться налогом'
       title: Эффективность инвестиций
       top_holdings: Основные активы
-      total_gains: Общие доходы
+      total_gains: 'Итоговая прибыль/убыток'
       total_return: Общая доходность
-      unrealized_gains: Нереализованные доходы
+      unrealized_gains: 'Нереализованная прибыль/убыток'
       value: Стоимость
       view_details: Посмотреть детали
       weight: Доля
       withdrawals: Выводы за период
     net_worth:
-      assets_vs_liabilities: Активы и обязательства
-      current_net_worth: Текущая чистая стоимость
+      assets_vs_liabilities: Активы и долги
+      current_net_worth: 'Текущий капитал'
       no_assets: Нет активов
-      no_liabilities: Нет обязательств
+      no_liabilities: Пока нет долгов
       period_change: Изменение за период
-      title: Чистая стоимость
+      title: 'Капитал'
       total_assets: Активы
-      total_liabilities: Обязательства
+      total_liabilities: Долги
     print:
       document_title: Финансовый отчёт
       generated_on: Создан %{date}
@@ -134,10 +136,10 @@ ru:
       net_worth:
         assets: Активы
         current_balance: Текущий баланс
-        liabilities: Обязательства
-        no_liabilities: Нет обязательств
+        liabilities: Долги
+        no_liabilities: Пока нет долгов
         this_period: за этот период
-        title: Чистая стоимость
+        title: 'Капитал'
       spending:
         amount: Сумма
         category: Категория
@@ -154,7 +156,7 @@ ru:
         of_income: "%{percent}% от дохода"
         title: Сводка
         used: использовано
-        vs_prior: "%{percent}% по сравнению с предыдущим"
+        vs_prior: '%{percent}% по сравнению с предыдущим периодом'
       title: Финансовый отчёт
       trends:
         average: Среднее
@@ -194,7 +196,7 @@ ru:
         date_range: Диапазон дат
         tag: Тег
         title: Фильтры
-      no_transactions: Нет активности за выбранный период и фильтры
+      no_transactions: 'Нет операций за выбранный период с этими фильтрами'
       pagination:
         next: Следующая
         previous: Предыдущая
@@ -248,3 +250,31 @@ ru:
       transactions: Операции
       weekday_spending: Расходы в будни
       weekend_spending: Расходы в выходные
+    spending_vs_normal:
+      title: Расходы по сравнению с обычными
+      summary_html: За этот период потрачено %{total}. Обычные расходы за период такой продолжительности — %{normal}, по данным с %{baseline_start} по %{baseline_end}.
+      summary_so_far_html: На данный момент потрачено %{total}. Обычные расходы за такое число дней — %{normal}, по данным с %{baseline_start} по %{baseline_end}.
+      no_history_html: За этот период потрачено %{total}. Пока недостаточно предыдущих данных, чтобы определить обычный уровень расходов.
+      no_history_short: Пока недостаточно предыдущих данных для сравнения.
+      no_spending: За этот период расходов нет.
+      no_changes: Расходы во всех категориях соответствуют обычному уровню.
+      treemap_title: На что ушли деньги
+      changes_title: Что изменилось
+      direct: '%{category} (без подкатегории)'
+      tooltip:
+        path: '%{parent} › %{category}'
+        total: '%{category}: %{amount}'
+        normal: 'Обычно: %{amount}'
+        more: На %{amount} больше обычного (%{percent})
+        less: На %{amount} меньше обычного (%{percent})
+        more_no_percent: На %{amount} больше обычного
+        less_no_percent: На %{amount} меньше обычного
+        no_normal: Нет предыдущих данных для сравнения
+        open: Нажмите, чтобы посмотреть операции
+      legend:
+        less: На 50–100% меньше
+        slightly_less: На 15–50% меньше
+        normal: Примерно как обычно
+        slightly_more: На 15–50% больше
+        more: На 50–100% больше
+        much_more: Более чем на 100% больше

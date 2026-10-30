@@ -1,0 +1,9 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        account_provider:
+          attributes:
+            account:
+              pending_deletion: ожидает удаления и не может быть привязан

@@ -26,6 +26,7 @@ en:
       country: Country
       submit: Continue
     preferences:
+      as_of: As of %{date}
       title: Configure your preferences
       subtitle: Let's configure your preferences.
       example: Example account

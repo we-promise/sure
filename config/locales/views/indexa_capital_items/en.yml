@@ -15,6 +15,10 @@ en:
         other: "%{count} institutions"
     errors:
       provider_not_configured: "IndexaCapital provider is not configured"
+    account_types:
+      mutual: Mutual
+      pension: Pension
+      epsv: EPSV
 
     # Syncer status messages
     sync:
@@ -29,6 +33,7 @@ en:
 
     # Panel (settings view)
     panel:
+      default_connection_name: "Indexa Capital Connection"
       setup_instructions: "Setup instructions:"
       step_1: "Visit your Indexa Capital dashboard to generate a read-only API token"
       step_2: "Paste your API token below and click Save"

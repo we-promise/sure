@@ -6,13 +6,14 @@
 <li data-controller="rule--conditions"
     data-rule--conditions-condition-filters-value="<%= rule.condition_filters.to_json %>"
     data-rule--conditions-valueless-operators-value="<%= Rule::ConditionFilter::VALUELESS_OPERATORS.to_json %>"
+    data-rule--conditions-value-placeholder-value="<%= t(".value_placeholder") %>"
     class="flex items-center gap-3">
 
   <%# Conditionally render the prefix %>
   <%# Condition groups pass in show_prefix: false for subconditions since the ANY/ALL selector makes that clear %>
   <% if show_prefix %>
     <div class="pl-2" data-condition-prefix>
-      <span class="font-medium uppercase text-xs">and</span>
+      <span class="font-medium uppercase text-xs"><%= t("javascript.rule.and") %></span>
     </div>
   <% end %>
 

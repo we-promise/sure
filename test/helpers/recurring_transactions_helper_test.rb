@@ -11,6 +11,11 @@ class RecurringTransactionsHelperTest < ActionView::TestCase
     I18n.with_locale(:ca) do
       assert_equal "1r", frequency_day_options.first.first
     end
+
+    I18n.with_locale(:ru) do
+      assert_equal "1-е число", frequency_day_options.first.first
+      assert_equal "28-е число", frequency_day_options[27].first
+    end
   end
 
   test "the two custom options follow the named presets, together" do

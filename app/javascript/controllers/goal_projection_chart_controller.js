@@ -32,6 +32,8 @@ export default class extends Controller {
     data: Object,
     ariaLabel: String,
     ariaDescription: String,
+    targetTemplate: String,
+    shortfallTemplate: String,
     todayLabel: { type: String, default: "Today" },
     projectedTemplate: { type: String, default: "Projected: {amount}" },
     savedTemplate: { type: String, default: "Saved: {amount}" },
@@ -288,7 +290,7 @@ export default class extends Controller {
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", textPrimary)
-          .text(`Target · ${data.target_amount_short_label}`);
+          .text(this.targetTemplateValue.replace("%{amount}", () => data.target_amount_short_label));
       } else {
         // Plenty of room: keep the right-side full-format label.
         svg
@@ -298,7 +300,7 @@ export default class extends Controller {
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", textPrimary)
-          .text(`Target · ${data.target_amount_label}`);
+          .text(this.targetTemplateValue.replace("%{amount}", () => data.target_amount_label));
       }
     }
 
@@ -385,7 +387,7 @@ export default class extends Controller {
         // is the "$X short" string when we fall short.
         const labelText = willHit
           ? data.projection_end_label
-          : (data.projection_shortfall_label ? `${data.projection_shortfall_label} short` : "");
+          : (data.projection_shortfall_label ? this.shortfallTemplateValue.replace("%{amount}", () => data.projection_shortfall_label) : "");
         if (labelText) {
           svg
             .append("text")
@@ -436,7 +438,7 @@ export default class extends Controller {
     // Full 4-digit year so the terminal "Jan 2027" reads as the year, not
     // as "Jan 27" (which scans as January 27th). Slightly wider per tick;
     // the de-dupe logic below keeps the count sane.
-    const tickFmt = d3.timeFormat("%b %Y");
+    const tickFmt = new Intl.DateTimeFormat(data.locale, { month: "short", year: "numeric" }).format;
     const tickCount = Math.min(5, Math.max(2, Math.round(innerWidth / 80)));
     const ticks = x.ticks(tickCount);
     const tickGroup = svg.append("g");
@@ -544,7 +546,7 @@ export default class extends Controller {
       .style("cursor", "crosshair");
 
     const bisectDate = d3.bisector((d) => d.date).left;
-    const dateFmt = d3.timeFormat("%b %d, %Y");
+    const dateFmt = new Intl.DateTimeFormat(data.locale, { day: "numeric", month: "short", year: "numeric" }).format;
     const todayTs = today.getTime();
     const targetTs = target ? target.getTime() : null;
     const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;

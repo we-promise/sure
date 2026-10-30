@@ -2,7 +2,8 @@
 <%= content_for :page_actions do %>
   <% unless Current.user&.guest? %>
     <% if @rules.any? %>
-      <%= render DS::Menu.new do |menu| %>
+      <%= render DS::Menu.new(variant: "button") do |menu| %>
+        <% menu.with_button(variant: "icon", icon: "more-horizontal", aria_label: t("rules.menu_actions")) %>
         <% menu.with_item(
           variant: "button",
           text: t("rules.clear_ai_cache.button"),
@@ -20,7 +21,7 @@
           href: destroy_all_rules_path,
           icon: "trash-2",
           method: :delete,
-          confirm: CustomConfirm.for_resource_deletion("all rules", high_severity: true)) %>
+          confirm: CustomConfirm.for_resource_deletion(t("rules.all_rules"), high_severity: true)) %>
       <% end %>
       <%= render DS::Link.new(
         text: t("rules.apply_all.button"),
@@ -150,7 +151,7 @@
           <% @recent_runs.each do |run| %>
             <tr class="<%= "bg-red-tint-5 theme-dark:bg-red-tint-10" if run.failed? %>">
               <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
-                <%= run.executed_at.strftime("%b %d, %Y %I:%M %p") %>
+                <%= l(run.executed_at, format: :long) %>
               </td>
               <td class="px-4 py-3 text-sm text-primary text-center">
                 <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium <%= run.execution_type == "manual" ? "bg-blue-50 text-blue-700 theme-dark:bg-blue-950/30 theme-dark:text-blue-400" : "bg-purple-50 text-purple-700 theme-dark:bg-purple-950/30 theme-dark:text-purple-400" %>">

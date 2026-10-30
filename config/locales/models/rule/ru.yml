@@ -1,12 +1,42 @@
 ---
 ru:
   activerecord:
+    models:
+      rule:
+        one: правило
+        few: правила
+        many: правил
+        other: правила
     errors:
       models:
         rule:
           duplicate_actions: Правило не может содержать дублирующиеся действия %{types}
           min_actions: должно содержать как минимум одно действие
           nested_conditions: Составные условия не могут быть вложенными
+          split_not_alone: 'Правило разбиения операции нельзя использовать вместе с другими действиями'
+        rule/action:
+          attributes:
+            value:
+              invalid_config: 'должно содержать корректную конфигурацию разбиения операции'
+              invalid_split_count: 'должно содержать от %{min} до %{max} частей'
+              split_name_required: 'у части №%{index} не указано название'
+              split_name_too_long: 'название части №%{index} слишком длинное (не более 255 символов)'
+              split_name_invalid: 'название части №%{index} содержит недопустимые символы'
+              split_type_invalid: 'тип части №%{index} должен быть «фиксированный» или «процентный»'
+              split_share_invalid: 'доля части №%{index} должна быть положительным числом'
+              split_category_invalid: 'категория части №%{index} не принадлежит этой семье/группе'
+              split_merchant_invalid: 'продавец для части №%{index} не принадлежит этой семье/группе'
+              split_tags_invalid: 'у части №%{index} есть тег, не принадлежащий этой семье/группе'
+              percentages_must_total_100: 'сумма процентов должна быть равна 100 (сейчас %{total})'
+              fixed_requires_exact_amount_condition: 'Для разбиения на фиксированные суммы нужно условие правила с точной суммой операции (например, «Сумма = 42.00»), иначе суммы частей могут не совпадать с суммой каждой подходящей операции'
+              fixed_shares_must_equal_condition_amount: 'Сумма частей должна быть равна %{amount} — точной сумме, заданной условием этого правила'
+        rule/condition:
+          attributes:
+            value:
+              regex_invalid: 'не является корректным регулярным выражением'
+              regex_too_complex: 'слишком сложно для безопасного выполнения'
+              regex_too_long: 'слишком длинное (максимум %{count} символов)'
+              regex_backreference: 'не может содержать обратные ссылки (\1–\9)'
   rule:
     conditions:
       unsupported_label: Не поддерживается (%{type})

@@ -1,0 +1,33 @@
+en:
+  javascript:
+    turbo_frame_timeout:
+      timeout: Timeout
+    admin_sso_form:
+      copied: Copied!
+      copy_failed: Failed to copy to clipboard
+      valid_issuer: Valid OIDC issuer
+      issuer_mismatch: "Issuer mismatch: discovery returned %{issuer}. Copy the issuer exactly as returned by the provider."
+      issuer_slash_mismatch: "Issuer mismatch: discovery returned %{issuer}. This is usually a trailing slash mismatch, so copy the issuer exactly as returned."
+      browser_validation_failed: Could not validate from browser (CORS). Provider can still be saved.
+      testing: Testing...
+      request_failed: "Request failed: %{error}"
+    attachment_upload:
+      upload_files:
+        one: Upload %{count} file
+        other: Upload %{count} files
+      too_many_files: Too many files (max %{max})
+      file_too_large: File too large (max %{max})
+    file_upload:
+      uploading: Uploading %{filename}...
+    drag_and_drop_import:
+      invalid_sure_file: Please upload an NDJSON or JSON file.
+    rule:
+      and: and
+      no_options: (none)
+    tag_select:
+      create_error: Could not create tag
+    color_icon_picker:
+      contrast_error: Poor contrast, choose a darker color or auto-adjust.
+    goal_projection_chart:
+      target: Target · %{amount}
+      shortfall: "%{amount} short"

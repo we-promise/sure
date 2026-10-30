@@ -16,12 +16,16 @@ ru:
       success: Подключение к IndexaCapital удалено
     errors:
       provider_not_configured: Провайдер IndexaCapital не настроен
+    account_types:
+      mutual: Инвестиционный портфель
+      pension: Пенсионный план
+      epsv: EPSV
     index:
       title: Подключения IndexaCapital
     indexa_capital_item:
       accounts_need_setup: Счета требуют настройки
       delete: Удалить подключение
-      deletion_in_progress: удаление в процессе...
+      deletion_in_progress: 'Идёт удаление...'
       error: Ошибка
       more_accounts_available:
         few: Доступно ещё %{count} счёта
@@ -87,6 +91,7 @@ ru:
       loading_message: Загрузка счетов IndexaCapital...
       loading_title: Загрузка
     panel:
+      default_connection_name: Подключение Indexa Capital
       alternative_auth: Или используйте аутентификацию по имени пользователя/паролю...
       field_descriptions: 'Описание полей:'
       fields:
@@ -249,7 +254,7 @@ ru:
       status:
         calculating: Расчёт балансов...
         checking_setup: Проверка конфигурации счёта...
-        importing: Импортирование счетов из IndexaCapital...
+        importing: 'Импорт счетов из IndexaCapital...'
         importing_data: Импорт данных счёта...
         needs_setup: "%{count} счетов требуют настройки..."
         processing: Обработка активов и операций...

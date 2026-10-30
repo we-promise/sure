@@ -376,12 +376,21 @@ module LanguagesHelper
     ZW: "🇿🇼 Zimbabwe"
   }.freeze
 
+  def translation_locale(key)
+    I18n.fallbacks[I18n.locale].find { |locale| I18n.exists?(key, locale, fallback: false) }
+  end
+
   def country_options
-    COUNTRY_MAPPING.keys.map do |key|
-      english = COUNTRY_MAPPING[key]
-      emoji, name = english.split(" ", 2)
-      label = I18n.t("countries.#{key}", default: name)
-      [ "#{emoji} #{label}", key.to_s ]
+    COUNTRY_MAPPING.map do |code, default_label|
+      country = ISO3166::Country.new(code)
+      if country
+        label = I18n.t("countries.#{code}", default: country.translation(I18n.locale).presence || country.common_name)
+        [ "#{country.emoji_flag} #{label}", country.alpha2 ]
+      else
+        emoji, fallback_name = default_label.split(" ", 2)
+        label = I18n.t("countries.#{code}", default: fallback_name)
+        [ "#{emoji} #{label}", code.to_s ]
+      end
     end
   end
 
@@ -389,7 +398,8 @@ module LanguagesHelper
     I18n.available_locales
       .select { |locale| SUPPORTED_LOCALES.include?(locale.to_s) }
       .map do |locale|
-        label = LANGUAGE_MAPPING[locale.to_sym] || locale.to_s.humanize
+        fallback = LANGUAGE_MAPPING[locale.to_sym] || locale.to_s.humanize
+        label = I18n.t("settings.preferences.show.language_names.#{locale}", default: fallback)
         [ "#{label} (#{locale})", locale ]
       end
       .sort_by { |label, locale| label }
@@ -400,7 +410,8 @@ module LanguagesHelper
       .sort_by { |tz| [ tz.utc_offset, tz.name ] }
       .map do |tz|
         name = tz.name.split(" - ").first.gsub(" (US & Canada)", "")
-        [ "(#{tz.formatted_offset}) #{name}", tz.tzinfo.identifier ]
+        label = I18n.t("settings.preferences.show.timezones.#{tz.tzinfo.identifier}", default: name)
+        [ "(#{tz.formatted_offset}) #{label}", tz.tzinfo.identifier ]
       end
   end
 end

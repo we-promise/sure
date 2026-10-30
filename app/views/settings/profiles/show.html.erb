@@ -180,7 +180,7 @@
         variant: "destructive",
         href: user_path(@user),
         method: :delete,
-        confirm: CustomConfirm.for_resource_deletion("your account", high_severity: true)
+        confirm: CustomConfirm.for_resource_deletion(t(".account"), high_severity: true)
       ) %>
     </div>
   </div>

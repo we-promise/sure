@@ -30,7 +30,7 @@ ru:
       success: Счёт CoinSpot успешно связан
       select_connection: Выберите подключение CoinSpot перед связыванием счетов.
       errors:
-        only_manual: С CoinSpot можно связать только ручные счета криптобиржи, ещё не связанные с провайдером
+        only_manual: 'С CoinSpot можно связать только вручную добавленные счета криптобиржи, ещё не связанные с провайдером.'
         invalid_coinspot_account: Недействительный счёт CoinSpot
         coinspot_account_already_linked: Этот счёт CoinSpot уже связан
     setup_accounts:
@@ -46,7 +46,7 @@ ru:
       select_all: Выбрать все
       import_selected: Импортировать выбранные
       cancel: Отмена
-      creating: Импортирование...
+      creating: 'Импорт…'
     complete_account_setup:
       success:
         one: Импортирован %{count} счёт

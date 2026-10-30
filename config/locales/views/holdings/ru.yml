@@ -26,7 +26,7 @@ ru:
     holding:
       no_cost_basis: Нет стоимости приобретения
       per_share: за акцию
-      shares: "%{qty} акций"
+      shares: '%{qty} ед.'
       unknown: "--"
     index:
       positions:
@@ -96,7 +96,7 @@ ru:
       syncing: Синхронизация...
       ticker_label: Тикер
       total_return_label: Общая доходность
-      trade_history_entry: "%{qty} акций %{security} по цене %{price}"
+      trade_history_entry: '%{security}: %{qty} шт. по цене %{price}'
       truncated_history_warning: История цен доступна только с %{date}. Более ранние
         даты не содержат данных от выбранного поставщика — это может произойти, если
         актив был добавлен после даты вашей сделки или если поставщик предлагает ограниченное

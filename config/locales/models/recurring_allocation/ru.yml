@@ -6,4 +6,4 @@ ru:
         recurring_allocation:
           attributes:
             currency:
-              must_match_occurrence: должна совпадать с валютой платежа
+              must_match_occurrence: 'должна совпадать с валютой регулярного платежа'

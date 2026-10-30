@@ -10,7 +10,8 @@
 
   <% dialog.with_body do %>
     <p class="text-secondary text-sm mb-4">
-      <%= t(".apply_notice_html", count: @rule.affected_resource_count, resource: @rule.resource_type.pluralize) %>
+      <% affected_count = @rule.affected_resource_count %>
+      <%= t(".apply_notice_html", count: affected_count, resource: @rule.resource_name(count: affected_count)) %>
     </p>
 
     <% if @active_rules_above_count.positive? %>

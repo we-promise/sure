@@ -165,6 +165,7 @@ en:
       title: Health
       view_error_details: View error details
       rate_limited: "Rate limited %{time_ago}"
+      rate_limited_recently: Rate limited recently
       recently: recently
       errors: "Errors: %{count}"
       pending_reconciled:

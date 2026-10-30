@@ -1,6 +1,23 @@
 ---
 en:
   rules:
+    back_to_rules: Back to rules
+    all_rules: all rules
+    menu_actions: Actions
+    condition_summary: If %{field} %{operator} %{value}
+    if: IF
+    for: FOR
+    resource_types:
+      transaction:
+        one: transaction
+        other: transactions
+    new:
+      title: New transaction rule
+    edit:
+      title: Edit transaction rule
+      title_with_name: 'Edit transaction rule "%{name}"'
+    apply:
+      success: Transaction rule activated
     no_action: No Action
     no_condition: No condition
     notification_baseline_timed_out: This rule is still off. Checking which transactions it already matches took too long, and without that check it would email all of them. Simplify its conditions, then turn it on again.
@@ -68,6 +85,24 @@ en:
       view_usage_history: View usage history
       confirm_changes: Confirm changes
     actions:
+      labels:
+        set_transaction_category: Set transaction category
+        set_transaction_tags: Set transaction tags
+        set_transaction_merchant: Set transaction merchant
+        set_transaction_name: Set transaction name
+        set_investment_activity_label: Set investment activity label
+        exclude_transaction: Exclude from budgeting and reports
+        set_as_transfer_or_payment: Set as transfer or payment
+        split_transaction: Split transaction
+        send_email_notification: Send email notification
+        fill_similar_merchants: Fill missing merchants from similar transactions (no AI)
+        bayes_categorize: Categorize with the classifier (no AI)
+        auto_categorize: Auto-categorize transactions with AI
+        auto_detect_merchants: Auto-detect merchants
+      auto_categorize_with_cost: "%{label} (~$%{cost} per 20 transactions)"
+      auto_categorize_cost_unavailable: "%{label} (cost: N/A)"
+      auto_categorize_no_provider: "%{label} (no categorization provider configured)"
+      auto_detect_merchants_with_ai: Auto-detect merchants with AI ($$)
       to_label: to
       value_placeholder: Enter a value
       split:
@@ -133,6 +168,16 @@ en:
       confirm_button: Reset Cache
       success: AI cache is being cleared. This may take a few moments.
     condition_filters:
+      labels:
+        transaction_name: Transaction name
+        transaction_amount: Transaction amount
+        transaction_type: Transaction type
+        transaction_merchant: Transaction merchant
+        transaction_category: Transaction category
+        transaction_tag: Transaction tag
+        transaction_details: Transaction details
+        transaction_notes: Transaction notes
+        transaction_account: Transaction account
       transaction_type:
         income: Income
         expense: Expense

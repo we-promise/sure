@@ -84,7 +84,7 @@ en:
         similar_threshold_hint: Lowest similarity of the descriptions, ignoring numbers and reference codes (0.5–0.99). Lower fills more, with more mistakes. Auto-tune's Apply sets it too.
       matcher_tuning:
         similar_common_share: Cutoff
-        similar_common_share_hint: A word or 3-letter piece in more than this share of the transactions it copies from (0.01–1), and in at least 50 of them, is too common to tell them apart, like "card" or "payment", so it's ignored. Higher counts more of them. Auto-tune's Apply sets it too.
+        similar_common_share_hint: A word or 3-letter piece in more than this share of the transactions it copies from (0.01–1), and in more than 50 of them, is too common to tell them apart, like "card" or "payment", so it's ignored. A higher cutoff ignores fewer of them. Auto-tune's Apply sets it too.
         similar_min_neighbours: Merchants agreeing
         similar_min_neighbours_hint: How many near-duplicates must have the merchant, with none having another. 1 copies a single transaction, mistakes too.
         similar_min_neighbours_option:

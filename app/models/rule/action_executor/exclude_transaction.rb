@@ -1,8 +1,4 @@
 class Rule::ActionExecutor::ExcludeTransaction < Rule::ActionExecutor
-  def label
-    "Exclude from budgeting and reports"
-  end
-
   def claimed_attributes
     [ :excluded ]
   end

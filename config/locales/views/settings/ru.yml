@@ -4,22 +4,24 @@ ru:
     encryption_migration_guide: Руководство по настройке шифрования и миграции
     ai_prompts:
       show:
-        disable_ai: Отключить AI Ассистента
+        disable_ai: 'Отключить ИИ-ассистента'
         main_system_prompt:
-          subtitle: Основные инструкции, определяющие поведение AI ассистента во всех
-            чатах
+          subtitle: 'Основные инструкции, определяющие поведение ИИ-ассистента во всех чатах.'
           title: Основной системный запрос
           label: Системный запрос чата
         merchant_detector:
-          subtitle: AI идентифицирует и обогащает данные операций информацией о продавцах
+          subtitle: 'ИИ определяет продавцов и дополняет данные операций сведениями о них.'
           title: Определитель продавцов
         openai_label: OpenAI
         page_title: Запросы ИИ
         prompt_instructions: Инструкции по запросу
         transaction_categorizer:
-          subtitle: AI автоматически категоризирует ваши операции на основе заданных
-            категорий
+          subtitle: 'ИИ автоматически распределяет операции по категориям согласно заданным инструкциям.'
           title: Категоризатор операций
+        insight_dig_in:
+          title: Разбор вывода ИИ
+          subtitle: Первое сообщение чата, когда вы разбираете вывод с ИИ
+          label: Сообщение для разбора вывода
         save: Сохранить запросы
         save_confirm:
           title: Сохранить собственные запросы ИИ?
@@ -37,38 +39,35 @@ ru:
         reset_confirm_body: Ваш собственный запрос будет удалён, а встроенные инструкции по умолчанию — восстановлены.
         status_custom: Используется ваш собственный запрос
         status_default: Используется встроенный запрос по умолчанию
-        format_risk: 'В вашем запросе для %{provider} нет примера {"%{key}": ...}. Каждое обращение к модели по-прежнему требует этот формат, поэтому разбор обычно работает, но если ваш запрос требует другой формат вывода, разбор сломается.'
+        format_risk: 'В вашем запросе для %{provider} нет примера {"%{key}": ...}. В каждом запросе к модели по-прежнему запрашивается этот формат, поэтому разбор обычно работает. Но если в вашем запросе задан другой формат вывода, разбор не сработает.'
       update:
         success: Запросы ИИ обновлены
         multiple_errors: Несколько запросов слишком длинные (максимум %{count} символов)
     appearances:
       show:
-        dashboard_subtitle: Настройте отображение панели
-        dashboard_title: Панель
-        dashboard_two_column_description: Отображение виджетов панели в две колонки
-          на больших экранах. Если выключено, виджеты располагаются в одну колонку.
-        dashboard_two_column_title: Двухколоночный макет
-        disable_modal_click_outside_description: Запретить закрытие модальных окон при 
-          клике вне их. Полезно, чтобы не потерять несохранённые изменения.
-        disable_modal_click_outside_title: Не закрывать модальные окна при клике вне их
-        modals_subtitle: Настройка поведения модальных окон
+        dashboard_subtitle: Настройте главную страницу
+        dashboard_title: Главная страница
+        dashboard_two_column_description: На широких экранах виджеты будут показаны в две колонки. Ширину и высоту каждого виджета можно изменить в его заголовке. Если отключить, виджеты выстроятся в одну колонку.
+        dashboard_two_column_title: Две колонки
+        disable_modal_click_outside_description: Не закрывать модальные окна при клике вне них, чтобы не потерять несохранённые изменения.
+        disable_modal_click_outside_title: Не закрывать модальные окна при клике вне них
+        modals_subtitle: Настройте поведение модальных окон
         modals_title: Модальные окна
         page_title: Внешний вид
-        split_grouped_description: Показывать разделённые операции сгруппированными
-          под их родительской в списке операций. Если выключено, разделённые элементы
-          отображаются как отдельные строки.
+        split_grouped_description: Показывать части разделённой операции вместе с исходной в списке. Если отключить, части будут показаны отдельными строками.
         split_grouped_title: Группировать разделённые операции
         auto_generate_transaction_names_title: "Автоматически создавать названия транзакций"
         auto_generate_transaction_names_description: "Если название вручную введённой транзакции оставлено пустым, оно заполняется по выбранной категории и продавцу (например, «Развлечения - Netflix»). Если ничего не выбрано, название по-прежнему обязательно. Действует для всего домохозяйства и только для новых транзакций."
         theme_dark: Тёмная
         theme_light: Светлая
-        theme_subtitle: Выберите предпочитаемую тему для приложения
+        theme_preview_alt: 'Предпросмотр темы: %{theme}'
+        theme_subtitle: Выберите тему оформления
         theme_system: Системная
         theme_title: Тема
         transactions_subtitle: Настройте отображение операций
         transactions_title: Операции
-        dashboard_account_groups_title: Развёрнуты по умолчанию
-        dashboard_account_groups_description: Эти разделы счетов будут изначально развёрнуты на панели и в боковой панели счетов. Вы по-прежнему можете свернуть их вручную в любой момент.
+        dashboard_account_groups_title: Открывать по умолчанию
+        dashboard_account_groups_description: Эти разделы счетов будут открыты на главной странице и в боковой панели счетов. Их можно свернуть вручную в любой момент.
     debugs:
       show:
         context:
@@ -122,12 +121,23 @@ ru:
         completion: ответ
         cost_by_model: Стоимость по моделям
         cost_by_operation: Стоимость по операциям
-        cost_estimates_description: 'Стоимость оценивается по опубликованным ценам поставщиков, проверенным %{date}. Фактические затраты могут отличаться. Цены указаны за 1 миллион токенов и варьируются в зависимости от модели. Пользовательские или самохостинг-модели будут отображаться как "N/A" и не включаются в общую стоимость.'
+        cost_estimates_description: 'Стоимость оценивается по опубликованным ценам поставщиков, проверенным %{date}. Фактические затраты могут отличаться. Цены указаны за 1 миллион токенов и варьируются в зависимости от модели. Для пользовательских и самохостинг-моделей будет показано «Нет данных», и они не включаются в общую стоимость.'
         cost_estimates_title: Оценка стоимости
         end_date: Дата окончания
         failed: Неудачно
         filter: Фильтр
+        http_status: 'Статус HTTP: %{status}'
         no_usage_data: Данные об использовании за выбранный период не найдены
+        not_available: Нет данных
+        operations:
+          auto_categorize: Автоматическая категоризация
+          auto_detect_merchants: Автоматическое определение продавцов
+          chat: Чат
+          enhance_provider_merchants: Дополнение данных продавцов
+          extract_bank_statement: Извлечение банковской выписки
+          process_pdf: Обработка PDF
+          process_pdf_vision: Обработка PDF с распознаванием изображений
+          suggest_bill_setup: Подбор настроек счёта
         page_title: Использование LLM и затраты
         prompt: запрос
         recent_usage: Недавнее использование
@@ -162,22 +172,22 @@ ru:
         unknown_client: Неизвестный клиент
     payments:
       show:
-        choose_level: Выберите уровень
-        contributions_note: Взносы в %{product_name} будут отображаться здесь.
-        currently_on_plan: В настоящее время на
+        choose_level: Выбрать уровень поддержки
+        contributions_note: Ваша поддержка %{product_name} будет отображаться здесь.
+        currently_on_plan: 'Текущий план:'
         manage: Управлять
-        not_contributing_emphasis: не вносите вклад
-        not_contributing_prefix: В настоящее время вы
-        page_title: Оплата
+        not_contributing_emphasis: не поддерживаете проект
+        not_contributing_prefix: Сейчас вы
+        page_title: Поддержка
         payment_via_stripe: Оплата через Stripe
-        subscription_subtitle: Обновите данные вашей кредитной карты
-        subscription_title: Управление взносами
+        subscription_subtitle: Обновите данные банковской карты
+        subscription_title: Поддержка проекта
         trial_days_left:
           few: Данные будут удалены через %{count} дня
           many: Данные будут удалены через %{count} дней
           one: Данные будут удалены через %{count} день
           other: Данные будут удалены через %{count} дня
-        trialing: В настоящее время используется открытая демо-версия %{product_name}
+        trialing: Вы используете открытую демоверсию %{product_name}
     preferences:
       show:
         additional_currencies_label: Дополнительные валюты
@@ -185,32 +195,49 @@ ru:
         base_currency_label: Базовая валюта
         country: Страна
         currencies_more: "+%{count} ещё"
-        currencies_subtitle: Выберите, какие валюты будут отображаться в денежных полях (%{moniker})
+        currencies_subtitle: Выберите валюты для денежных полей (%{moniker}).
         currencies_title: '%{moniker}: валюты'
         currency: Валюта
         currency_search_placeholder: Поиск валют
         date_format: Формат даты
         default_account_order: Порядок счетов по умолчанию
+        default_account_order_hint: При ручной сортировке перетаскивайте счета в боковой панели.
         default_period: Период по умолчанию
-        general_subtitle: Настройте ваши предпочтения
-        general_title: Общие
+        general_subtitle: Настройте основные параметры
+        general_title: Основные
         language: Язык
         language_auto: Язык браузера
+        language_names:
+          ca: Каталанский
+          de: Немецкий
+          en: Английский
+          es: Испанский
+          fr: Французский
+          hu: Венгерский
+          it: Итальянский
+          nb: Норвежский букмол
+          nl: Нидерландский
+          pl: Польский
+          pt-BR: Португальский (Бразилия)
+          pt-PT: Португальский (Португалия)
+          ro: Румынский
+          ru: Русский
+          tr: Турецкий
+          uk: Украинский
+          vi: Вьетнамский
+          zh-CN: Китайский (упрощённый)
+          zh-TW: Китайский (традиционный)
         manage_currencies: Управление валютами
-        manage_currencies_subtitle: Уберите валюты, которые вы никогда не используете,
-          или сократите список до нескольких.
-        month_start_day: Начало бюджетного месяца
-        month_start_day_hint: Установите, когда начинается ваш бюджетный месяц (например,
-          день зарплаты)
-        month_start_day_warning: Ваши бюджеты и расчёты MTD будут использовать этот
-          пользовательский день начала вместо 1-го числа каждого месяца.
+        manage_currencies_subtitle: Снимите выбор с валют, которыми не пользуетесь, или оставьте только нужные.
+        month_start_day: Бюджетный месяц начинается
+        month_start_day_hint: Выберите день начала бюджетного месяца — например, день получения зарплаты.
+        month_start_day_warning: Бюджеты и расчёты за текущий месяц будут вестись от выбранного дня, а не с 1-го числа.
         no_additional_currencies: Не выбрано
         no_matching_currencies: Валюты не найдены
-        page_title: Предпочтения
+        page_title: Настройки
         preview:
-          description: Подключитесь к функциям в процессе разработки, отмеченным как
-            предварительный просмотр или canary.
-          title: Включить функции предварительного просмотра
+          description: Включите функции в разработке, помеченные как предварительные или экспериментальные.
+          title: Включить предварительные функции
         save_currencies: Сохранить валюты
         select_all_currencies: Выбрать все
         select_base_only: Только базовая валюта
@@ -219,91 +246,219 @@ ru:
           many: Выбрано %{count}
           one: Выбрано %{count}
           other: Выбрано %{count}
-        sharing_default_label: Совместное использование по умолчанию для новых счетов
-        sharing_private: Оставить приватным по умолчанию
-        sharing_shared: Делитесь со всеми участниками
-        sharing_subtitle: Управляйте тем, как счета доступны участникам (%{moniker})
-        sharing_title: '%{moniker}: совместный доступ'
+        sharing_default_label: Доступ к новым счетам по умолчанию
+        sharing_private: Оставлять личными
+        sharing_shared: Открывать доступ всем участникам
+        sharing_subtitle: Настройте доступ участников к новым счетам (%{moniker}).
+        sharing_title: '%{moniker}: общий доступ'
         timezone: Часовой пояс
-        translations_notice: Обратите внимание, что мы всё ещё работаем над переводами
-          на различные языки.
+        timezones:
+          Etc/GMT+12: Международная линия перемены дат
+          Pacific/Pago_Pago: Паго-Паго
+          Pacific/Midway: Мидуэй
+          Pacific/Honolulu: Гонолулу
+          America/Juneau: Джуно
+          America/Los_Angeles: Лос-Анджелес
+          America/Tijuana: Тихуана
+          America/Phoenix: Финикс
+          America/Mazatlan: Масатлан
+          America/Denver: Денвер
+          America/Guatemala: Гватемала
+          America/Chicago: Чикаго
+          America/Chihuahua: Чиуауа
+          America/Mexico_City: Мехико
+          America/Monterrey: Монтеррей
+          America/Regina: Реджайна
+          America/Bogota: Богота
+          America/New_York: Нью-Йорк
+          America/Indiana/Indianapolis: Индианаполис
+          America/Lima: Лима
+          America/Halifax: Галифакс
+          America/Caracas: Каракас
+          America/Guyana: Гайана
+          America/La_Paz: Ла-Пас
+          America/Puerto_Rico: Пуэрто-Рико
+          America/Santiago: Сантьяго
+          America/St_Johns: Сент-Джонс
+          America/Asuncion: Асунсьон
+          America/Sao_Paulo: Сан-Паулу
+          America/Argentina/Buenos_Aires: Буэнос-Айрес
+          America/Montevideo: Монтевидео
+          America/Nuuk: Нуук
+          Atlantic/South_Georgia: Южная Георгия
+          Atlantic/Azores: Азорские острова
+          Atlantic/Cape_Verde: Кабо-Верде
+          Europe/London: Лондон
+          Europe/Lisbon: Лиссабон
+          Africa/Monrovia: Монровия
+          Etc/UTC: UTC
+          Europe/Amsterdam: Амстердам
+          Europe/Belgrade: Белград
+          Europe/Berlin: Берлин
+          Europe/Zurich: Цюрих
+          Europe/Bratislava: Братислава
+          Europe/Brussels: Брюссель
+          Europe/Budapest: Будапешт
+          Africa/Casablanca: Касабланка
+          Europe/Copenhagen: Копенгаген
+          Europe/Dublin: Дублин
+          Europe/Ljubljana: Любляна
+          Europe/Madrid: Мадрид
+          Europe/Paris: Париж
+          Europe/Prague: Прага
+          Europe/Rome: Рим
+          Europe/Sarajevo: Сараево
+          Europe/Skopje: Скопье
+          Europe/Stockholm: Стокгольм
+          Europe/Vienna: Вена
+          Europe/Warsaw: Варшава
+          Africa/Algiers: Алжир
+          Europe/Zagreb: Загреб
+          Europe/Athens: Афины
+          Europe/Bucharest: Бухарест
+          Africa/Cairo: Каир
+          Africa/Harare: Хараре
+          Europe/Helsinki: Хельсинки
+          Asia/Jerusalem: Иерусалим
+          Europe/Kaliningrad: Калининград
+          Europe/Kiev: Киев
+          Africa/Johannesburg: Йоханнесбург
+          Europe/Riga: Рига
+          Europe/Sofia: София
+          Europe/Tallinn: Таллин
+          Europe/Vilnius: Вильнюс
+          Asia/Baghdad: Багдад
+          Europe/Istanbul: Стамбул
+          Asia/Kuwait: Эль-Кувейт
+          Europe/Minsk: Минск
+          Europe/Moscow: Москва
+          Africa/Nairobi: Найроби
+          Asia/Riyadh: Эр-Рияд
+          Europe/Volgograd: Волгоград
+          Asia/Tehran: Тегеран
+          Asia/Muscat: Маскат
+          Asia/Baku: Баку
+          Europe/Samara: Самара
+          Asia/Tbilisi: Тбилиси
+          Asia/Yerevan: Ереван
+          Asia/Kabul: Кабул
+          Asia/Almaty: Алма-Ата
+          Asia/Yekaterinburg: Екатеринбург
+          Asia/Karachi: Карачи
+          Asia/Tashkent: Ташкент
+          Asia/Kolkata: Калькутта
+          Asia/Colombo: Коломбо
+          Asia/Kathmandu: Катманду
+          Asia/Dhaka: Дакка
+          Asia/Urumqi: Урумчи
+          Asia/Rangoon: Янгон
+          Asia/Bangkok: Бангкок
+          Asia/Jakarta: Джакарта
+          Asia/Krasnoyarsk: Красноярск
+          Asia/Novosibirsk: Новосибирск
+          Asia/Shanghai: Шанхай
+          Asia/Chongqing: Чунцин
+          Asia/Hong_Kong: Гонконг
+          Asia/Irkutsk: Иркутск
+          Asia/Kuala_Lumpur: Куала-Лумпур
+          Australia/Perth: Перт
+          Asia/Singapore: Сингапур
+          Asia/Taipei: Тайбэй
+          Asia/Ulaanbaatar: Улан-Батор
+          Asia/Tokyo: Токио
+          Asia/Seoul: Сеул
+          Asia/Yakutsk: Якутск
+          Australia/Adelaide: Аделаида
+          Australia/Darwin: Дарвин
+          Australia/Brisbane: Брисбен
+          Australia/Canberra: Канберра
+          Pacific/Guam: Гуам
+          Australia/Hobart: Хобарт
+          Australia/Melbourne: Мельбурн
+          Pacific/Port_Moresby: Порт-Морсби
+          Australia/Sydney: Сидней
+          Asia/Vladivostok: Владивосток
+          Asia/Magadan: Магадан
+          Pacific/Noumea: Нумеа
+          Pacific/Guadalcanal: Гуадалканал
+          Asia/Srednekolymsk: Среднеколымск
+          Pacific/Auckland: Окленд
+          Pacific/Fiji: Фиджи
+          Asia/Kamchatka: Камчатка
+          Pacific/Majuro: Маджуро
+          Pacific/Chatham: Чатем
+          Pacific/Tongatapu: Тонгатапу
+          Pacific/Apia: Апиа
+          Pacific/Fakaofo: Факаофо
+        translations_notice: Мы продолжаем переводить интерфейс на другие языки.
         budget_title: Бюджет
-        budget_subtitle: Настройте работу ваших бюджетов
+        budget_subtitle: Настройте правила расчёта бюджета
+        investment_contributions_as_spending: Считать переводы в инвестиции расходами
+        investment_contributions_as_spending_hint: Переводы на инвестиционные счета будут учитываться как расходы в бюджетах, отчётах и диаграмме денежного потока. Отключите, чтобы показывать их как инвестиции.
         personal_budgets: Личные бюджеты
-        personal_budgets_hint: Включить отдельные бюджеты для каждого участника семьи.
+        personal_budgets_hint: Создать отдельный бюджет для каждого участника.
         household_budget_enabled: Общий бюджет
-        household_budget_enabled_hint: Вести общий бюджет домохозяйства наряду с личными. Отключите, чтобы использовать только личные бюджеты.
-        budget_sharing_title: Общий доступ к бюджету
-        budget_sharing_subtitle: Разрешите другим участникам просматривать или изменять ваш личный бюджет
-        budget_sharing_no_members: 'Нет других участников, с которыми можно поделиться: %{moniker} состоит только из вас'
+        household_budget_enabled_hint: Ведите общий бюджет вместе с личными. Отключите, чтобы оставить только личные бюджеты.
+        budget_sharing_title: Доступ к личным бюджетам
+        budget_sharing_subtitle: Разрешите другим участникам просматривать или редактировать ваш личный бюджет.
+        budget_sharing_no_members: '%{moniker}: нет других участников, которым можно открыть доступ.'
         budget_sharing_permission_label: Доступ для %{name}
         budget_sharing_permissions:
           none: Нет доступа
           read_only: Только просмотр
-          read_write: Может изменять
+          read_write: Просмотр и редактирование
     profiles:
       destroy:
-        cannot_remove_self: Вы не можете удалить себя из аккаунта.
-        member_owns_other_family_data: Этот участник всё ещё владеет счетами в другом
-          домохозяйстве и не может быть удалён. Сначала передайте или удалите эти счета.
-        member_removal_failed: Произошла ошибка при удалении участника.
-        member_removed: Участник успешно удалён.
-        not_authorized: У вас нет прав для удаления участников.
+        cannot_remove_self: Нельзя удалить себя из аккаунта.
+        member_owns_other_family_data: У этого участника остались счета в другой семье. Сначала передайте или удалите их.
+        member_removal_failed: Не удалось удалить участника.
+        member_removed: Участник удалён.
+        not_authorized: У вас нет прав удалять участников.
       show:
+        account: аккаунт
         confirm_delete:
-          body: Вы уверены, что хотите навсегда удалить свой аккаунт? Это действие
-            необратимо.
+          body: Удалить аккаунт навсегда? Это действие необратимо.
           title: Удалить аккаунт?
         confirm_remove_invitation:
-          body: Вы уверены, что хотите удалить приглашение для %{email}?
+          body: Удалить приглашение для %{email}?
           title: Удалить приглашение
         confirm_remove_member:
-          body: Вы уверены, что хотите удалить %{name} из вашего аккаунта?
+          body: Удалить %{name} из аккаунта?
           title: Удалить участника
         confirm_reset:
-          body: Вы уверены, что хотите сбросить свой аккаунт? Это удалит все ваши
-            счета, категории, продавцов, теги и другие данные. Это действие нельзя
-            отменить.
-          title: Сбросить аккаунт?
+          body: Все счета, категории, продавцы, теги и другие финансовые данные будут удалены без возможности восстановления. Профиль сохранится.
+          title: Сбросить финансовые данные?
         confirm_reset_with_sample_data:
-          body: Вы уверены, что хотите сбросить свой аккаунт и загрузить демонстрационные
-            данные? Это удалит ваши существующие данные и заменит их демонстрационными,
-            чтобы вы могли безопасно исследовать Sure.
-          title: Сбросить аккаунт и загрузить демонстрационные данные?
-        danger_zone_title: Опасная зона
+          body: Текущие финансовые данные будут удалены без возможности восстановления и заменены демонстрационными данными. Профиль сохранится.
+          title: Заменить данные демонстрационными?
+        danger_zone_title: Сброс и удаление
         delete_account: Удалить аккаунт
-        delete_account_warning: Удаление вашего аккаунта навсегда удалит все ваши
-          данные и не может быть отменено.
+        delete_account_warning: Все данные будут удалены без возможности восстановления.
         email: Электронная почта
         first_name: Имя
         group_form_input_placeholder: Введите название группы
         group_form_label: Название группы
-        group_title: Участники группы
-        household_form_input_placeholder: Введите название домохозяйства
-        household_form_label: Название домохозяйства
-        household_subtitle: Приглашённые могут войти в общий аккаунт (%{moniker}) и получить доступ к общим ресурсам.
-        household_title: Домохозяйство
+        group_title: Группа
+        household_form_input_placeholder: Введите название семьи
+        household_form_label: Название семьи
+        household_subtitle: Приглашённые участники смогут войти в общий аккаунт и пользоваться общими данными (%{moniker}).
+        household_title: Семья
         invitation_link: Ссылка на приглашение
         invite_member: Добавить участника
         last_name: Фамилия
-        page_title: Информация о профиле
-        pending: В ожидании
-        profile_subtitle: Настройте, как вы выглядите в %{product_name}
+        page_title: Профиль
+        pending: Ожидает подтверждения
+        profile_subtitle: Настройте отображение своего имени в %{product_name}
         profile_title: Личные данные
         remove_invitation: Удалить приглашение
         remove_member: Удалить участника
-        resend_confirmation_link: Запросить новое письмо для подтверждения
-        reset_account: Сбросить аккаунт
-        reset_account_warning: Сброс вашего аккаунта удалит все ваши счета, категории,
-          продавцов, теги и другие данные, но сохранит ваш пользовательский аккаунт.
-        reset_account_with_sample_data: Сброс и предзагрузка
-        reset_account_with_sample_data_warning: Удалите все ваши существующие данные
-          и затем загрузите свежие демонстрационные данные, чтобы вы могли исследовать
-          с предзаполненной средой.
+        resend_confirmation_link: отправьте письмо повторно
+        reset_account: Сбросить данные
+        reset_account_warning: Все финансовые данные будут удалены без возможности восстановления. Профиль сохранится.
+        reset_account_with_sample_data: Заменить демонстрационными данными
+        reset_account_with_sample_data_warning: Текущие финансовые данные будут безвозвратно заменены демонстрационными. Профиль сохранится.
         save: Сохранить
-        unconfirmed_email_notice_html: Вы запросили смену email на %{email}. Перейдите по 
-          ссылке в письме, чтобы подтвердить изменения. Если письмо не пришло, проверьте 
-          папку Спам или %{resend_link}.
+        unconfirmed_email_notice_html: Вы запросили смену адреса на %{email}. Перейдите по ссылке в письме, чтобы подтвердить изменение. Если письма нет, проверьте папку «Спам» или %{resend_link}.
     providers:
       akahu_panel:
         step_1_html: Перейдите по ссылке %{link} и создайте персональное приложение.
@@ -362,10 +517,28 @@ ru:
         sync: Синхронизировать
         syncing: Синхронизация...
       connect: Подключить
+      financekit:
+        app_store: App Store
+        coming_soon: Скоро появится!
+        description: Управляйте подключениями Apple Wallet в приложении Sure для iOS. Данные кошелька синхронизируются, пока приложение открыто; фоновая синхронизация без открытого приложения пока недоступна.
+        summary: Синхронизация кошелька
+        accounts: Связанные счета
+        linked_accounts:
+          one: "%{count} связанный счёт"
+          few: "%{count} связанных счёта"
+          many: "%{count} связанных счетов"
+          other: "%{count} связанного счёта"
+        status:
+          active: Синхронизация включена
+          repair_required: Требуется исправление — откройте приложение Sure для iOS
+        last_accepted_at: Последняя передача в Sure
+        last_imported_at: Последний импорт в семью
+        not_yet: Ещё нет
       drawer_trust_statement: Доступ только для чтения. Sure никогда не может перемещать
         деньги, а ваши учетные данные хранятся в зашифрованном виде.
       empty_filter: Провайдеры, соответствующие фильтру, не найдены.
       enable_banking_panel:
+        default_connection_name: Подключение Enable Banking
         add_connection: Добавить подключение
         application_id_label: ID приложения
         application_id_placeholder_new: Введите ID приложения
@@ -433,7 +606,7 @@ ru:
             должен включать ваш запрос активности IBKR Flex.
           title: Разделы, поля и конфигурация
         not_configured: Не настроено.
-        query_id_label: Query ID
+        query_id_label: ID запроса
         query_id_placeholder_existing: Оставьте пустым, чтобы сохранить текущий ID
           запроса
         query_id_placeholder_new: Введите ваш ID запроса IBKR Flex
@@ -513,6 +686,7 @@ ru:
         syncing: Синхронизация...
         update_connection: Обновить подключение
       lunchflow_panel:
+        default_connection_name: Подключение Lunch Flow
         api_key_label: API-ключ
         api_key_placeholder_new: Вставьте API-ключ здесь
         api_key_placeholder_update: Введите новый API-ключ для обновления
@@ -526,6 +700,26 @@ ru:
       maturity:
         alpha: Альфа
         beta: Бета
+      names:
+        onchain_wallet: Ончейн-кошельки
+      regions:
+        au: Австралия
+        ca: Канада
+        cz: Чехия
+        es: Испания
+        eu: ЕС
+        global: Весь мир
+        nz: Новая Зеландия
+        ua: Украина
+        uk: Великобритания
+        us: США
+      kinds:
+        bank: Банки
+        crypto: Криптовалюты
+        investment: Инвестиции
+        property: Недвижимость
+      tiers:
+        paid: Платный
       meta:
         last_synced: Синхронизировано %{time} назад
         no_recent_sync: Синхронизация просрочена
@@ -548,6 +742,29 @@ ru:
           для реальных счетов.
         step_3: Вставьте ваши учётные данные ниже и подключитесь.
       provider_form:
+        environment_configuration_hint: Настройки можно задать через переменные окружения или переопределить ниже.
+        optional: Необязательно
+        fields:
+          plaid:
+            client_id:
+              label: ID клиента
+              description: Ваш Client ID из панели Plaid.
+            secret:
+              label: Секретный ключ
+              description: Ваш Secret Key из панели Plaid.
+            environment:
+              label: Среда
+              description: "Среда Plaid: sandbox, development или production."
+          plaid_eu:
+            client_id:
+              label: ID клиента
+              description: Ваш Client ID из панели Plaid для региона ЕС.
+            secret:
+              label: Секретный ключ
+              description: Ваш Secret Key из панели Plaid для региона ЕС.
+            environment:
+              label: Среда
+              description: "Среда Plaid: sandbox, development или production."
         save_and_connect: Сохранить и подключить
       recently_synced: Недавно синхронизировано. Попробуйте снова через мгновение.
       search_filters:
@@ -589,8 +806,8 @@ ru:
         coinstats: Отслеживайте весь ваш криптопортфель через кошельки и биржи.
         enable_banking: Синхронизируйте европейские банковские счета через открытый
           банкинг PSD2.
-        ibkr: Синхронизируйте инвестиционные счета Interactive Brokers через Flex
-          Query импорт.
+        financekit: Синхронизируйте некоторые счета FinanceKit через приложение Sure для iOS.
+        ibkr: Синхронизируйте инвестиционные счета Interactive Brokers через импорт Flex Query.
         indexa_capital: Отслеживайте ваш автоматизированный инвестиционный портфель
           Indexa Capital.
         kraken: Синхронизируйте балансы Kraken и спотовые торговые операции с использованием
@@ -599,11 +816,10 @@ ru:
           ЕС, США и другие!)
         mercury: Синхронизируйте ваши бизнес-счета Mercury автоматически.
         plaid: Подключите тысячи финансовых учреждений США через Plaid.
-        plaid_eu: Подключите европейские финансовые учреждения через Plaid (PSD2 /
-          Open Banking).
+        plaid_eu: Подключите европейские финансовые учреждения через Plaid (PSD2 / открытый банкинг).
         simplefin: Подключите банковские счета США через открытый протокол SimpleFIN.
         snaptrade: Подключите брокерские счета через сеть агрегации SnapTrade.
-        sophtron: Подключите банки и коммунальные услуги США и Канады.
+        sophtron: 'Подключите банки и поставщиков коммунальных услуг США и Канады.'
         redbark: Синхронизируйте австралийские банковские счета через открытый банкинг Redbark.
         monobank: Синхронизируйте карты и «банки» Monobank из Украины с помощью персонального API-токена.
         fio: Синхронизируйте счёт Fio banka с помощью API-токена только для чтения.
@@ -613,11 +829,13 @@ ru:
         trading212: Синхронизируйте инвестиционный портфель Trading 212 с помощью API-ключа только для чтения.
         trade_republic: Синхронизируйте инвестиционный счёт Trade Republic через защищённый веб-вход только для чтения.
         questrade: Синхронизируйте инвестиционные счета Questrade напрямую через Questrade API.
+        up: Синхронизируйте счета австралийского банка Up с помощью персонального токена доступа.
       up_panel:
         step_1_html: Перейдите по ссылке %{link} и создайте персональный токен доступа.
         step_2: Скопируйте персональный токен доступа.
         step_3: Вставьте токен ниже, сохраните и подключите синхронизированные счета.
       update:
+        failed: Не удалось обновить настройки провайдера. Попробуйте ещё раз.
         no_changes: Изменений не было
         updated_successfully: Настройки поставщика успешно обновлены
       drawer_trust_statement_encryption_unconfigured: Доступ только для чтения. Sure никогда не может перемещать деньги. Настройте явные ключи шифрования, прежде чем хранить учётные данные провайдеров в продакшене.
@@ -736,10 +954,10 @@ ru:
           step_1: Откройте Trading 212 → Settings → API (в веб-версии или мобильном приложении).
           step_2: Сгенерируйте новый API-ключ — Trading 212 покажет API ID и Secret Key.
           step_3: Вставьте оба значения ниже, выберите среду и валюту счёта, затем сохраните.
-        api_key_label: API ID
+        api_key_label: ID API
         api_key_placeholder_new: Вставьте ваш API ID Trading 212
         api_key_placeholder_existing: Оставьте пустым, чтобы сохранить текущий API ID
-        api_secret_label: Secret Key
+        api_secret_label: Секретный ключ
         api_secret_placeholder_new: Вставьте ваш Secret Key Trading 212
         api_secret_placeholder_existing: Оставьте пустым, чтобы сохранить текущий Secret Key
         environment_label: Среда
@@ -771,22 +989,18 @@ ru:
             - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
           title: Отсутствуют ключи шифрования
         page_title: Безопасность
-        sso_confirm_body: Вы уверены, что хотите отключить ваш аккаунт %{provider}?
-          Вы можете подключить его снова, войдя с этим поставщиком.
+        sso_confirm_body: Отключить вход через %{provider}? Позже его можно будет подключить снова, войдя через этого провайдера.
         sso_confirm_button: Отключить
-        sso_confirm_title: Отключить аккаунт?
-        sso_connect_hint: Выйдите и войдите с помощью поставщика SSO, чтобы подключить
-          аккаунт.
+        sso_confirm_title: Отключить вход?
+        sso_connect_hint: Выйдите из аккаунта, затем войдите через провайдера единого входа, чтобы подключить его.
         sso_disconnect: Отключить
-        sso_last_used: Последнее использование
+        sso_last_used: Последний вход
         sso_never: Никогда
-        sso_no_email: Нет электронной почты
-        sso_no_identities: Нет подключённых аккаунтов SSO
-        sso_subtitle: Управляйте подключениями вашего аккаунта единого входа
-        sso_title: Подключённые аккаунты
-        sso_warning_message: Это ваш единственный метод входа. Вы должны установить
-          пароль в настройках безопасности перед отключением, иначе вы можете потерять
-          доступ к своему аккаунту.
+        sso_no_email: Адрес электронной почты не указан
+        sso_no_identities: Нет подключённых способов входа
+        sso_subtitle: Управляйте способами входа через единый вход
+        sso_title: Единый вход
+        sso_warning_message: Это единственный способ входа в аккаунт. Перед отключением задайте пароль в настройках безопасности, иначе можете потерять доступ к аккаунту.
     settings_nav:
       accounts_label: Счета
       advanced_section_title: Расширенные
@@ -800,19 +1014,19 @@ ru:
       debug_label: Отладка
       exports_label: Экспорт
       feedback_label: Обратная связь
-      general_section_title: Общие
+      general_section_title: Основные
       guides_label: Руководства
       imports_label: Импорт
       llm_usage_label: Использование LLM
       logout: Выйти
       mcp_label: MCP
       merchants_label: Продавцы
-      other_section_title: Ещё
+      other_section_title: Другое
       payment_label: Оплата
-      preferences_label: Предпочтения
-      profile_label: Информация о профиле
+      preferences_label: Настройки
+      profile_label: Профиль
       providers_label: Провайдеры
-      recurring_transactions_label: Регулярные
+      recurring_transactions_label: Регулярные операции
       rules_label: Правила
       security_label: Безопасность
       self_hosting_label: Самостоятельный хостинг
@@ -824,6 +1038,7 @@ ru:
       whats_new_label: Что нового
       background_jobs_label: Фоновые задачи
       system_health_label: Состояние системы
+      classifier_label: Классификатор
     settings_nav_link_large:
       next: Далее
       previous: Назад

@@ -118,7 +118,7 @@
     <div class="space-y-4"
          data-controller="currency-preferences"
          data-currency-preferences-base-currency-value="<%= @user.family.primary_currency_code %>"
-         data-currency-preferences-locale-value="<%= I18n.locale %>"
+         data-currency-preferences-locale-value="<%= translation_locale("settings.preferences.show.selected_currencies_count") %>"
          data-currency-preferences-selected-count-translations-value="<%= selected_count_translations.to_json %>">
       <% additional_preview_currencies = @user.family.secondary_enabled_currency_objects.first(6) %>
       <% additional_currency_count = @user.family.secondary_enabled_currency_objects.count %>
@@ -220,7 +220,7 @@
                     "bg-surface-inset": base_currency,
                     "cursor-default": base_currency
                   ) %>"
-                         data-filter-name="<%= "#{currency.iso_code} #{currency.name}" %>">
+                         data-filter-name="<%= "#{currency.iso_code} #{currency.localized_name}" %>">
                     <%= check_box_tag "user[family_attributes][enabled_currencies][]",
                                       currency.iso_code,
                                       checked,
@@ -239,7 +239,7 @@
                               <%= render DS::Pill.new(label: t(".base_currency_badge"), tone: :neutral, marker: false) %>
                             <% end %>
                           </div>
-                          <p class="mt-0.5 text-sm text-secondary"><%= currency.name %></p>
+                          <p class="mt-0.5 text-sm text-secondary"><%= currency.localized_name %></p>
                         </div>
                       </div>
                     </div>

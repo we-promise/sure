@@ -5,6 +5,108 @@ class RulesTest < ApplicationSystemTestCase
     sign_in @user = users(:family_admin)
   end
 
+  [ 390, 1400 ].each do |width|
+    test "Russian rule creation editing confirmation and list at #{width}px preserve technical values" do
+      @user.update!(locale: "ru")
+      @user.family.rules.destroy_all
+      page.current_window.resize_to(width, 1400)
+      visit new_rule_path(resource_type: "transaction")
+
+      within "dialog" do
+        assert_selector "h2", text: "Новое правило для операций"
+        [ "ЕСЛИ", "ТОГДА", "ДЛЯ", "Все прошлые и будущие операции" ].each { |text| assert_text text }
+        find("input[name='rule[name]']").set("Кофе «утро» <проверка>")
+        click_on "Добавить условие"
+        assert_selector "select[name$='[condition_type]'] option[selected][value='transaction_name']", text: "Название операции", visible: :all
+        assert_selector "select[name$='[operator]'] option[value='like']", text: "Содержит", visible: :all
+        find("[data-rules-target='conditionsList'] input[name$='[value]']").set("Coffee")
+        click_on "Добавить действие"
+        assert_selector "select[name$='[action_type]'] option[selected][value='set_transaction_category']", text: "Назначить категорию", visible: :all
+        assert_no_text(/Back to rules|Transaction name|Set transaction|\bIF\b|\bFOR\b/)
+        assert_operator page.evaluate_script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), :<=, 0
+        save_screenshot(Rails.root.join("tmp/screenshots/russian-rule-new-#{width}.png"))
+        click_on "Создать правило"
+      end
+
+      assert_text "Подтвердите изменения"
+      assert_no_text "transactions"
+      rule = @user.family.rules.order(:created_at).last
+      assert_equal "transaction", rule.resource_type
+      assert_equal "like", rule.conditions.sole.operator
+      assert_equal "Coffee", rule.conditions.sole.value
+      assert_equal "set_transaction_category", rule.actions.sole.action_type
+      assert rule.actions.sole.value.present?
+      within("dialog") { click_on "Подтвердить изменения" }
+      assert_text "Правило для операций включено"
+      visit rules_path
+      within "##{ActionView::RecordIdentifier.dom_id(rule)}" do
+        assert_text "Название операции Содержит Coffee"
+        assert_text "Назначить категорию:"
+        assert_text "Все прошлые и будущие операции"
+        assert_no_text(/\blike\b|transactions/)
+      end
+
+      within "##{ActionView::RecordIdentifier.dom_id(rule)}" do
+        find("button[aria-haspopup='menu']").click
+        click_on "Редактировать"
+      end
+      within "dialog" do
+        assert_selector "h2", text: "Изменить правило «Кофе «утро» <проверка>»"
+        assert_operator page.evaluate_script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), :<=, 0
+        save_screenshot(Rails.root.join("tmp/screenshots/russian-rule-edit-#{width}.png"))
+        click_on "Сохранить правило"
+      end
+      assert_text "Правило обновлено"
+
+      rule.update!(name: nil, effective_date: Date.new(2026, 10, 26))
+      rule.rule_runs.create!(execution_type: "manual", status: "success", executed_at: Time.utc(2026, 10, 26, 12),
+        transactions_queued: 0, transactions_processed: 0, transactions_modified: 0, pending_jobs_count: 0)
+      visit edit_rule_path(rule)
+      assert_selector "dialog h2", text: "Изменить правило для операций"
+      visit rules_path
+      assert_selector "button[aria-label^='Переместить правило «Если название операции содержит Coffee»']"
+      within "##{ActionView::RecordIdentifier.dom_id(rule)}" do
+        assert_text "операции начиная с"
+        assert_text "октября"
+        assert_no_text "Oct"
+      end
+      page.scroll_to(find("table"), align: :center)
+      within "table" do
+        assert_text "октября"
+        assert_no_text "Oct"
+      end
+      page.scroll_to(find("##{ActionView::RecordIdentifier.dom_id(rule)}"), align: :center)
+      assert_no_selector ".translation_missing"
+      assert_operator page.evaluate_script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), :<=, 0
+      save_screenshot(Rails.root.join("tmp/screenshots/russian-rule-list-#{width}.png"))
+
+      within "##{ActionView::RecordIdentifier.dom_id(rule)}" do
+        find("button[aria-label='Действия']").click
+        click_on "Удалить"
+      end
+      within "#confirm-dialog" do
+        assert_selector "h3", text: "Удалить правило?"
+        assert_button "Удалить правило"
+        assert_no_text(/\brule\b/)
+        assert_operator page.evaluate_script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), :<=, 0
+        save_screenshot(Rails.root.join("tmp/screenshots/russian-rule-delete-#{width}.png"))
+        find("button[value='cancel']").click
+      end
+      assert_selector "##{ActionView::RecordIdentifier.dom_id(rule)}"
+      within "main" do
+        find("button[aria-label='Действия']", match: :first).click
+        click_on "Удалить все правила"
+      end
+      within "#confirm-dialog" do
+        assert_selector "h3", text: "Удалить все правила?"
+        assert_button "Удалить все правила"
+        assert_no_text(/all rules/)
+        find("button[value='cancel']").click
+      end
+      assert Rule.exists?(rule.id)
+    end
+  end
+
   test "shows queued processed modified and blocked counts for recent rule runs" do
     rule = @user.family.rules.create!(
       name: "Whole Foods Testing",

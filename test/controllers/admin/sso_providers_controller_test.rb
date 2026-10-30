@@ -1,6 +1,17 @@
 require "test_helper"
 
 class Admin::SsoProvidersControllerTest < ActionDispatch::IntegrationTest
+  test "Russian connection result is localized without changing its JSON contract" do
+    post test_connection_admin_sso_provider_path(@provider, locale: "ru")
+
+    assert_response :success
+    result = response.parsed_body
+    assert_equal true, result["success"]
+    assert_equal "Настройки Google OAuth2 прошли предварительную проверку", result["message"]
+    assert_equal "Full validation occurs during actual authentication", result.dig("details", "note")
+    assert_equal %w[details message success], result.keys.sort
+  end
+
   setup do
     ensure_tailwind_build
     sign_in users(:sure_support_staff)

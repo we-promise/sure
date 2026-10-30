@@ -3,16 +3,13 @@
 # so record names can be interpolated as they are.
 class CustomConfirm
   class << self
-    # `titleize` / `downcase` are English-shaped and stay applied to the record
-    # name so the English copy is unchanged; a locale that needs different
-    # casing can absorb it in its own string.
     def for_resource_deletion(resource_name, high_severity: false)
       new(
         destructive: true,
         high_severity: high_severity,
-        title: I18n.t("shared.custom_confirm.resource_deletion_title", resource: resource_name.titleize),
-        body: I18n.t("shared.custom_confirm.resource_deletion_body", resource: resource_name.downcase),
-        btn_text: I18n.t("shared.custom_confirm.resource_deletion_btn_text", resource: resource_name.titleize)
+        title: I18n.t("shared.custom_confirm.resource_deletion_title", resource: resource_name),
+        body: I18n.t("shared.custom_confirm.resource_deletion_body", resource: resource_name),
+        btn_text: I18n.t("shared.custom_confirm.resource_deletion_btn_text", resource: resource_name)
       )
     end
   end

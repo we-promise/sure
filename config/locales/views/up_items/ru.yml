@@ -6,7 +6,7 @@ ru:
         default_name: Подключение Up
   providers:
     up:
-      description: Подключайте счета австралийского банка Up с помощью персонального токена доступа
+      description: 'Подключите счета австралийского банка Up с помощью персонального токена доступа'
       name: Up
   up_account:
     fallback: Счёт Up
@@ -94,7 +94,7 @@ ru:
     setup_accounts:
       account_type_label: Тип счёта
       account_types:
-        depository: Денежный счёт
+        depository: Счёт или наличные
         loan: Кредит
         skip: Пропустить
       all_accounts_linked: Все счета Up уже связаны.
@@ -112,10 +112,10 @@ ru:
       delete: Удалить
       deletion_in_progress: Идёт удаление
       error: Ошибка
-      no_accounts_description: Получите счета Up и выберите, какие из них связать.
+      no_accounts_description: 'Загрузите данные счетов Up и выберите, какие из них связать.'
       no_accounts_title: Счета ещё не импортированы
       setup_action: Настроить счета
-      setup_description: 'Связано счетов: %{linked} из %{total}.'
+      setup_description: 'Связано %{linked} из %{total} счетов.'
       setup_needed: Требуется настройка счетов
       status_never: Ещё не синхронизировалось
       status_with_summary: Синхронизировано %{timestamp} назад · %{summary}

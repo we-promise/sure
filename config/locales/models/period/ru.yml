@@ -20,9 +20,9 @@ ru:
     custom:
       label: Свой период
       label_short: Свой
-      comparison_label: по сравнению с периодом %{start_date} – %{end_date}
+      comparison_label: 'с %{start_date} по %{end_date}'
     last_10_years:
-      comparison_label: по сравнению с 10 лет назад
+      comparison_label: 'по сравнению с показателями десятилетней давности'
       label: Последние 10 лет
       label_short: 10Л
     last_30_days:
@@ -30,11 +30,11 @@ ru:
       label: Последние 30 дней
       label_short: 30Д
     last_365_days:
-      comparison_label: по сравнению с год назад
+      comparison_label: 'по сравнению с показателями годичной давности'
       label: Последние 365 дней
       label_short: 365Д
     last_5_years:
-      comparison_label: по сравнению с 5 лет назад
+      comparison_label: 'по сравнению с показателями пятилетней давности'
       label: Последние 5 лет
       label_short: 5Л
     last_7_days:
@@ -46,7 +46,7 @@ ru:
       label: Последние 90 дней
       label_short: 90Д
     last_day:
-      comparison_label: по сравнению со вчера
+      comparison_label: 'по сравнению со вчерашним днём'
       label: Последний день
       label_short: 1Д
     last_month:

@@ -1,6 +1,10 @@
 ---
 en:
   activerecord:
+    models:
+      rule:
+        one: Rule
+        other: Rules
     errors:
       models:
         rule:

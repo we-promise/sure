@@ -1,0 +1,9 @@
+---
+ru:
+  tag:
+    dropdowns:
+      show:
+        empty: Меток пока нет
+        manage: Управление метками
+        no_tags: Метки не найдены
+        search_placeholder: Поиск

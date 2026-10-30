@@ -14,14 +14,13 @@ ru:
       account_settings: Настройки аккаунта
       already_contributing: Вы уже поддерживаете нас. Спасибо!
       contribute_and_support_sure: Поддержите и помогите Sure
-      cta: Продолжайте поддерживать разработку этого кода!
+      cta: 'Продолжайте поддерживать разработку Sure!'
       header:
         support: Поддержка
         sure: Sure
         today: сегодня
       page_title: Обновление
-      redirect_to_stripe: На следующем шаге вы будете перенаправлены на Stripe, который
-        обрабатывает наши кредитные карты.
+      redirect_to_stripe: 'На следующем шаге вас перенаправят в Stripe для оплаты картой.'
       sign_out: Выйти
       trial_over: Ваш пробный период завершён
       trialing: Ваши данные будут удалены через %{days} дней

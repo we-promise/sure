@@ -9,8 +9,9 @@ ru:
           cash_flow: "Денежный поток"
           surplus: "Профицит"
           deficit: "Дефицит"
+          invested: Инвестиции
         title: Новая диаграмма Sankey
-        preview: Предпросмотр
+        preview: 'Предварительный просмотр'
         preview_tooltip: Эта диаграмма заменит визуализацию выше, так как использует новый общий API с мобильным клиентом на Swift.
         feedback_prompt: Сравните эту диаграмму с исходной выше и сообщите нам, если она отличается чем-то, кроме сортировки.
         positive: Всё верно
@@ -21,17 +22,24 @@ ru:
         feedback_thanks: Спасибо, что помогаете улучшить диаграмму!
         feedback_privacy: Ваш ответ отправляется в PostHog. Опишите проблему, не указывая номера счетов, балансы и другие личные финансовые данные.
         feedback_submit: Отправить отзыв
+        group_by_label: Группировать потоки по
+        group_by_category: Категориям
+        group_by_account: Счетам
+        sort_label: Сортировка потоков
+        sort_auto: Автоматически
+        sort_ascending: Сначала меньшие
+        sort_descending: Сначала большие
       balance_sheet:
         add_accounts: Добавьте счета %{name}, чтобы увидеть разбивку
         add_asset_accounts: Добавьте счета активов
-        add_liability_accounts: Добавьте счета обязательств
+        add_liability_accounts: Добавьте кредиты, кредитные карты или другие долги
         classifications:
           asset: Активы
-          liability: Обязательства
+          liability: Долги
         name: Название
         no_asset: Пока нет активов
         no_items: Пока нет %{name}
-        no_liability: Пока нет обязательств
+        no_liability: Пока нет долгов
         title: Баланс
         value: Сумма
         weight: Доля
@@ -61,7 +69,7 @@ ru:
         withdrawals: Выводы
       net_worth_chart:
         data_not_available: Нет данных за выбранный период
-        title: Чистая стоимость
+        title: 'Капитал'
       new: Новое
       no_account_empty_state:
         new_account: Новый счёт
@@ -69,7 +77,7 @@ ru:
         no_account_title: Пока нет счетов
       no_accounts:
         add_account: Добавить счёт
-        description: Добавьте счета, чтобы увидеть чистую стоимость
+        description: 'Добавьте счета, чтобы увидеть капитал'
         title: Пока нет счетов
       outflows_donut:
         categories: Категории
@@ -101,7 +109,7 @@ ru:
         period_scope_hint: Показывает месяцы, выбранные здесь, — независимо от периода панели вверху.
         search_accounts: Поиск счетов
         apply: Применить
-        balance: Сальдо операций
+        balance: Итог
         chart_span:
           one: Последний %{count} месяц
           few: Последние %{count} месяца
@@ -118,6 +126,19 @@ ru:
         period_scope_hint: Показывает месяц, выбранный здесь, — независимо от периода панели вверху.
         no_data: Нет данных о расходах за этот месяц
         previous_comparison_days: (1–%{end_day})
+        filter_categories: Категории (%{count})
+        filter_categories_all: Все категории
+        search_categories: Поиск категорий
+        apply: Применить
+      customize:
+        start: Настроить
+        done: Готово
+        hide: Скрыть «%{title}»
+        hidden_title: Скрытые виджеты
+        hidden_description: Верните виджет на главную страницу.
+        none_hidden: Все виджеты показаны. Чтобы скрыть виджет, нажмите на значок глаза.
+        all_hidden_title: Все виджеты скрыты
+        all_hidden_description: Откройте настройки главной страницы, чтобы вернуть виджеты.
     feedback:
       bug_report: Сообщить об ошибке
       description: Сообщите нам, если у вас есть замечания. Можно приложить ссылки
@@ -145,7 +166,7 @@ ru:
       refresh_page: Обновить
       setup_guide_hint: Следуйте руководству по настройке Docker для конфигурации
         Redis
-      subheading: Для self-hosted версии Sure необходимо настроить Redis.
+      subheading: 'Для самостоятельно развёрнутой версии Sure необходимо правильно настроить Redis.'
       view_setup_guide: Открыть руководство
       why_required_body: Sure использует Redis для фоновых задач Sidekiq — синхронизации
         счетов, обработки импорта и других операций, поддерживающих актуальность данных.

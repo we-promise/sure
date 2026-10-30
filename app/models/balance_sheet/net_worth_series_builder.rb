@@ -48,6 +48,8 @@ class BalanceSheet::NetWorthSeriesBuilder
         "balance_sheet_net_worth_series_historical",
         user&.id,
         shares_version,
+        I18n.locale,
+        family.date_format,
         period.start_date,
         period.end_date
       ].compact.join("_")

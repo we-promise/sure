@@ -102,6 +102,10 @@ class Rule::Condition < ApplicationRecord
     filter.operators
   end
 
+  def operator_display
+    operators.find { |_label, value| value == operator }&.first || operator
+  end
+
   def filter
     rule.registry.get_filter!(condition_type)
   rescue Rule::Registry::UnsupportedConditionError

@@ -18,7 +18,10 @@
   </div>
 <% end %>
 
-<%= styled_form_with model: [:admin, sso_provider], class: "space-y-6", data: { controller: "admin-sso-form" } do |form| %>
+<%= styled_form_with model: [:admin, sso_provider], class: "space-y-6", data: {
+      controller: "admin-sso-form",
+      admin_sso_form_labels_value: t("javascript.admin_sso_form")
+    } do |form| %>
   <div class="space-y-4">
     <h3 class="font-medium text-primary"><%= t("admin.sso_providers.form.basic_information") %></h3>
 
@@ -92,14 +95,18 @@
 
     <div data-oidc-field class="<%= "hidden" unless sso_provider.strategy == "openid_connect" %>">
       <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.redirect_uri_label") %></label>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2" data-controller="clipboard" data-clipboard-error-text-value="<%= t("javascript.admin_sso_form.copy_failed") %>">
         <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
-              data-admin-sso-form-target="callbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
+              data-clipboard-target="source" data-admin-sso-form-target="callbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
         <button type="button"
-                data-action="click->admin-sso-form#copyCallback"
+                data-action="click->clipboard#copy"
                 class="p-2 text-secondary hover:text-primary shrink-0"
                 title="<%= t("admin.sso_providers.form.copy_button") %>">
-          <%= icon "copy", class: "w-4 h-4" %>
+          <%= icon "copy", class: "w-4 h-4", data: { clipboard_target: "iconDefault" } %>
+          <span class="hidden text-green-600" data-clipboard-target="iconSuccess">
+            <%= icon "check", class: "w-4 h-4" %>
+            <span class="sr-only"><%= t("javascript.admin_sso_form.copied") %></span>
+          </span>
         </button>
       </div>
       <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.redirect_uri_help") %></p>
@@ -138,7 +145,7 @@
           <input type="text" name="sso_provider[settings][idp_slo_url]"
                  value="<%= sso_provider.settings&.dig("idp_slo_url") %>"
                  class="w-full px-3 py-2 border border-primary rounded-lg text-sm"
-                 placeholder="https://idp.example.com/slo (optional)"
+                 placeholder="https://idp.example.com/slo"
                  autocomplete="off">
         </div>
 
@@ -175,14 +182,18 @@
 
     <div>
       <label class="block text-sm font-medium text-primary mb-1"><%= t("admin.sso_providers.form.saml_sp_callback_url_label") %></label>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2" data-controller="clipboard" data-clipboard-error-text-value="<%= t("javascript.admin_sso_form.copy_failed") %>">
         <code class="flex-1 bg-surface px-3 py-2 rounded text-sm text-secondary overflow-x-auto"
-              data-admin-sso-form-target="samlCallbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
+              data-clipboard-target="source" data-admin-sso-form-target="samlCallbackUrl"><%= "#{request.base_url}/auth/#{sso_provider.name.presence || 'PROVIDER_NAME'}/callback" %></code>
         <button type="button"
-                data-action="click->admin-sso-form#copySamlCallback"
+                data-action="click->clipboard#copy"
                 class="p-2 text-secondary hover:text-primary shrink-0"
                 title="<%= t("admin.sso_providers.form.copy_button") %>">
-          <%= icon "copy", class: "w-4 h-4" %>
+          <%= icon "copy", class: "w-4 h-4", data: { clipboard_target: "iconDefault" } %>
+          <span class="hidden text-green-600" data-clipboard-target="iconSuccess">
+            <%= icon "check", class: "w-4 h-4" %>
+            <span class="sr-only"><%= t("javascript.admin_sso_form.copied") %></span>
+          </span>
         </button>
       </div>
       <p class="text-xs text-secondary mt-1"><%= t("admin.sso_providers.form.saml_sp_callback_url_help") %></p>

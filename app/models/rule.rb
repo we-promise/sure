@@ -101,6 +101,10 @@ class Rule < ApplicationRecord
     registry.action_executors
   end
 
+  def resource_name(count: 2)
+    I18n.t("rules.resource_types.#{resource_type}", count: count)
+  end
+
   def condition_filters
     registry.condition_filters
   end
@@ -287,7 +291,8 @@ class Rule < ApplicationRecord
     condition = displayed_condition
     return I18n.t("rules.no_condition") if condition.blank?
 
-    "If #{condition.filter.label.downcase} #{condition.operator} #{condition.value_display}"
+    I18n.t("rules.condition_summary", field: condition.filter.label.downcase,
+      operator: condition.operator_display.to_s.downcase, value: condition.value_display)
   end
 
   def displayed_condition
