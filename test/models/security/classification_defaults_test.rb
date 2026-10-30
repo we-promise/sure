@@ -156,7 +156,7 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     assert_nil security.development_status
   end
 
-  # KNOWN LIMITATION, pinned on purpose (owner decision on #233, option A).
+  # KNOWN LIMITATION, pinned on purpose.
   # The guard above holds only while the row stays offline. The daily health
   # check includes offline rows, prices them through `providers.first` and,
   # on success, flips them online. On the save that does this, `offline?` no
@@ -203,8 +203,7 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
   # Named for what it verifies, not for a path it never takes. There is no
   # provider match and no Security::Resolver here -- a plain create with
   # `offline: false` exercises the `offline?` guard in `apply_default_region`
-  # and nothing more, and the old name implied coverage that does not exist
-  # (raised by cubic on #201).
+  # and nothing more.
   test "an online security gets a region from its country" do
     security = Security.create!(ticker: "REG-ONLINE", country_code: "US", offline: false)
 
