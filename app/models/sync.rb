@@ -50,7 +50,7 @@ class Sync < ApplicationRecord
     end
 
     # Marks a sync that never completed within the expected time window
-    event :mark_stale do
+    event :mark_stale, after_commit: :handle_stale_transition do
       transitions from: %i[pending syncing], to: :stale
     end
   end
@@ -399,6 +399,11 @@ class Sync < ApplicationRecord
 
     def handle_completion_transition
       family.touch(:latest_sync_completed_at)
+    end
+
+    # A stale sync skips post-sync, so a resync request must be processed here.
+    def handle_stale_transition
+      queue_full_resync
     end
 
     def window_valid

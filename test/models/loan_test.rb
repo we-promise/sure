@@ -366,6 +366,28 @@ class LoanTest < ActiveSupport::TestCase
     end
   end
 
+  test "a balance input change ignores a syncing sync outside the visible window" do
+    account = build_loan_account(balance: 80_000, down_payment: 20_000)
+    sync = Sync.create!(syncable: account, status: :syncing, created_at: Sync::VISIBLE_FOR.ago - 1.minute)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      account.loan.update!(principal_only_transfers: true)
+    end
+
+    assert_not sync.reload.full_resync_requested?
+  end
+
+  test "a balance input change ignores a cancel-requested sync" do
+    account = build_loan_account(balance: 80_000, down_payment: 20_000)
+    sync = Sync.create!(syncable: account, status: :syncing, cancel_requested_at: Time.current)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      account.loan.update!(principal_only_transfers: true)
+    end
+
+    assert_not sync.reload.full_resync_requested?
+  end
+
   private
     # A loan imported part way through its life: the principal it was written
     # for is recorded, and the only valuation the account carries is the

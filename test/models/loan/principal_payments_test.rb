@@ -438,6 +438,25 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("12_000"), total_principal
   end
 
+  test "an instalment paid in two parts inside the grace window charges the period once" do
+    account = create_loan_account(term_months: 12, initial_balance: 12_000, entries: [
+      { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 },
+      { type: "transaction", date: Date.new(2026, 2, 1), amount: -600 },
+      { type: "transaction", date: Date.new(2026, 2, 2), amount: -466.19 },
+      { type: "transaction", date: Date.new(2026, 3, 1), amount: -1_066.19 }
+    ])
+
+    payments = principal_payments(account)
+
+    assert_equal BigDecimal("120"), payments.change_for(Date.new(2026, 2, 1)).interest_paid
+    assert_equal BigDecimal("480"), payments.change_for(Date.new(2026, 2, 1)).principal_paid
+    assert_equal BigDecimal("0"), payments.change_for(Date.new(2026, 2, 2)).interest_paid,
+                 "the second part must not pay the next period in advance"
+    assert_equal BigDecimal("466.19"), payments.change_for(Date.new(2026, 2, 2)).principal_paid
+    assert_equal BigDecimal("110.54"), payments.change_for(Date.new(2026, 3, 1)).interest_paid
+    assert_equal BigDecimal("955.65"), payments.change_for(Date.new(2026, 3, 1)).principal_paid
+  end
+
   test "a rate change takes effect from the period that opens on the new rate" do
     account = create_loan_account(
       term_months: 12,

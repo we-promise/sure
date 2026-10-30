@@ -495,4 +495,40 @@ class SyncTest < ActiveSupport::TestCase
     assert running.reload.full_resync_requested?
     assert_equal "syncing", running.status
   end
+
+  test "a stale sync still queues the full follow-up" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, status: :syncing, full_resync_requested: true)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      sync.mark_stale!
+    end
+
+    assert sync.reload.stale?
+    assert_not sync.full_resync_requested?
+    assert_enqueued_with(job: SyncJob)
+  end
+
+  test "a cancelled sync still queues the full follow-up" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, status: :syncing, full_resync_requested: true)
+    sync.update!(cancel_requested_at: Time.current)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      sync.finalize_if_all_children_finalized
+    end
+
+    assert sync.reload.stale?
+    assert_not sync.full_resync_requested?
+    assert_enqueued_with(job: SyncJob)
+  end
+
+  test "a stale sync without a request queues nothing" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, status: :syncing)
+
+    assert_no_difference -> { Sync.where(syncable: account).count } do
+      sync.mark_stale!
+    end
+  end
 end

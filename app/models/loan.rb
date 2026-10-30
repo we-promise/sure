@@ -341,7 +341,7 @@ class Loan < ApplicationRecord
     # A running sync cannot widen its window, so reusing it would keep the
     # balance seeded from the old window. Mark it for a full sync after it
     # finishes.
-    if (sync = account.syncs.where(status: "syncing").first)
+    if (sync = account.syncs.visible.where(status: "syncing").first)
       sync.update!(full_resync_requested: true)
       # The sync can finish between the lookup and the update. Its own
       # completion check may already have run, so queue the full sync here.

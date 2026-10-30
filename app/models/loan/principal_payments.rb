@@ -133,6 +133,9 @@ class Loan
         # A payment between due dates pays interest already carried before it
         # pays the next period's charge.
         return false if state.carried_interest.positive?
+        # A payment inside the grace window can still lower the principal the
+        # new period charges. Wait for the window to close.
+        return false if grace_window?(state, date)
 
         transactions_on(date).any?
       end
@@ -230,12 +233,18 @@ class Loan
       # the principal it opened with.
       def apply_grace_principal(state, date, applied)
         return unless applied.positive?
-        return unless scheduled_period_start?(state.period_start)
-
-        days = (date - state.period_start).to_i
-        return unless days.positive? && days <= PAYMENT_GRACE_DAYS
+        return unless grace_window?(state, date)
 
         state.period_principal -= applied
+      end
+
+      # A payment made a few days after the period opens still belongs to that
+      # period. This is the same window apply_grace_principal uses.
+      def grace_window?(state, date)
+        return false unless scheduled_period_start?(state.period_start)
+
+        days = (date - state.period_start).to_i
+        days.positive? && days <= PAYMENT_GRACE_DAYS
       end
 
       # Apply a payment to carried interest first, then to the open period's
