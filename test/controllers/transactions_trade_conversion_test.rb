@@ -133,6 +133,43 @@ class TransactionsTradeConversionTest < ActionDispatch::IntegrationTest
       assert_equal "NG", existing.country_code
       assert_equal existing, @account.entries.where(entryable_type: "Trade").order(:created_at).last.trade.security
     end
+
+    test "#{context} pick with no exact result does not adopt another listing" do
+      @user.family.update!(country: "US")
+      Setting.stubs(:enabled_securities_providers).returns([ "mansa" ])
+      Security.expects(:search_provider)
+              .with("MTNN", exchange_operating_mic: "XNSA", technical_failure: anything)
+              .returns([ Security.new(ticker: "MTN", exchange_operating_mic: "XJSE", country_code: "ZA", price_provider: "mansa") ])
+
+      assert_difference "Trade.count", 1 do
+        post create_trade_from_transaction_transaction_url(@entry.transaction), params: selection_params.merge(
+          ticker: "MTNN|XNSA|mansa", qty: 2, price: 50, investment_activity_label: "Buy"
+        )
+      end
+
+      assert_not Security.exists?(ticker: "MTN", exchange_operating_mic: "XJSE")
+      security = @account.entries.where(entryable_type: "Trade").order(:created_at).last.trade.security
+      assert_equal [ "MTNN", "XNSA" ], [ security.ticker, security.exchange_operating_mic ]
+      assert security.offline?
+    end
+
+    test "#{context} plain ticker without an exchange keeps the family country filter" do
+      @user.family.update!(country: "US")
+      Security.expects(:search_provider)
+              .with("MTN", country_code: "US", technical_failure: anything)
+              .returns([ Security.new(ticker: "MTN", exchange_operating_mic: "XJSE", country_code: "ZA") ])
+
+      assert_difference "Trade.count", 1 do
+        post create_trade_from_transaction_transaction_url(@entry.transaction), params: selection_params.merge(
+          ticker: "MTN", qty: 2, price: 50, investment_activity_label: "Buy"
+        )
+      end
+
+      assert_not Security.exists?(ticker: "MTN", exchange_operating_mic: "XJSE")
+      security = @account.entries.where(entryable_type: "Trade").order(:created_at).last.trade.security
+      assert_nil security.exchange_operating_mic
+      assert_equal "US", security.country_code
+    end
   end
 
   test "invalid trade quantities leave the original transaction unchanged" do

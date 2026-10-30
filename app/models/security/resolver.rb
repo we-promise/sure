@@ -1,27 +1,28 @@
 class Security::Resolver
-  def initialize(symbol, exchange_operating_mic: nil, country_code: nil, price_provider: nil)
+  def initialize(symbol, exchange_operating_mic: nil, country_code: nil, price_provider: nil, exact_only: false)
     @symbol = validate_symbol!(symbol)
     @exchange_operating_mic = Security.canonical_exchange_operating_mic(exchange_operating_mic)
     @country_code = country_code
     @price_provider = validated_price_provider(price_provider)
+    @exact_only = exact_only
   end
 
   # Attempts several paths to resolve a security:
   # 1. Exact match in DB
   # 2. Search provider for an exact match
-  # 3. Search provider for close match, ranked by relevance
+  # 3. Search provider for close match, ranked by relevance (unless exact_only)
   # 4. Create offline security if no match is found in either DB or provider
   def resolve
     return nil if symbol.blank?
 
     exact_match_from_db ||
       exact_match_from_provider ||
-      close_match_from_provider ||
+      (close_match_from_provider unless exact_only) ||
       offline_security(reason: provider_search_technical_failure? ? "resolution_pending" : nil)
   end
 
   private
-    attr_reader :symbol, :exchange_operating_mic, :country_code, :price_provider
+    attr_reader :symbol, :exchange_operating_mic, :country_code, :price_provider, :exact_only
 
     def validate_symbol!(symbol)
       raise ArgumentError, "Symbol is required and cannot be blank" if symbol.blank?
@@ -50,10 +51,8 @@ class Security::Resolver
         exchange_operating_mic: exchange_operating_mic
       )
 
-      security.assign_attributes(
-        country_code: country_code,
-        offline: true # This tells us that we shouldn't try to fetch prices later
-      )
+      security.country_code = country_code if country_code.present?
+      security.offline = true # This tells us that we shouldn't try to fetch prices later
       # Don't clobber a more specific existing reason (e.g. "provider_disabled",
       # "health_check_failed") with "resolution_pending" — only write a new
       # reason when the record doesn't already have a more specific one.
@@ -255,8 +254,9 @@ class Security::Resolver
 
     # True when at least one enabled provider's search request errored/timed
     # out rather than answering with zero results. Only meaningful after
-    # provider_search_result has run (close_match_from_provider always calls
-    # it before resolve reaches the offline_security fallback).
+    # provider_search_result has run (the provider match paths call it before
+    # resolve reaches the offline_security fallback; exact_only callers must
+    # pass an exchange, without which exact_match_from_provider skips the search).
     def provider_search_technical_failure?
       provider_search_technical_failure_keys.any?
     end
