@@ -444,18 +444,23 @@ module Security::Provided
     # accept. `Security::Constituent` has no callbacks for `delete_all` to skip.
     #
     # Securities are shared across families, so two syncs can replace one fund
-    # at once. The row lock makes the second wait and then replace the first's
-    # set, where its DELETE would otherwise miss the uncommitted rows and its
-    # INSERT break the unique index. `lock!` is not used: it reloads, and would
-    # drop attributes a failed `update` just left unsaved.
-    transaction do
-      self.class.where(id: id).lock.pluck(:id)
+    # at once. The row lock makes the second wait, where its DELETE would
+    # otherwise miss the uncommitted rows and its INSERT break the unique
+    # index. Under the lock it reads the stamp again: one written since this
+    # import read it means the other import has stored its answer, and that
+    # set stays. `lock!` is not used: it reloads, and would drop attributes a
+    # failed `update` just left unsaved.
+    replaced = transaction do
+      stamp = self.class.where(id: id).lock.pick(:constituents_fetched_at)
+      next false if stamp && stamp != constituents_fetched_at
+
       Security::Constituent.where(security_id: id).delete_all
       Security::Constituent.insert_all!(rows.map { |row| row.merge(security_id: id) }) if rows.any?
       update_column(:constituents_fetched_at, Time.current)
+      true
     end
 
-    skipped.each { |reason, entry| log_skipped_constituent(reason, entry) }
+    skipped.each { |reason, entry| log_skipped_constituent(reason, entry) } if replaced
   end
 
   # Splits a provider list into rows the table will accept and [reason, entry]

@@ -237,6 +237,24 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_operator lock, :<, delete, "the lock is taken after the old set is deleted"
   end
 
+  # The second of two concurrent imports read the stamp as nil before the
+  # first stored its answer. Once it holds the lock it must see the first's
+  # stamp and leave that set alone, not replace it with its own answer.
+  test "an import that finds the fund stamped under the lock keeps the stored holdings" do
+    provider = capable_provider("provider")
+    @security.stubs(:price_data_provider).returns(provider)
+    stale = Security.find(@security.id)
+    stale.stubs(:price_data_provider).returns(provider)
+
+    @security.send(:store_constituents, [ constituent("AAA", "First", 100) ])
+    stamped = @security.reload.constituents_fetched_at
+
+    stale.send(:store_constituents, [ constituent("BBB", "Second", 100) ])
+
+    assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker)
+    assert_equal stamped, @security.constituents_fetched_at
+  end
+
   # -------------------------------------------------------- malformed lists
   #
   # One row the table refuses would raise out of `store_constituents`, roll
