@@ -201,17 +201,36 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
     end
 
     def detect_date_format(parsed, date_header)
-      Import.detect_date_format(date_samples(parsed, date_header), candidates: date_format_candidates, fallback: family.date_format, limit: nil)
+      samples = date_samples(parsed, date_header)
+      Import.detect_date_format(samples, candidates: whole_reading_candidates(samples), fallback: family.date_format, limit: nil)
+    end
+
+    # Import.detect_date_format counts a partial parse as a reading, so a
+    # format that reads some date only in part (13/01/2025 under %d/%m/%y is
+    # 13 January 2020) could outscore the right one. It is not a candidate
+    # when another format reads that date whole. A date no format reads
+    # whole, such as one with a time after it, rules nothing out.
+    def whole_reading_candidates(samples)
+      candidates = date_format_candidates
+      distinct_dates(samples).each do |sample|
+        partial, whole = candidates.partition { |format| Date._strptime(sample, format)&.key?(:leftover) }
+        candidates -= partial if whole.any? { |format| read_all([ sample ], format) }
+      end
+      candidates
     end
 
     # The other formats that read every sample date, as different dates from
     # the chosen format (so %e/%m/%Y beside %d/%m/%Y is not an alternative).
     # Import.detect_date_format breaks a tie by candidate order, which is
     # a guess when, say, every day in the file is 12 or under.
+    #
+    # A date the chosen format cannot read is reported as an invalid row, and
+    # is left out here so it does not hide that the rest read two ways.
     def other_readings(parsed, date_header, chosen)
-      samples = date_samples(parsed, date_header).map(&:to_s).compact_blank.uniq
+      samples = distinct_dates(date_samples(parsed, date_header)).select { |sample| read_all([ sample ], chosen) }
+      return [] if samples.empty?
+
       chosen_dates = read_all(samples, chosen)
-      return [] if samples.empty? || chosen_dates.nil?
 
       date_format_candidates.each_with_object({}) do |format, by_dates|
         dates = read_all(samples, format)
@@ -236,6 +255,10 @@ class Assistant::Function::PrepareTradeImport < Assistant::Function
     # by a later one, and the chosen format must read every row.
     def date_samples(parsed, date_header)
       parsed.map { |row| row[date_header] }
+    end
+
+    def distinct_dates(samples)
+      samples.map { |sample| sample.to_s.strip }.compact_blank.uniq
     end
 
     def date_format_candidates

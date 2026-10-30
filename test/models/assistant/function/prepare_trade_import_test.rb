@@ -94,6 +94,49 @@ class Assistant::Function::PrepareTradeImportTest < ActiveSupport::TestCase
     assert_equal false, result[:date_format_ambiguous]
   end
 
+  # Date.strptime reads 13/01/2025 under %d/%m/%y as 13 January 2020 and
+  # ignores the trailing "25". A format that reads any date only in part is
+  # not chosen, so one short year cannot move every other date.
+  test "a format that reads a date only in part is not chosen" do
+    full_years = (13..28).to_a.product([ 1, 2, 3, 4 ]).first(50).map { |day, month| format("%02d/%02d/2025", day, month) }
+    lines = (full_years + [ "05/03/25" ]).map { |date| "#{date},AAPL,1,150.00,USD,Bought Apple" }
+    csv = "Trade Date,Symbol,Quantity,Price,Currency,Description\n#{lines.join("\n")}\n"
+
+    result = @fn.call("csv_content" => csv, "account_id" => @account.id)
+
+    assert_equal "%d/%m/%Y", result[:date_format]
+    assert_equal 50, result[:valid_rows_count]
+    assert_equal [ 51 ], result[:invalid_rows].map { |row| row[:row_number] }
+  end
+
+  # No format reads a date with a time after it whole, so that rules no
+  # format out, and the rows still read as they did before.
+  test "dates with a time after them still decide the format" do
+    # The fallback must not be the answer, or the test proves nothing.
+    @family.update!(date_format: "%d/%m/%Y")
+    csv = "Trade Date,Symbol,Quantity,Price,Currency,Description\n" \
+          "2026-03-05 10:30:00,AAPL,10,150.00,USD,Bought Apple\n" \
+          "2026-03-06 15:00:00,MSFT,-2,410.50,USD,Sold Microsoft\n"
+
+    result = @fn.call("csv_content" => csv, "account_id" => @account.id)
+
+    assert_equal "%Y-%m-%d", result[:date_format]
+    assert_equal 2, result[:valid_rows_count]
+  end
+
+  # An unreadable date is reported as an invalid row; it must not also hide
+  # that every other date reads two ways.
+  test "an unreadable date does not hide that the other dates read two ways" do
+    csv = BROKER_CSV + "not a date,AAPL,1,150.00,USD,Bought Apple\n"
+
+    result = @fn.call("csv_content" => csv, "account_id" => @account.id)
+
+    assert_equal "%d/%m/%Y", result[:date_format]
+    assert_equal true, result[:date_format_ambiguous]
+    assert_equal [ "%m/%d/%Y" ], result[:date_format_alternatives]
+    assert_equal 1, result[:invalid_rows].size
+  end
+
   test "a date format the caller passes is not reported as ambiguous" do
     result = @fn.call("csv_content" => BROKER_CSV, "account_id" => @account.id, "date_format" => "%m/%d/%Y")
 
