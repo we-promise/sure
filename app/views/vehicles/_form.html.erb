@@ -33,7 +33,6 @@
         <div class="flex items-center gap-2">
           <%= vehicle_form.money_field :initial_balance,
                                      label: t("vehicles.form.purchase_price"),
-                                     placeholder: t("vehicles.form.purchase_price_placeholder"),
                                      currency_value_override: account.currency,
                                      currency_source: "select[name='account[currency]']",
                                      value: vehicle_form.object.initial_balance || (vehicle_form.object.purchase_price.amount if account.persisted?),

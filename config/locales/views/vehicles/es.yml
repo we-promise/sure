@@ -13,7 +13,6 @@ es:
       model_placeholder: Camry
       purchase_date: Fecha de compra
       purchase_price: Precio de compra
-      purchase_price_placeholder: '25000'
       year: Año
       year_placeholder: '2025'
     new:
