@@ -26,7 +26,8 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
       line1: "123 Main Street",
       locality: "Los Angeles",
       region: "CA",
-      postal_code: "90001"
+      postal_code: "90001",
+      square_footage: 1000
     ).returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
     Provider::Registry.stubs(:rentcast).returns(provider)
 
@@ -35,6 +36,48 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
     assert_equal Date.current, @property.reload.avm_last_synced_on
     assert_equal 600_000, @account.reload.balance
     assert_equal "RentCast valuation", @account.entries.valuations.find_by(date: Date.current).name
+  end
+
+  test "sends a living area stored in square meters as square feet" do
+    @property.update!(area_value: 100, area_unit: "sqm")
+
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:valuation_currency).returns("USD")
+    provider.expects(:fetch_property_valuation)
+      .with(has_entry(:square_footage, 1076))
+      .returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    SyncPropertyValuationsJob.new.perform
+  end
+
+  test "omits the living area when the property has none" do
+    @property.update!(area_value: nil)
+
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:valuation_currency).returns("USD")
+    provider.expects(:fetch_property_valuation)
+      .with(Not(has_key(:square_footage)))
+      .returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    SyncPropertyValuationsJob.new.perform
+  end
+
+  test "does not send the living area to providers that do not accept it" do
+    @property.update!(avm_provider: "realie")
+
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:valuation_currency).returns("USD")
+    provider.expects(:fetch_property_valuation)
+      .with(Not(has_key(:square_footage)))
+      .returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
+    Provider::Registry.stubs(:realie).returns(provider)
+
+    SyncPropertyValuationsJob.new.perform
   end
 
   test "resolves each provider once per run across multiple properties" do

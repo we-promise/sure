@@ -34,8 +34,17 @@ class Property < ApplicationRecord
     end
   end
 
+  SQFT_PER_SQM = 10.7639
+
   def area
     Measurement.new(area_value, area_unit) if area_value.present?
+  end
+
+  # Living area in whole square feet, the unit US valuation providers take.
+  def area_in_sqft
+    return nil if area_value.blank?
+
+    area_unit == "sqm" ? (area_value * SQFT_PER_SQM).round : area_value
   end
 
   def purchase_price
