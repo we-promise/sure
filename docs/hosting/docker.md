@@ -49,12 +49,19 @@ This command will do the following:
 
 At this point, you should have `compose.yml` in your directory. It includes an optional `backup` service; see [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks).
 
-### Step 3 (optional): Configure your environment
+### Step 3: Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
-That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
+The app needs a secret key of your own before it will start. This key signs sessions and, on self-hosted installs, is also the source of the keys that encrypt stored credentials such as bank connection tokens and the API keys saved in the app's settings, so it must be unique to your install and kept private.
 
-If you're running the app locally and don't care much about security, you can skip this step.
+New install? Skip to [Create your environment file](#create-your-environment-file).
+
+#### Upgrading an install that ran without `SECRET_KEY_BASE`
+
+Earlier versions of the example compose file fell back to a built-in key when `SECRET_KEY_BASE` was missing or empty. If your existing install has been running that way, your stored credentials (bank connections and similar) and the API keys saved in the app's settings are encrypted with keys derived from it, and a new key would make them unreadable. To check, run `docker compose exec web printenv SECRET_KEY_BASE` while the old version is still running: if it prints the built-in key shown in [Add a secret key to an existing `.env`](#add-a-secret-key-to-an-existing-env), your install ran this way.
+
+Do not generate a new key, and do not download `.env.example`: its `POSTGRES_USER` and `POSTGRES_PASSWORD` differ from the defaults your database was created with. Instead, follow [Add a secret key to an existing `.env`](#add-a-secret-key-to-an-existing-env) now, using the upgrade line in its first step. It only adds a key when `.env` has no non-empty `SECRET_KEY_BASE`, so a value your install already uses (for example `secret-value` from an older `.env.example`) is kept, as your data needs. Then skip "Create your environment file", "Generate the app secret key" and "Fill in your environment file" below.
+
+The built-in key is public, so treat moving off it as a follow-up: until then, anyone holding a copy of your database or backups can decrypt those credentials. Do not add new random `ACTIVE_RECORD_ENCRYPTION_*` keys to an existing install either; they must match the keys your data was encrypted with.
 
 #### Create your environment file
 
@@ -63,8 +70,10 @@ In order to configure the app, you will need to create a file called `.env`, whi
 To do this, you should get our .env.example as a starting point:
 
 ```bash
-curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
+[ -e .env ] || (umask 077 && curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example)
 ```
+
+The command does nothing if `.env` already exists, and creates it readable only by you.
 
 #### Generate the app secret key
 
@@ -94,6 +103,42 @@ Fill in this file with the following variables:
 SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
+
+#### Add a secret key to an existing `.env`
+
+Use this when you already have a `.env` or are upgrading an install. It adds a key only when `.env` has no non-empty `SECRET_KEY_BASE`, creating the file (readable only by you) if needed, and leaves an existing key alone. A blank `SECRET_KEY_BASE=` line, as in `.env.example`, stays in the file but no longer matters, because Compose uses the last assignment. On an install that has its own key, it adds nothing. A `.env` created before this guide made it owner-only keeps its old permissions; `chmod 600 .env` makes it readable only by you.
+
+1. Choose the key. For a new install:
+
+   ```bash
+   SECRET="$(openssl rand -hex 64)"
+   ```
+
+   If you are [upgrading an install that ran without `SECRET_KEY_BASE`](#upgrading-an-install-that-ran-without-secret_key_base), use this instead:
+
+   ```bash
+   SECRET="a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13"
+   ```
+
+2. In the same terminal, add it to `.env` unless it already has a key:
+
+   ```bash
+   grep -qE "^[[:space:]]*(export[[:space:]]+)?SECRET_KEY_BASE[[:space:]]*=[[:space:]]*[\"']?[^\"'[:space:]]" .env 2>/dev/null || (umask 077 && printf '\nSECRET_KEY_BASE=%s\n' "${SECRET:?run the SECRET= line from step 1 first}" >> .env)
+   ```
+
+#### Set explicit encryption keys (recommended)
+
+Skip this on an existing install; see [Upgrading an install that ran without `SECRET_KEY_BASE`](#upgrading-an-install-that-ran-without-secret_key_base).
+
+Without explicit keys, the app derives its Active Record encryption keys from `SECRET_KEY_BASE`. On a new install, setting them explicitly lets you rotate `SECRET_KEY_BASE` later without losing access to that data. API keys saved in the app's settings are encrypted with a key derived directly from `SECRET_KEY_BASE`, not with these keys, so after a rotation the app sends the stored encrypted text in their place, without a decryption error, and they must be entered again. Generate three values:
+
+```bash
+for k in PRIMARY_KEY DETERMINISTIC_KEY KEY_DERIVATION_SALT; do echo "ACTIVE_RECORD_ENCRYPTION_$k=$(openssl rand -hex 32)"; done
+```
+
+Add the three lines to `.env`. Set all three or none; a partial set stops the app from starting.
+
+Back up `SECRET_KEY_BASE` and these keys somewhere other than your database backups (a password manager works well). If they are lost, encrypted data such as bank connections cannot be recovered.
 
 #### Using HTTPS
 
@@ -329,6 +374,9 @@ Sure ships with a separate compose file for AI-related features: `compose.exampl
 curl --fail --location --silent --show-error --output compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
 curl --fail --location --silent --show-error --output compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
 curl --fail --location --silent --show-error --output pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
+
+# Make sure .env has SECRET_KEY_BASE first. Existing install? See "Upgrading an install that ran
+# without SECRET_KEY_BASE" above, then "Add a secret key to an existing .env"
 
 # Run with Pipelock (no local LLM)
 docker compose -f compose.ai.yml up -d

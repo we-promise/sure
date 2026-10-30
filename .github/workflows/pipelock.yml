@@ -57,6 +57,9 @@ jobs:
 
       - name: Validate Pipelock deployment contracts
         shell: bash
+        env:
+          # The example compose files require a secret; CI only renders them.
+          SECRET_KEY_BASE: ci-placeholder-not-a-real-secret
         run: |
           set -euo pipefail
 
