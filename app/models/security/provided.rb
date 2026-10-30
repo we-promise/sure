@@ -272,32 +272,16 @@ module Security::Provided
     # before any brand-logo enrichment, otherwise setting logo_url first would
     # trip it and skip website_url backfill from providers that return links.
     has_metadata = self.name.present? && (self.logo_url.present? || self.website_url.present?)
-    # Both halves are needed, and each closes a hole the other leaves.
-    #
-    # `classification_source.blank?` alone stayed OPEN for ever on a wrapper the
-    # type map deliberately does not classify: an ETF never gets a source, so
-    # every sync would have asked again for an answer already in hand.
-    #
-    # `sector.blank? && industry.blank?` alone reopened the gate on the things
-    # the classification defaults fill from an instrument's own shape. Cash and
-    # crypto carry `default` and no sector, and no provider has a sector for
-    # them -- `price_data_provider` falls back to the first configured provider,
-    # which answers nothing for a crypto pair -- so keying on sector alone would
-    # have asked, for ever, on exactly the securities a provider cannot help with.
-    #
-    # Together: ask only when nothing at all is known, and stop as soon as
-    # anything is -- a source, or the sector the provider just supplied.
-    # `supplies_classification?` FIRST, because the rest of this condition can
-    # only ever be satisfied by a provider that answers. A provider with no
-    # sector or industry to give never fills those columns, so the gate never
-    # closes and the security is re-asked on every sync for ever -- seven of the
-    # ten security providers are in that position.
-    #
-    # And `classification_fetched_at`, for the answer that holds nothing: a bond
-    # or an ETF with an empty sector fills none of the columns above, so without
-    # a record of the ask it was asked again on every sync -- each one of EODHD's
-    # 20 daily requests, shared with prices. Stamped on any successful answer;
-    # a failed one is not stamped, so it is retried.
+    # A provider is asked for a classification only when it can give one and
+    # nothing is known yet:
+    # - `supplies_classification?` first: a provider with no sector to give
+    #   never fills the columns below, so without it the gate never closes.
+    # - No source and no sector or industry: an ETF the type map leaves without
+    #   a source, or cash and crypto that carry a `default` source and no
+    #   sector, are not asked again for an answer no provider has.
+    # - `classification_fetched_at` unset: an answer that holds nothing (a bond,
+    #   an ETF with no sector) is stamped, so it is asked once. A failed answer
+    #   is not stamped, so it is retried.
     wants_classification = include_classification && price_data_provider.supplies_classification? &&
       !classification_locked? && classification_source.blank? && sector.blank? && industry.blank? &&
       classification_fetched_at.nil?
