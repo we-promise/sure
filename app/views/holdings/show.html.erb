@@ -127,6 +127,9 @@
               <%= render "holdings/cost_basis_form", holding: @holding, context: :drawer, cancel_action: "drawer-cost-basis#toggle" %>
             </div>
           </div>
+          <% if @lots.any? %>
+            <%= render "holdings/lots", holding: @holding, lots: @lots, can_edit: @can_write_lots %>
+          <% end %>
           <div class="flex items-center justify-between text-sm">
             <dt class="text-secondary"><%= t(".book_value_label") %></dt>
             <dd class="text-primary">

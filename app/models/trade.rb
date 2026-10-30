@@ -88,6 +88,15 @@ class Trade < ApplicationRecord
     Trend.new(current: current_value, previous: cost_basis)
   end
 
+  # Set by callers that list many sales: what this sale took from each lot, as
+  # HoldingLotDisposal.readable_by_sale gives it, or nil where there is no
+  # readable record and the basis comes from the holding snapshot. Clears the
+  # memo, so a sale measured before the preload does not keep its old figure.
+  def preloaded_lot_disposals=(value)
+    @preloaded_lot_disposals = value
+    remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+  end
+
   # Set by callers that list many disposals, so the proceeds conversion below
   # reads one preloaded set instead of a query per foreign disposal. Keyed
   # `[from, to, date]`.
@@ -206,6 +215,28 @@ class Trade < ApplicationRecord
       end
     end
 
+    def lot_disposals
+      return @preloaded_lot_disposals if defined?(@preloaded_lot_disposals)
+
+      HoldingLotDisposal.readable_by_sale([ self ])[entry.id]
+    end
+
+    # The cost of the lots this sale consumed, :unknown when one of them has
+    # no cost, or nil when there is no record covering the whole sale.
+    def disposed_lots_cost
+      disposals = lot_disposals
+      return nil if disposals.blank? || disposals.sum(BigDecimal("0"), &:qty) != qty.abs
+      return :unknown if disposals.any? { |disposal| disposal.unit_cost.nil? }
+
+      Money.new(disposals.sum(BigDecimal("0")) { |disposal| disposal.qty * disposal.unit_cost }, disposals.first.currency)
+    end
+
+    # The position's average on the sale's day, applied to the units sold.
+    def snapshot_cost
+      holding = basis_holding
+      holding.avg_cost * qty.abs if holding&.avg_cost
+    end
+
     def calculate_realized_gain_loss
       return nil unless sell?
       # Moving an asset to another account you own realises nothing. Without
@@ -213,11 +244,10 @@ class Trade < ApplicationRecord
       # difference is booked as a gain the user never made.
       return nil if internal_movement?
 
-      holding = basis_holding
+      cost_basis = disposed_lots_cost || snapshot_cost
 
-      return nil unless holding&.avg_cost
+      return nil unless cost_basis.is_a?(Money)
 
-      cost_basis = holding.avg_cost * qty.abs
       # A disposal's fee is what selling cost, so it comes off the proceeds.
       sale_proceeds = converted_to_basis_currency(price_money * qty.abs - fee_money, cost_basis.currency)
 

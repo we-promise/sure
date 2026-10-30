@@ -53,6 +53,11 @@ en:
       exclude_from_reports: Exclude from all reports
       enable_category_matcher_label: Enable category matcher
       enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.
+      cost_basis_method_label: Cost basis method
+      cost_basis_method_hint: How a sale is matched to the shares it came from. Changing it recalculates past realized gains and the average cost of what you hold. A sale of shares whose cost is unknown shows its gain as unknown.
+      cost_basis_methods:
+        average: Average cost
+        fifo: First in, first out (FIFO)
     index:
       accounts: Accounts
       financekit_accounts:

@@ -561,6 +561,10 @@ class ReportsController < ApplicationController
         trade.instance_variable_set(:@preloaded_holdings, holdings_by_account[trade.entry.account_id] || [])
       end
 
+      # What each fifo sale took from which lot, read once for the whole set.
+      lot_disposals = HoldingLotDisposal.readable_by_sale(sell_trades)
+      sell_trades.each { |trade| trade.preloaded_lot_disposals = lot_disposals[trade.entry.id] }
+
       # The rates the proceeds conversion needs, in one query rather than one
       # per foreign disposal.
       Trade.preload_exchange_rates(sell_trades)

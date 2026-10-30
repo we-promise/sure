@@ -6,6 +6,12 @@ class Account::Syncer
   end
 
   def perform_sync(sync)
+    # Only the types with lot books record a method; this syncer is shared by
+    # every account type, and stamping depositories with a key nothing reads
+    # put the cost-basis question where the review on this PR belonged.
+    if account.accountable_type.in?(%w[Investment Crypto])
+      sync.update!(data: (sync.data || {}).merge("cost_basis_method" => account.cost_basis_method))
+    end
     Rails.logger.info("Processing balances (#{account.linked? ? 'reverse' : 'forward'})")
     import_market_data
     materialize_balances(window_start_date: sync.window_start_date)
@@ -15,9 +21,25 @@ class Account::Syncer
 
   def perform_post_sync
     account.family.auto_match_transfers!(account: account)
+    restate_if_cost_basis_method_changed
   end
 
   private
+    # A method saved while this run was calculating left its figures on the
+    # old one, and the form's sync_later folded into this run. Once it has
+    # completed, a new sync restates them. Post-sync also runs after a failed
+    # sync; that one queues nothing, since each failure would queue another,
+    # and the next sync to complete restates the figures.
+    def restate_if_cost_basis_method_changed
+      latest = account.syncs.ordered.first
+      return unless latest&.completed?
+
+      used = latest.data&.dig("cost_basis_method")
+      return if used.nil? || used == Account.where(id: account.id).pick(:cost_basis_method)
+
+      account.sync_later
+    end
+
     def materialize_balances(window_start_date: nil)
       strategy = account.linked? ? :reverse : :forward
       Balance::Materializer.new(account, strategy: strategy, window_start_date: window_start_date).materialize_balances
