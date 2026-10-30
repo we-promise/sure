@@ -189,7 +189,7 @@ class Assistant::Function::SuggestSecurityClassificationTest < ActiveSupport::Te
     assert_match(/not held/i, result[:skipped].first[:reason])
   end
 
-  # #539 approves a sub-class alone as a no-op, so the model refuses it and
+  # Approving a sub-class alone would write nothing, so the model refuses it and
   # the tool reports why rather than counting it as recorded.
   test "a sub-class without an asset class is skipped, with a reason" do
     result = @function.call("proposals" => [ { "ticker" => "AAPL", "asset_sub_class" => "etf" } ])
