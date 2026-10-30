@@ -5,7 +5,7 @@ id:
       sign_out: Keluar
       setup: Penyiapan
       preferences: Preferensi
-      goals: Target
+      goals: Tujuan
       start: Mulai
     logout:
       sign_out: Keluar
@@ -40,7 +40,7 @@ id:
       submit: Selesai
     goals:
       title: Apa tujuan utama Anda?
-      subtitle: Pilih satu atau lebih target Anda dalam menggunakan %{product_name} sebagai alat keuangan pribadi Anda.
+      subtitle: Pilih satu atau lebih tujuan Anda dalam menggunakan %{product_name} sebagai alat keuangan pribadi Anda.
       unified_accounts: Melihat semua rekening saya di satu tempat
       cashflow: Memahami arus kas dan pengeluaran
       budgeting: Mengelola rencana keuangan dan anggaran
@@ -53,7 +53,7 @@ id:
     trial:
       title: Coba Sure selama 45 hari
       data_deletion: Data akan dihapus setelah periode berakhir
-      description_html: Mulai hari ini Anda dapat mencoba produk ini secara menyeluruh.<br/>Jika Anda menyukainya, lakukan self-host atau berkontribusi untuk terus menggunakannya di sini.
+      description_html: Mulai hari ini Anda dapat mencoba produk ini secara menyeluruh.<br/>Jika Anda menyukainya, host sendiri atau berkontribusi untuk terus menggunakannya di sini.
       try_button: Coba Sure selama 45 hari
       continue_trial: Lanjutkan uji coba
       upgrade: Tingkatkan
