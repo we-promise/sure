@@ -11,6 +11,8 @@ module Api
       before_action :check_api_key_rate_limit, only: :enable_ai
       before_action :log_api_access, only: :enable_ai
       rescue_from SsoIdentityBlock::BlockedIdentity, with: :render_removed_identity
+      rescue_from OidcIdentity::ProviderNotConfigured, OidcIdentity::IssuerMismatch,
+        with: :render_invalid_sso_linking_code
 
       def signup
         # RegistrationsController refuses to register a user while the instance
@@ -143,6 +145,7 @@ module Api
         end
       end
 
+      # Redeem a single-use mobile SSO code for its cached credentials and user payload.
       def sso_exchange
         code = sso_exchange_params
 
@@ -183,6 +186,7 @@ module Api
         }
       end
 
+      # Link trusted pending SSO authentication to a password-verified local account.
       def sso_link
         linking_code = params[:linking_code]
         cached = validate_linking_code(linking_code)
@@ -244,6 +248,7 @@ module Api
         render json: token_response.merge(user: mobile_user_payload(user))
       end
 
+      # Create an SSO account only after revalidating the deferred provider and issuer.
       def sso_create_account
         linking_code = params[:linking_code]
         cached = validate_linking_code(linking_code)
@@ -279,7 +284,7 @@ module Api
           # New family creators must be able to administer their own family.
           # Lower provider defaults are promoted to admin by role_for_new_family_creator,
           # while intentional super_admin defaults remain supported.
-          provider_config = Rails.configuration.x.auth.sso_providers&.find { |p| p[:name] == cached[:provider] }
+          provider_config = AuthConfig.sso_providers&.find { |p| p[:name] == cached[:provider] }
           provider_default_role = provider_config&.dig(:settings, :default_role)
         end
 
@@ -459,10 +464,12 @@ module Api
           params.require(:device).permit(:device_id, :device_name, :device_type, :os_version, :app_version)
         end
 
+        # Require the mobile authorization code submitted for credential exchange.
         def sso_exchange_params
           params.require(:code)
         end
 
+        # Serialize the user fields returned with mobile authentication credentials.
         def mobile_user_payload(user)
           {
             id: user.id,
@@ -484,6 +491,7 @@ module Api
           false
         end
 
+        # Reconstruct the cached provider identity without losing its authenticated issuer.
         def build_omniauth_hash(cached)
           OpenStruct.new(
             provider: cached[:provider],
@@ -493,6 +501,16 @@ module Api
           )
         end
 
+        # Return the API error for deferred SSO authentication that is no longer valid.
+        def render_invalid_sso_linking_code
+          if params[:linking_code].present?
+            Rails.cache.delete("mobile_sso_link:#{params[:linking_code]}")
+          end
+
+          render json: { error: "SSO authentication is no longer valid" }, status: :forbidden
+        end
+
+        # Load single-use deferred authentication and reject stale provider trust.
         def validate_linking_code(linking_code)
           if linking_code.blank?
             render json: { error: "Linking code is required" }, status: :bad_request
@@ -513,9 +531,14 @@ module Api
             return nil
           end
 
+          provider_config = OidcIdentity.provider_config_for(cached[:provider])
+          raise OidcIdentity::ProviderNotConfigured if provider_config.blank?
+          OidcIdentity.verified_issuer_for!(build_omniauth_hash(cached), provider_config)
+
           cached
         end
 
+        # Reject mobile authentication for an identity removed by an administrator.
         def render_removed_identity
           render json: { error: "SSO identity was removed by an administrator" }, status: :forbidden
         end
