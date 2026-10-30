@@ -110,6 +110,22 @@ class Security::ClassificationProposalTest < ActiveSupport::TestCase
     ).valid?
   end
 
+  # Blank is "not answered" everywhere else in this model, so a blank
+  # vocabulary answer is stored as no answer rather than refused.
+  test "a blank vocabulary answer is stored as no answer" do
+    proposal = propose(asset_class: "equity", asset_sub_class: "", region: "", sector: "")
+
+    assert proposal.pending?
+    assert_equal "equity", proposal.reload.asset_class
+    assert_nil proposal.asset_sub_class
+    assert_nil proposal.region
+    assert_nil proposal.sector
+
+    blank_class = Security::ClassificationProposal.new(security: @security, family: @family, asset_class: "", region: "europe")
+    assert blank_class.valid?, blank_class.errors.full_messages.to_sentence
+    assert_nil blank_class.asset_class
+  end
+
   # ------------------------------------------------------- lifecycle safety
 
   # `family.destroy` is reached by User#purge, InactiveFamilyCleanerJob,

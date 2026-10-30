@@ -15,6 +15,10 @@ class Security::ClassificationProposal < ApplicationRecord
   belongs_to :security
   belongs_to :family
 
+  # Blank is "not answered" everywhere below, so it is stored as nil rather
+  # than refused by the vocabulary checks.
+  normalizes :asset_class, :asset_sub_class, :region, :sector, :rationale, with: ->(value) { value.presence }
+
   validates :status, inclusion: { in: STATUSES }
   # The same vocabularies `Security` validates, and for a concrete reason: they
   # are database check constraints on `securities`, so storing a proposal that
