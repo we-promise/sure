@@ -24,9 +24,8 @@
 # changing it is a data edit and not a deploy of new logic.
 #
 # A country absent from this file leaves `region` nil. That is on purpose:
-# an unclassified holding is honest, and 3.4 gives it an explicit
-# "Unclassified" bucket. Guessing a region from an unknown code would put a
-# holding in a slice no one can justify.
+# an unclassified holding is honest, and guessing a region from an unknown
+# code would put a holding in a slice no one can justify.
 
 # ---------------------------------------------------------------- North America
 US:
