@@ -231,7 +231,7 @@ tr:
           fiyatları + marka logoları
         twelve_data_hint: API anahtarı gerektirir, günlük 800 kredi
         yahoo_finance_hint: ücretsiz, API anahtarı gerekmez
-        requires_api_key_mansa: API anahtarı gerektirir, günde 100 çağrılık ücretsiz katman -- yalnızca NGX (Nijerya Borsası)
+        requires_api_key_mansa: API anahtarı gerektirir, günde 100 çağrılık ücretsiz katman -- Afrika borsaları (NGX, JSE, NSE, GSE, BRVM ve diğerleri)
       show:
         ai_assistant: Yapay Zeka Asistanı
         clear_cache: Veri önbelleğini temizle
@@ -372,11 +372,11 @@ tr:
         usage: Aylık %{limit} isteğin %{used} tanesi kullanıldı
       mansa_settings:
         title: Mansa
-        description: Mansa API'den aldığınız API anahtarını girin. Buradaki başka hiçbir sağlayıcının kapsamadığı NGX'i (Nijerya Borsası) destekler. Mansa diğer Afrika borsalarını da kapsar, ancak bu entegrasyonla yalnızca NGX doğrulanmıştır.
+        description: Mansa API'den aldığınız API anahtarını girin. NGX (Nijerya Borsası), JSE, NSE (Kenya), GSE (Gana) ve BRVM dahil 20 Afrika borsasını destekler; bunların birçoğu buradaki başka hiçbir sağlayıcı tarafından kapsanmaz.
         env_configured_message: MANSA_API_KEY ortam değişkeni aracılığıyla başarıyla yapılandırıldı.
         label: API Anahtarı
         placeholder: Mansa API anahtarınızı buraya girin
         show_details: (ayrıntıları göster)
         step_1_html: <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> adresine gidin ve ücretsiz API anahtarınızı alın -- kart gerekmez.
         step_2: API anahtarınızı kopyalayıp aşağıya yapıştırın.
-        rate_limit_warning: Mansa'nın ücretsiz katmanı günde 100 API çağrısıyla sınırlıdır ve yalnızca güncel fiyatları sunar -- geçmiş fiyatlar ücretli plan gerektirir. Bu entegrasyonla yalnızca NGX (Nijerya Borsası) doğrulanmıştır; Mansa'nın kapsadığı diğer Afrika borsaları burada henüz desteklenmemektedir.
+        rate_limit_warning: Mansa'nın ücretsiz katmanı günde 100 API çağrısıyla sınırlıdır ve yalnızca güncel fiyatları sunar -- geçmiş fiyatlar ücretli plan gerektirir.
