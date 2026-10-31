@@ -13,6 +13,7 @@ es:
     api_keys:
       create:
         success: Tu clave API se ha creado correctamente
+        creation_failed: "No se pudo crear tu clave API. Inténtalo de nuevo."
       destroy:
         revoked_successfully: La clave API se ha revocado correctamente
         revoke_failed: No se pudo revocar la clave API

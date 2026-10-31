@@ -4,6 +4,7 @@ tr:
     api_keys:
       create:
         success: API anahtarınız başarıyla oluşturuldu
+        creation_failed: "API anahtarınız oluşturulamadı. Lütfen tekrar deneyin."
       created:
         continue: API Anahtarı Ayarlarına Devam Et
         copy_key: API Anahtarını Kopyala
