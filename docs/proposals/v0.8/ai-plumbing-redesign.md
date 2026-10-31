@@ -165,7 +165,10 @@ app/models/ai/
   owners.rb                              # feature key → owner class registry
   batch.rb                               # slices items by batch_size and tokens (was Provider::Openai::BatchSlicer)
   judgement.rb                           # base class for typed-decision features (Jev)
-  conversation.rb                        # chat-with-tools primitive
+  conversation.rb                        # chat: Sure's driver steps a RubyLLM agent through a turn (section 8.4)
+  conversation/
+    chat_agent.rb                        # RubyLLM::Agent for chat: tool options only; the route supplies the rest
+    sure_tool.rb                         # an Assistant::Function as a RubyLLM::Tool, carrying the job's lane
   comparison.rb                          # AR: primary vs shadow output, any feature
   transport/                             # hand-written, or a thin adapter over RubyLLM (section 19)
     base.rb
@@ -912,8 +915,8 @@ end
   (400, missing `thought_signature`). On a Gemini route, `History` gives such a call Google's
   documented placeholder signature, `skip_thought_signature_validator`, as RubyLLM's native
   Gemini protocol does. Without it, a resumed or failed-over turn can't continue on Gemini.
-- **Bounded turns.** `Ai::Conversation` owns the tool loop, a product decision with the spike's
-  evidence on both sides (section 8.4), and bounds it twice: at most `Setting.ai_max_tool_rounds` rounds, with the last
+- **Bounded turns.** Sure drives the turn and RubyLLM runs the tools, a product decision with the
+  spike's evidence on both sides (section 8.4). The driver bounds the turn twice: at most `Setting.ai_max_tool_rounds` rounds, with the last
   round sent without tools so the model must answer, and at most `Setting.ai_response_timeout`
   seconds for the whole turn, after which the turn stops and the message says so. Today's
   responder already caps rounds; the cap moves into the plumbing so every transport and the
@@ -1494,10 +1497,25 @@ overridden by a family.
 
 ### 8.4 `Ai::Conversation` — chat
 
-Chat isn't a generation: it streams, calls tools in rounds and continues a history. It has one
-class, called by `AssistantResponseJob` on `ai_interactive`:
+Chat isn't a generation: it streams, calls tools in rounds and continues a history. A tool loop
+has three parts, and they're owned in different places:
+
+| Part | What it does | Owner |
+|---|---|---|
+| The driver | Round cap, last round without tools, turn deadline, cancel, failover only before the first chunk, sending an interrupted round again | Sure: `Ai::Conversation`, stepping the agent one move at a time |
+| Tool execution | Runs the model's tool calls, in parallel threads, pausing for approval, resuming a turn whose tool calls have no results | RubyLLM: `Agent#step` runs `run_tools` when calls are pending |
+| The definition | Tools and tool options | `RubyLLM::Agent`, with the route supplying model, context and prompt each turn |
+
+`Ai::Conversation` is called by `AssistantResponseJob` on `ai_interactive`:
 
 ```ruby
+# app/models/ai/conversation/chat_agent.rb
+class Ai::Conversation::ChatAgent < RubyLLM::Agent
+  # No model, context, instructions or fallbacks: the route supplies the first three each turn,
+  # and failover is Sure's (section 5.4).
+  tool_options concurrency: :threads
+end
+
 # app/models/ai/conversation.rb
 class Ai::Conversation
   def initialize(chat:, user:, tools:)   # tools: Assistant.function_classes(user), as today
@@ -1508,12 +1526,15 @@ class Ai::Conversation
   def respond(message, cancelled: -> { message.reload.cancelled? })
     # 1. Ai::Router#resolve(:chat): the family's chat mode picks model or agent routes (section 5.3).
     # 2. Ai::Sequencer.run(plan) on the interactive lane; failover only here, before the first chunk.
-    # 3. History::for(@chat, route:): previous_response_id when the last turn ran on this endpoint
-    #    and it has responses_api, otherwise messages rebuilt and trimmed to the model's budget.
-    # 4. Rounds: route.transport.converse(request) { |chunk| message.append_text!(chunk) }; tool calls
-    #    go to Assistant::FunctionToolCaller and start the next round, at most Setting.ai_max_tool_rounds
-    #    (the last without tools), within Setting.ai_response_timeout for the whole turn (section 5.5).
-    # 5. Instrument converse.ai and store the serving route on the message.
+    # 3. The agent for the route: ChatAgent on the endpoint's RubyLLM context (which carries the
+    #    host's gate, section 11), the route's model, instructions from Ai::Prompt.for (section 8.3),
+    #    @tools wrapped as SureTool, and History::for(@chat, route:) as its messages.
+    # 4. Drive: agent.step { |chunk| message.append_text!(chunk.content) } until the agent is
+    #    complete or waiting for an approval; at most Setting.ai_max_tool_rounds model calls (the
+    #    last with tool_choice: none), Setting.ai_response_timeout for the whole turn, and
+    #    `cancelled`, checked while streaming and before each tool (before_tool_call). A round
+    #    interrupted at the gate is stepped again (section 11).
+    # 5. Instrument converse.ai per round and store the serving route and provider_state on the message.
   end
 end
 ```
@@ -1524,8 +1545,8 @@ What happens to today's chat classes in PR 3:
 |---|---|
 | `Assistant.for_chat`, `config_for`, `available_types`, `implementation_for` | Deleted. `AssistantResponseJob` calls `Ai::Conversation`. `Assistant.function_classes` stays: it lists chat's tools, with today's preview and guest filtering |
 | `Assistant::Base`, `Assistant::Builtin`, `Assistant::Provided` | Deleted; their work is `Ai::Conversation#respond` |
-| `Assistant::Responder` | Its round loop and final no-tools round move into `respond`; deleted |
-| `Assistant::FunctionToolCaller` | Stays: it runs tools against the family's data, which is domain work |
+| `Assistant::Responder` | Its round cap and final no-tools round move into `respond`'s driver; RubyLLM runs the tools; deleted |
+| `Assistant::FunctionToolCaller` | Stays: it runs tools against the family's data, which is domain work. `SureTool` wraps each function for RubyLLM and calls it through the caller, so a tool's failure is still Sure's data (no SQL in a not-found, the retry hints) |
 | `Assistant::HistoryTrimmer`, `TokenBudget`, `TokenEstimator` | Move to `Ai::Conversation::History`. The budget comes from the model's `context_window` minus `max_output_tokens`, so `LLM_MAX_HISTORY_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE` go |
 | `Assistant::Configurable` | The system prompt text moves to `app/prompts/chat_system.md`; the values it fills in (date, currency, accounts) stay in the domain as `Chat#prompt_locals` |
 | `Assistant::External`, `Assistant::External::Client` | Deleted; the `compatible` transport's agent mode |
@@ -1545,13 +1566,37 @@ What happens to today's chat classes in PR 3:
   `Assistant::External.available_for?` does today.
 - **Which tools write.** Each `Assistant::Function` declares whether it writes; nothing marks it
   today (19 of the 34 do, by name). Chat needs it to ask before a write, and MCP needs it for
-  `destructiveHint`.
-- **Who runs the tools is a product decision.** Sure's loop is 47 lines. RubyLLM's `ask` runs
-  tools with no code but with no round cap (12 rounds in the spike until its guard). Stepping
-  RubyLLM's loop with `run_tools` keeps Sure's bounds and adds approvals that pause the turn,
-  tools in parallel threads and resume after a dead worker, for about 40 more lines. RubyLLM's
-  durable agents run one step per job, but execution is at least once, so tools must be safe to
-  run twice, which Sure's write tools aren't today (spike: "RubyLLM running Sure's tools").
+  `destructiveHint`. With RubyLLM running the tools, a write tool declares `requires_approval`;
+  an undecided call ends the turn `:awaiting_approval` with its history, the decision is kept in
+  Sure's tables, and the next `respond` with that history runs or refuses the call (spike, live
+  on llama.cpp). The approve and deny UI is a feature of its own, not part of this plan.
+- **Tools carry the job's lane.** RubyLLM starts each parallel tool thread with fresh execution
+  state, so a chat tool's own AI call (`search_family_files` embedding its query) would run in the
+  background lane and could be made to re-enqueue (section 11, rule 3). `SureTool` keeps the lane
+  it was built in and runs the tool inside it (spike: both calls moved from background to
+  interactive).
+- **Why RubyLLM runs the tools, and the evidence against.** RubyLLM's `ask` has no round cap (12
+  rounds in the spike until its guard), so Sure keeps the driver; stepping the agent keeps every
+  bound. Running the tools brings approvals, parallel tools and resuming after a dead worker,
+  working, for about 40 lines more than Sure's own 47-line loop; the plan needs approvals for
+  writes anyway. Behind the gate, a background agent interrupted mid-answer was stepped again
+  without running a tool twice: `generate` adds a reply to the history only when it's complete
+  (spike: "RubyLLM agents behind the gate"). Against: Sure then depends on RubyLLM's tool
+  semantics (its denial message, its unknown-tool error that lists every tool name), which change
+  with its releases; and the spike adapted only the compatible transport, so PR 3 also adapts
+  Anthropic's.
+- **What isn't used, and why.**
+  - `ask` and `complete`: no round cap; Sure steps.
+  - `fallbacks`: they switch provider through the first endpoint's context and gate, and fall back
+    after chunks have streamed; failover stays Sure's.
+  - `ask_later`, RubyLLM's durable agents (one step per job): execution is at least once, so tools
+    must be safe to run twice, which Sure's write tools aren't today.
+  - Instructions from ERB templates (`app/prompts/<agent>/instructions.txt.erb`): a family's
+    prompt override is user text, which ERB would run as code; the instructions come from
+    `Ai::Prompt.for`.
+  - `chat_model` (RubyLLM's Rails persistence): Sure keeps its own chat tables (section 20). If it
+    were adopted, an interrupt would use `Agent#cancel`, whose error RubyLLM's persistence cleans
+    up after; Sure's `Preempted` leaves a blank assistant row until the next step.
 
 ## 9. `Ai::Result` and `Ai::Error`
 
@@ -2241,7 +2286,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    Every criterion below passes or needs a small fix in Sure's adapter; none fails. It recommends
    adopting `ruby_llm` 2.1.1, pinned, and adopting it stays a product decision. Beyond the
    criteria it covered local servers in containers, the proxy, OpenRouter's free models,
-   reasoning switches, Jev, Sure's tools in RubyLLM's loop, switching providers mid-chat, PDF
+   reasoning switches, Jev, Sure's tools in RubyLLM's loop and RubyLLM agents (section 8.4 is built on them), switching providers mid-chat, PDF
    import and local OCR, OpenAI vector stores, every RubyLLM 2.1 feature and its ecosystem gems,
    job runners and chat priority on one CPU (Sidekiq threads against Solid Queue and Async::Job
    fibers, llama.cpp's slots, interrupting background calls; section 11 is built on it), and a
@@ -2283,8 +2328,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    smart-configure, document embedding and the MCP AI tools call their owners on the web thread,
    as today. Configuration is still edited on the hostings page, and the web and the workers
    each build `Ai::Config` from their own ENV, as they resolve settings today, until PR 6.
-3. **Chat.** `Ai::Conversation` (section 8.4), `converse` and the agent mode on the transports,
-   chat mode (read from today's `assistant_type` until PR 6), today's `mcp_only` rule as one line
+3. **Chat.** `Ai::Conversation`'s driver around `ChatAgent` and `SureTool` (section 8.4), agent
+   construction on the compatible and Anthropic transports, `converse` and the agent mode on the
+   transports, chat mode (read from today's `assistant_type` until PR 6), today's `mcp_only` rule as one line
    in `Ai::Consent` (section 6), `previous_response_id` on the same
    endpoint, failover at the start of a turn, bounded turns, the serving route and
    `provider_state` on each message with the drop-on-switch rule and Gemini's placeholder
@@ -2406,5 +2452,6 @@ chat tables (for the chat storage line).
   `provider_state` column (section 18). RubyLLM's persistence pays off when RubyLLM runs the loop
   (approvals and MCP input that survive restarts); it would also migrate data the mobile API
   reads (#4421), touch how tool rounds are stored (#4133), and turn on RubyLLM's usage ledger,
-  which then records every call Sure makes. Revisit if a later proposal moves the loop into
-  RubyLLM.
+  which then records every call Sure makes. RubyLLM now runs the tools (section 8.4), but Sure
+  keeps the history and rebuilds it each turn; revisit when approvals have to survive restarts
+  without Sure storing the paused turn itself.
