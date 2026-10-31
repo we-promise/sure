@@ -1,7 +1,7 @@
 # RubyLLM spike report (PR 1 of the AI plumbing redesign)
 
 **Companion to:** [`rubyllm-spike-prompt.md`](rubyllm-spike-prompt.md) (the brief), [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) (the plan, §19) and [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) (the question before it was run)
-**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`46201d2be`](https://github.com/josh-sanders/sure/commit/46201d2be). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
+**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`32ef81fb9`](https://github.com/josh-sanders/sure/commit/32ef81fb9). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
 **Status:** a recommendation with its evidence, not a decision. The spike's second purpose was to sort the plan's choices into product decisions and technical limits; none of the product decisions, and none of the scope lines, is final. This file is the spike's note (`docs/llm-guides/ai-pipeline.md` on the branch) as of that commit; the plan's own short note in that path comes with PR 2.
 
 **Recommendation: adopt, pinned to `ruby_llm` 2.1.1** (released 2026-10-11, the latest at the
@@ -28,7 +28,8 @@ case for it is everything else:
   can't take one (see the proxy row).
 - **Unknown models:** `assume_model_exists` handles models missing from the registry.
 
-Sure keeps the tool loop, the JSON-mode policy, error mapping, instrumentation and the routing
+Sure keeps the turn's bounds (it steps the tool loop; RubyLLM can run the tools, see "RubyLLM
+agents behind the gate"), the JSON-mode policy, error mapping, instrumentation and the routing
 around it.
 
 Branch: `spike/ruby-llm` (not merged). Tests: `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb` (348 runs, 57 skips:
@@ -1301,6 +1302,14 @@ interrupting on). Sure drives each one with `Agent#step` in a bounded loop inste
   the lane captured when the tool is built (`CarriesLane`, 4 lines) ran both in the interactive
   lane. RubyLLM's own way to carry context into tool threads, `Support::Instrumentation`
   subscribers with `capture_context`, is `:nodoc:`.
+- **That's RubyLLM's design, not a bug in it.** `ToolConcurrency#isolated` says why: a tool
+  thread runs as its own unit of work so its database connections return to the pool, and a
+  fiber that shared the caller's state would reset the caller's `Current` when it finished. The
+  gap was in the spike, which kept the lane in per-thread state; the fix uses public API only.
+  No RubyLLM issue asks for a public way to carry an app's own context (a lane, a tenant, a
+  trace) into tool workers, and its recent work in that code (#1326, "Propagate cancellation
+  checkpoints to child fibers") carries only its own state. Asking for one is optional and not
+  filed: Sure doesn't need it.
 
 ## Lines of code for bill setup
 

@@ -1571,10 +1571,11 @@ What happens to today's chat classes in PR 3:
   Sure's tables, and the next `respond` with that history runs or refuses the call (spike, live
   on llama.cpp). The approve and deny UI is a feature of its own, not part of this plan.
 - **Tools carry the job's lane.** RubyLLM starts each parallel tool thread with fresh execution
-  state, so a chat tool's own AI call (`search_family_files` embedding its query) would run in the
-  background lane and could be made to re-enqueue (section 11, rule 3). `SureTool` keeps the lane
-  it was built in and runs the tool inside it (spike: both calls moved from background to
-  interactive).
+  state, on purpose: the thread's connections return to the pool and the caller's `Current`
+  isn't reset. So a chat tool's own AI call (`search_family_files` embedding its query) would run
+  in the background lane and could be made to re-enqueue (section 11, rule 3). `SureTool` keeps
+  the lane it was built in and runs the tool inside it (spike: both calls moved from background
+  to interactive). This uses RubyLLM's public API; nothing upstream needs to change.
 - **Why RubyLLM runs the tools, and the evidence against.** RubyLLM's `ask` has no round cap (12
   rounds in the spike until its guard), so Sure keeps the driver; stepping the agent keeps every
   bound. Running the tools brings approvals, parallel tools and resuming after a dead worker,
