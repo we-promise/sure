@@ -1,20 +1,22 @@
 # Bills subsystem: after detecting patterns this now runs the rest of the
 # pipeline -- materialize occurrences, repair provider-replaced entries, match.
 class IdentifyRecurringTransactionsJob < ApplicationJob
+  include FamilyDebounce
+
   queue_as :default
+  self.debounce_key_prefix = "recurring_transaction_identify"
 
   # Debounce: if called multiple times within the delay window,
   # only the last scheduled job will actually run
   DEBOUNCE_DELAY = 30.seconds
 
-  def perform(family_id, scheduled_at)
+  def perform(family_id, token)
     family = Family.find_by(id: family_id)
     return unless family
     return if family.recurring_transactions_disabled?
 
     # Check if this job is stale (a newer one was scheduled)
-    latest_scheduled = Rails.cache.read(cache_key(family_id))
-    return if latest_scheduled && latest_scheduled > scheduled_at
+    return if superseded?(family_id, token)
 
     # Check if there are still incomplete syncs - if so, skip and let the last sync trigger it
     return if family_has_incomplete_syncs?(family)
@@ -28,21 +30,13 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
   def self.schedule_for(family)
     return if family.recurring_transactions_disabled?
 
-    scheduled_at = Time.current.to_f
-    cache_key = "recurring_transaction_identify:#{family.id}"
-
-    # Store the latest scheduled time
-    Rails.cache.write(cache_key, scheduled_at, expires_in: DEBOUNCE_DELAY + 10.seconds)
+    token = claim_debounce_token(family.id, expires_in: DEBOUNCE_DELAY + 10.seconds)
 
     # Schedule the job with delay
-    set(wait: DEBOUNCE_DELAY).perform_later(family.id, scheduled_at)
+    set(wait: DEBOUNCE_DELAY).perform_later(family.id, token)
   end
 
   private
-
-    def cache_key(family_id)
-      "recurring_transaction_identify:#{family_id}"
-    end
 
     # Debounce gate: delegate to `Sync.any_incomplete_for?`, which polls every
     # `Syncable` provider association on `Family` via reflection. The previous
