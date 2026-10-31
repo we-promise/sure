@@ -58,10 +58,14 @@
 <% end %>
 
 <%= turbo_frame_tag "dashboard_sections", target: "_top" do %>
-  <%= render "shared/exchange_rate_notes", family: Current.family, classes: "mb-4" %>
+  <%= render "shared/exchange_rate_notes", family: Current.family, currency: @dashboard_currency, classes: "mb-4" %>
 
   <% if accessible_accounts.any? %>
-    <div class="flex items-center justify-end mb-4">
+    <div class="flex items-center justify-end gap-2 mb-4">
+      <%# Offered only when preferences list additional currencies; a lone primary currency has nothing to switch to. %>
+      <% if @reporting_currencies.many? %>
+        <%= render UI::CurrencyPicker.new(selected: @balance_sheet.currency, currencies: @reporting_currencies, url: root_path, frame: "dashboard_sections", extra_params: @dashboard_view_params.except(:currency)) %>
+      <% end %>
       <%# Keeps the widgets' own months and filters; a preset replaces any custom range. %>
       <%= render UI::PeriodPicker.new(selected: @period, url: root_path, frame: "dashboard_sections", extra_params: @dashboard_view_params.except(:start_date, :end_date)) %>
     </div>
