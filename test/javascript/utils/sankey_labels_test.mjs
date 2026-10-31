@@ -4,6 +4,7 @@ import {
   largestSankeyColumn,
   layoutSankeyLabels,
   sankeyHeightForLabels,
+  sankeyLabelRoom,
   spreadSankeyColumns,
 } from "../../../app/javascript/utils/sankey_labels.mjs";
 
@@ -432,4 +433,51 @@ test("a slot exactly one label tall survives fractional positions", () => {
     [358.19, 144.19626751650793, 146.71313464516334],
   ]);
   assert.equal(hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING }).size, 0);
+});
+
+// A first-column node whose label runs right, towards the next column's bar.
+const income = { index: 0, x0: 0, x1: 15, value: 476, y0: 390, y1: 410 };
+const incomeBar = { index: 1, x0: 355, x1: 370, value: 4174, y0: 200, y1: 520 };
+
+test("a label's room ends a little before the next column's bar at its height", () => {
+  const box = { x: 21, y: 387, width: 300, height: 26 };
+  assert.equal(sankeyLabelRoom(income, box, [income, incomeBar]), 355 - 21 - 4);
+});
+
+test("a bar at another height leaves the label unbounded", () => {
+  const box = { x: 21, y: 387, width: 300, height: 26 };
+  const higher = { ...incomeBar, y0: 100, y1: 300 };
+  assert.equal(sankeyLabelRoom(income, box, [income, higher]), null);
+});
+
+test("a label left of its bar is bounded by the bar to its left", () => {
+  const category = { index: 0, x0: 980, x1: 995, value: 60, y0: 405, y1: 410 };
+  const cashFlow = { index: 1, x0: 668, x1: 683, value: 4174, y0: 200, y1: 520 };
+  const box = { x: 760, y: 395, width: 214, height: 26 };
+  assert.equal(sankeyLabelRoom(category, box, [category, cashFlow]), 974 - 683 - 4);
+});
+
+test("a node out of room keeps smaller neighbours within a label unlabeled", () => {
+  // Health has no room under Food and Rent; Transport, 20px below it, would
+  // fit, but in the place of Health's label.
+  const nodes = column([
+    [750, 100, 130], // Food
+    [600, 134, 136], // Rent
+    [141, 137, 139], // Health
+    [27, 157, 159], // Transport
+  ]);
+  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
+  assert.deepEqual([...hidden].sort(), [2, 3]);
+});
+
+test("further down a column, the largest of the smaller nodes get labels again", () => {
+  const nodes = column([
+    [750, 100, 130], // Food
+    [600, 134, 136], // Rent
+    [141, 137, 139], // Health, out of room
+    [58, 250, 251], // Family help, far below with room
+    [27, 253, 254], // too close to Family help
+  ]);
+  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
+  assert.deepEqual([...hidden].sort(), [2, 4]);
 });

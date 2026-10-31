@@ -6,9 +6,9 @@
 // node-value order, and a placed label never moves again: the largest labels
 // sit at their bars' centres, and a smaller one may only slide into the free
 // space left between its neighbours, as long as it still touches its own
-// bar. It is hidden when no such space is left. A node that runs out of room
-// still holds its slot, so a smaller neighbour can't be labeled in its place
-// and the visible labels stay the largest ones.
+// bar. It is hidden when no such space is left, and so is every smaller node
+// within a label of it, so a small category never takes the place of a larger
+// one's label; further along, the largest of the rest still get labels.
 //
 // On a narrow chart a label can also run across the gap into the next
 // column. When the caller passes each label's measured box (keyed by
@@ -56,10 +56,10 @@ export function layoutSankeyLabels(
     const column = Math.round(node.x0);
     const placed = placedByColumn.get(column) || [];
     const crowdedYs = crowdedYsByColumn.get(column) || [];
-    const crowded = crowdedYs.some(
+    const nearCrowded = crowdedYs.some(
       (crowdedY) => Math.abs(centre(node) - crowdedY) < spacing - TOLERANCE,
     );
-    const y = crowded
+    const y = nearCrowded
       ? null
       : freeSlot(node, placed, labelY, { spacing, height });
 
@@ -85,6 +85,29 @@ export function largestSankeyColumn(nodes) {
     sizes.set(column, (sizes.get(column) || 0) + 1);
   });
   return Math.max(0, ...sizes.values());
+}
+
+// How wide a label measured at `box` beside `node` may be before it runs
+// into another column's bar at the label's height; null when no bar is in
+// its way. A label to the right of its bar grows rightwards, one to the left
+// grows leftwards.
+export function sankeyLabelRoom(node, box, nodes) {
+  const rightwards = box.x >= node.x1;
+  let room = null;
+  nodes.forEach((other) => {
+    if (other === node) return;
+    if (other.y0 >= box.y + box.height + CLEARANCE) return;
+    if (other.y1 <= box.y - CLEARANCE) return;
+
+    let width = null;
+    if (rightwards && other.x0 >= node.x1) {
+      width = other.x0 - box.x - CLEARANCE * 2;
+    } else if (!rightwards && other.x1 <= node.x0) {
+      width = box.x + box.width - other.x1 - CLEARANCE * 2;
+    }
+    if (width !== null && (room === null || width < room)) room = width;
+  });
+  return room;
 }
 
 // Widens the gaps in every column that has height to spare, so each node's

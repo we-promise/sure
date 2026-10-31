@@ -5,6 +5,7 @@ import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 import {
   layoutSankeyLabels,
   sankeyHeightForLabels,
+  sankeyLabelRoom,
   spreadSankeyColumns,
 } from "utils/sankey_labels";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
@@ -573,7 +574,7 @@ export default class extends Controller {
       .attr("text-anchor", d.x0 < width / 2 ? "start" : "end");
 
     textEl.selectAll("tspan").remove();
-    textEl.append("tspan").text(d.name);
+    textEl.append("tspan").text(d.labelName ?? d.name);
     textEl
       .append("tspan")
       .attr("x", x)
@@ -585,22 +586,51 @@ export default class extends Controller {
 
   // Where each label lands at this width, measured with an invisible probe
   // before the real labels are drawn, so the overlap rule can see a label
-  // that reaches into the next column.
+  // that reaches into the next column. A name too long to stop short of the
+  // next column's bar is shortened to fit; the tooltip keeps the full name.
   #measureLabels(svg, nodes, width) {
     const probe = svg
       .append("text")
       .attr("class", "text-xs font-medium select-none")
       .style("visibility", "hidden");
+    const measure = (d) => {
+      this.#writeLabel(probe, d, width);
+      const { x, y, width: boxWidth, height } = probe.node().getBBox();
+      return { x, y, width: boxWidth, height };
+    };
 
     const boxes = new Map();
     nodes.forEach((d) => {
-      this.#writeLabel(probe, d, width);
-      const { x, y, width: boxWidth, height } = probe.node().getBBox();
-      boxes.set(d.index, { x, y, width: boxWidth, height });
+      let box = measure(d);
+      const room = sankeyLabelRoom(d, box, nodes);
+      if (room !== null && box.width > room) {
+        d.labelName = this.#shortenedName(d, room, measure);
+        box = measure(d);
+      }
+      boxes.set(d.index, box);
     });
 
     probe.remove();
     return boxes;
+  }
+
+  // The longest "Name…" whose label fits in `room`, or undefined (the full
+  // name) when even one letter doesn't.
+  #shortenedName(d, room, measure) {
+    let fitting;
+    let lo = 1;
+    let hi = d.name.length - 1;
+    while (lo <= hi) {
+      const length = Math.floor((lo + hi) / 2);
+      d.labelName = `${d.name.slice(0, length).trimEnd()}…`;
+      if (measure(d).width <= room) {
+        fitting = d.labelName;
+        lo = length + 1;
+      } else {
+        hi = length - 1;
+      }
+    }
+    return fitting;
   }
 
   // Where each label goes, and which ones are hidden to prevent overlap
