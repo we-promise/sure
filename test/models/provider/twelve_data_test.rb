@@ -85,6 +85,36 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
     assert_instance_of Provider::TwelveData::RateLimitError, result.error
   end
 
+  { 400 => Faraday::BadRequestError, 404 => Faraday::ResourceNotFound }.each do |status, error_class|
+    test "falls back to the cross API when time_series rejects the pair with HTTP #{status}" do
+      error_body = {
+        "code" => status,
+        "message" => "**symbol** or **figi** parameter is missing or invalid.",
+        "status" => "error"
+      }.to_json
+      cross_response = mock
+      cross_response.stubs(:body).returns({
+        "values" => [ { "datetime" => "2026-10-28", "close" => "0.0102" } ],
+        "status" => "ok"
+      }.to_json)
+
+      @provider.stubs(:throttle_request)
+      mock_client = mock
+      mock_client.expects(:get).with("https://api.twelvedata.com/time_series")
+        .raises(error_class.new("the server responded with status #{status}", { status: status, body: error_body }))
+      mock_client.expects(:get).with("https://api.twelvedata.com/time_series/cross").returns(cross_response)
+      @provider.stubs(:client).returns(mock_client)
+
+      result = @provider.fetch_exchange_rates(from: "KGS", to: "EUR", start_date: Date.new(2026, 10, 28), end_date: Date.new(2026, 10, 28))
+
+      assert result.success?
+      assert_equal 1, result.data.size
+      assert_equal "KGS", result.data.first.from
+      assert_equal "EUR", result.data.first.to
+      assert_equal "0.0102", result.data.first.rate
+    end
+  end
+
   # ================================
   #   Error Transformer Tests
   # ================================
