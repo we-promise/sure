@@ -46,9 +46,15 @@ class Rule::Layout
         family.rules.where(rule_group_id: group.id).where.not(id: rule.id).maximum(:position).to_i
       ].max
 
-      family.rules.where.not(id: rule.id).where("position > ?", anchor).update_all("position = position + 1")
-      family.rule_groups.where("position > ?", anchor).update_all("position = position + 1")
-      rule.update_column(:position, anchor + 1)
+      place_after_position!(rule, anchor)
+    end
+  end
+
+  # Moves a rule without a group to right after another one, shifting the items
+  # after it down by one.
+  def place_after_rule!(rule, anchor_rule)
+    with_lock do
+      place_after_position!(rule, family.rules.where(id: anchor_rule.id).pick(:position).to_i)
     end
   end
 
@@ -92,6 +98,12 @@ class Rule::Layout
         Rule.lock_positions!(family)
         block.call
       end
+    end
+
+    def place_after_position!(rule, anchor)
+      family.rules.where.not(id: rule.id).where("position > ?", anchor).update_all("position = position + 1")
+      family.rule_groups.where("position > ?", anchor).update_all("position = position + 1")
+      rule.update_column(:position, anchor + 1)
     end
 
     def write_positions!(items)

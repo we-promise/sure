@@ -1386,6 +1386,8 @@ class Family::DataImporter
         [ position || Float::INFINITY, index ]
       end.map(&:first)
       with_stored_email_action = Rule.ids_with_stored_email_notification_action(@family.rules)
+      # The last rule each group lost in this import, keyed by group id.
+      left_group_last = {}
 
       records.each do |record|
         data = record["data"]
@@ -1428,7 +1430,17 @@ class Family::DataImporter
           build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
 
+        left_group_id = rule.rule_group_id_was if rule.will_save_change_to_rule_group_id? && rule.rule_group.nil?
+
         rule.save!
+        if left_group_id
+          # Each rule leaving a group lands right below it (Rule#place_in_rule_group),
+          # so one that left the same group earlier in this import would end up
+          # after it. Keep the exported run order instead.
+          previous = left_group_last[left_group_id]
+          Rule::Layout.new(@family).place_after_rule!(rule, previous) if previous
+          left_group_last[left_group_id] = rule
+        end
         map_source!(:rules, old_id, rule)
         increment_summary("Rule", created ? :created : :updated)
       end
