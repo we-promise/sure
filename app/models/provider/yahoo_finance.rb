@@ -34,6 +34,12 @@ class Provider::YahooFinance < Provider
   # Maximum lookback window for historical data (configurable)
   MAX_LOOKBACK_WINDOW = 10.years
 
+  # Returns `sector` and `industry` from its own metadata response, so the
+  # classification gate in `Security::Provided` must ask it.
+  def supplies_classification?
+    true
+  end
+
   def max_history_days
     (MAX_LOOKBACK_WINDOW / 1.day).to_i
   end
@@ -281,7 +287,9 @@ class Provider::YahooFinance < Provider
         logo_url: nil, # Yahoo doesn't provide reliable logo URLs
         description: asset_profile["longBusinessSummary"],
         kind: map_security_type(quote_type["quoteType"]),
-        exchange_operating_mic: exchange_operating_mic
+        exchange_operating_mic: exchange_operating_mic,
+        sector: asset_profile["sector"],
+        industry: asset_profile["industry"]
       )
 
       security_info

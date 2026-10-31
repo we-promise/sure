@@ -15,7 +15,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     Holding.delete_all
     Security.delete_all
 
-    @provider = mock("provider")
+    @provider = capable_provider("provider")
     Provider::Registry.any_instance
                       .stubs(:get_provider)
                       .with(:twelve_data)
@@ -58,6 +58,53 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     after  = ExchangeRate.count
 
     assert_operator after, :>, before + 1, "Should insert at least two new exchange-rate rows (forward + computed inverse)"
+  end
+
+  # Pins the keyword rather than the behaviour it enables. The test below stubs
+  # `fetch_security_info` and never looks at how `import_provider_details` was
+  # called, so a change dropping this keyword would silently switch off
+  # classification backfill with every test still green.
+  test "asks for classification when importing security details" do
+    security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
+    accounts(:investment).holdings.create!(
+      security: security, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD"
+    )
+
+    Security.any_instance.stubs(:import_provider_prices)
+    Security.any_instance
+            .expects(:import_provider_details)
+            .with(has_entry(include_classification: true))
+            .at_least_once
+
+    MarketDataImporter.new(mode: :snapshot).import_security_prices
+  end
+
+  # The details loop walks every online security, held or not, so the opt-in
+  # is limited to securities someone holds: an unheld row (created by a search
+  # and never traded) would otherwise spend one of EODHD's 20 daily requests
+  # on a classification nobody reads. A held one is still asked.
+  test "asks for classification only for securities someone holds" do
+    held = Security.create!(ticker: "HELD", exchange_operating_mic: "XNAS", name: "Held", logo_url: "logo")
+    unheld = Security.create!(ticker: "UNHELD", exchange_operating_mic: "XNAS", name: "Unheld", logo_url: "logo")
+    accounts(:investment).holdings.create!(
+      security: held, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD"
+    )
+
+    answer = Provider::SecurityConcept::SecurityInfo.new(
+      symbol: "X", name: nil, links: nil, logo_url: nil, description: nil,
+      kind: nil, exchange_operating_mic: "XNAS", sector: "Technology", industry: nil
+    )
+    @provider.stubs(:class).returns(Provider::TwelveData)
+    @provider.stubs(:fetch_security_info).returns(provider_success_response(answer))
+    @provider.expects(:fetch_security_info).with(has_entry(symbol: "UNHELD")).never
+    Security.stubs(:providers).returns([ @provider ])
+    Security.any_instance.stubs(:price_data_provider).returns(@provider)
+    Security.any_instance.stubs(:import_provider_prices)
+
+    MarketDataImporter.new(mode: :snapshot).import_security_prices
+
+    assert_equal "Technology", held.reload.sector, "a held security was not classified"
+    assert_nil unheld.reload.classification_fetched_at
   end
 
   test "syncs account exchange rates into the primary currency when the family currency is blank or NULL" do
