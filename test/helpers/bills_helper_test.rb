@@ -419,7 +419,7 @@ class BillsHelperTest < ActionView::TestCase
     second_inside = stub_occurrence("Power", 80, id: "two", due_on: Date.new(2026, 9, 10))
     outside = stub_occurrence("Later", 10, id: "three", due_on: Date.new(2026, 9, 20))
 
-    markers = bills_pay_period_markers([ first_inside, second_inside, outside ], [ period ])
+    markers = bills_pay_period_markers([ first_inside, second_inside, outside ], [ period ], currency: "USD")
 
     assert_equal [ "one" ], markers.keys
     assert_equal 2230, markers["one"][:due_total]
@@ -435,17 +435,42 @@ class BillsHelperTest < ActionView::TestCase
     snoozed = stub_occurrence("Gym", 40, id: "gym", due_on: Date.new(2026, 9, 17), effective_due_on: Date.new(2026, 9, 24))
     power = stub_occurrence("Power", 80, id: "power", due_on: Date.new(2026, 9, 25))
 
-    markers = bills_pay_period_markers([ rent, snoozed, power ], [ this_week, next_week ])
+    markers = bills_pay_period_markers([ rent, snoozed, power ], [ this_week, next_week ], currency: "USD")
 
     assert_equal %w[rent gym], markers.keys
     assert_equal 900, markers["rent"][:due_total]
     assert_equal 120, markers["gym"][:due_total]
   end
 
+  test "a pay period running past the month counts the bills due after it" do
+    period = OpenStruct.new(starts_on: Date.new(2026, 10, 26), ends_on: Date.new(2026, 11, 20))
+    rent = stub_occurrence("Rent", 900, id: "rent", due_on: Date.new(2026, 10, 28))
+    power = stub_occurrence("Power", 80, id: "power", due_on: Date.new(2026, 11, 5))
+    gym = stub_occurrence("Gym", 40, id: "gym", due_on: Date.new(2026, 11, 25))
+
+    markers = bills_pay_period_markers([ rent ], [ period ], currency: "USD", counted: [ rent, power, gym ])
+
+    assert_equal %w[rent], markers.keys
+    assert_equal 980, markers["rent"][:due_total]
+  end
+
+  test "a pay period total converts each bill into the family currency and leaves out one with no rate" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    period = OpenStruct.new(starts_on: Date.new(2026, 10, 26), ends_on: Date.new(2026, 11, 20))
+    rent = stub_occurrence("Rent", 900, id: "rent", due_on: Date.new(2026, 10, 28))
+    gym = stub_occurrence("Gym", 40, id: "gym", due_on: Date.new(2026, 11, 2), currency: "EUR")
+    tax = stub_occurrence("Tax", 500, id: "tax", due_on: Date.new(2026, 11, 9), currency: "JPY")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 2)
+
+    markers = bills_pay_period_markers([ rent ], [ period ], currency: "USD", counted: [ rent, gym, tax ])
+
+    assert_equal 980, markers["rent"][:due_total]
+  end
+
   test "no pay periods means no markers" do
     occurrence = stub_occurrence("Rent", 1, id: "x", due_on: Date.current)
 
-    assert_empty bills_pay_period_markers([ occurrence ], [])
+    assert_empty bills_pay_period_markers([ occurrence ], [], currency: "USD")
   end
 
   test "month progress divides paid, overdue and upcoming out of one total" do
@@ -638,12 +663,13 @@ class BillsHelperTest < ActionView::TestCase
 
   private
 
-    def stub_occurrence(name, amount, id:, due_on: Date.current, effective_due_on: due_on)
+    def stub_occurrence(name, amount, id:, due_on: Date.current, effective_due_on: due_on, currency: "USD")
       OpenStruct.new(
         id: id,
         due_on: due_on,
         effective_due_on: effective_due_on,
         resolved_expected_amount: amount,
+        resolved_expected_amount_money: Money.new(amount, currency),
         recurring_transaction: OpenStruct.new(display_name: name)
       )
     end

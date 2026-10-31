@@ -1173,6 +1173,25 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.safe_after_bills"), response.body
   end
 
+  test "a pay period marker totals the bills due after the month's end" do
+    travel_to Date.new(2026, 10, 23)
+    [ 21, 26 ].each do |day|
+      payday = Date.new(2026, 10, day)
+      @family.recurring_transactions.create!(
+        name: "Paycheck #{day}", account: accounts(:depository), amount: -1840, currency: "USD",
+        bill_type: "income", expected_day_of_month: day, anchor_date: payday,
+        last_occurrence_date: payday, next_expected_date: payday.next_month, status: "active", manual: true
+      )
+    end
+    create_bill(name: "Rent", amount: 900, expected_day_of_month: 28, next_expected_date: Date.new(2026, 10, 28))
+    create_bill(name: "Power", amount: 80, expected_day_of_month: 5, next_expected_date: Date.new(2026, 11, 5))
+
+    get bills_url
+
+    assert_response :success
+    assert_match I18n.t("bills.pay_period.due_before_date", amount: "$980.00", date: I18n.l(Date.new(2026, 11, 21), format: :short)), response.body
+  end
+
   # A lone materialized paycheck landing today collapses the planner's
   # boundary list to a single date, which yields an empty plan; the page must
   # treat that like no plan instead of crashing on plan.last.
