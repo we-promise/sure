@@ -299,6 +299,35 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert monthly.values.all? { |totals| totals.income_money.zero? && totals.expense_money.zero? }
   end
 
+  test "monthly_totals_for caches per month so a shifted window only queries the new month" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    current_month = Date.current.beginning_of_month
+    previous_window = Period.custom(start_date: current_month - 6.months, end_date: (current_month - 1.month).end_of_month)
+    shifted_window = Period.custom(start_date: current_month - 5.months, end_date: Date.current)
+
+    IncomeStatement.new(@family).monthly_totals_for(previous_window)
+
+    IncomeStatement::MonthlyTotals.expects(:new)
+      .with { |*args| args.last[:date_range] == (current_month..Date.current) }
+      .once
+      .returns(stub(call: []))
+
+    monthly = IncomeStatement.new(@family).monthly_totals_for(shifted_window)
+
+    assert_equal 6, monthly.size
+  end
+
+  test "monthly_totals_for keeps account-filtered months separate in the cache" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+
+    all_accounts = IncomeStatement.new(@family).monthly_totals_for(period).values.first
+    checking_only = IncomeStatement.new(@family).monthly_totals_for(period, account_ids: [ @checking_account.id ]).values.first
+
+    assert_equal Money.new(200 + 300 + 400, @family.currency), all_accounts.expense_money
+    assert_equal Money.new(200, @family.currency), checking_only.expense_money
+  end
+
   test "eligible_accounts excludes accounts not reflected in totals" do
     tax_advantaged_account = @family.accounts.create! name: "401k", currency: @family.currency, balance: 10000, accountable: Investment.new(subtype: "401k")
     excluded_account = @family.accounts.create! name: "Excluded", currency: @family.currency, balance: 0, exclude_from_reports: true, accountable: Depository.new
