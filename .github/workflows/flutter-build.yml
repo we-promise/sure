@@ -2,6 +2,11 @@ name: Flutter Mobile Build
 
 on:
   workflow_call:
+    inputs:
+      app_version:
+        description: Selected mobile release version (v-prefix allowed)
+        required: false
+        type: string
     outputs:
       has_app_release_aab:
         description: "Whether a signed release AAB artifact was produced"
@@ -40,15 +45,20 @@ jobs:
 
       - name: Resolve app version
         shell: bash
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
         run: |
-          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+          set -euo pipefail
+          if [[ -n "$APP_VERSION_INPUT" ]]; then
+            version="${APP_VERSION_INPUT#v}"
+          elif [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
             version="${GITHUB_REF_NAME#v}"
           else
             version="$(sed -n 's/^version: *//p' mobile/pubspec.yaml)"
             version="${version%%+*}"
           fi
           printf '%s\n' "$version" > .sure-version
-          echo "SURE_BUILD_NAME=${version%%-*}" >> "$GITHUB_ENV"
+          echo "SURE_BUILD_NAME=$version" >> "$GITHUB_ENV"
 
       - name: Get dependencies
         working-directory: mobile
@@ -149,8 +159,13 @@ jobs:
 
       - name: Resolve app version
         shell: bash
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
         run: |
-          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+          set -euo pipefail
+          if [[ -n "$APP_VERSION_INPUT" ]]; then
+            version="${APP_VERSION_INPUT#v}"
+          elif [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
             version="${GITHUB_REF_NAME#v}"
           else
             version="$(sed -n 's/^version: *//p' mobile/pubspec.yaml)"
