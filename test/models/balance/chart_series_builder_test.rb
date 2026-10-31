@@ -2,8 +2,10 @@ require "test_helper"
 
 class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
   include BalanceTestHelper
+  include PortfolioReturnsTestHelper
 
   setup do
+    @day_one = Date.new(2026, 3, 2)
   end
 
   test "balance series with fallbacks and gapfills" do
@@ -536,7 +538,453 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal 200, series.values.last.trend.current.amount
   end
 
+  # Net contributions. The example from the issue, a day apart rather
+  # than months: opened with 10,000, 5,000 deposited, a 150 dividend, 2,000
+  # withdrawn. The value line moves with the market and the dividend; the
+  # contributions line moves only with money the owner put in or took out.
+  test "net contributions open at the opening value and step up by a deposit on its date" do
+    account = lay_contributions_example
+
+    builder = contributions_builder(account, start_date: @day_one - 2)
+    series = builder.net_contributions_series
+
+    assert_equal builder.balance_series.values.map(&:date), series.values.map(&:date),
+                 "the contributions line is sampled on the value line's own dates"
+    assert_equal [ 0, 0, 10_000, 15_000, 15_000, 13_000 ], series.values.map { |v| v.value.amount }
+    assert_equal [ 0, 0, 10_000, 15_400, 15_900, 14_100 ], builder.balance_series.values.map { |v| v.value.amount }
+    assert_equal "USD", series.values.last.value.currency.iso_code
+  end
+
+  test "net contributions label their dates in the family's date format, as the value line does" do
+    account = lay_contributions_example
+    account.family.update!(date_format: "%Y-%m-%d")
+    Current.stubs(:family).returns(account.family)
+
+    builder = contributions_builder(account)
+    labels = I18n.with_locale(:en) { builder.net_contributions_series.values.map(&:date_formatted) }
+
+    expected = (@day_one..@day_one + 3).map { |date| date.strftime("%Y-%m-%d") }
+    assert_equal expected, labels
+    assert_equal I18n.with_locale(:en) { builder.balance_series.values.map(&:date_formatted) }, labels
+  end
+
+  test "a withdrawal lowers net contributions by its amount on its date" do
+    account = lay_contributions_example
+
+    amounts = contributions_builder(account).net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal(-2_000, amounts[3] - amounts[2])
+  end
+
+  # The delta, not the level: on the dividend's date the value line rises by
+  # the dividend and the market move, and the contributions line does not move.
+  # Goal#net_contributed_for's definition (balance minus net market flows)
+  # would count the dividend here, which is why it was not reused.
+  test "a dividend moves the value line and leaves net contributions unchanged" do
+    account = lay_contributions_example
+    builder = contributions_builder(account)
+
+    values = builder.balance_series.values.map { |v| v.value.amount }
+    contributions = builder.net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal 500, values[2] - values[1], "the dividend day moves the value line"
+    assert_equal 0, contributions[2] - contributions[1], "and leaves the contributions line where it was"
+  end
+
+  test "a fee, a buy and a sell leave net contributions unchanged" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 10_000, closing: 10_000
+    fee_entry account: account, date: @day_one + 1, amount: 25
+    buy_trade account: account, date: @day_one + 2, qty: 10, price: 100
+    sell_trade account: account, date: @day_one + 3, qty: 5, price: 120
+
+    amounts = contributions_builder(account).net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal [ 10_000, 10_000, 10_000, 10_000 ], amounts
+  end
+
+  # At account scope a transfer from the family's own current account is money
+  # the owner put into this account. It is internal only to a scope holding
+  # both legs, which the account chart never is.
+  test "a transfer in from another account in the family counts as a contribution" do
+    family = families(:empty)
+    account = create_portfolio_account(family: family)
+    checking = family.accounts.create!(name: "Checking", balance: 5_000, currency: "USD", accountable: Depository.new)
+    lay_balance account: account, date: @day_one, opening: 10_000, closing: 10_000
+    Transfer::Creator.new(
+      family: family,
+      source_account_id: checking.id,
+      destination_account_id: account.id,
+      date: @day_one + 1,
+      amount: 3_000
+    ).create
+
+    amounts = contributions_builder(account).net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal [ 10_000, 13_000, 13_000, 13_000 ], amounts
+  end
+
+  # Inception-anchored, not period-anchored: a window that opens after the
+  # deposits still starts at everything put in so far.
+  test "a period that starts after the deposits still opens at the cumulative figure" do
+    account = lay_contributions_example
+
+    series = contributions_builder(account, start_date: @day_one + 2).net_contributions_series
+
+    assert_equal [ 15_000, 13_000 ], series.values.map { |v| v.value.amount }
+  end
+
+  test "a foreign-currency deposit converts at its rate" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    deposit account: account, date: @day_one + 1, amount: 1_000, currency: "EUR"
+
+    amounts = contributions_builder(account).net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal 2_100, amounts[1]
+  end
+
+  # A position moved in from another broker is money the owner put in, valued
+  # at the position, by the same rule the returns engine uses.
+  test "a security journalled in counts at its value" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    security_journal account: account, date: @day_one + 1, qty: 10, price: 50
+
+    amounts = contributions_builder(account).net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal 1_500, amounts[1]
+  end
+
+  # A linked account's line starts from the balance held
+  # before the anchor day's activity (its value_open, 10,000) and counts that
+  # day's 5,000 deposit, so the anchor day's 400 market gain is not money put
+  # in. Opened at the day's 15,400 close, it would count that gain.
+  test "an anchor date opens at that day's opening value and counts its flows" do
+    account = lay_contributions_example
+
+    builder = contributions_builder(account, start_date: @day_one + 1)
+    series = builder.net_contributions_series(anchor_date: @day_one + 1)
+
+    assert_equal [ 15_000, 15_000, 13_000 ], series.values.map { |v| v.value.amount }
+    assert_equal [ 400, 900, 1_100 ], builder.balance_series.values.map(&:value).zip(series.values.map(&:value)).map { |v, c| (v - c).amount },
+                 "the gap is the market's and the dividend's, from the anchor day"
+  end
+
+  # When the value line's point on the anchor date is the balance before
+  # that day's activity (a coarse interval's prepended opening, or the
+  # normalizer's reset), the line's point there is measured at the same moment:
+  # the day's opening value. The day's flows arrive on the next point.
+  test "an anchor point before the day's activity opens at that day's opening value" do
+    account = lay_contributions_example
+
+    series = contributions_builder(account, start_date: @day_one + 1)
+      .net_contributions_series(anchor_date: @day_one + 1, anchor_before_activity: true)
+
+    assert_equal [ 10_000, 15_000, 13_000 ], series.values.map { |v| v.value.amount }
+    assert_equal 10_000, series.values[1].trend.previous.amount
+  end
+
+  # Negative: without an anchor date the flag has nothing to apply to, and
+  # the inception-anchored line is unchanged. The first day carries a
+  # deposit, so opening that day before its activity would read 0.
+  test "the before-activity opening needs an anchor date" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 0, closing: 1_000, cash_flow: 1_000
+    lay_balance account: account, date: @day_one + 1, opening: 1_000, closing: 1_500, cash_flow: 500
+    deposit account: account, date: @day_one, amount: 1_000
+    deposit account: account, date: @day_one + 1, amount: 500
+
+    plain = contributions_builder(account).net_contributions_series
+    flagged = contributions_builder(account).net_contributions_series(anchor_before_activity: true)
+
+    assert_equal [ 1_000, 1_500, 1_500, 1_500 ], flagged.values.map { |v| v.value.amount }
+    assert_equal plain.values.map(&:value), flagged.values.map(&:value)
+  end
+
+  test "net contributions carry a trend against the previous point" do
+    account = lay_contributions_example
+
+    values = contributions_builder(account).net_contributions_series.values
+
+    assert_equal 10_000, values.first.trend.previous.amount, "the first point has nothing before it"
+    assert_equal 10_000, values[1].trend.previous.amount
+    assert_equal 15_000, values[1].trend.current.amount
+  end
+
+  # A flow the returns engine cannot value
+  # counts as nothing, so the line is incomplete from that day. The builder
+  # says so rather than hiding it.
+  test "net contributions say when a flow could not be valued" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    deposit account: account, date: @day_one + 1, amount: 500
+    builder = contributions_builder(account)
+
+    refute builder.net_contributions_incomplete?, "every flow valued"
+
+    deposit account: account, date: @day_one + 2, amount: 1_000, currency: "EUR" # no EUR rate at all
+    unconverted = contributions_builder(account)
+
+    assert unconverted.net_contributions_incomplete?, "a flow with no rate"
+    assert_equal 1_500, unconverted.net_contributions_series.values.last.value.amount, "and it counts as nothing"
+  end
+
+  # The anchor day's flows are counted, so one that could not be
+  # valued on that day makes the line incomplete. One before the anchor
+  # is outside the line and does not.
+  test "an unvalued flow on the anchor day makes net contributions incomplete" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    deposit account: account, date: @day_one + 2, amount: 1_000, currency: "EUR" # no EUR rate at all
+
+    assert contributions_builder(account).net_contributions_incomplete?(anchor_date: @day_one + 2), "on the anchor day"
+    refute contributions_builder(account).net_contributions_incomplete?(anchor_date: @day_one + 3), "before the anchor"
+  end
+
+  test "an unpriced journal makes net contributions incomplete" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    security_journal account: account, date: @day_one + 1, qty: 10 # no price that day
+
+    assert contributions_builder(account).net_contributions_incomplete?
+  end
+
+  # An unvalued withdrawal is left out like an unvalued deposit, but it
+  # leaves the line too high, not too low. The check reports both, so it is
+  # named for what it knows (a flow is missing), not for a direction.
+  test "an unvalued withdrawal makes net contributions incomplete and leaves the line higher" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 5_000, closing: 5_000
+    deposit account: account, date: @day_one + 2, amount: -1_000, currency: "EUR"
+
+    unvalued = contributions_builder(account)
+    unvalued_last = unvalued.net_contributions_series.values.last.value.amount
+
+    set_rate from: "EUR", to: "USD", date: @day_one + 1, rate: 1.1
+    valued = contributions_builder(account)
+    valued_last = valued.net_contributions_series.values.last.value.amount
+
+    assert unvalued.net_contributions_incomplete?, "a withdrawal with no rate"
+    refute valued.net_contributions_incomplete?, "the same withdrawal, valued"
+    assert_equal 3_900, valued_last, "valued, the withdrawal comes off"
+    assert_equal 1_100, unvalued_last - valued_last, "unvalued, the line stays higher by the withdrawal"
+  end
+
+  test "fees, interest, buys and sells leave net contributions unchanged" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 10_000, closing: 10_000
+    fee_entry account: account, date: @day_one + 1, amount: 25
+    income_trade account: account, date: @day_one + 1, amount: 40, label: "Interest"
+    buy_trade account: account, date: @day_one + 2, qty: 10, price: 100
+    sell_trade account: account, date: @day_one + 3, qty: 5, price: 120
+
+    amounts = contributions_builder(account).net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal [ 10_000, 10_000, 10_000, 10_000 ], amounts
+  end
+
+  # A pending entry has not moved the balance, so it is not money put in. An
+  # excluded one has: excluding hides it from budgets, but the balance still
+  # applies it, and Portfolio::DailyReturns counts it as the flow it was.
+  test "an excluded deposit counts and a pending one does not" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    deposit(account: account, date: @day_one + 1, amount: 300).update!(excluded: true)
+    account.entries.create!(name: "Deposit", date: @day_one + 2, amount: -700, currency: "USD",
+                            entryable: Transaction.new(kind: "standard", extra: { "simplefin" => { "pending" => true } }))
+
+    amounts = contributions_builder(account).net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal [ 1_000, 1_300, 1_300, 1_300 ], amounts
+  end
+
+  # Both legs inside the scope: the money went nowhere, so a two-account
+  # builder does not count it, while the destination's own chart does.
+  test "a transfer between two accounts in the scope is not a contribution" do
+    family = families(:empty)
+    first = create_portfolio_account(family: family)
+    second = create_portfolio_account(family: family)
+    lay_balance account: first, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: second, date: @day_one, opening: 0, closing: 0
+    Transfer::Creator.new(
+      family: family,
+      source_account_id: first.id,
+      destination_account_id: second.id,
+      date: @day_one + 1,
+      amount: 400
+    ).create
+
+    both = Balance::ChartSeriesBuilder.new(
+      account_ids: [ first.id, second.id ],
+      currency: "USD",
+      period: Period.custom(start_date: @day_one, end_date: @day_one + 3),
+      interval: "1 day"
+    )
+
+    assert_equal [ 1_000, 1_000, 1_000, 1_000 ], both.net_contributions_series.values.map { |v| v.value.amount }
+    assert_equal [ 0, 400, 400, 400 ], contributions_builder(second).net_contributions_series.values.map { |v| v.value.amount }
+  end
+
+  # The opening value is the first row's start balance, before that day's
+  # flows. Its close already holds a deposit made that day, so opening at the
+  # close would count the deposit twice.
+  test "a deposit on the first balance day is counted once" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 0, closing: 5_000, cash_flow: 5_000
+    deposit account: account, date: @day_one, amount: 5_000
+
+    amounts = contributions_builder(account).net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal [ 5_000, 5_000, 5_000, 5_000 ], amounts
+  end
+
+  # Valued as the balance took it: into the account's currency on the
+  # deposit's own date (1.2 here), then into the family's currency at the
+  # previous day's rate (1 for a USD account). The two dates' rates differ, so
+  # reading the wrong one moves the figure.
+  test "a foreign-currency deposit converts into the account's currency on its own date" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    set_rate from: "EUR", to: "USD", date: @day_one + 1, rate: 1.2
+    deposit account: account, date: @day_one + 1, amount: 1_000, currency: "EUR"
+
+    builder = contributions_builder(account)
+
+    assert_equal [ 1_000, 2_200, 2_200, 2_200 ], builder.net_contributions_series.values.map { |v| v.value.amount }
+    refute builder.net_contributions_incomplete?
+  end
+
+  # Opening values convert the same way: an account in another currency
+  # opens at the rate of the day before its first balance.
+  test "an opening value in another currency converts at the previous day's rate" do
+    account = create_portfolio_account(family: families(:empty), currency: "EUR")
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    set_rate from: "EUR", to: "USD", date: @day_one - 1, rate: 1.5
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.6
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: @day_one, end_date: @day_one + 3),
+      interval: "1 day"
+    )
+
+    assert_equal 1_500, builder.net_contributions_series.values.first.value.amount
+    refute builder.net_contributions_incomplete?
+  end
+
+  # A position moved out is taken out the same way one moved in is put in:
+  # at the position's value that day.
+  test "a security journalled in or out counts at its position value" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    security_journal account: account, date: @day_one + 1, qty: 10, price: 50
+    security_journal account: account, date: @day_one + 2, qty: -4, price: 60, holding_qty: 6
+
+    amounts = contributions_builder(account).net_contributions_series.values.map { |v| v.value.amount }
+
+    assert_equal [ 1_000, 1_500, 1_260, 1_260 ], amounts
+  end
+
+  # A rate is carried to a date that has none, from the nearest earlier day,
+  # so a flow on such a date is valued rather than left out.
+  test "a flow with no rate on its own date is valued at the last known rate" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    deposit account: account, date: @day_one + 1, amount: 500
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    deposit account: account, date: @day_one + 2, amount: 1_000, currency: "EUR"
+
+    builder = contributions_builder(account)
+
+    refute builder.net_contributions_incomplete?
+    assert_equal [ 1_000, 1_500, 2_600, 2_600 ], builder.net_contributions_series.values.map { |v| v.value.amount }
+  end
+
+  test "a flow after the sampled dates does not make the line incomplete" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    deposit account: account, date: @day_one + 5, amount: 1_000, currency: "EUR" # no EUR rate at all
+
+    refute contributions_builder(account).net_contributions_incomplete?
+  end
+
+  # An account whose history starts after the others' brings its opening
+  # value into the scope on its first balance date: that is money put in, so
+  # the line steps up by it there and not before.
+  test "an account that joins the scope later adds its opening value on its first balance date" do
+    family = families(:empty)
+    first = create_portfolio_account(family: family)
+    later = create_portfolio_account(family: family)
+    lay_balance account: first, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: later, date: @day_one + 2, opening: 700, closing: 700
+
+    both = Balance::ChartSeriesBuilder.new(
+      account_ids: [ first.id, later.id ],
+      currency: "USD",
+      period: Period.custom(start_date: @day_one, end_date: @day_one + 3),
+      interval: "1 day"
+    )
+
+    assert_equal [ 1_000, 1_000, 1_700, 1_700 ], both.net_contributions_series.values.map { |v| v.value.amount }
+  end
+
+  # A day with nothing invested is suppressed by the returns engine for its
+  # zero denominator, not because a flow went unvalued, so it must not make
+  # the line read as incomplete.
+  test "an empty opening day does not make net contributions incomplete" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 0, closing: 0
+    lay_balance account: account, date: @day_one + 1, opening: 0, closing: 500, cash_flow: 500
+    deposit account: account, date: @day_one + 1, amount: 500
+
+    builder = contributions_builder(account)
+
+    refute builder.net_contributions_incomplete?
+    assert_equal [ 0, 500, 500, 500 ], builder.net_contributions_series.values.map { |v| v.value.amount }
+  end
+
+  # An explicit anchor opens before the day's activity and counts the day's
+  # flows, so one of them going unvalued is part of the line and makes
+  # it incomplete, with the anchor as without it.
+  test "an unvalued flow on an explicit anchor day makes the line incomplete" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 1_000, closing: 1_000
+    deposit account: account, date: @day_one + 1, amount: 100, currency: "EUR" # no EUR rate at all
+
+    assert contributions_builder(account).net_contributions_incomplete?, "counted from inception"
+    assert contributions_builder(account).net_contributions_incomplete?(anchor_date: @day_one + 1),
+           "the anchor day's flows are counted, so an unvalued one is reported"
+  end
+
   private
+    def lay_contributions_example
+      account = create_portfolio_account(family: families(:empty))
+
+      lay_balance account: account, date: @day_one, opening: 10_000, closing: 10_000
+      lay_balance account: account, date: @day_one + 1, opening: 10_000, closing: 15_400, cash_flow: 5_000, market_flow: 400
+      lay_balance account: account, date: @day_one + 2, opening: 15_400, closing: 15_900, cash_flow: 150, market_flow: 350
+      lay_balance account: account, date: @day_one + 3, opening: 15_900, closing: 14_100, cash_flow: -2_000, market_flow: 200
+
+      deposit account: account, date: @day_one + 1, amount: 5_000
+      income_transaction account: account, date: @day_one + 2, amount: 150
+      deposit account: account, date: @day_one + 3, amount: -2_000
+
+      account
+    end
+
+    def contributions_builder(account, start_date: @day_one)
+      Balance::ChartSeriesBuilder.new(
+        account_ids: [ account.id ],
+        currency: account.currency,
+        period: Period.custom(start_date: start_date, end_date: @day_one + 3),
+        interval: "1 day"
+      )
+    end
+
     def create_holding(account:, security:, date:, qty:, price:, cost_basis:)
       Holding.create!(
         account: account,
