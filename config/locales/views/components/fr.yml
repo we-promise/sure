@@ -102,6 +102,11 @@ fr:
           holdings: Titres
           total_value: Valeur totale
         vs_available_history: par rapport à l'historique disponible
+        net_contributions:
+          difference: Différence
+          incomplete: "Les apports nets peuvent être incomplets : un dépôt ou un retrait n'a pas pu être valorisé."
+          label: Apports nets
+          legend: Séries du graphique
     period_picker:
       aria_label: 'Période : %{period}'
   ds:

@@ -168,6 +168,11 @@ de:
           holdings: Bestände
           total_value: Gesamtwert
         vs_available_history: vs. verfügbarer Verlauf
+        net_contributions:
+          difference: Differenz
+          incomplete: "Nettoeinlagen sind möglicherweise unvollständig: Eine Ein- oder Auszahlung konnte nicht bewertet werden."
+          label: Nettoeinlagen
+          legend: Diagrammreihen
     period_picker:
       aria_label: 'Zeitraum: %{period}'
   ds:

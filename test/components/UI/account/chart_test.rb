@@ -1,6 +1,9 @@
 require "test_helper"
 
 class UI::Account::ChartTest < ViewComponent::TestCase
+  include BalanceTestHelper
+  include PortfolioFlowTestHelper
+
   setup do
     @account = accounts(:investment)
     @account.holdings.destroy_all
@@ -329,6 +332,116 @@ class UI::Account::ChartTest < ViewComponent::TestCase
 
     assert_equal "all_time", component.period.key
     assert_equal family_oldest, component.period.start_date
+  end
+
+  # The Total value view of an account that holds trades carries the
+  # net contributions line for the chart controller, with each point's
+  # difference from total value, and a legend naming both lines.
+  test "the total value view of an investment account carries net contributions and a legend" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 15_400)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+    create_balance(account: account, date: day_one + 1, balance: 15_400, start_cash_balance: 10_000, cash_adjustments: 5_400)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 1), view: "balance"))
+
+    comparison = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])
+    last = comparison["values"].last
+
+    assert_equal "Net contributions", comparison["label"]
+    assert_equal "Difference", comparison["difference_label"]
+    assert_equal [ day_one.iso8601, (day_one + 1).iso8601 ], comparison["values"].map { |v| v["date"] }
+    assert_equal "15000.0", last["value"]["amount"]
+    assert_equal "400.0", last["difference"]["value"]["amount"], "total value minus net contributions"
+    assert_equal 2.7, last["difference"]["percent"], "as a percentage of net contributions"
+    assert_selector "[data-net-contributions-legend]", text: "Net contributions"
+    assert_selector "[data-net-contributions-legend]", text: "Total value"
+    refute_selector "[data-net-contributions-incomplete]"
+  end
+
+  # Zero net contributions under a non-zero value make the difference's
+  # percentage infinite. ActiveSupport writes a non-finite Float as null,
+  # so the attribute stays valid JSON and the controller leaves the
+  # percentage off. Strict JSON.parse refuses a bare Infinity, as the
+  # browser's does.
+  test "zero net contributions serialize a null percent the browser can parse" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 400)
+    create_balance(account: account, date: day_one, balance: 0)
+    create_balance(account: account, date: day_one + 1, balance: 5_400, start_cash_balance: 0, cash_adjustments: 5_400)
+    create_balance(account: account, date: day_one + 2, balance: 400, start_cash_balance: 5_400, cash_adjustments: -5_000)
+    create_labelled_transaction account: account, label: nil, amount: -5_000, date: day_one + 1
+    create_labelled_transaction account: account, label: nil, amount: 5_000, date: day_one + 2
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one + 2), view: "balance"))
+
+    raw = page.find("#lineChart")["data-time-series-chart-comparison-value"]
+    comparison = JSON.parse(raw)
+    last = comparison["values"].last
+
+    assert_equal (day_one + 2).iso8601, last["date"]
+    assert_equal "0.0", last["value"]["amount"], "net contributions must be zero, or this asserts nothing"
+    assert_equal "400.0", last["difference"]["value"]["amount"], "the value must be non-zero, so the percentage is not the 0.0 of 0 over 0"
+    assert_nil last["difference"]["percent"]
+    assert_equal "＋∞", last["difference"]["percent_formatted"]
+  end
+
+  test "net contributions are not drawn on the holdings, cash or gains views" do
+    %w[holdings_balance cash_balance gains].each do |view|
+      component = UI::Account::Chart.new(account: @account, view: view)
+
+      refute component.show_net_contributions?, "#{view} must not carry net contributions"
+      render_inline(component)
+      refute_selector "[data-time-series-chart-comparison-value]"
+      refute_selector "[data-net-contributions-legend]"
+    end
+  end
+
+  test "net contributions are drawn only for accounts that hold trades" do
+    exchange = accounts(:crypto)
+    exchange.accountable.update!(subtype: "exchange")
+    assert UI::Account::Chart.new(account: exchange, view: "balance").show_net_contributions?
+
+    wallet = accounts(:crypto)
+    wallet.accountable.update!(subtype: "wallet")
+    refute UI::Account::Chart.new(account: wallet.reload, view: "balance").show_net_contributions?
+
+    render_inline(UI::Account::Chart.new(account: accounts(:depository), view: "balance"))
+    refute_selector "[data-time-series-chart-comparison-value]"
+    refute_selector "[data-net-contributions-legend]"
+  end
+
+  # The controller draws the dashed line only when the comparison has points,
+  # so the legend naming it must follow the same condition, not the value
+  # line's.
+  test "no legend when the net contributions comparison has no points" do
+    values = @account.balance_series(view: "balance").values
+    assert values.any?, "the value line must have points, or this asserts nothing"
+    original = @account.method(:balance_series)
+    @account.define_singleton_method(:balance_series) do |**kwargs|
+      kwargs[:view].to_s == "net_contributions" ? Struct.new(:values).new([]) : original.call(**kwargs)
+    end
+
+    render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
+
+    assert_equal [], JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])["values"]
+    refute_selector "[data-net-contributions-legend]"
+  end
+
+  test "the chart says when net contributions are incomplete" do
+    @account.stubs(:net_contributions_incomplete?).returns(true)
+    render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
+    assert_selector "[data-net-contributions-incomplete]", text: I18n.t("UI.account.chart.net_contributions.incomplete")
+    # An unvalued withdrawal leaves the line too high, so the note
+    # names no direction.
+    note = page.find("[data-net-contributions-incomplete]").text
+    assert_includes note, "incomplete"
+    refute_match(/understated|overstated/i, note)
+
+    @account.stubs(:net_contributions_incomplete?).returns(false)
+    render_inline(UI::Account::Chart.new(account: @account, view: "balance"))
+    refute_selector "[data-net-contributions-incomplete]"
   end
 
   private
