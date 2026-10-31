@@ -97,7 +97,9 @@ class AccountsController < ApplicationController
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
     @q = activity_search_params
-    entries = @account.entries.excluding_split_parents.search(@q, family).reverse_chronological.includes(:entryable)
+    # Cash anchors are internal accounting baselines, not user activity.
+    entries = @account.entries.excluding_split_parents.where.not(entryable_id: Valuation.cash_anchor.select(:id))
+      .search(@q, family).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?

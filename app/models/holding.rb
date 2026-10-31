@@ -86,13 +86,24 @@ class Holding < ApplicationRecord
     account.entries.where(entryable: account.trades.where(security: security)).reverse_chronological
   end
 
+  # A cash-anchored account keeps holdings history, so remove this position's whole manual series.
   def destroy_holding_and_entries!
-    transaction do
-      account.entries.where(entryable: account.trades.where(security: security)).destroy_all
-      destroy
+    trade_entries = account.entries.where(entryable: account.trades.where(security: security))
+    # A cash-anchored account only rebuilds from a given date: start where this position began.
+    if account.accounting_start_date
+      window_start_date = [ trade_entries.minimum(:date), account.holdings.where(security: security).minimum(:date) ].compact.min
     end
 
-    account.sync_later
+    transaction do
+      trade_entries.destroy_all
+      if account.accounting_start_date
+        account.holdings.where(security: security, account_provider_id: nil).destroy_all
+      else
+        destroy
+      end
+    end
+
+    account.sync_later(window_start_date: window_start_date)
   end
 
   # Returns the priority level for the current source (higher = better)

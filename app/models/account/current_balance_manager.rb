@@ -78,7 +78,7 @@ class Account::CurrentBalanceManager
       if account.balance_type == :cash && account.valuations.reconciliation.empty?
         adjust_opening_balance_with_delta(new_balance: balance, old_balance: account.balance)
       else
-        existing_reconciliation = account.entries.valuations.find_by(date: Date.current)
+        existing_reconciliation = account.entries.valuations.where.not(entryable_id: Valuation.cash_anchor.select(:id)).find_by(date: Date.current)
 
         result = reconciliation_manager.reconcile_balance(balance: balance, date: Date.current, existing_valuation_entry: existing_reconciliation)
 
