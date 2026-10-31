@@ -115,8 +115,8 @@ below traces back to one of these needs.
 
 | Need | Served by |
 |---|---|
-| F1, U2, M5 | Two-level consent with a data manifest per feature, and a member switch only an admin can turn off (section 6; the family level in PR 6) |
-| F2 | The family's allowed endpoints; each endpoint is marked local or cloud (sections 4, 6; PR 8) |
+| F1, U2, M5 | Two-level consent with a data manifest per feature, and a member switch only an admin can turn off (section 6; the family level in PR 7) |
+| F2 | The family's allowed endpoints; each endpoint is marked local or cloud (sections 4, 6; PR 9) |
 | F3, U4 | Domain provenance (`source: "ai"`) and enrichment locks, unchanged |
 | F4, U3 | `Ai::Availability` reasons, `Ai::AffordanceComponent` and the "AI unavailable" notice (sections 5.4, 16) |
 | F5 | The family's chat mode, and chat's switch on the AI features page (section 6) |
@@ -171,7 +171,7 @@ app/models/ai/
     chat_agent.rb                        # RubyLLM::Agent for chat: tool options only; the route supplies the rest
     sure_tool.rb                         # an Assistant::Function as a RubyLLM::Tool, carrying the job's lane
   comparison.rb                          # AR: primary vs shadow output, any feature
-  transport/                             # hand-written, or a thin adapter over RubyLLM (section 19)
+  transport/                             # thin adapters over RubyLLM (section 7)
     base.rb
     compatible.rb                        # chat completions or Responses API; embeddings; vector stores
     anthropic.rb                         # Messages API, forced tool_use for structured output
@@ -201,7 +201,7 @@ app/jobs/ai/shadow_job.rb                # a shadow run, on ai_background
 app/jobs/ai/probe_job.rb                 # health probe for one model
 app/jobs/ai/tool_job.rb                  # runs an AI-dependent MCP tool in the ai capsule
 app/models/recurring_transaction/suggestion.rb   # AR: one smart-fill or smart-configure request, cancellable
-app/mailers/ai_consent_mailer.rb         # tells members when a background feature is turned on (PR 6)
+app/mailers/ai_consent_mailer.rb         # tells members when a background feature is turned on (PR 7)
 test/support/ai_test_helper.rb           # with_ai_routes, without_ai, stub_ai, with_ai_capsule
 app/controllers/concerns/ai_feature_guard.rb
 app/controllers/settings/ai/*.rb
@@ -209,7 +209,7 @@ lib/rubocop/cop/sure/*.rb
 ```
 
 `Provider::Jev` and the structured-output parts of `Provider::Openai` and `Provider::Anthropic`
-are removed in PR 2, and the rest of those two in PR 3 (section 19). `Provider::Registry` keeps its non-AI concepts: exchange rates, securities,
+are removed in PR 2, and the rest of those two in PR 6 (section 19). `Provider::Registry` keeps its non-AI concepts: exchange rates, securities,
 property valuations and Plaid.
 
 ### Four families of intelligent behaviour
@@ -626,7 +626,7 @@ migration (each variable's `Setting` field, where it has one, maps the same way)
 | `LLM_MAX_RESPONSE_TOKENS` (`llm_max_response_tokens`) | `max_output_tokens` on each LLM model |
 | `LLM_MAX_ITEMS_PER_CALL` (`llm_max_items_per_call`) | `batch_size` on each LLM model |
 | `LLM_MAX_HISTORY_TOKENS`, `LLM_SYSTEM_PROMPT_RESERVE` | Dropped: the chat history budget comes from the model's window (section 8.4) |
-| `JEV_API_KEY`, `JEV_ENDPOINT`, `JEV_MODEL` (`jev_*`) | The Jev endpoint (`jev` preset, or `jev_local` for an http URL) and its model |
+| `JEV_API_KEY`, `JEV_ENDPOINT`, `JEV_MODEL` (`jev_*`) | The Jev endpoint (`jev` preset, or `jev_local` for an http URL) and its model. The URL loses its `/v1/systemone` path; an OpenRouter URL becomes RubyLLM's `openrouter` provider (from PR 5); an endpoint at any other path is left out, with a boot warning naming it, so `categorize` uses its next route |
 | `JEV_REQUEST_TIMEOUT`, `JEV_CONCURRENCY` | `timeout_seconds` and `parallel_requests` on the Jev endpoint |
 | `CATEGORIZATION_PROVIDER` | Dropped. On a single-family instance whose effective choice is Jev, `categorize` lists Jev first |
 | `CATEGORIZATION_CONFIDENCE_THRESHOLD` | Dropped: it overrode a family setting, which ENV no longer does. Upgrade note: set it on the categorization page |
@@ -846,9 +846,9 @@ end
 - `preferred_llm_provider`, `llm_provider_order`, `Family#resolved_categorization_provider`,
   `#shadow_categorization_provider`, `#categorization_model_name`, `Chat.default_model` and
   `Assistant::Provided#get_model_provider` are deleted with their 87 test stubs: the non-chat
-  ones in PR 2, the chat ones in PR 3.
-- The code above is the final shape. The family consent checks arrive in PR 6, and the
-  `allowed` and `keyed` lines in PR 8 (section 6).
+  ones in PR 2, the chat ones in PR 6.
+- The code above is the final shape. The family consent checks arrive in PR 7, and the
+  `allowed` and `keyed` lines in PR 9 (section 6).
 - The router doesn't look at liveness. Down endpoints and busy hosts are the sequencer's concern
   at run time (section 11), so availability doesn't flicker when a worker restarts.
 
@@ -967,14 +967,14 @@ keys), lives in `Family::AiSettings`, a concern in `app/models/family/ai_setting
 `Family::AiPromptable` stays as it is.
 
 **Delivery.** PR 2 ships `Ai::Consent` with the user switch, plus the
-threshold and prompt overrides; PR 3 adds chat mode. PR 6 creates the AI features page with chat
+threshold and prompt overrides; PR 6 adds chat mode. PR 7 creates the AI features page with chat
 mode and per-feature consent (`families.ai_consents`, the consent migration, member emails,
-`:no_family_consent`, `:consent_outdated`), which fixes drift bug 4. PR 8 adds the family's
+`:no_family_consent`, `:consent_outdated`), which fixes drift bug 4. PR 9 adds the family's
 allowed endpoints, its own keys and the member switch as new sections of that page. Until each
-lands, the router has no line for it: before PR 6 background features run without family
+lands, the router has no line for it: before PR 7 background features run without family
 consent, as today. One rule is carried over rather than stubbed: today `mcp_only` turns chat
-off (through `User#ai_available?`), so PR 3, which deletes that check, keeps the rule as one line
-in `Ai::Consent` (`:no_family_consent` for `chat` when `assistant_type` is `mcp_only`). PR 6
+off (through `User#ai_available?`), so PR 6, which deletes that check, keeps the rule as one line
+in `Ai::Consent` (`:no_family_consent` for `chat` when `assistant_type` is `mcp_only`). PR 7
 deletes the line when the consent migration turns those families' Chat row off.
 
 **Two family AI pages.** The AI features page holds everything about what AI the family uses: six
@@ -1015,11 +1015,11 @@ end
 
 | Setting | Column | Default |
 |---|---|---|
-| Each row on or off (a consent key: six rows), on the AI features page with its data manifest and where the data may go (PR 6) | `families.ai_consents` (jsonb) | See the migration below |
+| Each row on or off (a consent key: six rows), on the AI features page with its data manifest and where the data may go (PR 7) | `families.ai_consents` (jsonb) | See the migration below |
 | Chat mode: built-in or external | `families.chat_mode`, a string with a check constraint on `built_in`, `external` | From `assistant_type`: `builtin` → `built_in`, `external` → `external`, `mcp_only` → `built_in` with chat switched off |
-| Endpoints this family allows (PR 8) | `families.ai_blocked_endpoint_ids` | None blocked. A new endpoint is allowed at once. |
-| The family's own key per cloud endpoint (PR 8) | `ai_endpoint_credentials` (section 4.2) | None: the endpoint's own key is used |
-| Members allowed to use AI (PR 8) | `users.ai_allowed` (boolean, set only by a family admin) | `true` for every member, guests included |
+| Endpoints this family allows (PR 9) | `families.ai_blocked_endpoint_ids` | None blocked. A new endpoint is allowed at once. |
+| The family's own key per cloud endpoint (PR 9) | `ai_endpoint_credentials` (section 4.2) | None: the endpoint's own key is used |
+| Members allowed to use AI (PR 9) | `users.ai_allowed` (boolean, set only by a family admin) | `true` for every member, guests included |
 | Categorization confidence threshold | `families.categorization_confidence_threshold` | 0.7, today's schema default. The code comment that says 0 is fixed. |
 | Prompt overrides, one per feature | `families.ai_prompt_overrides` | Migrated (section 8.3) |
 
@@ -1103,11 +1103,11 @@ end
 
 ## 7. Transports — one structured-output primitive each
 
-The spike recommends a thin adapter over `ruby_llm` 2.1.1, pinned (section 19,
-[`rubyllm-spike-report.md`](rubyllm-spike-report.md)). Adopting it stays a product decision. The
-interface is the same either way, and Jev stays hand-written; the spike also ran Jev through
-RubyLLM's `judge` and through the `ruby_decision_model` gem, and the choice of client for Jev is
-open too.
+Every transport, Jev's included, is a thin adapter over `ruby_llm`: 2.1.1 from PR 2 and 2.2 from
+PR 5, pinned at the end of this work (section 19,
+[`rubyllm-spike-report.md`](rubyllm-spike-report.md)). The owner adopted it; like every product
+decision it stays open to evidence. Jev goes through RubyLLM's `judge`, which reaches
+TypeSafe-style servers on 2.1.1 and OpenRouter's decisions gateway from 2.2, at fixed paths only.
 
 ```ruby
 class Ai::Transport::Base
@@ -1164,10 +1164,10 @@ end
   is latency-bound (~400–550 ms), so `judge` runs a batch on a bounded pool of
   `parallel_requests` threads (default 8, today's `DEFAULT_CONCURRENCY`): about 1.6 s for 25
   transactions instead of about 12 s. Everything above the transport sees one batch call, as it
-  does for an LLM. Cloud Jev has no gate. Jev's transport isn't RubyLLM, so a self-hosted Jev
-  takes its host's gate itself around each request (section 11); the gate admits
-  `parallel_requests` of them at once, and a chat on the same host interrupts nothing, because a
-  Jev request is short (~0.5 s) and isn't streamed.
+  does for an LLM. Cloud Jev has no gate. A self-hosted Jev's requests go through RubyLLM, so
+  they pass its host's gate like any other (section 11); the gate admits `parallel_requests` of
+  them at once, and a chat on the same host interrupts nothing, because a Jev request is short
+  (~0.5 s) and isn't streamed.
 - **A self-hosted Jev-compatible server** is the same transport with the `jev_local` preset. Its
   `parallel_requests` defaults to 1, because 8 at once would overload the host's GPU or CPU (H2).
 - **https only for cloud endpoints.** Today `Provider::Jev.endpoint_allowed?` refuses http except
@@ -1540,9 +1540,9 @@ class Ai::Conversation
 end
 ```
 
-What happens to today's chat classes in PR 3:
+What happens to today's chat classes in PR 6:
 
-| Today | After PR 3 |
+| Today | After PR 6 |
 |---|---|
 | `Assistant.for_chat`, `config_for`, `available_types`, `implementation_for` | Deleted. `AssistantResponseJob` calls `Ai::Conversation`. `Assistant.function_classes` stays: it lists chat's tools, with today's preview and guest filtering |
 | `Assistant::Base`, `Assistant::Builtin`, `Assistant::Provided` | Deleted; their work is `Ai::Conversation#respond` |
@@ -1599,7 +1599,7 @@ What happens to today's chat classes in PR 3:
   without running a tool twice: `generate` adds a reply to the history only when it's complete
   (spike: "RubyLLM agents behind the gate"). Against: Sure then depends on RubyLLM's tool
   semantics (its denial message, its unknown-tool error that lists every tool name), which change
-  with its releases; and the spike adapted only the compatible transport, so PR 3 also adapts
+  with its releases; and the spike adapted only the compatible transport, so PR 6 also adapts
   Anthropic's.
 - **What isn't used, and why.**
   - `ask` and `complete`: no round cap; Sure steps.
@@ -1791,8 +1791,8 @@ RubyLLM context makes, streamed or not and with its retries, runs inside
 `instrument("request.ruby_llm")` on the context's `instrumenter`, a public setting. For a local
 endpoint the transport sets an instrumenter that holds the host's gate for that block, in the
 lane of the job making the call. Jobs, generations and transports don't change where they call;
-embeddings, probes and a chat tool's nested call all pass through it. Jev's transport isn't
-RubyLLM, so it takes the gate itself around each request.
+embeddings, probes, Jev and a chat tool's nested call all pass through it. Until chat moves
+(PR 6), today's chat holds the gate itself around each provider request (section 19, PR 4).
 
 - **Keyed by host.** The key is the endpoint's host, without port, path or scheme. A chat server
   on `http://llm.lan:8080` and an embedding server on `http://llm.lan:8081` usually share a CPU or
@@ -1902,7 +1902,7 @@ and a PDF import.
 
 - The record that started the work holds the status, so the plumbing takes a `cancelled:`
   callable, for example `-> { pdf_import.reload.cancelled? }`. There's no separate token to
-  expire. Today none of these records can say "cancelled", so PR 4 adds it:
+  expire. Today none of these records can say "cancelled", so PR 3 adds it:
 
   | Work | Record | Change |
   |---|---|---|
@@ -1981,7 +1981,7 @@ reads `assistant_type`.
 `import_bank_statement` (`extract_pdf`) and `search_family_files` (`search_documents`: pgvector and
 Qdrant embed the query, and the OpenAI adapter calls the vector store's search). Both make that
 call inside the MCP web request today. Their AI work moves into the `ai` capsule like every other
-AI call, in PR 4, with the other web-thread calls (section 19).
+AI call, in PR 3, with the other web-thread calls (section 19).
 
 - An AI-dependent tool is listed only when `Ai.available?(feature)` is true for the token's user,
   so a client never sees a tool that can't work by setup. This replaces today's check in PR 2.
@@ -2010,7 +2010,7 @@ namespace :settings do
   namespace :ai do
     # family-scoped: family admins
     resource  :features,        only: %i[show update]       # the AI features page: chat mode, each feature on/off with its manifest;
-                                                            # from PR 8 also the endpoints the family allows with its own keys,
+                                                            # from PR 9 also the endpoints the family allows with its own keys,
                                                             # and a switch per member
     resource  :categorization,  only: %i[show update]       # the categorization workflow: confidence threshold
     resource  :prompts,         only: %i[show update]       # was settings/ai_prompts; linked as "Advanced" from the AI features page
@@ -2122,8 +2122,8 @@ end
   (the feature now sends more than the family agreed to), `:user_disabled`, `:blocked_by_admin`
   (a family admin turned AI off for this member) or `:key_missing` (every
   candidate endpoint needs the family's own key, and it has none). `:no_family_consent` and
-  `:consent_outdated` first appear with PR 6; `:endpoint_not_allowed`, `:key_missing` and
-  `:blocked_by_admin` with PR 8. Consent is per feature, so one feature can be unavailable while another works.
+  `:consent_outdated` first appear with PR 7; `:endpoint_not_allowed`, `:key_missing` and
+  `:blocked_by_admin` with PR 9. Consent is per feature, so one feature can be unavailable while another works.
 - One view component, `Ai::AffordanceComponent.new(feature:)`, renders the AI button when the
   feature is available. Otherwise it renders nothing, or a quiet hint shown only to someone who
   can act on it: "Turn on AI in your preferences" for the user, or "Turn on <feature> on the
@@ -2178,7 +2178,7 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
   queue and failure policy, and that no job outside `Ai::GenerationJob`, `Ai::ShadowJob`,
   `Ai::ProbeJob`, `Ai::ToolJob` and `AssistantResponseJob` calls `Ai::`. It's the only check on
   queues, so there's no cop for them. There's no cop for the old provider lookups either: PRs 2
-  and 3 delete those methods, so a call to one fails anyway.
+  and 6 delete those methods, so a call to one fails anyway.
 - `ai_transport_contract_test.rb`: every transport passes one contract suite against recorded
   cassettes: valid JSON, bad-output fixtures (`<think>` tags, fenced JSON, wrong keys), error
   mapping (including each provider's context-length 400 → `ContextTooLong`), usage normalisation,
@@ -2212,21 +2212,21 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
   for the token's user, and no MCP request calls a transport.
 - `ai_chat_mode_test.rb`: in external mode every chat entry point (chat page, API, "Dig in with
   AI", bills AI review) resolves to an agent route; in built-in mode none does; with the Chat row
-  off (an `mcp_only` family before PR 6) all are unavailable; no other feature ever resolves to an agent endpoint.
+  off (an `mcp_only` family before PR 7) all are unavailable; no other feature ever resolves to an agent endpoint.
 - `ai_conversation_bounds_test.rb`: a model that keeps calling tools gets a final round without
   tools after `ai_max_tool_rounds`; a turn that passes `ai_response_timeout` stops and says so.
 - `ai_consent_test.rb`: a feature whose `sends:` grows resolves to `:consent_outdated` for a
   family that agreed to the shorter list; one whose list shrinks stays consented; and, from
-  PR 8, a member a family admin turned off gets `:blocked_by_admin` for every user-started feature, can't turn
+  PR 9, a member a family admin turned off gets `:blocked_by_admin` for every user-started feature, can't turn
   their own switch back on, and their transactions still reach family-consented background
   features.
 - `ai_diagnostics_test.rb`: the copied diagnostics contain no key, header value, agent setting,
   family name, prompt, transaction text or local host name.
 
-**Testing an AI feature** (the helpers land in PR 2, replacing the stubs it and PR 3 delete; PR 6 backs them with table fixtures):
+**Testing an AI feature** (the helpers land in PR 2, replacing the stubs it and PR 6 delete; PR 7 backs them with table fixtures):
 
-- **Fixtures.** From PR 6, `test/fixtures/ai_endpoints.yml`, `ai_models.yml` and `ai_routes.yml`
-  give every test one configured setup (before PR 6 the helpers build the same setup as an
+- **Fixtures.** From PR 7, `test/fixtures/ai_endpoints.yml`, `ai_models.yml` and `ai_routes.yml`
+  give every test one configured setup (before PR 7 the helpers build the same setup as an
   in-memory `Ai::Config`): a cloud `openai` endpoint (`gpt-4.1-mini`, every LLM capability), a
   local `gpu` endpoint (`qwen3-8b`), an `embed` endpoint, a cloud `jev` endpoint and an `agent`
   endpoint, with every feature routed. Tests for "no AI" use `without_ai`.
@@ -2272,7 +2272,8 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | AI configuration moves to `ai_endpoints`, `ai_models`, `ai_routes` and `AI_CONFIG` | Nothing at first. The old AI ENV still works, read by the workers as a deprecated config source; the release that stops reading it is named in the upgrade guide. | UI-configured installs: a data migration. ENV-configured installs: `Ai::LegacyEnvConfig` at every AI worker boot (section 4.5). | Deprecation warning in the worker log and on the AI settings pages. Run `bin/rails ai:export_config > ai.yml` and mount it as `AI_CONFIG`, or remove the variables and use the UI. |
 | Global token budgets become model columns; Jev's pool size becomes an endpoint column | `LLM_CONTEXT_WINDOW`, `LLM_MAX_RESPONSE_TOKENS`, `LLM_MAX_ITEMS_PER_CALL`, `JEV_CONCURRENCY` | Mapped onto each model, or the Jev endpoint's `parallel_requests`, by the same two paths | — |
 | `assistant_type` becomes chat mode; `ASSISTANT_TYPE` and `CATEGORIZATION_PROVIDER` overrides go | `mcp_only`, the family Jev choice | `mcp_only` → chat switched off on the AI features page (MCP is unaffected); the Jev choice of a single-family instance goes into the `categorize` route | Multi-family instances: the admin puts Jev in the route if wanted |
-| Two-level consent (PR 6) | Background AI needs the family's consent per feature | Section 6 | Family admins review the AI features page; members get a notice |
+| Two-level consent (PR 7) | Background AI needs the family's consent per feature | Section 6 | Family admins review the AI features page; members get a notice |
+| Jev through RubyLLM (PR 2) | A Jev endpoint on OpenRouter stops working until PR 5 brings RubyLLM 2.2; an endpoint at any path other than TypeSafe's `/v1/systemone` isn't supported | Section 7 | OpenRouter users wait for PR 5 or switch to a TypeSafe-style endpoint; anyone who needs another path opens an issue |
 | Prompt overrides, one per feature | Overrides stored under provider keys | Section 8.3 | Shown only where an override was dropped |
 | Three lane queues and the `ai_chat` capsule | `ai_high_priority`, `ai_low_priority`, custom `sidekiq.yml`, `SidekiqHealth::AI_QUEUES` | The `ai` capsule drains the old queues for one release; old job classes are shims | Update a custom `sidekiq.yml`; with several workers on one local host, set `RAILS_AI_MAX_THREADS=0` on all but one |
 | `Ai::GenerationJob` and `Ai::ShadowJob` replace the AI job classes | Jobs queued in Redis | Shims for one release | — |
@@ -2292,12 +2293,23 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 
 ## 19. Delivery
 
-Seven merged PRs plus one spike branch (PR 1) that isn't merged. The order follows one rule:
-**each PR replaces something outright, and nothing is written only to bridge to a later PR.**
-Where code isn't replaced yet, it keeps running as it does today, reading the same settings as
-the new code, so the two never disagree. That keeps each review to one question ("is this
-replacement right?") rather than "is this temporary state safe?". Size is secondary: a PR is as
-big as its replacement needs.
+Eight merged PRs plus one spike branch (PR 1) that isn't merged. The order follows a principle,
+not a ban: **each PR replaces something outright, and avoids duplicated work, wrappers and
+temporary code.** They're allowed where they make the whole order clearly better; PR 4's few
+lines in today's chat are the one case, and PR 6 deletes them. Where code isn't replaced yet, it
+keeps running as it does today, reading the same settings as the new code, so the two never
+disagree. That keeps most reviews to one question ("is this replacement right?"). Size is
+secondary: a PR is as big as its replacement needs.
+
+**RubyLLM versions.** PR 2 builds on 2.1.1, and 2.2 comes in with PR 5 whenever it's released;
+nothing waits for it. During this work the Gemfile allows `~> 2.1`, while `Gemfile.lock` still
+fixes the exact version each PR is tested with, so a version changes only when a PR bumps it.
+When PR 9 lands, the Gemfile pins the version in use.
+
+**Why chat is PR 6.** The owner decided that chat goes onto RubyLLM 2.2, so it follows PR 5. The
+gate doesn't wait for it: today's chat takes the gate itself (PR 4). Configuration in the
+database (PR 7) follows chat, because today's chat would otherwise need a wrapper to read the new
+tables.
 
 Each PR deletes the code it replaces, lands with its own checks, and has a reviewer guide: what
 moved, what was deleted, what to read first. PRs are stacked so review can start early, and the
@@ -2308,14 +2320,15 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
 1. **RubyLLM spike**, judged against the criteria below, timeboxed to one week on the latest
    release of the gem at the start. It covers the three transport calls the criteria need:
    `generate` for `SuggestBillSetup`, one streaming chat turn with one tool (`converse`), and one
-   `embed` call. Its result decides how PRs 2 and 3 are
+   `embed` call. Its result decides how PRs 2 and 6 are
    built. Either way it ends with a short note in `docs/llm-guides/ai-pipeline.md`: adopted or
    not, which criteria failed and what a later attempt would need.
 
    **Done** ([`rubyllm-spike-report.md`](rubyllm-spike-report.md); evidence on
    [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm), never merged).
    Every criterion below passes or needs a small fix in Sure's adapter; none fails. It recommends
-   adopting `ruby_llm` 2.1.1, pinned, and adopting it stays a product decision. Beyond the
+   adopting `ruby_llm` 2.1.1, and adopting it stays a product decision (the owner adopted it,
+   with the version policy above). Beyond the
    criteria it covered local servers in containers, the proxy, OpenRouter's free models,
    reasoning switches, Jev, Sure's tools in RubyLLM's loop and RubyLLM agents (section 8.4 is built on them), switching providers mid-chat, PDF
    import and local OCR, OpenAI vector stores, every RubyLLM 2.1 feature and its ecosystem gems,
@@ -2339,7 +2352,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    - **Jobs:** `Ai::GenerationJob` (with small batches) and `Ai::ShadowJob` replace the four AI
      job classes, which stay one release as shims; `Ai::Comparison` replaces
      `CategorizationComparison`. Lanes map onto today's two queues (interactive →
-     `ai_high_priority`, prompt and background → `ai_low_priority`) until PR 5.
+     `ai_high_priority`, prompt and background → `ai_low_priority`) until PR 4.
    - **Features:** `bill_setup`, `categorize` (generation and Jev judgement), `detect_merchants`,
      `enhance_merchants`, `extract_pdf`, `embed` and `search_documents`, each with its owner.
      `AiHealth::Probe` calls `transport.probe`.
@@ -2348,20 +2361,47 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `Family#resolved_categorization_provider` and `#shadow_categorization_provider`, the
      non-chat availability checks, their test stubs and `families.categorization_provider` (a
      single-family Jev choice moves into the `categorize` route).
-   - **Adds:** the agreement test (chat entry points on its allowlist until PR 3), the transport
+   - **Jev on RubyLLM:** the Jev transport is a thin adapter over RubyLLM's `judge`, so Jev's
+     requests pass the gate and the usage path like every other call. It reaches TypeSafe-style
+     servers at `<base>/v1/systemone`, today's default and self-hosted servers. A Jev endpoint on
+     OpenRouter stops working until PR 5 brings 2.2, and an endpoint at any other path isn't
+     supported; the release notes say so, and an issue can bring a path back if someone needs it.
+   - **Adds:** the agreement test (chat entry points on its allowlist until PR 6), the transport
      contract test, the AI test helpers (section 17), the recorded-eval CI gate and the `ai-live`
      label.
 
-   `Generation#call` takes the plan's first route that isn't down; PR 5 adds the gate inside the
+   `Generation#call` takes the plan's first route that isn't down; PR 4 adds the gate inside the
    transport.
    *Still on old code:* chat, through `Assistant`, `Provider::Openai` and `Provider::Anthropic`'s
    chat methods and `Chat.default_model`, reading the same ENV and `Setting` fields. Smart-fill,
    smart-configure, document embedding and the MCP AI tools call their owners on the web thread,
    as today. Configuration is still edited on the hostings page, and the web and the workers
-   each build `Ai::Config` from their own ENV, as they resolve settings today, until PR 6.
-3. **Chat.** `Ai::Conversation`'s driver around `ChatAgent` and `SureTool` (section 8.4), agent
+   each build `Ai::Config` from their own ENV, as they resolve settings today, until PR 7.
+3. **Off the web thread.** Smart-fill and smart-configure through `RecurringTransaction::Suggestion`
+   and a Turbo Stream, non-PDF document embedding as a job, `Ai::ProbeJob`, and the MCP tools
+   through `Ai::ToolJob` (with its result handoff) and a pending import plus `get_import_status`
+   (section 14). Cancellation: the `cancelled` statuses, `ai_cancelled?` on each owner, and the
+   checks in the plumbing (section 12). Capsule-only enforcement, now that no AI call is left on a
+   web thread. Adds the capsule-only and completion-hook tests.
+4. **Sequencer.** The three lane queues replacing `ai_high_priority` and `ai_low_priority` (the
+   `ai` capsule drains the old two for one release), the `ai_chat` capsule, one gate per local
+   host in RubyLLM's instrumenter sized from the server, Rules 1 to 3 with streamed, interruptible
+   background and prompt calls on local hosts, and the gate state the chat watchdog reads.
+   Today's chat doesn't go through RubyLLM yet, so `Assistant::Responder` holds the gate in the
+   interactive lane around each provider request: a few temporary lines that PR 6 deletes. Chat's
+   own requests can't be interrupted, and never need to be. Replaces #4444. Adds the lane and
+   gate tests and the sequencer cases of the escalation test.
+5. **RubyLLM 2.2.** Whenever 2.2 is released; nothing waits for it. The version bump (the
+   `~> 2.1` constraint allows it), the recorded tests replayed and the live ones recorded again,
+   and Jev on OpenRouter working again (#1264). Then the chat-storage spike: 2.2's claims on
+   RubyLLM's persistence, with the cases of Sure's own claim spike (two Retry requests at once, a
+   lapsed claim, a message sent mid-turn, an approval clicked twice). Its result decides PR 6's
+   storage.
+6. **Chat**, on RubyLLM 2.2, with the storage PR 5's spike picked: Sure's tables with Sure's
+   claim on `chats` (section 8.4), or RubyLLM's persistence (section 20). `Ai::Conversation`'s
+   driver around `ChatAgent` and `SureTool` (section 8.4), agent
    construction on the compatible and Anthropic transports, `converse` and the agent mode on the
-   transports, chat mode (read from today's `assistant_type` until PR 6), today's `mcp_only` rule as one line
+   transports, chat mode (read from today's `assistant_type` until PR 7), today's `mcp_only` rule as one line
    in `Ai::Consent` (section 6), `previous_response_id` on the same
    endpoint, failover at the start of a turn, bounded turns, the serving route and
    `provider_state` on each message with the drop-on-switch rule and Gemini's placeholder
@@ -2371,18 +2411,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    `Provider::Anthropic`, `Chat.default_model`, `Assistant::Provided#get_model_provider` and the
    `Assistant::*` classes listed in section 8.4, and empties the agreement test's allowlist. Adds
    the conversation bounds and chat mode tests.
-4. **Off the web thread.** Smart-fill and smart-configure through `RecurringTransaction::Suggestion`
-   and a Turbo Stream, non-PDF document embedding as a job, `Ai::ProbeJob`, and the MCP tools
-   through `Ai::ToolJob` (with its result handoff) and a pending import plus `get_import_status`
-   (section 14). Cancellation: the `cancelled` statuses, `ai_cancelled?` on each owner, and the
-   checks in the plumbing (section 12). Capsule-only enforcement, now that no AI call is left on a
-   web thread. Adds the capsule-only and completion-hook tests.
-5. **Sequencer.** The three lane queues replacing `ai_high_priority` and `ai_low_priority` (the
-   `ai` capsule drains the old two for one release), the `ai_chat` capsule, one gate per local
-   host in RubyLLM's instrumenter sized from the server, Rules 1 to 3 with streamed, interruptible
-   background and prompt calls on local hosts, and the gate state the chat watchdog reads.
-   Replaces #4444. Adds the lane and gate tests and the sequencer cases of the escalation test.
-6. **Configuration in the database.** The tables (`ai_endpoints`, `ai_models`, `ai_routes`),
+7. **Configuration in the database.** The tables (`ai_endpoints`, `ai_models`, `ai_routes`),
    presets, `Ai::ConfigFile` and `AI_CONFIG`, `ai:export_config`, the data migration of
    UI-stored settings, the version stamp, and the source rule. `Ai::Config` now reads the tables,
    and `Ai::LegacyEnvConfig` loads its structure into them as a deprecated source. The instance
@@ -2390,22 +2419,22 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    reasoning effort) and the family AI features page replace the
    hostings AI sections. The AI features page has chat mode and each feature's switch and
    manifest: `families.ai_consents`, the consent migration (an `mcp_only` family gets chat
-   switched off, and PR 3's `mcp_only` line goes), member emails, `:no_family_consent` and
+   switched off, and PR 6's `mcp_only` line goes), member emails, `:no_family_consent` and
    `:consent_outdated`. That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
    The test helpers switch to the new fixtures. Adds the config and consent tests.
    *Still on old code:* nothing; from here every process reads the same rows.
-7. **Health and settings pages.** The health page (lanes, down marks, AI threads per worker,
+8. **Health and settings pages.** The health page (lanes, down marks, AI threads per worker,
    rates, the context window check, "Copy diagnostics"), each row's status on the AI features
    page with the "AI unavailable" banner, the categorization page, and the prompts (behind
    "Advanced") and usage pages moved under `/settings/ai` with redirects. Adds the diagnostics
    test.
-8. **Allowed endpoints, own keys and the member switch.** `families.ai_blocked_endpoint_ids`,
+9. **Allowed endpoints, own keys and the member switch.** `families.ai_blocked_endpoint_ids`,
    `ai_endpoint_credentials` and `users.ai_allowed`; the AI features page gains its endpoints
    section, with the allow checkbox and the "use our own key" field with a probe on save, and its
    members section. The router gains its endpoint and key lines (section 5.3), with
    `:endpoint_not_allowed` and `:key_missing`, and `Ai::Consent` gains `:blocked_by_admin`. Adds
    `llm_usages.family_key` and the family key test, and extends the consent test with the member
-   cases. Needs PR 6.
+   cases. Needs PR 7.
 
 **RubyLLM spike criteria.** RubyLLM is adopted under `Ai::Transport::*` only if every item holds
 or has a small fix. Whatever the result, Sure still owns the router, consent, the JSON-mode policy
@@ -2429,10 +2458,10 @@ normaliser, `<think>` stripping, and the Responses path, where vector stores sta
   hand-written.
 - Report lines removed for `bill_setup` against the hand-written version.
 
-If adopted, pin the version and name an owner: the gem has fast major versions and mostly one
-maintainer.
+Pin the version when PR 9 lands, and name an owner: the gem has fast major versions and mostly
+one maintainer.
 
-**Measure** after PR 5: chat time-to-first-token while background AI work runs, using Sidekiq
+**Measure** after PR 4: chat time-to-first-token while background AI work runs, using Sidekiq
 queue latency and the model server's queue depth (for llama.cpp, its Prometheus metrics).
 
 **Docs that ship with the work:**
