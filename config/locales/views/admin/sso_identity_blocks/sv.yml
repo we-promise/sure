@@ -1,0 +1,5 @@
+sv:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: "SSO-identiteten kan logga in eller skapa ett konto igen."

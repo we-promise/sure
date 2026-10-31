@@ -1,0 +1,36 @@
+---
+sv:
+  plans:
+    show:
+      title: Plan
+      subtitle: Bestäm vart dina pengar går — vad du spenderar och vad du sparar.
+    budget_card:
+      title: Denna månad
+      edit_budget: Redigera budget
+      of_total: av %{total}
+      days_left:
+        one: 1 dag kvar
+        other: "%{count} dagar kvar"
+      percent_used: "%{percent}% använt"
+      top_categories: Toppkategorier
+      view_budget: Visa hela budgeten
+      empty_body: Sätt ett månatligt utgiftsmål och kategorigränser för att se hur den här månaden går.
+      set_up: Sätt upp den här månadens budget
+    goals_card:
+      title: Dina mål
+      new_goal: Nytt mål
+      active_count:
+        one: 1 aktivt
+        other: "%{count} aktiva"
+      of_targets: av %{total} totalt bland målen
+      behind_count:
+        one: 1 efter takten
+        other: "%{count} efter takten"
+      pending_count:
+        one: 1 väntande löfte
+        other: "%{count} väntande löften"
+      all_on_pace: Allt i takt
+      active_goals: Aktiva mål
+      pending_marker: väntande
+      runway: "%{months} mån räckvidd · %{pace}/mån"
+      all_goals: Alla mål

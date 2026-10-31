@@ -1,0 +1,102 @@
+---
+sv:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: Anslut ett Trading 212-investeringskonto via API-nyckel
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: Borttagning pågår
+      environment_label_live: Livekonto
+      environment_label_demo: Demokonto
+      syncing: Synkroniserar
+      requires_update: API-nyckeln behöver åtgärdas
+      error: Fel
+      synced: Synkroniserades %{time} sedan. %{summary}.
+      never_synced: Har aldrig synkroniserats.
+      setup_accounts: Konfigurera konton
+      delete: Ta bort
+      accounts_need_setup: Kontot behöver konfigureras
+      accounts_need_setup_description: Ditt Trading 212-konto måste kopplas till ett Sure-konto.
+      no_accounts_discovered: Inget Trading 212-konto hittades ännu.
+      no_accounts_discovered_description: Kör en synkronisering efter att du sparat din API-nyckel för att hitta ditt konto.
+    setup_accounts:
+      page_title: Konfigurera Trading 212-konto
+      dialog_title: Konfigurera ditt Trading 212-konto
+      subtitle: Koppla ditt Trading 212-investeringskonto.
+      info_box:
+        title: Trading 212 API-import
+        items:
+          item_1: Nuvarande positioner med priser och antal
+          item_2: Fullständig orderhistorik (köp och försäljningar)
+          item_3: Utdelningar och kontanttransaktioner
+      status:
+        fetching_accounts: Hämtar konto från Trading 212...
+        no_accounts_found_title: Inget konto hittades.
+        no_accounts_found_description: Sure kunde inte hitta ett Trading 212-konto. Kontrollera att din API-nyckel är giltig.
+      available_accounts:
+        title: Tillgängligt konto
+        account_type_investment: Investering
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "Konto-ID: %{account_id}"
+      link_existing:
+        description: Eller koppla det hittade Trading 212-kontot till ett befintligt manuellt investeringskonto.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Välj ett konto...
+      linked_accounts:
+        title: Redan kopplat
+        linked_to_html: "Kopplat till: %{account}"
+      buttons:
+        refresh: Uppdatera
+        cancel: Avbryt
+        back_to_settings: Tillbaka till inställningar
+        create_selected_accounts: Skapa markerade konton
+        link: Koppla
+        done: Klar
+    sync:
+      status:
+        checking_credentials: Kontrollerar Trading 212-uppgifter...
+        importing_account: Importerar Trading 212-konto...
+        checking_configuration: Kontrollerar kontokonfiguration...
+        accounts_need_setup:
+          one: 1 Trading 212-konto behöver konfigureras...
+          other: "%{count} Trading 212-konton behöver konfigureras..."
+        processing_activity: Bearbetar positioner och aktivitet...
+        calculating_balances: Beräknar saldon...
+    sync_status:
+      no_accounts: Inget Trading 212-konto hittades ännu
+      all_linked:
+        one: 1 konto kopplat
+        other: "%{count} konton kopplade"
+      partial: "%{linked} kopplade, %{unlinked} behöver konfigureras"
+    select_existing_account:
+      title: Koppla Trading 212-konto
+      no_accounts_available: Det finns inga okopplade Trading 212-konton tillgängliga ännu.
+      run_sync_hint: "Kör en synkronisering från Inställningar > Leverantörer efter att du sparat din API-nyckel."
+      wait_for_sync: Vänta på att kontosökningen slutförs.
+      balance: Saldo
+      link: Koppla
+      cancel: Avbryt
+    create:
+      success: Trading 212 konfigurerades.
+    update:
+      success: Trading 212-konfigurationen uppdaterades.
+    destroy:
+      success: Trading 212-anslutningen är schemalagd för borttagning.
+    select_accounts:
+      not_configured: Trading 212 är inte konfigurerat.
+    link_existing_account:
+      not_found: Konto eller Trading 212-konfiguration hittades inte.
+      only_manual_investment: Endast manuella investeringskonton kan kopplas till Trading 212.
+      already_linked: Detta Trading 212-konto är redan kopplat.
+      success: Kopplingen till Trading 212-kontot lyckades.
+      failed: Det gick inte att koppla Trading 212-kontot.
+    complete_account_setup:
+      success:
+        one: Skapade %{count} Trading 212-konto.
+        other: Skapade %{count} Trading 212-konton.
+      none_selected: Inga konton valdes.
+      none_created: Inga konton skapades.

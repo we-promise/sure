@@ -1,0 +1,42 @@
+---
+sv:
+  oidc_accounts:
+    link:
+      no_pending_oidc: Ingen väntande OIDC-autentisering hittades
+      title_link: Länka OIDC-konto
+      title_create: Skapa konto
+      verify_heading: Verifiera din identitet
+      verify_description_html: "För att länka ditt %{provider}-konto%{email_suffix} måste du verifiera din identitet genom att ange ditt lösenord."
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: E-post
+      email_placeholder: Ange din e-postadress
+      password_label: Lösenord
+      password_placeholder: Ange ditt lösenord
+      verify_hint: Detta säkerställer att endast du kan länka externa konton till din profil.
+      submit_link: Länka konto
+      create_heading: Skapa nytt konto
+      create_description_html: "Inget konto hittades med e-postadressen <strong>%{email}</strong>. Klicka nedan för att skapa ett nytt konto med din %{provider}-identitet."
+      info_email: "E-post:"
+      info_name: "Namn:"
+      submit_create: Skapa konto
+      submit_accept_invitation: Acceptera inbjudan
+      account_creation_disabled: Kontoskapande via engångsinloggning är inaktiverat. Kontakta en administratör för att skapa ditt konto.
+      cancel: Avbryt
+    create_link:
+      no_pending_oidc: Ingen väntande OIDC-autentisering hittades
+    new_user:
+      no_pending_oidc: Ingen väntande OIDC-autentisering hittades
+      title: Slutför ditt konto
+      heading: Skapa ditt konto
+      description: Bekräfta dina uppgifter för att slutföra kontoskapandet med din %{provider}-identitet.
+      email_label: E-post (från SSO-leverantören)
+      first_name_label: Förnamn
+      first_name_placeholder: Ange ditt förnamn
+      last_name_label: Efternamn
+      last_name_placeholder: Ange ditt efternamn
+      submit: Skapa konto
+      cancel: Avbryt
+    create_user:
+      no_pending_oidc: Ingen väntande OIDC-autentisering hittades
+      account_creation_disabled: SSO-kontoskapande är inaktiverat. Kontakta en administratör.
+      account_created: "Välkommen! Ditt konto har skapats."

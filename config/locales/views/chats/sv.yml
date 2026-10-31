@@ -1,0 +1,47 @@
+---
+sv:
+  chats:
+    demo_banner_title: "Demoläge aktivt"
+    demo_banner_message: "Du använder LLM:er via krediter från Cloudflare Workers AI. Resultaten kan variera eftersom kodbasen testades på `gpt-4.1`, men dina tokens går inte någonstans för att tränas! 🤖"
+    thinking: "Tänker ..."
+    worker_unhealthy_warning: "AI-svar levereras eventuellt inte just nu — bakgrundsarbetaren verkar vara nere eller överbelastad. Kontrollera att din Sidekiq-worker körs."
+    ai_greeting:
+      greeting: "Hej %{name}! Jag är en AI/stor språkmodell som kan hjälpa dig med din ekonomi. Jag har tillgång till webben och din kontodata."
+      there: "där"
+      commands_hint_html: "Du kan använda <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> för att komma åt kommandon"
+      questions_intro: "Här är några frågor du kan ställa:"
+      evaluate_portfolio: "Utvärdera investeringsportfölj"
+      spending_insights: "Visa utgiftsinsikter"
+      unusual_patterns: "Hitta ovanliga mönster"
+    chat:
+      edit_chat_title: "Redigera chattitel"
+      delete_chat: "Ta bort chatt"
+    chat_nav:
+      all_chats: "Alla chattar"
+      start_new_chat: "Starta ny chatt"
+      edit_chat_title: "Redigera chattitel"
+      delete_chat: "Ta bort chatt"
+    error:
+      retry: "Försök igen"
+    destroy:
+      notice: "Chatten togs bort"
+    index:
+      chats: "Chattar"
+      new_chat: "Ny chatt"
+    new:
+      default_title: "Ny chatt %{timestamp}"
+    update:
+      success: "Chatten uppdaterades"
+    ai_consent:
+      title: "Aktivera AI-chattar"
+      available_description: "AI-chatt kan svara på ekonomiska frågor och ge insikter baserade på din data. För att använda den här funktionen måste du aktivera den uttryckligen."
+      unavailable_description_html: "För att använda AI-assistenten måste du ange miljövariabeln <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> eller konfigurera den i självhostningsinställningarna för din instans."
+      enable_button: "Aktivera AI-chattar"
+      disable_note: "Inaktivera när du vill. All data som skickas till våra LLM-leverantörer anonymiseras."
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: "Assistentens resonemang"
+    tool_calls:
+      tool_calls: "Verktygsanrop"
+      function: "Funktion:"
+      arguments: "Argument:"

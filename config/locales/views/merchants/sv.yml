@@ -1,0 +1,81 @@
+sv:
+  family_merchants:
+    create:
+      error: 'Fel vid skapande av handlare: %{error}'
+      success: Ny handlare skapades
+    destroy:
+      success: Handlaren har tagits bort
+      unlinked_success: Handlaren har tagits bort från dina transaktioner
+    edit:
+      title: Redigera handlare
+    form:
+      name_placeholder: Handlarens namn
+      website_placeholder: Webbplats (t.ex. starbucks.com)
+      website_hint: Ange handlarens webbplats för att automatiskt visa deras logotyp
+    index:
+      empty: Inga handlare ännu
+      new: Ny handlare
+      import: Importera handlare
+      merge: Slå ihop handlare
+      title: Handlare
+      family_title: "%{moniker}s handlare"
+      family_empty: "Inga %{moniker}-handlare ännu"
+      provider_title: Leverantörshandlare
+      provider_empty: "Inga leverantörshandlare kopplade till detta %{moniker} ännu"
+      provider_read_only: Leverantörshandlare synkas från dina anslutna institutioner. De kan inte redigeras här.
+      provider_info: Dessa handlare upptäcktes automatiskt av dina bankanslutningar eller AI. Du kan redigera dem för att skapa din egen kopia, eller ta bort dem för att koppla loss dem från dina transaktioner.
+      enhance_info:
+        one: "%{count} leverantörshandlare saknar webbplatsinformation. Förbättra med AI för att upptäcka webbplatser, visa logotyper och slå ihop dubbletthandlare."
+        other: "%{count} leverantörshandlare saknar webbplatsinformation. Förbättra med AI för att upptäcka webbplatser, visa logotyper och slå ihop dubbletthandlare."
+      enhance_button: Förbättra med AI
+      search_family_merchants: Sök familjehandlare...
+      search_provider_merchants: Sök leverantörshandlare...
+      no_family_merchants_found: Inga matchande familjehandlare hittades
+      no_provider_merchants_found: Inga matchande leverantörshandlare hittades
+      per_page: per sida
+      unlinked_title: Nyligen bortkopplade
+      unlinked_info: Dessa handlare togs nyligen bort från dina transaktioner. De försvinner från listan efter 30 dagar om de inte tilldelas en transaktion igen.
+      table:
+        merchant: Handlare
+        actions: Åtgärder
+        source: Källa
+    family_merchant:
+      edit: Redigera
+      delete: Ta bort
+    merchant:
+      confirm_accept: Ta bort handlare
+      confirm_body: Är du säker på att du vill ta bort denna handlare? Om du tar bort
+        handlaren kopplas alla tillhörande transaktioner loss, vilket kan påverka din rapportering.
+      confirm_title: Ta bort handlare?
+      delete: Ta bort handlare
+      edit: Redigera handlare
+    merge:
+      title: Slå ihop handlare
+      description: Välj en målhandlare och de handlare som ska slås ihop med den. Alla transaktioner från de sammanslagna handlarna tilldelas målhandlaren.
+      target_label: Slå ihop till (mål)
+      select_target: Välj målhandlare...
+      sources_label: Handlare att slå ihop
+      sources_search_placeholder: Sök handlare...
+      no_merchants_found: Inga matchande handlare hittades
+      sources_hint: Valda handlare slås ihop med målhandlaren. Familjehandlare tas bort, leverantörshandlare kopplas loss.
+      submit: Slå ihop valda
+    new:
+      title: Ny handlare
+    perform_merge:
+      success:
+        one: Slog ihop %{count} handlare
+        other: Slog ihop %{count} handlare
+      no_merchants_selected: Inga handlare valda att slå ihop
+      target_not_found: Målhandlaren hittades inte
+      invalid_merchants: Ogiltiga handlare valda
+    provider_merchant:
+      edit: Redigera
+      remove: Ta bort
+      remove_confirm_title: Ta bort handlare?
+      remove_confirm_body: Är du säker på att du vill ta bort %{name}? Detta kopplar loss alla tillhörande transaktioner från denna handlare men tar inte bort handlaren själv.
+    enhance:
+      success: Förbättring av leverantörshandlare har startats. Handlare förbättras och dubbletter slås ihop inom kort.
+      already_running: Förbättring pågår redan. Vänta tills den är klar.
+    update:
+      success: Handlaren har uppdaterats
+      converted_success: Handlaren har konverterats och uppdaterats

@@ -1,0 +1,56 @@
+---
+sv:
+  period:
+    last_day:
+      label_short: "1D"
+      label: "Senaste dagen"
+      comparison_label: "jämfört med igår"
+    current_week:
+      label_short: "IVE"
+      label: "Aktuell vecka"
+      comparison_label: "jämfört med veckans start"
+    last_7_days:
+      label_short: "7D"
+      label: "Senaste 7 dagarna"
+      comparison_label: "jämfört med förra veckan"
+    current_month:
+      label_short: "IMA"
+      label: "Aktuell månad"
+      comparison_label: "jämfört med månadens start"
+    last_month:
+      label_short: "FM"
+      label: "Förra månaden"
+      comparison_label: "jämfört med förra månaden"
+    last_30_days:
+      label_short: "30D"
+      label: "Senaste 30 dagarna"
+      comparison_label: "jämfört med senaste 30 dagarna"
+    last_90_days:
+      label_short: "90D"
+      label: "Senaste 90 dagarna"
+      comparison_label: "jämfört med förra kvartalet"
+    current_year:
+      label_short: "IÅR"
+      label: "Aktuellt år"
+      comparison_label: "jämfört med årets start"
+    last_365_days:
+      label_short: "365D"
+      label: "Senaste 365 dagarna"
+      comparison_label: "jämfört med för 1 år sedan"
+    last_5_years:
+      label_short: "5Å"
+      label: "Senaste 5 åren"
+      comparison_label: "jämfört med för 5 år sedan"
+    last_10_years:
+      label_short: "10Å"
+      label: "Senaste 10 åren"
+      comparison_label: "jämfört med för 10 år sedan"
+    all_time:
+      label_short: "Allt"
+      label: "Hela perioden"
+      comparison_label: "jämfört med starten"
+    custom:
+      label_short: "Anpassad"
+      label: "Anpassad period"
+      comparison_label: "%{start_date} till %{end_date}"
+    range: "%{start_date} – %{end_date}"

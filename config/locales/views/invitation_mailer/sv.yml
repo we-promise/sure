@@ -1,0 +1,8 @@
+---
+sv:
+  invitation_mailer:
+    invite_email:
+      accept_button: Acceptera inbjudan
+      body: "%{inviter} har bjudit in dig att gå med i %{family} %{moniker} på %{product_name}!"
+      expiry_notice: Den här inbjudan går ut om %{days} dagar
+      greeting: Välkommen till %{product_name}!

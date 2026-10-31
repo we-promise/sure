@@ -1,0 +1,10 @@
+---
+sv:
+  email_confirmation_mailer:
+    confirmation_email:
+      body: Du begärde nyligen att ändra din e-postadress. Klicka på knappen
+        nedan för att bekräfta ändringen.
+      cta: Bekräfta e-poständring
+      expiry_notice: Denna länk går ut om %{hours} timmar.
+      greeting: Hej!
+      subject: '%{product_name}: Bekräfta din e-poständring'
