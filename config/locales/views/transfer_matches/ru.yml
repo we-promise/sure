@@ -2,6 +2,7 @@
 ru:
   transfer_matches:
     create:
+      already_matched: "Одна из этих транзакций уже входит в другой перевод."
       success: Перевод создан
     matching_fields:
       create_new_transaction: Создать новую операцию

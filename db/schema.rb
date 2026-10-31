@@ -2800,8 +2800,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_20_090001) do
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.index ["inflow_transaction_id", "outflow_transaction_id"], name: "idx_on_inflow_transaction_id_outflow_transaction_id_8cd07a28bd", unique: true
-    t.index ["inflow_transaction_id"], name: "index_transfers_on_inflow_transaction_id"
-    t.index ["outflow_transaction_id"], name: "index_transfers_on_outflow_transaction_id"
+    t.index ["inflow_transaction_id"], name: "index_transfers_on_inflow_transaction_id", unique: true
+    t.index ["outflow_transaction_id"], name: "index_transfers_on_outflow_transaction_id", unique: true
     t.index ["status"], name: "index_transfers_on_status"
     t.check_constraint "amount >= 0::numeric", name: "check_transfer_amount_non_negative"
   end
