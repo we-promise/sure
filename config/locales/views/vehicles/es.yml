@@ -11,6 +11,8 @@ es:
       mileage_unit: Unidad
       model: Modelo
       model_placeholder: Camry
+      purchase_date: Fecha de compra
+      purchase_price: Precio de compra
       year: Año
       year_placeholder: '2025'
     new:
