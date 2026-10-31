@@ -187,6 +187,7 @@ permissions enforced in the web UI.
 | `create_bill` | Create a bill, subscription, installment plan or income schedule |
 | `update_bill` | Update one bill's configuration; amount changes apply from today forward |
 | `record_bill_payment` | Record a partial payment against a bill's open occurrence, or settle it in full |
+| `prepare_trade_import` | Map a broker's trade CSV to a pending trade import with the manual import's own steps, and report the mapping, detected date format, invalid rows and a sample. Nothing is imported: the import stays pending until it is published from the Imports page |
 
 Because tool calls never pass through the Bills pages' controllers, the bills
 tools re-check the family's recurring-transactions feature gate (Settings →
