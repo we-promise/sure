@@ -161,8 +161,8 @@ zh-CN:
       spending_trend:
         title: 支出趋势
         date_range: "%{start_date} 至 %{end_date}"
-        date_range_short: "%{start_date} - %{end_day}, %{year}"
-        date_range_short_single: "%{date}, %{year}"
+        date_range_short: "%{year}年%{start_date} - %{end_day}日"
+        date_range_short_single: "%{year}年%{date}"
         month_picker_aria_label: 选择月份
         filter_categories: 筛选分类 (%{count})
         filter_categories_all: 所有分类
