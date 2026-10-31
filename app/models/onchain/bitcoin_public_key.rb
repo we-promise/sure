@@ -21,7 +21,8 @@ module Onchain
       payload = self.class.base58check_decode(text)
       raise InvalidKey, "Invalid extended public key" unless payload&.bytesize == 78 && VERSIONS.include?(payload[0, 4].unpack1("H*"))
       # Hardened account node: BIP84 m/84'/0'/n' (depth 3) or Electrum's segwit m/0' (depth 1).
-      raise InvalidKey, "Use an account-level extended public key" unless [ 1, 3 ].include?(payload.getbyte(4)) && payload[9, 4].unpack1("N") >= 0x80000000
+      depth, child = payload.getbyte(4), payload[9, 4].unpack1("N")
+      raise InvalidKey, "Use an account-level extended public key" unless depth == 3 ? child >= 0x80000000 : depth == 1 && child == 0x80000000
 
       @chain_code = payload[13, 32]
       @pub = payload[45, 33]
