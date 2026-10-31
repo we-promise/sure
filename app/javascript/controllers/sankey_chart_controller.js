@@ -195,7 +195,8 @@ export default class extends Controller {
       this.#morph(previous, layout, { svg, linkPaths, nodeGroups });
     }
     this.layout = layout;
-    this.drawnSize = { width, height: chartElement.clientHeight };
+    // The size the chart settles at; a morph is still on its way there.
+    this.drawnSize = { width, height };
 
     if (animate) {
       svg
