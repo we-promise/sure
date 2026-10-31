@@ -79,6 +79,7 @@
             action: [ options.dig(:amount_data, :action), "paste->money-field#pasteAmount", "blur->money-field#normalizeAmount" ].compact.join(" ")
           }.compact),
           required: options[:required],
+          aria: options[:aria],
           **options.slice(:name) %>
       </div>
 

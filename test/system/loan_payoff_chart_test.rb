@@ -48,6 +48,96 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
     end
   end
 
+  # The Extra repayments tab's amount reaches the chart as a fourth line,
+  # through the form a borrower actually uses. The line must paint in its own
+  # colour in both themes, and the legend must name it.
+  test "an extra repayment paints its own line beside the others" do
+    travel_to TODAY do
+      account = on_contract_loan_account
+
+      visit account_path(account, period: "all_time", tab: "extra_repayments")
+      assert_no_selector "[data-controller='loan-payoff-chart'] svg path[data-series='extra']"
+
+      # Laid out as the Bills form is: the amount and how often side by side,
+      # Apply below them as the form's one full-width action, and nothing
+      # wider than the tab.
+      field = find_field(I18n.t("loans.tabs.extra_repayments.amount_label"))
+      field_box = bounding_box(field.find(:xpath, "ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' form-field ')][1]"))
+      select = find_field(I18n.t("loans.tabs.extra_repayments.frequency_label"))
+      select_box = bounding_box(select.find(:xpath, "ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' form-field ')][1]"))
+      apply_box = bounding_box(find_button(I18n.t("loans.tabs.extra_repayments.apply")))
+      form_box = bounding_box(field.find(:xpath, "ancestor::form[1]"))
+      assert_in_delta field_box["top"], select_box["top"], 2, "the amount and how often must share a row"
+      assert_operator select_box["left"], :>=, field_box["right"], "how often sits to the amount's right"
+      assert_operator apply_box["top"], :>=, field_box["bottom"], "Apply sits below the fields"
+      assert_in_delta form_box["left"], apply_box["left"], 2, "Apply alone spans the form, from its left edge"
+      assert_in_delta form_box["right"], apply_box["right"], 2, "to its right edge"
+      assert_operator select_box["right"], :<=, form_box["right"] + 1, "and nothing overflows the form"
+
+      field.fill_in with: "1000"
+      select I18n.t("loans.tabs.extra_repayments.frequencies.weekly"), from: I18n.t("loans.tabs.extra_repayments.frequency_label")
+      click_button I18n.t("loans.tabs.extra_repayments.apply")
+      assert_field I18n.t("loans.tabs.extra_repayments.frequency_label"), with: "weekly"
+
+      # With an amount entered, Clear joins Apply as a right-aligned pair:
+      # Clear first, Apply at the form's right edge, both at natural width.
+      apply_box = bounding_box(find_button(I18n.t("loans.tabs.extra_repayments.apply")))
+      clear_box = bounding_box(find_link(I18n.t("loans.tabs.extra_repayments.clear")))
+      form_box = bounding_box(find_field(I18n.t("loans.tabs.extra_repayments.amount_label")).find(:xpath, "ancestor::form[1]"))
+      assert_in_delta form_box["right"], apply_box["right"], 2, "Apply ends the pair at the form's right edge"
+      assert_operator clear_box["right"], :<=, apply_box["left"], "Clear comes before Apply"
+      assert_in_delta clear_box["top"], apply_box["top"], 2, "on one row"
+      assert_operator apply_box["left"], :>, form_box["left"] + (form_box["right"] - form_box["left"]) / 2, "at natural width, not spanning the form"
+
+      # Each card's figure fits inside its card, at the width the page has with
+      # both side panels open. Three across only when the tab has room.
+      page.driver.browser.manage.window.resize_to(1280, 1400)
+      assert_selector "[data-testid='total-cost']"
+      overflowing = page.evaluate_script(<<~JS)
+        Array.from(document.querySelectorAll("[data-testid='extra-cards'] > div p"))
+          .filter((p) => p.scrollWidth > p.clientWidth + 1)
+          .map((p) => p.textContent.trim())
+      JS
+      assert_empty overflowing, "a card's figure runs past its card"
+
+      extra = find("[data-controller='loan-payoff-chart'] svg path[data-series='extra']")
+      assert extra["d"].to_s.start_with?("M"), "the extra line has no geometry"
+      assert_not_equal "none", stroke_of("extra"), "the extra line has geometry but no resolved stroke"
+      assert_not_equal stroke_of("projected"), stroke_of("extra"), "the extra line must not reuse the projection's colour"
+      assert_selector "ul li", text: I18n.t("UI.account.chart.loan.extra")
+      assert_series_painted
+
+      light = stroke_of("extra")
+      page.execute_script("document.documentElement.setAttribute('data-theme', 'dark')")
+      wait_until { stroke_of("extra") != light }
+      assert_not_equal light, stroke_of("extra"), "the extra line must repaint from the dark theme's token"
+    end
+  end
+
+  # A loan has five tabs, more than the account column holds beside both side
+  # panels. Labels stay on one line, and the bar scrolls inside the column
+  # rather than pushing the page sideways and hiding Statements off-screen.
+  test "the loan's tab bar keeps one line and stays inside its column" do
+    travel_to TODAY do
+      visit account_path(on_contract_loan_account)
+
+      details = find("[data-testid='account-details']")
+      heights = all("[data-testid='account-details'] [role='tab']").map { |tab| bounding_box(tab)["height"] }
+
+      assert_equal 5, heights.length
+      assert_equal 1, heights.uniq.length, "every tab is the same height"
+      assert_operator heights.first, :<, 40, "a label that wraps doubles the tab's height"
+      # The bar's own box stays inside the column either way; what must not
+      # happen is its tabs spilling out and widening the column's content.
+      overflow = page.evaluate_script("arguments[0].scrollWidth - arguments[0].clientWidth", details)
+      assert_operator overflow, :<=, 0, "the tabs must not run past their column"
+
+      statements = find("[data-testid='account-details'] [role='tab'][data-id='statements']")
+      statements.click
+      assert_equal "true", statements["aria-selected"], "the last tab is reachable"
+    end
+  end
+
   # The SVG names the balance and every payoff date in its label, the
   # same text is real DOM, and it points at no table that is not there.
   test "the SVG carries its description and no data table" do
@@ -439,6 +529,10 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
       page.evaluate_script(
         "getComputedStyle(document.querySelector(\"svg path[data-series='#{key}']\")).stroke"
       )
+    end
+
+    def bounding_box(element)
+      page.evaluate_script("arguments[0].getBoundingClientRect().toJSON()", element)
     end
 
     # Capybara retries its own matchers; a value read through evaluate_script

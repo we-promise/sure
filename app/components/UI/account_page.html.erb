@@ -4,7 +4,8 @@
   <%= tag.div class: "space-y-4 pb-5 lg:pb-32" do %>
     <%= render "accounts/show/header", account: account, title: title, subtitle: subtitle %>
 
-    <%= render UI::Account::Chart.new(account: account, period: chart_period, view: chart_view, loan_chart: loan_chart) %>
+    <%= render UI::Account::Chart.new(account: account, period: chart_period, view: chart_view, loan_chart: loan_chart,
+                                     extra_repayment: extra_repayment) %>
 
     <% if (fx_coverage_start = fx_coverage_start_date).present? %>
       <div class="px-3">
@@ -18,9 +19,13 @@
     <div data-testid="account-details">
       <% if tabs.count > 1 %>
         <%= render DS::Tabs.new(active_tab: active_tab, url_param_key: "tab") do |tabs_container| %>
-          <% tabs_container.with_nav(classes: "max-w-fit") do |nav| %>
+          <%# As wide as its tabs and no wider than the column. A loan's five
+              tabs can outgrow the column beside the side panels; the bar then
+              scrolls on its own instead of wrapping labels or pushing the
+              page sideways. %>
+          <% tabs_container.with_nav(classes: "w-max max-w-full overflow-x-auto") do |nav| %>
             <% tabs.each do |tab| %>
-              <% nav.with_btn(id: tab, label: t("accounts.show.tabs.#{tab}", default: tab.to_s.humanize), classes: "px-6") %>
+              <% nav.with_btn(id: tab, label: t("accounts.show.tabs.#{tab}", default: tab.to_s.humanize), classes: "px-6 whitespace-nowrap") %>
             <% end %>
           <% end %>
 
