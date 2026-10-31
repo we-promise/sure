@@ -14,7 +14,7 @@ class LunchflowItem < ApplicationRecord
 
   validates :name, presence: true
   validates :api_key, presence: true, on: :create
-  validate :sync_start_date_not_in_future
+  validate :sync_start_date_must_be_valid
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -173,9 +173,12 @@ class LunchflowItem < ApplicationRecord
 
   private
 
-    def sync_start_date_not_in_future
-      return if sync_start_date.blank? || sync_start_date.to_date <= Date.current
-
-      errors.add(:sync_start_date, :invalid)
+    def sync_start_date_must_be_valid
+      if sync_start_date.nil?
+        # A value that isn't a date casts to nil; reject it instead of clearing the saved date.
+        errors.add(:sync_start_date, :invalid) if sync_start_date_before_type_cast.present?
+      elsif sync_start_date.to_date > Date.current
+        errors.add(:sync_start_date, :invalid)
+      end
     end
 end

@@ -52,11 +52,21 @@ class LunchflowItemTest < ActiveSupport::TestCase
     assert @lunchflow_item.errors.added?(:sync_start_date, :invalid)
   end
 
+  test "rejects a sync start date that isn't a date" do
+    @lunchflow_item.sync_start_date = "not-a-date"
+
+    assert_not @lunchflow_item.valid?
+    assert @lunchflow_item.errors.added?(:sync_start_date, :invalid)
+  end
+
   test "accepts today or a blank sync start date" do
     @lunchflow_item.sync_start_date = Date.current
     assert @lunchflow_item.valid?
 
     @lunchflow_item.sync_start_date = nil
+    assert @lunchflow_item.valid?
+
+    @lunchflow_item.sync_start_date = ""
     assert @lunchflow_item.valid?
   end
 
