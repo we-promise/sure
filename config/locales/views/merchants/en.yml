@@ -83,3 +83,12 @@ en:
     update:
       success: Merchant updated successfully
       converted_success: Merchant converted and updated successfully
+  merchants:
+    show:
+      average_transaction: Average transaction
+      edit: Edit merchant
+      first_transaction: First transaction
+      last_transaction: Last transaction
+      summary: Summary
+      total_spending: Total spending
+      total_transactions: Total transactions
