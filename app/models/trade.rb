@@ -101,6 +101,7 @@ class Trade < ApplicationRecord
   def preloaded_exchange_rates=(value)
     @preloaded_exchange_rates = value
     remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+    @realized_gain_unconvertible = false
   end
 
   # One query for every rate a set of disposals can need, instead of one per
@@ -161,7 +162,17 @@ class Trade < ApplicationRecord
   def realized_gain_loss
     return @realized_gain_loss if defined?(@realized_gain_loss)
 
+    @realized_gain_unconvertible = false
     @realized_gain_loss = calculate_realized_gain_loss
+  end
+
+  # True when #realized_gain_loss is nil only because the proceeds' currency
+  # has no usable rate into the basis currency for the disposal's day, as
+  # opposed to a buy, a transfer or an unknown cost basis. A caller summing
+  # gains counts these as left out (#3640).
+  def realized_gain_unconvertible?
+    realized_gain_loss
+    @realized_gain_unconvertible
   end
 
   # Trades are always excluded from expense budgets
@@ -223,7 +234,10 @@ class Trade < ApplicationRecord
 
       # No rate for that day means the gain is unknown, not zero and not the
       # figure a rate of 1.0 would give.
-      return nil if sale_proceeds.nil?
+      if sale_proceeds.nil?
+        @realized_gain_unconvertible = true
+        return nil
+      end
 
       Trend.new(current: sale_proceeds, previous: cost_basis)
     end
