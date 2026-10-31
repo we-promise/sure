@@ -9,7 +9,7 @@ es:
     expand: Expandir
   mcp:
     errors:
-      insufficient_scope: "Este token no permite el acceso a MCP. Vuelve a autorizar con el permiso mcp o vuelve a añadir este conector."
+      insufficient_scope: "Este token no permite el acceso a MCP. Vuelve a autorizar con el permiso mcp:read_write o vuelve a añadir este conector."
   activerecord:
     errors:
       messages:

@@ -9,7 +9,7 @@ zh-CN:
     expand: 展开
   mcp:
     errors:
-      insufficient_scope: "此令牌没有 MCP 访问权限。请使用 mcp 权限范围重新授权，或重新添加此连接器。"
+      insufficient_scope: "此令牌没有 MCP 访问权限。请使用 mcp:read_write 权限范围重新授权，或重新添加此连接器。"
       invalid_session_id: 无效的 MCP 会话 ID
       unsupported_protocol_version: "不支持的 MCP 协议版本：%{version}"
   oauth:

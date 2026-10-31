@@ -13,7 +13,7 @@ class MigratePublicOauthApplicationsToMcpScopeMigrationTest < ActiveSupport::Tes
 
     run_migration
 
-    assert_equal "mcp", @legacy_app.reload.scopes.to_s
+    assert_equal "mcp:read_write", @legacy_app.reload.scopes.to_s
     assert_equal registration, @legacy_app.attributes.except("scopes", "updated_at")
   end
 
@@ -21,7 +21,7 @@ class MigratePublicOauthApplicationsToMcpScopeMigrationTest < ActiveSupport::Tes
     applications = [
       create_application(scopes: "read_write", confidential: true),
       create_application(scopes: "read", confidential: false),
-      create_application(scopes: "mcp", confidential: false),
+      create_application(scopes: "mcp:read_write", confidential: false),
       create_application(scopes: "read read_write", confidential: false)
     ]
     original_attributes = applications.map(&:attributes)

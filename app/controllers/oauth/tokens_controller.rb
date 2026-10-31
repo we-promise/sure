@@ -11,12 +11,12 @@ class Oauth::TokensController < Doorkeeper::TokensController
       return if token.nil? || token.revoked?
 
       application = token.application
-      return unless application && !application.confidential? && application.scopes.to_s == "mcp"
+      return unless application && !application.confidential? && application.scopes.to_s == "mcp:read_write"
       return unless token.scopes.to_s == "read_write"
 
       # Doorkeeper otherwise intersects the old token scope with the migrated
-      # application's mcp scope and issues an empty scope. Its normal client,
-      # token ownership and scope validation still apply to this request.
+      # application's mcp:read_write scope and issues an empty scope. Its normal
+      # client, token ownership and scope validation still apply to this request.
       request.parameters["scope"] = "read_write"
     end
 end

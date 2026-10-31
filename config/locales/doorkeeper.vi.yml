@@ -20,7 +20,7 @@ vi:
 
   doorkeeper:
     scopes:
-      mcp: "Truy cập dữ liệu tài chính của bạn và sử dụng công cụ qua MCP"
+      "mcp:read_write": "Đọc và chỉnh sửa dữ liệu tài chính của bạn qua MCP"
 
     applications:
       confirmations:

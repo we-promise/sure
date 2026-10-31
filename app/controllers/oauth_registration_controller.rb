@@ -86,7 +86,7 @@ class OauthRegistrationController < ApplicationController
       # Dynamic client registration is public, so issue an MCP-only scope
       # rather than the global API read_write scope. McpController accepts this
       # scope, while /api/v1 keeps rejecting it for normal JSON API access.
-      scopes: "mcp"
+      scopes: "mcp:read_write"
     )
 
     if app.save

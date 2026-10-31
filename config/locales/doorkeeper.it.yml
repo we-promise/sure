@@ -20,7 +20,7 @@ it:
 
   doorkeeper:
     scopes:
-      mcp: "Accedere ai tuoi dati finanziari e utilizzare strumenti tramite MCP"
+      "mcp:read_write": "Leggere e modificare i tuoi dati finanziari tramite MCP"
 
     applications:
       confirmations:

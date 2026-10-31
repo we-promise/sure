@@ -19,7 +19,7 @@ hu:
               not_match_configured: "nem egyezik a szerveren beállítottal."
   doorkeeper:
     scopes:
-      mcp: "Hozzáférés a pénzügyi adataidhoz és eszközök használata MCP-n keresztül"
+      "mcp:read_write": "Pénzügyi adataid olvasása és módosítása MCP-n keresztül"
 
     applications:
       confirmations:

@@ -19,7 +19,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unauthorized", JSON.parse(response.body)["error"]
     assert response.headers["WWW-Authenticate"].present?, "Must include WWW-Authenticate header"
     assert_includes response.headers["WWW-Authenticate"], "oauth-protected-resource/mcp"
-    assert_includes response.headers["WWW-Authenticate"], "scope=\"mcp\""
+    assert_includes response.headers["WWW-Authenticate"], "scope=\"mcp:read_write\""
   end
 
   test "returns 401 with wrong token" do
@@ -55,7 +55,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   test "authenticates a token issued to a dynamically registered MCP client" do
     app = register_mcp_client
-    token = authorize_mcp_client(app, expected_scope: "mcp")
+    token = authorize_mcp_client(app, expected_scope: "mcp:read_write")
 
     post "/mcp", params: jsonrpc_request("initialize").to_json,
          headers: mcp_headers(token)
@@ -66,7 +66,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   test "dynamically registered MCP token cannot access JSON API" do
     app = register_mcp_client
-    token = authorize_mcp_client(app, expected_scope: "mcp")
+    token = authorize_mcp_client(app, expected_scope: "mcp:read_write")
 
     assert_no_difference "User.count" do
       delete "/api/v1/users/me", headers: { "Authorization" => "Bearer #{token}" }
@@ -85,11 +85,11 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     )
     client_id = app.uid
     ActiveRecord::Migration.suppress_messages { MigratePublicOauthApplicationsToMcpScope.new.up }
-    assert_equal "mcp", app.reload.scopes.to_s
+    assert_equal "mcp:read_write", app.reload.scopes.to_s
     assert_equal client_id, app.uid
 
     travel_to McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE do
-      token = authorize_mcp_client(app, expected_scope: "mcp")
+      token = authorize_mcp_client(app, expected_scope: "mcp:read_write")
 
       post "/mcp", params: jsonrpc_request("initialize").to_json,
            headers: mcp_headers(token)
@@ -143,7 +143,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       name: "Legacy MCP Client",
       redirect_uri: "https://claude.ai/callback",
       confidential: false,
-      scopes: "mcp"
+      scopes: "mcp:read_write"
     )
 
     [ McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE, McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE + 1.second ].each do |time|
@@ -160,16 +160,16 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
         assert_response :forbidden
         assert_equal "insufficient_scope", JSON.parse(response.body)["error"]
-        assert_includes response.headers["WWW-Authenticate"], 'scope="mcp"'
+        assert_includes response.headers["WWW-Authenticate"], 'scope="mcp:read_write"'
       end
     end
   end
 
-  test "tokens containing mcp remain valid after the legacy scope deadline" do
+  test "tokens containing the MCP scope remain valid after the legacy scope deadline" do
     app = register_mcp_client
 
     travel_to McpController::LEGACY_READ_WRITE_SCOPE_DEADLINE + 1.day do
-      [ "mcp", "mcp read_write" ].each do |scope|
+      [ "mcp:read_write", "mcp:read_write read_write" ].each do |scope|
         token = Doorkeeper::AccessToken.create!( # pipelock:ignore
           application: app,
           resource_owner_id: @user.id,
@@ -220,8 +220,8 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :ok
-    assert_select "li span", text: "Access your financial data and use tools through MCP"
-    assert_select "input[name=scope][value=mcp]"
+    assert_select "li span", text: "Read and modify your financial data through MCP"
+    assert_select 'input[name=scope][value="mcp:read_write"]'
   end
 
   test "returns 403 with the required scope for a valid read-only token" do
@@ -243,11 +243,11 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
     body = JSON.parse(response.body)
     assert_equal "insufficient_scope", body["error"]
-    assert_equal "mcp", body["scope"]
-    assert_equal "This token lacks MCP access. Reauthorize with the mcp scope, or re-add this connector.", body["error_description"]
+    assert_equal "mcp:read_write", body["scope"]
+    assert_equal "This token lacks MCP access. Reauthorize with the mcp:read_write scope, or re-add this connector.", body["error_description"]
     challenge = response.headers["WWW-Authenticate"]
     assert_includes challenge, 'error="insufficient_scope"'
-    assert_includes challenge, 'scope="mcp"'
+    assert_includes challenge, 'scope="mcp:read_write"'
     assert_includes challenge, "oauth-protected-resource/mcp"
   end
 
@@ -819,7 +819,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     token = Doorkeeper::AccessToken.create!( # pipelock:ignore
       application: app,
       resource_owner_id: @user.id,
-      scopes: "mcp",
+      scopes: "mcp:read_write",
       expires_in: 1.year
     )
     Usage.expects(:capture).with("mcp_call_served_daily").once
@@ -906,7 +906,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :created
       app = Doorkeeper::Application.find_by!(uid: JSON.parse(response.body)["client_id"])
-      assert_equal "mcp", app.scopes.to_s
+      assert_equal "mcp:read_write", app.scopes.to_s
       app
     end
 

@@ -20,7 +20,7 @@ nb:
 
   doorkeeper:
     scopes:
-      mcp: "Få tilgang til dine økonomiske data og bruke verktøy via MCP"
+      "mcp:read_write": "Lese og endre dine økonomiske data via MCP"
 
     applications:
       confirmations:
