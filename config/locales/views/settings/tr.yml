@@ -686,18 +686,16 @@ tr:
           title: Şifreleme yapılandırılmamış
           message: Active Record Encryption yapılandırılana kadar Trade Republic kimlik bilgileri ve oturum verileri güvenli şekilde saklanamaz.
         steps:
-          step_1: Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i veya şifreyi girip kaydedin.
-          step_2: İstendiğinde doğrulama uygulamanızdaki kodu girin.
-          step_3: İstendiğinde girişi Trade Republic uygulamanızda onaylayın.
+          step_1: "Bağlantı ekle bölümünde QR ile giriş veya PIN ile giriş seçeneğini belirleyin."
+          step_2: "QR ile giriş: QR kodu telefonunuzun kamerasıyla tarayın, ardından girişi Trade Republic uygulamasında onaylayın."
+          step_3: "PIN ile giriş: Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i veya şifreyi, ardından doğrulama uygulamanızdaki kodu girin ve girişi Trade Republic uygulamasında onaylayın."
         phone_number_label: Telefon numarası
         phone_number_placeholder_new: +49 170 1234567
         phone_number_placeholder_existing: Mevcut telefon numarasını korumak için boş bırakın
         pin_label: PIN veya şifre
         pin_placeholder_new: Trade Republic uygulama PIN'iniz veya şifreniz
-        pin_placeholder_existing: Mevcut PIN'i veya şifreyi korumak için boş bırakın
         currency_label: Hesap para birimi
         connect: Giriş yap
-        confirm_login: Girişi kontrol et
         complete_login: Devam et
         authenticator_code_label: Doğrulama kodu (istenirse)
         authenticator_code_placeholder: 6 haneli kod
@@ -708,27 +706,28 @@ tr:
         awaiting_confirmation: Trade Republic uygulamasında onay bekleniyor.
         awaiting_authenticator_code: Doğrulama kodu gerekli.
         login_expired: Onay isteğinin süresi doldu.
-        restart_login: Girişi yeniden başlat
         connection_success:
           title: Trade Republic başarıyla bağlandı
           message: Trade Republic bağlantınız hazır.
           description: Sure, Trade Republic verilerinizi arka planda senkronize ediyor.
           close: Bitti
-        qr_login: QR kodla giriş yap
+        qr_login: QR ile giriş
         qr_cancel: QR girişini iptal et
-        qr_back_to_credentials: Telefon numarası ve PIN'e veya şifreye dön
         qr_loading: QR kod hazırlanıyor …
         qr_instruction: QR kodu telefonunuzun kamerasıyla tarayın, ardından girişi Trade Republic uygulamasında onaylayın.
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
         qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
         requires_update: "Senkronizasyona devam etmek için yeniden giriş yapın."
         session_expires_in: "Girişin süresi %{time} içinde doluyor (%{at})."
-        add_account: "Başka bir bağlantı ekle"
-        save_configuration: Kaydet ve Girişi Başlat
-        update_configuration: Yapılandırmayı Güncelle
+        pin_login: "PIN ile giriş"
+        pin_cancel: "PIN girişini iptal et"
+        remove: "Kaldır"
+        new_connection: "Yeni bağlantı"
+        cancel_login: "İptal"
+        add_connection: "Bağlantı ekle"
+        pin_login_hint: "Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i veya şifreyi girin."
         sync: Senkronize et
         syncing: "Senkronize ediliyor..."
-        disconnect: Trade Republic bağlantısını kes
         disconnect_confirm: Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir.
         disconnect_confirm_with_identifier: "%{last4} ile biten Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir."
         identifier_phone: Telefon
@@ -737,7 +736,7 @@ tr:
         accounts_tab: Hesaplar
         setup_accounts: Hesapları kur
         accounts_discovered:
-          one: '%{count} Trade Republic hesabı keşfedildi.'
+          one: 1 Trade Republic hesabı keşfedildi.
           other: '%{count} Trade Republic hesabı keşfedildi.'
         status_configured_suffix: sekmesine gidin.
         not_configured: Yapılandırılmadı.

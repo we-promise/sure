@@ -2719,6 +2719,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_200000) do
     t.index ["status"], name: "index_trade_republic_items_on_status"
   end
 
+  create_table "trade_republic_pending_connections", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.uuid "device_id", default: -> { "gen_random_uuid()" }, null: false
+    t.uuid "family_id", null: false
+    t.text "pending_login_state"
+    t.string "phone_number"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_trade_republic_pending_connections_on_family_id", unique: true
+  end
+
   create_table "trades", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "currency"
@@ -3136,6 +3147,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_200000) do
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "trade_republic_accounts", "trade_republic_items"
   add_foreign_key "trade_republic_items", "families"
+  add_foreign_key "trade_republic_pending_connections", "families"
   add_foreign_key "trades", "securities"
   add_foreign_key "trading212_accounts", "trading212_items"
   add_foreign_key "trading212_items", "families"

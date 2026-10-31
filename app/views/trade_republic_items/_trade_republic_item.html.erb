@@ -87,7 +87,7 @@
           <% login_stage = trade_republic_item.login_stage %>
           <% if trade_republic_item.pending_login_state.blank? || login_stage.in?(%w[qr_pending expired]) %>
             <%= render TradeRepublic::QrLoginComponent.new(
-                  item: trade_republic_item,
+                  record: trade_republic_item,
                   return_url: accounts_path,
                   active: login_stage == "qr_pending"
                 ) %>

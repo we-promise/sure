@@ -6,18 +6,22 @@ vi:
       connection_description: "Kết nối tài khoản đầu tư Trade Republic bằng đăng nhập web an toàn"
       institution_name: Trade Republic
   trade_republic_items:
-    duplicate_connection: "Tài khoản Trade Republic này đã được kết nối. Kết nối mới đã bị xóa."
     portfolio_categories:
       brokerage: "Tài khoản môi giới"
       private_markets: "Thị trường tư nhân"
       interest_products: "Sản phẩm lãi suất"
       crypto_wallet: "Ví tiền mã hóa"
+    duplicate_connection: "Tài khoản Trade Republic này đã được kết nối. Kết nối mới đã bị xóa."
+    defaults:
+      name: Trade Republic
     trade_republic_item:
+      deletion_in_progress: "Đang xóa"
       syncing: "Đang đồng bộ"
       requires_update: "Cần xác thực lại"
       session_expires_in: "Phiên đăng nhập hết hạn sau %{time} (%{at})."
       error: "Lỗi"
       synced: "Đã đồng bộ %{time} trước. %{summary}."
+      never_synced: "Chưa bao giờ đồng bộ."
       setup_accounts: "Thiết lập tài khoản"
       delete: "Xóa"
       accounts_need_setup: "Tài khoản cần được thiết lập"
@@ -55,13 +59,37 @@ vi:
           stale: Cũ
     setup_accounts:
       page_title: "Thiết lập tài khoản Trade Republic"
+      dialog_title: "Thiết lập tài khoản Trade Republic của bạn"
       subtitle: "Liên kết tài khoản đầu tư Trade Republic."
+      info_box:
+        title: "Nhập dữ liệu Trade Republic"
+        items:
+          item_1: "Vị thế hiện tại với giá và số lượng"
+          item_2: "Giao dịch đã khớp (mua và bán)"
+          item_3: "Nạp tiền, rút tiền và tiền lãi đã chi trả"
+      status:
+        fetching_accounts: "Đang lấy tài khoản từ Trade Republic..."
+        no_accounts_found_title: "Không tìm thấy tài khoản."
+        no_accounts_found_description: "Sure không thể tìm thấy tài khoản Trade Republic. Hãy kiểm tra xem phiên của bạn còn hiệu lực không."
       available_accounts:
-        account_type_investment: "Investment portfolio"
-        account_type_cash: "Cash account"
+        title: "Tài khoản có sẵn"
+        account_type_investment: "Danh mục đầu tư"
+        account_type_cash: "Tài khoản tiền mặt"
+        account_type_crypto: "Tài khoản tiền mã hóa"
+        account_summary: "%{account_type} • Số dư: %{balance}"
+        account_id: "Mã tài khoản: %{account_id}"
+      link_existing:
+        description: "Hoặc liên kết tài khoản Trade Republic đã phát hiện với tài khoản đầu tư thủ công hiện có."
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: "Chọn một tài khoản..."
+      linked_accounts:
+        title: "Đã liên kết"
+        linked_to_html: "Liên kết với: %{account}"
       buttons:
         refresh: "Làm mới"
         cancel: "Hủy"
+        back_to_settings: "Quay lại Cài đặt"
+        create_selected_accounts: "Tạo tài khoản đã chọn"
         link: "Liên kết"
         done: "Xong"
     sync:
@@ -71,27 +99,64 @@ vi:
       status:
         checking_credentials: "Đang kiểm tra thông tin xác thực Trade Republic..."
         importing_account: "Đang nhập tài khoản Trade Republic..."
+        checking_configuration: "Đang kiểm tra cấu hình tài khoản..."
+        accounts_need_setup:
+          one: "1 tài khoản Trade Republic cần thiết lập..."
+          other: "%{count} tài khoản Trade Republic cần thiết lập..."
         processing_activity: "Đang xử lý vị thế và hoạt động..."
         calculating_balances: "Đang tính số dư..."
     repair:
       scheduled: "Đã lên lịch sửa dữ liệu Trade Republic."
+    sync_status:
+      no_accounts: "Chưa phát hiện tài khoản Trade Republic"
+      all_linked:
+        one: "1 tài khoản đã liên kết"
+        other: "%{count} tài khoản đã liên kết"
+      partial: "%{linked} đã liên kết, %{unlinked} cần thiết lập"
     select_existing_account:
       title: "Liên kết tài khoản Trade Republic"
+      no_accounts_available: "Chưa có tài khoản Trade Republic nào chưa được liên kết."
+      run_sync_hint: "Hoàn tất đăng nhập và chạy đồng bộ từ Cài đặt > Nhà cung cấp."
+      wait_for_sync: "Chờ quá trình đồng bộ phát hiện tài khoản hoàn tất."
+      balance: "Số dư"
       link: "Liên kết"
       cancel: "Hủy"
+    update:
+      success: "Đã cập nhật cấu hình Trade Republic thành công."
+      pin_required: "Nhập PIN hoặc mật khẩu Trade Republic để xác thực lại."
+    destroy:
+      success: "Đã lên lịch xóa kết nối Trade Republic."
+      unlink_failed: "Không thể ngắt kết nối Trade Republic hoàn toàn. Kết nối được giữ lại để có thể thử lại an toàn."
+    select_accounts:
+      not_configured: "Trade Republic chưa được cấu hình."
     initiate_login:
-      verification_required: "Đã bắt đầu đăng nhập. Xác nhận qua %{method}, sau đó nhấn Xác nhận đăng nhập."
+      pin_required: "Nhập PIN hoặc mật khẩu Trade Republic để bắt đầu đăng nhập mới."
+    initiate_qr_login:
+      not_configured: "Trade Republic chưa được cấu hình."
+    poll_login:
+      no_pending_login: "Hiện không có đăng nhập nào đang chờ. Hãy bắt đầu đăng nhập mới trước."
+      login_expired: "Yêu cầu đăng nhập đã hết hạn. Hãy bắt đầu lại."
+    poll_qr_login:
+      no_pending_login: "Không có đăng nhập QR nào đang chờ."
+      success: "Đã kết nối Trade Republic thành công."
     complete_login:
+      no_pending_login: "Hiện không có đăng nhập nào đang chờ. Hãy bắt đầu đăng nhập mới trước."
       approval_pending: "Chưa được xác nhận. Hãy phê duyệt đăng nhập trong ứng dụng Trade Republic rồi thử lại."
+      still_pending: "Chưa được xác nhận. Hãy phê duyệt đăng nhập trong ứng dụng Trade Republic rồi thử lại."
       success: "Đã kết nối Trade Republic thành công."
       login_expired: "Yêu cầu đăng nhập đã hết hạn. Hãy bắt đầu lại."
     link_existing_account:
       not_found: "Không tìm thấy tài khoản hoặc cấu hình Trade Republic."
+      only_manual_investment: "Chỉ tài khoản đầu tư thủ công mới có thể liên kết với Trade Republic."
+      already_linked: "Tài khoản Trade Republic này đã được liên kết."
       success: "Đã liên kết tài khoản với Trade Republic."
+      processing_failed: "Tài khoản đã được liên kết, nhưng xử lý dữ liệu ban đầu thất bại. Đã lên lịch đồng bộ; hãy kiểm tra nhật ký gỡ lỗi nếu dữ liệu vẫn chưa đầy đủ."
+      failed: "Liên kết tài khoản Trade Republic thất bại."
     complete_account_setup:
       success:
         one: "Đã tạo thành công %{count} tài khoản Trade Republic."
         other: "Đã tạo thành công %{count} tài khoản Trade Republic."
+      none_selected: "Không có tài khoản nào được chọn."
       none_created: "Không có tài khoản nào được tạo."
       partial_failure:
         one: "Không thể hoàn tất một tài khoản Trade Republic đã chọn. Kiểm tra nhật ký gỡ lỗi và thử lại."
@@ -107,4 +172,4 @@ vi:
         card_fee: Phí thẻ
         card_refund: Hoàn tiền thẻ
         tax_refund: Hoàn thuế
-        round_up: Round up
+        round_up: "Round up"

@@ -527,18 +527,16 @@ de:
           title: Verschlüsselung ist nicht konfiguriert
           message: Trade-Republic-Zugangsdaten und Sitzungsdaten können erst sicher gespeichert werden, wenn Active-Record-Verschlüsselung konfiguriert ist.
         steps:
-          step_1: Gib die Telefonnummer und die PIN oder das Passwort deiner Trade-Republic-App ein und speichere sie.
-          step_2: Gib den Code deiner Authenticator-App ein, wenn du dazu aufgefordert wirst.
-          step_3: Bestätige den Login in deiner Trade-Republic-App, wenn du dazu aufgefordert wirst.
+          step_1: "Wähle unter Verbindung hinzufügen QR-Anmeldung oder PIN-Anmeldung."
+          step_2: "QR-Anmeldung: Scanne den QR-Code mit der Kamera deines Smartphones und bestätige die Anmeldung anschließend in der Trade-Republic-App."
+          step_3: "PIN-Anmeldung: Gib die Telefonnummer und die PIN oder das Passwort deiner Trade-Republic-App ein, danach den Code deiner Authenticator-App, und bestätige die Anmeldung in der Trade-Republic-App."
         phone_number_label: Telefonnummer
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Leer lassen, um die aktuelle Telefonnummer zu behalten
         pin_label: PIN oder Passwort
         pin_placeholder_new: PIN oder Passwort deiner Trade-Republic-App
-        pin_placeholder_existing: Leer lassen, um die aktuelle PIN bzw. das aktuelle Passwort zu behalten
         currency_label: Kontowährung
         connect: Einloggen
-        confirm_login: Login prüfen
         complete_login: Fortfahren
         authenticator_code_label: Authenticator-Code (falls angefordert)
         authenticator_code_placeholder: 6-stelliger Code
@@ -549,27 +547,28 @@ de:
         awaiting_confirmation: Bestätigung in der Trade-Republic-App ausstehend.
         awaiting_authenticator_code: Authenticator-Code erforderlich.
         login_expired: Die Bestätigung ist abgelaufen.
-        restart_login: Login erneut starten
         connection_success:
           title: Trade Republic erfolgreich verbunden
           message: Deine Trade-Republic-Verbindung ist eingerichtet.
           description: Sure synchronisiert deine Trade-Republic-Daten jetzt im Hintergrund.
           close: Fertig
-        qr_login: Mit QR-Code einloggen
+        qr_login: QR-Anmeldung
         qr_cancel: QR-Login abbrechen
-        qr_back_to_credentials: Zurück zu Telefonnummer und PIN oder Passwort
         qr_loading: QR-Code wird vorbereitet …
         qr_instruction: Scanne den QR-Code mit der Kamera deines Smartphones und bestätige die Anmeldung anschließend in der Trade-Republic-App.
         qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
         qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
         requires_update: "Melde dich erneut an, um die Synchronisierung fortzusetzen."
         session_expires_in: "Anmeldung läuft in %{time} ab (%{at})."
-        add_account: Weitere Verbindung hinzufügen
-        save_configuration: Speichern und Login starten
-        update_configuration: Konfiguration aktualisieren
+        pin_login: "PIN-Anmeldung"
+        pin_cancel: "PIN-Login abbrechen"
+        remove: "Entfernen"
+        new_connection: "Neue Verbindung"
+        cancel_login: "Abbrechen"
+        add_connection: "Verbindung hinzufügen"
+        pin_login_hint: "Gib die Telefonnummer und die PIN oder das Passwort deiner Trade-Republic-App ein."
         sync: Sync
         syncing: Wird synchronisiert...
-        disconnect: Trade Republic trennen
         disconnect_confirm: Trade Republic trennen? Deine synchronisierten Konten werden zu manuellen Konten.
         disconnect_confirm_with_identifier: "Die Trade-Republic-Verbindung mit den Endziffern %{last4} trennen? Deine synchronisierten Konten werden zu manuellen Konten."
         identifier_phone: Telefon
