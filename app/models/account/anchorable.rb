@@ -88,6 +88,35 @@ module Account::Anchorable
     current_balance_manager.has_current_anchor?
   end
 
+  # The first cash-only anchor opts this account into shared forward accounting.
+  # Read fresh on every call: an anchor created through another instance of
+  # this account must take effect. Joins only this account's valuations, so it
+  # stays an indexed lookup rather than a scan of every cash anchor.
+  def accounting_start_date
+    valuations.cash_anchor.minimum("entries.date")
+  end
+
+  # A cash-anchored account rebuilds from the given date or from its newest
+  # balance, so earlier history, including any imported before the anchor,
+  # stays as recorded.
+  def materialization_window(window_start_date = nil)
+    return window_start_date unless accounting_start_date
+
+    window_start_date || balances.where(currency: currency).maximum(:date) || accounting_start_date
+  end
+
+  # Capture cash and its ledger baseline without reapplying earlier transactions.
+  # Same-day total valuations yield to this new anchor until explicitly edited.
+  def create_cash_anchor!
+    entry = entries.valuations.find_by(date: Date.current, entryable_id: Valuation.cash_anchor.select(:id)) ||
+      entries.new(date: Date.current, entryable: Valuation.new(kind: :cash_anchor))
+    entry.assign_attributes(amount: cash_balance, currency: currency, name: I18n.t("valuations.cash_anchor", locale: family.locale))
+    entry.entryable.cash_entry_total = Balance::SyncCache.new(self).cash_entry_total(Date.current)
+    entry.save!
+    valuations.where.not(kind: "cash_anchor").joins(:entry).where(entries: { date: Date.current }).update_all(superseded_at: Time.current)
+    entry
+  end
+
   private
     def opening_balance_manager
       @opening_balance_manager ||= Account::OpeningBalanceManager.new(self)

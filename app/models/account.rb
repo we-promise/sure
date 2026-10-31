@@ -752,6 +752,13 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
+    # A cash-anchored account carries untraded holdings in their own currency,
+    # so take each security's latest row up to today in any currency.
+    if accounting_start_date
+      latest = holdings.where(date: ..Date.current).select("DISTINCT ON (security_id) id").order(:security_id, date: :desc)
+      return holdings.where(id: latest).where.not(qty: 0).order(amount: :desc)
+    end
+
     if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
       holdings
         .where.not(account_provider_id: nil)
@@ -770,6 +777,16 @@ class Account < ApplicationRecord
         .order(amount: :desc)
     end
   end
+
+  # New data needs a follow-up after a running materializer has built its cache;
+  # pending jobs may be reused only within the same completion tree.
+  def coalescible_syncs(parent_sync: nil)
+    return super unless accounting_start_date
+
+    scope = syncs.visible.pending
+    parent_sync ? scope.where(parent_id: [ nil, parent_sync.id ]) : scope
+  end
+  private :coalescible_syncs
 
   def latest_provider_holdings_snapshot_date
     holdings.where.not(account_provider_id: nil).maximum(:date)

@@ -83,7 +83,15 @@ class Balance::BaseCalculator
       change_holdings_value = end_of_day_holdings_value - start_of_day_holdings_value
       net_buy_sell_value = flows[:non_cash_inflows] - flows[:non_cash_outflows]
 
-      change_holdings_value - net_buy_sell_value
+      change_holdings_value - net_buy_sell_value - asset_adjustments_for_date(date, flows)
+    end
+
+    # An anchor re-bases the account, so the day's change in holdings is an
+    # adjustment rather than market profit.
+    def asset_adjustments_for_date(date, flows)
+      return 0 unless account.balance_type == :investment && sync_cache.get_cash_anchor(date)
+
+      holdings_value_for_date(date) - holdings_value_for_date(date.prev_day) - flows[:non_cash_inflows] + flows[:non_cash_outflows]
     end
 
     def flows_for_date(date)

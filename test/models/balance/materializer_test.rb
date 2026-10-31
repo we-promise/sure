@@ -209,6 +209,21 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_balance_fields_persisted(expected_balances)
   end
 
+  test "a windowed sync still rebuilds earlier holdings of an account without a cash anchor" do
+    security = Security.create!(ticker: "WNDW", name: "Window fund")
+    (5.days.ago.to_date..Date.current).each { |date| security.prices.create!(date: date, price: 10, currency: "USD") }
+    @account.entries.create!(date: 5.days.ago.to_date, name: "Opening", amount: 1000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    @account.entries.create!(date: 4.days.ago.to_date, name: "Buy", amount: 100, currency: "USD",
+      entryable: Trade.new(security: security, qty: 10, price: 10, currency: "USD", investment_activity_label: "Buy"))
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+
+    security.prices.find_by!(date: 3.days.ago.to_date).update!(price: 20)
+    Balance::Materializer.new(@account, strategy: :forward, window_start_date: 1.day.ago.to_date).materialize_balances
+
+    assert_equal 200, @account.holdings.find_by!(security: security, date: 3.days.ago.to_date).amount
+  end
+
   test "reverse materialization persists opening boundary adjustment" do
     account = families(:empty).accounts.create!(
       name: "Linked Depository",
