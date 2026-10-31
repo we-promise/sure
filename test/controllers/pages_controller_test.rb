@@ -1291,6 +1291,44 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal false, @user.reload.cashflow_preview_enabled?
   end
 
+  test "dashboard offers a currency picker only when the family has additional currencies" do
+    get root_path
+
+    assert_response :ok
+    assert_select "button[aria-label^='Currency:']", count: 0
+
+    @family.update!(enabled_currencies: [ "EUR" ])
+    get root_path
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: #{@family.currency}']"
+    assert_select "a[role='menuitemradio'][href*='currency=EUR']"
+  end
+
+  test "dashboard shows a requested additional currency and keeps it across period picks" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+
+    get root_path(currency: "EUR")
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: EUR']"
+    assert_select "a[role='menuitemradio'][href*='period='][href*='currency=EUR']"
+  end
+
+  test "dashboard falls back to the primary currency when the requested one is not enabled" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+
+    get root_path(currency: "GBP")
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: #{@family.currency}']"
+    assert_select "a[href*='currency=GBP']", count: 0
+
+    get root_path(currency: "not-a-currency")
+
+    assert_response :ok
+  end
+
   private
     def assert_cashflow_preview_opt_in(checked:)
       assert_select "form[action='#{dashboard_preferences_path}'][data-controller='auto-submit-form']" do

@@ -223,6 +223,24 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal %w[Card], balance_sheet.liabilities.account_groups.first.accounts.map(&:name)
   end
 
+  test "reports in a requested currency, converting balances at today's rate" do
+    create_account(balance: 1000, accountable: Depository.new)
+    create_account(balance: 400, accountable: CreditCard.new)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    balance_sheet = BalanceSheet.new(@family, currency: "EUR")
+
+    assert_equal "EUR", balance_sheet.currency
+    assert_equal 500, balance_sheet.assets.total
+    assert_equal 200, balance_sheet.liabilities.total
+    assert_equal Money.new(300, "EUR"), balance_sheet.net_worth_money
+    assert_equal "EUR", balance_sheet.assets.account_groups.first.currency
+  end
+
+  test "an unknown requested currency falls back to the family's" do
+    assert_equal @family.currency, BalanceSheet.new(@family, currency: "not-a-currency").currency
+  end
+
   private
     def create_account(attributes = {})
       account = @family.accounts.create! name: "Test", currency: "USD", **attributes
