@@ -1,8 +1,8 @@
 # CalVer transition: October–December 2026
 
-The transition starts with the **`v0.7.7-alpha.2`** release, not the 0.7.6 train.
+The transition starts with the **`v0.7.7-alpha.3`** release, not the 0.7.6 train.
 Its primary version is **`vYYYY.M.D-alpha`**, using the actual UTC release date;
-`v0.7.7-alpha.2` is only a temporary compatibility alias. No release date is
+`v0.7.7-alpha.3` is only a temporary compatibility alias. No release date is
 checked into the workflow or chart metadata.
 Release tags supply the canonical date to every build.
 Git tags include `v`; Docker tags and chart versions do not.
@@ -32,14 +32,14 @@ commits or channel-state files are needed.
 
 ## Releasing
 
-1. Land this change on `main` before cutting the 0.7.7 alpha.2 candidate.
-   Leave 0.7.6 and 0.7.7-alpha.1 unchanged. Carry it to the 0.7.7 release branch
+1. Land this change on `main` before cutting the 0.7.7 alpha.3 candidate.
+   Leave 0.7.6, 0.7.7-alpha.1 and 0.7.7-alpha.2 unchanged. Carry it to the 0.7.7 release branch
    when that branch is cut; do not backport the transition to 0.7.6.
 2. Generate the canonical tag from the UTC build day, once, when starting the release:
    `tag="v$(date -u +%Y.%-m.%-d)-alpha"` (omit `-alpha` for stable).
    Push that tag at the intended release commit; retries reuse it, even after midnight.
    In `publish.yml`, `COMPATIBILITY_CHANNEL: alpha` selects alpha releases and
-   `COMPATIBILITY_VERSION: 0.7.7-alpha.2` supplies the legacy alias. No date edit is
+   `COMPATIBILITY_VERSION: 0.7.7-alpha.3` supplies the legacy alias. No date edit is
    needed. Before a subsequent release, advance the legacy alias; for stable set
    the channel to `stable` and alias to `0.7.7`. Clear the alias to opt out.
 3. Push only the canonical tag. The workflow creates/verifies the legacy Git

@@ -12,8 +12,8 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     with_repo do |dir|
       success, output = resolve(dir, "2026.10.30-alpha")
       assert success
-      %w[release=true compatibility_version=0.7.7-alpha.2 type=raw,value=latest type=raw,value=0.7.7-alpha.2].each { |line| assert_includes output, line }
-      success, output = resolve(dir, "2026.10.28", ref: "refs/tags/v0.7.7-alpha.2")
+      %w[release=true compatibility_version=0.7.7-alpha.3 type=raw,value=latest type=raw,value=0.7.7-alpha.3].each { |line| assert_includes output, line }
+      success, output = resolve(dir, "2026.10.28", ref: "refs/tags/v0.7.7-alpha.3")
       assert success
       assert_includes output, "publish=false"
       assert_includes output, "release=false"
@@ -38,7 +38,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
       %w[alpha stable].each do |phase|
         suffix = phase == "stable" ? "" : "-#{phase}"
         version = "2026.11.2#{suffix}"
-        legacy = phase == "stable" ? "0.7.7" : "0.7.7-alpha.3"
+        legacy = phase == "stable" ? "0.7.7" : "0.7.7-alpha.4"
         success, output = resolve(dir, version, extra_env: { "COMPATIBILITY_CHANNEL" => phase, "COMPATIBILITY_VERSION" => legacy })
         assert success
         assert_includes output, "compatibility_version=#{legacy}"
@@ -47,7 +47,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         success, output = resolve(dir, version, extra_env: { "BUILD_DATE" => "2027.1.2" })
         assert success
         assert_includes output, "version=#{version}"
-        assert_includes output, "compatibility_version=0.7.7-alpha.2"
+        assert_includes output, "compatibility_version=0.7.7-alpha.3"
       end
       %w[2026.10.30 2026.10.31].each do |version|
         success, output = resolve(dir, version)
@@ -99,16 +99,16 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
       remote = File.join(dir, "remote.git")
       git!(dir, "init", "--bare", remote)
       git!(dir, "remote", "add", "origin", remote)
-      2.times { assert run_step(dir, "merge", "compatibility", "COMPATIBILITY_VERSION" => "0.7.7-alpha.2").first }
+      2.times { assert run_step(dir, "merge", "compatibility", "COMPATIBILITY_VERSION" => "0.7.7-alpha.3").first }
       git!(dir, "tag", "-a", "v0.7.7", "-m", "annotated")
       git!(dir, "push", "origin", "v0.7.7")
       assert run_step(dir, "merge", "compatibility", "COMPATIBILITY_VERSION" => "0.7.7").first
-      original = git!(remote, "rev-parse", "v0.7.7-alpha.2")
+      original = git!(remote, "rev-parse", "v0.7.7-alpha.3")
       git!(dir, "commit", "--allow-empty", "-m", "different")
-      success, output = run_step(dir, "merge", "compatibility", "COMPATIBILITY_VERSION" => "0.7.7-alpha.2")
+      success, output = run_step(dir, "merge", "compatibility", "COMPATIBILITY_VERSION" => "0.7.7-alpha.3")
       assert_not success
       assert_includes output, "refusing to move"
-      assert_equal original, git!(remote, "rev-parse", "v0.7.7-alpha.2")
+      assert_equal original, git!(remote, "rev-parse", "v0.7.7-alpha.3")
     end
   end
 

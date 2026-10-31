@@ -254,10 +254,12 @@ class LunchflowItem::Importer
     end
 
     def fetch_and_store_transactions(lunchflow_account)
+      fetches_history = history_needed?(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
+      fetch_started_at = Time.current
       include_pending = Rails.configuration.x.lunchflow.include_pending
 
-      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date} (include_pending=#{include_pending})"
+      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date || "the beginning"} (include_pending=#{include_pending})"
 
       begin
         # Fetch transactions
@@ -273,7 +275,7 @@ class LunchflowItem::Importer
         end
 
         # Validate response structure
-        unless transactions_data.is_a?(Hash)
+        unless transactions_data.is_a?(Hash) && transactions_data[:transactions].is_a?(Array)
           Rails.logger.error "LunchflowItem::Importer - Invalid transactions_data format for account #{lunchflow_account.account_id}"
           return { success: false, transactions_count: 0, error: "Invalid response format" }
         end
@@ -389,6 +391,10 @@ class LunchflowItem::Importer
           Rails.logger.warn "LunchflowItem::Importer - Failed to fetch holdings for account #{lunchflow_account.account_id}: #{e.message}"
         end
 
+        sync_markers = { transactions_synced_through: fetch_started_at }
+        sync_markers[:history_synced_from] = start_date if fetches_history
+        lunchflow_account.update!(sync_markers)
+
         { success: true, transactions_count: transactions_count }
       rescue Provider::Lunchflow::LunchflowError => e
         Rails.logger.error "LunchflowItem::Importer - Lunchflow API error for account #{lunchflow_account.id}: #{e.message}"
@@ -498,30 +504,33 @@ class LunchflowItem::Importer
       end
     end
 
+    # Starts from the chosen start date (nil fetches the full history) when the
+    # account needs history it doesn't have yet. Otherwise resumes from the last
+    # successful fetch, so one that keeps failing doesn't leave a gap once the
+    # item sync completes, but never goes back before the chosen start date.
     def determine_sync_start_date(lunchflow_account)
-      # Check if this account has any stored transactions
-      # If not, treat it as a first sync for this account even if the item has been synced before
-      has_stored_transactions = lunchflow_account.raw_transactions_payload.to_a.any?
+      chosen_start = chosen_start_date
+      return chosen_start if history_needed?(lunchflow_account)
 
-      if has_stored_transactions
-        # Account has been synced before, use item-level logic with buffer
-        # For subsequent syncs, fetch from last sync date with a buffer
-        if lunchflow_item.last_synced_at
-          lunchflow_item.last_synced_at - 7.days
-        else
-          # Fallback if item hasn't been synced but account has transactions
-          90.days.ago
-        end
-      else
-        # Account has no stored transactions - this is a first sync for this account
-        # Use account creation date or a generous historical window
-        account_baseline = lunchflow_account.created_at || Time.current
-        first_sync_window = [ account_baseline - 7.days, 90.days.ago ].max
+      [ (lunchflow_account.transactions_synced_through - 7.days).to_date, chosen_start ].compact.max
+    end
 
-        # Use the more recent of: (account created - 7 days) or (90 days ago)
-        # This caps old accounts at 90 days while respecting recent account creation dates
-        first_sync_window
-      end
+    # The chosen start date as a day on the family's calendar. The panel saves it
+    # in the family's timezone, but syncs run in the app's zone.
+    def chosen_start_date
+      start = lunchflow_item.sync_start_date
+      start && lunchflow_item.family.local_date(start)
+    end
+
+    # True until the account has a successful fetch on record, and again when the
+    # chosen start date moves before the history already fetched or is cleared.
+    # A blank history_synced_from means the account already has everything.
+    def history_needed?(lunchflow_account)
+      return true if lunchflow_account.raw_transactions_payload.to_a.empty? || lunchflow_account.transactions_synced_through.nil?
+
+      synced_from = lunchflow_account.history_synced_from
+      chosen_start = chosen_start_date
+      synced_from.present? && (chosen_start.nil? || chosen_start < synced_from.to_date)
     end
 
     def handle_error(error_message)

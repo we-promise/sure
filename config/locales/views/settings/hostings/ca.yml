@@ -144,9 +144,11 @@ ca:
         max_response_tokens_label: Màxim de tokens de resposta (opcional)
         model_label: Model (opcional)
         model_placeholder: gpt-4.1 (per defecte)
+        model_required_help: "Obligatori quan defineixes una URL base de l'API: introdueix el nom del model que utilitza el teu servidor, com ara llama3.1 per a Ollama."
         title: OpenAI
         uri_base_label: URL base de l'API (opcional)
         uri_base_placeholder: https://api.openai.com/v1 (per defecte)
+        uri_base_local_help: "Per a un model al teu propi ordinador, introdueix el seu endpoint compatible amb OpenAI, per exemple Ollama a http://localhost:11434/v1, o http://ollama:11434/v1 si Sure i Ollama s'executen com a serveis de Docker Compose."
         model_function_calling_help: L'assistent d'IA llegeix les teves dades mitjançant crides a funcions, així que tria un model que el teu proveïdor documenti com a compatible amb eines/crides a funcions. Els models que no ho admeten fan fallar el xat amb un error poc clar del proveïdor.
         model_function_calling_link: Comprova el model configurat
         timeout_heading: Temps d'espera

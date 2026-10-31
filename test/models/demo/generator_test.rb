@@ -28,6 +28,25 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "default demo data links the public on-chain wallets without reading a chain" do
+    # WebMock refuses any request, so this also proves generation stays offline.
+    User.find_by!(email: "user@example.com").update!(email: "existing-user@example.com")
+    generator = Demo::Generator.new(seed: 42)
+    %i[create_realistic_categories! create_realistic_accounts! create_realistic_transactions!
+       generate_budget_auto_fill! generate_goals! create_monitoring_api_key!].each do |step|
+      generator.stubs(step)
+    end
+
+    generator.generate_default_data!(skip_clear: true)
+
+    item = User.find_by!(email: "user@example.com").family.onchain_wallet_item
+    expected = Demo::Generator::ONCHAIN_DEMO_WALLETS.map { |wallet| [ wallet[:chain], Onchain::Chains.canonical_address(wallet[:chain], wallet[:address]) ] }
+    assert_equal expected.sort, item.wallet_keys.sort
+    assert_equal %w[BTC ETH SOL USDC USDC USDT USDT], item.onchain_wallet_accounts.pluck(:symbol).sort
+    assert item.onchain_wallet_accounts.all? { |row| row.account&.accountable_type == "Crypto" }
+    assert_equal 1, item.syncs.count, "the item sync fills in the real balances"
+  end
+
   test "production sample reset includes Wallet in the normal accounts and transactions phases" do
     Rails.stubs(:env).returns(ActiveSupport::EnvironmentInquirer.new("production"))
     generator = Demo::Generator.new(seed: 42)

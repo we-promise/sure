@@ -1,6 +1,11 @@
 ---
 zh-CN:
   trades:
+    api_errors:
+      activity_label_must_match_type: "当类型为 %{type} 时，investment_activity_label 必须为 %{label}"
+      invalid_activity_label: 无效的投资活动标签
+      invalid_type: 无效类型
+      supported_types: "类型必须是以下之一：%{types}"
     form:
       account: 转账账户（可选）
       account_prompt: 搜索账户
@@ -20,11 +25,21 @@ zh-CN:
       type_dividend: 分红
       type_interest: 利息
       dividend_requires_security: 分红需要证券
+      trade_requires_security: 买入和卖出交易必须指定证券（代码）
     header:
       buy: 买入
       sell: 卖出
       dividend: 分红
       interest: 利息
+      contribution: 供款
+      exchange: 兑换
+      fee: 手续费
+      other: 其他
+      reinvestment: 再投资
+      sweep_in: 自动转入
+      sweep_out: 自动转出
+      transfer: 转账
+      withdrawal: 提取
       current_market_price_label: 当前市场价
       overview: 概览
       purchase_price_label: 买入价格
@@ -45,7 +60,7 @@ zh-CN:
       delete_subtitle: 此操作无法撤销
       delete_title: 删除交易
       details: 详情
-      provider_disabled_warning: 价格更新已暂停——%{provider} 提供商已禁用。请在设置中重新启用，或将持仓重新映射到其他提供商。
+      provider_disabled_warning: "价格更新已暂停——%{provider} 提供商已禁用。请在设置中重新启用，或将持仓重新映射到其他提供商。"
       exclude_subtitle: 此交易不会计入报表和计算
       exclude_title: 从分析中排除
       no_category: 无分类
