@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": [],
+    "ignore": ["vendor/bundle/**"],
     "include": ["./app/javascript/**/*.js"]
   },
   "formatter": {

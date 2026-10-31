@@ -1,0 +1,59 @@
+name: mise development setup
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/mise.yml"
+      - ".mise/**"
+      - "mise.toml"
+      - ".ruby-version"
+      - "Gemfile*"
+      - "package*.json"
+      - "biome.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
+        with:
+          version: "2026.10.17"
+          sha256: "fe6dd17e68e09682b31d2e7bb7bb755d22636ac1af5d94621e300f2ca9e9fe8a"
+      - name: Set up twice without changing tracked files or local configuration
+        run: |
+          mise run install
+          printf '\n# preserve local settings\n' >> .env.local
+          printf '# custom test settings\n' > .env.test
+          sha256sum .env.local .env.test > /tmp/sure-env-checksums
+          mise run install
+          sha256sum -c /tmp/sure-env-checksums
+          git diff --exit-code
+      - name: Exercise PostgreSQL and Rails
+        run: mise exec -- bin/rails test test/models/account_test.rb test/controllers/registrations_controller_test.rb
+      - name: Start and check the application
+        run: |
+          mise run dev > /tmp/sure-dev.log 2>&1 &
+          dev_pid=$!
+          trap 'kill "$dev_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 30); do
+            if mise run check > /tmp/sure-check.log 2>&1; then
+              ready=1
+              break
+            fi
+            kill -0 "$dev_pid" || break
+            sleep 2
+          done
+          cat /tmp/sure-check.log
+          if [ "$ready" != 1 ]; then
+            cat /tmp/sure-dev.log
+            exit 1
+          fi
+      - name: Check JavaScript without linting installed gems
+        run: mise exec -- npm run lint
