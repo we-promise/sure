@@ -92,7 +92,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
     ActiveRecord::Base.transaction do
       account.lock! if requested_upsert
-      existing_write = account.entries.valuations.exists?(date: valuation_params[:date]) if requested_upsert
+      existing_write = account.entries.valuations.excluding_cash_anchors.exists?(date: valuation_params[:date]) if requested_upsert
 
       # upsert=true only affects response status; reconciliation owns write behavior.
       result = account.create_reconciliation(
@@ -109,7 +109,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
         raise ActiveRecord::Rollback
       end
 
-      @entry = account.entries.valuations.find_by!(date: valuation_params[:date])
+      @entry = account.entries.valuations.excluding_cash_anchors.find_by!(date: valuation_params[:date])
       @valuation = @entry.entryable
 
       if valuation_params.key?(:notes)
@@ -179,7 +179,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
           raise ActiveRecord::Rollback
         end
 
-        updated_entry = @entry.account.entries.valuations.find_by!(date: valuation_params[:date])
+        updated_entry = @entry.account.entries.valuations.excluding_cash_anchors.find_by!(date: valuation_params[:date])
 
         if valuation_params.key?(:notes)
           unless updated_entry.update(notes: valuation_params[:notes])

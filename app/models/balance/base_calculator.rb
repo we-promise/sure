@@ -74,8 +74,9 @@ class Balance::BaseCalculator
     # If holdings value goes from $100 -> $200 (change_holdings_value is $100)
     # And non-cash flows (i.e. "buys") for day are +$50 (net_buy_sell_value is $50)
     # That means value increased by $100, where $50 of that is due to the change in holdings value, and $50 is due to the buy/sell
+    # On an anchor day the whole change is an adjustment; see asset_adjustments_for_date.
     def market_value_change_on_date(date, flows)
-      return 0 unless account.balance_type == :investment
+      return 0 if account.balance_type != :investment || sync_cache.get_cash_anchor(date)
 
       start_of_day_holdings_value = holdings_value_for_date(date.prev_day)
       end_of_day_holdings_value = holdings_value_for_date(date)
@@ -83,7 +84,7 @@ class Balance::BaseCalculator
       change_holdings_value = end_of_day_holdings_value - start_of_day_holdings_value
       net_buy_sell_value = flows[:non_cash_inflows] - flows[:non_cash_outflows]
 
-      change_holdings_value - net_buy_sell_value - asset_adjustments_for_date(date, flows)
+      change_holdings_value - net_buy_sell_value
     end
 
     # An anchor re-bases the account, so the day's change in holdings is an

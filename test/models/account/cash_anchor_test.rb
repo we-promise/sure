@@ -70,9 +70,10 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     @account.entries.create!(date: Date.current, amount: 1500, currency: "USD", name: "Old total", entryable: Valuation.new)
     travel 1.second do
       @account.create_cash_anchor!
+      @aapl.prices.find_by!(date: Date.current).update!(price: 110)
       materialize
-      assert_equal 100, @account.reload.cash_balance
-      assert_equal 1100, @account.balance
+      assert_equal 500, @account.reload.cash_balance
+      assert_equal 1600, @account.balance
     end
   end
 
@@ -80,8 +81,27 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     old = @account.entries.create!(date: Date.current, amount: 1500, currency: "USD", name: "Old total", entryable: Valuation.new)
     @account.create_cash_anchor!
     old.update!(notes: "Keep this historical note")
+    @aapl.prices.find_by!(date: Date.current).update!(price: 110)
     materialize
-    assert_equal 1100, @account.reload.balance
+    assert_equal 1600, @account.reload.balance
+  end
+
+  test "an amount edit restores a superseded valuation" do
+    old = @account.entries.create!(date: Date.current, amount: 1500, currency: "USD", name: "Old total", entryable: Valuation.new)
+    @account.create_cash_anchor!
+    old.reload.update!(amount: 3000)
+    materialize
+    assert_equal 3000, @account.reload.balance
+  end
+
+  test "an unchanged reconciliation restores a superseded valuation" do
+    old = @account.entries.create!(date: Date.current, amount: 1500, currency: "USD", name: "Old total", entryable: Valuation.new)
+    @account.create_cash_anchor!
+    result = @account.update_reconciliation(old.reload, balance: 1500, date: Date.current)
+    assert result.success?, result.error_message
+    @aapl.prices.find_by!(date: Date.current).update!(price: 110)
+    materialize
+    assert_equal 1500, @account.reload.balance
   end
 
   test "the public reconciliation workflow keeps a total valuation distinct from the cash anchor" do
@@ -110,10 +130,21 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
 
   test "editing an earlier cash movement applies its delta through the anchor" do
     entry = cash_entry(amount: 10, date: Date.current.prev_day)
-    @account.create_cash_anchor!
+    # Not synced yet, so only the ledger, not cash_balance, has it.
+    assert_equal 90, @account.create_cash_anchor!.amount
     entry.update!(amount: 20)
     materialize(window_start_date: entry.date)
-    assert_equal 90, @account.reload.cash_balance
+    assert_equal 80, @account.reload.cash_balance
+  end
+
+  test "a movement dated after the anchor day is counted once" do
+    cash_entry(amount: 10, date: Date.current.next_day)
+    materialize
+    @account.create_cash_anchor!
+    travel 1.day do
+      materialize
+      assert_equal 90, @account.reload.cash_balance
+    end
   end
 
   test "backdated new cash movements are included once" do
@@ -134,6 +165,36 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     entry.sync_account_later
     materialize(window_start_date: entry.date)
     assert_equal 100, @account.reload.cash_balance
+  end
+
+  test "a sync without a start date still applies a backdated cash movement" do
+    travel_to(1.day.ago) { @account.create_cash_anchor! }
+    materialize
+    cash_entry(amount: 10, date: Date.current.prev_day)
+    materialize
+    assert_equal 90, @account.reload.cash_balance
+  end
+
+  test "deleting the last trade of a security removes its position" do
+    @account.create_cash_anchor!
+    trade = @account.entries.create!(date: Date.current, amount: 200, currency: "USD", name: "Buy MSFT",
+      entryable: Trade.new(security: @other, qty: 2, price: 100, currency: "USD", investment_activity_label: "Buy"))
+    materialize
+    assert_equal 2, @account.current_holdings.find_by!(security: @other).qty
+
+    trade.destroy!
+    materialize(window_start_date: trade.date)
+    assert_nil @account.current_holdings.find_by(security: @other)
+    assert_equal 1100, @account.reload.balance
+  end
+
+  test "a split before the window still scales the position" do
+    @account.create_cash_anchor!
+    Security::Split.create!(security: @aapl, ex_date: Date.current.prev_day, numerator: 2, denominator: 1, source: "manual")
+    @aapl.prices.where(date: Date.current.prev_day..).update_all(price: 50)
+    materialize(window_start_date: Date.current)
+    assert_equal 20, @account.current_holdings.find_by!(security: @aapl).qty
+    assert_equal 1100, @account.reload.balance
   end
 
   test "new manual assets are not copied backward and existing rows are repriced" do
@@ -157,6 +218,7 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     assert_equal 1220, @account.reload.balance
     assert_equal 60, @account.current_holdings.find_by!(security: @other).amount
     assert_equal "EUR", @account.current_holdings.find_by!(security: @other).currency
+    assert_includes Holding::CurrentForInvestmentAccounts.new([ @account.id ]).relation.map(&:security_id), @other.id
   end
 
   test "manual basis and locks survive carrying an untraded asset" do
@@ -205,8 +267,9 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     @account.entries.destroy_all
     @account.holdings.destroy_all
     @account.balances.destroy_all
-    @account.update!(cash_balance: 100, balance: 100)
     start_date = Date.current - 365
+    @account.entries.create!(date: start_date - 1, amount: 100, currency: "USD", name: "Opening",
+      entryable: Valuation.new(kind: "opening_anchor"))
     travel_to(start_date.noon) { @account.create_cash_anchor! }
     # Activity today, so the balance series runs up to today.
     cash_entry(amount: 1)
@@ -215,7 +278,7 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     assert_equal 99, @account.reload.balance
 
     history = @account.balances.where(date: ...Date.current).order(:date).pluck(:id, :updated_at)
-    materialize
+    materialize(window_start_date: Date.current)
     assert_equal history, @account.balances.where(date: ...Date.current).order(:date).pluck(:id, :updated_at)
 
     edit_date = 30.days.ago.to_date

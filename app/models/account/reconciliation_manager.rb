@@ -88,7 +88,7 @@ class Account::ReconciliationManager
     # Keep total reconciliations distinct from cash anchors and reactivate explicit edits.
     def prepare_reconciliation(balance, date, existing_valuation)
       valuation_record = existing_valuation ||
-                         account.entries.valuations.where.not(entryable_id: Valuation.cash_anchor.select(:id)).find_by(date: date) ||
+                         account.entries.valuations.excluding_cash_anchors.find_by(date: date) ||
                          account.entries.build(
                                   name: Valuation.build_reconciliation_name(account.accountable_type),
                                   entryable: Valuation.new(kind: "reconciliation")

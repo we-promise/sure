@@ -143,6 +143,20 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @account.id, response_data["account"]["id"]
   end
 
+  test "should create a valuation beside a cash anchor on the same date" do
+    @account.entries.create!(date: Date.current, name: "Cash", amount: 0, currency: @account.currency,
+      entryable: Valuation.new(kind: :cash_anchor))
+
+    post api_v1_valuations_url,
+         params: { upsert: "true", valuation: { account_id: @account.id, amount: 10000.00, date: Date.current, notes: "Statement" } },
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    response_data = JSON.parse(response.body)
+    assert_equal "reconciliation", response_data["kind"]
+    assert_equal "Statement", response_data["notes"]
+  end
+
   test "should upsert valuation for same account and date when requested" do
     existing_entry = @valuation.entry
     valuation_params = {
