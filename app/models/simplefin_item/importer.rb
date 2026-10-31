@@ -33,7 +33,7 @@ class SimplefinItem::Importer
       #
       # Check for linked accounts via BOTH legacy FK (accounts.simplefin_account_id) AND
       # the new AccountProvider system. An account is "linked" if either association exists.
-      linked_accounts = simplefin_item.simplefin_accounts.select { |sfa| sfa.current_account.present? }
+      linked_accounts = simplefin_item.linked_simplefin_accounts
       no_txns_yet = linked_accounts.any? && linked_accounts.all? { |sfa| sfa.raw_transactions_payload.blank? }
 
       if simplefin_item.last_synced_at.nil? || no_txns_yet
@@ -410,6 +410,9 @@ class SimplefinItem::Importer
       # chunked window would otherwise filter out newly added, inactive accounts.
       perform_account_discovery
 
+      # Accounts found during the walk are created unlinked, so the set is fixed here.
+      linked_account_ids = simplefin_item.linked_simplefin_accounts.map(&:account_id).to_set
+
       total_accounts_imported = 0
       chunk_count = 0
       consecutive_empty_chunks = 0
@@ -477,15 +480,28 @@ class SimplefinItem::Importer
           end
         end
 
-        # Count new transactions in this chunk (adaptive stopping)
+        # Count new transactions in this chunk (reported in stats)
         post_chunk_tx_count = count_linked_transactions
         new_txns_in_chunk = [ post_chunk_tx_count - pre_chunk_tx_count, 0 ].max
         total_new_transactions += new_txns_in_chunk
 
-        Rails.logger.info "SimpleFin chunked sync: chunk #{chunk_count} added #{new_txns_in_chunk} new transactions"
+        # Adaptive stopping is driven by what SimpleFIN returned for this window,
+        # not by growth of the stored payloads: rows already stored (for example
+        # by account discovery) come back again and would read as no growth.
+        # Only settled rows dated inside the window count, and only for linked
+        # accounts, so pending rows, out-of-window rows and accounts the user
+        # skipped cannot keep the walk going.
+        window = chunk_start_date.to_i..chunk_end_date.to_i
+        returned_txns_in_chunk = accounts_data[:accounts].to_a.sum do |a|
+          next 0 unless linked_account_ids.include?(a[:id].to_s)
 
-        # Adaptive stopping: if chunk returned no new transactions, increment counter
-        if new_txns_in_chunk.zero?
+          a[:transactions].to_a.count { |t| settled_in_window?(t, window) }
+        end
+
+        Rails.logger.info "SimpleFin chunked sync: chunk #{chunk_count} returned #{returned_txns_in_chunk} transactions, #{new_txns_in_chunk} new"
+
+        # Adaptive stopping: if the window returned no history, increment counter
+        if returned_txns_in_chunk.zero?
           consecutive_empty_chunks += 1
           # Stop after 2 consecutive empty chunks (allow for gaps in bank data)
           if consecutive_empty_chunks >= 2
@@ -519,11 +535,20 @@ class SimplefinItem::Importer
       Rails.logger.info "SimpleFin chunked sync completed: #{chunk_count} chunks processed, #{total_accounts_imported} account records, #{total_new_transactions} new transactions#{stopped_early ? " (stopped early)" : ""}"
     end
 
-    # Count total transactions in linked SimpleFIN accounts (for adaptive chunking)
+    # Count total transactions in linked SimpleFIN accounts (for chunked sync stats)
     def count_linked_transactions
-      simplefin_item.simplefin_accounts
-        .select { |sfa| sfa.current_account.present? }
-        .sum { |sfa| sfa.raw_transactions_payload.to_a.size }
+      simplefin_item.linked_simplefin_accounts.sum { |sfa| sfa.raw_transactions_payload.to_a.size }
+    end
+
+    # Whether a returned transaction is settled history dated inside the window.
+    # Pending detection is shared with the entry processor. Dating falls back to
+    # transacted_at because some providers omit posted on settled transactions.
+    def settled_in_window?(transaction, window)
+      return false if SimplefinEntry::Processor.pending?(transaction)
+
+      time = Simplefin::DateUtils.parse_provider_time(transaction[:posted]) ||
+        Simplefin::DateUtils.parse_provider_time(transaction[:transacted_at])
+      time.present? && window.cover?(time.to_i)
     end
 
     def import_regular_sync

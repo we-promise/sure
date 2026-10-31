@@ -45,6 +45,14 @@ class SimplefinItem < ApplicationRecord
       .uniq
   end
 
+  # Accounts linked to a Sure account, via the legacy FK or AccountProvider.
+  # Fresh query on purpose: the importer rewrites payloads through separate
+  # SimplefinAccount instances, so a loaded simplefin_accounts association
+  # would keep serving stale raw payloads during a run.
+  def linked_simplefin_accounts
+    simplefin_accounts.includes(:account, :linked_account).select { |sfa| sfa.current_account.present? }
+  end
+
   def import_latest_simplefin_data(sync: nil)
     SimplefinItem::Importer.new(self, simplefin_provider: simplefin_provider, sync: sync).import
   end
