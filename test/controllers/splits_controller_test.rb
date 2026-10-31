@@ -216,6 +216,26 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_empty groceries.entryable.tags
   end
 
+  test "create keeps a split row set to no merchant without one" do
+    @entry.entryable.update!(merchant: merchants(:amazon))
+
+    post transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Groceries", amount: "-70", category_id: "", merchant_id: SplitsHelper::NO_MERCHANT },
+          { name: "Household", amount: "-30", category_id: "", merchant_id: "" }
+        ]
+      }
+    }
+
+    assert_redirected_to transactions_url
+    children = @entry.reload.child_entries.index_by(&:name)
+    assert_nil children["Groceries"].entryable.merchant_id
+    assert children["Groceries"].entryable.locked?(:merchant_id)
+    assert_equal merchants(:amazon), children["Household"].entryable.merchant
+    refute children["Household"].entryable.locked?(:merchant_id)
+  end
+
   # Edit action tests
   test "edit renders with existing children pre-filled" do
     @entry.split!([
@@ -225,6 +245,20 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
 
     get edit_transaction_split_path(@entry)
     assert_response :success
+  end
+
+  test "edit lists split rows in the order they were entered" do
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+    @entry.child_entries.find_by!(name: "Part 2").update_columns(created_at: 1.day.ago)
+
+    get edit_transaction_split_path(@entry)
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    names = doc.css("[data-split-transaction-target='rowsContainer'] input[name$='[name]']").map { |input| input["value"] }
+    assert_equal [ "Part 2", "Part 1" ], names
   end
 
   test "edit on a child redirects to parent edit" do
@@ -346,4 +380,148 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("splits.destroy.success"), flash[:notice]
     refute @entry.reload.excluded?
   end
+
+  test "edit preselects each split's merchant" do
+    @entry.entryable.update!(merchant: merchants(:amazon))
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil, merchant_id: merchants(:netflix).id },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get edit_transaction_split_path(@entry)
+
+    assert_equal merchants(:netflix).id, split_row_merchant_value("Part 1")
+    # Part 2 follows the parent's merchant, so its picker starts on "(transaction's merchant)".
+    assert_equal "", split_row_merchant_value("Part 2")
+  end
+
+  test "edit shows a split's own lack of merchant and a pinned parent merchant as its own" do
+    @entry.entryable.update!(merchant: merchants(:amazon))
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+    children = @entry.child_entries.index_by(&:name)
+    # "(none)" picked in the split row's drawer
+    children["Part 1"].entryable.update!(merchant: nil)
+    children["Part 1"].entryable.lock_attr!(:merchant_id)
+    # The parent's merchant picked in the drawer, so it no longer follows the parent
+    children["Part 2"].entryable.lock_attr!(:merchant_id)
+
+    get edit_transaction_split_path(@entry)
+
+    assert_equal SplitsHelper::NO_MERCHANT, split_row_merchant_value("Part 1")
+    assert_equal merchants(:amazon).id, split_row_merchant_value("Part 2")
+    assert_select "[role=option][data-merchant-id=?]", SplitsHelper::NO_MERCHANT, text: I18n.t("splits.new.without_merchant")
+  end
+
+  test "update keeps a split without a merchant of its own without one" do
+    @entry.entryable.update!(merchant: merchants(:amazon))
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    patch transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Part 1", amount: "-60", category_id: "", merchant_id: SplitsHelper::NO_MERCHANT },
+          { name: "Part 2", amount: "-40", category_id: "", merchant_id: "" }
+        ]
+      }
+    }
+
+    assert_redirected_to transactions_url
+    children = @entry.reload.child_entries.index_by(&:name)
+    assert_nil children["Part 1"].entryable.merchant_id
+    assert children["Part 1"].entryable.locked?(:merchant_id)
+    assert_equal merchants(:amazon), children["Part 2"].entryable.merchant
+    refute children["Part 2"].entryable.locked?(:merchant_id)
+
+    # Neither survives as the parent's merchant when the parent changes later.
+    @entry.entryable.update!(merchant: merchants(:netflix))
+    assert_nil children["Part 1"].reload.entryable.merchant_id
+    assert_equal merchants(:netflix), children["Part 2"].reload.entryable.merchant
+  end
+
+  test "update keeps a split's own merchant and gives other splits the parent's" do
+    @entry.entryable.update!(merchant: merchants(:amazon))
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    patch transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Part 1", amount: "-60", category_id: "", merchant_id: merchants(:netflix).id },
+          { name: "Part 2", amount: "-30", category_id: "", merchant_id: "" },
+          { name: "Part 3", amount: "-10", category_id: "", merchant_id: merchants(:amazon).id }
+        ]
+      }
+    }
+
+    assert_redirected_to transactions_url
+    children = @entry.reload.child_entries.index_by(&:name)
+    assert_equal merchants(:netflix), children["Part 1"].entryable.merchant
+    assert children["Part 1"].entryable.locked?(:merchant_id)
+    assert_equal merchants(:amazon), children["Part 2"].entryable.merchant
+    refute children["Part 2"].entryable.locked?(:merchant_id)
+    # Picking the parent's merchant explicitly pins it to the split.
+    assert_equal merchants(:amazon), children["Part 3"].entryable.merchant
+    assert children["Part 3"].entryable.locked?(:merchant_id)
+  end
+
+  test "update gives a split left without a merchant the parent's, unlocked" do
+    @entry.entryable.update!(merchant: merchants(:amazon))
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil, merchant_id: merchants(:netflix).id },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    patch transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Part 1", amount: "-60", category_id: "", merchant_id: "" },
+          { name: "Part 2", amount: "-40", category_id: "" }
+        ]
+      }
+    }
+
+    child = @entry.reload.child_entries.find_by(name: "Part 1")
+    assert_equal merchants(:amazon), child.entryable.merchant
+    refute child.entryable.locked?(:merchant_id)
+  end
+
+  test "update ignores a merchant the user cannot use" do
+    @entry.entryable.update!(merchant: merchants(:amazon))
+    @entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+    foreign_merchant = families(:empty).merchants.create!(name: "Foreign")
+
+    patch transaction_split_path(@entry), params: {
+      split: {
+        splits: [
+          { name: "Part 1", amount: "-60", category_id: "", merchant_id: foreign_merchant.id },
+          { name: "Part 2", amount: "-40", category_id: "" }
+        ]
+      }
+    }
+
+    assert_redirected_to transactions_url
+    child = @entry.reload.child_entries.find_by(name: "Part 1")
+    assert_equal merchants(:amazon), child.entryable.merchant
+    refute child.entryable.locked?(:merchant_id)
+  end
+
+  private
+
+    # The merchant picker value of the split editor row with the given name.
+    def split_row_merchant_value(name)
+      doc = Nokogiri::HTML::Document.parse(response.body)
+      prefix = doc.at_css("input[name$='[name]'][value='#{name}']")["name"].delete_suffix("[name]")
+      doc.at_css("input[type=hidden][name='#{prefix}[merchant_id]']")["value"]
+    end
 end

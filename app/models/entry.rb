@@ -507,6 +507,12 @@ class Entry < ApplicationRecord
     child_entries.exists?
   end
 
+  # Split parents are always excluded (split! sets it), so entries that are not
+  # can skip looking for split rows without a query.
+  def may_have_split_rows?
+    excluded? && !split_child?
+  end
+
   # Splits this entry unless it stopped being splittable. Two callers (the split dialog, two
   # split rules, a rule and an API request) can both pass a splittable? check before either
   # inserts children, and split! only validates its own amounts, so without the lock both sets
@@ -551,8 +557,12 @@ class Entry < ApplicationRecord
 
   # Splits this entry into child entries. Marks parent as excluded.
   #
-  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, merchant_id:, tag_ids:, excluded: } hashes.
+  # A split whose merchant differs from the parent's keeps it locked, so later
+  # merchant changes on the parent leave it alone; the other splits follow them.
+  #
+  # @param splits [Array<Hash>] array of { name:, amount:, category_id:, merchant_id:, own_merchant:, tag_ids:, excluded: } hashes.
   #   merchant_id and tag_ids are optional per split and fall back to the parent's merchant / no tags.
+  #   own_merchant: true keeps merchant_id as given, even when blank or the parent's, and locks it.
   # @param lock_attributes [Boolean] locks the category and merchant each split sets on its child, so
   #   rules further down (or a later run) don't overwrite them. Tags are only ever added by rules.
   # @return [Array<Entry>] the created child entries
@@ -564,15 +574,20 @@ class Entry < ApplicationRecord
 
     self.class.transaction do
       children = splits.map do |split_attrs|
+        merchant_id = split_attrs[:merchant_id].presence
+        own_merchant = split_attrs[:own_merchant] || (merchant_id.present? && merchant_id != entryable.try(:merchant_id))
         child_transaction = Transaction.new(
           category_id: split_attrs[:category_id],
-          merchant_id: split_attrs[:merchant_id].presence || entryable.try(:merchant_id),
+          merchant_id: own_merchant ? merchant_id : entryable.try(:merchant_id),
           tag_ids: split_attrs[:tag_ids] || [],
-          kind: entryable.try(:kind)
+          kind: entryable.try(:kind),
+          locked_attributes: own_merchant ? { "merchant_id" => Time.current } : {}
         )
         if lock_attributes
           locked_at = Time.current
-          child_transaction.locked_attributes = split_attrs.slice(:category_id, :merchant_id).compact_blank.keys.index_with { locked_at }
+          child_transaction.locked_attributes = child_transaction.locked_attributes.merge(
+            split_attrs.slice(:category_id, :merchant_id).compact_blank.keys.map(&:to_s).index_with { locked_at }
+          )
         end
 
         child_entries.create!(

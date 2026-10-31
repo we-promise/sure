@@ -17,6 +17,7 @@ en:
       uncategorized: "(uncategorized)"
       merchant_label: Merchant
       no_merchant: "(transaction's merchant)"
+      without_merchant: "(no merchant)"
       tags_label: Tags
       original_name: "Name:"
       original_date: "Date:"
