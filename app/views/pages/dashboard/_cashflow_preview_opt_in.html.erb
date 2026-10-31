@@ -1,0 +1,19 @@
+<%# Posts to the same dashboard preferences endpoint as Sankey grouping.
+    Auto-submit matches the Settings preference toggles; the HTML response
+    redirects back so this section re-renders with or without the chart. %>
+<%= form_with url: dashboard_preferences_path, method: :patch,
+      class: "mt-4 border-t border-primary px-4 pt-4",
+      data: { controller: "auto-submit-form" } do %>
+  <label for="cashflow_preview_enabled" class="flex cursor-pointer items-center gap-4 justify-between">
+    <div class="text-sm space-y-1">
+      <p class="text-primary font-medium"><%= t("pages.dashboard.cashflow_preview.opt_in_title") %></p>
+      <p class="text-secondary"><%= t("pages.dashboard.cashflow_preview.opt_in_description") %></p>
+    </div>
+    <%= render DS::Toggle.new(
+          id: "cashflow_preview_enabled",
+          name: "preferences[cashflow_preview_enabled]",
+          checked: Current.user.cashflow_preview_enabled?,
+          data: { auto_submit_form_target: "auto", autosubmit_debounce_timeout: "0" }
+    ) %>
+  </label>
+<% end %>

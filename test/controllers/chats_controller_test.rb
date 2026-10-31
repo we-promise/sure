@@ -8,6 +8,8 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "gets index" do
+    Usage.stubs(:capture)
+    Usage.expects(:capture).with("ai_assistant_served_daily").never
     get chats_url
     assert_response :success
   end
@@ -34,7 +36,30 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "new chat prefills the Dig in with AI message for one of the family's insights" do
+    insight = insights(:spending_anomaly_dining)
+
+    assert_no_difference("Chat.count") do
+      get new_chat_url(insight_id: insight.id)
+    end
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]'][autofocus]", text: /#{Regexp.escape(insight.title)}/
+  end
+
+  test "new chat ignores another family's insight" do
+    insight = insights(:spending_anomaly_dining)
+    insight.update_columns(family_id: families(:empty).id)
+
+    get new_chat_url(insight_id: insight.id)
+
+    assert_response :success
+    assert_select "textarea[name='chat[content]']", text: ""
+  end
+
   test "creates chat" do
+    Usage.stubs(:capture)
+    Usage.expects(:capture).with("ai_assistant_served_daily").never
     assert_difference("Chat.count") do
       post chats_url, params: { chat: { content: "Hello", ai_model: "gpt-4.1" } }
     end

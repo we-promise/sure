@@ -5,6 +5,7 @@ de:
         renewal: Dein Beitrag wird am %{date} fortgesetzt.
         cancellation: Dein Beitrag endet am %{date}.
   settings:
+    encryption_migration_guide: Anleitung zur Einrichtung der Verschlüsselung und zur Migration
     ai_prompts:
       show:
         page_title: KI-Eingabeaufforderungen
@@ -20,6 +21,10 @@ de:
         merchant_detector:
           title: Händlererkennung
           subtitle: Die KI identifiziert und ergänzt Transaktionsdaten mit Händlerinformationen
+        insight_dig_in:
+          title: Analyse mit KI nachhaken
+          subtitle: Erste Chat-Nachricht, wenn du bei einer Analyse mit KI nachhakst
+          label: Nachricht zum Nachhaken
     payments:
       show:
         page_title: Zahlung
@@ -45,6 +50,7 @@ de:
         general_title: Allgemein
         default_period: Standardzeitraum
         default_account_order: Standardreihenfolge der Konten
+        default_account_order_hint: Bei „Manuell“ ziehst du die Konten in der Seitenleiste in die gewünschte Reihenfolge.
         language: Sprache
         language_auto: Browsersprache
         page_title: Einstellungen
@@ -96,6 +102,8 @@ de:
         page_title: Darstellung
         split_grouped_description: Zeigt geteilte Transaktionen in der Liste gebündelt unter ihrer Ursprungsbuchung. Ist die Option aus, erscheint jede Teilbuchung als eigene Zeile.
         split_grouped_title: Geteilte Transaktionen gruppieren
+        auto_generate_transaction_names_title: Transaktionsnamen automatisch erzeugen
+        auto_generate_transaction_names_description: Bleibt der Name einer manuell erfassten Transaktion leer, wird er aus der gewählten Kategorie und dem Händler gebildet (z. B. „Unterhaltung - Netflix“). Ist beides nicht gewählt, bleibt der Name Pflicht. Gilt für den ganzen Haushalt und nur für neue Transaktionen.
         theme_dark: Dunkel
         theme_light: Hell
         theme_subtitle: Wähle das Erscheinungsbild der App
@@ -186,6 +194,7 @@ de:
       accounts_label: Konten
       advanced_section_title: Erweitert
       ai_prompts_label: KI-Eingabeaufforderungen
+      auto_matches_label: Automatischer Abgleich
       api_key_label: API-Schlüssel
       payment_label: Zahlung
       categories_label: Kategorien

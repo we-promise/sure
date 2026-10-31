@@ -47,7 +47,6 @@ pt-PT:
       subtitle: "Acompanhe a evolução das suas finanças"
       new: "Novo"
       sections_aria_label: "Secções da Visão Geral"
-      drag_to_reorder: "Arraste para reordenar a secção"
       toggle_section: "Alternar a visibilidade da secção"
       widget_size:
         label: "Ajustar tamanho"
