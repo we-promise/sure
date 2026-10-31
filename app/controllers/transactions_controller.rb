@@ -405,7 +405,7 @@ class TransactionsController < ApplicationController
         original_name: @entry.name,
         original_date: I18n.l(@entry.date, format: :long))
 
-      new_entry = @entry.account.entries.create!(
+      new_entry = @entry.account.entries.new(
         name: params[:trade_name] || Trade.build_name(is_sell ? "sell" : "buy", qty, security.ticker),
         date: @entry.date,
         amount: signed_amount,
@@ -419,6 +419,12 @@ class TransactionsController < ApplicationController
           investment_activity_label: activity_label
         )
       )
+
+      unless Trade::SaleLimit.save(new_entry)
+        flash[:alert] = new_entry.errors.full_messages.to_sentence
+        redirect_back_or_to transactions_path, status: :see_other
+        next
+      end
 
       # Mark the new trade as user-modified to protect from sync
       new_entry.lock_saved_attributes!

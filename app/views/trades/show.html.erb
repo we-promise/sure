@@ -24,6 +24,9 @@
               url: trade_path(@entry),
               class: "space-y-2",
               data: { controller: "auto-submit-form" } do |f| %>
+          <% if @entry.errors.any? %>
+            <%= render "shared/form_errors", model: @entry %>
+          <% end %>
           <%= f.date_field :date,
                 label: t(".date_label"),
                 max: Date.current,

@@ -49,6 +49,9 @@ vi:
       holdings: Danh mục nắm giữ
       name: Tên
       new_holding: Hoạt động mới
+      negative_position: "%{name} (%{ticker}): dưới 0 từ %{date}, thấp nhất %{qty}."
+      negative_positions_hint: "Có thể thiếu một giao dịch mua hoặc chuyển khoản. Hãy thêm vào hoặc sửa các giao dịch đã đưa vị thế xuống dưới 0."
+      negative_positions_title: "Một số vị thế đã xuống dưới 0"
       no_holdings: Không có danh mục nắm giữ.
       return: Tổng lợi nhuận
       weight: Tỷ trọng

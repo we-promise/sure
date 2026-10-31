@@ -3,9 +3,10 @@ class Holding::ForwardCalculator
 
   attr_reader :account
 
-  def initialize(account, security_ids: nil)
+  def initialize(account, security_ids: nil, excluded_entry_ids: nil)
     @account = account
     @security_ids = security_ids
+    @excluded_entry_ids = excluded_entry_ids
     # Track weighted-average cost basis per security, relieving sells so the
     # figure stays correct after a position is fully sold and repurchased.
     @cost_basis_trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
@@ -34,7 +35,7 @@ class Holding::ForwardCalculator
 
   private
     def portfolio_cache
-      @portfolio_cache ||= Holding::PortfolioCache.new(account, security_ids: @security_ids)
+      @portfolio_cache ||= Holding::PortfolioCache.new(account, security_ids: @security_ids, excluded_entry_ids: @excluded_entry_ids)
     end
 
     def empty_portfolio

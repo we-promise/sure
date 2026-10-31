@@ -7,6 +7,22 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     sign_in @user = users(:family_admin)
   end
 
+  test "moving a sale before its purchase is refused and changes nothing" do
+    account = accounts(:investment)
+    sale = account.entries.create!(
+      name: "Sell 5 shares of AAPL", date: Date.current, amount: -1000, currency: "USD",
+      entryable: Trade.new(security: securities(:aapl), qty: -5, price: 200, currency: "USD", investment_activity_label: "Sell")
+    )
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: { entry_ids: [ sale.id ], date: 1.month.ago.to_date }
+    }
+
+    assert_redirected_to transactions_url
+    assert_match "holds only 0", flash[:alert]
+    assert_equal Date.current, sale.reload.date
+  end
+
   test "bulk update" do
     transactions = @user.family.entries.transactions
 

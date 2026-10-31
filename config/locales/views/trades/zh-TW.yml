@@ -1,6 +1,9 @@
 ---
 zh-TW:
   trades:
+    sale_limit:
+      exceeds_holding: "無法賣出 %{qty} %{ticker}：此帳戶在 %{date} 僅持有 %{available}。"
+      exceeds_later_holding: "無法賣出 %{qty} %{ticker}：此日期最多可賣出 %{available}，否則持倉會在 %{date} 低於零。"
     form:
       account: 轉帳帳戶（選填）
       account_prompt: 搜尋帳戶
@@ -21,6 +24,9 @@ zh-TW:
       type_interest: 利息
       dividend_requires_security: 股息必須指定證券
       trade_requires_security: 買入與賣出交易必須指定證券（代碼）
+      held_security: "%{name} (%{ticker})，持有 %{qty}"
+      held_security_prompt: "選擇持倉"
+      held_security_hint: "不在清單中？請先新增買入。"
     header:
       buy: 買入
       sell: 賣出
