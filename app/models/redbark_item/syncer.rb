@@ -33,7 +33,7 @@ class RedbarkItem::Syncer
     if linked_redbark_accounts.any?
       sync.update!(status_text: I18n.t("redbark_items.sync.status.processing")) if sync.respond_to?(:status_text)
       mark_import_started(sync)
-      redbark_item.process_accounts(as_of: synced_at.to_date)
+      redbark_item.process_accounts(as_of: redbark_item.family.local_date(synced_at))
 
       # Phase 4: Schedule balance calculations
       sync.update!(status_text: I18n.t("redbark_items.sync.status.calculating")) if sync.respond_to?(:status_text)

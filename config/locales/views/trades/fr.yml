@@ -4,6 +4,12 @@ fr:
     sale_limit:
       exceeds_holding: "Impossible de vendre %{qty} %{ticker} : le compte n'en détient que %{available} le %{date}."
       exceeds_later_holding: "Impossible de vendre %{qty} %{ticker} : au plus %{available} peuvent être vendus à cette date, sinon la position passe sous zéro le %{date}."
+
+    api_errors:
+      activity_label_must_match_type: investment_activity_label doit valoir %{label} lorsque type vaut %{type}
+      invalid_activity_label: Libellé d'activité d'investissement invalide
+      invalid_type: Type invalide
+      supported_types: 'type doit être l''une des valeurs suivantes : %{types}'
     form:
       account: Compte de transfert (facultatif)
       account_prompt: Rechercher un compte

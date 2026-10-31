@@ -6,6 +6,7 @@ zh-TW:
         renewal: 您的貢獻將於 %{date}繼續。
         cancellation: 您的貢獻將於 %{date}結束。
   settings:
+    encryption_migration_guide: 加密設定與資料遷移指南
     background_jobs:
       show:
         page_title: 背景工作
