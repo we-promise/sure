@@ -56,6 +56,8 @@ zh-CN:
       value: 价值
     new:
       title: 新余额
+      amount: 金额
+      submit: 保存估值
     show:
       amount: 金额
       amount_label: 此日期的账户价值

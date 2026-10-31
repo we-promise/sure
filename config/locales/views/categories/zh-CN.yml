@@ -46,7 +46,7 @@ zh-CN:
       target_label: 合并到（目标）
       select_target: 选择目标分类...
       sources_label: 要合并的分类
-      sources_hint: 所选分类的交易和预算项移至目标后将被删除。请勿将目标分类选为来源。
+      sources_hint: 所选分类将在其交易和预算项移至目标分类后被删除。请勿将目标分类选为来源。
       submit: 合并所选分类
     new:
       new_category: 新建分类
