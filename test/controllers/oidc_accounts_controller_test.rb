@@ -153,6 +153,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
       "provider" => "openid_connect",
       "uid" => "new-uid-99999",
       "email" => "newuser@example.com",
+      "email_verified" => true,
       "name" => "New User",
       "first_name" => "New",
       "last_name" => "User"
@@ -178,6 +179,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_response :success
     assert_select "p", text: /Create New Account/
     assert_select "strong", text: new_user_auth["email"]
+    assert_select "div.bg-warning\\/10", count: 0
   end
 
   test "does not show create account button when JIT link-only mode" do
@@ -192,7 +194,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_select "p", text: /Create New Account/
     # No create account button rendered
     assert_select "button", text: "Create Account", count: 0
-    assert_select "p", text: /New account creation via single sign-on is disabled/
+    assert_select "div.bg-warning\\/10 p", text: /New account creation via single sign-on is disabled/
   end
 
   test "create_user redirects when JIT link-only mode" do
@@ -385,7 +387,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     session[:pending_oidc_auth] = {
       "provider" => "openid_connect", "uid" => "invite-uid-1",
-      "email" => "invitee@example.com", "first_name" => "In", "last_name" => "Vitee"
+      "email" => "invitee@example.com", "email_verified" => true, "first_name" => "In", "last_name" => "Vitee"
     }
 
     post :create_user
@@ -405,7 +407,7 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     session[:pending_oidc_auth] = {
       "provider" => "openid_connect", "uid" => "invite-uid-2",
-      "email" => "invitee2@example.com", "first_name" => "In", "last_name" => "Vitee"
+      "email" => "invitee2@example.com", "email_verified" => true, "first_name" => "In", "last_name" => "Vitee"
     }
 
     post :create_user
@@ -465,5 +467,66 @@ class OidcAccountsControllerTest < ActionController::TestCase
     session[:pending_oidc_auth] = pending_auth
     get :new_user
     assert_redirected_to new_session_path
+  end
+
+  # docs/hosting/oidc.md: JIT creation and invitation redemption trust the
+  # IdP's email, so they require it to be verified.
+  test "create_user does not redeem an invitation for an unverified email" do
+    invitation = families(:dylan_family).invitations.create!(
+      email: "unverified-invitee@example.com", role: "admin", inviter: users(:family_admin)
+    )
+    session[:pending_oidc_auth] = {
+      "provider" => "openid_connect", "uid" => "unverified-uid-1",
+      "email" => "unverified-invitee@example.com", "email_verified" => false,
+      "first_name" => "Un", "last_name" => "Verified"
+    }
+
+    assert_no_difference [ "User.count", "OidcIdentity.count" ] do
+      post :create_user
+    end
+
+    assert_redirected_to new_session_path
+    assert_nil invitation.reload.accepted_at
+  end
+
+  test "create_user rejects JIT creation when the IdP does not report the email as verified" do
+    session[:pending_oidc_auth] = new_user_auth.except("email_verified")
+
+    assert_no_difference [ "User.count", "Family.count" ] do
+      assert_difference -> { SsoAuditLog.by_event("jit_blocked").count }, 1 do
+        post :create_user
+      end
+    end
+
+    assert_redirected_to new_session_path
+    assert_equal I18n.t("oidc_accounts.create_user.email_not_verified"), flash[:alert]
+    log = SsoAuditLog.by_event("jit_blocked").recent.first
+    assert_equal "email_not_verified", log.metadata["reason"]
+    assert_not_includes log.metadata.keys, "email"
+  end
+
+  test "link offers neither account creation nor the invitation for an unverified email" do
+    families(:dylan_family).invitations.create!(
+      email: "unverified-invitee@example.com", role: "member", inviter: users(:family_admin)
+    )
+    session[:pending_oidc_auth] = {
+      "provider" => "openid_connect", "uid" => "unverified-uid-2",
+      "email" => "unverified-invitee@example.com", "email_verified" => false
+    }
+
+    get :link
+
+    assert_response :success
+    assert_select "form[action='#{create_user_oidc_account_path}']", count: 0
+    assert_select "button", text: I18n.t("oidc_accounts.link.submit_accept_invitation"), count: 0
+    assert_select "div.bg-warning\\/10 p", text: I18n.t("oidc_accounts.link.email_not_verified")
+  end
+
+  test "create_link still links an existing account when the email is unverified" do
+    session[:pending_oidc_auth] = pending_auth.merge("email_verified" => false)
+
+    assert_difference "OidcIdentity.count", 1 do
+      post :create_link, params: { email: @user.email, password: user_password_test }
+    end
   end
 end

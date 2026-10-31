@@ -12,6 +12,7 @@ class SsoAuditLog < ApplicationRecord
     link
     unlink
     jit_account_created
+    jit_blocked
     identity_unblocked
     user_removed
   ].freeze
@@ -104,6 +105,18 @@ class SsoAuditLog < ApplicationRecord
         ip_address: request.remote_ip,
         user_agent: request.user_agent&.truncate(500),
         metadata: metadata
+      )
+    end
+
+    # Log a refused JIT account creation or invitation redemption
+    def log_jit_blocked!(provider:, request:, reason:, metadata: {})
+      create!(
+        user: nil,
+        event_type: "jit_blocked",
+        provider: provider,
+        ip_address: request.remote_ip,
+        user_agent: request.user_agent&.truncate(500),
+        metadata: metadata.merge(reason: reason)
       )
     end
 

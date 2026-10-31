@@ -42,17 +42,19 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil)
+  def setup_omniauth_mock(provider:, uid:, email:, name:, first_name: nil, last_name: nil, email_verified: nil, raw_info: nil)
     OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new({
       provider: provider,
       uid: uid,
       info: {
         email: email,
+        email_verified: email_verified,
         name: name,
         first_name: first_name,
         last_name: last_name
-      }.compact
-    })
+      }.compact,
+      extra: ({ raw_info: raw_info } if raw_info)
+    }.compact)
   end
 
   test "codespaces accepts its localhost preview origin with a valid CSRF token" do
@@ -905,6 +907,180 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
       assert_equal "New User", cached[:name]
       assert cached.key?(:device_info), "Expected device_info in cached payload"
       assert cached.key?(:allow_account_creation), "Expected allow_account_creation in cached payload"
+      assert_equal false, cached[:email_verified]
+    ensure
+      Rails.cache = original_cache
+    end
+  end
+
+  test "mobile SSO offers account creation for a verified email" do
+    setup_omniauth_mock(
+      provider: "openid_connect",
+      uid: "verified-mobile-uid",
+      email: "verified-mobile@example.com",
+      name: "Verified Mobile",
+      email_verified: true
+    )
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+    AuthConfig.stubs(:jit_link_only?).returns(false)
+    AuthConfig.stubs(:allowed_oidc_domain?).returns(true)
+
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    begin
+      get "/auth/mobile/openid_connect", params: {
+        device_id: "flutter-device-007", device_name: "Pixel 8", device_type: "android"
+      }
+      get "/auth/openid_connect/callback"
+
+      params = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)
+      assert_equal "true", params["allow_account_creation"]
+      cached = Rails.cache.read("mobile_sso_link:#{params['linking_code']}")
+      assert_equal true, cached[:email_verified]
+      assert_equal true, cached[:allow_account_creation]
+    ensure
+      Rails.cache = original_cache
+    end
+  end
+
+  test "logs a blocked JIT attempt when an unverified email would have been offered account creation" do
+    AuthConfig.stubs(:jit_link_only?).returns(false)
+    AuthConfig.stubs(:allowed_oidc_domain?).returns(true)
+    setup_omniauth_mock(
+      provider: "openid_connect", uid: "blocked-uid-1", email: "blocked@example.com",
+      name: "Blocked User", email_verified: false
+    )
+
+    assert_difference -> { SsoAuditLog.by_event("jit_blocked").count }, 1 do
+      get "/auth/openid_connect/callback"
+    end
+
+    log = SsoAuditLog.by_event("jit_blocked").recent.first
+    assert_equal "email_not_verified", log.metadata["reason"]
+    assert_nil log.user
+  end
+
+  test "does not log a blocked JIT attempt for a verified email" do
+    AuthConfig.stubs(:jit_link_only?).returns(false)
+    AuthConfig.stubs(:allowed_oidc_domain?).returns(true)
+    setup_omniauth_mock(
+      provider: "openid_connect", uid: "blocked-uid-2", email: "fine@example.com",
+      name: "Fine User", email_verified: true
+    )
+
+    assert_no_difference -> { SsoAuditLog.by_event("jit_blocked").count } do
+      get "/auth/openid_connect/callback"
+    end
+  end
+
+  test "does not log a blocked JIT attempt when the unverified email already has an account" do
+    AuthConfig.stubs(:jit_link_only?).returns(false)
+    AuthConfig.stubs(:allowed_oidc_domain?).returns(true)
+    setup_omniauth_mock(
+      provider: "openid_connect", uid: "blocked-uid-3", email: users(:new_email).email,
+      name: "Existing User", email_verified: false
+    )
+
+    assert_no_difference -> { SsoAuditLog.by_event("jit_blocked").count } do
+      get "/auth/openid_connect/callback"
+    end
+  end
+
+  test "does not log a blocked JIT attempt when account creation would not have been offered" do
+    AuthConfig.stubs(:jit_link_only?).returns(true)
+    setup_omniauth_mock(
+      provider: "openid_connect", uid: "blocked-uid-4", email: "linkonly@example.com",
+      name: "Link Only", email_verified: false
+    )
+
+    assert_no_difference -> { SsoAuditLog.by_event("jit_blocked").count } do
+      get "/auth/openid_connect/callback"
+    end
+  end
+
+  test "logs a blocked JIT attempt on the mobile flow for an unverified invitee" do
+    families(:dylan_family).invitations.create!(
+      email: "blocked-mobile@example.com", role: "member", inviter: users(:family_admin)
+    )
+    setup_omniauth_mock(
+      provider: "openid_connect", uid: "blocked-mobile-uid", email: "blocked-mobile@example.com",
+      name: "Blocked Mobile", email_verified: false
+    )
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    assert_difference -> { SsoAuditLog.by_event("jit_blocked").count }, 1 do
+      get "/auth/mobile/openid_connect", params: {
+        device_id: "flutter-device-008", device_name: "Pixel 8", device_type: "android"
+      }
+      get "/auth/openid_connect/callback"
+    end
+  end
+
+  test "stores whether the IdP verified the email in the pending OIDC auth" do
+    setup_omniauth_mock(
+      provider: "openid_connect",
+      uid: "verified-uid-1",
+      email: "verified@example.com",
+      name: "Verified User",
+      raw_info: { "email_verified" => "true" }
+    )
+
+    get "/auth/openid_connect/callback"
+
+    assert_redirected_to link_oidc_account_path
+    assert_equal true, session[:pending_oidc_auth].stringify_keys["email_verified"]
+  end
+
+  test "stores an unverified email as unverified in the pending OIDC auth" do
+    setup_omniauth_mock(
+      provider: "openid_connect",
+      uid: "unverified-uid-1",
+      email: "unverified@example.com",
+      name: "Unverified User",
+      email_verified: false
+    )
+
+    get "/auth/openid_connect/callback"
+
+    assert_redirected_to link_oidc_account_path
+    assert_equal false, session[:pending_oidc_auth].stringify_keys["email_verified"]
+  end
+
+  test "mobile SSO does not offer account creation or the invitation for an unverified email" do
+    families(:dylan_family).invitations.create!(
+      email: "unverified-mobile@example.com", role: "admin", inviter: users(:family_admin)
+    )
+    setup_omniauth_mock(
+      provider: "openid_connect",
+      uid: "unverified-mobile-uid",
+      email: "unverified-mobile@example.com",
+      name: "Unverified Mobile",
+      email_verified: false
+    )
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { name: "openid_connect", strategy: "openid_connect", label: "Google" }
+    ])
+
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    begin
+      get "/auth/mobile/openid_connect", params: { device_id: "flutter-device-unverified", device_name: "Pixel 8", device_type: "android" }
+      get "/auth/openid_connect/callback"
+
+      params = Rack::Utils.parse_query(URI.parse(@response.redirect_url).query)
+      assert_equal "account_not_linked", params["status"]
+      assert_equal "false", params["allow_account_creation"]
+      assert_equal "false", params["has_pending_invitation"]
+
+      cached = Rails.cache.read("mobile_sso_link:#{params['linking_code']}")
+      assert_equal false, cached[:allow_account_creation]
+      assert_equal false, cached[:email_verified]
     ensure
       Rails.cache = original_cache
     end

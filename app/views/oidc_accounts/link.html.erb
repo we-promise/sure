@@ -33,8 +33,14 @@
   <% end %>
 <% else %>
   <div class="mb-6">
-    <%= render DS::Alert.new(title: t("oidc_accounts.link.create_heading"), variant: :info) do %>
-      <p><%= t("oidc_accounts.link.create_description_html", email: @pending_auth["email"], provider: @pending_auth["provider"]).html_safe %></p>
+    <% if @allow_account_creation %>
+      <%= render DS::Alert.new(title: t("oidc_accounts.link.create_heading"), variant: :info) do %>
+        <p><%= t("oidc_accounts.link.create_description_html", email: @pending_auth["email"], provider: @pending_auth["provider"]).html_safe %></p>
+      <% end %>
+    <% else %>
+      <%= render DS::Alert.new(title: t("oidc_accounts.link.create_heading"), variant: :warning) do %>
+        <p><%= @email_unverified ? t("oidc_accounts.link.email_not_verified") : t("oidc_accounts.link.account_creation_disabled") %></p>
+      <% end %>
     <% end %>
   </div>
 
@@ -59,10 +65,6 @@
         method: :post,
         data: { turbo: false }
       ) %>
-    <% else %>
-      <p class="text-xs text-secondary">
-        <%= t("oidc_accounts.link.account_creation_disabled") %>
-      </p>
     <% end %>
   </div>
 <% end %>

@@ -21,6 +21,7 @@ en:
       submit_create: Create Account
       submit_accept_invitation: Accept Invitation
       account_creation_disabled: New account creation via single sign-on is disabled. Please contact an administrator to create your account.
+      email_not_verified: Your identity provider did not confirm your email address, so no account can be created and no invitation accepted with it. Please contact an administrator.
       cancel: Cancel
     create_link:
       no_pending_oidc: No pending OIDC authentication found
@@ -39,4 +40,5 @@ en:
     create_user:
       no_pending_oidc: No pending OIDC authentication found
       account_creation_disabled: SSO account creation is disabled. Please contact an administrator.
+      email_not_verified: Your identity provider did not confirm your email address, so no account can be created and no invitation accepted with it. Please contact an administrator.
       account_created: "Welcome! Your account has been created."
