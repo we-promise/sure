@@ -7,14 +7,17 @@ module Api::V1::TransactionLookup
 
   private
 
-    def load_accessible_transaction(id)
+    # `permission` narrows the lookup to accounts the caller holds at least
+    # that share level on (see Api::V1::BaseController#accounts_with_permission).
+    def load_accessible_transaction(id, permission: nil)
       raise ActiveRecord::RecordNotFound unless valid_uuid?(id)
 
       family = current_resource_owner.family
-      @transaction = family.transactions
+      scope = family.transactions
         .joins(entry: :account)
         .merge(Account.accessible_by(current_resource_owner))
-        .find(id)
+      scope = scope.where(entries: { account_id: accounts_with_permission(permission).select(:id) }) if permission
+      @transaction = scope.find(id)
       @entry = @transaction.entry
     rescue ActiveRecord::RecordNotFound
       render json: {
