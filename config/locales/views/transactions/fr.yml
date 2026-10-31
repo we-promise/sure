@@ -315,6 +315,10 @@ fr:
       details: Détails
       exclude: Exclure
       exclude_description: Les transactions exclues seront retirées des calculs budgétaires et des rapports.
+      auto_excluded_title: "Exclue automatiquement"
+      auto_excluded_stale_pending: "Le %{date}, la synchronisation bancaire a exclu cette transaction en attente car elle n'avait pas été comptabilisée après %{days} jours."
+      auto_excluded_posted_match: "Le %{date}, la synchronisation bancaire a exclu cette transaction en attente car sa version comptabilisée est arrivée comme transaction distincte."
+      auto_excluded_other: "Le %{date}, la synchronisation bancaire a exclu cette transaction."
       keep_both: Non, gardez les deux
       loan_payment: Paiement du prêt
       mark_recurring: Marquer comme récurrente

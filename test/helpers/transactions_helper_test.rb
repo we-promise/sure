@@ -151,6 +151,18 @@ class TransactionsHelperTest < ActionView::TestCase
     assert_equal({ "someprovider" => { "a" => 1 } }, JSON.parse(details[:raw]))
   end
 
+  test "auto_exclusion_description explains each reason with its date" do
+    at = Time.zone.parse("2026-10-03 06:00:00")
+    stale = DataEnrichment.new(metadata: { "reason" => "stale_pending", "days" => 8 }, updated_at: at)
+    posted = DataEnrichment.new(metadata: { "reason" => "posted_match" }, updated_at: at)
+    other = DataEnrichment.new(metadata: nil, updated_at: at)
+    date = I18n.l(at.to_date, format: :long)
+
+    assert_equal I18n.t("transactions.show.auto_excluded_stale_pending", date: date, days: 8), auto_exclusion_description(stale)
+    assert_equal I18n.t("transactions.show.auto_excluded_posted_match", date: date), auto_exclusion_description(posted)
+    assert_equal I18n.t("transactions.show.auto_excluded_other", date: date), auto_exclusion_description(other)
+  end
+
   test "investment_activity_label_name translates the stored label" do
     I18n.with_locale(:ru) do
       assert_equal "Перевод", investment_activity_label_name("Transfer")

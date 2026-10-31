@@ -300,6 +300,11 @@
                 </div>
                 <%= f.toggle :excluded, { data: { auto_submit_form_target: "auto" } } %>
               </div>
+              <% if (auto_exclusion = @entry.auto_exclusion) %>
+                <%= render DS::Note.new(title: t(".auto_excluded_title"), id: dom_id(@entry, :auto_exclusion), class: "mt-3") do %>
+                  <p><%= auto_exclusion_description(auto_exclusion) %></p>
+                <% end %>
+              <% end %>
             <% end %>
           </div>
         <% end %>

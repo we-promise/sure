@@ -92,6 +92,10 @@ zh-CN:
       attachments: 附件
       exclude: 排除
       exclude_description: 被排除的交易将从预算计算和报表中移除。
+      auto_excluded_title: "已自动排除"
+      auto_excluded_stale_pending: "%{date}，银行同步排除了这笔待处理交易，因为它在 %{days} 天内仍未入账。"
+      auto_excluded_posted_match: "%{date}，银行同步排除了这笔待处理交易，因为它的已入账版本作为单独的交易导入。"
+      auto_excluded_other: "%{date}，银行同步排除了这笔交易。"
       activity_type: 活动类型
       activity_type_description: 投资活动类型（买入、卖出、分红等）。可自动检测或手动设置。
       one_time_title: 一次性%{type}

@@ -48,6 +48,172 @@ class EntryTest < ActiveSupport::TestCase
     assert_not_nil category.reload.last_used_at
   end
 
+  test "auto_exclude_stale_pending records why it excluded the entry" do
+    account = accounts(:depository)
+    travel_to Time.zone.parse("2026-10-03 06:00:00")
+    stale = create_pending(account, date: 10.days.ago.to_date, amount: 40)
+    stale.update_columns(source: "simplefin")
+    fresh = create_pending(account, date: 2.days.ago.to_date, amount: 41)
+
+    assert_equal 1, Entry.auto_exclude_stale_pending(account: account)
+
+    stale.reload
+    assert stale.excluded?
+    enrichment = stale.auto_exclusion
+    assert_equal true, enrichment.value
+    assert_equal({ "reason" => "stale_pending", "provider" => "simplefin", "days" => 8 }, enrichment.metadata)
+    assert_equal Time.zone.parse("2026-10-03 06:00:00"), enrichment.updated_at
+    assert_equal({ "simplefin" => { "pending" => true } }, stale.transaction.extra, "provider data stays untouched")
+
+    assert_not fresh.reload.excluded?
+    assert_empty fresh.data_enrichments
+  end
+
+  test "auto_exclude_stale_pending leaves entries the user already excluded alone" do
+    account = accounts(:depository)
+    manual = create_pending(account, date: 10.days.ago.to_date, amount: 40)
+    manual.update!(excluded: true)
+
+    assert_equal 0, Entry.auto_exclude_stale_pending(account: account)
+    assert_nil manual.reload.auto_exclusion
+    assert_empty manual.data_enrichments
+  end
+
+  test "auto_exclude_stale_pending keeps an entry the user turned Exclude off for" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 10.days.ago.to_date, amount: 40)
+    pending.lock_attr!(:excluded)
+
+    assert_equal 0, Entry.auto_exclude_stale_pending(account: account)
+    assert_not pending.reload.excluded?
+  end
+
+  test "auto_exclude_stale_pending still excludes an entry without locked attributes" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 10.days.ago.to_date, amount: 40)
+    pending.update_columns(locked_attributes: nil)
+
+    assert_equal 1, Entry.auto_exclude_stale_pending(account: account)
+    assert pending.reload.excluded?
+  end
+
+  test "auto_exclude_stale_pending refreshes the record when it excludes again" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 10.days.ago.to_date, amount: 40)
+    Entry.auto_exclude_stale_pending(account: account)
+    pending.reload.update_columns(excluded: false)
+
+    travel 1.day do
+      assert_equal 1, Entry.auto_exclude_stale_pending(account: account)
+      assert_equal 1, pending.data_enrichments.count
+      assert_in_delta Time.current, pending.reload.auto_exclusion.updated_at, 1.second
+    end
+  end
+
+  test "reconcile_pending_duplicates records the posted match it excluded the pending for" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 3.days.ago.to_date, amount: 25)
+    pending.update_columns(source: "enable_banking")
+    booked = create_transaction(account: account, date: 1.day.ago.to_date, amount: 25)
+    booked.update_columns(source: "enable_banking")
+
+    Entry.reconcile_pending_duplicates(account: account)
+
+    assert pending.reload.excluded?
+    assert_equal({ "reason" => "posted_match", "provider" => "enable_banking", "matched_entry_id" => booked.id }, pending.auto_exclusion.metadata)
+  end
+
+  test "reconcile_pending_duplicates dry run records nothing" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 3.days.ago.to_date, amount: 25)
+    create_transaction(account: account, date: 1.day.ago.to_date, amount: 25)
+
+    Entry.reconcile_pending_duplicates(account: account, dry_run: true)
+
+    assert_not pending.reload.excluded?
+    assert_empty pending.data_enrichments
+  end
+
+  test "turning Exclude off by hand ends the automatic exclusion explanation" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 10.days.ago.to_date, amount: 40)
+    Entry.auto_exclude_stale_pending(account: account)
+    assert pending.reload.auto_exclusion
+
+    pending.update!(excluded: false)
+    assert_empty pending.data_enrichments.where(source: "sync")
+
+    pending.enrich_attribute(:excluded, true, source: "rule")
+    assert pending.reload.excluded?
+    assert_nil pending.auto_exclusion, "a later exclusion by a rule is not explained as the sync's"
+  end
+
+  test "exclude_automatically! lets a validation error through without a record" do
+    entry = create_transaction(account: accounts(:depository))
+    entry.update_columns(name: "")
+
+    assert_raises(ActiveRecord::RecordInvalid) { entry.exclude_automatically!(reason: "posted_match") }
+    assert_not entry.reload.excluded?
+    assert_empty entry.data_enrichments, "the record rolls back with the failed exclusion"
+  end
+
+  test "excluding by hand records no automatic exclusion" do
+    entry = create_transaction(account: accounts(:depository))
+
+    entry.update!(excluded: true)
+
+    assert entry.reload.excluded?
+    assert_nil entry.auto_exclusion
+  end
+
+  test "exclude_automatically! leaves an entry the user excluded meanwhile alone" do
+    entry = create_transaction(account: accounts(:depository))
+    Entry.find(entry.id).update!(excluded: true)
+
+    assert_equal false, entry.exclude_automatically!(reason: "posted_match")
+
+    assert entry.reload.excluded?
+    assert_nil entry.auto_exclusion
+  end
+
+  test "reconcile_pending_duplicates still excludes a kept pending once its posted copy arrives" do
+    account = accounts(:depository)
+    pending = create_pending(account, date: 3.days.ago.to_date, amount: 25)
+    pending.lock_attr!(:excluded)
+    create_transaction(account: account, date: 1.day.ago.to_date, amount: 25)
+
+    Entry.reconcile_pending_duplicates(account: account)
+
+    assert pending.reload.excluded?, "a duplicate would otherwise count twice"
+    assert_equal "posted_match", pending.auto_exclusion.metadata["reason"]
+  end
+
+  test "exclude_automatically! returns false for an entry deleted meanwhile" do
+    entry = create_transaction(account: accounts(:depository))
+    Entry.find(entry.id).destroy!
+
+    assert_equal false, entry.exclude_automatically!(reason: "posted_match")
+  end
+
+  test "reconcile_pending_duplicates does not count an entry the user excluded meanwhile" do
+    account = accounts(:depository)
+    create_pending(account, date: 3.days.ago.to_date, amount: 25)
+    create_transaction(account: account, date: 1.day.ago.to_date, amount: 25)
+    Entry.any_instance.stubs(:exclude_automatically!).returns(false)
+
+    stats = Entry.reconcile_pending_duplicates(account: account)
+
+    assert_equal 0, stats[:reconciled]
+    assert_empty stats[:details]
+  end
+
+  test "exclude_automatically! rejects unknown reasons" do
+    entry = create_transaction(account: accounts(:depository))
+
+    assert_raises(ArgumentError) { entry.exclude_automatically!(reason: "whatever") }
+    assert_not entry.reload.excluded?
+  end
+
   test "blank name is invalid when auto-generate transaction names is off" do
     families(:dylan_family).update!(auto_generate_transaction_names: false)
 
@@ -269,4 +435,12 @@ class EntryTest < ActiveSupport::TestCase
     entry.update!(entryable_attributes: { id: entry.entryable_id, exchange_rate: 1.2 })
     assert entry.saved_changes_affect_balances?
   end
+
+  private
+    def create_pending(account, date:, amount:)
+      create_transaction(
+        account: account, date: date, amount: amount,
+        entryable: Transaction.new(extra: { "simplefin" => { "pending" => true } })
+      )
+    end
 end

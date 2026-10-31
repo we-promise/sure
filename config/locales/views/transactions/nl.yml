@@ -36,6 +36,10 @@ nl:
       details: Details
       exclude: Uitsluiten
       exclude_description: Uitgesloten transacties worden verwijderd uit budgetberekeningen en rapporten.
+      auto_excluded_title: "Automatisch uitgesloten"
+      auto_excluded_stale_pending: "Op %{date} heeft de banksynchronisatie deze openstaande transactie uitgesloten omdat ze na %{days} dagen nog niet was verwerkt."
+      auto_excluded_posted_match: "Op %{date} heeft de banksynchronisatie deze openstaande transactie uitgesloten omdat de verwerkte versie als aparte transactie binnenkwam."
+      auto_excluded_other: "Op %{date} heeft de banksynchronisatie deze transactie uitgesloten."
       activity_type: Activiteitstype
       activity_type_description: Type beleggingsactiviteit (Kopen, Verkopen, Dividend, etc.). Automatisch gedetecteerd of handmatig ingesteld.
       one_time_title: "Eenmalige %{type}"
