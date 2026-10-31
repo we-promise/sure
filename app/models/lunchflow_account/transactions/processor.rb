@@ -1,4 +1,6 @@
 class LunchflowAccount::Transactions::Processor
+  include LunchflowTransactionHash
+
   attr_reader :lunchflow_account
 
   def initialize(lunchflow_account)
@@ -20,11 +22,14 @@ class LunchflowAccount::Transactions::Processor
 
     # Each entry is processed inside a transaction, but to avoid locking up the DB when
     # there are hundreds or thousands of transactions, we process them individually.
+    seen_content_hashes = Hash.new(0)
+
     lunchflow_account.raw_transactions_payload.each_with_index do |transaction_data, index|
       begin
         result = LunchflowEntry::Processor.new(
           transaction_data,
-          lunchflow_account: lunchflow_account
+          lunchflow_account: lunchflow_account,
+          occurrence: occurrence_of(transaction_data, seen_content_hashes)
         ).process
 
         if result.nil?
@@ -68,4 +73,17 @@ class LunchflowAccount::Transactions::Processor
 
     result
   end
+
+  private
+
+    # How many earlier rows without an ID share this row's content hash.
+    def occurrence_of(transaction_data, seen_content_hashes)
+      data = transaction_data.with_indifferent_access
+      return 0 if data[:id].present?
+
+      content_hash = content_hash_for_transaction(data)
+      occurrence = seen_content_hashes[content_hash]
+      seen_content_hashes[content_hash] += 1
+      occurrence
+    end
 end
