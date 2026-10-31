@@ -97,13 +97,16 @@ namespace :data_migration do
           raise "Leftover holdings detected" if Holding.where(security_id: dup_ids).exists?
           raise "Leftover trades detected"   if Trade.where(security_id: dup_ids).exists?
 
+          # Splits would otherwise go with the duplicates (dependent: :destroy)
+          split_counts = Security::Split.move!(from: duplicates, to: keeper)
+
           duplicates.each(&:destroy!)   # destroys its security_prices via dependent: :destroy
 
           # Log inside the transaction so counters are in-scope
           total_holdings = holdings_moved + holdings_deleted
           puts "[#{idx + 1}/#{duplicate_sets.size}] Merged #{dup_ids.join(', ')} → #{keeper.id} " \
                "(#{total_holdings} holdings → #{holdings_moved} moved, #{holdings_deleted} removed, " \
-               "#{trades_moved} trades)"
+               "#{trades_moved} trades, #{split_counts[:moved]} splits moved, #{split_counts[:dropped]} splits dropped)"
         end
       rescue => e
         puts "ERROR migrating #{dup_ids.join(', ')}: #{e.message}"
