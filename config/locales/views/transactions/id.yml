@@ -74,7 +74,7 @@ id:
       create_bill: Buat tagihan
       mark_recurring_subtitle: Lacak transaksi ini sebagai transaksi berulang. Variasi jumlah dihitung secara otomatis dari transaksi serupa selama 6 bulan terakhir.
       mark_recurring_title: Transaksi Berulang
-      applied_to_title: Tagihan yang dibayar ini
+      applied_to_title: Tagihan yang dibayar oleh transaksi ini
       applied_to_detail: "%{amount} untuk tagihan yang jatuh tempo %{date}"
       applied_to_unreviewed: Perlu ditinjau
       merge_duplicate: Ya, gabungkan

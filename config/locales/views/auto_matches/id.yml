@@ -11,11 +11,11 @@ id:
     bulk_update:
       invalid_selection: Pilih setidaknya satu saran untuk dikonfirmasi atau ditolak
       bulk_confirmed:
-        one: Mengonfirmasi 1 transfer
-        other: Mengonfirmasi %{count} transfer
+        one: "1 transfer dikonfirmasi"
+        other: "%{count} transfer dikonfirmasi"
       bulk_rejected:
-        one: Menolak 1 transfer
-        other: Menolak %{count} transfer
+        one: "1 transfer ditolak"
+        other: "%{count} transfer ditolak"
     empty:
       title: Tidak ada saran pencocokan otomatis yang tertunda
       description: Saat sinkronisasi mendeteksi kemungkinan transfer antara dua rekening Anda, saran akan muncul di sini untuk ditinjau.
