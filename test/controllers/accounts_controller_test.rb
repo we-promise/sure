@@ -11,6 +11,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
+  test "show leaves a cash anchor out of the account activity" do
+    account = accounts(:crypto)
+    account.create_cash_anchor!
+
+    get account_url(account)
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("valuations.cash_anchor")
+  end
+
   test "should get index" do
     get accounts_url
     assert_response :success

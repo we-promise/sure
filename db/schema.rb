@@ -2896,9 +2896,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_200000) do
   end
 
   create_table "valuations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "cash_entry_total", precision: 19, scale: 4
     t.datetime "created_at", null: false
     t.string "kind", default: "reconciliation", null: false
     t.jsonb "locked_attributes", default: {}
+    t.datetime "superseded_at"
     t.datetime "updated_at", null: false
   end
 

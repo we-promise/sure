@@ -65,7 +65,12 @@ Entry delegates to one of the three [Entryable types](../../app/models/entryable
 with a date, amount and currency:
 
 - [Valuation](../../app/models/valuation.rb) is an absolute account value or debt
-  at a date, not an income or expense.
+  at a date, not an income or expense. A `cash_anchor` records only the absolute
+  cash component on a date; from then on the account keeps forward accounting.
+  Its `cash_entry_total` retains the ledger baseline, so later edits to earlier
+  cash movements apply through the anchor without counting them twice. A same-day
+  older total valuation is marked `superseded_at`; monetary edits or an explicit
+  new reconciliation reactivate it. Notes alone do not change its precedence.
 - [Transaction](../../app/models/transaction.rb) changes the account balance and
   can have a category, merchant and tags; rules can enrich or classify it.
 - [Trade](../../app/models/trade.rb) represents a security movement with quantity
