@@ -30,6 +30,7 @@ class Category < ApplicationRecord
   validate :parent_in_same_family
 
   before_save :inherit_color_from_parent
+  after_update :propagate_color_to_subcategories, if: :saved_change_to_color?
 
   # prepend: runs before dependent: :nullify's own before_destroy, so the
   # reassignment (which touches entries to bust report caches) still sees the
@@ -434,6 +435,10 @@ class Category < ApplicationRecord
   end
 
   private
+    def propagate_color_to_subcategories
+      subcategories.update_all(color: color, updated_at: Time.current)
+    end
+
     def reassign_transactions_to_nothing
       Transaction.reassign_category!(transactions, nil)
     end

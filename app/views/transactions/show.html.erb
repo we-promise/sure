@@ -152,7 +152,7 @@
               <%= render DS::MerchantSelect.new(
                     form: ef,
                     method: :merchant_id,
-                    merchants: Current.family.available_merchants_for(Current.user).alphabetically,
+                    merchants: Current.family.available_merchants_for(Current.user).with_attached_logo.alphabetically,
                     selected_id: ef.object.merchant_id,
                     include_blank: t(".none"),
                     label: t(".merchant_label"),

@@ -28,7 +28,7 @@ class TransactionsController < ApplicationController
                        .reverse_chronological
                        .includes(
                          { entry: :account },
-                         :category, :merchant, :tags,
+                         :category, { merchant: { logo_attachment: :blob } }, :tags,
                          # Union of #2643 counterpart UI + Skylight category-menu N+1:
                          # - outflow rows need inflow_transaction (to_account) for both
                          #   counterpart display and Transfer#categorizable?/#payment?
@@ -52,6 +52,8 @@ class TransactionsController < ApplicationController
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
+    @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates(@transactions, user: Current.user)
+
     # Preload split parent data
     entry_ids = @transactions.map { |t| t.entry.id }
 
@@ -60,7 +62,7 @@ class TransactionsController < ApplicationController
       split_parent_ids = @transactions.filter_map { |t| t.entry.parent_entry_id }.uniq
       if split_parent_ids.any?
         Entry.where(id: split_parent_ids)
-             .includes(:account, entryable: [ :category, :merchant ])
+             .includes(:account, entryable: [ :category, { merchant: { logo_attachment: :blob } } ])
              .index_by(&:id)
       else
         {}
@@ -94,7 +96,7 @@ class TransactionsController < ApplicationController
       []
     else
       Current.family.recurring_transactions.accessible_by(Current.user)
-                    .where(id: projected_recurring_ids).includes(:merchant).to_a
+                    .where(id: projected_recurring_ids).includes(merchant: { logo_attachment: :blob }).to_a
     end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
@@ -734,7 +736,7 @@ class TransactionsController < ApplicationController
         .includes(:account_providers, logo_attachment: :blob)
         .to_a
       @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
-      @merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
+      @merchants = Current.family.available_merchants_for(Current.user).with_attached_logo.alphabetically.to_a
       @tags = Current.family.tags.alphabetically.to_a
     end
 

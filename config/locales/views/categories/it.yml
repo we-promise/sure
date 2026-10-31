@@ -41,8 +41,6 @@ it:
       sources_label: Categorie da unire
       sources_hint: Le categorie selezionate verranno eliminate dopo che le loro transazioni e righe di budget si saranno spostate nella destinazione. Non selezionare la destinazione come sorgente.
       submit: Unisci selezionate
-    menu:
-      loading: Caricamento...
     new:
       new_category: Nuova categoria
     perform_merge:

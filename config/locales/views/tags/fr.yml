@@ -17,8 +17,14 @@ fr:
       empty: Aucune étiquette pour le moment
       new: Nouvelle étiquette
       tags: Étiquettes
+    menu:
+      label: Modifier les étiquettes
+      loading: Chargement des étiquettes...
     new:
       new: Nouvelle étiquette
+    summary:
+      add: Ajouter des étiquettes
+      title: 'Étiquettes : %{names}'
     tag:
       delete: Supprimer
       edit: Éditer
