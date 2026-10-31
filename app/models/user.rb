@@ -53,7 +53,13 @@ class User < ApplicationRecord
   # Password is required on create unless the user is being created via SSO JIT.
   # SSO JIT users have password_digest = nil and authenticate via OIDC only.
   validates :password, presence: true, on: :create, unless: :skip_password_validation?
-  validates :password, length: { minimum: 8 }, allow_nil: true
+  validates :password, length: { minimum: PasswordPolicy::MIN_LENGTH }, allow_nil: true
+  # `validations: false` above also drops Rails' confirmation and current-password
+  # (password_challenge) checks, so restore both here.
+  validates :password, confirmation: true, allow_blank: true
+  validate :password_challenge_matches, unless: -> { password_challenge.nil? }
+  validate :password_within_byte_limit
+  validate :password_meets_complexity_requirements, if: :require_password_complexity
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
   normalizes :locale, with: ->(locale) { locale.presence }
@@ -249,6 +255,11 @@ class User < ApplicationRecord
 
   # Attribute to skip password validation during SSO JIT provisioning
   attr_accessor :skip_password_validation
+
+  # Set by the self-service password change and the password reset so they
+  # require a new password and apply the same rules (PasswordPolicy) as
+  # sign-up, the admin reset and the API signup.
+  attr_accessor :require_password_complexity
 
   # Deactivation
   validate :can_deactivate, if: -> { active_changed? && !active }
@@ -854,6 +865,35 @@ class User < ApplicationRecord
 
     def skip_password_validation?
       skip_password_validation == true
+    end
+
+    def password_challenge_matches
+      digest_was = password_digest_was
+      return if digest_was.present? && BCrypt::Password.new(digest_was).is_password?(password_challenge)
+
+      errors.add(:password_challenge)
+    end
+
+    # has_secure_password validations: false also drops its 72-byte check, so
+    # every path that sets a password relies on this one.
+    def password_within_byte_limit
+      return unless PasswordPolicy.too_long?(password)
+
+      errors.add(:password, :too_long, count: PasswordPolicy::MAX_BYTES)
+    end
+
+    # has_secure_password ignores a blank assignment, so an empty new password
+    # would otherwise leave the old one in place and still report success.
+    def password_meets_complexity_requirements
+      if password.to_s.empty?
+        errors.add(:password, :blank)
+        return
+      end
+
+      # Length is covered by the length and byte-limit validations above.
+      (PasswordPolicy.unmet_requirements(password) - %i[too_short too_long]).each do |requirement|
+        errors.add(:password, requirement)
+      end
     end
 
     # The dashboard only sends the order of the widgets it rendered, so put

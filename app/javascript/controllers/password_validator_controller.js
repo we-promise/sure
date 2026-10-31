@@ -12,7 +12,8 @@ export default class extends Controller {
     const password = this.inputTarget.value;
     let requirementsMet = 0;
 
-    // Check each requirement and count how many are met
+    // Check each requirement and count how many are met.
+    // Keep these in sync with app/models/password_policy.rb.
     const lengthValid = password.length >= 8;
     const caseValid = /[A-Z]/.test(password) && /[a-z]/.test(password);
     const numberValid = /\d/.test(password);

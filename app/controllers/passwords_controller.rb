@@ -5,7 +5,7 @@ class PasswordsController < ApplicationController
   end
 
   def update
-    if Current.user.update(password_params)
+    if Current.user.update(password_params.merge(require_password_complexity: true))
       redirect_to root_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity
@@ -24,7 +24,10 @@ class PasswordsController < ApplicationController
       redirect_to root_path, alert: t("passwords.disabled")
     end
 
+    # A missing or null current password becomes "", so the model always
+    # checks it; nil would skip that validation.
     def password_params
-      params.require(:user).permit(:password, :password_confirmation, :password_challenge).with_defaults(password_challenge: "")
+      permitted = params.require(:user).permit(:password, :password_confirmation, :password_challenge)
+      permitted.merge(password_challenge: permitted[:password_challenge].to_s)
     end
 end
