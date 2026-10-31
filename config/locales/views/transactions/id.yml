@@ -303,7 +303,7 @@ id:
       trade_type_label: Jenis Transaksi Efek
       trade_type_hint: Beli atau Jual lembar efek
       exchange_label: Bursa (Opsional)
-      exchange_placeholder: IDX
+      exchange_placeholder: XIDX
       exchange_hint: Kosongkan untuk deteksi otomatis
       cancel: Batal
       submit: Konversi ke Transaksi Efek
