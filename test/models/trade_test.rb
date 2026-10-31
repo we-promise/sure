@@ -149,6 +149,163 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal(40) ] * 4, trades.map { |t| t.realized_gain_loss.value.amount }
   end
 
+  # A sale that closes the position leaves a snapshot holding nothing, with no
+  # stored basis, so the snapshot cannot say what the units cost. Average cost
+  # does not move on a sale, so the sale is priced at the average before it:
+  # 10 at 100 and 10 at 200 is 3,000 for 20, sold at 180 for 3,600, a 600
+  # gain. Replaying through the sale itself closes the position and leaves no
+  # figure at all.
+  test "a sale that closes the position realises its gain against the cost before the sale" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    sell = create_trade(security, account: account, qty: -20, date: Date.new(2026, 3, 4), price: 180).entryable
+    closed_snapshot(account, security, Date.new(2026, 3, 4))
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain, "a closing sale still realises a gain"
+    assert_equal BigDecimal(3000), gain.previous.amount
+    assert_equal BigDecimal(600), gain.value.amount
+  end
+
+  # Bought and sold on one day, the only snapshot is the closed one and there
+  # is no earlier day to read a cost from. The buy sorts before the sale in
+  # Entry.chronological order, so it is the cost: 10 at 100 sold at 130 is a
+  # 300 gain.
+  test "a position bought and sold on the same day realises its gain" do
+    account, security = cross_currency_account
+    date = Date.new(2026, 3, 4)
+    create_trade(security, account: account, qty: 10, date: date, price: 100)
+    sell = create_trade(security, account: account, qty: -10, date: date, price: 130).entryable
+    closed_snapshot(account, security, date)
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain, "the same day's buy is the cost"
+    assert_equal BigDecimal(300), gain.value.amount
+  end
+
+  # A provider can hold a position in the security's currency rather than the
+  # account's, and the replayed cost is then in that currency too. 10 bought
+  # at 100 EUR and sold at 130 EUR is a 300 EUR gain; costing the units in
+  # USD (150 each at 1.5) but labelling them EUR reported a 200 EUR loss.
+  test "a closing sale of a position held in another currency realises its gain in that currency" do
+    account, security = cross_currency_account
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.new(2026, 3, 2), rate: 1.5)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100, currency: "EUR")
+    sell = create_trade(security, account: account, qty: -10, date: Date.new(2026, 3, 4), price: 130, currency: "EUR").entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 4), qty: 0, price: 0,
+                             amount: 0, currency: "EUR", cost_basis: nil)
+
+    gain = sell.realized_gain_loss
+
+    assert_equal Money.new(BigDecimal(1000), "EUR"), gain.previous
+    assert_equal Money.new(BigDecimal(300), "EUR"), gain.value
+  end
+
+  # A split applies at the open of its ex-date, before that day's trades. 10
+  # bought at 100 become 20 at 50 on a 2-for-1 split; all 20 sold that day at
+  # 70 is 1,400 against 1,000, a 400 gain. Pricing the 20 units at the
+  # pre-split 100 would report a 600 loss.
+  test "a closing sale after a split uses the split-adjusted cost" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    security.splits.create!(ex_date: Date.new(2026, 3, 4), numerator: 2, denominator: 1, source: "manual")
+    sell = create_trade(security, account: account, qty: -20, date: Date.new(2026, 3, 4), price: 70).entryable
+    closed_snapshot(account, security, Date.new(2026, 3, 4))
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain
+    assert_equal BigDecimal(1000), gain.previous.amount
+    assert_equal BigDecimal(400), gain.value.amount
+  end
+
+  # A sale that leaves units held keeps reading the snapshot's own figure. The
+  # stored 160 is deliberately not what the trades replay to (150), so this
+  # fails if the replay ever displaces a basis the snapshot has: 5 sold at 180
+  # is 900 against 800, a 100 gain.
+  test "a partial sale's realized gain is unchanged" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    sell = create_trade(security, account: account, qty: -5, date: Date.new(2026, 3, 4), price: 180).entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 4), qty: 15, price: 180,
+                             amount: BigDecimal(2700), currency: "USD", cost_basis: 160)
+
+    gain = sell.realized_gain_loss
+
+    assert_equal BigDecimal(800), gain.previous.amount
+    assert_equal BigDecimal(100), gain.value.amount
+  end
+
+  # With no stored basis, the snapshot's own figure is unknown, and the cost
+  # before the sale is all the gain needs. Replaying the history for the
+  # snapshot first, only to find a closed position, then replaying it again up
+  # to the sale, reads every trade and split twice on each sale Reports prices.
+  test "realized gain on a closing sale with no stored basis replays the history once" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 3), price: 200)
+    sell = create_trade(security, account: account, qty: -20, date: Date.new(2026, 3, 4), price: 180).entryable
+    closed_snapshot(account, security, Date.new(2026, 3, 4))
+    sell.entry.account
+
+    gain = nil
+    # Uncached, so a second replay counts rather than hitting the query cache.
+    queries = ActiveRecord::Base.uncached { capture_sql_queries { gain = sell.realized_gain_loss } }
+
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "security_splits"') }
+    assert_equal BigDecimal(600), gain.value.amount
+  end
+
+  # A reverse-synced account with two shares from before its first imported
+  # trade: 10 bought, 5 moved in, 15 sold, 8 bought at 150, then 3 sold. The
+  # -15 sale left two shares, so the transferred units were never cleared out
+  # and the cost of what the later sale disposes of is unknown -- pricing it
+  # at the rebuy's 150 would book a gain the history cannot support.
+  test "a sale after opening shares kept transferred units held realises no gain" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    transfer_in = create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 3), price: 120)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    create_trade(security, account: account, qty: -15, date: Date.new(2026, 3, 4), price: 130)
+    create_trade(security, account: account, qty: 8, date: Date.new(2026, 3, 5), price: 150)
+    sell = create_trade(security, account: account, qty: -3, date: Date.new(2026, 3, 6), price: 170).entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 6), qty: 7, price: 170,
+                             amount: BigDecimal(1190), currency: "USD", cost_basis: nil)
+
+    assert_nil sell.realized_gain_loss
+  end
+
+  # The latest snapshot on or before the sale can predate trades the replay
+  # still needs. Its quantity explains the trades up to its own date only:
+  # the 8 held on 3/5 is the whole history (10 in, 5 moved in, 15 sold, 8
+  # bought), so the position did close and the transfer is released. The 3
+  # sold on 3/6 came after the snapshot, and undoing it too would invent 3
+  # opening shares that keep the transfer held. 2 sold at 170 against 150 is
+  # a 40 gain.
+  test "a sale after the snapshot's date walks back only the snapshot's trades" do
+    account, security = cross_currency_account
+    create_trade(security, account: account, qty: 10, date: Date.new(2026, 3, 2), price: 100)
+    transfer_in = create_trade(security, account: account, qty: 5, date: Date.new(2026, 3, 3), price: 120)
+    transfer_in.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    create_trade(security, account: account, qty: -15, date: Date.new(2026, 3, 4), price: 130)
+    create_trade(security, account: account, qty: 8, date: Date.new(2026, 3, 5), price: 150)
+    create_trade(security, account: account, qty: -3, date: Date.new(2026, 3, 6), price: 160)
+    sell = create_trade(security, account: account, qty: -2, date: Date.new(2026, 3, 7), price: 170).entryable
+    account.holdings.create!(security: security, date: Date.new(2026, 3, 5), qty: 8, price: 150,
+                             amount: BigDecimal(1200), currency: "USD", cost_basis: nil)
+
+    gain = sell.realized_gain_loss
+
+    assert_not_nil gain, "the history explains the whole position, so the rebuy is the cost"
+    assert_equal BigDecimal(300), gain.previous.amount
+    assert_equal BigDecimal(40), gain.value.amount
+  end
+
   test "build_name generates buy trade name" do
     name = Trade.build_name("buy", 10, "AAPL")
     assert_equal "Buy 10.0 shares of AAPL", name
@@ -318,6 +475,13 @@ class TradeTest < ActiveSupport::TestCase
                                amount: BigDecimal(750), currency: "USD", cost_basis: 100)
 
       create_trade(security, account: account, qty: -2, date: date, price: 150, fee: fee, currency: "EUR").entryable
+    end
+
+    # The snapshot the calculators write on the day a position closes: nothing
+    # held and no basis.
+    def closed_snapshot(account, security, date)
+      account.holdings.create!(security: security, date: date, qty: 0, price: 0,
+                               amount: 0, currency: "USD", cost_basis: nil)
     end
 
     def cross_currency_account
