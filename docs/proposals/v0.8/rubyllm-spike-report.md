@@ -1,7 +1,7 @@
 # RubyLLM spike report (PR 1 of the AI plumbing redesign)
 
 **Companion to:** [`rubyllm-spike-prompt.md`](rubyllm-spike-prompt.md) (the brief), [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) (the plan, §19) and [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) (the question before it was run)
-**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`fd4503416`](https://github.com/josh-sanders/sure/commit/fd4503416). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
+**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`d802d9aed`](https://github.com/josh-sanders/sure/commit/d802d9aed). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
 **Status:** a recommendation with its evidence, not a decision. The spike's second purpose was to sort the plan's choices into product decisions and technical limits; none of the product decisions, and none of the scope lines, is final. This file is the spike's note (`docs/llm-guides/ai-pipeline.md` on the branch) as of that commit; the plan's own short note in that path comes with PR 2.
 
 **Recommendation: adopt, pinned to `ruby_llm` 2.1.1** (released 2026-10-11, the latest at the
@@ -31,8 +31,8 @@ case for it is everything else:
 Sure keeps the tool loop, the JSON-mode policy, error mapping, instrumentation and the routing
 around it.
 
-Branch: `spike/ruby-llm` (not merged). Tests: `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb` (298 runs, 13 skips:
-the live-only timeout and Red Candle tests, and OCR combinations not recorded), and for Jev `bin/rails test test/models/provider/jev_test.rb
+Branch: `spike/ruby-llm` (not merged). Tests: `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb` (345 runs, 54 skips:
+the live-only timeout, Red Candle and job-runner tests, and OCR combinations not recorded), and for Jev `bin/rails test test/models/provider/jev_test.rb
 test/models/provider/jev_gem_test.rb test/models/provider/jev_gem_live_test.rb` (62 runs). Live server: llama.cpp on venus, `qwen3.6-35b-a3b-mtp` (64k context,
 `--jinja`, tool calls on) and `granite-embedding-small-english-r2` (384 dimensions). Neither model
 is in RubyLLM's registry. Cassettes are under `test/vcr_cassettes/ai/llama_cpp/`.
@@ -94,6 +94,14 @@ here is final, and that includes scope: an "out of scope" line is a product deci
 | Auto-upload of large files off | A statement never stays in a provider's Files API | Anthropic over 24 MB then can't take the file at all | `extract_statement_stubbed_test` |
 | Chat storage redesign out of scope (§20) | The plumbing needs one additive column | RubyLLM's persistence pays off if RubyLLM runs the loop | "Switching providers" |
 | Local OCR as a two-step route (OCR model, then extraction) | Read both statements completely on CPU | Needs a second model or endpoint per route; a prompt per model | `ocr/` |
+| AI jobs on Sidekiq threads, not fiber workers (§11) | 200 threads made 200 cloud calls in 3.1 s (fibers 3.0 s) on a pool of 3 connections, with the same memory; chat as fast as on fibers with a 1-thread chat capsule (48.3 s against 48.2 s); interrupting works on threads; no second job runner | Fibers need no chat capsule and no AI thread count, and waiting costs nothing; one capsule of 4 threads left chat 136 s without a thread; Solid Queue's `limits_concurrency` was the only limit shared across workers that was tested | "Job runners and chat priority" |
+| Chat's wait behind background work on a local host: about 2 s, never more than 5 s (the owner, 2026-10-31) | Chat felt broken at 45 s; interrupting meets it (0.09 s) with MTP and the full context kept | Only interrupting or a kept slot meets it; both cost background throughput or lost work | `gpu_merchants_live_test` |
+| Chat interrupts the running background or prompt call on its host (§11) | Chat's first word at its time alone (48.3 s against 48.7 s) on 1 slot with MTP; public RubyLLM streaming only; threads and fibers | The interrupted call's work is lost (up to one call: 72 s at 25 transactions); a call still reading its prompt stops only when output starts; background calls on local hosts must stream | `sidekiq_preempt`, `preempt` |
+| No slot kept for chat; several server slots are the operator's choice (§11) | Keeps MTP and the full context; chat finished in 69 s against 103 s with a kept slot, because it had the CPU | Four slots without MTP did 29 transactions a minute against 20 with one; a kept slot needs no interrupt code | `gpu_merchants_live_test` |
+| Chat goes next, without interrupting (the plan before this) | No new mechanism | 45 s behind a 25-transaction call (up to 72 s), 8 s behind a 5-transaction one (up to 15 s) | `call_length`, `drain` |
+| The gate inside RubyLLM's instrumenter, per request, sized from the server (§11) | Every request passes it, streamed or not and with retries, embeddings and nested calls included, with no change where calls are made; no nested-call rule; llama-server's own queue stays empty | Holds per request, so a chat's tool rounds let background calls in between (the next round interrupts them); Jev's transport has to take it itself | `SlotInstrumenter`, `gpu_contention_live_test`, `drain` |
+| One worker per local host (§11) | The in-process gate is then the only one | Two workers, each with its own gate, let 6 calls through to a 4-slot server and chat waited 200 s; a shared limit (Solid Queue's held, Redis untested) would allow more workers | `two_workers_slot_each`, `two_workers_limits_concurrency` |
+| Fiber isolation for the whole app (needed by fiber workers) | Sure's full suite passed with it (13,944 runs; one timing failure that passes alone) | Every request and job changes; a fiber worker without it shares `Current` between jobs | `fiber_compat_live_test` |
 
 **Technical limits** (as found; each has the workaround noted)
 - Gemini's compatible API and llama.cpp reject RubyLLM's PDF `file` part (400); only OpenRouter
@@ -117,6 +125,28 @@ here is final, and that includes scope: an "out of scope" line is a product deci
   per-minute cap that a 12-round tool loop exceeds.
 - Five ecosystem gems pin RubyLLM 1.x: `ruby_llm-skills`, `-tribunal`, `-top_secret`, `-mcp`,
   `-instrumentation`.
+- Fiber workers need `isolation_level = :fiber`: under thread isolation, two jobs on one worker
+  read each other's `Current` attributes, so one family's job would see another's. Solid Queue
+  checks the setting at boot; Async::Job's railtie sets it for the whole app when it loads.
+- `ruby-vips` renders in the worker's own thread: 0.28 s of a 0.33 s render stalled every other
+  fiber. `pdftoppm` in a child process stalled nothing.
+- A transaction held across an AI call keeps its connection: nine fibers holding one for 2 s ran
+  three at a time on a pool of 3.
+- llama-server answers queued requests in arrival order, whatever their source, with no request
+  priority or preemption; its MTP speculative decoding allows only one slot; its context is
+  divided between the slots (65,536 becomes 16,384 each with 4) unless it runs with
+  `--kv-unified`, which is off by default when `--parallel` is set. It does stop work on a request
+  whose connection closes.
+- A slot held in one process doesn't limit another: two workers each admit the server's full size.
+- A thread can't be interrupted safely mid-request (`Thread#raise`); a streamed request can, at its
+  next chunk. Nothing arrives while the server reads the prompt, and embeddings don't stream.
+- Solid Queue's concurrency semaphore expires after `duration` (3 minutes by default), counts jobs
+  rather than requests, and takes its key at enqueue, before the router has picked a route.
+- Retries don't absorb a provider's concurrency limit: with 20 allowed at once, 80 of 200 calls
+  from 50 threads and 160 of 200 from 200 fibers still failed after RubyLLM's 4 attempts.
+- RubyLLM has no priority or concurrency limit of its own; Solid Queue's job priority only
+  orders claims, so with 50 fibers it changes nothing; Async::Job's executor drops a job's
+  exception once Active Job has logged it (read in the source, not tried).
 
 **RubyLLM 2.1.1 features tested** (`ruby_llm_features_live_test`, `ruby_llm_features2_live_test`,
 `ruby_llm_mcp_live_test`, `ruby_llm_persistence_live_test`, `ruby_llm_generators_test`;
@@ -1004,6 +1034,243 @@ and errors raised before RubyLLM is called (`Unavailable`, `Busy`). The global t
 also shared with any other OpenTelemetry instrumentation Sure adds later, which could carry
 content of its own.
 
+## Job runners and chat priority (rubyllm.com/async), outside the criteria
+
+RubyLLM's async guide runs AI jobs on fibers: Solid Queue 1.6+ workers with `fibers: N`, or
+Async::Job on Redis, with `isolation_level = :fiber`. The plan runs them on Sidekiq's `ai`
+capsule, `RAILS_AI_MAX_THREADS` threads (default 1), three lane queues in strict order and one
+slot per local host (§11). Solid Queue 1.7.0, `async` 2.46.0, `async-job-adapter-active_job`
+0.21.0 and `async-job-processor-redis` 0.3.1 are on the spike branch only, loaded with
+`SPIKE_ASYNC=1`; workers run inside the test process, Solid Queue's tables live in the test
+database for one test, and every scenario ran alone. `RAILS_MAX_THREADS` stayed at 3, the
+database pool.
+
+**Many cloud calls at once** (`job_backends_live_test`): 200 jobs, each one bill setup against a
+stub provider (`stub_provider.rb`) that answers after 2 s, plus a database read before and after.
+
+| Runner | Wall | In flight | Threads | Memory | Pool waiting (peak) |
+|---|---|---|---|---|---|
+| Sidekiq, 5 threads | 80.6 s | 5 | 15 | 348 MB | 0 |
+| Sidekiq, 50 threads | 8.6 s | 50 | 60 | 340 MB | 38 |
+| Sidekiq, 200 threads | 3.1 s | 200 | 210 | 362 MB | 159 |
+| Solid Queue, 50 threads | 9.8 s | 50 | 59 | 372 MB | 42 |
+| Solid Queue, 50 fibers | 9.5 s | 50 | 10 | 349 MB | 39 |
+| Solid Queue, 200 fibers | 3.0 s | 200 | 10 | 351 MB | 158 |
+| Async::Job on Redis | 2.4 s | 200 | 7 | 367 MB | 0 |
+
+- **Concurrency sets the wall time, not the runner.** Sidekiq at 200 threads matched 200 fibers.
+  Memory stayed within 32 MB across all of them, and none needed more than the 3 connections:
+  Rails 8.1 returns the connection after each query, so callers queue for it briefly instead.
+- **Above a provider's limit** (the stub allowing 20 at once, 429 with `Retry-After: 1`
+  above it, `max_retries: 3`): Sidekiq at 50 threads lost 80 of 200 calls, Solid Queue at 200
+  fibers and Async::Job 160 each. More concurrency than the provider allows turns into failures;
+  a per-endpoint limit would be the fix, and neither runner nor RubyLLM has one.
+
+**Sure's code inside a fiber reactor** (`fiber_compat_live_test`, 20 calls at once against the stub
+answering in 1 s):
+
+| What | Result |
+|---|---|
+| RubyLLM `generate`, default `net_http` adapter | 1.14 s: the calls overlapped |
+| RubyLLM, `async_http` adapter (`async-http-faraday`) | 1.02 s |
+| Hand-written transport (ruby-openai on Faraday) | 1.02 s |
+| Streamed chat, 20 conversations | First chunk at 0.26 s for all 20 |
+| Jev's 8-thread pool, 10 batches of 8 at once | 1.15 s, 80 requests in flight |
+| `Current` across two fibers | Fiber isolation: each kept its own; thread isolation: both read the second's |
+| 50 fibers querying around a 0.5 s wait, pool of 3 | 0.53 s, no errors |
+| 9 fibers holding a transaction for 2 s, pool of 3 | 6.06 s: three at a time, inside the 5 s checkout timeout |
+| Rendering both statements' pages | `vips` stalled the reactor 0.28 s of 0.33 s; `pdftoppm` 0 |
+
+Sure's whole suite with `SPIKE_ISOLATION=fiber` (fiber isolation app-wide): 13,944 runs, one
+failure, `page_images_test`'s hang-kill timing check, which passed alone under both isolation
+levels.
+
+**One machine, chat first** (`gpu_priority_live_test`): llama.cpp on venus, qwen3.6 with
+reasoning off. Twelve bill setups (about 9 s each) are queued, then, 3 s later, one streamed
+chat; times are from the chat's enqueue.
+
+| Setup | llama `--parallel` | Chat's first word | Background done |
+|---|---|---|---|
+| Sidekiq, 1 thread, strict queue order (the plan's default) | 1 (MTP on) | 6.0 s | 107 s |
+| Solid Queue, 50 fibers, no priority | 1 (MTP on) | 102.2 s | 105 s |
+| Solid Queue, 1 fiber, chat at a higher priority | 1 (MTP on) | 6.1 s | 108 s |
+| Solid Queue, 50 fibers, the plan's slot (`Ai::Spike::LaneSlot`) | 1 (MTP on) | 5.6 s | 109 s |
+| Solid Queue, 50 fibers, no priority | 4 (MTP off) | 91.2 s | 97 s |
+| The slot, 4 calls at a time | 4 (MTP off) | 19.2 s | 75 s |
+| The slot, 4 calls, 1 kept for chat | 4 (MTP off) | 0.6 s | 102 s |
+
+- **Fibers alone put chat last.** Every call reaches the server at once and llama-server answers
+  in arrival order, with 1 slot or 4.
+- **The plan's slot works on fibers unchanged:** its `Monitor` and lane-ordered waiters, under
+  the fiber scheduler, gave the same result as Sidekiq's single thread, while the 50 claimed
+  jobs waited as fibers instead of being re-enqueued.
+- **Parallel server slots are a trade, not a limit.** Four slots finished the background 30%
+  sooner even with MTP off, at the cost of each call taking 22-26 s instead of 9 s. Keeping one
+  slot for chat gave the fastest first word measured (0.6 s) and gave back most of the
+  throughput gain. MTP and `--parallel` were changed together, so their effects aren't
+  separated.
+
+**Chat and embeddings on one machine** (`gpu_contention_live_test`): the chat server and the
+embedding server run in two containers on the same host (ports 8180 and 8181), unaware of each
+other. Sixty embedding jobs (64 texts each, the prompt lane) are queued, then a chat; llama at
+`--parallel 4`, MTP off.
+
+| Setup | Chat's first word | Chat done | Embeddings done |
+|---|---|---|---|
+| Chat alone | 0.36 s | 2.22 s | |
+| Embeddings alone | | | 18.0 s |
+| Both, uncoordinated | 0.27 s | 2.53 s | 19.3 s |
+| Both, one host slot held inside RubyLLM | 0.39 s | 2.28 s | 20.8 s |
+
+- **The slot can live inside RubyLLM.** Each RubyLLM context takes an `instrumenter`, a public
+  setting, and RubyLLM runs every HTTP request it makes, streamed or not and with its retries,
+  inside `instrument("request.ruby_llm")`. `Ai::Transport::SlotInstrumenter` holds the
+  endpoint host's slot for that block, in the lane the job sets
+  (`SlotInstrumenter.with_lane`), and forwards every event to the instrumenter it replaced. In
+  the run the slot granted 61 requests, one at a time; chat waited at most 0.17 s, the end of one
+  embedding request, and embeddings up to 17.8 s.
+- **On venus the embeddings barely slowed chat** (2.53 s against 2.22 s alone), with or without
+  the slot. The embedding model is small, and the host already ranks chat above embeddings with
+  `Nice=` on the shared cores. A larger embedding model, or no `Nice=` ladder, could change that;
+  not tested.
+- **What the instrumenter's slot doesn't do:** it holds a slot per HTTP request, so a chat's
+  tool rounds can be interleaved with other requests; it lives in one process, like the plan's;
+  and it can't see Jev's or the hand-written transports' requests, which don't go through
+  RubyLLM.
+
+**Merchant detection and chat on the same model** (`gpu_merchants_live_test`): both go to
+qwen3.6 on llama.cpp, `--parallel 4`, MTP off. Eight `detect_merchants` jobs (the prompt lane, 25
+transactions each, today's custom-provider instructions as `Ai::Generations::DetectMerchants`)
+are queued, then, 20 s later, one chat turn with 3.3k tokens of transactions as context, as after
+a tool round. Solid Queue, 50 fibers, so every job is picked up at once. The slot sits in
+RubyLLM's instrumenter, sized from llama-server's `/props` `total_slots`, so Sure drains its
+queue into the server's slots and llama-server's own queue stays empty. One run each.
+
+| Setup | Chat's first word | Chat done | Chat's output | Merchants done |
+|---|---|---|---|---|
+| Chat alone | 44.4 s | 65.5 s | 11.6 tok/s | |
+| Merchants alone | | | | 410 s |
+| Every call sent at once (llama-server queues the rest) | 369.4 s | 396.1 s | 11.2 tok/s | 391 s |
+| Drain: at most 4 calls at the server, chat first in Sure's queue | 197.8 s | 237.2 s | 5.5 tok/s | 412 s |
+| Drain, 1 of the 4 kept for chat | 48.2 s | 103.2 s | 5.5 tok/s | 489 s |
+| Drain, 1 kept, no merchant call starts while chat runs | 48.6 s | 103.4 s | 5.5 tok/s | 489 s |
+| Drain, none kept, no merchant call starts once chat waits | 234.0 s | 276.5 s | 5.7 tok/s | 632 s |
+
+- **llama-server's queue is where chat gets lost.** Sent at once, the chat queued behind four
+  merchant calls inside the server, where nothing in Sure can reorder it: 369 s to the first word.
+- **Draining halves that, and no more.** Holding the calls in Sure, chat first, the chat still
+  waited 149 s for a running merchant call to end (each takes 115-215 s at four at a time).
+  With calls this long, priority in a queue can't help; the chat needs a free slot.
+- **A slot kept for chat is what makes it interactive:** 48 s to the first word, against 44 s
+  alone (the time to read 3.3k tokens of context on this CPU). The chat's output runs at half
+  speed (5.5 tok/s against 11.6) while it shares the CPU with three merchant calls, so it
+  finished at 103 s instead of 66 s. Merchants took 19% longer, with only three slots.
+- **Pausing other calls didn't help.** Every merchant call outlasted the chat, so none was due
+  to start while it ran; with none kept, pausing only left slots empty (merchants 632 s). A
+  pause that stops running calls isn't possible from Sure: llama-server has no request priority
+  or preemption, so the only way is to cancel a call and send it again later.
+- **The merchant answers didn't change:** 200 of 200 answered and 167-169 named in every run.
+
+**Sidekiq against Solid Queue, and two workers** (same test, same load, one run each). Every
+setup keeps one of llama.cpp's four slots for chat; "peak" is the most requests at llama.cpp at
+once.
+
+| Setup | Chat sent after | Chat's first word | Merchants done | Peak at llama.cpp |
+|---|---|---|---|---|
+| Solid Queue, 1 worker, 50 fibers, slot in RubyLLM (above) | 0.1 s | 48.2 s | 489 s | 4 |
+| Sidekiq, one capsule of 4 threads, strict queue order, same slot | 136.1 s | 184.1 s | 494 s | 4 |
+| Sidekiq, 3 threads for the prompt lane and a 1-thread chat capsule, same slot | 0.0 s | 48.3 s | 543 s | 4 |
+| Solid Queue, 2 workers, each with its own in-process slot | 0.1 s | 200.1 s | 416 s | 7 (6 merchant) |
+| Solid Queue, 2 workers, `limits_concurrency` (merchants to 3, chat to 1), no slot | 0.2 s | 48.2 s | 547 s | 4 |
+
+- **On threads, the kept slot needs a kept thread.** With one capsule all four threads took
+  merchant jobs, three at llama.cpp and one waiting at the slot, so the chat job sat in Sidekiq's
+  queue for 136 s until a thread came free. Strict queue order only decides what a free thread
+  takes next. A one-thread chat capsule (Sidekiq's per-capsule thread pools) matched the fiber
+  worker exactly. Fibers don't have the problem while there are more fibers than queued jobs.
+- **In-process slots don't add up across workers.** Two workers, each keeping one of four places
+  for chat, let six merchant calls through to a four-slot server; the chat was sent at once and
+  queued inside llama-server behind them. The plan's slot (§11) has the same limit with two
+  Sidekiq processes, whatever the capsules.
+- **Solid Queue's `limits_concurrency` holds across workers.** Its semaphore is a database row,
+  so two workers never had more than three merchant jobs running, and chat's own key kept its
+  place: 48.2 s, the same as one worker. The two workers ran in one process; the semaphore is the
+  same row from separate processes, but that wasn't run. Blocked jobs are released in priority,
+  then arrival, order (`BlockedExecution.ordered`). The limits:
+  - it counts jobs, not requests: a job holds its place for its whole run, including work
+    before and after the call;
+  - the key is computed from the job's arguments at enqueue, but the router picks the route,
+    and fails over, when the job runs, so a job that fails over to a cloud route still holds the
+    local host's place, and the key can't follow a route change without re-enqueueing;
+  - the semaphore expires after `duration` (3 minutes by default) so that a dead worker can't
+    hold it forever; merchant calls took up to 216 s here, so the default would have let a
+    fourth merchant job in;
+  - the size is fixed in code at class load, not read from the server's `/props`.
+- **Sidekiq has no cross-process equivalent without a paid tier** (Sidekiq Enterprise's
+  concurrent rate limiter). A Redis semaphore in Sure would be new code; not tested.
+
+**One slot with MTP: keeping chat first without a kept slot.** A slot kept for chat needs
+`--parallel` of 2 or more, which on this llama.cpp build turns MTP off (and splits the context
+unless `--kv-unified` is set; the build has it, off by default when `--parallel` is explicit).
+The server back at `--parallel 1`, MTP on, 64k context. One run each.
+
+Merchant calls alone, 50 transactions at each batch size (`call_length`):
+
+| Transactions per call | One call | Transactions per minute | Named |
+|---|---|---|---|
+| 25 | 72 s | 20.8 | 41/50 |
+| 10 | 29 s | 20.6 | 41/50 |
+| 5 | 15 s | 19.6 | 40/50 |
+
+Chat arriving 20 s after the merchant jobs (100 transactions), Solid Queue fibers, slot of 1 in
+RubyLLM:
+
+| Setup | Chat sent after | Chat's first word | Chat done | Chat's output | Merchants done |
+|---|---|---|---|---|---|
+| Chat alone | 0.1 s | 48.7 s | 69.7 s | 14.2 tok/s | |
+| A. Chat next, 25 per call | 45.1 s (20 s into a 65 s call) | 94.4 s | 111.9 s | 13.5 tok/s | 352 s |
+| B. Chat next, 5 per call | 8.3 s (7 s into a 15 s call) | 57.7 s | 70.5 s | 13.7 tok/s | 373 s |
+| C. Chat interrupts the call, 25 per call | 0.1 s | 50.6 s | 71.7 s | 14.2 tok/s | 353 s |
+| C on Sidekiq: 3 prompt threads, a 1-thread chat capsule, merchant calls streamed | 0.1 s | 48.3 s | 69.2 s | 14.3 tok/s | 382 s |
+
+- **On one slot, batch size is nearly free.** Throughput moved 6% between 25 and 5 transactions
+  per call, while the longest call, and so chat's longest wait, fell from 72 s to 15 s. The
+  instructions are a cached prefix, so more calls cost little prompt work.
+- **Interrupting works, and llama-server drops the abandoned request.** The slot raised
+  `Preempted` in the merchant call's fiber (`Fiber.scheduler.raise`); Net::HTTP closed the
+  socket, and the chat's first word came 1.9 s after its time alone. Had the server kept
+  generating, the chat would have queued behind the remaining 45 s. The merchant call waited
+  behind the chat and was sent again; the 20 s of discarded work didn't show in the merchants'
+  total (353 s against 352 s) within one run's noise. The chat kept MTP's speed and the full
+  context.
+- **Against the kept slot at `--parallel 4`** (above): C's chat started as fast (50.6 s against
+  48.2 s), finished sooner (71.7 s against 103.2 s, since it had the CPU to itself), and needed no
+  context split; merchant throughput was 17 transactions per minute against 24.5 there, because
+  four slots without MTP outrun one with it on this CPU.
+- **Interrupting works on Sidekiq threads too, through streaming.** `Thread#raise` isn't safe,
+  so a call made inside `LaneSlot.with_interrupt` is streamed, and the slot sets that call's flag;
+  the transport's chunk block raises `Preempted` at the next chunk, which abandons the request
+  (`Compatible#interruptible_generate`, public RubyLLM API only). The chat waited 0.09 s for the
+  slot and its first word came at its time alone (48.3 s against 48.7 s). The merchants' total
+  was 382 s against 353 s on fibers, one run each; streaming's cost isn't separated from noise.
+  RubyLLM's own `Chat#cancel` is the same kind of flag (checked before and after every chunk,
+  `raise_if_cancelled!`), but the slot would need each call's chat object.
+- **Limits of interrupting:** a flag is only seen when a chunk arrives, so a call still reading a
+  long prompt (a PDF's page images) stops when its output starts, not before. Work an interrupted
+  call already did is lost: up to one whole call when it's interrupted near its end. Embeddings
+  aren't streamed and can't be interrupted this way; they're short (the contention test's
+  longest wait behind one was 0.17 s).
+
+**For the plan** (§11 is rewritten on this): fiber workers don't replace the lanes. They replace
+the AI thread count, and for cloud work Sidekiq threads did as well at this scale, so AI jobs stay
+on Sidekiq with a one-thread chat capsule. What decides chat's wait on one machine is the per-host
+gate and what it does when the host is taken. Against the owner's target (about 2 s, never more
+than 5 s), only interrupting the running call meets it while keeping MTP and the full context:
+the gate sits in RubyLLM's instrumenter, sized from the server, and background and prompt calls
+on a local host stream so it can stop them. Lane order alone leaves chat behind one whole call; a
+kept slot gives up MTP and slows chat's finish. Several workers on one local host need the AI
+capsules on one of them, or a limit they share.
+
 ## Lines of code for bill setup
 
 Code lines only: blank and comment-only lines aren't counted.
@@ -1080,5 +1347,15 @@ measurement.
   up).
 - OCR: WeVisOne's two scan transcriptions, its `vips` direct extraction, 300 dpi, and Qwen's
   extraction from the `--special` transcriptions.
+- Job runners: worker processes in separate processes (the two-worker runs shared one process),
+  a Redis semaphore across workers, Sure's real generation jobs and batches instead of single
+  calls, Puma under fiber isolation outside tests, a provider's real rate limits, and
+  `async_http`'s connection reuse over TLS.
+- llama-server's MTP and `--parallel` separately (they were changed together), `--parallel 2`,
+  `--kv-unified` (and what it does when the shared context fills), and a larger embedding model
+  or no `Nice=` ladder for the contention test.
+- Interrupting: a PDF extraction or other long-prompt call, a chat with tool rounds interrupting
+  between them, Ollama and LM Studio stopping on a closed connection, and streaming's own cost on
+  throughput (382 s against 353 s, one run each).
 - One full-suite run had a single failure that six reruns with other seeds didn't reproduce,
   most likely a timing check in `page_images_test` under heavy CPU load.

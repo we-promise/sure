@@ -1,6 +1,6 @@
 # Sure — AI plumbing redesign
 
-Status: proposal, updated after the RubyLLM spike · Target: `we-promise/sure` (`origin/main` @ `a6767e931`) · 2026-10-28, updated 2026-10-30
+Status: proposal, updated after the RubyLLM spike · Target: `we-promise/sure` (`origin/main` @ `a6767e931`) · 2026-10-28, updated 2026-10-31
 
 Audience: the Sure dev team. This document describes the structure the AI layer is moving to and
 the pull requests that get it there (section 19).
@@ -120,12 +120,12 @@ below traces back to one of these needs.
 | F4, U3 | `Ai::Availability` reasons, `Ai::AffordanceComponent` and the "AI unavailable" notice (sections 5.4, 16) |
 | F5 | The family's chat mode, and chat's switch on the AI features page (section 6) |
 | H1 | Endpoints with several models, each marked local or cloud, and one ordered model list per feature (sections 4, 5) |
-| H2, U1 | The sequencer: one call at a time per local host, and lane priority (section 11) |
+| H2, U1 | The sequencer: a gate per local host sized from the server, lane order, and chat interrupting background work (section 11) |
 | H3, M1 | The `AI_CONFIG` file, loaded into the database (section 4) |
 | H4 | Probe jobs per model, and the health page (section 13) |
 | H5 | `timeout_seconds` per endpoint |
 | M2 | Small batches that re-enqueue at the back of the queue, so families take turns (section 11) |
-| M3 | No slot on cloud endpoints, 429 backoff, failover and escalation in the model list |
+| M3 | No gate on cloud endpoints, 429 backoff, failover and escalation in the model list |
 | M4 | `llm_usages` per family and feature, with a correlation id (section 10) |
 | M6 | Section 18 |
 | M7 | `AiEndpointCredential`: a family's own key for one cloud endpoint, used for that family's calls, with down marks per key (sections 4.2, 5.4) |
@@ -157,7 +157,7 @@ app/models/ai/
   availability.rb                        # Data: available? + reason (for no-AI UI)
   result.rb                              # Data: success/failure wrapper
   error.rb                               # error taxonomy
-  sequencer.rb                           # one slot per local host, lane priority
+  sequencer.rb                           # route choice and lanes; one gate per local host (section 11)
   prompt.rb                              # file-backed prompts + family overrides
   schema.rb                              # JSON-Schema → coercion/validation
   generation.rb                          # base class for structured-output features
@@ -173,6 +173,7 @@ app/models/ai/
     anthropic.rb                         # Messages API, forced tool_use for structured output
     jev.rb                               # judge only
     http.rb                              # one place clients are built: timeout, proxy, headers
+    gate_instrumenter.rb                 # RubyLLM's instrumenter: holds the host's gate per request
   generations/                           # ONE small declarative file per feature
     categorize_transactions.rb
     detect_merchants.rb
@@ -216,7 +217,7 @@ property valuations and Plaid.
 | 3. Embeddings | `transport.embed(texts)`, or an OpenAI vector store | used by `VectorStore` | `compatible` | pgvector, Qdrant |
 | 4. Ruby ML / heuristics | — | **not part of the AI layer** | — | Bayes, TF-IDF, transfer SQL, recurring clustering, insight generators |
 
-Family 4 doesn't go through the AI path. It has no transport, consent, cost, trace, sequencer slot
+Family 4 doesn't go through the AI path. It has no transport, consent, cost, trace, sequencer gate
 or prompt. These engines stay ordinary domain models, and the router never names them. The
 classifier settings page (`Settings::ClassifiersController`, #4310) stays outside `Settings::Ai`.
 
@@ -247,13 +248,13 @@ worker always agree. That removes the "ENV on web vs worker" problem rather than
 |---|---|---|
 | 1. No AI | Anyone | Nothing. No endpoints, so every feature is `:not_configured` and Sure works without AI (section 16). |
 | 2. Simple | A self-hoster | Settings → AI → Endpoints. Pick a preset, paste a key, and the preset fills in the URL, models and default routes. |
-| 3. Complex | A home lab or a multi-tenant admin | One YAML file, `AI_CONFIG=/config/ai.yml`, on each worker container (every worker runs the `ai` capsule). Loaded into the tables at boot. The instance-wide AI pages become read-only and say "Set by the AI config file". |
+| 3. Complex | A home lab or a multi-tenant admin | One YAML file, `AI_CONFIG=/config/ai.yml`, on each worker container that runs the AI capsules. Loaded into the tables at boot. The instance-wide AI pages become read-only and say "Set by the AI config file". |
 
 The rule is all or nothing. When a config source outside the database is present (`AI_CONFIG`,
 or the deprecated AI ENV from section 4.5), it owns every instance-wide AI value; otherwise the UI
 owns them. There are no per-field locks and no precedence chain.
 
-**Only processes that run the `ai` capsule load config from outside the database.** The worker's
+**Only processes that run the AI capsules load config from outside the database.** The worker's
 ENV is what AI jobs read today, so every setup where AI works today has its config on the worker,
 whatever the deployment: compose, Helm, quadlets or bare metal. The web container reads the rows
 and never loads config, so it doesn't matter which container boots first, how many web replicas
@@ -288,7 +289,7 @@ end
 
 # columns: name, protocol, preset, base_url, api_key, extra_headers, location, timeout_seconds,
 #          json_mode, responses_api (bool), vector_store (bool), agent (bool), agent_settings,
-#          parallel_requests (jev only; default 8)
+#          parallel_requests (local endpoints and jev: the server's parallel slots; jev default 8)
 ```
 
 ```ruby
@@ -399,7 +400,9 @@ prefix allow-list: a model is a candidate for a feature only if it declares what
 needs, and the probe catches a declaration that's wrong.
 
 **Tuning lives where it applies.** Request timeout and JSON mode are per endpoint, and so is
-`parallel_requests`, the size of the Jev transport's request pool (section 7). Context window,
+`parallel_requests`: the size of the Jev transport's request pool (section 7), and for a local
+endpoint the server's parallel slots, which size its host's gate (section 11; llama.cpp reports its
+own). Context window,
 output tokens and batch size are per model, because a small local model needs smaller batches.
 A route entry may override `json_mode`, name its own `prompt` file and set a `reasoning_effort`,
 for that entry only, so the same model can run with different settings in different routes: a
@@ -499,7 +502,7 @@ endpoints:
     models:
       - name: qwen3-8b
         capabilities: [tools, streaming, structured_output]
-  - name: embed                            # same host as gpu, so they share one slot (section 11)
+  - name: embed                            # same host as gpu, so they share one gate (section 11)
     preset: llama_cpp
     base_url: http://llm:8081/v1
     models:
@@ -526,7 +529,7 @@ shadow_rates:
   categorize: 0.1                          # share of categorize calls that also run on shadow_categorize
 ```
 
-- `Ai::ConfigFile.load!` runs at boot in processes that run the `ai` capsule. It skips the load
+- `Ai::ConfigFile.load!` runs at boot in processes that run the AI capsules. It skips the load
   when the file's digest matches `Setting.ai_config_digest`, and takes a Postgres advisory lock so
   two AI workers booting together don't race.
 - Each AI worker records the digest it loaded in its Sidekiq process info. If two AI workers have
@@ -784,7 +787,7 @@ embed             → embed/nomic-embed-text
 
 The first model is the normal choice. A later one is used only when an earlier one's server is
 down (failover) or the earlier model can't handle the request (escalation). A busy local host
-isn't a reason to move on: the call waits for it or re-enqueues (section 11), so work never
+isn't a reason to move on: the call waits, interrupts background work or re-enqueues (section 11), so work never
 leaves for the cloud just because the local model is busy. One list covers all three, so there's
 no separate duty, standby, failover or escalation setting. A feature with no list is
 `:not_configured`.
@@ -842,13 +845,13 @@ end
   ones in PR 2, the chat ones in PR 3.
 - The code above is the final shape. The family consent checks arrive in PR 6, and the
   `allowed` and `keyed` lines in PR 8 (section 6).
-- The router doesn't look at liveness. Down endpoints and busy slots are the sequencer's concern
+- The router doesn't look at liveness. Down endpoints and busy hosts are the sequencer's concern
   at run time (section 11), so availability doesn't flicker when a worker restarts.
 
 ### 5.4 Failover, escalation and what the user sees
 
 - **No overflow.** The sequencer takes the first route in the plan that isn't marked down. If its
-  local host is busy, the call waits or re-enqueues (section 11); it doesn't move to the next
+  local host is busy, the call waits, interrupts or re-enqueues (section 11); it doesn't move to the next
   entry.
 - **Failover: the endpoint is unhealthy.** On `Ai::Error::Timeout`, `Upstream`, `RateLimited`,
   `Unreachable`, `Unauthorized`, `NoCredit` or `ModelMissing`, the generation retries once on the
@@ -1157,21 +1160,21 @@ end
   is latency-bound (~400–550 ms), so `judge` runs a batch on a bounded pool of
   `parallel_requests` threads (default 8, today's `DEFAULT_CONCURRENCY`): about 1.6 s for 25
   transactions instead of about 12 s. Everything above the transport sees one batch call, as it
-  does for an LLM. Cloud Jev has no sequencer slot; a self-hosted Jev holds its host's one slot
-  for the whole batch, because its internal requests are its own concern, like the requests inside
-  an LLM batch. Counting each request as a slot would run Jev one request at a time.
+  does for an LLM. Cloud Jev has no gate. Jev's transport isn't RubyLLM, so a self-hosted Jev
+  takes its host's gate itself around each request (section 11); the gate admits
+  `parallel_requests` of them at once, and a chat on the same host interrupts nothing, because a
+  Jev request is short (~0.5 s) and isn't streamed.
 - **A self-hosted Jev-compatible server** is the same transport with the `jev_local` preset. Its
-  `parallel_requests` defaults to 1, because the sequencer can't see requests inside a call, and 8
-  at once would overload the host's GPU or CPU (H2).
+  `parallel_requests` defaults to 1, because 8 at once would overload the host's GPU or CPU (H2).
 - **https only for cloud endpoints.** Today `Provider::Jev.endpoint_allowed?` refuses http except
   on loopback, which rules out `http://jev:8080` on a compose network. `AiEndpoint` now requires
   https for `cloud` endpoints of every protocol and allows http for `local` ones, as `compatible`
   endpoints already do. A private network is the operator's call; financial data and keys on the
   public internet still need TLS.
-- **Transports run only inside the `ai` capsule.** In development and test, `Base` raises when
-  it's called anywhere else: a web thread, a rule job, a default-queue job. An LLM call added in
-  the wrong place fails its tests, and every call goes through the sequencer. Evals and console
-  sessions opt in explicitly with `Ai::Sequencer.outside_capsule { ... }`, which takes a slot in
+- **Transports run only inside the AI capsules** (`ai` and `ai_chat`). In development and test,
+  `Base` raises when it's called anywhere else: a web thread, a rule job, a default-queue job. An
+  LLM call added in the wrong place fails its tests, and every call goes through the sequencer.
+  Evals and console sessions opt in explicitly with `Ai::Sequencer.outside_capsule { ... }`, which takes the gate in
   their own process and is never used in app code (the cop allow-list is `lib/eval/**`).
 
 ## 8. Generations, shadow runs and prompts
@@ -1236,7 +1239,9 @@ end
      precedence and locale rule in section 8.3;
    - take the next batch when the feature declares `batch`, sized by the model's `batch_size` and
      `context_window` (this moves `Provider::Openai::BatchSlicer` here, for every transport);
-   - call `route.transport.generate(request)`.
+   - call `route.transport.generate(request)`. On a local host the request passes the host's
+     gate (section 11); if an interactive call interrupts it (`Ai::Error::Preempted`), the same
+     request waits for the gate again and is sent again, with no failover and no attempt counted.
 
    On a failover error, retry once on the next route on a different server; on an escalation
    error, retry once on the next route, whatever its endpoint (section 5.4). Coercion and
@@ -1567,7 +1572,8 @@ module Ai::Error
     def initialize(reason) = super("AI unavailable: #{@reason = reason}")
   end
   Cancelled      = Class.new(Base)
-  Busy           = Class.new(Base)   # background job found its slot taken; re-enqueued, not an error
+  Busy           = Class.new(Base)   # background job found its host's gate taken; re-enqueued, not an error
+  Preempted      = Class.new(Base)   # an interactive call took the host; Generation#call resends, never raised further
   Unreachable    = Class.new(Base)   # connection refused / DNS; failover + down mark
   Timeout        = Class.new(Base)   # failover + down mark
   RateLimited    = Class.new(Base)   # 429; failover + key mark, retryable
@@ -1598,7 +1604,7 @@ A job whose feature became unavailable after it was queued (chat turned off, con
 is discarded, and its reason is logged.
 These job-level policies apply after the in-call failover or escalation (section 5.4) has
 already been tried. `Ai::Error::Busy` is handled separately: the job re-enqueues itself after 5
-to 15 seconds (random), with no attempt limit, because a busy slot isn't a failure. Feature code
+to 15 seconds (random), with no attempt limit, because a busy host isn't a failure. Feature code
 has no `rescue` blocks of its own. Health probe failure codes map from the same classes.
 
 The plumbing doesn't promise idempotency. A retry may call the model again with the same input,
@@ -1645,109 +1651,171 @@ ActiveSupport::Notifications.subscribe(/\A(generate|judge)\.ai\z/, Ai::Instrumen
 
 ## 11. `Ai::Sequencer` — interactive work first
 
-The sequencer decides when a job's LLM call runs. It has three lanes, one slot per local host and
-two rules. There's no mode setting.
+The sequencer decides when a job's LLM request reaches the server. It has three lanes, a chat
+capsule, and one gate per local host that lets chat interrupt background work. There's no mode
+setting. This section was rewritten after the RubyLLM spike's job-runner runs
+([`rubyllm-spike-report.md`](rubyllm-spike-report.md), "Job runners and chat priority"); the
+choices it makes are product decisions with the evidence in the report's decisions register.
 
-**Three lanes, three queues.** Each feature's lane is fixed in the routing table, so adding a
-feature never adds a queue. The `ai` capsule runs the queues in strict order:
+**The target.** A chat waits about 2 s, and never more than 5 s, for background work on a local
+host. The time the model takes to read the chat's own context isn't counted: on a CPU it's tens
+of seconds (48.7 s for 3.3k tokens on the spike's server) whatever the plumbing does.
 
-| Lane | Queue | Features |
-|---|---|---|
-| Interactive | `ai_interactive` | `chat`, `bill_setup`, `search_documents` |
-| Prompt | `ai_prompt` | `extract_pdf`, `embed` |
-| Background | `ai_background` | `categorize`, `shadow_categorize`, `detect_merchants`, `enhance_merchants`, and probes |
+**What the spike measured** (qwen3.6 on llama.cpp, CPU only, one run each). Merchant detection
+was queued, then a chat turn with 3.3k tokens of context arrived while a merchant call was running:
 
-They replace `ai_high_priority` and `ai_low_priority`. For one release the capsule also drains the
-old queues, and the old job classes stay as shims that enqueue `Ai::GenerationJob`.
+| What happens when chat finds the host busy | Chat's extra wait | Chat's first word | Chat done | Server |
+|---|---|---|---|---|
+| Nothing; chat alone | — | 48.7 s | 69.7 s | 1 slot, MTP |
+| Every call sent at once; llama-server queues them | 325 s | 369 s | 396 s | 4 slots, no MTP |
+| Chat goes next, 25 transactions per call | 45 s (up to 72 s) | 94 s | 112 s | 1 slot, MTP |
+| Chat goes next, 5 transactions per call | 8 s (up to 15 s) | 58 s | 71 s | 1 slot, MTP |
+| One of four slots kept for chat | ~0 s | 48 s | 103 s | 4 slots, no MTP, 16k context each |
+| **Chat interrupts the running call (Sidekiq threads)** | **0.09 s** | **48 s** | **69 s** | **1 slot, MTP, 64k context** |
 
-**Concurrency comes from threads and hosts, not a setting.**
+Only interrupting and a kept slot meet the target. A kept slot needs `--parallel` of 2 or more,
+which on llama.cpp turns off MTP speculative decoding and, unless `--kv-unified` is set, splits
+the context between the slots; the chat then shares the CPU and finishes 30 s later. So the gate
+interrupts, and a server run with several slots is the operator's choice for throughput, not
+something Sure asks for.
 
-- **Calls at once, at most:** the AI threads across all workers (workers × `RAILS_AI_MAX_THREADS`).
-- **Each local host takes one call at a time.** Local endpoints on the same host share one slot,
-  whatever their ports. A chat server on `http://llm.lan:8080` and an embedding server on
-  `http://llm.lan:8081` usually share the same CPU or GPU, so a call to one slows the other; with
-  one slot, they take turns, chat first.
-- **Cloud endpoints have no slot.** Providers handle concurrency themselves, and 429s are retried
-  with backoff.
+**Three lanes, three queues, two capsules.** Each feature's lane is fixed in the routing table, so
+adding a feature never adds a queue.
 
-| Setup | Behaviour |
-|---|---|
-| One worker, `RAILS_AI_MAX_THREADS=1` (the default) | One call at a time overall, as today; chat first |
-| `RAILS_AI_MAX_THREADS=3`, chat and embedding on one local host, plus a cloud endpoint | The local host takes one call at a time, chat before embedding; calls to features routed to the cloud run alongside. A feature whose route starts with the local host waits for it rather than moving to the cloud (no overflow) |
-| Cloud only | No limit beyond the threads |
+| Lane | Queue | Capsule | Features |
+|---|---|---|---|
+| Interactive | `ai_interactive` | `ai_chat`, 1 thread | `chat`, `bill_setup`, `search_documents` |
+| Prompt | `ai_prompt` | `ai`, strict order | `extract_pdf`, `embed` |
+| Background | `ai_background` | `ai`, strict order | `categorize`, `shadow_categorize`, `detect_merchants`, `enhance_merchants`, and probes |
 
-**Keyed by host.** The slot key is the endpoint's host, without port, path or scheme, and the
-`location` already on every endpoint decides whether it has one. Two endpoint rows on one host
-(for example to compare JSON modes, or the same server added twice by accident) share the slot.
-The cost: two GPUs in one machine on different ports are serialised too. To run them in parallel,
-give the endpoints different host names (a second DNS name for the same machine).
+They replace `ai_high_priority` and `ai_low_priority`. For one release the `ai` capsule also
+drains the old queues, and the old job classes stay as shims that enqueue `Ai::GenerationJob`.
 
-**Thread counts stay as they are today.** `config/sidekiq.yml` keeps its sizing: the default
-capsule gets `RAILS_MAX_THREADS - RAILS_AI_MAX_THREADS` and the `ai` capsule gets
-`RAILS_AI_MAX_THREADS` (default 1). `RAILS_MAX_THREADS` stays the worker's total and its DB pool,
-so `database.yml` doesn't change. These are per-process tuning, so they stay in ENV; `Sure/NoAiEnv`
-doesn't flag them. Every worker runs the `ai` capsule, as today.
+- **Chat has its own thread.** In the spike, one `ai` capsule of four threads took four merchant
+  jobs (three at the server, one waiting for the host), and the chat job sat in Sidekiq's queue
+  for 136 s until a thread came free: strict queue order only decides what a free thread takes
+  next. A one-thread `ai_chat` capsule gave chat its first word as fast as a fiber worker did
+  (48.3 s against 48.2 s).
+- **Thread counts.** `config/sidekiq.yml` keeps its sizing for the default capsule
+  (`RAILS_MAX_THREADS - RAILS_AI_MAX_THREADS`) and the `ai` capsule (`RAILS_AI_MAX_THREADS`,
+  default 1). The `ai_chat` capsule's thread comes on top and isn't counted in the database pool:
+  Rails 8.1 returns a connection after each query outside a transaction, and in the spike a pool
+  of 3 served 200 threads making AI calls. The exception is a transaction held across an AI call,
+  which keeps its connection; the plumbing never opens one around a call.
+- **Cloud parallelism comes from `RAILS_AI_MAX_THREADS`.** Cloud endpoints have no gate, so their
+  calls run as many at once as there are AI threads; RubyLLM retries 429s with backoff. In the
+  spike 200 threads and 200 fibers made 200 cloud calls in the same time (3.1 s and 3.0 s) with
+  the same memory, so Sure stays on Sidekiq. A fiber worker (Solid Queue, `fibers: N`) would
+  remove this setting and the chat capsule, at the cost of a second job runner, fiber isolation
+  for the whole app, and a stalled worker whenever one job blocks (a `vips` render stalled the
+  others for 0.28 of its 0.33 s).
 
-- **At the default of 1 thread, the slots make no difference.** One thread makes one call at a
-  time, which is today's safe behaviour, and chat still goes first because it's the next job taken
-  from the strict-order queues when the current batch ends. Parallel calls (cloud, or local hosts
-  side by side) need `RAILS_AI_MAX_THREADS` of 2 or more.
-- **`RAILS_AI_MAX_THREADS` must stay below `RAILS_MAX_THREADS`**, or the default capsule has no
-  threads and Sidekiq won't start, as today.
+**One gate per local host, in each request.** The gate lives inside RubyLLM: every HTTP request a
+RubyLLM context makes, streamed or not and with its retries, runs inside
+`instrument("request.ruby_llm")` on the context's `instrumenter`, a public setting. For a local
+endpoint the transport sets an instrumenter that holds the host's gate for that block, in the
+lane of the job making the call. Jobs, generations and transports don't change where they call;
+embeddings, probes and a chat tool's nested call all pass through it. Jev's transport isn't
+RubyLLM, so it takes the gate itself around each request.
 
-**Rule 1: interactive and prompt jobs wait for a slot, in lane order.** A chat job that finds its
-local host busy waits in the process and takes the slot as soon as it's released, ahead of any
-waiting prompt job. Each host has one `Monitor` with its waiters ordered by lane, then by arrival.
-A waiting chat job has no timeout of its own: the chat watchdog (`Setting.ai_response_timeout`)
-already ends a turn that waits too long, and cancelling it removes the waiter.
+- **Keyed by host.** The key is the endpoint's host, without port, path or scheme. A chat server
+  on `http://llm.lan:8080` and an embedding server on `http://llm.lan:8081` usually share a CPU or
+  GPU and don't know about each other, so they share one gate; chat goes first. The cost: two
+  GPUs in one machine on different ports are serialised too; to run them side by side, give the
+  endpoints different host names.
+- **Sized from the server.** The gate admits as many requests as the host has parallel slots, so
+  Sure never sends more than the server can run and llama-server's own queue, which answers in
+  arrival order and can't be reordered, stays empty. For llama.cpp the health probe reads
+  `total_slots` from `/props`; for other local servers it's the endpoint's `parallel_requests`
+  (the field the Jev transport already has), default 1. With two or more slots, one is kept for
+  the interactive lane. Two endpoints on one host share the larger size.
+- **Cloud endpoints have no gate.**
 
-**Rule 2: background jobs never wait.** If the first route that isn't down is on a local host
-whose slot is taken, the job raises `Ai::Error::Busy`, re-enqueues itself after 5 to 15 seconds
-(random) and frees its thread. With more than one
-AI thread, background work therefore can't fill them all, and a free thread is there for the next
-chat job.
+**Rule 1: callers wait in lane order.** Interactive first, then prompt, then background, each in
+order of arrival. A waiting interactive call has no timeout of its own: the chat watchdog
+(`Setting.ai_response_timeout`) already ends a turn that waits too long, and cancelling it removes
+the waiter.
+
+**Rule 2: an interactive call interrupts.** An interactive call that finds its host full
+interrupts the running call of the lowest lane, background before prompt. Interactive calls never
+interrupt each other.
+
+- On a local host, prompt and background calls are streamed, and the transport checks the gate's
+  flag at every chunk. When the gate sets it, the chunk block raises `Ai::Error::Preempted`, which
+  abandons the HTTP request; llama-server stops work on a request whose connection closes (the
+  spike's chat started 0.09 s after the interrupt, at its time alone). This uses RubyLLM's public
+  streaming block only, and works the same on threads and fibers. `Thread#raise` isn't used.
+- `Preempted` never leaves `Ai::Generation#call`: the generation waits for the gate again, now
+  behind the interactive call, and sends the same request. It isn't a failure, isn't counted as
+  an attempt, and doesn't mark the endpoint down or move to the next route.
+- **What it costs.** The interrupted request's work is lost: at most one call, and on a slow
+  server one call can be minutes. Local routes therefore use smaller batches: on the spike's
+  server, merchant detection ran at 20.8 transactions a minute at 25 per call and 19.6 at 5 per
+  call, while one call went from 72 s to 15 s. The `llama_cpp` preset's models already default to
+  `batch_size: 10` (29 s a call there), against today's `LLM_MAX_ITEMS_PER_CALL` default of 25.
+- **What it can't do.** The flag is only seen when a chunk arrives, and nothing arrives while the
+  server reads the prompt, so a PDF extraction still reading its page images stops when its
+  output starts. Embedding requests aren't streamed and can't be interrupted; they're short (the
+  longest wait behind one in the spike was 0.17 s).
+
+**Rule 3: background jobs never wait.** If a background call finds its host's gate taken, the
+gate raises `Ai::Error::Busy`, and the job re-enqueues itself after 5 to 15 seconds (random) and
+frees its thread, so background work waiting on a local host can't hold every AI thread while
+cloud-routed jobs wait. Prompt calls wait in lane order.
 
 ```ruby
 # app/models/ai/sequencer.rb
 module Ai::Sequencer
-  # Yields the first route in the plan that isn't down. A cloud route runs at once. A local route
-  # needs its host's slot: interactive and prompt callers wait for it in lane order; background
-  # callers get Ai::Error::Busy. A busy host never sends the call to a later route.
-  def self.run(plan, &block)
-    up    = plan.routes.find { !Ai::Router.down?(_1) } or raise Ai::Error::Unreachable
-    route = slots.acquire(up, lane: plan.lane)
-    yield route
-  ensure
-    slots.release(route) if route
+  # Runs the block with the first route in the plan that isn't down, in the plan's lane. A busy
+  # host never sends the call to a later route: the gate inside the transport waits, interrupts
+  # or raises Busy (rules 1-3).
+  def self.run(plan)
+    route = plan.routes.find { !Ai::Router.down?(_1) } or raise Ai::Error::Unreachable
+    with_lane(plan.lane) { yield route }
   end
 
-  # One in-process slot per local host; cloud routes are never held.
-  def self.slots = @slots ||= Slots.new
+  # The host's gate in this process, or nil for a cloud endpoint.
+  def self.gate_for(endpoint) = endpoint.local? ? gates.for(endpoint) : nil
+end
+
+# app/models/ai/transport/gate_instrumenter.rb: RubyLLM's config.instrumenter for local endpoints
+class Ai::Transport::GateInstrumenter
+  def instrument(name, payload = {}, &block)
+    return @delegate.instrument(name, payload, &block) unless name == "request.ruby_llm" && block
+
+    @gate.hold(Ai::Sequencer.lane, interrupt: Ai::Sequencer.interrupt) { @delegate.instrument(name, payload, &block) }
+  end
 end
 ```
 
-**Nested calls run under the parent's slot.** A chat tool can call AI inside a turn, for example
-`search_family_files` embedding its query on the same local host. If the thread already holds a
-slot, the sequencer doesn't take another, so a chat turn can't deadlock waiting for itself. The
-nested call is recorded with the parent's correlation id.
+**Between a chat's tool rounds the host is free.** The gate is held per request, not per turn, so
+while a chat's tools run, a waiting background call can start; the chat's next round interrupts
+it. For the same reason a tool's own AI call (`search_family_files` embedding its query) can't
+deadlock on the turn that called it.
 
 **Small batches.** `Ai::GenerationJob` runs one batch and enqueues the remainder at the back of
-its queue. A chat job enqueued mid-run waits for the current batch, not the whole run, and
-families' batches interleave, so one family's large import takes turns with other families' work.
+its queue, so families' batches interleave and one family's large import takes turns with other
+families' work.
 
-**Several workers.** Slots live in each process, so with two workers a local host can get one call
-from each. That's visible, not silent: the health page shows the AI threads per worker (from
-`Sidekiq::ProcessSet`) and, for each local host, which job holds its slot in each worker.
+**One worker per local host.** Gates live in each process, so two workers would each admit a
+host's full size: in the spike two workers, each keeping one of four places for chat, let six
+merchant calls through to a four-slot server, and the chat queued inside llama-server behind them
+(200 s to its first word). An install that runs several workers against one local host runs the
+AI capsules on one of them: `RAILS_AI_MAX_THREADS=0` on the others leaves both AI capsules out.
+The health page shows the AI threads per worker (from `Sidekiq::ProcessSet`) and warns when two
+workers serve the same local host. A shared gate across processes (Solid Queue's
+`limits_concurrency` held across two workers in the spike; a Redis semaphore wasn't tested) is
+future work if one worker isn't enough.
 
 **No LLM call on a web thread.** Smart-fill and smart-configure render a skeleton, enqueue a job
 on `ai_interactive`, and receive the result as a Turbo Stream broadcast, the same pattern as
 `Chat#broadcast_pending_status`. Non-PDF embedding in `ImportsController` and health probes become
 jobs too.
 
-**Visible waiting.** Each slot records its holder and waiters in `Rails.cache`
-(`ai/slots/<host>`: worker, job id, feature, lane, since). The chat watchdog (`Chat.response_timeout`)
-and `BackgroundJobHealth` read it, so the UI can say "waiting for the model; 1 task ahead" instead
-of timing out silently, and the health page shows the same data.
+**Visible waiting.** Each gate records its holders, waiters and interruptions in `Rails.cache`
+(`ai/gates/<host>`: worker, job id, feature, lane, since). The chat watchdog
+(`Chat.response_timeout`) and `BackgroundJobHealth` read it, so the UI can say "waiting for the
+model; 1 task ahead" instead of timing out silently, and the health page shows the same data.
 
 The sequencer replaces #4444 (holding back AI jobs while someone types a chat message).
 
@@ -1767,7 +1835,7 @@ and a PDF import.
   | Smart-fill, smart-configure | `RecurringTransaction::Suggestion`, new | A table: `recurring_transaction_id`, `family_id`, `mode` (`fill` or `configure`), `status` (`pending`, `complete`, `failed`, `cancelled`), `result` (jsonb). The controller creates one and enqueues the job; it's the `bill_setup` owner, and its `apply_ai` stores the result and broadcasts it, so a reload still shows it |
 
   Each owner's `ai_cancelled?` reads its own status.
-- The plumbing checks it before taking a sequencer slot, between batches, and on every streamed
+- The plumbing checks it before a request passes the host's gate, between batches, and on every streamed
   chunk. A cancelled conversation stops reading the stream and closes the connection. A request
   that isn't streamed can't be aborted once sent, so its result is discarded when it returns and
   its usage is still recorded. The UI says "Stopped. The model may still finish this request."
@@ -1790,7 +1858,7 @@ and a PDF import.
   server (a CPU host loading a model, at 300 seconds) isn't marked down by a probe that gave up
   after 5.
 - **Probes queue like other background work.** On a busy local host a probe re-enqueues
-  (Rule 2), so that host's result can be minutes old while it serves chat. The page shows each
+  (Rule 3), so that host's result can be minutes old while it serves chat. The page shows each
   result's age.
 - **The health page** (`settings/ai/health`) shows, per endpoint and model: up or down, latency,
   declared and confirmed capabilities, and any down mark. Per model and feature, it shows the
@@ -1800,8 +1868,9 @@ and a PDF import.
   `failed_over_from` and `escalated_from` into `metadata` on every call (section 10). Where shadow runs exist, it also shows agreement by confidence band from
   `Ai::Comparison`, which tells an admin whether a model's confidence can be trusted
   (`calibrated_confidence`, section 6).
-- **Operations on the same page:** lane state (queue depths, and the job holding each local
-  host's slot in each worker), the AI threads per worker so an operator can see how many calls
+- **Operations on the same page:** lane state (queue depths, each local host's gate size, the
+  jobs holding it and waiting for it, and its interruptions), a warning when two workers serve
+  the same local host (section 11), the AI threads per worker so an operator can see how many calls
   can run at once (section 11), where the config came from (UI, `AI_CONFIG` or the deprecated ENV)
   with a warning when workers loaded different digests. "Re-probe" enqueues probe jobs; the web
   never calls a model.
@@ -1810,7 +1879,8 @@ and a PDF import.
   model's `context_window` is larger ("qwen3-8b declares 32768, the server runs 8192"), because
   batches sized for the declared window would be truncated. Nothing is changed automatically.
   - `llama_cpp_props`: `GET /props`, `default_generation_settings.n_ctx`, the context of one slot
-    (the server's total divided by its parallel slots), which is what one request gets.
+    (the server's total divided by its parallel slots, unless it runs with `--kv-unified`), which
+    is what one request gets. The same call's `total_slots` sizes the host's gate (section 11).
   - `ollama_show`: `POST /api/show`, `model_info["<architecture>.context_length"]`, the model's
     maximum. Ollama doesn't report the context it actually loads, so this check only catches a
     declared window above the model's maximum.
@@ -2041,8 +2111,8 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
 - `ai_escalation_test.rb`: invalid output from the first model escalates once to the next route
   on the same endpoint without a down mark; an unhealthy server fails over to a different server
   and is marked down; two endpoint rows on one server share a down mark, and two local endpoints
-  on one host (different ports) share a slot, with chat ahead of embedding; a busy local host
-  never sends a call to the next route; cloud routes never wait; a 429 or 401 marks only the key
+  on one host (different ports) share a gate, with chat ahead of embedding; a busy local host
+  never sends a call to the next route; an interrupted request is sent again on the same route; cloud routes never wait; a 429 or 401 marks only the key
   that got it; other `Refused` errors aren't retried.
 - `ai_family_key_test.rb`: a family's key is used for its calls and the endpoint's key for
   everyone else's; a failing family key fails over to the next route and never retries with the
@@ -2051,13 +2121,17 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
   `ai:export_config`.
 - `ai_feature_guard_test.rb`: every controller action that starts an AI feature declares
   `requires_ai` for it, and `requires_ai` reads nothing but `Ai.availability`.
-- `ai_capsule_only_test.rb`: a transport called outside the `ai` capsule raises, including from a
+- `ai_capsule_only_test.rb`: a transport called outside the AI capsules raises, including from a
   web request and a rule job.
 - `ai_completion_hook_test.rb`: every generation that applies results calls its owner's hook
   once per applied batch.
 - `ai_nested_call_test.rb`: a chat turn that calls `search_family_files` completes when the chat
-  and embedding servers share one local host's slot, and the nested call is recorded with the
+  and embedding servers share one local host's gate, and the nested call is recorded with the
   chat's correlation id.
+- `ai_gate_test.rb`: waiters go in lane order; an interactive call interrupts the lowest running
+  lane and never another interactive call; a background call raises `Busy` instead of waiting;
+  with two or more slots one is kept for the interactive lane; the gate is sized from
+  `parallel_requests` or llama.cpp's `total_slots`; cloud endpoints have none.
 - `mcp_ai_tools_test.rb`: an AI-dependent MCP tool is listed only when its feature is available
   for the token's user, and no MCP request calls a transport.
 - `ai_chat_mode_test.rb`: in external mode every chat entry point (chat page, API, "Dig in with
@@ -2124,7 +2198,7 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | `assistant_type` becomes chat mode; `ASSISTANT_TYPE` and `CATEGORIZATION_PROVIDER` overrides go | `mcp_only`, the family Jev choice | `mcp_only` → chat switched off on the AI features page (MCP is unaffected); the Jev choice of a single-family instance goes into the `categorize` route | Multi-family instances: the admin puts Jev in the route if wanted |
 | Two-level consent (PR 6) | Background AI needs the family's consent per feature | Section 6 | Family admins review the AI features page; members get a notice |
 | Prompt overrides, one per feature | Overrides stored under provider keys | Section 8.3 | Shown only where an override was dropped |
-| Three lane queues | `ai_high_priority`, `ai_low_priority`, custom `sidekiq.yml`, `SidekiqHealth::AI_QUEUES` | The capsule drains the old queues for one release; old job classes are shims | Update a custom `sidekiq.yml` |
+| Three lane queues and the `ai_chat` capsule | `ai_high_priority`, `ai_low_priority`, custom `sidekiq.yml`, `SidekiqHealth::AI_QUEUES` | The `ai` capsule drains the old queues for one release; old job classes are shims | Update a custom `sidekiq.yml`; with several workers on one local host, set `RAILS_AI_MAX_THREADS=0` on all but one |
 | `Ai::GenerationJob` and `Ai::ShadowJob` replace the AI job classes | Jobs queued in Redis | Shims for one release | — |
 | `CategorizationComparison` → `Ai::Comparison` | A persisted table | Rows copied | — |
 | `llm_usages.operation` values become feature keys | Usage history under old names | Rows rewritten | The usage page sums per feature |
@@ -2169,7 +2243,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    criteria it covered local servers in containers, the proxy, OpenRouter's free models,
    reasoning switches, Jev, Sure's tools in RubyLLM's loop, switching providers mid-chat, PDF
    import and local OCR, OpenAI vector stores, every RubyLLM 2.1 feature and its ecosystem gems,
-   and a decisions register. PR 2 records live cassettes for Anthropic's and OpenAI's successful
+   job runners and chat priority on one CPU (Sidekiq threads against Solid Queue and Async::Job
+   fibers, llama.cpp's slots, interrupting background calls; section 11 is built on it), and a
+   decisions register. PR 2 records live cassettes for Anthropic's and OpenAI's successful
    paths before relying on them: the spike's keys had no credits.
 2. **Generations: every AI call except chat.**
    - **Routing:** `Ai::Config`, built in memory in each process by `Ai::LegacyEnvConfig` from
@@ -2200,8 +2276,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      contract test, the AI test helpers (section 17), the recorded-eval CI gate and the `ai-live`
      label.
 
-   `Generation#call` takes the plan's first route that isn't down; PR 5 puts the slot around
-   that choice.
+   `Generation#call` takes the plan's first route that isn't down; PR 5 adds the gate inside the
+   transport.
    *Still on old code:* chat, through `Assistant`, `Provider::Openai` and `Provider::Anthropic`'s
    chat methods and `Chat.default_model`, reading the same ENV and `Setting` fields. Smart-fill,
    smart-configure, document embedding and the MCP AI tools call their owners on the web thread,
@@ -2225,9 +2301,10 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    checks in the plumbing (section 12). Capsule-only enforcement, now that no AI call is left on a
    web thread. Adds the capsule-only and completion-hook tests.
 5. **Sequencer.** The three lane queues replacing `ai_high_priority` and `ai_low_priority` (the
-   capsule drains the old two for one release), one slot per local host, Rules 1 and 2, nested
-   calls under the parent's slot, and the slot state the chat watchdog reads. Replaces #4444. Adds
-   the lane test and the sequencer cases of the escalation test.
+   `ai` capsule drains the old two for one release), the `ai_chat` capsule, one gate per local
+   host in RubyLLM's instrumenter sized from the server, Rules 1 to 3 with streamed, interruptible
+   background and prompt calls on local hosts, and the gate state the chat watchdog reads.
+   Replaces #4444. Adds the lane and gate tests and the sequencer cases of the escalation test.
 6. **Configuration in the database.** The tables (`ai_endpoints`, `ai_models`, `ai_routes`),
    presets, `Ai::ConfigFile` and `AI_CONFIG`, `ai:export_config`, the data migration of
    UI-stored settings, the version stamp, and the source rule. `Ai::Config` now reads the tables,
