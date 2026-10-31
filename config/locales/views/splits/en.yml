@@ -4,6 +4,7 @@ en:
     new:
       title: Split Transaction
       description: Split this transaction into multiple entries with different categories and amounts.
+      pending_warning: This transaction is still pending. Your splits will be saved. If the posted amount matches, the split is kept automatically. If the amount changes (e.g. a tip was added), you will be asked to review the posted transaction.
       submit: Split Transaction
       cancel: Cancel
       add_row: Add split
