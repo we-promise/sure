@@ -330,6 +330,8 @@ class Family::DataImporter
           notes: data["notes"],
           status: importable_account_status(data["status"])
         )
+        # Older exports predate the choice and keep the account's own.
+        account.logo_selection = data["logo_selection"] if Account.logo_selections.key?(data["logo_selection"])
 
         account.save!
 

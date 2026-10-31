@@ -1210,6 +1210,181 @@ class AccountTest < ActiveSupport::TestCase
     assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
   end
 
+  test "institution_domain is normalized to a bare host" do
+    {
+      "https://www.tbank.ru/" => "tbank.ru",
+      "https://www.krungsri.com/en/personal" => "krungsri.com",
+      "  HTTP://Chase.com:443/?q=1#top " => "chase.com",
+      "www.example.co.uk" => "example.co.uk",
+      "sberbank.ru" => "sberbank.ru"
+    }.each do |input, expected|
+      @account.update!(institution_domain: input)
+      assert_equal expected, @account.read_attribute(:institution_domain), "for #{input.inspect}"
+    end
+
+    @account.update!(institution_domain: "   ")
+    assert_nil @account.read_attribute(:institution_domain)
+  end
+
+  test "logo_url builds a Brandfetch URL from a legacy unnormalized domain" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update_column(:institution_domain, "https://www.tbank.ru/")
+
+    assert_match %r{\Ahttps://cdn\.brandfetch\.io/tbank\.ru/icon/}, @account.logo_url
+  end
+
+  test "an uploaded logo wins over the Brandfetch icon" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png")
+
+    assert_equal Rails.application.routes.url_helpers.rails_blob_path(@account.logo, only_path: true), @account.logo_url
+  end
+
+  test "logo must be a small raster image" do
+    @account.logo = { io: file_fixture("test.txt").open, filename: "logo.txt" }
+    assert_not @account.valid?
+    assert @account.errors.added?(:logo, :invalid_content_type)
+
+    @account.logo = { io: StringIO.new("\x89PNG\r\n\x1a\n".b + "\x00" * Account::LOGO_MAX_SIZE), filename: "logo.png", content_type: "image/png" }
+    assert_not @account.valid?
+    assert @account.errors.added?(:logo, :too_large, max_size: 1)
+  end
+
+  test "choosing Brandfetch shows it while keeping the stored logo" do
+    @account.update!(institution_domain: "tbank.ru", logo_selection: "brandfetch")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png")
+
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    assert_match %r{\Ahttps://cdn\.brandfetch\.io/tbank\.ru/}, @account.logo_url
+    assert @account.logo.attached?
+
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+    assert_equal Rails.application.routes.url_helpers.rails_blob_path(@account.logo, only_path: true), @account.logo_url
+  end
+
+  test "choose_logo switches between Brandfetch and the stored logo without deleting it" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+    Account::LogoFetcher.any_instance.expects(:fetch).never
+
+    assert @account.choose_logo("brandfetch")
+    assert @account.reload.logo_brandfetch?
+
+    assert @account.choose_logo("stored")
+    assert @account.reload.logo_automatic?
+    assert @account.logo.attached?
+  end
+
+  test "choose_logo downloads a picked icon by its key" do
+    Account::LogoFetcher.any_instance.expects(:fetch).with(source: "appstore:123").returns(true)
+
+    assert @account.choose_logo("appstore:123")
+  end
+
+  test "removing the stored logo brings back the fallback" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+    assert_equal @account.stored_logo_url, @account.logo_url
+
+    @account.choose_logo("remove")
+
+    assert_equal @account.brandfetch_logo_url, @account.reload.logo_url
+    assert_equal @account.fallback_logo_url, @account.logo_url
+  end
+
+  test "clearing the domain drops an automatic icon but keeps an uploaded one" do
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "tbank.ru.png",
+                         metadata: { "logo_source" => "google", "logo_key" => "google", "logo_auto" => true })
+    @account.update!(institution_domain: "")
+    assert_not @account.reload.logo.attached?
+
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+    @account.update!(institution_domain: "")
+    assert @account.reload.logo.attached?
+  end
+
+  test "stored_logo? matches a favicon key only for the domain it was fetched for" do
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "tbank.ru.png",
+                         metadata: { "logo_source" => "google", "logo_key" => "google" })
+    assert @account.stored_logo?("google")
+
+    @account.institution_domain = "sberbank.ru"
+    assert_not @account.stored_logo?("google")
+  end
+
+  test "a stored logo from before the upload check does not block saves" do
+    # Attached around the validation, as a logo stored before it existed.
+    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new("<svg/>"), filename: "old.svg", content_type: "image/svg+xml")
+    ActiveStorage::Attachment.create!(name: "logo", record: @account, blob: blob)
+    assert @account.reload.logo.attached?
+
+    assert @account.update(name: "Renamed")
+  end
+
+  test "clearing the domain keeps the automatic icon when the provider supplies one" do
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "tbank.ru.png",
+                         metadata: { "logo_source" => "google", "logo_key" => "google", "logo_auto" => true })
+    @account.stubs(:provider).returns(stub(institution_domain: "tbank.ru"))
+
+    assert_enqueued_with(job: AccountLogoFetchJob) { @account.update!(institution_domain: "") }
+    assert @account.reload.logo.attached?
+  end
+
+  test "uploading or removing a logo touches the account" do
+    @account.update_columns(updated_at: 1.day.ago)
+    @account.update!(logo: { io: file_fixture("square-placeholder.png").open, filename: "mine.png", content_type: "image/png" })
+    assert_operator @account.reload.updated_at, :>, 1.hour.ago
+
+    @account.update_columns(updated_at: 1.day.ago)
+    @account.choose_logo("remove")
+    assert_operator @account.reload.updated_at, :>, 1.hour.ago
+  end
+
+  test "choose_logo removes the stored logo" do
+    @account.update!(logo_selection: "brandfetch")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+
+    assert @account.choose_logo("remove")
+    assert_not @account.reload.logo.attached?
+    assert @account.logo_automatic?
+  end
+
+  test "only empty or automatically picked logos are fetched automatically" do
+    @account.update!(institution_domain: "tbank.ru")
+    assert @account.logo_auto_fetchable?
+
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+    assert_not @account.logo_auto_fetchable?, "an uploaded logo stays"
+
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "tbank.ru.png",
+                         metadata: { "logo_source" => "google", "logo_auto" => true })
+    assert @account.logo_auto_fetchable?
+
+    @account.update!(logo_selection: "brandfetch")
+    assert_not @account.logo_auto_fetchable?, "a chosen Brandfetch logo stays"
+
+    @account.update!(logo_selection: "automatic", institution_domain: nil)
+    assert_not @account.logo_auto_fetchable?
+  end
+
+  test "setting or changing the institution domain fetches a logo in the background" do
+    assert_enqueued_with(job: AccountLogoFetchJob, args: [ @account ]) do
+      @account.update!(institution_domain: "tbank.ru")
+    end
+
+    assert_no_enqueued_jobs(only: AccountLogoFetchJob) do
+      @account.update!(name: "Renamed")
+      @account.update!(institution_domain: nil)
+    end
+  end
+
   private
     def create_loan_with_start_date(start_date, opening_balance_date)
       Account.create_and_sync(

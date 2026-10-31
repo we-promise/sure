@@ -28,6 +28,36 @@ en:
       data_not_available: Data not available for the selected period
     create:
       success: "%{type} account created"
+    logo_caption:
+      appstore: From the App Store
+      brandfetch: From Brandfetch
+      duckduckgo: From DuckDuckGo
+      google: From Google
+      googleplay: From Google Play
+      none: No icon yet
+      rustore: From RuStore
+      uploaded: Uploaded by you
+      yandex: From Yandex
+    logo_field:
+      current: current
+      domain_needed: Enter the institution domain, such as tbank.ru, to pick an icon.
+      empty: No icons found for this domain. Upload your own below.
+      pick: Pick icon
+      pending: Applied when you save
+      remove: Remove
+      removal: Removed when you save; the automatic icon comes back
+      searching: Searching…
+    logo_options:
+      size: "%{size} px"
+      sources:
+        appstore: App Store
+        brandfetch: Brandfetch
+        duckduckgo: DuckDuckGo
+        google: Google
+        googleplay: Google Play
+        rustore: RuStore
+        yandex: Yandex
+      stored: Saved icon
     set_default:
       depository_only: "Only cash and credit card accounts can be set as default."
     destroy:
@@ -48,6 +78,11 @@ en:
       institution_name_placeholder: e.g., Chase Bank
       institution_domain_label: Institution domain
       institution_domain_placeholder: e.g., chase.com
+      institution_domain_hint: Used to find the institution's icon.
+      institution_domain_missing_logo_key_hint: Used to find the institution's icon. Brandfetch logos are not available because no Brandfetch client ID is configured.
+      institution_domain_settings_link: Add one in Self-Hosting settings
+      logo_label: Icon
+      logo_hint: Or upload your own PNG, JPEG, GIF, WebP or ICO image up to 1 MB. It replaces the Brandfetch logo.
       notes_label: Notes
       notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
       exclude_from_reports: Exclude from all reports
@@ -132,6 +167,7 @@ en:
         include_in_reports: Include in reports
     update:
       success: "%{type} account updated"
+      logo_not_applied: The account was saved, but the chosen icon could not be downloaded. Try again or upload your own.
     sidebar:
       missing_data: Missing historical data
       missing_data_description: "%{product} uses third party providers to fetch historical exchange rates, security prices, and more. This data is required to calculate accurate historical account balances."
