@@ -9,6 +9,10 @@ on:
         type: string
   workflow_call:
     inputs:
+      app_version:
+        description: Selected mobile release version (v-prefix allowed)
+        required: false
+        type: string
       notes:
         description: "TestFlight release notes"
         required: false
@@ -21,8 +25,40 @@ permissions:
   contents: read
 
 jobs:
+  validate-release:
+    runs-on: ubuntu-latest
+    outputs:
+      eligible: ${{ steps.release.outputs.eligible }}
+    steps:
+      - name: Validate automatic release tag
+        id: release
+        shell: bash
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            # Mobile-only callers pass their selected version explicitly.
+            if [[ "$GITHUB_REF" == refs/tags/mobile-v* && -n "$APP_VERSION_INPUT" ]]; then
+              echo "eligible=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            version="${GITHUB_REF#refs/tags/v}"
+            if [[ ! "$GITHUB_REF" == refs/tags/v* || ! "$version" =~ ^[2-9][0-9]{3}\.[1-9][0-9]?\.[1-9][0-9]?(-alpha)?$ ]]; then
+              echo "eligible=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            base="${version%%-*}"
+            if [[ "$(date -u -d "${base//./-}" +%Y.%-m.%-d 2>/dev/null)" != "$base" ]]; then
+              echo "eligible=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "eligible=true" >> "$GITHUB_OUTPUT"
+
   build-and-upload:
-    if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/v0.')
+    needs: [validate-release]
+    if: needs.validate-release.outputs.eligible == 'true'
     name: Build signed IPA and upload to TestFlight
     runs-on: macos-26
     timeout-minutes: 120
@@ -32,6 +68,24 @@ jobs:
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           persist-credentials: false
+
+      - name: Resolve app version
+        id: version
+        shell: bash
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$APP_VERSION_INPUT" ]]; then
+            version="${APP_VERSION_INPUT#v}"
+          elif [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(sed -n 's/^version: *//p' mobile/pubspec.yaml)"
+            version="${version%%+*}"
+          fi
+          printf '%s\n' "$version" > .sure-version
+          echo "ios_version=${version%%-*}" >> "$GITHUB_OUTPUT"
 
       - name: Check TestFlight credentials
         id: check_prereqs
@@ -154,6 +208,7 @@ jobs:
         working-directory: mobile
         if: ${{ steps.check_prereqs.outputs.enabled == 'true' }}
         env:
+          IOS_VERSION: ${{ steps.version.outputs.ios_version }}
           APP_BUNDLE_ID: ${{ vars.IOS_APP_BUNDLE_ID || 'am.sure.mobile' }}
           IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
           PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
@@ -161,14 +216,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
-            version="${GITHUB_REF_NAME#v}"
-          else
-            version="$(sed -n 's/^version: *//p' pubspec.yaml)"
-            version="${version%%+*}"
-          fi
-          printf '%s\n' "$version" > ../.sure-version
-          IOS_VERSION="${version%%-*}"
           IOS_BUILD_NUMBER="$(date -u +%Y%m%d%H%M)"
           ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
           EXPORT_PATH="$PWD/build/ios/ipa"
