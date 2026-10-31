@@ -1,0 +1,38 @@
+# Cloud in a Bottle app manifest for Sure.
+# Spec: https://cloudinabottle.org/docs/creating_an_app/manifest_spec.html
+#
+# Cloud in a Bottle runs one container per app, so this manifest points at an
+# all-in-one image (cloudinabottle/Dockerfile) that runs the whole Sure stack:
+# Rails web + Sidekiq worker + PostgreSQL + Redis in a single container.
+
+[app]
+name = "sure"
+version = "0.1.0"
+description = "Sure personal finance (all-in-one: web, worker, PostgreSQL, Redis)"
+authors = ["we-promise"]
+
+[runtime.container]
+image = "cloudinabottle/Dockerfile"
+port = 3000
+
+[routing]
+# Rails built-in health endpoint (config/routes.rb: rails/health#show).
+health_check = "/up"
+# No public_paths: every route stays behind the Cloud in a Bottle owner
+# login, and Sure's own signup/login runs inside that. To use Sure's API
+# (mobile app, MCP) or bank-sync webhooks from outside the zone, expose them
+# explicitly, e.g. public_paths = ["/api/", "/webhooks/"] - Sure's own auth
+# still applies to anything you expose.
+
+[resources]
+# 2 GB is the smallest size known to run the full Sure stack comfortably
+# (512 Mi reliably OOMs on demo-data generation). Raise for heavier use.
+memory_mb = 2048
+build_memory_mb = 2048
+cpu_cores = 1.0
+
+[data]
+# Permanent tier: PostgreSQL cluster, Redis AOF, uploaded files, and the
+# generated SECRET_KEY_BASE / database password all live here and are picked
+# up by the instance's bundled backup app.
+app_data = true
