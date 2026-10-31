@@ -49,3 +49,4 @@ zh-CN:
       update:
         success: 用户角色更新成功。
         failure: 更新用户角色失败。
+        last_super_admin_error: 无法移除系统中的最后一位超级管理员。

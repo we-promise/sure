@@ -17,6 +17,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "show points an unmatched transaction with a counterpart to the transfer matcher" do
+    outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
+    create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "a[href='#{new_transaction_transfer_match_path(outflow)}']", text: I18n.t("transactions.transaction.transfer_hint")
+  end
+
   test "show filters account activity to uncategorized transactions" do
     uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
     categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))
@@ -375,6 +385,24 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     get accounts_url
     assert_includes response.body, title
+  end
+
+  # The default trail ends on "Accounts", which is never a link, so an account's
+  # page had no way back to the accounts list.
+  test "show links the Accounts crumb back to the accounts list" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-breadcrumbs] a[href=?]", accounts_path, text: I18n.t("breadcrumbs.accounts")
+    assert_select "[data-breadcrumbs] > span:last-child", text: @account.name
+  end
+
+  test "the accounts list itself stays the unlinked current crumb" do
+    get accounts_url
+
+    assert_response :success
+    assert_select "[data-breadcrumbs] a[href=?]", accounts_path, count: 0
+    assert_select "[data-breadcrumbs] > span:last-child", text: I18n.t("breadcrumbs.accounts")
   end
 
   test "index offers a QR login on a Trade Republic connection that needs one" do

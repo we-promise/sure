@@ -31,8 +31,12 @@ fr:
       categories_incomes: Catégories de revenus
       delete_all: Supprimer tout
       empty: Aucune catégorie trouvée
+      lock_categories: Verrouiller la création de catégories
+      locked_message: La création de catégories est verrouillée. Les imports et les synchronisations bancaires peuvent toujours ajouter des catégories.
       merge: Fusionner les catégories
       new: Nouvelle catégorie
+      unlock_categories: Déverrouiller la création de catégories
+    locked: Les catégories sont verrouillées. Déverrouillez-les pour ajouter une nouvelle catégorie.
     merge:
       description: Sélectionnez une catégorie cible et les catégories à y fusionner. Les transactions et lignes budgétaires correspondantes seront déplacées vers la cible.
       select_target: Sélectionner la catégorie cible...
@@ -51,6 +55,9 @@ fr:
         other: "%{count} catégories fusionnées avec succès"
       target_not_found: Catégorie cible non trouvée
       target_selected_as_source: Choisissez des catégories différentes pour la cible et les sources.
+    toggle_lock:
+      locked: Catégories verrouillées
+      unlocked: Catégories déverrouillées
     update:
       success: Catégorie mise à jour avec succès
     virtual:

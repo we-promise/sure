@@ -83,6 +83,11 @@ class AccountsController < ApplicationController
   end
 
   def show
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.accounts"), accounts_path ],
+      [ @account.name, nil ]
+    ]
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     # One reference date for everything on the page that is date-sensitive:
@@ -150,12 +155,10 @@ class AccountsController < ApplicationController
       ).call
     end
 
+    @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates(transactions, user: Current.user)
+
     entry_ids = @entries.map(&:id)
-    @split_parent_entry_ids = if entry_ids.any?
-      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
-    else
-      Set.new
-    end
+    @split_parent_entry_ids = Entry.split_parent_ids_among(entry_ids)
 
     # Load split parent entries for grouped display (only when grouping is enabled)
     @split_parents = if Current.user.show_split_grouped?

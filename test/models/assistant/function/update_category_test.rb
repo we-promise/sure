@@ -31,6 +31,15 @@ class Assistant::Function::UpdateCategoryTest < ActiveSupport::TestCase
     assert_equal "#6471eb", @category.reload.color
   end
 
+  test "changing a parent's color also changes its subcategories" do
+    subcategory = @family.categories.create!(name: "Takeout", color: "#000000", parent: @category)
+
+    result = @fn.call("id" => @category.id, "color" => "#6471eb")
+
+    assert result[:success]
+    assert_equal "#6471eb", subcategory.reload.color
+  end
+
   test "updates category icon" do
     result = @fn.call("id" => @category.id, "icon" => "pizza")
 
@@ -100,5 +109,62 @@ class Assistant::Function::UpdateCategoryTest < ActiveSupport::TestCase
 
     assert_equal false, result[:success]
     assert_equal "not_found", result[:error]
+  end
+
+  test "moves a category under a new parent and inherits its color" do
+    parent = categories(:income)
+
+    result = @fn.call("id" => categories(:one).id, "parent_id" => parent.id)
+
+    assert result[:success]
+    assert_equal parent.id, result[:category][:parent_id]
+    assert_equal parent.id, categories(:one).reload.parent_id
+    assert_equal parent.color, categories(:one).reload.color
+  end
+
+  test "empty parent_id promotes a subcategory to top-level" do
+    sub = categories(:subcategory)
+
+    result = @fn.call("id" => sub.id, "parent_id" => "")
+
+    assert result[:success]
+    assert_nil sub.reload.parent_id
+  end
+
+  test "soft error when moving a category with subcategories under a parent" do
+    result = @fn.call("id" => @category.id, "parent_id" => categories(:income).id)
+
+    assert_equal "validation_failed", result[:error]
+    assert_nil @category.reload.parent_id
+  end
+
+  test "soft error when parent is the category itself" do
+    result = @fn.call("id" => @category.id, "parent_id" => @category.id)
+
+    assert_equal "invalid_parent", result[:error]
+  end
+
+  test "null parent_id leaves the hierarchy unchanged" do
+    sub = categories(:subcategory)
+
+    result = @fn.call("id" => sub.id, "parent_id" => nil)
+
+    assert_equal "no_changes", result[:error]
+    assert_equal categories(:food_and_drink).id, sub.reload.parent_id
+  end
+
+  test "whitespace-only parent_id does not promote" do
+    sub = categories(:subcategory)
+
+    result = @fn.call("id" => sub.id, "parent_id" => "   ")
+
+    assert_equal "parent_not_found", result[:error]
+    assert_equal categories(:food_and_drink).id, sub.reload.parent_id
+  end
+
+  test "soft error when parent not found" do
+    result = @fn.call("id" => @category.id, "parent_id" => "00000000-0000-0000-0000-000000000000")
+
+    assert_equal "parent_not_found", result[:error]
   end
 end
