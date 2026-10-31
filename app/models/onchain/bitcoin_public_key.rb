@@ -20,7 +20,8 @@ module Onchain
       # version(4) depth(1) parent fingerprint(4) child number(4) chain code(32) key(33)
       payload = self.class.base58check_decode(text)
       raise InvalidKey, "Invalid extended public key" unless payload&.bytesize == 78 && VERSIONS.include?(payload[0, 4].unpack1("H*"))
-      raise InvalidKey, "Use an account-level extended public key" unless payload.getbyte(4) == 3
+      # Hardened account node: BIP84 m/84'/0'/n' (depth 3) or Electrum's segwit m/0' (depth 1).
+      raise InvalidKey, "Use an account-level extended public key" unless [ 1, 3 ].include?(payload.getbyte(4)) && payload[9, 4].unpack1("N") >= 0x80000000
 
       @chain_code = payload[13, 32]
       @pub = payload[45, 33]
@@ -46,7 +47,8 @@ module Onchain
 
     # Identify public key material independently of its xpub/zpub version bytes,
     # so equivalent encodings cannot create duplicate sources. The key is hashed
-    # as hex and the chain code as bytes, as stored fingerprints were computed.
+    # as hex and the chain code as bytes, matching fingerprints already stored
+    # by the #3753 preview.
     def fingerprint
       Digest::SHA256.hexdigest(@pub.unpack1("H*") + @chain_code)
     end
@@ -72,9 +74,7 @@ module Onchain
     # unchanged so checksum validation rejects it rather than silently repairing it.
     def self.canonical_address(value)
       text = value.to_s.strip
-      return text if text.match?(/\Abc1/i) && text != text.downcase && text != text.upcase
-
-      text.match?(/\Abc1/i) ? text.downcase : text
+      text.start_with?("BC1") && text == text.upcase ? text.downcase : text
     end
 
     # Decode Base58Check, returning nil when the checksum does not match.

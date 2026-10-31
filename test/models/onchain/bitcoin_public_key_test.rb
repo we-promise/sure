@@ -42,6 +42,19 @@ class Onchain::BitcoinPublicKeyTest < ActiveSupport::TestCase
     assert_raises(Onchain::BitcoinPublicKey::InvalidKey) { Onchain::BitcoinPublicKey.new(ZPUB.chop + "a") }
   end
 
+  test "accepts only hardened account-level keys" do
+    # BIP32 test vectors: m/0H is the depth-1 node Electrum segwit seeds export;
+    # the master key (depth 0) and non-hardened m/0 are not accounts.
+    assert Onchain::BitcoinPublicKey.new("xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw").address(0, 0).start_with?("bc1q")
+    %w[
+      xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8
+      xpub69H7F5d8KSRgmmdJg2KhpAK8SR3DjMwAdkxj3ZuxV27CprR9LgpeyGmXUbC6wb7ERfvrnKZjXoUmmDznezpbZb7ap6r1D3tgFxHmwMkQTPH
+    ].each do |value|
+      error = assert_raises(Onchain::BitcoinPublicKey::InvalidKey) { Onchain::BitcoinPublicKey.new(value) }
+      assert_equal "Use an account-level extended public key", error.message
+    end
+  end
+
   test "validates Bitcoin addresses using their checksum" do
     assert Onchain::BitcoinPublicKey.valid_address?(RECEIVE)
     refute Onchain::BitcoinPublicKey.valid_address?(RECEIVE.chop + "a")

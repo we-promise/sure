@@ -25,6 +25,7 @@ class Onchain::BitcoinAdapterTest < ActiveSupport::TestCase
       "not-an-address",
       "1A1zP1eP5QGefi2DMPTfTL5SLmv7Divf0a",         # Base58 excludes 0
       "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdb", # bech32 excludes b
+      "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdz", # last character mistyped: checksum fails
       "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", # an EVM address
       "xpub6CUGRUonZSQ4TWtTMmzXdrXDtypWKiKrhko4egpiMZbpiaQL2jkwSB1icqYh2cfDfVxdx4df189oLKnC5fSwqPfgyP3hooxujYzAu3fDVmz"
     ].each do |address|
