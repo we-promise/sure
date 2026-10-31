@@ -419,39 +419,18 @@ class BudgetCategory < ApplicationRecord
     # is counted.
     def bills_reservation
       @bills_reservation ||= begin
-        occurrences = RecurringOccurrence
-                        .open_status
-                        .joins(:recurring_transaction)
-                        .where(recurring_transactions: {
-                                 family_id: budget.family_id,
-                                 category_id: category_id,
-                                 status: :active,
-                                 destination_account_id: nil
-                               })
-                        .where("recurring_transactions.amount > 0")
-                        .where(due_on: budget.start_date..budget.end_date)
-                        .includes(:recurring_transaction)
-                        .to_a
-
-        # One grouped sum for the whole set. Reading remaining_amount straight
-        # off each row issues a SUM per occurrence, which is a query count that
-        # grows with the number of bills the user has.
-        sums = RecurringAllocation.confirmed
-                                  .where(recurring_occurrence_id: occurrences.map(&:id))
-                                  .group(:recurring_occurrence_id)
-                                  .sum(:allocated_amount)
+        # Loaded once per budget (with confirmed allocations pre-summed) and
+        # shared across its categories, so rendering N category cards does not
+        # issue N occurrence queries.
+        occurrences = budget.open_bill_occurrences_by_category.fetch(category_id, [])
 
         unconvertible = 0
 
         total = occurrences.reduce(Money.new(0, currency)) do |sum, occurrence|
-          occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
-
-          begin
-            sum + occurrence.remaining_amount_money.exchange_to(currency)
-          rescue Money::ConversionError
-            unconvertible += 1
-            sum
-          end
+          sum + occurrence.remaining_amount_money.exchange_to(currency)
+        rescue Money::ConversionError
+          unconvertible += 1
+          sum
         end
 
         [ total, unconvertible ]

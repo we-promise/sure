@@ -510,6 +510,40 @@ class Budget < ApplicationRecord
     remaining_expected_income.abs / expected_income.to_f * 100
   end
 
+  # Open bill occurrences due inside this budget period, grouped by the
+  # category of their series. Loaded once per budget so every
+  # BudgetCategory#bills_reserved on the page reads from memory instead of
+  # issuing its own occurrence query and allocation SUM (an N+1 per category).
+  # Each occurrence carries its confirmed allocated amount pre-summed.
+  def open_bill_occurrences_by_category
+    @open_bill_occurrences_by_category ||= begin
+      occurrences = RecurringOccurrence
+                      .open_status
+                      .joins(:recurring_transaction)
+                      .where(recurring_transactions: {
+                               family_id: family_id,
+                               status: :active,
+                               destination_account_id: nil
+                             })
+                      .where("recurring_transactions.amount > 0")
+                      .where(due_on: start_date..end_date)
+                      .includes(:recurring_transaction)
+                      .to_a
+
+      # One grouped sum for the whole set rather than one per occurrence.
+      sums = RecurringAllocation.confirmed
+                                .where(recurring_occurrence_id: occurrences.map(&:id))
+                                .group(:recurring_occurrence_id)
+                                .sum(:allocated_amount)
+
+      occurrences.each do |occurrence|
+        occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
+      end
+
+      occurrences.group_by { |occurrence| occurrence.recurring_transaction.category_id }
+    end
+  end
+
   private
     # Use the same known-subtotal policy as goal backing. A foreign balance
     # without a rate is unavailable, never newly "free" cash at a 1:1 rate.
