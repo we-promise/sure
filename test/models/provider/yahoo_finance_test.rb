@@ -880,7 +880,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
         attributes[:metadata][:exception_class] == "Faraday::ConnectionFailed"
     end
 
-    result = @provider.send(:fetch_chart_data, "EURUSD=X", Date.current - 5.days, Date.current) { |ts, close| close }
+    result = @provider.send(:fetch_chart_data, "EURUSD=X", Date.current - 5.days, Date.current, currency: "USD") { |ts, close| close }
 
     assert_nil result
   end
