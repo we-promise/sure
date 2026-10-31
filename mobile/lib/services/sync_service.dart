@@ -494,7 +494,7 @@ class SyncService with ChangeNotifier {
   Future<SyncResult> syncAccounts(String accessToken) async {
     try {
       final result =
-          await _accountsService.getAccounts(accessToken: accessToken);
+          await _accountsService.getAllAccounts(accessToken: accessToken);
 
       if (result['success'] == true) {
         final accountsList = result['accounts'] as List<dynamic>? ?? [];

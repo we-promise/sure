@@ -46,8 +46,10 @@ pt-BR:
         access_token_placeholder: Insira seu token de acesso aqui
         uri_base_label: URL Base da API (Opcional)
         uri_base_placeholder: "https://api.openai.com/v1 (padrão)"
+        uri_base_local_help: "Para um modelo no seu próprio computador, informe o endpoint compatível com OpenAI, por exemplo Ollama em http://localhost:11434/v1, ou http://ollama:11434/v1 quando o Sure e o Ollama rodam como serviços do Docker Compose."
         model_label: Modelo (Opcional)
         model_placeholder: "gpt-4.1 (padrão)"
+        model_required_help: "Obrigatório quando você define uma URL base da API: informe o nome do modelo usado pelo seu servidor, como llama3.1 para o Ollama."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

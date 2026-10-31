@@ -5,6 +5,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   include ProviderTestHelper
 
   setup do
+    # setting[...] values are instance-wide, so saving them takes a super
+    # admin. Promote the fixture admin rather than switching users so the
+    # family-scoped assertions below keep using dylan_family.
+    users(:family_admin).update!(role: :super_admin)
     sign_in users(:family_admin)
 
     @provider = mock
@@ -28,7 +32,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id].each do |key|
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id
+       market_data_sync_enabled market_data_sync_time market_data_sync_timezone].each do |key|
       Setting.public_send("#{key}=", nil)
     end
   end
@@ -42,6 +47,78 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
     patch settings_hosting_url, params: { setting: { onboarding_state: "invite_only" } }
     assert_response :forbidden
+  end
+
+  test "a family admin cannot change instance-wide settings on an instance with several families" do
+    with_self_hosting do
+      sign_in users(:empty)
+
+      patch settings_hosting_url, params: { setting: {
+        openai_access_token: "attacker-token",
+        openai_uri_base: "https://attacker.example/v1",
+        openai_model: "gpt-4.1",
+        external_assistant_url: "https://attacker.example/agent"
+      } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+      assert_nil Setting.openai_access_token
+      assert_nil Setting.external_assistant_url
+      assert_not_equal "https://attacker.example/v1", Setting.openai_uri_base
+    end
+  end
+
+  test "a family admin can still change their own family's assistant type" do
+    with_self_hosting do
+      sign_in users(:empty)
+
+      patch settings_hosting_url, params: { family: { assistant_type: "external" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "external", users(:empty).family.reload.assistant_type
+    end
+  end
+
+  test "a family admin cannot disconnect the instance's external assistant" do
+    Setting.external_assistant_url = "https://agent.example/v1"
+
+    with_self_hosting do
+      sign_in users(:empty)
+
+      delete disconnect_external_assistant_settings_hosting_url
+
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+      assert_equal "https://agent.example/v1", Setting.external_assistant_url
+    end
+  end
+
+  test "a family admin sees why instance-wide settings are not offered" do
+    with_self_hosting do
+      sign_in users(:empty)
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_includes response.body, I18n.t("settings.hostings.show.instance_settings_restricted")
+      assert_select "form input[name^='setting[']", count: 0
+      assert_select "select[name='family[assistant_type]']"
+    end
+  end
+
+  test "the admin of the only family on a self-hosted instance can change instance-wide settings" do
+    with_self_hosting do
+      Family.stubs(:count).returns(1)
+      sign_in users(:empty)
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "own-key" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "own-key", Setting.twelve_data_api_key
+
+      get settings_hosting_url
+      refute_includes response.body, I18n.t("settings.hostings.show.instance_settings_restricted")
+    end
   end
 
   test "should get edit when self hosting is enabled" do
@@ -72,6 +149,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
 
     %w[
+      uri_base_local_help
+      model_required_help
       model_function_calling_help
       model_function_calling_link
       timeout_heading
@@ -84,6 +163,41 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       ai_health_probe_timeout_help
     ].each do |key|
       assert I18n.exists?("settings.hostings.openai_settings.#{key}", :de, fallback: false)
+    end
+  end
+
+  # A custom base URL needs a model, and the controller refuses one without
+  # it, so the form says so rather than leaving "(Optional)" to mislead. It
+  # also names both Ollama endpoints the hosting docs describe: localhost for
+  # a bare-metal install, and the Compose service name, because localhost
+  # inside the Sure container is not the Ollama container.
+  test "the OpenAI settings explain a local model and when the model is required" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      assert_includes response.body, I18n.t("settings.hostings.openai_settings.uri_base_local_help")
+      assert_includes response.body, I18n.t("settings.hostings.openai_settings.model_required_help")
+      assert_includes I18n.t("settings.hostings.openai_settings.uri_base_local_help"), "http://localhost:11434/v1"
+      assert_includes I18n.t("settings.hostings.openai_settings.uri_base_local_help"), "http://ollama:11434/v1"
+
+      # Every locale that translates this form translates both lines, so none
+      # falls back to English for them while the rest of the panel is local.
+      translated = I18n.available_locales.select do |locale|
+        I18n.exists?("settings.hostings.openai_settings", locale, fallback: false)
+      end
+      assert_operator translated.size, :>, 1, "no translated locale was checked"
+
+      translated.each do |locale|
+        %w[uri_base_local_help model_required_help].each do |key|
+          assert I18n.exists?("settings.hostings.openai_settings.#{key}", locale, fallback: false),
+            "#{locale} has an openai_settings block but no #{key}"
+        end
+
+        help = I18n.t("settings.hostings.openai_settings.uri_base_local_help", locale: locale)
+        assert_includes help, "http://localhost:11434/v1", "#{locale} help lost the bare-metal address"
+        assert_includes help, "http://ollama:11434/v1", "#{locale} help lacks the Docker Compose address"
+      end
     end
   end
 
@@ -498,9 +612,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   # A gateway endpoint can carry its key in the userinfo or the query string,
   # and `show` has no admin gate: any member who turns on preview features sees
-  # this panel once the family's provider is Jev. Signed in as that member
-  # rather than the admin, because that is who the endpoint must not reach.
-  test "the jev panel shows a member the endpoint without its credentials" do
+  # the categorization panel once the family's provider is Jev. The Jev
+  # connection is an instance setting, so a member gets no field for it, and
+  # whoever manages it sees the endpoint without its credentials.
+  test "the jev panel shows a member neither the endpoint field nor its credentials" do
     with_self_hosting do
       Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
       member = users(:family_member)
@@ -511,8 +626,22 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       get settings_hosting_url
 
       assert_response :success
-      assert_select "input[name='setting[jev_endpoint]']", 1
-      assert_select "input[name='setting[jev_endpoint]'][value='https://gw.example.com/v1/jev']"
+      assert_select "input[name='setting[jev_endpoint]']", 0
+      assert_no_match(/gw-secret|qk-secret|gw-user/, response.body)
+    end
+  end
+
+  test "the jev panel shows the instance settings manager the endpoint without its credentials" do
+    with_self_hosting do
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      admin = users(:family_admin)
+      admin.family.update!(categorization_provider: "jev")
+      admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => true))
+
+      get settings_hosting_url
+
+      assert_response :success
+      assert_select "input[name='setting[jev_endpoint]'][value='https://gw.example.com/v1/jev']", 1
       assert_no_match(/gw-secret|qk-secret|gw-user/, response.body)
     end
   end
@@ -1309,6 +1438,74 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   ensure
     Setting.securities_providers = ""
     Setting.tinkoff_invest_api_key = nil
+  end
+
+  test "can update market data sync settings when self hosting is enabled" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1", market_data_sync_time: "18:30" } }
+
+      assert_redirected_to settings_hosting_url
+      assert Setting.market_data_sync_enabled
+      assert_equal "18:30", Setting.market_data_sync_time
+
+      job = Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
+      assert job, "Expected the market data cron job to be (re)created"
+      assert_equal "ImportMarketDataJob", job.klass
+    end
+  ensure
+    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
+  end
+
+  test "disabling market data sync removes its cron job" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1" } }
+      assert Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
+
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "0" } }
+      refute Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)
+    end
+  ensure
+    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
+  end
+
+  test "rejects an invalid market data sync time" do
+    with_self_hosting do
+      original_time = Setting.market_data_sync_time
+
+      patch settings_hosting_url, params: { setting: { market_data_sync_time: "not-a-time" } }
+
+      assert_redirected_to settings_hosting_path
+      assert_equal original_time, Setting.market_data_sync_time
+    end
+  end
+
+  test "still applies market_data_sync_enabled when market_data_sync_time in the same request is invalid" do
+    with_self_hosting do
+      Setting.market_data_sync_enabled = false
+
+      patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1", market_data_sync_time: "not-a-time" } }
+
+      assert_redirected_to settings_hosting_path
+      assert Setting.market_data_sync_enabled, "enabled flag from the same submission should not be dropped by the invalid time"
+    end
+  ensure
+    Sidekiq::Cron::Job.find(MarketDataScheduler::JOB_NAME)&.destroy
+  end
+
+  test "logs a failed market data schedule sync to the debug log" do
+    with_self_hosting do
+      MarketDataScheduler.stubs(:sync!).raises(StandardError, "cron create failed")
+
+      assert_difference -> { DebugLogEntry.where(category: "market_data_schedule").count }, 1 do
+        patch settings_hosting_url, params: { setting: { market_data_sync_enabled: "1" } }
+      end
+
+      assert_redirected_to settings_hosting_url
+      entry = DebugLogEntry.where(category: "market_data_schedule").last
+      assert_equal "Settings::HostingsController", entry.source
+      assert_equal users(:family_admin), entry.user
+      assert_equal "cron create failed", entry.metadata["exception_message"]
+    end
   end
 
   private

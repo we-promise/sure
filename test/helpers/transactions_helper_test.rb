@@ -134,6 +134,15 @@ class TransactionsHelperTest < ActionView::TestCase
     refute_includes row[:value], "\\\""
   end
 
+  # Regression: passing the raw operator straight to t() raised
+  # I18n::ArgumentError for nil/blank (an empty key) and resolved a whole
+  # translation subtree for a dotted value like "transactions.search".
+  test "falls back to the raw operator instead of translating unknown or blank values" do
+    assert_equal "", transaction_amount_operator_label(nil)
+    assert_equal "foo", transaction_amount_operator_label("foo")
+    assert_equal "transactions.search", transaction_amount_operator_label("transactions.search")
+  end
+
   test "falls back to a raw JSON dump for providers with no structured rendering" do
     details = build_transaction_extra_details(transaction_with({ "someprovider" => { "a" => 1 } }))
 
