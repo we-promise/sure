@@ -41,6 +41,18 @@ class AccountLogoFetchJobTest < ActiveJob::TestCase
     end
   end
 
+  test "fetches at once after a bounded number of probes when the cache refuses every claim" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    cache.expects(:write).times(AccountLogoFetchJob::MAX_SLOT_PROBES).returns(false)
+    Rails.stubs(:cache).returns(cache)
+
+    travel_to Time.zone.at(1_800_000_000) do
+      AccountLogoFetchJob.perform_paced(@account)
+
+      assert_equal [ 0 ], enqueued_waits
+    end
+  end
+
   test "picks a logo automatically" do
     Account::LogoFetcher.any_instance.expects(:fetch).with(auto: true).returns(true)
 

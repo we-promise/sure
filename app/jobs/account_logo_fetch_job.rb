@@ -2,6 +2,7 @@ class AccountLogoFetchJob < ApplicationJob
   queue_as :low_priority
 
   PACE_KEY = "account_logo_fetch_pace"
+  MAX_SLOT_PROBES = 50
 
   # Spaces fetches for the iTunes Search API limit: each one claims the next
   # free time slot in the shared cache (Redis in production), so imports, the
@@ -11,8 +12,14 @@ class AccountLogoFetchJob < ApplicationJob
     spacing = AccountLogoBackfillJob::SPACING.to_i
     now = Time.current.to_i
     # The next slot others claimed is only a hint where to start probing.
-    slot = [ now / spacing, Rails.cache.read(PACE_KEY).to_i ].max
-    slot += 1 until Rails.cache.write("#{PACE_KEY}:#{slot}", true, unless_exist: true, expires_in: (slot * spacing - now + 60).seconds)
+    first = [ now / spacing, Rails.cache.read(PACE_KEY).to_i ].max
+    slot = (first...first + MAX_SLOT_PROBES).find do |candidate|
+      Rails.cache.write("#{PACE_KEY}:#{candidate}", true, unless_exist: true, expires_in: (candidate * spacing - now + 60).seconds)
+    end
+    # A cache that refuses every claim (Redis down) must not hold up the
+    # caller, so the fetch goes unpaced.
+    return perform_later(account) unless slot
+
     Rails.cache.write(PACE_KEY, slot + 1, expires_in: 1.day)
 
     set(wait: [ slot * spacing - now, 0 ].max.seconds).perform_later(account)

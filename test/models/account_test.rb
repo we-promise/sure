@@ -1319,9 +1319,12 @@ class AccountTest < ActiveSupport::TestCase
   end
 
   test "a stored logo from before the upload check does not block saves" do
-    @account.logo.attach(io: StringIO.new("<svg/>"), filename: "old.svg", content_type: "image/svg+xml")
+    # Attached around the validation, as a logo stored before it existed.
+    blob = ActiveStorage::Blob.create_and_upload!(io: StringIO.new("<svg/>"), filename: "old.svg", content_type: "image/svg+xml")
+    ActiveStorage::Attachment.create!(name: "logo", record: @account, blob: blob)
+    assert @account.reload.logo.attached?
 
-    assert @account.reload.update(name: "Renamed")
+    assert @account.update(name: "Renamed")
   end
 
   test "clearing the domain keeps the automatic icon when the provider supplies one" do

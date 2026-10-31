@@ -109,7 +109,7 @@ export default class extends Controller {
     if (choice) {
       this.choiceTarget.value = choice;
       this.showImage(
-        currentTarget.querySelector("img").src,
+        currentTarget.querySelector("img")?.src,
         `${label} · ${this.pendingValue}`,
       );
     } else {
@@ -144,9 +144,13 @@ export default class extends Controller {
 
   // The image comes from the server-rendered blank, so it keeps the shape of
   // every other account logo and falls back to the initials like one.
+  // Without a source (the option's image failed to load and removed itself)
+  // the preview shows the initials, as the option does.
   showImage(src, caption) {
     const logo = this.blankTarget.content.cloneNode(true);
-    logo.querySelector("img").src = src;
+    const image = logo.querySelector("img");
+    if (src) image.src = src;
+    else image.remove();
     this.imageTarget.replaceChildren(logo);
     this.captionTarget.textContent = caption;
   }
