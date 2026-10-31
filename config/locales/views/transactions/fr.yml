@@ -150,6 +150,7 @@ fr:
       date: Date
       description: Libellé
       description_placeholder: Libellé de la transaction
+      description_placeholder_optional: "Laissez vide pour utiliser le nom de la catégorie/du marchand, ou sélectionnez-en un d'abord"
       details: Détails
       expense: Dépense
       income: Revenu
@@ -162,6 +163,7 @@ fr:
       tag_search_placeholder: Rechercher ou créer une étiquette
       tags_label: Étiquettes
       transfer: Virement
+      no_matching_categories: Aucune catégorie correspondante
     header:
       edit_categories: Modifier les catégories
       edit_imports: Modifier les importations
@@ -209,7 +211,9 @@ fr:
     search:
       filters:
         account: Compte
+        ai: IA
         amount: Montant
+        attachment: Pièce jointe
         category: Catégorie
         date: Date
         merchant: Marchand
@@ -220,12 +224,24 @@ fr:
       filters:
         account_filter:
           filter_accounts: Filtrer les comptes
+        ai_filter:
+          current: IA
+          current_description: La catégorie est toujours celle attribuée automatiquement (IA ou Bayes).
+          history: Historique IA
+          history_description: A été catégorisée automatiquement, mais la catégorie a été modifiée depuis.
         amount_filter:
           equal_to: Égal à
           greater_than: Supérieur à
           less_than: Inférieur à
           placeholder: '0'
+        attachment_filter:
+          with: Avec pièce jointe
+          without: Sans pièce jointe
         badge:
+          ai_current: IA
+          ai_history: Historique IA
+          attachment_with: Avec pièce jointe
+          attachment_without: Sans pièce jointe
           confirmed: Confirmée
           expense: Dépense
           income: Revenu
@@ -284,6 +300,8 @@ fr:
       applied_to_unreviewed: À vérifier
       attachments: Pièces jointes
       category_label: Catégorie
+      category_set_on_hidden_outflow: Ceci est le côté entrant d'un transfert. Sa catégorie appartient au côté sortant, sur un compte auquel vous n'avez pas accès, et ne peut être modifiée que là.
+      category_set_on_outflow: Ceci est le côté entrant d'un transfert. Sa catégorie appartient au côté sortant et ne peut être modifiée que là, pour que les budgets ne la comptent qu'une fois.
       convert: Convertir
       convert_to_trade_button: Convertir en transaction boursière
       convert_to_trade_description: Convertissez cette transaction en une transaction boursière d'achat ou de vente avec les détails du titre pour le suivi du portefeuille.
@@ -313,18 +331,37 @@ fr:
       one_time_description: Les transactions ponctuelles seront exclues de certains calculs budgétaires et rapports afin de vous aider à voir ce qui compte vraiment.
       one_time_title: Transaction ponctuelle (%{type})
       open_matcher: Ouvrir le matcheur
+      original_description: Libellé d'origine
       overview: Aperçu
       payee: Bénéficiaire
+      payment_channel: Canal de paiement
       pending_duplicate_merger_button: Ouvrir la fusion
       pending_duplicate_merger_description: Fusionnez manuellement cette transaction en attente avec sa version validée.
       pending_duplicate_merger_title: Doublon d'une transaction validée ?
+      plaid_counterparty_label: Contrepartie %{index}
+      plaid_payment_meta_label: Métadonnées de paiement · %{name}
       potential_duplicate_description: Cette transaction en attente peut être la même que la transaction validée ci-dessous. Si tel est le cas, fusionnez-les pour éviter un double comptage.
       potential_duplicate_title: Doublon possible détecté
+      provider_extra_fields:
+        by_order_of: Sur ordre de
+        confidence_level: Niveau de confiance
+        entity_id: ID de l'entité
+        logo_url: URL du logo
+        name: Nom
+        payee: Bénéficiaire
+        payer: Payeur
+        phone_number: Numéro de téléphone
+        ppd_id: ID PPD
+        reason: Motif
+        reference_number: Numéro de référence
+        type: Type
+        website: Site web
       provider_extras: Suppléments du fournisseur
       settings: Paramètres
       tab_transactions: Transactions
       tab_upcoming: À venir
       tags_label: Étiquettes
+      transaction_code: Code de transaction
       transfer: Transfert
       transfer_matcher_description: Connectez cette transaction à sa contrepartie dans un autre compte.
       transfer_or_debt_payment: Transfert ou paiement de la dette ?
@@ -350,6 +387,8 @@ fr:
       split: Fractionner
       split_child_tooltip: Partie d'une transaction fractionnée
       split_tooltip: Cette transaction a été fractionnée en plusieurs entrées
+    transaction_category:
+      set_on_outflow: La catégorie appartient au côté sortant de ce transfert et ne peut être modifiée que là
     transfer_match:
       auto_matched: Correspondance automatique
       auto_matched_short: C/A

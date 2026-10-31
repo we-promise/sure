@@ -127,8 +127,10 @@ uk:
         access_token_placeholder: Введіть свій токен доступу тут
         uri_base_label: Базова URL-адреса API (необов'язково)
         uri_base_placeholder: "https://api.openai.com/v1 (за замовчуванням)"
+        uri_base_local_help: "Для моделі на вашому комп'ютері вкажіть її OpenAI-сумісний endpoint, наприклад Ollama за адресою http://localhost:11434/v1 або http://ollama:11434/v1, якщо Sure та Ollama запущені як сервіси Docker Compose."
         model_label: Модель (необов'язково)
         model_placeholder: "gpt-4.1 (за замовчуванням)"
+        model_required_help: "Обов'язково, якщо задано базову URL-адресу API: вкажіть назву моделі на вашому сервері, наприклад llama3.1 для Ollama."
         json_mode_label: Режим JSON
         json_mode_auto: Авто (рекомендовано)
         json_mode_strict: Суворий (найкраще для моделей мислення)

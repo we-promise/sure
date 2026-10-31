@@ -255,10 +255,13 @@ class Family < ApplicationRecord
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
+  validates :auto_generate_transaction_names, inclusion: { in: [ true, false ] }
   validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
+  validate :currency_must_be_known, if: :currency_changed?
 
+  before_validation :normalize_currency
   before_validation :normalize_enabled_currencies!
   after_create_commit :add_classifier_rules
 
@@ -393,6 +396,15 @@ class Family < ApplicationRecord
     end
 
     AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
+  end
+
+  # The calendar date `time` falls on where the family lives. A background job
+  # runs in the app's zone (UTC unless configured), so a sync that dates what it
+  # finds by `Date.current` can land a day off the user's calendar. A blank or
+  # unknown zone falls back to the app's, as Localize#resolved_timezone does.
+  def local_date(time = Time.current)
+    zone = timezone.present? ? ActiveSupport::TimeZone[timezone] : nil
+    time.in_time_zone(zone || Time.zone).to_date
   end
 
   def uses_custom_month_start?
@@ -907,6 +919,14 @@ class Family < ApplicationRecord
       all_codes = Money::Currency.as_options.map(&:iso_code)
       all_selected = normalized_codes.size == all_codes.size && (normalized_codes - all_codes).empty?
       self.enabled_currencies = all_selected ? nil : normalized_codes
+    end
+
+    def normalize_currency
+      self.currency = self.class.normalize_currency_code(currency) || currency
+    end
+
+    def currency_must_be_known
+      errors.add(:currency, :invalid) if self.class.normalize_currency_code(currency).nil?
     end
 
     def normalize_currency_codes(values)

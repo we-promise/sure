@@ -1316,13 +1316,17 @@ class Family::DataImporter
 
         require_source_id!("Budget", old_id)
 
+        start_date = Date.parse(data["start_date"].to_s)
+        end_date = Date.parse(data["end_date"].to_s)
+
         budget = mapped_record(:budgets, old_id, @family.budgets, record_type: "Budget")
+        budget ||= untouched_household_budget(start_date, end_date) if data["user_id"].blank?
         created = budget.blank?
         budget ||= @family.budgets.build
 
         budget.assign_attributes(
-          start_date: Date.parse(data["start_date"].to_s),
-          end_date: Date.parse(data["end_date"].to_s),
+          start_date: start_date,
+          end_date: end_date,
           budgeted_spending: data["budgeted_spending"]&.to_d,
           expected_income: data["expected_income"]&.to_d,
           currency: data["currency"] || @family.currency
@@ -1332,6 +1336,19 @@ class Family::DataImporter
         map_source!(:budgets, old_id, budget)
         increment_summary("Budget", created ? :created : :updated)
       end
+    end
+
+    # A new family already has the household budget for the current period, with zeroed category
+    # rows. Reuse it instead of colliding on the unique period; a budget that holds a plan (any
+    # non-nil top-level amount, an explicit 0 included) is left alone, so the import fails on the uniqueness validation rather than overwriting it. An exported
+    # personal budget (with a user) is never merged into the household budget.
+    def untouched_household_budget(start_date, end_date)
+      budget = @family.budgets.find_by(user_id: nil, start_date: start_date, end_date: end_date)
+      return if budget.blank?
+      return if budget.initialized? || budget.expected_income.present?
+      return if budget.budget_categories.any? { |budget_category| budget_category.budgeted_spending.to_d.nonzero? }
+
+      budget
     end
 
     def import_budget_categories(records)
@@ -1368,6 +1385,7 @@ class Family::DataImporter
         position = Integer(record.dig("data", "position"), exception: false)
         [ position || Float::INFINITY, index ]
       end.map(&:first)
+      with_stored_email_action = Rule.ids_with_stored_email_notification_action(@family.rules)
 
       records.each do |record|
         data = record["data"]
@@ -1387,6 +1405,11 @@ class Family::DataImporter
           stop_processing: data["stop_processing"] || false
         )
 
+        # An email action replacing the rule's own keeps the baseline it recorded
+        # (see Rule::Action#keep_notification_baseline), as stored before this
+        # import: not one an earlier record of it wrote.
+        had_email_action = rule.persisted? && with_stored_email_action.include?(rule.id)
+
         # Marked rather than destroyed now, so the rule's save removes them and
         # sees its conditions change (Rule re-seeds an email rule's baseline then).
         rule.conditions.each(&:mark_for_destruction) unless created
@@ -1399,7 +1422,7 @@ class Family::DataImporter
 
         # Build actions
         (data["actions"] || []).each do |action_data|
-          build_rule_action(rule, action_data)
+          build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
 
         rule.save!
