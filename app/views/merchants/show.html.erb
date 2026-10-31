@@ -1,0 +1,41 @@
+<% totals = @search.totals %>
+
+<div class="space-y-4 pb-6 lg:pb-12 flex flex-col">
+  <header class="flex items-center justify-between gap-4 text-primary">
+    <div class="flex items-center gap-3 min-w-0">
+      <% if @merchant.logo_url.present? %>
+        <%= image_tag Setting.transform_brand_fetch_url(@merchant.logo_url), class: "w-9 h-9 rounded-full border border-secondary", alt: "" %>
+      <% else %>
+        <%= render DS::FilledIcon.new(variant: :text, text: @merchant.name, hex_color: @merchant.color, size: "lg", rounded: true) %>
+      <% end %>
+      <h1 class="text-xl font-medium truncate"><%= @merchant.name %></h1>
+    </div>
+
+    <% unless Current.user.guest? %>
+      <%= render DS::Link.new(
+        text: t(".edit"),
+        icon: "pencil",
+        variant: "outline",
+        href: edit_family_merchant_path(@merchant),
+        frame: :modal
+      ) %>
+    <% end %>
+  </header>
+
+  <%= render DS::Card.new(class: "gap-3") do %>
+    <h2 class="text-base font-medium text-primary"><%= t(".summary") %></h2>
+    <dl class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-10 gap-y-3">
+      <%= render DS::DetailRow.new(label: t(".total_transactions"), value: totals.count.to_s, align: :center, value_class: "privacy-sensitive") %>
+      <%= render DS::DetailRow.new(label: t(".total_spending"), value: format_money(@expense_totals.expense_money), align: :center, value_class: "privacy-sensitive") %>
+      <% if @average_expense_money %>
+        <%= render DS::DetailRow.new(label: t(".average_transaction"), value: format_money(@average_expense_money), align: :center, value_class: "privacy-sensitive") %>
+      <% end %>
+      <% if @first_date %>
+        <%= render DS::DetailRow.new(label: t(".first_transaction"), value: l(@first_date, format: :long), align: :center) %>
+        <%= render DS::DetailRow.new(label: t(".last_transaction"), value: l(@last_date, format: :long), align: :center) %>
+      <% end %>
+    </dl>
+  <% end %>
+
+  <%= render "transactions/list", transactions: @transactions, projected_recurring: @projected_recurring, q: @q, pagy: @pagy, toolbar: false %>
+</div>

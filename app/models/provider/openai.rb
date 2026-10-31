@@ -861,10 +861,10 @@ class Provider::Openai < Provider
 
       Rails.logger.info("Extracted tokens - prompt: #{prompt_tokens}, completion: #{completion_tokens}, total: #{total_tokens}")
 
-      estimated_cost = LlmUsage.calculate_cost(
+      estimated_cost = UsageCost.calculate(
         model: model,
-        prompt_tokens: prompt_tokens,
-        completion_tokens: completion_tokens
+        usage: usage,
+        uri_base: client.uri_base
       )
 
       # Log when we can't estimate the cost (e.g., custom/self-hosted models)
