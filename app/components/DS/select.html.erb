@@ -31,16 +31,15 @@
                 aria-expanded="false"
                 tabindex="0"
                 <%= tag.attributes(aria: { labelledby: "#{label_id} #{trigger_id}" }) if options[:label].present? %>>
-          <% if (short_label = short_label_for(selected_item)) %>
-            <span class="sm:hidden"><%= short_label %></span>
-            <span class="hidden sm:inline"><%= selected_item[:label] %></span>
-          <% elsif trigger_logo? %>
+          <% if trigger_logo? %>
             <span class="flex items-center gap-2 min-w-0">
               <%= logo_markup(selected_item) %>
-              <span class="truncate"><%= selected_item[:label] %></span>
+              <span class="truncate"><%= label_markup(selected_item) %></span>
             </span>
+          <% elsif selected_item&.dig(:label) %>
+            <%= label_markup(selected_item) %>
           <% else %>
-            <%= selected_item&.dig(:label) || @placeholder %>
+            <%= @placeholder %>
           <% end %>
         </button>
     </div>
@@ -88,16 +87,11 @@
 
           <% case variant %>
           <% when :simple %>
-            <% if (short_label = short_label_for(item)) %>
-              <span class="sm:hidden"><%= short_label %></span>
-              <span class="hidden sm:inline"><%= item[:label] %></span>
-            <% else %>
-              <%= item[:label] %>
-            <% end %>
+            <%= label_markup(item) %>
 
           <% when :logo %>
             <%= logo_markup(item) unless item[:value].nil? %>
-            <%= item[:label] %>
+            <%= label_markup(item) %>
 
           <% when :badge %>
             <% hex_color = color_for(item) %>

@@ -130,6 +130,22 @@ class DS::SelectTest < ViewComponent::TestCase
     assert_selector "[role=option][data-value=USD] span.hidden.sm\\:inline", text: "United States Dollar (USD)", visible: :all
   end
 
+  test "the logo variant keeps the logo next to a short label" do
+    render_inline DS::Select.new(
+      form: form_builder_for(Category.new, "category"),
+      method: :parent_id,
+      items: [ { value: "USD", label: "United States Dollar (USD)", short_label: "USD" } ],
+      selected: "USD",
+      variant: :logo
+    )
+
+    assert_selector "button#parent_id_trigger [data-select-logo]"
+    assert_selector "button#parent_id_trigger span.truncate span.sm\\:hidden", text: "USD"
+    assert_selector "button#parent_id_trigger span.truncate span.hidden.sm\\:inline", text: "United States Dollar (USD)", visible: :all
+    assert_selector "[role=option][data-value=USD] [data-select-logo]", visible: :all
+    assert_selector "[role=option][data-value=USD] span.sm\\:hidden", text: "USD", visible: :all
+  end
+
   test "searchable: :compact keeps the search field and hides its placeholder below sm" do
     render_inline DS::Select.new(
       form: form_builder_for(Category.new, "category"),
