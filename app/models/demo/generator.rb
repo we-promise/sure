@@ -1074,13 +1074,18 @@ class Demo::Generator
     # Linked the way a user links them, from an empty snapshot instead of a chain
     # read, so generating stays offline. The item sync the linker queues fills in
     # the real balances, history and prices.
+    #
+    # One transaction: jobs are enqueued after commit, so the sync the first link
+    # queues starts with every wallet linked rather than with the first alone.
     def link_onchain_demo_wallets!(family)
       item = family.onchain_wallet_item!
-      ONCHAIN_DEMO_WALLETS.each do |wallet|
-        chain = Onchain::Chains.find!(wallet[:chain])
-        assets = [ chain.native_asset(quantity: 0) ] + wallet[:tokens].map { |token| chain.token_asset(**token, quantity: 0) }
-        OnchainWalletItem::WalletLinker.new(item, chain: chain.key, address: Onchain::Chains.canonical_address(chain.key, wallet[:address]))
-          .link(snapshot: Onchain::Snapshot.new(assets: assets, movements: []), selected_keys: assets.map { |asset| OnchainWalletItem::TokenReview.key_for(asset) })
+      item.transaction do
+        ONCHAIN_DEMO_WALLETS.each do |wallet|
+          chain = Onchain::Chains.find!(wallet[:chain])
+          assets = [ chain.native_asset(quantity: 0) ] + wallet[:tokens].map { |token| chain.token_asset(**token, quantity: 0) }
+          OnchainWalletItem::WalletLinker.new(item, chain: chain.key, address: Onchain::Chains.canonical_address(chain.key, wallet[:address]))
+            .link(snapshot: Onchain::Snapshot.new(assets: assets, movements: []), selected_keys: assets.map { |asset| OnchainWalletItem::TokenReview.key_for(asset) })
+        end
       end
     end
 
