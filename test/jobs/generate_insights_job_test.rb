@@ -242,6 +242,28 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_nil insight.read_at
   end
 
+  # An aggregate carries the account set it was computed from. A share change
+  # (or a row stored before the digest existed) rewrites prose that may quote
+  # figures from the old set, without resurfacing what the user put away.
+  test "a changed account set rewrites the body but keeps acknowledged state" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    original_body = insight.body
+    insight.acknowledge!
+
+    rescoped = generated_insight(display_balance: 3000)
+    stub_generated([ rescoped.with(metadata: rescoped.metadata.merge(accounts_digest: "new-set")) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_not_equal original_body, insight.body
+    assert_includes insight.body, "$3000"
+    assert_equal "new-set", insight.metadata["accounts_digest"]
+    assert insight.acknowledged?
+  end
+
   test "expires a visible insight whose condition cleared" do
     insight = insights(:cash_flow_warning)
     stub_generated([], succeeded_types: [ "cash_flow_warning" ])

@@ -55,4 +55,17 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
       assert_equal "high", insights.first.priority
     end
   end
+
+  # The same spike as above, but booked on `connected`, which is private to
+  # family_admin. The shared feed must not report a category total built
+  # from it.
+  test "ignores spending on an account private to one member" do
+    travel_to anchor do
+      3.times { |i| spend(month_start(i + 1), 1_000) }
+      create_transaction(category: @category, amount: 1_000, date: anchor.beginning_of_month.change(day: 3),
+                         name: "private spike", account: accounts(:connected))
+
+      assert_empty generate
+    end
+  end
 end
