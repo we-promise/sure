@@ -933,6 +933,42 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "a preview loan payment reduces principal by only the post-interest part" do
+    account = create_loan_account(
+      initial_balance: 12_000,
+      term_months: 12,
+      entries: [
+        { type: "opening_anchor", date: Date.new(2026, 1, 1), balance: 12_000 },
+        { type: "transaction", date: Date.new(2026, 2, 1), amount: -1_066.19 }
+      ]
+    )
+    enable_preview_features_for_family!(account.family)
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+    row = calculated.find { |balance| balance.date == Date.new(2026, 2, 1) }
+
+    assert_equal BigDecimal("11053.81"), row.balance
+    assert_equal BigDecimal("946.19"), row.non_cash_inflows
+    assert_equal BigDecimal("0"), row.non_cash_outflows
+  end
+
+  test "a loan payment is all principal when preview is off" do
+    account = create_loan_account(
+      initial_balance: 12_000,
+      term_months: 12,
+      entries: [
+        { type: "opening_anchor", date: Date.new(2026, 1, 1), balance: 12_000 },
+        { type: "transaction", date: Date.new(2026, 2, 1), amount: -1_066.19 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+    row = calculated.find { |balance| balance.date == Date.new(2026, 2, 1) }
+
+    assert_equal BigDecimal("10933.81"), row.balance
+    assert_equal BigDecimal("1066.19"), row.non_cash_inflows
+  end
+
   private
     def assert_balances(calculated_data:, expected_balances:)
       # Sort calculated data by date to ensure consistent ordering

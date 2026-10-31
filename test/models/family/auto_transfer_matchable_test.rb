@@ -2,6 +2,7 @@ require "test_helper"
 
 class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
   include EntriesTestHelper
+  include LedgerTestingHelper
 
   setup do
     @family = families(:dylan_family)
@@ -870,6 +871,63 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     # Destination is loan account, so outflow should be loan_payment
     assert_equal "loan_payment", outflow_entry.entryable.kind
     assert_equal "funds_movement", inflow_entry.entryable.kind
+  end
+
+  test "auto-matching a principal-only loan payment re-syncs the loan" do
+    @loan.loan.update_column(:principal_only_transfers, true)
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_difference -> { Sync.where(syncable: @loan).count }, 1 do
+      @family.auto_match_transfers!
+    end
+
+    sync = Sync.where(syncable: @loan).order(:created_at).last
+    assert_equal Date.current, sync.window_start_date
+  end
+
+  test "auto-matching a principal-only loan payment corrects the stored balance" do
+    account = create_loan_account(
+      initial_balance: 12_000,
+      term_months: 12,
+      entries: [
+        { type: "opening_anchor", date: Date.new(2026, 1, 1), balance: 12_000 },
+        { type: "transaction", date: Date.new(2026, 2, 1), amount: -946.19 }
+      ]
+    )
+    enable_preview_features_for_family!(account.family)
+    checking = create_checking_account(account)
+    checking.entries.create!(
+      name: "Payment",
+      date: Date.new(2026, 2, 1),
+      amount: 946.19,
+      currency: checking.currency,
+      entryable: Transaction.new
+    )
+
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    assert_equal BigDecimal("11173.81"), account.balances.find_by(date: Date.new(2026, 2, 1)).balance,
+                 "the unlinked replay takes the interest out of principal"
+
+    account.loan.update_column(:principal_only_transfers, true)
+    Sync.where(syncable: account).delete_all
+    account.family.auto_match_transfers!
+
+    sync = Sync.where(syncable: account).order(:created_at).last
+    assert_equal Date.new(2026, 2, 1), sync.window_start_date
+
+    Balance::Materializer.new(account, strategy: :forward, window_start_date: sync.window_start_date).materialize_balances
+    assert_equal BigDecimal("11053.81"), account.balances.find_by(date: Date.new(2026, 2, 1)).balance,
+                 "the follow-up sync replays the new transfer as principal only"
+  end
+
+  test "auto-matching a loan payment without the opt-in does not re-sync the loan" do
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @loan, amount: -500)
+
+    assert_no_difference -> { Sync.where(syncable: @loan).count } do
+      @family.auto_match_transfers!
+    end
   end
 
   test "loan disbursement (loan to cash) assigns funds_movement kind to outflow" do

@@ -40,6 +40,8 @@ en:
       insurance_rate_type: Insurance type
       insurance_rate_type_decreasing_life: Decreasing
       insurance_rate_type_level_term: Level term
+      principal_only_transfers: Linked transfers are principal only
+      principal_only_transfers_hint: Turn this on when you transfer only the principal and record the interest separately. Leave it off when the linked transfer is the full payment.
     new:
       title: Enter loan details
     overview:

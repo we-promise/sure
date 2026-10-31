@@ -33,6 +33,18 @@ class Balance::SyncCache
     entries_by_date[date]&.select { |e| e.transaction? || e.trade? } || []
   end
 
+  # Every entry converted to the account currency, in date order.
+  def entries
+    converted_entries
+  end
+
+  # One replay per loan per cache, so a calculator that asks twice does not
+  # walk the ledger twice.
+  def loan_principal_payments(loan)
+    @loan_principal_payments ||= {}
+    @loan_principal_payments[loan.id] ||= Loan::PrincipalPayments.for(loan, entries: entries)
+  end
+
   private
     attr_reader :account
 
