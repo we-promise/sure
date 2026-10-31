@@ -5,7 +5,7 @@ nb:
     product_name: "%{product_name}"
   mcp:
     errors:
-      insufficient_scope: "Dette tokenet gir ikke tilgang til MCP. Autoriser på nytt med omfanget mcp, eller legg til denne koblingen på nytt."
+      insufficient_scope: "Dette tokenet gir ikke tilgang til MCP. Autoriser på nytt med omfanget mcp:read_write, eller legg til denne koblingen på nytt."
   activerecord:
     errors:
       messages:

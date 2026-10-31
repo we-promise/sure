@@ -20,7 +20,7 @@ nl:
 
   doorkeeper:
     scopes:
-      mcp: "Toegang tot je financiële gegevens en tools gebruiken via MCP"
+      "mcp:read_write": "Je financiële gegevens lezen en wijzigen via MCP"
 
     applications:
       confirmations:

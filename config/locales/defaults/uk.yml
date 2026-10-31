@@ -282,7 +282,7 @@ uk:
     pm: по полудні
   mcp:
     errors:
-      insufficient_scope: "Цей токен не надає доступу до MCP. Повторіть авторизацію з областю mcp або додайте цей конектор знову."
+      insufficient_scope: "Цей токен не надає доступу до MCP. Повторіть авторизацію з областю mcp:read_write або додайте цей конектор знову."
       invalid_session_id: Недійсний ідентифікатор сесії MCP
       unsupported_protocol_version: 'Непідтримувана версія протоколу MCP: %{version}'
   oauth:

@@ -2,7 +2,7 @@
 hu:
   mcp:
     errors:
-      insufficient_scope: "Ez a token nem biztosít MCP-hozzáférést. Engedélyezd újra az mcp hatókörrel, vagy add hozzá újra ezt a csatlakozót."
+      insufficient_scope: "Ez a token nem biztosít MCP-hozzáférést. Engedélyezd újra az mcp:read_write hatókörrel, vagy add hozzá újra ezt a csatlakozót."
   activerecord:
     errors:
       messages:

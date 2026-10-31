@@ -7,8 +7,8 @@ class Oauth::AuthorizationsController < Doorkeeper::AuthorizationsController
       return if params[:scope].present?
 
       application = Doorkeeper::Application.find_by(uid: params[:client_id])
-      # Migrated MCP registrations use mcp; honor remaining legacy applications too.
+      # Use the application's sole MCP or legacy scope when the client omits it.
       scopes = application&.scopes.to_s.split
-      params[:scope] = scopes.first if scopes == [ "mcp" ] || scopes == [ "read_write" ]
+      params[:scope] = scopes.first if scopes == [ "mcp:read_write" ] || scopes == [ "read_write" ]
     end
 end

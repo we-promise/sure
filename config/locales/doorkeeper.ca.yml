@@ -20,7 +20,7 @@ ca:
               not_match_configured: no coincideix amb la configuració del servidor.
   doorkeeper:
     scopes:
-      mcp: "Accedir a les teves dades financeres i utilitzar eines a través de MCP"
+      "mcp:read_write": "Llegir i modificar les teves dades financeres a través de MCP"
 
     applications:
       buttons:

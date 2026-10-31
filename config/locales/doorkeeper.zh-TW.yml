@@ -20,7 +20,7 @@ zh-TW:
               not_match_configured: 與伺服器上設定的權限範圍（Scopes）不符。
   doorkeeper:
     scopes:
-      mcp: "透過 MCP 存取您的財務資料並使用工具"
+      "mcp:read_write": "透過 MCP 讀取和修改您的財務資料"
 
     applications:
       confirmations:

@@ -4,7 +4,7 @@ class McpController < ApplicationController
   PROTOCOL_VERSION = "2025-06-18"
   SUPPORTED_PROTOCOL_VERSIONS = [ "2025-03-26", PROTOCOL_VERSION ].freeze
   MCP_SESSION_TTL = 1.day
-  REQUIRED_SCOPE = "mcp"
+  REQUIRED_SCOPE = "mcp:read_write"
   LEGACY_READ_WRITE_SCOPE_DEADLINE = Time.utc(2027, 1, 20).freeze
 
   # Skip session-based auth and CSRF — this is a token-authenticated API

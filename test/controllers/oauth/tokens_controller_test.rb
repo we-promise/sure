@@ -6,7 +6,7 @@ class Oauth::TokensControllerTest < ActionDispatch::IntegrationTest
       name: "Migrated MCP Client",
       redirect_uri: "https://claude.ai/callback",
       confidential: false,
-      scopes: "mcp"
+      scopes: "mcp:read_write"
     )
     @token = create_token(scopes: "read_write")
   end
@@ -28,7 +28,7 @@ class Oauth::TokensControllerTest < ActionDispatch::IntegrationTest
 
   test "does not override an explicitly requested scope" do
     assert_no_difference "Doorkeeper::AccessToken.count" do
-      refresh(scope: "mcp")
+      refresh(scope: "mcp:read_write")
     end
 
     assert_response :bad_request
@@ -37,7 +37,7 @@ class Oauth::TokensControllerTest < ActionDispatch::IntegrationTest
 
   test "does not override an explicitly requested scopes alias" do
     assert_no_difference "Doorkeeper::AccessToken.count" do
-      refresh(scopes: "mcp")
+      refresh(scopes: "mcp:read_write")
     end
 
     assert_response :bad_request
@@ -49,7 +49,7 @@ class Oauth::TokensControllerTest < ActionDispatch::IntegrationTest
       name: "Other MCP Client",
       redirect_uri: "https://other.example/callback",
       confidential: false,
-      scopes: "mcp"
+      scopes: "mcp:read_write"
     )
 
     assert_no_difference "Doorkeeper::AccessToken.count" do
@@ -81,12 +81,12 @@ class Oauth::TokensControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "MCP-only tokens keep their scope on refresh" do
-    token = create_token(scopes: "mcp")
+    token = create_token(scopes: "mcp:read_write")
 
     refresh(refresh_token: token.plaintext_refresh_token)
 
     assert_response :ok
-    assert_equal "mcp", JSON.parse(response.body)["scope"]
+    assert_equal "mcp:read_write", JSON.parse(response.body)["scope"]
   end
 
   private

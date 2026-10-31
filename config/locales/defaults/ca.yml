@@ -232,7 +232,7 @@ ca:
     pm: pm
   mcp:
     errors:
-      insufficient_scope: "Aquest token no té accés a MCP. Torna a autoritzar amb el permís mcp o torna a afegir aquest connector."
+      insufficient_scope: "Aquest token no té accés a MCP. Torna a autoritzar amb el permís mcp:read_write o torna a afegir aquest connector."
       invalid_session_id: ID de sessió MCP no vàlid
       unsupported_protocol_version: 'Versió del protocol MCP no compatible: %{version}'
   oauth:

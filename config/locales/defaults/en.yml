@@ -9,7 +9,7 @@ en:
     expand: "Expand"
   mcp:
     errors:
-      insufficient_scope: "This token lacks MCP access. Reauthorize with the mcp scope, or re-add this connector."
+      insufficient_scope: "This token lacks MCP access. Reauthorize with the mcp:read_write scope, or re-add this connector."
       invalid_session_id: "Invalid MCP session id"
       unsupported_protocol_version: "Unsupported MCP protocol version: %{version}"
   oauth:

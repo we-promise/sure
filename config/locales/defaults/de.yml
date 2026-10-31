@@ -14,7 +14,7 @@ de:
       reserved_client_name: "client_name ist für eigene Apps reserviert"
   mcp:
     errors:
-      insufficient_scope: "Dieses Token gewährt keinen MCP-Zugriff. Autorisiere erneut mit dem Scope mcp oder füge diesen Konnektor erneut hinzu."
+      insufficient_scope: "Dieses Token gewährt keinen MCP-Zugriff. Autorisiere erneut mit dem Scope mcp:read_write oder füge diesen Konnektor erneut hinzu."
   activerecord:
     errors:
       messages:

@@ -170,7 +170,7 @@ fr:
       update: Modifier ce(tte) %{model}
   mcp:
     errors:
-      insufficient_scope: "Ce jeton ne permet pas l’accès à MCP. Autorisez à nouveau avec la portée mcp ou ajoutez à nouveau ce connecteur."
+      insufficient_scope: "Ce jeton ne permet pas l’accès à MCP. Autorisez à nouveau avec la portée mcp:read_write ou ajoutez à nouveau ce connecteur."
       invalid_session_id: Identifiant de session MCP invalide
       unsupported_protocol_version: 'Version du protocole MCP non prise en charge : %{version}'
   number:
