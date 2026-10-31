@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Api::V1::UsageControllerTest < ActionDispatch::IntegrationTest
+  include ApiRateLimitTestHelper
+
   setup do
     @user = users(:family_admin)
     # Destroy any existing active API keys for this user
@@ -112,11 +114,8 @@ class Api::V1::UsageControllerTest < ActionDispatch::IntegrationTest
 
   test "should work correctly when approaching rate limit" do
     travel_to Time.zone.local(2026, 1, 1, 12, 15, 0) do
-      # Make 98 requests to get close to the limit
-      98.times do
-        get "/api/v1/test", headers: { "X-Api-Key" => @api_key.display_key }
-        assert_response :success
-      end
+      # Get close to the limit without issuing 98 real requests
+      seed_api_rate_limit(@api_key, 98)
 
       # Check usage - this should be request 99
       get "/api/v1/usage", headers: { "X-Api-Key" => @api_key.display_key }
