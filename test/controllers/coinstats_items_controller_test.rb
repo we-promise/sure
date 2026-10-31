@@ -2,7 +2,7 @@ require "test_helper"
 
 class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    sign_in users(:family_admin)
+    sign_in @user = users(:family_admin)
     @family = families(:dylan_family)
     @coinstats_item = CoinstatsItem.create!(
       family: @family,
@@ -53,6 +53,46 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
         }
       }
     end
+  end
+
+  test "invalid create outside a frame redirects to the providers page with a 303" do
+    assert_no_difference "CoinstatsItem.count" do
+      post coinstats_items_url, params: { coinstats_item: { name: "New CoinStats Connection", api_key: "" } }
+    end
+
+    assert_response :see_other
+    assert_redirected_to settings_providers_path
+    assert_match "can't be blank", flash[:alert]
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch coinstats_item_url(@coinstats_item),
+          params: { coinstats_item: { name: "Renamed CoinStats" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "coinstats-providers-panel"
+    assert_includes response.body, %(id="coinstats-providers-panel")
+    assert_equal "Renamed CoinStats", @coinstats_item.reload.name
+  end
+
+  test "invalid create from the page shows the error in the panel" do
+    post coinstats_items_url,
+         params: { coinstats_item: { name: "New CoinStats Connection", api_key: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "coinstats-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("can't be blank")
+  end
+
+  test "create from the page still reloads Bank sync" do
+    Provider::Coinstats.any_instance.expects(:get_blockchains).returns(success_response([])).once
+
+    post coinstats_items_url,
+         params: { coinstats_item: { name: "New CoinStats Connection", api_key: "valid_api_key" } },
+         as: :turbo_stream
+
+    assert_redirected_to settings_providers_path
   end
 
   test "should destroy coinstats item" do
@@ -160,7 +200,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "link_wallet handles no tokens found" do
+  test "link_wallet preserves no tokens found error in English" do
     Provider::Coinstats.any_instance.expects(:get_wallet_balances)
       .returns(success_response([]))
 
@@ -174,7 +214,28 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_match(/No tokens found/, response.body)
+    assert_includes response.body, "No tokens found for wallet"
+  end
+
+  test "link_wallet localizes no tokens found error in German" do
+    @user.update!(locale: "de")
+    Provider::Coinstats.any_instance.expects(:get_wallet_balances)
+      .returns(success_response([]))
+
+    Provider::Coinstats.any_instance.expects(:extract_wallet_balance)
+      .returns([])
+
+    post link_wallet_coinstats_items_url, params: {
+      coinstats_item_id: @coinstats_item.id,
+      address: "0x123abc",
+      blockchain: "ethereum"
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Für dieses Krypto-Wallet wurden keine Token gefunden."
+    refute_includes response.body, "No tokens found for wallet"
+    assert_equal "Für dieses Krypto-Wallet wurden keine Token gefunden.",
+                 I18n.t("models.coinstats_item.wallet_linker.no_tokens_found", locale: :de, fallback: false)
   end
 
   test "link_exchange filters unexpected connection fields" do

@@ -10,6 +10,45 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     @msft = securities(:msft)
   end
 
+  # The figure carried past a provider's last snapshot is per share, and a
+  # split changes how many shares the same money bought. Carried across a
+  # 2-for-1 unchanged, every row after the split recorded twice the cost the
+  # position actually has — and every gain and return computed from it.
+  test "a cost basis carried past a split is restated per post-split share" do
+    security = Security.create!(ticker: "CBSP", name: "Carried Basis Split")
+    (4.days.ago.to_date..Date.current).each do |date|
+      Security::Price.create!(security: security, date: date, price: date < 1.day.ago.to_date ? 200 : 100)
+    end
+
+    # An entry so materialisation reaches back past the snapshot's own day;
+    # account history starts the day before the first entry.
+    @account.entries.create!(
+      name: "Opening", date: 4.days.ago.to_date, amount: 20000, currency: "USD",
+      entryable: Valuation.new(kind: "opening_anchor")
+    )
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    # The provider's last snapshot, before the split: 10 shares at $100 each.
+    @account.holdings.create!(
+      security: security, date: 3.days.ago.to_date, qty: 10, price: 200, amount: 2000,
+      currency: "USD", cost_basis: 100, cost_basis_source: "provider", account_provider: account_provider
+    )
+    Security::Split.create!(security: security, ex_date: 1.day.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    after_split = @account.holdings.find_by!(security: security, date: Date.current)
+    before_split = @account.holdings.find_by!(security: security, date: 2.days.ago.to_date)
+
+    assert_equal 100, before_split.cost_basis.to_d, "the snapshot's own terms are untouched before the split"
+    assert_equal 50, after_split.cost_basis.to_d, "the same money over twice the shares"
+    assert_equal before_split.qty * before_split.cost_basis, after_split.qty * after_split.cost_basis,
+      "a split moves no money, so total recorded cost is unchanged"
+  end
+
   test "syncs holdings" do
     create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
 
@@ -17,6 +56,79 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_difference "@account.holdings.count", 2 do
       Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
     end
+  end
+
+  # A position that takes in a transfer has no cost basis this app can know.
+  # A nil from the calculator alone left the previous calculated figure
+  # standing — the stale number reporting a transferred coin as if it had been
+  # bought on the day it arrived. `avg_cost` reads that stored value before it
+  # ever reaches the transfer guard, so the guard was only protecting holdings
+  # that had nothing stored at all.
+  #
+  # Materialised first and relabelled after, because that is the case that
+  # matters: a position already carrying a figure worked out before anyone
+  # knew the movement was a transfer.
+  test "a transfer clears a cost basis this app had worked out" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+    assert_equal 200, latest_holding.cost_basis.to_d, "nothing was stored to clear"
+
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_nil latest_holding.cost_basis, "the stale calculated figure survived the transfer"
+    assert_nil latest_holding.cost_basis_source
+    assert_nil latest_holding.avg_cost
+  end
+
+  test "a sweep in clears a cost basis this app had worked out" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+    assert_equal 200, latest_holding.cost_basis.to_d
+
+    @account.trades.each { |trade| trade.update!(investment_activity_label: "Sweep In") }
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_nil latest_holding.cost_basis
+    assert_nil latest_holding.cost_basis_source
+    assert_nil latest_holding.avg_cost
+  end
+
+  # A row carrying a figure with no `cost_basis_source` was invisible to
+  # `load_existing_holdings_map`, so the clearing above saw no existing holding
+  # and left the stale basis standing — the rows least able to justify the
+  # number they hold being the ones that kept it.
+  test "a transfer clears a stored basis that never recorded where it came from" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    @account.holdings.where(security: @aapl).update_all(cost_basis: 200, cost_basis_source: nil)
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_nil latest_holding.cost_basis, "a source-less figure outlived the transfer"
+  end
+  # Somebody asserted what this position cost them, which is exactly what the
+  # app cannot work out for a transfer. Theirs to keep.
+  test "a transfer leaves a provider cost basis alone" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    @account.holdings.where(security: @aapl).update_all(cost_basis: 150, cost_basis_source: "provider")
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_equal 150, latest_holding.cost_basis.to_d
+  end
+
+  # An ordinary purchase is untouched: the exclusion keys off the label, and
+  # most rows carry none at all.
+  test "an ordinary purchase still gets its calculated basis" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+
+    assert_equal 200, latest_holding.cost_basis.to_d
   end
 
   test "purges stale holdings for unlinked accounts" do
@@ -153,6 +265,39 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
 
     assert_equal [ "EUR" ], today_holdings.pluck(:currency)
     assert_equal [ account_provider.id ], today_holdings.pluck(:account_provider_id)
+  end
+
+  test "cleans up calculated holdings on earlier provider snapshot dates when the snapshot is in another currency" do
+    [ Date.yesterday, Date.current ].each do |date|
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 1.2)
+    end
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(
+      name: "Brokerage",
+      currency: "USD"
+    )
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    [ Date.yesterday, Date.current ].each do |date|
+      Holding.create!(
+        account: @account,
+        security: @aapl,
+        qty: 10,
+        price: 200,
+        amount: 2000,
+        currency: "EUR",
+        date: date,
+        account_provider: account_provider
+      )
+    end
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    yesterday_holdings = @account.holdings.where(security: @aapl, date: Date.yesterday)
+
+    assert_equal [ "EUR" ], yesterday_holdings.pluck(:currency)
+    assert_equal [ account_provider.id ], yesterday_holdings.pluck(:account_provider_id)
   end
 
   test "carries forward provider cost_basis to calculated rows past the provider snapshot date" do
@@ -400,4 +545,10 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
       today_holdings.pluck(:security_id, :currency).sort
     )
   end
+
+  private
+
+    def latest_holding
+      @account.holdings.where(security: @aapl).order(:date).last
+    end
 end

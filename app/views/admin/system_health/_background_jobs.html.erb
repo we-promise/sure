@@ -1,0 +1,100 @@
+<div class="space-y-4">
+  <% unless health.healthy? %>
+    <%= render DS::Alert.new(
+      title: t("admin.system_health.show.alert.title"),
+      message: t("shared.sidekiq_health_banner.reasons.#{health.reason}"),
+      variant: :warning,
+      live: :polite
+    ) %>
+  <% end %>
+
+  <%= render DS::Card.new(class: "gap-4") do %>
+    <div>
+      <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.status_section_title") %></h2>
+      <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.status_section_description") %></p>
+    </div>
+
+    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.status") %></dt>
+        <dd>
+          <%= render DS::Pill.new(
+            label: t("admin.system_health.show.values.#{health.healthy? ? :healthy : :unhealthy}"),
+            tone: health.healthy? ? :success : :warning,
+            marker: false
+          ) %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.processes") %></dt>
+        <dd class="text-primary font-medium"><%= health.processes_count %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.last_heartbeat") %></dt>
+        <dd class="text-primary font-medium">
+          <% if health.last_heartbeat_at %>
+            <%= t("admin.system_health.show.values.time_ago", time_ago: time_ago_in_words(health.last_heartbeat_at)) %>
+          <% else %>
+            <%= t("admin.system_health.show.values.never") %>
+          <% end %>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.max_queue_latency") %></dt>
+        <dd class="text-primary font-medium">
+          <%= t("admin.system_health.show.values.seconds", seconds: number_with_precision(health.max_queue_latency, precision: 1)) %>
+        </dd>
+      </div>
+    </dl>
+  <% end %>
+
+  <%= render DS::Card.new(class: "gap-4") do %>
+    <div>
+      <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.counters_section_title") %></h2>
+      <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.counters_section_description") %></p>
+    </div>
+
+    <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.enqueued") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(health.enqueued_count) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.retries") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(health.retry_count) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.failed") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(health.failed_count) %></dd>
+      </div>
+      <div>
+        <dt class="text-secondary"><%= t("admin.system_health.show.labels.processed_total") %></dt>
+        <dd class="text-primary font-medium"><%= number_with_delimiter(health.processed_count) %></dd>
+      </div>
+    </dl>
+  <% end %>
+
+  <%= render DS::Card.new(class: "gap-4") do %>
+    <div>
+      <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.queues_section_title") %></h2>
+      <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.queues_section_description") %></p>
+    </div>
+
+    <% breakdown = health.queue_breakdown %>
+    <% if breakdown.empty? %>
+      <p class="text-sm text-secondary"><%= t("admin.system_health.show.values.no_queues") %></p>
+    <% else %>
+      <%= render DS::Table.new(rows: breakdown, inset: true, label: t("admin.system_health.show.queues_section_title")) do |table| %>
+        <% table.with_column(t("admin.system_health.show.labels.queue")) { |(name)| name } %>
+        <% table.with_column(t("admin.system_health.show.labels.size"), numeric: true) { |(_name, size)| number_with_delimiter(size) } %>
+        <% table.with_column(t("admin.system_health.show.labels.latency"), numeric: true) do |(_name, _size, latency)| %>
+          <%= t("admin.system_health.show.values.seconds", seconds: number_with_precision(latency, precision: 1)) %>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+  <% if push_notification_test %>
+    <%= render "push_notifications", disabled_reason: push_disabled_reason,
+      latest_test: latest_push_test, results: push_test_results %>
+  <% end %>
+</div>

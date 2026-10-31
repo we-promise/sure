@@ -57,7 +57,7 @@
         <% is_active = step_idx == idx %>
 
         <%= link_to url_for(step: idx + 1), class: "w-5 h-[3px] #{is_active ? 'bg-inverse hover:bg-inverse-hover' : 'bg-surface-inset hover:bg-surface-inset-hover'} rounded-xl transition-colors duration-200" do %>
-          <span class="sr-only">Step <%= idx + 1 %></span>
+          <span class="sr-only"><%= t("imports.steps.label", step: idx + 1) %></span>
         <% end %>
       <% end %>
     </div>

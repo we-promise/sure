@@ -7,7 +7,10 @@ module InsightsHelper
     "savings_rate_change" => "piggy-bank",
     "idle_cash" => "wallet",
     "budget_at_risk" => "alert-triangle",
-    "budget_on_track" => "circle-check"
+    "budget_on_track" => "circle-check",
+    # Same shield the reserve panel uses on the goal page, so the two read as
+    # the same object seen from two places.
+    "maintained_goal_depleted" => "shield-alert"
   }.freeze
 
   def insight_icon_key(insight)
@@ -26,7 +29,7 @@ module InsightsHelper
   /x
 
   # Insight titles and bodies are stored as finished prose with the amounts
-  # already interpolated (by the i18n template or the LLM writer), so unlike
+  # already interpolated by the i18n template, so unlike
   # the rest of the app the figures can't be tagged where they're formatted.
   # This wraps each numeric fragment in a privacy-sensitive span at render
   # time so privacy mode blurs the numbers but the sentence stays readable.
@@ -111,7 +114,33 @@ module InsightsHelper
     when "budget_at_risk", "budget_on_track"
       return nil unless insight.period_start
       { text: t("insights.actions.budget"), href: budget_path(Budget.date_to_param(insight.period_start)) }
+    when "maintained_goal_depleted"
+      goal = insight.family.goals.find_by(id: metadata["goal_id"])
+      goal && { text: t("insights.actions.maintained_goal_depleted"), href: goal_path(goal) }
     end
+  end
+
+  # "Dig in with AI" opens a chat about the insight (#4031). Gated per family,
+  # not per user, because cards are also rendered in broadcasts without a
+  # Current.user; chats#new asks a user without AI consent to opt in.
+  def insight_dig_in_available?(insight)
+    family = insight.family
+    return false unless family.assistant_enabled?
+
+    family.effective_assistant_type == "external" ? Assistant::External.configured? : Provider::Registry.preferred_llm_provider.present?
+  end
+
+  # Fills only these placeholders, so a mistyped one in an override stays as typed.
+  def insight_dig_in_prompt(insight)
+    values = {
+      "title" => insight.title,
+      "body" => insight.body,
+      "period" => insight.period_start && insight.period_end ? "#{l(insight.period_start)} – #{l(insight.period_end)}" : "–",
+      "facts" => (insight.facts || {}).map { |key, value| "- #{key.to_s.humanize}: #{value}" }.join("\n")
+    }
+    template = insight.family.ai_prompt(:insight_dig_in) || t("insights.dig_in.prompt")
+
+    template.gsub(/%\{(#{values.keys.join("|")})\}/) { values[$1] }
   end
 
   # Sentiment picks the color; priority only orders the feed. The two are
@@ -152,7 +181,9 @@ module InsightsHelper
       metadata["direction"] == "below" ? :positive : :warning
     when "cash_flow_warning"
       metadata["negative"] ? :negative : :warning
-    when "budget_at_risk"
+    when "budget_at_risk", "maintained_goal_depleted"
+      # Warning, not negative: the reserve is short, not overdrawn, and red is
+      # reserved here for money actually going the wrong side of zero.
       :warning
     else
       :neutral

@@ -1,0 +1,82 @@
+---
+pt-PT:
+  family_merchants:
+    create:
+      error: 'Erro ao criar comerciante: %{error}'
+      success: Novo comerciante criado com sucesso
+    destroy:
+      success: Comerciante eliminado com sucesso
+      unlinked_success: Comerciante removido das suas transações
+    edit:
+      title: Editar comerciante
+    form:
+      name_placeholder: Nome do comerciante
+      website_placeholder: "Site (ex.: starbucks.com)"
+      website_hint: Introduza o site do comerciante para apresentar automaticamente o seu logótipo
+    index:
+      empty: Ainda não há comerciantes
+      new: Novo comerciante
+      import: Importar comerciantes
+      merge: Unir comerciantes
+      title: Comerciantes
+      family_title: "Comerciantes da %{moniker}"
+      family_empty: "Ainda não há comerciantes da %{moniker}"
+      provider_title: Comerciantes externos
+      provider_empty: "Ainda não existem comerciantes externos associados a esta %{moniker}"
+      provider_read_only: Os comerciantes externos são sincronizados a partir das suas instituições associadas. Não podem ser editados.
+      provider_info: Estes comerciantes foram detetados automaticamente pelas suas ligações bancárias ou por IA. Pode editá-los para criar a sua própria cópia ou removê-los para os desassociar das suas transações.
+      enhance_info:
+        one: "%{count} comerciante externo não tem informação de site. Melhore com IA para detetar sites, apresentar logótipos e unir comerciantes duplicados."
+        other: "%{count} comerciantes externos não têm informação de site. Melhore com IA para detetar sites, apresentar logótipos e unir comerciantes duplicados."
+      enhance_button: Melhorar com IA
+      search_family_merchants: Procurar comerciantes da família...
+      search_provider_merchants: Procurar comerciantes externos...
+      no_family_merchants_found: Não foram encontrados comerciantes da família correspondentes
+      no_provider_merchants_found: Não foram encontrados comerciantes externos correspondentes
+      per_page: por página
+      unlinked_title: Recentemente removidos
+      unlinked_info: Estes comerciantes foram recentemente removidos das suas transações. Desaparecerão desta lista após 30 dias, a menos que sejam novamente atribuídos a uma transação.
+      table:
+        merchant: Comerciante
+        actions: Ações
+        source: Origem
+    family_merchant:
+      edit: Editar
+      delete: Eliminar
+    merchant:
+      confirm_accept: Eliminar comerciante
+      confirm_body: Tem a certeza de que deseja eliminar este comerciante? Eliminar este comerciante
+        irá desligar todas as transações associadas e pode afetar os seus relatórios.
+      confirm_title: Eliminar comerciante?
+      delete: Eliminar comerciante
+      edit: Editar comerciante
+    merge:
+      title: Fundir comerciantes
+      description: Selecione um comerciante de destino e os comerciantes a fundir nele. Todas as transações dos comerciantes fundidos serão reatribuídas ao destino.
+      target_label: Fundir em (destino)
+      select_target: Selecione o comerciante de destino...
+      sources_label: Comerciantes a fundir
+      sources_search_placeholder: Procurar comerciantes...
+      no_merchants_found: Não foram encontrados comerciantes correspondentes
+      sources_hint: Os comerciantes selecionados serão fundidos no destino. Os comerciantes da família serão eliminados e os comerciantes do serviço serão desligados.
+      submit: Fundir selecionados
+    new:
+      title: Novo comerciante
+    perform_merge:
+      success:
+        one: "%{count} comerciante fundido com sucesso"
+        other: "%{count} comerciantes fundidos com sucesso"
+      no_merchants_selected: Não foram selecionados comerciantes para fundir
+      target_not_found: Comerciante de destino não encontrado
+      invalid_merchants: Comerciantes selecionados inválidos
+    provider_merchant:
+      edit: Editar
+      remove: Remover
+      remove_confirm_title: Remover comerciante?
+      remove_confirm_body: Tem a certeza de que deseja remover %{name}? Isto irá desligar todas as transações associadas deste comerciante, mas não eliminará o próprio comerciante.
+    enhance:
+      success: Melhoria do comerciante do serviço iniciada. Os comerciantes serão melhorados e os duplicados fundidos em breve.
+      already_running: A melhoria já está em curso. Aguarde até que termine.
+    update:
+      success: Comerciante atualizado com sucesso
+      converted_success: Comerciante convertido e atualizado com sucesso

@@ -63,7 +63,13 @@ class KrakenItem::Importer
 
         next if balance.zero? && hold_trade.zero?
 
-        price_usd, price_status = price_for(parsed[:price_symbol])
+        # Price the underlying asset, not the wallet variant: there is no
+        # DOT28.S ticker, and staked DOT is worth what DOT is worth. Without
+        # this the variant prices as "missing" and the holding is dropped
+        # entirely, so a staked position vanishes from the snapshot.
+        price_usd, price_status = price_for(
+          KrakenAccount::SecurityResolver.canonical_asset(parsed[:price_symbol])
+        )
         amount_usd = price_usd ? (balance * price_usd).round(2) : 0.to_d
 
         parsed.merge(

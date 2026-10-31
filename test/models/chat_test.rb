@@ -40,6 +40,54 @@ class ChatTest < ActiveSupport::TestCase
     end
   end
 
+  test "a response queued before the assistant was turned off never reaches a provider" do
+    chat = @user.chats.start!("Test prompt", model: "gpt-4.1")
+    user_message = chat.messages.find_by!(type: "UserMessage")
+    pending = chat.messages.find_by!(type: "AssistantMessage", status: "pending")
+
+    @user.family.update!(assistant_type: "mcp_only")
+    Assistant.expects(:for_chat).never
+
+    AssistantResponseJob.perform_now(user_message, pending)
+
+    assert_not Message.exists?(pending.id)
+  end
+
+  test "the pending bubble says busy while the AI lane is busy, then Thinking when the job starts" do
+    chat = chats(:one)
+    user_message = chat.messages.where(type: "UserMessage").first
+    BackgroundJobHealth.stubs(:ai_busy?).returns(true)
+    Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:html] == I18n.t("chats.ai_busy") }
+
+    chat.ask_assistant_later(user_message)
+
+    pending = chat.messages.find_by!(type: "AssistantMessage", status: "pending")
+    Chat.any_instance.expects(:broadcast_update).with { |opts| opts[:target] == ActionView::RecordIdentifier.dom_id(pending, :status) && opts[:html] == I18n.t("chats.thinking") }
+    Assistant.stubs(:for_chat).returns(stub(respond_to: nil))
+
+    chat.ask_assistant(user_message, assistant_message: pending)
+  end
+
+  test "a finished reply holds the reservation and refreshes the bubble" do
+    chat = chats(:one)
+    user_message = chat.messages.where(type: "UserMessage").first
+    UserMessage.any_instance.expects(:request_response).with(assistant_message: nil)
+    ChatReservation.expects(:hold!).returns(60)
+    ChatReservation.expects(:bubble).with(60).returns(seconds: 60, busy: false)
+    Turbo::StreamsChannel.expects(:broadcast_update_to).with(chat, targets: ChatReservation::TARGETS, partial: "chats/reservation", locals: { bubble: { seconds: 60, busy: false } })
+
+    AssistantResponseJob.perform_now(user_message)
+  end
+
+  test "a failed hold doesn't fail a finished reply" do
+    user_message = chats(:one).messages.where(type: "UserMessage").first
+    UserMessage.any_instance.expects(:request_response).with(assistant_message: nil)
+    ChatReservation.stubs(:while_chat_runs).yields
+    ChatReservation.expects(:hold!).raises(RedisClient::ConnectionError)
+
+    assert_nothing_raised { AssistantResponseJob.perform_now(user_message) }
+  end
+
   test "creates with default model when model is nil" do
     prompt = "Test prompt"
 

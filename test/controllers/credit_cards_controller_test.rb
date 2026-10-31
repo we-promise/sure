@@ -93,6 +93,55 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "updates the statement cycle" do
+    patch credit_card_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          statement_close_day: 25,
+          due_day: 5
+        }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_equal 25, @account.reload.credit_card.statement_close_day
+    assert_equal 5, @account.credit_card.due_day
+  end
+
+  test "clearing the statement cycle stores blanks as no cycle" do
+    @account.credit_card.update!(statement_close_day: 25, due_day: 5)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          statement_close_day: "",
+          due_day: ""
+        }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil @account.reload.credit_card.statement_close_day
+    assert_nil @account.credit_card.due_day
+  end
+
+  test "a statement cycle day outside the month is rejected" do
+    patch credit_card_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          statement_close_day: 45,
+          due_day: 5
+        }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil @account.reload.credit_card.statement_close_day
+  end
+
   test "updates enable banking balance interpretation flag when linked" do
     enable_banking_account = create_linked_enable_banking_account
 
@@ -171,6 +220,340 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Still works", @account.reload.name
   end
 
+  test "updates lunch flow balance interpretation flag when linked" do
+    lunchflow_account = create_linked_lunchflow_account
+
+    get edit_credit_card_path(@account)
+    assert_response :success
+    assert_select "input[name='account[lunchflow][treat_balance_as_available_credit]']"
+
+    assert_enqueued_with(job: SyncJob) do
+      patch credit_card_path(@account), params: {
+        account: {
+          name: @account.name,
+          accountable_type: "CreditCard",
+          lunchflow: { treat_balance_as_available_credit: "1" }
+        }
+      }
+    end
+
+    assert_redirected_to @account
+    assert lunchflow_account.reload.treat_balance_as_available_credit?
+  end
+
+  test "clears lunch flow balance interpretation flag when toggled off" do
+    lunchflow_account = create_linked_lunchflow_account
+    lunchflow_account.update!(treat_balance_as_available_credit: true)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        lunchflow: { treat_balance_as_available_credit: "0" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_not lunchflow_account.reload.treat_balance_as_available_credit?
+  end
+
+  test "resyncs lunch flow when the card limit changes in available credit mode" do
+    lunchflow_account = create_linked_lunchflow_account
+    lunchflow_account.update!(treat_balance_as_available_credit: true)
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      patch credit_card_path(@account), params: {
+        account: { name: @account.name, accountable_type: "CreditCard",
+                   accountable_attributes: { id: @account.accountable.id, available_credit: 7500 } }
+      }
+    end
+
+    assert_redirected_to @account
+    assert lunchflow_account.reload.treat_balance_as_available_credit?, "a form without the flag keeps it"
+  end
+
+  test "turning the flag on and setting the limit together syncs once" do
+    create_linked_lunchflow_account
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      patch credit_card_path(@account), params: {
+        account: { name: @account.name, accountable_type: "CreditCard",
+                   accountable_attributes: { id: @account.accountable.id, available_credit: 7500 },
+                   lunchflow: { treat_balance_as_available_credit: "1" } }
+      }
+    end
+  end
+
+  test "a limit change does not resync lunch flow outside available credit mode" do
+    create_linked_lunchflow_account
+
+    assert_no_enqueued_jobs only: SyncJob do
+      patch credit_card_path(@account), params: {
+        account: { name: @account.name, accountable_type: "CreditCard",
+                   accountable_attributes: { id: @account.accountable.id, available_credit: 7500 } }
+      }
+    end
+  end
+
+  test "does not persist lunch flow flag when the account update fails" do
+    lunchflow_account = create_linked_lunchflow_account
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: "",
+        accountable_type: "CreditCard",
+        lunchflow: { treat_balance_as_available_credit: "1" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_not lunchflow_account.reload.treat_balance_as_available_credit?
+  end
+
+  test "hides the lunch flow toggle for accounts without a lunch flow link" do
+    get edit_credit_card_path(@account)
+
+    assert_response :success
+    assert_select "input[name='account[lunchflow][treat_balance_as_available_credit]']", count: 0
+  end
+
+  test "updates SimpleFIN balance sign override when linked" do
+    simplefin_account = create_linked_simplefin_account
+
+    get edit_credit_card_path(@account)
+    assert_response :success
+    assert_match "balance_sign_override", response.body
+    assert_match I18n.t("credit_cards.form.simplefin_balance_sign_label"), response.body
+
+    assert_enqueued_with(job: SyncJob) do
+      patch credit_card_path(@account), params: {
+        account: {
+          name: @account.name,
+          accountable_type: "CreditCard",
+          simplefin: { balance_sign_override: "credit" }
+        }
+      }
+    end
+
+    assert_redirected_to @account
+    assert_equal "credit", simplefin_account.reload.balance_sign_override
+  end
+
+  test "clears SimpleFIN balance sign override when automatic is selected" do
+    simplefin_account = create_linked_simplefin_account
+    simplefin_account.update!(balance_sign_override: "credit")
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        simplefin: { balance_sign_override: "" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil simplefin_account.reload.balance_sign_override
+  end
+
+  test "does not persist SimpleFIN override when the account update fails" do
+    simplefin_account = create_linked_simplefin_account
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: "",
+        accountable_type: "CreditCard",
+        simplefin: { balance_sign_override: "credit" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil simplefin_account.reload.balance_sign_override
+  end
+
+  test "normalizes an unsupported SimpleFIN balance sign to automatic" do
+    simplefin_account = create_linked_simplefin_account
+    simplefin_account.update!(balance_sign_override: "credit")
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        simplefin: { balance_sign_override: "unsupported" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil simplefin_account.reload.balance_sign_override
+  end
+
+  test "hides the Sophtron balance sign select for accounts without a Sophtron link" do
+    get edit_credit_card_path(@account)
+
+    assert_response :success
+    assert_select "select[name='account[sophtron][balance_sign_override]']", count: 0
+  end
+
+  test "updates Sophtron balance sign override when linked" do
+    sophtron_account = create_linked_sophtron_account
+
+    get edit_credit_card_path(@account)
+    assert_response :success
+    assert_select "select[name='account[sophtron][balance_sign_override]']"
+    SophtronAccount::Transactions::Processor.expects(:new).never
+
+    assert_enqueued_with(job: SyncJob) do
+      patch credit_card_path(@account), params: {
+        account: {
+          name: @account.name,
+          accountable_type: "CreditCard",
+          sophtron: { balance_sign_override: "credit" }
+        }
+      }
+    end
+
+    assert_redirected_to @account
+    assert_equal "credit", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("-25"), @account.reload.balance
+    assert_equal BigDecimal("-25"), @account.current_anchor_balance
+    assert_equal 1, @account.syncs.count
+    assert_empty sophtron_account.sophtron_item.syncs
+  end
+
+  test "applies a Sophtron sign override when the card requires manual sync" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.update!(manual_sync: true)
+
+    assert_no_difference -> { sophtron_account.sophtron_item.syncs.count } do
+      assert_difference -> { @account.syncs.count } => 1 do
+        patch credit_card_path(@account), params: {
+          account: {
+            name: @account.name,
+            accountable_type: "CreditCard",
+            sophtron: { balance_sign_override: "debt" }
+          }
+        }
+      end
+    end
+
+    assert_redirected_to @account
+    assert_equal "debt", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("25"), @account.reload.balance
+    assert_equal BigDecimal("25"), @account.current_anchor_balance
+  end
+
+  test "failed Sophtron balance application rolls back and can be retried" do
+    sophtron_account = create_linked_sophtron_account
+    original_balance = @account.balance
+    original_cash_balance = @account.cash_balance
+    original_anchor = @account.current_anchor_balance
+    submission = {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "credit" }
+      }
+    }
+    Account.any_instance.stubs(:set_current_balance).returns(
+      Account::CurrentBalanceManager::Result.new(success?: false, error: "anchor write failed")
+    )
+
+    assert_no_enqueued_jobs only: SyncJob do
+      patch credit_card_path(@account), params: submission
+    end
+
+    assert_redirected_to @account
+    assert_equal I18n.t("credit_cards.update.sophtron_balance_sign_error"), flash[:alert]
+    assert_nil flash[:notice]
+    assert_nil sophtron_account.reload.balance_sign_override
+    assert_equal original_balance, @account.reload.balance
+    assert_equal original_cash_balance, @account.cash_balance
+    assert_equal original_anchor, @account.current_anchor_balance
+    diagnostic = DebugLogEntry.find_by!(source: "CreditCardsController#update_sophtron_settings")
+    assert_equal @account.family, diagnostic.family
+    assert_equal sophtron_account.account_provider, diagnostic.account_provider
+    assert_equal "sophtron", diagnostic.provider_key
+
+    Account.any_instance.unstub(:set_current_balance)
+
+    assert_enqueued_jobs 1, only: SyncJob do
+      patch credit_card_path(@account), params: submission
+    end
+
+    assert_redirected_to @account
+    assert_equal "credit", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("-25"), @account.reload.balance
+    assert_equal BigDecimal("-25"), @account.current_anchor_balance
+  end
+
+  test "applies a Sophtron sign override when the parent item requires manual sync" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.sophtron_item.update!(manual_sync: true)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "credit" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_equal "credit", sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("-25"), @account.reload.balance
+    assert_empty sophtron_account.sophtron_item.syncs
+    assert_equal 1, @account.syncs.count
+  end
+
+  test "clears Sophtron balance sign override when automatic is selected" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.update!(balance_sign_override: "credit")
+    @account.update!(balance: -25)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil sophtron_account.reload.balance_sign_override
+    assert_equal BigDecimal("25"), @account.reload.balance
+    assert_equal BigDecimal("25"), @account.current_anchor_balance
+  end
+
+  test "does not persist Sophtron override when the account update fails" do
+    sophtron_account = create_linked_sophtron_account
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: "",
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "credit" }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil sophtron_account.reload.balance_sign_override
+  end
+
+  test "normalizes an unsupported Sophtron balance sign to automatic" do
+    sophtron_account = create_linked_sophtron_account
+    sophtron_account.update!(balance_sign_override: "credit")
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        sophtron: { balance_sign_override: "unsupported" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_nil sophtron_account.reload.balance_sign_override
+  end
+
   private
     def create_linked_enable_banking_account
       enable_banking_item = EnableBankingItem.create!(
@@ -190,5 +573,52 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
       )
       AccountProvider.create!(account: @account, provider: enable_banking_account)
       enable_banking_account
+    end
+
+    def create_linked_lunchflow_account
+      lunchflow_item = LunchflowItem.new(family: @account.family, name: "Test Lunch Flow", api_key: "test_key")
+      lunchflow_item.save!(validate: false)
+      lunchflow_account = lunchflow_item.lunchflow_accounts.create!(
+        name: "Linked card",
+        account_id: "lf_linked_card",
+        currency: "GBP",
+        current_balance: 4983.83
+      )
+      AccountProvider.create!(account: @account, provider: lunchflow_account)
+      lunchflow_account
+    end
+
+    def create_linked_simplefin_account
+      simplefin_item = SimplefinItem.create!(
+        family: @account.family,
+        name: "Test SimpleFIN",
+        access_url: "https://example.com/token"
+      )
+      simplefin_account = SimplefinAccount.create!(
+        simplefin_item: simplefin_item,
+        name: "Linked card",
+        account_id: "simplefin-linked-card",
+        currency: "USD",
+        account_type: "credit",
+        current_balance: -25
+      )
+      AccountProvider.create!(account: @account, provider: simplefin_account)
+      simplefin_account
+    end
+
+    def create_linked_sophtron_account
+      sophtron_item = @account.family.sophtron_items.create!(
+        name: "Test Sophtron",
+        user_id: "developer-user",
+        access_key: Base64.strict_encode64("secret-key")
+      )
+      sophtron_account = sophtron_item.sophtron_accounts.create!(
+        name: "Linked card",
+        account_id: "sophtron-linked-card",
+        currency: "USD",
+        balance: -25
+      )
+      AccountProvider.create!(account: @account, provider: sophtron_account)
+      sophtron_account
     end
 end

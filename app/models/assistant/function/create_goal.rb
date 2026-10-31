@@ -19,7 +19,9 @@ class Assistant::Function::CreateGoal < Assistant::Function
         Constraints:
         - The goal must link to at least one of the user's Depository
           accounts (checking, savings, HSA, CD, money-market).
-        - All linked accounts must share the same currency.
+        - The target is in the family's primary currency. Accounts in other
+          currencies are converted to it; earmarks stay in each account's
+          own currency.
         - Use account names exactly as listed in the user's Depository
           accounts.
 
@@ -44,7 +46,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
         },
         target_amount: {
           type: "number",
-          description: "Total amount to save, in the linked accounts' currency."
+          description: "Total amount to save, in the family's primary currency."
         },
         target_date: {
           type: "string",
@@ -54,6 +56,11 @@ class Assistant::Function::CreateGoal < Assistant::Function
           type: "array",
           items: { type: "string" },
           description: "Names of the user's Depository accounts to link. Must contain at least one. Use names exactly as they appear in the available accounts list. The goal's balance is the balance of these accounts."
+        },
+        earmarks: {
+          type: "object",
+          description: "Optional map of account name to the amount to reserve from that account, in that account's currency, e.g. {\"Livret A\": 2000}. Required for an account already claimed in full by another goal — the available accounts list says which, and how much room is left. Accounts left out of this map reserve whatever the account has spare.",
+          additionalProperties: { type: "number" }
         },
         notes: {
           type: "string",
@@ -69,6 +76,7 @@ class Assistant::Function::CreateGoal < Assistant::Function
     target_date = parse_date(params["target_date"])
     linked_account_names = Array(params["linked_account_names"]).map { |n| n.to_s.strip }.reject(&:blank?)
     notes = params["notes"].to_s.strip
+    earmarks = parse_earmarks(params["earmarks"])
 
     return error("name_required", "Please provide a name for the goal.") if name.blank?
 
@@ -109,11 +117,18 @@ class Assistant::Function::CreateGoal < Assistant::Function
 
     matched = linked_account_names.map { |name| grouped[name].first }
 
-    currencies = matched.map(&:currency).uniq
-    if currencies.size > 1
+    # Named before the save, so the assistant gets a reason it can act on
+    # rather than a generic validation failure it can only relay. Claiming an
+    # account in full is exclusive; joining one that is already claimed needs
+    # an explicit earmark, and the assistant can ask for one.
+    over_claimed = matched.select { |a| whole_account_claimed_ids.include?(a.id) && earmarks[a.name].nil? }
+    if over_claimed.any?
       return error(
-        "currency_mismatch",
-        "All linked accounts must share the same currency. Found: #{currencies.join(', ')}."
+        "account_claimed_in_full",
+        "Another goal already claims #{over_claimed.map(&:name).to_sentence} in full. " \
+        "Ask the user how much to reserve from #{'it'.pluralize(over_claimed.size)}, then pass it in `earmarks`.",
+        claimed_account_names: over_claimed.map(&:name),
+        available_accounts: depository_account_payload
       )
     end
 
@@ -123,11 +138,11 @@ class Assistant::Function::CreateGoal < Assistant::Function
         name: name,
         target_amount: target_amount,
         target_date: target_date,
-        currency: currencies.first,
+        currency: family.primary_currency_code,
         notes: notes.presence,
         color: Goal::COLORS.sample
       )
-      matched.each { |a| goal.goal_accounts.build(account: a) }
+      matched.each { |a| goal.goal_accounts.build(account: a, allocated_amount: earmarks[a.name]) }
       goal.save!
     end
 
@@ -174,8 +189,43 @@ class Assistant::Function::CreateGoal < Assistant::Function
       nil
     end
 
+    # Says what is left, not just what exists. A goal that claims an account in
+    # full is exclusive, so an account already claimed can only be joined with
+    # an explicit earmark — and the assistant has no way to know that unless
+    # the list says so.
     def depository_account_payload
-      family.accounts.where(accountable_type: "Depository").visible.pluck(:name, :currency).map { |n, c| { name: n, currency: c } }
+      claimed = whole_account_claimed_ids
+
+      family.accounts.where(accountable_type: "Depository").visible.map do |account|
+        {
+          name: account.name,
+          currency: account.currency,
+          free_to_earmark: Money.new(account.free_to_earmark, account.currency).format,
+          claimed_in_full: claimed.include?(account.id)
+        }
+      end
+    end
+
+    def whole_account_claimed_ids
+      @whole_account_claimed_ids ||= GoalAccount.joins(:goal)
+                                                .where(allocated_amount: nil)
+                                                .where(goals: { family_id: family.id })
+                                                .where.not(goals: { state: Goal::RELEASED_STATES })
+                                                .pluck(:account_id)
+                                                .to_set
+    end
+
+    # Names are the assistant's handle on an account, so the map is keyed by
+    # them. Non-positive amounts are dropped rather than refused: a zero
+    # earmark and no earmark mean different things to the model, and neither
+    # is what the user asked for.
+    def parse_earmarks(raw)
+      return {} unless raw.is_a?(Hash)
+
+      raw.each_with_object({}) do |(account_name, amount), acc|
+        value = parse_decimal(amount)
+        acc[account_name.to_s.strip] = value if value && value.positive?
+      end
     end
 
     def error(key, message, extras = {})

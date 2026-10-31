@@ -1,4 +1,5 @@
 require "test_helper"
+require "ostruct"
 
 class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
   setup do
@@ -208,6 +209,363 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_includes entry.notes, "Détail comptable interne"
   end
 
+  test "imports transaction with real merchant name instead of generic POS terminal line (issue #2935)" do
+    tx = {
+      entry_reference: "ref_pos_2935",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "45.13", currency: "EUR" },
+      creditor: { name: "" },
+      debtor: nil,
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [
+        "POS          45,13 AT  D6   31.07. 10:27",
+        "BILLA DANKT 0007114"
+      ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_pos_2935")
+    assert_equal "BILLA DANKT 0007114", entry.name
+    assert_includes entry.notes, "POS          45,13 AT  D6   31.07. 10:27"
+  end
+
+  test "uses the family's known merchant name instead of the raw remittance line when it matches, and assigns the merchant" do
+    @family.merchants.create!(name: "Billa")
+
+    tx = {
+      entry_reference: "ref_known_merchant",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "45.13", currency: "EUR" },
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [
+        "POS          45,13 AT  D6   31.07. 10:27",
+        "BILLA DANKT 0007114"
+      ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_known_merchant")
+
+    assert_equal "Billa", entry.name
+    assert_equal "Billa", entry.transaction.merchant&.name
+  end
+
+  test "matches known merchants regardless of retailer chain" do
+    %w[Bipa Spar Hofer Lidl Penny].each do |chain_name|
+      @family.merchants.create!(name: chain_name)
+    end
+
+    [
+      [ "bipa", "BIPA DANKT 0001234", "Bipa" ],
+      [ "spar", "SPAR DANKT 0005678", "Spar" ],
+      [ "hofer", "HOFER DANKT 0009876", "Hofer" ],
+      [ "lidl", "LIDL DANKT 0004321", "Lidl" ],
+      [ "penny", "DANKE 0009999 PENNY", "Penny" ]
+    ].each do |ref_suffix, raw_line, expected_name|
+      tx = {
+        entry_reference: "ref_known_#{ref_suffix}",
+        transaction_id: nil,
+        booking_date: Date.current.to_s,
+        transaction_amount: { amount: "12.34", currency: "EUR" },
+        creditor: { name: "" },
+        bank_transaction_code: nil,
+        credit_debit_indicator: "DBIT",
+        remittance_information: [
+          "POS          12,34 AT  D6   01.01. 09:00",
+          raw_line
+        ],
+        status: "BOOK"
+      }
+
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+      entry = @account.entries.find_by!(external_id: "enable_banking_ref_known_#{ref_suffix}")
+
+      assert_equal expected_name, entry.name, "expected #{raw_line.inspect} to resolve to #{expected_name.inspect}"
+    end
+  end
+
+  # --- identifiers assigned after the fact ---
+
+  def identifierless_transaction(amount: "12.34", payee: "ACME 0001234", booking_date: Date.current)
+    {
+      transaction_id: nil,
+      entry_reference: nil,
+      booking_date: booking_date.to_s,
+      transaction_amount: { amount: amount, currency: "EUR" },
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ payee ],
+      status: "BOOK"
+    }
+  end
+
+  test "a transaction that later gains an identifier claims its own earlier row instead of importing twice" do
+    raw = identifierless_transaction
+    content_id = EnableBankingEntry::Processor.compute_external_id(raw)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+    assert @account.entries.exists?(external_id: content_id)
+    before = @account.entries.count
+
+    settled = raw.merge(entry_reference: "2026-01-01.1")
+    settled_id = EnableBankingEntry::Processor.compute_external_id(settled)
+    EnableBankingEntry::Processor.new(settled, enable_banking_account: @enable_banking_account).process
+
+    assert_equal before, @account.entries.count, "the settled row should not import a second time"
+    assert @account.entries.exists?(external_id: settled_id)
+    assert_not @account.entries.exists?(external_id: content_id)
+  end
+
+  test "the superseded identifier is recorded so the stale payload row is skipped" do
+    raw = identifierless_transaction(amount: "23.45")
+    content_id = EnableBankingEntry::Processor.compute_external_id(raw)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+
+    settled = raw.merge(entry_reference: "2026-01-01.2")
+    EnableBankingEntry::Processor.new(settled, enable_banking_account: @enable_banking_account).process
+
+    entry = @account.entries.find_by!(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+    recorded = Array(entry.transaction.extra[EnableBankingEntry::Processor::SUPERSEDED_IDS_KEY])
+    assert_includes recorded, content_id
+  end
+
+  test "claiming a predecessor does not freeze the booking date against later corrections" do
+    # auto_claimed_pending_ids would: Account::ProviderImportAdapter#import_transaction
+    # keeps the stored date on any row carrying that key, forever. These are BOOK
+    # rows whose date the ASPSP may still correct, so the claim must not set it.
+    booked_on = Date.current - 3
+    raw = identifierless_transaction(amount: "45.67", booking_date: booked_on)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+
+    settled = raw.merge(entry_reference: "2026-01-01.5")
+    EnableBankingEntry::Processor.new(settled, enable_banking_account: @enable_banking_account).process
+
+    entry = @account.entries.find_by!(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+    assert_equal booked_on, entry.date
+
+    corrected_on = booked_on + 1
+    EnableBankingEntry::Processor.new(settled.merge(booking_date: corrected_on.to_s),
+                                      enable_banking_account: @enable_banking_account).process
+
+    assert_equal corrected_on, entry.reload.date, "a corrected booking date must still be applied"
+  end
+
+  test "an ASPSP identifier that looks synthesised still claims its predecessor" do
+    raw = identifierless_transaction(amount: "56.78")
+    content_id = EnableBankingEntry::Processor.compute_external_id(raw)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+    before = @account.entries.count
+
+    # compute_external_id renders this as "enable_banking_content_..." even though
+    # the ASPSP did supply an identifier, so a prefix check would misread it.
+    settled = raw.merge(transaction_id: "content_0a1b2c3d")
+    EnableBankingEntry::Processor.new(settled, enable_banking_account: @enable_banking_account).process
+
+    assert_equal before, @account.entries.count
+    assert_not @account.entries.exists?(external_id: content_id)
+    assert @account.entries.exists?(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+  end
+
+  test "a predecessor already claimed elsewhere is not taken over" do
+    raw = identifierless_transaction(amount: "67.89")
+    content_id = EnableBankingEntry::Processor.compute_external_id(raw)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+    predecessor = @account.entries.find_by!(external_id: content_id)
+
+    # Another sync of the same item claimed the row first. The set handed to this
+    # processor still lists the content id, which is what a concurrent run would
+    # see, so the claim is attempted and must decline.
+    predecessor.update_column(:external_id, "enable_banking_claimed_elsewhere.1")
+
+    settled = raw.merge(entry_reference: "2026-01-01.6")
+    EnableBankingEntry::Processor.new(settled,
+                                      enable_banking_account: @enable_banking_account,
+                                      identifierless_external_ids: Set[content_id]).process
+
+    assert_equal "enable_banking_claimed_elsewhere.1", predecessor.reload.external_id,
+                 "the earlier claim must stand"
+    assert @account.entries.exists?(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+  end
+
+  test "only one settled row claims the predecessor, so identical charges stay apart" do
+    raw = identifierless_transaction(amount: "34.56")
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+    before = @account.entries.count
+
+    # Two settled rows with identical content and different identifiers: one real
+    # movement was already stored, the other is a genuinely separate charge.
+    first = raw.merge(entry_reference: "2026-01-01.3")
+    second = raw.merge(entry_reference: "2026-01-01.4")
+    EnableBankingEntry::Processor.new(first, enable_banking_account: @enable_banking_account).process
+    EnableBankingEntry::Processor.new(second, enable_banking_account: @enable_banking_account).process
+
+    assert_equal before + 1, @account.entries.count,
+                 "the first settled row claims the predecessor, the second imports on its own"
+  end
+
+  test "a pending incoming payload does not claim an identifierless BOOK predecessor" do
+    raw = identifierless_transaction(amount: "45.67")
+    content_id = EnableBankingEntry::Processor.compute_external_id(raw)
+
+    EnableBankingEntry::Processor.new(raw, enable_banking_account: @enable_banking_account).process
+    before = @account.entries.count
+
+    # Carries a real identifier, same content, but is itself still pending --
+    # Enable Banking's own pending->booked reconciliation owns this transition,
+    # not this claim mechanism.
+    pending_settled = raw.merge(entry_reference: "2026-01-01.7", _pending: true)
+    EnableBankingEntry::Processor.new(pending_settled, enable_banking_account: @enable_banking_account).process
+
+    assert_equal before + 1, @account.entries.count,
+                 "a pending payload must not re-key the BOOK predecessor"
+    assert @account.entries.exists?(external_id: content_id),
+           "the original BOOK row must be untouched"
+  end
+
+  test "a pending identifierless row is not offered as a claimable predecessor by THIS mechanism" do
+    pending_raw = identifierless_transaction(amount: "56.78").merge(_pending: true)
+    content_id = EnableBankingEntry::Processor.compute_external_id(pending_raw)
+
+    EnableBankingEntry::Processor.new(pending_raw, enable_banking_account: @enable_banking_account).process
+    predecessor = @account.entries.find_by!(external_id: content_id)
+
+    settled = pending_raw.merge(entry_reference: "2026-01-01.8", _pending: false)
+    settled_id = EnableBankingEntry::Processor.compute_external_id(settled)
+    EnableBankingEntry::Processor.new(settled, enable_banking_account: @enable_banking_account).process
+
+    # Enable Banking's own pending->booked reconciliation (ProviderImportAdapter's
+    # amount/date pending_match, not claim_identifierless_predecessor!) is free to
+    # claim this same row -- that is the intended outcome, and the whole point of
+    # excluding pending rows from identifierless_external_ids_for is to let that
+    # more conservative, purpose-built path own this transition instead of this
+    # one. What matters here is which mechanism did the claiming, not whether a
+    # claim happened at all.
+    predecessor.reload
+    assert_equal settled_id, predecessor.external_id,
+                 "the existing pending->booked reconciliation should still settle this row"
+    assert_not predecessor.transaction.pending?,
+               "settling should have cleared the pending flag, same as any ordinary pending transaction"
+  end
+
+  # --- payment wallet prefixes ---
+
+  test "a payment wallet prefix does not claim the transaction for the wallet's merchant" do
+    @family.merchants.create!(name: "Apple")
+    @family.merchants.create!(name: "Acme")
+
+    tx = {
+      entry_reference: "ref_wallet_prefix",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "17.95", currency: "EUR" },
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Apple pay: ACME 0001234" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_wallet_prefix")
+
+    assert_equal "Acme", entry.name
+    assert_equal "Acme", entry.transaction.merchant&.name
+    # The wallet is still recorded: notes read remittance_information directly.
+    assert_includes entry.notes, "Apple pay:"
+  end
+
+  test "a purchase from the wallet brand itself still resolves to that brand" do
+    @family.merchants.create!(name: "Apple")
+
+    tx = {
+      entry_reference: "ref_wallet_own_brand",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "0.99", currency: "EUR" },
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Apple pay: APPLE 0001234" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_wallet_own_brand")
+
+    assert_equal "Apple", entry.name
+    assert_equal "Apple", entry.transaction.merchant&.name
+  end
+
+  test "strips every supported wallet prefix before matching a known merchant" do
+    %w[Apple Google Samsung Acme].each { |merchant_name| @family.merchants.create!(name: merchant_name) }
+
+    [ "Apple pay: ACME 0001234", "Google pay: ACME 0001234", "Samsung pay: ACME 0001234" ].each do |raw_line|
+      name = build_name_with_family(
+        credit_debit_indicator: "DBIT",
+        creditor: { name: "" },
+        bank_transaction_code: nil,
+        remittance_information: [ raw_line ]
+      )
+
+      assert_equal "Acme", name, "expected #{raw_line.inspect} to resolve to \"Acme\""
+    end
+  end
+
+  test "does not match a known merchant name shorter than the minimum match length" do
+    @family.merchants.create!(name: "IT")
+
+    name = build_name_with_family(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "NAME IT 1234" ]
+    )
+
+    # No known merchant match attempted ("IT" is below MIN_KNOWN_MERCHANT_MATCH_LENGTH),
+    # so the line passes through unchanged.
+    assert_equal "NAME IT 1234", name
+  end
+
+  test "prefers the longest matching known merchant name when multiple match" do
+    @family.merchants.create!(name: "Billa")
+    @family.merchants.create!(name: "Billa Corso")
+
+    name = build_name_with_family(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "Billa Corso 0001234" ]
+    )
+
+    assert_equal "Billa Corso", name
+  end
+
+  test "escapes regex metacharacters in a known merchant name so matching never raises" do
+    @family.merchants.create!(name: "A+B (Café)")
+
+    name = build_name_with_family(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "A+B (Café) 0001234" ]
+    )
+
+    assert_equal "A+B (Café)", name
+  end
+
   test "stores exchange_rate in extra when present" do
     tx = {
       entry_reference: "ref_fx",
@@ -266,6 +624,382 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, eb_extra["pending"]
   end
 
+  # --- unidentified_hold? unit tests ---
+
+  test "unidentified_hold? returns true when counterparty is absent and remittance has masked card descriptor" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: "2026-08-01",
+      transaction_amount: { amount: "26.57", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+    assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns false when remittance lacks masked card descriptor" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: "2026-08-01",
+      transaction_amount: { amount: "26.57", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "Arbitrary transfer" ],
+      status: "BOOK"
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns true when creditor has empty or blank name and remittance has masked card descriptor" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      remittance_information: [ "474836xxxxxx6879" ]
+    }
+    assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
+
+    tx2 = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor: { name: nil },
+      remittance_information: [ "474836xxxxxx6879" ]
+    }
+    assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx2)
+  end
+
+  test "unidentified_hold? returns false when transaction_id is present" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: "txn_123",
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879" ]
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns false when entry_reference is present" do
+    tx = {
+      entry_reference: "ref_123",
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879" ]
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns false when creditor name is present" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Kaufland" },
+      remittance_information: [ "474836xxxxxx6879" ]
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns false when creditor_name string is present" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor_name: "Kaufland",
+      remittance_information: [ "474836xxxxxx6879" ]
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns false for incoming CRDT when debtor is present" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      debtor: { name: "Alice" },
+      remittance_information: [ "474836xxxxxx6879" ]
+    }
+    assert_equal false, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "unidentified_hold? returns true for incoming CRDT when debtor is absent and remittance has masked card descriptor" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      debtor: nil,
+      remittance_information: [ "474836xxxxxx6879" ]
+    }
+    assert_equal true, EnableBankingEntry::Processor.unidentified_hold?(tx)
+  end
+
+  test "pending_payload? returns true for an unidentified hold" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879" ]
+    }
+    assert_equal true, EnableBankingEntry::Processor.pending_payload?(tx)
+  end
+
+  test "stores pending true in extra for unidentified holds" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "26.57", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "5168XXXXXXXX1234" ],
+      status: "BOOK"
+    }
+
+    assert_difference "@account.entries.count", 1 do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+
+    content_id = EnableBankingEntry::Processor.compute_external_id(tx)
+    entry = @account.entries.find_by!(external_id: content_id)
+    eb_extra = entry.transaction&.extra&.dig("enable_banking")
+    assert_equal true, eb_extra["pending"]
+    assert entry.transaction.pending?
+  end
+
+  test "normalizes CRDT amount to positive (outflow) and name to Card Authorization Hold for masked card holds" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    processor = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account)
+    entry = processor.process
+
+    assert_not_nil entry
+    assert_equal BigDecimal("14.97"), entry.amount, "Must be positive outflow in Sure convention"
+    assert_equal "Card Authorization Hold", entry.name
+    assert_nil entry.transaction.merchant
+    assert_equal "474836xxxxxx6879 003015315475", entry.notes
+    assert entry.transaction.pending?
+  end
+
+  test "does not invert CRDT amount for legitimate incoming transfer without card descriptor" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      debtor: nil,
+      remittance_information: [ "Gift from grandma" ],
+      status: "BOOK"
+    }
+
+    processor = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account)
+    entry = processor.process
+
+    assert_not_nil entry
+    assert_equal BigDecimal("-50.00"), entry.amount, "Must remain negative inflow in Sure convention"
+    assert_not_equal "Card Authorization Hold", entry.name
+  end
+
+  test "masked_card_descriptor? detects masked card numbers in remittance or bank transaction code" do
+    assert EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "474836xxxxxx6879 003015315475" ])
+    assert EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: "474836XXXXXX6879")
+    assert EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "474836******6879" ])
+    assert EnableBankingEntry::Processor.masked_card_descriptor?(bank_transaction_code: { description: "474836xxxxxx6879" })
+
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "Supermarket" ])
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: [ "Salary" ])
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(remittance_information: nil)
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(
+      remittance_information: [ "Amazon.com", "474836xxxxxx6879 003015315475" ]
+    )
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(
+      remittance_information: [ "474836xxxxxx6879 003015315475", "Amazon.com" ]
+    )
+    # Technical terminal lines are ignored when finding descriptive remittance lines
+    assert EnableBankingEntry::Processor.masked_card_descriptor?(
+      remittance_information: [ "474836xxxxxx6879 003015315475", "POS   45,13 AT  D6   31.07. 10:27" ]
+    )
+    # Masked bank transaction code does not override legitimate remittance merchant
+    assert_not EnableBankingEntry::Processor.masked_card_descriptor?(
+      remittance_information: [ "Amazon.com" ],
+      bank_transaction_code: { description: "474836xxxxxx6879" }
+    )
+  end
+
+  test "does not treat multi-line remittance with legitimate payee and card PAN as unidentified hold" do
+    # When payee matches a known merchant, preserves payee name and associates known merchant
+    tx_known = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "29.99", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "Amazon.com", "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    entry_known = EnableBankingEntry::Processor.new(tx_known, enable_banking_account: @enable_banking_account).process
+
+    assert_not_nil entry_known
+    assert_equal BigDecimal("29.99"), entry_known.amount
+    assert_equal "Amazon", entry_known.name
+    assert_equal "Amazon", entry_known.transaction.merchant&.name
+    assert_not entry_known.transaction.pending?
+
+    # When payee is not an existing known merchant, preserves remittance text as entry name
+    tx_unknown = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "15.50", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "Acme Store", "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    entry_unknown = EnableBankingEntry::Processor.new(tx_unknown, enable_banking_account: @enable_banking_account).process
+
+    assert_not_nil entry_unknown
+    assert_equal BigDecimal("15.50"), entry_unknown.amount
+    assert_equal "Acme Store", entry_unknown.name
+    assert_not entry_unknown.transaction.pending?
+  end
+
+  test "captures warning DebugLogEntry when processing unidentified card hold on first import only" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+
+    log_entry = DebugLogEntry.last
+    assert_equal "provider_sync", log_entry.category
+    assert_equal "warn", log_entry.level
+    assert_equal "enable_banking", log_entry.provider_key
+    assert_equal @account, log_entry.account
+    assert_equal @account.family, log_entry.family
+    assert_equal @enable_banking_account.account_provider, log_entry.account_provider
+    assert_equal CardAuthorizationHold::HOLD_DIAGNOSTIC_MESSAGE, log_entry.message
+    assert_equal true, log_entry.metadata["sign_inverted"]
+    assert_equal "14.97", log_entry.metadata["raw_amount"]
+    assert_equal "CRDT", log_entry.metadata["credit_debit_indicator"]
+
+    # Re-processing the same hold on subsequent sync does not write duplicate DebugLogEntry
+    assert_no_difference -> { DebugLogEntry.count } do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+  end
+
+  test "captures warning DebugLogEntry with sign_inverted false for DBIT unidentified hold" do
+    tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "20.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+
+    log_entry = DebugLogEntry.last
+    assert_equal false, log_entry.metadata["sign_inverted"]
+    assert_equal "DBIT", log_entry.metadata["credit_debit_indicator"]
+    assert_equal "20.00", log_entry.metadata["raw_amount"]
+  end
+
+  test "does not capture DebugLogEntry for regular transactions" do
+    tx = {
+      entry_reference: "ref_regular",
+      transaction_id: "tx_regular",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Regular Store" },
+      status: "BOOK"
+    }
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    end
+  end
+
+  test "reconciles and claims unfinalized card hold when settled booked transaction arrives" do
+    # 1. First sync: unfinalized card hold arrives with status BOOK, CRDT, no counterparty, masked remittance
+    hold_tx = {
+      entry_reference: nil,
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      creditor: nil,
+      remittance_information: [ "474836xxxxxx6879 003015315475" ],
+      status: "BOOK"
+    }
+
+    hold_entry = EnableBankingEntry::Processor.new(hold_tx, enable_banking_account: @enable_banking_account).process
+    assert_not_nil hold_entry
+    assert_equal BigDecimal("14.97"), hold_entry.amount
+    assert_equal "Card Authorization Hold", hold_entry.name
+    assert hold_entry.transaction.pending?
+
+    # 2. Later sync: settled booked transaction arrives with real creditor, DBIT, and identifiers
+    settled_tx = {
+      entry_reference: "ref_settled_999",
+      transaction_id: "txn_settled_999",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "14.97", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Billa" },
+      remittance_information: [ "BILLA DANKT 0007114" ],
+      status: "BOOK"
+    }
+
+    settled_entry = EnableBankingEntry::Processor.new(settled_tx, enable_banking_account: @enable_banking_account).process
+    assert_not_nil settled_entry
+
+    # Should have claimed the pending hold entry instead of creating a duplicate
+    assert_equal hold_entry.id, settled_entry.id, "Settled transaction must claim the pending hold row"
+    assert_equal "enable_banking_txn_settled_999", settled_entry.external_id
+    assert_not settled_entry.transaction.pending?, "Pending flag must be cleared upon settlement"
+    assert_equal 1, @account.entries.where(source: "enable_banking").count
+  end
+
   test "does not add enable_banking extra key when no extra data present" do
     tx = {
       entry_reference: "ref_noextra",
@@ -282,11 +1016,22 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
   end
 
   def build_processor(data)
-    EnableBankingEntry::Processor.new(data, enable_banking_account: Object.new)
+    # A minimal stand-in that responds to current_account (real EnableBankingAccount
+    # always does) so `account`/`known_merchant_names` resolve safely to nil/[] instead
+    # of raising -- these unit-level tests aren't wired to a real family, so they always
+    # exercise the "no known merchant" fallback path.
+    EnableBankingEntry::Processor.new(data, enable_banking_account: OpenStruct.new(current_account: nil))
   end
 
   def build_name(data)
     build_processor(data).send(:name)
+  end
+
+  # Unlike build_name/build_processor, wires up the real @enable_banking_account
+  # (and thus the real @family) so known-merchant matching has something to match
+  # against -- used by tests that create FamilyMerchant records via @family first.
+  def build_name_with_family(data)
+    EnableBankingEntry::Processor.new(data, enable_banking_account: @enable_banking_account).send(:name)
   end
 
   test "skips technical card counterparty and falls back to remittance_information" do
@@ -429,6 +1174,100 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     )
 
     assert_nil processor.send(:merchant)
+  end
+
+  # --- technical remittance line skip (issue #2935) ---
+
+  test "skips generic POS terminal line and uses real merchant from remittance_information" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "POS          45,13 AT  D6   31.07. 10:27",
+        "BILLA DANKT 0007114"
+      ]
+    )
+
+    assert_equal "BILLA DANKT 0007114", name
+  end
+
+  test "skips generic ATM terminal line and uses real merchant from remittance_information" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "ATM          50,00 AT  D6   31.07. 10:27",
+        "SPARKASSE EISENSTADT 7000"
+      ]
+    )
+
+    assert_equal "SPARKASSE EISENSTADT 7000", name
+  end
+
+  test "does not treat a POS/ATM-prefixed line as technical when it lacks a trailing date+time (merchant embedded in the same line)" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "POS 45,13 BILLA DANKT 0007114",
+        "Reference 0394676"
+      ]
+    )
+
+    assert_equal "POS 45,13 BILLA DANKT 0007114", name
+  end
+
+  test "does not treat a legitimate line as technical just because it ends with a date+time stamp" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "Invoice paid 31.07. 10:27",
+        "Reference 0394676"
+      ]
+    )
+
+    assert_equal "Invoice paid 31.07. 10:27", name
+  end
+
+  test "strips SumUp payment processor prefix from the merchant line" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [
+        "POS         130,00 AT  D6   21.07. 14:20",
+        "SUMUP  *HERR DR. EISENSTADT 7000"
+      ]
+    )
+
+    assert_equal "HERR DR. EISENSTADT 7000", name
+  end
+
+  test "falls back to the technical line when remittance_information has no descriptive line" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "POS          45,13 AT  D6   31.07. 10:27" ]
+    )
+
+    assert_equal "POS          45,13 AT  D6   31.07. 10:27", name
+  end
+
+  test "does not treat a merchant-like line starting with POS/ATM as technical" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "POS Café Wien" ]
+    )
+
+    assert_equal "POS Café Wien", name
   end
 
   test "converts unix timestamp date using family timezone not UTC" do

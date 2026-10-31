@@ -1,0 +1,17 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle", chain: Onchain::Chains.find!(@chain).label, address: @address)) %>
+
+  <% dialog.with_body do %>
+    <%# Same screen as linking, and deliberately without an address field: this %>
+    <%# action changes which assets are tracked, nothing else. %>
+    <%= render "onchain_wallet_items/token_review_form",
+               chain: @chain,
+               address: @address,
+               review: @review,
+               url: update_tokens_onchain_wallet_item_path(@onchain_wallet_item),
+               submit_label: t(".save"),
+               assets_truncated: @assets_truncated,
+               turbo_frame: "modal",
+               cancel_path: manage_onchain_wallet_item_path(@onchain_wallet_item) %>
+  <% end %>
+<% end %>

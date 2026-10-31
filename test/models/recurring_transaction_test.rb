@@ -1,12 +1,29 @@
 require "test_helper"
 
 class RecurringTransactionTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   def setup
     @family = families(:dylan_family)
     @merchant = merchants(:netflix)
     @account = accounts(:depository)
     # Clear any existing recurring transactions
     @family.recurring_transactions.destroy_all
+  end
+
+  test "payable ignores a debt destination that belongs to another family" do
+    foreign_card = families(:empty).accounts.create!(
+      name: "Foreign Card", balance: 0, currency: "USD", accountable: CreditCard.new
+    )
+    transfer = @family.recurring_transactions.create!(
+      name: "Card payment", account: @account, amount: 200, currency: "USD",
+      expected_day_of_month: 5, last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date, status: "active", manual: true
+    )
+    transfer.update_column(:destination_account_id, foreign_card.id)
+
+    assert_not_includes @family.recurring_transactions.payable, transfer,
+      "a destination outside the family is not this family's obligation"
   end
 
   test "status is required" do
@@ -23,6 +40,43 @@ class RecurringTransactionTest < ActiveSupport::TestCase
 
     assert_not recurring.valid?
     assert_includes recurring.errors[:status], "can't be blank"
+  end
+
+  # end_after_count is a permitted parameter and the generator materialises a
+  # finite plan whole, so an absurd value is not a silly setting: it is one
+  # request deciding how far the table grows. 100,000 wrote 100,000 rows.
+  test "an absurd installment plan length is refused before any row is written" do
+    plan = build_recurring(bill_type: "installment", end_mode: "after_count",
+                                  end_after_count: 100_000)
+
+    assert_not plan.valid?
+    assert_includes plan.errors.attribute_names, :end_after_count
+  end
+
+  test "a realistic installment plan length is accepted" do
+    plan = build_recurring(bill_type: "installment", end_mode: "after_count",
+                                  end_after_count: 24, anchor_date: Date.current)
+
+    assert plan.valid?, plan.errors.full_messages.to_sentence
+  end
+
+  # category_id is permitted too, and nothing checked whose category it was.
+  test "a category belonging to another family is refused" do
+    other = Family.create!(name: "Other Household", currency: "USD")
+    foreign = Category.create!(family: other, name: "Their Groceries", color: "#ff0000")
+
+    bill = build_recurring(category_id: foreign.id)
+
+    assert_not bill.valid?
+    assert_includes bill.errors.attribute_names, :category_id
+  end
+
+  test "a category belonging to this family is accepted" do
+    own = Category.create!(family: @family, name: "Our Groceries", color: "#00ff00")
+
+    bill = build_recurring(category_id: own.id)
+
+    assert bill.valid?, bill.errors.full_messages.to_sentence
   end
 
   test "occurrence count cannot be negative" do
@@ -68,7 +122,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal @account, recurring.account
     assert_equal 15.99, recurring.amount
     assert_equal "USD", recurring.currency
-    assert_equal "active", recurring.status
+    assert_equal "suggested", recurring.status
     assert_equal 3, recurring.occurrence_count
   end
 
@@ -205,7 +259,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal(-1000.00, recurring.amount)
     assert recurring.amount.negative?, "Income should have negative amount"
     assert_equal "USD", recurring.currency
-    assert_equal "active", recurring.status
+    assert_equal "suggested", recurring.status
   end
 
   test "identify_patterns_for creates name-based recurring transactions for transactions without merchants" do
@@ -233,7 +287,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "Local Coffee Shop", recurring.name
     assert_equal 25.00, recurring.amount
     assert_equal "USD", recurring.currency
-    assert_equal "active", recurring.status
+    assert_equal "suggested", recurring.status
     assert_equal 3, recurring.occurrence_count
   end
 
@@ -303,6 +357,36 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     matches = recurring.matching_transactions
     assert_equal 3, matches.size
     assert matches.all? { |entry| entry.name == "Gym Membership" }
+  end
+
+  test "matching_transactions rejects a same-day charge in an off-cycle month" do
+    recurring = build_recurring(
+      merchant: nil,
+      name: "Quarterly water bill",
+      amount: 90.00,
+      anchor_date: Date.new(2026, 5, 15),
+      last_occurrence_date: Date.new(2026, 5, 15),
+      next_expected_date: Date.new(2026, 8, 15)
+    )
+    recurring.save!
+    recurring.recurrence_rules.create!(frequency: "monthly", interval: 3, day_of_month: 15)
+
+    entries = [ Date.new(2026, 8, 15), Date.new(2026, 7, 15) ].map do |date|
+      @account.entries.create!(
+        date: date,
+        amount: 90.00,
+        currency: "USD",
+        name: "Quarterly water bill",
+        entryable: Transaction.create!
+      )
+    end
+    on_cycle, off_cycle = entries
+
+    matches = recurring.matching_transactions.map(&:id)
+    # Positive control: the on-cycle month's charge still matches.
+    assert_includes matches, on_cycle.id
+    # Same calendar day, off-cycle month: the day window alone would accept it.
+    assert_not_includes matches, off_cycle.id
   end
 
   test "validation requires either merchant or name" do
@@ -401,6 +485,29 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert recurring.next_expected_date >= Date.current
   end
 
+  test "create_from_transaction takes the transaction's category" do
+    transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 2.months.ago, amount: 50.00, currency: "USD", name: "Test Transaction", entryable: transaction
+    )
+
+    recurring = RecurringTransaction.create_from_transaction(transaction)
+
+    assert_equal categories(:food_and_drink), recurring.category
+  end
+
+  test "create_from_transaction leaves an inflow uncategorised" do
+    transaction = Transaction.create!(merchant: @merchant, category: categories(:income))
+    @account.entries.create!(
+      date: 2.months.ago, amount: -1840.00, currency: "USD", name: "Payroll", entryable: transaction
+    )
+
+    recurring = RecurringTransaction.create_from_transaction(transaction)
+
+    assert_equal "income", recurring.bill_type
+    assert_nil recurring.category_id
+  end
+
   test "create_from_transaction automatically calculates amount variance from history" do
     # Create multiple historical transactions with varying amounts on the same day of month
     amounts = [ 90.00, 100.00, 110.00, 120.00 ]
@@ -487,6 +594,53 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal 1, recurring.occurrence_count
   end
 
+  test "create_from_transaction collides on an identical series and still forks a different price tier" do
+    first_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 2.months.ago,
+      amount: 50.00,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: first_transaction
+    )
+
+    recurring = RecurringTransaction.create_from_transaction(first_transaction)
+    assert_equal "50.0", recurring.dedup_scope, "the amount is stamped before the first insert"
+
+    # An identical series (same identity, same amount) must hit the unique
+    # index on the first insert, not slip past it as a stamped duplicate.
+    duplicate_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 1.month.ago,
+      amount: 50.00,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: duplicate_transaction
+    )
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      assert_raises ActiveRecord::RecordNotUnique do
+        RecurringTransaction.create_from_transaction(duplicate_transaction)
+      end
+    end
+
+    # A different amount is a legitimate second tier from the same biller and
+    # still forks a sibling series.
+    tier_transaction = Transaction.create!(merchant: @merchant, category: categories(:food_and_drink))
+    @account.entries.create!(
+      date: 1.month.ago,
+      amount: 80.00,
+      currency: "USD",
+      name: "Test Transaction",
+      entryable: tier_transaction
+    )
+
+    assert_difference "@family.recurring_transactions.count", 1 do
+      tier = RecurringTransaction.create_from_transaction(tier_transaction)
+      assert_equal "80.0", tier.dedup_scope
+    end
+  end
+
   test "amount_within_variance_band? allows up to 2x and excludes beyond" do
     assert RecurringTransaction.amount_within_variance_band?(199, 100)
     assert_not RecurringTransaction.amount_within_variance_band?(201, 100)
@@ -502,6 +656,243 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   test "amount_within_variance_band? does not match across a sign mismatch" do
     assert_not RecurringTransaction.amount_within_variance_band?(50, -50)
     assert_not RecurringTransaction.amount_within_variance_band?(-10, 100)
+  end
+
+  # The check behind "Create bill" and "Mark as recurring" on a transaction:
+  # is there already a bill this payment belongs to? It has to see detected
+  # bills as well as hand-made ones. A declared bill is keyed by name and a
+  # detected one by merchant, so no unique index collides between the two.
+  test "covering finds a detected merchant-keyed bill" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 100, merchant: @merchant, name: "BETASHARES DIRECT DEBIT")
+    detected = covering_series(merchant: @merchant, amount: 100, manual: false)
+
+    assert_equal detected, @family.recurring_transactions.covering(entry)
+  end
+
+  test "covering finds a hand-made bill keyed by name" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 50, name: "Netflix")
+    declared = covering_series(name: "Netflix", amount: 50)
+
+    assert_equal declared, @family.recurring_transactions.covering(entry)
+  end
+
+  # "Create bill" names the bill after the merchant, not the bank's text, so a
+  # declared bill made that way has to be found from the merchant's name.
+  test "covering finds a declared bill named after the entry's merchant" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 100, merchant: @merchant, name: "BETASHARES DIRECT DEBIT 123")
+    declared = covering_series(name: "  betashares ", amount: 100)
+
+    assert_equal declared, @family.recurring_transactions.covering(entry)
+  end
+
+  test "covering finds a bill through a learned name alias" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 75, name: "FNB App Payment To Golf Cart")
+    renamed = covering_series(name: "GOLF CART", amount: 75)
+    renamed.update!(matcher_hints: { "name_aliases" => [ "FNB APP PAYMENT TO GOLF CART" ] })
+
+    assert_equal renamed, @family.recurring_transactions.covering(entry)
+  end
+
+  # A rename keeps the bank text as the detected name, so the bill still
+  # covers the transaction it was made from.
+  test "covering finds a renamed bill through its detected name" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 40, name: "CITY WATER 0042")
+    bill = covering_series(name: "CITY WATER 0042", amount: 40)
+    bill.update!(name: "Water")
+    assert_equal "CITY WATER 0042", bill.reload.matcher_hints["detected_name"], "precondition: the rename kept the detected name"
+
+    assert_equal bill, @family.recurring_transactions.covering(entry)
+  end
+
+  test "covering finds an accountless bill from any account" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 100, merchant: @merchant)
+    accountless = covering_series(merchant: @merchant, amount: 100, account: nil)
+
+    assert_equal accountless, @family.recurring_transactions.covering(entry)
+  end
+
+  # The payment is already paying a bill whose identity it does not share
+  # (a renamed bill, a payment linked by hand), so only the allocation says so.
+  test "covering finds the bill an entry is already allocated to" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 1200, name: "TRANSFER 4471")
+    rent = covering_series(name: "Rent", amount: 1200, manual: false)
+    rent.recurring_occurrences.order(:due_on).first.allocations.create!(
+      entry: entry, allocated_amount: 1200, currency: "USD", source: "user_created"
+    )
+
+    assert_equal rent, @family.recurring_transactions.covering(entry)
+  end
+
+  # Both edges of the shared variance band: inclusive at 2x and at half, so a
+  # second price tier from one biller (outside it) stays creatable.
+  test "covering treats the variance band as inclusive at both edges" do
+    setup_covering_family
+    covering_series(merchant: @merchant, amount: 100, manual: false)
+
+    covered = [ 50, 150, 200 ].map { |amount| create_transaction(account: @account, amount: amount, merchant: @merchant) }
+    uncovered = [ 49.99, 201 ].map { |amount| create_transaction(account: @account, amount: amount, merchant: @merchant) }
+
+    covered.each { |entry| assert_not_nil @family.recurring_transactions.covering(entry), "#{entry.amount} is inside the band" }
+    uncovered.each { |entry| assert_nil @family.recurring_transactions.covering(entry), "#{entry.amount} is a different price tier" }
+  end
+
+  test "covering ignores a bill on another account" do
+    setup_covering_family
+    other_account = @family.accounts.create! name: "Other", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: @account, amount: 100, merchant: @merchant)
+    covering_series(merchant: @merchant, amount: 100, account: other_account)
+
+    assert_nil @family.recurring_transactions.covering(entry)
+  end
+
+  test "covering ignores a bill for another merchant" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 100, merchant: @merchant, name: "Betashares")
+    covering_series(merchant: @family.merchants.create!(name: "Other Merchant"), amount: 100)
+
+    assert_nil @family.recurring_transactions.covering(entry)
+  end
+
+  test "covering ignores a bill in another currency" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 100, merchant: @merchant)
+    covering_series(merchant: @merchant, amount: 100, currency: "EUR")
+
+    assert_nil @family.recurring_transactions.covering(entry)
+  end
+
+  test "covering ignores a series of the opposite sign" do
+    setup_covering_family
+    outflow = create_transaction(account: @account, amount: 100, merchant: @merchant)
+    inflow = create_transaction(account: @account, amount: -100, merchant: @merchant)
+    covering_series(merchant: @merchant, amount: -100, dedup_scope: "income")
+
+    assert_nil @family.recurring_transactions.covering(outflow)
+    assert_not_nil @family.recurring_transactions.covering(inflow)
+  end
+
+  test "covering ignores an ended bill" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 100, merchant: @merchant)
+    covering_series(merchant: @merchant, amount: 100, status: "ended")
+
+    assert_nil @family.recurring_transactions.covering(entry)
+  end
+
+  # "Not this one" on a suggested match records the pair so the matcher never
+  # proposes it again. The same answer has to free the payment here, or it
+  # could never become a bill of its own. The rejection names one payment, so
+  # the bill still covers the next one.
+  test "covering skips a bill the user rejected for this payment" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 100, merchant: @merchant)
+    next_payment = create_transaction(account: @account, amount: 100, merchant: @merchant)
+    rejected = covering_series(merchant: @merchant, amount: 100, manual: false, status: "suggested")
+    assert_equal rejected, @family.recurring_transactions.covering(entry), "precondition: the bill covers the payment before the rejection"
+
+    RecurringMatchRejection.create!(recurring_transaction: rejected, entry: entry)
+
+    assert_nil @family.recurring_transactions.covering(entry)
+    assert_equal rejected, @family.recurring_transactions.covering(next_payment)
+  end
+
+  # A merchant-keyed bill matches on the merchant, as the matcher does: a
+  # merchant-less charge that only shares the text is not its payment.
+  test "covering does not match a merchant-keyed bill on name alone" do
+    setup_covering_family
+    covering_series(merchant: @merchant, amount: 100)
+    entry = create_transaction(account: @account, amount: 100, name: "Betashares")
+
+    assert_nil @family.recurring_transactions.covering(entry)
+  end
+
+  # An accountless series passes the account filter from any family, so the
+  # family pin is what keeps another family's bill out even when unscoped.
+  test "covering never returns another family's bill" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 50, name: "Netflix")
+    families(:dylan_family).recurring_transactions.create!(
+      account: nil, name: "Netflix", amount: 50, currency: "USD",
+      expected_day_of_month: Date.current.day, last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current, status: "active", manual: true, occurrence_count: 1
+    )
+
+    assert_nil RecurringTransaction.covering(entry)
+  end
+
+  # The unique indexes ignore status, so a series create_from_transaction
+  # would collide with is found whatever state it is in, even when covering
+  # (which skips ended series) does not see it. Built from a real create, so
+  # the lookup and the index cannot disagree on the key.
+  test "identity_taken_by finds the row create_from_transaction would collide with" do
+    setup_covering_family
+    [
+      create_transaction(account: @account, amount: 100, merchant: @merchant),
+      create_transaction(account: @account, amount: 40, name: "CITY WATER 0042")
+    ].each do |entry|
+      transaction = entry.entryable
+      assert_nil RecurringTransaction.identity_taken_by(transaction), "nothing holds the key yet"
+
+      created = RecurringTransaction.create_from_transaction(transaction)
+      created.update!(status: "ended")
+
+      assert_nil @family.recurring_transactions.covering(entry), "precondition: covering skips the ended series"
+      assert_equal created, RecurringTransaction.identity_taken_by(transaction)
+      assert_raises(ActiveRecord::RecordNotUnique) do
+        RecurringTransaction.transaction(requires_new: true) { RecurringTransaction.create_from_transaction(transaction) }
+      end
+    end
+  end
+
+  # dedup_scope carries the amount, so another price tier is a new key.
+  test "identity_taken_by leaves another price tier free" do
+    setup_covering_family
+    RecurringTransaction.create_from_transaction(create_transaction(account: @account, amount: 100, merchant: @merchant).entryable)
+    other_tier = create_transaction(account: @account, amount: 120, merchant: @merchant).entryable
+
+    assert_nil RecurringTransaction.identity_taken_by(other_tier)
+  end
+
+  # The matcher never pays an ordinary bill with a transfer leg, so neither
+  # does this check by name or merchant. A leg already allocated to a series
+  # is still covered by it.
+  test "covering does not match a transfer leg to a bill by identity" do
+    setup_covering_family
+    entry = create_transaction(account: @account, amount: 50, name: "Netflix")
+    bill = covering_series(name: "Netflix", amount: 50)
+    assert_equal bill, @family.recurring_transactions.covering(entry), "precondition: the ordinary charge is covered"
+
+    entry.entryable.update!(kind: "funds_movement")
+
+    assert_nil @family.recurring_transactions.covering(entry.reload)
+
+    bill.recurring_occurrences.order(:due_on).first.allocations.create!(
+      entry: entry, allocated_amount: 50, currency: "USD", source: "user_created"
+    )
+
+    assert_equal bill, @family.recurring_transactions.covering(entry)
+  end
+
+  # A recurring transfer is identified by its account pair, never by name, as
+  # in the matcher, so a same-named charge is not its payment.
+  test "covering ignores a recurring transfer" do
+    setup_covering_family
+    savings = @family.accounts.create! name: "Savings", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: @account, amount: 100, name: "Savings top-up")
+    @family.recurring_transactions.create!(
+      account: @account, destination_account: savings, name: "Savings top-up", amount: 100, currency: "USD",
+      expected_day_of_month: Date.current.day, last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current, status: "active", manual: true, occurrence_count: 1
+    )
+
+    assert_nil @family.recurring_transactions.covering(entry)
   end
 
   test "matching_transactions with amount variance matches within range" do
@@ -559,11 +950,14 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       manual: true
     )
 
-    # Auto recurring - 2 months threshold with different amount to avoid unique constraint
+    # Auto recurring - 2 months threshold. A second series on the same
+    # identity carries a dedup_scope discriminator now that amount is no
+    # longer part of the unique indexes.
     auto_recurring = @family.recurring_transactions.create!(
       account: @account,
       merchant: @merchant,
       amount: 60.00,
+      dedup_scope: "60.0",
       currency: "USD",
       expected_day_of_month: 15,
       last_occurrence_date: 3.months.ago,
@@ -933,6 +1327,40 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_includes rt.errors[:destination_account], "must belong to the same family as the source account"
   end
 
+  test "validation rejects a source account from a different family" do
+    other_family = Family.create!(name: "Other", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
+    other_account = other_family.accounts.create!(name: "Other depository", balance: 0, currency: "USD", accountable: Depository.new)
+
+    rt = build_recurring(account: other_account)
+
+    assert_not rt.valid?
+    assert_includes rt.errors[:account], "must belong to this family"
+  end
+
+  test "validation rejects a transfer whose endpoints both sit in another family" do
+    # The endpoint pair is internally consistent here, so only the check
+    # against the bill's own family can catch it.
+    other_family = Family.create!(name: "Other", locale: "en", date_format: "%Y-%m-%d", currency: "USD")
+    other_source = other_family.accounts.create!(name: "Other depository", balance: 0, currency: "USD", accountable: Depository.new)
+    other_destination = other_family.accounts.create!(name: "Other card", balance: 0, currency: "USD", accountable: CreditCard.new)
+
+    rt = @family.recurring_transactions.build(
+      account: other_source,
+      destination_account: other_destination,
+      name: "Foreign transfer pair",
+      amount: 100,
+      currency: "USD",
+      expected_day_of_month: 1,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      manual: true
+    )
+
+    assert_not rt.valid?
+    assert_includes rt.errors[:account], "must belong to this family"
+    assert_includes rt.errors[:destination_account], "must belong to this family"
+  end
+
   test "create_from_transfer builds a recurring transfer with both endpoints" do
     source = @account
     destination = accounts(:credit_card)
@@ -1201,4 +1629,236 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       @family.recurring_transactions.create!(base_attrs)
     end
   end
+
+  # The scheme allowlist is the security boundary for payment_url: the value is
+  # rendered as a link, so a "javascript:" or "data:" scheme surviving to the view
+  # would be stored XSS. These cases are the contract, not incidental coverage.
+  test "payment_url rejects any scheme other than http and https" do
+    [
+      "javascript:alert(1)",
+      "JaVaScRiPt:alert(1)",
+      "  javascript:alert(1)  ",
+      "data:text/html,<script>alert(1)</script>",
+      "mailto:billing@example.com",
+      "ftp://example.com/pay",
+      "https://"
+    ].each do |hostile|
+      recurring = build_recurring(payment_url: hostile)
+
+      assert_not recurring.valid?, "expected #{hostile.inspect} to be rejected"
+      assert_includes recurring.errors.attribute_names, :payment_url
+    end
+  end
+
+  test "payment_url accepts http and https and promotes a bare host to https" do
+    {
+      "https://pay.example.com/bill" => "https://pay.example.com/bill",
+      "http://pay.example.com" => "http://pay.example.com",
+      "pay.example.com" => "https://pay.example.com",
+      "  pay.example.com  " => "https://pay.example.com",
+      # A colon followed by digits is a port, not a scheme. Self-hosters link to
+      # LAN services this way.
+      "192.168.1.5:3000/pay" => "https://192.168.1.5:3000/pay"
+    }.each do |input, expected|
+      recurring = build_recurring(payment_url: input)
+
+      assert recurring.valid?, "expected #{input.inspect} to be accepted: #{recurring.errors.full_messages}"
+      assert_equal expected, recurring.payment_url
+    end
+  end
+
+  test "payment_url is optional and normalizes blank to nil" do
+    [ nil, "", "   " ].each do |blank|
+      recurring = build_recurring(payment_url: blank)
+
+      assert recurring.valid?
+      assert_nil recurring.payment_url
+    end
+  end
+
+  # `calculate_next_expected_date` jumps to `last_occurrence_date.next_month`, so a
+  # payment posting earlier in the month than the expected day skips the occurrence
+  # still ahead this month: rent due on the 29th, last paid on the 6th, is stored as
+  # due next month. Bills must not repeat that to the user.
+  test "next_due_date corrects a stored date that skipped this month's occurrence" do
+    travel_to Date.new(2026, 8, 13) do
+      recurring = build_recurring(
+        expected_day_of_month: 29,
+        last_occurrence_date: Date.new(2026, 8, 6),
+        next_expected_date: Date.new(2026, 9, 29)
+      )
+
+      assert_equal Date.new(2026, 8, 29), recurring.next_due_date
+      assert_not recurring.overdue?
+    end
+  end
+
+  test "next_due_date leaves a correct stored date alone" do
+    travel_to Date.new(2026, 8, 13) do
+      recurring = build_recurring(
+        expected_day_of_month: 21,
+        last_occurrence_date: Date.new(2026, 7, 21),
+        next_expected_date: Date.new(2026, 8, 21)
+      )
+
+      assert_equal Date.new(2026, 8, 21), recurring.next_due_date
+    end
+  end
+
+  test "next_due_date does not advance an overdue bill past its due date" do
+    travel_to Date.new(2026, 8, 13) do
+      recurring = build_recurring(
+        expected_day_of_month: 5,
+        last_occurrence_date: Date.new(2026, 7, 5),
+        next_expected_date: Date.new(2026, 8, 5)
+      )
+
+      assert_equal Date.new(2026, 8, 5), recurring.next_due_date
+      assert recurring.overdue?
+    end
+  end
+
+  test "bills scope keeps expenses and drops income, transfers and paused rows" do
+    expense = build_recurring(name: "Rent", merchant: nil, amount: 1200).tap(&:save!)
+    build_recurring(name: "Paycheck", merchant: nil, amount: -2000).tap(&:save!)
+    build_recurring(name: "Paused", merchant: nil, amount: 40, status: "inactive").tap(&:save!)
+    build_recurring(name: "Card payment", merchant: nil, amount: 500,
+                    destination_account: accounts(:credit_card)).tap(&:save!)
+
+    assert_equal [ expense.id ], @family.recurring_transactions.bills.pluck(:id)
+  end
+
+  test "display_name prefers the merchant over the free-text name" do
+    assert_equal @merchant.name, build_recurring(merchant: @merchant, name: nil).display_name
+    assert_equal "Rent", build_recurring(merchant: nil, name: "Rent").display_name
+  end
+
+
+  # next_expected_date only advances when a bank entry matches during sync, so
+  # a bill settled through mark_paid!, a manual payment or the assistant froze
+  # it in the past forever. next_due_date returned it verbatim, which reported
+  # a fully paid bill as long overdue and answered due_within_days for a date
+  # 45 days gone.
+  test "a settled bill looks ahead to its next open cycle, not at a stale hint" do
+    series = stale_hint_series
+
+    series.recurring_occurrences.where("due_on <= ?", Date.current).find_each do |occurrence|
+      RecurringTransaction::Allocator.new(occurrence).mark_paid!
+    end
+    series.reload
+
+    assert_operator series.next_due_date, :>, Date.current,
+      "every owed cycle is paid, so nothing is due in the past"
+    assert_not series.overdue?
+    assert_equal 0, series.cycles_overdue
+  end
+
+  test "an unpaid past cycle is still overdue" do
+    series = stale_hint_series
+
+    assert series.overdue?, "the oldest unpaid cycle is what makes a bill late"
+    assert_equal series.recurring_occurrences.open_status.minimum(:due_on), series.next_due_date
+  end
+
+  # "Whole cycles" is meant literally. The old formula added one, so a bill a
+  # single day late already claimed a full cycle missed.
+  test "cycles_overdue counts only whole cycles elapsed" do
+    series = stale_hint_series
+    due = Date.current - 1
+    series.recurring_occurrences.destroy_all
+    series.recurring_occurrences.create!(
+      family: @family, original_due_on: due, due_on: due,
+      currency: "USD", expected_amount: 60, status: "scheduled"
+    )
+
+    assert series.reload.overdue?
+    assert_equal 0, series.cycles_overdue, "one day late is not one cycle missed"
+  end
+
+  test "identify_patterns_for does not re-suggest a renamed name-matched bill" do
+    [ 0, 1, 2 ].each do |months_ago|
+      @account.entries.create!(
+        date: months_ago.months.ago.beginning_of_month + 5.days,
+        amount: 9.99,
+        currency: "USD",
+        name: "STREAMCO *CHG",
+        entryable: Transaction.create!(category: categories(:food_and_drink))
+      )
+    end
+
+    assert_difference "@family.recurring_transactions.count", 1 do
+      RecurringTransaction.identify_patterns_for!(@family)
+    end
+
+    bill = @family.recurring_transactions.last
+    assert_equal "STREAMCO *CHG", bill.matcher_name
+
+    bill.update!(name: "Streaming")
+
+    assert_no_difference "@family.recurring_transactions.count" do
+      RecurringTransaction.identify_patterns_for!(@family)
+    end
+    assert_equal "STREAMCO *CHG", bill.reload.matcher_name
+  end
+
+  test "renaming a legacy bill without a stored detected name keeps its original name for matching" do
+    bill = @family.recurring_transactions.create!(
+      account: @account,
+      name: "LEGACY CO",
+      amount: 5,
+      currency: "USD",
+      expected_day_of_month: 5,
+      last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date,
+      status: "active",
+      occurrence_count: 3,
+      bill_type: "bill",
+      manual: false
+    )
+
+    bill.update!(name: "Renamed Legacy")
+
+    assert_equal "LEGACY CO", bill.reload.matcher_name
+  end
+
+  private
+
+    def stale_hint_series
+      stale = 45.days.ago.to_date
+      series = @family.recurring_transactions.create!(
+        name: "Gym #{stale}", account: accounts(:depository), amount: 60,
+        currency: "USD", status: "active", bill_type: "subscription", manual: true,
+        dedup_scope: "gym-#{stale}", expected_day_of_month: stale.day,
+        last_occurrence_date: stale << 1, next_expected_date: stale
+      )
+      series.reload
+    end
+
+    def build_recurring(**overrides)
+      @family.recurring_transactions.build({
+        account: @account,
+        merchant: @merchant,
+        amount: 29.99,
+        currency: "USD",
+        expected_day_of_month: 15,
+        last_occurrence_date: Date.current,
+        next_expected_date: 1.month.from_now.to_date,
+        status: "active"
+      }.merge(overrides))
+    end
+
+    def setup_covering_family
+      @family = families(:empty)
+      @account = @family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+      @merchant = @family.merchants.create! name: "Betashares"
+    end
+
+    def covering_series(amount:, merchant: nil, name: nil, account: @account, currency: "USD", status: "active", manual: true, dedup_scope: "")
+      @family.recurring_transactions.create!(
+        account: account, merchant: merchant, name: name, amount: amount, currency: currency,
+        dedup_scope: dedup_scope, expected_day_of_month: Date.current.day,
+        last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current,
+        status: status, manual: manual, occurrence_count: 1
+      )
+    end
 end

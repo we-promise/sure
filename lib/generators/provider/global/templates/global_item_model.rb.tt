@@ -1,5 +1,5 @@
 class <%= class_name %>Item < ApplicationRecord
-  include Syncable, Provided
+  include Syncable, Provided, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -14,11 +14,6 @@ class <%= class_name %>Item < ApplicationRecord
   scope :active, -> { where(scheduled_for_deletion: false) }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   # NOTE: This is a GLOBAL provider
   # Credentials are configured globally in /settings/providers (self-hosted mode)

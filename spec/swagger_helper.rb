@@ -31,9 +31,82 @@ RSpec.configure do |config|
             name: 'X-Api-Key',
             in: :header,
             description: 'API key for authentication. Generate one from your account settings.'
+          },
+          financekitPublisher: {
+            type: :http,
+            scheme: :bearer,
+            bearerFormat: 'opaque publisher credential',
+            description: 'Revocable credential restricted to one FinanceKit publisher upload URL.'
+          },
+          oauth2: {
+            type: :oauth2,
+            flows: {
+              authorizationCode: {
+                authorizationUrl: '/oauth/authorize',
+                tokenUrl: '/oauth/token',
+                scopes: {
+                  read: 'Read access',
+                  read_write: 'Read and write access'
+                }
+              }
+            }
           }
         },
         schemas: {
+          SplitRequest: {
+            type: :object,
+            required: %w[split],
+            properties: {
+              split: {
+                type: :object,
+                required: %w[splits],
+                properties: {
+                  splits: {
+                    type: :array,
+                    minItems: 1,
+                    description: 'Child transactions. Amounts must sum exactly to the parent amount.',
+                    items: {
+                      type: :object,
+                      required: %w[amount],
+                      properties: {
+                        name: { type: :string, nullable: true, description: 'Defaults to the parent name when omitted' },
+                        amount: { type: :string, description: 'Same sign convention as the transaction amount' },
+                        category_id: { type: :string, nullable: true },
+                        merchant_id: { type: :string, nullable: true, description: "Omitted or null, the child takes the parent's merchant" },
+                        tag_ids: { type: :array, items: { type: :string }, nullable: true, description: 'No tags when omitted' },
+                        excluded: { type: :boolean, nullable: true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          Split: {
+            type: :object,
+            required: %w[transaction_id amount amount_decimal amount_cents currency children],
+            properties: {
+              transaction_id: { type: :string },
+              amount: { type: :string, description: 'Formatted parent amount, rounded for display' },
+              amount_decimal: { type: :string, description: 'Exact stored amount; children must sum to this' },
+              amount_cents: { type: :integer, description: 'Absolute amount in minor units' },
+              currency: { type: :string },
+              children: { type: :array, items: { '$ref' => '#/components/schemas/SplitChild' } }
+            }
+          },
+          SplitChild: {
+            allOf: [
+              { '$ref' => '#/components/schemas/Transaction' },
+              {
+                type: :object,
+                required: %w[amount_decimal excluded],
+                properties: {
+                  amount_decimal: { type: :string, description: 'Exact stored amount; send this back when replacing the split' },
+                  excluded: { type: :boolean, description: 'Whether this child is excluded from totals' }
+                }
+              }
+            ]
+          },
           Pagination: {
             type: :object,
             required: %w[page per_page total_count total_pages],
@@ -225,6 +298,45 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          Insight: {
+            type: :object,
+            required: %w[id type title body priority status],
+            properties: {
+              id: { type: :string, format: :uuid },
+              type: { type: :string },
+              title: { type: :string },
+              body: { type: :string },
+              priority: { type: :string, enum: %w[high medium low] },
+              status: { type: :string, enum: %w[active read] },
+              generated_at: { type: :string, format: :'date-time', nullable: true }
+            }
+          },
+          InsightCollection: {
+            type: :object,
+            required: %w[insights],
+            properties: {
+              insights: { type: :array, items: { '$ref' => '#/components/schemas/Insight' } }
+            }
+          },
+          PushSubscriptionRegistration: {
+            type: :object, required: %w[token environment platform],
+            properties: {
+              token: { type: :string, maxLength: 2048, pattern: "^(?:[0-9a-fA-F]{2})+$" },
+              environment: { type: :string, enum: %w[sandbox production] },
+              platform: { type: :string, enum: %w[ios] },
+              device_key: { type: :string, pattern: '^[0-9a-f]{64}$', description: 'Optional 256-bit installation secret, unique per server and kept in device secure storage. Required proof to replace another user’s registration for this device. Never returned.' }
+            }
+          },
+          PushSubscription: {
+            type: :object,
+            required: %w[id environment platform last_registered_at],
+            properties: {
+              id: { type: :string, format: :uuid },
+              environment: { type: :string, enum: %w[sandbox production] },
+              platform: { type: :string, enum: %w[ios] },
+              last_registered_at: { type: :string, format: :'date-time' }
+            }
+          },
           RetryResponse: {
             type: :object,
             required: %w[message message_id],
@@ -361,13 +473,14 @@ RSpec.configure do |config|
           },
           BudgetCategorySummary: {
             type: :object,
-            required: %w[id budget_id currency subcategory inherits_parent_budget category created_at updated_at],
+            required: %w[id budget_id currency subcategory inherits_parent_budget rollover_enabled category created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               budget_id: { type: :string, format: :uuid },
               currency: { type: :string },
               subcategory: { type: :boolean },
               inherits_parent_budget: { type: :boolean },
+              rollover_enabled: { type: :boolean },
               budgeted_spending: { type: :string },
               budgeted_spending_cents: { type: :integer },
               display_budgeted_spending: { type: :string },
@@ -389,19 +502,22 @@ RSpec.configure do |config|
           },
           BudgetCategory: {
             type: :object,
-            required: %w[id budget_id currency subcategory inherits_parent_budget category created_at updated_at],
+            required: %w[id budget_id currency subcategory inherits_parent_budget rollover_enabled category created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               budget_id: { type: :string, format: :uuid },
               currency: { type: :string },
               subcategory: { type: :boolean },
               inherits_parent_budget: { type: :boolean },
+              rollover_enabled: { type: :boolean },
               budgeted_spending: { type: :string },
               budgeted_spending_cents: { type: :integer },
               display_budgeted_spending: { type: :string },
               display_budgeted_spending_cents: { type: :integer },
               actual_spending: { type: :string },
               actual_spending_cents: { type: :integer },
+              rolled_over_amount: { type: :string },
+              rolled_over_amount_cents: { type: :integer },
               available_to_spend: { type: :string },
               available_to_spend_cents: { type: :integer },
               category: {
@@ -633,13 +749,15 @@ RSpec.configure do |config|
           },
           Rule: {
             type: :object,
-            required: %w[id resource_type active conditions actions created_at updated_at],
+            required: %w[id resource_type active position stop_processing conditions actions created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
               name: { type: :string, nullable: true },
               resource_type: { type: :string, enum: %w[transaction] },
               active: { type: :boolean },
               effective_date: { type: :string, format: :date, nullable: true },
+              position: { type: :integer, description: 'Run order within the family; rules run from the lowest position up and the top rule wins per attribute' },
+              stop_processing: { type: :boolean, description: 'When true, rules further down do not change transactions this rule matches' },
               conditions: {
                 type: :array,
                 items: { '$ref' => '#/components/schemas/RuleCondition' }
@@ -761,10 +879,38 @@ RSpec.configure do |config|
               expected_day_of_month: { type: :integer, minimum: 1, maximum: 31 },
               last_occurrence_date: { type: :string, format: :date },
               next_expected_date: { type: :string, format: :date },
-              status: { type: :string, enum: %w[active inactive] },
+              status: { type: :string, enum: %w[suggested active paused inactive ended] },
               occurrence_count: { type: :integer, minimum: 0 },
               name: { type: :string, nullable: true },
               manual: { type: :boolean },
+              payment_url: { type: :string, nullable: true, description: 'Link to the biller portal where this bill is paid. Only http and https are accepted; a bare host is stored as https.' },
+              autopay: { type: :boolean, description: 'Whether this bill pays itself automatically.' },
+              notes: { type: :string, nullable: true, description: 'Free-text notes shown alongside the bill.' },
+              bill_type: { type: :string, enum: %w[bill subscription installment income transfer other], description: 'What kind of obligation this is.' },
+              category_id: { type: :string, format: :uuid, nullable: true },
+              anchor_date: { type: :string, format: :date, nullable: true, description: 'Reference occurrence that phases every-N cadences.' },
+              weekend_adjust: { type: :string, enum: %w[none skip before after] },
+              end_mode: { type: :string, enum: %w[never on_date after_count] },
+              end_on: { type: :string, format: :date, nullable: true },
+              end_after_count: { type: :integer, nullable: true },
+              renews_on: { type: :string, format: :date, nullable: true },
+              trial_ends_on: { type: :string, format: :date, nullable: true },
+              cancelled_on: { type: :string, format: :date, nullable: true },
+              recurrence_rules: {
+                type: :array,
+                description: 'Repetition patterns; multiple rows express semimonthly and similar multi-pattern cadences. Empty means legacy monthly on expected_day_of_month.',
+                items: {
+                  type: :object,
+                  properties: {
+                    frequency: { type: :string, enum: %w[weekly monthly yearly] },
+                    interval: { type: :integer },
+                    day_of_month: { type: :integer, nullable: true, description: '-1 means the last day of the month.' },
+                    weekday: { type: :integer, nullable: true },
+                    weekday_ordinal: { type: :integer, nullable: true, description: '-1 means the last such weekday.' },
+                    month_of_year: { type: :integer, nullable: true }
+                  }
+                }
+              },
               expected_amount_min: { type: :string, nullable: true },
               expected_amount_min_cents: { type: :integer, nullable: true, description: 'Minimum expected amount in currency minor units' },
               expected_amount_max: { type: :string, nullable: true },
@@ -790,17 +936,37 @@ RSpec.configure do |config|
           },
           Transaction: {
             type: :object,
-            required: %w[id date amount currency name classification account tags created_at updated_at],
+            required: %w[id entry_id date amount amount_decimal currency name classification kind excluded split_parent account tags created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
+              entry_id: {
+                type: :string,
+                format: :uuid,
+                description: 'Id of the underlying entry. Web routes for a single transaction, such as /transactions/{entry_id}, use this id rather than id.'
+              },
               date: { type: :string, format: :date },
-              amount: { type: :string },
+              amount: { type: :string, description: 'Formatted amount, rounded to the currency display precision' },
+              amount_decimal: {
+                type: :string,
+                description: 'Exact stored amount as an unrounded, locale-independent decimal string. Positive is an outflow, negative an inflow.'
+              },
               currency: { type: :string },
               name: { type: :string },
               notes: { type: :string, nullable: true },
               external_id: { type: :string, nullable: true },
               source: { type: :string, nullable: true },
+              user_modified: { type: :boolean },
               classification: { type: :string },
+              kind: {
+                type: :string,
+                enum: Transaction.kinds.keys,
+                description: 'How budgets and reports treat the transaction. loan_payment counts as an expense; ' \
+                             'investment_contribution does too when the family counts investment contributions as ' \
+                             'spending, and is otherwise reported as invested and left out of spending and income; ' \
+                             'funds_movement, cc_payment and one_time are left out of budget totals.'
+              },
+              excluded: { type: :boolean, description: 'Whether the transaction is excluded from budget and report totals. Splitting a transaction marks it excluded.' },
+              split_parent: { type: :boolean, description: 'Whether the transaction has been split; its amount is then carried by its split children.' },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },
               merchant: { '$ref' => '#/components/schemas/Merchant', nullable: true },
@@ -1657,6 +1823,104 @@ RSpec.configure do |config|
               formatted: { type: :string, description: 'Locale-formatted money string' }
             }
           },
+          FinancialPeriod: {
+            type: :object, required: %w[start_date end_date],
+            properties: { start_date: { type: :string, format: :date }, end_date: { type: :string, format: :date } }
+          },
+          SpendingPoint: {
+            type: :object, required: %w[date amount],
+            properties: { date: { type: :string, format: :date }, amount: { type: :string, description: 'Cumulative decimal amount in family currency' } }
+          },
+          CashFlowSankey: {
+            type: :object, required: %w[basis income spending net_savings nodes links],
+            description: 'Refunds net within each category. Parent direct amounts exclude child totals before partitioning by direction. Graph income/spending may differ from gross monthly totals; net savings agrees. Decimal strings retain FX precision. Empty flow has empty nodes and links.',
+            properties: {
+              basis: { type: :string, enum: %w[net_by_category net_by_account], description: 'net_by_account (group_by=account) replaces the Cash Flow node with one account node per account, each balanced by Surplus or Deficit' },
+              income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
+              invested: { type: :string, description: "Money moved into investment accounts, shown as its own node. Zero unless the family does not count investing as spending" },
+              nodes: { type: :array, items: {
+                type: :object, required: %w[id name kind value percentage category_id filter_value color],
+                properties: {
+                  id: { type: :string, description: 'Stable direction-prefixed category identifier or structural identifier' },
+                  name: { type: :string }, kind: { type: :string, enum: %w[income expense cash_flow account surplus deficit invested] },
+                  value: { type: :string, description: 'Nonnegative decimal in envelope currency' },
+                  percentage: { type: :string, description: 'Percentage of parent, or side total for root categories; structural balancing nodes use central capacity' },
+                  category_id: { type: :string, format: :uuid, nullable: true },
+                  filter_value: { type: :string, nullable: true, description: 'Web transaction category filter; null means no category drill-down' },
+                  color: { type: :string, nullable: true, description: 'User category color; structural colors belong to the client' }
+                }
+              } },
+              links: { type: :array, items: {
+                type: :object, required: %w[source target value percentage],
+                properties: {
+                  source: { type: :integer, minimum: 0, description: 'Zero-based nodes index' },
+                  target: { type: :integer, minimum: 0, description: 'Zero-based nodes index' },
+                  value: { type: :string, description: 'Positive decimal in envelope currency' }, percentage: { type: :string }
+                }
+              } }
+            }
+          },
+          CashFlowGraph: {
+            type: :object, required: %w[as_of time_zone currency period sankey],
+            properties: {
+              as_of: { type: :string, format: :date }, time_zone: { type: :string }, currency: { type: :string },
+              period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+              sankey: { '$ref' => '#/components/schemas/CashFlowSankey' }
+            }
+          },
+          SpendingVsNormalCategory: {
+            type: :object, required: %w[id name color filter_value total normal change ratio],
+            properties: {
+              id: { type: :string, format: :uuid, nullable: true, description: 'Null for the synthetic Uncategorized category. A parent\'s own spending is listed among its subcategories with the parent\'s id' },
+              name: { type: :string }, color: { type: :string, nullable: true },
+              filter_value: { type: :string, description: 'Value for the transactions category filter' },
+              total: { type: :string, description: 'Net spending in the period (expense minus refunds), at least zero' },
+              normal: { type: :string, nullable: true, description: 'Finished period: net spending over the baseline period, scaled to the period length. Unfinished period (in_progress): average net spending over the same number of days from earlier month starts. Null without enough history' },
+              change: { type: :string, nullable: true, description: 'total minus normal' },
+              ratio: { type: :string, nullable: true, description: 'Fractional change against normal (0.5 = 50% more). Null without a positive normal' },
+              direct: { type: :boolean, description: 'Present on subcategories only: true for the parent\'s own spending, booked on the parent rather than a subcategory' },
+              subcategories: { type: :array, items: { '$ref' => '#/components/schemas/SpendingVsNormalCategory' }, description: 'Present on parent categories only; adds up to the parent total' }
+            }
+          },
+          SpendingVsNormal: {
+            type: :object, required: %w[currency period in_progress baseline_period comparable total normal_total categories],
+            properties: {
+              currency: { type: :string },
+              period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+              in_progress: { type: :boolean, description: 'The period has not ended: it is cut to today, and normal is the average of the same number of days from each of up to 12 earlier month starts' },
+              baseline_period: {
+                type: :object, nullable: true, required: %w[start_date end_date],
+                properties: { start_date: { type: :string, format: :date }, end_date: { type: :string, format: :date } },
+                description: 'Up to a year before the period, from the first counted transaction. Null with under 28 days of history'
+              },
+              comparable: { type: :boolean },
+              total: { type: :string }, normal_total: { type: :string, nullable: true },
+              categories: { type: :array, items: { '$ref' => '#/components/schemas/SpendingVsNormalCategory' }, description: 'Parent categories, largest total first' }
+            }
+          },
+          CashFlow: {
+            type: :object,
+            required: %w[month as_of time_zone currency period income spending net_savings savings_rate spending_comparison],
+            properties: {
+              month: { type: :string, format: :date }, as_of: { type: :string, format: :date },
+              time_zone: { type: :string }, currency: { type: :string },
+              period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+              income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
+              sankey: { '$ref' => '#/components/schemas/CashFlowSankey' },
+              savings_rate: { type: :string, nullable: true, description: 'Percentage points; null when income is nonpositive. May be negative.' },
+              spending_comparison: {
+                type: :object,
+                required: %w[previous_period current_total comparison_total comparison_end_date delta current previous],
+                properties: {
+                  previous_period: { '$ref' => '#/components/schemas/FinancialPeriod' },
+                  current_total: { type: :string }, comparison_total: { type: :string }, delta: { type: :string },
+                  comparison_end_date: { type: :string, format: :date },
+                  current: { type: :array, items: { '$ref' => '#/components/schemas/SpendingPoint' } },
+                  previous: { type: :array, items: { '$ref' => '#/components/schemas/SpendingPoint' } }
+                }
+              }
+            }
+          },
           BalanceSheet: {
             type: :object,
             required: %w[currency net_worth assets liabilities],
@@ -1714,6 +1978,10 @@ RSpec.configure do |config|
       }
     }
   }
+
+  config.openapi_specs["openapi.yaml"][:components][:schemas].merge!(
+    JSON.parse(Rails.root.join("docs/api/financekit/schemas.json").read)
+  )
 
   config.openapi_format = :yaml
 end

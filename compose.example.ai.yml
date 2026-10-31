@@ -110,11 +110,18 @@ x-rails-env: &rails_env
   # an hour. The trade is that longer tool chains fail earlier, with an explicit
   # tool-call limit error rather than a timeout.
   OPENAI_REQUEST_TIMEOUT: ${OPENAI_REQUEST_TIMEOUT:-300}
+  # Health-check probes (System Health → AI Status → "Run checks") bound each
+  # probe call. Distinct from OPENAI_REQUEST_TIMEOUT, which bounds real LLM
+  # calls the app makes; the probe default is 5s. AI_HEALTH_PROBE_CACHE_TTL
+  # controls how long probe results are cached (default 60s).
+  AI_HEALTH_PROBE_TIMEOUT: ${AI_HEALTH_PROBE_TIMEOUT:-}
+  AI_HEALTH_PROBE_CACHE_TTL: ${AI_HEALTH_PROBE_CACHE_TTL:-}
   ASSISTANT_MAX_TOOL_CALL_ITERATIONS: ${ASSISTANT_MAX_TOOL_CALL_ITERATIONS:-2}
   AI_RESPONSE_TIMEOUT: ${AI_RESPONSE_TIMEOUT:-1200}
   # Vector store — pgvector keeps all data local (requires pgvector/pgvector Docker image for db)
   VECTOR_STORE_PROVIDER: pgvector
-  EMBEDDING_MODEL: nomic-embed-text
+  EMBEDDING_URI_BASE: http://ollama:11434/v1
+  EMBEDDING_MODEL: mxbai-embed-large
   EMBEDDING_DIMENSIONS: "1024"
   # NOTE: enabling OpenAI will incur costs when you use AI-related features in the app (chat, rules).  Make sure you have set appropriate spend limits on your account before adding this.
   #  OPENAI_ACCESS_TOKEN: ${OPENAI_ACCESS_TOKEN}
@@ -182,7 +189,14 @@ services:
     networks:
       - sure_net
 
-  # Note: You still have to download models manually using the ollama CLI or via Open WebUI
+  # Ollama's OLLAMA_MODELS setting controls the model storage directory; it is
+  # not a preload list. Start Ollama, then pull each model once. The ollama
+  # volume below keeps the downloaded models across container restarts:
+  #
+  # docker compose -f compose.example.ai.yml --profile local-ai up -d --wait ollama
+  # docker compose -f compose.example.ai.yml exec ollama ollama pull deepseek-r1:8b
+  # docker compose -f compose.example.ai.yml exec ollama ollama pull llama3.1:8b
+  # docker compose -f compose.example.ai.yml exec ollama ollama pull mxbai-embed-large
   ollama:
     profiles:
       - local-ai
@@ -196,7 +210,12 @@ services:
       - "11434:11434"
     environment:
       - OLLAMA_KEEP_ALIVE=1h
-      - OLLAMA_MODELS=deepseek-r1:8b,llama3.1:8b,nomic-embed-text # Pre-load model on startup, you can change this to your preferred model
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
     networks:
       - sure_net
     # Recommended: Enable GPU support
@@ -285,7 +304,7 @@ services:
       - sure_net
 
   web:
-    image: ghcr.io/we-promise/sure:stable
+    image: ghcr.io/we-promise/sure:${SURE_IMAGE_TAG:-stable}
     volumes:
       - app-storage:/rails/storage
     ports:
@@ -317,7 +336,7 @@ services:
       - sure_net
 
   worker:
-    image: ghcr.io/we-promise/sure:stable
+    image: ghcr.io/we-promise/sure:${SURE_IMAGE_TAG:-stable}
     command: bundle exec sidekiq
     volumes:
       - app-storage:/rails/storage
@@ -338,7 +357,7 @@ services:
       - sure_net
 
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16-trixie
     restart: unless-stopped
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -353,23 +372,68 @@ services:
       - sure_net
 
   backup:
+    # Full-instance backups (database, uploaded files, .env and compose.yml),
+    # organized as <BACKUP_DIR>/<version>/<timestamp>-<trigger>/. Runs the same
+    # image as web/worker, so there is nothing to download.
+    #   Every day:  docker compose --profile backup up -d backup
+    #   Right now:  docker compose run --rm backup create
+    # See docs/hosting/docker.md "Backups, upgrades and rollbacks".
     profiles:
       - backup
-    image: prodrigestivill/postgres-backup-local
+    image: ghcr.io/we-promise/sure:${SURE_IMAGE_TAG:-stable}
+    # Root so it can write the host's backup folder; uploaded files keep their owner.
+    user: "0"
+    entrypoint: ["bin/sure-backup"]
     restart: unless-stopped
     volumes:
-      - /opt/sure-data/backups:/backups # Change this path to your desired backup location on the host machine
+      - ${BACKUP_DIR:-./backups}:/backups
+      - app-storage:/rails/storage
+      # The compose directory, so backups include .env and compose.yml
+      - .:/config:ro
     environment:
-      - POSTGRES_HOST=db
-      - POSTGRES_DB=${POSTGRES_DB:-sure_production}
-      - POSTGRES_USER=${POSTGRES_USER:-sure_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sure_password} # pipelock:ignore
-      - SCHEDULE=@daily # Runs once a day at midnight
-      - BACKUP_KEEP_DAYS=7 # Keeps the last 7 days of backups
-      - BACKUP_KEEP_WEEKS=4 # Keeps 4 weekly backups
-      - BACKUP_KEEP_MONTHS=6 # Keeps 6 monthly backups
+      <<: *db_env
+      POSTGRES_HOST: db
+      BACKUP_SCHEDULE: ${BACKUP_SCHEDULE:-0 2 * * *}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+      INSTANCE_ID: ${INSTANCE_ID:-default}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    networks:
+      - sure_net
+
+  backup-offsite:
+    # Optional: copies the backup folder to any rclone remote (S3, R2, B2, SFTP,
+    # Google Drive, ...) every hour, and prunes old scheduled backups there.
+    #   docker compose --profile backup-offsite up -d backup-offsite
+    profiles:
+      - backup-offsite
+    image: rclone/rclone:1.71
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        : "$${BACKUP_DESTINATION:?set BACKUP_DESTINATION in .env}"
+        while true; do
+          rclone copy /backups "$${BACKUP_DESTINATION%/}/$${INSTANCE_ID}" --exclude ".tmp-*/**" \
+            && rclone delete "$${BACKUP_DESTINATION%/}/$${INSTANCE_ID}" --min-age "$${BACKUP_KEEP_DAYS}d" --include "/*/*-scheduled/**" \
+            && rclone rmdirs "$${BACKUP_DESTINATION%/}/$${INSTANCE_ID}" --leave-root \
+            || echo "backup-offsite: copy failed; retrying in an hour"
+          sleep 3600
+        done
+    volumes:
+      - ${BACKUP_DIR:-./backups}:/backups:ro
+    environment:
+      BACKUP_DESTINATION: ${BACKUP_DESTINATION:-}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+      INSTANCE_ID: ${INSTANCE_ID:-default}
+      # By default we map the S3 variables. If you use a different provider (e.g., gdrive),
+      # replace these with the equivalent variables you added to your .env file.
+      RCLONE_CONFIG_S3_TYPE: ${RCLONE_CONFIG_S3_TYPE:-}
+      RCLONE_CONFIG_S3_PROVIDER: ${RCLONE_CONFIG_S3_PROVIDER:-}
+      RCLONE_CONFIG_S3_ACCESS_KEY_ID: ${RCLONE_CONFIG_S3_ACCESS_KEY_ID:-}
+      RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: ${RCLONE_CONFIG_S3_SECRET_ACCESS_KEY:-} # pipelock:ignore
+      RCLONE_CONFIG_S3_ENDPOINT: ${RCLONE_CONFIG_S3_ENDPOINT:-}
     networks:
       - sure_net
 

@@ -8,6 +8,81 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     @entry = entries(:trade)
   end
 
+  # The header used to read the amount's sign and call every trade a buy or a
+  # sell, so an inbound transfer — Questrade journals one, and so do the
+  # self-custody wallets — was shown as a purchase it never was.
+  test "the header calls a labelled trade what it is, not a buy or a sell" do
+    @entry.trade.update!(investment_activity_label: "Transfer")
+
+    get trade_url(@entry)
+
+    assert_response :success
+    # Scoped to the header's own line: "Buy" also appears in the quick-edit
+    # picker further down the page.
+    assert_select "span.text-secondary.text-sm", text: I18n.t("trades.header.transfer")
+    assert_select "span.text-secondary.text-sm", text: I18n.t("trades.header.buy"), count: 0
+  end
+
+  test "the German header localizes supported provider activity labels" do
+    @user.update!(locale: "de")
+
+    translations = {
+      "Buy" => "Kaufen",
+      "Contribution" => "Einlage",
+      "Dividend" => "Dividende",
+      "Exchange" => "Umtausch",
+      "Fee" => "Gebühr",
+      "Interest" => "Zinsen",
+      "Other" => "Sonstige",
+      "Reinvestment" => "Reinvestition",
+      "Sell" => "Verkaufen",
+      "Sweep In" => "Sweep In",
+      "Sweep Out" => "Sweep Out",
+      "Transfer" => "Überweisung",
+      "Withdrawal" => "Entnahme"
+    }
+
+    assert_equal Trade::ACTIVITY_LABELS.sort, translations.keys.sort
+
+    translations.each do |activity_label, translation|
+      key = activity_label.parameterize(separator: "_")
+
+      assert_equal translation,
+                   I18n.t("trades.header.#{key}", locale: :de, fallback: false, default: nil)
+
+      @entry.trade.update!(investment_activity_label: activity_label)
+
+      get trade_url(@entry)
+
+      assert_response :success
+      assert_select "span.text-secondary.text-sm", text: translation
+    end
+  end
+
+  test "an unlabelled trade still reads from the amount" do
+    @entry.trade.update!(investment_activity_label: nil)
+
+    get trade_url(@entry)
+
+    assert_response :success
+    expected = @entry.amount.positive? ? I18n.t("trades.header.buy") : I18n.t("trades.header.sell")
+    assert_select "span.text-secondary.text-sm", text: expected
+  end
+
+  # A label this view has no wording for must not blank the line out.
+  test "an unknown label falls back rather than rendering nothing" do
+    @entry.trade.update!(investment_activity_label: "Sweep In")
+    I18n.backend.store_translations(:en, trades: { header: { sweep_in: nil } })
+
+    get trade_url(@entry)
+
+    assert_response :success
+    expected = @entry.amount.positive? ? I18n.t("trades.header.buy") : I18n.t("trades.header.sell")
+    assert_select "span.text-secondary.text-sm", text: expected
+  ensure
+    I18n.reload!
+  end
+
   test "updates trade entry" do
     assert_no_difference [ "Entry.count", "Trade.count" ] do
       patch trade_url(@entry), params: {
@@ -51,6 +126,56 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to @entry.account
+  end
+
+  # A deposit or withdrawal books an entry on the other account too, so that
+  # account needs write permission, not just the investment account.
+  test "a withdrawal cannot book into an account the member may only read" do
+    sign_in_as_member_with_writable_investment
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      post trades_url(account_id: @investment.id), params: {
+        model: { type: "withdrawal", date: Date.current, amount: 10, currency: "USD", transfer_account_id: accounts(:credit_card).id }
+      }
+    end
+
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "a deposit cannot draw from another member's private account" do
+    sign_in_as_member_with_writable_investment
+
+    assert_no_difference [ "Entry.count", "Transfer.count" ] do
+      post trades_url(account_id: @investment.id), params: {
+        model: { type: "deposit", date: Date.current, amount: 10, currency: "USD", transfer_account_id: accounts(:connected).id }
+      }
+    end
+
+    assert_response :not_found
+  end
+
+  test "a member can still book a withdrawal into an account shared with full control" do
+    sign_in_as_member_with_writable_investment
+
+    assert_difference -> { Transfer.count } => 1 do
+      post trades_url(account_id: @investment.id), params: {
+        model: { type: "withdrawal", date: Date.current, amount: 10, currency: "USD", transfer_account_id: accounts(:depository).id }
+      }
+    end
+
+    assert_redirected_to @investment
+  end
+
+  test "the transfer account picker only offers accounts the member may write to" do
+    sign_in_as_member_with_writable_investment
+
+    get new_trade_url(account_id: @investment.id, type: "withdrawal")
+
+    assert_response :success
+    assert_select "input[type=hidden][name='model[transfer_account_id]']"
+    assert_select "[role=option][data-value='#{accounts(:depository).id}']"
+    assert_select "[role=option][data-value='#{accounts(:credit_card).id}']", count: 0
+    assert_select "[role=option][data-value='#{accounts(:connected).id}']", count: 0
   end
 
   test "creates withdrawal entry" do
@@ -410,4 +535,14 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert @entry.trade.locked_attributes.key?("investment_activity_label"), "investment_activity_label should be locked"
     assert @entry.protected_from_sync?, "Entry should be protected from sync"
   end
+
+  private
+    # family_member gets the investment account with full control; fixtures
+    # already share depository with full control and credit_card read-only,
+    # and leave connected private to family_admin.
+    def sign_in_as_member_with_writable_investment
+      @investment = accounts(:investment)
+      @investment.account_shares.create!(user: users(:family_member), permission: "full_control")
+      sign_in users(:family_member)
+    end
 end

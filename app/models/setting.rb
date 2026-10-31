@@ -10,10 +10,19 @@ class Setting < RailsSettings::Base
   field :openai_uri_base, type: :string, default: ENV["OPENAI_URI_BASE"]
   field :openai_model, type: :string, default: ENV["OPENAI_MODEL"]
   field :openai_json_mode, type: :string, default: ENV["LLM_JSON_MODE"]
+  field :openai_request_timeout, type: :integer, default: ENV["OPENAI_REQUEST_TIMEOUT"]&.to_i
   field :anthropic_access_token, type: :string, default: ENV["ANTHROPIC_ACCESS_TOKEN"].presence || ENV["ANTHROPIC_API_KEY"].presence
   field :anthropic_model, type: :string, default: ENV["ANTHROPIC_MODEL"]
   field :anthropic_base_url, type: :string, default: ENV["ANTHROPIC_BASE_URL"]
   field :llm_provider, type: :string, default: ENV.fetch("LLM_PROVIDER", "openai")
+
+  # Jev (TypeSafe) — a classification provider, not an LLM. Reachable either
+  # through OpenRouter's Decisions API (the default) or TypeSafe's own endpoint.
+  # Deliberately no OPENROUTER_API_KEY fallback: an operator holding that key
+  # for an unrelated purpose should not silently enable Jev.
+  field :jev_api_key, type: :string, default: ENV["JEV_API_KEY"]
+  field :jev_endpoint, type: :string, default: ENV["JEV_ENDPOINT"]
+  field :jev_model, type: :string, default: ENV["JEV_MODEL"]
 
   # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
   # merchant detection, enhance-merchants, PDF processing). Defaults track
@@ -29,8 +38,14 @@ class Setting < RailsSettings::Base
   # generate would otherwise always trip the watchdog. Read via
   # `Chat.response_timeout`, which applies ENV > Setting > default precedence.
   field :ai_response_timeout, type: :integer, default: ENV["AI_RESPONSE_TIMEOUT"]&.to_i
+  # Per-request bound for the admin "Run checks" AI probes on System Health.
+  # The PDF probes do a full extraction round trip, which cloud models often
+  # can't finish inside the 5s default. Read via `AiHealth::Probe.timeout`,
+  # which applies ENV > Setting > default precedence.
+  field :ai_health_probe_timeout, type: :integer, default: ENV["AI_HEALTH_PROBE_TIMEOUT"]&.to_i
   field :external_assistant_url, type: :string
   field :external_assistant_token, type: :string
+  field :external_assistant_model, type: :string
   field :external_assistant_agent_id, type: :string
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
@@ -55,6 +70,16 @@ class Setting < RailsSettings::Base
     url.gsub(BRAND_FETCH_URL_PATTERN, "\\1w/#{size}/h/#{size}\\2")
   end
 
+  def self.brand_fetch_icon_url(identifier, fallback: "lettermark", namespace: nil, width: nil, height: nil)
+    return nil if identifier.blank? || brand_fetch_client_id.blank?
+
+    w = width || brand_fetch_logo_size
+    h = height || brand_fetch_logo_size
+    path = [ namespace, identifier ].compact_blank.join("/")
+
+    "https://cdn.brandfetch.io/#{path}/icon/fallback/#{fallback}/w/#{w}/h/#{h}?c=#{brand_fetch_client_id}"
+  end
+
   # Provider selection
   field :exchange_rate_provider, type: :string, default: ENV.fetch("EXCHANGE_RATE_PROVIDER", "twelve_data")
   field :securities_provider, type: :string, default: ENV.fetch("SECURITIES_PROVIDER", "twelve_data")
@@ -67,10 +92,14 @@ class Setting < RailsSettings::Base
   field :eodhd_api_key, type: :string, default: ENV["EODHD_API_KEY"]
   field :alpha_vantage_api_key, type: :string, default: ENV["ALPHA_VANTAGE_API_KEY"]
   field :tinkoff_invest_api_key, type: :string, default: ENV["TINKOFF_INVEST_API_KEY"]
+  # Mansa API (mansaapi.com) — African exchanges, including NGX (Nigeria),
+  # which none of the providers above cover. See Provider::Mansa.
+  field :mansa_api_key, type: :string, default: ENV["MANSA_API_KEY"]
 
   # Property valuation (AVM) provider API keys
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
   field :realie_api_key, type: :string, default: ENV["REALIE_API_KEY"]
+  field :chimnie_api_key, type: :string, default: ENV["CHIMNIE_API_KEY"]
 
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
@@ -86,10 +115,13 @@ class Setting < RailsSettings::Base
       eodhd_api_key
       alpha_vantage_api_key
       tinkoff_invest_api_key
+      mansa_api_key
       rentcast_api_key
       realie_api_key
+      chimnie_api_key
       openai_access_token
       anthropic_access_token
+      jev_api_key
       external_assistant_token
     ].freeze
 
@@ -141,7 +173,7 @@ class Setting < RailsSettings::Base
       plural.to_s.split(",").map(&:strip).reject(&:blank?)
     else
       # Backward compat: fall back to singular setting
-      [ ENV["SECURITIES_PROVIDER"].presence || securities_provider ].compact
+      [ ENV["SECURITIES_PROVIDER"].presence || securities_provider.presence ].compact
     end
   end
 
@@ -156,6 +188,14 @@ class Setting < RailsSettings::Base
   field :auto_sync_enabled, type: :boolean, default: ENV.fetch("AUTO_SYNC_ENABLED", "1") == "1"
   field :auto_sync_time, type: :string, default: ENV.fetch("AUTO_SYNC_TIME", "02:22")
   field :auto_sync_timezone, type: :string, default: ENV.fetch("AUTO_SYNC_TIMEZONE", "UTC")
+
+  # Daily market data (security price) import — mirrors auto_sync_* above.
+  # Default time intentionally unchanged from the previous hardcoded
+  # config/schedule.yml entry (22:00 UTC, ~1h after NYSE close) so existing
+  # installations see no behavior change unless they actively reconfigure it.
+  field :market_data_sync_enabled, type: :boolean, default: ENV.fetch("MARKET_DATA_SYNC_ENABLED", "1") == "1"
+  field :market_data_sync_time, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIME", "22:00")
+  field :market_data_sync_timezone, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIMEZONE", "UTC")
 
   AUTO_SYNC_TIME_FORMAT = /\A([01]?\d|2[0-3]):([0-5]\d)\z/
 
@@ -183,6 +223,9 @@ class Setting < RailsSettings::Base
   field :require_invite_for_signup, type: :boolean, default: false
   field :require_email_confirmation, type: :boolean, default: ENV.fetch("REQUIRE_EMAIL_CONFIRMATION", "true") == "true"
   field :invite_only_default_family_id, type: :string, default: nil
+  # Opt-in for self-hosted demo refresh. Managed hosting retains its scheduled behavior.
+  field :demo_family_refresh_enabled, type: :boolean, default: false
+  field :demo_family_refresh_family_id, type: :string, default: nil
 
   def self.validate_onboarding_state!(state)
     return if ONBOARDING_STATES.include?(state)
@@ -195,6 +238,12 @@ class Setting < RailsSettings::Base
     alias_method :raw_onboarding_state=, :onboarding_state=
     alias_method :raw_openai_model, :openai_model
     alias_method :raw_openai_model=, :openai_model=
+    alias_method :raw_llm_provider, :llm_provider
+
+    # The env var wins over a stored choice, like the other AI settings.
+    def llm_provider
+      ENV["LLM_PROVIDER"].presence || raw_llm_provider
+    end
 
     def onboarding_state
       value = raw_onboarding_state

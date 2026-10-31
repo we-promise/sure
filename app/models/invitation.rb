@@ -36,11 +36,29 @@ class Invitation < ApplicationRecord
     return false if would_orphan_owned_accounts?(user)
 
     transaction do
+      release_provider_item_ownership(user)
       user.update!(family_id: family_id, role: role.to_s)
       update!(accepted_at: Time.current)
       family.auto_share_existing_accounts_with(user)
     end
     true
+  end
+
+  # would_orphan_owned_accounts? blocks the move when the user owns accounts
+  # that would be left behind, but a provider item can be owned without owning
+  # any account (it may have generated none yet, or its accounts belong to
+  # someone else). Such an item keeps its old family_id while its owner leaves,
+  # and the next save fails ProviderItemOwnable's same-family validation --
+  # which would leave the connection unsyncable. Release ownership instead: the
+  # item reverts to admin-managed, exactly as before ownership existed.
+  def release_provider_item_ownership(user)
+    return if user.family_id.blank? || user.family_id == family_id
+
+    ProviderItemOwnable.owned_item_classes.each do |item_class|
+      item_class.where(owner_id: user.id)
+                .where.not(family_id: family_id)
+                .update_all(owner_id: nil, updated_at: Time.current)
+    end
   end
 
   def would_orphan_owned_accounts?(user)

@@ -2,6 +2,8 @@ require "test_helper"
 
 class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
   setup do
+    Rails.configuration.x.lunchflow.stubs(:include_pending).returns(true)
+
     @family = families(:dylan_family)
     @item = LunchflowItem.create!(
       family: @family,
@@ -295,5 +297,120 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
     importer.send(:fetch_and_store_transactions, @lunchflow_account)
     assert_equal 2, @lunchflow_account.reload.raw_transactions_payload.size,
       "re-syncing the same pair must not accumulate duplicates"
+  end
+
+  test "tags unidentified card holds as isPending when include_pending is enabled" do
+    Rails.configuration.x.lunchflow.stubs(:include_pending).returns(true)
+
+    hold_transaction = {
+      "id" => "",
+      "accountId" => @lunchflow_account.account_id,
+      "amount" => 15.50,
+      "currency" => "GBP",
+      "date" => Date.today.to_s,
+      "merchant" => "474836xxxxxx6879 003015315475",
+      "description" => "474836xxxxxx6879 003015315475"
+    }
+
+    mock_provider = mock()
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [ hold_transaction ], count: 1 })
+    mock_provider.stubs(:get_account_balance)
+      .with(@lunchflow_account.account_id)
+      .returns({ balance: 100.0, currency: "GBP" })
+
+    importer = LunchflowItem::Importer.new(@item, lunchflow_provider: mock_provider)
+    result = importer.send(:fetch_and_store_transactions, @lunchflow_account)
+
+    assert result[:success]
+    payload = @lunchflow_account.reload.raw_transactions_payload
+    assert_equal 1, payload.size
+    assert_equal true, payload.first.with_indifferent_access[:isPending],
+      "unidentified hold must be tagged as isPending when include_pending is enabled"
+  end
+
+  test "filters out unidentified card holds when include_pending is disabled" do
+    Rails.configuration.x.lunchflow.stubs(:include_pending).returns(false)
+
+    hold_transaction = {
+      "id" => "",
+      "accountId" => @lunchflow_account.account_id,
+      "amount" => 15.50,
+      "currency" => "GBP",
+      "date" => Date.today.to_s,
+      "merchant" => "474836xxxxxx6879 003015315475",
+      "description" => "474836xxxxxx6879 003015315475"
+    }
+    regular_transaction = {
+      "id" => "lf_posted_1",
+      "accountId" => @lunchflow_account.account_id,
+      "amount" => -20.00,
+      "currency" => "GBP",
+      "date" => Date.today.to_s,
+      "merchant" => "Tesco",
+      "description" => "Groceries",
+      "isPending" => false
+    }
+
+    mock_provider = mock()
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [ hold_transaction, regular_transaction ], count: 2 })
+    mock_provider.stubs(:get_account_balance)
+      .with(@lunchflow_account.account_id)
+      .returns({ balance: 100.0, currency: "GBP" })
+
+    importer = LunchflowItem::Importer.new(@item, lunchflow_provider: mock_provider)
+    result = importer.send(:fetch_and_store_transactions, @lunchflow_account)
+
+    assert result[:success]
+    payload = @lunchflow_account.reload.raw_transactions_payload
+    assert_equal 1, payload.size, "hold must be excluded when include_pending is disabled"
+    assert_equal "lf_posted_1", payload.first.with_indifferent_access[:id]
+  end
+
+  test "prunes cached holds and pending rows from snapshot leftovers when include_pending is disabled" do
+    Rails.configuration.x.lunchflow.stubs(:include_pending).returns(false)
+
+    hold_transaction = {
+      "id" => "",
+      "accountId" => @lunchflow_account.account_id,
+      "amount" => 15.50,
+      "currency" => "GBP",
+      "date" => Date.today.to_s,
+      "merchant" => "474836xxxxxx6879 003015315475",
+      "description" => "474836xxxxxx6879 003015315475"
+    }
+    regular_transaction = {
+      "id" => "lf_posted_1",
+      "accountId" => @lunchflow_account.account_id,
+      "amount" => -20.00,
+      "currency" => "GBP",
+      "date" => Date.today.to_s,
+      "merchant" => "Tesco",
+      "description" => "Groceries",
+      "isPending" => false
+    }
+
+    # Pre-populate raw_transactions_payload with cached hold and regular transaction
+    @lunchflow_account.upsert_lunchflow_transactions_snapshot!([ hold_transaction, regular_transaction ])
+
+    # Sync response returns no transactions (e.g. empty API response)
+    mock_provider = mock()
+    mock_provider.stubs(:get_account_transactions)
+      .with(@lunchflow_account.account_id, anything)
+      .returns({ transactions: [], count: 0 })
+    mock_provider.stubs(:get_account_balance)
+      .with(@lunchflow_account.account_id)
+      .returns({ balance: 100.0, currency: "GBP" })
+
+    importer = LunchflowItem::Importer.new(@item, lunchflow_provider: mock_provider)
+    result = importer.send(:fetch_and_store_transactions, @lunchflow_account)
+
+    assert result[:success]
+    payload = @lunchflow_account.reload.raw_transactions_payload
+    assert_equal 1, payload.size, "cached hold must be pruned from leftover snapshot"
+    assert_equal "lf_posted_1", payload.first.with_indifferent_access[:id]
   end
 end

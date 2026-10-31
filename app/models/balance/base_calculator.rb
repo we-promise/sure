@@ -32,7 +32,7 @@ class Balance::BaseCalculator
   # with large entry histories. Calculator instances are per-sync, so there is
   # no staleness concern.
   def calculation_start_date
-    @calculation_start_date ||= [ account.opening_anchor_date, account.entries.minimum(:date) ].compact.min
+    @calculation_start_date ||= [ account.opening_anchor_date, account.entries.excluding_pending.minimum(:date) ].compact.min
   end
 
   private

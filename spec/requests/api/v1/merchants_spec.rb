@@ -54,8 +54,15 @@ RSpec.describe 'API V1 Merchants', type: :request do
       consumes 'multipart/form-data'
       produces 'application/json'
 
-      parameter name: :file, in: :formData, type: :file, required: true,
-                description: 'CSV file with columns: name* (required), color, website_url'
+      parameter name: :file, in: :formData, required: true,
+                description: 'CSV file with columns: name* (required), color, website_url',
+                schema: {
+                  type: :object,
+                  required: [ 'file' ],
+                  properties: {
+                    file: { type: :string, format: :binary }
+                  }
+                }
 
       response '201', 'merchants imported' do
         schema '$ref' => '#/components/schemas/MerchantImportResult'
@@ -75,6 +82,24 @@ RSpec.describe 'API V1 Merchants', type: :request do
       response '401', 'unauthorized' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:'X-Api-Key') { nil }
+        run_test!
+      end
+
+      response '403', 'guest users cannot import merchants' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:user) do
+          family.users.create!(
+            email: 'api-guest@example.com',
+            password: 'password123',
+            password_confirmation: 'password123',
+            role: 'guest'
+          )
+        end
+        let(:file) do
+          Rack::Test::UploadedFile.new(StringIO.new("name\nCoffee Shop"), 'text/csv', true, original_filename: 'merchants.csv')
+        end
+
         run_test!
       end
 

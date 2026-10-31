@@ -1,0 +1,5 @@
+en:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: "The SSO identity can sign in or create an account again."

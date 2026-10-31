@@ -10,3 +10,6 @@
 <%= turbo_stream.replace "insights-feed" do %>
   <%= render "pages/dashboard/insights_feed", insights: @feed_insights %>
 <% end %>
+
+<%# Lightbulb badge in both layout copies (desktop header, mobile top nav). %>
+<%= turbo_stream.replace_all "[data-insights-badge]", partial: "layouts/shared/insights_badge", locals: { count: @unread_ids.size } %>

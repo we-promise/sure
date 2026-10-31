@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class WiseItemsController < ApplicationController
-  before_action :set_wise_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :set_wise_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup, :generate_sca_keypair ]
   before_action :require_admin!, except: [ :index ]
 
   def index
@@ -125,6 +125,7 @@ class WiseItemsController < ApplicationController
 
   def sync
     @wise_item.sync_later unless @wise_item.syncing?
+    return render_provider_panel("wise", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -134,6 +135,18 @@ class WiseItemsController < ApplicationController
 
   def setup_accounts
     @wise_accounts = @wise_item.wise_accounts.unlinked
+  end
+
+  # Generates a fresh SCA keypair for this item. The private key is stored
+  # (encrypted); the public key is derived from it on every render so the user
+  # can register it with Wise. Regenerating invalidates the previous keypair.
+  def generate_sca_keypair
+    @wise_item.generate_sca_keypair!
+    render_provider_panel_success(t(".success"))
+  rescue => e
+    Rails.logger.error "WiseItemsController#generate_sca_keypair - #{e.class}: #{e.message}"
+    @wise_item.errors.add(:base, t(".failed"))
+    render_provider_panel_error
   end
 
   def complete_account_setup
@@ -167,7 +180,7 @@ class WiseItemsController < ApplicationController
     @wise_item = resolve_wise_item_for_selection
 
     unless @wise_item
-      redirect_to settings_providers_path, alert: t("wise_items.select_accounts.no_connection") and return
+      frame_redirect_to settings_providers_path, alert: t("wise_items.select_accounts.no_connection") and return
     end
 
     @available_accounts = @wise_item.wise_accounts.unlinked
@@ -269,30 +282,12 @@ class WiseItemsController < ApplicationController
     end
 
     def render_provider_panel_success(message)
-      return redirect_to accounts_path, notice: message, status: :see_other unless turbo_frame_request?
-
-      flash.now[:notice] = message
-      @wise_items = Current.family.wise_items.active.ordered.includes(:syncs, :wise_accounts)
-      render_wise_provider_panel(locals: { wise_items: @wise_items }, include_flash: true)
+      render_provider_panel("wise", notice: message, fallback_path: accounts_path,
+                            wise_items: Current.family.wise_items.active.ordered.includes(:syncs, :wise_accounts))
     end
 
     def render_provider_panel_error
-      @error_message = @wise_item.errors.full_messages.join(", ")
-      return redirect_to settings_providers_path, alert: @error_message, status: :see_other unless turbo_frame_request?
-
-      render_wise_provider_panel(locals: { error_message: @error_message }, status: :unprocessable_entity)
-    end
-
-    def render_wise_provider_panel(locals:, status: :ok, include_flash: false)
-      streams = [
-        turbo_stream.replace(
-          "wise-providers-panel",
-          partial: "settings/providers/wise_panel",
-          locals: locals
-        )
-      ]
-      streams += flash_notification_stream_items if include_flash
-      render turbo_stream: streams, status: status
+      render_provider_panel("wise", alert: @wise_item.errors.full_messages.join(", "))
     end
 
     def encrypt_pending_token(token)

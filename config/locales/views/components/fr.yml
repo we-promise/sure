@@ -10,10 +10,10 @@ fr:
       balance_reconciliation:
         labels:
           adjustments: Ajustements
-          buys: Achète
+          buys: Achats
           change_in_brokerage_cash: Variation des liquidités de courtage
           change_in_holdings_market: Variation des holdings (activité des prix du marché)
-          change_in_holdings_trades: Evolution des holdings (achats/ventes)
+          change_in_holdings_trades: Évolution des holdings (achats/ventes)
           charges: Frais
           end_balance: Fin du solde
           end_principal: Fin du principal
@@ -26,7 +26,7 @@ fr:
           net_principal_change: Variation nette du capital
           net_value_change: Variation de la valeur nette
           payments: Paiements
-          sells: Vend
+          sells: Ventes
           start_balance: Début du solde
           start_principal: Démarrer le principal
           start_value: Valeur de départ
@@ -61,6 +61,29 @@ fr:
           start_principal: Le solde principal au début de cette journée
           start_value: La valeur de l'actif au début de cette journée
       chart:
+        loan:
+          actual: Solde enregistré
+          aria_actual_history_starts: L'historique du solde enregistré commence le %{date}.
+          aria_description: 'Graphique du solde du prêt. Solde enregistré : %{current_balance}. Fin prévue par l''échéancier initial : %{scheduled_payoff_date}. Fin projetée à partir du solde actuel : %{projected_payoff_date}.'
+          aria_interest_share: Sur les échéances de la première année, environ %{first} % du montant payé correspond aux intérêts ; sur celles de la dernière année, environ %{last} %.
+          aria_interest_share_overall: Sur l'ensemble des échéances, environ %{share} % du montant payé correspond aux intérêts.
+          interactive_chart: graphique interactif
+          interest_saved: Intérêts économisés
+          interest_share: Part des intérêts
+          legend: Séries du graphique
+          months_saved:
+            one: "%{count} mois plus tôt que prévu"
+            other: "%{count} mois plus tôt que prévu"
+          no_payoff: pas avec l'échéance actuelle
+          not_converged: Avec l'échéance actuelle, ce solde n'est pas remboursé à l'échéance initiale ; il resterait %{balloon} à payer.
+          on_schedule: Conforme à l'échéancier
+          principal_share: Part du capital
+          projected: Projection à partir d'aujourd'hui
+          projected_payoff: Fin projetée
+          projection_basis: Compare le solde enregistré aujourd'hui au solde prévu par l'échéancier à la même date. Un paiement passé avant sa date prévue apparaît en avance jusqu'à cette date ; un paiement passé après apparaît en retard.
+          scheduled: Échéancier initial
+          since_start: depuis le début du prêt
+          today: Aujourd'hui
         no_data_available: Aucune donnée disponible
         title:
           balance: Solde
@@ -68,12 +91,15 @@ fr:
           debt_balance: Solde de la dette
           estimated_property_value: Valeur estimée de la propriété
           estimated_vehicle_value: Valeur estimée du véhicule
-          holdings_value: Valeur des holdings
+          holdings_value: Valeur des titres
+          loan_remaining_balance: Capital restant dû
           remaining_principal_balance: Solde principal restant
           total_account_value: Valeur totale du compte
+          total_gains: Gains totaux
         views:
           cash: Espèces
-          holdings: Holdings
+          gains: Gains / rendement
+          holdings: Titres
           total_value: Valeur totale
         vs_available_history: par rapport à l'historique disponible
     period_picker:
@@ -88,6 +114,9 @@ fr:
         warning: Avertissement
     dialog:
       close: Fermer
+    icon_picker:
+      no_matching_icons: Aucune icône correspondante
+      search_placeholder: Rechercher des icônes...
     link:
       opens_in_new_tab: "(ouvre dans un nouvel onglet)"
     pill:

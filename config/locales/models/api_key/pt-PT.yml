@@ -1,0 +1,7 @@
+---
+pt-PT:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: "Não é possível eliminar a chave de API de monitorização de demonstração"

@@ -7,10 +7,10 @@ tr:
       cta: İşlemleri görüntüle
       date: Tarih
       heading:
-        one: Kuralınızla eşleşen 1 yeni işlem var
+        one: "Kuralınızla eşleşen %{count} yeni işlem var"
         other: Kuralınızla eşleşen %{count} yeni işlem var
       intro: '"%{rule}" kuralıyla eşleşen işlemler:'
       name: Ad
       subject:
-        one: "%{product_name} üzerinde kuralınızla eşleşen 1 yeni işlem var"
+        one: "%{product_name} üzerinde kuralınızla eşleşen %{count} yeni işlem var"
         other: "%{product_name} üzerinde kuralınızla eşleşen %{count} yeni işlem var"

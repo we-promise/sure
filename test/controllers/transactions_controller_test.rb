@@ -2,10 +2,150 @@ require "test_helper"
 
 class TransactionsControllerTest < ActionDispatch::IntegrationTest
   include EntryableResourceInterfaceTest, EntriesTestHelper
+  include ActionView::RecordIdentifier
 
   setup do
     sign_in @user = users(:family_admin)
     @entry = entries(:transaction)
+  end
+
+  # Bills has always linked out to transactions. Until now nothing linked back,
+  # so a transaction that settled a bill was a dead end. The link-back is part
+  # of the preview-gated bills surface, so the viewer needs the flag.
+  test "a German transaction shows the bill it paid with localized copy" do
+    @user.update!(locale: "de")
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    series = @user.family.recurring_transactions.create!(
+      account: accounts(:depository), name: "Watson Property", amount: 2000,
+      currency: "USD", expected_day_of_month: 9, status: "active", manual: true,
+      bill_type: "bill", last_occurrence_date: Date.current,
+      next_expected_date: Date.current
+    )
+    series.recurring_occurrences.destroy_all
+    due = Date.current.beginning_of_month + 8
+    occurrence = series.recurring_occurrences.create!(
+      family: @user.family, original_due_on: due, due_on: due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+    RecurringTransaction::Allocator.new(occurrence).allocate!(entry: @entry)
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match "Watson Property", response.body
+    assert_match bill_path(series), response.body, "the bill must be reachable from the transaction"
+
+    translations = {
+      "transactions.show.create_bill" => "Rechnung hinzufügen",
+      "transactions.show.applied_to_title" => "Damit bezahlte Rechnungen",
+      "transactions.show.applied_to_detail" => "%{amount} für die am %{date} fällige Rechnung",
+      "transactions.show.applied_to_unreviewed" => "Prüfung erforderlich"
+    }
+    translations.each do |key, text|
+      assert_equal text, I18n.t(key, locale: :de, fallback: false)
+    end
+
+    assert_match translations.fetch("transactions.show.create_bill"), response.body
+    assert_match translations.fetch("transactions.show.applied_to_title"), response.body
+    assert_match(/für die am .* fällige Rechnung/, response.body)
+  end
+
+  # The dialog route is GET only. Rendered as a button_to, "Create a bill"
+  # POSTed to it and the modal frame showed "Content Missing".
+  test "create a bill opens the prefilled dialog with a GET" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    href = new_recurring_transaction_path(entry_id: @entry.id)
+    assert_select "a[href=?][data-turbo-frame=modal]", href, text: /Create a bill/
+    assert_select "form[action=?]", href, count: 0
+
+    get href, headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "turbo-frame#modal"
+  end
+
+  test "the bill link-back stays hidden without preview access" do
+    series = @user.family.recurring_transactions.create!(
+      account: accounts(:depository), name: "Watson Property", amount: 2000,
+      currency: "USD", expected_day_of_month: 9, status: "active", manual: true,
+      bill_type: "bill", last_occurrence_date: Date.current,
+      next_expected_date: Date.current
+    )
+    series.recurring_occurrences.destroy_all
+    due = Date.current.beginning_of_month + 8
+    occurrence = series.recurring_occurrences.create!(
+      family: @user.family, original_due_on: due, due_on: due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+    RecurringTransaction::Allocator.new(occurrence).allocate!(entry: @entry)
+
+    get transaction_url(@entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_no_match bill_path(series), response.body,
+      "the preview-gated bill link must not render for a user without the flag"
+  end
+
+  test "index points an unmatched transaction with a counterpart to the transfer matcher" do
+    outflow = create_transaction(account: accounts(:depository), name: "Hint outflow", amount: 500, date: Date.current)
+    inflow = create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
+    lone = create_transaction(account: accounts(:depository), name: "Hint lone", amount: 77, date: Date.current)
+
+    get transactions_url
+
+    assert_response :success
+    [ outflow, inflow ].each do |entry|
+      assert_select "a[href='#{new_transaction_transfer_match_path(entry)}'][data-turbo-frame=modal]",
+                    text: I18n.t("transactions.transaction.transfer_hint")
+    end
+    assert_select "a[href='#{new_transaction_transfer_match_path(lone)}']", count: 0
+    assert_select "##{dom_id(outflow.transaction, :transfer_hint)} form[action='#{transaction_transfer_match_path(outflow)}'] input[name=_method][value=delete]"
+  end
+
+  test "the investment activity badge shows translated labels" do
+    @user.update!(locale: "ru")
+    accounts(:investment).entries.create!(
+      name: "Broker cash move", date: Date.current, amount: 100, currency: "USD",
+      entryable: Transaction.new(investment_activity_label: "Transfer")
+    )
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "[data-activity-label-quick-edit-target=badge]", text: /Перевод/
+    assert_select "[data-activity-label-quick-edit-target=badge]", text: /Transfer/, count: 0
+    # The picker shows translated names but still submits the stored label.
+    assert_select "button[data-label='Sweep In']", text: "Автоперевод (зачисление)"
+  end
+
+  test "index groups subcategories immediately after their parent in the category filter" do
+    get transactions_url
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    checkbox_values = doc.css("input[name='q[categories][]']").map { |node| node["value"] }
+
+    parent_index = checkbox_values.index(categories(:food_and_drink).name)
+    child_index = checkbox_values.index(categories(:subcategory).name)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+  end
+
+  # The form passes its own change action on the currency select; the money
+  # field must keep its handleCurrencyChange alongside it, or switching the
+  # currency never refreshes the amount's step and precision.
+  test "new form wires the currency select to both the money field and the transaction form" do
+    get new_transaction_path
+
+    assert_response :success
+    assert_select "select[data-money-field-target=currency][data-action=?]",
+                  "change->money-field#handleCurrencyChange change->transaction-form#onCurrencyChange"
   end
 
   test "creates with transaction details" do
@@ -35,6 +175,151 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: SyncJob)
   end
 
+  test "resubmitting the same idempotency key does not create a duplicate transaction" do
+    idempotency_key = SecureRandom.uuid
+    params = {
+      entry: {
+        account_id: @entry.account_id,
+        name: "New transaction",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: { category_id: Category.first.id },
+        idempotency_key: idempotency_key
+      }
+    }
+
+    assert_difference [ "Entry.count", "Transaction.count" ], 1 do
+      post transactions_url, params: params
+    end
+    assert_response :redirect
+    first_entry = Entry.order(:created_at).last
+
+    # Simulates a double-click or a browser retry: same form, same
+    # idempotency key, submitted again after the first request already
+    # completed and committed.
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: params
+    end
+    assert_response :redirect
+    assert_equal "Transaction created", flash[:notice]
+    assert_redirected_to account_url(first_entry.account)
+  end
+
+  test "the idempotency key does not mark the created transaction as provider-linked" do
+    # Regression test: the idempotency key must not be stored in
+    # external_id/source (Entry#linked? = external_id.present?), or a plain
+    # manual entry would incorrectly look provider-synced - disabling its
+    # editable fields in the UI and hiding it from future provider dedup.
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "New transaction",
+        date: Date.current,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: { category_id: Category.first.id },
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    created_entry = Entry.order(:created_at).last
+    assert_not created_entry.linked?
+    assert_nil created_entry.external_id
+    assert_nil created_entry.source
+  end
+
+  test "handles a genuine concurrent double-submit without raising or duplicating" do
+    idempotency_key = SecureRandom.uuid
+
+    # Simulates the race: another request with the same idempotency key wins
+    # and commits its INSERT in the window between our pre-check (which
+    # therefore still sees nothing, hence the first `nil`) and our own
+    # #save (which then hits the real partial unique index on
+    # entries(account_id, idempotency_key) and raises RecordNotUnique,
+    # exactly like the DB would under real concurrent requests). The rescue
+    # then re-runs the same lookup, this time finding the winner.
+    winning_entry = @entry.account.entries.create!(
+      name: "New transaction", date: Date.current, currency: "USD", amount: 100,
+      idempotency_key: idempotency_key,
+      entryable: Transaction.new
+    )
+    TransactionsController.any_instance.stubs(:find_duplicate_manual_entry).returns(nil, winning_entry)
+    Entry.any_instance.stubs(:save).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_response :redirect
+    assert_redirected_to account_url(winning_entry.account)
+    assert_equal "Transaction created", flash[:notice]
+  end
+
+  test "a RecordNotUnique with no matching entry is not silently swallowed" do
+    idempotency_key = SecureRandom.uuid
+
+    # Defensive-branch coverage: if the unique index ever rejects an insert
+    # for a reason other than "another request with this exact idempotency
+    # key already won" (e.g. a different constraint), we must not pretend it
+    # succeeded - the error should propagate instead of being hidden behind
+    # a fake success redirect.
+    TransactionsController.any_instance.stubs(:find_duplicate_manual_entry).returns(nil)
+    Entry.any_instance.stubs(:save).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "inflow",
+          entryable_type: "Transaction",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+  end
+
+  test "create without an idempotency key still creates a transaction as before" do
+    # A raw POST that doesn't go through the rendered form (e.g. a script)
+    # simply skips the idempotency check rather than being rejected - the
+    # form always supplies a key in normal browser usage.
+    assert_difference [ "Entry.count", "Transaction.count" ], 2 do
+      2.times do
+        post transactions_url, params: {
+          entry: {
+            account_id: @entry.account_id,
+            name: "New transaction",
+            date: Date.current,
+            currency: "USD",
+            amount: 100,
+            nature: "inflow",
+            entryable_type: "Transaction",
+            entryable_attributes: { category_id: Category.first.id }
+          }
+        }
+      end
+    end
+  end
+
   test "create without an account re-renders the form instead of raising" do
     assert_no_difference [ "Entry.count", "Transaction.count" ] do
       post transactions_url, params: {
@@ -54,6 +339,154 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
+  end
+
+  test "a blank auto-generated name is not silently kept when another field fails validation" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    # Name is blank but a category is selected, so Entry#set_default_name
+    # fills it in during validation; the date is deliberately out of the
+    # supported range so the record still fails to save for an unrelated
+    # reason (an invalid currency would break rendering the money field
+    # itself, not just validation). The re-rendered form must show the name
+    # field blank again (not the generated text), or a resubmission after
+    # changing the category would save that now-stale name instead of a
+    # fresh one.
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "",
+        date: 40.years.ago.to_date,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        entryable_attributes: { category_id: categories(:food_and_drink).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='entry[name]'][value='']"
+  end
+
+  test "an explicitly provided name survives a failed submission unchanged" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "Explicit name",
+        date: 40.years.ago.to_date,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        entryable_attributes: { category_id: categories(:food_and_drink).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='entry[name]'][value='Explicit name']"
+  end
+
+  test "recent name suggestions never include entries from accounts inaccessible to the current user" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    private_account = Account.create!(
+      family: @entry.account.family,
+      owner: users(:family_member),
+      name: "Family Member Private Account",
+      balance: 100,
+      currency: "USD",
+      accountable: Depository.new,
+      status: "active"
+    )
+    create_transaction(account: private_account, name: "Private Merchant XYZ")
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "Private Merchant XYZ", response.body
+  end
+
+  test "recent name suggestions exclude the unknown-name fallback in every supported locale, not just the current one" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    create_transaction(account: @entry.account, name: I18n.t("transactions.unknown_name", locale: :en))
+    create_transaction(account: @entry.account, name: I18n.t("transactions.unknown_name", locale: :de))
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match I18n.t("transactions.unknown_name", locale: :de), response.body
+  end
+
+  # Regression: the sync window must start at the old date, or the incremental
+  # balance calculation counts the moved transaction twice.
+  test "moving a transaction later syncs from its original date" do
+    original_date = 5.days.ago.to_date
+    @entry.update!(date: original_date)
+
+    Account.any_instance.expects(:sync_later).with(window_start_date: original_date)
+
+    patch transaction_url(@entry), params: {
+      entry: { date: 2.days.ago.to_date, entryable_type: @entry.entryable_type }
+    }
+
+    assert_equal 2.days.ago.to_date, @entry.reload.date
+  end
+
+  test "name_suggestions returns matching past transaction names with their usual category" do
+    get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
+
+    assert_response :success
+    assert_match "Starbucks", response.body
+    assert_match "data-category-id=\"#{categories(:food_and_drink).id}\"", response.body
+  end
+
+  test "name_suggestions starts with recent names and categories when auto naming is enabled" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_match "Starbucks", response.body
+    assert_match "data-category-id=\"#{categories(:food_and_drink).id}\"", response.body
+
+    get name_suggestions_transactions_url(q: "zz"), as: :turbo_stream
+    assert_no_match "Starbucks", response.body
+  end
+
+  test "name_suggestions does not load recent names when auto naming is disabled" do
+    @entry.account.family.update!(auto_generate_transaction_names: false)
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "Starbucks", response.body
+  end
+
+  test "name_suggestions returns no options when no past transaction matches" do
+    get name_suggestions_transactions_url(q: "no such merchant"), as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "no such merchant", response.body
+  end
+
+  test "name_suggestions only considers transactions from accounts accessible to the current user" do
+    # accounts(:investment) is owned by family_admin and not shared with family_member
+    create_transaction(account: accounts(:investment), name: "Private Yacht Purchase", category: categories(:income))
+
+    sign_in users(:family_member)
+
+    get name_suggestions_transactions_url(q: "Private Yacht"), as: :turbo_stream
+    assert_response :success
+    assert_no_match "Private Yacht", response.body
+
+    # depository is shared with family_member, so its transactions remain suggestible
+    get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
+    assert_response :success
+    assert_match "Starbucks", response.body
   end
 
   test "updates with transaction details" do
@@ -128,7 +561,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
-    assert_includes response.body, "A manual recurring transaction already exists for this pattern"
+    assert_includes response.body, I18n.t("recurring_transactions.already_covered")
     assert_select "button[disabled]", text: /Mark as Recurring/
   end
 
@@ -266,6 +699,63 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
   end
 
+  test "tag-only endpoint toggles a single tag and streams the row's tag UI" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ], locked_attributes: {})
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal [ tags(:one).id, tags(:two).id ].sort, @entry.reload.entryable.tag_ids.sort
+    assert @entry.entryable.locked?(:tag_ids)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, "tag_summary_desktop")
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(@entry.entryable, "tag_summary_mobile")
+    assert_select "turbo-stream[action=replace][target=?]", "#{dom_id(@entry, :tag_option)}_#{tags(:two).id}"
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal [ tags(:two).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint falls back to a redirect for plain HTML toggles" do
+    @entry.entryable.update!(tag_ids: [], locked_attributes: {})
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:one).id }
+
+    assert_redirected_to transaction_path(@entry)
+    assert_equal [ tags(:one).id ], @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint does not toggle tags from another family" do
+    other_tag = users(:empty).family.tags.create!(name: "Other family")
+    original_tag_ids = @entry.entryable.tag_ids
+
+    patch tags_transaction_url(@entry), params: { toggle_tag_id: other_tag.id }, as: :turbo_stream
+
+    assert_response :not_found
+    assert_equal original_tag_ids, @entry.reload.entryable.tag_ids
+  end
+
+  test "tag-only endpoint does not toggle tags for read-only users" do
+    sign_in users(:family_member)
+    read_only_entry = entries(:transfer_in)
+    original_tag_ids = read_only_entry.entryable.tag_ids
+
+    patch tags_transaction_url(read_only_entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
+
+    assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
+  test "transaction rows show tags" do
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ])
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(@entry.entryable, "tag_summary_desktop")}", text: /#{tags(:one).name}/
+    assert_select "##{dom_id(@entry.entryable, "tag_summary_mobile")}", text: /#{tags(:one).name}/
+  end
+
   test "split parent rows mark amount as privacy-sensitive" do
     entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
 
@@ -278,6 +768,43 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select ".split-group > div.opacity-50 p.privacy-sensitive", count: 1
+  end
+
+  # Row only opened on a precise click on the name text (whitespace between
+  # name/avatar/amount looked clickable via the row's hover styling but did
+  # nothing). A row-level click delegates to the name link now, so the whole
+  # row opens the drawer while interactive descendants (checkbox, category
+  # menu, account link) keep handling their own clicks.
+  test "transaction row delegates whole-row clicks to the drawer link" do
+    get transactions_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    frame_id = ActionView::RecordIdentifier.dom_id(@entry.entryable)
+    row = doc.at_css("turbo-frame##{frame_id} [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(@entry), drawer_link["href"]
+  end
+
+  test "split parent row delegates whole-row clicks to the drawer link" do
+    entry = create_transaction(account: accounts(:depository), amount: 100, name: "Split parent")
+
+    entry.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get transactions_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    row = doc.at_css(".split-group [data-controller='clickable-row']")
+    drawer_link = row.at_css("a[data-clickable-row-target='link']")
+
+    assert_equal "click->clickable-row#open", row["data-action"]
+    assert_equal entry_path(entry), drawer_link["href"]
   end
 
   test "can paginate" do
@@ -519,7 +1046,7 @@ end
     end
 
     assert_redirected_to transactions_path
-    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
   end
 
   test "mark_as_recurring allows a second manual recurring transaction with same merchant but different amount" do
@@ -606,7 +1133,139 @@ end
     end
 
     assert_redirected_to transactions_path
-    assert_equal "A manual recurring transaction already exists for this pattern", flash[:alert]
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
+  end
+
+  # Only hand-made rows used to count, so a bill that detection had already
+  # found never disabled the button (#4368).
+  test "mark_as_recurring refuses a transaction a detected bill already covers" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Betashares"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+
+    family.recurring_transactions.create!(
+      account: account,
+      merchant: merchant,
+      amount: 100,
+      currency: entry.currency,
+      expected_day_of_month: entry.date.day,
+      last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now,
+      status: "active",
+      manual: false,
+      occurrence_count: 2
+    )
+
+    get transaction_url(entry)
+    assert_select "button[disabled][title=?]", I18n.t("recurring_transactions.already_covered"), text: /Mark as Recurring/
+    assert_select "##{ActionView::RecordIdentifier.dom_id(entry, :mark_recurring)} p",
+                  text: I18n.t("recurring_transactions.already_covered")
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(entry.entryable)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
+  end
+
+  # The covering series may be income, or only a suggestion, so the message
+  # must not tell the user a bill is tracking the payment.
+  test "mark_as_recurring does not call a suggested income a bill" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Acme Payroll"
+    entry = create_transaction(account: account, amount: -1840, merchant: merchant)
+    family.recurring_transactions.create!(
+      account: account, merchant: merchant, amount: -1840, currency: "USD", bill_type: "income",
+      expected_day_of_month: entry.date.day, last_occurrence_date: entry.date,
+      next_expected_date: 1.month.from_now, status: "suggested", manual: false, occurrence_count: 2
+    )
+
+    get transaction_url(entry)
+    disabled = css_select("button[disabled]").find { |button| button.text.include?("Mark as Recurring") }
+    assert disabled, "the covering income must disable the button"
+    assert_no_match(/\bbill\b/i, disabled["title"])
+
+    post mark_as_recurring_transaction_path(entry.entryable)
+    assert_equal I18n.t("recurring_transactions.already_covered"), flash[:alert]
+    assert_no_match(/\bbill\b/i, flash[:alert])
+  end
+
+  # An ended series no longer covers the payment, but the unique index still
+  # holds its key, so the create would fail. The button says so up front
+  # instead of failing after the POST.
+  test "mark_as_recurring is disabled when an ended series holds the same key" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    merchant = family.merchants.create! name: "Betashares"
+    entry = create_transaction(account: account, amount: 100, merchant: merchant)
+    RecurringTransaction.create_from_transaction(entry.entryable).update!(status: "ended")
+
+    get transaction_url(entry)
+    assert_select "button[disabled][title=?]", I18n.t("recurring_transactions.already_exists"), text: /Mark as Recurring/
+
+    assert_no_difference "RecurringTransaction.count" do
+      post mark_as_recurring_transaction_path(entry.entryable)
+    end
+    assert_equal I18n.t("recurring_transactions.already_exists"), flash[:alert]
+  end
+
+  # Sharing is per account. A bill on an account this member was never given
+  # is not theirs to learn about, as in the add-bill dialog's own check, so
+  # it neither disables the button nor refuses the request.
+  test "mark_as_recurring ignores a covering bill on an account the user cannot see" do
+    member = users(:family_member)
+    entry = create_transaction(account: accounts(:depository), amount: 100, name: "PRIVATE PLAN")
+    hidden = families(:dylan_family).recurring_transactions.create!(
+      account: accounts(:investment), name: "Private Plan", amount: 100, currency: "USD",
+      expected_day_of_month: Date.current.day, last_occurrence_date: 1.month.ago.to_date,
+      next_expected_date: Date.current, status: "active", manual: true, occurrence_count: 1
+    )
+    hidden.recurring_occurrences.order(:due_on).first.allocations.create!(
+      entry: entry, allocated_amount: 100, currency: "USD", source: "user_created"
+    )
+    assert_equal hidden, families(:dylan_family).recurring_transactions.covering(entry), "precondition: the hidden bill covers the entry"
+
+    sign_in member
+    get transaction_url(entry)
+    assert_select "button[disabled]", text: /Mark as Recurring/, count: 0
+
+    assert_difference "RecurringTransaction.count", 1 do
+      post mark_as_recurring_transaction_path(entry.entryable)
+    end
+    assert_equal I18n.t("recurring_transactions.marked_as_recurring"), flash[:notice]
+  end
+
+  # The add-bill form checks and saves under the entry lock the Allocator
+  # takes. This path makes a series for the same transaction, so it holds the
+  # same lock, or the two could both see nothing and both create.
+  test "mark_as_recurring checks and creates while holding the entry lock" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    entry = create_transaction(account: account, amount: 100, name: "FRESH CHARGE")
+    connection = ActiveRecord::Base.connection
+    outside = connection.open_transactions
+    seen = {}
+
+    TransactionsController.any_instance.stubs(:mark_recurring_blocked_message)
+      .with { seen[:check] = [ connection.open_transactions, entry_lock_held?(entry) ]; true }.returns(nil)
+    RecurringTransaction.stubs(:create_from_transaction)
+      .with { seen[:create] = [ connection.open_transactions, entry_lock_held?(entry) ]; true }.returns(true)
+    assert_not entry_lock_held?(entry), "precondition: nothing holds the entry lock before the request"
+
+    post mark_as_recurring_transaction_path(entry.entryable)
+
+    assert_equal I18n.t("recurring_transactions.marked_as_recurring"), flash[:notice]
+    assert_operator seen[:check].first, :>, outside, "the check ran outside a transaction"
+    assert_operator seen[:create].first, :>, outside, "the create ran outside a transaction"
+    assert seen[:check].last, "the check ran without the entry lock"
+    assert seen[:create].last, "the create ran without the entry lock"
   end
 
   test "mark_as_recurring shows already-exists alert when a concurrent request wins the race" do
@@ -698,13 +1357,67 @@ end
     assert_not entry.protected_from_sync?
   end
 
+  test "new renders category and merchant selectors in German" do
+    get new_transaction_url(locale: "de")
+
+    assert_response :success
+
+    assert_select "[data-controller='category-select']" do
+      assert_select "input[type='search'][placeholder=?]", "Kategorien suchen"
+      assert_select "[data-category-select-create-label-value=?]", "„__CATEGORY_NAME__“ erstellen"
+      assert_select "[data-category-select-create-error-message-value=?]", "Kategorie konnte nicht erstellt werden"
+    end
+
+    assert_select "[data-controller='merchant-select']" do
+      assert_select "input[type='search'][placeholder=?]", "Händler suchen oder erstellen"
+      assert_select "[data-merchant-select-error-message-value=?]", "Händler konnte nicht erstellt werden"
+      assert_select "[data-merchant-select-target='createForm']", text: /Erstellen/
+    end
+  end
+
+  test "new groups subcategories immediately after their parent in the category select" do
+    get new_transaction_url
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    trigger = doc.at_css("#category_id_trigger")
+    assert_not_nil trigger, "expected the category select trigger button to render"
+
+    wrapper = trigger.ancestors(".relative").first
+    category_values = wrapper.css("[data-value]").map { |node| node["data-value"] }
+
+    parent_index = category_values.index(categories(:food_and_drink).id)
+    child_index = category_values.index(categories(:subcategory).id)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+
+    child_option = wrapper.at_css("[data-category-id='#{categories(:subcategory).id}']")
+    assert_not_nil child_option, "expected the subcategory option to render"
+    assert child_option.at_css("[data-testid='category-select-subcategory-indicator']"),
+           "expected the subcategory option to show the hierarchy indicator used in Settings"
+  end
+
+  test "new renders a search box for account selection" do
+    get new_transaction_url
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    trigger = doc.at_css("#account_id_trigger")
+    assert_not_nil trigger, "expected the account select trigger button to render"
+
+    wrapper = trigger.ancestors(".relative").first
+    assert_not_nil wrapper.at_css("input[type='search']"), "expected a search input inside the account select"
+  end
+
   test "new with duplicate_entry_id pre-fills form from source transaction" do
     @entry.reload
 
     get new_transaction_url(duplicate_entry_id: @entry.id)
     assert_response :success
     assert_select "input[name='entry[name]'][value=?]", @entry.name
-    assert_select "input[type='number'][name='entry[amount]']" do |elements|
+    assert_select "input[type='text'][name='entry[amount]']" do |elements|
       assert_equal sprintf("%.2f", @entry.amount.abs), elements.first["value"]
     end
     assert_select "input[type='hidden'][name='entry[entryable_attributes][merchant_id]']"
@@ -991,6 +1704,9 @@ end
     # Transfer#categorizable? / #payment? walk to_account via
     # transfer.inflow_transaction.entry.account. Without nested includes those
     # become one lookup triad per transfer row during list render.
+    # categorizable? also walks from_account via the outflow leg, which is only
+    # loaded through the inverse_of on Transaction::Transferable; dropping it
+    # makes the transactions.id assertion below fail.
     normalized_queries = queries.map { |sql| normalize_sql_query(sql) }
     assert_empty single_record_lookups(normalized_queries, table: "transactions", column: "id"),
                  "Expected transfer counterparty transactions to be preloaded"
@@ -1000,13 +1716,586 @@ end
                  "Expected transfer counterparty accounts to be preloaded"
   end
 
+  test "index caches uncategorized_count and projected_recurring across requests" do
+    # Test environment uses null_store; swap in a memory store so the cache
+    # actually persists between the two requests below.
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    get transactions_url
+    assert_response :success
+
+    queries = capture_sql_queries { get transactions_url }
+    assert_response :success
+
+    # uncategorized_transactions is a scope (joins/wheres), so its name never
+    # appears in the generated SQL -- match the COUNT query it produces instead.
+    assert_empty queries.select { |q| q =~ /SELECT COUNT/i && q =~ /category_id.*IS NULL/i },
+      "second request with unchanged data should reuse the cached uncategorized count"
+    # Building the cache key itself still runs small COUNT/MAX queries against
+    # recurring_transactions (Family#recurring_transactions_version and
+    # #recurring_transaction_merchants_version), so match the projection query
+    # the cached block itself would run instead of the whole table name.
+    assert_empty queries.grep(/next_expected_date/i),
+      "second request with unchanged data should reuse the cached projected recurring lookup"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index renders when the projected_recurring cache holds records from an older schema" do
+    # Regression: the cache used to hold whole RecurringTransaction objects. After
+    # an upgrade that added columns (e.g. payment_url in 0.7.5), the entry written
+    # by the previous version was still served and rendering raised
+    # ActiveModel::MissingAttributeError until the key rolled over the next day.
+    original_cache = Rails.cache
+    written_keys = []
+    Rails.cache = Class.new(ActiveSupport::Cache::MemoryStore) {
+      define_method(:write_entry) do |key, entry, **options|
+        written_keys << key
+        super(key, entry, **options)
+      end
+    }.new
+
+    recurring = recurring_transactions(:netflix_subscription)
+
+    get transactions_url
+    assert_response :success
+
+    cache_keys = written_keys.grep(/transactions_projected_recurring/).uniq
+    assert_not_empty cache_keys, "the first request should populate the projected-recurring cache"
+
+    # Write the Marshal payload the previous version produced: the record's
+    # attributes without the columns that version did not have yet.
+    stale_payload = [ recurring.attributes_for_database.except("payment_url", "autopay", "notes"), false, [ [ :merchant, recurring.merchant ] ] ]
+    stale_record = RecurringTransaction.allocate
+    stale_record.define_singleton_method(:marshal_dump) { stale_payload }
+    cache_keys.each { |key| Rails.cache.write(key, [ stale_record ]) }
+    assert_raises(ActiveModel::MissingAttributeError) { Rails.cache.read(cache_keys.first).first.payment_url }
+
+    get transactions_url
+    assert_response :success
+    assert_match(/#{Regexp.escape(recurring.merchant.name)}/, response.body,
+      "the projected recurring transaction should still render from fresh records")
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects new transactions immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+
+    account = @user.family.accounts.visible.first
+    account.entries.create!(
+      name: "New uncategorized transaction",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count + 1, updated_count,
+      "a new uncategorized transaction must be reflected without a stale cache read"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects categorizing a transaction immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    entry = @user.family.accounts.visible.first.entries.create!(
+      name: "Needs a category",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+
+    entry.entryable.update!(category: categories(:food_and_drink))
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count - 1, updated_count,
+      "categorizing a transaction must be reflected without a stale cache read"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache is invalidated when account-share access is revoked" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    member = users(:family_member)
+    share = account_shares(:depository_shared_with_member)
+    share.account.entries.create!(
+      name: "Uncategorized on shared account",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    sign_in member
+    get transactions_url
+    count_with_access = rendered_uncategorized_count
+    assert_operator count_with_access, :>, 0,
+      "the member should see the shared account's uncategorized transaction before revocation"
+
+    share.destroy!
+
+    get transactions_url
+    count_after_revocation = rendered_uncategorized_count
+
+    assert_operator count_after_revocation, :<, count_with_access,
+      "revoking account-share access must not leave a stale cached count that still includes the now-inaccessible account"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count leaves out read-only shared accounts" do
+    sign_in users(:family_member)
+    get transactions_url
+    count_before = rendered_uncategorized_count
+
+    accounts(:credit_card).entries.create!( # shared read_only with family_member
+      name: "Uncategorized on read-only share",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+    accounts(:depository).entries.create!( # shared full_control with family_member
+      name: "Uncategorized on full-control share",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    assert_equal count_before + 1, rendered_uncategorized_count,
+      "the categorize count should only include entries the member can categorize"
+  end
+
+  test "index projected_recurring cache is invalidated when account-share access is revoked" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    member = users(:family_member)
+    share = account_shares(:depository_shared_with_member)
+    recurring = recurring_transactions(:netflix_subscription)
+    assert_equal share.account_id, recurring.account_id,
+      "fixture assumption: the shared depository account has the netflix recurring charge"
+
+    merchant_name_pattern = /#{Regexp.escape(recurring.merchant.name)}/
+
+    sign_in member
+    get transactions_url
+    assert_match merchant_name_pattern, response.body,
+      "the member should see the shared account's recurring transaction before revocation"
+
+    share.destroy!
+
+    get transactions_url
+    assert_no_match merchant_name_pattern, response.body,
+      "revoking account-share access must not leave a stale cached projected-recurring list"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index projected_recurring cache reflects a merchant rename immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    recurring = recurring_transactions(:netflix_subscription)
+    merchant = recurring.merchant
+
+    get transactions_url
+    assert_match(/#{Regexp.escape(merchant.name)}/, response.body,
+      "the recurring transaction should render with the merchant's original name")
+
+    merchant.update!(name: "Netflix Renamed")
+
+    get transactions_url
+    assert_match(/Netflix Renamed/, response.body,
+      "renaming the merchant must not leave a stale cached projected-recurring list")
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index projected_recurring cache reflects a provider merchant update immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    # Recurring detection copies transaction.merchant_id, which can point at a
+    # shared ProviderMerchant (not just a family-owned FamilyMerchant) -- e.g.
+    # ProviderMerchant::Enhancer updates these after the recurring row exists.
+    provider_merchant = ProviderMerchant.create!(name: "Provider Merchant Original", source: "enable_banking")
+    recurring = recurring_transactions(:netflix_subscription)
+    recurring.update!(merchant: provider_merchant, name: nil)
+
+    get transactions_url
+    assert_match(/Provider Merchant Original/, response.body,
+      "the recurring transaction should render with the provider merchant's original name")
+
+    provider_merchant.update!(name: "Provider Merchant Renamed")
+
+    get transactions_url
+    assert_match(/Provider Merchant Renamed/, response.body,
+      "updating the provider merchant must not leave a stale cached projected-recurring list")
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects deleting an uncategorized transaction immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    entry = @user.family.accounts.visible.first.entries.create!(
+      name: "Deleted while uncategorized",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+
+    entry.destroy!
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_equal initial_count - 1, updated_count,
+      "deleting an uncategorized transaction must not leave a stale cached count"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache reflects disabling an account immediately" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    account = @user.family.accounts.visible.first
+    account.entries.create!(
+      name: "Uncategorized on account about to be disabled",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    initial_count = rendered_uncategorized_count
+    assert_operator initial_count, :>, 0
+
+    account.disable!
+
+    get transactions_url
+    updated_count = rendered_uncategorized_count
+
+    assert_operator updated_count, :<, initial_count,
+      "disabling an account must not leave a stale cached count that still includes its transactions"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "index uncategorized_count cache is scoped per user, not just per family" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    # family_member has no share on this account (see test/fixtures/account_shares.yml),
+    # so only the admin can see its uncategorized transaction.
+    accounts(:other_asset).entries.create!(
+      name: "Admin-only uncategorized transaction",
+      amount: 42,
+      currency: "USD",
+      date: Date.current,
+      entryable: Transaction.new
+    )
+
+    get transactions_url
+    admin_count = rendered_uncategorized_count
+    assert_operator admin_count, :>, 0
+
+    sign_in users(:family_member)
+    get transactions_url
+    member_count = rendered_uncategorized_count
+
+    assert_not_equal admin_count, member_count,
+      "a member without access to the admin-only account must not reuse the admin's cached uncategorized count"
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "category-only update does not sync the account" do
+    assert_no_enqueued_jobs only: SyncJob do
+      patch transaction_url(@entry), params: {
+        entry: { entryable_attributes: { id: @entry.entryable_id, category_id: categories(:food_and_drink).id } }
+      }
+    end
+
+    assert_equal categories(:food_and_drink).id, @entry.reload.entryable.category_id
+  end
+
+  test "amount update syncs the account" do
+    assert_enqueued_with(job: SyncJob) do
+      patch transaction_url(@entry), params: { entry: { amount: @entry.amount + 10 } }
+    end
+  end
+
+  test "category and date updated together still sync the account" do
+    assert_enqueued_with(job: SyncJob) do
+      patch transaction_url(@entry), params: {
+        entry: {
+          date: @entry.date - 1.day,
+          entryable_attributes: { id: @entry.entryable_id, category_id: categories(:food_and_drink).id }
+        }
+      }
+    end
+  end
+
+  test "toggling a tag does not sync the account" do
+    assert_no_enqueued_jobs only: SyncJob do
+      patch tags_transaction_url(@entry), params: { toggle_tag_id: tags(:two).id }, as: :turbo_stream
+    end
+  end
+
+  test "index with ai_status=current renders the AI filter badge" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    get transactions_url(q: { ai_status: [ "current" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with ai_status=history renders the AI history filter badge" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+
+    get transactions_url(q: { ai_status: [ "history" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI history", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with ai_status=current excludes history-only transactions" do
+    @entry.entryable.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    @entry.entryable.update!(category: categories(:subcategory))
+
+    get transactions_url(q: { ai_status: [ "current" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "AI", count: 1
+    assert_select "#entry_#{@entry.id}", count: 0
+  end
+
+  test "index ignores unsupported ai_status values without rendering a badge" do
+    get transactions_url(q: { ai_status: [ "bogus" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li", count: 0
+    assert_no_match(/translation missing/, response.body)
+
+    # The bogus value must be dropped entirely, not applied as a filter
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "clear_filter removes an ai_status value and redirects" do
+    delete clear_filter_transactions_url(
+      param_key: "ai_status",
+      param_value: "current",
+      q: { ai_status: [ "current" ] }
+    )
+
+    assert_response :redirect
+    assert_includes response.location, "filter_cleared=1"
+    assert_no_match(/ai_status/, response.location)
+  end
+
+  test "index with attachment_status=with lists only transactions that have a file" do
+    @entry.entryable.attachments.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
+
+    get transactions_url(q: { attachment_status: [ "with" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "With attachment", count: 1
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "index with attachment_status=without hides transactions that have a file" do
+    @entry.entryable.attachments.attach(io: StringIO.new("invoice"), filename: "invoice.pdf", content_type: "application/pdf")
+
+    get transactions_url(q: { attachment_status: [ "without" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: "Without attachment", count: 1
+    assert_select "#entry_#{@entry.id}", count: 0
+  end
+
+  test "index names the account on an account_ids filter chip" do
+    account = @entry.account
+
+    get transactions_url(q: { account_ids: [ account.id ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: account.name, count: 1
+    assert_select "#transaction-search-filters li p", text: account.id, count: 0
+  end
+
+  test "index renders a blank account filter value without failing" do
+    get transactions_url(q: { account_ids: [ "" ], accounts: [ "" ] })
+
+    assert_response :success
+  end
+
+  test "index offers the attachment filter in the filter menu" do
+    get transactions_url
+
+    assert_response :success
+    assert_select "#transaction-filters-menu input[type=checkbox][name='q[attachment_status][]']", count: 2
+  end
+
+  test "index ignores unsupported attachment_status values without rendering a badge" do
+    get transactions_url(q: { attachment_status: [ "bogus" ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li", count: 0
+    assert_select "#entry_#{@entry.id}", count: 1
+  end
+
+  test "clear_filter removes an attachment_status value and redirects" do
+    delete clear_filter_transactions_url(
+      param_key: "attachment_status",
+      param_value: "without",
+      q: { attachment_status: [ "without" ] }
+    )
+
+    assert_response :redirect
+    assert_includes response.location, "filter_cleared=1"
+    assert_no_match(/attachment_status/, response.location)
+  end
+
+  test "an unconfirmed auto-matched transfer keeps its category menu in the list" do
+    outflow = create_transaction(account: accounts(:depository), amount: 500, name: "PENDING_MATCH_OUT").transaction
+    inflow = create_transaction(account: accounts(:credit_card), amount: -500).transaction
+    Transfer.create!(outflow_transaction: outflow, inflow_transaction: inflow)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "##{dom_id(outflow, "category_menu_desktop")} turbo-frame#category_dropdown"
+  end
+
+  test "update drops a category sent for a matched transfer's inflow leg" do
+    outflow = Transaction.create!(kind: "investment_contribution")
+    Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
+    inflow = Transaction.create!(kind: "funds_movement")
+    inflow_entry = Entry.create!(account: accounts(:investment), entryable: inflow, name: "Contribution", amount: -500, currency: "USD", date: Date.current)
+    Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    patch transaction_url(inflow_entry), params: {
+      entry: {
+        notes: "Monthly savings",
+        entryable_type: "Transaction",
+        entryable_attributes: { id: inflow.id, category_id: categories(:income).id }
+      }
+    }
+
+    assert_nil inflow.reload.category_id
+    assert_equal "Monthly savings", inflow_entry.reload.notes
+  end
+
+  test "update drops a category for a matched inflow leg whose kind was edited to standard" do
+    outflow = Transaction.create!(kind: "investment_contribution")
+    Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
+    inflow = Transaction.create!(kind: "standard")
+    inflow_entry = Entry.create!(account: accounts(:investment), entryable: inflow, name: "Contribution", amount: -500, currency: "USD", date: Date.current)
+    Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    patch transaction_url(inflow_entry), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: inflow.id, category_id: categories(:income).id } }
+    }
+
+    assert_nil inflow.reload.category_id
+  end
+
+  test "drawer shows a matched transfer's inflow leg with the outflow's category, disabled" do
+    outflow = Transaction.create!(kind: "investment_contribution", category: categories(:income))
+    Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
+    inflow = Transaction.create!(kind: "funds_movement")
+    inflow_entry = Entry.create!(account: accounts(:investment), entryable: inflow, name: "Contribution", amount: -500, currency: "USD", date: Date.current)
+    Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+
+    get transaction_url(inflow_entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "button#category_id_trigger[disabled]", text: /#{categories(:income).name}/
+    assert_select "input[type=hidden][name='entry[entryable_attributes][category_id]'][disabled]"
+    assert_match I18n.t("transactions.show.category_set_on_outflow"), response.body
+  end
+
+  test "does not offer guests to create a rule through a transaction update" do
+    category = categories(:income)
+    @entry.update!(name: "AMZN Mktp UK")
+    rule = @entry.account.family.rules.build(name: "Amazon", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "AMAZON.CO.UK")
+    rule.actions.build(action_type: "set_transaction_category", value: category.id.to_s)
+    rule.save!
+    @entry.account.update!(owner: family_guest)
+    sign_in family_guest
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        entryable_type: @entry.entryable_type,
+        entryable_attributes: { id: @entry.entryable_id, category_id: category.id }
+      }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_equal category.id, @entry.reload.entryable.category_id
+    assert_not_includes response.body, "action_type=set_transaction_category"
+  end
+
   private
+    # The Allocator's two-key advisory lock on this entry, held by this session.
+    def entry_lock_held?(entry)
+      ActiveRecord::Base.connection.select_value(ActiveRecord::Base.sanitize_sql_array([ <<~SQL, RecurringTransaction::Allocator::ENTRY_LOCK_NAMESPACE, RecurringTransaction::Allocator.entry_lock_id(entry) ]))
+        SELECT EXISTS (
+          SELECT 1 FROM pg_locks
+          WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted
+            AND classid = ? AND objid = ? AND objsubid = 2
+        )
+      SQL
+    end
+
     def rendered_entry_ids
       css_select("turbo-frame[id^='entry_']").map { |node| node["id"].delete_prefix("entry_") }
     end
 
     def normalize_sql_query(sql)
       sql.to_s.squish.gsub(/[`"]/, "").downcase
+    end
+
+    # The "Categorize (N)" menu item only renders when @uncategorized_count
+    # is positive, so an absent match means the count is 0.
+    def rendered_uncategorized_count
+      match = response.body.match(/Categorize \((\d+)\)/)
+      match ? match[1].to_i : 0
     end
 
     # Per-row lazy loads use `column = ?`. Do not treat `IN (...)` as lazy

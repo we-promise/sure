@@ -26,26 +26,16 @@ fr:
       go_to_api_keys: Aller aux clés API
       need_key: Pour importer des données dans Google Sheets, vous avez besoin d'une
         clé API.
-      open_sheets: Ouvrir Google Sheets
-      ready: Votre URL CSV (avec clé API) est prête.
-      security_warning: Cette URL inclut votre clé API. Gardez-la en sécurité !
       step1: Allez dans Paramètres → Clés API
       step2: Créez une nouvelle clé API avec la permission "lecture"
       step3: Copiez la clé API
-      step4: 'Ajoutez-la à cette URL comme : ?api_key=VOTRE_CLÉ'
-      steps: |-
-        Pour importer dans Google Sheets :
-        1. Créez une nouvelle feuille Google
-        2. Dans la cellule A1, entrez la formule ci-dessous
-        3. Appuyez sur Entrée
+      step4: 'Ajoutez-la à cette URL comme : &api_key=VOTRE_CLÉ'
       then_use: Ensuite, utilisez l'URL complète avec =IMPORTDATA() dans Google Sheets.
-      title_no_key: "⚠️ Clé API requise"
-      title_with_key: "✅ Copier l'URL pour Google Sheets"
+      title_no_key: "Clé API requise"
     index:
       date_range:
         from: Du
         to: Au
-      drag_to_reorder: Glisser pour réorganiser la section
       export: Exporter CSV
       next_decade: La prochaine décennie
       next_period: Période suivante
@@ -54,10 +44,10 @@ fr:
         last_6_months: "%{start} – %{end}"
         past_year: "%{year}"
         quarterly: Q%{quarter} %{year}
-        ytd: Cumul cumulatif %{year}
+        ytd: Depuis le début de l'année %{year}
       period_picker:
         quarter: Q%{quarter} %{year}
-        ytd: Cumul cumulatif %{year}
+        ytd: Depuis le début de l'année %{year}
       periods:
         custom: Plage personnalisée
         last_6_months: 6 derniers mois
@@ -68,6 +58,8 @@ fr:
       previous_period: Période précédente
       previous_year: Année précédente
       print_report: Imprimer le rapport
+      sections_aria: Sections des rapports
+      shortcut_hint: "%{action} (%{key})"
       showing_period: Affichage des données du %{start} au %{end}
       subtitle: Aperçus complets de votre santé financière
       title: Rapports
@@ -172,6 +164,34 @@ fr:
         net: Net
         savings_rate: Taux d'épargne
         title: Tendances mensuelles
+    spending_vs_normal:
+      changes_title: Ce qui a changé
+      direct: "%{category} (sans sous-catégorie)"
+      legend:
+        less: 50–100 % de moins
+        more: 50–100 % de plus
+        much_more: Au moins 100 % de plus
+        normal: Proche de la normale
+        slightly_less: 15–50 % de moins
+        slightly_more: 15–50 % de plus
+      no_changes: Les dépenses sont conformes à la normale dans toutes les catégories.
+      no_history_html: "%{total} dépensés sur cette période. L'historique antérieur ne suffit pas encore pour déterminer ce qui est normal."
+      no_history_short: Pas encore assez d'historique antérieur pour comparer.
+      no_spending: Aucune dépense sur cette période.
+      summary_html: "%{total} dépensés sur cette période. La normale pour une période de cette durée est de %{normal}, calculée du %{baseline_start} au %{baseline_end}."
+      summary_so_far_html: "%{total} dépensés jusqu'ici. La normale pour ce nombre de jours est de %{normal}, calculée du %{baseline_start} au %{baseline_end}."
+      title: Dépenses par rapport à la normale
+      tooltip:
+        less: "%{amount} de moins que la normale (%{percent})"
+        less_no_percent: "%{amount} de moins que la normale"
+        more: "%{amount} de plus que la normale (%{percent})"
+        more_no_percent: "%{amount} de plus que la normale"
+        no_normal: Aucun historique antérieur pour comparer
+        normal: 'Normale : %{amount}'
+        open: Sélectionnez pour voir ces transactions
+        path: "%{parent} › %{category}"
+        total: "%{category} : %{amount}"
+      treemap_title: Où est passé l'argent
     summary:
       budget_performance: Performance budgétaire
       income_minus_expenses: Revenus moins dépenses

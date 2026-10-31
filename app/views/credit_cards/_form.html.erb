@@ -33,6 +33,29 @@
                                         placeholder: t("credit_cards.form.annual_fee_placeholder"),
                                         min: 0 %>
       </div>
+
+      <%# The two days that make up the statement cycle. Only the close day is
+          load-bearing -- without it there is no telling which charge belongs to
+          which statement -- so the due day is allowed to stand on its own for a
+          card whose close day came from a provider. %>
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <%= credit_card_form.select :statement_close_day,
+                                      options_for_select(
+                                        credit_card_day_of_month_options,
+                                        credit_card_form.object.statement_close_day
+                                      ),
+                                      { include_blank: true, label: t("credit_cards.form.statement_close_day") } %>
+
+          <%= credit_card_form.select :due_day,
+                                      options_for_select(
+                                        credit_card_day_of_month_options,
+                                        credit_card_form.object.due_day
+                                      ),
+                                      { include_blank: true, label: t("credit_cards.form.due_day") } %>
+        </div>
+        <p class="text-secondary text-xs"><%= t("credit_cards.form.statement_cycle_description") %></p>
+      </div>
     <% end %>
 
     <% enable_banking_account = account.provider_account_for("EnableBankingAccount") if account.persisted? %>
@@ -45,6 +68,51 @@
         <%= form.fields_for :enable_banking, enable_banking_account do |eb_form| %>
           <%= eb_form.toggle :treat_balance_as_available_credit, "aria-labelledby": "enable_banking_balance_toggle_label" %>
         <% end %>
+      </div>
+    <% end %>
+
+    <% lunchflow_account = account.provider_account_for("LunchflowAccount") if account.persisted? %>
+    <% if lunchflow_account %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="space-y-1">
+          <p class="text-sm" id="lunchflow_balance_toggle_label"><%= t("credit_cards.form.treat_balance_as_available_credit_label") %></p>
+          <p class="text-secondary text-xs"><%= t("credit_cards.form.treat_balance_as_available_credit_description") %></p>
+        </div>
+        <%= form.fields_for :lunchflow, lunchflow_account do |lf_form| %>
+          <%= lf_form.toggle :treat_balance_as_available_credit, "aria-labelledby": "lunchflow_balance_toggle_label" %>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% simplefin_account = account.provider_account_for("SimplefinAccount") if account.persisted? %>
+    <% if simplefin_account %>
+      <div class="space-y-1">
+        <%= form.fields_for :simplefin, simplefin_account do |simplefin_form| %>
+          <%= simplefin_form.select :balance_sign_override,
+                                    options_for_select([
+                                      [t("credit_cards.form.simplefin_balance_sign_auto"), ""],
+                                      [t("credit_cards.form.simplefin_balance_sign_debt"), "debt"],
+                                      [t("credit_cards.form.simplefin_balance_sign_credit"), "credit"]
+                                    ], simplefin_account.balance_sign_override),
+                                    { label: t("credit_cards.form.simplefin_balance_sign_label") } %>
+        <% end %>
+        <p class="text-secondary text-xs"><%= t("credit_cards.form.simplefin_balance_sign_description") %></p>
+      </div>
+    <% end %>
+
+    <% sophtron_account = account.provider_account_for("SophtronAccount") if account.persisted? %>
+    <% if sophtron_account %>
+      <div class="space-y-1">
+        <%= form.fields_for :sophtron, sophtron_account do |sophtron_form| %>
+          <%= sophtron_form.select :balance_sign_override,
+                                   options_for_select([
+                                     [t("credit_cards.form.sophtron_balance_sign_auto"), ""],
+                                     [t("credit_cards.form.sophtron_balance_sign_debt"), "debt"],
+                                     [t("credit_cards.form.sophtron_balance_sign_credit"), "credit"]
+                                   ], sophtron_account.balance_sign_override),
+                                   { label: t("credit_cards.form.sophtron_balance_sign_label") } %>
+        <% end %>
+        <p class="text-secondary text-xs"><%= t("credit_cards.form.sophtron_balance_sign_description") %></p>
       </div>
     <% end %>
   </div>

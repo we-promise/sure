@@ -7,3 +7,30 @@ fr:
           duplicate_actions: La règle ne peut pas avoir d'actions en double %{types}
           min_actions: doit avoir au moins une action
           nested_conditions: Les conditions composées ne peuvent pas être imbriquées
+          split_not_alone: Une règle de division ne peut pas avoir d'autres actions
+        rule/action:
+          attributes:
+            value:
+              fixed_requires_exact_amount_condition: les divisions à montant fixe nécessitent une condition de règle correspondant à un montant de transaction exact (par ex. Montant = 42.00), sinon les parts ne peuvent pas s'additionner de façon fiable au total de chaque transaction correspondante
+              fixed_shares_must_equal_condition_amount: la somme des parts doit être égale à %{amount}, le montant exact requis par la condition de cette règle
+              invalid_config: doit être une configuration de division valide
+              invalid_split_count: doit comporter entre %{min} et %{max} divisions
+              percentages_must_total_100: la somme des pourcentages doit être égale à 100 (actuellement %{total})
+              split_category_invalid: la catégorie de la division n°%{index} n'appartient pas à cette famille
+              split_merchant_invalid: le marchand de la division n°%{index} n'appartient pas à cette famille
+              split_name_invalid: le nom de la division n°%{index} contient des caractères invalides
+              split_name_required: il manque un nom à la division n°%{index}
+              split_name_too_long: le nom de la division n°%{index} est trop long (255 caractères maximum)
+              split_share_invalid: la part de la division n°%{index} doit être un nombre positif
+              split_tags_invalid: la division n°%{index} a une étiquette qui n'appartient pas à cette famille
+              split_type_invalid: le type de la division n°%{index} doit être fixe ou pourcentage
+        rule/condition:
+          attributes:
+            value:
+              regex_backreference: ne peut pas utiliser de références arrière (\1 à \9)
+              regex_invalid: n'est pas une expression régulière valide
+              regex_too_complex: est trop complexe pour être exécutée en toute sécurité
+              regex_too_long: est trop longue (%{count} caractères maximum)
+  rule:
+    conditions:
+      unsupported_label: Non pris en charge (%{type})

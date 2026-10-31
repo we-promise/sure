@@ -26,6 +26,43 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show groups subcategories immediately after their parent in the category select" do
+    create_transaction(account: @account, name: "Starbucks")
+    get transactions_categorize_url
+
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    option_values = doc.css("select[name='category_id'] option").map { |node| node["value"] }
+
+    parent_index = option_values.index(categories(:food_and_drink).id)
+    child_index = option_values.index(categories(:subcategory).id)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+  end
+
+  test "show groups subcategories immediately after their parent in the category pills" do
+    create_transaction(account: @account, name: "Starbucks")
+    get transactions_categorize_url
+
+    assert_response :success
+
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    pill_values = doc.css("button[name='category_id']").map { |node| node["value"] }
+
+    parent_index = pill_values.index(categories(:food_and_drink).id)
+    child_index = pill_values.index(categories(:subcategory).id)
+
+    assert_not_nil parent_index
+    assert_not_nil child_index
+    assert_equal parent_index + 1, child_index
+
+    child_pill = doc.css("button[name='category_id'][value='#{categories(:subcategory).id}']").first
+    assert_includes child_pill.text, categories(:subcategory).display_name_with_parent
+  end
+
   test "show renders full dates so multi-year lists are unambiguous" do
     create_transaction(account: @account, name: "Starbucks", date: Date.new(2024, 7, 8))
 
@@ -124,6 +161,93 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
     assert_nil entry.transaction.reload.category
   end
 
+  test "create does not categorize entries from read-only shared accounts" do
+    read_only_account = accounts(:credit_card) # shared read_only with family_member
+    entry = create_transaction(account: read_only_account, name: "Starbucks")
+
+    sign_in users(:family_member)
+    post transactions_categorize_url,
+      params: {
+        position: 0,
+        grouping_key: "Starbucks",
+        entry_ids: [ entry.id ],
+        all_entry_ids: [ entry.id ],
+        category_id: @category.id
+      },
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "create does not create a rule when no entry could be categorized" do
+    read_only_account = accounts(:credit_card) # shared read_only with family_member
+    entry = create_transaction(account: read_only_account, name: "Starbucks")
+
+    sign_in users(:family_member)
+    assert_no_difference "Rule.count" do
+      post transactions_categorize_url,
+        params: {
+          position: 0,
+          grouping_key: "Starbucks",
+          entry_ids: [ entry.id ],
+          all_entry_ids: [ entry.id ],
+          category_id: @category.id,
+          create_rule: "1"
+        },
+        headers: { "Accept" => "text/vnd.turbo-stream.html" }
+    end
+  end
+
+  test "create categorizes entries from read_write shared accounts" do
+    read_write_account = accounts(:credit_card)
+    read_write_account.account_shares.find_by!(user: users(:family_member)).update!(permission: "read_write")
+    entry = create_transaction(account: read_write_account, name: "Starbucks")
+
+    sign_in users(:family_member)
+    post transactions_categorize_url,
+      params: {
+        position: 0,
+        grouping_key: "Starbucks",
+        entry_ids: [ entry.id ],
+        all_entry_ids: [ entry.id ],
+        category_id: @category.id
+      },
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+
+    assert_equal @category, entry.transaction.reload.category
+  end
+
+  test "assign_entry does not categorize an entry from a read-only shared account" do
+    read_only_account = accounts(:credit_card) # shared read_only with family_member
+    entry = create_transaction(account: read_only_account, name: "Starbucks")
+
+    sign_in users(:family_member)
+    patch assign_entry_transactions_categorize_url, params: {
+      entry_id: entry.id,
+      category_id: @category.id,
+      position: 0,
+      all_entry_ids: [ entry.id ]
+    }
+
+    assert_response :not_found
+    assert_nil entry.transaction.reload.category
+  end
+
+  test "show and preview_rule skip entries from read-only shared accounts" do
+    read_only_account = accounts(:credit_card) # shared read_only with family_member
+    entry = create_transaction(account: read_only_account, name: "ReadOnlyShop")
+
+    sign_in users(:family_member)
+
+    get transactions_categorize_url
+    assert_not_includes response.body, entry.id
+
+    get preview_rule_transactions_categorize_url(filter: "ReadOnlyShop"),
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }
+    assert_response :success
+    assert_not_includes response.body, entry.id
+  end
+
   # GET /transactions/categorize/preview_rule
 
   test "preview_rule returns matching entries for a filter" do
@@ -159,7 +283,12 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
   private
 
     def sign_out
-      @user.sessions.each { |s| delete session_path(s) }
+      # Deleting sessions through the controller de-authenticates the request the
+      # moment our own session dies, so every later delete in the loop is a
+      # silent no-op and whichever sessions sort after it survive. The order is
+      # unspecified, which made every suite that signs out this way flaky.
+      # Teardown hygiene is not the behavior under test, so destroy directly.
+      @user.sessions.destroy_all
     end
 
     # POST /transactions/categorize

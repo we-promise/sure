@@ -530,6 +530,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           status: "active",
           occurrence_count: 6,
           manual: true,
+          payment_url: "https://pay.example.com/internet",
           expected_amount_min: "-95.00",
           expected_amount_max: "-85.00",
           expected_amount_avg: "-89.99"
@@ -551,6 +552,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "active", recurring_transaction.status
     assert_equal 6, recurring_transaction.occurrence_count
     assert_equal true, recurring_transaction.manual
+    assert_equal "https://pay.example.com/internet", recurring_transaction.payment_url
     assert_equal(-95.0, recurring_transaction.expected_amount_min.to_f)
     assert_equal(-85.0, recurring_transaction.expected_amount_max.to_f)
     assert_equal(-89.99, recurring_transaction.expected_amount_avg.to_f)
@@ -665,7 +667,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
           expected_day_of_month: "8",
           last_occurrence_date: "2024-01-08",
           next_expected_date: "2024-02-08",
-          status: "paused",
+          status: "bogus_status",
           occurrence_count: 2
         }
       }
@@ -1636,6 +1638,41 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Candidate outflow", rejected_transfer.outflow_transaction.entry.name
   end
 
+  test "restores a transfer the user made a plain transfer instead of an investment contribution" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" } },
+      { type: "Account", data: { id: "brokerage", name: "Brokerage", balance: "2500", currency: "USD", accountable_type: "Investment" } },
+      { type: "Transaction", data: { id: "fx-outflow", account_id: "checking", date: "2024-01-15", amount: "100.00", name: "To brokerage", currency: "USD", kind: "funds_movement" } },
+      { type: "Transaction", data: { id: "fx-inflow", account_id: "brokerage", date: "2024-01-15", amount: "-100.00", name: "From checking", currency: "USD", kind: "funds_movement" } },
+      { type: "Transfer", data: { id: "transfer-1", inflow_transaction_id: "fx-inflow", outflow_transaction_id: "fx-outflow", status: "confirmed", investment_contribution: false } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    outflow = Transaction.joins(:entry).find_by!(entries: { name: "To brokerage" })
+    assert_equal "funds_movement", outflow.kind
+    assert_nil outflow.category
+    assert outflow.locked?(:kind)
+    assert_equal false, outflow.transfer_as_outflow.investment_contribution_choice
+  end
+
+  test "imports a pending transfer without applying transfer kinds" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" } },
+      { type: "Account", data: { id: "savings", name: "Savings", balance: "2500", currency: "USD", accountable_type: "Depository" } },
+      { type: "Transaction", data: { id: "pending-outflow", account_id: "checking", date: "2024-01-15", amount: "100.00", name: "Pending outflow", currency: "USD", kind: "standard" } },
+      { type: "Transaction", data: { id: "pending-inflow", account_id: "savings", date: "2024-01-15", amount: "-100.00", name: "Pending inflow", currency: "USD", kind: "standard" } },
+      { type: "Transfer", data: { id: "transfer-1", inflow_transaction_id: "pending-inflow", outflow_transaction_id: "pending-outflow", status: "pending" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    transfer = Transfer.joins(inflow_transaction: :entry).find_by!(entries: { name: "Pending inflow" })
+    assert transfer.pending?
+    assert_equal "standard", transfer.inflow_transaction.kind
+    assert_equal "standard", transfer.outflow_transaction.kind
+  end
+
   test "skips rejected transfers with missing transactions under strict import" do
     session = @family.import_sessions.create!(expected_chunks: 1)
 
@@ -1831,6 +1868,125 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 500.0, budget_category.budgeted_spending.to_f
   end
 
+  test "reuses an untouched default budget for the same period" do
+    category = @family.categories.create!(name: "Groceries", color: "#00FF00")
+    default_budget = @family.budgets.create!(
+      start_date: Date.parse("2024-01-01"), end_date: Date.parse("2024-01-31"), currency: "USD"
+    )
+    default_budget.budget_categories.create!(category: category, budgeted_spending: 0, currency: "USD")
+
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "cat-groceries", name: "Groceries", color: "#00FF00", classification: "expense" } },
+      {
+        type: "Budget",
+        data: {
+          id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31",
+          budgeted_spending: "3000.00", expected_income: "5000.00", currency: "USD"
+        }
+      },
+      {
+        type: "BudgetCategory",
+        data: { id: "bc-1", budget_id: "budget-1", category_id: "cat-groceries", budgeted_spending: "500.00", currency: "USD" }
+      }
+    ])
+
+    assert_no_difference -> { @family.budgets.count } do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
+
+    default_budget.reload
+    assert_equal 3000.0, default_budget.budgeted_spending.to_f
+    assert_equal 5000.0, default_budget.expected_income.to_f
+    assert_equal 500.0, default_budget.budget_categories.find_by!(category: category).budgeted_spending.to_f
+  end
+
+  test "does not overwrite a populated budget for the same period" do
+    @family.budgets.create!(
+      start_date: Date.parse("2024-01-01"), end_date: Date.parse("2024-01-31"),
+      budgeted_spending: 1200, expected_income: 2000, currency: "USD"
+    )
+
+    ndjson = build_ndjson([
+      {
+        type: "Budget",
+        data: {
+          id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31",
+          budgeted_spending: "3000.00", expected_income: "5000.00", currency: "USD"
+        }
+      }
+    ])
+
+    assert_raises(ActiveRecord::RecordInvalid) { Family::DataImporter.new(@family, ndjson).import! }
+    assert_equal 1200.0, @family.budgets.first.budgeted_spending.to_f
+  end
+
+  test "does not overwrite a budget the user explicitly set to zero" do
+    @family.budgets.create!(
+      start_date: Date.parse("2024-01-01"), end_date: Date.parse("2024-01-31"),
+      budgeted_spending: 0, expected_income: 0, currency: "USD"
+    )
+
+    ndjson = build_ndjson([
+      {
+        type: "Budget",
+        data: {
+          id: "budget-1", start_date: "2024-01-01", end_date: "2024-01-31",
+          budgeted_spending: "3000.00", expected_income: "5000.00", currency: "USD"
+        }
+      }
+    ])
+
+    assert_raises(ActiveRecord::RecordInvalid) { Family::DataImporter.new(@family, ndjson).import! }
+    assert_equal 0.0, @family.budgets.first.budgeted_spending.to_f
+  end
+
+  test "does not reuse the household default for an exported personal budget" do
+    default_budget = @family.budgets.create!(
+      start_date: Date.parse("2024-01-01"), end_date: Date.parse("2024-01-31"), currency: "USD"
+    )
+
+    ndjson = build_ndjson([
+      {
+        type: "Budget",
+        data: {
+          id: "budget-1", user_id: "old-user-1", start_date: "2024-01-01", end_date: "2024-01-31",
+          budgeted_spending: "3000.00", expected_income: "5000.00", currency: "USD"
+        }
+      }
+    ])
+
+    assert_raises(ActiveRecord::RecordInvalid) { Family::DataImporter.new(@family, ndjson).import! }
+    assert_nil default_budget.reload.budgeted_spending
+  end
+
+  test "imports rules in their exported run order after existing rules" do
+    existing = @family.rules.create!(resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    rule_record = ->(name, position, stop_processing) do
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: name,
+          resource_type: "transaction",
+          active: true,
+          position: position,
+          stop_processing: stop_processing,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+          actions: [ { action_type: "exclude_transaction" } ]
+        }
+      }
+    end
+    ndjson = build_ndjson([ rule_record.call("Second", 2, false), rule_record.call("First", 1, true) ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal [ existing.id ] + @family.rules.where(name: %w[First Second]).in_order_of(:name, %w[First Second]).pluck(:id),
+      @family.rules.ordered.pluck(:id).last(3)
+    assert @family.rules.find_by(name: "First").stop_processing
+    assert_not @family.rules.find_by(name: "Second").stop_processing
+  end
+
   test "imports rules with conditions and actions" do
     ndjson = build_ndjson([
       {
@@ -1881,6 +2037,56 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal category.id, action.value
   end
 
+  test "rejects a rule with an unknown resource type or action type" do
+    [
+      [ "account", "exclude_transaction" ],
+      [ "transaction", "garbage" ]
+    ].each do |resource_type, action_type|
+      ndjson = build_ndjson([ {
+        type: "Rule", version: 1,
+        data: { id: "unknown-type-rule", name: "Unknown type", resource_type: resource_type,
+                conditions: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+                actions: [ { action_type: action_type } ] }
+      } ])
+
+      error = assert_raises(ActiveRecord::RecordInvalid, action_type) do
+        Family::DataImporter.new(@family, ndjson).import!
+      end
+
+      assert_match(/is not included in the list/, error.message)
+      assert_nil @family.rules.find_by(name: "Unknown type")
+    end
+  end
+
+  test "rejects invalid rule references before creating related records" do
+    valid_condition = { condition_type: "transaction_name", operator: "like", value: "coffee" }
+    cases = [
+      [ { condition_type: "transaction_category", operator: "=", value: "Bad\0Category" },
+        { action_type: "exclude_transaction" }, "value" ],
+      [ valid_condition,
+        { action_type: "set_transaction_merchant", value_ref: { name: "Bad\0Merchant" } }, "value_ref" ],
+      [ valid_condition,
+        { action_type: "set_transaction_tags", value_ref: [ { name: "Safe" }, { name: "Bad\0Tag" } ] }, "value_ref" ]
+    ]
+    counts = [ @family.rules.count, @family.categories.count, @family.merchants.count, @family.tags.count ]
+
+    cases.each do |condition, action, field|
+      ndjson = build_ndjson([ {
+        type: "Rule", version: 1,
+        data: { name: "Invalid reference", resource_type: "transaction", conditions: [ condition ], actions: [ action ] }
+      } ])
+
+      error = assert_raises(Family::DataImporter::InvalidRecordError) do
+        Family::DataImporter.new(@family, ndjson).import!
+      end
+
+      assert_equal "invalid_import_record", error.code
+      assert_equal field, error.details[:field]
+      assert_equal "(invalid text)", error.details[:value]
+      assert_equal counts, [ @family.rules.count, @family.categories.count, @family.merchants.count, @family.tags.count ]
+    end
+  end
+
   test "imports transaction_tag rule condition by remapping the tag name to an id" do
     ndjson = build_ndjson([
       {
@@ -1920,6 +2126,147 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     tag = @family.tags.find_by(name: "Reimbursable")
     assert_not_nil tag
     assert_equal tag.id, condition.value
+  end
+
+  test "reuses a category created for an earlier rule within the same import" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "First coffee rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "coffee" }
+          ],
+          actions: [
+            { action_type: "set_transaction_category", value: "Coffee Shops" }
+          ]
+        }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Second coffee rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "latte" }
+          ],
+          actions: [
+            { action_type: "set_transaction_category", value: "Coffee Shops" }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+
+    assert_difference -> { @family.categories.where(name: "Coffee Shops").count }, 1 do
+      importer.import!
+    end
+
+    category = @family.categories.find_by!(name: "Coffee Shops")
+    first_rule = @family.rules.find_by!(name: "First coffee rule")
+    second_rule = @family.rules.find_by!(name: "Second coffee rule")
+    assert_equal category.id, first_rule.actions.first.value
+    assert_equal category.id, second_rule.actions.first.value
+  end
+
+  test "reuses a merchant created for an earlier rule within the same import" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "First coffee merchant rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "coffee" }
+          ],
+          actions: [
+            { action_type: "set_transaction_merchant", value: "Blue Bottle" }
+          ]
+        }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Second coffee merchant rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "latte" }
+          ],
+          actions: [
+            { action_type: "set_transaction_merchant", value: "Blue Bottle" }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+
+    assert_difference -> { @family.merchants.where(name: "Blue Bottle").count }, 1 do
+      importer.import!
+    end
+
+    merchant = @family.merchants.find_by!(name: "Blue Bottle")
+    first_rule = @family.rules.find_by!(name: "First coffee merchant rule")
+    second_rule = @family.rules.find_by!(name: "Second coffee merchant rule")
+    assert_equal merchant.id, first_rule.actions.first.value
+    assert_equal merchant.id, second_rule.actions.first.value
+  end
+
+  test "reuses a tag created for an earlier rule within the same import" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "First coffee tag rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "coffee" }
+          ],
+          actions: [
+            { action_type: "set_transaction_tags", value: "Recurring" }
+          ]
+        }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Second coffee tag rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "latte" }
+          ],
+          actions: [
+            { action_type: "set_transaction_tags", value: "Recurring" }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+
+    assert_difference -> { @family.tags.where(name: "Recurring").count }, 1 do
+      importer.import!
+    end
+
+    tag = @family.tags.find_by!(name: "Recurring")
+    first_rule = @family.rules.find_by!(name: "First coffee tag rule")
+    second_rule = @family.rules.find_by!(name: "Second coffee tag rule")
+    assert_equal [ tag.id ], first_rule.actions.first.value.split(",")
+    assert_equal [ tag.id ], second_rule.actions.first.value.split(",")
   end
 
   test "session rule reimport only replaces current family conditions and actions" do
@@ -2071,6 +2418,230 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal category.id, rule.actions.first.value
     assert_not @family.merchants.exists?(name: stale_merchant_id)
     assert_not @family.categories.exists?(name: stale_category_id)
+  end
+
+  test "imports a multi-tag rule action by resolving each tag id ref independently" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Tag As Weekly And Recurring",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "subscription" }
+          ],
+          actions: [
+            {
+              action_type: "set_transaction_tags",
+              value: "Weekly,Recurring",
+              value_ref: [
+                { "type" => "Tag", "id" => "source-tag-1", "name" => "Weekly" },
+                { "type" => "Tag", "id" => "source-tag-2", "name" => "Recurring" }
+              ]
+            }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    rule = @family.rules.find_by!(name: "Tag As Weekly And Recurring")
+    weekly_tag = @family.tags.find_by!(name: "Weekly")
+    recurring_tag = @family.tags.find_by!(name: "Recurring")
+
+    imported_tag_ids = rule.actions.first.value.split(",")
+    assert_equal [ weekly_tag.id, recurring_tag.id ].sort, imported_tag_ids.sort
+    # Regression guard: must not create one bogus tag literally named "Weekly,Recurring"
+    assert_not @family.tags.exists?(name: "Weekly,Recurring")
+    assert_equal 2, @family.tags.count
+  end
+
+  test "imports a multi-tag rule action with a comma-containing tag name from CSV-quoted value" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Comma Tag Name Rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "subscription" }
+          ],
+          actions: [
+            {
+              action_type: "set_transaction_tags",
+              value: "Weekly,\"Food, Dining\""
+            }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    rule = @family.rules.find_by!(name: "Comma Tag Name Rule")
+    weekly_tag = @family.tags.find_by!(name: "Weekly")
+    comma_tag = @family.tags.find_by!(name: "Food, Dining")
+
+    imported_tag_ids = rule.actions.first.value.split(",")
+    assert_equal [ weekly_tag.id, comma_tag.id ].sort, imported_tag_ids.sort
+    assert_equal 2, @family.tags.count
+  end
+
+  test "imports a multi-tag rule action from a legacy single-tag value_ref hash" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Legacy Single Tag Action",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_name", operator: "like", value: "subscription" }
+          ],
+          actions: [
+            {
+              action_type: "set_transaction_tags",
+              value: "Weekly",
+              value_ref: { "type" => "Tag", "id" => "source-tag-1", "name" => "Weekly" }
+            }
+          ]
+        }
+      }
+    ])
+
+    importer = Family::DataImporter.new(@family, ndjson)
+    importer.import!
+
+    rule = @family.rules.find_by!(name: "Legacy Single Tag Action")
+    weekly_tag = @family.tags.find_by!(name: "Weekly")
+
+    assert_equal weekly_tag.id, rule.actions.first.value
+  end
+
+  test "rejects a split rule action with invalid text before creating related records" do
+    counts = [ @family.rules.count, @family.categories.count, @family.merchants.count, @family.tags.count ]
+
+    [ { name: "Bad\0Name" }, { category: "Bad\0Category" }, { merchant: "Bad\0Merchant" }, { tags: [ "Safe", "Bad\0Tag" ] } ].each do |bad|
+      ndjson = build_ndjson([ {
+        type: "Rule", version: 1,
+        data: {
+          name: "Invalid split", resource_type: "transaction",
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: "rent" } ],
+          actions: [ {
+            action_type: "split_transaction",
+            value: { splits: [
+              { type: "percentage", name: "A", share: "50" }.merge(bad),
+              { type: "percentage", name: "B", share: "50" }
+            ] }.to_json
+          } ]
+        }
+      } ])
+
+      error = assert_raises(Family::DataImporter::InvalidRecordError, bad.inspect) do
+        Family::DataImporter.new(@family, ndjson).import!
+      end
+
+      assert_equal "value", error.details[:field]
+      assert_equal counts, [ @family.rules.count, @family.categories.count, @family.merchants.count, @family.tags.count ]
+    end
+  end
+
+  test "imports a split rule action whose rows carry foreign ids by dropping them" do
+    foreign_category = categories(:food_and_drink)
+    own_tag = @family.tags.create!(name: "Shared")
+
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Split With Foreign Ids",
+          resource_type: "transaction",
+          active: true,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: "rent" } ],
+          actions: [
+            {
+              action_type: "split_transaction",
+              value: {
+                splits: [
+                  { type: "percentage", name: "A", share: "50", category_id: foreign_category.id, tag_ids: [ own_tag.id, SecureRandom.uuid ] },
+                  { type: "percentage", name: "B", share: "50", category: "Housing" }
+                ]
+              }.to_json
+            }
+          ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    first, second = JSON.parse(@family.rules.find_by!(name: "Split With Foreign Ids").actions.sole.value)["splits"]
+    assert_nil first["category_id"]
+    assert_equal [ own_tag.id ], first["tag_ids"]
+    assert_equal @family.categories.find_by!(name: "Housing").id, second["category_id"]
+  end
+
+  test "remaps raw split ids from an older export through the imported records" do
+    ndjson = build_ndjson([
+      { type: "Category", data: { id: "source-category", name: "Groceries", color: "#407706" } },
+      { type: "Tag", data: { id: "source-tag", name: "Shared", color: "#00FF00" } },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Raw Id Split",
+          resource_type: "transaction",
+          active: true,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: "market" } ],
+          actions: [
+            {
+              action_type: "split_transaction",
+              value: {
+                splits: [
+                  { type: "percentage", name: "A", share: "50", category_id: "source-category", tag_ids: [ "source-tag" ] },
+                  { type: "percentage", name: "B", share: "50" }
+                ]
+              }.to_json
+            }
+          ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    first = JSON.parse(@family.rules.find_by!(name: "Raw Id Split").actions.sole.value)["splits"].first
+    assert_equal @family.categories.find_by!(name: "Groceries").id, first["category_id"]
+    assert_equal [ @family.tags.find_by!(name: "Shared").id ], first["tag_ids"]
+  end
+
+  test "rejects a non-string split value with a validation error" do
+    ndjson = build_ndjson([
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Scalar Split",
+          resource_type: "transaction",
+          active: true,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: "x" } ],
+          actions: [ { action_type: "split_transaction", value: 5 } ]
+        }
+      }
+    ])
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
   end
 
   test "preserves explicit false rule operand values" do
@@ -2320,9 +2891,217 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Local Grocery", recurring_transaction.merchant.name
   end
 
+  # Everything below the series was silently absent from an export: a restored
+  # bill kept its name and amount and lost its cadence, its payment history and
+  # every setting that decides how it behaves.
+  test "imports the bills subsystem, reattaching payments to their transactions" do
+    importer = Family::DataImporter.new(@family, build_ndjson(bills_ndjson_records))
+    importer.import!
+
+    series = @family.recurring_transactions.sole
+    assert_equal "bill", series.bill_type
+    assert_equal 9.5, series.amount_tolerance_pct.to_f
+    assert_equal "before", series.weekend_adjust
+    assert_equal "2000", series.dedup_scope
+    assert_equal [ "WATSON PROPERTY" ], series.matcher_hints["name_aliases"]
+
+    rule = series.recurrence_rules.sole
+    assert_equal "weekly", rule.frequency, "cadence must survive, not fall back to monthly"
+    assert_equal 2, rule.interval
+
+    occurrence = series.recurring_occurrences.find_by(original_due_on: Date.new(2026, 6, 9))
+    assert occurrence.paid?
+    assert_equal 2000, occurrence.expected_amount.to_f
+
+    allocation = occurrence.allocations.sole
+    assert_equal 2000, allocation.allocated_amount.to_f
+    assert_equal "user_confirmed", allocation.source
+    assert_not_nil allocation.entry, "the payment must reattach to the imported transaction"
+    assert_equal 2000, allocation.entry.amount.to_f
+    assert_equal Date.new(2026, 6, 9), allocation.entry.date
+  end
+
+  test "replaying a bills export changes nothing the second time" do
+    records = bills_ndjson_records
+    session = @family.import_sessions.create!
+    Family::DataImporter.new(@family, build_ndjson(records), import_session: session).import!
+
+    census = -> {
+      [ RecurrenceRule.joins(:recurring_transaction).where(recurring_transactions: { family_id: @family.id }).count,
+        RecurringOccurrence.where(family_id: @family.id).count,
+        RecurringAllocation.joins(:recurring_occurrence).where(recurring_occurrences: { family_id: @family.id }).count ]
+    }
+    before = census.call
+
+    # The replay contract is the session's: mappings persisted on the first
+    # pass, so a fresh importer resolves every record to the row already
+    # created instead of skipping or duplicating it.
+    Family::DataImporter.new(@family, build_ndjson(records), import_session: session).import!
+
+    assert_equal before, census.call
+  end
+
+  test "a closed occurrence exported without closed_at replays to the same timestamp" do
+    records = bills_ndjson_records
+    records.each { |record| record[:data].delete(:closed_at) if record[:type] == "RecurringOccurrence" }
+
+    session = @family.import_sessions.create!
+    Family::DataImporter.new(@family, build_ndjson(records), import_session: session).import!
+    occurrence = @family.recurring_transactions.sole
+                        .recurring_occurrences.find_by!(original_due_on: Date.new(2026, 6, 9))
+    first_stamp = occurrence.closed_at
+    assert_not_nil first_stamp
+    assert_equal Date.new(2026, 6, 9), first_stamp.to_date, "the stand-in derives from the due date"
+
+    # A day later so a stand-in recomputed at import time would visibly move.
+    travel 1.day do
+      Family::DataImporter.new(@family, build_ndjson(records), import_session: session).import!
+    end
+
+    assert_equal first_stamp, occurrence.reload.closed_at,
+      "an import-time stand-in would move the historical timestamp on every replay"
+  end
+
+  test "one incoherent recurrence rule row is skipped, not the whole import" do
+    records = bills_ndjson_records
+    records.each do |record|
+      record[:data][:interval] = nil if record[:type] == "RecurrenceRule"
+    end
+
+    result = Family::DataImporter.new(@family, build_ndjson(records)).import!
+
+    assert_equal 1, result.dig(:summary, "recurrence_rules", "skipped")
+    assert_equal 1, @family.recurring_transactions.count,
+      "the rest of the file must land even though one rule row was stale"
+  end
+
+  test "a hand-recorded allocation without a paid_on is skipped, not defaulted to today" do
+    records = bills_ndjson_records
+    records.each do |record|
+      next unless record[:type] == "RecurringAllocation"
+
+      record[:data].delete(:transaction_id)
+      record[:data].delete(:paid_on)
+    end
+
+    result = Family::DataImporter.new(@family, build_ndjson(records)).import!
+
+    occurrence = @family.recurring_transactions.sole
+                        .recurring_occurrences.find_by!(original_due_on: Date.new(2026, 6, 9))
+    assert_equal 0, occurrence.allocations.count,
+      "a defaulted paid_on would make every later replay insert a fresh copy"
+    assert_equal 1, result.dig(:summary, "recurring_allocations", "skipped")
+  end
+
+  test "recurring records whose series never came across are counted as skipped" do
+    ndjson = build_ndjson([
+      { type: "RecurringPriceChange", data: {
+          id: "old-change", recurring_transaction_id: "missing-series",
+          effective_on: "2026-05-01", previous_amount: "10.0", new_amount: "12.0",
+          currency: "USD" } }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson).import!
+
+    assert_equal 1, result.dig(:summary, "recurring_price_changes", "skipped")
+  end
+
+  # A bill created with a full payment history must not also carry the
+  # occurrences its own creation callback generates.
+  test "imported occurrences do not duplicate the ones a new series generates" do
+    Family::DataImporter.new(@family, build_ndjson(bills_ndjson_records)).import!
+
+    series = @family.recurring_transactions.sole
+    duplicates = series.recurring_occurrences.group(:original_due_on).count.select { |_, n| n > 1 }
+
+    assert_empty duplicates, "generation and import collided on the same due date"
+  end
+
+
+  # Occurrence generation fires after_commit on the instance the importer
+  # created. If validation cached its rules while they were still empty, a
+  # biweekly restore would materialize monthly phantom occurrences beside the
+  # real schedule.
+  test "a restored biweekly series keeps its cadence, with no monthly phantoms" do
+    Family::DataImporter.new(@family, build_ndjson(bills_ndjson_records)).import!
+
+    series = @family.recurring_transactions.find_by!(name: "Rent")
+
+    # The imported historical row is weekend-adjusted off its weekday, so the
+    # cadence check runs on what generation produced: every scheduled cycle
+    # lands on the rule's weekday, fourteen days from its neighbour. A monthly
+    # phantom would land on the 9th, whatever weekday that is.
+    generated = series.recurring_occurrences.open_status.order(:due_on).pluck(:due_on)
+    assert generated.any?, "generation must have materialized future cycles"
+
+    generated.each do |due_on|
+      assert_equal 1, due_on.cwday, "#{due_on} is not the rule's Monday"
+    end
+    generated.each_cons(2) do |a, b|
+      assert_equal 14, (b - a).to_i, "#{a} to #{b} is not one biweekly step"
+    end
+  end
+
+  # Session imports arrive in chunks, each processed by a fresh importer. The
+  # occurrence map used to live in memory, so an allocation whose occurrence
+  # landed in an earlier chunk was silently skipped.
+  test "an allocation in a later session chunk finds its occurrence from an earlier one" do
+    records = bills_ndjson_records
+    allocations = records.select { |r| r[:type] == "RecurringAllocation" }
+    rest = records - allocations
+    assert allocations.any?, "fixture must carry at least one allocation"
+
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    session.attach_chunk!(sequence: 1, client_chunk_id: "bills",
+                          content: build_ndjson(rest),
+                          filename: "bills.ndjson", content_type: "application/x-ndjson")
+    session.attach_chunk!(sequence: 2, client_chunk_id: "allocations",
+                          content: build_ndjson(allocations),
+                          filename: "allocations.ndjson", content_type: "application/x-ndjson")
+
+    session.publish
+
+    series = @family.recurring_transactions.find_by!(name: "Rent")
+    assert_operator RecurringAllocation.joins(:recurring_occurrence)
+      .where(recurring_occurrences: { recurring_transaction_id: series.id }).count, :>, 0,
+      "the later chunk's allocation must resolve its occurrence through the persisted mapping"
+  end
+
   private
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")
+    end
+
+    # A bill, one non-monthly rule, a settled occurrence, and the payment that
+    # settled it, pointing at a transaction arriving in the same export.
+    def bills_ndjson_records
+      [
+        { type: "Account", data: {
+            id: "old-acct", name: "Checking", balance: "0", currency: "USD",
+            accountable_type: "Depository", accountable: { subtype: "checking" } } },
+        { type: "RecurringTransaction", data: {
+            id: "old-series", account_id: "old-acct", amount: "2000.0", currency: "USD",
+            expected_day_of_month: 9, last_occurrence_date: "2026-06-09",
+            next_expected_date: "2026-07-09", status: "active", name: "Rent",
+            manual: true, bill_type: "bill", amount_tolerance_pct: "9.5",
+            anchor_date: "2026-06-09", weekend_adjust: "before", dedup_scope: "2000",
+            matcher_hints: { "name_aliases" => [ "WATSON PROPERTY" ] } } },
+        { type: "RecurrenceRule", data: {
+            id: "old-rule", recurring_transaction_id: "old-series",
+            frequency: "weekly", interval: 2, weekday: 1, position: 0 } },
+        { type: "Transaction", data: {
+            id: "old-txn", entry_id: "old-entry", account_id: "old-acct",
+            date: "2026-06-09", amount: "2000.0", currency: "USD", name: "Rent payment" } },
+        { type: "RecurringOccurrence", data: {
+            id: "old-occ", recurring_transaction_id: "old-series",
+            original_due_on: "2026-06-09", due_on: "2026-06-09", currency: "USD",
+            expected_amount: "2000.0", status: "paid",
+            closed_at: "2026-06-09T12:00:00Z", closed_source: "auto" } },
+        { type: "RecurringAllocation", data: {
+            id: "old-alloc", recurring_occurrence_id: "old-occ", transaction_id: "old-txn",
+            allocated_amount: "2000.0", currency: "USD", state: "confirmed",
+            source: "user_confirmed", paid_on: "2026-06-09" } }
+      ]
     end
 end

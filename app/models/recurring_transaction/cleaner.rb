@@ -1,4 +1,6 @@
 class RecurringTransaction
+  # Bills subsystem: staleness is measured in the series' own cycles, so
+  # quarterly and annual bills survive the gaps between normal occurrences.
   class Cleaner
     attr_reader :family
 
@@ -6,8 +8,10 @@ class RecurringTransaction
       @family = family
     end
 
-    # Mark recurring transactions as inactive if they haven't occurred recently
-    # Uses 2 months for automatic recurring, 6 months for manual recurring.
+    # Mark recurring transactions as inactive if they haven't occurred
+    # recently, where "recently" is measured in the series' own cycles (see
+    # RecurringTransaction#staleness_threshold_date) so quarterly and annual
+    # bills survive the gaps between their perfectly normal occurrences.
     #
     # Transfer rows (destination_account_id present) are included: as of issue
     # #1590, `matching_transactions` detects the Transfer pair, so a still-active
@@ -21,10 +25,8 @@ class RecurringTransaction
             .find_each do |recurring_transaction|
         next unless recurring_transaction.should_be_inactive?
 
-        # Determine threshold based on manual flag
-        threshold = recurring_transaction.manual? ? 6.months.ago.to_date : 2.months.ago.to_date
-
         # Double-check if there are any recent matching transactions
+        threshold = recurring_transaction.staleness_threshold_date
         recent_matches = recurring_transaction.matching_transactions.select { |entry| entry.date >= threshold }
 
         if recent_matches.empty?

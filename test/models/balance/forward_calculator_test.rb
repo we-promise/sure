@@ -66,6 +66,44 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "pending transactions do not affect materialized balances" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -200 },
+        { type: "transaction", date: 1.day.ago.to_date, amount: -500 }
+      ]
+    )
+    account.entries.find_by!(date: 1.day.ago.to_date).entryable.update!(
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_equal 1200, calculated.last.balance
+    assert_equal 200, calculated.sum(&:cash_inflows)
+    assert_not_includes calculated.map(&:date), 1.day.ago.to_date
+  end
+
+  test "calculation start date ignores a pending entry before the opening anchor" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "transaction", date: 5.days.ago.to_date, amount: -100 },
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -200 }
+      ]
+    )
+    account.entries.find_by!(date: 5.days.ago.to_date).entryable.update!(
+      extra: { "plaid" => { "pending" => true } }
+    )
+
+    calculator = Balance::ForwardCalculator.new(account)
+
+    assert_equal 3.days.ago.to_date, calculator.calculation_start_date
+  end
+
   test "reconciliation valuation sets absolute balance before applying subsequent transactions" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
@@ -806,6 +844,27 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     # Full range returned.
     assert_includes result.map(&:date), 3.days.ago.to_date
     assert_not calculator.incremental?, "Should not be incremental for foreign currency accounts"
+  end
+
+  test "pending foreign-currency entries do not force a full recalculation" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -100 },
+        { type: "transaction", date: 1.day.ago.to_date, amount: -500, currency: "EUR" }
+      ]
+    )
+    account.entries.find_by!(date: 1.day.ago.to_date).entryable.update!(
+      extra: { "plaid" => { "pending" => true } }
+    )
+
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    result = calculator.calculate
+
+    assert calculator.incremental?, "Pending foreign-currency entries should be ignored by the guard"
+    assert_equal [ 2.days.ago.to_date ], result.map(&:date)
   end
 
   # Regression: a reconciliation (or any entry) backfilled with a date EARLIER

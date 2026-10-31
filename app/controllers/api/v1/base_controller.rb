@@ -24,6 +24,10 @@ class Api::V1::BaseController < ApplicationController
   before_action :force_json_format
   # Use our custom authentication that supports both OAuth and API keys
   before_action :authenticate_request!
+  # Localize registers this before API authentication in ApplicationController.
+  # Resolve the family zone only after the API identity has populated Current.
+  skip_around_action :switch_timezone
+  around_action :switch_timezone
   before_action :check_api_key_rate_limit
   before_action :log_api_access
 
@@ -217,6 +221,15 @@ class Api::V1::BaseController < ApplicationController
       authorize_scope!(:read)
     end
 
+    # Guests are read-only by design, so API credentials they hold must not
+    # change family-wide configuration either.
+    def reject_guest_writes!
+      return true unless current_resource_owner&.guest?
+
+      render_json({ error: "forbidden", message: "Guests cannot modify family configuration" }, status: :forbidden)
+      false
+    end
+
     # Consistent JSON response method
     def render_json(data, status: :ok)
       render json: data, status: status
@@ -266,6 +279,15 @@ class Api::V1::BaseController < ApplicationController
 
     def handle_invalid_filter(exception)
       render_validation_error(exception.message)
+    end
+
+    # A strict YYYY-MM-DD date, or nil when the value is missing or invalid.
+    def parse_date(value)
+      return unless value.is_a?(String) && value.match?(/\A\d{4}-\d{2}-\d{2}\z/)
+      date = Date.iso8601(value)
+      date if date.year.positive?
+    rescue Date::Error
+      nil
     end
 
     def parse_date_param(key)

@@ -24,7 +24,14 @@
     <% end %>
 
     <%= turbo_frame_tag "modal" %>
-    <%= turbo_frame_tag "drawer" %>
+    <%# A controller can open the drawer on arrival by setting @drawer_src
+        (bills#show visited directly renders a bills view around the bill),
+        whichever template renders the page. %>
+    <% if @drawer_src %>
+      <%= turbo_frame_tag "drawer", src: @drawer_src, refresh: :morph %>
+    <% else %>
+      <%= turbo_frame_tag "drawer" %>
+    <% end %>
 
     <%# Custom overrides for browser's confirm API  %>
     <%= render "layouts/shared/confirm_dialog" %>
@@ -40,19 +47,27 @@
         and for managed-mode deployments — `current_sidekiq_health` returns
         nil in those cases. %>
     <% if Current.user&.super_admin? && current_sidekiq_health && !current_sidekiq_health.healthy? %>
-      <%# Stack below any sticky impersonation bars instead of hard-coding
-          80px (`top-20`). Each bar is ~60px tall (`py-4` + content), so
-          adjust the fixed offset based on how many are visible. %>
-      <% banner_top_class = if super_admin_bar_visible && approval_bar_visible
-                             "top-36"
-                           elsif super_admin_bar_visible || approval_bar_visible
-                             "top-20"
-                           else
-                             "top-4"
-                           end %>
-      <div class="fixed z-40 <%= banner_top_class %> left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
-        <%= render "shared/sidekiq_health_banner", health: current_sidekiq_health %>
-      </div>
+      <% if sidebar_aware %>
+        <% content_for :system_alerts do %>
+          <div class="mx-auto w-full max-w-2xl">
+            <%= render "shared/sidekiq_health_banner", health: current_sidekiq_health %>
+          </div>
+        <% end %>
+      <% else %>
+        <%# Stack below any sticky impersonation bars instead of hard-coding
+            80px (`top-20`). Each bar is ~60px tall (`py-4` + content), so
+            adjust the fixed offset based on how many are visible. %>
+        <% banner_top_class = if super_admin_bar_visible && approval_bar_visible
+                               "top-36"
+                             elsif super_admin_bar_visible || approval_bar_visible
+                               "top-20"
+                             else
+                               "top-4"
+                             end %>
+        <div class="fixed z-40 <%= banner_top_class %> left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
+          <%= render "shared/sidekiq_health_banner", health: current_sidekiq_health %>
+        </div>
+      <% end %>
     <% end %>
 
     <%= yield %>

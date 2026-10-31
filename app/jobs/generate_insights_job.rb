@@ -16,7 +16,7 @@ class GenerateInsightsJob < ApplicationJob
     # Insights are a preview feature, so the nightly sweep only visits families
     # with an opted-in member. Unlike a job that moves existing data around,
     # this one manufactures data per family — seven generators over the income
-    # statement and balance sheet, plus paid LLM narration — so running it for
+    # statement and balance sheet — so running it for
     # families who can't see the result is pure waste. Scoped in SQL rather
     # than checked per family to keep the fan-out a single indexed query.
     def fan_out
@@ -37,18 +37,20 @@ class GenerateInsightsJob < ApplicationJob
       # broadcast below too, not just the generation.
       return unless family.preview_features_enabled?
 
-      with_advisory_lock(family_id) do
+      notifiable_insights = with_advisory_lock(family_id) do
         I18n.with_locale(family.locale) do
           result = Insight::GeneratorRegistry.new(family).generate_all
-          upsert_insights(family, result.insights)
+          created_or_resurfaced = upsert_insights(family, result.insights)
           expire_stale_insights(family, result)
+          created_or_resurfaced
         end
       end
 
       # Outside the lock on purpose: even a lock-skipped run re-broadcasts the
       # current state, so a subscribed /insights page (waiting on its manual
       # refresh) always gets its list and button restored.
-      broadcast_feed(family)
+      I18n.with_locale(family.locale) { broadcast_feed(family) }
+      Array(notifiable_insights).each { |insight| DeliverInsightNotificationJob.enqueue_for(insight) }
     end
 
     def broadcast_feed(family)
@@ -67,24 +69,33 @@ class GenerateInsightsJob < ApplicationJob
         partial: "insights/refresh_button",
         locals: { pending: false }
       )
+      # The lightbulb lives in the layout, so it goes on the family stream every
+      # page subscribes to, not just the /insights one.
+      Turbo::StreamsChannel.broadcast_replace_to(
+        family,
+        targets: "[data-insights-badge]",
+        partial: "layouts/shared/insights_badge",
+        locals: { count: unread_ids.size }
+      )
     end
 
     # A visible insight whose generator ran successfully but did not re-emit
     # its dedup_key has had its condition clear — hide it. Types whose
     # generator crashed are left untouched so a transient failure can't wipe
-    # out healthy insights.
+    # out healthy insights. By status rather than `visible`, so a row hidden
+    # because its account is no longer shared with everyone expires too.
     def expire_stale_insights(family, result)
       family.insights
-        .visible
+        .where(status: %w[active read])
         .where(insight_type: result.succeeded_types)
         .where.not(dedup_key: result.insights.map(&:dedup_key))
         .update_all(status: "expired", updated_at: Time.current)
     end
 
     def upsert_insights(family, generated_insights)
-      writer = Insight::BodyWriter.new(family)
+      writer = Insight::BodyWriter.new
 
-      generated_insights.each do |generated|
+      generated_insights.filter_map do |generated|
         metadata = normalize_json(generated.metadata)
         facts = normalize_json(generated.facts)
         existing = family.insights.find_by(dedup_key: generated.dedup_key)
@@ -120,22 +131,32 @@ class GenerateInsightsJob < ApplicationJob
             read_at: nil,
             dismissed_at: nil
           )
+          existing
         elsif existing.expired?
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces; the body is still accurate, so no rewrite.
-          existing.update!(status: "active", facts: facts, generated_at: Time.current, read_at: nil)
+          existing.update!(title: generated.title, status: "active", facts: facts,
+                           generated_at: Time.current, read_at: nil)
+          existing
         else
-          # Same signal, same numbers: don't rewrite the body (avoids an LLM
-          # call) and don't undo the user's read/dismissed state. Facts still
+          # Same signal, same numbers: don't rewrite the body and don't undo
+          # the user's read/dismissed state. Facts still
           # refresh — they're display values (key figure, link labels), and
           # keeping them current is exactly why they're not part of the
           # material-change comparison.
-          existing.update!(facts: facts, generated_at: Time.current)
+          #
+          # The title refreshes with them. It is built from I18n and the
+          # generator's own data, not written by the model, so keeping it
+          # current costs nothing — and a title naming a goal or a category
+          # the user has since renamed is simply wrong on the page. Rename is
+          # not a reason to resurface, so status and read state stay untouched.
+          existing.update!(title: generated.title, facts: facts, generated_at: Time.current)
+          nil
         end
       rescue ActiveRecord::RecordNotUnique
         # A concurrent run created the same dedup_key first; it owns this row.
-        next
+        nil
       rescue => e
         DebugLogEntry.capture(
           category: "insights",
@@ -145,6 +166,7 @@ class GenerateInsightsJob < ApplicationJob
           family: family,
           metadata: { dedup_key: generated.dedup_key, insight_type: generated.insight_type }
         )
+        nil
       end
     end
 

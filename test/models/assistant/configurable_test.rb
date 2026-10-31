@@ -29,6 +29,18 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
     assert_includes instructions, "Today's date: #{Date.current}"
   end
 
+  test "a family's chat_system override replaces the static block but keeps session context" do
+    chat = chats(:one)
+    chat.user.family.update!(ai_prompt_chat_system: "CUSTOM IDENTITY")
+
+    instructions = Assistant.config_for(chat)[:instructions]
+
+    assert instructions.start_with?("CUSTOM IDENTITY")
+    assert_not_includes instructions, "You help users understand their financial data"
+    assert_includes instructions, "## Session context"
+    assert_includes instructions, "Today's date: #{Date.current}"
+  end
+
   test "session context lists accounts and categories for a typical family" do
     chat = chats(:one)
     family = chat.user.family
@@ -77,5 +89,22 @@ class AssistantConfigurableTest < ActiveSupport::TestCase
 
     assert_match(/\d+ accounts:/, instructions)
     assert_match(/\d+ categories\./, instructions)
+  end
+  # The tool caller returns {error:, hint:} instead of raising; without this
+  # rule the model sees those results as opaque data and never self-corrects.
+  test "instructions teach the model to follow tool error hints" do
+    config = Assistant.config_for(chats(:one))
+
+    assert_includes config[:instructions],
+      %(If a tool result contains an "error" and a "hint", follow the hint and retry once)
+  end
+
+  # Function names are plumbing; a reply that says "I ran get_bill_audit"
+  # reads like a stack trace, not an assistant.
+  test "instructions forbid naming internal tools in responses" do
+    config = Assistant.config_for(chats(:one))
+
+    assert_includes config[:instructions],
+      "Never mention internal tool or function names in your responses"
   end
 end

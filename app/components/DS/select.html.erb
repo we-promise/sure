@@ -3,14 +3,16 @@
 <div class="relative" data-controller="select <%= "list-filter" if searchable %> form-dropdown" data-select-menu-placement-value="<%= menu_placement %>" data-action="dropdown:select->form-dropdown#onSelect">
   <div class="form-field <%= options[:container_class] %>">
     <div class="form-field__body">
-        <%= form.label method, options[:label], class: "form-field__label", id: "#{method}_label" if options[:label].present? %>
-        <%= form.hidden_field method,
-            value: @selected_value,
-            data: {
-              "form-dropdown-target": "input",
-              "auto-submit-target": "auto",
-              **(options.dig(:html_options, :data) || {})
-            } %>
+        <%= form.label method, options[:label], class: "form-field__label", id: label_id if options[:label].present? %>
+        <% unless disabled? %>
+          <%= form.hidden_field method,
+              value: @selected_value,
+              data: {
+                "form-dropdown-target": "input",
+                "auto-submit-target": "auto",
+                **(options.dig(:html_options, :data) || {})
+              } %>
+        <% end %>
         <%# `aria-expanded` reflects MENU open/closed state — managed by the
             select controller's openMenu/close. Init as "false"; previously
             this incorrectly mirrored whether a value was selected.
@@ -20,15 +22,23 @@
             value>" — referencing only the label would override the
             button's text node and suppress the current value. %>
         <button type="button"
-                id="<%= method %>_trigger"
+                id="<%= trigger_id %>"
                 class="form-field__input w-full"
+                <%= "disabled" if disabled? %>
                 data-select-target="button"
                 data-action="click->select#toggle focus->select#handleButtonFocus"
                 aria-haspopup="listbox"
                 aria-expanded="false"
                 tabindex="0"
-                <%= "aria-labelledby=\"#{method}_label #{method}_trigger\"".html_safe if options[:label].present? %>>
-          <%= selected_item&.dig(:label) || @placeholder %>
+                <%= tag.attributes(aria: { labelledby: "#{label_id} #{trigger_id}" }) if options[:label].present? %>>
+          <% if trigger_logo? %>
+            <span class="flex items-center gap-2 min-w-0">
+              <%= logo_markup(selected_item) %>
+              <span class="truncate"><%= selected_item[:label] %></span>
+            </span>
+          <% else %>
+            <%= selected_item&.dig(:label) || @placeholder %>
+          <% end %>
         </button>
     </div>
   </div>
@@ -49,7 +59,7 @@
           role="listbox" tabindex="-1">
       <% items.each do |item| %>
         <% is_selected = item[:value] == selected_value %>
-        <% obj = item[:object] %>
+        <% is_child = child?(item) %>
 
         <%# Options use tabindex="-1" always — keyboard focus is managed
             programmatically so listbox items never appear in the Tab
@@ -67,25 +77,16 @@
             <%= helpers.icon("check") %>
           </span>
 
+          <% if is_child %>
+            <%= helpers.icon("corner-down-right", size: "sm") %>
+          <% end %>
+
           <% case variant %>
           <% when :simple %>
             <%= item[:label] %>
 
           <% when :logo %>
-            <% unless item[:value].nil? %>
-              <% if logo_for(item) %>
-                <%= image_tag logo_for(item),
-                      class: "w-6 h-6 rounded-full border border-secondary",
-                      loading: "lazy" %>
-              <% else %>
-                <%= render DS::FilledIcon.new(
-                      variant: :text,
-                      text: item[:label],
-                      size: "sm",
-                      rounded: true
-                    ) %>
-              <% end %>
-            <% end %>
+            <%= logo_markup(item) unless item[:value].nil? %>
             <%= item[:label] %>
 
           <% when :badge %>

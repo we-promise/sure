@@ -20,7 +20,7 @@
           <%= render "budget_categories/no_categories" %>
         </div>
       <% else %>
-        <div class="max-w-md mx-auto">
+        <div class="max-w-md mx-auto" data-controller="budget-move">
           <%= render "budget_categories/allocation_progress", budget: @budget %>
 
           <div class="space-y-4 mb-4">
@@ -46,6 +46,8 @@
           </div>
 
           <%= render "budget_categories/confirm_button", budget: @budget %>
+
+          <%= render "budget_categories/move_dialog", budget: @budget, budget_categories: @budget_categories %>
         </div>
       <% end %>
     </div>

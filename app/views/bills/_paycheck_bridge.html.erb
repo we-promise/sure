@@ -1,0 +1,72 @@
+<%# locals: (period:, currency:) %>
+<%# The gap before the next paycheck, when the cash does cover it.
+
+    Its twin next door reports the same window when the cash falls short. This
+    one exists because the covered case used to be dropped from the page
+    outright: the bridge is filtered out of the timeline, and only a shortfall
+    earned a banner, so a bill due in five days appeared nowhere on the plan
+    that is supposed to answer what is due before payday.
+
+    A month between paydays holds dozens of bills, so each one is a dated
+    ledger row like the period cards below, the first few show and the rest
+    fold away. Only rendered once the balance is known (see
+    BillsHelper#paycheck_plan_sections), so the cash figures always exist. %>
+
+<%
+  items = period.items_due
+  shown = items.first(BillsHelper::PAYCHECK_BRIDGE_VISIBLE_ITEMS)
+  folded = items.drop(BillsHelper::PAYCHECK_BRIDGE_VISIBLE_ITEMS)
+  segments = paycheck_bridge_segments(period)
+  segment_class = { due: "bg-inverse", left: "bg-success" }
+%>
+
+<section class="bg-container rounded-xl shadow-border-xs px-4 sm:px-5 py-4 space-y-3" data-paycheck-bridge>
+  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+    <p class="text-sm text-primary tabular-nums privacy-sensitive">
+      <span class="font-medium"><%= t("bills.paycheck.bridge_label") %></span>
+      <%= t("bills.paycheck.bridge_amount", amount: format_money(Money.new(period.obligation_total, currency))) %>
+    </p>
+    <p class="text-xs text-secondary tabular-nums privacy-sensitive shrink-0">
+      <%= t("bills.paycheck.bridge_left", amount: format_money(Money.new(period.cash_after_obligations, currency))) %>
+    </p>
+  </div>
+
+  <div class="space-y-2">
+    <p class="text-xs text-secondary">
+      <%= t("bills.paycheck.bridge_split",
+            date: l(period.ends_on + 1, format: :short),
+            cash: format_money(Money.new(period.cash_on_hand, currency))) %>
+    </p>
+
+    <% if segments.any? %>
+      <div class="flex h-1.5 rounded-full overflow-hidden bg-surface-inset"
+           role="img"
+           aria-label="<%= paycheck_bridge_aria(period, currency) %>">
+        <% segments.each do |key, percent| %>
+          <div class="<%= segment_class[key] %>" style="width: <%= percent %>%"></div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <div>
+    <% shown.each do |item| %>
+      <%= render "bills/paycheck_item", item: item, currency: currency, reserved: false %>
+    <% end %>
+
+    <% if folded.any? %>
+      <%= render DS::Disclosure.new(variant: :inline, body_class: nil) do |disclosure| %>
+        <% disclosure.with_summary_content do %>
+          <span class="flex items-center gap-1 pt-1 text-xs text-secondary hover:text-primary">
+            <%= t("bills.paycheck.bridge_show_more", count: folded.size) %>
+            <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+          </span>
+        <% end %>
+
+        <% folded.each do |item| %>
+          <%= render "bills/paycheck_item", item: item, currency: currency, reserved: false %>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+</section>

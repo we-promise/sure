@@ -1,0 +1,12 @@
+---
+fr:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: Clé privée SCA
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: ne peut pas être enregistrée car le chiffrement Active Record n'est pas configuré sur cette installation

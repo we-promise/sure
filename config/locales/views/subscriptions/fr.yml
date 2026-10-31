@@ -4,16 +4,16 @@ fr:
     create:
       trial_already_used: Vous avez déjà commencé ou terminé un essai. Veuillez mettre
         à niveau pour continuer.
-      welcome: Bienvenue sur Bien sûr !
+      welcome: Bienvenue sur Sure !
     self_hosted_alert: "%{product_name} n'est pas disponible en mode auto-hébergé."
     success:
       contribution_failed: Une erreur s'est produite lors du traitement de votre contribution.
         Veuillez réessayer.
-      welcome_with_contribution: Bienvenue sur Bien sûr !  Votre contribution est
+      welcome_with_contribution: Bienvenue sur Sure ! Votre contribution est
         appréciée.
     upgrade:
       account_settings: Paramètres du compte
-      already_contributing: Vous contribuez déjà. Merci!
+      already_contributing: Vous contribuez déjà. Merci !
       contribute_and_support_sure: Contribuer et soutenir Sure
       cta: Continuez à soutenir le développement de cette base de code !
       header:

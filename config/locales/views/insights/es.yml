@@ -1,6 +1,9 @@
 ---
 es:
   insights:
+    notification:
+      title: Nuevo análisis financiero
+      body: Abre Sure para revisar tu análisis de IA más reciente.
     index:
       title: Insights
       subtitle: Qué está pasando en tus finanzas, actualizado cada noche.

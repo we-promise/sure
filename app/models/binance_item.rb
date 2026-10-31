@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class BinanceItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -27,11 +27,6 @@ class BinanceItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
-
   def import_latest_binance_data
     provider = binance_provider
     unless provider
@@ -40,6 +35,16 @@ class BinanceItem < ApplicationRecord
 
     BinanceItem::Importer.new(self, binance_provider: provider).import
   rescue StandardError => e
+    DebugLogEntry.capture(
+      category: "provider_sync",
+      level: "error",
+      message: "Binance import failed",
+      source: self.class.name,
+      provider_key: "binance",
+      family: family,
+      account_provider: binance_accounts.includes(:account_provider).filter_map(&:account_provider).first,
+      metadata: { binance_item_id: id, error_class: e.class.name, error: e.message }
+    )
     Rails.logger.error "BinanceItem #{id} - Failed to import: #{e.message}"
     raise
   end

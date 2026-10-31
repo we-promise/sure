@@ -6,6 +6,7 @@ zh-CN:
         renewal: 您的捐助将持续到 %{date}。
         cancellation: 您的捐助将于 %{date} 结束。
   settings:
+    encryption_migration_guide: 加密配置与数据迁移指南
     debugs:
       show:
         page_title: 调试
@@ -67,7 +68,7 @@ zh-CN:
         failed: 失败
         no_usage_data: 所选时间段内未找到用量数据
         cost_estimates_title: 关于费用预估
-        cost_estimates_description: "费用根据各提供商公布的定价估算，包括截至 2026 年 7 月的 OpenAI 定价。实际费用可能不同。定价按每 100 万 token 计算，并随模型而异。自定义或自托管模型将显示为“N/A”，且不计入总费用。"
+        cost_estimates_description: "费用根据各提供商公布的定价估算，最近核实日期为 %{date}。实际费用可能不同。定价按每 100 万 token 计算，并随模型而异。自定义或自托管模型将显示为“N/A”，且不计入总费用。"
     ai_prompts:
       show:
         page_title: AI 提示词
@@ -118,6 +119,8 @@ zh-CN:
         dashboard_two_column_title: 双栏布局
         dashboard_two_column_description: 在大屏幕上以两列显示仪表盘组件；关闭后，组件将以单列堆叠显示。
         split_grouped_title: 将拆分交易分组显示
+        auto_generate_transaction_names_title: "自动生成交易名称"
+        auto_generate_transaction_names_description: "手动输入的交易名称留空时，将根据所选分类和商户自动填写（例如“娱乐 - Netflix”）。如果两者都未选择，名称仍为必填。适用于整个家庭，且仅影响新交易。"
         split_grouped_description: 在交易列表中按父级分组显示拆分交易；关闭后，拆分子项将作为独立行显示。
     preferences:
       show:
@@ -234,6 +237,7 @@ zh-CN:
       accounts_label: 账户
       advanced_section_title: 高级
       ai_prompts_label: AI 提示词
+      auto_matches_label: 自动匹配
       api_key_label: API 密钥
       payment_label: 付款
       categories_label: 分类
@@ -305,6 +309,8 @@ zh-CN:
         sync_error: 同步错误
         no_recent_sync: 同步已逾期
         reconsent_required: 需要重新授权
+        login_required: "需要登录"
+        login_expires_soon: "登录将在 %{time}后过期（%{at}）"
         reconsent_needed:
           one: 1 天后需要重新授权
           other: "%{count} 天后需要重新授权"
@@ -359,6 +365,7 @@ zh-CN:
         connect_button: 连接 Coinbase
         syncing: 正在同步...
         sync: 同步
+        disconnect: 断开连接
         disconnect_confirm: 确定要断开此 Coinbase 连接吗？同步的账户会变为手动账户。
       binance_panel:
         setup_instructions: 连接 Binance，请创建一个只读 API key：
@@ -377,6 +384,7 @@ zh-CN:
         connect_button: 连接 Binance
         syncing: 正在同步...
         sync: 同步
+        disconnect: 断开连接
         disconnect_confirm: 确定要断开 Binance 吗？
         historical_import: 历史导入设置
         sync_start_date_label: 导入起始日期
@@ -415,6 +423,7 @@ zh-CN:
         application_id_placeholder_new: 输入 application ID
         application_id_placeholder_update: 输入新 ID 以更新
         client_certificate_label: Client Certificate（包含 Private Key）
+        keep_client_certificate_hint: "留空以保留当前证书"
         save_and_connect: 保存并连接
         update_connection: 更新连接
         connected_bank: 已连接的银行

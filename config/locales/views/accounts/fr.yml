@@ -34,6 +34,7 @@ fr:
       warning_no_sync: Le compte ne se synchronisera plus automatiquement avec votre fournisseur
       warning_title: Ce que cela signifie
       warning_transactions_kept: Toutes les transactions et soldes existants seront conservés
+      warning_wallet_connection: Tous les comptes de cette connexion Apple Wallet seront dissociés. Leurs transactions et soldes seront conservés. Vous pourrez vous reconnecter depuis l'app iOS Sure en configurant à nouveau Wallet.
     create:
       success: Compte %{type} créé
     destroy:
@@ -47,6 +48,8 @@ fr:
     form:
       additional_details: Détails supplémentaires
       balance: 'Solde à la date :'
+      enable_category_matcher_hint: Lorsque cette option est activée, la catégorie suggérée par le fournisseur est appliquée aux transactions importées. Désactivez-la pour laisser les nouvelles transactions sans catégorie.
+      enable_category_matcher_label: Activer l'attribution automatique de catégorie
       exclude_from_reports: Exclure de tous les rapports
       institution_domain_label: Domaine de l'institution
       institution_domain_placeholder: ex., banquepopulaire.fr
@@ -59,6 +62,10 @@ fr:
       opening_balance_date_label: Date du solde d'ouverture
     index:
       accounts: Comptes
+      cancel_sync: Annuler la synchronisation
+      financekit_accounts:
+        description: Gérez les connexions Apple Wallet et leur synchronisation dans l'app iOS Sure.
+        title: Apple Wallet
       manual_accounts:
         other_accounts: Autres comptes
       new_account: Nouveau compte
@@ -67,6 +74,8 @@ fr:
       container:
         close: Fermer
         navigate: Naviguer
+        next: Suivant
+        previous: Précédent
         select: Sélectionnez
       import_accounts: Importer des comptes
       method_selector:
@@ -129,17 +138,26 @@ fr:
         statements: Déclarations
       tabs:
         activity: Activité
-        holdings: Holdings
+        holdings: Titres
         overview: Aperçu
+        schedule: Échéancier
         statements: Déclarations
     sidebar:
+      collapse_all: Tout replier
       configure_providers: Configurez vos fournisseurs ici.
+      expand_all: Tout déplier
       missing_data: Données historiques manquantes
       missing_data_description: "%{product} utilise des fournisseurs tiers pour récupérer l'historique des taux de change, des cours des titres, etc. Ces données sont nécessaires au calcul précis des soldes historiques des comptes."
       new_account: Nouveau compte
       new_account_group: Nouveau %{account_group}
       new_asset: Nouvel actif
       new_debt: Nouvelle dette
+      reorder_account: Déplacer %{account}
+      reorder_hint: Faites glisser pour réorganiser. Au clavier, appuyez sur Entrée, puis utilisez les flèches.
+      sort_mode:
+        done: Terminé
+        hint: Faites glisser les comptes par leur poignée pour les réorganiser.
+        start: Trier les comptes
       tabs:
         all: Tout
         assets: Actifs

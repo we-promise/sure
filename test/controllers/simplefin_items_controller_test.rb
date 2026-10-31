@@ -11,6 +11,8 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
       name: "Test Connection",
       access_url: "https://example.com/test_access"
     )
+    # Setup tokens are checked before the claim job runs; keep tests off DNS.
+    Provider::Simplefin.any_instance.stubs(:resolve_addresses).returns([ "93.184.216.34" ])
   end
 
 
@@ -146,6 +148,44 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "pending_deletion", account_a.status, "expected orphaned duplicate to be hidden after relink"
   end
 
+  # The orphan cleanup's enqueue runs once the relink transaction commits. If it
+  # ran inside that transaction, its error would escape the action's rescue
+  # after the relink had committed, and the request would fail.
+  test "relink still succeeds when the orphan's destroy enqueue fails" do
+    account_a = Account.create!(
+      family: @family,
+      name: "Duplicate A",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    account_b = Account.create!(
+      family: @family,
+      name: "Target B",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.create!(subtype: "savings")
+    )
+    sfa = @simplefin_item.simplefin_accounts.create!(
+      name: "SF For Duplicate",
+      account_id: "sf_dup_enqueue",
+      account_type: "depository",
+      currency: "USD",
+      current_balance: 0
+    )
+    AccountProvider.create!(account: account_a, provider: sfa)
+    DestroyJob.queue_adapter.expects(:enqueue).once.raises(RedisClient::CannotConnectError, "Connection refused")
+
+    post link_existing_account_simplefin_items_path, params: {
+      account_id: account_b.id,
+      simplefin_account_id: sfa.id
+    }
+
+    assert_response :see_other
+    assert_equal account_b, AccountProvider.find_by!(provider: sfa).account
+    assert_equal "active", account_a.reload.status
+  end
+
   test "should get edit" do
     @simplefin_item.update!(status: :requires_update)
     get edit_simplefin_item_url(@simplefin_item)
@@ -171,6 +211,17 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "SimpleFIN connection updated.", flash[:notice]
   end
 
+  test "update rejects a token whose claim URL targets a disallowed address" do
+    @simplefin_item.update!(status: :requires_update)
+    token = Base64.strict_encode64("http://169.254.169.254/latest/meta-data/")
+    SimplefinConnectionUpdateJob.expects(:perform_later).never
+
+    patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: token } }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("simplefin_items.update.errors.invalid_token"))
+  end
+
   test "should handle update with invalid token" do
     @simplefin_item.update!(status: :requires_update)
 
@@ -180,6 +231,50 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_includes response.body, I18n.t("simplefin_items.update.errors.blank_token", default: "Please enter a SimpleFIN setup token")
+  end
+
+  # The edit modal sits in turbo-frame#modal, so Turbo swaps in that frame from
+  # the response. A stream aimed at the Bank sync panel left the modal as it was.
+  test "invalid update from the edit modal shows the error in the modal" do
+    @simplefin_item.update!(status: :requires_update)
+
+    patch simplefin_item_url(@simplefin_item),
+          params: { simplefin_item: { setup_token: "" } },
+          headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :unprocessable_entity
+    assert_select "turbo-frame#modal form[action=?]", simplefin_item_path(@simplefin_item)
+    assert_select "turbo-frame#modal", text: /#{I18n.t("simplefin_items.update.errors.blank_token")}/
+  end
+
+  test "invalid create from the Bank sync panel shows the error in the panel" do
+    post simplefin_items_url, params: { source: "panel", simplefin_item: { setup_token: "" } }, as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "simplefin-providers-panel"
+    assert_includes response.body, I18n.t("simplefin_items.create.errors.blank_token")
+  end
+
+  # The new-connection modal posts to the top of the page, with the same Accept
+  # header as the panel, and shows its error in its own template.
+  test "invalid create from the new connection modal renders the modal with the error" do
+    post simplefin_items_url,
+         params: { simplefin_item: { setup_token: "" } },
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :unprocessable_entity
+    assert_select "turbo-frame#modal form[action=?]", simplefin_items_path
+    assert_includes response.body, I18n.t("simplefin_items.create.errors.blank_token")
+  end
+
+  test "create with a token that is not an http url shows the invalid token message" do
+    token = Base64.strict_encode64("file:///etc/passwd")
+
+    assert_no_difference "SimplefinItem.count" do
+      post simplefin_items_url, params: { simplefin_item: { setup_token: token } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("simplefin_items.create.errors.invalid_token"))
   end
 
   test "should update simplefin item access_url in place preserving account linkages" do
@@ -230,6 +325,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     # Mock only the external API calls
     mock_provider = mock()
+    mock_provider.stubs(:validate_setup_token!)
     mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
@@ -291,6 +387,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     # Mock only the external API calls
     mock_provider = mock()
+    mock_provider.stubs(:validate_setup_token!)
     mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
@@ -1049,4 +1146,35 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     assert Account.exists?(stale_account.id)
     assert SimplefinAccount.exists?(stale_sfa.id)
   end
+
+  test "complete_account_setup's stream lists only the manual accounts the viewer can access" do
+    own, shared, private_account = create_manual_accounts_for_scope_test
+
+    post complete_account_setup_simplefin_item_url(@simplefin_item),
+         params: { sync_start_date: Date.today.to_s },
+         headers: { "Turbo-Frame" => "modal" }
+
+    assert_turbo_stream action: "update", target: "manual-accounts"
+    assert_includes response.body, own.name
+    assert_includes response.body, shared.name
+    assert_not_includes response.body, private_account.name
+  end
+
+  private
+    # The #manual-accounts list rebuilt in this response must match /accounts
+    # for the viewer: their own manual accounts and those shared with them,
+    # never a member's account that was not shared.
+    def create_manual_accounts_for_scope_test
+      admin = users(:family_admin)
+      member = users(:family_member)
+      build = ->(name, owner) {
+        Account.create!(family: families(:dylan_family), owner: owner, name: name, currency: "USD", balance: 0,
+                        accountable: Depository.create!(subtype: "checking"))
+      }
+      own = build.call("Admin Own Manual Marker", admin)
+      shared = build.call("Member Shared Manual Marker", member)
+      shared.account_shares.create!(user: admin, permission: "read_only")
+      private_account = build.call("Member Private Manual Marker", member)
+      [ own, shared, private_account ]
+    end
 end

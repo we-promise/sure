@@ -2,7 +2,7 @@
 fr:
   enable_banking_items:
     authorize:
-      authorization_failed: Échec de l'initiation de l'autorisation
+      authorization_failed: "Échec de l'initiation de l'autorisation : %{message}"
       bank_required: Veuillez sélectionner une banque.
       invalid_redirect: L'URL d'autorisation reçue est invalide. Veuillez réessayer.
       redirect_uri_not_allowed:

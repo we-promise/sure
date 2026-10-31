@@ -59,6 +59,7 @@ gem "image_processing", ">= 1.2"
 gem "ostruct"
 gem "bcrypt", "~> 3.1"
 gem "jwt"
+gem "apnotic", "~> 1.8"
 gem "jbuilder"
 gem "countries"
 
@@ -85,8 +86,9 @@ gem "httparty"
 gem "rotp", "~> 6.3"
 gem "rqrcode", "~> 3.0"
 gem "webauthn", "~> 3.4"
+gem "websocket-driver", "~> 0.8"
 gem "activerecord-import"
-gem "rubyzip", "~> 2.3"
+gem "rubyzip", "~> 3.4"
 gem "pdf-reader", "~> 2.12"
 
 # OpenID Connect, OAuth & SAML authentication
@@ -104,7 +106,8 @@ gem "after_commit_everywhere", "~> 1.0"
 # AI
 gem "ruby-openai"
 gem "anthropic", "~> 1.0"
-gem "langfuse-ruby", "~> 0.1.4", require: "langfuse"
+gem "opentelemetry-sdk", "~> 1.13"
+gem "opentelemetry-exporter-otlp", "~> 0.36"
 
 group :development, :test do
   gem "debug", platforms: %i[mri mswin mswin64 mingw x64_mingw]

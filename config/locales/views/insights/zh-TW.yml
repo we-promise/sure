@@ -1,6 +1,9 @@
 ---
 zh-TW:
   insights:
+    notification:
+      title: 新的財務洞察
+      body: 開啟 Sure 以查看最新的 AI 洞察。
     index:
       title: 洞察
       subtitle: 您財務狀況的近期動態，每晚更新。

@@ -42,7 +42,6 @@ it:
       subtitle: "Ecco cosa sta succedendo con le tue finanze"
       new: "Nuovo"
       sections_aria_label: "Sezioni dashboard"
-      drag_to_reorder: "Trascina per riordinare la sezione"
       toggle_section: "Attiva/disattiva visibilità sezione"
       widget_size:
         label: "Regola dimensione"
@@ -74,6 +73,11 @@ it:
         classifications:
           asset: "Attività"
           liability: "Passività"
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Flusso di cassa"
+          surplus: "Avanzo"
+          deficit: "Disavanzo"
       cashflow_sankey:
         title: "Flusso di cassa"
         zoom_out: "Torna al flusso completo"

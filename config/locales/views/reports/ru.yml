@@ -25,26 +25,16 @@ ru:
       example: Пример
       go_to_api_keys: Перейти к API-ключам
       need_key: Чтобы импортировать данные в Google Sheets, вам нужен API-ключ.
-      open_sheets: Открыть Google Sheets
-      ready: Ваш URL для CSV (с API-ключом) готов.
-      security_warning: Этот URL включает ваш API-ключ. Держите его в безопасности!
       step1: Перейдите в Настройки → API-ключи
       step2: Создайте новый API-ключ с разрешением "чтение"
       step3: Скопируйте API-ключ
-      step4: 'Добавьте его в этот URL как: ?api_key=YOUR_KEY'
-      steps: |-
-        Чтобы импортировать в Google Sheets:
-        1. Создайте новый Google Sheet
-        2. В ячейке A1 введите формулу, показанную ниже
-        3. Нажмите Enter
+      step4: 'Добавьте его в этот URL как: &api_key=YOUR_KEY'
       then_use: Затем используйте полный URL с =IMPORTDATA() в Google Sheets.
-      title_no_key: "⚠️ Требуется API-ключ"
-      title_with_key: "✅ Скопируйте URL для Google Sheets"
+      title_no_key: "Требуется API-ключ"
     index:
       date_range:
         from: С
         to: По
-      drag_to_reorder: Перетащите для изменения порядка разделов
       export: Экспорт CSV
       next_decade: Следующее десятилетие
       next_period: Следующий период
@@ -75,20 +65,19 @@ ru:
     invalid_date_range: Дата окончания не может быть раньше даты начала. Даты были
       поменяны местами.
     investment_flows:
-      contributions: Взносы
+      contributions: Пополнения
       contributions_description: Средства, добавленные в инвестиции
-      description: Отслеживайте движение средств в и из ваших инвестиционных счетов
-        через взносы и изъятия.
+      description: "Отслеживайте движение средств на ваших инвестиционных счетах: пополнения и выводы."
       net_flow: Чистый поток
-      net_flow_description: Общая чистая изменяемость
+      net_flow_description: Общее чистое изменение
       title: Инвестиционные потоки
-      withdrawals: Изъятия
-      withdrawals_description: Средства, изъятые из инвестиций
+      withdrawals: Выводы
+      withdrawals_description: Средства, выведенные из инвестиций
     investment_performance:
       accounts: Инвестиционные счета
       and_more: "+%{count} ещё"
-      contributions: Взносы за период
-      gains_by_tax_treatment: Доходы по налоговому учёту
+      contributions: Пополнения за период
+      gains_by_tax_treatment: Доходы по налоговому режиму
       holding: Актив
       holdings: Активы
       holdings_count:
@@ -116,9 +105,9 @@ ru:
       value: Стоимость
       view_details: Посмотреть детали
       weight: Доля
-      withdrawals: Изъятия за период
+      withdrawals: Выводы за период
     net_worth:
-      assets_vs_liabilities: Активы против обязательств
+      assets_vs_liabilities: Активы и обязательства
       current_net_worth: Текущая чистая стоимость
       no_assets: Нет активов
       no_liabilities: Нет обязательств
@@ -130,7 +119,7 @@ ru:
       document_title: Финансовый отчёт
       generated_on: Создан %{date}
       investments:
-        contributions: Взносы
+        contributions: Пополнения
         holding: Актив
         period_return: Доходность за период
         portfolio_value: Стоимость портфеля
@@ -141,14 +130,14 @@ ru:
         total_return: Общая доходность
         value: Стоимость
         weight: Доля
-        withdrawals: Изъятия
+        withdrawals: Выводы
       net_worth:
         assets: Активы
         current_balance: Текущий баланс
         liabilities: Обязательства
         no_liabilities: Нет обязательств
         this_period: за этот период
-        title: Свободные средства
+        title: Чистая стоимость
       spending:
         amount: Сумма
         category: Категория
@@ -174,7 +163,7 @@ ru:
         income: Доход
         month: Месяц
         net: Чистый
-        savings_rate: Уровень сбережений
+        savings_rate: Норма сбережений
         title: Ежемесячные тренды
     summary:
       budget_performance: Выполнение бюджета
@@ -252,7 +241,7 @@ ru:
       net: Чистый
       no_data: Нет данных о трендах
       no_spending_data: Нет данных о расходах за этот период
-      savings_rate: Уровень сбережений
+      savings_rate: Норма сбережений
       spending_patterns: Модели расходов
       title: Тренды и анализ
       total: Итого

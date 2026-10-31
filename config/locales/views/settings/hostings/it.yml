@@ -82,15 +82,15 @@ it:
           title: Disconnettere l'assistente esterno?
           body: Questo rimuoverà l'URL, il token e l'ID agente salvati, e passerà all'assistente integrato. Puoi riconnetterti in seguito inserendo nuove credenziali.
       brand_fetch_settings:
-        description: Inserisci il Client ID fornito da Brand Fetch
-        env_configured_message: Hai configurato con successo il tuo Client ID di Brand Fetch tramite la variabile d'ambiente BRAND_FETCH_CLIENT_ID.
+        description: Inserisci il Client ID fornito da Brandfetch
+        env_configured_message: Hai configurato con successo il tuo Client ID di Brandfetch tramite la variabile d'ambiente BRAND_FETCH_CLIENT_ID.
         show_details: "(mostra dettagli)"
-        setup_step_1_html: 'Visita <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> e crea un account sviluppatore Brand Fetch gratuito.'
+        setup_step_1_html: 'Visita <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> e crea un account sviluppatore Brandfetch gratuito.'
         setup_step_2_html: 'Vai alla pagina <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.'
         setup_step_3: 'Tocca l''icona occhio nella sezione "Il tuo Client ID" per visualizzare il tuo Client ID e incollarlo qui sotto.'
         label: Client ID
         placeholder: Inserisci il tuo Client ID qui
-        title: Impostazioni Brand Fetch
+        title: Impostazioni Brandfetch
         high_res_label: Abilita loghi ad alta risoluzione
         high_res_description: Se abilitato, i loghi verranno recuperati alla risoluzione 120x120 invece di 40x40. Questo fornisce immagini più nitide su display ad alta densità.
       llm_provider_selector:
@@ -104,6 +104,8 @@ it:
         not_configured_hint: "Aggiungi una chiave API %{provider} qui sotto per attivarlo."
         data_retention_heading: Gestione dati
         data_retention: Gli input API non vengono usati per addestrare modelli per impostazione predefinita; le API hosted dei provider conservano i dati per ~30 giorni per fiducia e sicurezza. Gli endpoint personalizzati o self-hosted seguono la tua politica.
+        max_items_per_call_label: Elementi massimi per batch (facoltativo)
+        max_items_per_call_help: "Limite superiore per batch di auto-categorizzazione/rilevamento commercianti. Predefinito: 25. Con provider compatibili con OpenAI, i batch più grandi vengono suddivisi automaticamente per adattarsi alla finestra di contesto."
       anthropic_settings:
         title: Anthropic (Claude)
         description: Inserisci la tua chiave API Anthropic. Opzionalmente punta l'URL base ad AWS Bedrock o GCP Vertex.
@@ -136,8 +138,6 @@ it:
         context_window_help: "Token totali che il modello accetterà. Predefinito: 2048 — aumenta a 8192+ per OpenAI cloud o modelli locali a contesto ampio."
         max_response_tokens_label: Token risposta massimi (facoltativo)
         max_response_tokens_help: "Token riservati per la risposta del modello. Predefinito: 512. Diminuisci per liberare spazio per cronologie più lunghe."
-        max_items_per_call_label: Elementi massimi per batch (facoltativo)
-        max_items_per_call_help: "Limite superiore per batch di auto-categorizzazione/rilevamento commercianti. Predefinito: 25. I batch più grandi vengono suddivisi automaticamente per adattarsi alla finestra di contesto."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

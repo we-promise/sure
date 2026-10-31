@@ -5,3 +5,10 @@ fr:
       Les étiquettes d'activité (Achat, Vente, Dividende) ne sont pas disponibles,
       ce qui peut affecter la précision du budget. Pensez à créer des règles pour
       exclure ou catégoriser les transactions d'investissement.
+    lunchflow_accounts_failed:
+      one: 'Import Lunchflow : la mise à jour de %{count} compte a échoué'
+      other: 'Import Lunchflow : la mise à jour de %{count} comptes a échoué'
+    lunchflow_import_error: 'Import Lunchflow : %{error}'
+    lunchflow_transactions_failed:
+      one: 'Import Lunchflow : la récupération des transactions a échoué pour %{count} compte'
+      other: 'Import Lunchflow : la récupération des transactions a échoué pour %{count} comptes'

@@ -19,13 +19,21 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
   end
 
   test "creates a goal with linked accounts" do
+    # A fresh account, not one the goal fixtures already claim in full:
+    # GoalAccount refuses a second whole-balance link on a contested account,
+    # and this function has no way to pass an earmark.
+    unclaimed = Account.create!(
+      family: @family, accountable: Depository.new,
+      name: "Vacation Savings", currency: "USD", balance: 2_000
+    )
+
     assert_difference -> { Goal.count } => 1,
                       -> { GoalAccount.count } => 1 do
       result = @fn.call(
         "name" => "Vacation",
         "target_amount" => 1500,
         "target_date" => 3.months.from_now.to_date.iso8601,
-        "linked_account_names" => [ @depository.name ]
+        "linked_account_names" => [ unclaimed.name ]
       )
 
       assert result[:success]
@@ -62,15 +70,17 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
     assert_includes result[:unknown_names], "Nonexistent Account"
   end
 
-  test "soft error when currencies differ across linked accounts" do
-    eur = Account.create!(family: @family, accountable: Depository.new, name: "EUR Account", currency: "EUR", balance: 100)
+  test "mixed-currency accounts fund one goal in the family currency" do
+    usd = Account.create!(family: @family, accountable: Depository.new, name: "USD Pot", currency: "USD", balance: 100)
+    eur = Account.create!(family: @family, accountable: Depository.new, name: "EUR Pot", currency: "EUR", balance: 100)
     result = @fn.call(
       "name" => "Mixed",
       "target_amount" => 100,
-      "linked_account_names" => [ @depository.name, eur.name ]
+      "linked_account_names" => [ usd.name, eur.name ]
     )
-    assert_equal false, result[:success]
-    assert_equal "currency_mismatch", result[:error]
+    assert result[:success]
+    assert_equal @family.primary_currency_code, result[:currency]
+    assert_equal [ usd.id, eur.id ].sort, Goal.find(result[:goal_id]).linked_accounts.pluck(:id).sort
   end
 
   test "scopes to the user's family" do
@@ -84,5 +94,57 @@ class Assistant::Function::CreateGoalTest < ActiveSupport::TestCase
     )
     assert_equal false, result[:success]
     assert_equal "unknown_accounts", result[:error]
+  end
+
+  # --- Review follow-up (#3166) ---
+
+  # The function always built whole-account links, so once exclusivity landed a
+  # second goal on the same account failed with a generic validation error —
+  # while the account list still advertised it as available. A common request
+  # ("save for a holiday too") became an unexplained refusal.
+  test "an account another goal claims in full is refused with a reason, not a validation failure" do
+    account = Account.create!(family: @family, accountable: Depository.new,
+                              name: "Claimed Pot", currency: "USD", balance: 5_000)
+    @family.goals.create!(name: "Precaution", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    result = @fn.call("name" => "Holiday", "target_amount" => 1_000,
+                      "linked_account_names" => [ account.name ])
+
+    assert_equal false, result[:success]
+    assert_equal "account_claimed_in_full", result[:error]
+    assert_includes result[:claimed_account_names], account.name
+  end
+
+  test "the same account is accepted once an earmark says how much to take" do
+    account = Account.create!(family: @family, accountable: Depository.new,
+                              name: "Claimed Pot", currency: "USD", balance: 5_000)
+    @family.goals.create!(name: "Precaution", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    result = @fn.call("name" => "Holiday", "target_amount" => 1_000,
+                      "linked_account_names" => [ account.name ],
+                      "earmarks" => { account.name => 1_000 })
+
+    assert_equal true, result[:success]
+    assert_equal 1_000, Goal.find(result[:goal_id]).goal_accounts.first.allocated_amount.to_d
+  end
+
+  # The list is what the assistant reasons from; without this it had no way to
+  # know an account could not be taken whole.
+  test "the account list says what is left and what is already claimed" do
+    account = Account.create!(family: @family, accountable: Depository.new,
+                              name: "Claimed Pot", currency: "USD", balance: 5_000)
+    @family.goals.create!(name: "Precaution", target_amount: 5_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: account)
+    end
+
+    result = @fn.call("name" => "X", "target_amount" => 100, "linked_account_names" => [])
+    listed = result[:available_accounts].find { |a| a[:name] == account.name }
+
+    assert listed[:claimed_in_full]
+    assert listed.key?(:free_to_earmark)
   end
 end

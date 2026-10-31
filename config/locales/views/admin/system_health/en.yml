@@ -2,8 +2,229 @@
 en:
   admin:
     system_health:
+      hosted_usage:
+        loading: "Loading hosted usage…"
+        title: "Hosted usage"
+        snapshot: "Read-only database snapshot as of %{time}"
+        summary:
+          trial_households_count: "Trial households (last 30 days)"
+          trial_members_count: "Current trial member accounts"
+          trials_expiring_soon_count: "Trials expiring in next 7 days"
+          cleanup_eligible_count: "Cleanup-eligible households"
+          active_supporter_households_count: "Active supporter households (local)"
+          supporter_subscription_count: "Stripe-linked subscription rows"
+        summary_help: "Trial totals cover subscriptions recorded in the last 30 days. Expiring-trial, cleanup and supporter totals cover all matching current rows, without the table limits."
+        limitations_title: "What these numbers can tell us"
+        limitations: "Current tables do not retain full trial, payment or session-activity history. Subscription creation can reflect imports. Member accounts are not verified unique people. This view changes no household or subscription data. Shared-demo resets remove old households and sessions, so visitor history cannot be reconstructed."
+        trials:
+          title: "Recent trial households"
+          description: "Subscriptions recorded since %{date} that retain a trial end date, including converted trials. Showing up to %{limit} households."
+          sessions_help: "Sessions are retained sign-in records for enabled users, not currently online users or visits. Signing out deletes a record. The latest creation time is not a last-seen time."
+          empty: "No trial households recorded in this window"
+        cleanup:
+          title: "Cleanup eligibility"
+          description: "Matches the existing cleanup scope: a paused or trialing subscription ended more than 14 days ago, or no subscription and a household older than 45 + 14 days. Showing up to %{limit} households."
+          eligibility_help: "Recent logins do not prevent a match. Eligibility does not confirm deletion; 90 days is archive retention, not the trial-cleanup threshold."
+          disabled: "Scheduled trial cleanup is disabled outside managed mode. These are scope matches only."
+          empty: "No households match the cleanup scope"
+          reasons:
+            expired_trial_grace_elapsed: "Trial ended; 14-day grace elapsed"
+            no_subscription_grace_elapsed: "No subscription; 45 + 14 days elapsed"
+        supporters:
+          title: "Local supporter status"
+          description: "Current local subscription rows with Stripe-shaped customer and subscription IDs; the synthetic demo subscription is excluded. Statuses do not verify payments received or first-payment dates. No Stripe request is made."
+          empty: "No Stripe-linked subscription rows"
+        columns:
+          household: "Household ID"
+          recorded_at: "Subscription recorded"
+          trial_ends_at: "Trial ends"
+          status: "Current status"
+          members: "Member accounts"
+          retained_sessions: "Retained sign-in sessions"
+          recent_sessions: "Retained sessions created in last 30 days"
+          latest_session: "Latest retained sign-in"
+          cleanup_eligible: "Cleanup eligible"
+          cleanup_reason: "Reason"
+          subscription_rows: "Subscription rows"
+        statuses:
+          unknown: "Unknown"
+          incomplete: "Incomplete"
+          incomplete_expired: "Incomplete, expired"
+          trialing: "Trialing"
+          active: "Active"
+          past_due: "Past due"
+          canceled: "Canceled"
+          unpaid: "Unpaid"
+          paused: "Paused"
+          no_subscription: "No subscription"
+        not_recorded: "Not recorded"
+        eligible: "Eligible"
+        not_eligible: "Not eligible"
+        synthetic_demo: "Synthetic demo"
+      push_notifications:
+        send_test: "Send test push notification"
+        queueing: "Queueing…"
+        title: "Push notifications"
+        requested_at: "Latest test requested at %{time}"
+        result_help: "APNs acceptance does not confirm delivery to your device. Refresh to see worker results. Results are retained for 24 hours."
+        results_label: "Test results"
+        device: "Device %{number}"
+        pending: "Pending"
+        refresh: "Refresh results"
+        columns:
+          device: "Device"
+          environment: "APNs environment"
+          status: "Result"
+          checked_at: "Last update"
+        environments:
+          sandbox: "Sandbox"
+          production: "Production"
+        messages:
+          enqueue_failed: "The test could not be queued. Check Sidekiq and refresh the results below."
+          ready: "Send a test notification to the enabled iOS devices registered to your account."
+          queued: "Test notification queued. Refresh the results below to check its status."
+          hosted_only: "Push notifications are available only in hosted mode."
+          ineligible: "Only an active super-admin can send a test notification."
+          no_devices: "Enable push notifications in the Sure iOS app for this account to send a test."
+          disabled: "Push delivery has been disabled by the operator."
+          not_configured: "APNs credentials are not configured."
+          cooldown: "Please wait 30 seconds before sending another test."
+          storage_unavailable: "The test request could not be saved. Check the shared cache configuration."
+        statuses:
+          queued: "Queued"
+          accepted: "Accepted by APNs"
+          skipped: "Skipped: no longer eligible"
+          rejected: "Rejected by APNs; check push debug logs"
+          unregistered: "Device registration is no longer valid"
+          retrying: "Retrying a temporary failure"
+          failed: "Failed; check push debug logs"
+          enqueue_failed: "Could not enqueue; check Sidekiq"
+          expired: "Expired without a final result"
+      push_notification:
+        title: "Sure test notification"
+        body: "This is a test push notification for your Sure account."
+      verify_worker_ai:
+        queued: "Worker check queued. It will appear below once a worker process picks it up, usually within a few seconds."
+      optional_services:
+        title: Optional services
+        description: "Optional operator integrations. Unconfigured services are informational. These checks inspect settings only; they do not test connectivity, send test events, or change analytics consent. Expand a service for setup details."
+        missing_settings: "Missing settings: %{settings}"
+        statuses:
+          configured: Configured
+          not_configured: Not configured
+          incomplete: Incomplete configuration
+          disabled: Disabled in this process
+          not_checked: Not verified
+        notes:
+          environment_disabled: "The loaded integration is disabled for this Rails environment."
+          explicitly_disabled: "SKYLIGHT_ENABLED explicitly disables instrumentation."
+          self_hosted_checkout_disabled: "Subscription checkout and the billing portal are disabled in self-hosted mode. Stripe webhooks can still be configured; checkout price IDs are not required here."
+          browser_analytics_disabled: "Browser analytics are disabled for this environment. This does not disable the separately configured server client."
+          shared_feedback_configured: "Self-hosted feedback has a separate bundled project and is enabled by its configuration. It does not require an operator POSTHOG_KEY. Browser opt-out and SDK availability are not checked."
+          shared_feedback_disabled: "The separate self-hosted feedback project is disabled by its feedback or environment setting. This does not disable operator-owned analytics."
+          production_only: "This integration is used only in production by the application's current configuration."
+        services:
+          langfuse:
+            title: Langfuse
+            description: "Optional AI tracing and evaluation reporting. No traces or evaluation requests are sent by this check."
+            guidance: "Set LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY together. LANGFUSE_HOST is optional. Restart the affected services after changing these settings."
+          sentry:
+            title: Sentry
+            description: "Optional error and performance reporting. The current initializer enables reporting only in production."
+            guidance: "Set SENTRY_DSN and restart the affected services. This checks the loaded SDK configuration without capturing an error or sending an event."
+          skylight:
+            title: Skylight
+            description: "Optional application performance instrumentation. Configuration presence does not confirm that the agent is running or reporting."
+            guidance: "Set SKYLIGHT_AUTHENTICATION and ensure Skylight is loaded in the intended Rails environment. SKYLIGHT_ENABLED=false disables instrumentation; the flag alone does not load the gem. Restart after changes."
+          stripe:
+            title: Stripe
+            description: "Optional subscription billing and payment webhooks. This check does not create a Stripe client, validate credentials, or make payment requests."
+            guidance: "Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET together. Managed subscription checkout also needs STRIPE_MONTHLY_PRICE_ID and STRIPE_ANNUAL_PRICE_ID."
+          posthog:
+            title: PostHog
+            description: "Optional operator-owned analytics, using the configuration loaded at boot. Configured does not mean that a user has consented to analytics."
+            guidance: "Set POSTHOG_KEY and a nonblank POSTHOG_HOST, or leave the host unset to use the default. Browser analytics require production or POSTHOG_DEVELOPMENT_ENABLED in development. POSTHOG_FEEDBACK_ENABLED controls separate self-hosted feedback, not operator analytics."
+          logtail:
+            title: Logtail
+            description: "Optional production log forwarding. When it is unconfigured, the application continues logging to standard output."
+            guidance: "Set LOGTAIL_API_KEY and LOGTAIL_INGESTING_HOST together and restart the affected services. No test log is emitted by this check."
+      configuration:
+        description: "Configuration visible to this web process. These checks do not send emails, contact providers, or upload or download files. Configured means settings are present, not that delivery, provider access, or storage access has been verified."
+        statuses:
+          configured: Configured
+          not_configured: Not configured
+          incomplete: Incomplete configuration
+          disabled: Disabled
+          not_checked: Not verified
+        settings_needed: Settings to review
+        unknown_provider: Unrecognized provider selection
+        provider_statuses:
+          configured: Configured
+          not_configured: API key missing
+          invalid: Invalid selection
+        configure_providers: Open self-hosting settings
+        storage_backend: "Selected storage: %{backend}"
+        storage_backends:
+          local: Local disk
+          test: Test disk
+          amazon: Amazon S3
+          cloudflare: Cloudflare R2
+          generic_s3: S3-compatible storage
+          google: Google Cloud Storage
+          other: Custom or unrecognized backend
+        checks:
+          smtp:
+            title: Email (SMTP)
+            statuses:
+              configured: "SMTP settings are present."
+              not_configured: "SMTP is not configured. Password resets, invitations, and other system emails cannot be sent through SMTP."
+              incomplete: "Some email settings are missing or incomplete. System emails or the links they contain may not work."
+              disabled: "Email delivery is disabled in the running mailer configuration."
+              not_checked: "This process uses a delivery method other than SMTP, such as a development preview. SMTP delivery is not assessed."
+            guidance: "SMTP cannot be configured in the admin UI. Set the email environment variables for both the web and worker services, then restart both. SMTP_USERNAME and SMTP_PASSWORD can both be omitted for an unauthenticated relay."
+            issues:
+              address: SMTP_ADDRESS
+              port: SMTP_PORT (a number from 1 to 65535)
+              sender: EMAIL_SENDER (replace the default sender@sure.local)
+              app_domain: APP_DOMAIN (used in email links)
+              authentication: SMTP_USERNAME and SMTP_PASSWORD (supply both or neither)
+          securities:
+            title: Market prices
+            statuses:
+              configured: "All enabled market-price providers have configuration."
+              not_configured: "The enabled market-price providers are missing their API keys. Automatic security searches and price lookups are unavailable through these providers."
+              incomplete: "At least one enabled market-price provider has missing configuration or an invalid selection. Securities assigned to that provider may not receive price updates."
+              disabled: "No market-price provider is enabled. Automatic security searches and price lookups are unavailable."
+            guidance: "Choose providers and add any required API keys in self-hosting settings, or configure them in the deployment environment. Environment overrides take precedence. Public providers do not need an API key."
+          exchange_rates:
+            title: Foreign exchange rates
+            statuses:
+              configured: "The selected exchange-rate provider has configuration."
+              not_configured: "No usable exchange-rate provider is configured. Automatic currency conversion may be unavailable when a stored rate is missing."
+            guidance: "Choose an exchange-rate provider and add its API key if required in self-hosting settings, or configure it in the deployment environment. EXCHANGE_RATE_PROVIDER and provider API-key environment overrides take precedence."
+            issues:
+              invalid_provider: "The selected exchange-rate provider is not recognized. Automatic rate lookups fail until a supported provider is selected."
+          storage:
+            title: File uploads and storage
+            statuses:
+              configured: "Storage settings are present; local disk needs no cloud credentials."
+              not_configured: "The selected storage backend has no matching configuration. File uploads may be unavailable."
+              incomplete: "Required storage settings are missing or incomplete. File uploads or retrieval may not work."
+              not_checked: "This backend uses external credential discovery or a custom configuration. Its access cannot be determined from these settings alone."
+            guidance: "Review ACTIVE_STORAGE_SERVICE and the selected backend's deployment settings. Local disk needs persistent storage shared by the web and worker services. Changing backends does not migrate existing files; plan any migration separately."
+            issues:
+              root: Local storage root
+              bucket: Storage bucket
+              region: Storage region
+              credentials: Storage access key and secret key (supply both or use external credential discovery)
+              endpoint: Storage endpoint (and CLOUDFLARE_ACCOUNT_ID for R2)
       show:
         title: System health
+        tabs:
+          hosted_usage: "Usage"
+          background_jobs: "Jobs"
+          ai: "AI"
+          configuration: "Config"
         alert:
           title: Background jobs aren't running
         status_section_title: Sidekiq status
@@ -31,3 +252,181 @@ en:
           never: Never
           seconds: "%{seconds}s"
           no_queues: "No queues are registered. The worker may not be running."
+        ai:
+          run_checks: Run checks again
+          last_checked: "Live checks completed %{time_ago} ago. Results are cached briefly."
+          not_checked_help: Open the AI status URL directly or run the checks to verify service liveness.
+          loading: "Running live checks…"
+          alerts:
+            custom_openai:
+              title: The hosted vector-store check failed at this custom endpoint
+              message: The configured endpoint did not pass the /v1/vector_stores liveness check. Most local and OpenAI-compatible endpoints do not implement that API. Chat and PDF processing may still work; use pgvector with a separate embeddings endpoint for the usual local setup. The failure was recorded in Settings → Debug logs and Rails.logger.
+            function_calling_unsupported:
+              title: The model does not support function calling
+              message: The endpoint served a plain chat request but rejected the same request carrying the tools parameter. The AI assistant reads accounts, transactions, and holdings through function calls, so chat keeps failing — often with an unhelpful 404 — until the model is one that supports tools. Pick a model whose provider documents function-calling support. The failure was recorded in Settings → Debug logs and Rails.logger.
+            function_calling_not_used:
+              title: The model answered without calling the tool it was asked to call
+              message: The endpoint accepted the tools parameter, but the model replied with text instead of calling the health-check tool. The AI assistant cannot read financial data without tool calls, so chat may answer with nothing or with invented figures. Prefer a model whose provider documents function-calling support.
+            llm_probe_failed:
+              title: The LLM live check failed
+              message: Sure could not verify both the configured endpoint and model. The failure was recorded in Settings → Debug logs and Rails.logger.
+            llm_model_not_available:
+              title: The configured AI model is not available
+              message: The endpoint answered, but it did not list or serve the configured model. Pick an active model for the selected provider, then run the checks again. For Gemini through an OpenAI-compatible translation layer, use a currently supported model such as gemini-3.8-flash.
+            pdf_text_extraction_failed:
+              title: The synthetic PDF text-extraction check failed
+              message: Sure could not complete the text-first path that extracts embedded PDF text locally and sends it to the configured model. No customer data was sent. The failure was recorded in Settings → Debug logs and Rails.logger.
+            pdf_vision_processing_failed:
+              title: The synthetic PDF vision/native check failed
+              message: Sure could not complete the image or native-document PDF path through the configured model. No customer data was sent. The failure was recorded in Settings → Debug logs and Rails.logger.
+            vector_probe_failed:
+              title: The document-search live check failed
+              message: Sure could not verify the selected vector store and every required embedding service. The failure was recorded in Settings → Debug logs and Rails.logger.
+            pgvector_extension_not_enabled:
+              title: The PostgreSQL vector extension is not enabled
+              message: The pgvector adapter is selected, but PostgreSQL has not enabled the vector extension for this database. Use a PostgreSQL image that includes pgvector, then enable the extension as a database owner or superuser and re-run migrations with VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: The vector_store_chunks table is missing
+              message: The pgvector extension is enabled, but the chunks table was not found. Check migration status, then re-run the vector-store migration with VECTOR_STORE_PROVIDER=pgvector so Sure can create vector_store_chunks.
+            pgvector_probe_failed:
+              title: The pgvector storage check failed
+              message: Sure could not query the pgvector chunks table. Check PostgreSQL permissions, the vector extension, and the vector_store_chunks migration. The failure was recorded in Settings → Debug logs and Rails.logger.
+            embedding_dimensions_mismatch:
+              title: The embedding dimensions do not match
+              message: The embedding endpoint returned a vector whose length does not match EMBEDDING_DIMENSIONS. Set EMBEDDING_MODEL and EMBEDDING_DIMENSIONS to the model's documented vector size, restart Sure so the environment persists, then alter or recreate the pgvector embedding column/table and re-embed documents if existing data used a different size.
+            embedding_probe_timeout:
+              title: The embedding live check timed out
+              message: The embedding endpoint did not answer before AI_HEALTH_PROBE_TIMEOUT. Increase that health-check timeout if the provider is slow, then restart Sure so the environment persists in every process. If normal AI chat calls also time out, raise OPENAI_REQUEST_TIMEOUT separately.
+            embedding_probe_failed:
+              title: The embedding live check failed
+              message: Sure could not create a short test embedding through the configured endpoint and model. Check EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN, and the embedding provider logs. The failure was recorded in Settings → Debug logs and Rails.logger.
+            qdrant:
+              title: Qdrant support is not implemented yet
+              message: The Qdrant adapter is scaffolded, but document upload and search operations currently fail. Select OpenAI or pgvector for document search.
+            missing_vector_store:
+              title: No vector store is configured
+              message: Uploaded documents cannot be indexed or searched until a vector-store adapter and its requirements are configured.
+            unavailable_vector_store:
+              title: The selected vector store is unavailable
+              message: Check the adapter requirements below. For pgvector, the database must provide the vector extension or an existing vector_store_chunks table.
+          llm:
+            title: LLM and PDF processing
+            description: The live checks verify the configured model, ask it for one trivial function call the way the assistant does, then separately exercise text extraction and vision/native processing with a one-page synthetic PDF containing no customer data. Credential values are never displayed.
+          vector_store:
+            title: Vector store and document search
+            description: The live check queries the hosted vector-store API, or tests the pgvector table and creates one short embedding without storing it.
+          labels:
+            selected_provider: Selected provider
+            effective_provider: Effective provider
+            model: Model
+            endpoint: Endpoint
+            function_calling: Function calling (tools)
+            pdf_text_extraction: PDF text-extraction path
+            pdf_vision_processing: PDF vision/native path
+            llm_request_timeout: LLM request timeout
+            probe_request_timeout: Health-check probe timeout
+            openai_credentials: OpenAI credentials
+            openai_compatible_credentials: OpenAI-compatible API credentials
+            anthropic_credentials: Anthropic credentials
+            adapter: Adapter
+            adapter_available: Adapter available
+            pgvector_extension: PostgreSQL vector extension
+            pgvector_table: Vector chunks table
+            embedding_model: Embedding model
+            embedding_endpoint: Embedding endpoint
+            embedding_dimensions: Embedding dimensions
+            function_calling_failure_reason: Function-calling failure reason
+            pdf_text_extraction_failure_reason: Text-extraction failure reason
+            pdf_vision_processing_failure_reason: Vision/native failure reason
+            storage_probe: pgvector storage check
+            embedding_probe: Embedding endpoint check
+            failure_reason: Failure reason
+          providers:
+            openai: OpenAI
+            openai_compatible: OpenAI-compatible
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Custom endpoint
+          adapters:
+            openai: OpenAI hosted vector store
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Configured
+            not_configured: Not configured
+            fallback: "(fallback)"
+            not_set: Not set
+            "yes": "Yes"
+            "no": "No"
+            enabled: Enabled
+            available_not_enabled: Available, not enabled
+            not_available: Not available
+            available: Available
+            not_found: Not found
+          function_calling_statuses:
+            supported: Live tool call succeeded
+            unsupported: Not supported by the effective provider/model
+            not_used: Tools accepted, but the model called none
+            failing: Live check failed
+            not_checked: Not checked
+            unavailable: Unavailable until an LLM provider is configured
+          pdf_statuses:
+            supported: Synthetic PDF check passed
+            failing: Synthetic PDF check failed
+            unsupported: Disabled or not supported by the effective provider/model
+            not_checked: Not checked
+            unavailable: Unavailable until an LLM provider is configured
+          probe_statuses:
+            passing: Live check passed
+            failing: Live check failed
+            not_checked: Not checked
+            not_configured: Not configured
+          vector_statuses:
+            passing: Live checks passed
+            failing: Live check failed
+            not_checked: Not checked
+            not_configured: Not configured
+            scaffolded: Scaffolded
+            missing: Not configured
+          failure_codes:
+            model_not_available: The configured model was not returned by the provider
+            no_tool_call: The model answered without calling the health-check tool
+            tools_refused: The service served the same request without tools and refused it with them
+            invalid_response: The service returned an unexpected response
+            dimensions_mismatch: The embedding vector dimensions do not match the configured dimensions
+            extension_not_enabled: The PostgreSQL vector extension is not enabled
+            table_not_found: The vector_store_chunks table was not found
+            render_missing_binary: The pdftoppm renderer (poppler-utils) is not available in this container
+            timeout: The service did not respond before the probe timeout
+            request_failed: The service request failed
+            unsupported_provider: The provider does not support this check
+          worker:
+            title: Worker verification
+            description: The checks above ran from this web process. Most AI work -- assistant responses, PDF processing, embeddings, auto-categorization, and merchant detection -- actually runs in a Sidekiq worker process, which can differ in network access, DNS, proxy rules, or even loaded credentials. Queue a check to verify a worker's own configuration and connectivity.
+            verify_button: Verify worker configuration
+            coverage_notice: Each check verifies exactly one worker process -- whichever one dequeues it. With more than one worker replica, a passing result does not confirm every worker is healthy; queue the check again to sample another.
+            empty:
+              title: No worker has checked in yet
+              description: Click "Verify worker configuration" to queue an asynchronous check. The result appears here once a worker process picks it up.
+            labels:
+              process: Worker process
+              checked_at: Checked
+              configuration: Configuration
+            configuration_statuses:
+              match: Matches web
+              mismatch: Differs from web
+            statuses:
+              passing: Passing
+              failing: Failing
+              stale: Stale
+            settings_origin:
+              title: Which settings need a restart?
+              database_backed: "Provider, model, and API-key settings changed in Settings → Self-Hosting are stored in the database. rails-settings-cached invalidates the shared cache on write, so both web and worker resolve the new value for the next request or queued job -- no restart needed."
+              env_backed: "Embedding configuration, and any value only set through an environment variable, is fixed when each container starts. Rails cannot change another container's environment, so changing these requires restarting or recreating both the web and worker services -- and any deployment tooling that only restarts one of them (partial rollout, an updated Secret without a pod restart) will not pick up the change."
+          local_setup:
+            title: Recommended local setup
+            description: Run the LLM through your local OpenAI-compatible endpoint, store document vectors in pgvector, and point the embedding settings at an OpenAI-compatible embeddings endpoint. The PostgreSQL image must include the vector extension, and embedding dimensions must match the selected model.

@@ -9,15 +9,14 @@ Doorkeeper.configure do
   resource_owner_authenticator do
     # Manually replicate the app's session-based authentication logic, since
     # Doorkeeper controllers don't include our Authentication concern.
-    if (session_id = cookies.signed[:session_token]).present?
-      if (session_record = Session.find_by(id: session_id))
-        # Set Current.session so downstream code expecting it behaves normally.
-        Current.session = session_record
-        # Return the authenticated user object as the resource owner.
-        session_record.user
-      else
-        redirect_to new_session_url
-      end
+    # Session.find_active_by_cookie enforces the same inactivity expiry as
+    # Authentication#find_session_by_cookie (nil for a missing, inactive-user,
+    # or expired session).
+    if (session_record = Session.find_active_by_cookie(cookies.signed[:session_token]))
+      # Set Current.session so downstream code expecting it behaves normally.
+      Current.session = session_record
+      # Return the authenticated user object as the resource owner.
+      session_record.user
     else
       redirect_to new_session_url
     end
@@ -28,14 +27,11 @@ Doorkeeper.configure do
   # adding oauth authorized applications. In other case it will return 403 Forbidden response
   # every time somebody will try to access the admin web interface.
   #
+  # Same active?-check-and-destroy treatment as resource_owner_authenticator above.
   admin_authenticator do
-    if (session_id = cookies.signed[:session_token]).present?
-      if (session_record = Session.find_by(id: session_id))
-        Current.session = session_record
-        head :forbidden unless session_record.user&.super_admin?
-      else
-        redirect_to new_session_url
-      end
+    if (session_record = Session.find_active_by_cookie(cookies.signed[:session_token]))
+      Current.session = session_record
+      head :forbidden unless session_record.user&.super_admin?
     else
       redirect_to new_session_url
     end
@@ -303,8 +299,12 @@ Doorkeeper.configure do
   # #call can be used in order to allow conditional checks (to allow non-SSL
   # redirects to localhost for example).
   #
-  # Allow custom URL schemes for mobile apps
-  force_ssl_in_redirect_uri false
+  # Doorkeeper only enforces this for the http scheme, so custom mobile schemes
+  # (sureapp://) are unaffected. Plain http stays allowed for loopback hosts
+  # (RFC 8252 native clients) and in development.
+  force_ssl_in_redirect_uri do |uri|
+    !Rails.env.development? && !uri.host.to_s.downcase.delete_prefix("[").delete_suffix("]").in?(OauthRegistrationController::LOOPBACK_HOSTS)
+  end
 
   # Specify what redirect URI's you want to block during Application creation.
   # Any redirect URI is allowed by default.

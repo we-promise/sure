@@ -1,0 +1,9 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% title_key = @recurring_transaction.typed_income? ? ".income_title" : ".title" %>
+  <% dialog.with_header(title: t(title_key, name: @recurring_transaction.display_name)) %>
+  <% dialog.with_body do %>
+    <%= render "form",
+          recurring_transaction: @recurring_transaction,
+          sibling_count: @sibling_count.to_i %>
+  <% end %>
+<% end %>

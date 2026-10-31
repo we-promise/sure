@@ -1,11 +1,11 @@
-<%# locals: (snaptrade_item:) %>
+<%# locals: (snaptrade_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(snaptrade_item) do %>
   <% unlinked_count = snaptrade_item.unlinked_accounts_count %>
   <% snaptrade_registered = snaptrade_item.oauth_configured? %>
-  <% brokerage_connect_href = snaptrade_registered ? connect_snaptrade_item_path(snaptrade_item) : oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id) %>
-  <% brokerage_connect_frame = snaptrade_registered ? "_top" : :drawer %>
-  <% reconnect_href = oauth_authorize_snaptrade_items_path(item_id: snaptrade_item.id) %>
+  <% brokerage_connect_href = snaptrade_registered ? connect_snaptrade_item_path(snaptrade_item) : snaptrade_authorize_path(item_id: snaptrade_item.id) %>
+  <% brokerage_connect_frame = snaptrade_registered ? "_top" : snaptrade_authorize_frame %>
+  <% reconnect_href = snaptrade_authorize_path(item_id: snaptrade_item.id) %>
 
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
@@ -13,15 +13,7 @@
         <div class="flex items-center gap-2">
           <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-          <div class="flex items-center justify-center h-8 w-8 bg-success/10 rounded-full">
-            <% if snaptrade_item.logo.attached? %>
-              <%= image_tag snaptrade_item.logo, class: "rounded-full h-full w-full", loading: "lazy" %>
-            <% else %>
-              <div class="flex items-center justify-center">
-                <%= tag.p snaptrade_item.name.first.upcase, class: "text-success text-xs font-medium" %>
-              </div>
-            <% end %>
-          </div>
+          <%= render ProviderLogo.new(provider_key: :snaptrade) %>
 
           <div class="pl-1 text-sm">
             <div class="flex items-center gap-2">
@@ -30,7 +22,9 @@
                 <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
               <% end %>
             </div>
-            <% if snaptrade_item.snaptrade_accounts.any? %>
+            <%# Built from every account on the connection, so it can name a
+                brokerage behind an account this viewer was never shared. %>
+            <% if snaptrade_item.snaptrade_accounts.any? && visible_accounts.size == snaptrade_item.accounts.size %>
               <p class="text-xs text-secondary">
                 <%= snaptrade_item.brokerage_summary %>
               </p>
@@ -70,7 +64,7 @@
                 icon: "link",
                 variant: "secondary",
                 href: reconnect_href,
-                frame: "_top"
+                frame: snaptrade_authorize_frame
               ) %>
             <% else %>
               <%= icon(
@@ -120,8 +114,8 @@
 
     <% unless snaptrade_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if snaptrade_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: snaptrade_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -129,7 +123,7 @@
         <% activities_pending = snaptrade_item.snaptrade_accounts.any?(&:activities_fetch_pending) %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: snaptrade_item,
+          provider_item: snaptrade_item, show_account_details: visible_accounts.size == snaptrade_item.accounts.size,
           institutions_count: snaptrade_item.snaptrade_accounts.map(&:brokerage_name).uniq.compact.size,
           activities_pending: activities_pending
         ) %>

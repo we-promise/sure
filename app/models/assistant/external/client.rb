@@ -18,9 +18,10 @@ class Assistant::External::Client
     SocketError
   ].freeze
 
-  def initialize(url:, token:, agent_id: "main", session_key: "agent:main:main")
+  def initialize(url:, token:, model: "openclaw", agent_id: "main", session_key: "agent:main:main")
     @url = url
     @token = token # pipelock:ignore Credential in URL
+    @model = model
     @agent_id = agent_id
     @session_key = session_key
   end
@@ -40,6 +41,7 @@ class Assistant::External::Client
 
     begin
       http = build_http(uri)
+      Usage.capture("ai_assistant_served_daily")
       model = stream_response(http, request) do |content|
         streaming_started = true
         block.call(content)
@@ -156,7 +158,7 @@ class Assistant::External::Client
       request["X-Session-Key"] = @session_key
 
       payload = {
-        model: @agent_id,
+        model: @model,
         messages: messages,
         stream: true
       }

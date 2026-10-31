@@ -74,15 +74,17 @@
         } catch {
           return;
         }
-        const m = path.match(/^\/auth\/([A-Za-z0-9_-]+)$/);
+        // Leading group is the base the server is mounted under: "" at a domain
+        // root, "/sure" behind a path-prefixing proxy.
+        const m = path.match(/^(.*)\/auth\/([A-Za-z0-9_-]+)$/);
         if (!m) return; // not an SSO provider form (e.g. /sessions, /auth/x/callback)
         ev.preventDefault();
         ev.stopImmediatePropagation();
         // Emit an event (remote pages can emit but not invoke custom commands);
         // Rust listens for "sure://start-sso" and opens the browser.
         // eslint-disable-next-line no-console
-        console.log("[sure] SSO intercept -> emit sure://start-sso", m[1]);
-        Promise.resolve(emit("sure://start-sso", { server: location.origin, provider: m[1] }))
+        console.log("[sure] SSO intercept -> emit sure://start-sso", m[2]);
+        Promise.resolve(emit("sure://start-sso", { server: location.origin + m[1], provider: m[2] }))
           // eslint-disable-next-line no-console
           .then(() => console.log("[sure] start-sso emitted"))
           // eslint-disable-next-line no-console

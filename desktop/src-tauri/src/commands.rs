@@ -1,5 +1,6 @@
 use crate::servers::{
-    health_check_url, is_healthy_status, normalize_server_url, ServerEntry, ServerStore,
+    base_candidates, health_check_url, is_healthy_status, normalize_server_url, ServerEntry,
+    ServerStore,
 };
 use crate::state::AppState;
 use tauri::{Emitter, Manager, State};
@@ -22,15 +23,23 @@ pub fn remove_server(url: String) -> Result<Vec<ServerEntry>, String> {
     ServerStore::remove(&url).map_err(|e| e.to_string())
 }
 
+/// The base `url`'s server is actually served under — a sub-path or the bare
+/// origin, whichever answers `/up` with a 200 — or `None` if neither does. That
+/// base is what the caller should save and navigate to.
 #[tauri::command]
-pub fn check_server(url: String) -> Result<bool, String> {
+pub fn check_server(url: String) -> Result<Option<String>, String> {
     let canonical = normalize_server_url(&url).map_err(|e| e.to_string())?;
-    let health = health_check_url(&canonical);
-    match ureq::get(&health).timeout(std::time::Duration::from_secs(6)).call() {
-        Ok(resp) => Ok(is_healthy_status(resp.status())),
-        Err(ureq::Error::Status(code, _)) => Ok(is_healthy_status(code)),
-        Err(e) => Err(e.to_string()),
+    for base in base_candidates(&canonical) {
+        let health = health_check_url(&base);
+        match ureq::get(&health).timeout(std::time::Duration::from_secs(6)).call() {
+            Ok(resp) if is_healthy_status(resp.status()) => return Ok(Some(base)),
+            // A non-200 rules out this base only; keep walking up. A transport
+            // failure is the whole origin, so it falls through and returns.
+            Ok(_) | Err(ureq::Error::Status(_, _)) => continue,
+            Err(e) => return Err(e.to_string()),
+        }
     }
+    Ok(None)
 }
 
 #[tauri::command]

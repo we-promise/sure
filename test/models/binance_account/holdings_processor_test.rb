@@ -69,4 +69,61 @@ class BinanceAccount::HoldingsProcessorTest < ActiveSupport::TestCase
 
     BinanceAccount::HoldingsProcessor.new(@ba).process
   end
+  # The reported bug. The processor wrote whatever Binance returned and never
+  # removed what it stopped returning, so an asset sold between two syncs kept
+  # its row for the day — and the account page reads exactly that day.
+  test "an asset that has left the wallet stops being held" do
+    seed_rate_and_securities
+
+    write_payload([ btc_asset, eth_asset ])
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+    assert_equal [ "CRYPTO:BTC", "CRYPTO:ETH" ], held_tickers
+
+    # ETH is sold, so Binance stops returning it.
+    write_payload([ btc_asset ])
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+
+    assert_equal [ "CRYPTO:BTC" ], held_tickers,
+                 "an asset the wallet no longer holds was still in the portfolio"
+  end
+
+  # An emptied wallet is the same question with nothing left to compare
+  # against, and the early return on a blank asset list skipped the removal
+  # entirely.
+  test "emptying the wallet empties the portfolio" do
+    seed_rate_and_securities
+
+    write_payload([ btc_asset ])
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+    assert_equal [ "CRYPTO:BTC" ], held_tickers
+
+    write_payload([])
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+
+    assert_empty held_tickers, "the emptied wallet still reported holdings"
+  end
+
+  private
+    def seed_rate_and_securities
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR",
+                           date: Date.current, rate: 1.0)
+      %w[BTC ETH].each do |symbol|
+        Security.find_or_create_by!(ticker: "CRYPTO:#{symbol}") do |s|
+          s.name = symbol
+          s.exchange_operating_mic = "XBNC"
+        end
+      end
+      BinanceAccount::HoldingsProcessor.any_instance.stubs(:fetch_price).returns(1_000.0)
+    end
+
+    def btc_asset = { "symbol" => "BTC", "total" => "0.5", "source" => "spot" }
+    def eth_asset = { "symbol" => "ETH", "total" => "2", "source" => "spot" }
+
+    def write_payload(assets)
+      @ba.update!(raw_payload: { "assets" => assets })
+    end
+
+    def held_tickers
+      @account.reload.current_holdings.filter_map { |h| h.security&.ticker }.sort
+    end
 end

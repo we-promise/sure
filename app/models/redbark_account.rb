@@ -8,6 +8,7 @@ class RedbarkAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
+    encrypts :raw_account_details_payload
   end
 
   belongs_to :redbark_item
@@ -19,6 +20,41 @@ class RedbarkAccount < ApplicationRecord
 
   validates :name, :currency, :redbark_account_id, presence: true
   validates :redbark_account_id, uniqueness: { scope: :redbark_item_id }
+  # Redbark rejects a `from` date 2555+ days back ("too far in the past -
+  # banking providers serve at most ~7 years of history"), confirmed
+  # empirically against the live API. That's a flat 7 * 365 day count with no
+  # leap-day adjustment, so `7.years.ago` (which Rails computes against actual
+  # calendar years, landing past 2555 days whenever a leap day falls in the
+  # range) is rejected every time. MAX_SYNC_START_DATE_LOOKBACK_DAYS stays a
+  # few days inside that boundary as margin against timezone/day-of-fetch
+  # drift between our `Date.current` and Redbark's.
+  MAX_SYNC_START_DATE_LOOKBACK_DAYS = 2550
+
+  # The window RedbarkItem::Importer pulls on an account's first sync when no
+  # sync_start_date was chosen. Named here (rather than left as a literal in
+  # both the setup view's default and the importer's fallback) so the two
+  # can't quietly drift apart.
+  DEFAULT_INITIAL_HISTORY_DAYS = 90
+
+  # Scoped to the change itself: this is a rolling window, so a date that was
+  # valid when set drifts outside it over time. Without the guard, every
+  # unrelated update! (upsert_from_redbark! touching balance, name, currency
+  # on a routine sync) would re-validate the unchanged sync_start_date and
+  # start failing once enough time passed -- blocking updates that have
+  # nothing to do with it.
+  validates :sync_start_date,
+    inclusion: { in: ->(_account) { MAX_SYNC_START_DATE_LOOKBACK_DAYS.days.ago.to_date..Date.current } },
+    allow_nil: true,
+    if: :will_save_change_to_sync_start_date?
+
+  # A nonblank value Rails couldn't parse (e.g. "foo") casts to nil before
+  # validation ever sees it, and allow_nil above would then quietly accept
+  # it -- silently clearing whatever was previously stored instead of
+  # rejecting the bad input. *_before_type_cast still has the raw value, so
+  # this distinguishes "the user explicitly cleared the field" (blank raw
+  # value, fine) from "the user's input didn't parse" (nonblank raw value,
+  # reject it).
+  validate :reject_unparseable_sync_start_date, if: :will_save_change_to_sync_start_date?
 
   # Scopes
   scope :with_linked, -> { joins(:account_provider) }
@@ -32,6 +68,79 @@ class RedbarkAccount < ApplicationRecord
   # Helper to get account using account_providers system
   def current_account
     account
+  end
+
+  # Normalise a Redbark liability (CreditCard / Loan) `current_balance` into the
+  # sign Sure stores: a positive amount owed (or a negative credit / overpaid
+  # balance).
+  #
+  # Redbark does not normalise the sign across its upstream sources:
+  #   * Fiskil (AU / CDR) reports the amount owed as a negative balance.
+  #     Negate to store it as a positive amount owed (Redbark sample response:
+  #     credit card "\"-842.15\"").
+  #   * Plaid (US / CA) reports the amount owed as a POSITIVE balance for
+  #     credit and loan accounts (https://plaid.com/docs/api/accounts/).
+  #     Pass through unchanged. This is what the bug in we-promise/sure#3747
+  #     mis-applies a blind negation to, flipping every Plaid-sourced
+  #     liability and double-inflating net worth.
+  #   * Any other or blank `provider` keeps Fiskil's negation convention
+  #     (today's behaviour) AND records a DebugLogEntry on every call, so an
+  #     operator can confirm or correct the convention for the new source.
+  #
+  # The check keys off `provider`, NOT the currency or institution country:
+  # the reporter of we-promise/sure#3747 confirms that their Wise
+  # Plaid-sourced accounts carry AUD and EUR alongside USD (upstream comment
+  # 5920931841).
+  #
+  # The processor calls this for liability accountable types only; do not
+  # call it for Depository / Investment — their balances pass through
+  # unchanged regardless of provider.
+  #
+  # @param balance [BigDecimal, Numeric] the raw `current_balance` value the
+  #   processor read off `#current_balance` for this account.
+  # @param accountable_type [String] the accountable type of the Sure account
+  #   being updated (e.g. "CreditCard"). Used only for the support metadata.
+  # @param account [Account, nil] the Sure account, when available — attached
+  #   to the DebugLogEntry capture so support can trace the affected account.
+  # @return [BigDecimal, Numeric] the balance with the correct sign.
+  def normalized_liability_balance(balance:, accountable_type: nil, account: nil)
+    case (provider.presence&.downcase)
+    when "fiskil"
+      -balance
+    when "plaid"
+      balance
+    else
+      # Unknown / blank convention: keep the CDR convention (negate) and
+      # record a DebugLogEntry so support can flag the source. Following
+      # docs/llm-guides/providers.md, include category, level, message,
+      # source, provider_key and useful structured metadata, and attach
+      # family, account and account provider when available.
+      # DebugLogEntry#capture is a safe no-op on error (log! is wrapped in
+      # rescue), so a missing family or a capture failure cannot break a
+      # balance update.
+      DebugLogEntry.capture(
+        category: "redbark_sync",
+        level: "warn",
+        message: "Redbark liability balance normalisation: unrecognised or blank " \
+                 "provider — kept the Fiskil/CDR convention (negate). Operator should " \
+                 "confirm the upstream source's sign convention before relying on " \
+                 "stored liability balances.",
+        source: "RedbarkAccount::Processor",
+        provider_key: provider.presence,
+        family: redbark_item&.family,
+        account: account,
+        account_provider: account_provider,
+        metadata: {
+          redbark_account_id: id,
+          redbark_account_redbark_id: redbark_account_id,
+          provider: provider,
+          accountable_type: accountable_type,
+          balance_in: balance,
+          balance_out: -balance
+        }
+      )
+      -balance
+    end
   end
 
   # Idempotently create or update AccountProvider link
@@ -66,7 +175,6 @@ class RedbarkAccount < ApplicationRecord
       redbark_account_id: data[:id]&.to_s,
       connection_id: data[:connectionId]&.to_s,
       name: display_name,
-      account_number: data[:accountNumber],
       currency: extract_currency(data, fallback: parse_currency(currency) || "AUD"),
       account_status: connection[:status],
       account_type: data[:type],
@@ -88,6 +196,12 @@ class RedbarkAccount < ApplicationRecord
   end
 
   private
+
+    def reject_unparseable_sync_start_date
+      return unless sync_start_date.nil? && sync_start_date_before_type_cast.present?
+
+      errors.add(:sync_start_date, :invalid)
+    end
 
     def enqueue_connection_cleanup
       return unless redbark_item

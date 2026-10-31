@@ -2,6 +2,7 @@ uk:
   properties:
     edit:
       edit: Редагувати %{account}
+      title: Ввести дані нерухомості вручну
     form:
       address_line1: Вулиця
       address_line1_placeholder: вул. Головна, 123
@@ -23,6 +24,16 @@ uk:
     new:
       title: Введіть нерухомість вручну
       next: "Далі"
+      avm_option: Додати через %{provider}
+      avm_title: Додати нерухомість через %{provider}
+      avm_description: Введіть назву об'єкта нерухомості та його адресу. %{provider} знайде характеристики об'єкта та його орієнтовну ринкову вартість.
+      avm_us_only: '%{provider} підтримує лише об''єкти нерухомості у США.'
+      avm_submit: Знайти об'єкт
+      avm_preview_title: Підтвердьте дані об'єкта
+      avm_preview_description: Ось що знайшов %{provider}. Перевірте дані перед додаванням нерухомості — поки що нічого не створено.
+      avm_preview_no_record: '%{provider} не знайшов запису про об''єкт за цією адресою, тож показана вартість — це оцінка на основі навколишнього району. Перевірте адресу, перш ніж продовжити.'
+      avm_preview_back: Назад
+      avm_preview_confirm: Додати нерухомість
     address:
       title: "Введіть нерухомість вручну"
       address_line1_label: "Адреса, рядок 1"
@@ -69,7 +80,7 @@ uk:
         trend: Тренд
         unknown: Невідомо
         year_built: Рік побудови
-        edit_account_details: "Редагувати дані облікового запису"
+        edit_account_details: "Редагувати дані рахунку"
     subtypes:
       apartment:
         short: Квартира
@@ -86,3 +97,10 @@ uk:
       agri_land:
         short: С/г земля
         long: Сільськогосподарська земля
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    form_tabs:
+      address: Адреса
+      overview: Огляд
+      value: Вартість

@@ -14,6 +14,23 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     ]
   end
 
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_wise_item_url(@wise_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "wise-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @wise_item.reload.syncing?
+  end
+
+  # The Accounts page's Sync button posts here too, without the panel's source.
+  test "sync from the Accounts page goes back to it" do
+    post sync_wise_item_url(@wise_item),
+         headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml", "Referer" => accounts_url }
+
+    assert_redirected_to accounts_url
+  end
+
   # create redirects to select_profiles (Turbo requires a redirect from a standard
   # form submission) — the encrypted token travels via the session, not the response body.
 
@@ -48,6 +65,15 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     post wise_items_url, params: { wise_item: { token: "" } }
     assert_redirected_to settings_providers_path
     assert_nil session[:wise_pending_token]
+  end
+
+  test "create from the drawer shows a blank token error in the panel" do
+    post wise_items_url,
+         params: { wise_item: { token: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "wise-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Token can't be blank")
   end
 
   test "create redirects to providers when Wise API rejects the token" do
@@ -121,6 +147,56 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_providers_path
   end
 
+  test "generate_sca_keypair stores a keypair on the item" do
+    WiseItem.any_instance.stubs(:sca_encryption_available?).returns(true)
+
+    assert_nil @wise_item.sca_private_key
+
+    post generate_sca_keypair_wise_item_url(@wise_item)
+
+    assert_redirected_to accounts_path
+    assert @wise_item.reload.sca_configured?
+  end
+
+  test "generate_sca_keypair from the page shows the new public key in place" do
+    WiseItem.any_instance.stubs(:sca_encryption_available?).returns(true)
+
+    post generate_sca_keypair_wise_item_url(@wise_item),
+         as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "wise-providers-panel"
+    assert_includes response.body, %(id="wise-providers-panel")
+    assert_includes response.body, @wise_item.reload.sca_public_key.lines.second.strip
+  end
+
+  test "update from the page re-renders the panel in place instead of leaving for accounts" do
+    patch wise_item_url(@wise_item),
+          params: { wise_item: { name: "Renamed Wise" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "wise-providers-panel"
+    assert_equal "Renamed Wise", @wise_item.reload.name
+  end
+
+  test "generate_sca_keypair replaces a previously generated keypair" do
+    WiseItem.any_instance.stubs(:sca_encryption_available?).returns(true)
+
+    @wise_item.generate_sca_keypair!
+    previous_key = @wise_item.sca_private_key
+
+    post generate_sca_keypair_wise_item_url(@wise_item)
+
+    assert_not_equal previous_key, @wise_item.reload.sca_private_key
+  end
+
+  test "generate_sca_keypair reports an error rather than storing a key in the clear" do
+    WiseItem.stubs(:encryption_ready?).returns(false)
+
+    post generate_sca_keypair_wise_item_url(@wise_item)
+
+    assert_nil @wise_item.reload.sca_private_key
+  end
+
   test "link_profiles redirects to providers when the session token cannot be decrypted" do
     Provider::Wise.any_instance.stubs(:get_profiles).returns(@valid_profiles)
     post wise_items_url, params: { wise_item: { token: "live_token_abc" } }
@@ -130,5 +206,25 @@ class WiseItemsControllerTest < ActionDispatch::IntegrationTest
     post link_profiles_wise_items_url, params: { profile_ids: [ "99999999" ] }
 
     assert_redirected_to settings_providers_path
+  end
+
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    families(:dylan_family).wise_items.update_all(scheduled_for_deletion: true)
+
+    get select_accounts_wise_items_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("wise_items.select_accounts.no_connection"), flash[:alert]
+  end
+
+  test "select accounts redirects to Settings outside a turbo frame" do
+    families(:dylan_family).wise_items.update_all(scheduled_for_deletion: true)
+
+    get select_accounts_wise_items_url
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("wise_items.select_accounts.no_connection"), flash[:alert]
   end
 end

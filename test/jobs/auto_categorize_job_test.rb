@@ -81,4 +81,31 @@ class AutoCategorizeJobTest < ActiveJob::TestCase
     assert_equal "Failed to auto-categorize transactions: Fixed prompt tokens exceed context budget", entry.metadata["error_message"]
     assert_equal [ transaction.id ], entry.metadata["transaction_ids"]
   end
+
+  test "fails the rule run when no categories are available" do
+    @family.categories.destroy_all
+    transaction = create_transaction(account: @account, name: "Coffee shop").transaction
+    provider = mock
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.expects(:auto_categorize).never
+
+    assert_difference "DebugLogEntry.count", 2 do
+      assert_raises(Family::AutoCategorizer::Error) do
+        AutoCategorizeJob.perform_now(@family, transaction_ids: [ transaction.id ], rule_run_id: @rule_run.id)
+      end
+    end
+
+    @rule_run.reload
+    assert_equal "failed", @rule_run.status
+    assert_equal "Family::AutoCategorizer::Error: No categories available for auto-categorization", @rule_run.error_message
+    assert_equal 0, @rule_run.pending_jobs_count
+
+    entries = DebugLogEntry.order(:created_at).last(2)
+    categorization_entry = entries.find { |entry| entry.category == "auto_categorization" }
+    rule_run_entry = entries.find { |entry| entry.category == "rule_run" }
+
+    assert_equal "AI categorization failed: no categories available", categorization_entry.message
+    assert_equal [ transaction.id ], categorization_entry.metadata["requested_transaction_ids"]
+    assert_equal "No categories available for auto-categorization", rule_run_entry.metadata["error_message"]
+  end
 end

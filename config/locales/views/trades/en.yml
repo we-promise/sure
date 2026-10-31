@@ -1,6 +1,11 @@
 ---
 en:
   trades:
+    api_errors:
+      activity_label_must_match_type: "investment_activity_label must be %{label} when type is %{type}"
+      invalid_activity_label: Invalid investment activity label
+      invalid_type: Invalid type
+      supported_types: "type must be one of: %{types}"
     form:
       account: Transfer account (optional)
       account_prompt: Search account
@@ -26,6 +31,15 @@ en:
       sell: Sell
       dividend: Dividend
       interest: Interest
+      contribution: Contribution
+      exchange: Exchange
+      fee: Fee
+      other: Other
+      reinvestment: Reinvestment
+      sweep_in: Sweep in
+      sweep_out: Sweep out
+      transfer: Transfer
+      withdrawal: Withdrawal
       current_market_price_label: Current Market Price
       overview: Overview
       purchase_price_label: Purchase Price

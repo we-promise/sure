@@ -6,6 +6,7 @@ zh-TW:
         renewal: 您的貢獻將於 %{date}繼續。
         cancellation: 您的貢獻將於 %{date}結束。
   settings:
+    encryption_migration_guide: 加密設定與資料遷移指南
     background_jobs:
       show:
         page_title: 背景工作
@@ -110,7 +111,7 @@ zh-TW:
         failed: 已失敗
         no_usage_data: 所選期間內查無使用資料
         cost_estimates_title: 關於費用預估
-        cost_estimates_description: 費用是依各供應商公布的價格預估，其中 OpenAI 的價格以 2026 年 7 月為準。實際費用可能有所不同。價格以每 100 萬個 Token 計算，並依模型而異。自訂或自行代管的模型會顯示「N/A」，且不列入費用總計。
+        cost_estimates_description: 費用依各供應商公布的價格預估，最近核實日期為 %{date}。實際費用可能有所不同。價格以每 100 萬個 Token 計算，並依模型而異。自訂或自行代管的模型會顯示「N/A」，且不列入費用總計。
     ai_prompts:
       show:
         page_title: AI 提示詞
@@ -161,6 +162,8 @@ zh-TW:
         dashboard_two_column_title: 雙欄版面
         dashboard_two_column_description: 在大螢幕上以兩欄顯示儀表板小工具，每個小工具的標題列都有各自的寬度與高度控制項。關閉時，小工具會排成單欄。
         split_grouped_title: 將拆分交易分組
+        auto_generate_transaction_names_title: "自動產生交易名稱"
+        auto_generate_transaction_names_description: "手動輸入的交易名稱留空時，會依所選類別和商家自動填入（例如「娛樂 - Netflix」）。若兩者皆未選擇，名稱仍為必填。適用於整個家庭，且僅影響新交易。"
         split_grouped_description: 在交易清單中，將拆分交易歸在其母交易之下顯示。關閉時，拆分出來的子項會各自成為一列。
     preferences:
       show:
@@ -312,6 +315,7 @@ zh-TW:
       accounts_label: 帳戶管理
       advanced_section_title: 進階設定
       ai_prompts_label: AI 提示詞
+      auto_matches_label: 自動配對
       background_jobs_label: 背景工作
       api_key_label: API 金鑰
       payment_label: 付款
@@ -385,6 +389,8 @@ zh-TW:
         sync_error: 同步錯誤
         no_recent_sync: 同步逾期
         reconsent_required: 需要重新授權
+        login_required: "需要登入"
+        login_expires_soon: "登入將在 %{time}後過期（%{at}）"
         reconsent_needed:
           one: 1 天後需要重新授權
           other: '%{count} 天後需要重新授權'
@@ -443,6 +449,7 @@ zh-TW:
         connect_button: 連結 Coinbase
         syncing: 同步中...
         sync: 同步
+        disconnect: 中斷連線
         disconnect_confirm: 確定要中斷這個 Coinbase 連線嗎？已同步的帳戶會變成手動帳戶。
       binance_panel:
         setup_instructions: 要連結 Binance，請建立一組唯讀 API 金鑰：
@@ -464,6 +471,7 @@ zh-TW:
         historical_import: 歷史資料匯入設定
         sync_start_date_label: 匯入資料起始日
         sync_start_date_help: 選擇要往回抓多久的歷史交易。
+        disconnect: 中斷連線
         disconnect_confirm: 確定要中斷 Binance 連線嗎？
       kraken_panel:
         step1_html: 前往 <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>
@@ -499,6 +507,7 @@ zh-TW:
         application_id_placeholder_new: 輸入 Application ID
         application_id_placeholder_update: 輸入新的 ID 以更新
         client_certificate_label: Client Certificate（含私密金鑰）
+        keep_client_certificate_hint: "留空以保留目前的憑證"
         save_and_connect: 儲存並連線
         update_connection: 更新連線
         connected_bank: 已連結的銀行
@@ -624,7 +633,11 @@ zh-TW:
         save_configuration: 儲存設定
         update_configuration: 更新設定
         sync: 同步
+        syncing: 同步中...
+        disconnect: 中斷 Trading 212 帳戶連線
         disconnect_confirm: 要中斷 Trading 212 連線嗎？
+        default_account_name: Trading 212 帳戶
+        add_account: 新增其他帳戶
         status_configured_prefix: 已設定。請前往
         accounts_tab: 帳戶管理
         status_configured_suffix: 分頁管理已偵測到的帳戶。

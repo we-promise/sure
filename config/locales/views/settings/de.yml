@@ -5,6 +5,7 @@ de:
         renewal: Dein Beitrag wird am %{date} fortgesetzt.
         cancellation: Dein Beitrag endet am %{date}.
   settings:
+    encryption_migration_guide: Anleitung zur Einrichtung der Verschlüsselung und zur Migration
     ai_prompts:
       show:
         page_title: KI-Eingabeaufforderungen
@@ -20,6 +21,10 @@ de:
         merchant_detector:
           title: Händlererkennung
           subtitle: Die KI identifiziert und ergänzt Transaktionsdaten mit Händlerinformationen
+        insight_dig_in:
+          title: Analyse mit KI nachhaken
+          subtitle: Erste Chat-Nachricht, wenn du bei einer Analyse mit KI nachhakst
+          label: Nachricht zum Nachhaken
     payments:
       show:
         page_title: Zahlung
@@ -45,6 +50,7 @@ de:
         general_title: Allgemein
         default_period: Standardzeitraum
         default_account_order: Standardreihenfolge der Konten
+        default_account_order_hint: Bei „Manuell“ ziehst du die Konten in der Seitenleiste in die gewünschte Reihenfolge.
         language: Sprache
         language_auto: Browsersprache
         page_title: Einstellungen
@@ -96,6 +102,8 @@ de:
         page_title: Darstellung
         split_grouped_description: Zeigt geteilte Transaktionen in der Liste gebündelt unter ihrer Ursprungsbuchung. Ist die Option aus, erscheint jede Teilbuchung als eigene Zeile.
         split_grouped_title: Geteilte Transaktionen gruppieren
+        auto_generate_transaction_names_title: Transaktionsnamen automatisch erzeugen
+        auto_generate_transaction_names_description: Bleibt der Name einer manuell erfassten Transaktion leer, wird er aus der gewählten Kategorie und dem Händler gebildet (z. B. „Unterhaltung - Netflix“). Ist beides nicht gewählt, bleibt der Name Pflicht. Gilt für den ganzen Haushalt und nur für neue Transaktionen.
         theme_dark: Dunkel
         theme_light: Hell
         theme_subtitle: Wähle das Erscheinungsbild der App
@@ -186,6 +194,7 @@ de:
       accounts_label: Konten
       advanced_section_title: Erweitert
       ai_prompts_label: KI-Eingabeaufforderungen
+      auto_matches_label: Automatischer Abgleich
       api_key_label: API-Schlüssel
       payment_label: Zahlung
       categories_label: Kategorien
@@ -217,6 +226,7 @@ de:
       sso_providers_label: SSO-Anbieter
       statement_vault_label: Auszugsarchiv
       users_label: Benutzer
+      system_health_label: Systemstatus
     settings_nav_link_large:
       next: Weiter
       previous: Zurück
@@ -243,6 +253,7 @@ de:
         connect_button: Coinbase verbinden
         syncing: Wird synchronisiert…
         sync: Synchronisieren
+        disconnect: Trennen
         disconnect_confirm: Bist du sicher, dass du diese Coinbase-Verbindung trennen möchtest? Deine synchronisierten Konten werden zu manuellen Konten.
       enable_banking_panel:
         callback_url_instruction: "Für die Callback-URL, verwende %{callback_url}."
@@ -252,6 +263,7 @@ de:
         application_id_placeholder_new: Application ID eintragen
         application_id_placeholder_update: Neue ID eintragen, um sie zu ändern
         client_certificate_label: Client-Zertifikat (mit Private Key)
+        keep_client_certificate_hint: "Leer lassen, um das aktuelle Zertifikat beizubehalten"
         config_locked_message: Trenn alle verknüpften Banken, bevor du diese Zugangsdaten änderst.
         config_locked_title: Konfiguration gesperrt
         configured: Eingerichtet
@@ -287,6 +299,7 @@ de:
         api_secret_label: API-Secret
         api_secret_placeholder: Binance-API-Secret einfügen
         connect_button: Binance verbinden
+        disconnect: Trennen
         disconnect_confirm: Verbindung zu Binance wirklich trennen?
         historical_import: Einstellungen für den Verlaufsimport
         ip_hint_body: 'Trag die ausgehende IP-Adresse des App-Servers in die Whitelist des Binance-API-Keys ein:'
@@ -305,7 +318,11 @@ de:
       clear_filter: Filter löschen
       connect: Verbinden
       drawer_trust_statement: Nur Lesezugriff. Sure kann kein Geld bewegen, und deine Zugangsdaten liegen verschlüsselt.
+      drawer_trust_statement_encryption_unconfigured: Nur Lesezugriff. Sure kann kein Geld bewegen. Konfiguriere explizite Verschlüsselungsschlüssel, bevor du Provider-Zugangsdaten in Produktion speicherst.
       empty_filter: Kein Anbieter passt zu deinem Filter.
+      provider_setup_encryption_warning:
+        title: Verschlüsselungsschlüssel fehlen
+        message: Diese selbst gehostete Installation hat keine expliziten Active-Record-Verschlüsselungsschlüssel konfiguriert. Konfiguriere primary_key, deterministic_key und key_derivation_salt, bevor du Provider-Zugangsdaten in Produktion speicherst.
       groups:
         available: Verfügbar
         empty_available: Alle verfügbaren Anbieter sind verbunden.
@@ -413,6 +430,8 @@ de:
           one: Erneute Zustimmung in 1 Tag nötig
           other: Erneute Zustimmung in %{count} Tagen nötig
         reconsent_required: Erneute Zustimmung nötig
+        login_required: "Anmeldung erforderlich"
+        login_expires_soon: "Anmeldung läuft in %{time} ab (%{at})"
         sync_error: Sync-Fehler
       not_authorized: Nicht berechtigt
       not_found: Anbieter nicht gefunden.
@@ -474,6 +493,7 @@ de:
         snaptrade: Verbindet Depots über das Aggregationsnetz von SnapTrade.
         sophtron: Verbindet Banken und Versorger in den USA & Kanada.
         trading212: Synchronisiert dein Trading-212-Depot über einen API-Key mit Lesezugriff.
+        trade_republic: Synchronisiert dein Trade-Republic-Konto über einen sicheren Web-Login mit Lesezugriff.
         wise: Synchronisiert deine Wise-Guthaben in mehreren Währungen und internationale Überweisungen automatisch.
       trading212_panel:
         accounts_tab: Konten
@@ -484,7 +504,9 @@ de:
         api_secret_placeholder_existing: Leer lassen, um den bisherigen Secret Key zu behalten
         api_secret_placeholder_new: Trading-212-Secret-Key einfügen
         currency_label: Kontowährung
+        disconnect: Trading-212-Konto trennen
         disconnect_confirm: Trading 212 trennen?
+        default_account_name: Trading-212-Konto
         environment_demo: Demokonto
         environment_label: Umgebung
         environment_live: Echtes Konto
@@ -497,7 +519,69 @@ de:
           step_2: Erzeug einen neuen API-Key – Trading 212 zeigt dir eine API ID und einen Secret Key.
           step_3: Füg beides unten ein, wähl Umgebung und Kontowährung und speichere.
         sync: Sync
+        syncing: Wird synchronisiert...
+        add_account: Weiteres Konto hinzufügen
         update_configuration: Konfiguration aktualisieren
+      trade_republic_panel:
+        encryption_warning:
+          title: Verschlüsselung ist nicht konfiguriert
+          message: Trade-Republic-Zugangsdaten und Sitzungsdaten können erst sicher gespeichert werden, wenn Active-Record-Verschlüsselung konfiguriert ist.
+        steps:
+          step_1: Gib die Telefonnummer und die PIN oder das Passwort deiner Trade-Republic-App ein und speichere sie.
+          step_2: Gib den Code deiner Authenticator-App ein, wenn du dazu aufgefordert wirst.
+          step_3: Bestätige den Login in deiner Trade-Republic-App, wenn du dazu aufgefordert wirst.
+        phone_number_label: Telefonnummer
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: Leer lassen, um die aktuelle Telefonnummer zu behalten
+        pin_label: PIN oder Passwort
+        pin_placeholder_new: PIN oder Passwort deiner Trade-Republic-App
+        pin_placeholder_existing: Leer lassen, um die aktuelle PIN bzw. das aktuelle Passwort zu behalten
+        currency_label: Kontowährung
+        connect: Einloggen
+        confirm_login: Login prüfen
+        complete_login: Fortfahren
+        authenticator_code_label: Authenticator-Code (falls angefordert)
+        authenticator_code_placeholder: 6-stelliger Code
+        push_login_notice: Bestätige jetzt den Login in deiner Trade-Republic-App. Sure prüft automatisch im Hintergrund. Du kannst den Status auch direkt selbst prüfen.
+        check_login_status: Status jetzt prüfen
+        authenticator_code_notice: Gib den Code deiner Authenticator-App ein.
+        approval_pending: Login gestartet. Bestätige ihn in der Trade-Republic-App; Sure prüft automatisch.
+        awaiting_confirmation: Bestätigung in der Trade-Republic-App ausstehend.
+        awaiting_authenticator_code: Authenticator-Code erforderlich.
+        login_expired: Die Bestätigung ist abgelaufen.
+        restart_login: Login erneut starten
+        connection_success:
+          title: Trade Republic erfolgreich verbunden
+          message: Deine Trade-Republic-Verbindung ist eingerichtet.
+          description: Sure synchronisiert deine Trade-Republic-Daten jetzt im Hintergrund.
+          close: Fertig
+        qr_login: Mit QR-Code einloggen
+        qr_cancel: QR-Login abbrechen
+        qr_back_to_credentials: Zurück zu Telefonnummer und PIN oder Passwort
+        qr_loading: QR-Code wird vorbereitet …
+        qr_instruction: Scanne den QR-Code mit der Kamera deines Smartphones und bestätige die Anmeldung anschließend in der Trade-Republic-App.
+        qr_success: Anmeldung bestätigt. Sure lädt die Provider-Übersicht neu.
+        qr_error: Der QR-Login konnte nicht gestartet werden. Bitte versuche es erneut.
+        requires_update: "Melde dich erneut an, um die Synchronisierung fortzusetzen."
+        session_expires_in: "Anmeldung läuft in %{time} ab (%{at})."
+        add_account: Weitere Verbindung hinzufügen
+        save_configuration: Speichern und Login starten
+        update_configuration: Konfiguration aktualisieren
+        sync: Sync
+        syncing: Wird synchronisiert...
+        disconnect: Trade Republic trennen
+        disconnect_confirm: Trade Republic trennen? Deine synchronisierten Konten werden zu manuellen Konten.
+        disconnect_confirm_with_identifier: "Die Trade-Republic-Verbindung mit den Endziffern %{last4} trennen? Deine synchronisierten Konten werden zu manuellen Konten."
+        identifier_phone: Telefon
+        identifier_account: Konto
+        status_configured_prefix: "Verbunden. Im Reiter"
+        accounts_tab: Konten
+        setup_accounts: Konten einrichten
+        accounts_discovered:
+          one: 1 Trade-Republic-Konto gefunden.
+          other: "%{count} Trade-Republic-Konten gefunden."
+        status_configured_suffix: verwaltest du die gefundenen Konten.
+        not_configured: Nicht eingerichtet.
       up_panel:
         step_1_html: Geh zu %{link} und erzeug einen persönlichen Zugriffstoken.
         step_2: Kopier deinen persönlichen Zugriffstoken.
@@ -596,7 +680,7 @@ de:
         completion: Antwort
         cost_by_model: Kosten nach Modell
         cost_by_operation: Kosten nach Vorgang
-        cost_estimates_description: Die Kosten sind aus den veröffentlichten Preisen der Anbieter geschätzt, für OpenAI mit Stand Juli 2026. Die tatsächlichen Kosten können abweichen. Die Preise gelten je 1 Million Tokens und unterscheiden sich je Modell. Eigene oder selbst gehostete Modelle zeigen „N/A“ und fließen nicht in die Gesamtkosten ein.
+        cost_estimates_description: Die Kosten werden anhand der veröffentlichten Anbieterpreise geschätzt, zuletzt geprüft am %{date}. Die tatsächlichen Kosten können abweichen. Die Preise gelten je 1 Million Tokens und unterscheiden sich je Modell. Eigene oder selbst gehostete Modelle zeigen „N/A“ und fließen nicht in die Gesamtkosten ein.
         cost_estimates_title: Zur Kostenschätzung
         end_date: Enddatum
         failed: Fehler

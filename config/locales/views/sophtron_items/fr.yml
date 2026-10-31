@@ -85,7 +85,7 @@ fr:
         one: Impossible de lier un compte avec un nom vide
         other: Impossible d'associer les comptes %{count} avec des noms vides
       link_failed: Échec de l'association des comptes
-      no_access_key: La clé d’accès Sophtron n’est pas configurée. Veuillez le configurer
+      no_access_key: La clé d’accès Sophtron n’est pas configurée. Veuillez la configurer
         dans Paramètres.
       no_accounts_found: Aucun compte trouvé. Veuillez vérifier la configuration de
         votre clé API.
@@ -140,7 +140,7 @@ fr:
       user_id_placeholder: collez votre identifiant Sophtron
     preload_accounts:
       api_error: Erreur de connexion API
-      no_access_key: La clé d’accès Sophtron n’est pas configurée. Veuillez le configurer
+      no_access_key: La clé d’accès Sophtron n’est pas configurée. Veuillez la configurer
         dans Paramètres.
       no_accounts_found: Aucun compte trouvé. Veuillez vérifier la configuration de
         votre clé API.
@@ -176,7 +176,7 @@ fr:
       description: Sélectionnez les comptes que vous souhaitez associer à votre compte
         %{product_name}.
       link_accounts: Associer les comptes sélectionnés
-      no_access_key: La clé d’accès Sophtron n’est pas configurée. Veuillez le configurer
+      no_access_key: La clé d’accès Sophtron n’est pas configurée. Veuillez la configurer
         dans Paramètres.
       no_accounts_found: Aucun compte trouvé. Veuillez vérifier la configuration de
         votre clé API.
@@ -199,7 +199,7 @@ fr:
       description: Sélectionnez un compte Sophtron à associer à ce compte. Les transactions
         seront synchronisées et dédupliquées automatiquement.
       link_account: Lier le compte
-      no_access_key: La clé d’accès Sophtron n’est pas configurée. Veuillez le configurer
+      no_access_key: La clé d’accès Sophtron n’est pas configurée. Veuillez la configurer
         dans Paramètres.
       no_account_specified: Aucun compte spécifié
       no_accounts_found: Aucun compte Sophtron trouvé. Veuillez vérifier la configuration
@@ -309,7 +309,7 @@ fr:
         step_2: Copiez votre identifiant utilisateur et votre clé d'accès à partir
           des paramètres de votre compte Sophtron
         step_3: Collez les informations d'identification ci-dessous et cliquez sur
-          Enregistrer ; Bien sûr, votre identifiant client Sophtron sera automatiquement
+          Enregistrer ; Sure, votre identifiant client Sophtron sera automatiquement
           créé ou réutilisé.
       setup_instructions_title: 'Instructions de configuration :'
       update: Mettre à jour la configuration

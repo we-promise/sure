@@ -11,6 +11,7 @@ nl:
       date: Datum
       description: Beschrijving
       description_placeholder: Beschrijf transactie
+      description_placeholder_optional: "Laat leeg om de naam van de categorie/handelaar te gebruiken, of kies eerst een van beide"
       expense: Uitgave
       income: Inkomsten
       none: (geen)
@@ -71,7 +72,6 @@ nl:
     mark_recurring_title: Terugkerende Transactie
     potential_duplicate_title: Mogelijk duplicaat gedetecteerd
     potential_duplicate_description: Deze wachtende transactie kan hetzelfde zijn als de geposte transactie hieronder. Indien ja, voeg ze samen om dubbeltelling te voorkomen.
-    merge_duplicate: Ja, voeg ze samen
     keep_both: Nee, bewaar beide
     transaction:
       pending: Wachtend

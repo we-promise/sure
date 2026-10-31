@@ -2,9 +2,32 @@ require "test_helper"
 
 class FamilyTest < ActiveSupport::TestCase
   include SyncableInterfaceTest
+  include SqlQueryCapture
 
   def setup
     @syncable = families(:dylan_family)
+  end
+
+  test "local_date is the date in the family's zone" do
+    family = families(:dylan_family)
+    evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
+
+    family.update!(timezone: "Australia/Sydney")
+    assert_equal Date.new(2026, 1, 16), family.local_date(evening_utc)
+
+    family.update!(timezone: "America/New_York")
+    assert_equal Date.new(2026, 1, 15), family.local_date(Time.utc(2026, 1, 16, 3, 0, 0))
+  end
+
+  test "local_date falls back to the app's zone for a blank or unknown zone" do
+    family = families(:dylan_family)
+    evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
+
+    family.update_column(:timezone, nil)
+    assert_equal evening_utc.in_time_zone(Time.zone).to_date, family.local_date(evening_utc)
+
+    family.update_column(:timezone, "Mars/Olympus_Mons")
+    assert_equal evening_utc.in_time_zone(Time.zone).to_date, family.local_date(evening_utc)
   end
 
   test "investment_contributions_category creates category when missing" do
@@ -138,9 +161,11 @@ class FamilyTest < ActiveSupport::TestCase
       name: "Test 2"
     )
 
+    txn2_entry_updated_at = txn2.entry.updated_at
+
     # Should merge both categories into one, keeping the oldest
     assert_difference "Category.count", -1 do
-      result = family.investment_contributions_category
+      result = travel_to(1.minute.from_now) { family.investment_contributions_category }
       assert_equal english_category.id, result.id
       assert_equal "Investment Contributions", result.name
 
@@ -148,9 +173,60 @@ class FamilyTest < ActiveSupport::TestCase
       assert_equal english_category.id, txn1.reload.category_id
       assert_equal english_category.id, txn2.reload.category_id
 
+      # Reassignment must touch entries so entry-keyed caches bust
+      # (only txn2 is reassigned — txn1 already points at the keeper)
+      assert txn2.entry.reload.updated_at > txn2_entry_updated_at
+
       # French category should be deleted
       assert_nil Category.find_by(id: french_category.id)
     end
+  end
+
+  test "investment_contributions_category merges duplicates across accounts" do
+    family = families(:dylan_family)
+    family.update!(locale: "en")
+    family.categories.where(name: [ "Investment Contributions", "Contributions aux investissements" ]).destroy_all
+
+    english_category = family.categories.create!(
+      name: "Investment Contributions",
+      color: "#0d9488",
+      lucide_icon: "trending-up"
+    )
+
+    french_category = family.categories.create!(
+      name: "Contributions aux investissements",
+      color: "#0d9488",
+      lucide_icon: "trending-up"
+    )
+
+    # Transactions on two different accounts of the same family: the
+    # transactions-through-accounts scope must reach both.
+    txn1 = Transaction.create!(category: english_category)
+    Entry.create!(
+      account: accounts(:depository),
+      entryable: txn1,
+      amount: 100,
+      currency: "USD",
+      date: Date.current,
+      name: "First account txn"
+    )
+
+    txn2 = Transaction.create!(category: french_category)
+    Entry.create!(
+      account: accounts(:credit_card),
+      entryable: txn2,
+      amount: 50,
+      currency: "USD",
+      date: Date.current,
+      name: "Second account txn"
+    )
+
+    result = family.investment_contributions_category
+
+    assert_equal english_category.id, result.id
+    assert_equal english_category.id, txn1.reload.category_id
+    assert_equal english_category.id, txn2.reload.category_id,
+      "transaction on the second account must also be reassigned to the keeper"
   end
 
   test "moniker helpers return expected singular and plural labels" do
@@ -163,6 +239,75 @@ class FamilyTest < ActiveSupport::TestCase
     family.update!(moniker: "Group")
     assert_equal "Group", family.moniker_label
     assert_equal "Groups", family.moniker_label_plural
+  end
+
+  test "entries_cache_version changes when an older entry is destroyed" do
+    family = families(:dylan_family)
+    newer_entry = entries(:transaction)
+    older_entry = Entry.create!(
+      account: accounts(:depository),
+      entryable: Transaction.create!(category: categories(:food_and_drink)),
+      date: Date.current,
+      name: "Older duplicate",
+      amount: 42,
+      currency: "USD",
+      created_at: 2.days.ago,
+      updated_at: 2.days.ago
+    )
+
+    newer_entry.update!(updated_at: 1.day.ago)
+
+    before_destroy = family.reload.entries_cache_version
+    older_entry.destroy!
+
+    assert_not_equal before_destroy, family.reload.entries_cache_version
+  end
+
+  test "build_cache_key changes when family currency changes" do
+    family = families(:empty)
+    before = family.build_cache_key("test_key")
+    family.update!(currency: "EUR")
+    after = family.reload.build_cache_key("test_key")
+
+    assert_not_equal before, after
+  end
+
+  test "build_cache_key changes through the account deletion lifecycle and does not revert" do
+    family = families(:dylan_family)
+    newer_account = accounts(:credit_card)
+    older_account = accounts(:depository)
+
+    newer_account.touch
+    k0 = family.build_cache_key("test_key")
+
+    older_account.mark_for_deletion!
+    k1 = family.reload.build_cache_key("test_key")
+
+    older_account.destroy!
+    k2 = family.reload.build_cache_key("test_key")
+
+    assert_not_equal k0, k1
+    assert_not_equal k1, k2
+    # Regression assertion for #4200: ensure key does not revert to pre-deletion state (k0)
+    assert_not_equal k0, k2
+  end
+
+  test "build_cache_key remains unchanged when nothing relevant has changed" do
+    family = families(:dylan_family)
+    key1 = family.build_cache_key("test_key", invalidate_on_data_updates: true)
+    key2 = family.reload.build_cache_key("test_key", invalidate_on_data_updates: true)
+
+    assert_equal key1, key2
+  end
+
+  test "accounts_status_version fetches count and max updated_at in a single query" do
+    family = families(:dylan_family)
+    queries = capture_sql_queries do
+      family.accounts_status_version
+    end
+
+    account_queries = queries.grep(/FROM "accounts"/i)
+    assert_equal 1, account_queries.size, "accounts_status_version should execute only one query"
   end
 
   test "default currency comes from country ISO data" do
@@ -180,6 +325,36 @@ class FamilyTest < ActiveSupport::TestCase
     assert_includes family.available_merchants, new_merchant
   end
 
+  test "known_merchant_names includes assigned and family-owned merchant names, deduplicates matching names, and excludes recently-unlinked merchants" do
+    family = families(:dylan_family)
+
+    provider_merchant = ProviderMerchant.create!(name: "Known Provider Merchant", source: "enable_banking")
+    transactions(:one).update!(merchant: provider_merchant)
+
+    # Same name as the assigned provider merchant, but a distinct record -- proves
+    # the result is deduplicated by name value, not just by record identity.
+    family.merchants.create!(name: "Known Provider Merchant")
+
+    unassigned_family_merchant = family.merchants.create!(name: "Unassigned Family Merchant")
+
+    # Assign then unlink a merchant -- available_merchants deliberately keeps
+    # recently-unlinked merchants around (so the UI can offer a quick undo);
+    # known_merchant_names must NOT, since it's used to auto-match/auto-assign new
+    # transactions and re-surfacing a deliberately-removed association would undo
+    # the user's action silently.
+    unlinked_merchant = ProviderMerchant.create!(name: "Recently Unlinked Merchant", source: "enable_banking")
+    transactions(:one).update!(merchant: unlinked_merchant)
+    unlinked_merchant.unlink_from_family(family)
+    transactions(:one).update!(merchant: provider_merchant)
+
+    names = family.known_merchant_names
+
+    assert_equal 1, names.count("Known Provider Merchant")
+    assert_includes names, unassigned_family_merchant.name
+    assert_not_includes names, "Recently Unlinked Merchant"
+    assert_includes family.available_merchants.map(&:name), "Recently Unlinked Merchant"
+  end
+
   test "enabled currencies always include the base currency" do
     family = families(:dylan_family)
     family.update!(currency: "SGD", enabled_currencies: [ "USD" ])
@@ -187,6 +362,39 @@ class FamilyTest < ActiveSupport::TestCase
     family.update!(enabled_currencies: [ "USD" ])
 
     assert_equal [ "SGD", "USD" ], family.reload.enabled_currency_codes
+  end
+
+  test "currency is saved as its ISO code" do
+    family = families(:dylan_family)
+    family.update!(currency: "eur")
+
+    assert_equal "EUR", family.reload.currency
+  end
+
+  test "an existing lowercase currency is saved as its ISO code" do
+    family = families(:dylan_family)
+    family.update_column(:currency, "eur")
+
+    family.update!(name: "Renamed family")
+
+    assert_equal "EUR", family.reload.currency
+  end
+
+  test "rejects a blank or unknown currency" do
+    family = families(:dylan_family)
+
+    [ "", nil, "XYZ" ].each do |value|
+      assert_not family.update(currency: value)
+      assert family.errors.of_kind?(:currency, :invalid)
+    end
+    assert_equal "USD", family.reload.currency
+  end
+
+  test "an existing unknown currency does not block unrelated updates" do
+    family = families(:dylan_family)
+    family.update_column(:currency, "XYZ")
+
+    assert family.update(name: "Renamed family")
   end
 
   test "empty enabled currencies keeps all currencies available" do
@@ -396,6 +604,199 @@ class FamilyTest < ActiveSupport::TestCase
 
     assert family.valid?, "an unrelated change must not be blocked by a pre-existing bad timezone"
     assert family.save
+  end
+
+  test "balance_sheet memoizes per user for the same family instance" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    member = users(:family_member)
+
+    first_call_for_admin = family.balance_sheet(user: admin)
+
+    assert_same first_call_for_admin, family.balance_sheet(user: admin),
+      "repeated calls for the same user must reuse the same BalanceSheet instance"
+
+    refute_same first_call_for_admin, family.balance_sheet(user: member),
+      "different users must not share a memoized BalanceSheet (family sharing scoping)"
+  end
+
+  test "investment_statement memoizes per user for the same family instance" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+    member = users(:family_member)
+
+    first_call_for_admin = family.investment_statement(user: admin)
+
+    assert_same first_call_for_admin, family.investment_statement(user: admin),
+      "repeated calls for the same user must reuse the same InvestmentStatement instance"
+
+    refute_same first_call_for_admin, family.investment_statement(user: member),
+      "different users must not share a memoized InvestmentStatement (family sharing scoping)"
+  end
+
+  test "requests transaction refreshes for syncable Plaid items" do
+    family = families(:dylan_family)
+
+    assert_enqueued_with job: PlaidTransactionsRefreshAllJob, args: [ family, { source: "TestSync" } ] do
+      family.request_plaid_transactions_refreshes_later(source: "TestSync")
+    end
+  end
+
+  test "records a sanitized diagnostic and returns when Plaid refresh orchestration cannot be enqueued" do
+    family = families(:dylan_family)
+
+    PlaidTransactionsRefreshAllJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
+
+    assert_difference "DebugLogEntry.count", 1 do
+      assert_nil family.request_plaid_transactions_refreshes_later(source: "TestSync")
+    end
+
+    debug_entry = DebugLogEntry.order(:created_at).last
+    assert_equal "TestSync", debug_entry.source
+    assert_equal "RedisClient::Error", debug_entry.metadata["error_class"]
+  end
+
+  test "does not raise when both Plaid refresh enqueue and diagnostic capture fail" do
+    family = families(:dylan_family)
+
+    PlaidTransactionsRefreshAllJob.stubs(:perform_later).raises(RedisClient::Error, "Redis unavailable")
+    DebugLogEntry.stubs(:capture).raises(ActiveRecord::ConnectionNotEstablished, "DB unavailable")
+
+    assert_nil family.request_plaid_transactions_refreshes_later(source: "TestSync")
+  end
+
+  # A non-loopback http:// endpoint is the misconfiguration these guard: the
+  # settings form rejects it, but JEV_ENDPOINT never passes through the form.
+  # Marked for the secret scanner: a redaction test has to hold the shape it
+  # redacts. The host and secrets are fake.
+  CREDENTIALED_JEV_ENDPOINT = "http://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET#frag" # pipelock:ignore Credential in URL
+
+  REJECTED_JEV_ENV = {
+    "JEV_API_KEY" => "test_api_key",
+    "JEV_ENDPOINT" => "http://internal-gateway.example.com/v1/systemone"
+  }.freeze
+
+  test "resolved_categorization_provider builds Jev when the endpoint is allowed" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+
+    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_ENDPOINT" => "https://api.typesafe.ai/v1/systemone") do
+      assert_instance_of Provider::Jev, family.resolved_categorization_provider
+    end
+  end
+
+  test "categorization_model_name names the Jev model when Jev will categorize" do
+    family = families(:dylan_family)
+    family.stubs(:resolved_categorization_provider).returns(Provider::Jev.allocate)
+    Provider::Jev.stubs(:effective_model).returns("~typesafe/jev-latest")
+
+    assert_equal "~typesafe/jev-latest", family.categorization_model_name
+  end
+
+  test "categorization_model_name names the Anthropic model when Anthropic will categorize" do
+    family = families(:dylan_family)
+    family.stubs(:resolved_categorization_provider).returns(Provider::Anthropic.allocate)
+    Provider::Anthropic.stubs(:effective_model).returns("claude-sonnet-test")
+
+    assert_equal "claude-sonnet-test", family.categorization_model_name
+  end
+
+  test "resolved_categorization_provider falls back to the LLM provider when the endpoint is rejected" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    llm = Provider::Openai.allocate
+    Provider::Registry.stubs(:preferred_llm_provider).returns(llm)
+
+    with_env_overrides(REJECTED_JEV_ENV) do
+      assert_same llm, family.resolved_categorization_provider
+    end
+  end
+
+  test "resolved_categorization_provider does not write diagnostics from view-time callers" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    assert_no_difference "DebugLogEntry.count" do
+      with_env_overrides(REJECTED_JEV_ENV) do
+        assert_nil family.resolved_categorization_provider
+      end
+    end
+  end
+
+  test "categorization_model_name does not write diagnostics from view-time callers" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    assert_no_difference "DebugLogEntry.count" do
+      with_env_overrides(REJECTED_JEV_ENV) do
+        assert_nil family.categorization_model_name
+      end
+    end
+  end
+
+  test "shadow_categorization_provider returns nil when the Jev endpoint is rejected" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "llm")
+
+    with_env_overrides(REJECTED_JEV_ENV) do
+      assert_nil family.shadow_categorization_provider
+    end
+  end
+
+  test "resolved_categorization_provider hands the construction error to a caller that asks" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    errors = []
+
+    with_env_overrides(REJECTED_JEV_ENV) do
+      assert_nil family.resolved_categorization_provider { |error| errors << error }
+    end
+
+    assert_equal [ Provider::Jev::Error ], errors.map(&:class)
+  end
+
+  # The rescue is deliberately narrow, so a registry bug still surfaces rather
+  # than being reported to the operator as a Jev misconfiguration.
+  test "resolved_categorization_provider does not swallow non-provider errors" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
+    Provider::Registry.stubs(:get_provider).with(:jev).raises(ArgumentError, "boom")
+
+    assert_raises(ArgumentError) { family.resolved_categorization_provider }
+  end
+
+  test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
+
+    account.entries.create!(date: Date.new(2000, 1, 15), name: "Old valuation",
+                            amount: 5000, currency: "USD", entryable: Valuation.new)
+    transaction_date = Date.new(2025, 3, 10)
+    account.entries.create!(date: transaction_date, name: "Groceries",
+                            amount: -50, currency: "USD", entryable: Transaction.new)
+
+    assert_equal transaction_date, family.earliest_activity_date
+
+    # A Trade earlier than the Transaction must win, so a regression that
+    # drops Trade from the filter is caught (#4007).
+    trade_date = Date.new(2020, 6, 15)
+    account.entries.create!(date: trade_date, name: "Investment purchase",
+                            amount: 100, currency: "USD",
+                            entryable: Trade.new(security: securities(:aapl), qty: 1, price: 100, currency: "USD"))
+
+    assert_equal trade_date, family.earliest_activity_date
+  end
+
+  test "earliest_activity_date returns nil when family has no Transaction/Trade entries" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "House", balance: 0, currency: "USD", accountable: Depository.new)
+    account.entries.create!(date: Date.new(2000, 1, 15), name: "Old valuation",
+                            amount: 5000, currency: "USD", entryable: Valuation.new)
+
+    assert_nil family.earliest_activity_date
   end
 
   private

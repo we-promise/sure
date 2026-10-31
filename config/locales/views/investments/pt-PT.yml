@@ -1,0 +1,197 @@
+---
+pt-PT:
+  investments:
+    edit:
+      edit: Editar %{account}
+    form:
+      none: Nenhum
+      subtype_prompt: Selecionar tipo de investimento
+    new:
+      title: Introduzir saldo da conta
+    show:
+      chart_title: Valor total
+    subtypes:
+      # United States
+      brokerage:
+        short: Corretora
+        long: Conta de Corretagem
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Plano de Poupança (TSP)
+      ira:
+        short: IRA
+        long: IRA Tradicional
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: Plano 529
+        long: Plano de Poupança para a Educação (529)
+      hsa:
+        short: HSA
+        long: Conta de Poupança de Saúde (HSA)
+      ugma:
+        short: UGMA
+        long: Conta de Curadoria UGMA
+      utma:
+        short: UTMA
+        long: Conta de Curadoria UTMA
+      # United Kingdom
+      isa:
+        short: ISA
+        long: Conta de Poupança Individual (ISA)
+      lisa:
+        short: LISA
+        long: ISA Vitalícia (LISA)
+      sipp:
+        short: SIPP
+        long: Pensão Pessoal de Auto-Investimento (SIPP)
+      workplace_pension_uk:
+        short: Pensão
+        long: Pensão de Trabalho
+      # Canada
+      rrsp:
+        short: RRSP
+        long: Plano de Poupança de Reforma Registado (RRSP)
+      tfsa:
+        short: TFSA
+        long: Conta de Poupança Isenta de Impostos (TFSA)
+      resp:
+        short: RESP
+        long: Plano de Poupança para a Educação Registado (RESP)
+      lira:
+        short: LIRA
+        long: Conta de Reforma Bloqueada (LIRA)
+      rrif:
+        short: RRIF
+        long: Fundo de Rendimento de Reforma Registado (RRIF)
+      # Australia
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Fundo de Super Autogerido (SMSF)
+      # Europe
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions
+      pillar_3a:
+        short: Pilar 3a
+        long: Pensão Privada (Pilar 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      # India
+      nps:
+        short: NPS
+        long: Sistema Nacional de Pensões (NPS)
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: Ações Indianas
+        long: Ações Indianas (Demat)
+      indian_equity:
+        short: Ações Indianas
+        long: Ações Indianas
+      indian_etf:
+        short: ETF Indiano
+        long: ETF Indiano
+      life_insurance:
+        short: Seguro de Vida
+        long: Seguro de Vida
+      ppf:
+        short: PPF
+        long: Fundo de Previdência Pública (PPF)
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: Certificado Nacional de Poupança (NSC)
+      scss:
+        short: SCSS
+        long: Esquema de Poupança para Idosos (SCSS)
+      fd:
+        short: DP
+        long: Depósito a Prazo
+      rd:
+        short: DR
+        long: Depósito Recorrente
+      pomis:
+        short: POMIS
+        long: Esquema de Rendimento Mensal dos Correios (POMIS)
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: ETF de Ouro
+        long: ETF de Ouro
+      gold_mf:
+        short: Fundo de Ouro
+        long: Fundo de Investimento em Ouro
+      sgb:
+        short: SGB
+        long: Obrigação de Ouro Soberana (SGB)
+      g_sec:
+        short: Títulos Públicos
+        long: Títulos do Governo (G-Secs)
+      sdl:
+        short: SDL
+        long: Empréstimos de Desenvolvimento do Estado (SDLs)
+      corporate_bond:
+        short: Obrigação Corporativa
+        long: Obrigação Corporativa
+      infrastructure_bond:
+        short: Obrigação de Infraestruturas
+        long: Obrigação de Infraestruturas
+      tax_free_bond:
+        short: Obrigação Isenta de Impostos
+        long: Obrigação Isenta de Impostos
+      # Generic
+      pension:
+        short: Pensão
+        long: Pensão
+      retirement:
+        short: Reforma
+        long: Conta de Reforma
+      mutual_fund:
+        short: Fundo de Investimento
+        long: Fundo de Investimento
+      gold:
+        short: Ouro
+        long: Ouro (físico ou digital)
+      angel:
+        short: Anjo
+        long: Investimento Anjo
+      trust:
+        short: Fiduciário
+        long: Fiduciário
+      other:
+        short: Outro
+        long: Outro Investimento
+    value_tooltip:
+      cash: Dinheiro
+      holdings: Posições
+      total: Saldo da carteira
+      total_value_tooltip: O saldo total da carteira é a soma do dinheiro da corretora
+        (disponível para negociação) e o valor de mercado atual das suas posições.
