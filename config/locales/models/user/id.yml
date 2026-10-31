@@ -10,6 +10,7 @@ id:
         last_name: Nama Belakang
         password: Kata Sandi
         password_confirmation: Konfirmasi Kata Sandi
+        password_challenge: Kata Sandi Saat Ini
     errors:
       models:
         user:
@@ -18,5 +19,10 @@ id:
               cannot_deactivate_admin_with_other_users: Admin tidak dapat menghapus akun selama pengguna lain masih ada. Silakan hapus semua anggota terlebih dahulu.
               provider_item_has_other_accounts: Pengguna memiliki rekening yang terhubung ke koneksi penyedia yang juga memiliki rekening milik pengguna lain. Pindahkan atau putuskan tautan rekening tersebut sebelum mengubah keanggotaan keluarga/grup.
               cannot_remove_last_super_admin: Tidak dapat menghapus super admin aktif terakhir. Angkat pengguna lain menjadi super admin terlebih dahulu.
+            password:
+              missing_case: harus berisi huruf besar dan huruf kecil
+              missing_number: harus berisi setidaknya satu angka
+              missing_special: harus berisi setidaknya satu karakter khusus
+              too_long: "terlalu panjang (maksimal %{count} byte; huruf beraksen dan emoji memakan lebih dari satu byte)"
             profile_image:
               invalid_file_size: ukuran file harus kurang dari %{max_megabytes}MB
