@@ -2734,20 +2734,6 @@ enj:
   delimiter: ","
   default_format: "%u%n"
   default_precision: 8
-eth:
-  name: Ethereum
-  priority: 100
-  iso_code: ETH
-  iso_numeric: ""
-  html_code: "&#x39e;"
-  symbol: ETH
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
-  smallest_denomination: 1
-  separator: "."
-  delimiter: ","
-  default_format: "%u%n"
-  default_precision: 8
 fet:
   name: Fetch.ai
   priority: 100
@@ -3000,19 +2986,6 @@ uni:
   delimiter: ","
   default_format: "%u%n"
   default_precision: 8
-usdt:
-  name: Tether USD
-  priority: 100
-  iso_code: USDT
-  iso_numeric: ""
-  html_code: "$"
-  symbol: USDT
-  minor_unit: Cent
-  minor_unit_conversion: 100
-  smallest_denomination: 1
-  separator: "."
-  delimiter: ","
-  default_format: "%u%n"
   default_precision: 2
 zec:
   name: Zcash
