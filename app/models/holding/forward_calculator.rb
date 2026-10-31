@@ -54,7 +54,8 @@ class Holding::ForwardCalculator
     # basis metadata while repricing.
     def untraded_holdings(date)
       @untraded_snapshots ||= begin
-        traded_ids = account.trades.distinct.pluck(:security_id)
+        # An income trade (qty 0) moves no shares, so it leaves a snapshot carried.
+        traded_ids = account.trades.where.not(qty: 0).distinct.pluck(:security_id)
         scope = account.holdings.where.not(security_id: traded_ids).order(:date)
         scope = scope.where(security_id: @security_ids) if @security_ids
         scope.to_a.group_by(&:security_id)
@@ -68,9 +69,9 @@ class Holding::ForwardCalculator
         price = portfolio_cache.get_price(security_id, date, currency: snapshot.currency)
         next unless price
 
+        qty = Security::Split.scale(snapshot.qty, portfolio_cache.split_factor_between(security_id, snapshot.date, date))
         Holding::HoldingData.new(account_id: account.id, security_id: security_id, date: date,
-          qty: snapshot.qty, price: price.price, currency: price.currency,
-          amount: snapshot.qty * price.price, snapshot: snapshot)
+          qty: qty, price: price.price, currency: price.currency, amount: qty * price.price, snapshot: snapshot)
       end
     end
 

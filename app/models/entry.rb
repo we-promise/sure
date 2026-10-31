@@ -62,7 +62,7 @@ class Entry < ApplicationRecord
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   before_validation :reactivate_changed_valuation
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
-  after_destroy :remove_holdings_of_last_trade, if: :trade?
+  after_destroy :remove_holdings_of_last_trade, if: -> { trade? && entryable.qty.nonzero? }
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -725,12 +725,13 @@ class Entry < ApplicationRecord
       entryable.superseded_at = nil
     end
 
-    # A cash-anchored account carries holdings of securities it has no trades
-    # for. Once a security's last trade is gone, the rows calculated from it
-    # would be carried too, so they go from the trade's date on.
+    # A cash-anchored account carries holdings of securities it has no
+    # quantity-changing trades for. Once a security's last such trade is gone,
+    # the rows calculated from it would be carried too, so they go from the
+    # trade's date on.
     def remove_holdings_of_last_trade
       return unless account.accounting_start_date
-      return if account.trades.exists?(security_id: entryable.security_id)
+      return if account.trades.where.not(qty: 0).exists?(security_id: entryable.security_id)
 
       account.holdings.where(security_id: entryable.security_id, account_provider_id: nil, date: date..).delete_all
     end
