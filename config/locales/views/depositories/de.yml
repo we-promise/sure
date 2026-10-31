@@ -21,6 +21,12 @@ de:
       money_market:
         long: Geldmarktkonto
         short: Geldmarkt
+      notice_savings:
+        long: Kündigungsgeld
+        short: Kündigungsgeld
+      building_savings:
+        long: Bausparvertrag
+        short: Bausparen
       savings:
         long: Sparkonto
         short: Spar

@@ -146,7 +146,7 @@ module Assistant::Configurable
           CONTEXT
         else
           lines = accounts.map do |account|
-            "- #{account.name}: #{account.accountable_type}, #{account.classification}, #{account.balance_money.format}"
+            "- #{account.name}: #{account.accountable_type}, #{account.classification}, #{account.balance_money.format}#{liquidity_context(account)}"
           end
 
           <<~CONTEXT
@@ -154,8 +154,18 @@ module Assistant::Configurable
             ### Accounts
 
             #{lines.join("\n")}
+
+            When asked how much money there is or can be spent, tell available money apart from locked money.
           CONTEXT
         end
+      end
+
+      # Only bound assets get a note: "available" is what everyone assumes.
+      def liquidity_context(account)
+        return "" unless account.asset? && !account.available_on?
+
+        release = account.next_release_date
+        release ? ", locked until #{release.iso8601}" : ", #{account.liquidity.tr("_", "-")}"
       end
 
       def categories_context(user)

@@ -17,6 +17,7 @@ being changed. These guides hold the detailed conventions and procedures.
 | Add a preview survey or usage event | [Feedback surveys](feedback-surveys.md) |
 | Gate or release a preview feature | [Preview-feature gating](gating-a-preview-feature.md) |
 | Change goals, pledges or reconciliation | [Goals](goals.md) |
+| Ask whether an account's money is available, or add a subtype | [Account availability](account-availability.md) |
 
 ## External wealth integration
 

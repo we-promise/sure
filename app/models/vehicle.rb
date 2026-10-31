@@ -16,6 +16,14 @@ class Vehicle < ApplicationRecord
   end
 
   class << self
+    def default_liquidity_for(_subtype)
+      "long_term"
+    end
+
+    def liquidity_selectable?
+      false
+    end
+
     def color
       "#F23E94"
     end

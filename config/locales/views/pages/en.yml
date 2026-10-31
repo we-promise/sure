@@ -38,6 +38,17 @@ en:
       heading: Terms of Service
       placeholder: Terms of service content will be displayed here.
     dashboard:
+      liquidity:
+        title: Availability
+        available_net_worth: Available net worth
+        available_assets: Available
+        bound_assets: Locked
+        short_term_liabilities: Short-term debts
+        view_report: Release dates in reports
+        review:
+          title: Check how your accounts were classified
+          body: Each account got an availability level from its account type. Savings accounts are often locked in practice. Open an account below and change its availability in the account settings if it works differently.
+          dismiss: Got it
       welcome: "Welcome back, %{name}"
       subtitle: "Here's what's happening with your finances"
       new: "New"

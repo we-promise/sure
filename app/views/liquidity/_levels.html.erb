@@ -1,0 +1,49 @@
+<%# locals: (overview:) %>
+
+<div class="space-y-4">
+  <% if overview.asset_levels.any? %>
+    <div class="flex gap-1" aria-hidden="true">
+      <% overview.asset_levels.each do |level| %>
+        <div class="h-1.5 rounded-sm <%= liquidity_level_bar_class(level.key) %>" style="inline-size: <%= level.weight %>%;"></div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
+    <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
+      <div class="min-w-40"><%= t(".level") %></div>
+      <div class="ml-auto text-right flex items-center gap-2">
+        <div class="w-16 shrink-0"><%= t(".share") %></div>
+        <div class="w-28 shrink-0"><%= t(".value") %></div>
+      </div>
+    </div>
+
+    <div class="rounded-lg bg-container font-medium text-sm min-w-fit">
+      <% overview.asset_levels.each_with_index do |level, idx| %>
+        <%= render "liquidity/level_row",
+                   key: level.key,
+                   label: t("accounts.liquidity.levels.#{level.key}"),
+                   dot_class: liquidity_level_bar_class(level.key),
+                   share: level.weight,
+                   amount: format_money(level.total, precision: 0),
+                   accounts: level.accounts,
+                   overview: overview %>
+
+        <% if idx < overview.asset_levels.size - 1 || overview.short_term_liability_rows.any? %>
+          <%= render "shared/ruler", classes: "mx-4" %>
+        <% end %>
+      <% end %>
+
+      <% if overview.short_term_liability_rows.any? %>
+        <%= render "liquidity/level_row",
+                   key: "short_term_liabilities",
+                   label: t(".short_term_liabilities"),
+                   dot_class: "bg-destructive",
+                   share: nil,
+                   amount: "−#{format_money(overview.short_term_liabilities, precision: 0)}",
+                   accounts: overview.short_term_liability_rows,
+                   overview: overview %>
+      <% end %>
+    </div>
+  </div>
+</div>

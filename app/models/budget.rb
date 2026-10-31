@@ -194,11 +194,22 @@ class Budget < ApplicationRecord
   # Liquidity only. Cash held inside investment accounts (Account#cash_balance)
   # is deliberately out: it is not money available to this month's budget.
   #
+  # With preview features on (the viewer's switch, as for the plan hub), the
+  # accounts come from their availability instead of their type: immediate
+  # accounts plus locked ones past their release date (Account::Liquidity).
+  # A term deposit then stops counting as free until it matures, and an HSA
+  # stops counting at all.
+  #
   # Scoped like #transactions — a personal budget sees only its owner's
   # accounts, the household one what the viewer can see — because a figure
   # labelled "available" must mean available to the person reading it.
   def cash_accounts
-    scope = family.accounts.visible.included_in_reports.where(accountable_type: "Depository")
+    scope = family.accounts.visible.included_in_reports
+    scope = if current_user&.preview_features_enabled?
+      scope.immediate_assets_on(Account.liquidity_today_for(family))
+    else
+      scope.where(accountable_type: "Depository")
+    end
 
     if user_id.present?
       scope.where(owner_id: user_id)

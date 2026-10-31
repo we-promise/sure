@@ -95,4 +95,39 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, I18n.t("settings.preferences.show.household_budget_enabled")
     assert_not_includes response.body, I18n.t("settings.preferences.show.budget_sharing_title")
   end
+
+  test "release reminder settings are preview only" do
+    get settings_preferences_url
+    assert_select "select[name='user[account_release_channel]']", count: 0
+
+    users(:family_admin).update!(preferences: { "preview_features_enabled" => true })
+    get settings_preferences_url
+
+    assert_select "select[name='user[account_release_channel]'] option[selected][value='insight']"
+    assert_select "input[name='user[account_release_lead_days]'][value='14']"
+  end
+
+  test "update stores release reminder channel and lead time" do
+    user = users(:family_admin)
+    user.update!(preferences: { "preview_features_enabled" => true })
+
+    patch settings_preferences_url, params: { user: { account_release_channel: "both", account_release_lead_days: "30" } }
+
+    assert_redirected_to settings_preferences_url
+    user.reload
+    assert_equal "both", user.account_release_channel
+    assert_equal 30, user.account_release_lead_days
+    assert user.preview_features_enabled?
+  end
+
+  test "update ignores unknown release reminder values" do
+    user = users(:family_admin)
+    user.update!(preferences: { "account_release_channel" => "email", "account_release_lead_days" => 7 })
+
+    patch settings_preferences_url, params: { user: { account_release_channel: "sms", account_release_lead_days: "365" } }
+
+    user.reload
+    assert_equal "email", user.account_release_channel
+    assert_equal 7, user.account_release_lead_days
+  end
 end
