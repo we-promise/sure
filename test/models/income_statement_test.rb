@@ -262,6 +262,72 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(200, @family.currency), checking_only_totals.expense_money
   end
 
+  test "monthly_totals_for matches totals_for for each month, with and without account ids" do
+    last_month = Date.current.prev_month.beginning_of_month
+    create_transaction(account: @checking_account, amount: -500, category: @income_category, date: last_month + 3.days)
+    create_transaction(account: @credit_card_account, amount: 75, category: @groceries_category, date: last_month + 5.days)
+
+    income_statement = IncomeStatement.new(@family)
+    chart_period = Period.custom(start_date: last_month.prev_month, end_date: Date.current)
+
+    [ nil, [ @checking_account.id ] ].each do |account_ids|
+      monthly = income_statement.monthly_totals_for(chart_period, account_ids: account_ids)
+
+      assert_equal [ last_month.prev_month, last_month, Date.current.beginning_of_month ], monthly.keys
+
+      monthly.each do |month_start, totals|
+        month_period = Period.custom(start_date: month_start, end_date: [ month_start.end_of_month, Date.current ].min)
+        expected = income_statement.totals_for(month_period, account_ids: account_ids)
+
+        assert_equal expected.income_money, totals.income_money, "income for #{month_start} (#{account_ids.inspect})"
+        assert_equal expected.expense_money, totals.expense_money, "expense for #{month_start} (#{account_ids.inspect})"
+        assert_equal expected.transactions_count, totals.transactions_count, "count for #{month_start} (#{account_ids.inspect})"
+      end
+    end
+  end
+
+  test "monthly_totals_for runs a single query for every month in the period" do
+    income_statement = IncomeStatement.new(@family)
+    chart_period = Period.custom(start_date: 5.months.ago.beginning_of_month.to_date, end_date: Date.current)
+
+    IncomeStatement::MonthlyTotals.expects(:new).once.returns(stub(call: []))
+    IncomeStatement::Totals.expects(:new).never
+
+    monthly = income_statement.monthly_totals_for(chart_period)
+
+    assert_equal 6, monthly.size
+    assert monthly.values.all? { |totals| totals.income_money.zero? && totals.expense_money.zero? }
+  end
+
+  test "monthly_totals_for caches per month so a shifted window only queries the new month" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    current_month = Date.current.beginning_of_month
+    previous_window = Period.custom(start_date: current_month - 6.months, end_date: (current_month - 1.month).end_of_month)
+    shifted_window = Period.custom(start_date: current_month - 5.months, end_date: Date.current)
+
+    IncomeStatement.new(@family).monthly_totals_for(previous_window)
+
+    IncomeStatement::MonthlyTotals.expects(:new)
+      .with { |*args| args.last[:date_range] == (current_month..Date.current) }
+      .once
+      .returns(stub(call: []))
+
+    monthly = IncomeStatement.new(@family).monthly_totals_for(shifted_window)
+
+    assert_equal 6, monthly.size
+  end
+
+  test "monthly_totals_for keeps account-filtered months separate in the cache" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current)
+
+    all_accounts = IncomeStatement.new(@family).monthly_totals_for(period).values.first
+    checking_only = IncomeStatement.new(@family).monthly_totals_for(period, account_ids: [ @checking_account.id ]).values.first
+
+    assert_equal Money.new(200 + 300 + 400, @family.currency), all_accounts.expense_money
+    assert_equal Money.new(200, @family.currency), checking_only.expense_money
+  end
+
   test "eligible_accounts excludes accounts not reflected in totals" do
     tax_advantaged_account = @family.accounts.create! name: "401k", currency: @family.currency, balance: 10000, accountable: Investment.new(subtype: "401k")
     excluded_account = @family.accounts.create! name: "Excluded", currency: @family.currency, balance: 0, exclude_from_reports: true, accountable: Depository.new
