@@ -1570,6 +1570,17 @@ What happens to today's chat classes in PR 3:
   an undecided call ends the turn `:awaiting_approval` with its history, the decision is kept in
   Sure's tables, and the next `respond` with that history runs or refuses the call (spike, live
   on llama.cpp). The approve and deny UI is a feature of its own, not part of this plan.
+- **One turn per chat.** Nothing stops two jobs running one chat today: a second message mid-turn
+  starts a second turn at once, and two Retry requests at the same moment ran
+  `create_transaction` twice (spike: "One turn per chat"). `respond` claims the chat first, with a
+  conditional update of `chats.claim_token` and `claimed_until` outside any transaction, renews
+  the claim before every tool run and every round, and releases it at the end; a job that finds
+  the chat claimed drops a duplicate bubble or re-enqueues itself. The renewal before each tool
+  run is what stops a turn whose claim lapsed (a hung worker) from writing again. A turn that
+  lost its claim stops without an error. This is RubyLLM 2.2's "One Process at a Time" (not
+  released yet), which needs RubyLLM's own chat storage (section 20), done in Sure's tables in
+  about 30 lines. What a message sent mid-turn should do (wait, be refused, or restart the turn
+  with both messages) is a product decision; the spike made it wait.
 - **Tools carry the job's lane.** RubyLLM starts each parallel tool thread with fresh execution
   state, on purpose: the thread's connections return to the pool and the caller's `Current`
   isn't reset. So a chat tool's own AI call (`search_family_files` embedding its query) would run
@@ -2473,4 +2484,7 @@ chat tables (for the chat storage line).
   reads (#4421), touch how tool rounds are stored (#4133), and turn on RubyLLM's usage ledger,
   which then records every call Sure makes. RubyLLM now runs the tools (section 8.4), but Sure
   keeps the history and rebuilds it each turn; revisit when approvals have to survive restarts
-  without Sure storing the paused turn itself.
+  without Sure storing the paused turn itself. RubyLLM 2.2 (unreleased) adds to the case for it:
+  one process per chat and per tool call, cancel from another process, and approvals safe
+  against a double click, all on its persistence. Sure's own claim covers the first (section
+  8.4).

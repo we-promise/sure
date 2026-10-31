@@ -1,7 +1,7 @@
 # RubyLLM spike report (PR 1 of the AI plumbing redesign)
 
 **Companion to:** [`rubyllm-spike-prompt.md`](rubyllm-spike-prompt.md) (the brief), [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) (the plan, §19) and [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) (the question before it was run)
-**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`fea2dda63`](https://github.com/josh-sanders/sure/commit/fea2dda63). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
+**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`93b527180`](https://github.com/josh-sanders/sure/commit/93b527180). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
 **Status:** a recommendation with its evidence, not a decision. The spike's second purpose was to sort the plan's choices into product decisions and technical limits; none of the product decisions, and none of the scope lines, is final. This file is the spike's note (`docs/llm-guides/ai-pipeline.md` on the branch) as of that commit; the plan's own short note in that path comes with PR 2.
 
 **Recommendation: adopt, pinned to `ruby_llm` 2.1.1** (released 2026-10-11, the latest at the
@@ -32,7 +32,7 @@ Sure keeps the turn's bounds (it steps the tool loop; RubyLLM can run the tools,
 agents behind the gate"), the JSON-mode policy, error mapping, instrumentation and the routing
 around it.
 
-Branch: `spike/ruby-llm` (not merged). Tests: `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb` (357 runs, 57 skips:
+Branch: `spike/ruby-llm` (not merged). Tests: `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb` (365 runs, 57 skips:
 the live-only timeout, Red Candle and job-runner tests, and OCR combinations not recorded), and for Jev `bin/rails test test/models/provider/jev_test.rb
 test/models/provider/jev_gem_test.rb test/models/provider/jev_gem_live_test.rb` (62 runs). Live server: llama.cpp on venus, `qwen3.6-35b-a3b-mtp` (64k context,
 `--jinja`, tool calls on) and `granite-embedding-small-english-r2` (384 dimensions). Neither model
@@ -94,7 +94,9 @@ here is final, and that includes scope: an "out of scope" line is a product deci
 | RubyLLM's usage ledger off (no `ruby_llm_usages`); Sure writes `llm_usages` | The ledger has no feature, route, correlation id or metadata column, and its `operation` allows only RubyLLM's 11; local models have no price; `provider` is RubyLLM's slug (`openai` for llama.cpp); Jev isn't recorded; the table is RubyLLM's private model | A row per attempt with its status, written with no Sure code; the owner follows RubyLLM's tool threads; prices for registry models; where RubyLLM's history finds a message's producer | "RubyLLM's usage ledger"; `ruby_llm_usage_ledger_test` |
 | Usage from Sure's `.ai` events, one per call (§10) | Feature, route, error class and correlation id in one place, shared with Langfuse | A call of four requests (two retried 503s, the `auto` chain's 400, the success) was one event with the last request's tokens; RubyLLM's `usage.ruby_llm` event fires for every attempt and its subscriber sees Sure's context | `ruby_llm_usage_ledger_test` |
 | Auto-upload of large files off | A statement never stays in a provider's Files API | Anthropic over 24 MB then can't take the file at all | `extract_statement_stubbed_test` |
-| Chat storage redesign out of scope (§20) | The plumbing needs one additive column | RubyLLM's persistence pays off if RubyLLM runs the loop | "Switching providers" |
+| Chat storage redesign out of scope (§20) | The plumbing needs one additive column; one turn per chat can be Sure's own claim (31 lines) | RubyLLM's persistence pays off if RubyLLM runs the loop; 2.2 (unreleased) adds one process per chat and per tool call, cancel from another process, and approvals safe against a double click, all on that persistence | "Switching providers"; "One turn per chat" |
+| One turn per chat, with a claim on `chats` (not in the plan yet) | Two jobs on one turn ran the write tool twice today; with the claim, once | Two columns and a renewal before every tool run, or a lapsed turn writes again; a turn waiting longer than the claim wastes its model call | "One turn per chat"; `chat_claim_test` |
+| A message sent while a turn runs (today: a second turn starts at once) | Each message is answered as soon as possible | Two turns read the same history and ran at the same time; with a claim the second waits and runs after (re-enqueued), or could be refused | `chat_claim_test` |
 | Local OCR as a two-step route (OCR model, then extraction) | Read both statements completely on CPU | Needs a second model or endpoint per route; a prompt per model | `ocr/` |
 | AI jobs on Sidekiq threads, not fiber workers (§11) | 200 threads made 200 cloud calls in 3.1 s (fibers 3.0 s) on a pool of 3 connections, with the same memory; chat as fast as on fibers with a 1-thread chat capsule (48.3 s against 48.2 s); interrupting works on threads; no second job runner | Fibers need no chat capsule and no AI thread count, and waiting costs nothing; one capsule of 4 threads left chat 136 s without a thread; Solid Queue's `limits_concurrency` was the only limit shared across workers that was tested | "Job runners and chat priority" |
 | Chat's wait behind background work on a local host: about 2 s, never more than 5 s (the owner, 2026-10-31) | Chat felt broken at 45 s; interrupting meets it (0.09 s) with MTP and the full context kept | Only interrupting or a kept slot meets it; both cost background throughput or lost work | `gpu_merchants_live_test` |
@@ -119,6 +121,9 @@ here is final, and that includes scope: an "out of scope" line is a product deci
   `openai_api_base`.
 - RubyLLM's `input_tokens` excludes cached tokens (reported 512 where the prompt was 12,457).
 - RubyLLM retries OpenAI's `insufficient_quota` 429 like a rate limit.
+- A claim taken inside a transaction is invisible to other processes until it commits.
+- A claim only stops a turn that checks it: a turn whose claim lapsed still ran its write tool
+  unless it renewed the claim before the tool run.
 - RubyLLM's usage ledger accepts only its own eleven operations, records RubyLLM's provider slug,
   and prices only models in its registry.
 - Anthropic checks the balance before the model name, and blocks `count_tokens` without credits.
@@ -1362,6 +1367,58 @@ usage were compared: (A) the ledger as the record, (B) a Sure subscriber writing
   release (3 statements). Without it, none: the table check goes to the schema cache.
 - **Not tested:** the usage page built from the ledger, a data migration from `llm_usages`, and
   Jev, whose transport isn't RubyLLM and would never reach the ledger.
+
+## One turn per chat (RubyLLM 2.2's "One Process at a Time"), outside the criteria
+
+RubyLLM 2.2, unreleased when this was written (rubyllm.com/next), claims a persisted chat before
+any model call or tool run, and each tool call before it runs, with a conditional update of
+`claim_token` and `claimed_until` on `chats`; a claim lapses after `max_run_time` (ten minutes by
+default) and a run whose claim lapsed has its results discarded. It needs RubyLLM's Rails
+persistence, which Sure doesn't use, and the spike can't run unreleased RubyLLM. So
+`chat_claim_test` asks two questions on 2.1.1, with today's code (`Chat`, `AssistantResponseJob`,
+`Assistant::Builtin`, the responder and the real `create_transaction` tool) and a fake provider
+that asks for one `create_transaction` (no `external_id`, so not idempotent) and then answers.
+Two jobs run at once on two threads, as on two Sidekiq threads or workers.
+
+`Ai::Spike::ChatClaim` (31 lines) is Sure's own version: claim the chat in `Chat#ask_assistant`
+with a conditional update; renew it before each tool run and each responder event, raising
+`Lost` if another turn took it over; release it at the end. A job that finds the chat claimed
+drops its bubble if the message already has an answer coming (a duplicate) and otherwise
+re-enqueues itself 5 s later.
+
+| Case | Today | With the claim |
+|---|---|---|
+| Retry pressed again after the first | Nothing: `retry_last_message!` acts only when the user's message is the chat's last, and the first Retry's bubble now is | — |
+| Two Retry requests at the same moment (both pass that check) | Two turns, two answers, `create_transaction` ran twice: two coffees | One turn, one answer, one coffee; the other job dropped its bubble |
+| A second message while a turn runs | A second turn at once; both turns sent the model the same history (both messages, no answer) | The second waits: re-enqueued, its bubble pending until then |
+| A turn whose claim lapsed mid-call (worker hung), another took over | — | One coffee: the stale turn's renewal before its tool run failed, and it stopped |
+| The same, without renewing before the tool run | — | Two coffees: the stale turn wrote, then stopped at its next renewal |
+| A chat waiting at the gate longer than the claim (1 s claim, 2 s wait, no interrupt) | — | A second turn took the claim and answered; the waiting turn's model call was wasted, and its renewal before the tool run stopped it |
+
+- **Nothing in the code stops a second turn on one chat.** The form disables Send only when the
+  text is empty, `MessagesController#create` saves and enqueues, and neither the job nor
+  `Chat#ask_assistant` checks for a running turn. The double Retry needs two requests within the
+  same moment; a second message mid-turn needs nothing unusual.
+- **Renewing before every tool run is what stops a stale write**, not the claim itself. RubyLLM
+  2.2 claims each tool call for the same reason.
+- **A replaced turn must stop quietly.** `Assistant::Builtin#respond_to` rescues every error into
+  the chat's error, so the first version showed the user an error although the other turn had
+  answered; one rescue clause for `Lost` fixes it (the test does it in `Chat#add_error`).
+- **Renewals have to come more often than the claim lapses.** In one of five full-suite runs of
+  the first version of the gate test, with a 1-second claim on a busy CPU, more than a second
+  passed between two of a turn's renewals, a second turn took the chat in the gap, and both wrote
+  (two coffees). The test now holds the gate until the other turn is done. A ten-minute claim
+  renewed at every tool run and event leaves a wide margin; a single non-streamed call longer
+  than the claim wouldn't.
+- **The claim has to outlast the gate's wait.** A chat that waits longer than its claim lets a
+  second turn in. With §11's interrupt a chat waits about 0.1 s, and the `ai_chat` capsule runs
+  one turn at a time, so a ten-minute claim covers it; a claim that renewed while waiting would
+  remove the question.
+- **What a message sent mid-turn should do is a product decision:** wait for the turn (as here),
+  be refused, or interrupt the turn and start again with both messages.
+- **Not tested:** the watchdog's interplay with claims (a turn queued behind other AI work has no
+  claim yet, so the watchdog is still what resolves it), RubyLLM 2.2's own claims, and Sidekiq
+  processes rather than threads.
 
 ## Lines of code for bill setup
 
