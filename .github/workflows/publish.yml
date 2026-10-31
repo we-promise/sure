@@ -256,7 +256,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '-alpha.')
     needs: [merge]
 
-    timeout-minutes: 15
+    timeout-minutes: 30
     runs-on: 'ubuntu-24.04'
 
     environment:
@@ -272,76 +272,57 @@ jobs:
       deployments: write
 
     steps:
-      - name: Verify Render deployment configuration
+      - name: Check out release tooling
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Deploy and verify web and worker
         env:
-          DEMO_URL: ${{ vars.RENDER_DEMO_URL }}
-          WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WEB_DEPLOY_HOOK_URL }}
-          WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WORKER_DEPLOY_HOOK_URL }}
-        shell: bash
-        run: |
-          missing=()
-          [[ -n "${DEMO_URL}" ]] || missing+=(RENDER_DEMO_URL)
-          [[ -n "${WEB_DEPLOY_HOOK_URL}" ]] || missing+=(RENDER_DEMO_WEB_DEPLOY_HOOK_URL)
-          [[ -n "${WORKER_DEPLOY_HOOK_URL}" ]] || missing+=(RENDER_DEMO_WORKER_DEPLOY_HOOK_URL)
+          RELEASE_TAG: ${{ github.ref_name }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_RELEASE_CHANNEL: alpha
+          RENDER_WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WEB_DEPLOY_HOOK_URL }}
+          RENDER_WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WORKER_DEPLOY_HOOK_URL }}
+          RENDER_URL: ${{ vars.RENDER_DEMO_URL }}
+        run: python3 .github/deployment/deploy_render.py
 
-          if (( ${#missing[@]} > 0 )); then
-            printf 'Missing demo environment configuration: %s\n' "${missing[*]}" >&2
-            exit 1
-          fi
 
-      - name: Deploy web service
+  deploy_app:
+    name: Deploy stable to Render sure-app
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    needs: [merge]
+
+    timeout-minutes: 30
+    runs-on: 'ubuntu-24.04'
+
+    environment:
+      name: stable
+      url: https://sure-web-6y53.onrender.com
+
+    concurrency:
+      group: render-sure-app-stable
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Check out release tooling
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Deploy and verify web and worker
         env:
-          WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WEB_DEPLOY_HOOK_URL }}
-        shell: bash
-        run: |
-          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${GITHUB_REF_NAME#v}"
-          curl --fail-with-body --silent --show-error \
-            --get \
-            --data-urlencode "imgURL=${image}" \
-            "${WEB_DEPLOY_HOOK_URL}"
-
-      - name: Wait for web service
-        env:
-          DEMO_URL: ${{ vars.RENDER_DEMO_URL }}
-        shell: bash
-        run: |
-          demo_url="${DEMO_URL%/}"
-
-          # Render deploy hooks are asynchronous. Give the deployment time to
-          # start before polling the public health endpoint.
-          sleep 60
-
-          for attempt in {1..24}; do
-            if curl --fail --silent --show-error --max-time 15 "${demo_url}/up" > /dev/null; then
-              echo "Demo web service is healthy."
-              exit 0
-            fi
-
-            echo "Health check attempt ${attempt}/24 failed; retrying in 15 seconds."
-            sleep 15
-          done
-
-          echo "Demo web service did not become healthy in time." >&2
-          exit 1
-
-      - name: Smoke test sign-in page
-        env:
-          DEMO_URL: ${{ vars.RENDER_DEMO_URL }}
-        shell: bash
-        run: |
-          curl --fail --location --silent --show-error --max-time 30 \
-            "${DEMO_URL%/}/sessions/new" > /dev/null
-
-      - name: Deploy worker
-        env:
-          WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WORKER_DEPLOY_HOOK_URL }}
-        shell: bash
-        run: |
-          image="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${GITHUB_REF_NAME#v}"
-          curl --fail-with-body --silent --show-error \
-            --get \
-            --data-urlencode "imgURL=${image}" \
-            "${WORKER_DEPLOY_HOOK_URL}"
+          RELEASE_TAG: ${{ github.ref_name }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_RELEASE_CHANNEL: stable
+          RENDER_WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WEB_DEPLOY_HOOK_URL }}
+          RENDER_WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WORKER_DEPLOY_HOOK_URL }}
+          RENDER_URL: https://sure-web-6y53.onrender.com
+        run: python3 .github/deployment/deploy_render.py
 
 
   deploy_app:
