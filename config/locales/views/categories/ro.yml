@@ -21,8 +21,6 @@ ro:
       categories_incomes: Categorii de venituri
       empty: Nicio categorie găsită
       new: Categorie nouă
-    menu:
-      loading: Se încarcă...
     new:
       new_category: Categorie nouă
     update:
