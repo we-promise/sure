@@ -149,6 +149,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
 
     %w[
+      uri_base_local_help
+      model_required_help
       model_function_calling_help
       model_function_calling_link
       timeout_heading
@@ -161,6 +163,41 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       ai_health_probe_timeout_help
     ].each do |key|
       assert I18n.exists?("settings.hostings.openai_settings.#{key}", :de, fallback: false)
+    end
+  end
+
+  # A custom base URL needs a model, and the controller refuses one without
+  # it, so the form says so rather than leaving "(Optional)" to mislead. It
+  # also names both Ollama endpoints the hosting docs describe: localhost for
+  # a bare-metal install, and the Compose service name, because localhost
+  # inside the Sure container is not the Ollama container.
+  test "the OpenAI settings explain a local model and when the model is required" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      assert_includes response.body, I18n.t("settings.hostings.openai_settings.uri_base_local_help")
+      assert_includes response.body, I18n.t("settings.hostings.openai_settings.model_required_help")
+      assert_includes I18n.t("settings.hostings.openai_settings.uri_base_local_help"), "http://localhost:11434/v1"
+      assert_includes I18n.t("settings.hostings.openai_settings.uri_base_local_help"), "http://ollama:11434/v1"
+
+      # Every locale that translates this form translates both lines, so none
+      # falls back to English for them while the rest of the panel is local.
+      translated = I18n.available_locales.select do |locale|
+        I18n.exists?("settings.hostings.openai_settings", locale, fallback: false)
+      end
+      assert_operator translated.size, :>, 1, "no translated locale was checked"
+
+      translated.each do |locale|
+        %w[uri_base_local_help model_required_help].each do |key|
+          assert I18n.exists?("settings.hostings.openai_settings.#{key}", locale, fallback: false),
+            "#{locale} has an openai_settings block but no #{key}"
+        end
+
+        help = I18n.t("settings.hostings.openai_settings.uri_base_local_help", locale: locale)
+        assert_includes help, "http://localhost:11434/v1", "#{locale} help lost the bare-metal address"
+        assert_includes help, "http://ollama:11434/v1", "#{locale} help lacks the Docker Compose address"
+      end
     end
   end
 
