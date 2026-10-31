@@ -90,6 +90,82 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
       "the preview-gated bill link must not render for a user without the flag"
   end
 
+  test "create rule link is prefilled with the merchant name and merchant id when a merchant is set" do
+    entry = create_transaction(account: accounts(:depository), name: "Payee String", merchant: merchants(:netflix))
+
+    get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:netflix).name, merchant_id: merchants(:netflix).id)
+  end
+
+  test "create rule link is refreshed after an update that changes the merchant" do
+    entry = create_transaction(account: accounts(:depository), name: "Payee String", merchant: merchants(:netflix))
+
+    patch transaction_url(entry), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: entry.entryable_id, merchant_id: merchants(:amazon).id } }
+    }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[target='#{dom_id(entry, :create_rule)}']" do
+      assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:amazon).name, merchant_id: merchants(:amazon).id)
+      assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:netflix).name, merchant_id: merchants(:netflix).id), false
+    end
+  end
+
+  test "create rule link is repopulated when an update fails validation" do
+    entry = create_transaction(account: accounts(:depository), name: "Payee String", merchant: merchants(:netflix))
+
+    patch transaction_url(entry), params: { entry: { name: "" } }, as: :turbo_stream
+
+    assert_response :unprocessable_entity
+    assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: merchants(:netflix).name, merchant_id: merchants(:netflix).id)
+  end
+
+  test "create rule link falls back to the transaction name without a merchant" do
+    entry = create_transaction(account: accounts(:depository), name: "Payee String")
+
+    get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "a[href=?]", new_rule_path(resource_type: "transaction", name: "Payee String")
+  end
+
+  test "create rule section is localized in German" do
+    entry = create_transaction(account: accounts(:depository), name: "Payee String")
+
+    get transaction_url(entry, locale: "de"), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "##{dom_id(entry, :create_rule)}" do
+      assert_select "h4", text: "Regel erstellen"
+      assert_select "p", text: "Künftige Transaktionen wie diese automatisch bearbeiten."
+      assert_select "a", text: /Regel erstellen/
+    end
+  end
+
+  test "create rule link is hidden for split child transactions" do
+    parent = create_transaction(account: accounts(:depository), amount: 100)
+    parent.split!([ { name: "Part 1", amount: 60, category_id: nil }, { name: "Part 2", amount: 40, category_id: nil } ])
+    child = parent.child_entries.first
+
+    get transaction_url(child), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "a[href^='#{rules_path}']", false
+  end
+
+  test "create rule link is hidden without edit permission" do
+    # credit_card is shared read-only with family_member, see fixtures/account_shares.yml
+    entry = create_transaction(account: accounts(:credit_card), name: "Payee String", merchant: merchants(:netflix))
+
+    sign_in users(:family_member)
+    get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "a[href^='#{rules_path}']", false
+  end
+
   test "index points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: accounts(:depository), name: "Hint outflow", amount: 500, date: Date.current)
     inflow = create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
