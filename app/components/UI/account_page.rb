@@ -2,7 +2,7 @@ class UI::AccountPage < ApplicationComponent
   attr_reader :account, :chart_view, :chart_period, :loan_chart, :as_of, :statement_coverage, :statements,
               :reconciliation_statuses, :can_manage_statements
 
-  renders_one :activity_feed, ->(feed_data:, pagy:, search:) { UI::Account::ActivityFeed.new(feed_data: feed_data, pagy: pagy, search: search) }
+  renders_one :activity_feed, ->(feed_data:, pagy:, q:) { UI::Account::ActivityFeed.new(feed_data: feed_data, pagy: pagy, q: q) }
 
   # `loan_chart` is the Loan::PayoffChart payload the controller built for a
   # loan account, nil for every other type and for a loan with no schedule.
@@ -57,6 +57,8 @@ class UI::AccountPage < ApplicationComponent
       [ :activity, :holdings ]
     when "Loan"
       account.loan.amortizable? ? [ :activity, :overview, :schedule ] : [ :activity, :overview ]
+    when "CreditCard"
+      [ :activity, :overview ]
     when "Property", "Vehicle"
       [ :activity, :overview ]
     else
@@ -95,14 +97,14 @@ class UI::AccountPage < ApplicationComponent
       activity_feed
     when :overview
       # Accountable is responsible for implementing the partial in the correct
-      # folder. The loan's tab shows date-sensitive figures and takes the
-      # page's one reference date, like its Schedule tab.
+      # folder. These tabs show date-sensitive figures and take the page's one
+      # reference date, like the Schedule tab does.
       locals = { account: account }
-      locals[:as_of] = as_of if account.accountable_type == "Loan"
-      render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", **locals
+      locals[:as_of] = as_of if %w[Loan CreditCard].include?(account.accountable_type)
+      render "#{accountable_view_folder}/tabs/#{tab}", **locals
     when :holdings
       # Accountable is responsible for implementing the partial in the correct folder
-      render "#{account.accountable_type.downcase.pluralize}/tabs/#{tab}", account: account
+      render "#{accountable_view_folder}/tabs/#{tab}", account: account
     when :schedule
       render "loans/tabs/schedule", account: account, as_of: as_of, projection: loan_projection
     when :statements
@@ -133,4 +135,15 @@ class UI::AccountPage < ApplicationComponent
       can_manage_statements: can_manage_statements
     }
   end
+
+  private
+    # The app/views folder an accountable's own tab partials live in.
+    #
+    # Not `accountable_type.downcase.pluralize`, which reads a two-word class
+    # name as one word: "CreditCard" became `creditcards/tabs/overview` and
+    # there is no such folder. The accountable names its own folder, and a
+    # multi-word one is underscored.
+    def accountable_view_folder
+      account.accountable_type.underscore.pluralize
+    end
 end
