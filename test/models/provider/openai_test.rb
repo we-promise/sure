@@ -1028,6 +1028,72 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_not_includes third_request.to_json, "\"round\":", "the round tag must not leak into the request"
   end
 
+  test "OpenRouter chat records provider cost and tokens for an unknown model with a streamer" do
+    provider = Provider::Openai.new("test-token", uri_base: "https://openrouter.ai/api/v1", model: "deepseek/example-model")
+    usage = { "prompt_tokens" => 10, "completion_tokens" => 5, "total_tokens" => 15, "cost" => 0.012345 }
+    provider.send(:client).expects(:chat).returns(
+      "id" => "chatcmpl-synthetic", "choices" => [ { "message" => { "role" => "assistant", "content" => "Hello" } } ],
+      "usage" => usage
+    )
+    chunks = []
+    family = families(:dylan_family)
+
+    assert_difference -> { family.llm_usages.count }, 1 do
+      response = provider.chat_response("Hello", model: "deepseek/example-model", family: family, streamer: ->(chunk) { chunks << chunk })
+      assert response.success?
+    end
+
+    recorded = family.llm_usages.order(:created_at).last
+    assert_equal BigDecimal("0.012345"), recorded.estimated_cost
+    assert_equal [ 10, 5, 15 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
+    assert_equal usage, chunks.last.usage
+  end
+
+  test "OpenRouter chat falls back to token estimates when reported cost is absent or invalid" do
+    provider = Provider::Openai.new("test-token", uri_base: "https://openrouter.ai/api/v1", model: "gpt-4.1")
+    family = families(:dylan_family)
+    expected = LlmUsage.calculate_cost(model: "gpt-4.1", prompt_tokens: 1000, completion_tokens: 100)
+
+    [ {}, { "cost" => -1 }, { "cost" => "NaN" }, { "cost" => "not a cost" } ].each do |extra_usage|
+      usage = { "prompt_tokens" => 1000, "completion_tokens" => 100, "total_tokens" => 1100 }.merge(extra_usage)
+      provider.send(:client).expects(:chat).returns(
+        "id" => "chatcmpl-synthetic", "choices" => [ { "message" => { "role" => "assistant", "content" => "Hello" } } ],
+        "usage" => usage
+      )
+
+      assert_difference -> { family.llm_usages.count }, 1 do
+        assert provider.chat_response("Hello", model: "gpt-4.1", family: family).success?
+      end
+
+      recorded = family.llm_usages.order(:created_at).last
+      assert_equal expected, recorded.estimated_cost
+      assert_equal [ 1000, 100, 1100 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
+    end
+  end
+
+  test "OpenRouter Responses stream forwards reported zero cost to the ledger" do
+    provider = Provider::Openai.new("test-token", uri_base: "https://openrouter.ai/api/v1", model: "deepseek/example-model")
+    provider.stubs(:supports_responses_endpoint?).returns(true)
+    usage = { "input_tokens" => 10, "output_tokens" => 5, "total_tokens" => 15, "cost" => 0 }
+    provider.send(:client).responses.expects(:create).with do |parameters:|
+      parameters[:stream].call({
+        "type" => "response.completed",
+        "response" => { "id" => "resp-synthetic", "model" => "deepseek/example-model", "output" => [], "usage" => usage }
+      })
+      true
+    end.returns(nil)
+    family = families(:dylan_family)
+
+    assert_difference -> { family.llm_usages.count }, 1 do
+      response = provider.chat_response("Hello", model: "deepseek/example-model", family: family, streamer: ->(_) { })
+      assert response.success?
+    end
+
+    recorded = family.llm_usages.order(:created_at).last
+    assert_equal BigDecimal("0"), recorded.estimated_cost
+    assert_equal [ 10, 5, 15 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
+  end
+
   private
     # Verify the response budget at the provider-to-processor boundary.
     # @param limit [Integer, nil] expected explicit cap or omitted cap
