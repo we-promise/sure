@@ -4,13 +4,15 @@
   <div class="form-field <%= options[:container_class] %>">
     <div class="form-field__body">
         <%= form.label method, options[:label], class: "form-field__label", id: label_id if options[:label].present? %>
-        <%= form.hidden_field method,
-            value: @selected_value,
-            data: {
-              "form-dropdown-target": "input",
-              "auto-submit-target": "auto",
-              **(options.dig(:html_options, :data) || {})
-            } %>
+        <% unless disabled? %>
+          <%= form.hidden_field method,
+              value: @selected_value,
+              data: {
+                "form-dropdown-target": "input",
+                "auto-submit-target": "auto",
+                **(options.dig(:html_options, :data) || {})
+              } %>
+        <% end %>
         <%# `aria-expanded` reflects MENU open/closed state — managed by the
             select controller's openMenu/close. Init as "false"; previously
             this incorrectly mirrored whether a value was selected.
@@ -22,6 +24,7 @@
         <button type="button"
                 id="<%= trigger_id %>"
                 class="form-field__input w-full"
+                <%= "disabled" if disabled? %>
                 data-select-target="button"
                 data-action="click->select#toggle focus->select#handleButtonFocus"
                 aria-haspopup="listbox"
@@ -31,6 +34,11 @@
           <% if (short_label = short_label_for(selected_item)) %>
             <span class="sm:hidden"><%= short_label %></span>
             <span class="hidden sm:inline"><%= selected_item[:label] %></span>
+          <% elsif trigger_logo? %>
+            <span class="flex items-center gap-2 min-w-0">
+              <%= logo_markup(selected_item) %>
+              <span class="truncate"><%= selected_item[:label] %></span>
+            </span>
           <% else %>
             <%= selected_item&.dig(:label) || @placeholder %>
           <% end %>
@@ -88,20 +96,7 @@
             <% end %>
 
           <% when :logo %>
-            <% unless item[:value].nil? %>
-              <% if logo_for(item) %>
-                <%= image_tag logo_for(item),
-                      class: "w-6 h-6 rounded-full border border-secondary",
-                      loading: "lazy" %>
-              <% else %>
-                <%= render DS::FilledIcon.new(
-                      variant: :text,
-                      text: item[:label],
-                      size: "sm",
-                      rounded: true
-                    ) %>
-              <% end %>
-            <% end %>
+            <%= logo_markup(item) unless item[:value].nil? %>
             <%= item[:label] %>
 
           <% when :badge %>

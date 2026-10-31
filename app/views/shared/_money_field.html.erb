@@ -18,6 +18,7 @@
      data-money-field-separator-currency-value="<%= currency.iso_code %>"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>
+     <% if options[:currency_source].present? %> data-money-field-currency-source-value="<%= options[:currency_source] %>" data-action="change@document->money-field#followCurrencySource"<% end %>
      data-money-field-min-value="<%= amount_min %>"
      data-money-field-max-value="<%= amount_max %>"
      data-money-field-invalid-message-value="<%= t(".invalid_amount") %>"

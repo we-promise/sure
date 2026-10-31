@@ -33,8 +33,6 @@ ca:
       empty: No s'han trobat categories
       new: Nova categoria
       merge: Fusiona categories
-    menu:
-      loading: Carregant...
     new:
       new_category: Nova categoria
     update:

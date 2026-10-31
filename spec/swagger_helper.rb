@@ -936,9 +936,14 @@ RSpec.configure do |config|
           },
           Transaction: {
             type: :object,
-            required: %w[id date amount amount_decimal currency name classification kind excluded split_parent account tags created_at updated_at],
+            required: %w[id entry_id date amount amount_decimal currency name classification kind excluded split_parent account tags created_at updated_at],
             properties: {
               id: { type: :string, format: :uuid },
+              entry_id: {
+                type: :string,
+                format: :uuid,
+                description: 'Id of the underlying entry. Web routes for a single transaction, such as /transactions/{entry_id}, use this id rather than id.'
+              },
               date: { type: :string, format: :date },
               amount: { type: :string, description: 'Formatted amount, rounded to the currency display precision' },
               amount_decimal: {
@@ -1830,7 +1835,7 @@ RSpec.configure do |config|
             type: :object, required: %w[basis income spending net_savings nodes links],
             description: 'Refunds net within each category. Parent direct amounts exclude child totals before partitioning by direction. Graph income/spending may differ from gross monthly totals; net savings agrees. Decimal strings retain FX precision. Empty flow has empty nodes and links.',
             properties: {
-              basis: { type: :string, enum: %w[net_by_category net_by_account], description: 'net_by_account (group_by=account) replaces the Cash Flow node with one account node per account, each balanced by Surplus or Deficit' },
+              basis: { type: :string, enum: %w[net_by_category net_by_account], description: 'net_by_account (group_by=account) replaces the Cash Flow node with one account node per account, each balanced by Surplus or Deficit. Where an account in surplus paid one in deficit by confirmed transfer in the period, that amount is a link between the two account nodes instead' },
               income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
               invested: { type: :string, description: "Money moved into investment accounts, shown as its own node. Zero unless the family does not count investing as spending" },
               nodes: { type: :array, items: {
