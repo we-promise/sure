@@ -2346,6 +2346,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_200000) do
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "currency", default: "USD", null: false
+    t.boolean "currency_retry_generated", default: false, null: false
+    t.boolean "currency_retry_required", default: false, null: false
     t.date "date", null: false
     t.decimal "price", precision: 19, scale: 4, null: false
     t.boolean "provisional", default: false, null: false

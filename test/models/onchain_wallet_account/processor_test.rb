@@ -217,6 +217,33 @@ class OnchainWalletAccount::ProcessorTest < ActiveSupport::TestCase
     OnchainWalletAccount::Processor.new(@onchain_account).process
   end
 
+  test "a legacy invalid currency price does not prevent backfill" do
+    date = 5.days.ago.to_date
+    bad_price = price_asset_at(date, 50)
+    bad_price.update_column(:currency, "")
+    price_asset_at(Date.current, 60)
+    store_movements(fake_movement(external_id: "tx1", amount: "1", timestamp: date))
+    Security.any_instance.stubs(:price_data_provider).returns(Provider::BinancePublic.new)
+    Security.any_instance.expects(:import_provider_prices)
+            .with(start_date: date, end_date: Date.current).once.returns([ 0, nil ])
+    ExchangeRate.expects(:find_or_fetch_rate).never
+
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    entry = @account.entries.find_by!(external_id: "onchain_#{@onchain_account.id}_tx1")
+    assert_equal "Transaction", entry.entryable_type
+  end
+
+  test "valuation uses an earlier valid price instead of a newer invalid one" do
+    price_asset_at(1.day.ago.to_date, 100)
+    bad_price = price_asset_at(Date.current, 999)
+    bad_price.update_column(:currency, "")
+
+    OnchainWalletAccount::Processor.new(@onchain_account).process
+
+    assert_equal 200, @account.reload.balance
+  end
+
   test "does not reach for prices at all when no crypto price provider is enabled" do
     store_movements(fake_movement(external_id: "tx1", amount: "1", timestamp: 5.days.ago.to_date))
     Security.any_instance.expects(:import_provider_prices).never
