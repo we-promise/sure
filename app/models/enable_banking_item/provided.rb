@@ -23,8 +23,17 @@ module EnableBankingItem::Provided
     # Only attempt to satisfy the headers if the only required one is Psu-Ip-Address
     # (the one we can populate from stored data)
     satisfiable = required.all? { |h| h == "psu-ip-address" }
-    return {} unless satisfiable && last_psu_ip.present?
+    return {} unless satisfiable && public_psu_ip.present?
 
-    { "Psu-Ip-Address" => last_psu_ip }
+    { "Psu-Ip-Address" => public_psu_ip }
   end
+
+  private
+    # last_psu_ip is the browser's address as Rails saw it. On a self-hosted
+    # instance reached over a LAN or VPN that is a private or other
+    # special-purpose address, which banks reject as an invalid PSU IP, so only
+    # a public one is sent.
+    def public_psu_ip
+      last_psu_ip if NetworkAddress.public?(last_psu_ip)
+    end
 end

@@ -1,6 +1,12 @@
 ---
 zh-CN:
   goals:
+    currency_warning:
+      title: 部分余额未计入
+      body:
+        one: "尚无 %{from} → %{to} 的可用汇率，因此 %{from} 余额未计入此总额。"
+        other: "尚无 %{from} 到 %{to} 的可用汇率，因此这些余额未计入此总额。"
+      settings_link: 汇率提供商设置
     color_picker:
       trigger_label: 选择颜色和图标
       color_heading: 颜色
@@ -57,6 +63,7 @@ zh-CN:
         empty_with_both: 此筛选条件下没有与“%{query}”匹配的目标。
         clear_search: 清除搜索
         show_all: 显示全部
+      chips_aria: 按状态筛选目标
       chips:
         all: 全部
         on_track: 进度正常
@@ -94,8 +101,36 @@ zh-CN:
     reopen:
       success: 目标已重新开启。
       invalid_transition: 目标当前状态无法重新开启。
+    consume:
+      title: 记录支出
+      subtitle: "%{goal}"
+      amount_label: 你使用了多少？
+      amount_hint: 目前有 %{saved} 支持此目标。
+      account_label: 从哪个账户支出？
+      earmark_note: 你记录的金额将不再为此目标预留，因此该账户上的其他目标将恢复其可用份额。
+      goal_currency_hint: "请输入 %{currency} 金额。对于其他货币的账户，在从该账户预留额扣除前将按今日汇率折算。"
+      cancel: 取消
+      submit: 记录
+      success: 已记录使用 %{amount}。
+      errors:
+        missing_exchange_rate: 该账户货币尚无可用汇率，因此无法记录此支出。
+        non_positive: 请输入大于零的金额。
+        maintained: 储备金是提取和补充的，而不是消耗支出的——其缺口已在目标上显示。
+        exceeds_target: 这超过了此目标计划储蓄的总额。
+        account_required: 此目标由多个账户资助——请指明资金来自哪个账户。
+        account_not_linked: 该账户未为此目标提供资金。
+        not_active: 此目标不再处于活跃状态，因此无法记录支出。
+        exceeds_earmark: 这超过了该目标在此账户上的预留金额。
+        transaction_already_claimed: 该笔支出已被归属。
+        transaction_not_found: 该笔支出已无法归属。
+        no_linked_account: 此目标已无关联的资金账户。
+    unattributed_outflows:
+      heading: 资金离开了这些账户
+      body: 如果其中有任何一笔用于 %{goal}，请指出，它将不再计入目标余额。
+      attribute: 就是这笔
     show:
       edit: 编辑
+      consume: 我使用了其中一些资金
       pause: 暂停
       resume: 恢复
       complete: 标记完成
@@ -103,12 +138,17 @@ zh-CN:
       unarchive: 恢复
       reopen: 重新开启目标
       delete: 删除
+      reserve_shortfall:
+        heading: 储备低于目标余额
+        body: "你当前持有 %{target} 中的 %{saved}。请存入 %{missing} 以恢复至目标余额。"
       record_pledge_cta: 记录承诺
       pledge_just_transferred: 记录你完成的转账
       pledge_just_saved: 记录你留出的资金
       funding_accounts_heading: 资金账户
       funding_accounts:
         earmarked_of: 已预留 %{earmarked}（共 %{balance}）
+        converted: "≈ %{amount}"
+        rate_unavailable: 暂无汇率，因此该账户未计入。
         empty:
           heading: 尚未关联资金账户
           body: 编辑目标以关联用于储蓄的存款账户。
@@ -116,6 +156,7 @@ zh-CN:
       funding_last_30d: 最近 30 天
       funding_last_90d: 最近 90 天
       status_callout:
+        depleted: "比目标余额少 %{amount} — 请补充以恢复储备"
         behind: 每月多存 %{amount} 以赶上进度
         behind_covered: 待确认承诺可以补足差距
         on_track: 预计在 %{date} 左右达成目标
@@ -138,17 +179,20 @@ zh-CN:
         target_by: 到 %{date} 达到 %{amount}
         target_by_past: 目标 %{amount} · 原定 %{date} 到期
       ring:
+        including_used: "包括已使用的 %{amount}"
         saved: 已存
         of: 共 %{target}
         to_go: 还差 %{amount}
         of_target: 目标进度
         market_value: 市值 %{amount}
         aria_label: 目标已完成 %{percent}%。已存 %{target} 中的 %{amount}。
+        aria_label_with_used: "目标已完成 %{percent}%。%{target} 中的 %{amount}，包括已使用的 %{used}。"
       projection:
         heading: 预测
         legend_saved: 已存
         legend_projection: 预测
         legend_required: 所需
+        reserve: "储备金维持目标余额，因此没有可预测的完成日期。"
         reached: 你已达到目标，无需预测。
         no_target_date: 尚未设置目标日期。设置后可预测完成时间。
         no_pace: 还没有存入资金。向关联账户存钱后即可开始预测。
@@ -182,7 +226,13 @@ zh-CN:
         body: 恢复后可继续投入，也可以保留为记录。
         restore_cta: 恢复目标
       celebration:
+        heading_reserve: 储备完好
+        body_reserve: "你的储备金已达到目标余额，%{target} 中的 %{saved}。无需操作——资金保持预留状态。"
         heading: 目标已达成。做得不错。
+        body_reached: "你已达到目标，已存 %{saved}（目标为 %{target}）。该目标尚未关闭——资金仍为其预留。"
+        close_cta: 关闭此目标
+        close_hint: 关闭会为同一账户上的其他目标释放预留资金。一旦实际用完这笔钱即可关闭。
+        frozen: "于 %{date} 达成 · %{amount}"
         body: 目标以 %{saved}/%{target} 关闭。可以保留记录，或现在归档。
         archive_cta: 归档目标
       inactive:
@@ -204,6 +254,8 @@ zh-CN:
       completed: 已完成
       archived: 已归档
     status:
+      funded: 储备完好
+      depleted: 需要补充
       on_track: 进度正常
       behind: 进度落后
       reached: 已达成
@@ -219,6 +271,8 @@ zh-CN:
       no_depository_accounts: 创建目标前至少需要一个存款账户（支票、储蓄、HSA、CD、货币市场账户）。
       add_account: 添加账户
     goal_card:
+      including_used: "包括已使用的 %{amount}"
+      partial_total: 部分余额未计入（暂无可用汇率）
       no_accounts: 没有关联账户
       n_accounts: "%{first} +%{count}"
       left: 剩余
@@ -236,6 +290,8 @@ zh-CN:
       pace_no_target: 平均 %{avg}/月
       footer_paused: 已暂停
       footer_archived: 已归档
+      footer_reserve_intact: 储备完好
+      footer_reserve_short: "需补充 %{amount}"
       footer_reached: 目标已达成
       footer_catch_up: 每月存入 %{amount} 以赶上进度
       footer_no_deadline: 开放
@@ -249,6 +305,16 @@ zh-CN:
         one: 上次承诺 1 天前已匹配
         other: 上次承诺 %{count} 天前已匹配
     form:
+      target_modes:
+        fixed: 固定金额
+        months_of_expenses: 支出月数
+      kinds:
+        one_off:
+          hint: 为某事存钱，花掉后将其关闭。
+          label: 一次性目标
+        maintained:
+          hint: 持续保持的余额，如应急基金。永不关闭。
+          label: 维持的储备金
       create: 创建目标
       save: 保存更改
       suggested_with_date: 在 {accounts} 中每月存入 {monthly} 以按时达成目标。
@@ -257,10 +323,22 @@ zh-CN:
         name_required: 请为目标命名。
         amount_required: 请设置大于 0 的目标。
         accounts_required: 请选择至少一个资金账户。
+      earmark:
+        headroom: "此账户还剩 {left} 可供预留。"
+        converted: "此预留金额 ≈ {amount}。"
+        prorata: "你在该账户上的目标总计 {total}，余额为 {balance} — 它们将按比例推进。"
+        whole_balance: 此账户将资助除其他预留外的剩余所有资金。
+        whole_balance_alone: "此目标将使用该账户的全部余额。"
       fields:
+        target_mode: 目标余额设置方式
+        target_months: 支出月数
+        target_months_hint: 每月 1 日根据你的月支出中位数重新计算。
         name: 名称
         name_placeholder: 应急基金、购房首付…
         target_amount: 目标金额
+        target_balance: "目标余额"
+        target_balance_pending: "保存时计算"
+        target_balance_hint: "根据上述月份的月度支出中位数得出。每月刷新。"
         target_date: 目标日期
         color: 颜色
         notes: 备注（可选）
@@ -270,6 +348,7 @@ zh-CN:
         whole_balance: "留空即全部余额"
         earmark_for: 为「%{account}」预留的金额
         earmark_hint: 留空则使用该账户的全部余额。
+        currency_conversion_hint: "账户可以使用不同货币。总额将转换为 %{currency}；账户预留仍以各账户的原货币保留。"
       subtypes:
         checking: 支票账户
         savings: 储蓄账户

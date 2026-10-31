@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 json.id transaction.id
+# Web routes for a single transaction (/transactions/:id) take the entry id,
+# not the transaction id, so expose it for clients that link back into the app.
+json.entry_id transaction.entry.id
 json.date transaction.entry.date
 json.amount transaction.entry.amount_money.format
 
@@ -14,6 +17,14 @@ amount_cents = (amount_money.amount * conversion_factor).round(0).to_i.abs
 json.amount_cents amount_cents
 json.signed_amount_cents(transaction.entry.classification == "income" ? amount_cents : -amount_cents)
 
+# `amount` and `amount_cents` are both rounded to the currency's display
+# precision, but entries store decimal(19,4). Expose the stored value
+# unrounded, as a locale-independent string in the entry's own sign
+# convention (positive = outflow, negative = inflow), the same field split
+# show returns, so a client can build a split that sums exactly. "F" keeps
+# it fixed-point (12.3456, never 0.123456e2).
+json.amount_decimal transaction.entry.amount.to_s("F")
+
 json.currency transaction.entry.currency
 json.name transaction.entry.name
 json.notes transaction.entry.notes
@@ -21,6 +32,23 @@ json.external_id transaction.entry.external_id
 json.source transaction.entry.source
 json.user_modified transaction.entry.user_modified
 json.classification transaction.entry.classification
+
+# How budgets and reports treat the row: loan_payment counts as an expense
+# whatever the amount's sign; investment_contribution does too unless the
+# family turned off investment_contributions_as_spending, in which case it is
+# reported as invested and left out (Family#analytics_excluded_kinds); and
+# Transaction::BUDGET_EXCLUDED_KINDS are left out entirely.
+json.kind transaction.kind
+
+# Excluded entries are left out of budget and report totals, and splitting
+# marks the parent excluded. A split parent's amount is carried by its
+# children, so a client summing a list should skip the parent. entries.excluded
+# is nullable, so the predicate keeps the field a boolean. Callers that render
+# many rows pass split_parent_ids (the set of entry ids with children) so
+# split_parent costs no query per row; a single row falls back to an EXISTS.
+json.excluded transaction.entry.excluded?
+split_parent_ids = local_assigns[:split_parent_ids]
+json.split_parent split_parent_ids ? split_parent_ids.include?(transaction.entry.id) : transaction.entry.split_parent?
 
 # Account information
 json.account do

@@ -5,7 +5,7 @@ class CashFlowSortTest < ApplicationSystemTestCase
 
   setup do
     sign_in @user = users(:family_admin)
-    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true, "cashflow_preview_enabled" => true))
     @month = Date.current.beginning_of_month
     account = @user.family.accounts.first
     { "Sort Small" => 30, "Sort Large" => 3000, "Sort Medium" => 300 }.each do |name, amount|

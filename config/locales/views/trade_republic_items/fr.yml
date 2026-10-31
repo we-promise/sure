@@ -40,6 +40,7 @@ fr:
       never_synced: Jamais synchronisé.
       syncing: "Synchronisation en cours"
       requires_update: "Réauthentification requise"
+      session_expires_in: "La connexion expire dans %{time} (%{at})."
       error: "Erreur"
       synced: "Synchronisé il y a %{time}. %{summary}."
       setup_accounts: "Configurer les comptes"
@@ -104,6 +105,7 @@ fr:
         account_type_investment: "Investment portfolio"
         account_type_cash: "Cash account"
         title: Compte disponible
+        account_type_crypto: Compte crypto
       buttons:
         back_to_settings: Retour aux paramètres
         create_selected_accounts: Créer les comptes sélectionnés

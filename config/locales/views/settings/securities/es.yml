@@ -18,6 +18,8 @@ es:
         webauthn_empty: Aún no hay passkeys ni llaves de seguridad registradas.
         webauthn_last_used: Último uso hace %{time_ago}
         webauthn_name_label: Nombre de la llave
+        webauthn_code_label: "Código del autenticador o de respaldo"
+        webauthn_code_placeholder: "Código actual del autenticador o un código de respaldo sin usar"
         webauthn_name_placeholder: Touch ID del MacBook, YubiKey, etc.
         webauthn_remove: Eliminar
         webauthn_remove_confirm: ¿Seguro que quieres eliminar esta passkey o llave de seguridad?
@@ -25,6 +27,9 @@ es:
         webauthn_title: Passkeys y llaves de seguridad
         webauthn_unsupported: Este navegador no admite passkeys ni llaves de seguridad.
   webauthn_credentials:
+    code_already_used: "Ese código ya se ha usado. Espera al siguiente código de tu app de autenticación."
+    invalid_code: "Ese código no es válido. Introduce un código actual de tu app de autenticación o un código de respaldo sin usar."
+    rate_limited: "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
     default_name: Llave de seguridad
     failure: No se pudo guardar esa passkey o llave de seguridad. Inténtalo de nuevo.
     mfa_required: Activa la autenticación de dos factores antes de añadir una passkey o llave de seguridad.

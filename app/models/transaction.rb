@@ -218,6 +218,33 @@ class Transaction < ApplicationRecord
     "AND #{not_pending_sql(table_alias, providers: providers)}"
   end
 
+  # Transactions whose category is still the one an automatic source (e.g.
+  # "ai", "bayes") set.
+  scope :category_from, ->(*sources, since: nil, metadata: nil) { where(category_from_sql(*sources, since:, metadata:)) }
+
+  def self.category_from_sql(*sources, **options)
+    enriched_from_sql("category_id", *sources, **options)
+  end
+
+  # Transactions whose attribute (category_id, merchant_id; internal callers
+  # only) is still the value an automatic source set: that source's
+  # enrichment holds the current value. since: only enrichments written
+  # after it; metadata: only those whose metadata contains it.
+  def self.enriched_from_sql(attribute, *sources, since: nil, metadata: nil)
+    sql = +<<~SQL.squish
+      EXISTS (
+        SELECT 1 FROM data_enrichments de
+        WHERE de.enrichable_type = 'Transaction'
+          AND de.enrichable_id = transactions.id
+          AND de.attribute_name = :attribute
+          AND de.source IN (:sources)
+          AND de.value = to_jsonb(transactions.#{attribute}::text)
+    SQL
+    sql << " AND de.updated_at > :since" if since
+    sql << " AND de.metadata @> CAST(:metadata AS jsonb)" if metadata
+    sanitize_sql_array([ "#{sql})", { attribute: attribute, sources: sources.flatten.map(&:to_s), since: since, metadata: metadata&.to_json } ])
+  end
+
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(entry: :account).where(accounts: { family_id: family.id })
@@ -255,6 +282,64 @@ class Transaction < ApplicationRecord
       end
 
       updated_ids.size
+    end
+  end
+
+  # Minimum characters typed before searching past transactions for name suggestions.
+  MIN_LENGTH_FOR_NAME_SUGGESTION = 3
+
+  # Past transaction names resembling the given query, each paired with the category most
+  # commonly used for that exact name. Powers the "Libellé" autocomplete in the new
+  # transaction form — call on a family-scoped relation, e.g. `family.transactions.name_suggestions_for(query)`.
+  def self.name_suggestions_for(query, limit: 8)
+    sanitized_query = query.to_s.strip
+    return [] if sanitized_query.length < MIN_LENGTH_FOR_NAME_SUGGESTION
+
+    # distinct(false) cancels any DISTINCT inherited from the caller's scope (e.g.
+    # Account.accessible_by's left_joins(:account_shares).distinct) — Postgres rejects
+    # SELECT DISTINCT combined with an ORDER BY expression absent from the select list.
+    # Callers such as TransactionsController#name_suggestions merge in
+    # Account.accessible_by, whose left_joins(:account_shares) fans out to one row per
+    # share for accounts the current user owns (the owner predicate matches regardless of
+    # which share row it's paired with) — so COUNT(*) below would over-count transactions
+    # on any owned account shared with multiple family members. COUNT(DISTINCT
+    # transactions.id) counts each transaction once no matter how the caller's scope joins.
+    # Leading-wildcard ILIKE can't use index_entries_on_lower_name (a btree on
+    # lower(name), which only accelerates prefix/exact matches) and falls back
+    # to a scan — same tradeoff already accepted in EntrySearch#search and
+    # Entry.uncategorized_matching for the same reason. Revisit with a shared
+    # pg_trgm index across all three call sites if this becomes a bottleneck.
+    matching_names = with_entry
+      .distinct(false)
+      .where("entries.name ILIKE ?", "%#{sanitize_sql_like(sanitized_query)}%")
+      .group("entries.name")
+      .order(Arel.sql("COUNT(DISTINCT transactions.id) DESC"))
+      .limit(limit)
+      .pluck(Arel.sql("entries.name"))
+
+    name_suggestions_for_names(matching_names)
+  end
+
+  def self.name_suggestions_for_names(matching_names)
+    return [] if matching_names.empty?
+
+    # Winning (most-used) category_id per name, in one grouped query. Rows are ordered so
+    # that for each name, its highest-count category_id comes first — the `||=` below then
+    # keeps only that first (winning) row per name, avoiding a query per name.
+    category_id_by_name = {}
+    with_entry
+      .distinct(false)
+      .where(entries: { name: matching_names })
+      .where.not(category_id: nil)
+      .group("entries.name", :category_id)
+      .order(Arel.sql("entries.name ASC, COUNT(DISTINCT transactions.id) DESC"))
+      .pluck(Arel.sql("entries.name"), :category_id)
+      .each { |name, category_id| category_id_by_name[name] ||= category_id }
+
+    categories_by_id = Category.where(id: category_id_by_name.values.uniq).index_by(&:id)
+
+    matching_names.map do |name|
+      Transaction::NameSuggestion.new(name: name, category: categories_by_id[category_id_by_name[name]])
     end
   end
 
@@ -366,20 +451,6 @@ class Transaction < ApplicationRecord
     potential_posted_match_data.present? && !potential_duplicate_dismissed?
   end
 
-  # Manual recurring transactions are unique per (family, account, merchant/name, amount, currency)
-  # — see the partial unique indexes on recurring_transactions. Used to guard "mark as recurring"
-  # so the UI can disable the action ahead of time instead of failing after a POST.
-  def existing_manual_recurring_transaction
-    entry.account.family.recurring_transactions.find_by(
-      account_id: entry.account_id,
-      merchant_id: merchant_id,
-      name: merchant_id.present? ? nil : entry.name,
-      amount: entry.amount,
-      currency: entry.currency,
-      manual: true
-    )
-  end
-
   def potential_duplicate_entry
     return nil unless has_potential_duplicate?
     Entry.find_by(id: potential_posted_match_data["entry_id"])
@@ -455,6 +526,15 @@ class Transaction < ApplicationRecord
       # cannot race on reading/writing extra (e.g., the manual_merge array).
       posted_tx = posted_entry.entryable
       posted_tx.lock! if posted_tx.is_a?(Transaction)
+
+      # Moving the attachments bypasses validation, so refuse a merge that would
+      # leave the posted transaction over the limit instead of dropping files.
+      if posted_tx.is_a?(Transaction) && pending_entry.entryable.is_a?(Transaction) &&
+          attachment_count_after_merge(from: pending_entry.entryable, to: posted_tx) > MAX_ATTACHMENTS_PER_TRANSACTION
+        Rails.logger.info("merge_with_duplicate! rejected: merging pending entry #{pending_entry_id} would exceed #{MAX_ATTACHMENTS_PER_TRANSACTION} attachments")
+        raise ActiveRecord::Rollback
+      end
+
       if posted_tx.is_a?(Transaction)
         tx_attrs = {}
 
@@ -487,14 +567,26 @@ class Transaction < ApplicationRecord
         end
 
         posted_tx.update!(tx_attrs) if tx_attrs.any?
+
+        # Keep what the user added to the pending transaction (e.g. a receipt attached
+        # before the bank booked it); destroying the pending entry would purge it.
+        pending_transaction = pending_entry.entryable
+        carry_over_user_additions(from: pending_transaction, to: posted_tx) if pending_transaction.is_a?(Transaction)
       end
 
       # Date inheritance on the Entry row — separate from the Transaction update above.
+      entry_attrs = {}
       unless posted_entry.protected_from_sync?
         # Date: pending dates reflect actual transaction initiation time
-        posted_entry.update!(date: pending_entry_date) if posted_entry.date != pending_entry_date
+        entry_attrs[:date] = pending_entry_date if posted_entry.date != pending_entry_date
         # Name + Merchant intentionally NOT inherited — booked values are canonical
       end
+
+      # Notes are the user's own text, so they are kept even on a protected entry.
+      notes = merged_notes(posted_entry.notes, pending_entry.notes)
+      entry_attrs[:notes] = notes if notes != posted_entry.notes
+
+      posted_entry.update!(entry_attrs) if entry_attrs.any?
 
       # Lock the posted entry so future syncs cannot overwrite the merged state
       posted_entry.mark_user_modified!
@@ -550,6 +642,37 @@ class Transaction < ApplicationRecord
   end
 
   private
+    # Moves the pending transaction's attachments (the attachment rows themselves, so the
+    # blobs are not purged with the pending entry) and adds its tags to the posted one.
+    def carry_over_user_additions(from:, to:)
+      if from.attachments.attached?
+        # A blob already attached to the posted transaction would collide with the
+        # unique index on attachments once re-pointed, and is kept there anyway.
+        from.attachments_attachments.where(blob_id: to.attachments_attachments.select(:blob_id)).delete_all
+        from.attachments_attachments.update_all(record_id: to.id)
+      end
+
+      new_tags = from.tags.where.not(id: to.tags.select(:id))
+      to.tags << new_tags if new_tags.any?
+    end
+
+    def attachment_count_after_merge(from:, to:)
+      to_blob_ids = to.attachments_attachments.pluck(:blob_id)
+      to_blob_ids.size + from.attachments_attachments.where.not(blob_id: to_blob_ids).count
+    end
+
+    # Notes merged earlier are joined by blank lines, so look for the pending
+    # note's paragraphs, in order, among the posted note's: "Order 123" is not
+    # already in "Order 1234", and a multi-paragraph note is not split apart.
+    def merged_notes(posted_notes, pending_notes)
+      return posted_notes if pending_notes.blank?
+      return pending_notes if posted_notes.blank?
+      posted_parts = posted_notes.split(/\n{2,}/).map(&:strip)
+      pending_parts = pending_notes.split(/\n{2,}/).map(&:strip)
+      return posted_notes if posted_parts.each_cons(pending_parts.size).include?(pending_parts)
+
+      "#{posted_notes}\n\n#{pending_notes}"
+    end
 
     def validate_attachments
       # Check attachment count limit

@@ -29,6 +29,14 @@ class DS::SectionTest < ViewComponent::TestCase
     assert_selector "div.bg-container.rounded-lg > p", text: "Rent"
   end
 
+  test "rules the rows apart unless asked not to" do
+    render_inline(DS::Section.new(title: "Rent", count: 1)) { "<p>Rent</p>".html_safe }
+    assert_selector "div.divide-y.divide-subdued > p"
+
+    render_inline(DS::Section.new(title: "Rent", count: 1, divided: false)) { "<p>Rent</p>".html_safe }
+    assert_no_selector ".divide-y"
+  end
+
   # With both sidebars open a list is phone-width at a desktop viewport, so
   # rows size themselves against the card, not the screen.
   test "makes the card the query container for its rows" do

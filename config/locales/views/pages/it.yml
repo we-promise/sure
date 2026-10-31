@@ -42,7 +42,6 @@ it:
       subtitle: "Ecco cosa sta succedendo con le tue finanze"
       new: "Nuovo"
       sections_aria_label: "Sezioni dashboard"
-      drag_to_reorder: "Trascina per riordinare la sezione"
       toggle_section: "Attiva/disattiva visibilità sezione"
       widget_size:
         label: "Regola dimensione"

@@ -53,6 +53,8 @@ class TransactionsController < ApplicationController
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
+    @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates(@transactions, user: Current.user)
+
     # Preload split parent data
     entry_ids = @transactions.map { |t| t.entry.id }
 
@@ -71,14 +73,12 @@ class TransactionsController < ApplicationController
     end
 
     # Preload which entries on this page are split parents (have children) to avoid N+1
-    @split_parent_entry_ids = if entry_ids.any?
-      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
-    else
-      Set.new
-    end
+    @split_parent_entry_ids = Entry.split_parent_ids_among(entry_ids)
 
+    # Counts what the categorize wizard can act on, so read-only shares don't
+    # keep the "Categorize" menu item visible.
     @uncategorized_count = Rails.cache.fetch(uncategorized_count_cache_key) do
-      Current.accessible_entries.uncategorized_transactions.count
+      Current.annotatable_entries.uncategorized_transactions.count
     end
 
     # Load projected recurring transactions for next 10 days. Only the IDs are
@@ -138,6 +138,7 @@ class TransactionsController < ApplicationController
     if account.nil?
       @entry = Current.family.entries.new(entry_params)
       @entry.valid?
+      clear_stale_auto_generated_name!(@entry)
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
       return
@@ -167,6 +168,7 @@ class TransactionsController < ApplicationController
 
       respond_with_created_entry(@entry)
     else
+      clear_stale_auto_generated_name!(@entry)
       set_new_transaction_form_options
       render :new, status: :unprocessable_entity
     end
@@ -460,19 +462,24 @@ class TransactionsController < ApplicationController
 
     return unless require_account_permission!(transaction.entry.account)
 
-    # Check if a recurring transaction already exists for this pattern.
-    # The UI disables the button ahead of time using the same lookup, but this
-    # guard remains as the authoritative check (e.g. stale page, direct POST).
-    existing = transaction.existing_manual_recurring_transaction
-
-    if existing
-      flash[:alert] = t("recurring_transactions.already_exists")
-      redirect_back_or_to transactions_path
-      return
-    end
-
     begin
-      recurring_transaction = RecurringTransaction.create_from_transaction(transaction)
+      # Check if a recurring transaction already exists for this pattern.
+      # The UI disables the button ahead of time using the same lookup, but
+      # this guard remains as the authoritative check (e.g. stale page, direct
+      # POST). The check and the create hold the entry lock the Allocator and
+      # the add-bill form take, so neither can slip in between them.
+      blocked = nil
+      Entry.transaction do
+        RecurringTransaction::Allocator.lock_entry!(transaction.entry)
+        blocked = mark_recurring_blocked_message(transaction)
+        RecurringTransaction.create_from_transaction(transaction) unless blocked
+      end
+
+      if blocked
+        flash[:alert] = blocked
+        redirect_back_or_to transactions_path
+        return
+      end
 
       respond_to do |format|
         format.html do
@@ -531,48 +538,54 @@ class TransactionsController < ApplicationController
     end
   end
 
+  def name_suggestions
+    unknown_names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t("transactions.unknown_name", locale: locale) }
+    transactions = Current.family.transactions.merge(Account.accessible_by(Current.user)).where.not(entries: { name: unknown_names })
+    query = params[:q].to_s.strip
+
+    @suggestions = if query.length < Transaction::MIN_LENGTH_FOR_NAME_SUGGESTION
+      names = recent_transaction_names.select { |name| name.downcase.include?(query.downcase) }
+      transactions.name_suggestions_for_names(names)
+    else
+      transactions.name_suggestions_for(query)
+    end
+  end
+
   private
-    # Scoped by user (not just family) because Current.accessible_entries is
-    # user-scoped for family sharing (see Current#accessible_entries).
-    #
-    # Includes Family#accounts_status_version because `uncategorized_transactions`
-    # filters on account status (draft/active), and toggling an account's
-    # active status (AccountsController#toggle_active) doesn't touch `entries`
-    # or `AccountShare`, so it wouldn't otherwise bust this cache.
     def uncategorized_count_cache_key
-      "transactions_uncategorized_count/v4/#{Current.family.id}/#{Current.user.id}/" \
+      "transactions_uncategorized_count/v5/#{Current.family.id}/#{Current.user.id}/" \
         "#{Current.family.entries_version}/#{Current.family.accounts_status_version}/#{Current.account_share_version}"
     end
 
-    # Scoped additionally by Date.current since the "next 10 days" window is
-    # date-dependent and would otherwise return a stale window on a cache hit
-    # from an earlier day.
-    #
-    # Includes Family#recurring_transaction_merchants_version because the
-    # cached records are preloaded with :merchant and rendered with its
-    # name/logo, but editing a FamilyMerchant or a shared ProviderMerchant
-    # doesn't touch `recurring_transactions`.
     def projected_recurring_cache_key
       "transactions_projected_recurring/v6/#{Current.family.id}/#{Current.user.id}/#{Date.current}/" \
         "#{Current.family.recurring_transactions_version}/#{Current.family.accounts_status_version}/" \
         "#{Current.family.recurring_transaction_merchants_version}/#{Current.account_share_version}"
     end
 
-    # The "Mark as Recurring" block is only ever rendered under these same
-    # conditions (see transactions/show.html.erb), so skip the extra query
-    # entirely when it won't be used — this runs on every show/failed-update
-    # render, including read-only viewers and split-child transactions.
+    def covering_series_for(entry)
+      Current.family.recurring_transactions.accessible_by(Current.user).covering(entry)
+    end
+
+    def mark_recurring_blocked_message(transaction)
+      if covering_series_for(transaction.entry)
+        t("recurring_transactions.already_covered")
+      elsif RecurringTransaction.identity_taken_by(transaction)
+        t("recurring_transactions.already_exists")
+      end
+    end
+
     def assign_mark_recurring_state
       return unless can_edit_entry? && !@entry.split_child?
 
-      existing = @entry.transaction.existing_manual_recurring_transaction
+      blocked = mark_recurring_blocked_message(@entry.transaction)
 
       @mark_recurring_href = mark_as_recurring_transaction_path(@entry.transaction)
-      @mark_recurring_subtitle_class = existing ? "text-subdued" : "text-secondary"
-      @mark_recurring_subtitle = existing ? t("recurring_transactions.already_exists") : t("transactions.show.mark_recurring_subtitle")
-      @mark_recurring_disabled = existing.present?
-      @mark_recurring_title = existing ? t("recurring_transactions.already_exists") : nil
-      @mark_recurring_button_class = existing ? "disabled:opacity-50" : nil
+      @mark_recurring_subtitle_class = blocked ? "text-subdued" : "text-secondary"
+      @mark_recurring_subtitle = blocked || t("transactions.show.mark_recurring_subtitle")
+      @mark_recurring_disabled = blocked.present?
+      @mark_recurring_title = blocked
+      @mark_recurring_button_class = blocked ? "disabled:opacity-50" : nil
     end
 
     def assign_create_rule_state
@@ -629,6 +642,7 @@ class TransactionsController < ApplicationController
     end
 
     def needs_rule_notification?(transaction)
+      return false if Current.user.guest?
       return false if Current.user.rule_prompts_disabled
 
       if Current.user.rule_prompt_dismissed_at.present?
@@ -711,6 +725,16 @@ class TransactionsController < ApplicationController
       set_entry
     end
 
+    # Entry#set_default_name may have already filled in a category/merchant
+    # -derived name during this failed validation attempt. A blank
+    # submission must still render blank -- otherwise the generated text
+    # becomes the field's literal value, and if the user then changes the
+    # category/merchant and resubmits, that stale generated name (no longer
+    # blank) skips the callback entirely and gets saved as-is.
+    def clear_stale_auto_generated_name!(entry)
+      entry.name = "" if entry_params[:name].blank?
+    end
+
     def set_new_transaction_form_options
       accessible_accounts_scope = accessible_accounts
 
@@ -726,6 +750,41 @@ class TransactionsController < ApplicationController
       @tags = Current.family.tags.alphabetically.to_a
     end
 
+    # Autocomplete suggestions for the name field, only queried when the
+    # auto-generate setting is on: lets a user reuse an actual previous name
+    # instead of leaving the field blank (which would produce a generic
+    # fallback), the same way it curbs bulk-identical generated names.
+    def recent_transaction_names
+      return [] unless Current.family.auto_generate_transaction_names?
+
+      # Current.accessible_entries (not Entry.family_scope), so a non-admin
+      # family member never sees names from accounts that weren't shared
+      # with them -- family-wide settings still respect per-account sharing.
+      # Its underlying Account.accessible_by scope is itself a `.distinct`
+      # query, so ORDER BY created_at must stay in the pluck'd column list
+      # (a plain "pluck(:name)" here would hit Postgres's "SELECT DISTINCT
+      # ... ORDER BY expressions must appear in select list"); dedup by name
+      # happens in Ruby afterward instead.
+      #
+      # Checked across every supported locale (like Entry#generic_name?'s
+      # unknown-name check), not just the current one -- otherwise an old
+      # entry named under a different locale's fallback (e.g. "Unbekannte
+      # Transaktion") would still surface as a "recent name" suggestion. A
+      # full generic_name? reuse isn't practical here since it also needs a
+      # loaded entryable.category, which isn't available cheaply from a pluck.
+      unknown_names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t("transactions.unknown_name", locale: locale) }
+
+      Current.accessible_entries
+        .where(entryable_type: "Transaction")
+        .where.not(name: unknown_names)
+        .order(created_at: :desc)
+        .limit(200)
+        .pluck(:name, :created_at)
+        .map(&:first)
+        .uniq
+        .first(20)
+    end
+
     # Filters entry_params based on the user's permission on the account.
     # read_write users can only annotate (category, tags, notes, merchant).
     # read_only users cannot update anything.
@@ -735,9 +794,9 @@ class TransactionsController < ApplicationController
         entry_params
       when :read_write
         # Annotate only: category, tags, merchant, notes
-        ep = entry_params.slice(:notes)
+        ep = entry_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES)
         if entry_params[:entryable_attributes].present?
-          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, :category_id, :merchant_id, :tag_ids)
+          ep[:entryable_attributes] = entry_params[:entryable_attributes].slice(:id, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES)
         end
         ep
       else

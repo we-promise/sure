@@ -91,7 +91,8 @@
                     selected_id: ef.object.category_id,
                     disabled: @entry.split_child? || annotate_locked,
                     auto_submit: true,
-                    blank_label: t(".uncategorized")
+                    blank_label: t(".uncategorized"),
+                    locked: Current.family.categories_locked?
                   ) %>
             <% end %>
           <% elsif @entry.transaction.category_set_on_transfer_outflow? %>

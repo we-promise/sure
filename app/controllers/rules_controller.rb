@@ -21,7 +21,7 @@ class RulesController < ApplicationController
 
   def new
     @rule = Current.family.rules.build(
-      resource_type: params[:resource_type] || "transaction",
+      resource_type: params[:resource_type].presence_in(Rule::SUPPORTED_RESOURCE_TYPES) || "transaction",
     )
 
     prefill_merchant = if params[:merchant_id].present? && UuidFormat.valid?(params[:merchant_id])
@@ -44,7 +44,7 @@ class RulesController < ApplicationController
       )
     end
 
-    if params[:action_type].present? && params[:action_value].present?
+    if params[:action_type].in?(Rule::Action::SUPPORTED_ACTION_TYPES) && params[:action_value].present?
       @rule.actions.build(
         action_type: params[:action_type],
         value: params[:action_value]
@@ -64,6 +64,13 @@ class RulesController < ApplicationController
 
   def apply
     @rule.update!(active: true)
+
+    # The rule stayed off, so running it now would only repeat the slow query.
+    if @rule.notification_baseline_timed_out?
+      redirect_back_or_to rules_path, alert: t("rules.notification_baseline_timed_out")
+      return
+    end
+
     @rule.apply_later(ignore_attribute_locks: true)
     redirect_back_or_to rules_path, notice: "#{@rule.resource_type.humanize} rule activated"
   end
@@ -81,9 +88,15 @@ class RulesController < ApplicationController
 
   def update
     if @rule.update(rule_params)
+      flash_message = if @rule.notification_baseline_timed_out?
+        { alert: t("rules.notification_baseline_timed_out") }
+      else
+        { notice: t(".success") }
+      end
+
       respond_to do |format|
-        format.html { redirect_back_or_to rules_path, notice: t(".success") }
-        format.turbo_stream { stream_redirect_back_or_to rules_path, notice: t(".success") }
+        format.html { redirect_back_or_to rules_path, **flash_message }
+        format.turbo_stream { stream_redirect_back_or_to rules_path, **flash_message }
       end
     else
       render_invalid_rule :edit
@@ -132,9 +145,10 @@ class RulesController < ApplicationController
 
   private
     def render_invalid_rule(template)
-      # A native select cannot preserve an invalid option on resubmission.
+      # A native select cannot preserve an invalid option on resubmission. An
+      # action marked for destruction is not validated, but is still rendered.
       invalid_selector = @rule.errors[:resource_type].any? ||
-        @rule.actions.any? { |action| action.errors[:action_type].any? } ||
+        @rule.actions.any? { |action| action.errors[:action_type].any? || !action.action_type.in?(Rule::Action::SUPPORTED_ACTION_TYPES) } ||
         @rule.conditions.any? { |condition| invalid_condition_selector?(condition) }
 
       if invalid_selector
@@ -228,7 +242,8 @@ class RulesController < ApplicationController
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]
         ],
         actions_attributes: [
-          :id, :action_type, :value, :_destroy, { value: [] }
+          :id, :action_type, :value, :_destroy, { value: [] },
+          split_rows: [ :type, :name, :share, :category_id, :merchant_id, tag_ids: [] ]
         ]
       )
     end
