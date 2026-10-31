@@ -5,7 +5,6 @@ uk:
       subtitle: Комплексне уявлення про ваше фінансове здоров'я
       export: Експорт CSV
       print_report: Друк звіту
-      drag_to_reorder: "Перетягніть, щоб змінити порядок розділу"
       toggle_section: "Переключити видимість розділу"
       periods:
         monthly: Щомісяця
@@ -121,16 +120,20 @@ uk:
         entries:
           one: "%{count} запис"
           other: "%{count} записів"
+          few: '%{count} записи'
+          many: '%{count} записів'
         percentage: "% від загальної суми"
       pagination:
         showing:
           one: Показано %{count} запис
           other: Показано %{count} записів
+          few: Показано %{count} записи
+          many: Показано %{count} записів
         previous: Попередній
         next: Наступний
     net_worth:
-      title: Чиста вартість
-      current_net_worth: Поточна чиста вартість
+      title: Чистий капітал
+      current_net_worth: Поточний чистий капітал
       period_change: Зміна за період
       assets_vs_liabilities: Активи проти зобов'язань
       total_assets: Активи
@@ -140,15 +143,15 @@ uk:
     investment_performance:
       title: Ефективність інвестицій
       portfolio_value: Вартість портфеля
-      total_return: Загальний дохід
-      period_return: Дохід за період
+      total_return: Загальна дохідність
+      period_return: Дохідність за період
       contributions: Внески за період
       withdrawals: Зняття за період
       top_holdings: Основні активи
       holding: Актив
       weight: Вага
       value: Вартість
-      return: Дохід
+      return: Дохідність
       accounts: Інвестиційні рахунки
       gains_by_tax_treatment: Прибуток за податковим режимом
       unrealized_gains: Нереалізований прибуток
@@ -160,9 +163,13 @@ uk:
       holdings_count:
         one: "%{count} актив"
         other: "%{count} активів"
+        few: '%{count} активи'
+        many: '%{count} активів'
       sells_count:
         one: "%{count} продаж"
         other: "%{count} продажів"
+        few: '%{count} продажі'
+        many: '%{count} продажів'
       holdings: Активи
       sell_trades: Продажі
       and_more: "+%{count} ще"
@@ -176,19 +183,14 @@ uk:
       net_flow: Чистий потік
       net_flow_description: Загальна чиста зміна
     google_sheets_instructions:
-      title_with_key: "✅ Скопіюйте URL-адресу для Google Sheets"
-      title_no_key: "⚠️ Потрібен ключ API"
-      ready: Ваша URL-адреса CSV (з ключем API) готова.
-      steps: "Щоб імпортувати в Google Sheets:\n1. Створіть нову таблицю Google\n2. У клітинці A1 введіть формулу, показану нижче\n3. Натисніть Enter"
-      security_warning: "Ця URL-адреса містить ваш ключ API. Зберігайте її в безпеці!"
+      title_no_key: "Потрібен ключ API"
       need_key: Щоб імпортувати дані в Google Sheets, вам потрібен ключ API.
       step1: "Перейдіть до Налаштування → Ключі API"
       step2: "Створіть новий ключ API з дозволом на читання"
       step3: Скопіюйте ключ API
-      step4: "Додайте його до цієї URL-адреси як: ?api_key=ВАШ_КЛЮЧ"
+      step4: "Додайте його до цієї URL-адреси як: &api_key=ВАШ_КЛЮЧ"
       example: Приклад
       then_use: Потім використовуйте повну URL-адресу з =IMPORTDATA() в Google Sheets.
-      open_sheets: Відкрити Google Sheets
       go_to_api_keys: Перейти до ключів API
       close: Зрозуміло
     print:
@@ -207,7 +209,7 @@ uk:
         used: використано
       # Net Worth section
       net_worth:
-        title: Чиста вартість
+        title: Чистий капітал
         current_balance: Поточний баланс
         this_period: за цей період
         assets: Активи
@@ -227,8 +229,8 @@ uk:
       investments:
         title: Інвестиції
         portfolio_value: Вартість портфеля
-        total_return: Загальний дохід
-        period_return: Дохід за період
+        total_return: Загальна дохідність
+        period_return: Дохідність за період
         contributions: Внески
         withdrawals: Зняття
         this_period: за цей період
@@ -236,7 +238,7 @@ uk:
         holding: Актив
         weight: Вага
         value: Вартість
-        return: Дохід
+        return: Дохідність
       # Spending by Category section
       spending:
         title: Витрати за категоріями

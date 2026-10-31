@@ -2,6 +2,7 @@
 
 class ProviderConnectionStatus
   PROVIDERS = [
+    { key: "financekit", type: "FinancekitItem", association: :financekit_items, accounts: :financekit_account_lineages },
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
     { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },
     { key: "monobank", type: "MonobankItem", association: :monobank_items, accounts: :monobank_accounts },
@@ -118,13 +119,16 @@ class ProviderConnectionStatus
     def item_status
       return item.effective_status(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
 
+      # A session can end while the stored status is still good.
+      return "requires_update" if item_boolean(:needs_login?)
+
       item_value(:status)
     end
 
     def item_requires_update?
       return item.setup_token_update_required?(latest_sync: latest_sync) if item.respond_to?(:setup_token_update_required?)
 
-      item_boolean(:requires_update?)
+      item_boolean(:requires_update?) || item_boolean(:needs_login?)
     end
 
     def pending_account_setup?
@@ -197,6 +201,10 @@ class ProviderConnectionStatus
     end
 
     def sync_status_summary
+      if provider[:key] == "financekit"
+        return item.last_imported_at ? "Wallet publisher imported" : "Waiting for Wallet publisher"
+      end
+
       stats = latest_completed_sync_stats
       counts = accounts_payload
       total = stats.fetch("total_accounts", counts[:total_count]).to_i

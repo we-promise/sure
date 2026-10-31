@@ -18,8 +18,22 @@ de:
       calendar: Kalender
       paycheck: Einkommensplan
       all: Alle Rechnungen
+    all:
+      current_bills: Aktuelle Rechnungen
+      dismissed_hidden_description: Verworfene Rechnungen sind ausgeblendet.
+      no_matches_title: Keine Treffer
+      no_matches_description: Entferne einen Filter oder die Suche.
+      status_filters:
+        overdue: Überfällig
+        due: Bald fällig
+        partial: Teilweise bezahlt
+        paid: Bezahlt
+        paused: Pausiert
+        ended: Verworfen
     index:
       title: Rechnungen
-      add_bill: Rechnung hinzufügen
-      add_income: Einkommen hinzufügen
+      add_bill: Neue Rechnung
+      add_income: Neues Einkommen
       review_with_ai: Mit KI prüfen
+      notices_heading: Änderungen
+      dormant: Pausiert

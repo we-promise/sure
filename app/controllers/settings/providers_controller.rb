@@ -2,6 +2,7 @@ class Settings::ProvidersController < ApplicationController
   layout -> { turbo_frame_request? ? "turbo_rails/frame" : "settings" }
 
   before_action :ensure_admin, only: [ :show, :update, :sync_all, :sync, :connect_form ]
+  before_action :ensure_instance_settings_manager, only: :update
   before_action :set_encryption_warning_context, only: [ :show, :connect_form ]
 
   def show
@@ -111,6 +112,8 @@ class Settings::ProvidersController < ApplicationController
   def connect_form
     provider_key = params[:provider_key]
 
+    # Not FAMILY_PANELS_BY_KEY[provider_key]: Brakeman reads that as the param
+    # choosing the partial to render.
     panel = FAMILY_PANELS.find { |p| p[:key] == provider_key }
     if panel
       @panel_key     = panel[:key]
@@ -123,6 +126,10 @@ class Settings::ProvidersController < ApplicationController
     Provider::Factory.ensure_adapters_loaded
     config = Provider::ConfigurationRegistry.all.find { |c| c.provider_key.to_s == provider_key }
     if config
+      unless Current.user.manages_instance_settings?
+        return redirect_to settings_providers_path, alert: t("settings.providers.not_authorized")
+      end
+
       @panel_title           = Provider::Metadata.for(provider_key)[:name] || provider_key.titleize
       @provider_configuration = config
       return render :connect_form
@@ -152,6 +159,14 @@ class Settings::ProvidersController < ApplicationController
       return if Current.user.admin?
 
       redirect_to root_path, alert: t("settings.providers.not_authorized")
+    end
+
+    # Registry-driven configurations (e.g. Plaid) are stored in the global
+    # Setting and apply to every family on the instance.
+    def ensure_instance_settings_manager
+      return if Current.user.manages_instance_settings?
+
+      redirect_to settings_providers_path, alert: t("settings.providers.not_authorized")
     end
 
     def set_encryption_warning_context
@@ -215,6 +230,7 @@ class Settings::ProvidersController < ApplicationController
     ].freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
+    FAMILY_PANELS_BY_KEY = FAMILY_PANELS.index_by { |p| p[:key] }.freeze
 
     # Maps panel key → ActiveRecord model name for sync health queries
     PANEL_SYNCABLE_TYPES = {
@@ -287,7 +303,7 @@ class Settings::ProvidersController < ApplicationController
       when "trading212"
         @trading212_items = Current.family.trading212_items.ordered
       when "trade_republic"
-        @trade_republic_items = Current.family.trade_republic_items.ordered
+        @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
       when "indexa_capital"
         @indexa_capital_items = Current.family.indexa_capital_items.ordered
       when "sophtron"
@@ -299,11 +315,13 @@ class Settings::ProvidersController < ApplicationController
 
     # Prepares instance vars needed by the show view and partials
     def prepare_show_context
-      # Load all provider configurations (exclude family-scoped panels, which have their own UI below)
+      # Load all provider configurations (exclude family-scoped panels, which have their own UI below).
+      # They edit instance-wide credentials, so only those who may change them see them.
       Provider::Factory.ensure_adapters_loaded
       @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
         FAMILY_PANEL_KEYS.any? { |key| config.provider_key.to_s.casecmp(key).zero? }
       end
+      @provider_configurations = [] unless Current.user.manages_instance_settings?
 
       @akahu_items = Current.family.akahu_items.active.ordered
       @up_items = Current.family.up_items.active.ordered
@@ -323,7 +341,7 @@ class Settings::ProvidersController < ApplicationController
       @snaptrade_items = Current.family.snaptrade_items.ordered
       @ibkr_items = Current.family.ibkr_items.ordered.select(:id)
       @trading212_items = Current.family.trading212_items.ordered
-      @trade_republic_items = Current.family.trade_republic_items.ordered.select(:id)
+      @trade_republic_items = Current.family.trade_republic_items.active.ordered.includes(:trade_republic_accounts)
       @indexa_capital_items = Current.family.indexa_capital_items.ordered.select(:id)
       @binance_items = Current.family.binance_items.active.ordered
       @kraken_items = Current.family.kraken_items.active.ordered
@@ -332,6 +350,15 @@ class Settings::ProvidersController < ApplicationController
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
       @fio_items = Current.family.fio_items.active.ordered
 
+      # Wallet uploads are managed on iOS. Only expose linked accounts the
+      # current admin can access, including connections that need repair.
+      accessible_account_ids = Current.family.accounts.accessible_by(Current.user).pluck(:id).to_set
+      @financekit_connections = Current.family.financekit_items.where(status: %w[active repair_required])
+        .ordered.includes(:accounts).filter_map do |item|
+          accounts = item.accounts.select { |account| accessible_account_ids.include?(account.id) && !account.pending_deletion? }
+          { item: item, accounts: accounts } if accounts.any?
+        end
+
       @provider_sync_health = compute_provider_sync_health(family_panel_items)
 
       entries = build_provider_entries
@@ -339,6 +366,7 @@ class Settings::ProvidersController < ApplicationController
       @connected        = entries.select { |e| e[:summary][:status] == :ok }
       @needs_attention  = entries.select { |e| [ :warn, :err ].include?(e[:summary][:status]) }
       @available        = entries.select { |e| e[:summary][:status] == :off }
+      @can_sync_all = (@connected + @needs_attention).any? { |entry| entry[:sync_supported] != false }
 
       @health = view_context.provider_health_strip(connected: @connected, needs_attention: @needs_attention)
     end
@@ -434,6 +462,17 @@ class Settings::ProvidersController < ApplicationController
         }
       end
 
-      (configuration_entries + family_entries).sort_by { |entry| entry[:title].downcase }
+      wallet_entry = {
+        provider_key: "financekit", title: Provider::Metadata.for(:financekit)[:name],
+        turbo_id: "financekit", partial: "financekit_panel", maturity: :beta,
+        external_link: {
+          text: t("settings.providers.financekit.app_store"), href: nil,
+          tooltip: t("settings.providers.financekit.coming_soon")
+        },
+        sync_supported: false,
+        summary: view_context.financekit_provider_summary(@financekit_connections)
+      }
+
+      (configuration_entries + family_entries + [ wallet_entry ]).sort_by { |entry| entry[:title].downcase }
     end
 end

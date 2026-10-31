@@ -59,9 +59,16 @@ cargo test
 
 ## Reports and downloads
 
-CSV exports are saved in the macOS Downloads folder. Sure sends a native
-notification when a download finishes or fails; allow Sure notifications in
-System Settings to see them. Repeated downloads get a numbered filename.
+Files your Sure server sends as downloads (CSV exports, statements, transaction
+attachments, the import sample CSV) are saved in the macOS Downloads folder,
+even when the app could display them. When a download finishes or fails, Sure
+shows its usual message in the window, or in the main window when the download
+came from a window that closed itself. A native notification is also sent when
+that window is not in front, and replaces the message when the window is hidden
+or the server is too old to provide it (allow Sure notifications in System
+Settings to see them). The notification uses the message's text in Sure's
+language, and is in English only with a server too old to provide the message.
+Repeated downloads get a numbered filename.
 
 Print Report opens a separate Sure window using the current signed-in session,
 then the native print dialog once the report has loaded. Print it, or choose
@@ -70,12 +77,16 @@ PDF → Save as PDF. Close the report window to return to the app.
 Other links that open a new window follow the same rule: pages of your Sure
 server open in a separate Sure window with your session, and other websites
 open in your default browser. Only the main window has the desktop
-integrations: notifications, SSO in your browser and report CSV exports.
-Downloads are only accepted from pages of your saved servers.
+integrations: notifications and SSO in your browser. Downloads are only
+accepted from pages of your saved servers.
 
-To verify changes to this flow, run `npm test` and `npm run build` in `desktop`,
-then `cargo test --locked` in `desktop/src-tauri`. In the desktop app, export a
-CSV twice, check both files in Downloads, and open Print Report to save a PDF.
+To verify changes to this flow, run `npm run build` in `desktop`, then
+`cargo test --locked` in `desktop/src-tauri`. In the desktop app, export a
+report CSV twice and check both files in Downloads. Download a statement PDF
+and a transaction attachment, check that the app page stays in place, and open
+Print Report to save a PDF. Open a CSV statement with its view link (the eye
+icon on an account's statements): the file is saved in Downloads, no empty Sure
+window stays open, and the message appears in the main window.
 Open an external link (for example the Discord help icon) and check that it
 opens in your browser. Repeat against a server mounted under a URL prefix, if
 applicable.

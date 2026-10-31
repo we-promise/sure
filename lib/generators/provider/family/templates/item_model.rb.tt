@@ -1,7 +1,14 @@
 # frozen_string_literal: true
 
 class <%= class_name %>Item < ApplicationRecord
-  include Syncable, Provided, Unlinking, DestroyableLater
+  include Syncable, Provided, Unlinking, DestroyableLater, ProviderDisconnectable
+
+  # Set to true once this provider implements removal of the data it imported, so
+  # a client may disconnect with disposition "discard". Left false until then:
+  # the capability is advertised to API clients, and claiming it without the
+  # implementation would tell a family their data was deleted when it was not.
+  # See Unlinking#unlink_all! and Financekit::Purge for the worked example.
+  self.supports_discard = false
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 

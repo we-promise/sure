@@ -15,11 +15,3 @@ nl:
       minimum_payment_placeholder: '100'
     new:
       title: Creditcardgegevens invoeren
-    overview:
-      amount_owed: Schuldig bedrag
-      annual_fee: Jaarlijkse kosten
-      apr: Rentepercentage
-      available_credit: Beschikbaar krediet
-      expiration_date: Vervaldatum
-      minimum_payment: Minimumbetaling
-      unknown: Onbekend

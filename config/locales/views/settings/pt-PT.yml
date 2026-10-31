@@ -6,6 +6,7 @@ pt-PT:
         renewal: "A sua contribuição continua em %{date}."
         cancellation: "A sua contribuição termina em %{date}."
   settings:
+    encryption_migration_guide: Guia de configuração da encriptação e migração
     background_jobs:
       show:
         page_title: "Tarefas em segundo plano"
@@ -110,7 +111,7 @@ pt-PT:
         failed: "Falhadas"
         no_usage_data: "Não foram encontrados dados de utilização para o período selecionado"
         cost_estimates_title: "Sobre as Estimativas de Custo"
-        cost_estimates_description: "Os custos são estimados com base nos preços publicados dos serviços, incluindo os preços da OpenAI a partir de julho de 2026. Os custos reais podem variar. O preço é por 1 milhão de tokens e varia consoante o modelo. Os modelos personalizados ou autoalojados mostrarão \"N/A\" e não estão incluídos nos totais de custo."
+        cost_estimates_description: "Os custos são estimados com base nos preços publicados dos serviços, verificados pela última vez em %{date}. Os custos reais podem variar. O preço é por 1 milhão de tokens e varia consoante o modelo. Os modelos personalizados ou autoalojados mostrarão \"N/A\" e não estão incluídos nos totais de custo."
     ai_prompts:
       show:
         page_title: Prompts de IA
@@ -161,6 +162,8 @@ pt-PT:
         dashboard_two_column_title: Disposição de duas colunas
         dashboard_two_column_description: Apresenta os widgets da visão geral em duas colunas em ecrãs grandes, com controlos de largura e altura por widget no cabeçalho de cada widget. Quando desativado, os widgets são empilhados numa única coluna.
         split_grouped_title: Agrupar transações divididas
+        auto_generate_transaction_names_title: "Gerar nomes de transações automaticamente"
+        auto_generate_transaction_names_description: "Quando o nome de uma transação introduzida manualmente fica em branco, é preenchido a partir da categoria e do comerciante selecionados (ex.: \"Entretenimento - Netflix\"). O nome continua obrigatório se nenhum dos dois for selecionado. Aplica-se a todo o agregado familiar e apenas a novas transações."
         split_grouped_description: Apresenta as transações divididas agrupadas pela transação principal. Quando desativado, cada transação dividida é apresentada individualmente.
     preferences:
       show:
@@ -326,6 +329,7 @@ pt-PT:
       accounts_label: Contas
       advanced_section_title: Avançado
       ai_prompts_label: Prompts de IA
+      auto_matches_label: Correspondências automáticas
       background_jobs_label: Tarefas em segundo plano
       api_key_label: Chaves de API
       payment_label: Pagamento
@@ -404,6 +408,8 @@ pt-PT:
         sync_error: Erro de sincronização
         no_recent_sync: Sincronização em atraso
         reconsent_required: Necessário novo consentimento
+        login_required: "Início de sessão necessário"
+        login_expires_soon: "A sessão expira dentro de %{time} (%{at})"
         reconsent_needed:
           one: Necessário novo consentimento em 1 dia
           other: Necessário novo consentimento em %{count} dias
@@ -427,7 +433,7 @@ pt-PT:
         coinbase: Importe as suas posições cripto Coinbase e acompanhe o desempenho.
         binance: Sincronize os seus saldos à vista Binance utilizando uma chave de API apenas de leitura.
         kraken: Sincronize os saldos Kraken e as execuções de negociação à vista utilizando uma chave de API apenas de leitura.
-        onchain_wallet: Acompanhe carteiras Bitcoin, EVM e Solana de autocustódia a partir dos seus endereços públicos.
+        onchain_wallet: Acompanhe carteiras Bitcoin, EVM, Solana, Cosmos e Polkadot de autocustódia a partir dos seus endereços públicos.
         snaptrade: Ligue contas de corretagem através da rede de agregação SnapTrade.
         trading212: Sincronize a sua carteira de investimento Trading 212 utilizando uma chave de API apenas de leitura.
         ibkr: Sincronize contas de investimento Interactive Brokers através de importações de Flex Query.
@@ -463,6 +469,7 @@ pt-PT:
         connect_button: Ligar Coinbase
         syncing: A sincronizar...
         sync: Sincronizar
+        disconnect: Desligar
         disconnect_confirm: Tem a certeza de que pretende desligar esta ligação Coinbase? As suas contas sincronizadas tornar-se-ão contas manuais.
       binance_panel:
         setup_instructions: "Para ligar a Binance, crie uma chave de API apenas de leitura:"
@@ -484,6 +491,7 @@ pt-PT:
         historical_import: "Definições de Importação Histórica"
         sync_start_date_label: "Importar dados desde"
         sync_start_date_help: "Selecione até que ponto no passado pretende obter as negociações históricas."
+        disconnect: Desligar
         disconnect_confirm: "Tem a certeza de que pretende desligar a Binance?"
       kraken_panel:
         step1_html: 'Aceda a <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Definições de API Kraken</a>'
@@ -534,6 +542,7 @@ pt-PT:
         application_id_placeholder_new: "Introduza o application ID"
         application_id_placeholder_update: "Introduza o novo ID para atualizar"
         client_certificate_label: "Client Certificate (com Chave Privada)"
+        keep_client_certificate_hint: "Deixe em branco para manter o certificado atual"
         save_and_connect: "Guardar e ligar"
         update_connection: "Atualizar ligação"
         connected_bank: "Banco Ligado"

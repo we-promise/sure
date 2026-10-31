@@ -39,27 +39,29 @@ class Family::FinancialDataReset
     active_storage_attachments
   ].freeze
   STATUS_COUNT_KEYS = (COUNT_KEYS - %i[syncs]) + %i[plaid_items]
+  # sorted
   PROVIDER_ITEM_ASSOCIATIONS = %i[
     binance_items
     brex_items
     coinbase_items
     coinstats_items
     enable_banking_items
+    financekit_items
+    fio_items
     ibkr_items
     indexa_capital_items
     kraken_items
-    questrade_items
     lunchflow_items
-    redbark_items
     mercury_items
+    monobank_items
     onchain_wallet_items
     plaid_items
+    questrade_items
+    redbark_items
     simplefin_items
     snaptrade_items
     sophtron_items
     up_items
-    monobank_items
-    fio_items
   ].freeze
 
   Result = Struct.new(:user, :family, :dry_run, :before_counts, :deleted_counts, :after_counts, keyword_init: true)
@@ -160,6 +162,7 @@ class Family::FinancialDataReset
       scope(:tags).destroy_all
       scope(:merchants).destroy_all
       delete_provider_items!
+      family.financekit_account_lineages.destroy_all
       scope(:accounts).destroy_all
     end
 

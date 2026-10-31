@@ -22,8 +22,8 @@ class DS::Disclosure < DesignSystemComponent
   # `:inline` — no surface, no padding, no shadow. The disclosure reads
   # as a plain text-link-style toggle (e.g. "Alternative auth" inside
   # a form, or a "Manage connections" lazy-load opener). Caller provides
-  # the summary text (and optional chevron) via the `summary_content`
-  # slot.
+  # the summary text (and optional chevron, `disclosure_chevron`) via the
+  # `summary_content` slot.
   #
   # `:bare` — like `:default` on the `<details>` element (`group` only),
   # but content is yielded without the in-flow body wrapper. Use for

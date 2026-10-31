@@ -381,7 +381,7 @@ module LanguagesHelper
       english = COUNTRY_MAPPING[key]
       emoji, name = english.split(" ", 2)
       label = I18n.t("countries.#{key}", default: name)
-      [ "#{emoji} #{label}", key ]
+      [ "#{emoji} #{label}", key.to_s ]
     end
   end
 

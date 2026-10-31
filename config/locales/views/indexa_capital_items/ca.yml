@@ -203,7 +203,7 @@ ca:
         other_asset: No calen opcions addicionals per a altres actius.
       subtypes:
         depository:
-          cd: Certificat de dipòsit
+          cd: Dipòsit a termini
           checking: Compte corrent
           hsa: Compte d'estalvi per a salut
           money_market: Mercat monetari

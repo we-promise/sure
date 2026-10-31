@@ -18,7 +18,11 @@ class TradeRepublicItem::Importer
   def import
     result = provider.sync(
       session_txt: trade_republic_item.session_blob,
-      known_newest_event_id: known_newest_event_id
+      known_newest_event_id: known_newest_event_id,
+      timeline_cursors: force_full_timeline_fetch? ? {} : trade_republic_item.timeline_cursors,
+      enrich_events: events_needing_detail_enrichment,
+      symbol_lookup_isins: isins_needing_symbol_lookup,
+      known_instrument_symbols: stored_instrument_symbols
     )
 
     data = result.data
@@ -30,22 +34,30 @@ class TradeRepublicItem::Importer
         "Trade Republic session expired. Re-authentication required."
     end
 
+    capped_topics = []
     ActiveRecord::Base.transaction do
-      upsert_account(data, domain_statuses: domain_statuses)
+      capped_topics = upsert_account(data, domain_statuses: domain_statuses)
       trade_republic_item.update!(
         status: :good,
-        newest_event_id: domain_statuses["timeline"] == "success" && data["newest_event_id"].present? ? data["newest_event_id"] : trade_republic_item.newest_event_id,
+        newest_event_id: timeline_cursor_for(data, domain_statuses),
+        timeline_cursors: timeline_cursors_for(data, domain_statuses, capped_topics: capped_topics),
         session_blob: data["session_txt"].presence || trade_republic_item.session_blob
       )
     end
 
-    record_provider_warnings(data["warnings"])
+    record_provider_warnings(Array(data["warnings"]) + importer_warnings(capped_topics: capped_topics))
 
-    { success: true }
+    {
+      success: true,
+      detail_backfill_count: data["detail_backfill_count"].to_i,
+      timeline_backfill_count: Provider::TradeRepublicClient.pending_timeline_backfills(trade_republic_item.timeline_cursors)
+    }
   end
 
   private
 
+    # Returns the topics whose fetched events the size cap of the stored
+    # timeline dropped.
     def upsert_account(data, domain_statuses:)
       account_info = data["account"] || {}
       unless domain_statuses["account_metadata"] == "success"
@@ -63,7 +75,7 @@ class TradeRepublicItem::Importer
                  trade_republic_item.family.currency
       portfolio_account = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
 
-      upsert_kind(
+      portfolio_capped = upsert_kind(
         kind: "portfolio",
         external_id: account_id,
         name: build_account_name(account_id, kind: "portfolio"),
@@ -72,10 +84,16 @@ class TradeRepublicItem::Importer
         cash_balance: 0,
         positions: Array(data["positions"]),
         events: data["events"],
+        topic_event_ids: data["timeline_topic_event_ids"],
+        instrument_symbols: data["instrument_symbols"],
+        unresolved_symbol_isins: data["unresolved_symbol_isins"],
         warnings: position_warnings(data),
         domain_statuses: domain_statuses
       )
-      upsert_kind(
+      # Pass every event into the cash merge, including orderExecution. Filtering
+      # happens after merge so a newly categorized savings-plan event can replace
+      # and remove its older unmapped cash copy.
+      cash_capped = upsert_kind(
         kind: "cash",
         external_id: "cash:#{account_id}",
         name: build_account_name(account_id, kind: "cash"),
@@ -83,19 +101,60 @@ class TradeRepublicItem::Importer
         current_balance: cash_balance(data),
         cash_balance: cash_balance(data),
         positions: [],
-        events: Array(data["events"]).reject { |event| event["category"] == "orderExecution" },
+        events: Array(data["events"]),
+        topic_event_ids: data["timeline_topic_event_ids"],
+        instrument_symbols: data["instrument_symbols"],
         warnings: [],
         domain_statuses: domain_statuses
       )
+      upsert_crypto_account(account_id, currency, domain_statuses)
+      portfolio_capped | cash_capped
     end
 
-    def upsert_kind(kind:, external_id:, name:, currency:, current_balance:, cash_balance:, positions:, events:, warnings:, domain_statuses:)
+    # Crypto gets its own account because Sure has a Crypto account type.
+    # It reads its positions and trades from the portfolio payloads, so only
+    # its balance is stored here. Created once the portfolio holds or traded
+    # crypto; it stays unlinked until the user sets it up.
+    def upsert_crypto_account(account_id, currency, domain_statuses)
+      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      crypto = trade_republic_item.trade_republic_accounts.find_by(kind: "crypto")
+      return if crypto.nil? && !holds_or_traded_crypto?(portfolio)
+
+      crypto ||= trade_republic_item.trade_republic_accounts.build(kind: "crypto")
+
+      crypto.assign_attributes(
+        trade_republic_account_id: "crypto:#{account_id}",
+        name: build_account_name(account_id, kind: "crypto"),
+        currency: currency,
+        cash_balance: 0
+      )
+      if domain_statuses["portfolio"] == "success"
+        crypto.current_balance = positions_value(crypto_positions(portfolio), fallback: crypto.current_balance)
+      end
+      crypto.save!
+    end
+
+    def holds_or_traded_crypto?(portfolio)
+      return false unless portfolio
+
+      crypto_positions(portfolio).any? || Array(portfolio.raw_timeline_payload).any? do |event|
+        detail = event.is_a?(Hash) ? (event["detail"] || event[:detail]) : nil
+        detail.is_a?(Hash) && TradeRepublicAccount.crypto_isin?(detail["isin"] || detail[:isin])
+      end
+    end
+
+    def crypto_positions(portfolio)
+      Array(portfolio&.raw_positions_payload).select { |position| TradeRepublicAccount.crypto_position?(position) }
+    end
+
+    def upsert_kind(kind:, external_id:, name:, currency:, current_balance:, cash_balance:, positions:, events:, instrument_symbols:, warnings:, domain_statuses:, topic_event_ids: nil, unresolved_symbol_isins: [])
       tr_account = trade_republic_item.trade_republic_accounts.find_by(trade_republic_account_id: external_id) ||
                     trade_republic_item.trade_republic_accounts.find_or_initialize_by(kind: kind)
       portfolio_status = domain_statuses["portfolio"]
       cash_status = domain_statuses["cash"]
       timeline_status = domain_statuses["timeline"]
       domain_status = kind == "portfolio" ? portfolio_status : cash_status
+      capped_topics = []
       attrs = {
         trade_republic_account_id: external_id,
         name: name,
@@ -116,11 +175,19 @@ class TradeRepublicItem::Importer
       end
 
       if timeline_status != "failed"
-        attrs[:raw_timeline_payload] = merge_timeline_events(tr_account.raw_timeline_payload, events)
+        merged = merge_timeline_events(tr_account.raw_timeline_payload, events)
+        apply_instrument_symbols!(merged, instrument_symbols)
+        stamp_symbol_lookup_attempts!(merged, unresolved_symbol_isins)
+        # Drop order executions before the size cap so they never crowd out
+        # cash events on the cash account.
+        merged = merged.reject { |event| event_category(event) == "orderExecution" } if kind == "cash"
+        capped_topics = capped_timeline_topics(merged, existing: tr_account.raw_timeline_payload, incoming: events, topic_event_ids: topic_event_ids)
+        attrs[:raw_timeline_payload] = merged.last(MAX_TIMELINE_EVENTS)
       end
 
       tr_account.assign_attributes(attrs)
       tr_account.save!
+      capped_topics
     end
 
     def normalized_domain_statuses(data)
@@ -153,16 +220,130 @@ class TradeRepublicItem::Importer
     end
 
     def known_newest_event_id
-      return if trade_republic_item.newest_event_id.blank?
+      return if force_full_timeline_fetch?
 
-      # A previous implementation could persist the newest cursor while
-      # dropping the actual event payload. Force one full timeline fetch in
-      # that state so historical data can be recovered instead of remaining
-      # permanently invisible.
+      trade_republic_item.newest_event_id.presence
+    end
+
+    # A previous implementation could persist the newest cursor while
+    # dropping the actual event payload. Force one full timeline fetch in
+    # that state so historical data can be recovered instead of remaining
+    # permanently invisible.
+    def force_full_timeline_fetch?
+      return false if trade_republic_item.newest_event_id.blank?
+
       portfolio_accounts = trade_republic_item.trade_republic_accounts.select(&:portfolio?)
-      return if portfolio_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
+      portfolio_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
+    end
 
-      trade_republic_item.newest_event_id
+    # Incomplete trade-detail events, complete trades without a price read from
+    # the detail (missing, or derived from the rounded total) and dividends
+    # without their detail, in the client's backlog order.
+    def events_needing_detail_enrichment
+      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      return [] unless portfolio
+
+      Array(portfolio.raw_timeline_payload)
+        .select do |event|
+          Provider::TradeRepublicClient.incomplete_trade_detail_event?(event) ||
+            Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(event) ||
+            Provider::TradeRepublicClient.dividend_detail_missing?(event)
+        end
+        .sort_by { |event| Provider::TradeRepublicClient.detail_backfill_sort_key(event) }
+        .first(Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS)
+    end
+
+    # Sold / historical trade ISINs that already have complete details but still
+    # lack an exchange ticker. Incremental syncs stop at newest_event_id, so
+    # these must be passed explicitly for instrument lookup.
+    def isins_needing_symbol_lookup
+      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      return [] unless portfolio
+
+      Array(portfolio.raw_timeline_payload).filter_map do |event|
+        isin = Provider::TradeRepublicClient.symbol_lookup_isin(event)
+        isin if isin && Provider::TradeRepublicClient.symbol_lookup_due?(event)
+      end.uniq.first(Provider::TradeRepublicClient::MAX_INSTRUMENT_LOOKUPS)
+    end
+
+    # Exchange tickers stored by earlier syncs; the client skips the
+    # instrument subscription for these positions.
+    def stored_instrument_symbols
+      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
+      return {} unless portfolio
+
+      Provider::TradeRepublicClient.instrument_symbols_from_positions(portfolio.raw_positions_payload)
+    end
+
+    # Advance the list cursor whenever timeline pagination finished, even when
+    # a detail backlog remains for later syncs. The per-topic newest events in
+    # timeline_cursors take precedence; this column seeds topics without
+    # their own state and triggers the forced full fetch.
+    def timeline_cursor_for(data, domain_statuses)
+      pagination_complete = if data.key?("timeline_pagination_complete")
+        data["timeline_pagination_complete"]
+      else
+        domain_statuses["timeline"] == "success"
+      end
+      return trade_republic_item.newest_event_id unless pagination_complete
+      return trade_republic_item.newest_event_id if data["newest_event_id"].blank?
+
+      data["newest_event_id"]
+    end
+
+    # Per-topic newest event and history backfill position for the next
+    # sync. Kept as-is when the timeline failed so no progress is lost. Once
+    # the stored history is full, a topic whose fetched events were dropped
+    # would lose its older pages straight away, so its history backfill stops.
+    def timeline_cursors_for(data, domain_statuses, capped_topics:)
+      stored = trade_republic_item.timeline_cursors
+      return stored if domain_statuses["timeline"] == "failed" || data["timeline_cursors"].nil?
+
+      cursors = data["timeline_cursors"].to_h
+      return cursors if capped_topics.empty?
+
+      Provider::TradeRepublicClient.stop_timeline_history_backfills(cursors, topics: capped_topics)
+    end
+
+    def importer_warnings(capped_topics:)
+      return [] if capped_topics.empty?
+
+      [ "timeline history exceeds #{MAX_TIMELINE_EVENTS} events; older history is not imported" ]
+    end
+
+    # The topics whose events, fetched for the first time this sync, the size
+    # cap would discard, i.e. whose history reaches further back than can be
+    # stored. A dropped event that can't be traced to a topic (no id, or no
+    # per-topic ids from the provider) counts against every topic.
+    def capped_timeline_topics(merged, existing:, incoming:, topic_event_ids:)
+      overflow = merged.size - MAX_TIMELINE_EVENTS
+      return [] unless overflow.positive?
+
+      existing_keys = Array(existing).filter_map { |event| timeline_event_key(event) }.to_set
+      fetched_keys = Array(incoming).filter_map { |event| timeline_event_key(event) }.reject { |key| existing_keys.include?(key) }.to_set
+      topics_by_id = Hash.new { |hash, id| hash[id] = [] }
+      topic_event_ids.to_h.each { |topic, ids| Array(ids).each { |id| topics_by_id[id.to_s] << topic } }
+
+      merged.first(overflow).flat_map do |event|
+        next [] unless fetched_keys.include?(timeline_event_key(event))
+
+        topics = topics_by_id.fetch(event_id(event).to_s, [])
+        topics.presence || Provider::TradeRepublicClient::TIMELINE_TOPICS
+      end.uniq
+    end
+
+    # Matches how merge_timeline_events collapses events: by id, or by the
+    # whole event when it has none.
+    def timeline_event_key(event)
+      return unless event.is_a?(Hash)
+
+      event_id(event) || event.as_json
+    end
+
+    def event_id(event)
+      return unless event.is_a?(Hash)
+
+      (event["id"] || event[:id]).presence
     end
 
     def merge_timeline_events(existing, incoming)
@@ -172,22 +353,121 @@ class TradeRepublicItem::Importer
 
         event = event.with_indifferent_access
         key = event[:id].presence || event
-        events_by_id[key] = event
+        events_by_id[key] = prefer_richer_timeline_event(events_by_id[key], event)
       end
-      events_by_id.values.sort_by { |event| event[:timestamp].to_s }.last(MAX_TIMELINE_EVENTS)
+      events_by_id.values.sort_by { |event| event[:timestamp].to_s }
+    end
+
+    # Stamp exchange tickers onto timeline details for ISINs that were resolved
+    # during sync (including fully sold holdings no longer in the portfolio).
+    def apply_instrument_symbols!(events, instrument_symbols)
+      return events if instrument_symbols.blank?
+
+      symbols = instrument_symbols.each_with_object({}) do |(isin, mapping), map|
+        next if isin.blank? || !mapping.is_a?(Hash)
+
+        entry = mapping.stringify_keys
+        symbol = entry["symbol"].to_s.strip.presence
+        exchange_slug = entry["exchange_slug"].to_s.strip.upcase.presence
+        next if symbol.blank? || exchange_slug.blank?
+        next if symbol.casecmp?(isin.to_s)
+
+        map[isin.to_s] = { "symbol" => symbol, "exchange_slug" => exchange_slug }
+      end
+      return events if symbols.empty?
+
+      Array(events).each do |event|
+        next unless event.is_a?(Hash)
+
+        detail = event[:detail] || event["detail"]
+        next unless detail.is_a?(Hash)
+
+        detail = detail.with_indifferent_access
+        isin = detail[:isin].to_s.presence
+        next if isin.blank?
+
+        mapping = symbols[isin]
+        next unless mapping
+
+        current_symbol = detail[:symbol].to_s.strip.presence
+        usable_symbol = current_symbol.present? && !current_symbol.casecmp?(isin)
+        detail[:symbol] = mapping["symbol"] unless usable_symbol
+        detail[:exchange_slug] = mapping["exchange_slug"] if detail[:exchange_slug].to_s.strip.blank?
+
+        if event.respond_to?(:[]=)
+          event[:detail] = detail
+        end
+      end
+
+      events
+    end
+
+    def stamp_symbol_lookup_attempts!(events, unresolved_isins)
+      isins = Array(unresolved_isins).map(&:to_s).to_set
+      return events if isins.empty?
+
+      now = Time.current.iso8601
+      Array(events).each do |event|
+        next unless event.is_a?(Hash)
+
+        detail = event[:detail] || event["detail"]
+        next unless detail.is_a?(Hash)
+
+        detail = detail.with_indifferent_access
+        next unless isins.include?(detail[:isin].to_s)
+
+        detail[Provider::TradeRepublicClient::SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY] ||= now
+        detail[Provider::TradeRepublicClient::SYMBOL_LOOKUP_ATTEMPTED_AT_KEY] = now
+        event[:detail] = detail
+      end
+
+      events
+    end
+
+    def prefer_richer_timeline_event(previous, incoming)
+      return incoming if previous.blank?
+      return previous if incoming.blank?
+
+      previous = previous.with_indifferent_access
+      incoming = incoming.with_indifferent_access
+      merged = previous.merge(incoming)
+      merged[:category] = incoming[:category].presence || previous[:category]
+      merged[:eventType] = incoming[:eventType].presence || previous[:eventType]
+      merged[:detail] = prefer_richer_timeline_detail(previous[:detail], incoming[:detail])
+      Provider::TradeRepublicTimelineEvent.merge_lifecycle_fields!(merged, previous, incoming)
+      # compact drops nil only; boolean false for deleted/hidden must survive.
+      merged.compact
+    end
+
+    def prefer_richer_timeline_detail(previous, incoming)
+      previous = previous.is_a?(Hash) ? previous.with_indifferent_access : {}.with_indifferent_access
+      incoming = incoming.is_a?(Hash) ? incoming.with_indifferent_access : {}.with_indifferent_access
+      return previous.presence if incoming.blank?
+      return incoming.presence if previous.blank?
+
+      previous.merge(incoming) { |_key, old_value, new_value| new_value.presence || old_value }.presence
+    end
+
+    def event_category(event)
+      return if event.blank?
+
+      event = event.with_indifferent_access if event.respond_to?(:with_indifferent_access)
+      event[:category].to_s
     end
 
     # Exact decimal math: cash + Σ(quantity × price). Positions lacking a
     # validated price remain visible in the raw payload but contribute zero
     # until Trade Republic provides a current quote.
     def cash_balance(data)
-      parse_decimal(data.dig("cash", "available_amount")) ||
-        parse_decimal(data.dig("cash", "amount")) ||
+      parse_decimal(data.dig("cash", "amount")) ||
         parse_decimal(data.dig("cash", "value")) || BigDecimal("0")
     end
 
     def portfolio_balance(data, fallback: nil)
-      positions = Array(data["positions"])
+      positions_value(Array(data["positions"]), fallback: fallback)
+    end
+
+    def positions_value(positions, fallback: nil)
       return BigDecimal("0") if positions.empty?
 
       values = positions.map do |position|
@@ -205,7 +485,7 @@ class TradeRepublicItem::Importer
 
     def build_account_name(account_id, kind:)
       base = I18n.t("trade_republic_items.defaults.name")
-      suffix = kind == "cash" ? "Cash" : "Portfolio"
+      suffix = { "cash" => "Cash", "crypto" => "Crypto" }.fetch(kind, "Portfolio")
       account_id.present? ? "#{base} #{suffix} (#{account_id})" : "#{base} #{suffix}"
     end
 
@@ -225,7 +505,8 @@ class TradeRepublicItem::Importer
 
     def parse_decimal(value)
       return nil if value.blank?
-      BigDecimal(value.to_s)
+      decimal = BigDecimal(value.to_s)
+      decimal if decimal.finite?
     rescue ArgumentError
       nil
     end

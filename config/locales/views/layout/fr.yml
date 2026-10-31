@@ -13,6 +13,9 @@ fr:
         reports: Rapports
         transactions: Transactions
       privacy_mode: Activer/désactiver le mode confidentialité
+      release_highlight:
+        done: Compris
+        title: Nouveautés
       resize_left_sidebar: Redimensionner la barre latérale des comptes
       resize_right_sidebar: Redimensionner la barre latérale de l'assistant
       skip_to_main: Aller au contenu principal
@@ -29,6 +32,10 @@ fr:
       footer:
         privacy_policy: Politique de confidentialité
         terms_of_service: Conditions d'utilisation
+      notification_tray:
+        download_complete: Téléchargement terminé
+        download_failed: Le téléchargement a échoué. Veuillez réessayer.
+        download_location: Le fichier se trouve dans votre dossier Téléchargements.
     trial:
       contribute: Contribuer
       data_deleted_in_days: Les données seront supprimées dans %{days} jours

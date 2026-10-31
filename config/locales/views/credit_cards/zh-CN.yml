@@ -1,6 +1,14 @@
 ---
 zh-CN:
   credit_cards:
+    due:
+      in_days:
+        zero: 今天到期
+        "1": 明天到期
+        other: "%{count} 天后到期"
+      overdue:
+        "1": 昨天到期
+        other: "逾期 %{count} 天"
     edit:
       edit: 编辑%{account}
     form:
@@ -10,17 +18,39 @@ zh-CN:
       apr_placeholder: '15.99'
       available_credit: 可用额度
       available_credit_placeholder: '10000'
+      due_day: 还款日
       expiration_date: 到期日期
       minimum_payment: 最低还款额
       minimum_payment_placeholder: '100'
+      statement_close_day: 账单日
+      statement_cycle_description: 每月账单结账日和还款到期日。设置后，“概览”标签页会显示上一期账单金额以及正在计入下一期的金额。已连接的卡会自动填入这些信息并保留手动修改。
+      sophtron_balance_sign_auto: 自动
+      sophtron_balance_sign_credit: 贷方（银行欠您）
+      sophtron_balance_sign_debt: 借方（您欠银行）
+      sophtron_balance_sign_description: 仅在 Sophtron 报告的正负号不明确时使用覆盖。自动模式将继续取反信用卡余额。
+      sophtron_balance_sign_label: Sophtron 余额含义
+      simplefin_balance_sign_auto: 自动
+      simplefin_balance_sign_credit: 贷方（银行欠您）
+      simplefin_balance_sign_debt: 借方（您欠银行）
+      simplefin_balance_sign_description: 仅在 SimpleFIN 报告的正负号不明确时使用覆盖。自动模式将继续结合交易历史和提供商余额。
+      simplefin_balance_sign_label: SimpleFIN 余额含义
+      treat_balance_as_available_credit_description: 如果您的银行将此卡的余额报告为剩余可用信用额度而非欠款金额，请启用此项。欠款金额将根据银行报告的信用额度推导，若银行未提供则根据“可用额度”字段推导。
+      treat_balance_as_available_credit_label: 余额即为可用额度
+    tabs:
+      overview:
+        above_minimum: 此账单金额为 %{balance}，高于最低还款额 %{minimum}。仅偿还最低还款额将使卡内余额按此 APR 计息。
+        apr: 年利率
+        closes_on: 下一期账单日 %{date}
+        credit_toward_next: 计入下一期账单的贷记
+        due_on: "%{date} 到期"
+        edit_card_details: 编辑卡片详情
+        since_last_statement: 自上一期账单以来
+        statement_balance: 账单余额
+        multi_currency_unavailable: 此账单汇总了以多种货币记录的条目，在没有所有货币汇率的情况下无法在此计算总额。余额将留空而非进行估算。
+        no_cycle_description: 设置账单结账日和还款到期日，此标签页即可显示上一期账单金额以及正在计入下一期的金额。关联的卡片通常会自动填入这些信息。
+        no_cycle_title: 未设置账单周期
+        unknown: 未知
     new:
       title: 请输入信用卡详细信息
-    overview:
-      amount_owed: 欠款总额
-      annual_fee: 年费
-      apr: 年利率
-      available_credit: 可用额度
-      expiration_date: 到期日期
-      minimum_payment: 最低还款额
-      unknown: 未知
-      edit_account_details: 编辑账户详情
+    update:
+      sophtron_balance_sign_error: 无法应用 Sophtron 余额含义设置。已保留您之前的设置。请重试。

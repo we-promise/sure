@@ -71,7 +71,8 @@ compared. Add events only with their capture code, allowlist, and offline tests;
 registering a survey does not automatically instrument the feature.
 
 These are the events **currently implemented for Sankey**. All include
-`preview_version: cash_flow_v1`:
+`preview_version: cash_flow_v1` and `sure_version` (the deployed release string
+from `.sure-version`, including any prerelease suffix):
 
 | Event | Trigger | Additional properties |
 | --- | --- | --- |
@@ -94,8 +95,8 @@ labels, colors, and API-only metadata do not affect the result. An empty legacy
 zero-valued center is equivalent to an empty preview graph. Missing or invalid
 inputs produce no event. Zoomed and expanded views do not create new comparisons.
 
-Only `new_sankey_match` or `new_sankey_mismatch`, plus `preview_version`, is sent
-to PostHog. No graph, amount, category, user ID, or date range is included in the
+Only `new_sankey_match` or `new_sankey_mismatch`, plus `preview_version` and
+`sure_version`, is sent to PostHog. No graph, amount, category, user ID, or date range is included in the
 comparison payload. Existing managed SDK metadata and self-hosted privacy rules
 still apply. Intentional deficit/netting changes can produce mismatches;
 a match proves input equivalence, not visual correctness. The separate requests
@@ -137,6 +138,58 @@ usage: blocked or opted-out analytics are absent. The self-hosted client uses an
 in-memory anonymous identity, so distinct IDs are not reliable counts of returning
 people or installations across visits.
 
+## Daily web preview adoption
+
+`web_ui_served_daily` records whether Rails served an authenticated user a
+successful full HTML UI response with `preview_features_enabled` true or false. It
+does not claim that the browser displayed the response or that someone was
+actively using it. Normal web visits and installed PWAs use the same UI route;
+API/JSON requests, AJAX/Turbo-frame requests, non-GET requests, redirects/errors,
+and prefetch/prerender requests are excluded. No browser script, storage marker, mobile API, or
+background-job hook is added.
+
+The server event uses the bundled shared feedback project, the same destination
+as self-hosted Sankey feedback, in both managed and self-hosted deployments.
+It does not require `POSTHOG_KEY` / `POSTHOG_HOST` or duplicate the event to an
+installation's normal analytics project. `POSTHOG_FEEDBACK_ENABLED=false`
+disables it. Collection requires production or the existing explicit development
+opt-in (`POSTHOG_DEVELOPMENT_ENABLED=true`); automated tests remain disabled.
+Browser SDK opt-outs stored in localStorage and ad blockers cannot suppress this
+server-side event; Rails cannot read that browser-only state.
+
+Sankey's browser capture and routing remain unchanged: managed Sankey events use
+their configured normal analytics project, while self-hosted Sankey events use
+the shared feedback project. Browser and server events have different identities
+and opt-out behavior. The shared destination and GeoIP support aggregate location
+cohorts, not matching people or sessions between the two event streams.
+
+An atomic cache claim limits capture to one attempt per authenticated user per
+calendar day in the family's configured timezone (or the app timezone when
+unset/invalid), across browsers and sign-ins. The
+first claimed response supplies that day's preview state and IP; later preference
+or network changes do not add another event that day. A shared Redis cache provides this
+deduplication across web workers; other cache stores can race or limit counting
+only within one process. Null-cache configurations skip capture; cache
+clearing/eviction can permit repeats, and cache/SDK failures can omit a day.
+SDK queue acceptance does not guarantee delivery. A qualifying full UI response
+can still be requested by a background tab or automation; browser-cached opens
+that never reach Rails cannot count.
+
+The event includes the Boolean preview state, `sure_version`, and the visitor IP
+that Rails resolves through `request.remote_ip`, sent as `$ip`. GeoIP enrichment
+is explicitly allowed with `$geoip_disable: false`, subject to the destination
+project's settings. Correct visitor geography depends on the deployment's proxy
+headers and Rails trusted-proxy configuration; a proxy, VPN, or shared network
+can affect the result. The event uses Rails' resolved address, not an unparsed
+forwarding header. This change does not modify proxy trust settings.
+
+The required distinct identifier is an application-keyed digest of the user and
+date: it is stable only for that user/day and contains no raw user ID. Person
+profiles remain disabled. However, an IP address can identify or correlate people,
+so the event is not anonymous. No names, emails, financial values, or URLs are
+added. Tests use synthetic addresses and an offline client and never submit live
+events.
+
 ## Privacy and extending the implementation
 
 Usage properties must exclude amounts, account/category names or IDs, date
@@ -144,14 +197,76 @@ ranges, server URLs, and graph payloads. Ask users to omit private financial
 details from voluntary text. The feature and feedback form are excluded from
 autocapture and session recording.
 
-Managed deployments retain their existing SDK metadata. The dedicated self-hosted
-client disables automatic tracking, pageviews, session recording, and person
+Managed Sankey events retain their existing SDK metadata. The dedicated self-hosted
+browser client disables automatic tracking, pageviews, session recording, and person
 profiles; it strips incidental URL, referrer, and device metadata. Opting out of
-either client suppresses capture. GeoIP enrichment is disabled, although the
-ingestion service necessarily receives the network connection's IP address.
+either browser client suppresses Sankey capture. GeoIP enrichment is enabled using the browser
+connection's IP address, allowing PostHog to add approximate location properties
+to these events without creating person profiles. The destination project must also allow GeoIP enrichment.
 
 Use `feedback_config(:feature_name)` and the per-feature survey registry for the
 next preview. Follow [Adding feature feedback surveys](../llm-guides/feedback-surveys.md)
 for implementation and tests. Reuse project routing, while giving the new feature
 its own questions and explicit event contract. Extending the browser client must
 preserve the same routing, privacy, and opt-out behavior for both features.
+
+## Daily installation activity
+
+`Usage` captures all daily events through the same shared feedback
+client, environment/opt-out gates, pseudonym generation and error handling. The
+web controller concern only selects qualifying responses and supplies user,
+family-local date and resolved IP; assistant/MCP hooks and Sidekiq middleware supply
+their event names. User-scoped web claims remain in Rails cache; installation
+claims use Sidekiq Redis.
+
+`ai_assistant_served_daily` records an attempted LLM chat request through the
+built-in assistant or the external assistant client. Web and mobile/API chat
+entry points share these paths. Viewing a chat page, enqueueing a response, and
+non-chat AI features do not trigger it. Tool-call rounds and provider retries
+share the same daily claim. A failed LLM request still counts as an attempt.
+Externally initiated MCP clients that do not call Sure's chat backend are not
+observable through this event.
+
+`job_served_daily` records entry into Sidekiq server job execution, including
+Active Job wrappers, scheduled jobs and retries. It does not count enqueueing or
+web requests; failing jobs still count. Capture uses the feedback SDK directly,
+not another Sidekiq job, so it cannot create a telemetry-job loop.
+
+`mcp_call_served_daily` records an authenticated `tools/call` execution attempt
+through Sure's MCP endpoint, using either OAuth or the environment token. The
+tool must exist and be available to the authenticated user; a tool failure still
+counts. Initialization, tool listing, notifications, malformed JSON/JSON-RPC,
+rejected authentication, invalid sessions/protocol versions and unknown or unavailable
+tools do not count. Tool names, arguments and results are not sent. The built-in
+assistant's internal tool calls do not trigger this event.
+
+Each event has an independent atomic Redis claim per installation per UTC
+calendar day. Unlike the existing per-user, family-local web event, these events
+have no user or family context. The daily pseudonymous installation ID is an HMAC
+derived from the shared Rails deployment secret and UTC date. All web/worker
+processes must share that secret and Sidekiq Redis (including the existing
+Sentinel configuration). Separate installations must not share deployment
+secrets. Rotating the secret or losing/evicting Redis claims can permit another
+capture that day. Claims expire after two days; deployment timezone does not
+change the midnight UTC boundary.
+
+These events reuse the bundled feedback destination, production/development
+opt-in rules and `POSTHOG_FEEDBACK_ENABLED` opt-out above. Tests are disabled
+unless a test explicitly replaces the collector and environment gates. Browser
+opt-outs cannot control server capture. The only event properties are Sure's
+version, disabled person-profile processing and disabled GeoIP: no prompt,
+response, user/account ID, IP, tool name, tool arguments/results, job class, queue
+or job arguments are sent.
+
+The guarantee is best-effort at-most-one capture attempt while a Redis claim is
+retained, not distributed exactly-once delivery. A Redis failure skips capture
+without blocking chat/job execution; a collector failure or process exit after
+claiming can omit the day's event. Claims are not released or retried on delivery
+failure. SDK acceptance and retries do not guarantee collector delivery or
+collector-side deduplication. A quiet installation without qualifying activity
+emits nothing.
+
+Run the shared-store concurrency regression against disposable Redis with
+`DAILY_USAGE_REDIS_TESTS=1 REDIS_URL=redis://localhost:6379/15 bin/rails test test/integration/usage_redis_test.rb`.
+It forks eight workers and replaces the collector with a Redis-backed fake;
+it sends no live telemetry and deletes only its own randomly scoped keys.

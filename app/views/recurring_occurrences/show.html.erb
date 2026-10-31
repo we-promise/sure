@@ -7,13 +7,10 @@
 
     This is the ACT surface: it answers "what do I need to do about this bill
     right now", which is a different question from "what is this bill", and it
-    is why it opens in the drawer while the bill's own story lives on its page.
+    is why it is its own drawer, one link away from the bill's.
 
     frame: "drawer", responsive: true matches every other detail surface in the
-    app -- a centred card on a phone, a right-hand drawer from lg up. The close
-    button is ours rather than dialog.close_button, because that one carries
-    `hidden lg:flex` under `responsive`, which leaves a phone with no visible
-    way out. %>
+    app -- a centred card on a phone, a right-hand drawer from lg up. %>
 
 <%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
   <% dialog.with_header(custom_header: true) do %>
@@ -26,15 +23,7 @@
           <%= occurrence_due_label(@occurrence) %>
         </p>
       </div>
-      <%= render DS::Button.new(
-            variant: "icon",
-            size: :sm,
-            icon: "x",
-            class: "ml-auto shrink-0",
-            title: t("ds.dialog.close"),
-            aria_label: t("ds.dialog.close"),
-            data: { action: "DS--dialog#close" }
-          ) %>
+      <%= dialog.close_button %>
     </div>
   <% end %>
 
@@ -83,7 +72,7 @@
                     <%= allocation.entry&.name.presence || t(".manual_payment") %>
                   </p>
                   <% if allocation.paid_on %>
-                    <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short) %></p>
+                    <p class="text-xs text-secondary"><%= l(allocation.paid_on, format: :short_with_year) %></p>
                   <% end %>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
@@ -115,7 +104,7 @@
                   <%= @pending_suggestion.entry&.name.presence || t(".manual_payment") %>
                 </p>
                 <% if @pending_suggestion.paid_on %>
-                  <p class="text-xs text-secondary"><%= l(@pending_suggestion.paid_on, format: :short) %></p>
+                  <p class="text-xs text-secondary"><%= l(@pending_suggestion.paid_on, format: :short_with_year) %></p>
                 <% end %>
               </div>
               <p class="text-sm font-medium text-primary privacy-sensitive shrink-0">
@@ -250,18 +239,28 @@
           <%= render DS::Disclosure.new(title: t(".cant_find"), align: "left") do %>
             <div class="space-y-2 pt-1">
               <p class="text-xs text-secondary"><%= t(".manual_explainer") %></p>
-              <%= form_with url: recurring_occurrence_allocations_path(@occurrence), class: "flex items-end gap-2" do |form| %>
-                <div class="grow">
-                  <%= form.label :amount, t(".manual_amount_label"), class: "form-field__label" %>
-                  <%= form.number_field :amount, step: 0.01, min: 0.01,
-                        value: @occurrence.remaining_amount.positive? ? @occurrence.remaining_amount : nil,
-                        class: "form-field__input" %>
+              <%# The same boxed fields as every other form. Bare inputs under
+                  a bare label read as text, not as something to fill in. The
+                  payment is recorded in the bill's currency, so that shows
+                  and stays put. %>
+              <%= styled_form_with url: recurring_occurrence_allocations_path(@occurrence), class: "space-y-2" do |form| %>
+                <div class="grid grid-cols-2 gap-2">
+                  <%# The minimum is one step, so a whole-unit currency like JPY
+                      keeps whole amounts valid: a 0.01 minimum would have
+                      been the step base and put 1000 off-step. %>
+                  <% step = RecurringTransaction.amount_step(@occurrence.currency) %>
+                  <%= form.money_field :amount,
+                        label: t(".manual_amount_label"),
+                        input_class: "privacy-sensitive privacy-sensitive-interactive",
+                        value: (@occurrence.remaining_amount if @occurrence.remaining_amount.positive?),
+                        currency_value_override: @occurrence.currency,
+                        disable_currency: true,
+                        step: step,
+                        min: step %>
+                  <%= form.date_field :paid_on, label: t(".manual_date_label"), value: Date.current %>
                 </div>
-                <div class="grow">
-                  <%= form.label :paid_on, t(".manual_date_label"), class: "form-field__label" %>
-                  <%= form.date_field :paid_on, value: Date.current, class: "form-field__input" %>
-                </div>
-                <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary") %>
+                <%# DS::Button defaults to type="button"; this one has to submit the form. %>
+                <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary", full_width: true, type: "submit") %>
               <% end %>
             </div>
           <% end %>
@@ -291,7 +290,8 @@
               <% menu.with_item(variant: "button",
                     text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
                     icon: series.active? ? "pause" : "play",
-                    href: toggle_status_recurring_transaction_path(series), method: :post) %>
+                    href: toggle_status_recurring_transaction_path(series), method: :post,
+                    frame: "_top") %>
             <% end %>
           </div>
         <% else %>
@@ -303,8 +303,9 @@
           <%= render DS::Link.new(
                 text: t(".view_bill"),
                 variant: "default",
-                href: bill_path(series),
-                data: { turbo_frame: "_top" }
+                href: bill_path(series, occurrence: @occurrence.id),
+                frame: :drawer,
+                data: { turbo_prefetch: false }
               ) %>
           <%= render "recurring_transactions/pay_action", recurring_transaction: series, show_add: false %>
         </div>

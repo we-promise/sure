@@ -33,6 +33,29 @@ class Loan < ApplicationRecord
   # charging a month's interest for the gap.
   validates :start_date, comparison: { less_than_or_equal_to: -> { Date.current } }, allow_nil: true
 
+  # What the borrower put in up front. Not part of the amortisation -- the loan
+  # amortises what was actually lent -- but it is what makes leverage readable:
+  # a 20,000 deposit against an 80,000 loan is a different position from the
+  # same loan against 5,000.
+  validates :down_payment, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+
+  validates :insurance_rate, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  # The form's "None" option submits an empty string, which means no type
+  # recorded (read as decreasing). Stored as NULL: the column's check
+  # constraint admits NULL but not '', so allowing blank here would only move
+  # the rejection from a validation error to a database error.
+  normalizes :insurance_rate_type, with: ->(value) { value.presence }
+  validates :insurance_rate_type, inclusion: { in: Loan::Insurance::RATE_TYPES }, allow_nil: true
+
+  # How much was borrowed for every unit the borrower put in. Nil without a
+  # down payment recorded: a loan with no deposit is not infinitely leveraged,
+  # it is a loan whose leverage nobody has told us.
+  LEVERAGE_BANDS = {
+    conservative: 0..4,
+    moderate: 4..8,
+    high: 8..
+  }.freeze
+
   # The contracted repayment, for a loan that has exactly one.
   #
   # Deliberately still nil for a variable loan even though it now has a
@@ -126,6 +149,49 @@ class Loan < ApplicationRecord
     RateResolver.for(self).accrual_rate_for(as_of)
   end
 
+  # What a provider should write when it reports this variable loan's rate on
+  # `as_of`, or nil when there is nothing to write. Writes nothing itself, so
+  # the provider's own writer keeps locks, provenance and refusal handling.
+  #
+  # - A first sighting (no base rate yet) sets the base rate: a first reading
+  #   is not evidence that the rate moved on any particular day.
+  # - A rate equal to the one in force on `as_of` is not a change. A row
+  #   already dated `as_of` is the rate in force on `as_of`, so this also
+  #   covers a second sync on the same day.
+  # - Otherwise the change is a row dated `as_of`. The base rate stays, since
+  #   replacing it would re-price every period before the change.
+  # - A loan that is not variable gets nil; what a fixed loan does with a
+  #   reported rate is the caller's decision.
+  #
+  # Rounded to three places, the precision of `interest_rate`, so a reading a
+  # hair off the stored rate is not taken for a change on every sync.
+  #
+  # A rate outside 0..MAX_INTEREST_RATE gets nil. The form rejects one, and
+  # nothing checks a schedule written any other way, so a provider reporting
+  # -1% or 150% has sent something other than a rate. So has one that is not
+  # a number at all, which gets nil too rather than raising out of the sync.
+  # The bound is checked before rounding, which would otherwise carry -0.0004
+  # or 100.0004 onto 0 or 100.
+  def variable_rate_update_for(reported_rate, as_of:)
+    return nil if reported_rate.nil? || !variable_rate_type?
+
+    rate = begin
+      BigDecimal(reported_rate.to_s)
+    rescue ArgumentError, TypeError, FloatDomainError
+      nil
+    end
+    return nil unless rate&.finite? && rate.between?(0, MAX_INTEREST_RATE)
+
+    rate = rate.round(3)
+    return { interest_rate: rate } if interest_rate.blank?
+
+    in_force = current_variable_rate(as_of)
+    return nil if in_force.present? && BigDecimal(in_force.to_s) == rate
+
+    schedule = (variable_rate_schedule || {}).stringify_keys
+    { variable_rate_schedule: schedule.merge(as_of.to_date.iso8601 => rate.to_s("F")) }
+  end
+
   # Rows the form submitted that could not be parsed. Kept so the save can be
   # rejected and the form re-rendered with what the user actually typed --
   # dropping them silently loses a typo'd row between submit and redisplay,
@@ -216,21 +282,202 @@ class Loan < ApplicationRecord
     @amortization_schedule ||= AmortizationSchedule.for(self)
   end
 
+  # Mirrored from the engine so the model and the simulator cannot drift: the
+  # engine owns what the conventions mean, the model owns what a user may store.
+  DAY_COUNT_CONVENTIONS = Simulator::DAY_COUNT_CONVENTIONS.map(&:to_s).freeze
+  DEFAULT_DAY_COUNT_CONVENTION = Simulator::DEFAULT_DAY_COUNT_CONVENTION.to_s
+
   # The columns AmortizationSchedule.for reads from the loan itself. Assigning
   # any of them drops the memoised schedule, as reload does, so a read after the
   # change answers with the new terms rather than the ones it was built from.
-  SCHEDULE_INPUTS = %i[interest_rate term_months rate_type start_date variable_rate_schedule].freeze
+  SCHEDULE_INPUTS = %i[interest_rate term_months rate_type start_date variable_rate_schedule day_count_convention].freeze
+
+  validates :day_count_convention, inclusion: { in: DAY_COUNT_CONVENTIONS }
 
   SCHEDULE_INPUTS.each do |input|
     define_method(:"#{input}=") do |value|
       @amortization_schedule = nil
+      @insurance = nil
+      super(value)
+    end
+  end
+
+  # The premium is charged against the schedule, so it goes stale for both its
+  # own inputs and the schedule's.
+  INSURANCE_INPUTS = %i[insurance_rate insurance_rate_type].freeze
+
+  INSURANCE_INPUTS.each do |input|
+    define_method(:"#{input}=") do |value|
+      @insurance = nil
       super(value)
     end
   end
 
   def reload(*)
     @amortization_schedule = nil
+    @insurance = nil
     super
+  end
+
+  # The insurance policy charged alongside this loan's instalments, or nil when
+  # no premium is recorded. Read #total_insurance for a figure that is always
+  # money.
+  def insurance
+    @insurance ||= Loan::Insurance.for(self)
+  end
+
+  def total_insurance
+    insurance&.total || Money.new(0, account.currency)
+  end
+
+  # Everything the loan costs the borrower: what the schedule has them repay
+  # (principal and interest, the Schedule tab's own "Total Cost") plus the
+  # premium charged alongside. Read off the schedule rather than re-added from
+  # its parts, so with no premium the two figures are the same figure. Nil when
+  # there is no schedule to read an interest figure from, because a cost
+  # without interest in it would understate the loan rather than decline to
+  # answer.
+  def total_cost
+    schedule = amortization_schedule
+    return nil if schedule.nil?
+
+    schedule.total_paid + total_insurance
+  end
+
+  # How far into the term the loan is, measured from origination rather than
+  # from `start_date` alone: a loan drawn down before the account tracking it
+  # was created has no start_date, and #origination_date already answers that
+  # from the account's first valuation.
+  #
+  # A month counts once it has been served in full, so a loan originated on the
+  # 15th is one month in on the 15th of the next month, not on the 1st. Clamped
+  # to the term: a loan running past its last payment is finished, not further
+  # in than it can be.
+  def months_elapsed(as_of: Date.current)
+    origin = origination_date
+    return 0 if origin.nil? || term_months.nil? || as_of < origin
+
+    months = (as_of.year * 12 + as_of.month) - (origin.year * 12 + origin.month)
+    months -= 1 if origin + months.months > as_of
+
+    months.clamp(0, term_months)
+  end
+
+  def remaining_months(as_of: Date.current)
+    return nil if term_months.nil?
+
+    [ term_months - months_elapsed(as_of: as_of), 0 ].max
+  end
+
+  def finished?(as_of: Date.current)
+    return nil if term_months.nil?
+
+    months_elapsed(as_of: as_of) >= term_months
+  end
+
+  # What is still owed after a given scheduled payment, read off the schedule
+  # rather than re-derived, so it cannot drift from the table beside it.
+  def remaining_balance_at(payment_number)
+    return nil unless payment_number&.positive?
+
+    amortization_schedule&.payments&.dig(payment_number - 1)&.ending_balance
+  end
+
+  # One instalment, split into what it repays, what it costs and what it
+  # insures, with each part as a share of the whole. Defaults to the payment
+  # the loan is on as of `as_of`, which the caller supplies so the instalment
+  # agrees with every other figure it shows for that date.
+  #
+  # The ratios are for a progress bar, so they are floats summing to 1 rather
+  # than money. A zero payment -- an interest-free loan repaid in full by its
+  # opening instalment -- gives zeroes rather than a division by zero.
+  def payment_breakdown(payment_number: nil, as_of: Date.current)
+    schedule = amortization_schedule
+    return nil if schedule.nil?
+
+    if payment_number.nil?
+      # A finished loan is on no instalment; the clamp below would otherwise
+      # answer with the final, already-paid one as though it were current. The
+      # same holds once a schedule that rounding cleared early has run out,
+      # though the term has not.
+      elapsed = months_elapsed(as_of: as_of)
+      return nil if elapsed >= term_months || elapsed >= schedule.payments.size
+
+      payment_number = elapsed + 1
+    end
+
+    payment = schedule.payments[payment_number.clamp(1, schedule.payments.size) - 1]
+    return nil if payment.nil?
+
+    premium = insurance&.premium_for(payment.number)&.amount || Money.new(0, account.currency)
+    total = payment.principal + payment.interest + premium
+
+    {
+      number: payment.number,
+      date: payment.date,
+      principal: payment.principal,
+      interest: payment.interest,
+      insurance: premium,
+      total: total,
+      ratios: payment_ratios(payment, premium, total)
+    }
+  end
+
+  # How much of what was borrowed has been repaid, as a fraction, measured
+  # against the account's current balance rather than the schedule: the
+  # schedule says what was promised, the balance says what happened.
+  def balance_paid_ratio
+    borrowed = original_balance.amount
+    return nil unless borrowed.positive?
+
+    balance = account&.balance
+    return nil if balance.nil?
+
+    (1 - balance.abs.fdiv(borrowed)).clamp(0.0, 1.0)
+  end
+
+  # Segments for the repayment ring, in the shape the shared donut-chart
+  # controller takes. Nil when the paydown cannot be computed, which is the
+  # view's cue to leave the ring out rather than draw an empty one.
+  def to_donut_segments
+    ratio = balance_paid_ratio
+    return nil if ratio.nil?
+
+    [
+      { color: "var(--color-warning)", amount: ratio, id: "paid" },
+      { color: "var(--budget-unused-fill)", amount: 1 - ratio, id: "unused" }
+    ]
+  end
+
+  # The same segments as JSON, which is what the shared donut-chart controller
+  # reads. Mirrors Budget#to_donut_segments_json so the two ring call sites
+  # hand the controller the same shape.
+  def to_donut_segments_json
+    to_donut_segments&.to_json
+  end
+
+  # Nil for a negative opening balance too: imports can record one, and it is
+  # no amount borrowed to measure a deposit against.
+  def initial_leverage_ratio
+    return nil unless down_payment&.positive?
+
+    borrowed = original_balance.amount
+    return nil unless borrowed.positive?
+
+    borrowed.fdiv(down_payment)
+  end
+
+  def leverage_band
+    ratio = initial_leverage_ratio
+    return nil if ratio.nil?
+
+    LEVERAGE_BANDS.find { |_band, range| range.cover?(ratio) }&.first
+  end
+
+  # Where the loan is heading from today's balance. Not memoised: `as_of`
+  # makes each call a different question.
+  def payoff_projection(as_of: Date.current)
+    PayoffProjection.new(self, as_of: as_of)
   end
 
   # The date the loan was drawn down. Recorded explicitly when the borrower
@@ -241,8 +488,45 @@ class Loan < ApplicationRecord
     start_date || account.first_valuation&.date || account.opening_anchor_date
   end
 
+  # What the loan was written for, which is not always what the account has
+  # been seen holding.
+  #
+  # `initial_balance` is the recorded contractual principal. The account form
+  # writes it beside the opening valuation and the demo generator does the
+  # same, so for anything created here the two agree. Plaid's student-loan
+  # import writes `origination_principal_amount` into it, and there they can
+  # disagree by the whole of the repayment history: a loan imported after
+  # years of payments has a first tracked valuation part way down the curve,
+  # not the amount borrowed.
+  #
+  # Every figure measured against what was borrowed reads this: the schedule's
+  # principal, the insurance base, how much has been repaid, and the leverage
+  # against the deposit. Taking the first valuation instead understated all of
+  # them, for the whole life of the loan, and the wrong principal was
+  # amortised from the real origination date -- so the error was spread across
+  # the loan's actual history rather than being visibly recent.
+  #
+  # Falls back to the first tracked valuation when no principal was recorded,
+  # which is every loan whose import does not send one. Non-positive counts as
+  # unrecorded: an import can write a zero or a negative, and neither is an
+  # amount borrowed.
   def original_balance
+    recorded_principal = initial_balance
+    return Money.new(recorded_principal, account.currency) if recorded_principal&.positive?
+
     Money.new(account.first_valuation_amount, account.currency)
+  end
+
+  private def payment_ratios(payment, premium, total)
+    return { principal: 0.0, interest: 0.0, insurance: 0.0 } unless total.amount.positive?
+
+    whole = total.amount.to_f
+
+    {
+      principal: payment.principal.amount.to_f / whole,
+      interest: payment.interest.amount.to_f / whole,
+      insurance: premium.amount.to_f / whole
+    }
   end
 
   class << self

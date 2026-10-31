@@ -18,8 +18,6 @@ de:
           trial_expiring_soon: "Läuft in 7 Tagen ab"
           trial_trialing: "In Testphase"
           submit: "Filtern"
-        summary:
-          trials_expiring_7_days: "Testversionen laufen in den nächsten 7 Tagen ab"
         table:
           user: "Benutzer"
           trial_ends_at: "Testversion endet"

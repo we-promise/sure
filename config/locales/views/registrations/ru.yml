@@ -15,7 +15,7 @@ ru:
       success: Вы успешно зарегистрировались.
     new:
       invitation_message: "%{inviter} пригласил вас присоединиться в качестве %{role}"
-      join_family_title: Присоединиться к %{family} %{moniker}
+      join_family_title: Присоединиться к «%{family}» (%{moniker})
       password_placeholder: Введите ваш пароль
       password_requirements:
         case: Заглавные и строчные буквы

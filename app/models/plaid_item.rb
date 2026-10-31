@@ -1,5 +1,10 @@
 class PlaidItem < ApplicationRecord
-  include Syncable, Provided, Encryptable, DestroyableLater
+  include Syncable, Provided, Encryptable, DestroyableLater, ProviderItemOwnable
+
+  # A Plaid access_token only covers the institution the user authenticated
+  # to through Link, so a household member may connect their own bank without
+  # gaining any visibility into anyone else's connections.
+  credential_scope :per_connection
 
   enum :plaid_region, { us: "us", eu: "eu" }
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -113,9 +118,12 @@ class PlaidItem < ApplicationRecord
   # Reads the fetched data and updates internal domain objects
   # Generally, this should only be called within a "sync", but can be called
   # manually to "re-sync" the already fetched data
-  def process_accounts
+  #
+  # `as_of` is captured once and passed down, so every account in one sync
+  # dates a rate change the same way, as RedbarkItem#process_accounts does.
+  def process_accounts(as_of: Date.current)
     plaid_accounts.each do |plaid_account|
-      PlaidAccount::Processor.new(plaid_account).process
+      PlaidAccount::Processor.new(plaid_account, as_of: as_of).process
     end
   end
 
@@ -157,15 +165,22 @@ class PlaidItem < ApplicationRecord
     supported_products.include?(product)
   end
 
+  # available_products only says the institution offers a product. Calling one
+  # the user did not consent to in Link fails with ADDITIONAL_CONSENT_REQUIRED.
+  def consented_to_product?(product)
+    consented_products.include?(product)
+  end
+
   private
     def transactions_refresh_cache_key
       "plaid_item:#{id}:transactions_refresh_requested"
     end
 
     def shared_transactions_refresh_cache?
+      # Compared by name: referencing MemCacheStore autoloads it, which raises
+      # LoadError without the dalli gem, and SolidCache isn't a dependency.
       shared_cache = Rails.cache.is_a?(ActiveSupport::Cache::RedisCacheStore) ||
-        Rails.cache.is_a?(ActiveSupport::Cache::MemCacheStore) ||
-        Rails.cache.class.name == "SolidCache::Store"
+        Rails.cache.class.name.in?(%w[ActiveSupport::Cache::MemCacheStore SolidCache::Store])
 
       Rails.logger.warn("Plaid transaction refresh requires a shared Rails cache store") unless shared_cache
       shared_cache
@@ -207,8 +222,15 @@ class PlaidItem < ApplicationRecord
     # the transactions fetch entirely and those accounts imported balances and
     # liabilities but no transactions at all.
     def supported_products
+      (available_products + consented_products).map(&:to_s).uniq
+    end
+
+    # Link's initial `products` are billed when the item is created; products
+    # granted through `additional_consented_products` stay in consented_products
+    # until their first call bills them.
+    def consented_products
       consented = raw_payload.is_a?(Hash) ? Array(raw_payload["consented_products"]) : []
 
-      (available_products + billed_products + consented).map(&:to_s).uniq
+      (billed_products + consented).map(&:to_s).uniq
     end
 end

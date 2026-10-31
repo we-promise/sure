@@ -25,14 +25,77 @@ class IbkrAccount::Processor
     def update_account_balance!
       total_balance = ibkr_account.current_balance || ibkr_account.cash_balance || 0
       cash_balance = ibkr_account.cash_balance || 0
+      result = nil
 
-      account.assign_attributes(
-        balance: total_balance,
-        cash_balance: cash_balance,
-        currency: ibkr_account.currency
-      )
-      account.save!
-      account.set_current_balance(total_balance)
+      # One lock across the whole of it. Which statement the account follows is
+      # decided by the anchor's date, and a sync running beside this one can
+      # move that anchor between any two of these writes -- so the currency,
+      # the anchor and the cash split are settled together, and follow the same
+      # statement. The manager is called directly: the Anchorable wrapper
+      # queues the sync, which belongs after the lock is released.
+      account.with_lock do
+        manager = Account::CurrentBalanceManager.new(account)
+
+        # The currency is written ahead of the anchor so the anchor is made in
+        # it, but only when this statement is the one the anchor will follow:
+        # an older one leaves the balance where it is, and the cached figures
+        # must keep the denomination they were written in. Rolled back below
+        # with everything else if the write fails.
+        if ibkr_account.currency != account.currency && !statement_behind_anchor?(manager)
+          account.update!(currency: ibkr_account.currency)
+        end
+
+        # Dated to the statement, not to today: the NAV is as of IBKR's report
+        # date and the holdings imported beside it carry that same date.
+        # Anchoring it to today instead pairs one day's NAV with the next day's
+        # prices, and the cash plug absorbs the difference -- a phantom balance
+        # the size of whatever the holdings moved that day, on every day of the
+        # account's history.
+        result = manager.set_current_balance(total_balance, date: balance_date)
+
+        # The manager rescues and reports failure through its result, and its
+        # own lock joined this transaction rather than opening one -- so what
+        # it wrote before failing (an anchor already rotated into a
+        # reconciliation, a reconciliation saved before its pledge failed)
+        # would commit with the currency. Nothing of this statement may stay.
+        raise ActiveRecord::Rollback unless result.success?
+
+        # The cached balance and its cash split are what the account is worth
+        # now, and set_current_balance owns the first of them. A statement
+        # older than the anchor describes a day gone by, so it moves neither.
+        account.update!(cash_balance: cash_balance) unless result.historical?
+      end
+
+      if result.success?
+        account.sync_later
+      else
+        # set_current_balance rescues and reports through its result, so a failed
+        # write is otherwise silent. Captured rather than raised, as the anchor
+        # repair below is: broadcast_sync_complete still has to run.
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "error",
+          message: "Failed to set the current balance: #{result.error}",
+          source: self.class.name,
+          provider_key: "ibkr",
+          account_provider: ibkr_account.account_provider,
+          family: ibkr_account.ibkr_item&.family,
+          metadata: { report_date: ibkr_account.report_date&.to_s, balance_date: balance_date.to_s }
+        )
+      end
+
+      result
+    end
+
+    def statement_behind_anchor?(manager)
+      manager.has_current_anchor? && manager.current_date > balance_date
+    end
+
+    def balance_date
+      date = ibkr_account.report_date
+      return Date.current if date.blank? || date > Date.current
+
+      date
     end
 
     def repair_default_opening_anchor!

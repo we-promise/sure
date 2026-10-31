@@ -265,7 +265,10 @@ Rails.application.routes.draw do
       post :new_connection
     end
   end
-  get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
+  get ".well-known/oauth-protected-resource(/*resource_path)",
+      to: "oauth_metadata#protected_resource",
+      as: :oauth_protected_resource_metadata,
+      format: false
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
   use_doorkeeper do |mapping|
@@ -301,6 +304,8 @@ Rails.application.routes.draw do
   end
 
   # AI chats
+  resource :chat_reservation, only: :create
+
   resources :chats do
     resources :messages, only: :create do
       member do
@@ -336,6 +341,7 @@ Rails.application.routes.draw do
   get "feedback", to: "pages#feedback"
   get "dashboard/cash_flow", to: "cash_flows#show", as: :dashboard_cash_flow
   patch "dashboard/preferences", to: "pages#update_preferences"
+  patch "dashboard/sections/:section_key/hidden", to: "pages#update_section_hidden", as: :dashboard_section_hidden
 
   resource :current_session, only: %i[update]
 
@@ -403,6 +409,16 @@ Rails.application.routes.draw do
       delete "tokens/:token_id", to: "mcp#revoke", as: :revoke_token
     end
     resource :ai_prompts, only: %i[show update]
+    resource :classifier, only: %i[show update] do
+      patch :rule
+      post :add_rule
+      post :run
+      post :clear_locks
+      post :evaluate
+      post :find_best
+      post :remember_weight
+      patch :apply_best
+    end
     resource :llm_usage, only: :show
     resource :guides, only: :show
     get "bank_sync", to: redirect("/settings/providers", status: 301)
@@ -427,6 +443,10 @@ Rails.application.routes.draw do
     delete :destroy_all, on: :collection
   end
 
+  namespace :tag do
+    resource :dropdown, only: :show
+  end
+
   namespace :category do
     resource :dropdown, only: :show
   end
@@ -437,6 +457,7 @@ Rails.application.routes.draw do
     get :merge, on: :collection
     post :perform_merge, on: :collection
     post :bootstrap, on: :collection
+    patch :toggle_lock, on: :collection
     delete :destroy_all, on: :collection
   end
 
@@ -482,6 +503,8 @@ Rails.application.routes.draw do
       end
     end
   end
+
+  resources :merchants, only: :show
 
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
@@ -548,13 +571,14 @@ Rails.application.routes.draw do
 
   resources :transactions, only: %i[index new create show update destroy] do
     resource :split, only: %i[new create edit update destroy]
-    resource :transfer_match, only: %i[new create]
+    resource :transfer_match, only: %i[new create destroy]
     resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
     resources :attachments, only: %i[show create destroy], controller: :transaction_attachments
 
     collection do
       delete :clear_filter
+      get :name_suggestions
     end
 
     member do
@@ -620,6 +644,13 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :auto_matches, only: %i[index] do
+    collection do
+      patch :update_settings
+      patch :bulk_update
+    end
+  end
+
   resources :insights, only: %i[index] do
     collection do
       post :refresh
@@ -649,6 +680,7 @@ Rails.application.routes.draw do
 
     collection do
       delete :destroy_all
+      patch :reorder
       get :confirm_all
       post :apply_all
       post :clear_ai_cache
@@ -666,10 +698,12 @@ Rails.application.routes.draw do
       get :select_provider
       get :confirm_unlink
       delete :unlink
+      delete :clear_filter
     end
 
     collection do
       post :sync_all
+      patch :reorder
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
@@ -698,6 +732,9 @@ Rails.application.routes.draw do
 
       get :address
       patch :update_address
+
+      post :refresh_valuation
+      post :link_valuation
     end
   end
   resources :vehicles, only: %i[new create edit update]
@@ -718,10 +755,23 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      namespace :financekit do
+        get "capabilities", to: "connections#capabilities"
+        resources :connections, only: [ :create, :show, :destroy ] do
+          put "account_mappings/:source_id", to: "connections#mapping"
+          post :activate, to: "connections#activate"
+          post :credential, to: "connections#credential"
+          post :repair, to: "connections#repair"
+          resources :conflicts, only: [ :index, :update ]
+        end
+        post "publishers/:publisher_id/batches", to: "batches#create", as: :publisher_batches_upload
+        get "publishers/:publisher_id/batches/:batch_id", to: "batches#show", as: :publisher_batch_status
+      end
       # Authentication endpoints
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
+      get "auth/sso_providers", to: "auth#sso_providers"
       post "auth/sso_exchange", to: "auth#sso_exchange"
       post "auth/sso_link", to: "auth#sso_link"
       post "auth/sso_create_account", to: "auth#sso_create_account"
@@ -740,7 +790,9 @@ Rails.application.routes.draw do
       resources :security_prices, only: [ :index, :show ]
       resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
-      resources :transactions, only: [ :index, :show, :create, :update, :destroy ]
+      resources :transactions, only: [ :index, :show, :create, :update, :destroy ] do
+        resource :split, only: [ :show, :create, :update, :destroy ]
+      end
       resources :trades, only: [ :index, :show, :create, :update, :destroy ]
       resources :holdings, only: [ :index, :show ]
       resources :transfers, only: [ :index, :show ]
@@ -760,6 +812,7 @@ Rails.application.routes.draw do
       end
       resource :usage, only: [ :show ], controller: :usage
       resource :cash_flow, only: [ :show ], controller: :cash_flows
+      resource :spending_vs_normal, only: [ :show ], controller: :spending_vs_normal
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resources :insights, only: [ :index ]
       resources :push_subscriptions, only: [ :create, :destroy ]
@@ -997,6 +1050,8 @@ Rails.application.routes.draw do
     # that happen to round-trip cleanly). The controller file is singular,
     # so name it explicitly.
     resource :system_health, only: :show, controller: "system_health" do
+      get :ai_status
+      get :hosted_usage
       post :verify_worker_ai
       post :send_test_push
     end

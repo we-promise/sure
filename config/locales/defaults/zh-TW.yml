@@ -51,6 +51,7 @@ zh-TW:
       short: '%m月%d日'
       month_year: '%Y年%-m月'
       short_month_year: '%Y年%b'
+      short_with_year: '%Y年%m月%d日'
     month_names:
     - null
     - 一月

@@ -3,6 +3,18 @@ en:
   rules:
     no_action: No Action
     no_condition: No condition
+    notification_baseline_timed_out: This rule is still off. Checking which transactions it already matches took too long, and without that check it would email all of them. Simplify its conditions, then turn it on again.
+    category_rule_cta:
+      close: Close
+      create_rule: Create rule
+      description: You can create a rule to automatically categorize transactions like this one
+      dont_show_again: Don't show this again
+      hide_for_today: Hide for today
+      hide_for_today_hint: "Hide for today pauses these suggestions for 24 hours."
+      message: Updated to %{category_name}
+    classifier_rules:
+      category_classifier: Category classifier
+      merchant_matcher: Merchant matcher
     rule:
       edit: Edit
       re_apply_rule: Re-apply rule
@@ -17,6 +29,8 @@ en:
       action_label_to: "%{label} to %{value}"
       all_past_and_future: All past and future %{resource}
       on_or_after: "%{resource} on or after %{date}"
+      stop_processing: Stop
+      stop_processing_hint: Rules further down don't change transactions matched by this rule.
     form:
       rule_name_label: Rule name (optional)
       rule_name_placeholder: Enter a name for this rule
@@ -26,22 +40,25 @@ en:
       all_past_and_future: All past and future %{resource}
       starting_from: Starting from
       then: THEN
+      stop_processing_label: Stop processing further rules
+      stop_processing_description: Rules further down the list don't change transactions this rule matches.
     index:
       page_title: Rules
       delete_all_rules: Delete all rules
       new_rule: New rule
       ai_cost_warning: AI-enabled rule actions will cost money.  Be sure to filter as narrowly as possible to avoid unnecessary costs.
       rules_heading: Rules
-      sort_by: "Sort by:"
-      sort_name: Name
-      sort_updated_at: Updated At
-      toggle_sort_direction: Toggle sort direction
+      order_hint: Rules run from top to bottom. Once a rule sets a field on a transaction, rules further down don't change that field. Tags are added by every matching rule. Drag rules to change the order.
+      reorder_rule: "Move rule %{name}. Press Enter or Space to grab it, then use the arrow keys to move it."
       no_rules_title: No rules yet
       no_rules_description: Set up rules to perform actions to your transactions and other data on every account sync.
     confirm:
       title: Confirm changes
       title_with_name: "Confirm changes to \"%{name}\""
       apply_notice_html: "You are about to apply this rule to <span class=\"text-primary font-medium\">%{count} %{resource}</span> that meet the specified rule criteria.  Please confirm if you wish to proceed with this change."
+      rules_above_notice:
+        one: The active rule above it runs first, so the result is the same as in the full run.
+        other: The %{count} active rules above it run first, so the result is the same as in the full run.
       ai_cost_title: AI Cost Estimation
       ai_cost_with_estimate_html: "This will use AI to categorize %{count} transaction(s). Estimated cost: <span class=\"font-semibold\">~$%{cost}</span>"
       ai_cost_no_estimate_html: "This will use AI to categorize %{count} transaction(s)."
@@ -53,6 +70,22 @@ en:
     actions:
       to_label: to
       value_placeholder: Enter a value
+      split:
+        type_fixed: Fixed amount
+        type_percentage: Percentage
+        type_label: Split type
+        add_split: Add split
+        name_placeholder: Split name
+        share_label: Split amount or percentage
+        category_label: Split category
+        merchant_label: Split merchant
+        tags_label: "Split tags"
+        remove_split: "Remove split"
+        hint: "Fixed splits are subtracted first, as exact amounts. Percentage splits then divide whatever's left. If every split here uses a fixed amount, also add a condition that matches an exact transaction amount (e.g. Amount = 42.00), since every matching transaction needs the same total for the fixed amounts to add up. A split rule can't have other actions."
+        fixed_summary_label: fixed
+        summary:
+          one: "%{count} split"
+          other: "%{count} splits"
     update:
       success: Rule updated
     destroy:
@@ -108,6 +141,9 @@ en:
       operators:
         contains: Contains
         does_not_contain: Does not contain
+        starts_with: Starts with
+        ends_with: Ends with
+        matches_regex: Matches regex
         equal_to: Equal to
         is_equal_to: Is equal to
         not_equal_to: Not equal to

@@ -43,11 +43,23 @@
       acknowledging is labelled text beside it — quieter, and honest about being
       an acknowledgement rather than a deletion. %>
   <div class="px-4 py-2.5 bg-container-inset rounded-b-xl flex items-center justify-between gap-3">
-    <% if (action = insight_action(insight)) %>
-      <%= render DS::Link.new(text: action[:text], href: action[:href], variant: "outline", size: "sm") %>
-    <% else %>
-      <span></span>
-    <% end %>
+    <div class="flex flex-wrap items-center gap-2">
+      <% if (action = insight_action(insight)) %>
+        <%= render DS::Link.new(text: action[:text], href: action[:href], variant: "outline", size: "sm") %>
+      <% end %>
+
+      <% if insight_dig_in_available?(insight) %>
+        <%= render DS::Link.new(
+              text: t("insights.card.dig_in"),
+              icon: "sparkles",
+              variant: "ghost",
+              size: "sm",
+              href: new_chat_path(insight_id: insight.id),
+              frame: chat_frame,
+              data: { action: "app-layout#openRightSidebar" }
+            ) %>
+      <% end %>
+    </div>
 
     <%= render DS::Button.new(
       text: t("insights.card.acknowledge"),

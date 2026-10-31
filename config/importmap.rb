@@ -50,15 +50,15 @@ pin "internmap" # @2.0.3
 pin "robust-predicates" # @3.0.2
 pin "@floating-ui/dom", to: "@floating-ui--dom.js" # @1.7.0
 pin "@floating-ui/core", to: "@floating-ui--core.js" # @1.7.0
-pin "@floating-ui/utils", to: "@floating-ui--utils.js" # @0.2.9
-pin "@floating-ui/utils/dom", to: "@floating-ui--utils--dom.js" # @0.2.9
+pin "@floating-ui/utils", to: "@floating-ui--utils.js" # @0.2.12
+pin "@floating-ui/utils/dom", to: "@floating-ui--utils--dom.js" # @0.2.12
 pin "d3-sankey" # @0.12.3
 pin "d3-array-src", to: "d3-array.js"
 pin "d3-shape-src", to: "d3-shape.js"
 
-# "What's new" release highlight popover
-pin "driver.js", to: "driver.js.mjs" # @1.8.0
 pin "utils/cash_flow_chart_data", to: "utils/cash_flow_chart_data.mjs"
 pin "utils/sankey_preview_analytics", to: "utils/sankey_preview_analytics.mjs"
 
 pin "utils/sankey_comparison", to: "utils/sankey_comparison.mjs"
+
+pin "utils/sankey_labels", to: "utils/sankey_labels.mjs"

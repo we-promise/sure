@@ -92,14 +92,13 @@ zh-TW:
       total: 總計
       unlinked: 未連結
     provider_panel:
-      accounts_link: 帳戶管理
       add_connection: 新增 Brex 連線
       base_url_label: Base URL（選填）
       base_url_placeholder: https://api.brex.com
-      configured_html: 已設定完成，可以開始使用。請前往 %{accounts_link} 分頁管理並設定帳戶。
       connection_name_label: 連線名稱
       connection_name_placeholder: 公司支票帳戶
       default_connection_name: Brex 連線
+      disconnect: 中斷連線
       disconnect_label: 中斷 %{name}
       disconnect_confirm: 確定要中斷 %{name} 嗎？
       encryption_warning:
@@ -111,10 +110,8 @@ zh-TW:
         open_tokens: 前往您想連結的那家公司的 Brex 開發者／API Token 設定
         sign_in_html: 前往 %{link} 並登入您想連結的帳號
       keep_token_placeholder: 留白以保留目前的 Token
-      not_configured: 未設定
       sandbox_note_html: 每一組您想同步的 Brex 公司／API Token，都請使用各自獨立的具名連線。正式環境請把 Base URL 留白。Staging 環境僅限 Brex 核可的測試使用，無法搭配客戶的 Token。
       setup_accounts: 設定帳戶
-      setup_title: 設定說明：
       sync: 同步
       token_label: 權杖 (Token)
       token_placeholder: 在此貼上 Token
