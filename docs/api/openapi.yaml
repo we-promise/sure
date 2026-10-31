@@ -10231,7 +10231,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Transaction"
         '422':
-          description: validation error - missing required fields
+          description: validation error - missing required fields or a malformed tag
+            id
           content:
             application/json:
               schema:
@@ -10354,6 +10355,12 @@ paths:
                 "$ref": "#/components/schemas/Transaction"
         '404':
           description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error - malformed tag id
           content:
             application/json:
               schema:
