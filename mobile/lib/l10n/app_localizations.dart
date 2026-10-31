@@ -63,7 +63,7 @@ import 'app_localizations_sv.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,16 +86,16 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-        delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-      ];
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
-    Locale('sv'),
+    Locale('sv')
   ];
 
   /// Application title shown in the OS task switcher.
@@ -2119,6 +2119,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t load transactions'**
   String get budgetCategoryTransactionsLoadFailed;
+
+  /// Pill on a split parent in the transaction list.
+  ///
+  /// In en, this message translates to:
+  /// **'Split'**
+  String get splitBadge;
+
+  /// Title of the split section on a split parent's detail screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Split entries'**
+  String get splitSectionTitle;
+
+  /// Description above the list of split children.
+  ///
+  /// In en, this message translates to:
+  /// **'This transaction has been split into the following entries.'**
+  String get splitSectionDescription;
+
+  /// Title of the split section on a split child's detail screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Part of split'**
+  String get splitChildTitle;
+
+  /// Description shown on a split child's detail screen.
+  ///
+  /// In en, this message translates to:
+  /// **'This entry is part of a split transaction. Edit the split to change it.'**
+  String get splitChildDescription;
+
+  /// Notice on the edit screen of a split child, whose fields are read-only.
+  ///
+  /// In en, this message translates to:
+  /// **'Split entries can\'t be edited directly. Use Edit split below.'**
+  String get splitChildEditLocked;
+
+  /// Notice on the edit screen while the split lookup is pending or has failed; the form is read-only.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking whether this transaction is split. The fields stay locked until that finishes.'**
+  String get splitStatusUnknownLocked;
+
+  /// Category label for a split entry without a category.
+  ///
+  /// In en, this message translates to:
+  /// **'(uncategorized)'**
+  String get splitUncategorized;
+
+  /// Button and section title that opens the split editor for an unsplit transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Split transaction'**
+  String get splitTransactionButton;
+
+  /// Description of the split action on the detail screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Split this transaction into multiple entries with different categories and amounts.'**
+  String get splitTransactionDescription;
+
+  /// Button that opens the split editor for an existing split.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit split'**
+  String get splitEditButton;
+
+  /// Button that removes a split and restores the original transaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsplit'**
+  String get splitUnsplitButton;
+
+  /// Title of the unsplit confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsplit transaction'**
+  String get splitUnsplitTitle;
+
+  /// Body of the unsplit confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'This will remove all split entries and restore the original transaction.'**
+  String get splitUnsplitConfirm;
+
+  /// Snackbar after a split is removed.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction unsplit successfully'**
+  String get splitUnsplitSuccess;
+
+  /// Fallback snackbar when removing a split fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to unsplit transaction'**
+  String get splitUnsplitFailed;
+
+  /// Shown on the detail screen while offline, since splits need the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to the internet to load or edit split details.'**
+  String get splitOfflineNotice;
+
+  /// Shown when the split details request fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load split details.'**
+  String get splitLoadFailed;
+
+  /// App bar title of the split editor when creating a split.
+  ///
+  /// In en, this message translates to:
+  /// **'Split transaction'**
+  String get splitEditorNewTitle;
+
+  /// App bar title of the split editor when editing a split.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit split'**
+  String get splitEditorEditTitle;
+
+  /// Label for the parent transaction amount in the split editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Original amount'**
+  String get splitEditorOriginalAmount;
+
+  /// Heading of one row in the split editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Split #{number}'**
+  String splitEditorRowLabel(int number);
+
+  /// Label for a split row's name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get splitEditorNameLabel;
+
+  /// Placeholder for a split row's name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Split name'**
+  String get splitEditorNamePlaceholder;
+
+  /// Validation error for an empty split row name.
+  ///
+  /// In en, this message translates to:
+  /// **'Name is required'**
+  String get splitEditorNameRequired;
+
+  /// Label for a split row's amount field.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get splitEditorAmountLabel;
+
+  /// Helper text explaining the sign convention for split amounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter amounts in the same direction as the original transaction. Use a minus sign for a part that goes the other way.'**
+  String get splitEditorAmountHelper;
+
+  /// Validation error for an empty split amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount is required'**
+  String get splitEditorAmountRequired;
+
+  /// Validation error for an unparseable split amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid amount'**
+  String get splitEditorAmountInvalid;
+
+  /// Validation error for a zero split amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount can\'t be zero'**
+  String get splitEditorAmountZero;
+
+  /// Validation error when a split amount has more decimals than the currency allows.
+  ///
+  /// In en, this message translates to:
+  /// **'Use at most {decimals} decimal places'**
+  String splitEditorAmountTooPrecise(int decimals);
+
+  /// Label for a split row's category picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get splitEditorCategoryLabel;
+
+  /// Button that adds a row to the split editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Add split'**
+  String get splitEditorAddRow;
+
+  /// Tooltip for the button that removes a split row.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove split'**
+  String get splitEditorRemoveRow;
+
+  /// Label of the remaining-to-allocate indicator.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get splitEditorRemaining;
+
+  /// Shown while the split rows do not add up to the original amount.
+  ///
+  /// In en, this message translates to:
+  /// **'Split amounts must equal the original transaction amount.'**
+  String get splitEditorAmountsMustMatch;
+
+  /// Save button label when creating a split.
+  ///
+  /// In en, this message translates to:
+  /// **'Split transaction'**
+  String get splitEditorSubmitNew;
+
+  /// Save button label when editing a split.
+  ///
+  /// In en, this message translates to:
+  /// **'Update split'**
+  String get splitEditorSubmitEdit;
+
+  /// Snackbar after a split is created.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction split successfully'**
+  String get splitEditorSaved;
+
+  /// Snackbar after a split is updated.
+  ///
+  /// In en, this message translates to:
+  /// **'Split updated successfully'**
+  String get splitEditorUpdated;
+
+  /// Fallback snackbar when saving a split fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save split'**
+  String get splitEditorSaveFailed;
+
+  /// Shown in the split editor while offline.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline. Splits can only be saved while connected.'**
+  String get splitEditorOffline;
+
+  /// Snackbar when deleting a split parent or child directly.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsplit this transaction before deleting it.'**
+  String get transactionsListSplitDeleteBlocked;
+
+  /// Snackbar when a delete is blocked because the split lookup failed while online.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t check whether this transaction is split. Please try again.'**
+  String get transactionsListSplitStatusUnknown;
 }
 
 class _AppLocalizationsDelegate
@@ -2148,9 +2412,8 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-    'an issue with the localizations generation tool. Please file an issue '
-    'on GitHub with a reproducible sample app and the gen-l10n configuration '
-    'that was used.',
-  );
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

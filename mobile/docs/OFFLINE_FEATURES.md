@@ -319,6 +319,31 @@ The app automatically syncs in these scenarios:
 - **Cache Invalidation**: Account cache is refreshed on each sync to ensure accurate balances
 - **Memory Usage**: Only active transactions are kept in memory; database queries are paginated
 
+## Online-only Actions
+
+### Transaction Splits
+
+Splitting a transaction, editing a split and unsplitting call
+`/api/v1/transactions/:id/split` directly and are **not** queued offline: the
+offline queue only replays creates and deletes. While offline, the split section
+on the transaction screen is read-only (cached splits stay visible) and the
+split editor cannot save.
+
+After a split write, children the server destroyed are removed from the local
+cache and the account's transactions are re-fetched, because an account-scoped
+sync only upserts. Those ids are dropped again after every later sync in the
+session (an overlapping sync can still return them), refreshes run one at a
+time, and an account whose refresh could not sync is synced on its next load.
+The list groups children under their parent for splits the app has loaded (the
+transactions index does not say which rows are split), and the calendar leaves
+those parents out of its daily totals.
+
+Deleting from the transactions list (swipe or bulk) checks split membership
+with the server first and refuses split parents and children ("Unsplit this
+transaction before deleting it"); if that check fails while online, the delete
+is refused too. Offline, only splits already loaded on the device are refused,
+so offline deletion keeps working.
+
 ## Future Enhancements
 
 Potential improvements for future versions:
@@ -327,9 +352,8 @@ Potential improvements for future versions:
 2. **Selective Sync**: Sync only specific accounts or date ranges
 3. **Background Sync**: Use platform background tasks for periodic syncing
 4. **Offline Editing**: Support editing transactions offline
-5. **Offline Deletion**: Support deleting transactions offline with sync
-6. **Export Offline Data**: Export local database for backup
-7. **Data Compression**: Compress large sync payloads for better performance
+5. **Export Offline Data**: Export local database for backup
+6. **Data Compression**: Compress large sync payloads for better performance
 
 ## Troubleshooting
 

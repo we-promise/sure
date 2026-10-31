@@ -1158,4 +1158,152 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get budgetCategoryTransactionsLoadFailed =>
       'Couldn\'t load transactions';
+
+  @override
+  String get splitBadge => 'Split';
+
+  @override
+  String get splitSectionTitle => 'Split entries';
+
+  @override
+  String get splitSectionDescription =>
+      'This transaction has been split into the following entries.';
+
+  @override
+  String get splitChildTitle => 'Part of split';
+
+  @override
+  String get splitChildDescription =>
+      'This entry is part of a split transaction. Edit the split to change it.';
+
+  @override
+  String get splitChildEditLocked =>
+      'Split entries can\'t be edited directly. Use Edit split below.';
+
+  @override
+  String get splitStatusUnknownLocked =>
+      'Checking whether this transaction is split. The fields stay locked until that finishes.';
+
+  @override
+  String get splitUncategorized => '(uncategorized)';
+
+  @override
+  String get splitTransactionButton => 'Split transaction';
+
+  @override
+  String get splitTransactionDescription =>
+      'Split this transaction into multiple entries with different categories and amounts.';
+
+  @override
+  String get splitEditButton => 'Edit split';
+
+  @override
+  String get splitUnsplitButton => 'Unsplit';
+
+  @override
+  String get splitUnsplitTitle => 'Unsplit transaction';
+
+  @override
+  String get splitUnsplitConfirm =>
+      'This will remove all split entries and restore the original transaction.';
+
+  @override
+  String get splitUnsplitSuccess => 'Transaction unsplit successfully';
+
+  @override
+  String get splitUnsplitFailed => 'Failed to unsplit transaction';
+
+  @override
+  String get splitOfflineNotice =>
+      'Connect to the internet to load or edit split details.';
+
+  @override
+  String get splitLoadFailed => 'Couldn\'t load split details.';
+
+  @override
+  String get splitEditorNewTitle => 'Split transaction';
+
+  @override
+  String get splitEditorEditTitle => 'Edit split';
+
+  @override
+  String get splitEditorOriginalAmount => 'Original amount';
+
+  @override
+  String splitEditorRowLabel(int number) {
+    return 'Split #$number';
+  }
+
+  @override
+  String get splitEditorNameLabel => 'Name';
+
+  @override
+  String get splitEditorNamePlaceholder => 'Split name';
+
+  @override
+  String get splitEditorNameRequired => 'Name is required';
+
+  @override
+  String get splitEditorAmountLabel => 'Amount';
+
+  @override
+  String get splitEditorAmountHelper =>
+      'Enter amounts in the same direction as the original transaction. Use a minus sign for a part that goes the other way.';
+
+  @override
+  String get splitEditorAmountRequired => 'Amount is required';
+
+  @override
+  String get splitEditorAmountInvalid => 'Enter a valid amount';
+
+  @override
+  String get splitEditorAmountZero => 'Amount can\'t be zero';
+
+  @override
+  String splitEditorAmountTooPrecise(int decimals) {
+    return 'Use at most $decimals decimal places';
+  }
+
+  @override
+  String get splitEditorCategoryLabel => 'Category';
+
+  @override
+  String get splitEditorAddRow => 'Add split';
+
+  @override
+  String get splitEditorRemoveRow => 'Remove split';
+
+  @override
+  String get splitEditorRemaining => 'Remaining';
+
+  @override
+  String get splitEditorAmountsMustMatch =>
+      'Split amounts must equal the original transaction amount.';
+
+  @override
+  String get splitEditorSubmitNew => 'Split transaction';
+
+  @override
+  String get splitEditorSubmitEdit => 'Update split';
+
+  @override
+  String get splitEditorSaved => 'Transaction split successfully';
+
+  @override
+  String get splitEditorUpdated => 'Split updated successfully';
+
+  @override
+  String get splitEditorSaveFailed => 'Failed to save split';
+
+  @override
+  String get splitEditorOffline =>
+      'You\'re offline. Splits can only be saved while connected.';
+
+  @override
+  String get transactionsListSplitDeleteBlocked =>
+      'Unsplit this transaction before deleting it.';
+
+  @override
+  String get transactionsListSplitStatusUnknown =>
+      'Couldn\'t check whether this transaction is split. Please try again.';
 }

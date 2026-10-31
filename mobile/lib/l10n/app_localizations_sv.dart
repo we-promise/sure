@@ -1169,4 +1169,152 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get budgetCategoryTransactionsLoadFailed =>
       'Kunde inte läsa in transaktioner';
+
+  @override
+  String get splitBadge => 'Delad';
+
+  @override
+  String get splitSectionTitle => 'Delade poster';
+
+  @override
+  String get splitSectionDescription =>
+      'Den här transaktionen har delats upp i följande poster.';
+
+  @override
+  String get splitChildTitle => 'Del av uppdelning';
+
+  @override
+  String get splitChildDescription =>
+      'Den här posten är en del av en uppdelad transaktion. Redigera uppdelningen för att ändra den.';
+
+  @override
+  String get splitChildEditLocked =>
+      'Delade poster kan inte redigeras direkt. Använd Redigera uppdelning nedan.';
+
+  @override
+  String get splitStatusUnknownLocked =>
+      'Kontrollerar om transaktionen är uppdelad. Fälten är låsta tills det är klart.';
+
+  @override
+  String get splitUncategorized => '(okategoriserad)';
+
+  @override
+  String get splitTransactionButton => 'Dela upp transaktion';
+
+  @override
+  String get splitTransactionDescription =>
+      'Dela upp transaktionen i flera poster med olika kategorier och belopp.';
+
+  @override
+  String get splitEditButton => 'Redigera uppdelning';
+
+  @override
+  String get splitUnsplitButton => 'Ta bort uppdelning';
+
+  @override
+  String get splitUnsplitTitle => 'Ta bort uppdelning';
+
+  @override
+  String get splitUnsplitConfirm =>
+      'Detta tar bort alla delade poster och återställer den ursprungliga transaktionen.';
+
+  @override
+  String get splitUnsplitSuccess => 'Uppdelningen har tagits bort';
+
+  @override
+  String get splitUnsplitFailed => 'Det gick inte att ta bort uppdelningen';
+
+  @override
+  String get splitOfflineNotice =>
+      'Anslut till internet för att läsa in eller redigera uppdelningar.';
+
+  @override
+  String get splitLoadFailed => 'Det gick inte att läsa in uppdelningen.';
+
+  @override
+  String get splitEditorNewTitle => 'Dela upp transaktion';
+
+  @override
+  String get splitEditorEditTitle => 'Redigera uppdelning';
+
+  @override
+  String get splitEditorOriginalAmount => 'Ursprungligt belopp';
+
+  @override
+  String splitEditorRowLabel(int number) {
+    return 'Del $number';
+  }
+
+  @override
+  String get splitEditorNameLabel => 'Namn';
+
+  @override
+  String get splitEditorNamePlaceholder => 'Namn på delen';
+
+  @override
+  String get splitEditorNameRequired => 'Namn krävs';
+
+  @override
+  String get splitEditorAmountLabel => 'Belopp';
+
+  @override
+  String get splitEditorAmountHelper =>
+      'Ange belopp i samma riktning som den ursprungliga transaktionen. Använd minustecken för en del som går åt andra hållet.';
+
+  @override
+  String get splitEditorAmountRequired => 'Belopp krävs';
+
+  @override
+  String get splitEditorAmountInvalid => 'Ange ett giltigt belopp';
+
+  @override
+  String get splitEditorAmountZero => 'Beloppet kan inte vara noll';
+
+  @override
+  String splitEditorAmountTooPrecise(int decimals) {
+    return 'Använd högst $decimals decimaler';
+  }
+
+  @override
+  String get splitEditorCategoryLabel => 'Kategori';
+
+  @override
+  String get splitEditorAddRow => 'Lägg till del';
+
+  @override
+  String get splitEditorRemoveRow => 'Ta bort del';
+
+  @override
+  String get splitEditorRemaining => 'Återstår';
+
+  @override
+  String get splitEditorAmountsMustMatch =>
+      'Delbeloppen måste vara lika med transaktionens ursprungliga belopp.';
+
+  @override
+  String get splitEditorSubmitNew => 'Dela upp transaktion';
+
+  @override
+  String get splitEditorSubmitEdit => 'Uppdatera uppdelning';
+
+  @override
+  String get splitEditorSaved => 'Transaktionen har delats upp';
+
+  @override
+  String get splitEditorUpdated => 'Uppdelningen har uppdaterats';
+
+  @override
+  String get splitEditorSaveFailed => 'Det gick inte att spara uppdelningen';
+
+  @override
+  String get splitEditorOffline =>
+      'Du är offline. Uppdelningar kan bara sparas när du är ansluten.';
+
+  @override
+  String get transactionsListSplitDeleteBlocked =>
+      'Ta bort uppdelningen innan du tar bort transaktionen.';
+
+  @override
+  String get transactionsListSplitStatusUnknown =>
+      'Det gick inte att kontrollera om transaktionen är uppdelad. Försök igen.';
 }
