@@ -109,6 +109,14 @@ en:
           title: Disconnect external assistant?
           body: This will remove the saved URL, token, and agent ID, and switch to the builtin assistant. You can reconnect later by entering new credentials.
       brand_fetch_settings:
+        usage_title: Brandfetch API usage
+        api_key_label: Brandfetch API key (optional, for usage reporting)
+        usage_description: API credits are separate from Logo CDN requests. Your logo client ID still controls logo delivery.
+        api_credits_used: "%{used} / %{quota} API credits used"
+        usage_period: Current billing period · may be up to five minutes old
+        usage_requires_key: Add a Brandfetch API key to display usage. A logo client ID alone cannot access this report.
+        usage_error: Could not load usage. Check your API key or try again later.
+        usage_dashboard: Open Brandfetch dashboard
         description: Enter the Client ID provided by Brandfetch
         env_configured_message: You have successfully configured your Brandfetch Client ID through the BRAND_FETCH_CLIENT_ID environment variable.
         show_details: "(show details)"

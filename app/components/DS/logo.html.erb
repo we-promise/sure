@@ -1,0 +1,12 @@
+<%= tag.span class: class_names("inline-flex shrink-0 rounded-full", class_name),
+             data: { controller: "image-fallback" } do %>
+  <% if src.present? %>
+    <%= image_tag src, alt: "", class: "w-full h-full rounded-full object-contain",
+          loading: "lazy",
+          data: { image_fallback_target: "image", action: "error->image-fallback#showFallback load->image-fallback#showImage" } %>
+  <% end %>
+  <%= tag.span class: "w-full h-full", hidden: src.present?, data: { image_fallback_target: "fallback" } do %>
+    <%= render DS::FilledIcon.new(variant: :text, text: name, hex_color: color,
+          size: "lg", rounded: true, class_name: "w-full! h-full!") %>
+  <% end %>
+<% end %>
