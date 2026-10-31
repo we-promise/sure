@@ -1,412 +1,249 @@
-# frozen_string_literal: true
+require "digest"
 
-# Creates a ledger transaction through the same Entry + Transaction path the
-# app's own create endpoint (Api::V1::TransactionsController#create) uses, so
-# balance recalculation and provider-sync protection behave exactly as they do
-# for a transaction entered by hand.
-#
-# Exposed on the shared Assistant.function_classes registry, so it is callable
-# from both the /mcp endpoint and the in-app assistant — the same surface that
-# already carries the equally-mutating UpdateTransaction.
 class Assistant::Function::CreateTransaction < Assistant::Function
   class << self
-    # The tool's stable name; this is the MCP function identifier callers use.
     def name
       "create_transaction"
     end
 
-    # Human/LLM-facing description of what the tool does and how to call it.
     def description
       <<~INSTRUCTIONS
-        Creates a new transaction on one of the user's accounts.
+        Creates a transaction on a writable account. Use get_accounts, get_categories,
+        get_merchants and get_tags to resolve related IDs.
 
-        Use this to record a transaction the app cannot see on its own — a
-        manual account, an off-platform payment, a cash transaction, or a line
-        from a statement export. It writes through the same Entry + Transaction
-        path the app's own create endpoint uses, so balance recalculation and
-        provider-sync protection behave exactly as they do for a transaction
-        entered by hand.
+        Existing callers may send a signed amount (negative is income), or pass
+        type: income/expense/inflow/outflow to derive the sign from its magnitude.
+        external_id is optional for this contract; calls without it are not retry-safe.
 
-        Amount sign convention (matches the rest of the app):
-          - negative amount = income / money in
-          - positive  amount = expense / money out
-        You may instead pass a positive magnitude plus `type` ("income" or
-        "expense"); the sign is then derived from `type`. If you pass neither
-        a sign nor a `type`, the amount is stored exactly as given.
+        Alternatively, send nature: income/expense with a strictly positive amount
+        and a required stable external_id. This magnitude-based contract returns an
+        absolute transaction amount and its nature; the signed/type contract keeps
+        its existing signed string amount. Do not send contradictory type and nature.
 
-        Idempotency: if you pass `external_id` (and optionally `source`,
-        defaulting to "mcp"), a repeat call with the same account + source +
-        external_id returns the existing transaction instead of creating a
-        duplicate. This makes batch imports safe to retry.
-
-        The account must be one the user can write to (owner or full-control
-        share). Related ids (category, merchant, tags) must belong to the
-        user's family.
-
-        Example:
-
-        ```
-        create_transaction({
-          account_id: "abc123-...",
-          date: "2026-09-11",
-          amount: 2194.15,
-          type: "expense",
-          name: "Roche",
-          category_id: "def456-..."
-        })
-        ```
+        currency defaults to the account currency. source is an optional provenance
+        label paired with external_id, defaulting to mcp. Idempotency is scoped to
+        source plus external_id across the family: a changed request is rejected.
+        user_modified explicitly controls provider-sync protection; it defaults to
+        true for nature-based calls and false for the existing signed/type contract.
       INSTRUCTIONS
     end
   end
 
-  # This tool is not strict: it validates its own inputs and returns structured
-  # error hashes rather than raising, so a bad call is reported to the model.
   def strict_mode?
     false
   end
 
-  # JSON schema of the parameters this tool accepts, exposed to the model.
   def params_schema
     build_schema(
       required: %w[account_id date amount name],
       properties: {
-        account_id: {
-          type: "string",
-          description: "UUID of the account to record the transaction on. The user must be able to write to it (owner or full-control share)."
-        },
-        date: {
-          type: "string",
-          description: "ISO 8601 date (YYYY-MM-DD) of the transaction."
-        },
-        amount: {
-          type: "number",
-          description: "Transaction amount in the account's currency. Negative = income (money in), positive = expense (money out). If `type` is also given, `type` decides the sign and the magnitude of `amount` is used."
-        },
-        name: {
-          type: "string",
-          description: "Transaction name / payee / description."
-        },
-        type: {
-          type: "string",
-          enum: %w[income expense inflow outflow],
-          description: "Optional. Derives the amount sign: income/inflow -> negative, expense/outflow -> positive. Omit to store `amount` as given."
-        },
-        currency: {
-          type: "string",
-          description: "ISO 4217 currency code. Defaults to the account's currency."
-        },
-        notes: {
-          type: [ "string", "null" ],
-          description: "Optional notes. Use null to store an empty note."
-        },
-        category_id: {
-          type: [ "string", "null" ],
-          description: "Category ID from get_categories. Must belong to the user's family."
-        },
-        merchant_id: {
-          type: [ "string", "null" ],
-          description: "Merchant ID available to the family. Must be a valid merchant id."
-        },
-        tag_ids: {
-          type: "array",
-          items: { type: "string" },
-          description: "Tag IDs from get_tags. Must belong to the user's family."
-        },
-        external_id: {
-          type: "string",
-          description: "Optional stable external identifier (e.g. a row id from a statement export). With `source`, makes the call idempotent."
-        },
-        source: {
-          type: "string",
-          description: "Optional provenance label paired with external_id (defaults to \"mcp\")."
-        },
-        user_modified: {
-          type: "boolean",
-          description: "If true, mark the transaction user-modified so a later provider sync will not overwrite it (defaults to false)."
-        }
+        account_id: { type: "string", description: "Writable account ID from get_accounts" },
+        date: { type: "string", format: "date", description: "Transaction date in YYYY-MM-DD format" },
+        amount: { type: "number", description: "Signed amount, or positive magnitude when nature is supplied; type derives the sign from the magnitude" },
+        name: { type: "string", description: "Transaction name or description" },
+        type: { type: "string", enum: %w[income expense inflow outflow], description: "Optional direction for signed/type callers" },
+        nature: { type: "string", enum: %w[expense income], description: "Optional magnitude-based contract: requires a positive amount and stable external_id" },
+        currency: { type: "string", description: "ISO currency code; defaults to the account currency" },
+        source: { type: "string", description: "Provenance label paired with external_id; defaults to mcp" },
+        category_id: { type: [ "string", "null" ], description: "Category ID from get_categories" },
+        merchant_id: { type: [ "string", "null" ], description: "Merchant ID available to the family" },
+        tag_ids: { type: "array", items: { type: "string" }, uniqueItems: true, description: "Tag IDs from get_tags" },
+        notes: { type: [ "string", "null" ], description: "Optional notes" },
+        external_id: { type: "string", description: "Stable idempotency key; required with nature and optional for existing signed/type callers" },
+        user_modified: { type: "boolean", description: "Protect this entry from provider overwrites; defaults to true with nature, otherwise false" }
       }
     )
   end
 
-  # Tool entry point. Validates the params, builds and persists the Entry
-  # through the same path as the native create endpoint, enqueues the
-  # post-commit account sync (best-effort), and returns a result hash. Returns
-  # { success: true, created: true, transaction: } on success (with an optional
-  # :warning if the sync could not be enqueued), an error hash on validation
-  # failure, or { success: true, created: false } when an idempotency key
-  # matches an existing record.
   def call(params = {})
-    account = resolve_account(params["account_id"])
-    return error("account_not_found", "No account found with that ID that this user can write to.") unless account
+    account = family.accounts.visible.writable_by(user).find_by(id: params["account_id"]) if valid_uuid?(params["account_id"])
+    return account_not_found unless account
 
-    date = parse_date(params["date"])
-    return error("invalid_date", "date must be an ISO 8601 date (YYYY-MM-DD).") unless date
+    attrs = normalized_attributes(params, account)
+    return attrs if error_response?(attrs)
 
-    amount = parse_decimal(params["amount"])
-    return error("invalid_amount", "amount must be a number.") if amount.nil?
+    result = family.with_lock do
+      account = Account::MutationAccess.lock!(accounts: [ account ], user:, level: Account::MutationAccess::WRITE).fetch(account.id.to_s)
+      next account_not_found unless family.accounts.visible.exists?(id: account.id)
 
-    name = params["name"].to_s.strip
-    return error("invalid_name", "name is required.") if name.empty?
-
-    # Default to the account's own currency, then the family's primary currency —
-    # the same fallback the app's create endpoint uses (it falls back to
-    # family.currency; account.currency is the more precise per-account value).
-    currency = (params["currency"].to_s.strip.presence || account.currency.presence || family.primary_currency_code).upcase
-    return error("invalid_currency", "currency must be a valid ISO 4217 code.") unless valid_currency?(currency)
-
-    entryable_attrs = resolve_entryable_attributes(params)
-    return entryable_attrs if error_response?(entryable_attrs)
-
-    signed_amount = signed_amount(amount, params["type"])
-
-    entry_params = {
-      name: name,
-      date: date,
-      amount: signed_amount,
-      currency: currency,
-      notes: params.key?("notes") ? params["notes"] : nil,
-      entryable_type: "Transaction",
-      entryable_attributes: entryable_attrs
-    }
-
-    if params["external_id"].present?
-      entry_params[:external_id] = params["external_id"].to_s
-      entry_params[:source] = params["source"].to_s.strip.presence || "mcp"
+      fingerprint = fingerprint_for(account.id, attrs) if attrs[:external_id]
+      existing = family.entries.find_by(source: attrs[:source], external_id: attrs[:external_id]) if attrs[:external_id]
+      if existing
+        existing_response(existing, fingerprint, attrs)
+      else
+        persist_entry(account, attrs, fingerprint)
+      end
     end
+    return result if result.is_a?(Hash)
 
-    # Idempotency: a repeat (account, source, external_id) returns the existing
-    # entry instead of inserting a duplicate. The partial unique index on
-    # [account_id, source, external_id] makes this race-safe (see schema.rb).
-    if entry_params[:external_id].present?
-      existing = existing_idempotent_entry(account, entry_params)
-      return existing_response(existing) if existing
-    end
-
-    entry = account.entries.new(entry_params)
-    unless entry.save
-      return error("validation_failed", entry.errors.full_messages.join("; "))
-    end
-
-    entry.lock_saved_attributes!
-    entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
-    entry.mark_user_modified! if user_modified?(params)
-
-    # Post-commit account sync is best-effort. entry.save has ALREADY committed
-    # the transaction, so a failure to enqueue the balance-sync job (e.g. an
-    # unavailable job backend) must NOT be reported as a failed create — doing
-    # so would make an MCP caller retry without an external_id and create a
-    # duplicate. Mirrors DeleteTransaction's post-destroy sync handling.
-    sync_warning = nil
+    response = success_response(result, created: true, magnitude: attrs[:magnitude])
     begin
-      entry.sync_account_later
+      result.sync_account_later
     rescue StandardError => e
-      sync_warning = "Transaction created, but the post-create account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync."
+      response[:warning] = "Transaction created, but the post-create account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync."
     end
-
-    transaction = entry.transaction
-    response = {
-      success: true,
-      created: true,
-      transaction: serialize(transaction),
-      message: "Created #{transaction.entry.name} (#{format_money(entry)} on #{date.iso8601})."
-    }
-    response[:warning] = sync_warning if sync_warning
     response
+  rescue Account::MutationAccess::Denied
+    account_not_found
   rescue ActiveRecord::RecordNotUnique
-    # Lost a race on the idempotency index: a concurrent call created it first.
-    if entry_params[:external_id].present?
-      existing = existing_idempotent_entry(account, entry_params)
-      return existing_response(existing) if existing
-    end
-    raise
+    existing = family.entries.find_by(source: attrs[:source], external_id: attrs[:external_id]) if attrs&.dig(:external_id)
+    existing ? existing_response(existing, fingerprint_for(account.id, attrs), attrs) : raise
   rescue ActiveRecord::RecordInvalid => e
     error("validation_failed", e.record.errors.full_messages.join("; "))
   end
 
   private
-    # Find a writable account by UUID, scoped to accounts the user can write to
-    # (owner or full-control share). Returns nil if the id is not a valid UUID
-    # or the account is not writable — callers treat that as not_found.
-    def resolve_account(account_id)
-      return nil unless valid_uuid?(account_id)
+    def normalized_attributes(params, account)
+      magnitude = params.key?("nature")
+      name = params["name"].to_s.strip
+      return error(magnitude ? "name_required" : "invalid_name", "Please provide a transaction name.") if name.blank?
 
-      family.accounts.writable_by(user).find_by(id: account_id)
-    end
-
-    # Always seed category/merchant/tag keys (nil / empty) so the nested
-    # entryable builds exactly as the API's create endpoint does, then override
-    # with any caller-supplied, family-validated values. Returns the attribute
-    # hash, or an error hash if a supplied id does not belong to the family.
-    def resolve_entryable_attributes(params)
-      attrs = { category_id: nil, merchant_id: nil, tag_ids: [] }
-
-      if params.key?("category_id")
-        category_id = optional_uuid(params["category_id"])
-        return category_id if error_response?(category_id)
-        return error("invalid_category", "category_id does not belong to the user's family.") if category_id && !family.categories.exists?(id: category_id)
-
-        attrs[:category_id] = category_id
+      external_id = params["external_id"].to_s.strip.presence
+      return error("external_id_required", "Please provide a stable external_id.") if magnitude && !external_id
+      if params["source"].present? && !external_id
+        return error("source_requires_external_id", "source must be paired with external_id.")
       end
 
-      if params.key?("merchant_id")
-        merchant_id = optional_uuid(params["merchant_id"])
-        return merchant_id if error_response?(merchant_id)
-        return error("invalid_merchant", "merchant_id is not available to the user's family.") if merchant_id && !available_merchants.exists?(id: merchant_id)
+      direction = { "income" => "income", "inflow" => "income", "expense" => "expense", "outflow" => "expense" }
+      type = direction[params["type"].to_s.downcase] if params["type"].present?
+      return error("invalid_type", "type must be income, expense, inflow or outflow.") if params["type"].present? && !type
+      nature = params["nature"].to_s.downcase if magnitude
+      return error("invalid_nature", "nature must be 'expense' or 'income'.") if magnitude && !nature.in?(%w[expense income])
+      return error("invalid_nature", "type and nature must describe the same direction.") if type && nature && type != nature
 
-        attrs[:merchant_id] = merchant_id
+      amount = parse_decimal(params["amount"])
+      return error("invalid_amount", "amount must be finite and numeric; with nature it must be greater than zero.") if amount.nil? || (magnitude && !amount.positive?)
+      selected_direction = nature || type
+      amount = selected_direction == "income" ? -amount.abs : amount.abs if selected_direction
+
+      begin
+        date = Date.iso8601(params["date"].to_s)
+      rescue Date::Error
+        return error(magnitude ? "invalid_parameters" : "invalid_date", "date must use YYYY-MM-DD format.")
       end
 
-      if params.key?("tag_ids")
-        tag_ids = Array(params["tag_ids"]).map(&:to_s).reject(&:blank?)
-        return error("invalid_tags", "One or more tag_ids do not belong to the user's family.") unless valid_tag_ids?(tag_ids)
-
-        attrs[:tag_ids] = tag_ids
+      currency = (params["currency"].to_s.strip.presence || account.currency.presence || family.primary_currency_code).upcase
+      begin
+        Money::Currency.new(currency)
+      rescue Money::Currency::UnknownCurrencyError, ArgumentError
+        return error("invalid_currency", "currency must be a valid ISO currency code.")
       end
 
-      attrs
-    end
-
-    # Apply the amount sign convention: income/inflow -> negative (money in),
-    # expense/outflow -> positive (money out). With no type, the amount is
-    # returned exactly as given.
-    def signed_amount(amount, type)
-      case type&.to_s&.downcase
-      when "income", "inflow" then -amount.abs
-      when "expense", "outflow" then amount.abs
-      else amount
+      category = nil
+      unless params["category_id"].nil? || params["category_id"] == ""
+        return error("invalid_uuid", "Expected a valid UUID.") unless valid_uuid?(params["category_id"])
+        category = family.categories.find_by(id: params["category_id"])
+        return error("invalid_category", "category_id does not belong to the user's family.") unless category
       end
-    end
+      merchant = nil
+      unless params["merchant_id"].nil? || params["merchant_id"] == ""
+        return error("invalid_uuid", "Expected a valid UUID.") unless valid_uuid?(params["merchant_id"])
+        merchant = family.available_merchants_for(user).find_by(id: params["merchant_id"])
+        return error("invalid_merchant", "merchant_id is not available to the user's family.") unless merchant
+      end
+      tag_ids = Array(params["tag_ids"]).map(&:to_s).reject(&:blank?).uniq
+      tags = family.tags.where(id: tag_ids).to_a
+      return error("invalid_tags", "One or more tag_ids do not belong to the user's family.") unless tags.size == tag_ids.size
 
-    # Whether the caller asked to mark the transaction user-modified (so a
-    # later provider sync will not overwrite it). Coerces the param to a boolean.
-    def user_modified?(params)
-      ActiveModel::Type::Boolean.new.cast(params["user_modified"])
-    end
-
-    # Coerce a nullable UUID parameter: returns nil for blank input, the value
-    # if it is a valid UUID, or an error hash otherwise.
-    def optional_uuid(value)
-      return nil if value.nil? || value == ""
-      return value.to_s if valid_uuid?(value)
-
-      error("invalid_uuid", "Expected a valid UUID.")
-    end
-
-    # True if every supplied tag id belongs to the user's family (an empty list
-    # is trivially valid).
-    def valid_tag_ids?(tag_ids)
-      return true if tag_ids.empty?
-
-      family.tags.where(id: tag_ids).count == tag_ids.uniq.size
-    end
-
-    # The set of merchants available to this user's family, used to validate
-    # a supplied merchant_id.
-    def available_merchants
-      family.available_merchants_for(user)
-    end
-
-    # Validate a currency code using the app's own Money currency table (rather
-    # than a bare 3-letter regex), so an explicit unknown code is rejected the
-    # same way the API rejects it.
-    def valid_currency?(code)
-      # Use the app's own currency validator (Money) rather than a bare
-      # 3-letter regex, so an explicit "ABC" is rejected like the API does.
-      Money::Currency.new(code)
-      true
-    rescue Money::Currency::UnknownCurrencyError, ArgumentError
-      false
-    end
-
-    # Look up an existing entry matching the (external_id, source) idempotency
-    # key on the given account; nil if there is no external_id or no match.
-    def existing_idempotent_entry(account, entry_params)
-      return nil unless entry_params[:external_id].present?
-
-      account.entries.find_by(
-        external_id: entry_params[:external_id],
-        source: entry_params[:source]
-      )
-    end
-
-    # Build the response for an idempotency hit. If the existing entry is a
-    # transaction, return it with created: false; if it is some other entry
-    # type, return an idempotency_conflict error.
-    def existing_response(existing)
-      return error("idempotency_conflict", "external_id already belongs to a non-transaction entry.") unless existing&.entryable&.is_a?(Transaction)
-
-      # `existing` is the Entry; `serialize` expects the Transaction, which is
-      # the entry's entryable (Entry has no `.entry` method — that direction
-      # only exists on the Transaction side).
       {
-        success: true,
-        created: false,
-        transaction: serialize(existing.entryable),
-        message: "Transaction already exists for this external_id; returned the existing one."
+        account_id: account.id.to_s,
+        name:, external_id:, amount:, date:, currency:, category:, merchant:, tags:,
+        notes: params["notes"], magnitude:,
+        source: external_id && (params["source"].to_s.strip.presence || "mcp"),
+        user_modified: params.key?("user_modified") ? ActiveModel::Type::Boolean.new.cast(params["user_modified"]) == true : magnitude
       }
     end
 
-    # Parse an ISO 8601 date string; returns nil if blank or not a valid date.
-    def parse_date(value)
-      return nil if value.blank?
+    def persist_entry(account, attrs, fingerprint)
+      extra = fingerprint ? { "mcp" => { "idempotency_fingerprint" => fingerprint } } : {}
+      entry = account.entries.new(
+        name: attrs[:name], amount: attrs[:amount], date: attrs[:date], currency: attrs[:currency],
+        notes: attrs[:notes], external_id: attrs[:external_id], source: attrs[:source],
+        entryable: Transaction.new(category: attrs[:category], merchant: attrs[:merchant], tags: attrs[:tags], extra:)
+      )
+      entry.save!
 
-      Date.iso8601(value.to_s)
-    rescue Date::Error
-      nil
+      entry.lock_saved_attributes!
+      entry.mark_user_modified! if attrs[:user_modified]
+      entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
+      entry
     end
 
-    # Parse a finite decimal from a value; returns nil if blank, non-numeric,
-    # or a non-finite value (BigDecimal accepts "Infinity"/"NaN", which we
-    # reject so a malformed amount can never reach the ledger).
-    def parse_decimal(value)
-      return nil if value.nil? || value.to_s.strip.empty?
+    def existing_response(entry, fingerprint, attrs)
+      return error("idempotency_conflict", "external_id already belongs to a non-transaction entry.") unless entry.entryable.is_a?(Transaction)
 
-      number = BigDecimal(value.to_s)
-      # BigDecimal accepts "Infinity" / "NaN" strings; reject non-finite values
-      # so a malformed amount can never reach the ledger.
-      return nil unless number.finite?
+      stored = entry.transaction.extra&.dig("mcp", "idempotency_fingerprint")
+      matches = stored ? ActiveSupport::SecurityUtils.secure_compare(stored, fingerprint) : fingerprint_for_entry(entry) == fingerprint
+      # Earlier magnitude-based clients stored fingerprints without currency,
+      # source or user_modified. Check those fields before accepting that digest.
+      if !matches && stored && entry.account_id == attrs[:account_id] && entry.currency == attrs[:currency] && entry.source == attrs[:source] && entry.user_modified? == attrs[:user_modified]
+        matches = ActiveSupport::SecurityUtils.secure_compare(stored, fingerprint_for(attrs[:account_id], attrs, legacy: true))
+      end
+      return error("idempotency_conflict", "external_id was already used with different transaction parameters.") unless matches
 
-      number
-    rescue ArgumentError, TypeError
-      nil
+      success_response(entry, created: false, magnitude: attrs[:magnitude])
     end
 
-    # Human-formatted money string for the entry's amount and currency, with a
-    # plain "amount currency" fallback if formatting fails.
+    def fingerprint_for(account_id, attrs, legacy: false)
+      payload = {
+        account_id: account_id.to_s, name: attrs[:name], amount: attrs[:amount].to_d.to_s("F"), date: attrs[:date].iso8601,
+        category_id: attrs[:category]&.id&.to_s, merchant_id: attrs[:merchant]&.id&.to_s,
+        tag_ids: attrs[:tags].map { |tag| tag.id.to_s }.sort, notes: attrs[:notes]
+      }
+      payload.merge!(currency: attrs[:currency], source: attrs[:source], user_modified: attrs[:user_modified]) unless legacy
+      Digest::SHA256.hexdigest(JSON.generate(payload))
+    end
+
+    def fingerprint_for_entry(entry)
+      transaction = entry.transaction
+      fingerprint_for(entry.account_id, {
+        name: entry.name, amount: entry.amount, date: entry.date, currency: entry.currency, source: entry.source,
+        category: transaction.category, merchant: transaction.merchant, tags: transaction.tags.to_a,
+        notes: entry.notes, user_modified: entry.user_modified?
+      })
+    end
+
+    def success_response(entry, created:, magnitude:)
+      {
+        success: true, created:, transaction: serialize(entry, magnitude:),
+        message: created ? "Transaction '#{entry.name}' created." : "Transaction '#{entry.name}' already exists."
+      }
+    end
+
+    def serialize(entry, magnitude:)
+      transaction = entry.transaction
+      {
+        id: transaction.id, entry_id: entry.id, account_id: entry.account_id, name: entry.name, date: entry.date,
+        amount: magnitude ? entry.amount.abs : entry.amount.to_s, amount_formatted: format_money(entry),
+        currency: entry.currency, type: entry.classification, nature: entry.amount.negative? ? "income" : "expense", notes: entry.notes,
+        category: transaction.category && { id: transaction.category.id, name: transaction.category.name },
+        merchant: transaction.merchant && { id: transaction.merchant.id, name: transaction.merchant.name },
+        tags: transaction.tags.map { |tag| { id: tag.id, name: tag.name } },
+        external_id: entry.external_id, source: entry.source
+      }
+    end
+
     def format_money(entry)
       entry.amount_money.format
     rescue StandardError
       "#{entry.amount} #{entry.currency}"
     end
 
-    # Shape a Transaction into the result hash returned to the caller (id,
-    # name, date, amount, currency, type, notes, and nested category/merchant/
-    # tags).
-    def serialize(transaction)
-      entry = transaction.entry
-      {
-        id: transaction.id,
-        entry_id: entry.id,
-        name: entry.name,
-        date: entry.date,
-        amount: entry.amount.to_s,
-        amount_formatted: format_money(entry),
-        currency: entry.currency,
-        type: entry.classification,
-        notes: entry.notes,
-        category: transaction.category && { id: transaction.category.id, name: transaction.category.name },
-        merchant: transaction.merchant && { id: transaction.merchant.id, name: transaction.merchant.name },
-        tags: transaction.tags.map { |tag| { id: tag.id, name: tag.name } }
-      }
+    def parse_decimal(value)
+      number = BigDecimal(value.to_s)
+      number if number.finite?
+    rescue ArgumentError, TypeError
+      nil
     end
 
-    # True if a helper returned an error hash (a Hash with success == false),
-    # used to short-circuit on validation failures from other helpers.
+    def account_not_found
+      error("account_not_found", "No account found with that ID that this user can write to.")
+    end
+
     def error_response?(value)
       value.is_a?(Hash) && value[:success] == false
     end
 
-    # Build a standard error result hash: { success: false, error:, message: }.
     def error(key, message)
       { success: false, error: key, message: message }
     end

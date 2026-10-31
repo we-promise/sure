@@ -26,44 +26,51 @@ class Assistant::Function::DeleteCategory < Assistant::Function
     build_schema(
       required: [ "id" ],
       properties: {
-        id: {
-          type: "string",
-          description: "ID of the category to delete (use get_categories to find it)"
-        },
-        replacement_id: {
-          type: "string",
-          description: "ID of a category to move the deleted category's transactions to (optional). Transactions become uncategorized if omitted."
-        }
+        id: { type: "string", description: "ID of the category to delete (use get_categories to find it)" },
+        replacement_id: { type: "string", description: "Optional category ID to move the deleted category's transactions to" },
+        replacement_category_id: { type: [ "string", "null" ], description: "Existing clients may use this alias for replacement_id; do not provide conflicting IDs" }
       }
     )
   end
 
   def call(params = {})
-    category = find_category(params["id"])
-    return error("not_found", "Category with id '#{params["id"]}' not found.") unless category
+    return error("not_authorized", "Guests cannot delete categories.") if user.guest?
 
-    replacement = nil
-    # Only an omitted or null replacement_id uncategorizes the transactions; any
-    # other value, blank included, must be the id of a category in the family.
-    unless params["replacement_id"].nil?
-      replacement = find_category(params["replacement_id"])
-      return error("replacement_not_found", "Replacement category with id '#{params["replacement_id"]}' not found.") unless replacement
-      return error("invalid_replacement", "A category cannot replace itself.") if replacement == category
+    category_id = valid_uuid?(params["id"]) ? params["id"].to_s : nil
+    return error("not_found", "Category not found.") unless category_id
+
+    if params.key?("replacement_id") && params.key?("replacement_category_id") && params["replacement_id"] != params["replacement_category_id"]
+      return error("invalid_replacement", "Provide only one replacement category.")
     end
 
-    name = category.name_with_parent
-    category.replace_and_destroy!(replacement)
+    replacement_id = params.key?("replacement_id") ? params["replacement_id"] : params["replacement_category_id"]
+    if !replacement_id.nil? && !valid_uuid?(replacement_id)
+      return error("replacement_not_found", "Replacement category not found.")
+    end
+    replacement_id = replacement_id.to_s unless replacement_id.nil?
+    return error("invalid_replacement", "A category cannot replace itself.") if replacement_id == category_id
 
-    message = "Category '#{name}' deleted."
-    message += " Its transactions were moved to '#{replacement.reload.name_with_parent}'." if replacement
-    { success: true, id: category.id, replacement_id: replacement&.id, message: message }
+    Category.transaction do
+      categories = family.categories.where(id: [ category_id, replacement_id ].compact).order(:id).lock.index_by { |category| category.id.to_s }
+      category = categories[category_id]
+      next error("not_found", "Category not found.") unless category
+      replacement = replacement_id && categories[replacement_id]
+      next error("replacement_not_found", "Replacement category not found.") if replacement_id && !replacement
+
+      name = category.name_with_parent
+      category.replace_and_destroy!(replacement)
+      message = "Category '#{name}' deleted."
+      message += " Its transactions were moved to '#{replacement.reload.name_with_parent}'." if replacement
+      {
+        success: true, id: category_id, replacement_id: replacement&.id,
+        deleted_category_id: category_id, replacement_category_id: replacement&.id, message: message
+      }
+    end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed => e
+    error("delete_failed", e.record.errors.full_messages.join("; "))
   end
 
   private
-    def find_category(id)
-      family.categories.find_by(id: id) if valid_uuid?(id)
-    end
-
     def error(key, message)
       { success: false, error: key, message: message }
     end

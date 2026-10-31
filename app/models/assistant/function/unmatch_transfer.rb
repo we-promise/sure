@@ -85,11 +85,15 @@ class Assistant::Function::UnmatchTransfer < Assistant::Function
     snapshot = accounts = nil
     unmatched = Transfer.uncached do
       Transfer.transaction do
+        initial_accounts = ([ transfer.from_account, transfer.to_account ] + transfer.fee_transactions.map { |t| t.entry.account }).compact.uniq
+        locked_accounts = Account::MutationAccess.lock!(accounts: initial_accounts, user:, level: Account::MutationAccess::WRITE)
         locked = scoped_transfers.lock.find_by(id: transfer.id)
         next false unless locked
 
-        snapshot = serialize_transfer(locked)
         accounts = ([ locked.from_account, locked.to_account ] + locked.fee_transactions.map { |t| t.entry.account }).compact.uniq
+        next false unless accounts.all? { |account| locked_accounts.key?(account.id.to_s) }
+
+        snapshot = serialize_transfer(locked)
         reject ? locked.reject! : locked.destroy!
         true
       end
@@ -119,6 +123,8 @@ class Assistant::Function::UnmatchTransfer < Assistant::Function
     end
 
     response
+  rescue Account::MutationAccess::Denied
+    error("not_found", "The transfer was already unlinked, or you can no longer write to its accounts.")
   end
 
   private

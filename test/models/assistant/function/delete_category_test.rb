@@ -79,4 +79,18 @@ class Assistant::Function::DeleteCategoryTest < ActiveSupport::TestCase
     assert Category.exists?(other_cat.id)
     assert Category.exists?(@category.id)
   end
+
+  test "conflicting replacement aliases do not delete or recategorize" do
+    original_category_id = transactions(:one).category_id
+
+    assert_no_difference "Category.count" do
+      result = @fn.call(
+        "id" => @category.id, "replacement_id" => categories(:income).id,
+        "replacement_category_id" => categories(:subcategory).id
+      )
+      assert_equal "invalid_replacement", result[:error]
+    end
+    assert_equal original_category_id, transactions(:one).reload.category_id
+    assert Category.exists?(@category.id)
+  end
 end
