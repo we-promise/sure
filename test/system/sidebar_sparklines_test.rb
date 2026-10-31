@@ -26,9 +26,10 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
   # for every fetched frame to finish instead of requiring a response time.
   SETTLE_WAIT_SECONDS = 15
 
-  # Long enough for a sparkline response to arrive inside it, so the render
-  # gap test only fails when the countdown outlives a response it already had.
-  RENDER_GAP_TIMEOUT_MS = 1500
+  # Long enough for a sparkline response to arrive inside it, so the tests
+  # that use it only fail on what the countdown does with a response it
+  # already had.
+  RESPONSE_WINDOW_MS = 1500
 
   # Holds sparkline responses open for as long as a test needs one pending.
   # The wait has to happen inside the server thread, which the test cannot
@@ -49,17 +50,24 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
   end
   AccountsController.prepend(StalledSparklines)
 
-  # Answers sparkline requests with a server error while enabled.
-  module FailingSparklines
-    mattr_accessor :enabled, default: false
+  # Answers sparkline requests with a response that has no sparkline frame:
+  # a server error, or a page without the frame like the sign-in page a
+  # request is redirected to once the session has expired.
+  module BrokenSparklines
+    mattr_accessor :mode, default: nil
 
     def sparkline
-      return head(:internal_server_error) if FailingSparklines.enabled
-
-      super
+      case BrokenSparklines.mode
+      when :server_error
+        head :internal_server_error
+      when :without_frame
+        render html: "<!DOCTYPE html><html><head></head><body><p>Sign in</p></body></html>".html_safe, layout: false
+      else
+        super
+      end
     end
   end
-  AccountsController.prepend(FailingSparklines)
+  AccountsController.prepend(BrokenSparklines)
 
   setup do
     @user = users(:family_admin)
@@ -132,27 +140,20 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
   # frame-load replaces the sparkline that has just been drawn. The window is
   # long enough for the response itself to arrive in time.
   test "a sparkline that has rendered is not replaced by the timeout badge" do
-    stub_const(AccountsHelper, :SPARKLINE_FRAME_TIMEOUT_MS, RENDER_GAP_TIMEOUT_MS) do
+    stub_const(AccountsHelper, :SPARKLINE_FRAME_TIMEOUT_MS, RESPONSE_WINDOW_MS) do
       visit root_path
 
+      record_account_sparkline_response_times
       page.execute_script(<<~JS)
         const requestAnimationFrame = window.requestAnimationFrame
-        const requestedAt = {}
-        window.sparklineResponseTimes = []
-        document.addEventListener("turbo:before-fetch-request", (event) => {
-          if (event.target.id.startsWith("sparkline_account_")) requestedAt[event.target.id] = performance.now()
-        })
-        document.addEventListener("turbo:before-fetch-response", (event) => {
-          if (event.target.id in requestedAt) window.sparklineResponseTimes.push(performance.now() - requestedAt[event.target.id])
-        })
         document.addEventListener("turbo:before-frame-render", (event) => {
           if (!event.target.id.startsWith("sparkline_account_")) return
           const render = event.detail.render
           event.detail.render = (currentElement, newElement) => {
             render(currentElement, newElement)
             window.requestAnimationFrame = (callback) =>
-              setTimeout(() => requestAnimationFrame(callback), #{RENDER_GAP_TIMEOUT_MS})
-            setTimeout(() => { window.requestAnimationFrame = requestAnimationFrame }, #{RENDER_GAP_TIMEOUT_MS * 4})
+              setTimeout(() => requestAnimationFrame(callback), #{RESPONSE_WINDOW_MS})
+            setTimeout(() => { window.requestAnimationFrame = requestAnimationFrame }, #{RESPONSE_WINDOW_MS * 4})
           }
         })
       JS
@@ -164,9 +165,7 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
 
       # A response that missed the window would let the badge land before the
       # render and be painted over, which proves nothing about the gap.
-      response_times = page.evaluate_script("window.sparklineResponseTimes")
-      assert_not_empty response_times
-      assert response_times.all? { |ms| ms < RENDER_GAP_TIMEOUT_MS }, "Sparkline responses took #{response_times.map(&:round)} ms"
+      assert_account_sparkline_responses_within RESPONSE_WINDOW_MS
 
       assert_no_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: BADGE_TEXT, visible: :all
       assert_selector "#{ACCOUNT_SPARKLINE_FRAME} [data-controller='time-series-chart'] svg path", minimum: 1
@@ -187,18 +186,16 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
     end
   end
 
-  # A response ends the wait only when it succeeds; an error is as much a
-  # failed sparkline as a request that never returns.
+  # Only a response that renders the frame ends the wait; one without it is as
+  # much a failed sparkline as a request that never returns. Each response has
+  # to arrive inside the window, otherwise the badge would be there before it
+  # and prove nothing about what the response does to the countdown.
   test "an error response still raises the timeout badge" do
-    with_short_sparkline_timeout do
-      visit root_path
+    assert_broken_response_raises_badge :server_error
+  end
 
-      with_failing_sparkline_responses do
-        expand_first_group
-
-        assert_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: BADGE_TEXT, minimum: 1
-      end
-    end
+  test "a response without the sparkline frame still raises the timeout badge" do
+    assert_broken_response_raises_badge :without_frame
   end
 
   private
@@ -214,11 +211,44 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
       StalledSparklines.enabled = false
     end
 
-    def with_failing_sparkline_responses
-      FailingSparklines.enabled = true
+    def with_broken_sparkline_responses(mode)
+      BrokenSparklines.mode = mode
       yield
     ensure
-      FailingSparklines.enabled = false
+      BrokenSparklines.mode = nil
+    end
+
+    def assert_broken_response_raises_badge(mode)
+      stub_const(AccountsHelper, :SPARKLINE_FRAME_TIMEOUT_MS, RESPONSE_WINDOW_MS) do
+        visit root_path
+        record_account_sparkline_response_times
+
+        with_broken_sparkline_responses(mode) do
+          expand_first_group
+
+          assert_selector "#{ACCOUNT_SPARKLINE_FRAME} p", text: BADGE_TEXT, minimum: 1, wait: SETTLE_WAIT_SECONDS
+          assert_account_sparkline_responses_within RESPONSE_WINDOW_MS
+        end
+      end
+    end
+
+    def record_account_sparkline_response_times
+      page.execute_script(<<~JS)
+        const requestedAt = {}
+        window.sparklineResponseTimes = []
+        document.addEventListener("turbo:before-fetch-request", (event) => {
+          if (event.target.id.startsWith("sparkline_account_")) requestedAt[event.target.id] = performance.now()
+        })
+        document.addEventListener("turbo:before-fetch-response", (event) => {
+          if (event.target.id in requestedAt) window.sparklineResponseTimes.push(performance.now() - requestedAt[event.target.id])
+        })
+      JS
+    end
+
+    def assert_account_sparkline_responses_within(ms)
+      response_times = page.evaluate_script("window.sparklineResponseTimes")
+      assert_not_empty response_times
+      assert response_times.all? { |time| time < ms }, "Sparkline responses took #{response_times.map(&:round)} ms"
     end
 
     def expand_first_group

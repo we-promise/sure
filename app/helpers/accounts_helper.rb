@@ -24,7 +24,7 @@ module AccountsHelper
     {
       controller: "turbo-frame-timeout",
       action: "turbo:before-fetch-request->turbo-frame-timeout#startTimeout " \
-              "turbo:before-fetch-response->turbo-frame-timeout#responseReceived",
+              "turbo:before-frame-render->turbo-frame-timeout#clearTimeout",
       turbo_frame_timeout_timeout_value: SPARKLINE_FRAME_TIMEOUT_MS
     }
   end
