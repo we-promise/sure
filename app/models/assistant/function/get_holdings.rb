@@ -135,9 +135,9 @@ class Assistant::Function::GetHoldings < Assistant::Function
         .where(
           id: Holding.where(account: accounts)
             .select("DISTINCT ON (account_id, security_id) id")
-            .where.not(qty: 0)
             .order(:account_id, :security_id, date: :desc)
         )
+        .where.not(qty: 0)
 
       if params["securities"].present?
         holdings = holdings.joins(:security).where(securities: { ticker: params["securities"] })
