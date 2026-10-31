@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { layoutSankeyLabels } from "../../../app/javascript/utils/sankey_labels.mjs";
+import {
+  largestSankeyColumn,
+  layoutSankeyLabels,
+  sankeyHeightForLabels,
+  spreadSankeyColumns,
+} from "../../../app/javascript/utils/sankey_labels.mjs";
 
 const hiddenSankeyLabels = (nodes, options) => layoutSankeyLabels(nodes, options).hidden;
 
@@ -130,13 +135,13 @@ test("equal values fall back to vertical order deterministically", () => {
   assert.equal(hidden.has(1), true);
 });
 
-test("large graphs use tighter spacing", () => {
+test("tall charts keep the full label spacing", () => {
+  // Labels are ~26px tall; packing them closer on tall charts made them overlap.
   const nodes = column([
     [500.0, 20, 22],
     [300.0, 31, 33],
   ]);
-  assert.equal(hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING }).size, 1);
-  assert.equal(hiddenSankeyLabels(nodes, { height: 800, minSpacing: SPACING }).size, 0);
+  assert.equal(hiddenSankeyLabels(nodes, { height: 800, minSpacing: SPACING }).size, 1);
 });
 
 test("hidden set uses node.index, not array position", () => {
@@ -249,4 +254,182 @@ test("a label rejected for crossing a bar doesn't keep its smaller neighbour hid
   assert.equal(hidden.has(0), true, "crosses the bar to its left");
   assert.equal(hidden.has(1), false, "takes the place it was crowded out of");
   assert.equal(hidden.has(2), false);
+});
+
+// `count` nodes in the crowded right column next to a two-node left column.
+const crowdedChart = (count) => [
+  { index: 0, x0: 0, y0: 16, y1: 200, value: 1 },
+  { index: 1, x0: 0, y0: 210, y1: 368, value: 1 },
+  ...Array.from({ length: count }, (_, i) => ({
+    index: i + 2,
+    x0: 300,
+    y0: 16 + i * 9,
+    y1: 21 + i * 9,
+    value: 1,
+  })),
+];
+
+test("the largest column is counted by visual position", () => {
+  assert.equal(largestSankeyColumn(crowdedChart(35)), 35);
+  assert.equal(largestSankeyColumn([]), 0);
+});
+
+test("showing every label widens only the gaps of the crowded column", () => {
+  const fitted = sankeyHeightForLabels(crowdedChart(35), {
+    height: 384,
+    padding: 1.5,
+    minSpacing: SPACING,
+  });
+  assert.deepEqual(fitted, { height: Math.ceil(384 + 34 * (SPACING - 1.5)), padding: SPACING });
+});
+
+test("a chart whose gaps already fit a label keeps its height", () => {
+  const fitted = sankeyHeightForLabels(crowdedChart(3), { height: 384, padding: 30, minSpacing: SPACING });
+  assert.deepEqual(fitted, { height: 384, padding: 30 });
+});
+
+test("every label of the crowded column fits once the gaps have widened", () => {
+  const count = 35;
+  const { height, padding } = sankeyHeightForLabels(crowdedChart(count), {
+    height: 384,
+    padding: 1,
+    minSpacing: SPACING,
+  });
+  const bar = (height - 32 - (count - 1) * padding) / count;
+  const nodes = Array.from({ length: count }, (_, i) => ({
+    index: i,
+    x0: 300,
+    y0: 16 + i * (bar + padding),
+    y1: 16 + i * (bar + padding) + bar,
+    value: count - i,
+  }));
+  assert.equal(hiddenSankeyLabels(nodes, { height, minSpacing: SPACING }).size, 0);
+});
+
+const SPREAD = { top: 16, bottom: 384, padding: 4, minSpacing: SPACING };
+
+test("a column with spare height spreads its nodes just enough for every label", () => {
+  // Left column: one large source, then four small ones packed under it.
+  const nodes = column([
+    [19821, 16, 146],
+    [75, 150, 151],
+    [2208, 155, 170],
+    [3953, 174, 200],
+    [1828, 204, 216],
+  ]);
+  spreadSankeyColumns({ nodes, links: [] }, SPREAD);
+  const heights = [130, 1, 15, 26, 12];
+  nodes.forEach((node, i) => assert.equal(node.y1 - node.y0, heights[i], "bars keep their size"));
+  assert.equal(nodes[0].y0, 16, "the top node stays put");
+  const centres = nodes.map((n) => (n.y0 + n.y1) / 2);
+  centres.slice(1).forEach((c, i) => assert.ok(c - centres[i] >= SPACING - 1e-9, "labels have room"));
+  assert.ok(nodes[4].y1 <= 384);
+  assert.equal(hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING }).size, 0);
+});
+
+test("nodes that already have room for their labels don't move", () => {
+  const nodes = column([
+    [10, 16, 40],
+    [10, 80, 100],
+  ]);
+  spreadSankeyColumns({ nodes, links: [] }, SPREAD);
+  assert.deepEqual(nodes.map((n) => [n.y0, n.y1]), [[16, 40], [80, 100]]);
+});
+
+test("near the bottom, spreading pushes nodes up instead of off the chart", () => {
+  const nodes = column([
+    [10, 350, 360],
+    [10, 362, 372],
+    [10, 374, 384],
+  ]);
+  spreadSankeyColumns({ nodes, links: [] }, SPREAD);
+  assert.equal(nodes[2].y1, 384);
+  assert.ok(nodes[0].y0 < 350);
+  assert.equal(hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING }).size, 0);
+});
+
+test("a column short of room gives label room to its largest nodes", () => {
+  // Twenty small bars, values shuffled; only some labels can fit.
+  const values = [3, 17, 8, 12, 1, 20, 5, 14, 9, 2, 19, 6, 11, 4, 16, 7, 13, 10, 18, 15];
+  const nodes = column(values.map((value, i) => [value, 16 + i * 12, 22 + i * 12]));
+  spreadSankeyColumns({ nodes, links: [] }, SPREAD);
+
+  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
+  const shown = nodes.filter((node) => !hidden.has(node.index)).map((node) => node.value);
+  assert.ok(shown.length > 1);
+  assert.deepEqual(
+    [...shown].sort((a, b) => b - a),
+    [...values].sort((a, b) => b - a).slice(0, shown.length),
+    "the labels shown are the largest values",
+  );
+  nodes.slice(1).forEach((node, i) => {
+    assert.ok(Math.abs(node.y1 - node.y0 - 6) < 1e-9, "bars keep their size");
+    assert.ok(node.y0 - nodes[i].y1 >= 4 - 1e-9, "gaps never shrink below the padding");
+  });
+  assert.ok(nodes[0].y0 >= 16 && nodes[19].y1 <= 384 + 1e-9);
+});
+
+test("a column with no room even for padding keeps its layout", () => {
+  const packed = Array.from({ length: 20 }, (_, i) => [1, 16 + i * 19, 32 + i * 19]);
+  const nodes = column(packed);
+  spreadSankeyColumns({ nodes, links: [] }, SPREAD);
+  assert.deepEqual(nodes.map((n) => [n.y0, n.y1]), packed.map(([, y0, y1]) => [y0, y1]));
+});
+
+test("nodes don't spread onto a link that passes through their column", () => {
+  // Cash Flow (x 0) sends a wide link straight to Surplus (x 300), across the
+  // categories at x 150; the categories must stay above it.
+  const cash = { index: 0, x0: 0, x1: 15, value: 100, y0: 16, y1: 384 };
+  const surplus = { index: 1, x0: 300, x1: 315, value: 60, y0: 200, y1: 384 };
+  const categories = [0, 1, 2, 3, 4].map((i) => ({
+    index: 2 + i,
+    x0: 150,
+    x1: 165,
+    value: 5 - i,
+    y0: 120 + i * 3,
+    y1: 121 + i * 3,
+  }));
+  const link = { source: cash, target: surplus, y0: 300, y1: 292, width: 184 };
+  const relinked = [];
+  spreadSankeyColumns(
+    { nodes: [cash, surplus, ...categories], links: [link] },
+    { ...SPREAD, relink: () => relinked.push(true) },
+  );
+  assert.equal(relinked.length, 2, "links follow each round of moves");
+  const bandTop = Math.min(300, 292) - 92 - 4;
+  categories.forEach((node) => assert.ok(node.y1 <= bandTop + 1e-9, `${node.index} stays above the link`));
+  const centres = categories.map((n) => (n.y0 + n.y1) / 2);
+  centres.slice(1).forEach((c, i) => assert.ok(c - centres[i] >= SPACING - 1e-9));
+});
+
+test("each column is spread on its own", () => {
+  const nodes = [
+    { index: 0, x0: 0, value: 1, y0: 16, y1: 20 },
+    { index: 1, x0: 0, value: 1, y0: 22, y1: 26 },
+    { index: 2, x0: 300, value: 1, y0: 16, y1: 20 },
+  ];
+  spreadSankeyColumns({ nodes, links: [] }, SPREAD);
+  assert.ok(nodes[1].y0 - nodes[0].y0 >= SPACING);
+  assert.deepEqual([nodes[2].y0, nodes[2].y1], [16, 20]);
+});
+
+test("a crowded group in the middle of a column opens up both ways", () => {
+  const nodes = column([
+    [10, 197, 199],
+    [10, 199, 201],
+    [10, 201, 203],
+  ]);
+  spreadSankeyColumns({ nodes, links: [] }, SPREAD);
+  assert.deepEqual(nodes.map((n) => n.y0 + 1), [200 - SPACING, 200, 200 + SPACING]);
+});
+
+test("a slot exactly one label tall survives fractional positions", () => {
+  // Positions from a spread chart: label centres exactly SPACING apart,
+  // which floating-point maths lands a hair short of.
+  const nodes = column([
+    [750.47, 86.81806511383212, 92.09133704783918],
+    [27.34, 117.35864710487674, 117.55075505679456],
+    [358.19, 144.19626751650793, 146.71313464516334],
+  ]);
+  assert.equal(hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING }).size, 0);
 });

@@ -1,7 +1,10 @@
 <%# locals: (sankey_data:, period:) %>
 <div id="cashflow-sankey-chart">
   <% if sankey_data[:links].present? %>
-    <div class="w-full h-96">
+    <div
+      class="w-full min-h-96 flex flex-col"
+      data-cashflow-expand-target="inlineChart"
+      data-action="sankey-chart:label-mode->cashflow-expand#syncLabelModeToggle">
       <%= render "pages/dashboard/cashflow_sankey_chart", sankey_data: sankey_data, period: period %>
     </div>
     <%= render DS::Dialog.new(id: "cashflow-expanded-dialog", auto_open: false, width: "expanded", disable_frame: true, data: { action: "close->cashflow-expand#restore" }) do |dialog| %>
