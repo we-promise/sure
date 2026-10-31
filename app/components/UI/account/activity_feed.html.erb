@@ -1,7 +1,20 @@
 <%= turbo_frame_tag dom_id(account, "entries") do %>
+  <%= helpers.unread_marker_tag %>
   <div class="bg-container px-3 py-4 lg:p-4 shadow-border-xs rounded-xl" data-controller="checkbox-toggle">
     <div class="flex items-center justify-between mb-4" data-testid="activity-menu">
       <%= tag.h2 t("accounts.show.activity.title"), class: "font-medium text-lg" %>
+
+      <% if has_unread %>
+        <%= render DS::Button.new(
+          text: t("accounts.show.activity.mark_all_read"),
+          icon: "check-check",
+          variant: "outline",
+          href: helpers.transactions_read_path(account_id: account.id, as_of: helpers.unread_as_of_param),
+          method: :post,
+          class: "ml-auto mr-2",
+          data: { turbo_frame: "_top" }
+        ) %>
+      <% end %>
 
       <%# Show menu if: manual (can add balance) OR non-crypto (can add transactions) %>
       <%# This hides the menu only for linked crypto accounts who have no actions %>
