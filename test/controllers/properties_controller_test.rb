@@ -74,6 +74,26 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "edit and new forms offer the custom group to preview users" do
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    @account.update!(custom_group: "Rentals")
+
+    get edit_property_path(@account)
+    assert_select "input[name='account[custom_group]'][value='Rentals']"
+    assert_select "datalist#account_custom_group_suggestions option[value='Rentals']"
+
+    get new_property_path
+    assert_select "input[name='account[custom_group]']"
+  end
+
+  test "edit form hides the custom group without preview features" do
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => false))
+
+    get edit_property_path(@account)
+    assert_response :success
+    assert_select "input[name='account[custom_group]']", count: 0
+  end
+
   test "editing the living area marks it as user-set, so valuation refreshes send it" do
     property = @account.accountable
     assert_not property.user_set_area?

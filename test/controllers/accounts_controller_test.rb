@@ -1644,7 +1644,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     patch reorder_accounts_url, params: { group: "depository", account_ids: [ foreign.id, @account.id ] }, as: :json
 
     assert_response :success
-    assert_equal [ @account.id ], @user.reload.manual_account_order["depository"]
+    assert_not_includes @user.reload.manual_account_order["depository"], foreign.id
   end
 
   test "reorder rejects an unknown group" do

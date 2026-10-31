@@ -8,6 +8,18 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
+  test "saves the custom group and shows it in the edit form for preview users" do
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+
+    patch depository_path(@account), params: { account: { custom_group: "  Vacation " } }
+
+    assert_equal "Vacation", @account.reload.custom_group
+
+    get edit_depository_path(@account)
+    assert_select "input[name='account[custom_group]'][value='Vacation']"
+    assert_select "datalist#account_custom_group_suggestions option[value='Vacation']"
+  end
+
   # The provider link's visibility and the controller's gate are two
   # expressions of one rule, and they disagreed. ConnectorAuthorizable requires
   # `member_connectable? && Current.user&.member?`; the selector asked only

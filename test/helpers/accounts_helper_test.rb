@@ -26,6 +26,29 @@ class AccountsHelperTest < ActionView::TestCase
     assert_not_equal before, sidebar_key
   end
 
+  test "the sidebar is sortable only when grouped by account type first" do
+    @user.update!(default_account_order: "manual")
+    assert account_sidebar_sortable?
+
+    @user.update!(preferences: @user.preferences.merge(
+      "preview_features_enabled" => true,
+      "account_grouping" => { "sidebar" => "institution" }
+    ))
+    assert account_sidebar_sortable?, "each subgroup is reordered within its type"
+
+    @user.update!(preferences: @user.preferences.merge(
+      "account_grouping" => {},
+      "account_grouping_primary" => { "sidebar" => "custom_group" }
+    ))
+    assert_not account_sidebar_sortable?, "another first level mixes account types"
+
+    @user.update!(preferences: @user.preferences.merge("account_grouping_primary" => {}))
+    assert account_sidebar_sortable?
+
+    @user.update!(default_account_order: "name_asc")
+    assert_not account_sidebar_sortable?
+  end
+
   private
     def sidebar_key
       account_sidebar_tabs_cache_key(family: @user.family, active_tab: "all", mobile: false)

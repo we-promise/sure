@@ -13,96 +13,45 @@
 
       <div class="ml-auto text-right grow">
         <%= tag.p format_money(account_group.total_money), class: "text-sm font-medium text-primary privacy-sensitive" %>
-        <%= turbo_frame_tag "#{account_group.key}_sparkline",
-                            src: accountable_sparkline_path(account_group.key),
-                            loading: "lazy",
-                            data: sparkline_frame_data do %>
-          <div class="flex items-center w-8 h-4 ml-auto">
-            <div class="w-6 h-px bg-loader"></div>
-          </div>
+        <% if account_group.type_group? %>
+          <%= turbo_frame_tag "#{account_group.key}_sparkline", src: accountable_sparkline_path(account_group.key), loading: "lazy", data: sparkline_frame_data do %>
+            <div class="flex items-center w-8 h-4 ml-auto">
+              <div class="w-6 h-px bg-loader"></div>
+            </div>
+          <% end %>
         <% end %>
       </div>
     <% end %>
 
-    <%= tag.div class: "space-y-1",
-          data: sortable ? {
-            controller: "sortable-list",
-            sortable_list_url_value: reorder_accounts_path(group: account_group.key),
-            sortable_list_param_value: "account_ids",
-            sortable_list_hold_delay_value: 400,
-            sortable_list_save_timeout_value: 10_000,
-            sortable_list_mirror_lists_value: true,
-            action: "dragover->sortable-list#dragOver drop->sortable-list#drop account-sort-mode:stop@window->sortable-list#releaseKeyboardGrab turbo:before-visit@window->sortable-list#saveBeforeVisit"
-          } : {} do %>
-      <% account_group.accounts.each do |account| %>
-        <%# Rows become draggable only in sort mode (account-sort-mode). %>
-        <%= tag.div class: "flex items-center gap-1 rounded-lg",
-              data: sortable ? {
-                sortable_list_target: "item",
-                sortable_list_id: account.id,
-                action: "dragstart->sortable-list#dragStart dragend->sortable-list#dragEnd"
-              } : {} do %>
-        <% if sortable %>
-          <%# Hidden until the sidebar is in sort mode (account-sort-mode). %>
-          <%= render DS::Button.new(
-            variant: :icon,
-            icon: "grip-vertical",
-            size: :sm,
-            style: "display:none",
-            class: "shrink-0 cursor-grab active:cursor-grabbing touch-none [-webkit-touch-callout:none]",
-            aria_label: t("accounts.sidebar.reorder_account", account: account.name),
-            title: t("accounts.sidebar.reorder_hint"),
-            data: {
-              account_sort_mode_target: "handle",
-              action: "touchstart->sortable-list#touchStart touchmove->sortable-list#touchMove touchend->sortable-list#touchEnd touchcancel->sortable-list#touchCancel contextmenu->sortable-list#suppressContextMenu keydown->sortable-list#handleKeyDown"
-            }
-          ) %>
-        <% end %>
-        <%= link_to account_path(account),
-                  class: class_names(
-                    "block flex items-center gap-2 px-3 py-2 rounded-lg min-w-0 grow",
-                    page_active?(account_path(account)) ? "bg-container" : "hover:bg-surface-hover"
-                  ),
-                  data: page_active?(account_path(account)) ? { active_account: true } : {},
-                  title: account.name do %>
-          <%= render "accounts/logo", account: account, size: "sm", color: account_group.color %>
-
-          <div class="min-w-0 grow">
-            <div class="flex items-center gap-2 mb-0.5">
-              <%= tag.p account.name, class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) %>
-              <% if account.shared? %>
-                <%= icon("users", class: "w-3 h-3 text-secondary shrink-0") %>
-              <% end %>
+    <% subgroups = account_subgroups(account_group, view: :sidebar) %>
+    <% if subgroups.any? %>
+      <div class="space-y-1">
+        <% subgroups.each do |subgroup| %>
+          <div id="<%= subgroup.dom_id(tab: all_tab ? :all : nil, mobile: mobile) %>" class="space-y-1" data-subgroup-key="<%= subgroup.key %>">
+            <div class="flex items-center justify-between gap-2 px-3 pt-2">
+              <%= tag.p subgroup.name, class: class_names("text-xs font-medium text-secondary truncate", "animate-pulse" => subgroup.syncing?) %>
+              <%= tag.p format_money(subgroup.total_money), class: "text-xs font-medium text-secondary whitespace-nowrap privacy-sensitive" %>
             </div>
-            <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
-          </div>
-
-          <div class="ml-auto text-right grow h-10">
-            <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
-            <%= turbo_frame_tag dom_id(account, :sparkline),
-                                src: sparkline_account_path(account),
-                                loading: "lazy",
-                                data: sparkline_frame_data do %>
-              <div class="flex items-center w-8 h-4 ml-auto">
-                <div class="w-6 h-px bg-loader"></div>
-              </div>
-            <% end %>
+            <%= render "accounts/sidebar_account_list", accounts: subgroup.accounts, account_group: account_group, sortable: sortable, subgroup: subgroup %>
           </div>
         <% end %>
-        <% end %>
-      <% end %>
+      </div>
+    <% else %>
+      <%= render "accounts/sidebar_account_list", accounts: account_group.accounts, account_group: account_group, sortable: sortable %>
     <% end %>
 
-    <div class="my-2">
-      <%= render DS::Link.new(
-      href: new_polymorphic_path(account_group.key, step: "method_select"),
-      text: t("accounts.sidebar.new_account_group", account_group: account_group.accountable_type.singular_display_name.downcase),
-      icon: "plus",
-      full_width: true,
-      variant: "ghost",
-      frame: :modal,
-      class: "justify-start"
-    ) %>
-    </div>
+    <% if account_group.type_group? %>
+      <div class="my-2">
+        <%= render DS::Link.new(
+        href: new_polymorphic_path(account_group.key, step: "method_select"),
+        text: t("accounts.sidebar.new_account_group", account_group: account_group.accountable_type.singular_display_name.downcase),
+        icon: "plus",
+        full_width: true,
+        variant: "ghost",
+        frame: :modal,
+        class: "justify-start"
+      ) %>
+      </div>
+    <% end %>
   <% end %>
 </div>
