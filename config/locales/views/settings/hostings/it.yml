@@ -124,8 +124,10 @@ it:
         access_token_placeholder: Inserisci il tuo token di accesso qui
         uri_base_label: URL base API (facoltativo)
         uri_base_placeholder: "https://api.openai.com/v1 (predefinito)"
+        uri_base_local_help: "Per un modello sulla tua macchina, inserisci il suo endpoint compatibile con OpenAI, ad esempio Ollama su http://localhost:11434/v1, oppure http://ollama:11434/v1 se Sure e Ollama girano come servizi Docker Compose."
         model_label: Modello (facoltativo)
         model_placeholder: "gpt-4.1 (predefinito)"
+        model_required_help: "Obbligatorio quando imposti un URL di base dell'API: inserisci il nome del modello usato dal tuo server, ad esempio llama3.1 per Ollama."
         json_mode_label: Modalità JSON
         json_mode_auto: Auto (consigliato)
         json_mode_strict: Strict (ottimo per modelli thinking)

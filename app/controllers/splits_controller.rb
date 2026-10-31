@@ -118,7 +118,7 @@ class SplitsController < ApplicationController
 
     def set_form_options
       @categories = grouped_categories
-      @merchants = Current.family.available_merchants_for(Current.user).alphabetically
+      @merchants = Current.family.available_merchants_for(Current.user).with_attached_logo.alphabetically
       @tags = Current.family.tags.alphabetically
     end
 

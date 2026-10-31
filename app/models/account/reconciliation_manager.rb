@@ -70,9 +70,9 @@ class Account::ReconciliationManager
     #      first reconciliation's full balance is its contribution.
     #
     # The delta is only ever consumed by manual_save pledges, which never
-    # attach to investment accounts: Account#default_pledge_kind forces
+    # attach to investment or crypto accounts: Account#default_pledge_kind forces
     # `transfer` there and GoalPledge#matches? rejects valuation deltas on
-    # investment accounts (a market move isn't a deposit). So a positive delta
+    # them (a market move isn't a deposit). So a positive delta
     # only feeds depository saves, where balances are positive and a positive
     # delta really is a deposit — the reconciler's positive-delta guard holds.
     def valuation_contribution(valuation, prior_valuation_amount, old_balance_components)

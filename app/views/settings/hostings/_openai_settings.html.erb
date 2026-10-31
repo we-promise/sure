@@ -37,6 +37,7 @@
                       inputmode: "url",
                       disabled: ENV["OPENAI_URI_BASE"].present?,
                       data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1"><%= t(".uri_base_local_help") %></p>
 
   <%= form.text_field :openai_model,
                       label: t(".model_label"),
@@ -49,6 +50,7 @@
                       disabled: ENV["OPENAI_MODEL"].present?,
                       data: { "auto-submit-form-target": "auto" } %>
   <p class="text-xs text-secondary mt-1">
+    <%= t(".model_required_help") %>
     <%= t(".model_function_calling_help") %>
     <% if Current.user&.super_admin? %>
       <%= link_to t(".model_function_calling_link"), admin_system_health_path(tab: "ai"), class: "underline" %>
