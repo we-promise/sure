@@ -1766,8 +1766,9 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "reconciles most recent pending when multiple exist" do
-    # Create two pending transactions with same amount
+  test "does not auto-claim pending when multiple same-amount candidates exist" do
+    # Two distinct pendings with the same amount: amount/date alone cannot tell
+    # which one the posted transaction belongs to (#2013).
     older_pending = @adapter.import_transaction(
       external_id: "simplefin_older_pending",
       amount: 60.00,
@@ -1788,8 +1789,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       extra: { "simplefin" => { "pending" => true } }
     )
 
-    # Import posted - should match the most recent pending (by date)
-    assert_no_difference "@account.entries.count" do
+    assert_difference "@account.entries.count", 1 do
       posted_entry = @adapter.import_transaction(
         external_id: "simplefin_posted_recurring",
         amount: 60.00,
@@ -1800,11 +1800,85 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         extra: { "simplefin" => { "pending" => false } }
       )
 
-      # Should match the newer pending entry
-      assert_equal newer_pending.id, posted_entry.id
-      # Older pending should remain untouched
-      assert_equal "simplefin_older_pending", older_pending.reload.external_id
+      assert_not_includes [ older_pending.id, newer_pending.id ], posted_entry.id
     end
+
+    assert_equal "simplefin_older_pending", older_pending.reload.external_id
+    assert_equal "simplefin_newer_pending", newer_pending.reload.external_id
+    assert newer_pending.transaction.pending?
+  end
+
+  test "keeps a distinct same-amount pending when another one is ambiguous (#2013)" do
+    # Two $20 ATM withdrawals pending, only one posts: neither pending may be
+    # overwritten, otherwise the other withdrawal's external_id is lost for good.
+    first = @adapter.import_transaction(
+      external_id: "enable_banking_atm_1",
+      amount: 20.00,
+      currency: "USD",
+      date: Date.today - 2.days,
+      name: "ATM Withdrawal",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+    second = @adapter.import_transaction(
+      external_id: "enable_banking_atm_2",
+      amount: 20.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "ATM Withdrawal",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => true } }
+    )
+
+    posted_entry = @adapter.import_transaction(
+      external_id: "enable_banking_atm_booked",
+      amount: 20.00,
+      currency: "USD",
+      date: Date.today,
+      name: "ATM Withdrawal",
+      source: "enable_banking",
+      extra: { "enable_banking" => { "pending" => false } }
+    )
+
+    assert posted_entry.transaction.extra["auto_claimed_pending_ids"].blank?
+    assert_equal "enable_banking_atm_1", first.reload.external_id
+    assert_equal "enable_banking_atm_2", second.reload.external_id
+  end
+
+  test "does not claim an excluded pending" do
+    excluded_pending = @adapter.import_transaction(
+      external_id: "simplefin_excluded_pending",
+      amount: 35.00,
+      currency: "USD",
+      date: Date.today - 3.days,
+      name: "Old Hold",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    excluded_pending.update!(excluded: true)
+
+    live_pending = @adapter.import_transaction(
+      external_id: "simplefin_live_pending",
+      amount: 35.00,
+      currency: "USD",
+      date: Date.today - 1.day,
+      name: "Live Hold",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    posted_entry = @adapter.import_transaction(
+      external_id: "simplefin_posted_hold",
+      amount: 35.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Hold Posted",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => false } }
+    )
+
+    assert_equal live_pending.id, posted_entry.id
+    assert_equal "simplefin_excluded_pending", excluded_pending.reload.external_id
   end
 
   # Every provider in Transaction::PENDING_PROVIDERS must be reconcilable, not just the
