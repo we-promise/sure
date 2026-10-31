@@ -50,6 +50,7 @@ pl:
       update: Aktualizuj
     errors:
       api_error: Wystąpił błąd komunikacji z bankiem.
+      history_truncated: Udało się zaimportować tylko część historii transakcji, ponieważ bank zwrócił więcej stron, niż może wczytać jedna synchronizacja. Brakuje starszych transakcji.
       network_unreachable: Usługa bankowa jest tymczasowo niedostępna. Spróbuj ponownie
         później.
       session_invalid: Sesja wygasła. Połącz bank ponownie.

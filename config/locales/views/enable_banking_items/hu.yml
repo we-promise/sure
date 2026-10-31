@@ -3,6 +3,7 @@ hu:
   enable_banking_items:
     errors:
       api_error: "Kommunikációs hiba lépett fel a bankkal."
+      history_truncated: "A tranzakciós előzményeknek csak egy része importálható, mert a bank több oldalt küldött, mint amennyit egy szinkronizálás betölthet. A régebbi tranzakciók hiányoznak."
       network_unreachable: "A banki szolgáltatás átmenetileg nem érhető el. Kérjük, próbáld újra később."
       session_invalid: "A munkamenet lejárt. Kérjük, csatlakoztasd újra a bankod."
       unexpected: "Váratlan hiba történt a szinkronizálás során."
