@@ -129,6 +129,7 @@ class Provider::Openai::PdfProcessor
           }
         ]
       }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
       apply_json_mode(params, mode: json_mode)
 
@@ -195,6 +196,7 @@ class Provider::Openai::PdfProcessor
       else
         params[:max_tokens] = max_response_tokens
       end
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
       response = client.chat(parameters: params)
 

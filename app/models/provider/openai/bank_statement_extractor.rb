@@ -108,6 +108,7 @@ class Provider::Openai::BankStatementExtractor
           { role: "user", content: "Extract transactions:\n\n#{text}" }
         ]
       }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat)
 
       apply_json_mode(params, mode: json_mode)
 
