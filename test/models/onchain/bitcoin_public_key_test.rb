@@ -17,6 +17,14 @@ class Onchain::BitcoinPublicKeyTest < ActiveSupport::TestCase
     assert_equal CHANGE, key.address(1, 0)
   end
 
+  test "derives only receive and change branches at non-hardened indices" do
+    # An account public key cannot derive hardened children; 0x80000000 would be one.
+    key = Onchain::BitcoinPublicKey.new(ZPUB)
+    [ [ 2, 0 ], [ 0, -1 ], [ 0, 0x80000000 ] ].each do |branch, index|
+      assert_raises(Onchain::BitcoinPublicKey::InvalidKey) { key.address(branch, index) }
+    end
+  end
+
   test "derives the official BIP32 public child" do
     # Test vector 1: m/0H/1/2H and its non-hardened child m/0H/1/2H/2.
     key = Onchain::BitcoinPublicKey.new("xpub6D4BDPcP2GT577Vvch3R8wDkScZWzQzMMUm3PWbmWvVJrZwQY4VUNgqFJPMM3No2dFDFGTsxxpG5uJh7n7epu4trkrX7x7DogT5Uv6fcLW5")
@@ -59,6 +67,14 @@ class Onchain::BitcoinPublicKeyTest < ActiveSupport::TestCase
     assert Onchain::BitcoinPublicKey.valid_address?(RECEIVE)
     refute Onchain::BitcoinPublicKey.valid_address?(RECEIVE.chop + "a")
     refute Onchain::BitcoinPublicKey.valid_address?("tb1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu")
+  end
+
+  test "canonicalizes only uniformly cased Bech32 addresses" do
+    assert_equal RECEIVE, Onchain::BitcoinPublicKey.canonical_address("  #{RECEIVE.upcase} ")
+    # BIP173: mixed case is invalid, so it is kept for validation to reject, not repaired.
+    mixed = RECEIVE.sub("bc1q", "bc1Q")
+    assert_equal mixed, Onchain::BitcoinPublicKey.canonical_address(mixed)
+    refute Onchain::BitcoinPublicKey.valid_address?(mixed)
   end
 
   test "accepts every standard mainnet output type and nothing else" do
