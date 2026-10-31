@@ -1169,4 +1169,92 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get budgetCategoryTransactionsLoadFailed =>
       'Kunde inte läsa in transaktioner';
+
+  @override
+  String get moreCashFlow => 'Kassaflöde';
+
+  @override
+  String get moreCashFlowSubtitle =>
+      'Inkomster, utgifter och sparande per kategori';
+
+  @override
+  String get cashFlowTitle => 'Kassaflöde';
+
+  @override
+  String get cashFlowPeriodCurrentMonth => 'Den här månaden';
+
+  @override
+  String get cashFlowPeriodLastMonth => 'Förra månaden';
+
+  @override
+  String get cashFlowPeriodLast30Days => 'Senaste 30 dagarna';
+
+  @override
+  String get cashFlowPeriodLast90Days => 'Senaste 90 dagarna';
+
+  @override
+  String get cashFlowPeriodCurrentYear => 'Hittills i år';
+
+  @override
+  String get cashFlowPeriodLast365Days => 'Senaste 365 dagarna';
+
+  @override
+  String get cashFlowIncome => 'Inkomster';
+
+  @override
+  String get cashFlowExpenses => 'Utgifter';
+
+  @override
+  String get cashFlowNetSavings => 'Nettosparande';
+
+  @override
+  String cashFlowSavingsRate(String rate) {
+    return 'Sparkvot: $rate';
+  }
+
+  @override
+  String get cashFlowExpensesByCategory => 'Utgifter per kategori';
+
+  @override
+  String get cashFlowIncomeByCategory => 'Inkomster per kategori';
+
+  @override
+  String cashFlowShareOfExpenses(String percent) {
+    return '$percent av utgifterna';
+  }
+
+  @override
+  String cashFlowShareOfIncome(String percent) {
+    return '$percent av inkomsterna';
+  }
+
+  @override
+  String get cashFlowEmpty => 'Inga inkomster eller utgifter under perioden';
+
+  @override
+  String get cashFlowEmptySubtitle =>
+      'Prova en annan period eller dra för att uppdatera.';
+
+  @override
+  String get cashFlowNoExpenses => 'Inga utgifter under perioden';
+
+  @override
+  String get cashFlowNoIncome => 'Inga inkomster under perioden';
+
+  @override
+  String get cashFlowLoadFailed => 'Kunde inte läsa in kassaflödet';
+
+  @override
+  String get cashFlowOffline =>
+      'Du är offline. Kassaflödet beräknas av din Sure-server och kräver en anslutning.';
+
+  @override
+  String get cashFlowOutdated => 'Inaktuell';
+
+  @override
+  String get cashFlowTransactionsEmpty => 'Inga transaktioner under perioden';
+
+  @override
+  String get cashFlowTransactionsLoadFailed =>
+      'Kunde inte läsa in transaktioner';
 }

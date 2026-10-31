@@ -1158,4 +1158,89 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get budgetCategoryTransactionsLoadFailed =>
       'Couldn\'t load transactions';
+
+  @override
+  String get moreCashFlow => 'Cash Flow';
+
+  @override
+  String get moreCashFlowSubtitle => 'Income, spending and savings by category';
+
+  @override
+  String get cashFlowTitle => 'Cash Flow';
+
+  @override
+  String get cashFlowPeriodCurrentMonth => 'This month';
+
+  @override
+  String get cashFlowPeriodLastMonth => 'Last month';
+
+  @override
+  String get cashFlowPeriodLast30Days => 'Last 30 days';
+
+  @override
+  String get cashFlowPeriodLast90Days => 'Last 90 days';
+
+  @override
+  String get cashFlowPeriodCurrentYear => 'Year to date';
+
+  @override
+  String get cashFlowPeriodLast365Days => 'Last 365 days';
+
+  @override
+  String get cashFlowIncome => 'Income';
+
+  @override
+  String get cashFlowExpenses => 'Expenses';
+
+  @override
+  String get cashFlowNetSavings => 'Net savings';
+
+  @override
+  String cashFlowSavingsRate(String rate) {
+    return '$rate savings rate';
+  }
+
+  @override
+  String get cashFlowExpensesByCategory => 'Expenses by category';
+
+  @override
+  String get cashFlowIncomeByCategory => 'Income by category';
+
+  @override
+  String cashFlowShareOfExpenses(String percent) {
+    return '$percent of expenses';
+  }
+
+  @override
+  String cashFlowShareOfIncome(String percent) {
+    return '$percent of income';
+  }
+
+  @override
+  String get cashFlowEmpty => 'No income or expenses in this period';
+
+  @override
+  String get cashFlowEmptySubtitle => 'Try another period or pull to refresh.';
+
+  @override
+  String get cashFlowNoExpenses => 'No expenses in this period';
+
+  @override
+  String get cashFlowNoIncome => 'No income in this period';
+
+  @override
+  String get cashFlowLoadFailed => 'Couldn\'t load cash flow';
+
+  @override
+  String get cashFlowOffline =>
+      'You\'re offline. Cash flow is calculated by your Sure server, so it needs a connection.';
+
+  @override
+  String get cashFlowOutdated => 'Outdated';
+
+  @override
+  String get cashFlowTransactionsEmpty => 'No transactions in this period';
+
+  @override
+  String get cashFlowTransactionsLoadFailed => 'Couldn\'t load transactions';
 }
