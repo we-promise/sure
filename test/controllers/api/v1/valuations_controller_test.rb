@@ -143,6 +143,18 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @account.id, response_data["account"]["id"]
   end
 
+  test "should neither list nor show a cash anchor" do
+    anchor = @account.entries.create!(date: Date.current, name: "Cash", amount: 0, currency: @account.currency,
+      entryable: Valuation.new(kind: :cash_anchor))
+
+    get api_v1_valuations_url, params: { account_id: @account.id }, headers: api_headers(@api_key)
+    assert_response :success
+    assert_not_includes JSON.parse(response.body)["valuations"].map { |valuation| valuation["id"] }, anchor.id
+
+    get api_v1_valuation_url(anchor), headers: api_headers(@api_key)
+    assert_response :not_found
+  end
+
   test "should create a valuation beside a cash anchor on the same date" do
     @account.entries.create!(date: Date.current, name: "Cash", amount: 0, currency: @account.currency,
       entryable: Valuation.new(kind: :cash_anchor))

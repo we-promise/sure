@@ -40,6 +40,8 @@ class Holding::PortfolioCache
       index = dates.bsearch_index { |value| value > date }
       previous_date = index ? (dates[index - 1] if index.positive?) : dates.last
       price_with_priority = security[:prices_by_date][previous_date] if previous_date
+      # A quote carried across a split is for a pre-split share.
+      carried_split = split_factor_between(security_id, previous_date, date)
     end
 
     return nil unless price_with_priority
@@ -47,7 +49,7 @@ class Holding::PortfolioCache
     price = price_with_priority.price
     return nil unless price
 
-    price_money = Money.new(price.price, price.currency)
+    price_money = Money.new(carried_split ? Security::Split.unscale(price.price, carried_split) : price.price, price.currency)
 
     begin
       converted_amount = price_money.exchange_to(currency, date: date).amount

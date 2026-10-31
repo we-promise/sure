@@ -15,6 +15,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
     accessible_account_ids = family.accounts.accessible_by(current_resource_owner).select(:id)
     valuations_query = family.entries
       .where(entryable_type: "Valuation", account_id: accessible_account_ids)
+      .excluding_cash_anchors
       .includes(:account, :entryable)
 
     valuations_query = apply_filters(valuations_query).reverse_chronological
@@ -235,6 +236,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       @entry = current_resource_owner.family
                  .entries
                  .where(entryable_type: "Valuation")
+                 .excluding_cash_anchors
                  .find(params[:id])
       @valuation = @entry.entryable
     rescue ActiveRecord::RecordNotFound

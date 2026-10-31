@@ -77,9 +77,12 @@ class Holding::Materializer
 
         if holding.snapshot && existing.nil?
           snapshot = holding.snapshot
+          # Per-share basis moves against a split-scaled quantity, so the total stays.
+          basis = snapshot.cost_basis
+          basis = basis * snapshot.qty / holding.qty if basis && holding.qty.nonzero? && holding.qty != snapshot.qty
           account.holdings.create!(security_id: holding.security_id, date: holding.date,
             currency: holding.currency, qty: holding.qty, price: holding.price, amount: holding.amount,
-            cost_basis: snapshot.cost_basis,
+            cost_basis: basis,
             cost_basis_source: snapshot.cost_basis_source, cost_basis_locked: snapshot.cost_basis_locked,
             security_locked: snapshot.security_locked, provider_security_id: snapshot.provider_security_id,
             account_provider_id: snapshot.account_provider_id)
@@ -188,7 +191,11 @@ class Holding::Materializer
       #   figure and no source was invisible here, so the transfer clearing
       #   below saw `existing` as nil and left the stale basis standing —
       #   exactly the rows least able to justify the number they hold.
-      return account.holdings.index_by { |h| holding_key(h) } if account.accounting_start_date
+      # Only rows inside the window can match a calculated holding.
+      if account.accounting_start_date
+        scope = @window_start_date ? account.holdings.where(date: @window_start_date..) : account.holdings
+        return scope.index_by { |h| holding_key(h) }
+      end
 
       account.holdings
         .where(cost_basis_locked: true)

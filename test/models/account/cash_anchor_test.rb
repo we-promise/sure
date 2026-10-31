@@ -234,6 +234,37 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     end
   end
 
+  test "an income trade neither stops nor removes a carried snapshot" do
+    @account.holdings.create!(security: @other, date: Date.current, qty: 2, price: 100, amount: 200, currency: "USD")
+    @account.create_cash_anchor!
+    dividend = @account.entries.create!(date: Date.current, amount: -5, currency: "USD", name: "Dividend",
+      entryable: Trade.new(security: @other, qty: 0, price: 0, currency: "USD", investment_activity_label: "Dividend"))
+    travel 1.day do
+      materialize
+      assert_equal 2, @account.current_holdings.find_by!(security: @other).qty
+
+      dividend.destroy!
+      materialize
+      assert_equal 2, @account.current_holdings.find_by!(security: @other).qty
+    end
+  end
+
+  test "a split after the last quote scales carried positions without moving their value" do
+    @account.holdings.create!(security: @other, date: Date.current, qty: 2, price: 100, amount: 200, currency: "USD", cost_basis: 50)
+    @account.create_cash_anchor!
+    travel 1.day do
+      [ @aapl, @other ].each do |security|
+        Security::Split.create!(security: security, ex_date: Date.current, numerator: 2, denominator: 1, source: "manual")
+      end
+      materialize
+      carried = @account.current_holdings.find_by!(security: @other)
+      assert_equal 4, carried.qty
+      assert_equal 25, carried.cost_basis
+      assert_equal 20, @account.current_holdings.find_by!(security: @aapl).qty
+      assert_equal 1300, @account.reload.balance
+    end
+  end
+
   test "deleting an untraded position removes its series and rebuilds from its first day" do
     @account.holdings.create!(security: @other, date: Date.current.prev_day, qty: 2, price: 100, amount: 200, currency: "USD")
     @account.create_cash_anchor!
