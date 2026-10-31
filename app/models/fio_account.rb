@@ -90,9 +90,10 @@ class FioAccount < ApplicationRecord
 
   private
 
-    # Fio names no account, so the account number stands in until the user renames it.
+    # Fio names no account, so the masked account number stands in until the
+    # user renames it.
     def default_name(account_number)
-      [ INSTITUTION_NAME, account_number ].compact_blank.join(" ")
+      [ INSTITUTION_NAME, IdentifierMask.last4(account_number) ].compact_blank.join(" ")
     end
 
     def parse_balance(value)

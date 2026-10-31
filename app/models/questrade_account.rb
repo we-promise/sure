@@ -51,13 +51,13 @@ class QuestradeAccount < ApplicationRecord
 
     # Questrade's list_accounts returns: number, type (TFSA/RRSP/Margin/Cash...),
     # status, clientAccountType, isPrimary, isBilling. There's no friendly name,
-    # so we build one from the type + number.
+    # so we build one from the type + the masked number.
     number = (data[:number] || data[:id]).to_s
     type = data[:type].presence || "Account"
 
     update!(
       questrade_account_id: number,
-      name: "#{type} (#{number})",
+      name: "#{type} (#{IdentifierMask.last4(number)})",
       # Default; the real home currency is inferred from per-currency balances
       # in upsert_balances! (Questrade exposes no account-level currency field).
       currency: "CAD",

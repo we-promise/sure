@@ -128,7 +128,10 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_nil mask_last4("")
   end
 
+  # mask_last4 is for identifiers only: a short value is shown in full, so it
+  # must never be used to hide secrets.
   test "#mask_last4 handles values shorter than 4 characters" do
     assert_equal "•••12", mask_last4("12")
+    assert_equal "•••123", mask_last4("123")
   end
 end

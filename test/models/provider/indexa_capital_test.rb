@@ -51,10 +51,10 @@ class Provider::IndexaCapitalTest < ActiveSupport::TestCase
     accounts = provider.list_accounts
     assert_equal 2, accounts.size
     assert_equal "ABC12345", accounts[0][:account_number]
-    assert_equal "Indexa Capital Mutual Fund (ABC12345)", accounts[0][:name]
+    assert_equal "Indexa Capital Mutual Fund (•••2345)", accounts[0][:name]
     assert_equal "EUR", accounts[0][:currency]
     assert_equal "DEF67890", accounts[1][:account_number]
-    assert_equal "Indexa Capital Pension Plan (DEF67890)", accounts[1][:name]
+    assert_equal "Indexa Capital Pension Plan (•••7890)", accounts[1][:name]
   end
 
   test "get_holdings calls fiscal-results endpoint" do
