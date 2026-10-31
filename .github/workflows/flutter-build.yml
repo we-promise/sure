@@ -2,6 +2,11 @@ name: Flutter Mobile Build
 
 on:
   workflow_call:
+    inputs:
+      app_version:
+        description: Selected mobile release version (v-prefix allowed)
+        required: false
+        type: string
     outputs:
       has_app_release_aab:
         description: "Whether a signed release AAB artifact was produced"
@@ -37,6 +42,23 @@ jobs:
           flutter-version: '3.32.4'
           channel: 'stable'
           cache: true
+
+      - name: Resolve app version
+        shell: bash
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$APP_VERSION_INPUT" ]]; then
+            version="${APP_VERSION_INPUT#v}"
+          elif [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(sed -n 's/^version: *//p' mobile/pubspec.yaml)"
+            version="${version%%+*}"
+          fi
+          printf '%s\n' "$version" > .sure-version
+          echo "SURE_BUILD_NAME=$version" >> "$GITHUB_ENV"
 
       - name: Get dependencies
         working-directory: mobile
@@ -88,10 +110,10 @@ jobs:
         run: |
           if [ "${{ steps.check_secrets.outputs.has_keystore }}" == "true" ]; then
             echo "Building signed release APK..."
-            flutter build apk --release
+            flutter build apk --release --build-name="$SURE_BUILD_NAME"
           else
             echo "Building debug-signed APK..."
-            flutter build apk --debug
+            flutter build apk --debug --build-name="$SURE_BUILD_NAME"
           fi
 
       - name: Upload APK artifact
@@ -107,7 +129,7 @@ jobs:
       - name: Build App Bundle (Release)
         if: steps.check_secrets.outputs.has_keystore == 'true'
         working-directory: mobile
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --build-name="$SURE_BUILD_NAME"
 
       - name: Upload AAB artifact
         if: steps.check_secrets.outputs.has_keystore == 'true'
@@ -135,6 +157,23 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Resolve app version
+        shell: bash
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$APP_VERSION_INPUT" ]]; then
+            version="${APP_VERSION_INPUT#v}"
+          elif [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(sed -n 's/^version: *//p' mobile/pubspec.yaml)"
+            version="${version%%+*}"
+          fi
+          printf '%s\n' "$version" > .sure-version
+          echo "SURE_BUILD_NAME=${version%%-*}" >> "$GITHUB_ENV"
+
       - name: Get dependencies
         working-directory: mobile
         run: flutter pub get
@@ -160,7 +199,7 @@ jobs:
 
       - name: Build iOS (No Code Signing)
         working-directory: mobile
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign --build-name="$SURE_BUILD_NAME"
 
       - name: Create IPA archive info
         working-directory: mobile
