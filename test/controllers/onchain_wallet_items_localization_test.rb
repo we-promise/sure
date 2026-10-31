@@ -117,7 +117,7 @@ class OnchainWalletItemsLocalizationTest < ActionDispatch::IntegrationTest
     assert_match "Nur Lesezugriff, keine Schlüssel erforderlich", response.body
     assert_match "Mit diesen Daten lassen sich keine Vermögenswerte übertragen.", response.body
     assert_match "Gib niemals eine Seed-Phrase oder einen Private Key ein.", response.body
-    assert_match "Bitcoin wird jeweils über eine einzelne Adresse verfolgt.", response.body
+    assert_match "Bitcoin, Litecoin, Dogecoin und Zcash werden jeweils über eine einzelne Adresse verfolgt.", response.body
   end
 
   test "the German token review renders selection guidance" do

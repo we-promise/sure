@@ -609,7 +609,7 @@ ru:
         fio: Синхронизируйте счёт Fio banka с помощью API-токена только для чтения.
         wise: Автоматически синхронизируйте мультивалютные балансы Wise и международные переводы.
         coinspot: Синхронизируйте балансы CoinSpot, стоимость в AUD, переводы, пополнения, выводы и историю ордеров с помощью API-ключа только для чтения.
-        onchain_wallet: Отслеживайте некастодиальные кошельки Bitcoin, EVM, Solana, Cosmos и Polkadot по их публичным адресам.
+        onchain_wallet: Отслеживайте некастодиальные кошельки Bitcoin, Litecoin, Dogecoin, Zcash, EVM, Solana, Cosmos и Polkadot по их публичным адресам.
         trading212: Синхронизируйте инвестиционный портфель Trading 212 с помощью API-ключа только для чтения.
         trade_republic: Синхронизируйте инвестиционный счёт Trade Republic через защищённый веб-вход только для чтения.
         questrade: Синхронизируйте инвестиционные счета Questrade напрямую через Questrade API.
@@ -655,10 +655,14 @@ ru:
         etherscan_api_key_placeholder: Вставьте API-ключ Etherscan
         etherscan_hint: Данные Ethereum читаются и без ключа. Ключ Etherscan лишь повышает лимит запросов для Ethereum.
         keep_etherscan_api_key: Оставьте пустым, чтобы сохранить текущий ключ
+        keep_sochain_api_key: Оставьте пустым, чтобы сохранить текущий ключ
         manage_wallets: Управление кошельками
         keyless_body: Sure только читает публичные данные блокчейна. Ключи, сид-фразы и подписи не используются, и ничего не может быть потрачено.
         keyless_title: Только чтение, ключи не нужны
         save: Сохранить
+        sochain_api_key_label: API-ключ SoChain (необязательно)
+        sochain_api_key_placeholder: Вставьте API-ключ SoChain
+        sochain_hint: Данные Litecoin, Dogecoin и Zcash читаются и без ключа. Ключ SoChain с sochain.com/dashboard повышает лимит запросов.
         sync_start_date_hint: Переводы до этой даты игнорируются. Оставьте пустым, чтобы импортировать всё, что показывает обозреватель блокчейна.
         sync_start_date_label: Игнорировать переводы до
       monobank_panel:

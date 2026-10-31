@@ -16,15 +16,99 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     unregister_fake_chain!
   end
 
-  test "new_wallet renders the address form with the read-only and Bitcoin notes" do
+  test "new_wallet renders the address form with the read-only and single-address notes" do
     get new_wallet_onchain_wallet_items_url
 
     assert_response :success
-    assert_match I18n.t("onchain_wallet_items.new_wallet.bitcoin_single_address_note"), response.body
+    # Every chain read one address at a time is named, not just Bitcoin.
+    chains = Onchain::Chains.single_address_chains.map(&:label)
+    assert_equal %w[Bitcoin Dogecoin Litecoin Zcash], chains.sort
+    assert_match I18n.t("onchain_wallet_items.new_wallet.single_address_note", chains: chains.to_sentence), response.body
     # "Can Sure spend my coins?" is asked while pasting an address, not while
     # reading a settings page for the third time.
     assert_match I18n.t("settings.providers.onchain_wallet_panel.keyless_title"), response.body
     assert_match I18n.t("onchain_wallet_items.new_wallet.read_only_note"), response.body
+  end
+
+  test "before the first link the address form takes a SoChain key" do
+    get new_wallet_onchain_wallet_items_url
+    assert_select "input[type=password][name=sochain_api_key]"
+
+    create_onchain_wallet_item(family: @family)
+    get new_wallet_onchain_wallet_items_url
+    # Once a connection exists the key lives in the settings panel.
+    assert_select "input[name=sochain_api_key]", count: 0
+  end
+
+  test "a key given before the first link is used to read and kept on the new connection" do
+    stub_wallet_with_token
+
+    assert_no_difference "OnchainWalletItem.count" do
+      post preview_wallet_onchain_wallet_items_url, params: {
+        address: OnchainTestHelper::FAKE_ADDRESS,
+        chain: OnchainTestHelper::FAKE_CHAIN,
+        sochain_api_key: " first-key "
+      }
+    end
+
+    assert_response :success
+    assert_equal "first-key", OnchainTestHelper::FakeAdapter.snapshot_credentials.last[:sochain_api_key]
+    assert_select "form[action=?] input[type=hidden][name=sochain_api_key][value=?]", link_wallet_onchain_wallet_items_path, "first-key"
+
+    post link_wallet_onchain_wallet_items_url, params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      assets: [ "native" ],
+      sochain_api_key: "first-key"
+    }
+
+    assert_redirected_to accounts_path
+    assert_equal "first-key", @family.reload.onchain_wallet_item.sochain_api_key
+  end
+
+  test "a first link that tracks nothing leaves no connection and still takes a key" do
+    stub_wallet_with_token
+
+    assert_no_difference "OnchainWalletItem.count" do
+      post link_wallet_onchain_wallet_items_url, params: {
+        chain: OnchainTestHelper::FAKE_CHAIN,
+        address: OnchainTestHelper::FAKE_ADDRESS,
+        sochain_api_key: "first-key"
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_nil @family.reload.onchain_wallet_item
+    assert_select "form[action=?] input[type=hidden][name=sochain_api_key][value=?]", link_wallet_onchain_wallet_items_path, "first-key"
+
+    get new_wallet_onchain_wallet_items_url
+    assert_select "input[type=password][name=sochain_api_key]"
+
+    post link_wallet_onchain_wallet_items_url, params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      assets: [ "native" ],
+      sochain_api_key: "second-key"
+    }
+
+    assert_redirected_to accounts_path
+    assert_equal "second-key", @family.reload.onchain_wallet_item.sochain_api_key
+  end
+
+  test "the first-link key never replaces a saved connection's key" do
+    item = create_onchain_wallet_item(family: @family, sochain_api_key: "saved-key")
+    stub_wallet_with_token
+
+    post link_wallet_onchain_wallet_items_url, params: {
+      chain: OnchainTestHelper::FAKE_CHAIN,
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      assets: [ "native" ],
+      sochain_api_key: "other-key"
+    }
+
+    assert_redirected_to accounts_path
+    assert_equal "saved-key", item.reload.sochain_api_key
+    assert_equal "saved-key", OnchainTestHelper::FakeAdapter.snapshot_credentials.last[:sochain_api_key]
   end
 
   test "the settings panel renders before anything is linked" do
@@ -43,6 +127,7 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match OnchainTestHelper::FAKE_ADDRESS.first(6), response.body
     assert_match I18n.t("settings.providers.onchain_wallet_panel.etherscan_api_key_label"), response.body
+    assert_match I18n.t("settings.providers.onchain_wallet_panel.sochain_api_key_label"), response.body
     assert_match I18n.t("settings.providers.onchain_wallet_panel.sync_start_date_label"), response.body
     assert_select "form[action=?]", sync_onchain_wallet_item_path(item)
     assert_select "a[href=?]", manage_onchain_wallet_item_path(item)
@@ -408,6 +493,17 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "abc123", item.reload.etherscan_api_key
 
     patch onchain_wallet_item_url(item), params: { onchain_wallet_item: { etherscan_api_key: "" } }
+    assert_equal "abc123", item.reload.etherscan_api_key
+  end
+
+  test "update stores a SoChain key and keeps it when the field is left blank" do
+    item = create_onchain_wallet_item(family: @family)
+
+    patch onchain_wallet_item_url(item), params: { onchain_wallet_item: { sochain_api_key: "def456" } }
+    assert_equal "def456", item.reload.sochain_api_key
+
+    patch onchain_wallet_item_url(item), params: { onchain_wallet_item: { sochain_api_key: "", etherscan_api_key: "abc123" } }
+    assert_equal "def456", item.reload.sochain_api_key
     assert_equal "abc123", item.reload.etherscan_api_key
   end
 

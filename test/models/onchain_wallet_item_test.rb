@@ -39,12 +39,24 @@ class OnchainWalletItemTest < ActiveSupport::TestCase
 
     @item.update!(etherscan_api_key: " abc ")
     assert_equal "abc", @item.reload.etherscan_api_key
+
+    @item.update!(sochain_api_key: "  ")
+    assert_nil @item.reload.sochain_api_key
+
+    @item.update!(sochain_api_key: " def ")
+    assert_equal "def", @item.reload.sochain_api_key
   end
 
   test "passes the explorer credential to chain adapters" do
     @item.update!(etherscan_api_key: "abc")
 
     assert_equal "abc", @item.chain_adapter(OnchainTestHelper::FAKE_CHAIN).credentials[:etherscan_api_key]
+  end
+
+  test "passes the SoChain credential to chain adapters" do
+    @item.update!(sochain_api_key: "def")
+
+    assert_equal "def", @item.chain_adapter(OnchainTestHelper::FAKE_CHAIN).credentials[:sochain_api_key]
   end
 
   test "matching_chain_adapters only returns chains that accept the address" do

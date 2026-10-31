@@ -50,7 +50,7 @@ fr:
     new_wallet:
       address_label: Adresse du portefeuille
       address_placeholder: bc1..., 0x... ou une adresse Solana
-      bitcoin_single_address_note: 'Bitcoin est suivi une adresse à la fois. Les clés étendues (xpub/ypub/zpub) ne sont pas prises en charge : un portefeuille qui répartit ses fonds sur des adresses dérivées n''affichera que le solde de l''adresse saisie.'
+      single_address_note: '%{chains} sont suivis une adresse à la fois. Les clés étendues (xpub/ypub/zpub) ne sont pas prises en charge : un portefeuille qui répartit ses fonds sur des adresses dérivées n''affichera que le solde de l''adresse saisie.'
       chain_auto_detect: Détecter automatiquement
       chain_label: Réseau
       continue: Continuer

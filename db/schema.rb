@@ -1895,6 +1895,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_200000) do
     t.string "institution_url"
     t.string "name"
     t.boolean "scheduled_for_deletion", default: false, null: false
+    t.text "sochain_api_key"
     t.string "status", default: "good", null: false
     t.datetime "sync_start_date"
     t.datetime "updated_at", null: false

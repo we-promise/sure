@@ -68,9 +68,9 @@ pl:
     new_wallet:
       address_label: Adres portfela
       address_placeholder: bc1..., 0x... albo adres Solany
-      bitcoin_single_address_note: Bitcoin jest śledzony po jednym adresie naraz.
-        Klucze rozszerzone (xpub/ypub/zpub) nie są obsługiwane, więc portfel rozkładający
-        środki na adresy pochodne pokaże tylko saldo wpisanego adresu.
+      single_address_note: '%{chains} są śledzone po jednym adresie naraz. Klucze rozszerzone
+        (xpub/ypub/zpub) nie są obsługiwane, więc portfel rozkładający środki na adresy
+        pochodne pokaże tylko saldo wpisanego adresu.'
       chain_auto_detect: Wykryj automatycznie
       chain_label: Sieć
       continue: Dalej

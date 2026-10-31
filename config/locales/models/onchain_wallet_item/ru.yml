@@ -6,12 +6,15 @@ ru:
       base: Base
       bitcoin: Bitcoin
       cosmos: Cosmos Hub
+      dogecoin: Dogecoin
       ethereum: Ethereum
       gnosis: Gnosis
+      litecoin: Litecoin
       optimism: Optimism
       polkadot: Polkadot
       polygon: Polygon
       solana: Solana
+      zcash: Zcash
     institution_name: Некастодиальные кошельки
   onchain_wallet_item:
     movement:
