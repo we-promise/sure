@@ -125,7 +125,7 @@ jobs:
               echo 'type=sha,format=long'
               if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then
                 echo 'type=schedule,pattern=nightly'
-                echo "type=schedule,pattern=nightly-{{date 'ddd'}}"
+                echo "type=raw,value=${BUILD_DATE}-nightly"
               fi
             fi
             echo 'RELEASE_TAGS'
