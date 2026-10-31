@@ -9,7 +9,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       consumes 'application/json'
       produces 'application/json'
       description 'Creates a new user and family. The first user on a fresh instance is assigned ' \
-                  'the super_admin role; later family creators are assigned an admin role.'
+                  'the super_admin role; later family creators are assigned an admin role. On invite-only ' \
+                  'instances with a default family, the user joins that family as a member instead.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -128,8 +129,9 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '403', 'local login is disabled: the instance is SSO-only, and this account is not a super admin using the emergency override' do
+      response '403', 'local login is disabled: the instance is SSO-only and the emergency override is off' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        before { allow(AuthConfig).to receive(:local_login_form_visible?).and_return(false) }
         run_test!
       end
     end
@@ -348,8 +350,9 @@ RSpec.describe 'API V1 Auth', type: :request do
       produces 'application/json'
       description 'Creates a new user and family from a previously issued linking code. Links the SSO identity ' \
                   'via OidcIdentity, logs the JIT account creation via SsoAuditLog, and issues mobile OAuth tokens. ' \
-                  'The linking code must have allow_account_creation enabled. The first user on a fresh instance is ' \
-                  'assigned the super_admin role; later family creators are assigned an admin-capable role.'
+                  'The linking code must have allow_account_creation enabled, and self-hosted instances must not have ' \
+                  'signups closed or invite-only; a pending invitation for the email bypasses both. The first user on a ' \
+                  'fresh instance is assigned the super_admin role; later family creators are assigned an admin-capable role.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
