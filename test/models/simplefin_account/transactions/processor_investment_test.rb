@@ -215,8 +215,8 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
     assert_equal [], @simplefin_account.raw_transactions_payload
 
     # Transaction from new SimplefinAccount should be created
-    assert_equal 1, @account.entries.count
-    entry = @account.entries.first
+    assert_equal 1, @account.transactions.count
+    entry = @account.entries.find_by!(entryable_type: "Transaction")
     assert_equal "simplefin_TRN-new-transaction-001", entry.external_id
     assert_equal BigDecimal("-5.00"), entry.amount
   end
@@ -245,7 +245,7 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
     # Should NOT have transferred linkage because names don't match
     @account.reload
     assert_equal original_linkage, @account.simplefin_account_id
-    assert_equal 0, @account.entries.count
+    assert_equal 0, @account.transactions.count
   end
 
   test "repairs linkage and merges transactions when both old and new have data" do
@@ -276,7 +276,7 @@ class SimplefinAccount::Transactions::ProcessorInvestmentTest < ActiveSupport::T
     assert_equal new_simplefin_account.id, @account.simplefin_account_id
 
     # Transactions should be merged: 3 from old + 1 from new = 4 total
-    assert_equal 4, @account.entries.count
+    assert_equal 4, @account.transactions.count
 
     # Old account should be cleared
     @simplefin_account.reload

@@ -69,7 +69,7 @@ class SnaptradeAccount::Processor
 
       # Create or update the current balance anchor valuation for linked accounts
       # This is critical for reverse sync to work correctly
-      account.set_current_balance(total_balance)
+      account.set_current_balance(total_balance, apply_provider_adjustment: true)
     end
 
     def calculate_total_balance

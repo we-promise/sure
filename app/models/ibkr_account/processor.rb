@@ -51,7 +51,7 @@ class IbkrAccount::Processor
         # prices, and the cash plug absorbs the difference -- a phantom balance
         # the size of whatever the holdings moved that day, on every day of the
         # account's history.
-        result = manager.set_current_balance(total_balance, date: balance_date)
+        result = manager.set_current_balance(total_balance, date: balance_date, apply_provider_adjustment: true)
 
         # The manager rescues and reports failure through its result, and its
         # own lock joined this transaction rather than opening one -- so what
@@ -63,7 +63,7 @@ class IbkrAccount::Processor
         # The cached balance and its cash split are what the account is worth
         # now, and set_current_balance owns the first of them. A statement
         # older than the anchor describes a day gone by, so it moves neither.
-        account.update!(cash_balance: cash_balance) unless result.historical?
+        account.update!(cash_balance: account.provider_cash_balance(cash_balance)) unless result.historical?
       end
 
       if result.success?
