@@ -282,8 +282,7 @@ class Provider::TwelveData < Provider
 
     # Paces API requests to stay within TwelveData's rate limits. Sleeps inline
     # because the API physically cannot be called faster — this is unavoidable
-    # with a rate-limited provider. The 5-minute cache lock TTL in
-    # ExchangeRate::Provided accounts for worst-case throttle waits.
+    # with a rate-limited provider.
     def throttle_request(credits: 1)
       # Layer 1: Per-instance minimum interval between calls
       @last_request_time ||= Time.at(0)

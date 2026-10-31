@@ -100,30 +100,13 @@ module ExchangeRate::Provided
     end
 
     # @return [Integer] The number of exchange rates synced
-    def import_provider_rates(from:, to:, start_date:, end_date:, clear_cache: false)
+    def import_provider_rates(from:, to:, start_date:, end_date:, clear_cache: false, account: nil)
       unless provider.present?
         Rails.logger.warn("No provider configured for ExchangeRate.import_provider_rates")
         return 0
       end
 
-      # Prevent concurrent syncs from fetching the same currency pair for overlapping
-      # date ranges. The lock is scoped to (pair + start_date) so that a broader range
-      # (e.g. daily job needing older history) is not blocked by a narrower account sync.
-      #
-      # Uses an owner-token pattern: the lock value is a unique token so the ensure
-      # block only deletes its own lock, not one acquired by a different worker after
-      # expiry. TTL is 5 minutes to cover worst-case throttle + rate-limit retry waits
-      # (~3 minutes with TwelveData).
-      lock_key = "exchange_rate_import:#{from}:#{to}:#{start_date}"
-      lock_token = SecureRandom.uuid
-      acquired = Rails.cache.write(lock_key, lock_token, expires_in: 5.minutes, unless_exist: true)
-
-      unless acquired
-        Rails.logger.info("Skipping exchange rate import for #{from}/#{to} from #{start_date} — already in progress")
-        return 0
-      end
-
-      begin
+      build_importer = -> {
         ExchangeRate::Importer.new(
           exchange_rate_provider: provider,
           from: from,
@@ -131,12 +114,87 @@ module ExchangeRate::Provided
           start_date: start_date,
           end_date: end_date,
           clear_cache: clear_cache
-        ).import_provider_rates
-      ensure
-        # Only delete the lock if we still own it (it hasn't expired and been
-        # re-acquired by another worker).
-        Rails.cache.delete(lock_key) if Rails.cache.read(lock_key) == lock_token
+        )
+      }
+      importer = build_importer.call
+      return importer.import_provider_rates if importer.rates_up_to_date?
+
+      # Concurrent syncs that need the same currency pair queue up behind one
+      # another instead of skipping: a sync that returned without rates would
+      # materialize its balances without them. Once the first import is done the
+      # next one finds the rates in place and returns without calling the provider.
+      # After a wait, a fresh importer re-reads what the import it waited for stored.
+      with_import_lock(from, to, start_date, account) do |waited|
+        (waited ? build_importer.call : importer).import_provider_rates
       end
     end
+
+    def import_lock_key(from, to)
+      Digest::MD5.hexdigest("exchange_rate_import:#{from}:#{to}").to_i(16) % (2**62)
+    end
+
+    private
+      # Covers a typical import including provider throttling; only a worst-case
+      # TwelveData rate-limit retry (~3 minutes) runs longer. Bounded so a sync
+      # worker is never held indefinitely.
+      IMPORT_LOCK_WAIT_SECONDS = 120
+      IMPORT_LOCK_POLL_SECONDS = 1
+
+      # Session-level Postgres advisory lock per pair. Postgres releases it when
+      # the connection closes, so a crashed worker cannot leave the pair locked.
+      # After the wait the import runs anyway: its rows are upserts, so an
+      # overlapping import costs a provider call but never duplicates data.
+      # Yields whether it had to wait for another import.
+      #
+      # The wait holds the connection the job already uses, not an extra one:
+      # the pool has one connection per worker thread. Callers should not hold
+      # a transaction across this call, as the wait would keep it open too; sync
+      # and the daily import call it outside one.
+      def with_import_lock(from, to, start_date, account)
+        # The unlock must run on the session that took the lock.
+        connection = lease_connection
+        key = import_lock_key(from, to)
+        acquired = try_import_lock(connection, key)
+        waited = !acquired
+
+        attempts = IMPORT_LOCK_WAIT_SECONDS / IMPORT_LOCK_POLL_SECONDS
+        until acquired || attempts.zero?
+          sleep IMPORT_LOCK_POLL_SECONDS
+          attempts -= 1
+          acquired = try_import_lock(connection, key)
+        end
+
+        unless acquired
+          DebugLogEntry.capture(
+            category: "exchange_rate_import",
+            level: "warn",
+            message: "Exchange rate import still locked after #{IMPORT_LOCK_WAIT_SECONDS}s, importing anyway",
+            source: name,
+            account: account,
+            provider_key: ExchangeRatePair.resolve_provider_name,
+            metadata: { from: from, to: to, start_date: start_date }
+          )
+        end
+
+        # Inside a caller's transaction a failed statement would abort it and
+        # the unlock below could not run; the savepoint keeps it usable.
+        if connection.transaction_open?
+          transaction(requires_new: true) { yield waited }
+        else
+          yield waited
+        end
+      ensure
+        advisory_lock_query(connection, "pg_advisory_unlock", key) if acquired
+      end
+
+      def try_import_lock(connection, key)
+        advisory_lock_query(connection, "pg_try_advisory_lock", key)
+      end
+
+      # Uncached: jobs run with the query cache on, and a repeated lock call would
+      # otherwise be answered from the cache instead of Postgres.
+      def advisory_lock_query(connection, function, key)
+        connection.uncached { connection.select_value(sanitize_sql_array([ "SELECT #{function}(?)", key ])) }
+      end
   end
 end
