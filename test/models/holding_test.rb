@@ -452,6 +452,87 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 0, @account.holdings.where(security: amzn_security).count
   end
 
+  # Provider holdings carry an external_id under a partial unique index on
+  # (account_id, external_id), so the merge must free it on the source row
+  # before writing it onto the target.
+  test "remap_security! merges a provider holding with an external_id into a calculated row on the same date" do
+    new_security = create_security("GOOGEXT", prices: [ { date: Date.current, price: 100.0 } ])
+    target = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: @amzn.currency)
+    assert_nil target.external_id
+    @amzn.update_columns(external_id: "simplefin-holding-amzn")
+
+    @amzn.remap_security!(new_security)
+
+    assert_equal "simplefin-holding-amzn", target.reload.external_id
+    assert_equal 1, @account.holdings.where(external_id: "simplefin-holding-amzn").count
+  end
+
+  # Another request can delete or move a holding while a remap or reset runs.
+  # The rows being moved are locked as they load and the merge target is
+  # locked before the merge, so that request waits; the writes are still
+  # checked, since update_columns returns false rather than raising.
+  test "remap_security! locks both rows of a merge" do
+    new_security = create_security("GOOGLOCK", prices: [ { date: Date.current, price: 100.0 } ])
+    @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: @amzn.currency)
+
+    # One collision date (today's AMZN row), so one lock on each side.
+    assert_queries_match(/FROM "holdings".*FOR UPDATE/, count: 2) do
+      @amzn.remap_security!(new_security)
+    end
+  end
+
+  # The rows to move are locked as they are loaded, under the old security's
+  # predicate, so a row another remap or reset moved first is not returned
+  # (Postgres re-checks the WHERE after waiting for the lock) and a row this
+  # remap loaded cannot be moved under it. Locking by id after loading would
+  # merge or overwrite a row that already belongs to another security.
+  LOCKED_LOAD = /FROM "holdings" WHERE .*"holdings"\."security_id" = .*ORDER BY "holdings"\."id" ASC LIMIT .*FOR UPDATE/
+
+  test "remap_security! locks the rows it moves under the old security's predicate" do
+    new_security = create_security("GOOGPRED", prices: [ { date: Date.current, price: 100.0 } ])
+
+    assert_queries_match(LOCKED_LOAD, count: 1) do
+      @amzn.remap_security!(new_security)
+    end
+    assert_equal new_security, @amzn.reload.security
+  end
+
+  test "reset_security_to_provider! locks the rows it moves back under the remapped predicate" do
+    old_security = @amzn.security
+    new_security = create_security("GOOGRPRED", prices: [ { date: Date.current, price: 100.0 } ])
+    @amzn.remap_security!(new_security)
+
+    assert_queries_match(LOCKED_LOAD, count: 1) do
+      @amzn.reset_security_to_provider!
+    end
+    assert_equal old_security, @amzn.reload.security
+  end
+
+  test "remap_security! raises and rolls back when a moved holding is gone at write time" do
+    old_security = @amzn.security
+    new_security = create_security("GOOGGONE", prices: [ { date: Date.current, price: 100.0 } ])
+    create_trade(old_security, account: @account, qty: 5, price: 100.00, date: Date.current)
+    Holding.any_instance.stubs(:update_columns).returns(false)
+
+    assert_raises(ActiveRecord::RecordNotSaved) { @amzn.remap_security!(new_security) }
+
+    assert_equal 1, @account.trades.where(security: old_security).count
+    assert_equal 0, @account.trades.where(security: new_security).count
+  end
+
+  test "reset_security_to_provider! raises and rolls back when a holding is gone at write time" do
+    old_security = @amzn.security
+    new_security = create_security("GOOGRST", prices: [ { date: Date.current, price: 100.0 } ])
+    create_trade(old_security, account: @account, qty: 5, price: 100.00, date: Date.current)
+    @amzn.remap_security!(new_security)
+    Holding.any_instance.stubs(:update_columns).returns(false)
+
+    assert_raises(ActiveRecord::RecordNotSaved) { @amzn.reset_security_to_provider! }
+
+    assert_equal 1, @account.trades.where(security: new_security).count
+    assert_equal 0, @account.trades.where(security: old_security).count
+  end
+
   test "reset_security_to_provider! restores original security" do
     old_security = @amzn.security
     new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
@@ -487,6 +568,381 @@ class HoldingTest < ActiveSupport::TestCase
 
     assert_equal old_security, @amzn.security
     assert_nil @amzn.provider_security_id
+  end
+
+  # Holdings are derived rows the materializer writes with upsert_all, which
+  # skips validations, so a full in-kind transfer out can leave a row with a
+  # negative qty and amount. Remapping or resetting such a row must not be
+  # vetoed by the >= 0 validations meant for user edits.
+
+  test "remap_security! moves a negative-amount holding onto another security (no collision)" do
+    record_a = create_security("AAAX", prices: [ { date: 1.day.ago.to_date, price: 50.00 } ])
+    record_b = create_security("BBX", prices: [ { date: Date.current, price: 144.90 } ])
+
+    # record_a holds a row on a different date, so the move does not collide.
+    create_trade(record_a, account: @account, qty: 22, price: 50.00, date: 1.day.ago.to_date)
+    @account.holdings.create!(security: record_a, date: 1.day.ago.to_date, qty: 22, price: 50.00, amount: 1100.0, currency: "USD")
+
+    neg = @account.holdings.create!(security: record_b, date: Date.current, qty: 22, price: 144.905, amount: 3187.91, currency: "USD")
+    neg.update_columns(qty: -22, amount: BigDecimal("-3187.80"))
+
+    neg.reload.remap_security!(record_a)
+
+    assert_equal 0, @account.holdings.where(security: record_b).count
+    row = @account.holdings.find_by(security: record_a, date: Date.current)
+    refute_nil row
+    assert_equal BigDecimal("-22"), row.qty
+    assert_equal BigDecimal("-3187.80"), row.amount
+    assert row.security_locked?
+    assert_equal record_b.id, row.provider_security_id
+  end
+
+  test "remap_security! merges a holding into a negative target without raising (collision)" do
+    new_security = create_security("GOOGNEG", prices: [ { date: Date.current, price: 100.0 } ])
+
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 0, price: 100.0, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -22, amount: -4000.0)
+
+    amzn_security = @amzn.security
+    initial_count = @account.holdings.count
+
+    @amzn.remap_security!(new_security)
+
+    assert_equal initial_count - 1, @account.holdings.count
+    assert_equal 0, @account.holdings.where(security: amzn_security).count
+    target.reload
+    # -22 + the moved row's 15, and -4000 + its 3240: both still negative.
+    assert_equal BigDecimal("-7"), target.qty
+    assert_equal BigDecimal("-760"), target.amount
+    # The calculators write amount = qty x price with a positive price, so a
+    # negative row's price is still amount / qty.
+    assert_in_delta BigDecimal("108.5714"), target.price, BigDecimal("0.0001")
+    assert target.security_locked?
+  end
+
+  test "remap_security! gives a merged row that nets to zero a zero price" do
+    new_security = create_security("GOOGZERO", prices: [ { date: Date.current, price: 100.0 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 0, price: 100.0, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -@amzn.qty, amount: -@amzn.amount)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    assert_equal [ BigDecimal("0"), BigDecimal("0"), BigDecimal("0") ], [ target.qty, target.amount, target.price ]
+  end
+
+  # Two rows priced differently can sum to a qty and an amount of opposite
+  # signs, where amount / qty would be a negative price. The materializer
+  # prices the row at the target security's own price for that date, so the
+  # merge keeps the target's price.
+  test "remap_security! keeps the target's price when a merge nets to opposite signs" do
+    new_security = create_security("GOOGOPP", prices: [ { date: Date.current, price: 136.3636 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 0, price: 136.3636, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -22, amount: -3000.0)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    # -22 + the moved row's 15, and -3000 + its 3240.
+    assert_equal BigDecimal("-7"), target.qty
+    assert_equal BigDecimal("240"), target.amount
+    assert_equal BigDecimal("136.3636"), target.price
+  end
+
+  test "remap_security! keeps the target's price when a merge nets to a positive qty and negative amount" do
+    new_security = create_security("GOOGOPQ", prices: [ { date: Date.current, price: 4.5 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 22, price: 4.5, amount: 99.0, currency: "USD")
+    @amzn.update_columns(qty: -15, amount: -3240.0)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    assert_equal BigDecimal("7"), target.qty
+    assert_equal BigDecimal("-3141"), target.amount
+    assert_equal BigDecimal("4.5"), target.price
+  end
+
+  # A negative row is units gone, not units bought, so it carries no cost into
+  # the merge: averaging it in would give (5 x 100 - 2 x 3000) / 3 = -1833.33.
+  # The units still held keep their per-share basis, as a sale leaves it.
+  test "remap_security! keeps the held side's cost basis when merging a negative holding into a positive one" do
+    new_security = create_security("GOOGCBN", prices: [ { date: Date.current, price: 100.0 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 5, price: 100.0, amount: 500.0, cost_basis: 100.0, currency: "USD")
+    @amzn.update_columns(qty: -2, amount: -432.0, cost_basis: 3000.0)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    assert_equal BigDecimal("3"), target.qty
+    assert_equal BigDecimal("100"), target.cost_basis
+  end
+
+  test "remap_security! takes the moved row's cost basis when merging a positive holding into a negative one" do
+    new_security = create_security("GOOGCBP", prices: [ { date: Date.current, price: 216.0 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 0, price: 216.0, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -2, amount: -432.0, cost_basis: 3000.0)
+    @amzn.update_columns(cost_basis: 216.0)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    # -2 + the moved row's 15.
+    assert_equal BigDecimal("13"), target.qty
+    assert_equal BigDecimal("216"), target.cost_basis
+  end
+
+  test "remap_security! keeps the target's cost basis when a merge leaves no units held" do
+    new_security = create_security("GOOGCBZ", prices: [ { date: Date.current, price: 216.0 } ])
+    target = @account.holdings.create!(date: Date.current, security: new_security, qty: 0, price: 216.0, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -22, amount: -4752.0, cost_basis: 3000.0)
+    @amzn.update_columns(cost_basis: 216.0)
+
+    @amzn.remap_security!(new_security)
+
+    target.reload
+    # -22 + the moved row's 15.
+    assert_equal BigDecimal("-7"), target.qty
+    assert_equal BigDecimal("3000"), target.cost_basis
+  end
+
+  # cost_basis is per share. A locked 5 @ $80 merged with an unlocked 15 @ $40
+  # is 20 units: keeping $80 would misstate the 15 merged-in units, so the
+  # weighted $50 is the right figure. The user's lock stays on the merged row.
+  test "remap_security! merge onto a locked row blends the basis and keeps the lock" do
+    new_security = create_security("GOOGLK1", prices: [ { date: Date.current, price: 100.00 } ])
+    existing = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: "USD")
+    existing.set_manual_cost_basis!(80)
+    @amzn.update_columns(cost_basis: 40, cost_basis_source: "calculated") # 15 units
+
+    @amzn.remap_security!(new_security)
+    existing.reload
+
+    assert_equal 20, existing.qty, "precondition: the rows did not merge"
+    assert_equal 50, existing.cost_basis.to_d, "merged basis is not the weighted blend (80 x 5 + 40 x 15) / 20"
+    assert existing.cost_basis_locked?, "the merge dropped the existing row's lock"
+    assert_equal "manual", existing.cost_basis_source
+  end
+
+  # The moved row carries the user's lock and is destroyed by the merge, so
+  # the lock has to travel to the surviving row with the blend.
+  test "remap_security! merge from a locked moved row blends the basis and keeps the lock" do
+    new_security = create_security("GOOGLK2", prices: [ { date: Date.current, price: 100.00 } ])
+    existing = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 15, price: 100, amount: 1500, currency: "USD",
+                                         cost_basis: 40, cost_basis_source: "calculated")
+    @amzn.update_columns(qty: 5, amount: 5 * @amzn.price)
+    @amzn.set_manual_cost_basis!(80)
+
+    @amzn.remap_security!(new_security)
+    existing.reload
+
+    assert_equal 20, existing.qty, "precondition: the rows did not merge"
+    assert_equal 50, existing.cost_basis.to_d, "merged basis is not the weighted blend (80 x 5 + 40 x 15) / 20"
+    assert existing.cost_basis_locked?, "the moved row's lock was lost in the merge"
+    assert_equal "manual", existing.cost_basis_source
+  end
+
+  # The remap controller re-materializes straight after the merge, and an
+  # unlocked merged row would take the trade-derived figure instead.
+  test "the blended basis from a locked moved row survives the re-materialization after a remap" do
+    account = families(:empty).accounts.create!(name: "Remap", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    moved_security = create_security("MOVD", prices: [ { date: 1.day.ago.to_date, price: 100 }, { date: Date.current, price: 100 } ])
+    target_security = create_security("TRGT", prices: [ { date: 1.day.ago.to_date, price: 100 }, { date: Date.current, price: 100 } ])
+    create_trade(moved_security, account: account, qty: 5, price: 200, date: 1.day.ago.to_date)
+    create_trade(target_security, account: account, qty: 15, price: 40, date: 1.day.ago.to_date)
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+    moved = account.holdings.find_by!(security: moved_security, date: Date.current)
+    moved.set_manual_cost_basis!(80)
+    moved.remap_security!(target_security)
+
+    merged = account.holdings.find_by!(security: target_security, date: Date.current)
+    assert_equal 50, merged.cost_basis.to_d, "precondition: the merge did not write the blend"
+
+    # As HoldingsController#remap_security does.
+    Balance::Materializer.new(Account.find(account.id), strategy: :forward, security_ids: [ target_security.id ]).materialize_balances
+    merged.reload
+
+    assert_equal 20, merged.qty
+    assert_equal 50, merged.cost_basis.to_d, "re-materialization replaced the blend with the trade-derived (200 x 5 + 40 x 15) / 20"
+    assert merged.cost_basis_locked?
+  end
+
+  # Both figures are the user's, each for its own units, so the blend is the
+  # user's figure for all 20.
+  test "remap_security! merge of two locked rows blends both figures and stays locked" do
+    new_security = create_security("GOOGLK3", prices: [ { date: Date.current, price: 100.00 } ])
+    existing = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: "USD")
+    existing.set_manual_cost_basis!(80)
+    @amzn.set_manual_cost_basis!(40) # 15 units
+
+    @amzn.remap_security!(new_security)
+    existing.reload
+
+    assert_equal 50, existing.cost_basis.to_d
+    assert existing.cost_basis_locked?
+    assert_equal "manual", existing.cost_basis_source
+  end
+
+  test "remap_security! merge with neither side locked stays unlocked" do
+    new_security = create_security("GOOGLK4", prices: [ { date: Date.current, price: 100.00 } ])
+    existing = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: "USD",
+                                         cost_basis: 100, cost_basis_source: "calculated")
+    @amzn.update_columns(qty: 10, amount: 10 * @amzn.price, cost_basis: 40, cost_basis_source: "calculated")
+
+    @amzn.remap_security!(new_security)
+    existing.reload
+
+    assert_equal 60, existing.cost_basis.to_d, "(100 x 5 + 40 x 10) / 15"
+    assert_not existing.cost_basis_locked?
+    assert_equal "calculated", existing.cost_basis_source
+  end
+
+  # Never state a cost for units nobody costed: the user's $80 covers its own
+  # 5 units, not the 10 merged in.
+  test "remap_security! merge with an unknown moved side leaves the basis unknown and unlocked" do
+    new_security = create_security("GOOGLK5", prices: [ { date: Date.current, price: 100.00 } ])
+    existing = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: "USD")
+    existing.set_manual_cost_basis!(80)
+    @amzn.update_columns(qty: 10, amount: 10 * @amzn.price, cost_basis: nil, cost_basis_source: nil)
+
+    @amzn.remap_security!(new_security)
+    existing.reload
+
+    assert_equal 15, existing.qty, "precondition: the rows did not merge"
+    assert_nil existing.cost_basis
+    assert_not existing.cost_basis_locked?
+    assert_nil existing.cost_basis_source
+  end
+
+  test "remap_security! merge of an unknown existing row with a locked moved row leaves the basis unknown and unlocked" do
+    new_security = create_security("GOOGLK6", prices: [ { date: Date.current, price: 100.00 } ])
+    existing = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: "USD")
+    @amzn.update_columns(qty: 10, amount: 10 * @amzn.price)
+    @amzn.set_manual_cost_basis!(40)
+
+    @amzn.remap_security!(new_security)
+    existing.reload
+
+    assert_nil existing.cost_basis
+    assert_not existing.cost_basis_locked?
+  end
+
+  # A negative row is units gone, so its unknown basis leaves the held side's
+  # figure standing, and that figure keeps its lock.
+  test "remap_security! merge of a locked row into a negative one keeps its figure and its lock" do
+    new_security = create_security("GOOGLK7", prices: [ { date: Date.current, price: 216.0 } ])
+    target = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 0, price: 216.0, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -2, amount: -432.0)
+    @amzn.set_manual_cost_basis!(80) # 15 units
+
+    @amzn.remap_security!(new_security)
+    target.reload
+
+    assert_equal BigDecimal("13"), target.qty
+    assert_equal BigDecimal("80"), target.cost_basis
+    assert target.cost_basis_locked?, "the moved row's lock was lost in the merge"
+    assert_equal "manual", target.cost_basis_source
+  end
+
+  # Providers send 0 when they do not know a cost, so an unlocked 0 is no
+  # figure (Holding#known_cost_basis), and the merged basis is unknown.
+  test "remap_security! merge with an unlocked zero basis on one side leaves the basis unknown" do
+    new_security = create_security("GOOGLK9", prices: [ { date: Date.current, price: 100.00 } ])
+    existing = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500, currency: "USD",
+                                         cost_basis: 100, cost_basis_source: "calculated")
+    @amzn.update_columns(qty: 10, amount: 10 * @amzn.price, cost_basis: 0, cost_basis_source: "provider")
+
+    @amzn.remap_security!(new_security)
+    existing.reload
+
+    assert_nil existing.cost_basis, "the unknown 10 units were costed at 0"
+    assert_not existing.cost_basis_locked?
+  end
+
+  # A lock covers the units of the row it is on. On a target holding none,
+  # it covers units gone, so the merged row takes the moved row's figure,
+  # unlocked, with its source.
+  test "remap_security! merge into a locked negative row takes the moved row's figure, unlocked" do
+    new_security = create_security("GOOGLKA", prices: [ { date: Date.current, price: 216.0 } ])
+    target = @account.holdings.create!(date: @amzn.date, security: new_security, qty: 0, price: 216.0, amount: 0.0, currency: "USD")
+    target.update_columns(qty: -2, amount: -432.0, cost_basis: 3000.0, cost_basis_source: "manual", cost_basis_locked: true)
+    @amzn.update_columns(cost_basis: 216.0, cost_basis_source: "calculated") # 15 units
+
+    @amzn.remap_security!(new_security)
+    target.reload
+
+    assert_equal BigDecimal("216"), target.cost_basis
+    assert_not target.cost_basis_locked?
+    assert_equal "calculated", target.cost_basis_source
+  end
+
+  test "a remap without a collision keeps the moved row's lock" do
+    new_security = create_security("GOOGLK8", prices: [ { date: Date.current, price: 100.00 } ])
+    @amzn.set_manual_cost_basis!(80)
+
+    @amzn.remap_security!(new_security)
+    @amzn.reload
+
+    assert_equal new_security, @amzn.security
+    assert_equal 80, @amzn.cost_basis.to_d
+    assert @amzn.cost_basis_locked?
+  end
+
+  test "reset_security_to_provider! moves a negative-qty holding back without raising" do
+    old_security = @amzn.security
+    new_security = create_security("GOOGRST", prices: [ { date: Date.current, price: 100.0 } ])
+
+    @amzn.remap_security!(new_security)
+    assert_equal new_security.id, @amzn.security_id
+
+    @amzn.update_columns(qty: -22, amount: BigDecimal("-3187.80"))
+
+    @amzn.reset_security_to_provider!
+
+    @amzn.reload
+    assert_equal old_security.id, @amzn.security_id
+    assert_not @amzn.security_locked?
+    assert_nil @amzn.provider_security_id
+  end
+
+  # save!/update! set updated_at, and Holding::CurrentForInvestmentAccounts and
+  # Security::Price::ImportWindows read it, so the remap and reset writes keep
+  # setting it.
+  test "remap_security! bumps updated_at on a moved holding" do
+    new_security = create_security("GOOGTS", prices: [ { date: Date.current, price: 100.0 } ])
+    @account.holdings.update_all(updated_at: 2.days.ago)
+    before = @account.holdings.maximum(:updated_at)
+
+    @amzn.remap_security!(new_security)
+
+    moved = @account.holdings.where(security: new_security)
+    assert_equal 2, moved.count
+    moved.each { |h| assert_operator h.updated_at, :>, before }
+  end
+
+  test "remap_security! bumps updated_at on the row it merges into" do
+    new_security = create_security("GOOGTM", prices: [ { date: Date.current, price: 100.0 } ])
+    target = @account.holdings.create!(security: new_security, date: @amzn.date, qty: 1, price: 100.0, amount: 100.0, currency: @amzn.currency)
+    @account.holdings.update_all(updated_at: 2.days.ago)
+    before = target.reload.updated_at
+
+    @amzn.remap_security!(new_security)
+
+    assert_operator target.reload.updated_at, :>, before
+  end
+
+  test "reset_security_to_provider! bumps updated_at on the holdings it moves back" do
+    old_security = @amzn.security
+    new_security = create_security("GOOGTR", prices: [ { date: Date.current, price: 100.0 } ])
+    @amzn.remap_security!(new_security)
+    @account.holdings.update_all(updated_at: 2.days.ago)
+    before = @account.holdings.maximum(:updated_at)
+
+    @amzn.reset_security_to_provider!
+
+    reset = @account.holdings.where(security: old_security)
+    assert_equal 2, reset.count
+    reset.each { |h| assert_operator h.updated_at, :>, before }
   end
 
   private
