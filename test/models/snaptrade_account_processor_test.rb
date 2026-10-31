@@ -791,4 +791,245 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal 0.0, entry.amount.to_f
     assert_equal 0.0, entry.entryable.price.to_f
   end
+
+  test "reverse-synced history holds shares deposited as OTHER only until they are sold" do
+    # Twice, shares vest with no price and no cash, are sold, and the proceeds
+    # leave the account; nothing is held now. The second deposit settles before
+    # its trade date.
+    @snaptrade_account.update!(
+      current_balance: 0,
+      cash_balance: 0,
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        snaptrade_activity("vest_1", "OTHER", 40, units: 10, price: 0, amount: 0),
+        snaptrade_activity("sale_1", "SELL", 39, units: -10, price: 100, amount: 1000),
+        snaptrade_activity("payout_1", "TRANSFER", 37, amount: -1000),
+        snaptrade_activity("vest_2", "OTHER", 20, trade_days_ago: 17, units: 5, price: 0, amount: 0),
+        snaptrade_activity("sale_2", "SELL", 16, units: -5, price: 90, amount: 449, fee: 1),
+        snaptrade_activity("payout_2", "TRANSFER", 14, amount: -449)
+      ]
+    )
+
+    reverse_sync!
+
+    held = [ 41, 40, 39, 30, 21, 20, 17, 16, 0 ].index_with { |days_ago| held_qty(days_ago) }
+    assert_equal({ 41 => 0, 40 => 10, 39 => 0, 30 => 0, 21 => 0, 20 => 5, 17 => 5, 16 => 0, 0 => 0 }, held)
+
+    # With no market prices, a deposit day is valued at the nearest price the
+    # account has: the first at the sale that follows it, the second at the
+    # last one before it.
+    balance = [ 41, 40, 39, 38, 37, 30, 20, 17, 16, 15, 14, 0 ].index_with { |days_ago| balance_on(days_ago) }
+    assert_equal({ 41 => 0, 40 => 1000, 39 => 1000, 38 => 1000, 37 => 0, 30 => 0, 20 => 500, 17 => 500, 16 => 449, 15 => 449, 14 => 0, 0 => 0 }, balance,
+                 "the shares until their sale, then the proceeds until they leave")
+    assert_no_negative_history
+
+    sale = @account.entries.find_by!(external_id: "sale_1").entryable
+    assert_nil sale.realized_gain_loss, "shares that arrived at no known cost claim no gain when sold"
+
+    synced_once = synced_series
+    reverse_sync!
+    assert_equal synced_once, synced_series, "a second sync changes nothing"
+  end
+
+  test "a position held across a share movement at no price keeps its value without market prices" do
+    @snaptrade_account.update!(
+      current_balance: 10945,
+      cash_balance: 0,
+      raw_holdings_payload: [ snaptrade_position("RSUCO", 99.5, 110) ],
+      raw_activities_payload: [
+        snaptrade_activity("deposit", "CONTRIBUTION", 61, amount: 10000),
+        snaptrade_activity("buy", "BUY", 60, units: 100, price: 100, amount: -10000),
+        snaptrade_activity("removed", "OTHER", 30, units: -0.5, price: 0, amount: 0)
+      ]
+    )
+
+    reverse_sync!
+
+    assert_equal BigDecimal("100"), held_qty(31)
+    assert_equal BigDecimal("99.5"), held_qty(30)
+    assert_equal 9950, holdings_value(30), "valued at the last price the account has, not at the movement's zero"
+    assert_equal 9950, holdings_value(1)
+  end
+
+  test "shares kept from a vest with a same-day sell-to-cover are valued at the sale price" do
+    @snaptrade_account.update!(
+      current_balance: 3600,
+      cash_balance: 0,
+      raw_holdings_payload: [ snaptrade_position("RSUCO", 60, 60) ],
+      raw_activities_payload: [
+        snaptrade_activity("vest", "OTHER", 30, units: 100, price: 0, amount: 0),
+        snaptrade_activity("sell_to_cover", "SELL", 30, units: -40, price: 50, amount: 2000),
+        snaptrade_activity("tax_out", "TRANSFER", 29, amount: -2000)
+      ]
+    )
+
+    reverse_sync!
+
+    assert_equal BigDecimal("0"), held_qty(31)
+    assert_equal BigDecimal("60"), held_qty(30)
+    assert_equal 3000, holdings_value(30), "the deposit's zero is not the day's price"
+    assert_equal 3000, holdings_value(1)
+  end
+
+  test "a same-day journal out and back in leaves the cost basis and realized gain alone" do
+    @snaptrade_account.update!(
+      current_balance: 12500,
+      cash_balance: 6000,
+      raw_holdings_payload: [ snaptrade_position("RSUCO", 50, 130) ],
+      raw_activities_payload: [
+        snaptrade_activity("deposit", "CONTRIBUTION", 61, amount: 10000),
+        snaptrade_activity("buy", "BUY", 60, units: 100, price: 100, amount: -10000),
+        snaptrade_activity("journal_out", "JOURNAL", 30, units: -100, price: 110, amount: 0),
+        snaptrade_activity("journal_in", "JOURNAL", 30, units: 100, price: 110, amount: 0),
+        snaptrade_activity("sale", "SELL", 10, units: -50, price: 120, amount: 6000)
+      ]
+    )
+
+    reverse_sync!
+
+    assert_equal BigDecimal("100"), @account.holdings.find_by!(date: 20.days.ago.to_date).cost_basis
+    gain = @account.entries.find_by!(external_id: "sale").entryable.realized_gain_loss
+    assert_equal Money.new(1000, "USD"), gain&.value
+  end
+
+  test "shares deposited as OTHER and moved out as TRANSFER both move the history" do
+    security = Security.create!(ticker: "RSUCO", name: "RSU Co")
+    (71.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: security, date: date, price: 100) }
+
+    @snaptrade_account.update!(
+      current_balance: 100,
+      cash_balance: 100,
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        snaptrade_activity("deposit", "CONTRIBUTION", 70, amount: 100),
+        snaptrade_activity("vest", "OTHER", 40, units: 10, price: 0, amount: 0),
+        snaptrade_activity("moved_out", "TRANSFER", 35, units: -10, price: 0)
+      ]
+    )
+
+    reverse_sync!
+
+    held = [ 50, 41, 40, 36, 35, 0 ].index_with { |days_ago| held_qty(days_ago) }
+    assert_equal({ 50 => 0, 41 => 0, 40 => 10, 36 => 10, 35 => 0, 0 => 0 }, held)
+    assert_equal 100, balance_on(50)
+    assert_equal 1100, balance_on(38)
+    assert_no_negative_history
+  end
+
+  test "a deposit dated after the sale of its own shares does not leave negative holdings" do
+    @snaptrade_account.update!(
+      current_balance: 0,
+      cash_balance: 0,
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        snaptrade_activity("vest", "OTHER", 28, trade_days_ago: 30, units: 10, price: 0, amount: 0),
+        snaptrade_activity("sale", "SELL", 29, trade_days_ago: 30, units: -10, price: 100, amount: 1000),
+        snaptrade_activity("payout", "TRANSFER", 25, amount: -1000)
+      ]
+    )
+
+    reverse_sync!
+
+    held = [ 31, 30, 29, 28, 0 ].index_with { |days_ago| held_qty(days_ago) }
+    assert_equal({ 31 => 0, 30 => 10, 29 => 0, 28 => 0, 0 => 0 }, held)
+    assert_equal 1000, balance_on(30)
+    assert_no_negative_history
+  end
+
+  test "shares moved out are not booked before the buy that delivered them" do
+    @snaptrade_account.update!(
+      current_balance: 0,
+      cash_balance: 0,
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        snaptrade_activity("deposit", "CONTRIBUTION", 10, amount: 1000),
+        snaptrade_activity("buy", "BUY", 4, trade_days_ago: 5, units: 10, price: 100, amount: -1000),
+        snaptrade_activity("moved_out", "TRANSFER_OUT", 3, trade_days_ago: 5, units: 10, price: 0)
+      ]
+    )
+
+    reverse_sync!
+
+    held = [ 5, 4, 3, 0 ].index_with { |days_ago| held_qty(days_ago) }
+    assert_equal({ 5 => 0, 4 => 10, 3 => 0, 0 => 0 }, held)
+    assert_no_negative_history
+  end
+
+  test "shares moved in after the provider priced the position at nothing are not valued at an older price" do
+    security = Security.create!(ticker: "RSUCO", name: "RSU Co")
+    # An earlier sync's snapshot, once the position had become worthless
+    @account.holdings.create!(security: security, date: 20.days.ago.to_date, qty: 100, price: 0, amount: 0, currency: "USD",
+                              account_provider: @snaptrade_account.account_provider)
+
+    @snaptrade_account.update!(
+      current_balance: 0,
+      cash_balance: 0,
+      raw_holdings_payload: [ snaptrade_position("RSUCO", 150, 0) ],
+      raw_activities_payload: [
+        snaptrade_activity("buy", "BUY", 40, units: 100, price: 10, amount: -1000),
+        snaptrade_activity("moved_in", "TRANSFER_IN", 10, units: 50, price: 0)
+      ]
+    )
+
+    reverse_sync!
+
+    assert_equal BigDecimal("150"), held_qty(5)
+    assert_equal 0, holdings_value(5), "the provider's zero, not the price paid before it"
+  end
+
+  private
+    # A SnapTrade activity settling `days_ago`, in the made-up security RSUCO when it has units
+    def snaptrade_activity(id, type, days_ago, trade_days_ago: days_ago, units: nil, price: nil, amount: nil, fee: nil)
+      {
+        "id" => id,
+        "type" => type,
+        "symbol" => (units ? { "symbol" => "RSUCO", "description" => "RSU Co" } : nil),
+        "units" => units,
+        "price" => price,
+        "amount" => amount,
+        "fee" => fee,
+        "trade_date" => trade_days_ago.days.ago.to_date.to_s,
+        "settlement_date" => days_ago.days.ago.to_date.to_s,
+        "currency" => { "code" => "USD" }
+      }
+    end
+
+    def snaptrade_position(ticker, units, price)
+      {
+        "symbol" => { "symbol" => { "symbol" => ticker, "description" => "#{ticker} Co" } },
+        "units" => units.to_s,
+        "price" => price.to_s,
+        "currency" => "USD"
+      }
+    end
+
+    def reverse_sync!
+      SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
+      Balance::Materializer.new(@account.reload, strategy: :reverse).materialize_balances
+    end
+
+    def held_qty(days_ago)
+      @account.holdings.where(date: days_ago.days.ago.to_date).sum(:qty)
+    end
+
+    def holdings_value(days_ago)
+      @account.holdings.where(date: days_ago.days.ago.to_date).sum(:amount)
+    end
+
+    def balance_on(days_ago)
+      @account.balances.find_by!(date: days_ago.days.ago.to_date).balance
+    end
+
+    def assert_no_negative_history
+      assert @account.balances.where("balance < 0 OR cash_balance < 0").none?, "no day has a negative balance"
+      assert @account.holdings.where("qty < 0").none?, "no day holds negative shares"
+    end
+
+    def synced_series
+      [
+        @account.entries.order(:id).pluck(:id, :amount),
+        @account.holdings.order(:date).pluck(:date, :qty, :amount),
+        @account.balances.order(:date).pluck(:date, :balance, :cash_balance)
+      ]
+    end
 end
