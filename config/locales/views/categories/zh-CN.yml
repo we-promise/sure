@@ -3,6 +3,10 @@ zh-CN:
   categories:
     bootstrap:
       success: 默认分类创建成功
+    locked: 分类已被锁定。解锁后即可添加新分类。
+    toggle_lock:
+      locked: 分类已锁定
+      unlocked: 分类已解锁
     category:
       delete: 删除分类
       edit: 编辑分类
@@ -31,24 +35,21 @@ zh-CN:
       categories_incomes: 收入分类
       delete_all: 全部删除
       empty: 未找到分类
-      new: 新建分类
+      lock_categories: 锁定分类创建
+      locked_message: 分类创建已锁定。导入和银行同步仍可添加分类。
       merge: 合并分类
-    new:
-      new_category: 新建分类
-    update:
-      success: 分类更新成功
-    virtual:
-      transfer: 转账
-      payment: 付款
-      trade: 交易
+      new: 新建分类
+      unlock_categories: 解锁分类创建
     merge:
       title: 合并分类
-      description: 选择要合并的分类，并指定保留的目标分类。
+      description: 选择目标分类以及要合并到其中的分类。匹配的交易和预算项将移至目标分类。
       target_label: 合并到（目标）
       select_target: 选择目标分类...
       sources_label: 要合并的分类
-      sources_hint: 这些分类会被合并到目标分类中。
+      sources_hint: 所选分类的交易和预算项移至目标后将被删除。请勿将目标分类选为来源。
       submit: 合并所选分类
+    new:
+      new_category: 新建分类
     perform_merge:
       success:
         one: 已成功合并 %{count} 个分类。
@@ -56,7 +57,13 @@ zh-CN:
       no_categories_selected: 请选择要合并的分类。
       target_not_found: 找不到目标分类。
       invalid_categories: 选择的分类无效。
-      target_selected_as_source: 目标分类不能同时作为来源分类。
+      target_selected_as_source: 请为目标分类和来源分类选择不同的分类。
+    update:
+      success: 分类更新成功
+    virtual:
+      transfer: 转账
+      payment: 付款
+      trade: 交易
   category:
     dropdowns:
       show:
