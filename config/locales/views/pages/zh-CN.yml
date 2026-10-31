@@ -26,6 +26,9 @@ zh-CN:
       refresh_page: 刷新页面
     changelog:
       title: 有什么新内容
+    release_notes_unavailable:
+      name: 发布说明暂不可用
+      body_html: "<p>暂时无法获取最新发布说明。请稍后再试，或直接访问 <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub releases 页面</a>。</p>"
     privacy:
       title: 隐私政策
       heading: 隐私政策
@@ -35,15 +38,29 @@ zh-CN:
       heading: 服务条款
       placeholder: 服务条款内容将显示在这里。
     dashboard:
-      cashflow_preview:
-        node_labels:
-          cash_flow: "现金流"
-          surplus: "盈余"
-          deficit: "赤字"
       welcome: 欢迎回来，%{name}
       subtitle: 以下是您的财务状况概览
       new: 新建
+      sections_aria_label: 仪表盘分区
       toggle_section: 切换模块可见性
+      customize:
+        start: 自定义
+        done: 完成
+        hide: 隐藏 %{title}
+        hidden_title: 已隐藏的小部件
+        hidden_description: 将小部件重新添加到仪表盘。
+        none_hidden: 所有小部件均已显示。点击小部件的眼睛按钮可将其隐藏。
+        all_hidden_title: 所有小部件均已隐藏
+        all_hidden_description: 自定义仪表盘以重新添加小部件。
+      widget_size:
+        label: 调整大小
+        width_label: 宽度
+        half: 半宽
+        full: 全宽
+        height_label: 高度
+        compact: 紧凑
+        auto: 自动
+        tall: 较高
       net_worth_chart:
         data_not_available: 所选时间段内无可用数据
         title: 净资产
@@ -62,10 +79,44 @@ zh-CN:
         name: 名称
         weight: 占比
         value: 金额
+        expand_all: 全部展开
+        collapse_all: 全部折叠
         classifications:
           asset: 资产
           liability: 负债
+      insights_feed:
+        title: 财务洞察
+      cashflow_preview:
+        opt_in_title: 显示新图表
+        opt_in_description: 对比实验性桑基图与上方图表。您可以随时关闭此功能。
+        node_labels:
+          cash_flow: 现金流
+          surplus: 盈余
+          deficit: 赤字
+          invested: 已投资
+        title: 新版桑基图
+        preview: 预览
+        preview_tooltip: 这将替换上述可视化图表，因为它采用了与移动端 Swift 客户端共用的新 API。
+        group_by_label: 资金流分组方式
+        group_by_category: 分类
+        group_by_account: 账户
+        feedback_prompt: 请对比此图表与上方的原始图表，若除了排序之外有任何异常，请告诉我们。
+        positive: 看起来正确
+        negative: 看起来有异常
+        feedback_title: 现金流图表反馈
+        feedback_loading: 正在加载反馈表单…
+        feedback_unavailable: 当前无法提交反馈。请稍后重试。
+        feedback_thanks: 感谢您帮助我们改进图表！
+        feedback_privacy: 您的反馈将发送至 PostHog。描述问题时请勿包含账号、余额或其他私密财务信息。
+        feedback_submit: 发送反馈
+        sort_label: 资金流排序
+        sort_auto: 自动
+        sort_ascending: 金额从小到大
+        sort_descending: 金额从大到小
       cashflow_sankey:
+        loading: 正在加载现金流…
+        load_error: 无法加载现金流。请重试。
+        retry: 重试
         title: 现金流
         zoom_out: 返回完整现金流
         no_data_title: 此时间段内没有现金流数据
@@ -89,11 +140,34 @@ zh-CN:
         value: 金额
         return: 回报
         period_activity: "%{period} 活动"
-        contributions: 贡献
-        withdrawals: 提现
+        contributions: 投入
+        withdrawals: 提取
         trades: 交易
         no_investments: 暂无投资账户
         add_investment: 添加投资账户以跟踪您的投资组合
-    release_notes_unavailable:
-      name: 发布说明暂不可用
-      body_html: "<p>暂时无法获取最新发布说明。请稍后再试，或直接访问 <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub releases 页面</a>。</p>"
+      money_flow:
+        title: 资金流入 / 流出
+        date_range: "%{start_date} 至 %{end_date}"
+        month_picker_aria_label: 选择月份
+        filter_accounts: 筛选账户 (%{count})
+        filter_accounts_all: 所有账户
+        period_scope_hint: 显示您在此处选择的月份 — 独立于顶部仪表盘的时间范围。
+        search_accounts: 搜索账户
+        apply: 应用
+        balance: 交易差额
+        chart_span: 最近 %{count} 个月
+        income: 收入
+        expenses: 支出
+      spending_trend:
+        title: 支出趋势
+        date_range: "%{start_date} 至 %{end_date}"
+        date_range_short: "%{start_date} - %{end_day}, %{year}"
+        date_range_short_single: "%{date}, %{year}"
+        month_picker_aria_label: 选择月份
+        filter_categories: 筛选分类 (%{count})
+        filter_categories_all: 所有分类
+        search_categories: 搜索分类
+        apply: 应用
+        period_scope_hint: 显示您在此处选择的月份 — 独立于顶部仪表盘的时间范围。
+        no_data: 本月暂无支出数据
+        previous_comparison_days: "(1-%{end_day}日)"
