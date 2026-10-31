@@ -688,6 +688,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_200000) do
     t.string "last_psu_ip"
     t.string "name"
     t.boolean "pending_account_setup", default: false
+    t.boolean "preserve_distinct_booked_references", default: false, null: false
     t.string "psu_type"
     t.jsonb "raw_institution_payload"
     t.jsonb "raw_payload"

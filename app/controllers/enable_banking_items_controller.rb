@@ -557,6 +557,7 @@ class EnableBankingItemsController < ApplicationController
       permitted = params.require(:enable_banking_item).permit(
         :name,
         :sync_start_date,
+        :preserve_distinct_booked_references,
         :country_code,
         :application_id,
         :client_certificate
