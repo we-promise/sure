@@ -1,0 +1,13 @@
+---
+id:
+  activemodel:
+    errors:
+      models:
+        trend:
+          attributes:
+            current:
+              must_be_of_the_same_type_as_previous: harus memiliki tipe yang sama dengan nilai sebelumnya
+              must_be_of_type_money_numeric_or_nil: harus bertipe Money, Numeric, atau nil
+            previous:
+              must_be_of_the_same_type_as_current: harus memiliki tipe yang sama dengan nilai saat ini
+              must_be_of_type_money_numeric_or_nil: harus bertipe Money, Numeric, atau nil
