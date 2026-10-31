@@ -65,6 +65,7 @@ class BillsController < ApplicationController
     # Snooze-aware, like the rail (bills_row_date): rows list in rail order,
     # and a bill snoozed past the month's end belongs after it.
     @this_month, later = upcoming.partition { |occurrence| occurrence.effective_due_on <= month_end }
+    @open_upcoming = upcoming
     @overdue = @overdue.sort_by(&:effective_due_on)
     @dormant = @dormant.sort_by(&:effective_due_on)
 
@@ -305,6 +306,12 @@ class BillsController < ApplicationController
 
       if status.presence_in(LIFECYCLE_FILTERS)
         scope = scope.where(status: LIFECYCLE_STATUSES.fetch(status))
+      else
+        # A removed detected bill stays as an ended tombstone so detection
+        # does not recreate it. It is not a current bill, so keep it out of
+        # the default list and out of the payment-state filters. The Dismissed
+        # filter above is the way to find it.
+        scope = scope.where.not(status: :ended)
       end
 
       if (bill_type = params.dig(:q, :bill_type)).presence_in(RecurringTransaction.bill_types.keys)
@@ -320,6 +327,18 @@ class BillsController < ApplicationController
       end
 
       @all_series = filter_by_payment_state(@all_series, status) if status.presence_in(PAYMENT_FILTERS)
+
+      # A family whose only bills are dismissed tombstones gets an empty list.
+      # Say why, so the empty state can point at the Dismissed filter instead
+      # of telling the user to clear a filter they never set.
+      @dismissed_series_hidden = @all_series.empty? &&
+                                 status.blank? &&
+                                 params.dig(:q, :search).blank? &&
+                                 params.dig(:q, :bill_type).blank? &&
+                                 Current.family.recurring_transactions
+                                                .accessible_by(Current.user)
+                                                .ended
+                                                .exists?
 
       load_subscription_rollup if bill_type == "subscription"
     end
@@ -360,7 +379,9 @@ class BillsController < ApplicationController
       @recent_price_changes = RecurringPriceChange
                                 .joins(:recurring_transaction)
                                 .merge(RecurringTransaction.accessible_by(Current.user))
-                                .where(recurring_transactions: { family_id: Current.family.id })
+                                .where(recurring_transactions: { family_id: Current.family.id,
+                                                                 bill_type: "subscription" })
+                                .where.not(recurring_transactions: { status: "ended" })
                                 .where("effective_on >= ?", 1.year.ago.to_date)
                                 .includes(:recurring_transaction)
                                 .order(effective_on: :desc)
@@ -506,7 +527,18 @@ class BillsController < ApplicationController
 
       @remaining_this_month, @unconvertible_count = total_of(owed_now) { |occurrence| occurrence.remaining_amount_money }
       @paid_this_month_total, _ = total_of(@paid_this_month) { |occurrence| occurrence.confirmed_allocated_money }
-      @due_next_seven, _ = total_of(owed_now.select { |occurrence| occurrence.effective_due_on <= today + 7 }) { |occurrence| occurrence.remaining_amount_money }
+      # The next seven days run across month boundaries, so they are not
+      # limited to this month's owed list. Overdue bills are excluded: they
+      # already have their own figure.
+      @next_seven_until = today + 6
+      window = @open_upcoming.select { |occurrence| occurrence.effective_due_on.between?(today, @next_seven_until) }
+      @due_next_seven, _ = total_of(window) { |occurrence| occurrence.remaining_amount_money }
+      # Bills beyond this month were not in the owed count above, so their
+      # conversion failures are added to it. The window reads every open bill,
+      # not the one-per-series @later list, so a second occurrence of the same
+      # bill inside the window is counted.
+      _, beyond_month_unconvertible = total_of(window - @this_month) { |occurrence| occurrence.remaining_amount_money }
+      @unconvertible_count += beyond_month_unconvertible
       @past_due_total, _ = total_of(@overdue) { |occurrence| occurrence.remaining_amount_money }
       @owed_count = owed_now.size
       @needs_action_count = owed_now.count { |occurrence| !occurrence.recurring_transaction.autopay? }
