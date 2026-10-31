@@ -1,0 +1,8 @@
+<%= turbo_frame_tag "transaction-filters" do %>
+  <%# fields (not form_with) because this frame lives inside the search form
+      in the DOM - a nested <form> would be invalid HTML. The inputs still
+      submit with the outer form. %>
+  <%= fields :q do |form| %>
+    <%= render "transactions/searches/menu", form: form %>
+  <% end %>
+<% end %>
