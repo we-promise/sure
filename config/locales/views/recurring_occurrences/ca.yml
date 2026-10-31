@@ -28,6 +28,9 @@ ca:
       no_candidates: No hi ha transaccions properes per enllaçar.
       no_search_results: No hi ha res que coincideixi amb %{query}.
       link_payment: Enllaça el pagament
+      amount_left: "Queden %{amount}"
+      used_up: Ja utilitzada
+      used_up_hint: "Altres factures ja utilitzen l'import complet d'aquesta transacció."
       not_this_one: No és aquesta
       cant_find: No trobes la transacció?
       manual_explainer: Registra un pagament que saps que s'ha fet quan cap transacció d'aquí no hi coincideix.

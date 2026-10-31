@@ -163,6 +163,7 @@
                   occurrence: @occurrence,
                   entry: best_entry,
                   promoted: true,
+                  remaining: @remaining_by_entry[best_entry.id],
                   reasons: bills_match_reasons(
                     best_explanation.signals,
                     currency: @occurrence.currency,
@@ -180,6 +181,7 @@
                   <%= render "recurring_occurrences/candidate",
                         occurrence: @occurrence,
                         entry: entry,
+                        remaining: @remaining_by_entry[entry.id],
                         reasons: bills_match_reasons(
                           explanation.signals,
                           currency: @occurrence.currency,
@@ -222,7 +224,7 @@
               <% if @other_entries.any? %>
                 <div class="divide-y divide-subdued">
                   <% @other_entries.each do |entry| %>
-                    <%= render "recurring_occurrences/candidate", occurrence: @occurrence, entry: entry %>
+                    <%= render "recurring_occurrences/candidate", occurrence: @occurrence, entry: entry, remaining: @remaining_by_entry[entry.id] %>
                   <% end %>
                 </div>
               <% else %>

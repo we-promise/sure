@@ -1,4 +1,4 @@
-<%# locals: (occurrence:, entry:, reasons: [], promoted: false) %>
+<%# locals: (occurrence:, entry:, reasons: [], promoted: false, remaining: nil) %>
 
 <%# One transaction offered as the payment for this bill.
 
@@ -15,6 +15,16 @@
     would shrink-wrap inside the divider stack. %>
 
 <% amount = format_money(entry.amount_money.abs) %>
+<% used_up = remaining&.zero? %>
+<% usage_pill = capture do %>
+  <% if used_up %>
+    <%= render DS::Pill.new(label: t("recurring_occurrences.show.used_up"), title: t("recurring_occurrences.show.used_up_hint"), tone: :warning, marker: false) %>
+  <% elsif remaining %>
+    <span class="privacy-sensitive">
+      <%= render DS::Pill.new(label: t("recurring_occurrences.show.amount_left", amount: format_money(Money.new(remaining, entry.currency))), tone: :neutral, marker: false) %>
+    </span>
+  <% end %>
+<% end %>
 
 <% if promoted %>
   <div class="bg-container-inset rounded-lg p-3 space-y-3">
@@ -31,8 +41,9 @@
       <p class="text-sm font-medium text-primary privacy-sensitive shrink-0"><%= amount %></p>
     </div>
 
-    <% if reasons.any? %>
+    <% if reasons.any? || usage_pill.present? %>
       <div class="flex flex-wrap gap-1.5">
+        <%= usage_pill %>
         <% reasons.each do |reason| %>
           <%= render DS::Pill.new(label: reason, tone: :neutral, marker: false) %>
         <% end %>
@@ -44,20 +55,25 @@
           variant: "primary",
           full_width: true,
           href: recurring_occurrence_allocations_path(occurrence, entry_id: entry.id),
-          method: :post
+          method: :post,
+          disabled: used_up
         ) %>
   </div>
 <% else %>
   <%# py-3 rather than py-2 so the row clears 44px on a phone. %>
   <%= button_to recurring_occurrence_allocations_path(occurrence, entry_id: entry.id),
         form_class: "w-full",
-        class: "w-full text-left flex items-center justify-between gap-3 px-3 py-3 rounded-lg hover:bg-container-inset" do %>
+        disabled: used_up,
+        class: "w-full text-left flex items-center justify-between gap-3 px-3 py-3 rounded-lg hover:bg-container-inset disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent" do %>
     <span class="min-w-0">
       <span class="block text-sm text-primary truncate"><%= entry.name %></span>
       <span class="block text-xs text-secondary truncate">
         <%= l(entry.date, format: :short_with_year) %><%= " · #{reasons.join(" · ")}" if reasons.any? %>
       </span>
     </span>
-    <span class="text-sm text-primary privacy-sensitive shrink-0"><%= amount %></span>
+    <span class="flex items-center gap-2 shrink-0">
+      <%= usage_pill %>
+      <span class="text-sm text-primary privacy-sensitive"><%= amount %></span>
+    </span>
   <% end %>
 <% end %>

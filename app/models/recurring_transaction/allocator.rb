@@ -46,6 +46,22 @@ class RecurringTransaction
       Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
     end
 
+    # What guard_entry_capacity! would leave of each entry for another bill,
+    # for many entries in one query. Entries no bill uses yet are omitted.
+    # Pass a narrower allocations scope to count only the bills a viewer can
+    # see; the guard itself always counts every allocation.
+    def self.remaining_by_entry(entries, allocations: RecurringAllocation.all)
+      by_id = entries.index_by(&:id)
+
+      allocations.where(entry_id: by_id.keys).group(:entry_id).pluck(
+        :entry_id,
+        Arel.sql("SUM(COALESCE(source_amount, allocated_amount))"),
+        Arel.sql("BOOL_OR(source_amount IS NULL)")
+      ).to_h do |entry_id, used, unmeasurable|
+        [ entry_id, unmeasurable ? 0 : [ by_id[entry_id].amount.abs - used, 0 ].max ]
+      end
+    end
+
     def initialize(occurrence)
       @occurrence = occurrence
     end

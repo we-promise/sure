@@ -298,6 +298,40 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       "the rest of that charge can still pay another bill; over-allocation is refused when it is written"
   end
 
+  test "a transaction another bill partly uses shows what is left of it" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 25, currency: "USD", name: "Netflix charge",
+      entryable: Transaction.new(merchant: merchants(:netflix))
+    )
+    earlier = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: Date.current - 25, due_on: Date.current - 25, currency: "USD"
+    )
+    RecurringTransaction::Allocator.new(earlier).allocate!(entry: entry, amount: 10)
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "span", text: I18n.t("recurring_occurrences.show.amount_left", amount: "$15.00")
+    assert_select "form[action=?] button:not([disabled])", recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id)
+  end
+
+  test "a transaction other bills use in full is shown but cannot be linked" do
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 10, currency: "USD", name: "Netflix charge",
+      entryable: Transaction.new(merchant: merchants(:netflix))
+    )
+    earlier = @series.recurring_occurrences.create!(
+      family: @family, original_due_on: Date.current - 25, due_on: Date.current - 25, currency: "USD"
+    )
+    RecurringTransaction::Allocator.new(earlier).allocate!(entry: entry, amount: 10)
+
+    get recurring_occurrence_url(@occurrence), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_select "form[action=?] button[disabled]", recurring_occurrence_allocations_path(@occurrence, entry_id: entry.id)
+    assert_select "span", text: I18n.t("recurring_occurrences.show.used_up")
+  end
+
   test "searching looks past the date window" do
     old = accounts(:depository).entries.create!(
       date: @occurrence.due_on - 300, amount: 15.99, currency: "USD",
@@ -532,6 +566,41 @@ class RecurringOccurrencesControllerTest < ActionDispatch::IntegrationTest
       "an entry on an account never shared with the viewer must not render"
     assert_match visible.name, response.body,
       "positive control: the same-shaped entry on a shared account must render"
+  end
+
+  # A transfer into investment is hidden from family_member, who sees only
+  # depository. What it took from a depository charge must not show through.
+  test "usage by a bill the viewer cannot see does not badge the transaction" do
+    visible = @family.recurring_transactions.create!(
+      name: "Gym", account: accounts(:depository), amount: 30, currency: "USD",
+      expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true, dedup_scope: "visible"
+    ).recurring_occurrences.order(:due_on).first
+    hidden = @family.recurring_transactions.create!(
+      name: "To brokerage", account: accounts(:depository), destination_account: accounts(:investment),
+      amount: 20, currency: "USD", expected_day_of_month: Date.current.day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true, dedup_scope: "hidden"
+    ).recurring_occurrences.order(:due_on).first
+
+    entry = accounts(:depository).entries.create!(
+      date: Date.current, amount: 50, currency: "USD", name: "Gym and brokerage", entryable: Transaction.new
+    )
+    RecurringTransaction::Allocator.new(hidden).allocate!(entry: entry, amount: 20)
+    left = I18n.t("recurring_occurrences.show.amount_left", amount: "$30.00")
+
+    get recurring_occurrence_url(visible, q: entry.name), headers: { "Turbo-Frame" => "drawer" }
+    assert_select "span", text: left
+
+    member = users(:family_member)
+    member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in member
+    get recurring_occurrence_url(visible, q: entry.name), headers: { "Turbo-Frame" => "drawer" }
+
+    assert_response :success
+    assert_match entry.name, response.body
+    assert_select "span", text: left, count: 0
   end
 
   # credit_card is shared read-only with family_member in the fixtures; a
