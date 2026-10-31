@@ -689,7 +689,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     chart = spending_trend_chart_data
 
     current = chart.fetch("current")
-    previous = chart.fetch("previous")
+    previous = chart.fetch("comparisons").first.fetch("series")
 
     # Both months are past, so the selected month's curve runs its full
     # length; the previous curve runs its own length unless folded to the
@@ -763,7 +763,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     chart = spending_trend_chart_data
-    previous = chart.fetch("previous")
+    previous = chart.fetch("comparisons").first.fetch("series")
 
     # The January curve is clipped to February's 28-day axis, with day 31's
     # spend folded into the final visible point so it still lands on the
@@ -797,7 +797,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     chart = spending_trend_chart_data
-    previous = chart.fetch("previous")
+    previous = chart.fetch("comparisons").first.fetch("series")
 
     assert_equal 30, chart.fetch("days")
     assert_equal 30, previous.size
@@ -821,8 +821,75 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     # truncated on mobile ("Previous mon…").
     expected_label = I18n.l(previous_month, format: :month_year).capitalize
     assert_select "#spending-trend-section p", text: expected_label
-    chart_element = css_select("[data-controller='spending-chart']").first
-    assert_equal expected_label, chart_element["data-spending-chart-previous-label-value"]
+    assert_equal expected_label, spending_trend_chart_data.fetch("comparisons").first.fetch("label")
+  end
+
+  test "dashboard spending trend compares against the previous month by default" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+
+    assert_response :ok
+    assert_equal 1, spending_trend_chart_data.fetch("comparisons").size
+    assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.compare_months", count: 1)
+  end
+
+  test "dashboard spending trend overlays the last N months on the chart, keeping the header on the previous month" do
+    account, selected_month, previous_month = spending_trend_filter_setup
+    create_transaction(account: account, name: "Selected", amount: 10, date: selected_month)
+    create_transaction(account: account, name: "Previous", amount: 20, date: previous_month)
+    create_transaction(account: account, name: "Two back", amount: 30, date: selected_month - 2.months)
+    create_transaction(account: account, name: "Three back", amount: 40, date: selected_month - 3.months)
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_compare_months: 3 }
+
+    assert_response :ok
+    comparisons = spending_trend_chart_data.fetch("comparisons")
+    # Newest first, each folded onto the selected month's axis.
+    assert_equal (1..3).map { |i| I18n.l(selected_month - i.months, format: :month_year).capitalize }, comparisons.map { |c| c.fetch("label") }
+    assert_equal [ 20.0, 30.0, 40.0 ], comparisons.map { |c| c.fetch("series").last.fetch("value") }
+    comparisons.each { |c| assert_operator c.fetch("series").size, :<=, selected_month.end_of_month.day }
+    assert_equal [ money_text(10), money_text(20) ], spending_trend_header_totals
+    assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.compare_months", count: 3)
+  end
+
+  test "dashboard spending trend falls back to the previous month for invalid compare values" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
+
+    [ "0", "6", "-1", "abc", "2.5" ].each do |value|
+      get root_path, params: { spending_month: selected_month.iso8601, spending_compare_months: value }
+
+      assert_response :ok
+      assert_equal 1, spending_trend_chart_data.fetch("comparisons").size, "for #{value.inspect}"
+    end
+  end
+
+  test "dashboard spending trend keeps the compared months across its month links and category filter" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    create_transaction(account: account, name: "Spend", amount: 10, date: selected_month)
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_compare_months: 3 }
+
+    other_month = selected_month - 1.month
+    assert_select "#spending-trend-section a[href='#{root_path(spending_month: other_month.iso8601, spending_compare_months: 3)}']"
+    assert_select "#spending-trend-section form input[type='hidden'][name='spending_compare_months'][value='3']"
+    # Back to one month drops the param rather than pinning the default.
+    assert_select "#spending-trend-section a[href='#{root_path(spending_month: selected_month.iso8601)}']"
+    assert_select "#spending-trend-section a[href='#{root_path(spending_month: selected_month.iso8601, spending_compare_months: 5)}']"
+  end
+
+  test "dashboard spending trend category filter offers categories from every compared month" do
+    account, selected_month, _previous_month = spending_trend_filter_setup
+    older = @family.categories.create!(name: "Spending Filter Older Month")
+    create_transaction(account: account, name: "Older", amount: 10, date: selected_month - 3.months, category: older)
+
+    get root_path, params: { spending_month: selected_month.iso8601 }
+    assert_not_includes spending_trend_category_values, older.id
+
+    get root_path, params: { spending_month: selected_month.iso8601, spending_compare_months: 3 }
+    assert_includes spending_trend_category_values, older.id
   end
 
   test "dashboard spending trend renders a compact date range for mobile" do
@@ -871,7 +938,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       assert_response :ok
 
       chart = spending_trend_chart_data
-      previous_series = chart.fetch("previous")
+      previous_series = chart.fetch("comparisons").first.fetch("series")
       aligned = previous_series.fetch(Date.current.day - 1).fetch("value")
       full_month = previous_series.last.fetch("value")
       current_value = chart.fetch("current").last.fetch("value")
@@ -917,7 +984,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       get root_path, params: { spending_month: selected_month.iso8601 }
       assert_response :ok
 
-      previous_series = spending_trend_chart_data.fetch("previous")
+      previous_series = spending_trend_chart_data.fetch("comparisons").first.fetch("series")
       _current_total, previous_total = spending_trend_header_totals
 
       assert_equal previous_month.end_of_month.iso8601, previous_series.last.fetch("date")
@@ -940,7 +1007,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path, params: { spending_month: selected_month.iso8601 }
     assert_response :ok
 
-    previous_series = spending_trend_chart_data.fetch("previous")
+    previous_series = spending_trend_chart_data.fetch("comparisons").first.fetch("series")
     _current_total, previous_total = spending_trend_header_totals
 
     # A month that has fully elapsed is still compared whole-to-whole.
@@ -966,7 +1033,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path, params: { spending_month: selected_month.iso8601 }
     assert_response :ok
 
-    previous_series = spending_trend_chart_data.fetch("previous")
+    previous_series = spending_trend_chart_data.fetch("comparisons").first.fetch("series")
     _current_total, previous_total = spending_trend_header_totals
 
     # Both months are over, so both are compared whole - the selected month
@@ -999,7 +1066,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       get root_path, params: { spending_month: selected_month.iso8601 }
       assert_response :ok
 
-      previous_series = spending_trend_chart_data.fetch("previous")
+      previous_series = spending_trend_chart_data.fetch("comparisons").first.fetch("series")
       _current_total, previous_total = spending_trend_header_totals
 
       # There is no day 30 in February: the previous month has fully elapsed, so
@@ -1025,7 +1092,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     chart = spending_trend_chart_data
     assert_equal 30.0, chart.fetch("current").last.fetch("value")
-    assert_equal 20.0, chart.fetch("previous").last.fetch("value")
+    assert_equal 20.0, chart.fetch("comparisons").first.fetch("series").last.fetch("value")
     assert_equal [ money_text(30), money_text(20) ], spending_trend_header_totals
     assert_equal money_text(10), spending_trend_header_delta
     assert_select "#spending-trend-section button", text: I18n.t("pages.dashboard.spending_trend.filter_categories", count: 1)

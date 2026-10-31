@@ -164,6 +164,10 @@ en:
         date_range_short: "%{start_date} - %{end_day}, %{year}"
         date_range_short_single: "%{date}, %{year}"
         month_picker_aria_label: "Select month"
+        compare_picker_aria_label: "Select months to compare"
+        compare_months:
+          one: "vs last month"
+          other: "vs last %{count} months"
         filter_categories: "Filter categories (%{count})"
         filter_categories_all: "All categories"
         search_categories: "Search categories"
