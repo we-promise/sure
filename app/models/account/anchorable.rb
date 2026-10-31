@@ -96,21 +96,23 @@ module Account::Anchorable
     valuations.cash_anchor.minimum("entries.date")
   end
 
-  # A cash-anchored account rebuilds from the given date or from its newest
-  # balance, so earlier history, including any imported before the anchor,
-  # stays as recorded.
+  # A cash-anchored account rebuilds from the given date, or from its first
+  # anchor when none is given: many changes sync without a date, and an earlier
+  # ledger change reaches the anchor through its cash_entry_total. History
+  # before the anchor, including any imported, stays as recorded.
   def materialization_window(window_start_date = nil)
-    return window_start_date unless accounting_start_date
-
-    window_start_date || balances.where(currency: currency).maximum(:date) || accounting_start_date
+    window_start_date || accounting_start_date
   end
 
   # Capture cash and its ledger baseline without reapplying earlier transactions.
+  # Both come from the ledger as it is now, not the cached cash_balance, so a
+  # movement not yet synced or dated after today is neither lost nor doubled.
   # Same-day total valuations yield to this new anchor until explicitly edited.
   def create_cash_anchor!
+    cash = Balance::ForwardCalculator.new(self).calculate.select { |balance| balance.date <= Date.current }.last&.cash_balance || 0
     entry = entries.valuations.find_by(date: Date.current, entryable_id: Valuation.cash_anchor.select(:id)) ||
       entries.new(date: Date.current, entryable: Valuation.new(kind: :cash_anchor))
-    entry.assign_attributes(amount: cash_balance, currency: currency, name: I18n.t("valuations.cash_anchor", locale: family.locale))
+    entry.assign_attributes(amount: cash, currency: currency, name: I18n.t("valuations.cash_anchor", locale: family.locale))
     entry.entryable.cash_entry_total = Balance::SyncCache.new(self).cash_entry_total(Date.current)
     entry.save!
     valuations.where.not(kind: "cash_anchor").joins(:entry).where(entries: { date: Date.current }).update_all(superseded_at: Time.current)

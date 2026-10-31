@@ -6,6 +6,8 @@ class Holding::CurrentForInvestmentAccounts
   # subquery is limited to the requested accounts so its cost follows them,
   # not the whole table. Accounts without provider holdings likewise take each
   # security's latest row in one DISTINCT ON pass, not one lookup per row.
+  # A cash-anchored account carries holdings in their own currency (see
+  # Account#current_holdings), so it takes that latest row in any currency.
   CURRENT_HOLDINGS_SQL = <<~SQL.squish.freeze
     (
       holdings.account_provider_id IS NOT NULL
@@ -22,7 +24,16 @@ class Holding::CurrentForInvestmentAccounts
       INNER JOIN accounts ON accounts.id = latest_holdings.account_id
       WHERE latest_holdings.account_id IN (:account_ids)
         AND accounts.id IN (:account_ids)
-        AND latest_holdings.currency = accounts.currency
+        AND (
+          latest_holdings.currency = accounts.currency
+          OR EXISTS (
+            SELECT 1 FROM entries anchor_entries
+            INNER JOIN valuations anchors ON anchors.id = anchor_entries.entryable_id
+            WHERE anchor_entries.account_id = accounts.id
+              AND anchor_entries.entryable_type = 'Valuation'
+              AND anchors.kind = 'cash_anchor'
+          )
+        )
         AND latest_holdings.account_id NOT IN (
           SELECT provider_holdings.account_id
           FROM holdings provider_holdings

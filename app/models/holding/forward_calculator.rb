@@ -26,7 +26,10 @@ class Holding::ForwardCalculator
       holdings = []
 
       first_date = @window_start_date || account.start_date
-      current_portfolio = apply_trades(current_portfolio, portfolio_cache.get_trades.select { |entry| entry.date < first_date })
+      # Replay the days before the window the same way, splits included, without emitting holdings.
+      account.start_date.upto(first_date - 1) do |date|
+        current_portfolio = apply_trades(apply_splits(current_portfolio, date), portfolio_cache.get_trades(date: date))
+      end
 
       first_date.upto(Date.current).each do |date|
         trades = portfolio_cache.get_trades(date: date)

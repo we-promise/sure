@@ -79,7 +79,7 @@ class Holding::Materializer
           snapshot = holding.snapshot
           account.holdings.create!(security_id: holding.security_id, date: holding.date,
             currency: holding.currency, qty: holding.qty, price: holding.price, amount: holding.amount,
-            cost_basis: snapshot.cost_basis && Money.new(snapshot.cost_basis, snapshot.currency).exchange_to(holding.currency, date: snapshot.date).amount,
+            cost_basis: snapshot.cost_basis,
             cost_basis_source: snapshot.cost_basis_source, cost_basis_locked: snapshot.cost_basis_locked,
             security_locked: snapshot.security_locked, provider_security_id: snapshot.provider_security_id,
             account_provider_id: snapshot.account_provider_id)
