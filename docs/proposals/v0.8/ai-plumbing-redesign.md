@@ -8,7 +8,8 @@ the pull requests that get it there (section 19).
 **Product decisions and technical limits.** The RubyLLM spike (PR 1,
 [`rubyllm-spike-report.md`](rubyllm-spike-report.md)) sorted the plan's choices into product
 decisions, which are Sure's to make, and technical limits, which a server, gem or protocol
-imposes. Its decisions register gives the evidence for and against each product decision. None of
+imposes. Its decisions register gives the evidence for and against each product decision, and lists
+the ones with no evidence yet, this plan's own design choices included. None of
 them is final, and neither is any line of section 20: an "out of scope" line is a product
 decision too. Where the spike found that something the plan presented as a limit is a choice,
 the section says so.
