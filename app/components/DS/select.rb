@@ -47,6 +47,32 @@ module DS
       items.find { |item| !item[:value].nil? && item[:value] == selected_value }
     end
 
+    # An item's optional `short_label` (e.g. "USD" for "United States Dollar
+    # (USD)") replaces its label below the `sm` breakpoint, in the trigger and
+    # in the option list, next to the logo in the :logo variant. Search still
+    # matches the full label. select_controller.js builds the same markup when
+    # an option is picked.
+    def short_label_for(item)
+      item&.dig(:short_label).presence
+    end
+
+    def label_markup(item)
+      short_label = short_label_for(item)
+      return item[:label] unless short_label
+
+      safe_join([
+        tag.span(short_label, class: "sm:hidden"),
+        tag.span(item[:label], class: "hidden sm:inline")
+      ])
+    end
+
+    # `searchable: :compact` keeps the search field and its icon at every
+    # width but drops the placeholder below the `sm` breakpoint, for a menu
+    # too narrow to fit it on a phone.
+    def search_input_classes
+      "[&_input]:placeholder:text-transparent sm:[&_input]:placeholder:text-secondary" if searchable == :compact
+    end
+
     # Returns the color for a given item (used in :badge variant)
     def color_for(item)
       obj = item[:object]
@@ -120,6 +146,7 @@ module DS
             {
               value: item[:value],
               label: item[:label],
+              short_label: item[:short_label],
               object: item[:object]
             }
           else

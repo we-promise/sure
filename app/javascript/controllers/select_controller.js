@@ -129,11 +129,17 @@ export default class extends Controller {
   }
 
   // Mirrors the closed trigger markup in select.html.erb: options of the :logo
-  // variant carry a [data-select-logo] element that is shown next to the label.
+  // variant carry a [data-select-logo] element that is shown next to the label,
+  // and an option's short label replaces the full one below `sm`.
   renderTrigger(selectedElement, label) {
+    const shortLabel = selectedElement.dataset.shortLabel
+    const labelNodes = shortLabel
+      ? [this.labelSpan(shortLabel, "sm:hidden"), this.labelSpan(label, "hidden sm:inline")]
+      : [label]
+
     const logo = selectedElement.querySelector("[data-select-logo]")
     if (!logo) {
-      this.buttonTarget.textContent = label
+      this.buttonTarget.replaceChildren(...labelNodes)
       return
     }
 
@@ -141,7 +147,7 @@ export default class extends Controller {
     wrapper.className = "flex items-center gap-2 min-w-0"
     const text = document.createElement("span")
     text.className = "truncate"
-    text.textContent = label
+    text.append(...labelNodes)
     wrapper.append(logo.cloneNode(true), text)
     this.buttonTarget.replaceChildren(wrapper)
   }
@@ -409,5 +415,12 @@ export default class extends Controller {
       this.menuTarget.style.left = "auto"
       this.menuTarget.style.right = "0"
     }
+  }
+
+  labelSpan(text, className) {
+    const span = document.createElement("span")
+    span.className = className
+    span.textContent = text
+    return span
   }
 }

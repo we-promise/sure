@@ -34,10 +34,12 @@
           <% if trigger_logo? %>
             <span class="flex items-center gap-2 min-w-0">
               <%= logo_markup(selected_item) %>
-              <span class="truncate"><%= selected_item[:label] %></span>
+              <span class="truncate"><%= label_markup(selected_item) %></span>
             </span>
+          <% elsif selected_item&.dig(:label) %>
+            <%= label_markup(selected_item) %>
           <% else %>
-            <%= selected_item&.dig(:label) || @placeholder %>
+            <%= @placeholder %>
           <% end %>
         </button>
     </div>
@@ -48,6 +50,7 @@
         <%= render DS::SearchInput.new(
           variant: :embedded,
           placeholder: t("helpers.select.search_placeholder"),
+          class: search_input_classes,
           data: {
             list_filter_target: "input",
             action: "input->list-filter#filter input->select#syncTabindex"
@@ -71,6 +74,7 @@
               data-select-target="option"
               data-action="click->select#select"
               data-value="<%= item[:value] %>"
+              <%= tag.attributes(data: { short_label: short_label_for(item) }) %>
               data-filter-name="<%= item[:label] %>">
 
           <span class="check-icon <%= "hidden" unless is_selected %>">
@@ -83,11 +87,11 @@
 
           <% case variant %>
           <% when :simple %>
-            <%= item[:label] %>
+            <%= label_markup(item) %>
 
           <% when :logo %>
             <%= logo_markup(item) unless item[:value].nil? %>
-            <%= item[:label] %>
+            <%= label_markup(item) %>
 
           <% when :badge %>
             <% hex_color = color_for(item) %>

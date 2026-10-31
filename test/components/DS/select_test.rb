@@ -110,6 +110,65 @@ class DS::SelectTest < ViewComponent::TestCase
     )
 
     assert_selector "button#parent_id_trigger", text: "Groceries"
+    refute_selector "button#parent_id_trigger span"
+  end
+
+  test "shows a selected item's short label below sm and its full label from sm up" do
+    render_inline DS::Select.new(
+      form: form_builder_for(Category.new, "category"),
+      method: :parent_id,
+      items: [
+        { value: "USD", label: "United States Dollar (USD)", short_label: "USD" },
+        { value: "EUR", label: "Euro (EUR)", short_label: "EUR" }
+      ],
+      selected: "EUR"
+    )
+
+    assert_selector "button#parent_id_trigger span.sm\\:hidden", text: "EUR"
+    assert_selector "button#parent_id_trigger span.hidden.sm\\:inline", text: "Euro (EUR)", visible: :all
+    assert_selector "[role=option][data-value=USD][data-short-label=USD][data-filter-name='United States Dollar (USD)'] span.sm\\:hidden", text: "USD", visible: :all
+    assert_selector "[role=option][data-value=USD] span.hidden.sm\\:inline", text: "United States Dollar (USD)", visible: :all
+  end
+
+  test "the logo variant keeps the logo next to a short label" do
+    render_inline DS::Select.new(
+      form: form_builder_for(Category.new, "category"),
+      method: :parent_id,
+      items: [ { value: "USD", label: "United States Dollar (USD)", short_label: "USD" } ],
+      selected: "USD",
+      variant: :logo
+    )
+
+    assert_selector "button#parent_id_trigger [data-select-logo]"
+    assert_selector "button#parent_id_trigger span.truncate span.sm\\:hidden", text: "USD"
+    assert_selector "button#parent_id_trigger span.truncate span.hidden.sm\\:inline", text: "United States Dollar (USD)", visible: :all
+    assert_selector "[role=option][data-value=USD] [data-select-logo]", visible: :all
+    assert_selector "[role=option][data-value=USD] span.sm\\:hidden", text: "USD", visible: :all
+  end
+
+  test "searchable: :compact keeps the search field and hides its placeholder below sm" do
+    render_inline DS::Select.new(
+      form: form_builder_for(Category.new, "category"),
+      method: :parent_id,
+      items: [ { value: 1, label: "Groceries" } ],
+      searchable: :compact
+    )
+
+    search = page.find("input[data-list-filter-target=input]", visible: :all)
+    assert_equal I18n.t("helpers.select.search_placeholder"), search[:placeholder]
+    assert_selector "div[class~='[&_input]:placeholder:text-transparent'][class~='sm:[&_input]:placeholder:text-secondary'] input[data-list-filter-target=input]", visible: :all
+  end
+
+  test "searchable: true keeps the placeholder at every width" do
+    render_inline DS::Select.new(
+      form: form_builder_for(Category.new, "category"),
+      method: :parent_id,
+      items: [ { value: 1, label: "Groceries" } ],
+      searchable: true
+    )
+
+    assert_selector "input[data-list-filter-target=input]", visible: :all
+    assert_no_selector "div[class*='placeholder:text-transparent']", visible: :all
   end
 
   private

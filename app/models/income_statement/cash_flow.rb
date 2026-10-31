@@ -26,7 +26,7 @@ class IncomeStatement::CashFlow
 
     result = {
       month: @month.iso8601, as_of: @as_of.iso8601, time_zone: @time_zone,
-      currency: @statement.family.currency,
+      currency: @statement.currency,
       period: period_json(current_period), income: decimal(income), spending: decimal(spending),
       net_savings: decimal(income - spending),
       savings_rate: income.positive? ? decimal((income - spending) / income * 100) : nil,

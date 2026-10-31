@@ -1,8 +1,9 @@
 class IncomeStatement::Totals
   include IncomeStatement::ScopedTransactionsQuery
 
-  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil)
+  def initialize(family, transactions_scope:, date_range:, include_trades: true, included_account_ids: nil, currency: nil)
     @family = family
+    @currency = currency
     @transactions_scope = transactions_scope
     @date_range = date_range
     @include_trades = include_trades

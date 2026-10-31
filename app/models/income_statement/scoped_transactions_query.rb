@@ -1,13 +1,14 @@
 # SQL building blocks shared by the IncomeStatement query classes
 # (Totals, DailyExpenseTotals, FamilyStats, CategoryStats). Each class keeps
 # its own SELECT/FROM/GROUP BY, but the scoping fragments - which rows count
-# as reportable transactions and how amounts convert to the family
+# as reportable transactions and how amounts convert to the target
 # currency - live here so every income statement number on the dashboard is
 # computed the same way.
 #
 # Fragments are parameterized by `t`, the alias the calling query gives its
 # transactions table or scope subquery, and assume the entry and account
-# aliases (`ae`, `a`). The including class must set `@family`.
+# aliases (`ae`, `a`). The including class must set `@family`, and may set
+# `@currency` to report in a currency other than the family's.
 module IncomeStatement::ScopedTransactionsQuery
   private
     # Contributions and loan payments are cash outflows whatever their
@@ -20,7 +21,7 @@ module IncomeStatement::ScopedTransactionsQuery
       "CASE WHEN #{t}.kind = 'investment_contribution' THEN '#{contribution}' WHEN #{t}.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
     end
 
-    # Entry amount converted to the family currency at the day's exchange
+    # Entry amount converted to the target currency at the day's exchange
     # rate. Contribution/loan-payment outflows are flipped positive so they
     # add to expense totals.
     def converted_amount_sql(t)
@@ -87,10 +88,14 @@ module IncomeStatement::ScopedTransactionsQuery
     # Bind params every income statement query needs; classes merge their
     # extras (date range, interval, account ids) on top.
     def base_sql_params(extra = {})
-      { target_currency: @family.currency, family_id: @family.id }.merge(extra).tap do |params|
+      { target_currency: target_currency, family_id: @family.id }.merge(extra).tap do |params|
         ids = @family.tax_advantaged_account_ids
         params[:tax_advantaged_account_ids] = ids if ids.present?
       end
+    end
+
+    def target_currency
+      @currency.presence || @family.currency
     end
 
     def validate_date_range!

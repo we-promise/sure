@@ -950,7 +950,106 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?]", settings_api_keys_path, count: 0
   end
 
+  test "index shows every figure in an enabled currency named in the URL" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+    category = create_currency_probe_spending(amount: 100, rate: 0.5)
+
+    get reports_path(period_type: :monthly, currency: "eur")
+    assert_response :ok
+
+    assert_select "form[data-controller=auto-submit-form][aria-label=?] input[type=hidden][name=currency][value=EUR]", I18n.t("reports.index.currency.label")
+    # DS::Select submits the form itself; an auto-submit target would submit it twice
+    assert_select "input[type=hidden][name=currency][data-auto-submit-form-target]", count: 0
+    assert_select "tr[data-category='category-#{category.id}']", text: /€50\.00/
+    assert_select "tr[data-category='category-#{category.id}']", text: /\$100\.00/, count: 0
+
+    prev_start = Date.current.beginning_of_month - 1.month
+    assert_select "a[href=?]", reports_path(period_type: :monthly, start_date: prev_start, end_date: prev_start.end_of_month, currency: "EUR")
+    assert_select "a[href=?]", print_reports_path(period_type: :monthly, start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month, currency: "EUR")
+  end
+
+  # A EUR account holding 5 shares at 150 EUR, bought at 100 EUR: the
+  # position is worth 750 EUR and up 250 EUR. At today's EUR->USD 1.5, the
+  # holding's line reads $375.00 and the account card $15,000.00, not the
+  # EUR figures under a dollar sign or in euros beside dollar totals.
+  test "a foreign holding's return and its account card are shown in the report currency" do
+    date = Date.current.beginning_of_month
+    account = @family.accounts.create!(name: "Brokerage EUR", balance: 10_000,
+                                       currency: "EUR", accountable: Investment.new)
+    security = Security.create!(ticker: "EUH#{SecureRandom.hex(3)}", name: "Euro Held")
+    [ date, Date.current ].uniq.each do |rate_date|
+      ExchangeRate.find_or_initialize_by(from_currency: "EUR", to_currency: "USD", date: rate_date).update!(rate: 1.5)
+    end
+    account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                             amount: BigDecimal(750), currency: "EUR", cost_basis: 100)
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "a[href=?]", account_path(account), text: /\$15,000\.00/
+
+    line = css_select("[data-testid='unrealized-gain-line']").map(&:text).find { |text| text.include?(security.ticker) }
+    assert line, "the holding must be listed at all, or this proves nothing"
+    assert_match "$375.00", line
+  end
+
+  test "index falls back to the family currency for a currency that is not enabled or not real" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+    category = create_currency_probe_spending(amount: 100, rate: 0.5)
+
+    [ "JPY", "NOPE" ].each do |currency|
+      get reports_path(period_type: :monthly, currency: currency)
+      assert_response :ok
+
+      assert_select "input[type=hidden][name=currency][value=USD]"
+      assert_select "tr[data-category='category-#{category.id}']", text: /\$100\.00/
+      prev_start = Date.current.beginning_of_month - 1.month
+      assert_select "a[href=?]", reports_path(period_type: :monthly, start_date: prev_start, end_date: prev_start.end_of_month)
+    end
+  end
+
+  test "index hides the currency picker when the family has only its own currency enabled" do
+    @family.update!(enabled_currencies: [ @family.currency ])
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "input[type=hidden][name=currency]", count: 0
+  end
+
+  test "index offers no other currency to a family that never chose its enabled currencies" do
+    @family.update!(enabled_currencies: nil)
+    category = create_currency_probe_spending(amount: 100, rate: 0.5)
+
+    get reports_path(period_type: :monthly, currency: "EUR")
+    assert_response :ok
+
+    assert_select "input[type=hidden][name=currency]", count: 0
+    assert_select "tr[data-category='category-#{category.id}']", text: /\$100\.00/
+  end
+
+  test "export transactions uses the currency named in the URL" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+    category = create_currency_probe_spending(amount: 100, rate: 0.5)
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly, currency: "EUR")
+    assert_response :ok
+
+    row = CSV.parse(@response.body).find { |r| r.first == category.name }
+    assert_equal "€50.00", row.last
+  end
+
   private
+    # Spending in a category of its own, in USD today, with today's USD->EUR
+    # rate, so its line in the breakdown shows which currency the page is in.
+    def create_currency_probe_spending(amount:, rate:)
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: rate)
+      account = @family.accounts.create!(name: "Currency Probe Checking", balance: 0, currency: "USD", accountable: Depository.new)
+      category = @family.categories.create!(name: "Currency Probe #{SecureRandom.hex(3)}", color: "#ABCDEF")
+      create_transaction(account: account, name: "Probe", amount: amount, currency: "USD", category: category, date: Date.current)
+      category
+    end
+
     # Takes every fixture investment account out of the card's scope, so an
     # account the test creates is the family's only one; otherwise the
     # fixtures satisfy the visible-accounts gate on their own.

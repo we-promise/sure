@@ -201,6 +201,32 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 4, totals.transactions_count
   end
 
+  test "reports in a requested currency, converting each entry at its own date's rate" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+    # Already in the requested currency, so it is counted as it is.
+    create_transaction(account: @checking_account, amount: 80, currency: "EUR", category: @food_category)
+
+    statement = IncomeStatement.new(@family, currency: "EUR")
+    totals = statement.totals(date_range: Period.last_30_days.date_range)
+
+    assert_equal "EUR", statement.currency
+    assert_equal Money.new(500, "EUR"), totals.income_money
+    assert_equal Money.new(450 + 80, "EUR"), totals.expense_money
+
+    expense_totals = statement.expense_totals(period: Period.last_30_days)
+    assert_equal "EUR", expense_totals.currency
+    assert_equal 450 + 80, expense_totals.total
+  end
+
+  test "keeps the totals of different report currencies apart in the cache" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+    period = Period.last_30_days
+
+    assert_equal 900, IncomeStatement.new(@family).expense_totals(period: period).total
+    assert_equal 450, IncomeStatement.new(@family, currency: "EUR").expense_totals(period: period).total
+  end
+
   test "calculates expenses for a period" do
     income_statement = IncomeStatement.new(@family)
     expense_totals = income_statement.expense_totals(period: Period.last_30_days)

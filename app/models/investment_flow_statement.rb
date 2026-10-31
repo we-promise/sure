@@ -1,22 +1,27 @@
 class InvestmentFlowStatement
   include Monetizable
 
+  # Each entry converts at its own date's rate, falling back to 1:1 when the
+  # rate is missing, as the income statement does.
   CONTRIBUTIONS_TOTAL_SQL = Arel.sql(
     "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Contribution' " \
-    "THEN entries.amount ELSE 0 END)), 0)"
+    "THEN entries.amount * COALESCE(er.rate, 1) ELSE 0 END)), 0)"
   )
   WITHDRAWALS_TOTAL_SQL = Arel.sql(
     "COALESCE(ABS(SUM(CASE WHEN transactions.investment_activity_label = 'Withdrawal' " \
-    "THEN entries.amount ELSE 0 END)), 0)"
+    "THEN entries.amount * COALESCE(er.rate, 1) ELSE 0 END)), 0)"
   )
   INVESTMENT_ACCOUNT_TYPES = %w[Investment Crypto].freeze
   private_constant :CONTRIBUTIONS_TOTAL_SQL, :WITHDRAWALS_TOTAL_SQL, :INVESTMENT_ACCOUNT_TYPES
 
-  attr_reader :family, :user
+  attr_reader :family, :user, :currency
 
-  def initialize(family, user: nil)
+  # `currency:` is the currency totals are converted to; it defaults to the
+  # family's.
+  def initialize(family, user: nil, currency: nil)
     @family = family
     @user = user
+    @currency = currency.presence || family.currency
   end
 
   # Get contribution/withdrawal totals for a period
@@ -35,21 +40,28 @@ class InvestmentFlowStatement
       scope = scope.where(entries: { account_id: account_ids })
     end
 
-    contributions, withdrawals = scope.pick(
+    contributions, withdrawals = scope.joins(exchange_rates_join_sql).pick(
       CONTRIBUTIONS_TOTAL_SQL,
       WITHDRAWALS_TOTAL_SQL
     )
 
     PeriodTotals.new(
-      contributions: Money.new(contributions, family.currency),
-      withdrawals: Money.new(withdrawals, family.currency),
-      net_flow: Money.new(contributions - withdrawals, family.currency)
+      contributions: Money.new(contributions, currency),
+      withdrawals: Money.new(withdrawals, currency),
+      net_flow: Money.new(contributions - withdrawals, currency)
     )
   end
 
   PeriodTotals = Data.define(:contributions, :withdrawals, :net_flow)
 
   private
+    def exchange_rates_join_sql
+      ActiveRecord::Base.sanitize_sql_array([
+        "LEFT JOIN exchange_rates er ON er.date = entries.date AND er.from_currency = entries.currency AND er.to_currency = ?",
+        currency
+      ])
+    end
+
     # Matching a provider "Contribution" or "Withdrawal" on an investment/crypto
     # account to its cash counterpart turns that leg into funds_movement
     # (Transfer#kind_for_leg), so the kind filter above would drop it. Count it

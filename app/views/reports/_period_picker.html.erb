@@ -8,7 +8,7 @@
         <%= render DS::Link.new(
           variant: "icon",
           icon: "chevron-left",
-          href: picker_reports_path(period_type: :monthly, start_date: start_date.beginning_of_year - 1.year),
+          href: picker_reports_path(period_type: :monthly, start_date: start_date.beginning_of_year - 1.year, **report_currency_params),
           aria: { label: t("reports.index.previous_year") },
           frame: "reports_picker"
         ) %>
@@ -22,7 +22,7 @@
           <%= render DS::Link.new(
             variant: "icon",
             icon: "chevron-right",
-            href: picker_reports_path(period_type: :monthly, start_date: next_year_start),
+            href: picker_reports_path(period_type: :monthly, start_date: next_year_start, **report_currency_params),
             aria: { label: t("reports.index.next_year") },
             frame: "reports_picker"
           ) %>
@@ -41,7 +41,7 @@
             <%= render DS::Link.new(
               variant: date.month == start_date.month ? "secondary" : "ghost",
               text: month_name,
-              href: reports_path(period_type: :monthly, start_date: date, end_date: date.end_of_month),
+              href: reports_path(period_type: :monthly, start_date: date, end_date: date.end_of_month, **report_currency_params),
               full_width: true,
               frame: :_top
             ) %>
@@ -56,7 +56,7 @@
         <%= render DS::Link.new(
           variant: "icon",
           icon: "chevron-left",
-          href: picker_reports_path(period_type: :quarterly, start_date: Date.new(start_date.year - 1, 1, 1)),
+          href: picker_reports_path(period_type: :quarterly, start_date: Date.new(start_date.year - 1, 1, 1), **report_currency_params),
           aria: { label: t("reports.index.previous_year") },
           frame: "reports_picker"
         ) %>
@@ -70,7 +70,7 @@
           <%= render DS::Link.new(
             variant: "icon",
             icon: "chevron-right",
-            href: picker_reports_path(period_type: :quarterly, start_date: next_year_start),
+            href: picker_reports_path(period_type: :quarterly, start_date: next_year_start, **report_currency_params),
             aria: { label: t("reports.index.next_year") },
             frame: "reports_picker"
           ) %>
@@ -89,7 +89,7 @@
             <%= render DS::Link.new(
               variant: quarter_start.quarter == start_date.quarter && start_date.year == quarter_start.year ? "secondary" : "ghost",
               text: t("reports.index.period_picker.quarter", quarter: q, year: start_date.year),
-              href: reports_path(period_type: :quarterly, start_date: quarter_start, end_date: quarter_end),
+              href: reports_path(period_type: :quarterly, start_date: quarter_start, end_date: quarter_end, **report_currency_params),
               full_width: true,
               frame: :_top
             ) %>
@@ -107,7 +107,7 @@
         <%= render DS::Link.new(
           variant: "icon",
           icon: "chevron-left",
-          href: picker_reports_path(period_type: :ytd, start_date: Date.new(decade_start - 1, 1, 1)),
+          href: picker_reports_path(period_type: :ytd, start_date: Date.new(decade_start - 1, 1, 1), **report_currency_params),
           aria: { label: t("reports.index.previous_decade") },
           frame: "reports_picker"
         ) %>
@@ -120,7 +120,7 @@
           <%= render DS::Link.new(
             variant: "icon",
             icon: "chevron-right",
-            href: picker_reports_path(period_type: :ytd, start_date: Date.new(decade_start + 10, 1, 1)),
+            href: picker_reports_path(period_type: :ytd, start_date: Date.new(decade_start + 10, 1, 1), **report_currency_params),
             aria: { label: t("reports.index.next_decade") },
             frame: "reports_picker"
           ) %>
@@ -139,7 +139,7 @@
           <%= render DS::Link.new(
             variant: year == start_date.year ? "secondary" : "ghost",
             text: year == Date.current.year ? t("reports.index.period_picker.ytd", year: year) : year.to_s,
-            href: reports_path(period_type: :ytd, start_date: year_start, end_date: year_end),
+            href: reports_path(period_type: :ytd, start_date: year_start, end_date: year_end, **report_currency_params),
             full_width: true,
             frame: :_top
           ) %>

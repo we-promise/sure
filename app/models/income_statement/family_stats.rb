@@ -1,8 +1,9 @@
 class IncomeStatement::FamilyStats
   include IncomeStatement::ScopedTransactionsQuery
 
-  def initialize(family, interval: "month", account_ids: nil)
+  def initialize(family, interval: "month", account_ids: nil, currency: nil)
     @family = family
+    @currency = currency
     @interval = interval
     @account_ids = account_ids
   end
