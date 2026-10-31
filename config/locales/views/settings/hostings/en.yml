@@ -33,6 +33,7 @@ en:
         invites: Invite Codes
         title: Self-Hosting
         danger_zone: Danger Zone
+        instance_settings_restricted: Provider credentials, the shared AI connection and sync settings apply to every family on this instance, so only a super admin can change them. Which assistant your family uses is still set per family. Someone with access to the server can promote a user to super admin; the Docker self-hosting guide shows the command in its upgrade notes.
         clear_cache: Clear data cache
         clear_cache_warning: Clearing the data cache will remove all exchange rates, security prices, account balances, and other data. This will not delete accounts, transactions, categories, or other user-owned data.
         confirm_clear_cache:
@@ -188,10 +189,12 @@ en:
         access_token_placeholder: Enter your access token here
         uri_base_label: API Base URL (Optional)
         uri_base_placeholder: "https://api.openai.com/v1 (default)"
+        uri_base_local_help: "For a model on your own machine, enter its OpenAI-compatible endpoint, for example Ollama at http://localhost:11434/v1, or http://ollama:11434/v1 when Sure and Ollama run as Docker Compose services."
         model_label: Model (Optional)
         model_placeholder: "gpt-4.1 (default)"
         model_function_calling_help: "The AI assistant reads your data through function calls, so pick a model your provider documents as supporting tools/function calling. Models without it fail chat with an opaque provider error."
         model_function_calling_link: Check the configured model
+        model_required_help: "Required when you set an API base URL: enter the model name your server uses, such as llama3.1 for Ollama."
         json_mode_label: JSON Mode
         json_mode_auto: Auto (recommended)
         json_mode_strict: Strict (best for thinking models)
@@ -343,6 +346,10 @@ en:
         auto_sync_description: When enabled, all accounts will be automatically synced daily at the specified time.
         auto_sync_time_label: Sync time (HH:MM)
         auto_sync_time_description: Specify the time of day when automatic sync should occur.
+        market_data_sync_label: Enable daily market data import
+        market_data_sync_description: When enabled, security prices are imported automatically once a day (Monday-Friday) at the specified time.
+        market_data_sync_time_label: Market data import time (HH:MM)
+        market_data_sync_time_description: Specify the time of day when the daily security price import should run — e.g. shortly after your primary exchange closes.
         include_pending_label: Include pending transactions
         include_pending_description: When enabled, pending (uncleared) transactions will be imported and automatically reconciled when they post. Disable if your bank provides unreliable pending data.
         env_configured_message: This setting is disabled because a provider environment variable (SIMPLEFIN_INCLUDE_PENDING or PLAID_INCLUDE_PENDING) is set. Remove it to enable this setting.

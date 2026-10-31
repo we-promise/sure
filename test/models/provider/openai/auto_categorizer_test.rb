@@ -161,6 +161,27 @@ class Provider::Openai::AutoCategorizerTest < ActiveSupport::TestCase
     assert_nil call_params.second[:response_format]
   end
 
+  test "categorization records OpenRouter cost for an unknown model" do
+    client = OpenAI::Client.new(access_token: "test-token", uri_base: "https://openrouter.ai/api/v1")
+    usage = { "prompt_tokens" => 50, "completion_tokens" => 25, "total_tokens" => 75, "cost" => 0.004321 }
+    client.expects(:chat).returns(chat_response('{"categorizations":[{"transaction_id":"1","category_name":"Food"}]}').merge("usage" => usage))
+    family = families(:dylan_family)
+    subject = Provider::Openai::AutoCategorizer.new(
+      client, model: "deepseek/example-model", transactions: @transactions, user_categories: @user_categories,
+      custom_provider: true, family: family, json_mode: "none"
+    )
+
+    assert_difference -> { family.llm_usages.count }, 1 do
+      assert_equal "Food", subject.auto_categorize.first.category_name
+    end
+
+    recorded = family.llm_usages.order(:created_at).last
+    assert_equal BigDecimal("0.004321"), recorded.estimated_cost
+    assert_equal [ 50, 25, 75 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
+    assert_equal "auto_categorize", recorded.operation
+    assert_equal 1, recorded.metadata["transaction_count"]
+  end
+
   private
 
     def categorizer(json_mode:)

@@ -161,6 +161,17 @@ class User < ApplicationRecord
     super_admin? || role == "admin"
   end
 
+  # Setting values are shared by every family on the instance, so changing them
+  # is a super admin's job: a family admin is anyone who signed up. A
+  # self-hosted instance with a single family has no other tenant to protect,
+  # and installs that predate the super_admin role may not have one, so that
+  # family's admins keep access there.
+  def manages_instance_settings?
+    return true if super_admin?
+
+    admin? && Rails.application.config.app_mode.self_hosted? && Family.count == 1
+  end
+
   def accessible_accounts
     family.accounts.accessible_by(self)
   end
@@ -794,6 +805,13 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
+  end
+
+  # The experimental Sankey comparison chart (and its feedback prompt) is
+  # opt-in on top of preview features, so a user can keep preview features
+  # enabled without a second chart rendering underneath the cash flow widget.
+  def cashflow_preview_enabled?
+    preferences&.dig("cashflow_preview_enabled") == true
   end
 
   private

@@ -35,7 +35,7 @@ class FamilyMerchantsController < ApplicationController
     @enhanceable_count = @all_provider_merchants.where(website_url: [ nil, "" ]).count
     @llm_available = Provider::Registry.get_provider(:openai).present?
 
-    @pagy_family_merchants, @family_merchants = pagy(family_scope, page_param: :family_page, limit: safe_per_page)
+    @pagy_family_merchants, @family_merchants = pagy(family_scope.with_attached_logo, page_param: :family_page, limit: safe_per_page)
     @pagy_provider_merchants, @provider_merchants = pagy(provider_scope, page_param: :provider_page, limit: safe_per_page)
 
     render layout: "settings"
@@ -127,7 +127,7 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def merge
-    @merchants = all_family_merchants
+    @merchants = all_family_merchants.with_attached_logo
   end
 
   def perform_merge
@@ -205,7 +205,7 @@ class FamilyMerchantsController < ApplicationController
     def merchant_params
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color, :website_url)
+      params.require(key).permit(:name, :color, :website_url, :logo, :remove_logo)
     end
 
     def merchant_json(merchant)

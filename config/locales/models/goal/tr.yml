@@ -23,7 +23,7 @@ tr:
               locked_after_linked: Hedef hesaplara bağlandıktan sonra para birimi
                 değiştirilemez.
             linked_accounts:
-              must_be_fundable: Bağlı tüm hesaplar nakit veya yatırım hesabı olmalıdır.
+              must_be_fundable: Bağlı tüm hesaplar nakit, yatırım veya kripto hesabı olmalıdır.
               must_belong_to_family: Bağlı hesaplar, hedefle aynı aileye ait olmalıdır.
             target_mode:
               months_requires_maintained: Yalnızca sürdürdüğünüz bir rezervin hedefi aylık gider cinsinden belirlenebilir.
