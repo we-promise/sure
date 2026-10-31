@@ -1,0 +1,11 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        transaction:
+          attributes:
+            attachments:
+              too_many: "tidak boleh melebihi %{max} file per transaksi"
+              too_large: "file %{index} terlalu besar (maksimum %{max_mb}MB)"
+              invalid_format: "file %{index} memiliki format yang tidak didukung (%{file_format})"

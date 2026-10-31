@@ -1,0 +1,32 @@
+---
+id:
+  auto_matches:
+    title: Pencocokan Otomatis
+    settings:
+      enable_label: Aktifkan Pencocokan Otomatis
+      enable_description: Deteksi dan sarankan pencocokan transfer antarrekening secara otomatis pada setiap sinkronisasi. Saran tidak akan diterapkan sampai Anda mengonfirmasinya di bawah.
+      admin_only: Hanya admin yang dapat mengubah pengaturan ini.
+    update_settings:
+      settings_updated: Pengaturan pencocokan otomatis berhasil diperbarui
+    bulk_update:
+      invalid_selection: Pilih setidaknya satu saran untuk dikonfirmasi atau ditolak
+      bulk_confirmed:
+        one: Mengonfirmasi 1 transfer
+        other: Mengonfirmasi %{count} transfer
+      bulk_rejected:
+        one: Menolak 1 transfer
+        other: Menolak %{count} transfer
+    empty:
+      title: Tidak ada saran pencocokan otomatis yang tertunda
+      description: Saat sinkronisasi mendeteksi kemungkinan transfer antara dua rekening Anda, saran akan muncul di sini untuk ditinjau.
+    table:
+      from: Dari
+      to: Ke
+      date: Tanggal
+      actions: Tindakan
+      separator: "·"
+    bulk_actions:
+      selected_label: dipilih
+      confirm_selected: Konfirmasi yang dipilih
+      reject_selected: Tolak yang dipilih
+      select_all: Pilih semua
