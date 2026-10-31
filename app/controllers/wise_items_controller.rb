@@ -164,7 +164,7 @@ class WiseItemsController < ApplicationController
       provider: wise_account
     )
 
-    @wise_item.sync_later unless @wise_item.syncing?
+    @wise_item.sync_linked_account_later(wise_account)
 
     redirect_to accounts_path, notice: t(".success")
   rescue => e
@@ -197,7 +197,7 @@ class WiseItemsController < ApplicationController
 
     account = Account.create_from_wise_account(wise_account)
     AccountProvider.create!(account: account, provider: wise_account)
-    wise_account.wise_item.sync_later unless wise_account.wise_item.syncing?
+    wise_account.wise_item.sync_linked_account_later(wise_account)
 
     redirect_to safe_return_to_path || accounts_path, notice: t("wise_items.link_accounts.success")
   rescue => e
@@ -214,7 +214,9 @@ class WiseItemsController < ApplicationController
       redirect_to accounts_path, alert: t("wise_items.select_existing_account.not_found") and return
     end
 
-    @available_accounts = @wise_item.wise_accounts.unlinked
+    # Only a balance in the account's currency can be linked to it
+    # (#existing_account_link_refusal).
+    @available_accounts = @wise_item.wise_accounts.unlinked.where(currency: @account.currency)
 
     render layout: false
   end
@@ -227,8 +229,12 @@ class WiseItemsController < ApplicationController
       redirect_to accounts_path, alert: t("wise_items.link_existing_account.not_found") and return
     end
 
+    if (refusal = existing_account_link_refusal(account, wise_account))
+      redirect_to safe_return_to_path || accounts_path, alert: refusal and return
+    end
+
     AccountProvider.create!(account: account, provider: wise_account)
-    wise_account.wise_item.sync_later unless wise_account.wise_item.syncing?
+    wise_account.wise_item.sync_linked_account_later(wise_account)
 
     redirect_to safe_return_to_path || accounts_path, notice: t("wise_items.link_existing_account.success", account_name: account.name)
   rescue => e
@@ -269,6 +275,20 @@ class WiseItemsController < ApplicationController
       WiseAccount.joins(:wise_item)
                  .merge(Current.family.wise_items.active)
                  .find_by(id: wise_account_id)
+    end
+
+    # A Wise balance is cash in one currency, and every sync writes its balance
+    # and currency onto the linked account, so only an unlinked cash account in
+    # that currency can take it.
+    def existing_account_link_refusal(account, wise_account)
+      if account.linked?
+        t("wise_items.link_existing_account.account_already_linked")
+      elsif Provider::WiseAdapter.supported_account_types.exclude?(account.accountable_type)
+        t("wise_items.link_existing_account.unsupported_account_type")
+      elsif account.currency != wise_account.currency
+        t("wise_items.link_existing_account.currency_mismatch",
+          account_currency: account.currency, balance_currency: wise_account.currency)
+      end
     end
 
     def profile_display_name(profile)

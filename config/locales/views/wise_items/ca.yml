@@ -15,7 +15,7 @@ ca:
       sync_start_date_label: Importa transaccions des de
       sync_start_date_help: Els extractes de Wise s'importen a partir d'aquesta data. Deixa el valor per defecte per obtenir fins a un any d'historial.
       import_all_history_label: Importa tot l'historial de transaccions
-      import_all_history_help: Obté tots els extractes històrics de Wise en lloc de només el darrer any.
+      import_all_history_help: Importa tot l'historial de Wise (transferències, activitats i extractes) en lloc de només el darrer any. Cada saldo comença llavors a 0 el dia que Wise el va obrir.
       connect: Connecta Wise
       update_connection: Actualitza la connexió
       setup_accounts: Configura comptes
@@ -43,6 +43,7 @@ ca:
     entries:
       default_name: Transacció Wise
       fee_name: Comissió de Wise
+      refund_name: Reemborsament de Wise
     activities:
       jar_deposit: Transferència a la guardiola
       jar_withdrawal: Transferència des de la guardiola
@@ -90,6 +91,9 @@ ca:
       account_sync_failed:
         one: No s'ha pogut programar la sincronització de %{count} compte Wise.
         other: No s'ha pogut programar la sincronització de %{count} comptes Wise.
+      fetch_failed:
+        one: "%{count} sol·licitud a Wise ha fallat. La propera sincronització la tornarà a provar."
+        other: "%{count} sol·licituds a Wise han fallat. La propera sincronització les tornarà a provar."
     provider_connection:
       default_name: Wise
       default_description: Connecta el teu compte multidivisa de Wise
@@ -151,6 +155,9 @@ ca:
       failed: No s'ha pogut enllaçar el saldo de Wise. Torna-ho a provar.
     link_existing_account:
       not_found: No s'ha trobat el compte o el saldo de Wise.
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor.
+      unsupported_account_type: Els saldos de Wise només es poden enllaçar a comptes d'efectiu.
+      currency_mismatch: "Aquest saldo de Wise és en %{balance_currency}, però el compte és en %{account_currency}. Tria un saldo en la moneda del compte."
       success: S'ha enllaçat correctament %{account_name} amb Wise
       failed: No s'ha pogut enllaçar el compte. Torna-ho a provar.
     complete_account_setup:

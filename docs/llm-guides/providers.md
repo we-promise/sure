@@ -216,3 +216,45 @@ putting the token in the **URL path**, so neither [the client](../../app/models/
 nor the importer may put a resolved URL into an exception message, a log line or debug
 metadata; requests are labelled with a static operation name instead. Fio reports no
 pending state, so it is deliberately absent from `Transaction::PENDING_PROVIDERS`.
+
+## Wise payloads and clean-up
+
+Each Wise balance stores the rows it books in `raw_transactions_payload`, and Sure
+re-routes them on every sync. Keep these rules when changing the importer, the row
+processors or the payload keys:
+
+- A Wise amount reaches an entry a person categorized, noted or excluded, unless they
+  changed its amount or currency themselves (a lock), an import owns it, or it is
+  reconciled, split or in a transfer ([`WiseItem::AmountCorrection`](../../app/models/wise_item/amount_correction.rb)).
+- [`WiseItem::Importer`](../../app/models/wise_item/importer.rb) fetches each source
+  from where its coverage ends (`sync_metadata["coverage"]`, raised by
+  `WiseItem::COVERAGE_VERSION`), and the whole history while none is recorded.
+  `import[:complete]` is true only when every source arrived in full, and coverage
+  moves on only when the rows reached every payload. A statement 403 is a refusal, not
+  a failure.
+- Rows carry Sure-owned keys: a transfer's `wise_activity` and `wise_refund_activity`,
+  which a re-fetched copy keeps unless it brings its own (`STICKY_ROW_KEYS`), and
+  `wise_missing_count` while Wise no longer finds the transfer by id.
+- [`WiseItem::BalanceReplay`](../../app/models/wise_item/balance_replay.rb) writes
+  `wise_funding` and `wise_split_parts`/`wise_split_estimated` only for a full-history
+  import whose balances reconcile to Wise's live amounts, and a split payment's parts
+  only when every balance it lists reconciled and a rate bounds each part.
+- [`WiseAccount::Transactions::Processor`](../../app/models/wise_account/transactions/processor.rb)
+  deletes the Wise entries no stored row books only after a complete import, where
+  coverage reaches, from the payload's earliest row on, for entries booked since the
+  balance was linked, never for an entry a person acted on, and at most max(5, 10 %)
+  of the account's Wise entries per sync. Balance markers in `raw_payload`
+  (`WiseAccount::PRESERVED_KEYS`) survive a new snapshot and are merged into the stored
+  one.
+- [`WiseItem::StatementMigration`](../../app/models/wise_item/statement_migration.rb)
+  hands a balance's transfer and activity rows over to the statement rows that carry
+  them (`wise_superseded_by`, `wise_supersedes`), renaming their entries, and keeps
+  each statement row's id (`wise_statement_id`) once given. A sync that re-fetched the
+  whole history may delete beyond the cap the entries whose rows it moved out of the
+  balance's payload or left booking nothing on it (`prune_cap_bypass`).
+- A jar move and interest stay on the balance they were first routed to
+  (`wise_jar_balance_id`), and a row processor books nothing a payload holds for
+  another balance.
+- [`WiseItem::InterbalanceLinker`](../../app/models/wise_item/interbalance_linker.rb)
+  links each conversion, jar move and send to the profile's own account details as a
+  confirmed transfer; removing such a link from the transfer drawer rejects it.
