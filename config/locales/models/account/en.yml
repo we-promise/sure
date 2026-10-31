@@ -7,6 +7,9 @@ en:
     balance_desc:
       label: Balance (High to Low)
       label_short: Balance ↓
+    manual:
+      label: Manual (drag to reorder)
+      label_short: Manual
     name_asc:
       label: Name (A-Z)
       label_short: Name ↑

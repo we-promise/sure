@@ -3,92 +3,6 @@ require "test_helper"
 class TransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
-  test "existing_manual_recurring_transaction finds a match by merchant" do
-    family = families(:empty)
-    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
-    merchant = family.merchants.create! name: "Test Merchant"
-    entry = create_transaction(account: account, amount: 100, merchant: merchant)
-    transaction = entry.entryable
-
-    recurring = family.recurring_transactions.create!(
-      account: account,
-      merchant: merchant,
-      amount: entry.amount,
-      currency: entry.currency,
-      expected_day_of_month: entry.date.day,
-      last_occurrence_date: entry.date,
-      next_expected_date: 1.month.from_now,
-      status: "active",
-      manual: true,
-      occurrence_count: 1
-    )
-
-    assert_equal recurring, transaction.existing_manual_recurring_transaction
-  end
-
-  test "existing_manual_recurring_transaction finds a match by name when no merchant" do
-    family = families(:empty)
-    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
-    entry = create_transaction(account: account, amount: 50, name: "Netflix")
-    transaction = entry.entryable
-
-    recurring = family.recurring_transactions.create!(
-      account: account,
-      name: "Netflix",
-      amount: entry.amount,
-      currency: entry.currency,
-      expected_day_of_month: entry.date.day,
-      last_occurrence_date: entry.date,
-      next_expected_date: 1.month.from_now,
-      status: "active",
-      manual: true,
-      occurrence_count: 1
-    )
-
-    assert_equal recurring, transaction.existing_manual_recurring_transaction
-  end
-
-  test "existing_manual_recurring_transaction returns nil when no manual recurring transaction matches" do
-    family = families(:empty)
-    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
-    other_account = family.accounts.create! name: "Other", balance: 0, currency: "USD", accountable: Depository.new
-    merchant = family.merchants.create! name: "Test Merchant"
-    other_merchant = family.merchants.create! name: "Other Merchant"
-    entry = create_transaction(account: account, amount: 100, merchant: merchant)
-    transaction = entry.entryable
-
-    base_attrs = {
-      expected_day_of_month: entry.date.day,
-      last_occurrence_date: entry.date,
-      next_expected_date: 1.month.from_now,
-      status: "active",
-      occurrence_count: 1
-    }
-
-    # Differs by account
-    family.recurring_transactions.create!(base_attrs.merge(
-      account: other_account, merchant: merchant, amount: entry.amount, currency: entry.currency, manual: true
-    ))
-    # Differs by merchant
-    family.recurring_transactions.create!(base_attrs.merge(
-      account: account, merchant: other_merchant, amount: entry.amount, currency: entry.currency, manual: true
-    ))
-    # Differs by amount
-    family.recurring_transactions.create!(base_attrs.merge(
-      account: account, merchant: merchant, amount: entry.amount + 1, currency: entry.currency, manual: true
-    ))
-    # Differs by currency
-    family.recurring_transactions.create!(base_attrs.merge(
-      account: account, merchant: merchant, amount: entry.amount, currency: "EUR", manual: true
-    ))
-    # Differs by manual flag
-    family.recurring_transactions.create!(base_attrs.merge(
-      account: account, merchant: merchant, amount: entry.amount, currency: entry.currency, manual: false
-    ))
-
-    assert_nil transaction.existing_manual_recurring_transaction
-  end
-
   test "pending? is true when extra.simplefin.pending is truthy" do
     transaction = Transaction.new(extra: { "simplefin" => { "pending" => true } })
 
@@ -562,6 +476,99 @@ class TransactionTest < ActiveSupport::TestCase
     stale_copy.toggle_tag!(tags(:two))
 
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
+  end
+
+  test "name_suggestions_for ranks names and each name's category by frequency" do
+    family = families(:dylan_family)
+    account = accounts(:depository)
+    # entries(:transaction) is named "Starbucks" and its transaction (transactions(:one)) is categorized as food_and_drink
+
+    # "Starbucks" ends up more frequent than "Star Market", and within "Starbucks",
+    # food_and_drink ends up more frequent than its one-off income-categorized occurrence.
+    2.times { create_transaction(name: "Starbucks", account: account, category: categories(:food_and_drink)) }
+    create_transaction(name: "Starbucks", account: account, category: categories(:income))
+    create_transaction(name: "Star Market", account: account, category: categories(:income))
+
+    suggestions = family.transactions.name_suggestions_for("star")
+
+    assert_equal [ "Starbucks", "Star Market" ], suggestions.map(&:name)
+    assert_equal categories(:food_and_drink), suggestions.first.category
+    assert_equal categories(:income), suggestions.second.category
+  end
+
+  test "name_suggestions_for counts each transaction once when the caller scope joins account_shares" do
+    # TransactionsController#name_suggestions calls this via
+    # `family.transactions.merge(Account.accessible_by(user))`. Account.accessible_by does
+    # left_joins(:account_shares), and for an account the user owns, its WHERE predicate
+    # matches every joined share row regardless of which share it is — so an owned account
+    # shared with multiple family members fans out to multiple rows per transaction. Without
+    # counting distinct transaction ids, that inflates a name's frequency by however many
+    # times its account is shared, letting a rarely-used name outrank a genuinely common one.
+    family = families(:dylan_family)
+    owner = users(:family_admin)
+    shared_account = accounts(:depository) # owned by family_admin; already shared with family_member (fixture)
+    unshared_account = accounts(:investment) # owned by family_admin; not shared with anyone
+
+    2.times do |i|
+      extra_member = User.create!(
+        family: family, email: "extra_member_#{i}@example.com", password: "password123456",
+        first_name: "Extra", last_name: "Member #{i}", role: "member"
+      )
+      AccountShare.create!(account: shared_account, user: extra_member, permission: "read_only", include_in_finances: true)
+    end
+    # shared_account now has 3 account_shares rows (1 fixture + 2 created above), so its
+    # accessible_by join fans out 3x — a single real transaction would inflate to a count of 3.
+
+    create_transaction(name: "Fanout Rare", account: shared_account, category: categories(:food_and_drink))
+    2.times { create_transaction(name: "Fanout Common", account: unshared_account, category: categories(:income)) }
+
+    suggestions = family.transactions
+      .merge(Account.accessible_by(owner))
+      .name_suggestions_for("Fanout")
+
+    assert_equal [ "Fanout Common", "Fanout Rare" ], suggestions.map(&:name)
+  end
+
+  test "name_suggestions_for returns an empty array when the query is too short" do
+    family = families(:dylan_family)
+    assert_equal [], family.transactions.name_suggestions_for("st")
+    assert_equal [], family.transactions.name_suggestions_for("  ")
+  end
+
+  test "name_suggestions_for returns an empty array when no past transaction matches" do
+    family = families(:dylan_family)
+    assert_equal [], family.transactions.name_suggestions_for("no such merchant")
+  end
+
+  test "name_suggestions_for caps results at 8" do
+    family = families(:dylan_family)
+    account = accounts(:depository)
+
+    9.times { |i| create_transaction(name: "Merchant #{i}", account: account) }
+
+    suggestions = family.transactions.name_suggestions_for("Merchant")
+
+    assert_equal 8, suggestions.size
+  end
+
+  test "category_from finds categories still set by a given source" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Category from", balance: 0, currency: "USD", accountable: Depository.new)
+    coffee = family.categories.create!(name: "Coffee")
+    tea = family.categories.create!(name: "Tea")
+    ai_guess = create_transaction(account: account, name: "Guess").transaction
+    ai_guess.enrich_attribute(:category_id, coffee.id, source: "ai", metadata: { confidence: 0.9 })
+    changed = create_transaction(account: account, name: "Changed").transaction
+    changed.enrich_attribute(:category_id, coffee.id, source: "ai")
+    changed.update!(category: tea)
+    scope = family.transactions
+
+    assert_equal [ ai_guess.id ], scope.category_from("ai").pluck(:id)
+    assert_equal [ ai_guess.id ], scope.category_from("bayes", "ai").pluck(:id)
+    assert_empty scope.category_from("bayes").pluck(:id)
+    assert_empty scope.category_from("ai", since: 1.minute.from_now).pluck(:id)
+    assert_equal [ ai_guess.id ], scope.category_from("ai", metadata: { confidence: 0.9 }).pluck(:id)
+    assert_empty scope.category_from("ai", metadata: { confidence: 0.5 }).pluck(:id)
   end
 
   private

@@ -359,6 +359,56 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert sankey_data.fetch("nodes").any? { |node| node.fetch("id").start_with?("expense_") }
   end
 
+  test "dashboard sankey shows investment contributions as invested when they are not spending" do
+    @family.update!(investment_contributions_as_spending: false)
+    category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    income_category = @family.categories.create!(name: "Salary", color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Payday", amount: -1000, category: income_category)
+    create_transaction(account: @family.accounts.first, name: "Shopping trip", amount: 100, category: category)
+    create_transaction(account: @family.accounts.first, name: "To ISA", amount: 400, category: nil, kind: "investment_contribution")
+
+    get root_path
+    assert_response :ok
+
+    chart = css_select("[data-controller='sankey-chart']").first
+    nodes = JSON.parse(chart["data-sankey-chart-data-value"]).fetch("nodes").index_by { |node| node.fetch("id") }
+
+    assert_equal 400.0, nodes.fetch("invested_node").fetch("value")
+    assert_equal I18n.t("pages.dashboard.cashflow_preview.node_labels.invested"), nodes.fetch("invested_node").fetch("name")
+    assert nodes.keys.none? { |id| id.start_with?("expense_") && nodes[id].fetch("value") == 400.0 }
+  end
+
+  test "dashboard sankey balances a deficit when outflows exceed income" do
+    @family.update!(investment_contributions_as_spending: false)
+    category = @family.categories.create!(name: "Shopping", color: "#FF5733")
+    income_category = @family.categories.create!(name: "Salary", color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Payday", amount: -1000, category: income_category)
+    create_transaction(account: @family.accounts.first, name: "Shopping trip", amount: 700, category: category)
+    create_transaction(account: @family.accounts.first, name: "To ISA", amount: 500, category: nil, kind: "investment_contribution")
+
+    get root_path
+    assert_response :ok
+
+    data = JSON.parse(css_select("[data-controller='sankey-chart']").first["data-sankey-chart-data-value"])
+    nodes = data.fetch("nodes")
+    index = nodes.each_with_index.to_h { |node, i| [ node.fetch("id"), i ] }
+    links = data.fetch("links")
+    center = index.fetch("cash_flow_node")
+
+    assert_not index.key?("surplus_node")
+    deficit = nodes[index.fetch("deficit_node")]
+    assert_equal I18n.t("pages.dashboard.cashflow_preview.node_labels.deficit"), deficit.fetch("name")
+    inflow = links.select { |link| link.fetch("target") == center }.sum { |link| link.fetch("value") }
+    outflow = links.select { |link| link.fetch("source") == center }.sum { |link| link.fetch("value") }
+    assert_in_delta outflow, inflow, 0.01, "the Cash Flow node must balance"
+    assert links.any? { |link| link.fetch("source") == index.fetch("deficit_node") && link.fetch("target") == center },
+      "the deficit flows into Cash Flow"
+    assert_operator deficit.fetch("value"), :>=, 200.0, "at least the 200 by which this month's new outflows exceed the payday"
+    capacity = nodes[center].fetch("value")
+    assert_in_delta (500 / capacity * 100).round(1), nodes[index.fetch("invested_node")].fetch("percentage"), 0.05,
+      "invested is a share of the Cash Flow node, which outflows size when they exceed income"
+  end
+
   test "dashboard sankey nodes carry a stable filter_value, including opposite-direction subcategories" do
     parent_category = @family.categories.create!(name: "Shopping", color: "#FF5733")
     subcategory = @family.categories.create!(name: "Rebate Program", parent: parent_category, color: "#33FF57")
@@ -1174,7 +1224,84 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path(spending_month: selected_month.iso8601, customize: true, hidden_section: "spending_trend")
   end
 
+  test "dashboard hides the experimental Sankey comparison unless the user opts in" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "section[data-section-key='cashflow_sankey']"
+    assert_select "#cashflow-preview", count: 0
+    assert_cashflow_preview_opt_in checked: false
+  end
+
+  test "dashboard renders the experimental Sankey comparison once the user opts in" do
+    @user.update!(preferences: (@user.preferences || {}).merge(
+      "preview_features_enabled" => true,
+      "cashflow_preview_enabled" => true
+    ))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-preview"
+    assert_cashflow_preview_opt_in checked: true
+  end
+
+  test "dashboard hides the Sankey comparison opt-in without preview features" do
+    @user.update!(preferences: (@user.preferences || {}).merge(
+      "preview_features_enabled" => false,
+      "cashflow_preview_enabled" => true
+    ))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-preview", count: 0
+    assert_select "input[name='preferences[cashflow_preview_enabled]']", count: 0
+  end
+
+  test "update_preferences persists the Sankey comparison opt-in" do
+    patch "/dashboard/preferences", params: { preferences: { cashflow_preview_enabled: true } }, as: :json
+    assert_response :ok
+    assert_equal true, @user.reload.cashflow_preview_enabled?
+
+    patch "/dashboard/preferences", params: { preferences: { cashflow_preview_enabled: false } }, as: :json
+    assert_response :ok
+    assert_equal false, @user.reload.cashflow_preview_enabled?
+  end
+
+  test "an html Sankey comparison toggle redirects back to the dashboard" do
+    patch "/dashboard/preferences",
+      params: { preferences: { cashflow_preview_enabled: "1" } },
+      headers: { "HTTP_REFERER" => root_url(period: "last_30_days") }
+
+    assert_redirected_to root_url(period: "last_30_days")
+    assert_equal true, @user.reload.cashflow_preview_enabled?
+
+    patch "/dashboard/preferences",
+      params: { preferences: { cashflow_preview_enabled: "0" } },
+      headers: { "HTTP_REFERER" => root_url(period: "last_30_days") }
+
+    assert_redirected_to root_url(period: "last_30_days")
+    assert_equal false, @user.reload.cashflow_preview_enabled?
+  end
+
   private
+    def assert_cashflow_preview_opt_in(checked:)
+      assert_select "form[action='#{dashboard_preferences_path}'][data-controller='auto-submit-form']" do
+        assert_select "label[for='cashflow_preview_enabled']", text: /#{Regexp.escape(I18n.t("pages.dashboard.cashflow_preview.opt_in_title"))}/
+        assert_select "input[type=checkbox][name='preferences[cashflow_preview_enabled]'][role=switch][data-auto-submit-form-target=auto]" do |inputs|
+          assert_equal 1, inputs.size
+          if checked
+            assert inputs.first["checked"].present?
+          else
+            assert_nil inputs.first["checked"]
+          end
+        end
+      end
+    end
+
     def money_flow_bars
       JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
     end

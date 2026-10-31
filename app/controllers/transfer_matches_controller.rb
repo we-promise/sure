@@ -2,8 +2,10 @@ class TransferMatchesController < ApplicationController
   before_action :set_entry
 
   def new
+    # Preloaded for the logo selects, which call Account#logo_url per option.
     @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
-    @transfer_match_candidates = writable_transfer_match_candidates
+      .includes(:account_providers, logo_attachment: :blob)
+    @candidate_entries = writable_candidate_entries
   end
 
   def create
@@ -30,23 +32,37 @@ class TransferMatchesController < ApplicationController
     redirect_back_or_to transactions_path, alert: t(".already_matched")
   end
 
+  # "Not a transfer" on the list's transfer hint.
+  def destroy
+    return unless require_account_permission!(@entry.account, redirect_path: transactions_path)
+
+    Current.family.dismiss_transfer_hint!(@entry.transaction, user: Current.user)
+
+    respond_to do |format|
+      format.turbo_stream { render turbo_stream: turbo_stream.remove(helpers.dom_id(@entry.transaction, :transfer_hint)) }
+      format.html { redirect_back_or_to transactions_path }
+    end
+  end
+
   private
     def set_entry
       @entry = Current.accessible_entries.find(params[:transaction_id])
     end
 
-    # Family-wide candidates, limited to counterparts in accounts the user can
-    # write to (create would reject the others anyway).
-    def writable_transfer_match_candidates
-      candidates = @entry.transaction.transfer_match_candidates
-      counterpart_id = ->(candidate) { @entry.amount.negative? ? candidate.outflow_transaction_id : candidate.inflow_transaction_id }
+    # Counterpart entries of the family-wide candidates, in candidate order and
+    # limited to accounts the user can write to (create would reject the others
+    # anyway).
+    def writable_candidate_entries
+      counterpart_ids = @entry.transaction.transfer_match_candidates.map do |candidate|
+        @entry.amount.negative? ? candidate.outflow_transaction_id : candidate.inflow_transaction_id
+      end
 
-      writable_counterpart_ids = Entry
-        .where(entryable_type: "Transaction", entryable_id: candidates.map(&counterpart_id), account_id: @accounts.map(&:id))
-        .pluck(:entryable_id)
-        .to_set
+      entries_by_transaction_id = Entry
+        .where(entryable_type: "Transaction", entryable_id: counterpart_ids, account_id: @accounts.map(&:id))
+        .includes(account: [ :account_providers, { logo_attachment: :blob } ])
+        .index_by(&:entryable_id)
 
-      candidates.select { |candidate| writable_counterpart_ids.include?(counterpart_id.call(candidate)) }
+      counterpart_ids.filter_map { |id| entries_by_transaction_id[id] }
     end
 
     # One of the two transactions already belongs to another transfer, in either role.
