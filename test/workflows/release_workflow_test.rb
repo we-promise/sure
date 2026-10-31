@@ -76,8 +76,16 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         assert success
         assert_includes output, "release=false"
         assert_includes output, "version=2026.10.28-alpha"
-        assert_not_includes output, "type=raw"
-        assert_includes output, "type=schedule,pattern=nightly" if event == "schedule"
+        assert_not_includes output, "type=raw,value=latest"
+        assert_not_includes output, "type=raw,value=stable"
+        assert_not_includes output, "compatibility_version=0.7.7"
+        if event == "schedule"
+          assert_includes output, "type=schedule,pattern=nightly"
+          assert_includes output, "type=raw,value=2026.10.28-nightly"
+          assert_not_includes output, "pattern=nightly-"
+        else
+          assert_not_includes output, "type=raw"
+        end
       end
       success, output = resolve(dir, "2027.1.1", extra_env: { "COMPATIBILITY_CHANNEL" => "stable" })
       assert success
@@ -131,6 +139,14 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         assert success
         assert_includes output, "version=#{date}-alpha"
         assert_not_includes output, "compatibility_version=0.7.7"
+        2.times do
+          success, output = resolve(dir, date, event: "schedule", ref: "refs/heads/main", extra_env: { "BUILD_DATE" => date })
+          assert success
+          assert_includes output, "type=raw,value=#{date}-nightly"
+          assert_includes output, "type=sha,format=long"
+          assert_includes output, "type=schedule,pattern=nightly"
+          assert_not_includes output, "pattern=nightly-"
+        end
       end
     end
   end

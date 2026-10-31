@@ -15,8 +15,12 @@ can generate the file explicitly to label their image; without it they are dev b
 
 Tagged releases derive their version from the tag, so retries retain the same
 identity. Untagged Docker builds use the original workflow run's UTC date
-(`YYYY.M.D-alpha`); retries retain that date. They keep the existing SHA/
-nightly registry tags and do not promote `stable` or `latest`.
+(`YYYY.M.D-alpha`); retries retain that date. They keep the existing SHA tags and do not
+promote `stable` or `latest`. Scheduled builds additionally publish floating
+`nightly` and unpadded `YYYY.M.D-nightly` Docker tags (for example,
+`2026.11.1-nightly`), using that same original UTC run date on retries.
+Dated tags replace the rotating weekday tags; existing images and tags are
+not deleted, and no retention or cleanup policy is changed.
 
 Desktop and mobile release builds also derive their versions from the release
 tag. Standalone mobile branch builds retain their explicit pubspec version.
