@@ -82,6 +82,88 @@ RSpec.configure do |config|
               }
             }
           },
+          TransactionAutoCategorizationRequest: {
+            type: :object,
+            properties: {
+              transaction_ids: {
+                type: :array,
+                minItems: 1,
+                maxItems: 1000,
+                items: { type: :string, format: :uuid },
+                description: 'Transactions to categorize. Omit to queue eligible transactions in pages of ' \
+                             'at most 1,000; see truncated and next_after_transaction_id.'
+              },
+              after_transaction_id: {
+                type: :string,
+                format: :uuid,
+                description: 'Only without transaction_ids: queue the page of eligible transactions after ' \
+                             'this ID. Send the previous response\'s next_after_transaction_id.'
+              }
+            }
+          },
+          TransactionAutoCategorization: {
+            type: :object,
+            required: %w[queued_count transaction_ids skipped_transaction_ids truncated next_after_transaction_id],
+            properties: {
+              queued_count: { type: :integer },
+              transaction_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Transactions queued for categorization'
+              },
+              skipped_transaction_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Requested transactions that were not queued: already categorized, ' \
+                             'category locked, a transfer or split parent, or not one this key may annotate'
+              },
+              truncated: {
+                type: :boolean,
+                description: 'True when transaction_ids was omitted and more than 1,000 transactions were eligible'
+              },
+              next_after_transaction_id: {
+                type: :string,
+                format: :uuid,
+                nullable: true,
+                description: 'When truncated, send as after_transaction_id to queue the next page; otherwise null'
+              }
+            }
+          },
+          TransactionAutoCategorizationPartial: {
+            type: :object,
+            required: %w[error message queued_count transaction_ids unqueued_transaction_ids
+                         skipped_transaction_ids truncated next_after_transaction_id],
+            properties: {
+              error: { type: :string, example: 'service_unavailable' },
+              message: { type: :string },
+              queued_count: { type: :integer },
+              transaction_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Transactions that were queued before the queue refused the rest'
+              },
+              unqueued_transaction_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Transactions the queue refused; retry with these as transaction_ids'
+              },
+              skipped_transaction_ids: {
+                type: :array,
+                items: { type: :string, format: :uuid },
+                description: 'Requested transactions that were not eligible, as in the 202 response'
+              },
+              truncated: {
+                type: :boolean,
+                description: 'True when transaction_ids was omitted and more than 1,000 transactions were eligible'
+              },
+              next_after_transaction_id: {
+                type: :string,
+                format: :uuid,
+                nullable: true,
+                description: 'When truncated, the cursor for the next page; otherwise null'
+              }
+            }
+          },
           Split: {
             type: :object,
             required: %w[transaction_id amount amount_decimal amount_cents currency children],
