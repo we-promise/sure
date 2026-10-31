@@ -200,6 +200,7 @@ de:
       funding_accounts_heading: Konten, aus denen gespart wird
       funding_last_30d: letzte 30 T
       funding_last_90d: letzte 90 T
+      milestone: "%{percent} % · %{date}"
       header:
         target: Ziel %{amount}
         target_by: Ziel %{amount} bis %{date}
