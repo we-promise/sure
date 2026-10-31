@@ -6,6 +6,7 @@ pt-BR:
         renewal: "Sua contribuição continua em %{date}."
         cancellation: "Sua contribuição termina em %{date}."
   settings:
+    encryption_migration_guide: Guia de configuração da criptografia e migração
     ai_prompts:
       show:
         page_title: Prompts de IA

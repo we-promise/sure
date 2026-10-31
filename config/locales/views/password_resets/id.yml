@@ -1,0 +1,15 @@
+---
+id:
+  password_resets:
+    disabled: Atur ulang kata sandi melalui Sure dinonaktifkan. Silakan atur ulang kata sandi Anda melalui penyedia identitas Anda.
+    sso_only_user: Akun Anda menggunakan SSO untuk autentikasi. Silakan hubungi administrator Anda untuk mengelola kredensial Anda.
+    edit:
+      title: Atur ulang kata sandi
+    new:
+      requested: Silakan periksa email Anda untuk tautan pengaturan ulang kata sandi.
+      submit: Atur ulang kata sandi
+      title: Atur ulang kata sandi
+      back: Kembali
+    update:
+      invalid_token: Token tidak valid.
+      success: Kata sandi Anda telah diatur ulang.

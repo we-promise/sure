@@ -6,6 +6,7 @@ pt-PT:
         renewal: "A sua contribuição continua em %{date}."
         cancellation: "A sua contribuição termina em %{date}."
   settings:
+    encryption_migration_guide: Guia de configuração da encriptação e migração
     background_jobs:
       show:
         page_title: "Tarefas em segundo plano"

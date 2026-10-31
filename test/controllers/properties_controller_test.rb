@@ -39,6 +39,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1990, created_account.accountable.year_built
     assert_equal 1200, created_account.accountable.area_value
     assert_equal "sqft", created_account.accountable.area_unit
+    assert created_account.accountable.user_set_area?, "a manually entered area should count as user-set"
     assert_redirected_to balances_property_path(created_account)
   end
 
@@ -91,6 +92,20 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     get edit_property_path(@account)
     assert_response :success
     assert_select "input[name='account[custom_group]']", count: 0
+  end
+
+  test "editing the living area marks it as user-set, so valuation refreshes send it" do
+    property = @account.accountable
+    assert_not property.user_set_area?
+
+    patch property_path(@account), params: {
+      account: { accountable_attributes: { id: property.id, area_value: 1364, area_unit: "sqft" } }
+    }
+
+    property.reload
+    assert_equal 1364, property.area_value
+    assert property.locked?(:area_value)
+    assert property.user_set_area?
   end
 
   # Tab view tests
