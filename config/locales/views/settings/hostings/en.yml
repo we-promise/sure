@@ -35,10 +35,12 @@ en:
         danger_zone: Danger Zone
         instance_settings_restricted: Provider credentials, the shared AI connection and sync settings apply to every family on this instance, so only a super admin can change them. Which assistant your family uses is still set per family. Someone with access to the server can promote a user to super admin; the Docker self-hosting guide shows the command in its upgrade notes.
         clear_cache: Clear data cache
-        clear_cache_warning: Clearing the data cache will remove all exchange rates, security prices, account balances, and other data. This will not delete accounts, transactions, categories, or other user-owned data.
+        clear_cache_warning: "Clearing the data cache recalculates your family's account balances and holdings and reloads the exchange rates and security prices they use. Only your family's balances and holdings are deleted; exchange rates and security prices are shared with the other families on this instance and are updated for them too. This will not delete accounts, transactions, categories, or other user-owned data."
+        clear_cache_warning_without_provider: "Clearing the data cache recalculates your family's account balances and holdings. No exchange rate or security price provider is configured, so the stored exchange rates and security prices are kept. This will not delete accounts, transactions, categories, or other user-owned data."
         confirm_clear_cache:
           title: Clear data cache?
-          body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+          body: "Are you sure you want to clear the data cache? Your family's account balances and holdings will be recalculated, and the exchange rates and security prices they use will be reloaded. Only your family's balances and holdings are deleted; exchange rates and security prices are shared with the other families on this instance and are updated for them too. This action cannot be undone."
+          body_without_provider: "Are you sure you want to clear the data cache? Your family's account balances and holdings will be recalculated. No exchange rate or security price provider is configured, so the stored exchange rates and security prices are kept. This action cannot be undone."
       provider_selection:
         exchange_rate_title: Exchange Rate Provider
         exchange_rate_description: Select a single provider for fetching currency exchange rates.

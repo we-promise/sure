@@ -59,6 +59,7 @@ class Settings::HostingsController < ApplicationController
     @rentcast_usage = Provider::Registry.get_provider(:rentcast)&.usage
     @realie_usage = Provider::Registry.get_provider(:realie)&.usage
     @chimnie_usage = Provider::Registry.get_provider(:chimnie)&.usage
+    @market_data_refreshable = market_data_provider_configured?
 
     load_external_assistant_models
   end
@@ -555,5 +556,10 @@ class Settings::HostingsController < ApplicationController
 
     def current_user_timezone
       Current.family&.timezone.presence || "UTC"
+    end
+
+    # A cache clear can only reload rates and prices when a provider is configured
+    def market_data_provider_configured?
+      ExchangeRate.configured_provider.present? || Security.provider.present?
     end
 end

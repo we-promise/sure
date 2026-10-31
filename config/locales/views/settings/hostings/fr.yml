@@ -262,9 +262,11 @@ fr:
       show:
         ai_assistant: Assistant IA
         clear_cache: Effacer le cache de données
-        clear_cache_warning: L'effacement du cache de données supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cela ne supprimera pas les comptes, les transactions, les catégories ou d'autres données possédées par les utilisateurs.
+        clear_cache_warning: "L'effacement du cache de données recalcule les soldes et les positions des comptes de votre famille et recharge les taux de change et les cours des titres qu'ils utilisent. Seuls les soldes et les positions de votre famille sont supprimés ; les taux de change et les cours des titres sont partagés avec les autres familles de cette instance et sont aussi mis à jour pour elles. Cela ne supprimera pas les comptes, les transactions, les catégories ou d'autres données possédées par les utilisateurs."
+        clear_cache_warning_without_provider: "L'effacement du cache de données recalcule les soldes et les positions des comptes de votre famille. Aucun fournisseur de taux de change ou de cours des titres n'est configuré, les taux de change et les cours enregistrés sont donc conservés. Cela ne supprimera pas les comptes, les transactions, les catégories ou d'autres données possédées par les utilisateurs."
         confirm_clear_cache:
-          body: Êtes-vous sûr(e) de vouloir effacer le cache de données ? Cela supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cette action ne peut pas être annulée.
+          body: "Êtes-vous sûr(e) de vouloir effacer le cache de données ? Les soldes et les positions des comptes de votre famille seront recalculés, et les taux de change et les cours des titres qu'ils utilisent seront rechargés. Seuls les soldes et les positions de votre famille sont supprimés ; les taux de change et les cours des titres sont partagés avec les autres familles de cette instance et sont aussi mis à jour pour elles. Cette action ne peut pas être annulée."
+          body_without_provider: "Êtes-vous sûr(e) de vouloir effacer le cache de données ? Les soldes et les positions des comptes de votre famille seront recalculés. Aucun fournisseur de taux de change ou de cours des titres n'est configuré, les taux de change et les cours enregistrés sont donc conservés. Cette action ne peut pas être annulée."
           title: Effacer le cache de données ?
         danger_zone: Zone dangereuse
         demo_refresh: Actualisation des données de démo
