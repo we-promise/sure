@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { sankey } from "d3-sankey";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
-import { hiddenSankeyLabels } from "utils/sankey_labels";
+import { layoutSankeyLabels } from "utils/sankey_labels";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
 import {
   buildCategoryTransactionsUrl,
@@ -358,7 +358,7 @@ export default class extends Controller {
 
   #addNodeLabels(svg, nodeGroups, width, nodes) {
     const controller = this;
-    const hiddenLabels = this.#calculateHiddenLabels(
+    const { hidden: hiddenLabels, labelY } = this.#layoutLabels(
       nodes,
       this.#measureLabels(svg, nodes, width),
     );
@@ -378,19 +378,20 @@ export default class extends Controller {
       )
       .style("transition", "opacity 0.2s ease")
       .each(function (d) {
-        controller.#writeLabel(d3.select(this), d, width);
+        controller.#writeLabel(d3.select(this), d, width, labelY.get(d.index));
       });
 
     return hiddenLabels;
   }
 
-  // Name above amount, beside the bar on the side facing the chart's middle.
-  #writeLabel(textEl, d, width) {
+  // Name above amount, beside the bar on the side facing the chart's middle,
+  // centred on `y` (the bar's centre unless the layout moved it).
+  #writeLabel(textEl, d, width, y = (d.y1 + d.y0) / 2) {
     const x = d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6;
 
     textEl
       .attr("x", x)
-      .attr("y", (d.y1 + d.y0) / 2)
+      .attr("y", y)
       .attr("dy", "-0.2em")
       .attr("text-anchor", d.x0 < width / 2 ? "start" : "end");
 
@@ -425,10 +426,10 @@ export default class extends Controller {
     return boxes;
   }
 
-  // Calculate which labels should be hidden to prevent overlap
-  #calculateHiddenLabels(nodes, labelBoxes) {
+  // Where each label goes, and which ones are hidden to prevent overlap
+  #layoutLabels(nodes, labelBoxes) {
     const height = this.#chartElement().clientHeight || 400;
-    return hiddenSankeyLabels(nodes, {
+    return layoutSankeyLabels(nodes, {
       height,
       minSpacing: this.constructor.MIN_LABEL_SPACING,
       labelBoxes,

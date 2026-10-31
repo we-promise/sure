@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { hiddenSankeyLabels } from "../../../app/javascript/utils/sankey_labels.mjs";
+import { layoutSankeyLabels } from "../../../app/javascript/utils/sankey_labels.mjs";
+
+const hiddenSankeyLabels = (nodes, options) => layoutSankeyLabels(nodes, options).hidden;
 
 const SPACING = 28;
 
@@ -14,45 +16,103 @@ const column = (entries) =>
     y1,
   }));
 
-test("a small node above a large node no longer hides the large label", () => {
+test("a small node can't push a larger node's label off its bar centre", () => {
   // Demo-scale regression: Fees ($1.15) sat above Household ($160) and won
   // the label under the old top-down rule.
   const nodes = column([
     [1.15, 18, 20],
-    [160.0, 10, 60],
+    [160.0, 22, 60],
     [928.21, 90, 240],
   ]);
-  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
-  assert.equal(hidden.has(1), false, "large node keeps its label");
-  assert.equal(hidden.has(0), true, "small neighbor yields");
-  assert.equal(hidden.has(2), false);
+  const { hidden, labelY } = layoutSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
+  assert.deepEqual([...hidden], [0], "Fees yields");
+  assert.equal(labelY.get(1), 41, "Household stays centred");
+  assert.equal(labelY.get(2), 165);
 });
 
-test("spacing still hides the less prominent of two crowded large nodes", () => {
+test("a crowded smaller label slides into free space beside its bar", () => {
   const nodes = column([
-    [500.0, 0, 20],
-    [400.0, 22, 40],
+    [160.0, 100, 140],
+    [40.0, 142, 150],
+  ]);
+  const { hidden, labelY } = layoutSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
+  assert.equal(hidden.size, 0);
+  assert.equal(labelY.get(0), 120, "the larger label doesn't move");
+  assert.equal(labelY.get(1), 148, "the smaller one moves just far enough");
+});
+
+test("when a column runs out of room the largest node keeps the label", () => {
+  const nodes = column([
+    [1.15, 19, 21],
+    [160.0, 22, 24],
+    [5.0, 25, 27],
   ]);
   const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
-  assert.equal(hidden.has(0), false, "larger value keeps the label");
-  assert.equal(hidden.has(1), true);
+  assert.deepEqual([...hidden].sort(), [0, 2]);
 });
 
-test("nodes spaced far enough apart all stay labeled", () => {
+test("a smaller node can't take the slot a larger crowded node gave up", () => {
+  // 5.0 has no room beside 160; 0.5 just below could slide into the free
+  // space, but labeling it while 5.0 stays hidden would invert the order.
+  const nodes = column([
+    [1.15, 19, 21],
+    [160.0, 22, 24],
+    [5.0, 25, 27],
+    [0.5, 45, 46],
+  ]);
+  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
+  assert.equal(hidden.has(1), false);
+  assert.equal(hidden.has(2), true);
+  assert.equal(hidden.has(3), true, "0.5 doesn't jump into 5.0's place");
+});
+
+test("mid-sized nodes keep labels when the free space beside them can hold them", () => {
+  // Expense column sorted large to small, small bars crowded at the bottom.
+  const nodes = column([
+    [500.0, 0, 100], // Food
+    [60.0, 105, 115], // Transport
+    [40.0, 120, 127], // Fun
+    [5.0, 145, 146], // Fees
+    [1.0, 150, 151], // Misc
+  ]);
+  const { hidden, labelY } = layoutSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
+  assert.deepEqual([...hidden].sort(), [3, 4], "only the smallest run out of room");
+  assert.equal(labelY.get(0), 50, "Food stays centred");
+  assert.equal(labelY.get(1), 110, "Transport stays centred");
+  assert.equal(labelY.get(2), 138, "Fun slides below Transport");
+});
+
+test("a label never slides off the chart", () => {
+  const fits = column([
+    [40, 355, 357],
+    [30, 375, 377],
+  ]);
+  const { labelY } = layoutSankeyLabels(fits, { height: 400, minSpacing: SPACING });
+  assert.equal(labelY.get(1), 384);
+
+  const tooLow = column([
+    [40, 359, 361],
+    [30, 375, 377],
+  ]);
+  assert.deepEqual([...hiddenSankeyLabels(tooLow, { height: 400, minSpacing: SPACING })], [1]);
+});
+
+test("nodes spaced far enough apart all stay labeled where they are", () => {
   const nodes = column([
     [5.99, 0, 4],
     [20.24, 40, 46],
     [1.15, 80, 82],
   ]);
-  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
+  const { hidden, labelY } = layoutSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
   assert.equal(hidden.size, 0);
+  assert.deepEqual([...labelY.values()].sort((a, b) => a - b), [2, 43, 81]);
 });
 
 test("columns are independent of each other", () => {
   const nodes = [
     { index: 0, x0: 0, value: 10, y0: 0, y1: 10 },
-    { index: 1, x0: 100, value: 10, y0: 0, y1: 10 },
-    { index: 2, x0: 100, value: 20, y0: 12, y1: 22 },
+    { index: 1, x0: 100, value: 10, y0: 0, y1: 2 },
+    { index: 2, x0: 100, value: 20, y0: 3, y1: 5 },
   ];
   const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
   assert.equal(hidden.has(0), false);
@@ -62,33 +122,50 @@ test("columns are independent of each other", () => {
 
 test("equal values fall back to vertical order deterministically", () => {
   const nodes = column([
-    [50, 0, 10],
-    [50, 12, 22],
+    [50, 0, 2],
+    [50, 3, 5],
   ]);
   const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
   assert.equal(hidden.has(0), false, "top-most of equal values stays");
   assert.equal(hidden.has(1), true);
 });
 
-test("large graphs keep tall-bar labels and use tighter spacing", () => {
+test("large graphs use tighter spacing", () => {
   const nodes = column([
-    [300.0, 8, 38], // 18px from the higher-value node; needs the tall-bar override
-    [500.0, 0, 10], // highest value claims its label first
-    [200.0, 43, 53], // 25px from the tall bar; needs the reduced 19.6px spacing
+    [500.0, 20, 22],
+    [300.0, 31, 33],
   ]);
-  const hidden = hiddenSankeyLabels(nodes, { height: 800, minSpacing: SPACING });
-  assert.equal(hidden.has(0), false, "tall bar always labeled");
-  assert.equal(hidden.has(1), false, "highest-value node keeps its label");
-  assert.equal(hidden.has(2), false, "tighter spacing in large graphs");
+  assert.equal(hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING }).size, 1);
+  assert.equal(hiddenSankeyLabels(nodes, { height: 800, minSpacing: SPACING }).size, 0);
 });
 
 test("hidden set uses node.index, not array position", () => {
   const nodes = [
-    { index: 7, x0: 100, value: 1, y0: 28, y1: 30 },
-    { index: 3, x0: 100, value: 100, y0: 6, y1: 60 },
+    { index: 7, x0: 100, value: 1, y0: 10, y1: 12 },
+    { index: 3, x0: 100, value: 100, y0: 13, y1: 15 },
   ];
-  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING });
+  const hidden = hiddenSankeyLabels(nodes, { height: 40, minSpacing: SPACING });
   assert.deepEqual([...hidden], [7]);
+});
+
+test("a label that would cross another column's bar once moved stays hidden", () => {
+  // Q fits beside its own bar, but only by sliding down onto the bar of the
+  // next column; P, which never has to move that far, keeps its label.
+  const nodes = [
+    { index: 0, x0: 0, x1: 15, value: 100, y0: 40, y1: 42 },
+    { index: 1, x0: 0, x1: 15, value: 50, y0: 43, y1: 45 },
+    { index: 2, x0: 120, x1: 135, value: 1000, y0: 60, y1: 300 },
+  ];
+  const box = (y) => ({ x: 21, y: y - 13, width: 108, height: 26 });
+  const labelBoxes = new Map([
+    [0, box(41)],
+    [1, box(44)],
+    [2, { x: 141, y: 167, width: 70, height: 26 }],
+  ]);
+  const hidden = hiddenSankeyLabels(nodes, { height: 400, minSpacing: SPACING, labelBoxes });
+  assert.equal(hidden.has(0), false);
+  assert.equal(hidden.has(1), true);
+  assert.equal(hidden.has(2), false);
 });
 
 test("same-depth nodes in different visual columns do not compete", () => {
