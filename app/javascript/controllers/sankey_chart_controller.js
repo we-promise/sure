@@ -2,7 +2,12 @@ import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
 import { sankey } from "d3-sankey";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
-import { hiddenSankeyLabels } from "utils/sankey_labels";
+import {
+  layoutSankeyLabels,
+  sankeyHeightForLabels,
+  sankeyLabelRoom,
+  spreadSankeyColumns,
+} from "utils/sankey_labels";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
 import {
   buildCategoryTransactionsUrl,
@@ -30,6 +35,7 @@ export default class extends Controller {
   static MAX_PADDING_RATIO = 0.4;
   static CORNER_RADIUS = 8;
   static ZOOM_TRANSITION_MS = 220;
+  static LABEL_MODE_TRANSITION_MS = 450;
   static DEFAULT_COLOR = "var(--color-gray-400)";
   static CSS_VAR_MAP = {
     "var(--color-success)": "#10A861",
@@ -42,7 +48,20 @@ export default class extends Controller {
   connect() {
     this.connected = true;
     this.zoomRootId = null;
-    this.resizeObserver = new ResizeObserver(() => this.#draw());
+    this.showAllLabels = false;
+    // The chart sets its own height while every label is shown, and animates
+    // it when switching; neither should trigger another draw.
+    this.resizeObserver = new ResizeObserver(() => {
+      const chart = this.#chartElement();
+      const drawn = this.drawnSize;
+      if (this.morphing) return;
+      if (
+        drawn?.width === chart.clientWidth &&
+        drawn?.height === chart.clientHeight
+      )
+        return;
+      this.#draw();
+    });
     this.resizeObserver.observe(this.#chartElement());
     this.tooltip = null;
     this.#createTooltip();
@@ -74,6 +93,11 @@ export default class extends Controller {
     this.tooltip = null;
   }
 
+  toggleLabelMode() {
+    this.showAllLabels = !this.showAllLabels;
+    this.#draw({ morph: true });
+  }
+
   zoomOut() {
     if (!this.zoomRootId) return;
 
@@ -82,7 +106,7 @@ export default class extends Controller {
     this.#draw({ animate: true });
   }
 
-  #draw({ animate = false } = {}) {
+  #draw({ animate = false, morph = false } = {}) {
     const { nodes = [], links = [] } = this.#visibleData();
     if (!nodes.length || !links.length) return;
 
@@ -93,6 +117,8 @@ export default class extends Controller {
     const chart = d3.select(chartElement);
 
     clearTimeout(this.drawTimeout);
+    chart.interrupt();
+    this.morphing = false;
     chart.selectAll("svg").interrupt();
 
     if (animate) {
@@ -104,20 +130,23 @@ export default class extends Controller {
         .remove();
 
       this.drawTimeout = setTimeout(() => {
-        this.#render(nodes, links, true);
+        this.#render(nodes, links, { animate: true });
       }, this.constructor.ZOOM_TRANSITION_MS / 2);
     } else {
       chart.selectAll("svg").remove();
-      this.#render(nodes, links, false);
+      this.#render(nodes, links, { morph });
     }
   }
 
-  #render(nodes, links, animate) {
+  #render(nodes, links, { animate = false, morph = false } = {}) {
     const chartElement = this.#chartElement();
     const chart = d3.select(chartElement);
 
+    // A chart still fading out after a zoom would inflate the measured height.
+    chart.selectAll("svg").interrupt().remove();
+
     const width = chartElement.clientWidth || 600;
-    const height = chartElement.clientHeight || 400;
+    const { height, padding } = this.#fitHeight(nodes, links, width);
 
     const svg = chart
       .append("svg")
@@ -125,25 +154,49 @@ export default class extends Controller {
       .attr("height", height)
       .style("opacity", animate ? 0 : 1);
 
-    const effectivePadding = this.#calculateNodePadding(nodes.length, height);
     const sankeyData = this.#generateSankeyData(
       nodes,
       links,
       width,
       height,
-      effectivePadding,
+      padding,
     );
 
     this.#createGradients(svg, sankeyData.links);
 
     const linkPaths = this.#drawLinks(svg, sankeyData.links);
-    const { nodeGroups, hiddenLabels } = this.#drawNodes(
+    const { nodeGroups, hiddenLabels, labelY } = this.#drawNodes(
       svg,
       sankeyData.nodes,
       width,
     );
 
     this.#attachHoverEvents(linkPaths, nodeGroups, sankeyData, hiddenLabels);
+
+    const layout = {
+      height,
+      nodes: new Map(
+        sankeyData.nodes.map((d) => [d.index, { y0: d.y0, y1: d.y1 }]),
+      ),
+      links: sankeyData.links.map((d) => ({
+        y0: d.y0,
+        y1: d.y1,
+        width: d.width,
+      })),
+      labelY,
+      hiddenLabels,
+    };
+    const previous = this.layout;
+    if (
+      morph &&
+      previous?.links.length === layout.links.length &&
+      previous.nodes.size === layout.nodes.size
+    ) {
+      this.#morph(previous, layout, { svg, linkPaths, nodeGroups });
+    }
+    this.layout = layout;
+    // The size the chart settles at; a morph is still on its way there.
+    this.drawnSize = { width, height };
 
     if (animate) {
       svg
@@ -194,6 +247,99 @@ export default class extends Controller {
     );
   }
 
+  // By default the chart keeps its card's height, so a crowded column only
+  // labels some of its small categories. With every label shown, the bars
+  // keep their size and the chart grows (its card with it) until each node of
+  // the crowded column has a label-sized gap.
+  #fitHeight(nodes, links, width) {
+    const chartElement = this.#chartElement();
+    chartElement.style.minHeight = "";
+    const height = chartElement.clientHeight || 400;
+    const padding = this.#calculateNodePadding(nodes.length, height);
+    const compact = this.#generateSankeyData(
+      nodes,
+      links,
+      width,
+      height,
+      padding,
+    );
+    const { hidden } = layoutSankeyLabels(compact.nodes, {
+      height,
+      minSpacing: this.constructor.MIN_LABEL_SPACING,
+    });
+    // Lets a toggle outside the chart offer the mode only when it matters.
+    this.dispatch("label-mode", {
+      detail: {
+        available: hidden.size > 0 || this.showAllLabels,
+        showAll: this.showAllLabels,
+      },
+    });
+    if (!this.showAllLabels) return { height, padding };
+
+    const fitted = sankeyHeightForLabels(compact.nodes, {
+      height,
+      padding,
+      minSpacing: this.constructor.MIN_LABEL_SPACING,
+    });
+    chartElement.style.minHeight = `${fitted.height}px`;
+    return fitted;
+  }
+
+  // Starts the freshly drawn chart where the previous one had every bar,
+  // link and label, then glides them (and the chart's height) into place.
+  #morph(previous, layout, { svg, linkPaths, nodeGroups }) {
+    const chartElement = this.#chartElement();
+    const transition = d3
+      .transition()
+      .duration(this.constructor.LABEL_MODE_TRANSITION_MS)
+      .ease(d3.easeCubicInOut);
+    const tween = (from, to, draw) => {
+      const y0 = d3.interpolateNumber(from.y0, to.y0);
+      const y1 = d3.interpolateNumber(from.y1, to.y1);
+      return (t) => draw(y0(t), y1(t));
+    };
+
+    this.morphing = true;
+    d3.select(chartElement)
+      .style("min-height", `${previous.height}px`)
+      .transition(transition)
+      .style("min-height", `${layout.height}px`)
+      .on("end", () => {
+        this.morphing = false;
+        if (!this.showAllLabels) chartElement.style.minHeight = "";
+      });
+
+    svg
+      .attr("height", previous.height)
+      .transition(transition)
+      .attr("height", layout.height);
+
+    linkPaths
+      .attr("stroke-width", (d, i) => Math.max(1, previous.links[i].width))
+      .transition(transition)
+      .attr("stroke-width", (d) => Math.max(1, d.width))
+      .attrTween("d", (d, i) =>
+        tween(previous.links[i], d, (y0, y1) => this.#linkPath(d, y0, y1)),
+      );
+
+    nodeGroups
+      .select("path")
+      .transition(transition)
+      .attrTween("d", (d) =>
+        tween(previous.nodes.get(d.index), d, (y0, y1) =>
+          this.#nodePath({ ...d, y0, y1 }),
+        ),
+      );
+
+    nodeGroups
+      .select("text")
+      .attr("y", (d) => previous.labelY.get(d.index))
+      .style("opacity", (d) => (previous.hiddenLabels.has(d.index) ? 0 : 1))
+      .transition(transition)
+      .attr("y", (d) => layout.labelY.get(d.index))
+      .style("opacity", (d) => (layout.hiddenLabels.has(d.index) ? 0 : 1));
+  }
+
   // Dynamic padding prevents padding from dominating when there are many nodes
   #calculateNodePadding(nodeCount, height) {
     const margin = this.constructor.EXTENT_MARGIN;
@@ -218,10 +364,32 @@ export default class extends Controller {
         [width - margin, height - margin],
       ]);
 
-    return sankeyGenerator({
+    const graph = sankeyGenerator({
       nodes: nodes.map((d) => ({ ...d })),
       links: links.map((d) => ({ ...d })),
     });
+
+    // Columns with height to spare give each label room beside its bar.
+    spreadSankeyColumns(graph, {
+      top: margin,
+      bottom: height - margin,
+      padding: nodePadding,
+      minSpacing: this.constructor.MIN_LABEL_SPACING,
+      // Stack each node's links in the order of their other ends again, as
+      // d3-sankey does, so moved nodes don't make links cross at their ends.
+      relink: () => {
+        graph.nodes.forEach((node) => {
+          node.sourceLinks.sort(
+            (a, b) => a.target.y0 - b.target.y0 || a.index - b.index,
+          );
+          node.targetLinks.sort(
+            (a, b) => a.source.y0 - b.source.y0 || a.index - b.index,
+          );
+        });
+        sankeyGenerator.update(graph);
+      },
+    });
+    return graph;
   }
 
   #createGradients(svg, links) {
@@ -274,15 +442,17 @@ export default class extends Controller {
       .data(links)
       .join("path")
       .attr("class", "sankey-link")
-      .attr("d", (d) =>
-        d3.linkHorizontal()({
-          source: [d.source.x1, d.y0],
-          target: [d.target.x0, d.y1],
-        }),
-      )
+      .attr("d", (d) => this.#linkPath(d, d.y0, d.y1))
       .attr("stroke", (d, i) => `url(#${this.#gradientId(d, i)})`)
       .attr("stroke-width", (d) => Math.max(1, d.width))
       .style("transition", "opacity 0.3s ease");
+  }
+
+  #linkPath(link, y0, y1) {
+    return d3.linkHorizontal()({
+      source: [link.source.x1, y0],
+      target: [link.target.x0, y1],
+    });
   }
 
   #drawNodes(svg, nodes, width) {
@@ -299,9 +469,14 @@ export default class extends Controller {
       .attr("fill", (d) => d.color || this.constructor.DEFAULT_COLOR)
       .attr("stroke", (d) => (d.color ? "none" : "var(--color-gray-500)"));
 
-    const hiddenLabels = this.#addNodeLabels(svg, nodeGroups, width, nodes);
+    const { hiddenLabels, labelY } = this.#addNodeLabels(
+      svg,
+      nodeGroups,
+      width,
+      nodes,
+    );
 
-    return { nodeGroups, hiddenLabels };
+    return { nodeGroups, hiddenLabels, labelY };
   }
 
   #nodePath(node) {
@@ -358,7 +533,7 @@ export default class extends Controller {
 
   #addNodeLabels(svg, nodeGroups, width, nodes) {
     const controller = this;
-    const hiddenLabels = this.#calculateHiddenLabels(
+    const { hidden: hiddenLabels, labelY } = this.#layoutLabels(
       nodes,
       this.#measureLabels(svg, nodes, width),
     );
@@ -378,24 +553,29 @@ export default class extends Controller {
       )
       .style("transition", "opacity 0.2s ease")
       .each(function (d) {
-        controller.#writeLabel(d3.select(this), d, width);
+        controller.#writeLabel(d3.select(this), d, width, labelY.get(d.index));
       });
 
-    return hiddenLabels;
+    // Hidden labels sit at their bars' centres, where hover reveals them.
+    const positions = new Map(
+      nodes.map((d) => [d.index, labelY.get(d.index) ?? (d.y0 + d.y1) / 2]),
+    );
+    return { hiddenLabels, labelY: positions };
   }
 
-  // Name above amount, beside the bar on the side facing the chart's middle.
-  #writeLabel(textEl, d, width) {
+  // Name above amount, beside the bar on the side facing the chart's middle,
+  // centred on `y` (the bar's centre unless the layout moved it).
+  #writeLabel(textEl, d, width, y = (d.y1 + d.y0) / 2) {
     const x = d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6;
 
     textEl
       .attr("x", x)
-      .attr("y", (d.y1 + d.y0) / 2)
+      .attr("y", y)
       .attr("dy", "-0.2em")
       .attr("text-anchor", d.x0 < width / 2 ? "start" : "end");
 
     textEl.selectAll("tspan").remove();
-    textEl.append("tspan").text(d.name);
+    textEl.append("tspan").text(d.labelName ?? d.name);
     textEl
       .append("tspan")
       .attr("x", x)
@@ -407,28 +587,57 @@ export default class extends Controller {
 
   // Where each label lands at this width, measured with an invisible probe
   // before the real labels are drawn, so the overlap rule can see a label
-  // that reaches into the next column.
+  // that reaches into the next column. A name too long to stop short of the
+  // next column's bar is shortened to fit; the tooltip keeps the full name.
   #measureLabels(svg, nodes, width) {
     const probe = svg
       .append("text")
       .attr("class", "text-xs font-medium select-none")
       .style("visibility", "hidden");
+    const measure = (d) => {
+      this.#writeLabel(probe, d, width);
+      const { x, y, width: boxWidth, height } = probe.node().getBBox();
+      return { x, y, width: boxWidth, height };
+    };
 
     const boxes = new Map();
     nodes.forEach((d) => {
-      this.#writeLabel(probe, d, width);
-      const { x, y, width: boxWidth, height } = probe.node().getBBox();
-      boxes.set(d.index, { x, y, width: boxWidth, height });
+      let box = measure(d);
+      const room = sankeyLabelRoom(d, box, nodes);
+      if (room !== null && box.width > room) {
+        d.labelName = this.#shortenedName(d, room, measure);
+        box = measure(d);
+      }
+      boxes.set(d.index, box);
     });
 
     probe.remove();
     return boxes;
   }
 
-  // Calculate which labels should be hidden to prevent overlap
-  #calculateHiddenLabels(nodes, labelBoxes) {
+  // The longest "Name…" whose label fits in `room`, or undefined (the full
+  // name) when even one letter doesn't.
+  #shortenedName(d, room, measure) {
+    let fitting;
+    let lo = 1;
+    let hi = d.name.length - 1;
+    while (lo <= hi) {
+      const length = Math.floor((lo + hi) / 2);
+      d.labelName = `${d.name.slice(0, length).trimEnd()}…`;
+      if (measure(d).width <= room) {
+        fitting = d.labelName;
+        lo = length + 1;
+      } else {
+        hi = length - 1;
+      }
+    }
+    return fitting;
+  }
+
+  // Where each label goes, and which ones are hidden to prevent overlap
+  #layoutLabels(nodes, labelBoxes) {
     const height = this.#chartElement().clientHeight || 400;
-    return hiddenSankeyLabels(nodes, {
+    return layoutSankeyLabels(nodes, {
       height,
       minSpacing: this.constructor.MIN_LABEL_SPACING,
       labelBoxes,
