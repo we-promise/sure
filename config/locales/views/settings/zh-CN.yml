@@ -420,8 +420,8 @@ zh-CN:
       drawer_trust_statement: 只读访问。Sure 绝不会移动您的资金，且您的凭证会被加密存储。
       drawer_trust_statement_encryption_unconfigured: 只读访问。Sure 绝不会转移资金。在生产环境中存储提供商凭据之前，请配置明确的加密密钥。
       provider_setup_encryption_warning:
-        title: 未配置加密
-        message: 在配置 Active Record 加密之前，无法配置此集成。存储外部访问令牌需要应用级加密密钥。
+        title: 缺少加密密钥
+        message: 此自托管实例未配置明确的 Active Record 加密密钥。在生产环境中保存提供商凭据之前，请配置 primary_key、deterministic_key 和 key_derivation_salt。
       setup_steps:
         eyebrow: 设置
         need_help: 需要帮助？
