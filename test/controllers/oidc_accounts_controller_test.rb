@@ -180,6 +180,32 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_select "strong", text: new_user_auth["email"]
   end
 
+  test "link page offers linking, not account creation, for a legacy plaintext-email user" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", new_user_auth["email"], @user.id ])
+    )
+    session[:pending_oidc_auth] = new_user_auth
+
+    get :link
+    assert_response :success
+    assert_select "p", text: /Create New Account/, count: 0
+  end
+
+  test "create_user does not create a duplicate of a legacy plaintext-email user" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", new_user_auth["email"], @user.id ])
+    )
+    session[:pending_oidc_auth] = new_user_auth
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+      post :create_user
+    end
+  end
+
   test "does not show create account button when JIT link-only mode" do
     session[:pending_oidc_auth] = new_user_auth
 

@@ -176,7 +176,7 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
   test "does not issue a session when user is deleted before row locking" do
     @user.stubs(:with_lock).raises(ActiveRecord::RecordNotFound)
-    User.stubs(:authenticate_by).returns(@user)
+    User.stubs(:authenticate_by_email).returns(@user)
 
     assert_no_difference("Session.count") do
       post sessions_url, params: { email: @user.email, password: user_password_test }

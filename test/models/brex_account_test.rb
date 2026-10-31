@@ -47,7 +47,7 @@ class BrexAccountTest < ActiveSupport::TestCase
   test "declares raw Brex payloads as encrypted" do
     skip "Encryption not configured" unless BrexAccount.encryption_ready?
 
-    encrypted_attributes = BrexAccount.encrypted_attributes.map(&:to_s)
+    encrypted_attributes = Array(BrexAccount.encrypted_attributes).map(&:to_s)
 
     assert_includes encrypted_attributes, "raw_payload"
     assert_includes encrypted_attributes, "raw_transactions_payload"
