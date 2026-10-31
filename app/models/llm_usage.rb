@@ -166,7 +166,8 @@ class LlmUsage < ApplicationRecord
     completion_cost = (completion_tokens * pricing[:completion]) / 1_000_000.0
 
     # Anthropic prompt-cache tokens bill relative to the input rate: cache
-    # writes at 1.25x, cache reads at 0.1x. These multipliers are Anthropic's;
+    # writes at 1.25x, cache reads at 0.1x unless the model row sets its own
+    # cache_read_multiplier (Opus 5.5 and Sonnet 5.5 use 0.05x). These multipliers are Anthropic's;
     # gate on the provider so a non-Anthropic caller that happens to pass cache
     # counts can't be priced with the wrong rates (OpenAI cache rates vary by
     # model). Without cache pricing at all, estimated_cost
@@ -188,6 +189,8 @@ class LlmUsage < ApplicationRecord
     return nil unless PRICING.key?(provider)
 
     model = model.delete_prefix("#{provider}/")
+    # OpenRouter spells Claude versions with a dot ("claude-sonnet-5.5"); the rows use dashes.
+    model = model.sub(/\A(claude-(?:opus|sonnet|haiku)-\d+)\.(\d+)/, '\1-\2') if provider == "anthropic"
 
     provider_pricing = PRICING[provider]
 

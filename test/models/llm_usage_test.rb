@@ -277,6 +277,16 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_in_delta 0.80, cost_3_flash, 0.0001
   end
 
+  test "find_pricing matches OpenRouter dotted Claude version ids" do
+    assert_equal 2.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-sonnet-5.5")[:prompt]
+    assert_equal 4.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-opus-5.5")[:prompt]
+    assert_equal 0.10, LlmUsage.find_pricing("anthropic", "anthropic/claude-haiku-5.5")[:prompt]
+    assert_equal 5.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-opus-4.7")[:prompt]
+
+    cost = LlmUsage.calculate_cost(model: "anthropic/claude-sonnet-5.5", prompt_tokens: 1_000_000, completion_tokens: 100_000)
+    assert_in_delta 3.00, cost, 0.0001
+  end
+
   test "find_pricing and calculate_cost normalize provider prefix for OpenRouter models" do
     pricing = LlmUsage.find_pricing("google", "google/gemini-3.8-flash")
     assert_not_nil pricing
