@@ -348,8 +348,6 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_not plan.first.short?, "so $100 in the bank is not short"
     assert_equal %w[Internet Power Water], plan[1].items_due.map { |item| item.occurrence.recurring_transaction.name },
       "payday's window carries both, in the order of the dates they were snoozed to"
-    markers = ApplicationController.helpers.bills_pay_period_markers([ power ], plan)
-    assert_equal plan[1], markers.dig(power.id, :period), "the overview marks it under the same paycheck"
   end
 
   # Bills claim paychecks in date order, so a window's own bills are funded

@@ -18,7 +18,7 @@
         <%= render DS::Menu.new do |menu| %>
           <% menu.with_item(
                variant: "link",
-               text: t("bills.show.edit"),
+               text: t(@series.typed_income? ? "bills.show.edit_income" : "bills.show.edit"),
                icon: "pencil",
                href: edit_recurring_transaction_path(@series),
                data: { turbo_frame: :modal }) %>

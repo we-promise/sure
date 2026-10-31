@@ -3,7 +3,9 @@
 <%# INSPECT. What is going on with this bill, and what to do about it?
 
     The top of the bill's drawer. Its sections (Overview, Coming up, History
-    and Notes) follow it in bills/_detail, loaded lazily. %>
+    and Notes) follow it in bills/_detail, loaded lazily. For income the same
+    drawer speaks in income terms: what is expected or received, not what is
+    owed, and no pay actions. %>
 
 <div class="space-y-4">
   <%= render "bills/cancelled_notice", series: series %>
@@ -17,14 +19,19 @@
     <div class="space-y-0.5">
       <p class="text-2xl font-medium text-primary privacy-sensitive">
         <% if current_occurrence.paid? %>
-          <%= t("bills.summary.paid_headline", amount: format_money(paid)) %>
+          <%= t(series.typed_income? ? "bills.summary.received_headline" : "bills.summary.paid_headline", amount: format_money(paid)) %>
+        <% elsif series.typed_income? %>
+          <%= t("bills.summary.expected_headline", amount: format_money(current_occurrence.remaining_amount_money)) %>
         <% else %>
           <%= t("bills.summary.remaining", amount: format_money(current_occurrence.remaining_amount_money)) %>
         <% end %>
       </p>
       <p class="text-sm <%= current_occurrence.overdue? ? "text-destructive" : "text-secondary" %>">
-        <span class="privacy-sensitive"><%= t("bills.partial_progress", paid: format_money(paid), expected: format_money(expected)) %></span>
-        &middot; <%= occurrence_due_label(current_occurrence) %>
+        <% unless series.typed_income? %>
+          <span class="privacy-sensitive"><%= t("bills.partial_progress", paid: format_money(paid), expected: format_money(expected)) %></span>
+          &middot;
+        <% end %>
+        <%= occurrence_due_label(current_occurrence) %>
       </p>
       <%# The row shows the range only from @lg, so on a phone this is where
           an estimate says how far it can swing. %>
@@ -64,7 +71,8 @@
   <%# The next step, spelled out. The row shows it only when the bill needs you
       now, and never on a phone. Here it is always present, settled occurrences
       included, because the drawer is the only route in the app to unlinking a
-      payment or reopening a cycle. %>
+      payment or reopening a cycle. An income has no pay action: its payday is
+      matched or marked from the same verb, and Pay and Add belong to bills. %>
   <div class="flex flex-wrap items-center gap-2 pt-1">
     <% if current_occurrence %>
       <%= render "bills/row_action", occurrence: current_occurrence, suggestion: suggestion, drawer: true %>
@@ -72,6 +80,8 @@
 
     <%# Pay and Add link keep a home here, so the portal never leaves Bills
         just because the row got quieter. %>
-    <%= render "recurring_transactions/pay_action", recurring_transaction: series %>
+    <% unless series.typed_income? %>
+      <%= render "recurring_transactions/pay_action", recurring_transaction: series %>
+    <% end %>
   </div>
 </div>

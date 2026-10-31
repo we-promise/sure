@@ -1,16 +1,20 @@
-<%# locals: (series:) %>
+<%# locals: (series:, tone: nil) %>
 <%# The face of a bill: its merchant's logo, else initials. One recipe for the
     overview rows and the All bills list, and the transaction row's: round, 36px,
     a hairline around a logo so a white one still has an edge. %>
+<%# tone: :income tints the face success, so a payday reads as money in among
+    the bills. A logo keeps its own colours and takes the success edge. %>
+<% income = tone == :income %>
 <% if series.merchant&.logo_url.present? %>
   <%= image_tag Setting.transform_brand_fetch_url(series.merchant.logo_url),
-        class: "w-9 h-9 rounded-full shrink-0 border border-secondary",
+        class: "w-9 h-9 rounded-full shrink-0 border #{income ? "border-success" : "border-secondary"}",
         loading: "lazy" %>
 <% else %>
   <%= render DS::FilledIcon.new(
         variant: :text,
         text: series.display_name,
         size: "lg",
-        rounded: true
+        rounded: true,
+        hex_color: income ? "var(--color-success)" : nil
       ) %>
 <% end %>

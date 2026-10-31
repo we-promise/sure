@@ -47,28 +47,6 @@ module BillsHelper
     Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider.present?
   end
 
-  # Pay-period markers keyed by the id of the FIRST occurrence inside each
-  # period, so the section template can drop a marker between groups without
-  # pre-bucketing the rows. Each marker carries its period and the summed
-  # obligations due inside it. Dated like the rail, so a snoozed row counts
-  # toward the period it sits in.
-  def bills_pay_period_markers(occurrences, pay_periods)
-    return {} if pay_periods.blank?
-
-    seen = Set.new
-    occurrences.each_with_object({}) do |occurrence, markers|
-      index = pay_periods.index { |p| occurrence.effective_due_on.between?(p.starts_on, p.ends_on) }
-      next unless index && seen.add?(index)
-
-      period = pay_periods[index]
-      markers[occurrence.id] = {
-        period: period,
-        due_total: occurrences.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
-                              .sum { |o| o.resolved_expected_amount.abs }
-      }
-    end
-  end
-
   # The month bar reads paid | overdue | still to come. Overdue money is a
   # subset of what remains, so the slices are derived rather than three
   # independent totals.
@@ -292,6 +270,12 @@ module BillsHelper
              .distinct.count(:account_id) > 1
   end
 
+  # Income amounts are stored negative. A range reads as its two magnitudes,
+  # lowest first, so "from" is the smaller payday and "to" the larger one.
+  def bills_amount_bounds(series)
+    [ series.expected_amount_min_money.abs, series.expected_amount_max_money.abs ].sort
+  end
+
   # The occurrence-level twin of bills_due_label: relative-first, snooze-aware.
   def occurrence_due_label(occurrence)
     due = occurrence.effective_due_on
@@ -302,7 +286,12 @@ module BillsHelper
     # bill paid three weeks after its due date reported "Overdue by 20 days"
     # directly beside its own "$11.99 of $11.99 paid" total. Once a cycle is
     # closed the only useful fact left is when it had been due.
-    return t("bills.due_label.settled", date: date) unless occurrence.scheduled?
+    unless occurrence.scheduled?
+      if occurrence.recurring_transaction.typed_income?
+        return t(occurrence.paid? ? "bills.due_label.received" : "bills.due_label.expected", date: date)
+      end
+      return t("bills.due_label.settled", date: date)
+    end
 
     # Nobody is paying a bill that isn't active, so its leftover isn't late.
     # The label leads with the bill's status instead, as its page does.
