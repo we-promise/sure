@@ -79,6 +79,110 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "#000000", @merchant.reload.color
   end
 
+  test "index restores the list state remembered for this session" do
+    get family_merchants_path(per_page: 100, family_page: 2, family_search: "net")
+    assert_response :success
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100, family_page: 2, family_search: "net")
+  end
+
+  test "editing a merchant returns to the list with the chosen page size" do
+    get family_merchants_path(per_page: 100)
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { name: "new name", color: "#000000" } }
+    follow_redirect!
+
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "deleting a merchant returns to the list with the chosen page size" do
+    get family_merchants_path(per_page: 100)
+
+    delete family_merchant_url(@merchant)
+    follow_redirect!
+
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "clearing the search forgets it for the session" do
+    get family_merchants_path(per_page: 100, family_search: "net")
+    get family_merchants_path(per_page: 100, family_search: "")
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "index ignores unknown and non-scalar params when remembering the list state" do
+    get family_merchants_path(per_page: 100, family_search: [ "net" ], other: "x")
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "index does not remember page values pagination would reject" do
+    get family_merchants_path(per_page: 100)
+    # The request itself still fails once; it just must not be replayed.
+    assert_raises(Pagy::VariableError) do
+      get family_merchants_path(per_page: 100, family_page: "0", provider_page: "abc")
+    end
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "index remembers page values with leading zeros as pagination reads them" do
+    get family_merchants_path(per_page: 100, family_page: "02")
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100, family_page: 2)
+  end
+
+  test "index does not store the list state again when a JSON number matches it" do
+    get family_merchants_path(per_page: 100)
+
+    Session.any_instance.expects(:set_merchant_page_params).never
+    get family_merchants_path, params: { per_page: 100 }, headers: { "Accept" => "text/html" }, as: :json
+    assert_response :success
+  end
+
+  test "index remembers list params sent as JSON numbers" do
+    get family_merchants_path, params: { per_page: 100 }, headers: { "Accept" => "text/html" }, as: :json
+    assert_response :success
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "index uses list params sent in a JSON body instead of the stored state" do
+    get family_merchants_path(per_page: 100)
+
+    get family_merchants_path, params: { per_page: 20 }, headers: { "Accept" => "text/html" }, as: :json
+    assert_response :success
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 20)
+  end
+
+  test "index keeps the stored state when only unknown params are sent" do
+    get family_merchants_path(per_page: 100)
+    get family_merchants_path(other: "x")
+    assert_response :success
+
+    get family_merchants_path
+    assert_redirected_to family_merchants_path(per_page: 100)
+  end
+
+  test "pagination links are not prefetched so a clicked page is remembered" do
+    provider_merchant = ProviderMerchant.create!(name: "Prefetch Provider", source: "plaid", provider_merchant_id: "prefetch-provider")
+    entries(:transaction).transaction.update!(merchant: provider_merchant)
+
+    get family_merchants_path
+
+    # One pagination for family merchants, one for provider merchants.
+    assert_select "div[data-turbo-prefetch=false] nav", count: 2
+  end
+
   test "should upload merchant logo" do
     patch family_merchant_url(@merchant), params: {
       family_merchant: { logo: file_fixture_upload("profile_image.png", "image/png", :binary) }
