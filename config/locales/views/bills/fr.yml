@@ -288,6 +288,7 @@ fr:
     row_today: Aujourd'hui
     show:
       edit: Modifier la facture
+      edit_plan: Modifier les conditions du plan
     smart_configurations:
       show:
         apply: Appliquer la sélection

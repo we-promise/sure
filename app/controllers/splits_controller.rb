@@ -1,6 +1,7 @@
 class SplitsController < ApplicationController
   before_action :set_entry
   before_action :require_split_write_permission!, only: %i[create update destroy]
+  before_action :ensure_not_owned_by_installment_plan, only: %i[create update destroy]
 
   def new
     set_form_options
@@ -81,6 +82,16 @@ class SplitsController < ApplicationController
 
     def set_entry
       @entry = Current.accessible_entries.find(params[:transaction_id])
+    end
+
+    def ensure_not_owned_by_installment_plan
+      return if performed?
+
+      entry = @entry.split_child? ? @entry.parent_entry : @entry
+      return unless entry&.installment_plan_locked?
+
+      redirect_back_or_to transactions_path,
+        alert: t("transactions.show.installment_plan_locked")
     end
 
     def require_split_write_permission!

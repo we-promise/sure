@@ -39,6 +39,8 @@ class Entry < ApplicationRecord
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
 
   validate :cannot_unexclude_split_parent
+  validate :cannot_unexclude_planned_purchase
+  validate :planned_purchase_financial_fields_locked
   validate :split_child_date_matches_parent
 
   # new_record? && import_id.blank? keeps this to genuinely new manual
@@ -58,6 +60,7 @@ class Entry < ApplicationRecord
   }
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
+  before_destroy :prevent_planned_purchase_deletion
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
 
   scope :visible, -> {
@@ -111,6 +114,27 @@ class Entry < ApplicationRecord
     where(<<~SQL.squish)
       NOT EXISTS (
         SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id
+      )
+    SQL
+  }
+
+  # Split children repeat money that their parent already carries. Matching a
+  # child to a bill would pay the same charge twice.
+  scope :excluding_split_children, -> { where(parent_entry_id: nil) }
+
+  # A purchase an installment plan took over. The plan's charges replace it, so
+  # the purchase itself no longer counts towards the balance: leaving it in
+  # would count the same money twice.
+  #
+  # The plan keeps ownership after it ends, so a plan that took a payment still
+  # hides the purchase. A plan that never charged releases the purchase (clears
+  # `excluded`) and the entry counts again.
+  scope :excluding_planned_purchases, -> {
+    where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1 FROM recurring_transactions rt
+        WHERE rt.financed_source_entry_id = entries.id
+          AND entries.excluded = true
       )
     SQL
   }
@@ -549,6 +573,26 @@ class Entry < ApplicationRecord
     parent_entry_id.present?
   end
 
+  # True while an installment plan still owns this purchase. The plan controls
+  # `excluded` until it gives the purchase back: a manual toggle would count the
+  # purchase beside the plan's charges.
+  def installment_plan_locked?
+    return false if id.blank?
+
+    self.class.installment_plan_locked_source_ids
+      .where(financed_source_entry_id: id)
+      .exists?
+  end
+
+  # Called by the plan when it releases the purchase. The plan is still active
+  # while this update runs, so the normal guard must step aside.
+  def unexclude_by_installment_plan!
+    @installment_plan_release = true
+    update!(excluded: false)
+  ensure
+    @installment_plan_release = false
+  end
+
   # Splits this entry into child entries. Marks parent as excluded.
   #
   # @param splits [Array<Hash>] array of { name:, amount:, category_id:, merchant_id:, tag_ids:, excluded: } hashes.
@@ -608,6 +652,26 @@ class Entry < ApplicationRecord
   end
 
   class << self
+    # Source purchases that a plan still owns. A plan owns the purchase while
+    # it can still produce or explain a charge: active, paused or inactive, or
+    # ended after any allocation, including a suggestion that can be confirmed.
+    # One relation, so callers can filter or count without one query per entry.
+    def installment_plan_locked_source_ids
+      RecurringTransaction
+        .where.not(financed_source_entry_id: nil)
+        .where(<<~SQL.squish)
+          recurring_transactions.status IN ('active', 'paused', 'inactive')
+          OR EXISTS (
+            SELECT 1
+            FROM recurring_occurrences
+            INNER JOIN recurring_allocations
+              ON recurring_allocations.recurring_occurrence_id = recurring_occurrences.id
+            WHERE recurring_occurrences.recurring_transaction_id = recurring_transactions.id
+          )
+        SQL
+        .select(:financed_source_entry_id)
+    end
+
     # `family` is positional (not a keyword) on purpose: several callers pass
     # the filters as a bare keyword-style hash (`search(status: [...])`), and
     # a keyword parameter here would capture those as kwargs instead.
@@ -654,8 +718,10 @@ class Entry < ApplicationRecord
 
       return 0 unless has_updates
 
+      entries = all.where.not(id: installment_plan_locked_source_ids).to_a
+
       transaction do
-        all.each do |entry|
+        entries.each do |entry|
           changed = false
 
           # Update standard attributes
@@ -688,7 +754,7 @@ class Entry < ApplicationRecord
         end
       end
 
-      all.size
+      entries.size
     end
   end
 
@@ -720,6 +786,35 @@ class Entry < ApplicationRecord
       return unless excluded_changed?(from: true, to: false) && split_parent?
 
       errors.add(:excluded, "cannot be toggled off for a split transaction")
+    end
+
+    def cannot_unexclude_planned_purchase
+      return if @installment_plan_release
+      return unless excluded_changed?(from: true, to: false)
+      return unless installment_plan_locked?
+
+      errors.add(:excluded, :cannot_unexclude_planned_purchase)
+    end
+
+    # The plan copied the purchase terms when it started. Editing them here
+    # would make the purchase disagree with the schedule that replaced it.
+    def planned_purchase_financial_fields_locked
+      return unless will_save_change_to_amount? ||
+                    will_save_change_to_date? ||
+                    will_save_change_to_name? ||
+                    will_save_change_to_account_id? ||
+                    will_save_change_to_currency?
+      return unless installment_plan_locked?
+
+      errors.add(:base, :installment_plan_locked)
+    end
+
+    def prevent_planned_purchase_deletion
+      return if destroyed_by_association
+      return unless installment_plan_locked?
+
+      errors.add(:base, :installment_plan_locked)
+      throw :abort
     end
 
     def split_child_date_matches_parent

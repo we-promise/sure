@@ -28,7 +28,11 @@ class Category::Merger
   private
     def merge_sources!
       source_categories.each do |source|
-        Transaction.reassign_category!(family.transactions.where(category_id: source.id), target_category.id)
+        Transaction.reassign_category!(
+          family.transactions.where(category_id: source.id),
+          target_category.id,
+          from_category_ids: [ source.id ]
+        )
         merge_budget_categories(source)
         family.categories.where(parent_id: source.id).where.not(id: target_category.id).update_all(parent_id: target_category.id)
         family.categories.find(source.id).destroy!

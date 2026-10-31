@@ -24,7 +24,7 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to transactions_url
-    assert_equal "#{transactions.count} transactions updated", flash[:notice]
+    assert_equal I18n.t("transactions.bulk_updates.updated", count: transactions.count), flash[:notice]
 
     transactions.reload.each do |transaction|
       assert_equal 1.day.ago.to_date, transaction.date
@@ -217,7 +217,7 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_redirected_to transactions_url
-    assert_equal "0 transactions updated", flash[:notice]
+    assert_equal I18n.t("transactions.bulk_updates.updated", count: 0), flash[:notice]
     assert_equal original_category, entry.reload.transaction.category
     assert_nil entry.notes
   end
@@ -230,7 +230,7 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
       bulk_update: { entry_ids: [ entry.id ], name: "Renamed", notes: "Changed by another member" }
     }
 
-    assert_equal "0 transactions updated", flash[:notice]
+    assert_equal I18n.t("transactions.bulk_updates.updated", count: 0), flash[:notice]
     entry.reload
     assert_equal "Private entry", entry.name
     assert_nil entry.notes
@@ -244,10 +244,35 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
       bulk_update: { entry_ids: [ entry.id ], name: "Renamed", date: "2026-02-10" }
     }
 
-    assert_equal "1 transactions updated", flash[:notice]
+    assert_equal I18n.t("transactions.bulk_updates.updated", count: 1), flash[:notice]
     entry.reload
     assert_equal "Renamed", entry.name
     assert_equal Date.new(2026, 2, 10), entry.date
+  end
+
+  test "bulk update reports a locked plan purchase in a mixed selection" do
+    card = @user.family.accounts.create!(
+      name: "Plan Card", accountable: CreditCard.new, balance: 0,
+      currency: "USD", owner: @user, status: "active"
+    )
+    purchase = create_transaction(
+      account: card, name: "Laptop", amount: 1200,
+      category: categories(:one), kind: "standard"
+    )
+    RecurringTransaction::InstallmentPlan.new(
+      family: @user.family, user: @user, entry: purchase,
+      interest_rate: 12, term_months: 12,
+      interest_category_id: categories(:food_and_drink).id
+    ).call
+    other = create_transaction(account: accounts(:depository), name: "Coffee")
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: { entry_ids: [ purchase.id, other.id ], name: "Renamed" }
+    }
+
+    assert_equal I18n.t("transactions.bulk_updates.partial", updated: 1, count: 1), flash[:alert]
+    assert_equal "Laptop", purchase.reload.name
+    assert_equal "Renamed", other.reload.name
   end
 
   test "bulk update applies each share's rights within one mixed selection" do
@@ -264,7 +289,7 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
       }
     }
 
-    assert_equal "2 transactions updated", flash[:notice]
+    assert_equal I18n.t("transactions.bulk_updates.updated", count: 2), flash[:notice]
     assert_equal [ "Renamed", "bulk note" ], [ full_entry.reload.name, full_entry.notes ]
     assert_equal [ "Annotate", "bulk note" ], [ annotate_entry.reload.name, annotate_entry.notes ]
     assert_equal [ "Private", nil ], [ private_entry.reload.name, private_entry.notes ]

@@ -280,6 +280,7 @@ ru:
         other: Другое
     show:
       edit: Редактировать платёж
+      edit_plan: Изменить условия плана
     index:
       left_to_pay: осталось оплатить
       paid_so_far: Уже оплачено

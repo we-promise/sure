@@ -271,4 +271,20 @@ module TransactionsHelper
   rescue StandardError
     value.to_s
   end
+
+  # A manual card purchase that can become an installment plan. Preview-gated
+  # with the Bills surface, and hidden while a plan already owns the purchase.
+  def installment_plan_available?(entry)
+    return false unless preview_features_enabled?
+    return false if Current.family.recurring_transactions_disabled?
+    return false unless entry.entryable.is_a?(Transaction)
+
+    RecurringTransaction::InstallmentPlan.new(
+      family: Current.family,
+      user: Current.user,
+      entry: entry,
+      interest_rate: nil,
+      term_months: nil
+    ).eligible?
+  end
 end
