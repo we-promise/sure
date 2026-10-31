@@ -73,6 +73,20 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "editing the living area marks it as user-set, so valuation refreshes send it" do
+    property = @account.accountable
+    assert_not property.user_set_area?
+
+    patch property_path(@account), params: {
+      account: { accountable_attributes: { id: property.id, area_value: 1364, area_unit: "sqft" } }
+    }
+
+    property.reload
+    assert_equal 1364, property.area_value
+    assert property.locked?(:area_value)
+    assert property.user_set_area?
+  end
+
   # Tab view tests
   test "shows balances tab" do
     get balances_property_path(@account)

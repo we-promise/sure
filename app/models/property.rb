@@ -40,11 +40,18 @@ class Property < ApplicationRecord
     Measurement.new(area_value, area_unit) if area_value.present?
   end
 
-  # Living area in whole square feet, the unit US valuation providers take.
+  # Living area in whole square feet, the unit US valuation providers take;
+  # nil when no usable (positive) area is stored.
   def area_in_sqft
-    return nil if area_value.blank?
+    return nil unless area_value.to_i.positive?
 
-    area_unit == "sqm" ? (area_value * SQFT_PER_SQM).round : area_value
+    area_unit.to_s.strip.downcase == "sqm" ? (area_value * SQFT_PER_SQM).round : area_value
+  end
+
+  # Whether the user has set the living area, rather than it being the figure
+  # an AVM provider returned when the property was created.
+  def user_set_area?
+    locked?(:area_value) || locked?(:area_unit)
   end
 
   def purchase_price

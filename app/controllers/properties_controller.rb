@@ -29,6 +29,7 @@ class PropertiesController < ApplicationController
 
   def update
     if @account.update(property_params)
+      @account.accountable.lock_saved_attributes!
       @success_message = "Property details updated successfully."
 
       if @account.active?

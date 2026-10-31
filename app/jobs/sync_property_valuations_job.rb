@@ -82,9 +82,10 @@ class SyncPropertyValuationsJob < ApplicationJob
         postal_code: address.postal_code
       }
       lookup_params[:external_id] = property.avm_external_id if provider_class.requires_external_id?
-      # The stored area is the provider's own figure unless the user corrected
-      # it, so sending it back changes the valuation only after a correction.
-      if provider_class.accepts_square_footage? && property.area_in_sqft.present?
+      # Only a user-set area overrides the provider's record; an area copied
+      # from the provider at creation is left out so later corrections to the
+      # provider's record still take effect.
+      if provider_class.accepts_square_footage? && property.user_set_area? && property.area_in_sqft.present?
         lookup_params[:square_footage] = property.area_in_sqft
       end
 

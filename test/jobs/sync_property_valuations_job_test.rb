@@ -26,8 +26,7 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
       line1: "123 Main Street",
       locality: "Los Angeles",
       region: "CA",
-      postal_code: "90001",
-      square_footage: 1000
+      postal_code: "90001"
     ).returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
     Provider::Registry.stubs(:rentcast).returns(provider)
 
@@ -38,36 +37,44 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
     assert_equal "RentCast valuation", @account.entries.valuations.find_by(date: Date.current).name
   end
 
-  test "sends a living area stored in square meters as square feet" do
-    @property.update!(area_value: 100, area_unit: "sqm")
-
+  def expect_rentcast_lookup(params_matcher)
     provider = mock
     provider.stubs(:requests_remaining?).returns(true)
     provider.stubs(:valuation_currency).returns("USD")
     provider.expects(:fetch_property_valuation)
-      .with(has_entry(:square_footage, 1076))
+      .with(params_matcher)
       .returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
     Provider::Registry.stubs(:rentcast).returns(provider)
+  end
+
+  test "sends a user-set living area to providers that accept it" do
+    @property.lock_attr!(:area_value)
+    expect_rentcast_lookup(has_entry(:square_footage, 1000))
 
     SyncPropertyValuationsJob.new.perform
   end
 
-  test "omits the living area when the property has none" do
-    @property.update!(area_value: nil)
-
-    provider = mock
-    provider.stubs(:requests_remaining?).returns(true)
-    provider.stubs(:valuation_currency).returns("USD")
-    provider.expects(:fetch_property_valuation)
-      .with(Not(has_key(:square_footage)))
-      .returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
-    Provider::Registry.stubs(:rentcast).returns(provider)
+  test "sends a user-set living area stored in square meters as square feet" do
+    @property.update!(area_value: 100, area_unit: " SQM ")
+    @property.lock_attr!(:area_unit)
+    expect_rentcast_lookup(has_entry(:square_footage, 1076))
 
     SyncPropertyValuationsJob.new.perform
+  end
+
+  [ nil, 0, -5 ].each do |area|
+    test "omits a user-set living area of #{area.inspect}" do
+      @property.update!(area_value: area)
+      @property.lock_attr!(:area_value)
+      expect_rentcast_lookup(Not(has_key(:square_footage)))
+
+      SyncPropertyValuationsJob.new.perform
+    end
   end
 
   test "does not send the living area to providers that do not accept it" do
     @property.update!(avm_provider: "realie")
+    @property.lock_attr!(:area_value)
 
     provider = mock
     provider.stubs(:requests_remaining?).returns(true)
