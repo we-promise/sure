@@ -1,6 +1,7 @@
 ---
 ru:
   settings:
+    encryption_migration_guide: Руководство по настройке шифрования и миграции
     ai_prompts:
       show:
         disable_ai: Отключить AI Ассистента
@@ -57,6 +58,8 @@ ru:
           под их родительской в списке операций. Если выключено, разделённые элементы
           отображаются как отдельные строки.
         split_grouped_title: Группировать разделённые операции
+        auto_generate_transaction_names_title: "Автоматически создавать названия транзакций"
+        auto_generate_transaction_names_description: "Если название вручную введённой транзакции оставлено пустым, оно заполняется по выбранной категории и продавцу (например, «Развлечения - Netflix»). Если ничего не выбрано, название по-прежнему обязательно. Действует для всего домохозяйства и только для новых транзакций."
         theme_dark: Тёмная
         theme_light: Светлая
         theme_subtitle: Выберите предпочитаемую тему для приложения
@@ -788,6 +791,7 @@ ru:
       accounts_label: Счета
       advanced_section_title: Расширенные
       ai_prompts_label: Запросы ИИ
+      auto_matches_label: Автоматическое сопоставление
       api_key_label: API-ключи
       api_keys_label: API-ключи
       appearance_label: Внешний вид

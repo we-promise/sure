@@ -38,7 +38,6 @@ hu:
       welcome: "Üdvözöllek újra, %{name}"
       subtitle: "Íme, mi történik a pénzügyeiddel"
       new: "Új"
-      drag_to_reorder: "Húzd át a szakasz átrendezéséhez"
       toggle_section: "Szakasz láthatóságának váltása"
       net_worth_chart:
         data_not_available: A kiválasztott időszakra nincs elérhető adat

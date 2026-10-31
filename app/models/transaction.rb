@@ -112,7 +112,8 @@ class Transaction < ApplicationRecord
   INTERNAL_MOVEMENT_LABELS = [ "Transfer", "Sweep In", "Sweep Out", "Exchange" ].freeze
 
   # Providers that support pending transaction flags
-  PENDING_PROVIDERS = %w[simplefin plaid lunchflow enable_banking akahu up monobank mercury redbark financekit].freeze
+  # sorted
+  PENDING_PROVIDERS = %w[akahu enable_banking financekit lunchflow mercury monobank plaid redbark simplefin up].freeze
 
   # Slice size for the entry touch in reassign_category! — bounds the UPDATE
   # statement size when a merge or category destroy hits many transactions.
@@ -218,6 +219,33 @@ class Transaction < ApplicationRecord
     "AND #{not_pending_sql(table_alias, providers: providers)}"
   end
 
+  # Transactions whose category is still the one an automatic source (e.g.
+  # "ai", "bayes") set.
+  scope :category_from, ->(*sources, since: nil, metadata: nil) { where(category_from_sql(*sources, since:, metadata:)) }
+
+  def self.category_from_sql(*sources, **options)
+    enriched_from_sql("category_id", *sources, **options)
+  end
+
+  # Transactions whose attribute (category_id, merchant_id; internal callers
+  # only) is still the value an automatic source set: that source's
+  # enrichment holds the current value. since: only enrichments written
+  # after it; metadata: only those whose metadata contains it.
+  def self.enriched_from_sql(attribute, *sources, since: nil, metadata: nil)
+    sql = +<<~SQL.squish
+      EXISTS (
+        SELECT 1 FROM data_enrichments de
+        WHERE de.enrichable_type = 'Transaction'
+          AND de.enrichable_id = transactions.id
+          AND de.attribute_name = :attribute
+          AND de.source IN (:sources)
+          AND de.value = to_jsonb(transactions.#{attribute}::text)
+    SQL
+    sql << " AND de.updated_at > :since" if since
+    sql << " AND de.metadata @> CAST(:metadata AS jsonb)" if metadata
+    sanitize_sql_array([ "#{sql})", { attribute: attribute, sources: sources.flatten.map(&:to_s), since: since, metadata: metadata&.to_json } ])
+  end
+
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
     joins(entry: :account).where(accounts: { family_id: family.id })
@@ -255,6 +283,64 @@ class Transaction < ApplicationRecord
       end
 
       updated_ids.size
+    end
+  end
+
+  # Minimum characters typed before searching past transactions for name suggestions.
+  MIN_LENGTH_FOR_NAME_SUGGESTION = 3
+
+  # Past transaction names resembling the given query, each paired with the category most
+  # commonly used for that exact name. Powers the "Libellé" autocomplete in the new
+  # transaction form — call on a family-scoped relation, e.g. `family.transactions.name_suggestions_for(query)`.
+  def self.name_suggestions_for(query, limit: 8)
+    sanitized_query = query.to_s.strip
+    return [] if sanitized_query.length < MIN_LENGTH_FOR_NAME_SUGGESTION
+
+    # distinct(false) cancels any DISTINCT inherited from the caller's scope (e.g.
+    # Account.accessible_by's left_joins(:account_shares).distinct) — Postgres rejects
+    # SELECT DISTINCT combined with an ORDER BY expression absent from the select list.
+    # Callers such as TransactionsController#name_suggestions merge in
+    # Account.accessible_by, whose left_joins(:account_shares) fans out to one row per
+    # share for accounts the current user owns (the owner predicate matches regardless of
+    # which share row it's paired with) — so COUNT(*) below would over-count transactions
+    # on any owned account shared with multiple family members. COUNT(DISTINCT
+    # transactions.id) counts each transaction once no matter how the caller's scope joins.
+    # Leading-wildcard ILIKE can't use index_entries_on_lower_name (a btree on
+    # lower(name), which only accelerates prefix/exact matches) and falls back
+    # to a scan — same tradeoff already accepted in EntrySearch#search and
+    # Entry.uncategorized_matching for the same reason. Revisit with a shared
+    # pg_trgm index across all three call sites if this becomes a bottleneck.
+    matching_names = with_entry
+      .distinct(false)
+      .where("entries.name ILIKE ?", "%#{sanitize_sql_like(sanitized_query)}%")
+      .group("entries.name")
+      .order(Arel.sql("COUNT(DISTINCT transactions.id) DESC"))
+      .limit(limit)
+      .pluck(Arel.sql("entries.name"))
+
+    name_suggestions_for_names(matching_names)
+  end
+
+  def self.name_suggestions_for_names(matching_names)
+    return [] if matching_names.empty?
+
+    # Winning (most-used) category_id per name, in one grouped query. Rows are ordered so
+    # that for each name, its highest-count category_id comes first — the `||=` below then
+    # keeps only that first (winning) row per name, avoiding a query per name.
+    category_id_by_name = {}
+    with_entry
+      .distinct(false)
+      .where(entries: { name: matching_names })
+      .where.not(category_id: nil)
+      .group("entries.name", :category_id)
+      .order(Arel.sql("entries.name ASC, COUNT(DISTINCT transactions.id) DESC"))
+      .pluck(Arel.sql("entries.name"), :category_id)
+      .each { |name, category_id| category_id_by_name[name] ||= category_id }
+
+    categories_by_id = Category.where(id: category_id_by_name.values.uniq).index_by(&:id)
+
+    matching_names.map do |name|
+      Transaction::NameSuggestion.new(name: name, category: categories_by_id[category_id_by_name[name]])
     end
   end
 
@@ -364,20 +450,6 @@ class Transaction < ApplicationRecord
 
   def has_potential_duplicate?
     potential_posted_match_data.present? && !potential_duplicate_dismissed?
-  end
-
-  # Manual recurring transactions are unique per (family, account, merchant/name, amount, currency)
-  # — see the partial unique indexes on recurring_transactions. Used to guard "mark as recurring"
-  # so the UI can disable the action ahead of time instead of failing after a POST.
-  def existing_manual_recurring_transaction
-    entry.account.family.recurring_transactions.find_by(
-      account_id: entry.account_id,
-      merchant_id: merchant_id,
-      name: merchant_id.present? ? nil : entry.name,
-      amount: entry.amount,
-      currency: entry.currency,
-      manual: true
-    )
   end
 
   def potential_duplicate_entry
