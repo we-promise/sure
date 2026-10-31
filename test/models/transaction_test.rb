@@ -205,9 +205,9 @@ class TransactionTest < ActiveSupport::TestCase
     # inflow leg shows the outflow's category read-only instead of a picker
     # whose choice would never reach a budget.
     assert outflow_entry.transaction.reload.category_editable?
-    assert_not outflow_entry.transaction.category_set_on_transfer_outflow?
+    assert_not outflow_entry.transaction.category_set_on_transfer_counterpart?
     assert_not inflow_entry.transaction.reload.category_editable?
-    assert inflow_entry.transaction.category_set_on_transfer_outflow?
+    assert inflow_entry.transaction.category_set_on_transfer_counterpart?
 
     fm_outflow = create_transaction(date: Date.current, account: accounts(:depository), amount: 500, kind: "funds_movement")
     fm_inflow = create_transaction(date: Date.current, account: accounts(:connected), amount: -500, kind: "funds_movement")
@@ -215,7 +215,7 @@ class TransactionTest < ActiveSupport::TestCase
 
     assert_not fm_outflow.transaction.reload.category_editable?
     assert_not fm_inflow.transaction.reload.category_editable?
-    assert_not fm_inflow.transaction.category_set_on_transfer_outflow?
+    assert_not fm_inflow.transaction.category_set_on_transfer_counterpart?
   end
 
   test "a matched inflow leg stays read-only after its kind is edited to standard" do
@@ -224,7 +224,7 @@ class TransactionTest < ActiveSupport::TestCase
     Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction)
     inflow_entry.transaction.update!(kind: "standard")
 
-    assert inflow_entry.transaction.reload.category_set_on_transfer_outflow?
+    assert inflow_entry.transaction.reload.category_set_on_transfer_counterpart?
     assert_not inflow_entry.transaction.category_editable?
   end
 

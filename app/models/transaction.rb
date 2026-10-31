@@ -88,8 +88,10 @@ class Transaction < ApplicationRecord
   # Kinds that never belong in the "Uncategorized" bucket, whichever surface
   # asks for it (the Transactions category filter, the uncategorized badge
   # count, the Quick Categorize wizard). These are the paired legs of a
-  # Transfer between the user's own accounts, so they have nothing to
-  # categorize. Every other kind with a NULL category does.
+  # Transfer between the user's own accounts, so they need no category. A
+  # withdrawal from an investment account can still carry one (see
+  # Transfer#investment_withdrawal?), but is not flagged when it has none.
+  # Every other kind with a NULL category does belong there.
   #
   # This is deliberately neither of the two lists above:
   #   - vs TRANSFER_KINDS: loan_payment and investment_contribution are
@@ -354,28 +356,29 @@ class Transaction < ApplicationRecord
   #     stay editable, same as a regular transaction, since there's no
   #     counterpart to defer to and no other way for the user to fix a
   #     provider mislabel.
-  #   - Once matched, the category belongs to the outflow leg, the one
-  #     budgets and reports count. Only that leg is editable, and only when
-  #     Transfer#categorizable?, which is based on the (stable) destination
-  #     account rather than either leg's kind, so it stays correct even if
-  #     an older provider sync left a stale kind on this transaction. The
-  #     inflow leg shows the outflow's category instead (see
-  #     #category_set_on_transfer_outflow?), since a category picked there
-  #     would look saved but never reach a budget.
+  #   - Once matched, the category belongs to one leg,
+  #     Transfer#category_transaction: the cash side, which budgets and
+  #     reports count when the transfer counts at all. Only that leg is
+  #     editable, and only when Transfer#categorizable?, which is based on
+  #     the (stable) accounts rather than either leg's kind, so it stays
+  #     correct even if an older provider sync left a stale kind on this
+  #     transaction. The other leg shows that category instead (see
+  #     #category_set_on_transfer_counterpart?), since a category picked
+  #     there would look saved but never be the one that counts.
   def category_editable?
-    return false if category_set_on_transfer_outflow?
+    return false if category_set_on_transfer_counterpart?
     return true unless transfer?
     return true unless transfer
 
-    transfer.categorizable? && transfer.outflow_transaction_id == id
+    transfer.categorizable? && transfer.category_transaction.id == id
   end
 
-  # The inflow leg of a categorizable transfer: its category is the
-  # outflow's, shown read-only. Decided by the Transfer record rather than
-  # this leg's kind, so editing the kind (e.g. to standard) cannot bypass
-  # the outflow's ownership.
-  def category_set_on_transfer_outflow?
-    transfer_as_inflow.present? && transfer_as_inflow.categorizable?
+  # The leg of a categorizable transfer that does not hold its category: it
+  # shows the other leg's category read-only. Decided by the Transfer record
+  # rather than this leg's kind, so editing the kind (e.g. to standard)
+  # cannot bypass the other leg's ownership.
+  def category_set_on_transfer_counterpart?
+    transfer.present? && transfer.categorizable? && transfer.category_transaction.id != id
   end
 
   # Whether this non-editable transfer leg is a liability payment (shown

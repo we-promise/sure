@@ -1,5 +1,6 @@
 class TransactionsController < ApplicationController
   include EntryableResource
+  include PairedTransferCategoryStreams
 
   before_action :set_entry_for_unlock, only: :unlock
   before_action :set_entry_for_tags, only: :update_tags
@@ -31,14 +32,16 @@ class TransactionsController < ApplicationController
                          :category, :merchant, :tags,
                          # Union of #2643 counterpart UI + Skylight category-menu N+1:
                          # - outflow rows need inflow_transaction (to_account) for both
-                         #   counterpart display and Transfer#categorizable?/#payment?
+                         #   counterpart display and Transfer#categorizable?/#payment?,
+                         #   and the inflow's category, which the outflow row of an
+                         #   investment withdrawal shows
                          # - inflow rows need outflow_transaction (from_account) for
                          #   counterpart display, inflow_transaction (to_account)
                          #   for the category menu on the same row, and the
                          #   outflow's category, which the inflow row shows
                          {
                            transfer_as_outflow: {
-                             inflow_transaction: { entry: :account }
+                             inflow_transaction: [ :category, { entry: :account } ]
                            }
                          },
                          {
@@ -240,6 +243,7 @@ class TransactionsController < ApplicationController
               partial: "entries/entry",
               locals: { entry: @entry, in_split_group: in_split_group }
             ),
+            *paired_transfer_category_stream_items(@entry.transaction),
             *flash_notification_stream_items
           ].compact
         end
@@ -782,9 +786,10 @@ class TransactionsController < ApplicationController
         {} # read_only — no edits allowed
       end
 
-      # A matched transfer's category lives on its outflow leg; a category
-      # sent for the inflow leg would look saved but never reach a budget.
-      if permitted[:entryable_attributes]&.key?(:category_id) && @entry.transaction.category_set_on_transfer_outflow?
+      # A matched transfer's category lives on one leg
+      # (Transfer#category_transaction); a category sent for the other leg
+      # would look saved but never be the one that counts.
+      if permitted[:entryable_attributes]&.key?(:category_id) && @entry.transaction.category_set_on_transfer_counterpart?
         permitted[:entryable_attributes] = permitted[:entryable_attributes].except(:category_id)
       end
 

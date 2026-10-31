@@ -238,9 +238,10 @@
                 <%= icon "lock", size: "sm", class: "text-secondary" %>
               <% end %>
             <% end %>
+            <% global_transfer = transaction.transfer? && view_ctx == "global" %>
             <%= content_tag :p,
-                transaction.transfer? && view_ctx == "global" ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
-                class: ["privacy-sensitive", "text-green-600": entry.amount.negative?] %>
+                global_transfer ? "+/- #{format_money(entry.amount_money.abs)}" : format_money(-entry.amount_money),
+                class: ["privacy-sensitive", "text-success": entry.amount.negative? && !global_transfer] %>
           </div>
         </div>
       </div>
