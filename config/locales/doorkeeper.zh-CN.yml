@@ -19,6 +19,9 @@ zh-CN:
             scopes:
               not_match_configured: 与服务器配置不匹配
   doorkeeper:
+    scopes:
+      "mcp:read_write": "通过 MCP 读取和修改您的财务数据"
+
     applications:
       buttons:
         authorize: 授权

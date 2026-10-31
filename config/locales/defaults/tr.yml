@@ -229,6 +229,7 @@ tr:
     pm: öğleden sonra
   mcp:
     errors:
+      insufficient_scope: "Bu belirteç MCP erişimi sağlamıyor. mcp:read_write kapsamıyla yeniden yetkilendirin veya bu bağlayıcıyı yeniden ekleyin."
       invalid_session_id: Geçersiz MCP oturum kimliği
       unsupported_protocol_version: 'Desteklenmeyen MCP protokol sürümü: %{version}'
   oauth:

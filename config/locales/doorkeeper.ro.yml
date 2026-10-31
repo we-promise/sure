@@ -19,6 +19,9 @@ ro:
               not_match_configured: "nu se potrivește cu configurația serverului."
 
   doorkeeper:
+    scopes:
+      "mcp:read_write": "Citește și modifică datele tale financiare prin MCP"
+
     applications:
       confirmations:
         destroy: 'Ești sigur?'

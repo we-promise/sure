@@ -19,6 +19,9 @@ vi:
               not_match_configured: "không khớp với cấu hình trên máy chủ."
 
   doorkeeper:
+    scopes:
+      "mcp:read_write": "Đọc và chỉnh sửa dữ liệu tài chính của bạn qua MCP"
+
     applications:
       confirmations:
         destroy: 'Bạn có chắc không?'
