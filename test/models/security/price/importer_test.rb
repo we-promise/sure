@@ -530,38 +530,44 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
   test "retries fetch when refetchable provisional prices exist" do
     Security::Price.delete_all
 
-    # Skip if today is a weekend
-    return if Date.current.saturday? || Date.current.sunday?
+    # A provisional price for "today" is only refetchable on a weekday, where the
+    # provider would have a real quote for it. Pin to the next weekday rather
+    # than bailing out at the top of the test, so the case is covered every day
+    # it is run instead of silently vanishing on weekends.
+    test_date = Date.current
+    test_date += 1.day while test_date.saturday? || test_date.sunday?
 
-    # Pre-populate with provisional price for today
-    Security::Price.create!(
-      security: @security,
-      date: Date.current,
-      price: 100,
-      currency: "USD",
-      provisional: true
-    )
+    travel_to test_date do
+      # Pre-populate with provisional price for today
+      Security::Price.create!(
+        security: @security,
+        date: Date.current,
+        price: 100,
+        currency: "USD",
+        provisional: true
+      )
 
-    # Provider now returns today's actual price
-    provider_response = provider_success_response([
-      OpenStruct.new(security: @security, date: Date.current, price: 165, currency: "USD")
-    ])
+      # Provider now returns today's actual price
+      provider_response = provider_success_response([
+        OpenStruct.new(security: @security, date: Date.current, price: 165, currency: "USD")
+      ])
 
-    @provider.expects(:fetch_security_prices)
-             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
-                   start_date: get_provider_fetch_start_date(Date.current), end_date: Date.current)
-             .returns(provider_response)
+      @provider.expects(:fetch_security_prices)
+               .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                     start_date: get_provider_fetch_start_date(Date.current), end_date: Date.current)
+               .returns(provider_response)
 
-    Security::Price::Importer.new(
-      security: @security,
-      security_provider: @provider,
-      start_date: Date.current,
-      end_date: Date.current
-    ).import_provider_prices
+      Security::Price::Importer.new(
+        security: @security,
+        security_provider: @provider,
+        start_date: Date.current,
+        end_date: Date.current
+      ).import_provider_prices
 
-    db_price = Security::Price.find_by(security: @security, date: Date.current)
-    assert_equal 165, db_price.price, "Price should be updated from provider"
-    assert_not db_price.provisional, "Price should no longer be provisional after provider returns real price"
+      db_price = Security::Price.find_by(security: @security, date: Date.current)
+      assert_equal 165, db_price.price, "Price should be updated from provider"
+      assert_not db_price.provisional, "Price should no longer be provisional after provider returns real price"
+    end
   end
 
   test "skips fetch when all prices are non-provisional" do
