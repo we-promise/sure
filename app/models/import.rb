@@ -394,7 +394,7 @@ class Import < ApplicationRecord
         ticker: csv_value(row, ticker_col_label, "ticker").to_s,
         exchange_operating_mic: csv_value(row, exchange_operating_mic_col_label, "exchange_operating_mic").to_s,
         price: sanitize_number(csv_value(row, price_col_label, "price")).to_s,
-        amount: sanitize_number(csv_value(row, amount_col_label, "amount", "balance")).to_s,
+        amount: sanitize_number(csv_value(row, amount_col_label, "amount", "balance"), parentheses_negative: amount_type_strategy != "custom_column").to_s,
         currency: (csv_value(row, currency_col_label, "currency") || default_currency).to_s,
         name: (csv_value(row, name_col_label, "name") || default_row_name).to_s,
         category: csv_value(row, category_col_label, "category").to_s,
@@ -692,7 +692,10 @@ class Import < ApplicationRecord
     #
     # @param value [String, nil] the raw cell value from the CSV
     # @return [String] a normalized number like "1234.56", or "" if invalid
-    def sanitize_number(value)
+    # parentheses_negative: read accounting notation, "(1,234.56)", as a negative
+    # amount. Only pass it for a column that is itself the signed value; magnitude
+    # columns (custom-column type strategy, YNAB Inflow/Outflow) stay unsigned.
+    def sanitize_number(value, parentheses_negative: false)
       return "" if value.nil?
 
       format = NUMBER_FORMATS[number_format]
@@ -700,6 +703,13 @@ class Import < ApplicationRecord
 
       # First, normalize spaces and remove any characters that aren't numbers, delimiters, separators, or minus signs
       sanitized = value.to_s.strip
+
+      # Accounting notation, "(1,234.56)" or "($1,234.56)", means a negative amount
+      negative = false
+      if parentheses_negative && (wrapped = sanitized.match(/\A[^\d()\-]*\(([^()]*)\)[^\d()\-]*\z/))
+        negative = true
+        sanitized = wrapped[1].strip
+      end
 
       # Handle French/Scandinavian format specially
       if format[:delimiter] == " "
@@ -735,6 +745,8 @@ class Import < ApplicationRecord
       unless sanitized =~ /\A-?\d+\.?\d*\z/
         return ""
       end
+
+      sanitized = "-#{sanitized}" if negative && !sanitized.start_with?("-") && !sanitized.to_d.zero?
 
       sanitized
     end

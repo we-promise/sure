@@ -92,6 +92,63 @@ module ImportInterfaceTest
     assert_equal "1234.56", row.amount
   end
 
+  test "parses accounting notation with parentheses as a negative amount" do
+    {
+      "1,234.56" => [ "(1,234.56)", "($1,234.56)", "$(1,234.56)", " (1,234.56) " ],
+      "1.234,56" => [ "(1.234,56)", "(€1.234,56)", "(1.234,56) €" ],
+      "1 234,56" => [ "(1 234,56)", "(1 234,56 kr)" ]
+    }.each do |number_format, values|
+      values.each do |value|
+        import = Import.find(imports(:transaction).id)
+        import.update!(
+          number_format: number_format,
+          amount_col_label: "amount",
+          date_col_label: "date",
+          name_col_label: "name",
+          date_format: "%m/%d/%Y"
+        )
+        import.update!(raw_file_str: "date,amount,name\n01/01/2024,\"#{value}\",Test")
+        import.generate_rows_from_csv
+
+        assert_equal "-1234.56", import.reload.rows.first.amount, "#{value.inspect} with #{number_format}"
+      end
+    end
+  end
+
+  test "does not negate zero or an amount that is already negative in parentheses" do
+    { "(0.00)" => "0.00", "(-5.00)" => "-5.00" }.each do |value, expected|
+      import = Import.find(imports(:transaction).id)
+      import.update!(
+        number_format: "1,234.56",
+        amount_col_label: "amount",
+        date_col_label: "date",
+        name_col_label: "name",
+        date_format: "%m/%d/%Y"
+      )
+      import.update!(raw_file_str: "date,amount,name\n01/01/2024,\"#{value}\",Test")
+      import.generate_rows_from_csv
+
+      assert_equal expected, import.reload.rows.first.amount, value.inspect
+    end
+  end
+
+  test "keeps a parenthesized amount unsigned when a type column sets the direction" do
+    import = Import.find(imports(:transaction).id)
+    import.update!(
+      number_format: "1,234.56",
+      amount_col_label: "amount",
+      date_col_label: "date",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "custom_column",
+      amount_type_inflow_value: "credit"
+    )
+    import.update!(raw_file_str: "date,amount,name\n01/01/2024,\"(1,234.56)\",Test")
+    import.generate_rows_from_csv
+
+    assert_equal "1234.56", import.reload.rows.first.amount
+  end
+
   test "parses French/Scandinavian number format correctly" do
     import = imports(:transaction)
     import.update!(
