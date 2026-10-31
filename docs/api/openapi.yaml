@@ -5008,6 +5008,42 @@ paths:
               - password
               - device
         required: true
+  "/api/v1/auth/sso_providers":
+    get:
+      summary: List configured SSO providers
+      tags:
+      - Auth
+      description: Lists the SSO providers configured on this instance. Each name
+        can be used with GET /auth/mobile/{name} to start mobile SSO.
+      responses:
+        '200':
+          description: providers listed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Provider name used in /auth/mobile/{name}
+                        strategy:
+                          type: string
+                          description: OmniAuth strategy, e.g. openid_connect, google_oauth2,
+                            github, saml
+                        label:
+                          type: string
+                          description: Button label
+                      required:
+                      - name
+                      - strategy
+                      - label
+                required:
+                - providers
   "/api/v1/auth/sso_exchange":
     post:
       summary: Exchange mobile SSO authorization code for tokens

@@ -8,9 +8,12 @@ class OauthMetadataController < ApplicationController
   skip_before_action :detect_os, raise: false
 
   def protected_resource
+    base = configured_base_url
+    resource_url = params[:resource_path].present? ? "#{base}/#{params[:resource_path]}" : base
+
     render json: {
-      resource: configured_base_url,
-      authorization_servers: [ configured_base_url ],
+      resource: resource_url,
+      authorization_servers: [ base ],
       scopes_supported: [ McpController::REQUIRED_SCOPE ],
       bearer_methods_supported: [ "header" ]
     }
