@@ -86,11 +86,11 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     account = family.accounts.create!(name: "Chequing", currency: "CAD", balance: 100, accountable: Depository.new)
     account.entries.create!(date: 10.days.ago.to_date, amount: 10, currency: "GBP", name: "Card payment", entryable: Transaction.new)
 
-    # GBP/CAD comes back empty, so GBP/USD is also fetched as its first USD leg.
-    [ %w[GBP CAD], %w[GBP USD], %w[CAD USD] ].each do |from, to|
+    # GBP/CAD comes back empty, so GBP/USD is fetched again as its first USD leg.
+    { %w[GBP CAD] => 1, %w[GBP USD] => 2, %w[CAD USD] => 1 }.each do |(from, to), calls|
       @provider.expects(:fetch_exchange_rates)
                .with(from: from, to: to, start_date: anything, end_date: anything)
-               .at_least_once
+               .times(calls)
                .returns(provider_success_response([]))
     end
 
