@@ -5,6 +5,21 @@ class Demo::Generator
   # reference Demo::Generator::DEMO_STRIPE_SUBSCRIPTION_ID keep working.
   DEMO_STRIPE_SUBSCRIPTION_ID = Subscription::DEMO_STRIPE_ID
 
+  # Organic Maps' published donation addresses (organicmaps.app/donate): real,
+  # public and modest. Every sync re-reads a wallet from its chain, so a made-up
+  # address would drop to zero on the demo user's first sync.
+  ONCHAIN_DEMO_WALLETS = [
+    { chain: "bitcoin", address: "bc1qxnn9j9z5xywqz5sdqxaq327vw0x22nhsxc67ld", tokens: [] },
+    { chain: "ethereum", address: "0xC36A638DD2274BDe6097DFD62B3EB5Aa8A67Ec54", tokens: [
+      { symbol: "USDC", name: "USD Coin", decimals: 6, contract: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
+      { symbol: "USDT", name: "Tether USD", decimals: 6, contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7" }
+    ] },
+    { chain: "solana", address: "9Fcm6Gw5PsivSCcpxCh9GVfj9jcPgQ8Q5mZJhsEuRHJV", tokens: [
+      { symbol: "USDC", name: "USD Coin", decimals: 6, contract: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+      { symbol: "USDT", name: "Tether USD", decimals: 6, contract: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB" }
+    ] }
+  ].freeze
+
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
   #
@@ -109,6 +124,11 @@ class Demo::Generator
 
       puts "🎯 Seeding goals..."
       generate_goals!(family)
+
+      # Only the demo family: every family with these wallets reads the same
+      # addresses from the public explorers on each sync.
+      puts "👛 Linking public on-chain wallets..."
+      link_onchain_demo_wallets!(family)
 
       puts "🔑 Creating monitoring API key..."
       create_monitoring_api_key!(family)
@@ -1048,6 +1068,19 @@ class Demo::Generator
       family.accounts.each do |account|
         sync = Sync.create!(syncable: account)
         sync.perform
+      end
+    end
+
+    # Linked the way a user links them, from an empty snapshot instead of a chain
+    # read, so generating stays offline. The item sync the linker queues fills in
+    # the real balances, history and prices.
+    def link_onchain_demo_wallets!(family)
+      item = family.onchain_wallet_item!
+      ONCHAIN_DEMO_WALLETS.each do |wallet|
+        chain = Onchain::Chains.find!(wallet[:chain])
+        assets = [ chain.native_asset(quantity: 0) ] + wallet[:tokens].map { |token| chain.token_asset(**token, quantity: 0) }
+        OnchainWalletItem::WalletLinker.new(item, chain: chain.key, address: Onchain::Chains.canonical_address(chain.key, wallet[:address]))
+          .link(snapshot: Onchain::Snapshot.new(assets: assets, movements: []), selected_keys: assets.map { |asset| OnchainWalletItem::TokenReview.key_for(asset) })
       end
     end
 
