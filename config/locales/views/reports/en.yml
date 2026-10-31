@@ -13,6 +13,7 @@ en:
         quarterly: Quarterly
         ytd: Year to Date
         last_6_months: Last 6 Months
+        last_12_months: Last 12 Months
         custom: Custom Range
       date_range:
         from: From
@@ -27,6 +28,7 @@ en:
         ytd: "YTD %{year}"
         past_year: "%{year}"
         last_6_months: "%{start} – %{end}"
+        last_12_months: "%{start} – %{end}"
       period_picker:
         quarter: "Q%{quarter} %{year}"
         ytd: "YTD %{year}"
@@ -59,6 +61,24 @@ en:
         over: Over Budget
     trends:
       title: Trends & Insights
+      category_trend:
+        title: Category trends
+        subtitle: Monthly or yearly totals for the selected categories.
+        select: Select categories
+        selected:
+          one: "%{count} category"
+          other: "%{count} categories"
+        search: Search categories
+        apply: Apply
+        clear: Clear
+        month: Month
+        year: Year
+        granularity_aria: Trend granularity
+        data_table: Show data table
+        data_table_caption: Trend values by period
+        data_table_period: Period
+        no_data: Choose a longer period to see a trend.
+        prompt: Select categories to see their trend.
       monthly_breakdown: Monthly Breakdown
       month: Month
       income: Income

@@ -201,6 +201,50 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes @response.body, next_month.strftime("%b %Y")
   end
 
+  test "last 12 months uses a twelve month window" do
+    get reports_path(period_type: :last_12_months)
+    assert_response :ok
+
+    expected_end   = Date.current.end_of_month
+    expected_start = (expected_end + 1.day - 12.months).beginning_of_month
+
+    assert_includes @response.body, expected_start.strftime("%b %Y")
+    assert_includes @response.body, expected_end.strftime("%b %Y")
+  end
+
+  test "last 12 months navigation shifts by twelve months" do
+    latest_start = (Date.current.end_of_month + 1.day - 12.months).beginning_of_month
+    start_date   = latest_start - 24.months
+    end_date     = start_date + 12.months - 1.day
+
+    get reports_path(period_type: :last_12_months, start_date: start_date, end_date: end_date)
+    assert_response :ok
+
+    prev_end = start_date - 1.day
+    next_start = start_date + 12.months
+    next_end = next_start + 12.months - 1.day
+
+    assert_select "a[href*='start_date=#{(start_date - 12.months).iso8601}'][href*='end_date=#{prev_end.iso8601}']", minimum: 1
+    assert_select "a[href*='start_date=#{next_start.iso8601}'][href*='end_date=#{next_end.iso8601}']", minimum: 1
+  end
+
+  test "last 12 months next link clamps at the latest window" do
+    latest_start = (Date.current.end_of_month + 1.day - 12.months).beginning_of_month
+    # A start inside the latest window: a plain twelve-month step would end
+    # after today, so the link has to clamp.
+    start_date = latest_start - 5.months
+    end_date   = start_date + 12.months - 1.day
+
+    get reports_path(period_type: :last_12_months, start_date: start_date, end_date: end_date)
+    assert_response :ok
+
+    unclamped_start = start_date + 12.months
+    unclamped_end = unclamped_start + 12.months - 1.day
+
+    assert_select "a[href*='start_date=#{latest_start.iso8601}'][href*='end_date=#{Date.current.end_of_month.iso8601}']", minimum: 1
+    assert_select "a[href*='start_date=#{unclamped_start.iso8601}'][href*='end_date=#{unclamped_end.iso8601}']", count: 0
+  end
+
   test "last 6 months default start date is consistent with navigation" do
     # First load (no params) should produce the same start/end as the navigation arrows would
     get reports_path(period_type: :last_6_months)
@@ -941,6 +985,240 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert lines.none? { |text| text.include?(excluded.ticker) }, "the excluded disposal must not be listed"
   end
 
+  test "activity breakdown draws one trend line per selected category" do
+    account = accounts(:depository)
+    groceries = @family.categories.create!(name: "Trend groceries", color: "#ABCDEF")
+    dining = @family.categories.create!(name: "Trend dining", color: "#FEDCBA")
+    period_start = 2.months.ago.beginning_of_month.to_date
+
+    create_transaction(account: account, name: "Groceries now", amount: 40, category: groceries, date: Date.current)
+    create_transaction(account: account, name: "Groceries before", amount: 10, category: groceries, date: period_start + 2.days)
+    create_transaction(account: account, name: "Dining now", amount: 25, category: dining, date: Date.current)
+
+    get reports_path(
+      period_type: :custom,
+      start_date: period_start,
+      end_date: Date.current.end_of_month,
+      trend_category_ids: [ groceries.id, dining.id ]
+    )
+
+    assert_response :ok
+    data = trend_chart_data
+
+    assert_select "section[data-section-key='trends_insights'] [data-controller='multi-series-chart']"
+    assert_equal [ "Trend dining", "Trend groceries" ], data["series"].map { |series| series["name"] }.sort
+    groceries_series = data["series"].find { |series| series["name"] == "Trend groceries" }
+
+    assert_equal 3, groceries_series["values"].size
+    assert_equal 40.0, groceries_series["values"].last["value"]
+    assert_equal Date.current.beginning_of_month.iso8601, groceries_series["values"].last["date"]
+  end
+
+  test "a selected parent trend includes its subcategory spending" do
+    parent = @family.categories.create!(name: "Trend parent", color: "#123123")
+    child = @family.categories.create!(name: "Trend child", parent: parent, color: "#321321")
+
+    create_transaction(account: accounts(:depository), name: "Child spend", amount: 30,
+                       category: child, date: Date.current)
+
+    get reports_path(
+      period_type: :custom,
+      start_date: 1.month.ago.beginning_of_month.to_date,
+      end_date: Date.current.end_of_month,
+      trend_category_ids: [ parent.id ]
+    )
+
+    assert_response :ok
+    series = trend_chart_data["series"].sole
+
+    assert_equal "Trend parent", series["name"]
+    assert_equal 2, series["values"].size
+    assert_equal 30.0, series["values"].last["value"]
+  end
+
+  test "year granularity sums the months in each year" do
+    category = @family.categories.create!(name: "Trend yearly", color: "#0F0F0F")
+    last_year_start = 1.year.ago.beginning_of_year.to_date
+    this_year_start = Date.current.beginning_of_year.to_date
+
+    create_transaction(account: accounts(:depository), name: "Last year", amount: 10,
+                       category: category, date: last_year_start + 10.days)
+    create_transaction(account: accounts(:depository), name: "Year first", amount: 10,
+                       category: category, date: this_year_start + 10.days)
+    create_transaction(account: accounts(:depository), name: "Year second", amount: 15,
+                       category: category, date: this_year_start + 70.days)
+
+    get reports_path(
+      period_type: :custom,
+      start_date: last_year_start,
+      end_date: Date.current.end_of_year.to_date,
+      trend_category_ids: [ category.id ],
+      trend_granularity: "year"
+    )
+
+    assert_response :ok
+    series = trend_chart_data["series"].sole
+
+    assert_equal 2, series["values"].size
+    assert_equal 10.0, series["values"].first["value"]
+    assert_equal 25.0, series["values"].last["value"]
+    assert_equal this_year_start.year.to_s, series["values"].last["label"]
+  end
+
+  test "year granularity keeps a one-year period visible as a single point" do
+    category = @family.categories.create!(name: "Trend single year", color: "#0A0A0A")
+    create_transaction(account: accounts(:depository), name: "Single year spend", amount: 12,
+                       category: category, date: Date.current.beginning_of_year)
+
+    get reports_path(
+      period_type: :ytd,
+      trend_category_ids: [ category.id ],
+      trend_granularity: "year"
+    )
+
+    assert_response :ok
+    series = trend_chart_data["series"].sole
+
+    assert_equal 1, series["values"].size
+    assert_equal 12.0, series["values"].sole["value"]
+    assert_equal Date.current.year.to_s, series["values"].sole["label"]
+  end
+
+  test "a category from another family never reaches the trend chart" do
+    foreign = Category.create!(family: families(:empty), name: "Foreign trend category",
+                               color: "#333333", lucide_icon: "shapes")
+
+    get reports_path(
+      period_type: :custom,
+      start_date: 1.month.ago.beginning_of_month.to_date,
+      end_date: Date.current.end_of_month,
+      trend_category_ids: [ foreign.id ]
+    )
+
+    assert_response :ok
+    assert_select "[data-controller='multi-series-chart']", count: 0
+  end
+
+  test "uncategorized can be selected for the trend" do
+    create_transaction(account: accounts(:depository), name: "No category spend",
+                       amount: 12, date: Date.current)
+
+    get reports_path(
+      period_type: :custom,
+      start_date: 1.month.ago.beginning_of_month.to_date,
+      end_date: Date.current.end_of_month,
+      trend_category_ids: [ Category::UNCATEGORIZED_FILTER_VALUE ]
+    )
+
+    assert_response :ok
+    names = trend_chart_data["series"].map { |series| series["name"] }
+
+    assert_includes names, Category.uncategorized.name
+  end
+
+  test "no trend chart renders without a category selection" do
+    get reports_path(
+      period_type: :custom,
+      start_date: 1.month.ago.beginning_of_month.to_date,
+      end_date: Date.current.end_of_month
+    )
+
+    assert_response :ok
+    assert_select "[data-controller='multi-series-chart']", count: 0
+  end
+
+  test "period links keep the trend selection and granularity" do
+    category = @family.categories.create!(name: "Trend link", color: "#444444")
+
+    get reports_path(period_type: :monthly, trend_category_ids: [ category.id ],
+                     trend_granularity: "year")
+
+    assert_response :ok
+    assert_select "a[href*='trend_category_ids']", minimum: 1
+    assert_select "a[href*='trend_granularity=year']", minimum: 1
+  end
+
+  test "period links keep an explicit month on a long range" do
+    category = @family.categories.create!(name: "Trend long month", color: "#555555")
+
+    get reports_path(
+      period_type: :custom,
+      start_date: 3.years.ago.beginning_of_year.to_date,
+      end_date: Date.current.end_of_month.to_date,
+      trend_category_ids: [ category.id ],
+      trend_granularity: "month"
+    )
+
+    assert_response :ok
+    assert_select "a[href*='trend_granularity=month']", minimum: 1
+  end
+
+  test "period links keep an explicit year on a long range" do
+    category = @family.categories.create!(name: "Trend long year", color: "#575757")
+
+    get reports_path(
+      period_type: :custom,
+      start_date: 3.years.ago.beginning_of_year.to_date,
+      end_date: Date.current.end_of_month.to_date,
+      trend_category_ids: [ category.id ],
+      trend_granularity: "year"
+    )
+
+    assert_response :ok
+    assert_select "a[href*='period_type=monthly'][href*='trend_granularity=year']", minimum: 1
+  end
+
+  test "the custom date form omits an automatic granularity" do
+    get reports_path(
+      period_type: :custom,
+      start_date: 3.years.ago.beginning_of_year.to_date,
+      end_date: Date.current.end_of_month.to_date
+    )
+
+    assert_response :ok
+    assert_select "form input[name='trend_granularity']", count: 0
+  end
+
+  test "the custom date form keeps an explicit granularity" do
+    get reports_path(
+      period_type: :custom,
+      start_date: 3.years.ago.beginning_of_year.to_date,
+      end_date: Date.current.end_of_month.to_date,
+      trend_granularity: "year"
+    )
+
+    assert_response :ok
+    assert_select "form[data-controller='auto-submit-form'] input[name='trend_granularity'][value='year']", count: 1
+    # The category filter form also carries the explicit choice.
+    assert_select "form input[name='trend_granularity'][value='year']", count: 2
+  end
+
+  test "the trend chart lists its values in a data table" do
+    category = @family.categories.create!(name: "Trend table", color: "#787878")
+    create_transaction(account: accounts(:depository), name: "Table spend", amount: 40,
+                       category: category, date: Date.current)
+
+    get reports_path(period_type: :last_6_months, trend_category_ids: [ category.id ])
+
+    assert_response :ok
+    assert_select "details table caption", text: I18n.t("reports.trends.category_trend.data_table_caption")
+    assert_select "details table th[scope='col']", text: "Trend table"
+    assert_select "details table th[scope='row']", minimum: 6
+  end
+
+  test "the amount sort link keeps the trend selection and granularity" do
+    category = @family.categories.create!(name: "Trend sort", color: "#666666")
+    create_transaction(account: accounts(:depository), name: "Sort spend", amount: 25,
+                       category: category, date: Date.current)
+
+    get reports_path(period_type: :last_6_months, trend_category_ids: [ category.id ],
+                     trend_granularity: "year")
+
+    assert_response :ok
+    assert_select "a[href*='sort_by=amount'][href*='trend_category_ids']", minimum: 1
+    assert_select "a[href*='sort_by=amount'][href*='trend_granularity=year']", minimum: 1
+  end
+
   # POSTing to settings_api_keys_path is create, which needs api_key params.
   test "google sheets instructions link to the API keys page" do
     get google_sheets_instructions_reports_url
@@ -951,6 +1229,13 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def trend_chart_data
+      chart = css_select("[data-controller='multi-series-chart']").first
+
+      assert chart, "the trend chart must render"
+      JSON.parse(chart["data-multi-series-chart-data-value"])
+    end
+
     # Takes every fixture investment account out of the card's scope, so an
     # account the test creates is the family's only one; otherwise the
     # fixtures satisfy the visible-accounts gate on their own.
