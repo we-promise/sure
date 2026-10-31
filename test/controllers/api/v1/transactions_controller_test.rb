@@ -194,6 +194,216 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_includes transaction_ids, disabled_transaction.id
   end
 
+  # Report scope filters
+
+  test "budget_id lists what the budget drill-down counts" do
+    budget = create_past_budget
+    in_period = budget.start_date + 3.days
+
+    counted = create_transaction(account: @account, amount: 30, date: in_period, name: "Groceries")
+    loan_payment = create_transaction(account: @account, amount: 200, date: in_period, name: "Loan payment", kind: "loan_payment")
+    contribution = create_transaction(account: @account, amount: 150, date: in_period, name: "Contribution", kind: "investment_contribution")
+    create_transaction(account: @account, amount: 500, date: in_period, name: "Move", kind: "funds_movement")
+    create_transaction(account: @account, amount: 400, date: in_period, name: "Card payment", kind: "cc_payment")
+    create_transaction(account: @account, amount: 900, date: in_period, name: "One off", kind: "one_time")
+    create_transaction(account: @account, amount: 30, date: budget.start_date - 1.day, name: "Before period")
+    create_transaction(account: @account, amount: 30, date: budget.end_date + 1.day, name: "After period")
+    off_report = create_owned_account(owner: @user, exclude_from_reports: true)
+    create_transaction(account: off_report, amount: 30, date: in_period, name: "Off-report account")
+
+    get api_v1_transactions_url, params: { budget_id: budget.id, per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+
+    data = JSON.parse(response.body)
+    assert_equal [ counted, loan_payment, contribution ].map(&:entryable_id).sort,
+                 data["transactions"].map { |row| row["id"] }.sort
+    assert_equal 3, data["pagination"]["total_count"]
+  end
+
+  test "budget_id leaves out investment contributions when the family does not count investing as spending" do
+    @user.family.update!(investment_contributions_as_spending: false)
+    budget = create_past_budget
+    in_period = budget.start_date + 3.days
+
+    counted = create_transaction(account: @account, amount: 30, date: in_period, name: "Groceries")
+    create_transaction(account: @account, amount: 150, date: in_period, name: "Contribution", kind: "investment_contribution")
+
+    get api_v1_transactions_url, params: { budget_id: budget.id, per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal [ counted.entryable_id ], JSON.parse(response.body)["transactions"].map { |row| row["id"] }
+  end
+
+  test "budget_id on the household budget stays within the caller's accounts" do
+    budget = create_past_budget
+    in_period = budget.start_date + 3.days
+    mine = create_transaction(account: @account, amount: 30, date: in_period, name: "Mine")
+    unshared = create_owned_account(owner: users(:family_member))
+    create_transaction(account: unshared, amount: 30, date: in_period, name: "Not shared with me")
+
+    get api_v1_transactions_url, params: { budget_id: budget.id, per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal [ mine.entryable_id ], JSON.parse(response.body)["transactions"].map { |row| row["id"] }
+  end
+
+  test "budget_id combines with the other filters" do
+    budget = create_past_budget
+    in_period = budget.start_date + 3.days
+    category = @family.categories.create!(name: "Budget filter #{SecureRandom.hex(3)}", color: "#000000")
+    matching = create_transaction(account: @account, amount: 30, date: in_period, name: "Categorized", category: category)
+    create_transaction(account: @account, amount: 30, date: in_period, name: "Other category")
+
+    get api_v1_transactions_url,
+        params: { budget_id: budget.id, category_id: category.id },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal [ matching.entryable_id ], JSON.parse(response.body)["transactions"].map { |row| row["id"] }
+  end
+
+  test "budget_id works with a read-only key" do
+    get api_v1_transactions_url, params: { budget_id: create_past_budget.id }, headers: api_headers(@read_only_api_key)
+    assert_response :success
+  end
+
+  test "budget_id rejects another member's unshared personal budget" do
+    @family.update!(personal_budgets: true)
+    budget = create_past_budget(user: users(:family_member))
+
+    get api_v1_transactions_url, params: { budget_id: budget.id }, headers: api_headers(@api_key)
+    assert_response :not_found
+  end
+
+  test "budget_id on a shared personal budget lists the owner's report accounts shared with the caller" do
+    @family.update!(personal_budgets: true)
+    owner = users(:family_member)
+    budget = create_past_budget(user: owner)
+    BudgetShare.create!(owner: owner, viewer: @user, permission: "read_only")
+    in_period = budget.start_date + 3.days
+    owners_account = create_owned_account(owner: owner)
+    AccountShare.create!(account: owners_account, user: @user, permission: "read_only")
+    owners_row = create_transaction(account: owners_account, amount: 30, date: in_period, name: "Owner spend")
+    create_transaction(account: @account, amount: 30, date: in_period, name: "Viewer spend")
+
+    get api_v1_transactions_url, params: { budget_id: budget.id }, headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal [ owners_row.entryable_id ], JSON.parse(response.body)["transactions"].map { |row| row["id"] }
+  end
+
+  test "budget_id on a shared personal budget leaves out the owner's accounts not shared with the caller" do
+    @family.update!(personal_budgets: true)
+    owner = users(:family_member)
+    budget = create_past_budget(user: owner)
+    BudgetShare.create!(owner: owner, viewer: @user, permission: "read_only")
+    in_period = budget.start_date + 3.days
+    create_transaction(account: create_owned_account(owner: owner), amount: 30, date: in_period, name: "Owner private spend")
+
+    get api_v1_transactions_url, params: { budget_id: budget.id, per_page: 100 }, headers: api_headers(@api_key)
+    assert_response :success
+
+    data = JSON.parse(response.body)
+    assert_empty data["transactions"], "a budget share alone must not expose the owner's account rows"
+    assert_equal 0, data["pagination"]["total_count"]
+  end
+
+  test "budget_id rejects another family's budget" do
+    other_budget = families(:empty).budgets.create!(
+      start_date: 7.months.ago.beginning_of_month.to_date,
+      end_date: 7.months.ago.end_of_month.to_date,
+      currency: "USD"
+    )
+
+    get api_v1_transactions_url, params: { budget_id: other_budget.id }, headers: api_headers(@api_key)
+    assert_response :not_found
+  end
+
+  test "budget_id returns 404 for an unknown budget and 422 for a malformed one" do
+    get api_v1_transactions_url, params: { budget_id: SecureRandom.uuid }, headers: api_headers(@api_key)
+    assert_response :not_found
+
+    get api_v1_transactions_url, params: { budget_id: "not-a-uuid" }, headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "malformed start_date or end_date is a 422, not a 500" do
+    %i[start_date end_date].each do |key|
+      get api_v1_transactions_url, params: { key => "not-a-date" }, headers: api_headers(@api_key)
+      assert_response :unprocessable_entity
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "budget_id still requires authentication" do
+    get api_v1_transactions_url, params: { budget_id: create_past_budget.id }
+    assert_response :unauthorized
+  end
+
+  test "exclude_split_parents drops split parents and keeps their children" do
+    parent = split_transaction_for_report_filters
+
+    get api_v1_transactions_url, params: report_filter_params(exclude_split_parents: true), headers: api_headers(@api_key)
+    assert_response :success
+    names = JSON.parse(response.body)["transactions"].map { |row| row["name"] }
+    assert_equal [ "Counted child", "Excluded child", "Excluded plain" ].sort, names.sort
+
+    get api_v1_transactions_url, params: report_filter_params(exclude_split_parents: false), headers: api_headers(@api_key)
+    assert_response :success
+    assert_includes JSON.parse(response.body)["transactions"].map { |row| row["id"] }, parent.entryable_id
+  end
+
+  test "excluded=false keeps only rows counted in totals" do
+    split_transaction_for_report_filters
+
+    get api_v1_transactions_url, params: report_filter_params(excluded: false), headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal [ "Counted child" ], JSON.parse(response.body)["transactions"].map { |row| row["name"] }
+  end
+
+  test "excluded=true keeps only excluded rows, split parents included" do
+    split_transaction_for_report_filters
+
+    get api_v1_transactions_url, params: report_filter_params(excluded: true), headers: api_headers(@api_key)
+    assert_response :success
+
+    names = JSON.parse(response.body)["transactions"].map { |row| row["name"] }
+    assert_equal [ "Excluded child", "Excluded plain", "Report split parent" ].sort, names.sort
+  end
+
+  test "report filters reject values that are not booleans" do
+    %i[exclude_split_parents excluded].each do |key|
+      get api_v1_transactions_url, params: { key => "maybe" }, headers: api_headers(@api_key)
+      assert_response :unprocessable_entity
+      assert_equal "#{key} must be true or false", JSON.parse(response.body)["message"]
+    end
+  end
+
+  test "report filters accept the shared boolean spellings, case and spaces aside" do
+    split_transaction_for_report_filters
+
+    [ " TRUE ", "1" ].each do |value|
+      get api_v1_transactions_url, params: report_filter_params(excluded: value), headers: api_headers(@api_key)
+      assert_response :success, "expected #{value.inspect} to be accepted"
+      names = JSON.parse(response.body)["transactions"].map { |row| row["name"] }
+      assert_equal [ "Excluded child", "Excluded plain", "Report split parent" ].sort, names.sort
+    end
+  end
+
+  test "report filters reject a present but empty value" do
+    %i[exclude_split_parents excluded].each do |key|
+      get "#{api_v1_transactions_url}?#{key}=", headers: api_headers(@api_key)
+      assert_response :unprocessable_entity
+      assert_equal "#{key} must be true or false", JSON.parse(response.body)["message"]
+    end
+
+    get "#{api_v1_transactions_url}?budget_id=", headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_equal "budget_id must be a valid UUID", JSON.parse(response.body)["message"]
+  end
+
   test "should search transactions" do
     # Create a transaction with a specific name for testing
     entry = @account.entries.create!(
@@ -1171,5 +1381,47 @@ end
       )
 
       entry.transaction
+    end
+
+    def create_past_budget(user: nil)
+      month = 7.months.ago
+      @family.budgets.create!(
+        user: user,
+        start_date: month.beginning_of_month.to_date,
+        end_date: month.end_of_month.to_date,
+        budgeted_spending: 1000,
+        currency: "USD"
+      )
+    end
+
+    def create_owned_account(owner:, exclude_from_reports: false)
+      @family.accounts.create!(
+        name: "Report filter account #{SecureRandom.hex(4)}",
+        balance: 0,
+        currency: "USD",
+        owner: owner,
+        exclude_from_reports: exclude_from_reports,
+        accountable: Depository.new
+      )
+    end
+
+    def report_filter_date
+      @report_filter_date ||= 9.months.ago.to_date
+    end
+
+    def report_filter_params(extra = {})
+      { start_date: report_filter_date, end_date: report_filter_date, per_page: 100 }.merge(extra)
+    end
+
+    # On one otherwise-empty day: a split parent with one counted and one
+    # excluded child, and a plain excluded transaction.
+    def split_transaction_for_report_filters
+      parent = create_transaction(account: @account, amount: 100, date: report_filter_date, name: "Report split parent")
+      parent.split!([
+        { name: "Counted child", amount: 70, category_id: nil },
+        { name: "Excluded child", amount: 30, category_id: nil, excluded: true }
+      ])
+      create_transaction(account: @account, amount: 15, date: report_filter_date, name: "Excluded plain", excluded: true)
+      parent
     end
 end
