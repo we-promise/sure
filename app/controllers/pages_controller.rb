@@ -67,8 +67,15 @@ class PagesController < ApplicationController
   end
 
   def update_preferences
-    if Current.user.update_dashboard_preferences(preferences_params, laid_out_order: ordered_dashboard_section_keys)
-      head :ok
+    saved = Current.user.update_dashboard_preferences(preferences_params, laid_out_order: ordered_dashboard_section_keys)
+
+    # Grouping, collapse, and layout save with a JSON PATCH and expect an empty
+    # 200. The comparison toggle is an HTML form so the dashboard can re-render
+    # the chart that the preference reveals.
+    if dashboard_preference_json_request?
+      head(saved ? :ok : :unprocessable_entity)
+    elsif saved
+      redirect_back fallback_location: root_path, status: :see_other
     else
       head :unprocessable_entity
     end
@@ -141,7 +148,14 @@ class PagesController < ApplicationController
         permitted["section_order"] = prefs[:section_order] if prefs[:section_order].is_a?(Array)
         permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout].respond_to?(:to_unsafe_h)
         permitted["cashflow_sankey_group_by"] = prefs[:cashflow_sankey_group_by] if User::CASHFLOW_SANKEY_GROUPINGS.include?(prefs[:cashflow_sankey_group_by])
+        permitted["cashflow_preview_enabled"] = ActiveModel::Type::Boolean.new.cast(prefs[:cashflow_preview_enabled]) if prefs.key?(:cashflow_preview_enabled)
       end
+    end
+
+    # Fetch callers send JSON without an Accept header, which Rails would
+    # otherwise treat as HTML and redirect.
+    def dashboard_preference_json_request?
+      request.format.json? || request.media_type == "application/json"
     end
 
     # The spending filter is carried as the widget resolved it: a selection

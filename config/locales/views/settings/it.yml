@@ -6,6 +6,7 @@ it:
         renewal: "Il tuo contributo continua il %{date}."
         cancellation: "Il tuo contributo termina il %{date}."
   settings:
+    encryption_migration_guide: Guida alla configurazione della crittografia e alla migrazione
     debugs:
       show:
         page_title: "Debug"

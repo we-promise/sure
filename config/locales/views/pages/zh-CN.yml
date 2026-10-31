@@ -43,7 +43,6 @@ zh-CN:
       welcome: 欢迎回来，%{name}
       subtitle: 以下是您的财务状况概览
       new: 新建
-      drag_to_reorder: 拖动以重新排序模块
       toggle_section: 切换模块可见性
       net_worth_chart:
         data_not_available: 所选时间段内无可用数据

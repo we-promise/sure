@@ -191,6 +191,13 @@ class Demo::Generator
         onboarded_at: onboarded ? Time.current : nil
       )
 
+      # Demo users showcase opt-in features. Apply after creation because a new
+      # member's role defaults hide the AI sidebar when no provider is configured.
+      family.users.each do |user|
+        user.update!(ai_enabled: true, show_ai_sidebar: true,
+                     preferences: user.preferences.to_h.merge("preview_features_enabled" => true))
+      end
+
       family
     end
 

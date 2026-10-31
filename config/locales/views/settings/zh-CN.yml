@@ -6,6 +6,7 @@ zh-CN:
         renewal: 您的捐助将持续到 %{date}。
         cancellation: 您的捐助将于 %{date} 结束。
   settings:
+    encryption_migration_guide: 加密配置与数据迁移指南
     debugs:
       show:
         page_title: 调试

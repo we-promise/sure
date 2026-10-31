@@ -6,6 +6,7 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    encryption_migration_guide: Encryption setup and migration guide
     background_jobs:
       show:
         page_title: "Background jobs"
