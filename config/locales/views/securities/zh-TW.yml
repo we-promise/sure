@@ -4,7 +4,15 @@ zh-TW:
     combobox:
       display: '%{symbol} - %{name}（%{exchange}）'
       exchange_label: '%{symbol}（%{exchange}）'
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider}（預設）"
+      offline: "%{provider}（已暫停）"
+      unavailable: "%{provider}（無法使用）"
+      none: "無，價格來自帳戶同步或交易"
     providers:
+      tinkoff_invest: T-Invest (T-Bank)
+      unknown: "未知"
       twelve_data: Twelve Data
       yahoo_finance: Yahoo Finance
       tiingo: Tiingo

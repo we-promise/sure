@@ -4,7 +4,15 @@ ca:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (per defecte)"
+      offline: "%{provider} (en pausa)"
+      unavailable: "%{provider} (no disponible)"
+      none: "Cap, preus de la sincronització del compte o de les operacions"
     providers:
+      tinkoff_invest: T-Invest (T-Bank)
+      unknown: "Desconegut"
       alpha_vantage: Alpha Vantage
       binance_public: Binance
       moex_public: MOEX

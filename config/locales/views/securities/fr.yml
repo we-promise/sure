@@ -4,7 +4,15 @@ fr:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (par défaut)"
+      offline: "%{provider} (en pause)"
+      unavailable: "%{provider} (indisponible)"
+      none: "Aucune, cours issus de la synchronisation du compte ou des transactions"
     providers:
+      tinkoff_invest: T-Invest (T-Bank)
+      unknown: "Inconnu"
       alpha_vantage: Alpha Vantage
       binance_public: Binance
       eodhd: EODHD
