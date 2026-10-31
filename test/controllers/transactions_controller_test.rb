@@ -2066,6 +2066,125 @@ end
     Rails.cache = original_cache
   end
 
+  test "create rejects a category from another family" do
+    foreign_category = families(:empty).categories.create!(name: "Foreign", color: "#000000", lucide_icon: "folder")
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: @entry.account_id,
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: { category_id: foreign_category.id }
+        }
+      }
+    end
+
+    assert_response :not_found
+  end
+
+  test "update rejects a category or merchant from another family" do
+    foreign_category = families(:empty).categories.create!(name: "Foreign", color: "#000000", lucide_icon: "folder")
+    foreign_merchant = families(:empty).merchants.create!(name: "Foreign Merchant")
+    original_category_id = @entry.entryable.category_id
+    original_merchant_id = @entry.entryable.merchant_id
+
+    [ { category_id: foreign_category.id }, { merchant_id: foreign_merchant.id } ].each do |attrs|
+      patch transaction_url(@entry), params: {
+        entry: { entryable_type: "Transaction", entryable_attributes: { id: @entry.entryable_id, **attrs } }
+      }
+
+      assert_response :not_found
+    end
+
+    @entry.entryable.reload
+    assert_equal original_category_id, @entry.entryable.category_id
+    assert_equal original_merchant_id, @entry.entryable.merchant_id
+  end
+
+  test "update drops tag ids from another family" do
+    foreign_tag = families(:empty).tags.create!(name: "Foreign Tag")
+
+    patch transaction_url(@entry), params: {
+      entry: {
+        entryable_type: "Transaction",
+        entryable_attributes: { id: @entry.entryable_id, tag_ids: [ tags(:one).id, foreign_tag.id ] }
+      }
+    }
+
+    assert_equal [ tags(:one).id ], @entry.entryable.reload.tag_ids
+  end
+
+  test "an annotate-only member cannot set a category or merchant from another family" do
+    accounts(:depository).account_shares.find_or_initialize_by(user: users(:family_member)).update!(permission: "read_write")
+    sign_in users(:family_member)
+    foreign_category = families(:empty).categories.create!(name: "Foreign", color: "#000000", lucide_icon: "folder")
+    foreign_merchant = families(:empty).merchants.create!(name: "Foreign Merchant")
+    original_category_id = @entry.entryable.category_id
+    original_merchant_id = @entry.entryable.merchant_id
+
+    [ { category_id: foreign_category.id }, { merchant_id: foreign_merchant.id } ].each do |attrs|
+      patch transaction_url(@entry), params: {
+        entry: { entryable_type: "Transaction", entryable_attributes: { id: @entry.entryable_id, **attrs } }
+      }
+
+      assert_response :not_found
+    end
+
+    @entry.entryable.reload
+    assert_equal original_category_id, @entry.entryable.category_id
+    assert_equal original_merchant_id, @entry.entryable.merchant_id
+  end
+
+  test "update accepts a provider merchant the picker offers" do
+    provider_merchant = ProviderMerchant.create!(name: "Provider Coffee", source: "enable_banking")
+    create_transaction(account: accounts(:depository), merchant: provider_merchant)
+
+    patch transaction_url(@entry), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: @entry.entryable_id, merchant_id: provider_merchant.id } }
+    }
+
+    assert_equal provider_merchant.id, @entry.entryable.reload.merchant_id
+  end
+
+  test "create without an account re-renders the form even with a foreign category" do
+    foreign_category = families(:empty).categories.create!(name: "Foreign", color: "#000000", lucide_icon: "folder")
+
+    assert_no_difference [ "Entry.count", "Transaction.count" ] do
+      post transactions_url, params: {
+        entry: {
+          account_id: "",
+          name: "New transaction",
+          date: Date.current,
+          currency: "USD",
+          amount: 100,
+          nature: "outflow",
+          entryable_type: "Transaction",
+          entryable_attributes: { category_id: foreign_category.id }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_not_includes response.body, "Foreign"
+  end
+
+  test "update skips the merchant lookup when the merchant is unchanged" do
+    @entry.entryable.update!(merchant: merchants(:netflix))
+    Family.any_instance.expects(:available_merchants_for).never
+
+    patch transaction_url(@entry), params: {
+      entry: { entryable_type: "Transaction", entryable_attributes: { id: @entry.entryable_id, merchant_id: merchants(:netflix).id, tag_ids: [ tags(:one).id ] } }
+    }
+
+    assert_equal [ tags(:one).id ], @entry.entryable.reload.tag_ids
+    assert_equal merchants(:netflix).id, @entry.entryable.merchant_id
+  end
+
   test "category-only update does not sync the account" do
     assert_no_enqueued_jobs only: SyncJob do
       patch transaction_url(@entry), params: {
