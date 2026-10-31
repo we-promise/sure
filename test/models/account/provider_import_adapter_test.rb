@@ -36,6 +36,258 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "imports an entry the user deleted during the import as a new one" do
+    entry = @adapter.import_transaction(
+      external_id: "deleted_mid_sync", amount: 10, currency: "USD",
+      date: Date.current, name: "Original", source: "plaid"
+    )
+    # The import loads the entry, then the user deletes it before the row lock.
+    stale = Entry.find(entry.id).tap(&:entryable)
+    entry.destroy!
+    entries = @account.entries
+    entries.stubs(:find_or_initialize_by).returns(stale)
+    @account.stubs(:entries).returns(entries)
+
+    imported = @adapter.import_transaction(
+      external_id: "deleted_mid_sync", amount: 10, currency: "USD",
+      date: Date.current, name: "Renamed", source: "plaid"
+    )
+
+    assert imported.persisted?
+    assert_not_equal entry.id, imported.id
+    assert_equal "Renamed", imported.reload.name
+    assert_not Entry.exists?(entry.id)
+  end
+
+  test "does not claim a manual duplicate the user protected during the import" do
+    manual = @account.entries.create!(
+      name: "Manual", date: Date.current, amount: 42, currency: "USD", entryable: Transaction.new
+    )
+    stale = Entry.find(manual.id)
+    manual.mark_user_modified!
+    @adapter.stubs(:find_duplicate_transaction).returns(stale)
+
+    @adapter.import_transaction(
+      external_id: "claimed_mid_edit", amount: 42, currency: "USD",
+      date: Date.current, name: "Provider name", source: "plaid"
+    )
+
+    manual.reload
+    assert_equal "Manual", manual.name
+    assert_equal "claimed_mid_edit", manual.external_id
+  end
+
+  test "keeps an amount the user locked while the posted copy claimed the pending entry" do
+    pending = @adapter.import_transaction(
+      external_id: "pending_tip", amount: 60, currency: "USD",
+      date: Date.current, name: "Restaurant", source: "plaid",
+      extra: { "plaid" => { "pending" => true } }
+    )
+    # The import loads the pending entry, then the user edits its amount.
+    stale = Entry.find(pending.id)
+    pending.save_and_lock_attributes { pending.update(amount: 99) }
+    @adapter.stubs(:find_pending_transaction).returns(stale)
+
+    claimed = @adapter.import_transaction(
+      external_id: "posted_tip", amount: 72, currency: "USD",
+      date: Date.current, name: "Restaurant", source: "plaid"
+    )
+
+    assert_equal pending.id, claimed.id
+    assert_equal 99, pending.reload.amount
+    assert_equal "posted_tip", pending.external_id
+  end
+
+  test "claims the next pending entry when another posted import claimed the first meanwhile" do
+    older = @adapter.import_transaction(
+      external_id: "pending_older", amount: 50, currency: "USD",
+      date: 1.day.ago.to_date, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    pending = @adapter.import_transaction(
+      external_id: "pending_race", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    first = @adapter.import_transaction(
+      external_id: "posted_first", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+    assert_equal pending.id, first.id
+    return_once_from_find_pending(stale)
+
+    second = @adapter.import_transaction(
+      external_id: "posted_second", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+
+    assert_equal older.id, second.id
+    assert_equal "posted_first", pending.reload.external_id
+    assert_equal [ "pending_race" ], pending.transaction.extra["auto_claimed_pending_ids"]
+    assert_equal [ "pending_older" ], older.reload.transaction.extra["auto_claimed_pending_ids"]
+  end
+
+  test "returns the entry a concurrent import of the same posted transaction claimed" do
+    @adapter.import_transaction(
+      external_id: "pending_other", amount: 50, currency: "USD",
+      date: 1.day.ago.to_date, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    pending = @adapter.import_transaction(
+      external_id: "pending_same", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    @adapter.import_transaction(
+      external_id: "posted_same", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+    # The concurrent import looked the posted id up before the claim committed.
+    entries = @account.entries
+    entries.stubs(:find_or_initialize_by).returns(entries.new(external_id: "posted_same", source: "simplefin", entryable: Transaction.new))
+    return_once_from_find_pending(stale)
+
+    again = @adapter.import_transaction(
+      external_id: "posted_same", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+
+    assert_equal pending.id, again.id
+    assert_equal 1, @account.entries.where(external_id: "posted_same").count
+    assert_equal [ "pending_same" ], pending.reload.transaction.extra["auto_claimed_pending_ids"]
+    assert_equal 1, @account.entries.where(external_id: "pending_other").count
+  end
+
+  test "returns the Plaid entry a concurrent import of the same posted transaction claimed" do
+    pending = @adapter.import_transaction(
+      external_id: "plaid_pending_same", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      extra: { "plaid" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    @adapter.import_transaction(
+      external_id: "plaid_posted_same", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      pending_transaction_id: "plaid_pending_same"
+    )
+    entries = @account.entries
+    entries.stubs(:find_or_initialize_by).returns(entries.new(external_id: "plaid_posted_same", source: "plaid", entryable: Transaction.new))
+    entries.stubs(:find_by).with(external_id: "plaid_pending_same", source: "plaid").returns(stale)
+
+    again = @adapter.import_transaction(
+      external_id: "plaid_posted_same", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      pending_transaction_id: "plaid_pending_same"
+    )
+
+    assert_equal pending.id, again.id
+    assert_equal [ "plaid_pending_same" ], pending.reload.transaction.extra["auto_claimed_pending_ids"]
+  end
+
+  test "does not claim a pending entry booked in place meanwhile" do
+    pending = @adapter.import_transaction(
+      external_id: "same_id", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    # Providers that keep the id for the booked copy update the entry in place.
+    @adapter.import_transaction(
+      external_id: "same_id", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+    assert_not pending.reload.transaction.pending?
+    return_once_from_find_pending(stale)
+
+    other = @adapter.import_transaction(
+      external_id: "other_posted", amount: 50, currency: "USD",
+      date: Date.current, name: "Coffee", source: "simplefin"
+    )
+
+    assert_not_equal pending.id, other.id
+    assert_equal "same_id", pending.reload.external_id
+  end
+
+  test "does not claim a Plaid pending entry another import claimed meanwhile" do
+    pending = @adapter.import_transaction(
+      external_id: "plaid_pending_race", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      extra: { "plaid" => { "pending" => true } }
+    )
+    stale = Entry.find(pending.id)
+    @adapter.import_transaction(
+      external_id: "plaid_posted_first", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      pending_transaction_id: "plaid_pending_race"
+    )
+    entries = @account.entries
+    entries.stubs(:find_by).returns(nil)
+    entries.stubs(:find_by).with(external_id: "plaid_pending_race", source: "plaid").returns(stale)
+
+    second = @adapter.import_transaction(
+      external_id: "plaid_posted_second", amount: 30, currency: "USD",
+      date: Date.current, name: "Store", source: "plaid",
+      pending_transaction_id: "plaid_pending_race", allow_heuristic_matching: false
+    )
+
+    assert_not_equal pending.id, second.id
+    assert_equal "plaid_posted_first", pending.reload.external_id
+  end
+
+  test "does not claim a manual duplicate another import claimed meanwhile" do
+    manual = @account.entries.create!(
+      name: "Manual", date: Date.current, amount: 42, currency: "USD", entryable: Transaction.new
+    )
+    stale = Entry.find(manual.id)
+    manual.update!(external_id: "first_import", source: "plaid")
+    @adapter.stubs(:find_duplicate_transaction).returns(stale)
+
+    imported = @adapter.import_transaction(
+      external_id: "second_import", amount: 42, currency: "USD",
+      date: Date.current, name: "Provider name", source: "plaid"
+    )
+
+    assert_not_equal manual.id, imported.id
+    assert_equal "first_import", manual.reload.external_id
+  end
+
+  test "does not relink a protected manual duplicate another import claimed meanwhile" do
+    manual = @account.entries.create!(
+      name: "Manual", date: Date.current, amount: 43, currency: "USD", entryable: Transaction.new, user_modified: true
+    )
+    stale = Entry.find(manual.id)
+    manual.update!(external_id: "first_import", source: "plaid")
+    @adapter.stubs(:find_duplicate_transaction).returns(stale)
+
+    imported = @adapter.import_transaction(
+      external_id: "second_import", amount: 43, currency: "USD",
+      date: Date.current, name: "Provider name", source: "plaid"
+    )
+
+    assert_not_equal manual.id, imported.id
+    assert_equal "first_import", manual.reload.external_id
+  end
+
+  test "imports a new entry when a protected manual duplicate was deleted meanwhile" do
+    manual = @account.entries.create!(
+      name: "Manual", date: Date.current, amount: 44, currency: "USD", entryable: Transaction.new, user_modified: true
+    )
+    stale = Entry.find(manual.id)
+    manual.destroy!
+    @adapter.stubs(:find_duplicate_transaction).returns(stale)
+
+    imported = @adapter.import_transaction(
+      external_id: "after_delete", amount: 44, currency: "USD",
+      date: Date.current, name: "Provider name", source: "plaid"
+    )
+
+    assert imported.persisted?
+    assert_not_equal manual.id, imported.id
+    assert_equal "after_delete", imported.reload.external_id
+  end
+
   test "imports transaction with minimal parameters" do
     assert_difference "@account.entries.count", 1 do
       entry = @adapter.import_transaction(
@@ -2500,5 +2752,18 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         source: "plaid",
         account_provider_id: account_provider.id
       )
+    end
+
+    # The first lookup returns an entry loaded before another import changed
+    # it, as when two imports race; later lookups run the real query.
+    def return_once_from_find_pending(stale)
+      real = @adapter.method(:find_pending_transaction)
+      returned = false
+      @adapter.define_singleton_method(:find_pending_transaction) do |**args|
+        next real.call(**args) if returned
+
+        returned = true
+        stale
+      end
     end
 end

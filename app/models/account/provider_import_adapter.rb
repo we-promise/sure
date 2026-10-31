@@ -61,6 +61,21 @@ class Account::ProviderImportAdapter
       # This prevents sync from overwriting user edits, CSV imports, or excluded entries.
       if entry.persisted?
         skip_reason = determine_skip_reason(entry)
+        # The entry was read without a row lock, so a user edit can commit its
+        # flags and locks right after. Skipping on a stale flag only defers the
+        # import to the next sync, but writing needs the current state: lock the
+        # rows and check again, which also waits for an edit still in progress
+        # (Entry#save_and_lock_attributes).
+        unless skip_reason
+          begin
+            entry.lock_with_entryable!
+          rescue ActiveRecord::RecordNotFound
+            # Deleted since it was loaded: import it as a new entry, as the
+            # next sync would, rather than return a row that no longer exists.
+            entry = account.entries.new(external_id: external_id, source: source, entryable: Transaction.new)
+          end
+          skip_reason = determine_skip_reason(entry) if entry.persisted?
+        end
         if skip_reason
           # Pending→booked bypass for user_modified entries: clear the stale pending flag
           # when the provider delivers a booked version of the same transaction.
@@ -111,6 +126,17 @@ class Account::ProviderImportAdapter
       # Note: We don't pass name here to allow matching even when provider formats names differently
       if entry.new_record? && allow_heuristic_matching
         duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
+        # Same as above: claiming writes, so check protection again under a row
+        # lock. Linking a protected duplicate writes its external_id too.
+        unless duplicate.nil?
+          begin
+            duplicate.lock_with_entryable!
+            # Another import may have claimed it since it was found.
+            duplicate = nil if duplicate.external_id.present?
+          rescue ActiveRecord::RecordNotFound
+            duplicate = nil
+          end
+        end
         if duplicate
           # Check if duplicate is protected - if so, link but don't modify
           if duplicate.protected_from_sync?
@@ -132,18 +158,30 @@ class Account::ProviderImportAdapter
         # PRIORITY 1: Use Plaid's pending_transaction_id if provided (most reliable)
         # Plaid explicitly links pending→posted with this ID - no guessing required
         if pending_transaction_id.present?
-          pending_match = account.entries.find_by(external_id: pending_transaction_id, source: source)
-          if pending_match
+          linked = account.entries.find_by(external_id: pending_transaction_id, source: source)
+          if linked && lock_unclaimed_pending(linked)
+            pending_match = linked
             Rails.logger.info("Reconciling pending→posted via Plaid pending_transaction_id: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
+          elsif linked&.external_id == external_id
+            # A concurrent import of this same posted transaction claimed it.
+            return linked
           end
         end
 
         # PRIORITY 2: Fallback to EXACT amount match (for SimpleFIN and providers without linking IDs)
         # Only searches backward in time - pending date must be <= posted date
         if pending_match.nil? && allow_heuristic_matching
-          pending_match = find_pending_transaction(date: date, amount: amount, currency: currency, source: source)
-          if pending_match
-            Rails.logger.info("Reconciling pending→posted via exact amount match: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
+          skipped_ids = []
+          while (candidate = find_pending_transaction(date: date, amount: amount, currency: currency, source: source, exclude_entry_ids: skipped_ids))
+            if lock_unclaimed_pending(candidate) && candidate.transaction.pending?
+              pending_match = candidate
+              Rails.logger.info("Reconciling pending→posted via exact amount match: claiming entry #{pending_match.id} (#{pending_match.name}) with new external_id #{external_id}")
+              break
+            end
+            # A concurrent import of this same posted transaction claimed it.
+            return candidate if candidate.external_id == external_id
+
+            skipped_ids << candidate.id
           end
         end
 
@@ -833,7 +871,7 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name (e.g., "simplefin")
   # @param date_window [Integer] Days to search around the posted date (default: 8)
   # @return [Entry, nil] The pending entry or nil if not found
-  def find_pending_transaction(date:, amount:, currency:, source:, date_window: 8)
+  def find_pending_transaction(date:, amount:, currency:, source:, date_window: 8, exclude_entry_ids: [])
     date = Date.parse(date.to_s) unless date.is_a?(Date)
 
     # Look for entries that:
@@ -852,6 +890,7 @@ class Account::ProviderImportAdapter
       .where(currency: currency)
       .where(date: (date - date_window.days)..date) # Pending must be ON or BEFORE posted date
       .where(Transaction.pending_sql("transactions"))
+      .where.not(id: exclude_entry_ids)
       .order(date: :desc) # Prefer most recent pending transaction
 
     candidates.first
@@ -1070,6 +1109,23 @@ class Account::ProviderImportAdapter
   end
 
   private
+
+    # Claiming overwrites the amount and date unless they are locked, so those
+    # locks are read under a row lock. The entry was found without one, and
+    # another import may have claimed it meanwhile, which replaces its
+    # external_id (and clears its pending flag).
+    #
+    # @return [Boolean] false when the entry was claimed or deleted meanwhile
+    def lock_unclaimed_pending(entry)
+      found_external_id = entry.external_id
+      entry.lock_with_entryable!
+      return true if entry.external_id == found_external_id
+
+      Rails.logger.info("Skipping pending entry #{entry.id}: another import claimed it meanwhile")
+      false
+    rescue ActiveRecord::RecordNotFound
+      false
+    end
 
     # The latest earlier holding of the security the provider reports. A
     # remapped row records that security in provider_security_id; an

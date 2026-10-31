@@ -183,13 +183,9 @@ class Assistant::Function::CreateTransaction < Assistant::Function
     end
 
     entry = account.entries.new(entry_params)
-    unless entry.save
+    unless entry.save_and_lock_attributes(user_modified: user_modified?(params), lock_tags: :if_any) { entry.save }
       return error("validation_failed", entry.errors.full_messages.join("; "))
     end
-
-    entry.lock_saved_attributes!
-    entry.transaction.lock_attr!(:tag_ids) if entry.transaction.tags.any?
-    entry.mark_user_modified! if user_modified?(params)
 
     # Post-commit account sync is best-effort. entry.save has ALREADY committed
     # the transaction, so a failure to enqueue the balance-sync job (e.g. an

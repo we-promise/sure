@@ -232,7 +232,7 @@ class Transaction::MergeWithDuplicateTest < ActiveSupport::TestCase
     # Simulate the race: posted_entry exists at find_by time but is gone at lock! time.
     # Use a stub rather than dup so id and account_id are real values — dup gives id: nil.
     ghost = stub(account_id: @posted_entry.account_id, id: @posted_entry.id)
-    ghost.stubs(:lock!).raises(ActiveRecord::RecordNotFound)
+    ghost.stubs(:lock_with_entryable!).raises(ActiveRecord::RecordNotFound)
     @pending_entry.transaction.stubs(:potential_duplicate_entry).returns(ghost)
 
     result = nil

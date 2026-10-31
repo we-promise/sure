@@ -677,6 +677,33 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Sweep Out", body["investment_activity_label"]
   end
 
+  test "created and updated trades are user-modified and locked" do
+    security = Security.create!(ticker: "LOCKED", name: "Locked Security", country_code: "US")
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "buy",
+        date: Date.current,
+        qty: 5,
+        price: 100,
+        security_id: security.id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+
+    trade = Trade.find(JSON.parse(response.body).fetch("id"))
+    assert trade.entry.user_modified?
+    assert trade.entry.locked?(:amount)
+    assert trade.locked?(:qty)
+
+    patch api_v1_trade_url(trade.id),
+      params: { trade: { notes: "Locked notes" } },
+      headers: api_headers(read_write_api_key)
+    assert_response :success
+
+    assert trade.entry.reload.locked?(:notes)
+  end
+
   test "rejects unsupported cash trade types on update" do
     trade = @investment_account.trades.first
 
