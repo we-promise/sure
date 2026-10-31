@@ -1,0 +1,26 @@
+<%# Bounded like the dashboard's other long menus, so a long list of enabled
+    currencies scrolls instead of running off the screen. %>
+<%= render DS::Menu.new(variant: :button, placement: placement, max_height: "18rem") do |menu| %>
+  <% menu.with_button(
+       type: "button",
+       class: "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0",
+       aria: { label: t("UI.currency_picker.aria_label", currency: selected) }
+     ) do %>
+    <span class="whitespace-nowrap"><%= selected %></span>
+    <%= helpers.icon("chevron-down", size: "sm") %>
+  <% end %>
+
+  <%# The picker navigates a Turbo frame, which leaves the address bar alone,
+      so every row carries an explicit visit action; see `turbo_action_for`. %>
+  <% items.each do |code, label| %>
+    <% item_selected = selected?(code) %>
+    <% menu.with_item(
+         variant: :link,
+         text: label,
+         href: href_for(code),
+         frame: frame,
+         selected: item_selected,
+         data: { turbo_action: turbo_action_for(item_selected) }
+       ) %>
+  <% end %>
+<% end %>

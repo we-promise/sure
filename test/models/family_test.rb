@@ -680,6 +680,18 @@ class FamilyTest < ActiveSupport::TestCase
       "different users must not share a memoized BalanceSheet (family sharing scoping)"
   end
 
+  test "balance_sheet shares one instance for the primary currency asked for by name or by default" do
+    family = families(:dylan_family)
+    admin = users(:family_admin)
+
+    by_default = family.balance_sheet(user: admin)
+
+    assert_same by_default, family.balance_sheet(user: admin, currency: family.currency),
+      "the dashboard's primary currency must reuse the sidebar's balance sheet"
+    assert_same by_default, family.balance_sheet(user: admin, currency: family.currency.downcase)
+    refute_same by_default, family.balance_sheet(user: admin, currency: "EUR")
+  end
+
   test "investment_statement memoizes per user for the same family instance" do
     family = families(:dylan_family)
     admin = users(:family_admin)
@@ -933,6 +945,26 @@ class FamilyTest < ActiveSupport::TestCase
                             amount: 5000, currency: "USD", entryable: Valuation.new)
 
     assert_nil family.earliest_activity_date
+  end
+
+  test "reporting currencies are the primary currency plus the enabled additional ones" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [ "USD", "EUR" ])
+
+    assert_equal [ "SGD", "USD", "EUR" ], family.reporting_currency_codes
+    assert_equal %w[SGD USD EUR], family.reporting_currency_objects.map(&:iso_code)
+    assert_equal "EUR", family.reporting_currency_code("eur")
+    assert_equal "SGD", family.reporting_currency_code("GBP")
+    assert_equal "SGD", family.reporting_currency_code(nil)
+    assert_equal "SGD", family.reporting_currency_code("not-a-currency")
+  end
+
+  test "a family without a narrowed currency list reports only in its primary currency" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [])
+
+    assert_equal [ "SGD" ], family.reporting_currency_codes
+    assert_equal "SGD", family.reporting_currency_code("USD")
   end
 
   private
