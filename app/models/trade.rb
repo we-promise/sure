@@ -79,7 +79,7 @@ class Trade < ApplicationRecord
 
   def unrealized_gain_loss
     return nil unless qty.positive?
-    current_price = security.current_price
+    current_price = security.current_price_in(currency)
     return nil if current_price.nil?
 
     current_value = current_price * qty.abs
