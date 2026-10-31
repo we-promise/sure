@@ -96,8 +96,6 @@ en:
       activity:
         amount: Amount
         balance: Balance
-        category: Category
-        confirmed: Confirmed
         date: Date
         entries: entries
         entry: entry
@@ -109,13 +107,10 @@ en:
         new_transaction: New transaction
         new_transfer: New transfer
         no_entries: No entries found
-        pending: Pending
         search:
           placeholder: Search entries by name
         search_placeholder: Search entries by name
-        status: Status
         title: Activity
-        uncategorized_only: Uncategorized only
       chart:
         balance: Balance
         owed: Amount owed

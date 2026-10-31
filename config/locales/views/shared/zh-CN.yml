@@ -11,7 +11,14 @@ zh-CN:
       cancel: 取消
       title: 确定吗？
     money_field:
+      above_max: 输入的金额不能超过 %{max}。
+      below_min: 输入的金额不能少于 %{min}。
+      invalid_amount: 请输入有效的金额或算式。
       label: 金额
+      operator_add: 加
+      operator_subtract: 减
+      operator_multiply: 乘
+      operator_divide: 除
     exchange_rate_tabs:
       calculate_rate_tab: 计算汇率
       convert_tab: 使用汇率换算
@@ -21,6 +28,8 @@ zh-CN:
     syncing_notice:
       syncing: 账户数据同步中……
     require_admin: 只有管理员才能执行此操作
+    require_non_guest: 访客无法执行此操作
+    require_connector_owner: 您只能管理自己添加的连接
     custom_confirm:
       default_title: 确定吗？
       default_body: 此操作不可逆。
@@ -44,3 +53,13 @@ zh-CN:
     sync_toast:
       message: 有新数据可用
       refresh: 刷新
+    sidekiq_health_banner:
+      title: 部分数据可能已过期
+      body: 后台任务未在处理，因此余额、净资产和账户同步可能已过期或缺失。
+      cta: 查看系统运行状况
+      reasons:
+        redis_unreachable: 应用程序无法连接到 Redis。请检查您的 REDIS_URL 并确认 Redis 正在运行。
+        no_worker_processes: 没有连接的 Sidekiq 工作进程。请启动 worker 容器或 systemd 服务单元。
+        stale_heartbeat: Sidekiq 工作进程近期未上报心跳。可能已卡住或崩溃。
+        ai_queues_not_polled: 没有工作进程正在处理 AI 队列（聊天、商户识别、分类）。请检查工作进程是否加载了 config/sidekiq.yml。
+        queue_backed_up: 队列中最早的任务等待时间已超出延迟预算。工作进程仍在运行但已落后。

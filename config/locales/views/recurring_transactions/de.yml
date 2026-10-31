@@ -48,6 +48,7 @@ de:
     status:
       active: Aktiv
       inactive: Inaktiv
+      ended: Verworfen
     badges:
       manual: Manuell
     transfer_already_exists: Für dieses Kontenpaar gibt es bereits eine wiederkehrende Überweisung

@@ -17,6 +17,9 @@ en:
       iban_set_placeholder: •••• •••• •••• •••• — IBAN on file, enter a new value to replace it
       iban_hint: The merchant's own bank account number, if known
       iban_remove_label: Remove IBAN
+      logo_label: Logo
+      logo_hint: Overrides the website logo. JPEG, PNG or WebP, up to %{max_megabytes}MB.
+      remove_logo_label: Remove uploaded logo
     index:
       empty: No merchants yet
       new: New merchant
@@ -84,3 +87,12 @@ en:
     update:
       success: Merchant updated successfully
       converted_success: Merchant converted and updated successfully
+  merchants:
+    show:
+      average_transaction: Average transaction
+      edit: Edit merchant
+      first_transaction: First transaction
+      last_transaction: Last transaction
+      summary: Summary
+      total_spending: Total spending
+      total_transactions: Total transactions

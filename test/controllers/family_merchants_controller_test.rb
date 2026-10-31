@@ -326,6 +326,24 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_nil provider_merchant.reload.iban, "the shared ProviderMerchant must still be untouched"
   end
 
+  test "should upload merchant logo" do
+    patch family_merchant_url(@merchant), params: {
+      family_merchant: { logo: file_fixture_upload("profile_image.png", "image/png", :binary) }
+    }
+
+    assert_redirected_to family_merchants_path
+    assert @merchant.reload.logo.attached?
+  end
+
+  test "should remove merchant logo" do
+    @merchant.logo.attach(io: file_fixture("profile_image.png").open, filename: "logo.png", content_type: "image/png")
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { remove_logo: "1" } }
+
+    assert_redirected_to family_merchants_path
+    assert_not @merchant.reload.logo.attached?
+  end
+
   test "should destroy merchant" do
     assert_difference("FamilyMerchant.count", -1) do
       delete family_merchant_url(@merchant)

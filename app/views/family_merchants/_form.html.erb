@@ -56,6 +56,24 @@
           <%= render DS::Toggle.new(id: "#{f.object_name}_remove_iban", name: "#{f.object_name}[remove_iban]", checked: false, "aria-labelledby": "#{f.object_name}_remove_iban_label") %>
         </div>
       <% end %>
+
+      <% if family_merchant.is_a?(FamilyMerchant) %>
+        <% saved_logo = family_merchant.logo.attached? && family_merchant.logo.persisted? %>
+        <div class="flex items-center gap-3">
+          <% if saved_logo %>
+            <%= image_tag family_merchant.logo_url, class: "w-10 h-10 rounded-full shrink-0", alt: "" %>
+          <% end %>
+          <%= f.file_field :logo, label: t(".logo_label"), accept: FamilyMerchant::LOGO_CONTENT_TYPES.join(","), container_class: "flex-1" %>
+        </div>
+        <p class="text-xs text-subdued"><%= t(".logo_hint", max_megabytes: FamilyMerchant::LOGO_MAX_SIZE / 1.megabyte) %></p>
+
+        <% if saved_logo %>
+          <div class="flex items-center justify-between gap-4">
+            <span id="remove_logo_label" class="text-sm text-primary"><%= t(".remove_logo_label") %></span>
+            <%= f.toggle :remove_logo, "aria-labelledby": "remove_logo_label" %>
+          </div>
+        <% end %>
+      <% end %>
     </section>
 
     <section>
