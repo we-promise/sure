@@ -39,6 +39,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1990, created_account.accountable.year_built
     assert_equal 1200, created_account.accountable.area_value
     assert_equal "sqft", created_account.accountable.area_unit
+    assert created_account.accountable.user_set_area?, "a manually entered area should count as user-set"
     assert_redirected_to balances_property_path(created_account)
   end
 
