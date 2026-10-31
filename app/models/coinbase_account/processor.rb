@@ -243,7 +243,17 @@ class CoinbaseAccount::Processor
       account.entries.create!(
         date: date,
         name: "#{received ? "Received" : "Sent"} #{qty.round(8)} #{security.ticker} (#{txn_type.humanize})",
-        amount: received ? -native_amount : native_amount,
+        # Not received ? -native_amount : native_amount: none of these types are
+        # a purchase or sale. staking_reward/interest is free income the account
+        # never paid cash for; pro_deposit/pro_withdrawal/staking_transfer/
+        # unstaking_transfer/exchange_deposit move an asset the account already
+        # owns between its own sub-ledgers (Trade::INTERNAL_MOVEMENT_LABELS).
+        # Giving either a real cash amount invents a cost basis with no actual
+        # cash behind it -- and since the two legs of an internal transfer
+        # almost never share the same market price, it also leaves a phantom,
+        # permanent cash drift every time one round-trips. Zero here, same as
+        # every other free-asset Trade this app creates.
+        amount: 0,
         currency: txn_currency,
         external_id: external_id,
         source: "coinbase",
