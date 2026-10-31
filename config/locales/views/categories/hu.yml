@@ -31,8 +31,6 @@ hu:
       delete_all: Összes törlése
       empty: Nem található kategória
       new: Új kategória
-    menu:
-      loading: Betöltés...
     new:
       new_category: Új kategória
     update:
