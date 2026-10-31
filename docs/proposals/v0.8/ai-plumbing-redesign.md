@@ -1575,7 +1575,10 @@ What happens to today's chat classes in PR 3:
   isn't reset. So a chat tool's own AI call (`search_family_files` embedding its query) would run
   in the background lane and could be made to re-enqueue (section 11, rule 3). `SureTool` keeps
   the lane it was built in and runs the tool inside it (spike: both calls moved from background
-  to interactive). This uses RubyLLM's public API; nothing upstream needs to change.
+  to interactive). This uses RubyLLM's public API; nothing upstream needs to change. The
+  alternative is to keep the lane in fiber storage (`Fiber[]`), which threads inherit: RubyLLM
+  keeps its usage owner there, and in the spike both the owner and a lane kept there reached the
+  tool threads, so `SureTool` would need no lane code.
 - **Why RubyLLM runs the tools, and the evidence against.** RubyLLM's `ask` has no round cap (12
   rounds in the spike until its guard), so Sure keeps the driver; stepping the agent keeps every
   bound. Running the tools brings approvals, parallel tools and resuming after a dead worker,
@@ -1688,6 +1691,21 @@ ActiveSupport::Notifications.subscribe(/\A(generate|judge)\.ai\z/, Ai::Instrumen
 - **Cached tokens.** RubyLLM's `input_tokens` excludes cached tokens, unlike the raw APIs: the
   spike's 34-tool list showed as 512 input tokens where the prompt was 12,457. `Ai::Usage` keeps
   both, and the prompt size is `input_tokens + cache_read_tokens`.
+- **Why not RubyLLM's usage ledger.** RubyLLM 2.1 writes a `ruby_llm_usages` row for every
+  provider attempt once the table exists. The spike compared it with this section's design
+  (spike: "RubyLLM's usage ledger"). Against the ledger: no feature, route, correlation id or
+  metadata column; `operation` limited to RubyLLM's eleven; `provider` is RubyLLM's slug
+  (`openai` for llama.cpp); local models have no price; Jev never reaches it; and the table is
+  RubyLLM's private model. For it: a row per attempt, with no Sure code, and the owner follows
+  RubyLLM's tool threads. So Sure keeps `llm_usages` and doesn't create the table, which
+  costs no SQL per call. That stays a product decision.
+- **Attempts, not only calls.** An `.ai` event wraps a whole call, so RubyLLM's retries and the
+  `auto` chain's resends inside it aren't counted: four requests were one event with the last
+  one's tokens. RubyLLM's `usage.ruby_llm` event fires for every attempt, and its subscriber runs
+  in the caller, where it can read the correlation id and the feature. The usage subscriber can
+  take attempts from it and the rest from the `.ai` event, or record calls only; it's open. An
+  attempt the gate interrupts comes through as `failed`, so the health page's failure rates
+  leave out `Preempted`.
 - **Two tracing modes, never at once.** `content` (the default) sends Sure's `.ai` events to
   Langfuse with prompts and outputs. `metadata` sends RubyLLM's own OpenTelemetry spans to any
   OTLP backend: model, settings, finish reason, tokens and latency, with no prompts, tool results

@@ -1,7 +1,7 @@
 # RubyLLM spike report (PR 1 of the AI plumbing redesign)
 
 **Companion to:** [`rubyllm-spike-prompt.md`](rubyllm-spike-prompt.md) (the brief), [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) (the plan, §19) and [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) (the question before it was run)
-**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`32ef81fb9`](https://github.com/josh-sanders/sure/commit/32ef81fb9). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
+**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`fea2dda63`](https://github.com/josh-sanders/sure/commit/fea2dda63). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
 **Status:** a recommendation with its evidence, not a decision. The spike's second purpose was to sort the plan's choices into product decisions and technical limits; none of the product decisions, and none of the scope lines, is final. This file is the spike's note (`docs/llm-guides/ai-pipeline.md` on the branch) as of that commit; the plan's own short note in that path comes with PR 2.
 
 **Recommendation: adopt, pinned to `ruby_llm` 2.1.1** (released 2026-10-11, the latest at the
@@ -32,7 +32,7 @@ Sure keeps the turn's bounds (it steps the tool loop; RubyLLM can run the tools,
 agents behind the gate"), the JSON-mode policy, error mapping, instrumentation and the routing
 around it.
 
-Branch: `spike/ruby-llm` (not merged). Tests: `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb` (348 runs, 57 skips:
+Branch: `spike/ruby-llm` (not merged). Tests: `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb` (357 runs, 57 skips:
 the live-only timeout, Red Candle and job-runner tests, and OCR combinations not recorded), and for Jev `bin/rails test test/models/provider/jev_test.rb
 test/models/provider/jev_gem_test.rb test/models/provider/jev_gem_live_test.rb` (62 runs). Live server: llama.cpp on venus, `qwen3.6-35b-a3b-mtp` (64k context,
 `--jinja`, tool calls on) and `granite-embedding-small-english-r2` (384 dimensions). Neither model
@@ -91,7 +91,8 @@ here is final, and that includes scope: an "out of scope" line is a product deci
 | OpenAI vector stores vs pgvector (§5.5) | No embedding model to run | Indexing isn't awaited; scans index empty; no score threshold; files outlive removal | `openai/vector_store_statements` |
 | Tracing: `content` vs `metadata` (§10) | `metadata` sends no financial data | It loses route, prompt key, Sure's error class | "Tracing modes" |
 | Sure is an MCP server, not a client (§20, proposal 04) | No third-party server gets family data | RubyLLM's client worked against Sure's own `/mcp` in process, negotiating down to 2025-06-18 and showing only the tools `only` allows | `ruby_llm_mcp_live_test` |
-| RubyLLM's usage ledger off (no `ruby_llm_usages`) | No per-call database check; Sure's own `LlmUsage` | The ledger is where RubyLLM's history finds a message's producer | "What the owner watches on upgrade" |
+| RubyLLM's usage ledger off (no `ruby_llm_usages`); Sure writes `llm_usages` | The ledger has no feature, route, correlation id or metadata column, and its `operation` allows only RubyLLM's 11; local models have no price; `provider` is RubyLLM's slug (`openai` for llama.cpp); Jev isn't recorded; the table is RubyLLM's private model | A row per attempt with its status, written with no Sure code; the owner follows RubyLLM's tool threads; prices for registry models; where RubyLLM's history finds a message's producer | "RubyLLM's usage ledger"; `ruby_llm_usage_ledger_test` |
+| Usage from Sure's `.ai` events, one per call (§10) | Feature, route, error class and correlation id in one place, shared with Langfuse | A call of four requests (two retried 503s, the `auto` chain's 400, the success) was one event with the last request's tokens; RubyLLM's `usage.ruby_llm` event fires for every attempt and its subscriber sees Sure's context | `ruby_llm_usage_ledger_test` |
 | Auto-upload of large files off | A statement never stays in a provider's Files API | Anthropic over 24 MB then can't take the file at all | `extract_statement_stubbed_test` |
 | Chat storage redesign out of scope (§20) | The plumbing needs one additive column | RubyLLM's persistence pays off if RubyLLM runs the loop | "Switching providers" |
 | Local OCR as a two-step route (OCR model, then extraction) | Read both statements completely on CPU | Needs a second model or endpoint per route; a prompt per model | `ocr/` |
@@ -118,6 +119,8 @@ here is final, and that includes scope: an "out of scope" line is a product deci
   `openai_api_base`.
 - RubyLLM's `input_tokens` excludes cached tokens (reported 512 where the prompt was 12,457).
 - RubyLLM retries OpenAI's `insufficient_quota` 429 like a rate limit.
+- RubyLLM's usage ledger accepts only its own eleven operations, records RubyLLM's provider slug,
+  and prices only models in its registry.
 - Anthropic checks the balance before the model name, and blocks `count_tokens` without credits.
 - `pdftoppm` exits 0 with a 1×1 PNG when it can't allocate a page.
 - Active Storage blocks libvips's PDF loader (`Vips.block_untrusted`).
@@ -1311,6 +1314,55 @@ interrupting on). Sure drives each one with `Agent#step` in a bounded loop inste
   checkpoints to child fibers") carries only its own state. Asking for one is optional and not
   filed: Sure doesn't need it.
 
+## RubyLLM's usage ledger, outside the criteria
+
+`ruby_llm_usage_ledger_test`, WebMock with the OpenAI-compatible shapes, no server. Sure records
+usage in `llm_usages` today, and the plan writes it from Sure's `.ai` events (§10). RubyLLM 2.1
+has a ledger of its own: once `ruby_llm_usages` exists, it writes a row for every provider
+attempt, owned by whatever `RubyLLM::Accounting::Usage.with_owner` set, and it publishes a
+`usage.ruby_llm` event for every attempt whether or not the table exists. Three ways to record
+usage were compared: (A) the ledger as the record, (B) a Sure subscriber writing the
+`usage.ruby_llm` events into `llm_usages`, and (C) the plan's `.ai` events.
+
+| What happened | A: ledger rows | B: `usage.ruby_llm` events | C: `.ai` events |
+|---|---|---|---|
+| One bill setup | 1 row: `chat`, succeeded, 400 in, 100 out, owner the family, cost `nil` | 1 | 1 |
+| Two 503s RubyLLM retried, a 400 the `auto` chain answered with `json_object`, then success (4 requests) | 4 rows: failed (tokens unknown), failed (unknown), failed (0 tokens, cost 0), succeeded | 4 | 1, with the last request's tokens |
+| A call the gate interrupted, then resent | failed (cost 0), succeeded | 2 | not tested |
+| An embedding | `embedding`, 7 tokens | 1 | 1 |
+| A call outside `with_owner` | a row with no owner | no owner | — |
+
+- **Sure's own fields have nowhere to go.** The ledger has no feature, route, correlation id or
+  metadata column. Its `operation` is checked against RubyLLM's eleven (`chat`, `embedding`,
+  `judgment`, …), so `suggest_bill_setup` is refused, and `provider` is RubyLLM's slug: `openai`
+  for a llama.cpp endpoint, not the endpoint's name. The usage page, the API and §10's health
+  rates read those fields. `RubyLLM::ActiveRecord::Usage` is marked `:nodoc:`, "RubyLLM's
+  private normalized persistence".
+- **Prices come only from RubyLLM's registry.** A local model's cost is `nil`; Gemini through
+  the native provider was priced ($0.00037). Sure's plan prices from each model's own
+  `input_cost_per_mtok` and `output_cost_per_mtok`, which covers local and unregistered models.
+- **Tokens agree.** With 11,945 of 12,457 prompt tokens cached, the ledger and Sure's `Ai::Usage`
+  both said 512 input and 11,945 cache read: both read RubyLLM's counts.
+- **An interrupt is a failure, not a cancellation.** `Preempted` isn't `RubyLLM::CancelledError`,
+  so the abandoned request is `failed`. A health rate built on failures would count every
+  interrupt, unless the gate raised RubyLLM's own cancellation.
+- **Attempts are visible only to A and B.** RubyLLM's retries and the `auto` chain's resends
+  happen inside one `.ai` event, so the plan's §10 records one row for four requests. Failed
+  attempts carried no tokens (503) or zero (400), so the cost was the same; the count and the
+  error statuses weren't. The plan's endpoints set `max_retries: 0`, which leaves only the `auto`
+  chain's resends.
+- **B's subscriber runs in the caller.** It saw Sure's correlation id (`Ai::Correlation`, a
+  thread-local), so Sure's own context can fill the fields RubyLLM doesn't have.
+- **The owner follows RubyLLM's tool threads.** It lives in fiber storage, which threads
+  inherit. Two tools run with `concurrency: :threads` saw the family as owner, and a lane kept in
+  fiber storage (`Fiber[:spike_lane]`) arrived as `:interactive`, while the same lane in
+  `ActiveSupport::IsolatedExecutionState` arrived empty. Keeping the gate's lane in fiber storage
+  would carry it into tool threads without `CarriesLane`.
+- **What the ledger costs.** With the table, each attempt adds a savepoint, an insert and a
+  release (3 statements). Without it, none: the table check goes to the schema cache.
+- **Not tested:** the usage page built from the ledger, a data migration from `llm_usages`, and
+  Jev, whose transport isn't RubyLLM and would never reach the ledger.
+
 ## Lines of code for bill setup
 
 Code lines only: blank and comment-only lines aren't counted.
@@ -1359,8 +1411,9 @@ measurement.
     in Sure's process.
   - It adds an `after_destroy` hook to every Active Storage blob, guarded by
     `ruby_llm_provider_files`.
-  - It installs a usage ledger. Every call checks out a database connection and checks whether
-    `ruby_llm_usages` exists. Don't create that table. #1071 says not to rely on
+  - It installs a usage ledger. Every call checks out a database connection and asks the schema
+    cache whether `ruby_llm_usages` exists: no SQL after the first call in a process
+    (`ruby_llm_usage_ledger_test`). Don't create that table. #1071 says not to rely on
     `Usage.ledger = nil`.
 - **Usage counts.** RubyLLM's `input_tokens` excludes cached tokens; the raw APIs include them.
   Fixes after 2.1.1 change the counts: #1060 (Anthropic streaming input tokens), #1075 (zero
