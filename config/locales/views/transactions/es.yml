@@ -35,6 +35,7 @@ es:
       date: Fecha
       description: Descripción
       description_placeholder: Describe la transacción
+      description_placeholder_optional: "Déjalo en blanco para usar el nombre de la categoría/comercio, o selecciona uno primero"
       expense: Gasto
       income: Ingreso
       merchant_label: Comercio

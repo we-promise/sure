@@ -1,6 +1,14 @@
 ---
 en:
   credit_cards:
+    due:
+      in_days:
+        zero: Due today
+        one: Due tomorrow
+        other: Due in %{count} days
+      overdue:
+        one: Due yesterday
+        other: "%{count} days overdue"
     edit:
       edit: Edit %{account}
     form:
@@ -10,9 +18,16 @@ en:
       apr_placeholder: '15.99'
       available_credit: Available credit
       available_credit_placeholder: '10000'
+      due_day: Payment due day
       expiration_date: Expiration date
       minimum_payment: Minimum payment
       minimum_payment_placeholder: '100'
+      statement_close_day: Statement closes on
+      statement_cycle_description: The day of the month your statement closes and
+        the day the payment is due. With these set, the Overview tab shows what
+        your last statement came to and what is building toward the next one.
+        A linked card fills these in automatically and keeps what you set by
+        hand.
       sophtron_balance_sign_auto: Automatic
       sophtron_balance_sign_credit: Credit (bank owes you)
       sophtron_balance_sign_debt: Debt (you owe the bank)
@@ -32,6 +47,37 @@ en:
         bank, or from the Available credit field if your bank does not provide
         one.
       treat_balance_as_available_credit_label: Balance is available credit
+    tabs:
+      overview:
+        above_minimum: This statement came to %{balance}, above the %{minimum} minimum.
+          Paying only the minimum leaves the balance on the card at this APR.
+        annual_percentage_rate: Annual Percentage Rate
+        apr: APR
+        balance_carried_label: Balance carried
+        charges: Charges
+        estimated_interest_label: Estimated interest
+        monthly_rate_label: Monthly rate
+        per_month: "%{amount}/month"
+        closes_on: Next statement closes %{date}
+        credit_toward_next: Credit toward the next statement
+        due_on: "Due %{date}"
+        edit_card_details: Edit card details
+        payments_credits: Payments/Credits
+        remaining_due: Remaining due %{amount}
+        scheduled_payment: Scheduled payment %{amount} on %{date}
+        since_last_statement: Since Last Statement
+        statement_balance: Statement Balance
+        status_paid: Paid
+        status_partial: Partially paid
+        multi_currency_unavailable: This statement adds up entries recorded in more
+          than one currency, which cannot be totalled here without a rate for every
+          one of them. The balances are left blank rather than guessed.
+        no_cycle_description: Set the day your statement closes and the day payment
+          is due, and this tab will show what your last statement came to and what
+          is building toward the next one. A linked card usually fills these in for
+          you.
+        no_cycle_title: No statement cycle set
+        unknown: Unknown
     new:
       title: Enter credit card details
     update:
