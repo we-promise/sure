@@ -10,6 +10,7 @@ export default class extends Controller {
     "selectionContainer",
     "createForm",
     "createError",
+    "saveError",
   ];
 
   static values = {
@@ -31,12 +32,16 @@ export default class extends Controller {
         .filter((option) => option.getAttribute("aria-selected") === "true")
         .map((option) => option.dataset.tagId),
     );
+    // The set last saved from here; the server applies only the difference,
+    // so tags something else (e.g. a rule) set in the meantime survive.
+    this.savedIds = new Set(this.selectedIds);
+    // Tags a failed save tried to change: it may still have been applied.
+    this.unconfirmedIds = new Set();
     this.renderSelection();
     this.observeMenuResize();
   }
 
   disconnect() {
-    if (this.submitAbortController) this.submitAbortController.abort();
     this.stopAutoUpdate();
     if (this.resizeObserver) this.resizeObserver.disconnect();
   }
@@ -124,12 +129,11 @@ export default class extends Controller {
   }
 
   handleSearchKeydown(event) {
-    if (
-      event.key === "Enter" &&
-      !this.createFormTarget.classList.contains("hidden") &&
-      !this.creating
-    ) {
-      event.preventDefault();
+    if (event.key !== "Enter") return;
+
+    // Never submit the surrounding form natively.
+    event.preventDefault();
+    if (!this.createFormTarget.classList.contains("hidden") && !this.creating) {
       this.createTag();
     }
   }
@@ -226,17 +230,36 @@ export default class extends Controller {
     if (this.isOpen && !this.element.contains(event.target)) this.close();
   }
 
-  async submitForm() {
+  submitForm() {
     if (!this.autoSubmitValue) return;
     if (!this.hasUpdateUrlValue || !this.updateUrlValue) return;
 
-    if (this.submitAbortController) this.submitAbortController.abort();
+    // Saves run one after another, never aborted: an aborted request may
+    // still have been applied, and the next save's previous_tag_ids would
+    // then miss it, so undoing a tag quickly would not undo it.
+    this.saveQueue = (this.saveQueue || Promise.resolve())
+      .catch(() => {})
+      .then(() => this.saveSelection());
+    return this.saveQueue;
+  }
 
-    const abortController = new AbortController();
-    this.submitAbortController = abortController;
+  async saveSelection() {
+    const selected = new Set(this.selectedIds);
+    // Unconfirmed tags are sent as changes again, whatever their saved state.
+    const previous = new Set(this.savedIds);
+    this.unconfirmedIds.forEach((id) => {
+      if (selected.has(id)) previous.delete(id);
+      else previous.add(id);
+    });
+    const changedIds = [
+      ...[...selected].filter((id) => !previous.has(id)),
+      ...[...previous].filter((id) => !selected.has(id)),
+    ];
+    if (changedIds.length === 0) return;
 
+    let saved = false;
     try {
-      await fetch(this.updateUrlValue, {
+      const response = await fetch(this.updateUrlValue, {
         method: "PATCH",
         headers: {
           Accept: "application/json",
@@ -245,17 +268,35 @@ export default class extends Controller {
           "X-Requested-With": "XMLHttpRequest",
         },
         body: JSON.stringify({
-          tag_ids: Array.from(this.selectedIds),
+          tag_ids: [...selected],
+          previous_tag_ids: [...previous],
         }),
         credentials: "same-origin",
-        signal: abortController.signal,
       });
-    } catch (error) {
-      if (error.name !== "AbortError") throw error;
+      // Only the endpoint's own JSON answer means the tags were saved, never a
+      // page some redirect (e.g. to a login page) led to.
+      saved =
+        response.ok &&
+        !response.redirected &&
+        (response.headers.get("Content-Type") || "").includes(
+          "application/json",
+        );
     } finally {
-      if (this.submitAbortController === abortController) {
-        this.submitAbortController = null;
+      if (saved) {
+        this.savedIds = selected;
+        this.unconfirmedIds.clear();
+      } else {
+        changedIds.forEach((id) => this.unconfirmedIds.add(id));
       }
+      this.toggleSaveError(!saved);
+    }
+  }
+
+  // The selection stays as picked: a failed request may still have been
+  // applied, so its tags are sent again with the next change.
+  toggleSaveError(show) {
+    if (this.hasSaveErrorTarget) {
+      this.saveErrorTarget.classList.toggle("hidden", !show);
     }
   }
 

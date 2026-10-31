@@ -114,6 +114,7 @@ class Api::V1::RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2024-01-01", rule["effective_date"]
     assert_equal @rule.reload.position, rule["position"]
     assert_equal false, rule["stop_processing"]
+    assert_equal false, rule["apply_immediately"]
 
     assert_equal 1, rule["conditions"].length
     assert_equal "transaction_name", rule["conditions"].first["condition_type"]

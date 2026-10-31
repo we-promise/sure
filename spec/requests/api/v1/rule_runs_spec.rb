@@ -91,7 +91,7 @@ RSpec.describe 'API V1 Rule Runs', type: :request do
                 schema: { type: :string, enum: %w[pending success failed] }
       parameter name: :execution_type, in: :query, required: false,
                 description: 'Filter by execution type',
-                schema: { type: :string, enum: %w[manual scheduled] }
+                schema: { type: :string, enum: %w[manual scheduled immediate] }
       parameter name: :start_executed_at, in: :query, required: false,
                 description: 'Filter runs executed at or after this timestamp',
                 schema: { type: :string, format: :'date-time' }

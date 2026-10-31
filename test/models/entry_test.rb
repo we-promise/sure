@@ -48,6 +48,47 @@ class EntryTest < ActiveSupport::TestCase
     assert_not_nil category.reload.last_used_at
   end
 
+  test "bulk_update! with a block reads the tags of all entries in one query" do
+    entries = Array.new(3) { create_transaction(account: accounts(:depository)) }
+    yielded = []
+
+    assert_queries_match(/FROM "taggings"/, count: 1) do
+      Entry.where(id: entries.map(&:id)).bulk_update!({ category_id: categories(:income).id }) { |entry| yielded << entry.id }
+    end
+
+    assert_equal entries.map(&:id).sort, yielded.sort
+  end
+
+  test "bulk_update! with a block yields only entries whose tags changed" do
+    tagged = create_transaction(account: accounts(:depository))
+    tagged.transaction.update!(tag_ids: [ tags(:one).id ])
+    untagged = create_transaction(account: accounts(:depository))
+    yielded = []
+
+    Entry.where(id: [ tagged.id, untagged.id ]).bulk_update!({ tag_ids: [ tags(:one).id ] }, update_tags: true) { |entry| yielded << entry.id }
+
+    assert_equal [ untagged.id ], yielded
+  end
+
+  test "reconciling a transaction leaves what rules read unchanged" do
+    entry = create_transaction(account: accounts(:depository))
+    before = entry.rule_input_snapshot
+
+    entry.update!(reconciled_at: Time.current)
+
+    assert_equal before, entry.rule_input_snapshot
+  end
+
+  test "excluding a transaction changes what rules read" do
+    entry = create_transaction(account: accounts(:depository))
+    before = entry.rule_input_snapshot
+
+    # The split action only splits transactions that aren't excluded.
+    entry.update!(excluded: true)
+
+    assert_not_equal before, entry.rule_input_snapshot
+  end
+
   test "blank name is invalid when auto-generate transaction names is off" do
     families(:dylan_family).update!(auto_generate_transaction_names: false)
 

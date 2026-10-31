@@ -50,19 +50,31 @@
     <% end %>
     <%= render "entries/protection_indicator", entry: @entry, unlock_path: unlock_transaction_path(@entry.transaction) %>
     <% dialog.with_section(title: t(".overview"), open: true) do %>
-      <div>
+      <div class="space-y-2">
         <% split_locked = @entry.split_child? || @entry.split_parent? %>
         <% edit_locked = !can_edit_entry? %>
         <% annotate_locked = !can_annotate_entry? %>
+        <%# Name, category, merchant and tags each get their own form: rules
+            (immediate ones included) can change them while the drawer is open,
+            and a shared form would send their stale values back on the next
+            save of a neighbouring field, overwriting and locking the rule's
+            result. %>
+        <%= styled_form_with model: @entry,
+              url: transaction_path(@entry),
+              data: { controller: "auto-submit-form" } do |f| %>
+          <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+          <%# "change", not "blur": leaving the field untouched must not send its stale value. %>
+          <%= f.text_field :name,
+                label: t(".name_label"),
+                disabled: @entry.split_child? || edit_locked,
+                "data-auto-submit-form-target": "auto",
+                "data-autosubmit-trigger-event": "change" %>
+        <% end %>
         <%= styled_form_with model: @entry,
               url: transaction_path(@entry),
               class: "space-y-2",
               data: { controller: "auto-submit-form" } do |f| %>
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
-          <%= f.text_field :name,
-                label: t(".name_label"),
-                disabled: @entry.split_child? || edit_locked,
-                "data-auto-submit-form-target": "auto" %>
           <%= f.date_field :date,
                 label: t(".date_label"),
                 max: Date.current,
@@ -83,33 +95,40 @@
                     disable_currency: @entry.linked? || split_locked || edit_locked %>
             </div>
           <% end %>
-          <% if @entry.transaction.category_editable? %>
-            <%= f.fields_for :entryable do |ef| %>
-              <%= render DS::CategorySelect.new(
-                    form: ef,
-                    categories: Current.family.categories.alphabetically_by_hierarchy,
-                    selected_id: ef.object.category_id,
-                    disabled: @entry.split_child? || annotate_locked,
-                    auto_submit: true,
-                    blank_label: t(".uncategorized"),
-                    locked: Current.family.categories_locked?
-                  ) %>
-            <% end %>
-          <% elsif @entry.transaction.category_set_on_transfer_outflow? %>
-            <% outflow_category = transfer_outflow_category(@entry.transaction) %>
-            <div class="space-y-1">
-              <div class="opacity-60 cursor-not-allowed">
-                <%= f.fields_for :entryable do |ef| %>
-                  <%= render DS::CategorySelect.new(
-                        form: ef,
-                        categories: [],
-                        selected_category: outflow_category || transfer_category,
-                        disabled: true
-                      ) %>
-                <% end %>
+        <% end %>
+        <% if @entry.transaction.category_editable? || @entry.transaction.category_set_on_transfer_outflow? %>
+          <%= styled_form_with model: @entry,
+                url: transaction_path(@entry),
+                data: { controller: "auto-submit-form" } do |f| %>
+            <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+            <% if @entry.transaction.category_editable? %>
+              <%= f.fields_for :entryable do |ef| %>
+                <%= render DS::CategorySelect.new(
+                      form: ef,
+                      categories: Current.family.categories.alphabetically_by_hierarchy,
+                      selected_id: ef.object.category_id,
+                      disabled: @entry.split_child? || annotate_locked,
+                      auto_submit: true,
+                      blank_label: t(".uncategorized"),
+                      locked: Current.family.categories_locked?
+                    ) %>
+              <% end %>
+            <% elsif @entry.transaction.category_set_on_transfer_outflow? %>
+              <% outflow_category = transfer_outflow_category(@entry.transaction) %>
+              <div class="space-y-1">
+                <div class="opacity-60 cursor-not-allowed">
+                  <%= f.fields_for :entryable do |ef| %>
+                    <%= render DS::CategorySelect.new(
+                          form: ef,
+                          categories: [],
+                          selected_category: outflow_category || transfer_category,
+                          disabled: true
+                        ) %>
+                  <% end %>
+                </div>
+                <p class="text-xs text-secondary"><%= outflow_category ? t(".category_set_on_outflow") : t(".category_set_on_hidden_outflow") %></p>
               </div>
-              <p class="text-xs text-secondary"><%= outflow_category ? t(".category_set_on_outflow") : t(".category_set_on_hidden_outflow") %></p>
-            </div>
+            <% end %>
           <% end %>
         <% end %>
       </div>
@@ -140,6 +159,15 @@
                     disabled: @entry.split_child? || !can_annotate_entry?,
                     auto_submit: true
                   ) %>
+            <% end %>
+          <% end %>
+        <% end %>
+        <% unless @entry.transaction.transfer? %>
+          <%= styled_form_with model: @entry,
+                url: transaction_path(@entry),
+                data: { controller: "auto-submit-form" } do |f| %>
+            <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+            <%= f.fields_for :entryable do |ef| %>
               <%= render DS::TagSelect.new(
                     form: ef,
                     tags: Current.family.tags.alphabetically,
