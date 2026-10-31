@@ -1154,6 +1154,52 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_200000) do
     t.check_constraint "amount > 0::numeric", name: "chk_goal_pledges_amount_positive"
   end
 
+  create_table "gocardless_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_number"
+    t.string "account_status"
+    t.string "account_type"
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "gocardless_account_id"
+    t.uuid "gocardless_item_id", null: false
+    t.jsonb "institution_metadata"
+    t.string "name"
+    t.string "provider"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.date "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["gocardless_account_id"], name: "index_gocardless_accounts_on_gocardless_account_id", unique: true
+    t.index ["gocardless_item_id"], name: "index_gocardless_accounts_on_gocardless_item_id"
+  end
+
+  create_table "gocardless_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "agreement_id"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.string "name"
+    t.boolean "pending_account_setup", default: false
+    t.jsonb "raw_institution_payload"
+    t.jsonb "raw_payload"
+    t.string "requisition_id"
+    t.string "requisition_status"
+    t.boolean "scheduled_for_deletion", default: false
+    t.string "secret_id"
+    t.text "secret_key"
+    t.string "status", default: "good"
+    t.datetime "sync_start_date"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_gocardless_items_on_family_id"
+    t.index ["requisition_id"], name: "index_gocardless_items_on_requisition_id", unique: true
+    t.index ["status"], name: "index_gocardless_items_on_status"
+  end
+
   create_table "goals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "color"
     t.decimal "completed_amount", precision: 19, scale: 4
@@ -3041,6 +3087,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_30_200000) do
   add_foreign_key "financekit_transactions", "financekit_accounts", on_delete: :nullify
   add_foreign_key "fio_accounts", "fio_items"
   add_foreign_key "fio_items", "families"
+  add_foreign_key "gocardless_accounts", "gocardless_items"
+  add_foreign_key "gocardless_items", "families"
   add_foreign_key "goal_accounts", "accounts", on_delete: :restrict
   add_foreign_key "goal_accounts", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "accounts", on_delete: :restrict

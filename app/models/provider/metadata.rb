@@ -8,6 +8,7 @@ class Provider
       up:             { region: "AU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "UP", logo_color: "#ea580c", domain: "up.com.au" },
       monobank:       { region: "UA",      kinds: %w[Bank],            maturity: :alpha,  logo_text: "MB", logo_color: "#111827", domain: "monobank.ua" },
       fio:            { region: "CZ",      kinds: %w[Bank],            maturity: :alpha,  logo_text: "FI", logo_color: "#1d4ed8", domain: "fio.cz", name: "Fio banka" },
+      gocardless:     { region: "UK / EU", kinds: %w[Bank],            maturity: :alpha,  logo_text: "GC", logo_color: nil, domain: "gocardless.com", name: "GoCardless" },
       enable_banking: { region: "EU",      kinds: %w[Bank],            maturity: :beta,   logo_text: "EB", logo_color: "#9333ea", domain: "enablebanking.com" },
       coinstats:      { region: "Global",  kinds: %w[Crypto],          maturity: :beta,   logo_text: "CS", logo_color: "#db2777", domain: "coinstats.app" },
       wise:           { region: "Global",  kinds: %w[Bank],            maturity: :beta,   logo_text: "WI", logo_color: "#22c55e", domain: "wise.com" },

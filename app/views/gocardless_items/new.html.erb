@@ -1,0 +1,106 @@
+<%# Bank picker for a GoCardless connection.
+
+    Must be wrapped in the "modal" turbo frame: the accounts page requests this with a
+    Turbo-Frame: modal header, and a response without a matching frame is silently
+    discarded, which looks like the button doing nothing at all.
+
+    Institutions are scoped to a country by the API, so the country select re-requests
+    the list rather than filtering client-side. GB is the default because Enable Banking
+    already covers the EU/EEA and GoCardless is the UK path. %>
+
+<%= turbo_frame_tag "modal" do %>
+  <%= render DS::Dialog.new do |dialog| %>
+    <% dialog.with_header(title: t(".title", default: "Choose your bank")) %>
+
+    <% dialog.with_body do %>
+      <div class="space-y-4" data-controller="bank-search">
+        <p class="text-sm text-secondary">
+          <%= t(".description", default: "You will be sent to your bank to approve access. Sure only reads balances and transactions.") %>
+        </p>
+
+        <% if @error_message.present? %>
+          <%= render DS::Alert.new(message: @error_message, variant: :error) %>
+        <% end %>
+
+        <%= form_with url: new_gocardless_item_path, method: :get, data: { turbo_frame: "modal" } do |f| %>
+          <%= f.select :country,
+                       options_for_select(
+                         [
+                           [ "United Kingdom", "GB" ], [ "Ireland", "IE" ], [ "France", "FR" ],
+                           [ "Germany", "DE" ], [ "Spain", "ES" ], [ "Italy", "IT" ],
+                           [ "Netherlands", "NL" ], [ "Belgium", "BE" ], [ "Portugal", "PT" ],
+                           [ "Austria", "AT" ], [ "Denmark", "DK" ], [ "Finland", "FI" ],
+                           [ "Sweden", "SE" ], [ "Norway", "NO" ], [ "Poland", "PL" ]
+                         ],
+                         @country
+                       ),
+                       {},
+                       class: "w-full px-3 py-2 text-sm rounded-md border border-primary bg-container-inset text-primary",
+                       onchange: "this.form.requestSubmit()",
+                       aria: { label: t(".country_label", default: "Country") } %>
+        <% end %>
+
+        <% if @institutions.present? %>
+          <input
+            type="text"
+            placeholder="<%= t(".search_placeholder", default: "Search for your bank...") %>"
+            data-bank-search-target="input"
+            data-action="input->bank-search#filter"
+            class="w-full px-3 py-2 text-sm rounded-md border border-primary bg-container-inset text-primary placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+            autocomplete="off"
+            aria-label="<%= t(".search_label", default: "Search for your bank") %>"
+            autofocus>
+
+          <div class="space-y-2 max-h-80 overflow-y-auto">
+            <% @institutions.each do |institution| %>
+              <div data-bank-search-target="item" data-bank-search="<%= [ institution[:name], institution[:bic] ].compact_blank.join(" ").downcase(:fold) %>">
+                <%# turbo: false is required: connect redirects off-site to the bank's own
+                    consent page, which Turbo cannot follow. %>
+                <%= button_to connect_gocardless_items_path,
+                              method: :post,
+                              params: { institution_id: institution[:id] },
+                              class: "w-full flex items-center gap-4 p-3 rounded-lg border border-primary bg-container hover:bg-subtle transition-colors text-left",
+                              data: { turbo: false } do %>
+                  <% if institution[:logo].present? %>
+                    <img src="<%= institution[:logo] %>" alt="<%= institution[:name] %>" class="w-10 h-10 rounded object-contain">
+                  <% else %>
+                    <div class="w-10 h-10 rounded bg-container-inset flex items-center justify-center">
+                      <%= icon "building-bank", class: "w-5 h-5 text-tertiary" %>
+                    </div>
+                  <% end %>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-medium text-sm text-primary"><%= institution[:name] %></p>
+                    <% if institution[:transaction_total_days].present? %>
+                      <p class="text-xs text-secondary truncate">
+                        <%= t(".history_days", count: institution[:transaction_total_days].to_i,
+                              default: "%{count} days of history") %>
+                      </p>
+                    <% end %>
+                  </div>
+                  <%= icon "chevron-right", class: "w-5 h-5 text-secondary flex-shrink-0" %>
+                <% end %>
+              </div>
+            <% end %>
+
+            <div data-bank-search-target="emptyState" class="hidden py-4 text-center text-sm text-secondary">
+              <%= t(".no_search_results", default: "No banks match your search.") %>
+            </div>
+          </div>
+        <% else %>
+          <div class="text-center py-8">
+            <p class="text-secondary"><%= t(".no_banks", default: "No banks available for this country.") %></p>
+          </div>
+        <% end %>
+
+        <div class="flex justify-end pt-4">
+          <%= render DS::Link.new(
+                text: t(".cancel", default: "Cancel"),
+                variant: :secondary,
+                href: accounts_path,
+                data: { turbo_frame: "_top", action: "DS--dialog#close" }
+              ) %>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

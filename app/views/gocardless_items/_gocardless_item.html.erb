@@ -1,0 +1,136 @@
+<%# locals: (gocardless_item:, visible_accounts:) %>
+
+<%= tag.div id: dom_id(gocardless_item) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+    <div class="flex items-center justify-between gap-2 w-full">
+      <div class="flex items-center gap-2">
+        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
+
+        <%= render ProviderLogo.new(provider_key: :gocardless) %>
+
+        <div class="pl-1 text-sm">
+          <div class="flex items-center gap-2">
+            <%= tag.p gocardless_item.name, class: "font-medium text-primary" %>
+            <% if gocardless_item.scheduled_for_deletion? %>
+              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+            <% end %>
+          </div>
+          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+          <% if gocardless_item.syncing? %>
+            <div class="text-secondary flex items-center gap-1">
+              <%= icon "loader", size: "sm", class: "animate-spin" %>
+              <%= tag.span t(".syncing") %>
+            </div>
+          <% elsif gocardless_item.requires_update? %>
+            <div class="text-warning flex items-center gap-1">
+              <%= icon "alert-triangle", size: "sm", color: "warning" %>
+              <%= tag.span t(".requires_update") %>
+            </div>
+          <% else %>
+            <p class="text-secondary">
+              <% if gocardless_item.last_synced_at %>
+                <% if Current.user&.admin? && gocardless_item.sync_status_summary %>
+                  <%= t(".status_with_summary", timestamp: time_ago_in_words(gocardless_item.last_synced_at), summary: gocardless_item.sync_status_summary) %>
+                <% else %>
+                  <%= t(".status", timestamp: time_ago_in_words(gocardless_item.last_synced_at)) %>
+                <% end %>
+              <% else %>
+                <%= t(".status_never") %>
+              <% end %>
+            </p>
+          <% end %>
+        </div>
+      </div>
+
+      <% if Current.user&.admin? %>
+      <div class="flex items-center gap-2">
+        <% if gocardless_item.requires_update? %>
+          <%= render DS::Link.new(
+            text: t(".update_credentials"),
+            icon: "refresh-cw",
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
+        <% else %>
+          <%= icon(
+            "refresh-cw",
+            as_button: true,
+            href: sync_gocardless_item_path(gocardless_item),
+            disabled: gocardless_item.syncing?
+          ) %>
+        <% end %>
+
+        <%= render DS::Menu.new do |menu| %>
+          <% menu.with_item(
+            variant: "button",
+            text: t(".delete"),
+            icon: "trash-2",
+            href: gocardless_item_path(gocardless_item),
+            method: :delete,
+            confirm: CustomConfirm.for_resource_deletion(gocardless_item.name, high_severity: true)
+          ) %>
+        <% end %>
+      </div>
+      <% end %>
+    </div>
+    <% end %>
+
+    <% unless gocardless_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+        <% end %>
+
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@gocardless_sync_stats_map) && @gocardless_sync_stats_map
+             @gocardless_sync_stats_map[gocardless_item.id] || {}
+           else
+             gocardless_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: gocardless_item,
+          show_account_details: Current.user&.admin?
+        ) %>
+
+        <% if Current.user&.admin? %>
+        <%# Compute unlinked accounts (no AccountProvider link) %>
+        <% unlinked_count = gocardless_item.unlinked_gocardless_accounts&.count || 0 %>
+
+        <% if unlinked_count.to_i > 0 && gocardless_item.accounts.empty? %>
+          <%# No accounts imported yet - show prominent setup prompt %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: gocardless_item.accounts.count, total: gocardless_item.gocardless_accounts.count) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "plus",
+              variant: "primary",
+              href: setup_accounts_gocardless_item_path(gocardless_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif unlinked_count.to_i > 0 %>
+          <%# Some accounts imported, more available - show subtle link %>
+          <div class="pt-2 border-t border-primary">
+            <%= link_to setup_accounts_gocardless_item_path(gocardless_item),
+                        data: { turbo_frame: :modal },
+                        class: "flex items-center gap-2 text-sm text-secondary hover:text-primary transition-colors" do %>
+              <%= icon "plus", size: "sm" %>
+              <span><%= t(".more_accounts_available", count: unlinked_count) %></span>
+            <% end %>
+          </div>
+        <% elsif gocardless_item.accounts.empty? && gocardless_item.gocardless_accounts.none? %>
+          <%# No provider accounts at all - waiting for sync %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+          </div>
+        <% end %>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

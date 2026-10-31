@@ -1,6 +1,6 @@
 class ProviderMerchant < Merchant
   # sorted
-  enum :source, { ai: "ai", akahu: "akahu", brex: "brex", coinstats: "coinstats", enable_banking: "enable_banking", fio: "fio", indexa_capital: "indexa_capital", lunchflow: "lunchflow", mercury: "mercury", monobank: "monobank", plaid: "plaid", questrade: "questrade", redbark: "redbark", simplefin: "simplefin", sophtron: "sophtron", synth: "synth", up: "up" }
+  enum :source, { ai: "ai", akahu: "akahu", brex: "brex", coinstats: "coinstats", enable_banking: "enable_banking", fio: "fio", gocardless: "gocardless", indexa_capital: "indexa_capital", lunchflow: "lunchflow", mercury: "mercury", monobank: "monobank", plaid: "plaid", questrade: "questrade", redbark: "redbark", simplefin: "simplefin", sophtron: "sophtron", synth: "synth", up: "up" }
 
   # Unlike FamilyMerchant, only fill a blank logo: providers such as Plaid or
   # CoinStats supply their own logo_url, which must not be replaced (issue #2925).

@@ -10,6 +10,7 @@ class DataEnrichment < ApplicationRecord
     coinstats: "coinstats",
     enable_banking: "enable_banking",
     fio: "fio",
+    gocardless: "gocardless",
     ibkr: "ibkr",
     indexa_capital: "indexa_capital",
     lunchflow: "lunchflow",
