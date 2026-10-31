@@ -53,6 +53,10 @@ fr:
       exclude_from_reports: Exclure de tous les rapports
       institution_domain_label: Domaine de l'institution
       institution_domain_placeholder: ex., banquepopulaire.fr
+      iban_label: "IBAN"
+      iban_placeholder: "ex., DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN enregistré, saisissez une nouvelle valeur pour le remplacer"
+      iban_remove_label: "Supprimer l'IBAN"
       institution_name_label: Nom de l'institution
       institution_name_placeholder: ex., Banque Populaire
       name_label: Nom du compte

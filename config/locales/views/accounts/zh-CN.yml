@@ -48,6 +48,10 @@ zh-CN:
       institution_name_placeholder: 例如：Chase Bank
       institution_domain_label: 金融机构域名
       institution_domain_placeholder: 例如：chase.com
+      iban_label: "IBAN"
+      iban_placeholder: "例如：DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — 已保存 IBAN，输入新值以替换"
+      iban_remove_label: "移除 IBAN"
       notes_label: 备注
       notes_placeholder: 存储其他信息，例如账号、排序码、IBAN、路由号码等。
       exclude_from_reports: 从所有报表中排除

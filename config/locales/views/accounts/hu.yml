@@ -45,6 +45,10 @@ hu:
       institution_name_placeholder: pl. OTP Bank
       institution_domain_label: Pénzintézet domainje
       institution_domain_placeholder: pl. otpbank.hu
+      iban_label: "IBAN"
+      iban_placeholder: "pl. DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN mentve, add meg az új értéket a cseréjéhez"
+      iban_remove_label: "IBAN eltávolítása"
       notes_label: Megjegyzések
       notes_placeholder: További információk tárolása, pl. számlaszám, IBAN, routing szám stb.
     index:

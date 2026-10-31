@@ -48,6 +48,10 @@ id:
       institution_name_placeholder: mis., Bank BCA
       institution_domain_label: Domain institusi
       institution_domain_placeholder: mis., bca.co.id
+      iban_label: IBAN
+      iban_placeholder: mis., DE89370400440532013000 # pipelock:ignore IBAN
+      iban_set_placeholder: •••• •••• •••• •••• — IBAN tersimpan, masukkan nilai baru untuk menggantinya
+      iban_remove_label: Hapus IBAN
       notes_label: Catatan
       notes_placeholder: Simpan informasi tambahan seperti nomor rekening, kode bank, IBAN, nomor perutean, dll.
       exclude_from_reports: Kecualikan dari semua laporan

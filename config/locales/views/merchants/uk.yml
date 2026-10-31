@@ -12,6 +12,10 @@ uk:
       name_placeholder: Назва продавця
       website_placeholder: Веб-сайт (наприклад, starbucks.com)
       website_hint: Введіть веб-сайт продавця, щоб автоматично відображати його логотип
+      iban_placeholder: "IBAN (необов'язково)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN збережено, введіть нове значення, щоб замінити його"
+      iban_hint: "Номер банківського рахунку продавця, якщо відомий"
+      iban_remove_label: "Видалити IBAN"
     index:
       empty: Продавців ще немає
       new: Новий продавець

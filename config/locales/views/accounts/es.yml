@@ -48,6 +48,10 @@ es:
       institution_name_placeholder: ej. Chase Bank
       institution_domain_label: Dominio de la institución
       institution_domain_placeholder: ej. chase.com
+      iban_label: "IBAN"
+      iban_placeholder: "ej. DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN guardado, introduce un nuevo valor para reemplazarlo"
+      iban_remove_label: "Eliminar IBAN"
       notes_label: Notas
       notes_placeholder: Guarda información adicional como números de cuenta, códigos de sucursal, IBAN, números de ruta, etc.
       exclude_from_reports: Excluir de todos los informes
