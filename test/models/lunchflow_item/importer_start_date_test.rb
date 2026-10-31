@@ -26,7 +26,7 @@ class LunchflowItem::ImporterStartDateTest < ActiveSupport::TestCase
     store_previous_transaction
     @lunchflow_account.update!(transactions_synced_through: synced_through)
     @item.stubs(:last_synced_at).returns(Time.zone.parse("2026-10-20 06:00"))
-    expect_fetch_from(synced_through - 7.days)
+    expect_fetch_from((synced_through - 7.days).to_date)
 
     import_transactions
   end
@@ -68,7 +68,7 @@ class LunchflowItem::ImporterStartDateTest < ActiveSupport::TestCase
     @item.update!(sync_start_date: Date.new(2026, 1, 15))
     store_previous_transaction
     @lunchflow_account.update!(transactions_synced_through: synced_through)
-    expect_fetch_from(synced_through - 7.days)
+    expect_fetch_from((synced_through - 7.days).to_date)
 
     import_transactions
   end
@@ -113,7 +113,7 @@ class LunchflowItem::ImporterStartDateTest < ActiveSupport::TestCase
   test "keeping the same start date doesn't refetch history" do
     @item.update!(sync_start_date: Date.new(2026, 3, 1))
     mark_previously_synced(history_from: Time.zone.parse("2026-03-01"))
-    expect_fetch_from(Time.zone.parse("2026-10-03 06:00"))
+    expect_fetch_from(Date.new(2026, 10, 3))
 
     import_transactions
   end
@@ -121,7 +121,7 @@ class LunchflowItem::ImporterStartDateTest < ActiveSupport::TestCase
   test "moving the start date later keeps the history already fetched" do
     @item.update!(sync_start_date: Date.new(2026, 3, 1))
     mark_previously_synced(history_from: Time.zone.parse("2026-01-01"))
-    expect_fetch_from(Time.zone.parse("2026-10-03 06:00"))
+    expect_fetch_from(Date.new(2026, 10, 3))
 
     import_transactions
 
@@ -131,7 +131,7 @@ class LunchflowItem::ImporterStartDateTest < ActiveSupport::TestCase
   test "accounts with the full history don't refetch it when a start date is chosen" do
     @item.update!(sync_start_date: Date.new(2026, 1, 1))
     mark_previously_synced(history_from: nil)
-    expect_fetch_from(Time.zone.parse("2026-10-03 06:00"))
+    expect_fetch_from(Date.new(2026, 10, 3))
 
     import_transactions
   end

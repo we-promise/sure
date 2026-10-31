@@ -512,7 +512,7 @@ class LunchflowItem::Importer
       chosen_start = chosen_start_date
       return chosen_start if history_needed?(lunchflow_account)
 
-      [ lunchflow_account.transactions_synced_through - 7.days, chosen_start ].compact.max
+      [ (lunchflow_account.transactions_synced_through - 7.days).to_date, chosen_start ].compact.max
     end
 
     # The chosen start date as a day on the family's calendar. The panel saves it
