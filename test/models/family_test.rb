@@ -364,6 +364,39 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal [ "SGD", "USD" ], family.reload.enabled_currency_codes
   end
 
+  test "currency is saved as its ISO code" do
+    family = families(:dylan_family)
+    family.update!(currency: "eur")
+
+    assert_equal "EUR", family.reload.currency
+  end
+
+  test "an existing lowercase currency is saved as its ISO code" do
+    family = families(:dylan_family)
+    family.update_column(:currency, "eur")
+
+    family.update!(name: "Renamed family")
+
+    assert_equal "EUR", family.reload.currency
+  end
+
+  test "rejects a blank or unknown currency" do
+    family = families(:dylan_family)
+
+    [ "", nil, "XYZ" ].each do |value|
+      assert_not family.update(currency: value)
+      assert family.errors.of_kind?(:currency, :invalid)
+    end
+    assert_equal "USD", family.reload.currency
+  end
+
+  test "an existing unknown currency does not block unrelated updates" do
+    family = families(:dylan_family)
+    family.update_column(:currency, "XYZ")
+
+    assert family.update(name: "Renamed family")
+  end
+
   test "empty enabled currencies keeps all currencies available" do
     family = families(:dylan_family)
     family.update!(enabled_currencies: [])

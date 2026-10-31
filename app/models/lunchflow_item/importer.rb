@@ -255,9 +255,10 @@ class LunchflowItem::Importer
 
     def fetch_and_store_transactions(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
+      fetch_started_at = Time.current
       include_pending = Rails.configuration.x.lunchflow.include_pending
 
-      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date} (include_pending=#{include_pending})"
+      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date || "the beginning"} (include_pending=#{include_pending})"
 
       begin
         # Fetch transactions
@@ -273,7 +274,7 @@ class LunchflowItem::Importer
         end
 
         # Validate response structure
-        unless transactions_data.is_a?(Hash)
+        unless transactions_data.is_a?(Hash) && transactions_data[:transactions].is_a?(Array)
           Rails.logger.error "LunchflowItem::Importer - Invalid transactions_data format for account #{lunchflow_account.account_id}"
           return { success: false, transactions_count: 0, error: "Invalid response format" }
         end
@@ -389,6 +390,8 @@ class LunchflowItem::Importer
           Rails.logger.warn "LunchflowItem::Importer - Failed to fetch holdings for account #{lunchflow_account.account_id}: #{e.message}"
         end
 
+        lunchflow_account.update!(transactions_synced_through: fetch_started_at)
+
         { success: true, transactions_count: transactions_count }
       rescue Provider::Lunchflow::LunchflowError => e
         Rails.logger.error "LunchflowItem::Importer - Lunchflow API error for account #{lunchflow_account.id}: #{e.message}"
@@ -498,30 +501,14 @@ class LunchflowItem::Importer
       end
     end
 
+    # Returns nil until the account has a successful fetch on record, which
+    # fetches its full history. Later syncs resume from that fetch, so one that
+    # keeps failing doesn't leave a gap once the item sync completes.
     def determine_sync_start_date(lunchflow_account)
-      # Check if this account has any stored transactions
-      # If not, treat it as a first sync for this account even if the item has been synced before
-      has_stored_transactions = lunchflow_account.raw_transactions_payload.to_a.any?
+      synced_through = lunchflow_account.transactions_synced_through
+      return if lunchflow_account.raw_transactions_payload.to_a.empty? || synced_through.nil?
 
-      if has_stored_transactions
-        # Account has been synced before, use item-level logic with buffer
-        # For subsequent syncs, fetch from last sync date with a buffer
-        if lunchflow_item.last_synced_at
-          lunchflow_item.last_synced_at - 7.days
-        else
-          # Fallback if item hasn't been synced but account has transactions
-          90.days.ago
-        end
-      else
-        # Account has no stored transactions - this is a first sync for this account
-        # Use account creation date or a generous historical window
-        account_baseline = lunchflow_account.created_at || Time.current
-        first_sync_window = [ account_baseline - 7.days, 90.days.ago ].max
-
-        # Use the more recent of: (account created - 7 days) or (90 days ago)
-        # This caps old accounts at 90 days while respecting recent account creation dates
-        first_sync_window
-      end
+      synced_through - 7.days
     end
 
     def handle_error(error_message)
