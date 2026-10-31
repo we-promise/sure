@@ -95,6 +95,12 @@ de:
       rule_name_placeholder: Gib dieser Regel einen Namen
       starting_from: Ab dem
       stop_processing_description: Weiter unten stehende Regeln ändern die Transaktionen nicht mehr, die diese Regel trifft.
+      group_label: Gruppe (optional)
+      group_select_label: Gruppe
+      no_group: Keine Gruppe
+      new_group_label: Oder neue Gruppe
+      new_group_placeholder: Name einer neuen Gruppe
+      group_hint: Gruppen ordnen nur die Liste. Eine Regel in einer Gruppe läuft dort, wo die Gruppe in der Liste steht.
       stop_processing_label: Danach keine weiteren Regeln anwenden
       then: DANN
     index:
@@ -103,10 +109,56 @@ de:
       new_rule: Neue Regel
       no_rules_description: Mit Regeln bearbeitest du Transaktionen und andere Daten automatisch bei jedem Konto-Sync.
       no_rules_title: Noch keine Regeln
-      order_hint: Regeln laufen von oben nach unten. Setzt eine Regel ein Feld einer Transaktion, ändern weiter unten stehende Regeln dieses Feld nicht mehr. Tags ergänzt jede passende Regel. Ziehe Regeln, um die Reihenfolge zu ändern.
+      order_hint: Regeln laufen von oben nach unten, auch die Regeln in Gruppen. Setzt eine Regel ein Feld einer Transaktion, ändern weiter unten stehende Regeln dieses Feld nicht mehr. Tags ergänzt jede passende Regel. Ziehe Regeln und Gruppen, um die Reihenfolge zu ändern.
+      new_group: Neue Gruppe
+      reorder_group: "Gruppe %{name} verschieben. Mit Enter oder Leertaste greifen, dann mit den Pfeiltasten verschieben."
+      filters:
+        no_matches: Keine Regel passt zur Suche oder zu den Filtern.
+        drag_disabled: Während einer Suche oder eines Filters ist das Sortieren aus. Setze sie zurück, um die Reihenfolge zu ändern.
       page_title: Regeln
+      fold_rule: "Regel %{name} ein- oder ausklappen"
       reorder_rule: "Regel %{name} verschieben. Mit Enter oder Leertaste greifen, dann mit den Pfeiltasten verschieben."
       rules_heading: Regeln
+    filters:
+      search_label: Regeln durchsuchen
+      search_placeholder: Name, Bedingungen und Aktionen durchsuchen
+      reset: Zurücksetzen
+      button: Filter
+      done: Fertig
+      active_label: Aktive Filter
+      remove: "Filter %{filter} entfernen"
+      status:
+        label: Status
+        all: Alle Status
+        active: Aktiv
+        inactive: Inaktiv
+      action_type:
+        label: Aktion
+        all: Alle Aktionen
+      condition_type:
+        label: Bedingung
+        all: Alle Bedingungen
+      account:
+        label: Konto
+        all: Alle Konten
+      group:
+        label: Gruppe
+        all: Alle Gruppen
+        none: Ohne Gruppe
+    group:
+      rules_count:
+        one: 1 Regel
+        other: "%{count} Regeln"
+      inactive_count:
+        one: 1 inaktiv
+        other: "%{count} inaktiv"
+      empty: Noch keine Regeln in dieser Gruppe. Wähle die Gruppe im Formular einer Regel.
+      activate_all: Alle Regeln einschalten
+      deactivate_all: Alle Regeln ausschalten
+      rename: Umbenennen
+      delete: Gruppe löschen
+      delete_confirm_title: Gruppe „%{name}“ löschen?
+      delete_confirm_body: Die Regeln bleiben an ihrer Stelle, nur ohne Gruppe. Keine Regel wird gelöscht.
     rule:
       action_label_to: "%{label} auf %{value}"
       all_past_and_future: Alle bisherigen und künftigen %{resource}

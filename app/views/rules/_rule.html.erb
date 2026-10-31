@@ -15,7 +15,9 @@
     <% if rule.conditions.any? %>
       <% displayed_condition = rule.displayed_condition %>
       <% additional_condition_count = rule.additional_displayable_conditions_count %>
-      <div class="flex items-center gap-2 mt-1">
+      <%# Folding hides the details; a rule without a name keeps its
+          condition as its title. %>
+      <%= tag.div class: "flex items-center gap-2 mt-1", data: { rule_details: rule.name.present? || nil } do %>
         <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
           <span class="font-mono text-xs">IF</span>
         </div>
@@ -31,42 +33,44 @@
             <%= t(".and_more_conditions", count: additional_condition_count) %>
           <% end %>
         </p>
-      </div>
+      <% end %>
     <% end %>
-    <div class="flex items-center gap-2 mt-1">
-      <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
-        <span class="font-mono text-xs"><%= t(".then") %></span>
-      </div>
-      <p class="flex min-w-0 items-center flex-wrap gap-x-1.5 gap-y-1 m-0">
-        <span class="max-w-full truncate px-2 py-1 border border-secondary rounded-full">
-          <% if rule.actions.first.nil? %>
-            <%= t("rules.no_action") %>
-          <% else %>
-            <% if rule.actions.first.value && rule.actions.first.options %>
-              <%= t(".action_label_to", label: rule.actions.first.executor.label, value: rule.actions.first.value_display) %>
+    <div id="<%= dom_id(rule, :details) %>" class="space-y-1.5" data-rule-details>
+      <div class="flex items-center gap-2 mt-1">
+        <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
+          <span class="font-mono text-xs"><%= t(".then") %></span>
+        </div>
+        <p class="flex min-w-0 items-center flex-wrap gap-x-1.5 gap-y-1 m-0">
+          <span class="max-w-full truncate px-2 py-1 border border-secondary rounded-full">
+            <% if rule.actions.first.nil? %>
+              <%= t("rules.no_action") %>
             <% else %>
-              <%= rule.actions.first.executor.label %>
+              <% if rule.actions.first.value && rule.actions.first.options %>
+                <%= t(".action_label_to", label: rule.actions.first.executor.label, value: rule.actions.first.value_display) %>
+              <% else %>
+                <%= rule.actions.first.executor.label %>
+              <% end %>
             <% end %>
+          </span>
+          <% if rule.actions.size > 1 %>
+            <%= t(".and_more_actions", count: rule.actions.size - 1) %>
           <% end %>
-        </span>
-        <% if rule.actions.count > 1 %>
-          <%= t(".and_more_actions", count: rule.actions.count - 1) %>
-        <% end %>
-      </p>
-    </div>
-    <div class="flex items-center gap-2 mt-1">
-      <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
-        <span class="font-mono text-xs">FOR</span>
+        </p>
       </div>
-      <p class="flex min-w-0 items-center flex-wrap gap-x-1.5 gap-y-1 m-0">
-        <span class="max-w-full truncate px-2 py-1 border border-secondary rounded-full">
-          <% if rule.effective_date.nil? %>
-            <%= t(".all_past_and_future", resource: rule.resource_type.pluralize) %>
-          <% else %>
-            <%= t(".on_or_after", resource: rule.resource_type.pluralize, date: rule.effective_date.strftime("%b %-d, %Y")) %>
-          <% end %>
-        </span>
-      </p>
+      <div class="flex items-center gap-2 mt-1">
+        <div class="flex items-center gap-1 text-secondary w-16 shrink-0">
+          <span class="font-mono text-xs">FOR</span>
+        </div>
+        <p class="flex min-w-0 items-center flex-wrap gap-x-1.5 gap-y-1 m-0">
+          <span class="max-w-full truncate px-2 py-1 border border-secondary rounded-full">
+            <% if rule.effective_date.nil? %>
+              <%= t(".all_past_and_future", resource: rule.resource_type.pluralize) %>
+            <% else %>
+              <%= t(".on_or_after", resource: rule.resource_type.pluralize, date: rule.effective_date.strftime("%b %-d, %Y")) %>
+            <% end %>
+          </span>
+        </p>
+      </div>
     </div>
   </div>
   <div class="col-start-2 row-start-1 flex items-center gap-4 self-start sm:self-center <%= "sm:row-span-2" if has_title %>">

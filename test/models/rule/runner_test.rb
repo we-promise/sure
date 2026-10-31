@@ -27,10 +27,27 @@ class Rule::RunnerTest < ActiveSupport::TestCase
   test "reordering changes which rule wins" do
     top = create_rule("Top", "Whole Foods", category: @groceries)
     bottom = create_rule("Bottom", "Whole Foods", category: @dining)
-    Rule.update_positions!(@family, [ bottom.id, top.id ])
+    Rule::Layout.new(@family).reorder!([ "rule:#{bottom.id}", "rule:#{top.id}" ])
 
     run_active_rules
 
+    assert_equal @dining, @whole_foods.reload.category
+  end
+
+  test "rules in a group run where the group stands in the list" do
+    create_rule("Loose", "Whole Foods", category: @groceries)
+    grouped = create_rule("Grouped", "Whole Foods", category: @dining)
+    group = @family.rule_groups.create!(name: "Dining")
+    grouped.update!(rule_group: group)
+
+    run_active_rules
+    assert_equal @groceries, @whole_foods.reload.category
+
+    @whole_foods.update!(category: nil)
+    loose_key = "rule:#{@family.rules.find_by!(name: "Loose").id}"
+    Rule::Layout.new(@family).reorder!([ "group:#{group.id}", loose_key ])
+
+    run_active_rules
     assert_equal @dining, @whole_foods.reload.category
   end
 

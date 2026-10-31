@@ -1987,6 +1987,81 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not @family.rules.find_by(name: "Second").stop_processing
   end
 
+  test "imports rule groups by name and keeps each group in one block" do
+    existing = @family.rule_groups.create!(name: "Food")
+    rule_record = ->(name, position, group) do
+      data = {
+        name: name,
+        resource_type: "transaction",
+        active: true,
+        position: position,
+        conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+        actions: [ { action_type: "exclude_transaction" } ]
+      }
+      data[:group] = group unless group == :absent
+      { type: "Rule", version: 1, data: data }
+    end
+    ndjson = build_ndjson([
+      rule_record.call("Loose", 1, nil),
+      rule_record.call("Groceries", 2, "Food"),
+      rule_record.call("Restaurants", 3, "Food"),
+      rule_record.call("Rent", 4, "Housing"),
+      rule_record.call("Old export", 5, :absent)
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    rules = @family.rules.index_by(&:name)
+    assert_nil rules["Loose"].rule_group
+    assert_equal existing, rules["Groceries"].rule_group
+    assert_equal existing, rules["Restaurants"].rule_group
+    assert_equal "Housing", rules["Rent"].rule_group.name
+    assert_nil rules["Old export"].rule_group
+    # Rules joining a group that already exists run where that group stands.
+    assert_equal [ "Groceries", "Restaurants", "Loose", "Rent", "Old export" ], @family.rules.ordered.pluck(:name).last(5)
+  end
+
+  test "session rule reimport keeps the run order of rules leaving a group" do
+    group = @family.rule_groups.create!(name: "Food")
+    build_rule = ->(name) do
+      rule = @family.rules.build(name: name, resource_type: "transaction", active: true, rule_group: group)
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: name)
+      rule.actions.build(action_type: "exclude_transaction")
+      rule.tap(&:save!)
+    end
+    first = build_rule.call("First")
+    second = build_rule.call("Second")
+    build_rule.call("Staying")
+
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    { "rule-1" => first, "rule-2" => second }.each do |source_id, rule|
+      session.source_mappings.create!(family: @family, source_type: "Rule", source_id: source_id, target: rule)
+    end
+    rule_record = ->(id, name, position) do
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          id: id,
+          name: name,
+          resource_type: "transaction",
+          active: true,
+          position: position,
+          group: nil,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+          actions: [ { action_type: "exclude_transaction" } ]
+        }
+      }
+    end
+    ndjson = build_ndjson([ rule_record.call("rule-1", "First", 1), rule_record.call("rule-2", "Second", 2) ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert_nil first.reload.rule_group
+    assert_nil second.reload.rule_group
+    assert_equal [ "Staying", "First", "Second" ], @family.rules.ordered.pluck(:name).last(3)
+  end
+
   test "imports rules with conditions and actions" do
     ndjson = build_ndjson([
       {

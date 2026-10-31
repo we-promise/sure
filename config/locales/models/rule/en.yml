@@ -1,6 +1,10 @@
 ---
 en:
   activerecord:
+    attributes:
+      rule:
+        new_rule_group_name: "New group"
+        rule_group: "Group"
     errors:
       models:
         rule:

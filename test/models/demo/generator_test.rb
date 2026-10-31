@@ -12,7 +12,7 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
       User.any_instance.stubs(:ai_available?).returns(false)
       generator = Demo::Generator.new(seed: 42)
       %i[create_realistic_categories! create_realistic_accounts! create_realistic_transactions!
-         generate_budget_auto_fill! generate_goals! create_monitoring_api_key!].each do |step|
+         generate_budget_auto_fill! create_sample_rules! generate_goals! create_monitoring_api_key!].each do |step|
         generator.stubs(step)
       end
 
@@ -104,6 +104,26 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
 
     assert_equal existing_key, monitoring_key
     assert_equal 1, ApiKey.where(display_key: ApiKey::DEMO_MONITORING_KEY).count
+  end
+
+  test "sample rules come in groups and are all switched off" do
+    generator = Demo::Generator.new(seed: 42)
+    generator.send(:create_realistic_categories!, @family)
+    existing_rule_ids = @family.rules.ids
+    generator.send(:create_sample_rules!, @family)
+
+    rules = @family.rules.where.not(id: existing_rule_ids).ordered.includes(:rule_group, :conditions, :actions).to_a
+    assert_equal 5, rules.size
+    assert rules.none?(&:active?), "sample rules must stay off until someone switches them on"
+    assert_equal [ "Groceries", "Subscriptions" ], @family.rule_groups.order(:name).pluck(:name)
+    assert rules.any? { |rule| rule.rule_group.nil? }, "the demo should also show a rule without a group"
+
+    netflix = rules.find { |rule| rule.conditions.first.value == "Netflix" }
+    assert_equal "Subscriptions", netflix.rule_group.name
+    assert_equal @family.categories.find_by!(name: "Entertainment").id, netflix.actions.first.value
+
+    # Each group's rules sit directly below it, in the order the page shows.
+    assert_equal @family.rules.ordered.to_a, Rule::Layout.new(@family).items.flat_map { |item| item.group? ? item.rules : [ item.rule ] }
   end
 
   # Regression for a `rake demo_data:default` crash: the goal-seeding matrix

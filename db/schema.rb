@@ -1307,6 +1307,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_200000) do
     t.string "price"
     t.string "qty"
     t.string "resource_type"
+    t.string "rule_group"
     t.integer "source_row_number", null: false
     t.string "tags"
     t.string "ticker"
@@ -2272,6 +2273,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_200000) do
     t.index ["rule_id"], name: "index_rule_conditions_on_rule_id"
   end
 
+  create_table "rule_groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "name"], name: "index_rule_groups_on_family_id_and_name", unique: true
+    t.index ["family_id"], name: "index_rule_groups_on_family_id"
+  end
+
   create_table "rule_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "error_message"
@@ -2298,10 +2309,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_200000) do
     t.string "name"
     t.integer "position", default: 0, null: false
     t.string "resource_type", null: false
+    t.uuid "rule_group_id"
     t.boolean "stop_processing", default: false, null: false
     t.datetime "updated_at", null: false
     t.index ["family_id", "position"], name: "index_rules_on_family_id_and_position"
     t.index ["family_id"], name: "index_rules_on_family_id"
+    t.index ["rule_group_id"], name: "index_rules_on_rule_group_id"
   end
 
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3115,8 +3128,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_200000) do
   add_foreign_key "rule_actions", "rules"
   add_foreign_key "rule_conditions", "rule_conditions", column: "parent_id"
   add_foreign_key "rule_conditions", "rules"
+  add_foreign_key "rule_groups", "families"
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
+  add_foreign_key "rules", "rule_groups", on_delete: :nullify
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify

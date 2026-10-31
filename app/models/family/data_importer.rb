@@ -1386,6 +1386,8 @@ class Family::DataImporter
         [ position || Float::INFINITY, index ]
       end.map(&:first)
       with_stored_email_action = Rule.ids_with_stored_email_notification_action(@family.rules)
+      # The last rule each group lost in this import, keyed by group id.
+      left_group_last = {}
 
       records.each do |record|
         data = record["data"]
@@ -1404,6 +1406,9 @@ class Family::DataImporter
           effective_date: data["effective_date"].present? ? Date.parse(data["effective_date"].to_s) : nil,
           stop_processing: data["stop_processing"] || false
         )
+        # Exports from before rule groups have no group key; an existing rule
+        # then keeps its group.
+        rule.rule_group = find_or_create_rule_group(data["group"]) if data.key?("group")
 
         # An email action replacing the rule's own keeps the baseline it recorded
         # (see Rule::Action#keep_notification_baseline), as stored before this
@@ -1425,10 +1430,28 @@ class Family::DataImporter
           build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
 
+        left_group_id = rule.rule_group_id_was if rule.will_save_change_to_rule_group_id? && rule.rule_group.nil?
+
         rule.save!
+        if left_group_id
+          # Each rule leaving a group lands right below it (Rule#place_in_rule_group),
+          # so one that left the same group earlier in this import would end up
+          # after it. Keep the exported run order instead.
+          previous = left_group_last[left_group_id]
+          Rule::Layout.new(@family).place_after_rule!(rule, previous) if previous
+          left_group_last[left_group_id] = rule
+        end
         map_source!(:rules, old_id, rule)
         increment_summary("Rule", created ? :created : :updated)
       end
+    end
+
+    def find_or_create_rule_group(name)
+      validate_rule_text!(name, field: "group")
+      name = name.to_s.strip
+      return if name.empty?
+
+      @family.rule_groups.find_or_create_named!(name)
     end
 
     def build_rule_condition(rule, condition_data, parent: nil)
