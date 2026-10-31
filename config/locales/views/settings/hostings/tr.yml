@@ -183,9 +183,11 @@ tr:
         max_response_tokens_label: Maksimum Yanıt Token'ı (İsteğe Bağlı)
         model_label: Model (İsteğe Bağlı)
         model_placeholder: gpt-4.1 (varsayılan)
+        model_required_help: "Bir API temel URL'si belirlediğinizde zorunludur: sunucunuzun kullandığı model adını girin, örneğin Ollama için llama3.1."
         title: OpenAI
         uri_base_label: API Temel URL'si (İsteğe Bağlı)
         uri_base_placeholder: https://api.openai.com/v1 (varsayılan)
+        uri_base_local_help: "Kendi makinenizdeki bir model için OpenAI uyumlu uç noktasını girin, örneğin Ollama için http://localhost:11434/v1; Sure ve Ollama Docker Compose servisleri olarak çalışıyorsa http://ollama:11434/v1."
         model_function_calling_help: Yapay zeka asistanı verilerinizi fonksiyon çağrılarıyla okur; bu nedenle sağlayıcınızın araç/fonksiyon çağırmayı desteklediğini belirttiği bir model seçin. Bu desteği olmayan modellerde sohbet, anlaşılması güç bir sağlayıcı hatasıyla başarısız olur.
         model_function_calling_link: Yapılandırılan modeli kontrol et
         timeout_heading: Zaman aşımları

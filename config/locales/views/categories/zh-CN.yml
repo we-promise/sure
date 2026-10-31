@@ -33,8 +33,6 @@ zh-CN:
       empty: 未找到分类
       new: 新建分类
       merge: 合并分类
-    menu:
-      loading: 正在加载...
     new:
       new_category: 新建分类
     update:

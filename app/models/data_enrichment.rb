@@ -4,29 +4,30 @@ class DataEnrichment < ApplicationRecord
   # Why a sync excluded an entry (see Entry.record_auto_exclusions).
   scope :sync_exclusion, -> { where(source: "sync", attribute_name: "excluded") }
 
+  # sorted
   enum :source, {
-    rule: "rule",
-    plaid: "plaid",
-    simplefin: "simplefin",
-    lunchflow: "lunchflow",
-    akahu: "akahu",
-    up: "up",
-    monobank: "monobank",
-    synth: "synth",
     ai: "ai",
-    sync: "sync",
-    enable_banking: "enable_banking",
-    coinstats: "coinstats",
-    mercury: "mercury",
+    akahu: "akahu",
+    bayes: "bayes",
     brex: "brex",
-    indexa_capital: "indexa_capital",
-    sophtron: "sophtron",
+    coinstats: "coinstats",
+    enable_banking: "enable_banking",
+    fio: "fio",
     ibkr: "ibkr",
+    indexa_capital: "indexa_capital",
+    lunchflow: "lunchflow",
+    mercury: "mercury",
+    monobank: "monobank",
+    plaid: "plaid",
     questrade: "questrade",
     redbark: "redbark",
-    trade_republic: "trade_republic",
-    bayes: "bayes",
+    rule: "rule",
     similar: "similar",
-    fio: "fio"
+    simplefin: "simplefin",
+    sophtron: "sophtron",
+    sync: "sync",
+    synth: "synth",
+    trade_republic: "trade_republic",
+    up: "up"
   }
 end
