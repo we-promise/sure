@@ -151,7 +151,7 @@ class McpController < ApplicationController
     end
 
     def mcp_scope_allowed?(access_token)
-      return true if access_token.scopes.include?("mcp")
+      return true if access_token.scopes.include?(REQUIRED_SCOPE)
 
       access_token.scopes.include?("read_write") && Time.current < LEGACY_READ_WRITE_SCOPE_DEADLINE
     end
@@ -243,12 +243,12 @@ class McpController < ApplicationController
     def render_mcp_insufficient_scope
       response.set_header(
         "WWW-Authenticate",
-        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource\", error=\"insufficient_scope\", scope=\"mcp\""
+        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource/mcp\", error=\"insufficient_scope\", scope=\"#{REQUIRED_SCOPE}\""
       )
       render json: {
         error: "insufficient_scope",
         error_description: t("mcp.errors.insufficient_scope"),
-        scope: "mcp"
+        scope: REQUIRED_SCOPE
       }, status: :forbidden
     end
 

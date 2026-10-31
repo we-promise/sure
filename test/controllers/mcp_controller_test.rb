@@ -19,7 +19,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal "unauthorized", JSON.parse(response.body)["error"]
     assert response.headers["WWW-Authenticate"].present?, "Must include WWW-Authenticate header"
     assert_includes response.headers["WWW-Authenticate"], "oauth-protected-resource/mcp"
-    assert_includes response.headers["WWW-Authenticate"], "scope=\"read_write\""
+    assert_includes response.headers["WWW-Authenticate"], "scope=\"mcp\""
   end
 
   test "returns 401 with wrong token" do
@@ -248,7 +248,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     challenge = response.headers["WWW-Authenticate"]
     assert_includes challenge, 'error="insufficient_scope"'
     assert_includes challenge, 'scope="mcp"'
-    assert_includes challenge, "oauth-protected-resource"
+    assert_includes challenge, "oauth-protected-resource/mcp"
   end
 
   test "returns 401 for expired Doorkeeper tokens regardless of scope" do
@@ -819,7 +819,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     token = Doorkeeper::AccessToken.create!( # pipelock:ignore
       application: app,
       resource_owner_id: @user.id,
-      scopes: "read_write",
+      scopes: "mcp",
       expires_in: 1.year
     )
     Usage.expects(:capture).with("mcp_call_served_daily").once
