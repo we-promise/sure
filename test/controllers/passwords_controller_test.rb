@@ -38,6 +38,25 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "update rejects a current password sent as null" do
+    patch password_path, params: { user: {
+      password_challenge: nil,
+      password: "NewSecure1!",
+      password_confirmation: "NewSecure1!"
+    } }.to_json, headers: { "CONTENT_TYPE" => "application/json" }
+
+    assert_response :unprocessable_entity
+    assert_not @user.reload.authenticate("NewSecure1!")
+  end
+
+  test "update rejects a current password field sent without a value" do
+    patch password_path, params: "user[password_challenge]&user[password]=NewSecure1!&user[password_confirmation]=NewSecure1!",
+      headers: { "CONTENT_TYPE" => "application/x-www-form-urlencoded" }
+
+    assert_response :unprocessable_entity
+    assert_not @user.reload.authenticate("NewSecure1!")
+  end
+
   test "update rejects a mismatched confirmation" do
     patch password_path, params: { user: {
       password_challenge: user_password_test,
