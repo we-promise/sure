@@ -13,7 +13,7 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
       name: "Test Read Key",
       scopes: [ "read" ],
       source: "web",
-      display_key: "test_read_#{SecureRandom.hex(8)}"
+      key: "test_read_#{SecureRandom.hex(8)}"
     )
 
     @account = accounts(:investment)
@@ -90,6 +90,6 @@ class Api::V1::HoldingsControllerTest < ActionDispatch::IntegrationTest
   private
 
     def api_headers(api_key)
-      { "X-Api-Key" => api_key.display_key }
+      { "X-Api-Key" => api_key.plain_key }
     end
 end

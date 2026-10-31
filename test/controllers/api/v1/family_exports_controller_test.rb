@@ -15,7 +15,7 @@ class Api::V1::FamilyExportsControllerTest < ActionDispatch::IntegrationTest
       user: @admin,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
-      display_key: "test_rw_#{SecureRandom.hex(8)}",
+      key: "test_rw_#{SecureRandom.hex(8)}",
       source: "web"
     )
 
@@ -23,7 +23,7 @@ class Api::V1::FamilyExportsControllerTest < ActionDispatch::IntegrationTest
       user: @admin,
       name: "Test Read Key",
       scopes: [ "read" ],
-      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      key: "test_ro_#{SecureRandom.hex(8)}",
       source: "mobile"
     )
 
@@ -31,7 +31,7 @@ class Api::V1::FamilyExportsControllerTest < ActionDispatch::IntegrationTest
       user: @member,
       name: "Member Read-Write Key",
       scopes: [ "read_write" ],
-      display_key: "test_member_#{SecureRandom.hex(8)}",
+      key: "test_member_#{SecureRandom.hex(8)}",
       source: "web"
     )
 

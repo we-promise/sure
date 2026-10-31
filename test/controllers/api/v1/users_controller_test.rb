@@ -13,14 +13,14 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
       source: "web",
-      display_key: "test_rw_#{SecureRandom.hex(8)}"
+      key: "test_rw_#{SecureRandom.hex(8)}"
     )
 
     @read_only_api_key = ApiKey.create!(
       user: @user,
       name: "Test Read-Only Key",
       scopes: [ "read" ],
-      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      key: "test_ro_#{SecureRandom.hex(8)}",
       source: "mobile"
     )
   end
@@ -58,7 +58,7 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
       name: "Member Read-Write Key",
       scopes: [ "read_write" ],
       source: "web",
-      display_key: "test_member_#{SecureRandom.hex(8)}"
+      key: "test_member_#{SecureRandom.hex(8)}"
     )
 
     assert_no_enqueued_jobs only: FamilyResetJob do
@@ -107,7 +107,7 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
       name: "Member Read Key",
       scopes: [ "read_write" ],
       source: "web",
-      display_key: "test_member_read_#{SecureRandom.hex(8)}"
+      key: "test_member_read_#{SecureRandom.hex(8)}"
     )
 
     get "/api/v1/users/reset/status", headers: api_headers(non_admin_api_key)
@@ -172,7 +172,7 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
       name: "Solo Key",
       scopes: [ "read_write" ],
       source: "web",
-      display_key: "test_solo_#{SecureRandom.hex(8)}"
+      key: "test_solo_#{SecureRandom.hex(8)}"
     )
 
     delete "/api/v1/users/me", headers: api_headers(solo_api_key)

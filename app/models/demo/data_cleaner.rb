@@ -62,7 +62,7 @@ class Demo::DataCleaner
     def disarm_destroy_guards!
       # ApiKey#prevent_demo_monitoring_key_destroy! stops the demo monitoring
       # key being revoked from the UI.
-      ApiKey.where(display_key: ApiKey::DEMO_MONITORING_KEY).delete_all
+      ApiKey.demo_monitoring.delete_all
 
       # A family cancels its Stripe subscription before it goes, and aborts
       # when Stripe refuses. The demo family's stripe_id is the synthetic sentinel

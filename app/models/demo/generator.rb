@@ -209,7 +209,7 @@ class Demo::Generator
       # (the monitoring key uses the dedicated "monitoring" source and cannot be revoked)
       admin_user.api_keys.active.visible.where(source: "web").find_each(&:revoke!)
 
-      existing_key = ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+      existing_key = ApiKey.demo_monitoring.first
 
       if existing_key
         existing_key.update!(

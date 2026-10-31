@@ -28,7 +28,7 @@ class DemoFamilyRefreshJob < ApplicationJob
 
         # The generator transfers this global key to the new demo user. Never
         # take it away from a different family on a self-hosted instance.
-        monitoring_key = ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+        monitoring_key = ApiKey.demo_monitoring.first
         return Rails.logger.warn("Skipped demo family refresh: monitoring key belongs to another family") if monitoring_key && monitoring_key.user.family_id != old_family.id
       end
 

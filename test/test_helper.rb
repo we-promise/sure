@@ -126,6 +126,21 @@ module ActiveSupport
       { "X-Api-Key" => api_key.plain_key }
     end
 
+    # The secrets behind test/fixtures/api_keys.yml. The database only holds
+    # their digests, so fixture keys can't produce `plain_key` on their own.
+    API_KEY_FIXTURE_SECRETS = {
+      active_key: "test_key_123",
+      expired_key: "expired_key_456",
+      revoked_key: "revoked_key_789",
+      one: "test_one_key_123",
+      two: "test_two_key_456"
+    }.freeze
+
+    # An api_keys fixture that can be used with `api_headers` / `plain_key`.
+    def fixture_api_key(name)
+      api_keys(name).tap { |api_key| api_key.key = API_KEY_FIXTURE_SECRETS.fetch(name) }
+    end
+
     def user_password_test
       "maybetestpassword817983172"
     end

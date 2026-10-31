@@ -13,7 +13,7 @@ class Api::V1::RuleRunsControllerTest < ActionDispatch::IntegrationTest
       name: "Test Read Key",
       scopes: [ "read" ],
       source: "web",
-      display_key: "test_read_#{SecureRandom.hex(8)}"
+      key: "test_read_#{SecureRandom.hex(8)}"
     )
     @redis = Redis.new
     @redis.del("api_rate_limit:#{@api_key.id}")
@@ -166,7 +166,7 @@ class Api::V1::RuleRunsControllerTest < ActionDispatch::IntegrationTest
       name: "No Read Key",
       scopes: [],
       source: "web",
-      display_key: "no_read_#{SecureRandom.hex(8)}"
+      key: "no_read_#{SecureRandom.hex(8)}"
     )
     api_key_without_read.save!(validate: false)
 
@@ -184,7 +184,7 @@ class Api::V1::RuleRunsControllerTest < ActionDispatch::IntegrationTest
   private
 
     def api_headers(api_key)
-      { "X-Api-Key" => api_key.display_key }
+      { "X-Api-Key" => api_key.plain_key }
     end
 
     def create_other_family_rule_run

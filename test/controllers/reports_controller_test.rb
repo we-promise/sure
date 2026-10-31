@@ -371,7 +371,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
   test "export transactions with API key authentication" do
     # Use an active API key with read permissions
-    api_key = api_keys(:active_key)
+    api_key = fixture_api_key(:active_key)
 
     # Make sure the API key has the correct source
     api_key.update!(source: "web") unless api_key.source == "web"

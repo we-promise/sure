@@ -227,8 +227,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_200000) do
 
   create_table "api_keys", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.string "display_key", null: false
+    t.string "display_key"
     t.datetime "expires_at"
+    t.string "key_digest"
+    t.string "key_prefix"
     t.datetime "last_used_at"
     t.string "name"
     t.datetime "revoked_at"
@@ -237,6 +239,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_28_200000) do
     t.datetime "updated_at", null: false
     t.uuid "user_id", null: false
     t.index ["display_key"], name: "index_api_keys_on_display_key", unique: true
+    t.index ["key_digest"], name: "index_api_keys_on_key_digest", unique: true
     t.index ["revoked_at"], name: "index_api_keys_on_revoked_at"
     t.index ["user_id", "source"], name: "index_api_keys_on_user_id_and_source"
     t.index ["user_id"], name: "index_api_keys_on_user_id"

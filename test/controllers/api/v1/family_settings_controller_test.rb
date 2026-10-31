@@ -24,7 +24,7 @@ class Api::V1::FamilySettingsControllerTest < ActionDispatch::IntegrationTest
       name: "Test Read Key",
       scopes: [ "read" ],
       source: "web",
-      display_key: "test_read_#{SecureRandom.hex(8)}"
+      key: "test_read_#{SecureRandom.hex(8)}"
     )
     Redis.new.del("api_rate_limit:#{@api_key.id}")
   end
@@ -65,7 +65,7 @@ class Api::V1::FamilySettingsControllerTest < ActionDispatch::IntegrationTest
       name: "No Read Key",
       scopes: [],
       source: "web",
-      display_key: "no_read_#{SecureRandom.hex(8)}"
+      key: "no_read_#{SecureRandom.hex(8)}"
     )
     api_key_without_read.save!(validate: false)
 

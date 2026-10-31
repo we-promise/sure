@@ -19,14 +19,14 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
-      display_key: "test_rw_#{SecureRandom.hex(8)}"
+      key: "test_rw_#{SecureRandom.hex(8)}"
     )
 
     @read_only_api_key = ApiKey.create!(
       user: @user,
       name: "Test Read-Only Key",
       scopes: [ "read" ],
-      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      key: "test_ro_#{SecureRandom.hex(8)}",
       source: "mobile"  # Use different source to allow multiple keys
     )
 
@@ -1075,7 +1075,7 @@ end
   private
 
     def api_headers(api_key)
-      { "X-Api-Key" => api_key.display_key }
+      { "X-Api-Key" => api_key.plain_key }
     end
 
     def count_db_queries(&block)
