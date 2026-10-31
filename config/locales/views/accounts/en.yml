@@ -154,6 +154,7 @@ en:
         done: Done
     types:
       depository: Cash
+      physical_cash: Physical Cash
       investment: Investment
       crypto: Crypto
       property: Property
@@ -164,6 +165,7 @@ en:
       other_liability: Other Liability
     types_plural:
       depository: Cash
+      physical_cash: Physical Cash
       investment: Investments
       crypto: Crypto
       property: Properties

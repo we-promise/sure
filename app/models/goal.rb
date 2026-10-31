@@ -102,7 +102,7 @@ class Goal < ApplicationRecord
   monetize :target_amount
 
   # Account types that can back a goal (see linked_accounts_must_be_fundable).
-  FUNDABLE_ACCOUNT_TYPES = %w[Depository Investment Crypto].freeze
+  FUNDABLE_ACCOUNT_TYPES = %w[Depository PhysicalCash Investment Crypto].freeze
 
   # States in which a goal has let go of the money it was holding, and so
   # drops out of the shared pool. `completed` belongs here: reaching a goal

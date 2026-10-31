@@ -206,6 +206,19 @@ class QifImportTest < ActiveSupport::TestCase
     ^
   QIF
 
+  QIF_WITH_CASH_ACCOUNT = <<~QIF
+    !Account
+    NQIF Wallet
+    TCash
+    ^
+    !Type:Cash
+    D1/ 1'24
+    U-10.00
+    T-10.00
+    PCoffee Shop
+    ^
+  QIF
+
   QIF_WITH_MIXED_ACCOUNT_TYPES = <<~QIF
     !Account
     NQIF Checking
@@ -791,6 +804,41 @@ class QifImportTest < ActiveSupport::TestCase
 
     assert_in_delta 25, coffee.amount, 0.01
     assert_in_delta 50, grocery.amount, 0.01
+  end
+
+  test "import! maps !Type:Cash accounts to PhysicalCash with the default subtype" do
+    @import.update!(account: nil, raw_file_str: QIF_WITH_CASH_ACCOUNT)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_difference "Account.count", 1 do
+      @import.import!
+    end
+
+    wallet = @family.accounts.find_by!(name: "QIF Wallet")
+
+    assert_equal "PhysicalCash", wallet.accountable_type
+    assert_equal PhysicalCash::DEFAULT_SUBTYPE, wallet.accountable.subtype
+  end
+
+  test "import! reuses a pre-existing same-named Depository account for Cash rows instead of duplicating it" do
+    legacy_wallet = @family.accounts.create!(
+      name: "QIF Wallet",
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+
+    @import.update!(account: nil, raw_file_str: QIF_WITH_CASH_ACCOUNT)
+    @import.generate_rows_from_csv
+    @import.sync_mappings
+
+    assert_no_difference "Account.count" do
+      @import.import!
+    end
+
+    assert_equal legacy_wallet, @family.accounts.find_by!(name: "QIF Wallet")
+    assert_equal 1, @family.accounts.where(name: "QIF Wallet").count
   end
 
   test "import! routes mixed transaction and investment sections independently" do
