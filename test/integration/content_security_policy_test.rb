@@ -44,7 +44,7 @@ class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
 
   test "allows the self-hosted feedback survey's PostHog hosts without POSTHOG_KEY" do
     user = users(:family_admin)
-    user.update!(preferences: user.preferences.merge("preview_features_enabled" => true))
+    user.update!(preferences: user.preferences.merge("preview_features_enabled" => true, "cashflow_preview_enabled" => true))
     sign_in user
     config = Rails.configuration.x.posthog
     config.stubs(:api_key).returns(nil)
