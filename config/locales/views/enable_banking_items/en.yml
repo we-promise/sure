@@ -21,6 +21,7 @@ en:
       unexpected_error: An unexpected error occurred. Please try again.
     complete_account_setup:
       all_skipped: All accounts were skipped. You can set them up later on the accounts page.
+      invalid_sync_strategy: Invalid sync strategy.
       no_accounts: No accounts available to set up.
       success: Successfully created %{count} accounts!
     create:
@@ -54,6 +55,8 @@ en:
       set_up_accounts: Set up accounts
       no_accounts_found: No accounts found
       no_accounts_found_description: No accounts were found from Enable Banking. Try syncing again.
+      sync_start_date_shortfall_title: Limited history available
+      sync_start_date_shortfall_body: "Your bank only made transaction history available starting later than %{requested}, the date you requested."
     select_existing_account:
       title: Link Enable Banking account
       all_linked: All Enable Banking accounts appear to be linked already.
@@ -67,6 +70,13 @@ en:
       header_subtitle: Choose the correct account types for your imported accounts
       choose_account_type: "Choose the correct account type for each Enable Banking account:"
       historical_data_range: "Historical Data Range:"
+      sync_strategies:
+        date:
+          label: From a specific date
+          hint: Sync transactions starting from a date you choose.
+        longest:
+          label: Full available history
+          hint: Sync as much transaction history as your bank makes available.
       sync_start_date_label: "Start syncing transactions from:"
       sync_start_date_help: Select how far back you want to sync transaction history. Maximum 2 years of history available.
       account_type_label: "Account Type:"

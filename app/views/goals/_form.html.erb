@@ -27,15 +27,14 @@
         not have. %>
     <div class="grid grid-cols-2 gap-2">
       <% Goal::KINDS.each do |kind| %>
-        <label class="flex items-start gap-2 rounded-lg border border-primary p-3 cursor-pointer has-[:checked]:border-secondary has-[:checked]:bg-surface-inset">
-          <%= f.radio_button :kind, kind,
-                             class: "radio mt-0.5 shrink-0",
-                             data: { goal_kind_target: "radio", action: "change->goal-kind#refresh" } %>
-          <span class="min-w-0">
-            <span class="block text-sm font-medium text-primary"><%= t("goals.form.kinds.#{kind}.label") %></span>
-            <span class="block text-xs text-secondary"><%= t("goals.form.kinds.#{kind}.hint") %></span>
-          </span>
-        </label>
+        <%= render DS::RadioCard.new(
+              form: f,
+              method: :kind,
+              value: kind,
+              label: t("goals.form.kinds.#{kind}.label"),
+              hint: t("goals.form.kinds.#{kind}.hint"),
+              data: { goal_kind_target: "radio", action: "change->goal-kind#refresh" }
+            ) %>
       <% end %>
     </div>
 
