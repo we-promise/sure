@@ -265,6 +265,22 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a carried provider snapshot becomes a calculated row that keeps being repriced" do
+    coinstats_item = @account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: @account, provider: coinstats_item.coinstats_accounts.create!(name: "Wallet", currency: "USD"))
+    @account.holdings.create!(security: @other, date: Date.current, qty: 2, price: 100, amount: 200, currency: "USD", account_provider_id: provider.id)
+    @account.create_cash_anchor!
+    travel 1.day do
+      price = @other.prices.create!(date: Date.current, price: 120, currency: "USD")
+      materialize
+      assert_nil @account.holdings.find_by!(security: @other, date: Date.current).account_provider_id
+
+      price.update!(price: 130)
+      materialize
+      assert_equal 260, @account.holdings.find_by!(security: @other, date: Date.current).amount
+    end
+  end
+
   test "deleting an untraded position removes its series and rebuilds from its first day" do
     @account.holdings.create!(security: @other, date: Date.current.prev_day, qty: 2, price: 100, amount: 200, currency: "USD")
     @account.create_cash_anchor!

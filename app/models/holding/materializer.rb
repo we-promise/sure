@@ -80,12 +80,12 @@ class Holding::Materializer
           # Per-share basis moves against a split-scaled quantity, so the total stays.
           basis = snapshot.cost_basis
           basis = basis * snapshot.qty / holding.qty if basis && holding.qty.nonzero? && holding.qty != snapshot.qty
+          # Providerless: the carried row is calculated here, so later syncs keep repricing it.
           account.holdings.create!(security_id: holding.security_id, date: holding.date,
             currency: holding.currency, qty: holding.qty, price: holding.price, amount: holding.amount,
             cost_basis: basis,
             cost_basis_source: snapshot.cost_basis_source, cost_basis_locked: snapshot.cost_basis_locked,
-            security_locked: snapshot.security_locked, provider_security_id: snapshot.provider_security_id,
-            account_provider_id: snapshot.account_provider_id)
+            security_locked: snapshot.security_locked, provider_security_id: snapshot.provider_security_id)
           next
         end
 
