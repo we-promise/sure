@@ -39,6 +39,7 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Checking Account',
       balance: 1000,
       currency: 'USD',
@@ -145,6 +146,94 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
       end
 
       response '404', 'transaction is not split' do
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/transactions/{transaction_id}/split/itemize' do
+    parameter name: :transaction_id, in: :path, type: :string, description: 'Transaction ID'
+
+    post 'Propose a split from an attached receipt' do
+      tags 'Transactions'
+      security [ { apiKeyAuth: [] } ]
+      description 'Reads a receipt (PDF or image) attached to the transaction with the family\'s ' \
+                  'LLM provider and proposes split rows from its line items. Receipt-level tax and ' \
+                  'discounts are spread over the items in proportion to their amounts, and the rows ' \
+                  'sum exactly to the transaction. Nothing is saved: review the `split` body and send ' \
+                  'it to `POST /api/v1/transactions/{transaction_id}/split`. Requires AI to be enabled ' \
+                  'for the user.'
+      produces 'application/json'
+      parameter name: :attachment_id, in: :query, type: :string, required: false,
+                description: 'Receipt attachment to read. Defaults to the first PDF or image attachment.'
+
+      response '200', 'split proposed' do
+        schema '$ref' => '#/components/schemas/SplitReceiptProposal'
+        let(:attachment_id) { nil }
+        before do
+          user.update!(ai_enabled: true)
+          transaction.attachments.attach(io: StringIO.new('%PDF-1.4 receipt'), filename: 'receipt.pdf', content_type: 'application/pdf')
+          provider = Object.new
+          provider.define_singleton_method(:supports_receipt_extraction?) { |**| true }
+          provider.define_singleton_method(:extract_receipt) do |**|
+            Provider::Response.new(
+              success?: true,
+              error: nil,
+              data: Provider::LlmConcept::ReceiptExtraction.new(
+                merchant_name: 'Marketplace',
+                currency: 'USD',
+                line_items: [
+                  Provider::LlmConcept::ReceiptLineItem.new(name: 'Groceries', amount: BigDecimal('55')),
+                  Provider::LlmConcept::ReceiptLineItem.new(name: 'Household', amount: BigDecimal('37'))
+                ],
+                tax: BigDecimal('8'),
+                discount: nil,
+                total: BigDecimal('100')
+              )
+            )
+          end
+          allow(Provider::Registry).to receive(:preferred_llm_provider).and_return(provider)
+        end
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:attachment_id) { nil }
+        let(:'X-Api-Key') { 'invalid-key' }
+        run_test!
+      end
+
+      response '403', 'AI is not enabled for the user, or the key lacks the read_write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:attachment_id) { nil }
+        before { user.update!(ai_enabled: false) }
+        run_test!
+      end
+
+      response '404', 'transaction not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:attachment_id) { nil }
+        let(:transaction_id) { SecureRandom.uuid }
+        before { user.update!(ai_enabled: true) }
+        run_test!
+      end
+
+      response '422', 'no readable receipt, or the transaction cannot be split' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:attachment_id) { nil }
+        before { user.update!(ai_enabled: true) }
+        run_test!
+      end
+
+      response '503', 'the receipt could not be read because storage or a dependency was unavailable; retry' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:attachment_id) { nil }
+        before do
+          user.update!(ai_enabled: true)
+          allow_any_instance_of(Transaction::ReceiptItemizer).to receive(:propose)
+            .and_raise(Transaction::ReceiptItemizer::Unavailable, 'Could not read the receipt (ActiveStorage::FileNotFoundError)')
+        end
         run_test!
       end
     end

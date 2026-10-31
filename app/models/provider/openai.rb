@@ -401,6 +401,59 @@ class Provider::Openai < Provider
     end
   end
 
+  # Text PDFs are read as extracted text through ordinary chat, so any
+  # supported model can itemize them. Photos (and PDFs without a text layer,
+  # which are rendered to page images) need a vision-capable model with PDF
+  # processing enabled.
+  # @param content_type [String, nil] the receipt's MIME type; nil asks whether
+  #   any receipt can be read
+  def supports_receipt_extraction?(model: @default_model, content_type: nil)
+    return supports_pdf_processing?(model: model) if ReceiptExtractor::IMAGE_CONTENT_TYPES.include?(content_type)
+    return false unless content_type.nil? || content_type == "application/pdf"
+
+    supports_model?(model.to_s)
+  end
+
+  # Reads the line items, tax, discount and total off a receipt.
+  # @param file_content [String] receipt bytes (PDF or image)
+  # @param content_type [String] MIME type of file_content
+  # @return [Provider::Response] wrapping a Provider::LlmConcept::ReceiptExtraction
+  def extract_receipt(file_content:, content_type:, model: "", family: nil, json_mode: nil)
+    with_provider_response do
+      effective_model = model.presence || @default_model
+      unless supports_receipt_extraction?(model: effective_model, content_type: content_type)
+        raise Error, "Model does not support #{content_type} receipts: #{effective_model}"
+      end
+
+      trace = create_langfuse_trace(
+        name: "openai.extract_receipt",
+        input: { content_type: content_type, size: file_content&.bytesize }
+      )
+
+      # Only an explicitly configured cap is sent: the 512-token budget
+      # fallback is too small for the JSON of a long itemized receipt.
+      result = ReceiptExtractor.new(
+        client,
+        model: effective_model,
+        file_content: file_content,
+        content_type: content_type,
+        custom_provider: custom_provider?,
+        langfuse_trace: trace,
+        family: family,
+        max_response_tokens: explicit_max_response_tokens,
+        json_mode: json_mode,
+        vision: supports_pdf_processing?(model: effective_model)
+      ).extract
+
+      finish_langfuse_trace(trace: trace, output: { line_item_count: result.line_items.size })
+
+      result
+    rescue => error
+      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
+      raise
+    end
+  end
+
   def chat_response(
     prompt,
     model:,

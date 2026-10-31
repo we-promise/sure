@@ -1,9 +1,30 @@
 class SplitsController < ApplicationController
   before_action :set_entry
-  before_action :require_split_write_permission!, only: %i[create update destroy]
+  before_action :require_split_write_permission!, only: %i[create update destroy itemize]
 
   def new
     set_form_options
+    @receipt_itemization_available = Transaction::ReceiptItemizer.available?(@entry.transaction, user: Current.user)
+  end
+
+  # Re-renders the split editor pre-filled with rows read from a receipt
+  # attached to the transaction. Nothing is saved: the user reviews and edits
+  # the rows, then submits the editor as usual. Synchronous, like the bill
+  # smart-fill: one LLM call per receipt.
+  def itemize
+    return head :forbidden unless Transaction::ReceiptItemizer.ai_ready?(Current.user)
+
+    set_form_options
+    @receipt_itemization_available = Transaction::ReceiptItemizer.available?(@entry.transaction, user: Current.user)
+
+    begin
+      @receipt_proposal = Transaction::ReceiptItemizer.new(@entry.transaction).propose(attachment_id: params[:attachment_id])
+    rescue Transaction::ReceiptItemizer::Error
+      # The itemizer records the failure in the debug log.
+      @receipt_error = t(".failed")
+    end
+
+    render :new
   end
 
   def create
