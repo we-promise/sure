@@ -138,6 +138,12 @@ balances and transactions are unchanged; no migration is required.
 
 - `:reached` when `progress_percent >= 100`.
 - `:no_target_date` when `target_date.nil?`.
+- `:pace_unknown` when the goal has a deadline but `pace_measurable?` is
+  false: at least one linked account gives no evidence of how its balance
+  moves (see below). It is neither on track nor behind, so it stays out of
+  the "behind" count and the on-track tile's denominator (whose subline
+  counts it instead), sorts beside `:no_target_date`, and has no index chip
+  of its own.
 - `:on_track` when the goal has a deadline and `monthly_target_amount <= pace`.
 - `:behind` otherwise.
 
@@ -162,6 +168,40 @@ divided by three. The query joins `entries` with `transactions`
 pending provider transactions via `Transaction.excluding_pending`. This
 last filter matters: a pending Plaid deposit that later reverses would
 otherwise quietly reshape pace.
+
+That reads cash transactions only, so an account maintained by balance
+updates (a manually tracked pension or superannuation fund) would always
+show 0. Each linked account therefore takes exactly one of four paths, in
+this order:
+
+1. **Transactions.** At least one counted transaction in the 90-day
+   window: the net inflow above, divided by three. Unchanged.
+2. **Balance.** Otherwise, a `reconciliation` or `current_anchor` valuation
+   in the trailing 365 days: the account's balance today minus the
+   `end_balance` of its latest balance row on or before a year ago,
+   divided by twelve. On the contributions basis the window's
+   `net_market_flows` are subtracted, so pace measures what progress does.
+   Stored balances include excluded entries, so excluded transactions in
+   the window are taken back out, as path 1 leaves them out. They are read
+   as `Balance::SyncCache` counts them: split parents skipped, amounts
+   converted to the account's currency, unconvertible entries skipped.
+   With no balance row a year back, the account is unmeasured; a missing
+   row is never read as a zero opening balance.
+3. **Dormant.** Otherwise, any transaction that is neither excluded nor
+   pending, at any date: a measured zero.
+   A savings account nobody has paid into lately is honestly behind.
+4. **Unmeasured.** Anything else (an opening balance and nothing since,
+   or valuations all older than a year).
+
+`Goal#pace_measurable?` is true only when every linked account is on path
+1, 2 or 3. `Goal#pace` stays numeric (an unmeasured account adds 0). When
+pace is unmeasurable, `projection_payload` sends `avg_monthly: nil` and no
+shortfall label, and the chart draws no projection line. The evidence is
+read by `Goal.pace_for` and `Goal.balance_pace_for`, both family-wide and
+injected by `Goal.inject_backing_math!`, so a page of goals costs no
+query per goal. That method reads the linked account ids once
+(`Goal.linked_account_ids_for`) and passes them to both, and to
+`Goal.market_flows_for`.
 
 `Goal#monthly_target_amount` is `(remaining_amount / months_remaining).ceil(2)`.
 `months_remaining` uses day precision: `(target_date - Date.current) / 30.0`,
@@ -264,11 +304,14 @@ state means touching:
 3. `Goals::StatusPillComponent::VARIANTS` to add the chip styling
    (classes + icon).
 4. `Goals::CardComponent#footer_line` if the footer copy depends.
-5. `GoalsController#kpi_payload` if the KPI strip counts it.
-6. `config/locales/views/goals/en.yml` under `goals.status.*` for the
+5. `GoalsController#kpi_payload` if the KPI strip counts it, and
+   `tracked_total` if it has no pace benchmark.
+6. `Goal::ACTIVE_DISPLAY_STATUS_RANK`, or it sorts below funded reserves.
+7. `config/locales/views/goals/en.yml` under `goals.status.*` for the
    pill label, plus chip and subtitle keys if the new status filters
    on the index.
-7. `Goals::StatusPillComponent#status_key` and the goal-filter Stimulus
+8. `Goal#status_callout_context` if the show page should explain it.
+9. `Goals::StatusPillComponent#status_key` and the goal-filter Stimulus
    controller (`data-status="..."` on chips) if the new status filters.
 
 ### Adding a new pledge kind
