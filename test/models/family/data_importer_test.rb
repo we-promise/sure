@@ -984,6 +984,41 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_empty explicit_empty_child.transaction.tags
   end
 
+  # An export taken while a transaction carried a tag twice lists the tag id
+  # twice, and the import must not fail on the unique index because of it.
+  test "imports a repeated tag id once" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "checking", name: "Checking", balance: "1000", currency: "USD", accountable_type: "Depository" } },
+      { type: "Tag", data: { id: "tag-1", name: "Repeated" } },
+      {
+        type: "Transaction",
+        data: {
+          id: "plain", account_id: "checking", date: "2024-01-15", amount: "10.00",
+          name: "Plain", currency: "USD", tag_ids: [ "tag-1", "tag-1" ]
+        }
+      },
+      {
+        type: "Transaction",
+        data: {
+          id: "split-parent", account_id: "checking", date: "2024-01-15", amount: "30.00",
+          name: "Split parent", currency: "USD", tag_ids: [ "tag-1", "tag-1" ],
+          split_lines: [
+            { id: "inherits", amount: "10.00", name: "Inherits" },
+            { id: "explicit", amount: "20.00", name: "Explicit", tag_ids: [ "tag-1", "tag-1" ] }
+          ]
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    tag = @family.tags.find_by!(name: "Repeated")
+    [ "Plain", "Inherits", "Explicit" ].each do |name|
+      transaction = @family.entries.find_by!(name: name).transaction
+      assert_equal [ tag.id ], transaction.taggings.pluck(:tag_id), "#{name} should carry the tag once"
+    end
+  end
+
   test "session transaction reimport only replaces current family taggings" do
     session = @family.import_sessions.create!(expected_chunks: 1)
     account = @family.accounts.create!(
