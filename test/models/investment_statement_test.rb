@@ -789,6 +789,27 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "portfolio_value and cash_balance convert to a requested currency" do
+    create_investment_account(balance: 1000, cash_balance: 100, currency: "USD")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    statement = InvestmentStatement.new(@family, user: nil, currency: "EUR")
+
+    assert_equal "EUR", statement.currency
+    assert_equal 500, statement.portfolio_value
+    assert_equal 50, statement.cash_balance
+    assert_equal Money.new(500, "EUR"), statement.portfolio_value_money
+  end
+
+  test "allocation segments convert to a requested currency" do
+    create_investment_account(balance: 1000, cash_balance: 1000, currency: "USD")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    segments = InvestmentStatement.new(@family, user: nil, currency: "EUR").allocation_by("asset_class").index_by(&:id)
+
+    assert_equal Money.new(500, "EUR"), segments["liquidity"].amount
+  end
+
   # ---------------------------------------------- allocation by classification
 
   test "allocation groups by asset class, and cash counts as liquidity" do
@@ -1415,6 +1436,33 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(2090, "USD"), day_change.previous
     per_holding = @statement.current_holdings.filter_map { |h| h.day_change }
     assert_equal per_holding.sum { |t| t.current.amount }, day_change.current.amount
+  end
+
+  test "allocation by currency and by kind report in a requested currency" do
+    account = create_investment_account(balance: 1000)
+    stock = Security.create!(ticker: "AAPL", name: "Apple")
+    Holding.create!(account: account, security: stock, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    statement = InvestmentStatement.new(@family, user: nil, currency: "EUR")
+
+    assert_equal [ [ "USD", Money.new(500, "EUR") ] ], statement.allocation_by("currency").map { |s| [ s.id, s.amount ] }
+    assert_equal [ [ "standard", Money.new(500, "EUR") ] ], statement.allocation_by("kind").map { |s| [ s.id, s.amount ] }
+  end
+
+  test "holdings_table_rows report in a requested currency" do
+    account = create_investment_account(balance: 2000)
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    Holding.create!(account: account, security: aapl, date: 1.day.ago.to_date, qty: 10, price: 190, amount: 1900, currency: "USD", cost_basis: 150, cost_basis_locked: true)
+    Holding.create!(account: account, security: aapl, date: Date.current, qty: 10, price: 200, amount: 2000, currency: "USD", cost_basis: 150, cost_basis_locked: true)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    row = InvestmentStatement.new(@family, user: nil, currency: "EUR").holdings_table_rows.first
+
+    assert_equal Money.new(1000, "EUR"), row.amount_money
+    assert_equal Money.new(75, "EUR"), row.avg_cost
+    assert_equal Money.new(250, "EUR"), row.unrealized.value
+    assert_equal Money.new(50, "EUR"), row.day_change.value
   end
 
   test "holdings_table_rows measures a row's return over the positions whose cost basis is known" do

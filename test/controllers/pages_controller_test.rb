@@ -404,6 +404,23 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#cashflow-donut-section [data-donut-chart-account-ids-value='#{[ account.id.to_s ].to_json}']"
   end
 
+  test "dashboard reports account-filtered cash flow rings in the chosen currency" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+    account = @family.accounts.create!(name: "Rings Currency Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    month = Date.current.beginning_of_month
+    paid_on = [ month + 1.day, Date.current ].min
+    ExchangeRate.create!(from_currency: @family.currency, to_currency: "EUR", date: paid_on, rate: 0.5)
+    create_transaction(account: account, name: "Paycheck", amount: -3_000, date: paid_on, category: categories(:income))
+
+    get root_path, params: { currency: "EUR", cashflow_month: month.iso8601, cashflow_account_ids: [ account.id ] }
+
+    assert_response :ok
+    inflows, _outflows = cashflow_donut_rings
+    paycheck = inflows.find { |s| s["id"] == "income_#{categories(:income).id}" }
+    assert_equal 1500.0, paycheck["amount"], "the filtered rings must convert to the dashboard currency like the unfiltered ones"
+    assert_equal "EUR", paycheck["currency"]
+  end
+
   test "the cash flow rings' drill-downs only list confirmed transactions, like the ring amounts" do
     create_transaction(account: @family.accounts.first, name: "Salary", amount: -1_000, category: categories(:income))
     create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
@@ -1402,6 +1419,44 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_url(period: "last_30_days")
     assert_equal false, @user.reload.cashflow_preview_enabled?
+  end
+
+  test "dashboard offers a currency picker only when the family has additional currencies" do
+    get root_path
+
+    assert_response :ok
+    assert_select "button[aria-label^='Currency:']", count: 0
+
+    @family.update!(enabled_currencies: [ "EUR" ])
+    get root_path
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: #{@family.currency}']"
+    assert_select "a[role='menuitemradio'][href*='currency=EUR']"
+  end
+
+  test "dashboard shows a requested additional currency and keeps it across period picks" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+
+    get root_path(currency: "EUR")
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: EUR']"
+    assert_select "a[role='menuitemradio'][href*='period='][href*='currency=EUR']"
+  end
+
+  test "dashboard falls back to the primary currency when the requested one is not enabled" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+
+    get root_path(currency: "GBP")
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: #{@family.currency}']"
+    assert_select "a[href*='currency=GBP']", count: 0
+
+    get root_path(currency: "not-a-currency")
+
+    assert_response :ok
   end
 
   private
