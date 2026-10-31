@@ -1014,6 +1014,10 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Dependency status (database, Redis, background jobs) for external monitors.
+  # Keep deploy healthchecks on /up so a downed dependency can't block deploys.
+  get "health" => "health#show", as: :health, defaults: { format: :json }
+
   # Render dynamic PWA files from app/views/pwa/*
   get "service-worker" => "pwa#service_worker", as: :pwa_service_worker, defaults: { format: :js }
   get "manifest" => "pwa#manifest", as: :pwa_manifest, defaults: { format: :json }

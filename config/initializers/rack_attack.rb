@@ -215,6 +215,14 @@ class Rack::Attack
     request.ip if request.post? && request.path == "/settings/background_jobs/cancel"
   end
 
+  # /health is public, and each request starts a thread per dependency check and
+  # borrows a database connection; a check that times out keeps running in the
+  # background. During an outage, a flood of requests would pile those up and
+  # starve the app of connections. An uptime monitor polls about once a minute.
+  throttle("health/ip", limit: 60, period: 1.minute) do |request|
+    request.ip if request.get? && credential_guess_path.call(request, "/health")
+  end
+
   # Determine limits based on self-hosted mode
   self_hosted = Rails.application.config.app_mode.self_hosted?
 
