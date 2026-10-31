@@ -101,6 +101,10 @@ class Rule::Action < ApplicationRecord
     executor.claimed_attributes
   end
 
+  def blocking_attributes
+    executor.blocking_attributes
+  end
+
   def reserves_claimed_attributes?
     executor.reserves_claimed_attributes? && executor.actionable?(value)
   end
