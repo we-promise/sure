@@ -25,6 +25,7 @@ class Account::ProviderImportAdapter
   # @param notes [String, nil] Optional transaction notes/memo
   # @param pending_transaction_id [String, nil] Plaid's linking ID for pending→posted reconciliation
   # @param extra [Hash, nil] Optional provider-specific metadata to merge into transaction.extra
+  # @param extra_keys_to_remove [Array<Array<String>>] Nested metadata paths to remove after merging
   # @param investment_activity_label [String, nil] Optional activity type label (e.g., "Buy", "Dividend")
   # @param allow_heuristic_matching [Boolean] Claim likely duplicates using amount/date matching
   # @param replace_extra_namespaces [Array<String>] Top-level `extra` keys the provider owns
@@ -34,7 +35,7 @@ class Account::ProviderImportAdapter
   #   was built from. When a protected entry keeps its name, these keep their stored values
   #   too, so the name and the data it came from cannot drift apart.
   # @return [Entry] The created or updated entry
-  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {})
+  def import_transaction(external_id:, amount:, currency:, date:, name:, source:, category_id: nil, kind: nil, merchant: nil, notes: nil, pending_transaction_id: nil, extra: nil, extra_keys_to_remove: [], investment_activity_label: nil, allow_heuristic_matching: true, replace_extra_namespaces: [], name_extra_keys: {})
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
@@ -226,7 +227,7 @@ class Account::ProviderImportAdapter
       end
 
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
-      apply_provider_extra(entry, extra, replace_extra_namespaces)
+      apply_provider_extra(entry, extra, replace_extra_namespaces, extra_keys_to_remove)
 
       # Auto-detect investment activity labels for investment accounts
       detected_label = investment_activity_label
@@ -1136,15 +1137,21 @@ class Account::ProviderImportAdapter
     # @param entry [Entry] the entry being imported
     # @param extra [Hash, nil] provider metadata to apply
     # @param replace_extra_namespaces [Array<String>] branches to replace wholesale
+    # @param extra_keys_to_remove [Array<Array<String>>] nested paths to remove after merging
     # @return [void]
-    def apply_provider_extra(entry, extra, replace_extra_namespaces)
-      return unless extra.present? && entry.entryable.is_a?(Transaction)
+    def apply_provider_extra(entry, extra, replace_extra_namespaces, extra_keys_to_remove = [])
+      return unless (extra.present? || extra_keys_to_remove.present?) && entry.entryable.is_a?(Transaction)
 
       existing = entry.transaction.extra || {}
       incoming = extra.is_a?(Hash) ? extra.deep_stringify_keys : {}
       replaced = replace_extra_namespaces.map(&:to_s).select { |ns| incoming.key?(ns) }
 
-      entry.transaction.extra = existing.except(*replaced).deep_merge(incoming)
+      merged = existing.except(*replaced).deep_merge(incoming)
+      extra_keys_to_remove.each do |path|
+        parent = merged.dig(*path[0...-1])
+        parent.delete(path.last) if parent.is_a?(Hash)
+      end
+      entry.transaction.extra = merged
       entry.transaction.save!
     end
 
