@@ -51,7 +51,6 @@ pl:
         no_data_title: Brak danych o przepływach pieniężnych dla tego okresu
         title: Przepływy pieniężne
         zoom_out: Wróć do pełnego przepływu środków
-      drag_to_reorder: Przeciągnij, aby zmienić kolejność sekcji
       insights_feed:
         title: Analizy
       investment_summary:

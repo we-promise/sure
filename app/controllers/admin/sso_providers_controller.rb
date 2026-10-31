@@ -22,6 +22,7 @@ module Admin
     def new
       @sso_provider = SsoProvider.new
       authorize @sso_provider
+      set_form_breadcrumbs(:new)
     end
 
     def create
@@ -38,12 +39,14 @@ module Admin
         clear_provider_cache
         redirect_to admin_sso_providers_path, notice: t(".success")
       else
+        set_form_breadcrumbs(:new)
         render :new, status: :unprocessable_entity
       end
     end
 
     def edit
       authorize @sso_provider
+      set_form_breadcrumbs(:edit)
     end
 
     def update
@@ -61,6 +64,7 @@ module Admin
         clear_provider_cache
         redirect_to admin_sso_providers_path, notice: t(".success")
       else
+        set_form_breadcrumbs(:edit)
         render :edit, status: :unprocessable_entity
       end
     end
@@ -102,6 +106,16 @@ module Admin
     private
       def set_sso_provider
         @sso_provider = SsoProvider.find(params[:id])
+      end
+
+      # The form pages sit under the providers list, so the trail links back
+      # to it and ends on the form's own title.
+      def set_form_breadcrumbs(action)
+        @breadcrumbs = [
+          [ t("breadcrumbs.home"), root_path ],
+          [ t("breadcrumbs.sso_providers"), admin_sso_providers_path ],
+          [ t("admin.sso_providers.#{action}.title"), nil ]
+        ]
       end
 
       def sso_provider_params

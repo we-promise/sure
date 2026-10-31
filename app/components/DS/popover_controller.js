@@ -64,7 +64,12 @@ export default class extends Controller {
     if (!this.show) this.close();
   };
 
+  // A click in a modal dialog opened on top of the panel (e.g. the
+  // data-turbo-confirm dialog of a form inside it) is not outside the panel.
   handleOutsideClick = (event) => {
+    const dialog = event.target.closest?.("dialog[open]");
+    if (dialog && !dialog.contains(this.element)) return;
+
     if (this.show && !this.element.contains(event.target)) this.close();
   };
 
@@ -85,14 +90,17 @@ export default class extends Controller {
     }
   };
 
-  close() {
+  // Used as an action (a Cancel button in the panel), close() returns focus
+  // to the trigger like Escape does, instead of dropping it to <body>.
+  close(event) {
     this.contentTarget.classList.add("hidden");
     this.buttonTarget.setAttribute("aria-expanded", "false");
+    if (event) this.buttonTarget.focus();
   }
 
   focusFirstElement() {
     const focusableElements =
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+      'button, [href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])';
     const firstFocusableElement =
       this.contentTarget.querySelectorAll(focusableElements)[0];
     if (firstFocusableElement) {

@@ -17,6 +17,8 @@ zh-CN:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: 存在其他用户时无法删除管理员账户，请先删除所有家庭成员。
+              provider_item_has_other_accounts: 该用户拥有的某些账户关联到了一个提供商连接，而该连接下同时包含属于其他用户的账户。在更改家庭/群组成员身份之前，请先移动或解除关联这些账户。
+              cannot_remove_last_super_admin: 无法移除最后一位活跃超级管理员。请先将其他用户提升为超级管理员。
             password:
               missing_case: 必须同时包含大写和小写字母
               missing_number: 必须包含至少一个数字
