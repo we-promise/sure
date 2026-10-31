@@ -65,7 +65,7 @@ class HoldingsController < ApplicationController
     # Validate ticker is present (form has required: true, but can be bypassed)
     if parsed[:ticker].blank?
       flash[:alert] = t(".security_not_found")
-      redirect_to account_path(@holding.account, tab: "holdings")
+      redirect_to_holdings_tab
       return
     end
 
@@ -85,24 +85,33 @@ class HoldingsController < ApplicationController
     new_security.failed_fetch_count = 0
     new_security.failed_fetch_at = nil
 
-    new_security.save!
+    begin
+      # Saving the security, moving the holdings and trades, and
+      # re-materializing run as one transaction, so a failure at any step
+      # leaves nothing changed and the alert below is true.
+      ActiveRecord::Base.transaction do
+        new_security.save!
 
-    @holding.remap_security!(new_security)
+        @holding.remap_security!(new_security)
 
-    # Re-materialize holdings with the new security's prices.
-    # Reload account to avoid stale associations from remap_security!.
-    # The around_action :switch_timezone already sets the family timezone
-    # for this request, so Date.current is correct here.
-    account = Account.find(@holding.account_id)
-    strategy = account.linked? ? :reverse : :forward
-    Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
+        # Re-materialize holdings with the new security's prices.
+        # Reload account to avoid stale associations from remap_security!.
+        # The around_action :switch_timezone already sets the family timezone
+        # for this request, so Date.current is correct here.
+        account = Account.find(@holding.account_id)
+        strategy = account.linked? ? :reverse : :forward
+        Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
+      end
+    rescue StandardError => e
+      Rails.logger.warn("remap_security failed for holding #{@holding.id}: #{e.class}: #{e.message}")
+      Rails.error.report(e, handled: true, context: { holding_id: @holding.id, action: "remap_security" })
+      flash[:alert] = t(".failed")
+      redirect_to_holdings_tab
+      return
+    end
 
     flash[:notice] = t(".success")
-
-    respond_to do |format|
-      format.html { redirect_to account_path(@holding.account, tab: "holdings") }
-      format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
-    end
+    redirect_to_holdings_tab
   end
 
   def sync_prices
@@ -144,13 +153,20 @@ class HoldingsController < ApplicationController
   end
 
   def reset_security
-    @holding.reset_security_to_provider!
-    flash[:notice] = t(".success")
-
-    respond_to do |format|
-      format.html { redirect_to account_path(@holding.account, tab: "holdings") }
-      format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, account_path(@holding.account, tab: "holdings")) }
+    begin
+      # reset_security_to_provider! writes in one transaction, which a
+      # failure rolls back.
+      @holding.reset_security_to_provider!
+    rescue StandardError => e
+      Rails.logger.warn("reset_security failed for holding #{@holding.id}: #{e.class}: #{e.message}")
+      Rails.error.report(e, handled: true, context: { holding_id: @holding.id, action: "reset_security" })
+      flash[:alert] = t(".failed")
+      redirect_to_holdings_tab
+      return
     end
+
+    flash[:notice] = t(".success")
+    redirect_to_holdings_tab
   end
 
   private
@@ -174,6 +190,20 @@ class HoldingsController < ApplicationController
         }
       end
     end
+
+    # The drawer's forms submit inside its turbo-frame. A plain redirect is
+    # followed in that frame, which the account page doesn't have, so the
+    # drawer shows "Content missing" and the flash never appears. A
+    # turbo-stream request gets a redirect action, which visits the page.
+    def redirect_to_holdings_tab
+      url = account_path(@holding.account, tab: "holdings")
+
+      respond_to do |format|
+        format.html { redirect_to url }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, url) }
+      end
+    end
+
     def set_holding
       @holding = Current.family.holdings
                    .joins(:account)
