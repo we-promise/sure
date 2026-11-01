@@ -713,6 +713,40 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "incremental sync loads only entries inside the window" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 5.days.ago.to_date, balance: 20000 },
+        { type: "transaction", date: 4.days.ago.to_date, amount: -500 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: 100 }
+      ]
+    )
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 3.days.ago.to_date)
+    calculator.calculate
+
+    assert calculator.incremental?
+    assert_equal [ 2.days.ago.to_date ], calculator.send(:sync_cache).send(:converted_entries).map(&:date)
+  end
+
+  test "falling back to full recalculation loads every entry" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 20000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -500 }
+      ]
+    )
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    calculator.calculate
+
+    assert_not calculator.incremental?
+    assert_equal [ 3.days.ago.to_date, 2.days.ago.to_date ], calculator.send(:sync_cache).send(:converted_entries).map(&:date)
+  end
+
   test "falls back to full recalculation when prior balance has a non-cash component" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
