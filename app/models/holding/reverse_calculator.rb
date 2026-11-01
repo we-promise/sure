@@ -138,7 +138,8 @@ class Holding::ReverseCalculator
       @lot_books = Hash.new { |h, k| h[k] = Holding::LotBook.new }
       open_unknown_start = {}
 
-      # get_trades is already chronological (date, then created_at, then id).
+      # get_trades is already in replay order (date, created_at, acquisitions
+      # before disposals, then id).
       # Re-sorting by date alone is unstable and could reorder same-day trades,
       # which matters because the lot book is order-sensitive once sells relieve.
       trades = portfolio_cache.get_trades
