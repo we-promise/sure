@@ -92,9 +92,11 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update ignores an external return_to" do
-    patch family_merchant_url(@merchant), params: { return_to: "//evil.example", family_merchant: { name: "new name" } }
+    [ "//evil.example", "/\t/evil.example" ].each do |return_to|
+      patch family_merchant_url(@merchant), params: { return_to: return_to, family_merchant: { name: "new name" } }
 
-    assert_redirected_to family_merchants_path
+      assert_redirected_to family_merchants_path
+    end
   end
 
   test "should upload merchant logo" do
