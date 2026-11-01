@@ -120,10 +120,22 @@ class KrakenItem::Importer
 
       items.filter_map do |item|
         raw_asset = item["native_asset"] || item[:native_asset]
-        next if raw_asset.blank?
+        raise "Earn allocation missing native_asset: #{item.inspect}" if raw_asset.blank?
 
-        balance = item.dig("amount_allocated", "total", "native").to_d
-        next if balance.zero?
+        # Checked before to_d, not after: a missing field or a non-numeric
+        # value (both blank? false and to_d 0 for the latter) must raise
+        # here rather than silently read as "genuinely zero and filtered" --
+        # that's a parse failure, not a real zero balance, and needs to go
+        # through the rescue below into the carry-forward path instead of
+        # quietly saving an undercounted snapshot.
+        raw_balance = item.dig("amount_allocated", "total", "native")
+        raise "Earn allocation missing amount_allocated.total.native: #{item.inspect}" if raw_balance.blank?
+        unless raw_balance.to_s.match?(/\A-?\d+(\.\d+)?\z/)
+          raise "Earn allocation has a non-numeric amount_allocated.total.native: #{raw_balance.inspect}"
+        end
+
+        balance = raw_balance.to_d
+        next if balance.zero? # a genuine zero balance, not a parse failure
 
         parsed = normalizer.normalize(raw_asset)
         price_usd, price_status = price_for(parsed[:price_symbol])
@@ -154,7 +166,15 @@ class KrakenItem::Importer
 
       MAX_EARN_PAGES.times do
         result = kraken_provider.get_earn_allocations(cursor: cursor).to_h
-        items = result["items"] || []
+        items = result["items"]
+        # `|| []` here used to treat a missing "items" key as "genuinely zero
+        # Earn assets this sync" -- a malformed response read as a clean
+        # empty snapshot, which saves over any previously-carried Earn
+        # assets instead of raising into the carry-forward path. A non-Array
+        # "items" (e.g. a Hash) would otherwise raise an uncaught TypeError
+        # from #concat below, crashing the whole sync instead of degrading
+        # gracefully like every other Earn failure here.
+        raise EarnAllocationsUnavailable, "Earn allocation items must be an array" unless items.is_a?(Array)
         all_items.concat(items)
 
         cursor = result["next_cursor"].presence

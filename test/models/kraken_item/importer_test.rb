@@ -156,6 +156,116 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "BTC", earn_assets.first["symbol"]
   end
 
+  test "carries forward last known Earn assets when an item is missing native_asset" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    # A missing native_asset used to be dropped via `next` -- normal control
+    # flow, not an exception -- so it never reached the carry-forward rescue
+    # and silently saved a spot-only snapshot instead.
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "amount_allocated" => { "total" => { "native" => "2.0" } } } ]
+    )
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    earn_assets = @item.kraken_accounts.first.raw_payload["assets"].select { |asset| asset["source"] == "earn" }
+    assert_equal 1, earn_assets.size, "expected the carried-forward snapshot, not a spot-only one"
+    assert_equal "BTC", earn_assets.first["symbol"]
+  end
+
+  test "carries forward last known Earn assets when amount_allocated.total.native is non-numeric" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    # "N/A" is not blank, so it used to reach #to_d, which silently coerces
+    # non-numeric strings to 0 -- read as a genuine zero balance and
+    # filtered out via `next`, the same silent-drop bug as a missing field.
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "N/A" } } } ]
+    )
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    earn_assets = @item.kraken_accounts.first.raw_payload["assets"].select { |asset| asset["source"] == "earn" }
+    assert_equal 1, earn_assets.size, "expected the carried-forward snapshot, not a spot-only one"
+    assert_equal "BTC", earn_assets.first["symbol"]
+  end
+
+  test "carries forward last known Earn assets when the response is missing items" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    # A response with no "items" key used to be read via `|| []` as "zero
+    # Earn assets this sync" -- a clean, successful-looking empty snapshot
+    # that saved over the previously-carried Earn principal instead of
+    # raising into the carry-forward path.
+    @provider.stubs(:get_earn_allocations).returns({})
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    earn_assets = @item.kraken_accounts.first.raw_payload["assets"].select { |asset| asset["source"] == "earn" }
+    assert_equal 1, earn_assets.size, "expected the carried-forward snapshot, not an empty one"
+    assert_equal "BTC", earn_assets.first["symbol"]
+  end
+
+  test "carries forward last known Earn assets when items is not an array" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    # "items" as a Hash instead of an Array used to raise an uncaught
+    # TypeError from Array#concat, crashing the whole sync -- including the
+    # spot balance that had already succeeded -- instead of degrading
+    # gracefully like every other Earn-specific failure.
+    @provider.stubs(:get_earn_allocations).returns("items" => { "unexpected" => "shape" })
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    earn_assets = @item.kraken_accounts.first.raw_payload["assets"].select { |asset| asset["source"] == "earn" }
+    assert_equal 1, earn_assets.size, "expected the carried-forward snapshot, not a crash"
+    assert_equal "BTC", earn_assets.first["symbol"]
+  end
+
   test "preserves suffix assets in metadata and marks missing prices" do
     @provider.stubs(:get_asset_info).returns(asset_metadata)
     @provider.stubs(:get_extended_balance).returns(
