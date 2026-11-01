@@ -70,10 +70,10 @@ class GocardlessItem::ImporterTest < ActiveSupport::TestCase
   test "a reissued account id moves onto the existing account instead of pruning it" do
     item = families(:empty).gocardless_items.create!(name: "Test bank", secret_id: "test-id", secret_key: "test-key", requisition_id: "requisition-2")
     account = item.gocardless_accounts.create!(name: "Current", currency: "GBP", gocardless_account_id: "old-id",
-                                               raw_payload: { iban: "GB33BUKB20201555555555" })
+                                               raw_payload: { iban: "GB33BUKB20201555555555" }) # pipelock:ignore IBAN
     provider = mock("GoCardless")
     provider.stubs(:get_requisition).returns(status: "LN", accounts: [ "new-id" ])
-    provider.stubs(:get_account).returns(iban: "GB33BUKB20201555555555", status: "READY")
+    provider.stubs(:get_account).returns(iban: "GB33BUKB20201555555555", status: "READY") # pipelock:ignore IBAN
     provider.stubs(:get_account_details).returns(account: { currency: "GBP", name: "Current" })
     provider.stubs(:get_account_balances).returns(balances: [])
 
