@@ -414,6 +414,16 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_in_delta 1 / 1.12, usd_eur.data.first.rate.to_f, 1e-9
   end
 
+  test "fetch_exchange_rates matches the quote currency regardless of case" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("eurusd=X", anything).returns(fx_chart(date, "USD", 1.12))
+
+    response = @provider.fetch_exchange_rates(from: "eur", to: "usd", start_date: date, end_date: date)
+
+    assert_in_delta 1.12, response.data.first.rate.to_f
+  end
+
   test "fetch_exchange_rate returns 1.0 for same currency" do
     date = Date.parse("2024-01-15")
     response = @provider.fetch_exchange_rate(from: "USD", to: "USD", date: date)

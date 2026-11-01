@@ -898,7 +898,7 @@ class Provider::YahooFinance < Provider
         return nil unless chart_data
 
         quote_currency = chart_data.dig("meta", "currency")
-        unless quote_currency == currency
+        unless quote_currency&.casecmp?(currency)
           DebugLogEntry.capture(
             category: "exchange_rates",
             level: "warn",
