@@ -33,7 +33,7 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     User.find_by!(email: "user@example.com").update!(email: "existing-user@example.com")
     generator = Demo::Generator.new(seed: 42)
     %i[create_realistic_categories! create_realistic_accounts! create_realistic_transactions!
-       generate_budget_auto_fill! generate_goals! create_monitoring_api_key!].each do |step|
+       generate_budget_auto_fill! create_sample_rules! generate_goals! create_monitoring_api_key!].each do |step|
       generator.stubs(step)
     end
 
