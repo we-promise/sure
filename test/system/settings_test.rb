@@ -122,6 +122,17 @@ class SettingsTest < ApplicationSystemTestCase
     assert_no_selector "[data-settings-search-target=results] [role=option]"
   end
 
+  test "settings search finds the name of a toggle but not its description" do
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: I18n.t("settings.preferences.show.investment_contributions_as_spending")
+    assert_selector "[data-settings-search-target=results] [role=option]", text: I18n.t("settings.preferences.show.investment_contributions_as_spending")
+
+    search.fill_in with: I18n.t("settings.preferences.show.investment_contributions_as_spending_hint")
+    assert_selector "[data-settings-search-target=empty]"
+  end
+
   test "settings search lists pages first when their name matches and reports when nothing matches" do
     visit settings_profile_path
     search = find_field(I18n.t("settings.settings_search.placeholder"))

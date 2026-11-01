@@ -59,7 +59,7 @@ search_pages = nav_sections.compact.flat_map { |section| section[:items] }
   .map { |item| { path: item[:path], label: item[:label] } }
 %>
 
-<div class="space-y-4" data-controller="settings-search" data-settings-search-pages-value="<%= search_pages.to_json %>">
+<div class="space-y-4" data-controller="settings-search" data-settings-search-pages-value="<%= search_pages.to_json %>" data-settings-search-scope-value="<%= Current.user.id %>">
   <div class="hidden lg:flex items-center gap-2 p-1.5">
     <%= render DS::Link.new(
       text: t("settings.settings_nav_link_large.previous"),

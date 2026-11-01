@@ -1,8 +1,10 @@
 import { Controller } from "@hotwired/stimulus";
 
 // Elements whose text names a setting or states it: headings, field labels and
-// primary-colored lines. Muted description text is not searchable.
-const TEXT_SELECTOR = "h2, h3, h4, legend, label, summary, p.text-primary";
+// primary-colored lines, including the title line of a toggle. Muted
+// description text is not searchable.
+const TEXT_SELECTOR =
+  "h2, h3, h4, legend, label, summary, p.text-primary, p.text-sm:not(.text-secondary, .text-subdued, .text-destructive)";
 // Text inside these is not shown, or is not part of a setting.
 const SKIPPED_SELECTOR =
   "nav, header, footer, script, style, template, dialog, [hidden], [aria-hidden='true'], .hidden, .sr-only";
@@ -24,7 +26,7 @@ let settingsIndex = null;
 // as extra rows, and moves the keyboard highlight between matches.
 export default class extends Controller {
   static targets = ["input", "nav", "results", "item", "empty", "template"];
-  static values = { pages: Array };
+  static values = { pages: Array, scope: String };
 
   connect() {
     this.settingRows = [];
@@ -36,7 +38,9 @@ export default class extends Controller {
     if (this.loading || this.isFresh()) return;
 
     this.loading = true;
-    settingsIndex = { loadedAt: Date.now(), entries: await this.readPages() };
+    const scope = this.indexScope;
+    const entries = await this.readPages();
+    settingsIndex = { scope, loadedAt: Date.now(), entries };
     this.loading = false;
     this.filter();
   }
@@ -77,6 +81,9 @@ export default class extends Controller {
   }
 
   keydown(event) {
+    // Enter and Escape finish an IME composition rather than act on the results.
+    if (event.isComposing || event.keyCode === 229) return;
+
     switch (event.key) {
       case "ArrowDown":
         event.preventDefault();
@@ -112,7 +119,7 @@ export default class extends Controller {
 
   // Settings found on the pages, best match first.
   rankSettings(query) {
-    if (!query || !settingsIndex) return [];
+    if (!query || settingsIndex?.scope !== this.indexScope) return [];
 
     return settingsIndex.entries
       .flatMap((entry) => {
@@ -137,6 +144,7 @@ export default class extends Controller {
   buildRow(setting) {
     const element =
       this.templateTarget.content.firstElementChild.cloneNode(true);
+    element.dataset.settingResult = "";
     const link = element.querySelector("a");
     const page = this.itemTargets.find(
       (item) => item.dataset.pagePath === setting.path,
@@ -156,8 +164,12 @@ export default class extends Controller {
     return { element, score: setting.score };
   }
 
+  // Rows are found by their marker, not only from the list, so rows restored
+  // from Turbo's page cache are removed too.
   clearSettingRows() {
-    this.settingRows.forEach((row) => row.remove());
+    this.resultsTarget
+      .querySelectorAll("[data-setting-result]")
+      .forEach((row) => row.remove());
     this.settingRows = [];
   }
 
@@ -220,7 +232,17 @@ export default class extends Controller {
   }
 
   isFresh() {
-    return settingsIndex && Date.now() - settingsIndex.loadedAt < INDEX_TTL_MS;
+    return (
+      settingsIndex?.scope === this.indexScope &&
+      Date.now() - settingsIndex.loadedAt < INDEX_TTL_MS
+    );
+  }
+
+  // The index holds the text of one user's pages, so it is only reused for the
+  // same user and page list. Turbo keeps this module across sign-in and
+  // impersonation changes.
+  get indexScope() {
+    return `${this.scopeValue}:${this.pagesValue.map((page) => page.path).join("|")}`;
   }
 
   async readPages() {

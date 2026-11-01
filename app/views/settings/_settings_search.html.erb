@@ -4,7 +4,6 @@
   visible_items = nav_sections.compact.flat_map do |section|
     section[:items].reject { |item| item[:if] == false }.map { |item| item.merge(section: section[:header]) }
   end
-  result_classes = "flex items-center gap-3 px-3 py-2 rounded-lg text-sm focus-ring hover:bg-surface-hover aria-selected:bg-surface-hover"
 %>
 
 <div class="space-y-2">
@@ -35,17 +34,15 @@
           data-page-path="<%= item[:path] %>"
           data-search-label="<%= item[:label] %>"
           data-search-text="<%= [ item[:label], item[:section] ].compact_blank.join(" ") %>">
-          <%= link_to item[:path],
-                id: "settings-search-page-#{index}",
-                role: "option",
-                aria: { selected: "false", current: ("page" if page_active?(item[:path])) },
-                class: result_classes do %>
-            <%= icon(item[:icon], class: "shrink-0") if item[:icon] %>
-            <span class="min-w-0">
-              <span class="block text-primary font-medium truncate"><%= item[:label] %></span>
-              <span class="block text-secondary text-xs truncate"><%= item[:section] %></span>
-            </span>
-          <% end %>
+          <%= render DS::SearchResult.new(
+            href: item[:path],
+            title: item[:label],
+            subtitle: item[:section],
+            icon: item[:icon],
+            id: "settings-search-page-#{index}",
+            role: "option",
+            aria: { selected: "false", current: ("page" if page_active?(item[:path])) }
+          ) %>
         </li>
       <% end %>
     </ul>
@@ -59,13 +56,7 @@
         page load to scroll to and highlight the setting, so these links opt out of Turbo. %>
     <template data-settings-search-target="template">
       <li role="presentation">
-        <%= link_to "#", role: "option", data: { turbo: false }, aria: { selected: "false" }, class: result_classes do %>
-          <span data-slot="icon" class="shrink-0"></span>
-          <span class="min-w-0">
-            <span data-slot="title" class="block text-primary font-medium truncate"></span>
-            <span data-slot="subtitle" class="block text-secondary text-xs truncate"></span>
-          </span>
-        <% end %>
+        <%= render DS::SearchResult.new(href: "#", role: "option", data: { turbo: false }, aria: { selected: "false" }) %>
       </li>
     </template>
   </div>

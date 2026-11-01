@@ -46,6 +46,14 @@ class Settings::SearchNavigationTest < ActionDispatch::IntegrationTest
     assert_not_includes pages.map { |page| page["path"] }, categories_path
   end
 
+  test "the search index is scoped to the signed-in user" do
+    sign_in users(:family_member)
+
+    get settings_profile_path
+
+    assert_select "[data-controller~=settings-search][data-settings-search-scope-value='#{users(:family_member).id}']"
+  end
+
   test "members are not handed admin-only pages to search" do
     sign_in users(:family_member)
 
