@@ -175,7 +175,7 @@
                       <span class="hidden lg:inline truncate">
                         <%= transaction.merchant.name %><%= link_to merchant_path(transaction.merchant),
                               data: { turbo_frame: "_top" },
-                              class: "invisible group-hover/transaction:visible inline-flex align-middle hover:text-primary",
+                              class: "opacity-0 group-hover/transaction:opacity-100 focus-visible:opacity-100 transition-opacity inline-flex align-middle hover:text-primary",
                               title: t("transactions.transaction.view_merchant") do %>
                           <%= icon "arrow-up-right", size: "xs", color: "current" %>
                         <% end %> •
