@@ -1520,6 +1520,17 @@ everywhere and over a logic-less template language for both.
 small model, or a trial prompt for a shadow run, is a file the route entry names
 (`prompt: categorize_transactions_short`). The only naming convention is the locale suffix.
 
+**Today's prompts, word for word** (call by @josh-sanders during development of PR #4440). Today one feature can have several prompts:
+categorization, merchant detection and merchant enhancement each have OpenAI's detailed prompt,
+a simplified one for custom OpenAI-compatible servers, and Anthropic's own. PR 2c moves each of
+them into its own file unchanged (`categorize_transactions.txt.erb` for OpenAI's,
+`categorize_transactions_simple.txt.erb`, `categorize_transactions_anthropic.txt.erb`, and so on
+for each feature that has variants), and the presets name the right one for each route entry:
+`openai` the detailed prompt, `anthropic` Anthropic's, every other `compatible` preset the
+simplified one. `Ai::LegacyEnvConfig` does the same for today's ENV, so every install sends
+exactly what it sends today. Merging the variants is a later PR of its own, gated by the
+recorded evals (section 17).
+
 **Which prompt runs.** The first that applies:
 
 1. the family's override, for keys a family can override (below), inserted into the feature's
@@ -2600,7 +2611,8 @@ spike's decisions register already has evidence on some: RubyLLM's MCP client wo
 Sure's own `/mcp` (for the MCP lines), and RubyLLM's Rails persistence was compared with Sure's
 chat tables (for the chat storage line).
 
-- Changing any feature's prompts or models.
+- Changing any feature's prompts or models (call by @josh-sanders during development of PR #4440): section 8.3 keeps every one of today's prompts
+  word for word.
 - The Ruby ML engines' internals, and the classifier settings page.
 - Suggestions instead of AI locks, and rule ordering (phases or an enrichment pipeline).
 - Rules that run only after an AI rule. The rule runner can add this later as its own PR,
