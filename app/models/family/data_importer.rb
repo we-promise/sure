@@ -1437,13 +1437,29 @@ class Family::DataImporter
           # Each rule leaving a group lands right below it (Rule#place_in_rule_group),
           # so one that left the same group earlier in this import would end up
           # after it. Keep the exported run order instead.
-          previous = left_group_last[left_group_id]
+          previous = left_group_last[left_group_id] || session_rule_left_earlier(rule)
           Rule::Layout.new(@family).place_after_rule!(rule, previous) if previous
           left_group_last[left_group_id] = rule
         end
         map_source!(:rules, old_id, rule)
         increment_summary("Rule", created ? :created : :updated)
       end
+    end
+
+    # Session imports arrive in chunks, each through a fresh importer, so a rule
+    # that left the same group in an earlier chunk is not in the importer's own
+    # map. Rules this session has already imported come earlier in the run
+    # order, and those that left the group now sit right below this one: the
+    # last of that run is where this rule belongs.
+    def session_rule_left_earlier(rule)
+      return unless @import_session
+
+      session_rule_ids = @import_session.source_mappings.where(source_type: "Rule").pluck(:target_id).to_set
+      items = Rule::Layout.new(@family).items
+      index = items.index { |item| !item.group? && item.rule.id == rule.id }
+      return unless index
+
+      items.drop(index + 1).take_while { |item| !item.group? && session_rule_ids.include?(item.rule.id) }.last&.rule
     end
 
     def find_or_create_rule_group(name)
