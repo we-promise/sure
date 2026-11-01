@@ -1,8 +1,14 @@
 require "application_system_test_case"
 
 class ReportsTest < ApplicationSystemTestCase
+  include EntriesTestHelper
+
   setup do
     sign_in users(:family_admin)
+    # The breakdown table, whose Amount link one test follows, only renders
+    # when the month has transactions; fixtures are dated a few days ago, which
+    # on the 1st is last month.
+    create_transaction(date: Date.current, amount: 50, category: categories(:food_and_drink))
     visit reports_path(period_type: :monthly)
 
     # The tooltip only shows once the page's controllers are connected, so
