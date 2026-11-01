@@ -1991,11 +1991,17 @@ the waiter.
 interrupts the running call of the lowest lane, background before prompt. Interactive calls never
 interrupt each other.
 
-- On a local host, prompt and background calls are streamed, and the transport checks the gate's
-  flag at every chunk. When the gate sets it, the chunk block raises `Ai::Error::Preempted`, which
-  abandons the HTTP request; llama-server stops work on a request whose connection closes (the
-  spike's chat started 0.09 s after the interrupt, at its time alone). This uses RubyLLM's public
-  streaming block only, and works the same on threads and fibers. `Thread#raise` isn't used.
+- **The interrupt closes the call's connection** (call by @josh-sanders during development of PR #4440). On a local host, prompt and
+  background calls are streamed, and the gate closes the running call's HTTP connection; the
+  call then raises `Ai::Error::Preempted`. llama-server stops a request whose connection closes,
+  including one still reading its prompt, which no chunk-based check can reach because no chunk
+  arrives until the read ends. In the spike (spike: "Prompt cache and prompt reads on one slot"),
+  a chat sent 10 s into an 11,575-token prompt read waited about 209 s with the read left
+  running, and about 20 s with its connection closed: llama.cpp stops between prompt batches
+  (2,048 tokens by default, about 35 s on that CPU). A merchant call's whole read took about
+  8.5 s, and a call already writing stopped at once (the chat started 0.09 s after the
+  interrupt). Closing the connection through RubyLLM and Faraday from the gate's thread is the
+  part to build and test in PR 4; the spike closed `Net::HTTP` directly.
 - `Preempted` never leaves `Ai::Generation#call`: the generation waits for the gate again, now
   behind the interactive call, and sends the same request. It isn't a failure, isn't counted as
   an attempt, and doesn't mark the endpoint down or move to the next route.
@@ -2004,10 +2010,22 @@ interrupt each other.
   server, merchant detection ran at 20.8 transactions a minute at 25 per call and 19.6 at 5 per
   call, while one call went from 72 s to 15 s. The `llama_cpp` preset's models already default to
   `batch_size: 10` (29 s a call there), against today's `LLM_MAX_ITEMS_PER_CALL` default of 25.
-- **What it can't do.** The flag is only seen when a chunk arrives, and nothing arrives while the
-  server reads the prompt, so a PDF extraction still reading its page images stops when its
-  output starts. Embedding requests aren't streamed and can't be interrupted; they're short (the
-  longest wait behind one in the spike was 0.17 s).
+- **What it can't do.** A prompt read stops only at the end of its current batch, so a chat sent
+  during a long read (a PDF statement) can still wait up to one batch. #4444's typing hold covers
+  that case (below). Embedding requests aren't streamed and can't be interrupted; they're short
+  (the longest wait behind one in the spike was 0.17 s).
+- **The gate is held per request, not per chat turn** (call by @josh-sanders during development of PR #4440). A background call may run
+  between a chat's rounds. On one slot, today's llama.cpp keeps the chat's evicted prompt and
+  restores it: across a merchant call and an 11,575-token statement between rounds, round 2 still
+  read only 40 tokens and served 2,640 from cache (first word in 0.9–1.0 s). That removes the
+  reason #4237 ran a turn's calls back to back. Ollama, LM Studio and older llama.cpp builds
+  weren't tested; an issue can bring a turn hold back for them.
+- **#4444's typing hold stays, in the gate** (call by @josh-sanders during development of PR #4440). While someone types in the chat box
+  (its existing Stimulus controller and `POST /chat_reservation`), new background and prompt calls
+  on the local host that chat's route uses don't start: they re-enqueue as under Rule 3. The hold lasts
+  60 seconds from the last keystroke, with #4444's 15-minute cap and its "ready" and "busy" bubble.
+  So a long prompt read rarely starts just before a chat is sent. #4444's 60-second hold after
+  each reply goes: spike A shows the follow-up keeps its cache anyway.
 
 **Rule 3: background jobs never wait.** If a background call finds its host's gate taken, the
 gate raises `Ai::Error::Busy`, and the job re-enqueues itself after 5 to 15 seconds (random) and
@@ -2086,7 +2104,14 @@ health probes become jobs too.
 (`Chat.response_timeout`) and `BackgroundJobHealth` read it, so the UI can say "waiting for the
 model; 1 task ahead" instead of timing out silently, and the health page shows the same data.
 
-The sequencer replaces #4444 (holding back AI jobs while someone types a chat message).
+The sequencer moves #4444's typing hold into the gate (Rule 2) and replaces its Sidekiq fetch class.
+
+**#4237's health signals carry over** (call by @josh-sanders during development of PR #4440),
+adjusted to the new queues: the lane queues and the chat capsule's queue don't count towards
+`SidekiqHealth`'s "queue backed up" (a large run queues for hours, and Rule 3's re-enqueues would
+look like churn); `ai_queues_not_polled` covers every AI queue, which matters most during the
+upgrade, when a worker started with the old queue names would leave chats unanswered; and the
+chat's busy bubble shows the gate's "waiting for the model; 1 task ahead".
 
 ## 12. Cancellation
 
@@ -2625,11 +2650,13 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    web thread. Adds the capsule-only and completion-hook tests.
 4. **Sequencer.** The three lane queues replacing `ai_high_priority` and `ai_low_priority` (the
    `ai` capsule drains the old two for one release), the `ai_chat` capsule, one gate per local
-   host in RubyLLM's instrumenter sized from the server, Rules 1 to 3 with streamed, interruptible
-   background and prompt calls on local hosts, and the gate state the chat watchdog reads.
+   host in RubyLLM's instrumenter sized from the server, Rules 1 to 3 with streamed background and
+   prompt calls on local hosts that the gate interrupts by closing their connection, #4444's
+   typing hold moved into the gate, #4237's health signals on the new queues, and the gate state
+   the chat watchdog reads.
    Today's chat doesn't go through RubyLLM yet, so `Assistant::Responder` holds the gate in the
    interactive lane around each provider request: a few temporary lines that PR 6 deletes. Chat's
-   own requests can't be interrupted, and never need to be. Replaces #4444. Adds the lane and
+   own requests can't be interrupted, and never need to be. Replaces #4444's fetch class. Adds the lane and
    gate tests and the sequencer cases of the escalation test.
 5. **RubyLLM 2.2.** Whenever 2.2 is released; nothing waits for it. The version bump (the
    `~> 2.1` constraint allows it), the recorded tests replayed and the live ones recorded again,

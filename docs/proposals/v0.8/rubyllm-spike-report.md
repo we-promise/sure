@@ -1,7 +1,7 @@
 # RubyLLM spike report (PR 1 of the AI plumbing redesign)
 
 **Companion to:** [`rubyllm-spike-prompt.md`](rubyllm-spike-prompt.md) (the brief), [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) (the plan, §19) and [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) (the question before it was run)
-**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`06559d5ca`](https://github.com/josh-sanders/sure/commit/06559d5ca). Every test and recording named below is on that branch; it is never merged. The tests replay without keys (the commands are under the recommendation); `SPIKE_RECORD=1`, with the spike's own variables in `.env.local`, records them again.
+**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`f01c6d3de`](https://github.com/josh-sanders/sure/commit/f01c6d3de). Every test and recording named below is on that branch; it is never merged. The tests replay without keys (the commands are under the recommendation); `SPIKE_RECORD=1`, with the spike's own variables in `.env.local`, records them again.
 **Status:** a recommendation with its evidence, not a decision. The spike's second purpose was to sort the plan's choices into product decisions and technical limits; none of the product decisions, and none of the scope lines, is final. Calls made by @josh-sanders during development of PR #4440 are marked in the register. This file is the spike's note (`docs/llm-guides/ai-pipeline.md` on the branch) as of that commit; the plan's own short note in that path comes with PR 2.
 
 **Recommendation: adopt `ruby_llm`**, tested on 2.1.1 (released 2026-10-11, the latest at the
@@ -113,10 +113,10 @@ evidence like everything else here.
 | Local OCR as a two-step route (OCR model, then extraction). **Call by @josh-sanders during development of PR #4440:** both kinds: a local OCR model through chat, and Mistral or Cohere through `RubyLLM.ocr`, with live cassettes before relying on the cloud ones | Read both statements completely on CPU | Needs a second model or endpoint per route; a prompt per model | `ocr/` |
 | AI jobs on Sidekiq threads, not fiber workers (§11) | 200 threads made 200 cloud calls in 3.1 s (fibers 3.0 s) on a pool of 3 connections, with the same memory; chat as fast as on fibers with a 1-thread chat capsule (48.3 s against 48.2 s); interrupting works on threads; no second job runner | Fibers need no chat capsule and no AI thread count, and waiting costs nothing; one capsule of 4 threads left chat 136 s without a thread; Solid Queue's `limits_concurrency` was the only limit shared across workers that was tested | "Job runners and chat priority" |
 | Chat's wait behind background work on a local host: about 2 s, never more than 5 s. **Call by @josh-sanders during development of PR #4440:** the target | Chat felt broken at 45 s; interrupting meets it (0.09 s) with MTP and the full context kept | Only interrupting or a kept slot meets it; both cost background throughput or lost work | `gpu_merchants_live_test` |
-| Chat interrupts the running background or prompt call on its host (§11) | Chat's first word at its time alone (48.3 s against 48.7 s) on 1 slot with MTP; public RubyLLM streaming only; threads and fibers | The interrupted call's work is lost (up to one call: 72 s at 25 transactions); a call still reading its prompt stops only when output starts; background calls on local hosts must stream | `sidekiq_preempt`, `preempt` |
+| Chat interrupts the running background or prompt call on its host (§11). **Call by @josh-sanders during development of PR #4440:** the gate closes the call's connection, which also stops a prompt read (about 20 s against 209 s), keeping #4444's typing hold for long reads | Chat's first word at its time alone (48.3 s against 48.7 s) on 1 slot with MTP; public RubyLLM streaming only; threads and fibers | The interrupted call's work is lost (up to one call: 72 s at 25 transactions); a call still reading its prompt stops only when output starts; background calls on local hosts must stream | `sidekiq_preempt`, `preempt` |
 | No slot kept for chat; several server slots are the operator's choice (§11) | Keeps MTP and the full context; chat finished in 69 s against 103 s with a kept slot, because it had the CPU | Four slots without MTP did 29 transactions a minute against 20 with one; a kept slot needs no interrupt code | `gpu_merchants_live_test` |
 | Chat goes next, without interrupting (the plan before this) | No new mechanism | 45 s behind a 25-transaction call (up to 72 s), 8 s behind a 5-transaction one (up to 15 s) | `call_length`, `drain` |
-| The gate inside RubyLLM's instrumenter, per request, sized from the server (§11) | Every request passes it, streamed or not and with retries, embeddings and nested calls included, with no change where calls are made; no nested-call rule; llama-server's own queue stays empty | Holds per request, so a chat's tool rounds let background calls in between (the next round interrupts them); Jev's transport has to take it itself | `SlotInstrumenter`, `gpu_contention_live_test`, `drain` |
+| The gate inside RubyLLM's instrumenter, per request, sized from the server (§11). **Call by @josh-sanders during development of PR #4440:** per request, not per turn: on one slot llama.cpp kept chat's prompt across other calls between rounds | Every request passes it, streamed or not and with retries, embeddings and nested calls included, with no change where calls are made; no nested-call rule; llama-server's own queue stays empty | Holds per request, so a chat's tool rounds let background calls in between (the next round interrupts them); Jev's transport has to take it itself | `SlotInstrumenter`, `gpu_contention_live_test`, `drain` |
 | One worker per local host (§11) | The in-process gate is then the only one | Two workers, each with its own gate, let 6 calls through to a 4-slot server and chat waited 200 s; a shared limit (Solid Queue's held, Redis untested) would allow more workers | `two_workers_slot_each`, `two_workers_limits_concurrency` |
 | Fiber isolation for the whole app (needed by fiber workers) | Sure's full suite passed with it (13,944 runs; one timing failure that passes alone) | Every request and job changes; a fiber worker without it shares `Current` between jobs | `fiber_compat_live_test` |
 | Each PR replaces code outright, with no bridge code (§19). **Call by @josh-sanders during development of PR #4440:** a principle, not a ban: avoid duplicated work, wrappers and temporary code, but allow them where the whole order is clearly better | One question per review ("is this replacement right?"), and no temporary state to reason about | It fixed chat before the gate and config in the database: the gate needs chat's requests to pass through RubyLLM, and config in the database leaves nothing on old code, so neither could land before chat without a bridge | §19's dependencies (read, not tested) |
@@ -139,6 +139,8 @@ evidence like everything else here.
 | Health probes as jobs, using each endpoint's timeout (§13). **Call by @josh-sanders during development of PR #4440:** yes, keeping #3155's 60-second cache, 'Run checks again' and 'opening a tab triggers nothing' | A slow local model's probe against #3155's 5-second timeout |
 | MCP's two AI tools: move only the model call into a job, the request waiting for the result; the pending import, `get_import_status` and streaming go to the MCP work-pack (§14). **Call by @josh-sanders during development of PR #4440:** yes | MCP clients' timeouts while `import_bank_statement` waits for an extraction |
 | Cancelling is cooperative, as in #2685; in chat a stop closes the stream at once, a running tool finishes, the turn ends before the next round (§12). **Call by @josh-sanders during development of PR #4440:** yes | A stopped chat on llama.cpp: the slot freed; a stop during a write tool |
+| #4444's typing hold, moved into the gate on local hosts with its 15-minute cap; its after-reply hold dropped (§11). **Call by @josh-sanders during development of PR #4440:** yes | Chats sent during a long prompt read with and without the hold; how often the cap is reached |
+| #4237's health signals on the new lane queues: not counted as backed up, `ai_queues_not_polled`, the busy bubble (§11). **Call by @josh-sanders during development of PR #4440:** carry them over | A worker started with the old queue names during the upgrade |
 | PR 2 in five parts (2a to 2e), each its own PR into `main`, merged in order, all in one release (§19). **Call by @josh-sanders during development of PR #4440:** yes | Review time per part; `main` green and releasable after each part |
 | PR #4440 holds only the proposal documents and stays a draft until the whole plan is done; the spike branch is never merged, and only its report is in PR #4440 (§19). **Call by @josh-sanders during development of PR #4440:** yes | The maintainers' review of PR #4440 and of the first code PR |
 | Two-level consent: the family per feature, then the member (§6) | Admins and members trying the AI features page; whether `:no_family_consent` blocks anything people expect to work |
@@ -1347,6 +1349,44 @@ the gate sits in RubyLLM's instrumenter, sized from the server, and background a
 on a local host stream so it can stop them. Lane order alone leaves chat behind one whole call; a
 kept slot gives up MTP and slows chat's finish. Several workers on one local host need the AI
 capsules on one of them, or a limit they share.
+
+## Prompt cache and prompt reads on one slot, outside the criteria
+
+`test/models/ai/live/cache_prefill_check.rb`, llama.cpp on the test host (build `b1-d812350`,
+`--parallel 1`, MTP, no cache flags set), one request at a time, the server otherwise idle. Every
+prompt carries a nonce. #4237 measured 4–15 minute re-reads when background calls ran between a
+chat's rounds on one slot; #4444 held background work while someone typed.
+
+**A. A chat's cache survives other calls between its rounds.** Round 1 is a chat of about 2,640
+prompt tokens; round 2 is round 1 plus its answer and a follow-up.
+
+| Between the rounds | Round 2 read again (`prompt_n`) | Round 2 from cache (`cache_n`) | Round 2's first word |
+|---|---|---|---|
+| Nothing | 40 tokens | 2,640 | 0.9 s |
+| A 25-transaction merchant call (567 prompt tokens, 200 out) | 40 | 2,640 | 0.9 s |
+| A statement's text (11,575 prompt tokens, 195 s to read) | 40 | 2,639 | 1.0 s |
+
+Round 1 took 37–39 s to its first word each time. This build keeps a slot's evicted prompt and
+restores it, so on one slot a background call between rounds didn't cost the chat its cache.
+Other servers (Ollama, LM Studio) and older llama.cpp builds weren't tested.
+
+**B. A chat sent while a long prompt is being read.** The statement prompt starts; a chat (about
+2,640 tokens, 39 s to read alone) is sent 10 s later.
+
+| Background call | Chat's first word after sending | Of which waiting behind the background call |
+|---|---|---|
+| Left running (llama.cpp queues the chat) | 247.7 s | about 209 s: the rest of the 195 s read plus 300 tokens of output |
+| Its connection closed when the chat was sent | 59.5 s | about 20 s |
+
+- **Closing the connection stops a prompt read**, which an interrupt raised from the chunk block
+  can't do, since no chunk arrives until the read ends. It took about 20 s, not at once: the read
+  stops between prompt batches (llama.cpp's default `--batch-size` is 2,048 tokens, about 35 s on
+  this CPU), so a closed read can still run up to one batch.
+- **A merchant call reads its prompt in about 8.5 s** (567 tokens), so a chat sent during it
+  waits at most that long with the connection closed.
+- **Not tested:** a smaller `--batch-size` or `--ubatch-size`, which should shorten the stop, and
+  closing the connection through RubyLLM and Faraday from the gate's thread (the check closed
+  `Net::HTTP` directly).
 
 ## RubyLLM agents behind the gate, outside the criteria
 
