@@ -102,8 +102,10 @@ hu:
         access_token_placeholder: Add meg ide a hozzáférési tokenedet
         uri_base_label: API alap URL (nem kötelező)
         uri_base_placeholder: "https://api.openai.com/v1 (alapértelmezett)"
+        uri_base_local_help: "Saját gépen futó modellhez add meg az OpenAI-kompatibilis végpontját, például az Ollamát a http://localhost:11434/v1 címen, vagy a http://ollama:11434/v1 címen, ha a Sure és az Ollama Docker Compose szolgáltatásként fut."
         model_label: Modell (nem kötelező)
         model_placeholder: "gpt-4.1 (alapértelmezett)"
+        model_required_help: "Kötelező, ha API alap-URL-t adsz meg: írd be a szervered által használt modell nevét, például llama3.1 az Ollamához."
         json_mode_label: JSON mód
         json_mode_auto: Automatikus (ajánlott)
         json_mode_strict: Szigorú (gondolkodó modellekhez a legjobb)
