@@ -27,10 +27,20 @@ module Account::Chartable
   end
 
   def sparkline_series
-    cache_key = family.build_cache_key("#{id}_sparkline_#{SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
-
-    Rails.cache.fetch(cache_key, expires_in: 24.hours) do
+    Rails.cache.fetch(sparkline_cache_key, expires_in: 24.hours) do
       balance_series
+    end
+  end
+
+  # Built from this account's own data, so a sync of another account keeps it cached.
+  def sparkline_cache_key
+    @sparkline_cache_key ||= begin
+      balance_count, balances_updated_at = balances.pick(Arel.sql("count(*)"), Arel.sql("max(balances.updated_at)"))
+
+      [
+        "account_sparkline", SPARKLINE_CACHE_VERSION, id, updated_at.to_f, last_synced_at&.to_f,
+        balance_count, balances_updated_at&.to_f, Date.current
+      ].join("_")
     end
   end
 

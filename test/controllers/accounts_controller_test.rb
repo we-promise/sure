@@ -1227,6 +1227,40 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "sparkline stays fresh when another account syncs" do
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    @account.family.touch(:latest_sync_completed_at)
+    get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+
+    assert_response :not_modified
+  end
+
+  test "sparkline is re-rendered when the account's balances change" do
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      @account.balances.create!(date: 40.days.ago.to_date, balance: 1, currency: @account.currency)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
+  test "sparkline is re-rendered after the account's own sync completes" do
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      @account.syncs.create!(status: "completed", completed_at: Time.current)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
   test "sparkline renders an empty series without a trend" do
     empty_series = Series.new(
       start_date: 1.day.ago.to_date,
