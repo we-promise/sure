@@ -211,6 +211,7 @@ id:
       empty_month: Tidak ada tagihan yang jatuh tempo bulan ini.
     all:
       search_placeholder: Cari tagihan
+      current_bills: Tagihan saat ini
       any_status: Status apa pun
       status_filters:
         overdue: Terlambat

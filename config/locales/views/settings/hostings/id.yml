@@ -187,10 +187,12 @@ id:
         access_token_placeholder: Masukkan access token-mu di sini
         uri_base_label: URL Basis API (Opsional)
         uri_base_placeholder: https://api.openai.com/v1 (default)
+        uri_base_local_help: "Untuk model di mesin sendiri, masukkan endpoint yang kompatibel dengan OpenAI, misalnya Ollama di http://localhost:11434/v1, atau http://ollama:11434/v1 saat Sure dan Ollama berjalan sebagai service Docker Compose."
         model_label: Model (Opsional)
         model_placeholder: gpt-4.1 (default)
         model_function_calling_help: Asisten AI membaca data Anda melalui function call, jadi pilih model yang terdokumentasi mendukung tools/function calling oleh provider Anda. Model yang tidak mendukungnya membuat chat gagal dengan error provider yang tidak jelas.
         model_function_calling_link: Cek model yang dikonfigurasi
+        model_required_help: "Wajib diisi saat Base URL API diatur: masukkan nama model yang dipakai server Anda, misalnya llama3.1 untuk Ollama."
         json_mode_label: Mode JSON
         json_mode_auto: Otomatis (disarankan)
         json_mode_strict: Ketat (terbaik untuk model penalaran)
