@@ -2073,8 +2073,13 @@ future work if one worker isn't enough.
 
 **No LLM call on a web thread.** Smart-fill and smart-configure render a skeleton, enqueue a job
 on `ai_interactive`, and receive the result as a Turbo Stream broadcast, the same pattern as
-`Chat#broadcast_pending_status`. Non-PDF embedding in `ImportsController` and health probes become
-jobs too.
+`Chat#broadcast_pending_status` (call by @josh-sanders during development of PR #4440). Their author built them synchronous on purpose
+("one small LLM call … slow local models may want a generous request timeout", #3202). The job
+keeps what they set out to do: the same dialog, the same bounded charge history, and nothing
+applied until the user checks it. It changes only the delivery, because a call on the web thread
+holds a Puma thread, can't take the gate that puts chat first (drift bug 7), and on a slow local
+model can outlast a reverse proxy's timeout. Non-PDF embedding in `ImportsController` (#961) and
+health probes become jobs too.
 
 **Visible waiting.** Each gate records its holders, waiters and interruptions in `Rails.cache`
 (`ai/gates/<host>`: worker, job id, feature, lane, since). The chat watchdog
@@ -2099,10 +2104,17 @@ and a PDF import.
   | Smart-fill, smart-configure | `RecurringTransaction::Suggestion`, new | A table: `recurring_transaction_id`, `family_id`, `mode` (`fill` or `configure`), `status` (`pending`, `complete`, `failed`, `cancelled`), `result` (jsonb). The controller creates one and enqueues the job; it's the `bill_setup` requester, and its `apply_ai` stores the result and broadcasts it, so a reload still shows it |
 
   Each requester's `ai_cancelled?` reads its own status.
-- The plumbing checks it before a request passes the host's gate, between batches, and on every streamed
-  chunk. A cancelled conversation stops reading the stream and closes the connection. A request
+- **Cooperative, as #2685's cancellation is: nothing is killed mid-write** (call by @josh-sanders during development of PR #4440). The
+  plumbing checks it before a request passes the host's gate, between batches, and on every
+  streamed chunk. A cancelled conversation stops reading the stream and closes the connection. A request
   that isn't streamed can't be aborted once sent, so its result is discarded when it returns and
   its usage is still recorded. The UI says "Stopped. The model may still finish this request."
+- **In chat**, which has no stop today: stopping a streamed answer closes it at once (llama.cpp
+  stops generating when the client goes, so the host is free; a cloud provider bills only what it
+  produced), and the text so far stays on the message, marked "Stopped". A tool already running
+  finishes honestly and its result is kept; the turn ends before the next model round. A turn
+  waiting for approval ends without running the tool. The chat's claim is released, so the next
+  message can start. A person's stop is never sent again, unlike the gate's interrupt (section 11).
 - A cancelled call returns `Ai::Result` with `Ai::Error::Cancelled`, which jobs discard.
 - Cancelling is a `DELETE` on the resource that started the work (section 15).
 
@@ -2113,7 +2125,9 @@ and a PDF import.
   headers, timeout and proxy as production. It checks the declared capabilities: tool calling,
   structured output, vision and embedding.
 - `AiHealth::Probe` keeps its caching, redaction, debug logging and `confirming_tools_refusal`
-  logic, but stops building its own clients.
+  logic, but stops building its own clients (call by @josh-sanders during development of PR #4440). #3155's 60-second cache, "Run checks
+  again" and "opening a tab triggers no AI request" stay; only the probe itself moves into a job,
+  whose result arrives by Turbo Stream.
 - **A probe compares the model's name.** LM Studio answers a request for a model it doesn't have
   with whichever model is loaded, and a 200, so a probe that checks only the status passes the
   wrong model.
@@ -2175,14 +2189,19 @@ AI call, in PR 3, with the other web-thread calls (section 19).
 
 - An AI-dependent tool is listed only when `Ai.available?(feature)` is true for the token's user,
   so a client never sees a tool that can't work by setup. This replaces today's check in PR 2.
-- `search_family_files` runs as an `Ai::ToolJob` on `ai_interactive`. The MCP request waits for
-  the result for up to 30 seconds, then returns it, or returns "busy, try again". The web thread
-  waits; it never calls a model. The handoff is `Rails.cache`: the job writes its result to
-  `ai/tool_results/<job id>` (expiring after 2 minutes), and the request polls that key every
-  250 ms. `ActiveSupport::Notifications` can't be used, because it doesn't cross processes.
-- `import_bank_statement` takes minutes, so over MCP it returns a pending import at once and
-  queues an `Ai::GenerationJob(:extract_pdf)`; a new read-only tool, `get_import_status`, reports
-  progress and the result. Chat keeps calling it as it does today, inside the chat job.
+- **Only the model call moves; nothing an MCP client sees changes** (call by @josh-sanders during development of PR #4440). Both tools run
+  their AI work as an `Ai::ToolJob` and the MCP request waits for the result: `search_family_files`
+  on `ai_interactive` for up to 30 seconds, then "busy, try again"; `import_bank_statement` on
+  `ai_prompt` for up to the route's time budget, then an error saying the extraction didn't
+  finish. The web thread waits, as it does today, but never calls a model, so the work takes the
+  gate and the capsule-only check can land. The handoff is `Rails.cache`: the job writes its
+  result to `ai/tool_results/<job id>` (expiring after 2 minutes), and the request polls that key
+  every 250 ms. `ActiveSupport::Notifications` can't be used, because it doesn't cross processes.
+  Chat keeps calling `import_bank_statement` inside the chat job, as today.
+- **To the MCP work-pack:** an asynchronous `import_bank_statement` that returns a pending import,
+  a read-only `get_import_status`, and streaming for long tool calls (Streamable HTTP or SSE, the
+  future work #1051 listed and #2631 didn't build). They change the MCP interface, beside #4283's
+  `mcp` scope.
 
 **Pipelock.** The CI scan stays as it is. At runtime, `Ai::Transport::Http` is the only place that
 builds AI HTTP clients, so it's the only place that has to honour the proxy (section 7). The proxy
@@ -2488,7 +2507,6 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | The shadow rate moves from the family to the instance, and families opt in (PR 7) | `families.categorization_shadow_rate`, `CATEGORIZATION_SHADOW_RATE` | One family: its rate is copied to `Setting.ai_shadow_rates`; several: 0; every family with a rate today is opted in | Multi-family instances: the instance admin sets the rate on the routes page, and each family turns on comparisons on its AI features page |
 | Chat history budget comes from the model | `LLM_MAX_HISTORY_TOKENS`, `LLM_SYSTEM_PROMPT_RESERVE` | None | Set the model's `context_window` and `max_output_tokens` instead |
 | `/settings/ai/*` replaces `settings/hostings` AI sections, `settings/ai_prompts`, `settings/llm_usage` | Bookmarks | Redirects for one release | — |
-| `import_bank_statement` over MCP becomes asynchronous | Clients that expect the import result in the same call | None | Call `get_import_status` with the returned import id |
 
 ## 19. Delivery
 
@@ -2600,9 +2618,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    settings today, until PR 7 (call by @josh-sanders during development of PR #4440). The
    upgrade guide says to give the web and the workers the same AI variables.
 3. **Off the web thread.** Smart-fill and smart-configure through `RecurringTransaction::Suggestion`
-   and a Turbo Stream, non-PDF document embedding as a job, `Ai::ProbeJob`, and the MCP tools
-   through `Ai::ToolJob` (with its result handoff) and a pending import plus `get_import_status`
-   (section 14). Cancellation: the `cancelled` statuses, `ai_cancelled?` on each requester, and the
+   and a Turbo Stream, non-PDF document embedding as a job, `Ai::ProbeJob` keeping #3155's cache,
+   and the two MCP AI tools' model calls through `Ai::ToolJob` and its result handoff, with no
+   change an MCP client sees (section 14). Cancellation: the `cancelled` statuses, `ai_cancelled?` on each requester, and the
    checks in the plumbing (section 12). Capsule-only enforcement, now that no AI call is left on a
    web thread. Adds the capsule-only and completion-hook tests.
 4. **Sequencer.** The three lane queues replacing `ai_high_priority` and `ai_low_priority` (the
@@ -2727,8 +2745,10 @@ chat tables (for the chat storage line).
 - Keeping a member's private accounts out of background AI processing (section 6).
 - An `ai_calls` table replacing `llm_usages`.
 - What Langfuse traces contain.
-- The MCP server: renames, a tool catalog shared with chat, `read_only?` and scopes, and a family
-  switch. They're a separate proposal; only MCP's AI tools are here (section 14).
+- The MCP server: renames, a tool catalog shared with chat, `read_only?` and scopes, a family
+  switch, and an asynchronous `import_bank_statement` with `get_import_status` and streaming for
+  long tool calls. They're a separate proposal; only moving MCP's AI calls off the web thread is
+  here (section 14).
 - Product features from PR #4440's user review.
 - New providers beyond presets, and model discovery (#3694). They become presets, model columns or
   transport options. Reasoning effort (#3605) is in scope for the `compatible` transport
