@@ -659,7 +659,7 @@ migration (each variable's `Setting` field, where it has one, maps the same way)
 | `JEV_REQUEST_TIMEOUT`, `JEV_CONCURRENCY` | `timeout_seconds` and `parallel_requests` on the Jev endpoint |
 | `CATEGORIZATION_PROVIDER` | Dropped. On a single-family instance whose effective choice is Jev, `categorize` lists Jev first |
 | `CATEGORIZATION_CONFIDENCE_THRESHOLD` | Dropped: it overrode a family setting, which ENV no longer does. Upgrade note: set it on the categorization page |
-| `CATEGORIZATION_SHADOW_RATE` | `Setting.ai_shadow_rates["categorize"]` |
+| `CATEGORIZATION_SHADOW_RATE` | `Setting.ai_shadow_rates["categorize"]` from PR 7; until then it overrides the family's rate, as today |
 | `EMBEDDING_URI_BASE`, `EMBEDDING_ACCESS_TOKEN` | A `compatible` endpoint named `embed` and its key; `location: local` for http, `cloud` for https |
 | `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS` | A model on `embed` with `capabilities: [embedding]` and `embedding_dimensions` |
 | `VECTOR_STORE_PROVIDER` | `openai`: the `embed` route uses the OpenAI endpoint's vector store. `pgvector` or `qdrant`: `Setting.vector_store_backend` |
@@ -693,8 +693,8 @@ field :ai_shadow_rates,         type: :hash,    default: {}   # feature key => 0
 `ASSISTANT_MAX_TOOL_CALL_ITERATIONS` and `AI_RESPONSE_TIMEOUT` onto them.
 `ai_health_probe_timeout` and `AI_HEALTH_PROBE_TIMEOUT` go: probes use each endpoint's
 `timeout_seconds` (section 13). `ai_shadow_rates` replaces the family's
-`categorization_shadow_rate`: an instance with one family copies its rate, any other starts at 0
-with an upgrade note, and families opt in to shadow runs from PR 7 (section 8.2). The config file sets it as `shadow_rates:`.
+`categorization_shadow_rate` in PR 7, with each family's opt-in: an instance with one family
+copies its rate, any other starts at 0 with an upgrade note (section 8.2). The config file sets it as `shadow_rates:`.
 
 They're set on the instance-wide AI pages, or in the config file, under the same all-or-nothing
 rule. Changing any of them requires `User#manages_instance_settings?`, which is true for super
@@ -1307,8 +1307,8 @@ end
    numbers, unknown enum values → nil, invalid → `Ai::Error::InvalidOutput`.
 5. `ActiveSupport::Notifications.instrument("generate.ai", feature:, route:, usage:, error:, family:, correlation_id:, shadow: false)`.
 6. If the call succeeded, the feature has a shadow route and the family has opted in to it
-   (section 8.2), sample the instance's shadow rate for the feature (`Setting.ai_shadow_rates`)
-   and, on a hit, enqueue `Ai::ShadowJob`.
+   (section 8.2), sample the instance's shadow rate for the feature (`Setting.ai_shadow_rates`;
+   before PR 7, the family's rate as today) and, on a hit, enqueue `Ai::ShadowJob`.
 7. Return `Ai::Result`. The job enqueues the remaining batches (section 11).
 
 `call` always returns an `Ai::Result`. `call!` returns the value or raises the `Ai::Error`; jobs
@@ -1478,9 +1478,13 @@ end
   key (`shadow_categorize`), so without it the router answers `:no_family_consent` and no shadow
   job is enqueued. The family's allowed endpoints (PR 9) still limit where the second model can
   be.
-- **Before PR 7.** Family consent arrives with PR 7, so from PR 2d until then shadow runs happen
-  only on an instance with one family, where the family is the operator. PR 7's consent migration
-  turns the switch on for every family with a non-zero `categorization_shadow_rate` today.
+- **Before PR 7, the rate stays where it is** (call by @josh-sanders during development of PR #4440). PR 2d replaces only the mechanism (its
+  own job, any feature, `Ai::Comparison`); the job reads today's
+  `family.effective_categorization_shadow_rate`, which is enough while `categorize` is the only
+  feature with a shadow. So until PR 7, shadow runs behave exactly as today, including
+  `CATEGORIZATION_SHADOW_RATE` applying to every family. PR 7 moves the rate to
+  `Setting.ai_shadow_rates` together with each family's opt-in, and its consent migration turns
+  the switch on for every family with a non-zero `categorization_shadow_rate`.
 - **Same model allowed.** Nothing requires the shadow to use a different endpoint or model.
   Same-model experiments are first-class:
   - a different prompt: `{ model: gpu/qwen3-8b, prompt: categorize_transactions_trial }` runs
@@ -2414,7 +2418,7 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | The route chooses the chat model | The API's `model` parameter on chats and messages is accepted and ignored | None | API clients: `model` in the response says which model served the turn |
 | Cancel statuses | `cancelled` added to `Import` and `Message` statuses; `RecurringTransaction::Suggestion` added | Additive (string enums) | — |
 | The ENV override of the family confidence threshold goes | `CATEGORIZATION_CONFIDENCE_THRESHOLD` | None | Set it on the categorization page |
-| The shadow rate moves from the family to the instance, and families opt in (PR 2d, PR 7) | `families.categorization_shadow_rate`, `CATEGORIZATION_SHADOW_RATE` | One family: its rate is copied to `Setting.ai_shadow_rates`; several: 0, with no shadow runs until PR 7; PR 7 opts in every family with a rate today | Multi-family instances: the instance admin sets the rate on the routes page, and each family turns on comparisons on its AI features page |
+| The shadow rate moves from the family to the instance, and families opt in (PR 7) | `families.categorization_shadow_rate`, `CATEGORIZATION_SHADOW_RATE` | One family: its rate is copied to `Setting.ai_shadow_rates`; several: 0; every family with a rate today is opted in | Multi-family instances: the instance admin sets the rate on the routes page, and each family turns on comparisons on its AI features page |
 | Chat history budget comes from the model | `LLM_MAX_HISTORY_TOKENS`, `LLM_SYSTEM_PROMPT_RESERVE` | None | Set the model's `context_window` and `max_output_tokens` instead |
 | `/settings/ai/*` replaces `settings/hostings` AI sections, `settings/ai_prompts`, `settings/llm_usage` | Bookmarks | Redirects for one release | — |
 | `import_bank_statement` over MCP becomes asynchronous | Clients that expect the import result in the same call | None | Call `get_import_status` with the returned import id |
@@ -2504,8 +2508,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    - **2d. Jev and shadow runs.** The `jev` transport as a thin adapter over RubyLLM's `judge`, so
      Jev's requests pass the gate and the usage path like every other call; `Ai::Judgement` and
      `categorize`'s judgement; `Ai::ShadowJob` and `Ai::Comparison` for any feature;
-     `Setting.ai_shadow_rates` replacing `families.categorization_shadow_rate`, with shadow runs
-     only on single-family instances until PR 7 brings each family's opt-in (section 8.2). Jev reaches
+     the shadow job reading the family's rate as today until PR 7 (section 8.2). Jev reaches
      TypeSafe-style servers at `<base>/v1/systemone`, today's default and self-hosted servers. A
      Jev endpoint on OpenRouter stops working until PR 5 brings 2.2, and an endpoint at any other
      path isn't supported; the release notes say so, and an issue can bring a path back if
@@ -2570,7 +2573,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    local-server help today's OpenAI section has (#4408). The AI features page has chat mode and each feature's switch and
    manifest: `families.ai_consents`, the consent migration (an `mcp_only` family gets chat
    switched off, and PR 6's `mcp_only` line goes), member emails, `:no_family_consent` and
-   `:consent_outdated`, and the shadow comparison switch (section 8.2). That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
+   `:consent_outdated`, and the shadow comparison switch with `Setting.ai_shadow_rates` replacing
+   `families.categorization_shadow_rate` (section 8.2). That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
    The test helpers switch to the new fixtures. Adds the config and consent tests.
    *Still on old code:* nothing; from here every process reads the same rows.
 8. **Health and settings pages.** The health page (lanes, down marks, AI threads per worker,
