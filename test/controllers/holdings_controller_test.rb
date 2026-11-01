@@ -1,6 +1,8 @@
 require "test_helper"
 
 class HoldingsControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     sign_in users(:family_admin)
     @account = accounts(:investment)
@@ -16,6 +18,18 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     get holding_path(@holding)
 
     assert_response :success
+  end
+
+  test "holding history loads its trades once however many there are" do
+    3.times { |i| create_trade(@holding.security, account: @account, qty: 1, price: 100, date: (i + 1).days.ago.to_date) }
+    trade_count = @holding.trades.count
+
+    assert_queries_match(/\ASELECT "trades"\.\*/, count: 1) do
+      get holding_path(@holding)
+    end
+
+    assert_response :success
+    assert_select "li", text: /#{Regexp.escape(@holding.security.ticker)}/, count: trade_count
   end
 
   test "shows exact share count without rounding" do
