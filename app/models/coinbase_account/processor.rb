@@ -243,23 +243,21 @@ class CoinbaseAccount::Processor
       # Confirmed against real data: only a minority of "send" entries are
       # duplicates of a specific-type sibling (most are standalone, e.g. Earn
       # rewards tagged as "send") - so only skip a "send" when a specific-type
-      # sibling actually matches it.
-      if txn_type == "send" && shadowed_by_specific_transfer?(txn_data)
-        # A rate-limited partial fetch (see Provider::Coinbase::PartialResultError)
-        # can import this send on one sync before its matching sibling is ever
-        # fetched, so it wasn't shadowed yet. Once a later, more complete sync
-        # makes the sibling visible, remove that now-duplicate send instead of
-        # leaving both -- the sibling is imported separately, on its own merits,
-        # same as any other transaction.
-        reconcile_shadowed_send(account, txn_data)
-        return
-      end
+      # sibling actually matches it. Reconciling an already-imported duplicate
+      # happens from the sibling's own side below, once it's confirmed saved -
+      # never eagerly here: destroying the send before confirming the sibling
+      # actually persists would leave the account with neither entry if the
+      # sibling's own import then failed.
+      return if txn_type == "send" && shadowed_by_specific_transfer?(txn_data)
 
       security = find_or_create_security(txn_data)
       return unless security
 
       external_id = "coinbase_txn_#{txn_data['id']}"
-      return if account.entries.exists?(external_id: external_id)
+      if account.entries.exists?(external_id: external_id)
+        reconcile_shadowed_sends(account, txn_data) if SPECIFIC_TRANSFER_TYPES.include?(txn_type)
+        return
+      end
 
       date = Time.zone.parse(txn_data["created_at"]).to_date
       qty = raw_qty.abs
@@ -305,6 +303,7 @@ class CoinbaseAccount::Processor
       Rails.logger.info(
         "CoinbaseAccount::Processor - Created #{txn_type} entry: #{raw_qty} #{security.ticker} @ #{price} #{txn_currency}"
       )
+      reconcile_shadowed_sends(account, txn_data) if SPECIFIC_TRANSFER_TYPES.include?(txn_type)
     rescue => e
       Rails.logger.error "CoinbaseAccount::Processor - Failed to process #{txn_data['type']} transaction #{txn_data['id']}: #{e.message}"
       DebugLogEntry.capture(
@@ -319,46 +318,74 @@ class CoinbaseAccount::Processor
       )
     end
 
+    # True when sibling_a and sibling_b describe the same date+amount+currency
+    # leg - the shape Coinbase uses to double-log one real Pro/staking/vault
+    # transfer as two records in the same batch (see SPECIFIC_TRANSFER_TYPES).
+    # Matches on the *signed* amount, not its absolute value: both records
+    # log the same leg with the same sign, so comparing magnitude alone would
+    # also match an unrelated same-day transaction in the opposite direction
+    # for the same amount and currency, confusing two independent events.
+    def same_transfer_leg?(sibling_a, sibling_b)
+      sibling_a["created_at"].to_s[0, 10] == sibling_b["created_at"].to_s[0, 10] &&
+        sibling_a.dig("amount", "amount").to_d == sibling_b.dig("amount", "amount").to_d &&
+        sibling_a.dig("amount", "currency") == sibling_b.dig("amount", "currency")
+    end
+
     # True when txn_data (a "send") describes the same transfer as a
     # specific pro_deposit/pro_withdrawal/staking_transfer/etc sibling in the
-    # same batch - see SPECIFIC_TRANSFER_TYPES. Matches on the *signed*
-    # amount, not its absolute value: Coinbase double-logs one real transfer
-    # as two records for the same leg (same sign), so comparing magnitude
-    # alone would also match an unrelated same-day send in the opposite
-    # direction for the same amount and currency, dropping a real,
-    # independent transaction. A sibling still pending/failed/canceled
-    # can't shadow anything either -- only a completed one actually happened.
+    # same batch. A sibling still pending/failed/canceled can't shadow
+    # anything either -- only a completed one actually happened.
     def shadowed_by_specific_transfer?(txn_data)
       siblings = coinbase_account.raw_transactions_payload&.dig("transactions") || []
-      date = txn_data["created_at"].to_s[0, 10]
-      amount = txn_data.dig("amount", "amount").to_d
-      currency = txn_data.dig("amount", "currency")
 
       siblings.any? do |sibling|
         next false if sibling["id"] == txn_data["id"]
         next false unless SPECIFIC_TRANSFER_TYPES.include?(sibling["type"])
         next false unless sibling["status"] == "completed"
-        sibling["created_at"].to_s[0, 10] == date &&
-          sibling.dig("amount", "amount").to_d == amount &&
-          sibling.dig("amount", "currency") == currency
+        same_transfer_leg?(sibling, txn_data)
       end
     end
 
-    # Removes a previously-imported "send" entry now that its matching
-    # specific-transfer sibling is visible (see #shadowed_by_specific_transfer?).
-    # A rate-limited partial fetch can import the send before the sibling is
-    # ever reachable in the same batch; once a later, more complete sync
-    # makes the sibling visible, leaving both would double-count one real
-    # transfer as two entries.
-    def reconcile_shadowed_send(account, txn_data)
-      external_id = "coinbase_txn_#{txn_data['id']}"
-      shadowed = account.entries.find_by(external_id: external_id)
-      return unless shadowed
+    # The "send" siblings that txn_data (a specific-type transfer whose own
+    # entry has just been confirmed saved, created or already existing)
+    # shadows - the inverse of #shadowed_by_specific_transfer?, used once the
+    # sibling side of the duplicate is itself confirmed, not from the send's
+    # own processing.
+    def shadowed_sends(txn_data)
+      siblings = coinbase_account.raw_transactions_payload&.dig("transactions") || []
 
-      shadowed.destroy!
-      Rails.logger.info(
-        "CoinbaseAccount::Processor - Removed send #{txn_data['id']}, now shadowed by a specific transfer"
-      )
+      siblings.select do |sibling|
+        sibling["id"] != txn_data["id"] &&
+          sibling["type"] == "send" &&
+          sibling["status"] == "completed" &&
+          same_transfer_leg?(sibling, txn_data)
+      end
+    end
+
+    # Removes any previously-imported "send" entries now shadowed by
+    # txn_data, a specific-transfer sibling whose own entry is confirmed
+    # saved. Deferred to here rather than run eagerly from the send's own
+    # processing: destroying a send before confirming its sibling actually
+    # persists would leave the account with neither entry if the sibling's
+    # own import then failed. A rate-limited partial fetch can import the
+    # send before the sibling is ever reachable in the same batch; once a
+    # later, more complete sync saves the sibling, leaving both would
+    # double-count one real transfer as two entries.
+    def reconcile_shadowed_sends(account, txn_data)
+      shadowed_sends(txn_data).each do |send_txn|
+        external_id = "coinbase_txn_#{send_txn['id']}"
+        shadowed = account.entries.find_by(external_id: external_id)
+        next unless shadowed
+        # A user who excluded or edited this entry made a deliberate choice;
+        # sync-driven reconciliation must not silently override it, same as
+        # every other provider's sync code respects Entry#protected_from_sync?.
+        next if shadowed.protected_from_sync?
+
+        shadowed.destroy!
+        Rails.logger.info(
+          "CoinbaseAccount::Processor - Removed send #{send_txn['id']}, now shadowed by a specific transfer"
+        )
+      end
     end
 
     # Buy/sell transaction handling (trade with a cost-basis-relevant price).

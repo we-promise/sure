@@ -218,6 +218,47 @@ class CoinbaseAccount::ProcessorTest < ActiveSupport::TestCase
     assert @account.entries.exists?(external_id: "coinbase_txn_txn_pro_withdraw_later")
   end
 
+  test "keeps the send when its matching transfer sibling fails to import" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    send_txn = coinbase_txn(id: "txn_send_keep", type: "send", btc_amount: "-0.01", native_amount: "665.80")
+    # An unparseable created_at fails before the sibling's entry is ever
+    # created, same as any other per-transaction processing failure.
+    broken_sibling = coinbase_txn(
+      id: "txn_pro_withdraw_broken", type: "pro_withdrawal", btc_amount: "-0.01",
+      native_amount: "665.80", created_at: "not-a-real-date"
+    )
+
+    @coinbase_account.update!(raw_transactions_payload: { "transactions" => [ send_txn ] })
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_send_keep")
+
+    @coinbase_account.update!(raw_transactions_payload: { "transactions" => [ send_txn, broken_sibling ] })
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_send_keep"),
+      "the send must survive when its matching sibling fails to import -- otherwise the account has neither entry"
+    refute @account.entries.exists?(external_id: "coinbase_txn_txn_pro_withdraw_broken")
+  end
+
+  test "does not destroy a protected send when its matching transfer becomes visible" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    send_txn = coinbase_txn(id: "txn_send_protected", type: "send", btc_amount: "-0.01", native_amount: "665.80")
+    sibling_txn = coinbase_txn(id: "txn_pro_withdraw_protected", type: "pro_withdrawal", btc_amount: "-0.01", native_amount: "665.80")
+
+    @coinbase_account.update!(raw_transactions_payload: { "transactions" => [ send_txn ] })
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+    # A user's deliberate exclusion must survive sync-driven reconciliation,
+    # same as every other provider's sync code respects protected_from_sync?.
+    @account.entries.find_by!(external_id: "coinbase_txn_txn_send_protected").update!(excluded: true)
+
+    @coinbase_account.update!(raw_transactions_payload: { "transactions" => [ send_txn, sibling_txn ] })
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_send_protected"),
+      "a user-excluded entry must never be silently destroyed by sync reconciliation"
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_pro_withdraw_protected")
+  end
+
   test "captures a per-transaction processing failure via DebugLogEntry" do
     CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
     @coinbase_account.update!(raw_transactions_payload: {
