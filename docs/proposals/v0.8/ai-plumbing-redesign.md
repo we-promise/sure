@@ -898,7 +898,8 @@ end
   the **same** endpoint (a 3B and a 20B on one llama.cpp host). Nothing is marked down: the
   endpoint is fine, and other requests may suit the small model. `InvalidOutput` is raised only
   after the transport's own JSON-mode fallbacks and tolerant parsing have failed, so the small
-  model really couldn't do it.
+  model really couldn't do it. A batch that's too big for the model is split first, on the same
+  route (section 8.1, "Batches"); only a single item that still doesn't fit escalates.
 - **No retry on other `Refused` errors.** A malformed request is our bug, and every model would
   refuse it.
 - **Limits.** The list is the limit: a call moves down it until a route answers or none is left,
@@ -1320,14 +1321,40 @@ option. Batched features declare how batch outputs combine, for example
 sequencer block, once the route is known, the plumbing:
 
 1. slices that list with `Provider::Openai::BatchSlicer`'s rule, moved to `Ai::Batch`: at most the
-   model's `batch_size` items, and at most the tokens that fit in `context_window` minus
-   `max_output_tokens`, estimated from the rendered prompt plus `input`;
+   model's `batch_size` items (where the feature caps item count), and at most the tokens that fit
+   in `context_window` minus `max_output_tokens`, estimated from the rendered prompt plus each
+   item's own cost;
 2. builds a copy of the generation holding only the first slice (`with_items(slice)`), so `input`
    only ever sees one batch;
 3. runs that copy, and returns the rest as `Ai::Result#remaining`.
 
 `call(batches: 1)` runs one batch and is what jobs use (small batches, section 11). Plain `call`
 runs every batch in turn and merges the outputs; evals and tests use it.
+
+**One way to fit the model, for every feature** (call by @josh-sanders during development of PR #4440). Today the prompt path slices
+transactions to fit (`BatchSlicer`), and PDF import's image path sends only the first five pages,
+a limit #808 set "to avoid token limits" when every page went in one request. `Ai::Batch` serves
+both:
+
+- **Each item knows its cost.** A transaction or a text-layer chunk is costed by the token
+  estimator, as today. A page image is costed by the provider's rule (OpenAI at high detail: 85
+  tokens plus 170 per 512-pixel tile, about 1,100 for a 150-dpi Letter page; Anthropic: width ×
+  height ÷ 750; Gemini: a fixed amount per image), and for a local vision model by a figure its
+  preset gives, with a cautious default. Pages batch like transactions: as many as fit, so there's
+  no page limit. #808's fixed 3,000-character text chunks become chunks sized to the model.
+- **A batch that overflows is split, not guessed better.** Estimates are rough (the spike's
+  estimator said 15,085 tokens where tokenizers said 10,737 to 12,418), and output is the larger
+  risk: a batch of pages can hold more transactions than `max_output_tokens` allows. When a call
+  fails with `ContextTooLong`, or its answer stops at the output limit (`finish_reason` length,
+  Anthropic's `max_tokens`, which today's extractor only logs), `Ai::Batch` halves the batch and
+  sends both halves on the same route. An answer cut off mid-JSON is split the same way instead of
+  escalating as `InvalidOutput`.
+- **Only an item that can't fit on its own escalates**, to the next route (section 5.4). For a
+  PDF, a page that no route can take marks the statement partial: coverage and reconciliation
+  don't treat it as complete (#1382, #3105).
+- `batch_size` still caps how many transactions go in one call (section 11); pages are limited by
+  tokens only. A per-page price for cloud OCR models (Mistral and Cohere bill per page) waits for
+  an issue; until then their cost shows only when the provider reports it.
 
 **Generation or judgement.** A feature may declare both, as `categorize` does. The router keeps a
 route if its model meets either set of needs (`structured_output` for the generation, `judge` for
@@ -2364,6 +2391,9 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
   lane and never another interactive call; a background call raises `Busy` instead of waiting;
   with two or more slots one is kept for the interactive lane; the gate is sized from
   `parallel_requests` or llama.cpp's `total_slots`; cloud endpoints have none.
+- `ai_batch_split_test.rb`: a stubbed model that refuses more than N items, and one whose answer
+  stops at the output limit, both end with every item answered by splitting on the same route; a
+  single item that can't fit escalates; a page no route can take marks the statement partial.
 - `ai_batch_fairness_test.rb`: two families' imports on one AI thread against a stubbed cloud
   endpoint each get their first result before either import finishes.
 - `mcp_ai_tools_test.rb`: an AI-dependent MCP tool is listed only when its feature is available
@@ -2521,14 +2551,15 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      today's checks until PR 7 (section 6). Adds the agreement test, with chat's entry points on its allowlist until PR 6.
      *Deletes:* the non-chat availability checks and their test stubs.
    - **2c. Generations.** `transport.generate` with the JSON-mode policy, `Ai::Generation`,
-     `Ai::Requester`, `Ai::Batch`, `Ai::GenerationJob` with small batches, failover and
-     escalation down the list (section 5.4), the ERB prompt files with the key collapse (section
+     `Ai::Requester`, `Ai::Batch` with per-item costs and splitting on overflow,
+     `Ai::GenerationJob` with small batches, failover and escalation down the list (section 5.4), the ERB prompt files with the key collapse (section
      8.3), and reasoning effort on route entries (#3605) with its per-preset mapping. Features:
      `bill_setup`, `categorize` (the generation), `detect_merchants` and `enhance_merchants`, each
      with its requester. Lanes map onto today's two queues (interactive → `ai_high_priority`,
      prompt and background → `ai_low_priority`) until PR 4. Records live cassettes for
      Anthropic's and OpenAI's successful paths before relying on them (the spike's keys had no
-     credits). Adds the recorded-eval CI gate, the `ai-live` label and the batch fairness test.
+     credits). Adds the recorded-eval CI gate, the `ai-live` label, and the batch fairness and
+     split tests.
      *Deletes:* the eight workers for those features (`AutoCategorizer`, `AutoMerchantDetector`,
      `ProviderMerchantEnhancer` and `BillSetupSuggester`, for both providers) and
      `Family#resolved_categorization_provider`.
@@ -2543,8 +2574,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      *Deletes:* `Provider::Jev`, `Family#shadow_categorization_provider`,
      `CategorizationComparison` and `families.categorization_provider` (a single-family Jev
      choice moves into the `categorize` route).
-   - **2e. Documents.** `transport.embed`, `extract_pdf` with the input step, the extraction
-     checks and the page rendering (section 8.1), `embed` and `search_documents`, and the OpenAI
+   - **2e. Documents.** `transport.embed`, `extract_pdf` with the per-upload "Read as" switch,
+     Auto's input step tuning itself per account, pages batched by `Ai::Batch` with no page limit,
+     the extraction checks offered for review and the hardened page rendering (section 8.1), `embed` and `search_documents`, and the OpenAI
      vector store fixes (section 5.5).
      *Deletes:* the four PDF and statement workers, the usage recorders, the per-worker tracing,
      `preferred_llm_provider` and `llm_provider_order`, and their test stubs.
