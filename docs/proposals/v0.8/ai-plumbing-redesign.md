@@ -1785,8 +1785,9 @@ ActiveSupport::Notifications.subscribe(/\A(generate|judge)\.ai\z/, Ai::Instrumen
   failed, cancelled) and tokens. The subscriber runs in the caller, so it reads Sure's call
   context, which the transport sets around each call: the feature, the route, the correlation id
   and a new `call_id` (spike: the subscriber saw the correlation id). `llm_usages` gains
-  `call_id` (uuid, indexed, nullable) and `status`; existing rows keep a null `call_id` and count
-  as one-request calls.
+  `call_id` (uuid, indexed, nullable) and `status`; existing rows, and the rows today's chat and Jev
+  write through their old recorders until PR 6 and PR 2d, have a null `call_id` and count as
+  one-request calls.
   - **The usage page looks as it does today:** one row per call, grouped by `call_id`, with its
     requests' tokens and cost summed, and the statistics count calls. Clicking a call opens its
     requests: status, tokens, cost and error, so a reader sees how the call was summed.
