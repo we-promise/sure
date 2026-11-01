@@ -77,3 +77,26 @@ List<SplitListEntry<T>> groupSplitEntries<T>(
 
   return result;
 }
+
+/// Child ids for [groupSplitEntries]' `childIdsOf`, combining the split
+/// lookups this device made with the index's `split_parent` flag.
+///
+/// A looked-up split wins, since it is fresher than the cached flag. A row
+/// only flagged as a parent is still rendered as one, with no children
+/// grouped under it until its lookup lands.
+List<String>? splitChildIdsForList(
+  String id, {
+  required SplitLookup splits,
+  required Set<String> flaggedParents,
+}) {
+  if (splits.isSplitParent(id)) return splits.childIdsFor(id) ?? const [];
+  if (splits.isSplitStatusKnown(id)) return null;
+  return flaggedParents.contains(id) ? const [] : null;
+}
+
+/// What [splitChildIdsForList] needs from the split lookups.
+abstract class SplitLookup {
+  bool isSplitParent(String transactionId);
+  bool isSplitStatusKnown(String transactionId);
+  List<String>? childIdsFor(String parentId);
+}

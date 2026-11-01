@@ -334,15 +334,22 @@ cache and the account's transactions are re-fetched, because an account-scoped
 sync only upserts. Those ids are dropped again after every later sync in the
 session (an overlapping sync can still return them), refreshes run one at a
 time, and an account whose refresh could not sync is synced on its next load.
-The list groups children under their parent for splits the app has loaded (the
-transactions index does not say which rows are split), and the calendar leaves
-those parents out of its daily totals.
+The transactions index flags split parents (`split_parent`) and sends the
+exact stored amount (`amount_decimal`), the `kind` and the `excluded` flag;
+all four are cached with the transaction (database version 4). Flagged parents
+are shown as split parents straight away, and their splits are looked up in the
+background (one request at a time, at most 20 per list load) so their children
+can be grouped under them. The calendar leaves split parents out of its daily
+totals, and a new split starts from the exact amount (so 100.1250 USD splits to
+exactly 100.1250). Servers without these fields fall back to the splits the
+app has loaded and to the display amount.
 
-Deleting from the transactions list (swipe or bulk) checks split membership
-with the server first and refuses split parents and children ("Unsplit this
-transaction before deleting it"); if that check fails while online, the delete
-is refused too. Offline, only splits already loaded on the device are refused,
-so offline deletion keeps working.
+Deleting from the transactions list (swipe or bulk) refuses flagged split
+parents and checks every other row's split membership with the server first,
+refusing split parents and children ("Unsplit this transaction before deleting
+it"); if that check fails while online, the delete is refused too. Offline,
+flagged parents and splits already loaded on the device are refused, so
+offline deletion keeps working.
 
 ## Future Enhancements
 

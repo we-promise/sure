@@ -117,8 +117,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         'Starting to calculate daily changes for ${transactions.length} transactions');
 
     // A split parent's amount is carried by its children, which are cached
-    // too, so counting both doubles the day. The index does not flag split
-    // parents, so this covers the splits this device knows about.
+    // too, so counting both doubles the day. The index flags split parents
+    // (`split_parent`); servers without the flag fall back to the splits this
+    // device knows about.
     final splits = Provider.of<TransactionSplitsProvider?>(
       context,
       listen: false,
@@ -126,6 +127,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     for (var transaction in transactions) {
       final id = transaction.id;
+      if (transaction.splitParent == true) continue;
       if (id != null && splits != null && splits.isSplitParent(id)) continue;
       try {
         final date = DateTime.parse(transaction.date);

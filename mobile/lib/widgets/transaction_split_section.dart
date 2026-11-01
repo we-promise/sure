@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/offline_transaction.dart';
+import '../models/transaction.dart';
 import '../models/transaction_split.dart';
 import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
@@ -30,6 +31,31 @@ import 'sure_card.dart';
 /// offline. [onChanged] fires after a successful write with `true` when the
 /// transaction this screen shows no longer exists (a child of a split that
 /// was replaced or removed).
+
+/// The amount a new split of [transaction] must sum to, in [SplitMath] units
+/// and the API's sign convention (positive = outflow).
+///
+/// Uses the exact stored `amount_decimal` when the server sends it, so a
+/// `100.1250` USD entry splits to exactly 100.1250. Older servers only send
+/// the display amount, which is parsed instead (rounded to the currency).
+@visibleForTesting
+BigInt? splitTargetUnitsFor(Transaction transaction) {
+  final exact = transaction.amountDecimal;
+  if (exact != null) {
+    final units = SplitMath.parseUnits(exact);
+    if (units != null) return units;
+  }
+  try {
+    final parsed = AmountParser.parse(transaction.amount);
+    final magnitude =
+        SplitMath.parseUnits(parsed.canonicalValue.replaceFirst('-', ''));
+    if (magnitude == null) return null;
+    return transaction.isIncome ? -magnitude : magnitude;
+  } on FormatException {
+    return null;
+  }
+}
+
 class TransactionSplitSection extends StatefulWidget {
   const TransactionSplitSection({
     super.key,
@@ -127,23 +153,17 @@ class _TransactionSplitSectionState extends State<TransactionSplitSection> {
   /// sign from the classification; the server re-checks the exact sum.
   SplitEditorTarget? _targetForUnsplit() {
     final transaction = widget.transaction;
-    try {
-      final parsed = AmountParser.parse(transaction.amount);
-      final magnitude =
-          SplitMath.parseUnits(parsed.canonicalValue.replaceFirst('-', ''));
-      if (magnitude == null) return null;
-      return SplitEditorTarget(
-        transactionId: _id!,
-        accountId: transaction.accountId,
-        name: transaction.name,
-        date: transaction.date,
-        currency: transaction.currency,
-        categoryId: transaction.categoryId,
-        amountUnits: transaction.isIncome ? -magnitude : magnitude,
-      );
-    } on FormatException {
-      return null;
-    }
+    final units = splitTargetUnitsFor(transaction);
+    if (units == null) return null;
+    return SplitEditorTarget(
+      transactionId: _id!,
+      accountId: transaction.accountId,
+      name: transaction.name,
+      date: transaction.date,
+      currency: transaction.currency,
+      categoryId: transaction.categoryId,
+      amountUnits: units,
+    );
   }
 
   SplitEditorTarget _targetForSplit(TransactionSplit split) {

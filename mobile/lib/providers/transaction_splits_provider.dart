@@ -4,6 +4,7 @@ import '../models/transaction_split.dart';
 import '../services/connectivity_service.dart';
 import '../services/log_service.dart';
 import '../services/transaction_splits_service.dart';
+import '../utils/split_list_grouping.dart';
 
 /// Outcome of a split write (create, replace, or unsplit).
 class SplitActionResult {
@@ -42,7 +43,7 @@ enum SplitDeleteStatus {
 ///
 /// Splits are online-only: the offline queue only replays creates and
 /// deletes, so writes are refused while offline instead of being queued.
-class TransactionSplitsProvider with ChangeNotifier {
+class TransactionSplitsProvider with ChangeNotifier implements SplitLookup {
   TransactionSplitsProvider({TransactionSplitsService? service})
       : _service = service ?? TransactionSplitsService();
 
@@ -92,6 +93,11 @@ class TransactionSplitsProvider with ChangeNotifier {
     return parentId == null ? null : _splitsByParent[parentId];
   }
 
+  @override
+  List<String>? childIdsFor(String parentId) =>
+      _splitsByParent[parentId]?.childIds;
+
+  @override
   bool isSplitParent(String transactionId) =>
       _splitsByParent.containsKey(transactionId);
 
@@ -101,6 +107,7 @@ class TransactionSplitsProvider with ChangeNotifier {
   /// Whether the server has confirmed if [transactionId] is a split parent,
   /// a split child, or not split. Until then, edits that the API rejects for
   /// split children must stay locked.
+  @override
   bool isSplitStatusKnown(String transactionId) =>
       _known.contains(transactionId);
 
@@ -186,6 +193,38 @@ class TransactionSplitsProvider with ChangeNotifier {
     }
   }
 
+  /// Looks up the splits of rows the transactions index flags as split
+  /// parents, so the list can group their children under them. One request
+  /// at a time and at most [limit] per call, to stay well inside the API rate
+  /// limit; rows already known, in flight, or whose lookup failed this
+  /// session are skipped.
+  Future<void> loadFlaggedParents({
+    required String accessToken,
+    required Iterable<String> transactionIds,
+    int limit = 20,
+  }) async {
+    final generation = _generation;
+    var requested = 0;
+    for (final id in transactionIds) {
+      if (requested >= limit || !isOnline || generation != _generation) {
+        return;
+      }
+      if (_known.contains(id) ||
+          _loading.containsKey(id) ||
+          _flaggedLookupFailed.contains(id)) {
+        continue;
+      }
+      requested++;
+      final ok = await _lookup(accessToken: accessToken, transactionId: id);
+      if (!ok && generation == _generation) _flaggedLookupFailed.add(id);
+    }
+  }
+
+  /// Flagged parents whose background lookup failed; not retried
+  /// automatically until [clear], so a failing server isn't polled on every
+  /// list refresh. Opening the transaction still looks it up.
+  final Set<String> _flaggedLookupFailed = {};
+
   /// Decides whether [transactionId] may go through the plain delete
   /// endpoint. The server refuses a split child and cascades a split parent's
   /// delete to its children, which an upsert-only sync would leave behind.
@@ -195,7 +234,8 @@ class TransactionSplitsProvider with ChangeNotifier {
   /// seen), otherwise only when it is not known yet. A failed lookup returns
   /// [SplitDeleteStatus.unknown] so the caller blocks the delete. Offline,
   /// only splits already known on this device are blocked, so offline delete
-  /// keeps working; the transactions index does not say which rows are split.
+  /// keeps working. Callers also block rows the index flags as split parents
+  /// (`split_parent`); split children carry no such flag.
   Future<SplitDeleteStatus> checkBeforeDelete({
     required String? accessToken,
     required String transactionId,
@@ -329,6 +369,7 @@ class TransactionSplitsProvider with ChangeNotifier {
     _parentByChild.clear();
     _known.clear();
     _failedLookups.clear();
+    _flaggedLookupFailed.clear();
     _notify();
   }
 

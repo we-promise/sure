@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/account.dart';
@@ -135,6 +137,30 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
       accessToken: accessToken,
       accountId: widget.account.id,
     );
+    if (!mounted) return;
+
+    // The index flags split parents, so only those need a split lookup to
+    // group their children under them; other rows cost no extra request.
+    final splits =
+        Provider.of<TransactionSplitsProvider>(context, listen: false);
+    unawaited(splits.loadFlaggedParents(
+      accessToken: accessToken,
+      transactionIds: [
+        for (final t in transactionsProvider.offlineTransactions)
+          if (t.splitParent == true && t.id != null) t.id!,
+      ],
+    ));
+  }
+
+  /// Ids of cached rows the transactions index flags as split parents.
+  Set<String> _flaggedSplitParents() {
+    final transactions =
+        Provider.of<TransactionsProvider>(context, listen: false)
+            .offlineTransactions;
+    return {
+      for (final t in transactions)
+        if (t.splitParent == true && t.id != null) t.id!,
+    };
   }
 
   void _toggleSelectionMode() {
@@ -150,9 +176,10 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
   /// server refuses a child, and deleting a parent cascades to its children,
   /// which this list would keep showing. Point the user at "Unsplit" instead.
   ///
-  /// The list never loads split state itself, so a split made on the web or
-  /// another device is unknown here: [TransactionSplitsProvider.checkBeforeDelete]
-  /// looks it up, and a lookup that fails while online blocks the delete.
+  /// Rows the index flags as split parents are blocked straight away, even
+  /// offline. Split children carry no flag, so every other row is checked
+  /// with [TransactionSplitsProvider.checkBeforeDelete], and a lookup that
+  /// fails while online blocks the delete.
   Future<bool> _blockSplitDelete(
     String? transactionId, {
     bool fresh = false,
@@ -172,16 +199,19 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
     final splits =
         Provider.of<TransactionSplitsProvider>(context, listen: false);
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    final flagged = _flaggedSplitParents();
     final token = splits.isOnline ? await auth.getValidAccessToken() : null;
     if (!mounted) return true;
 
     final statuses = await Future.wait(
       transactionIds.map(
-        (id) => splits.checkBeforeDelete(
-          accessToken: token,
-          transactionId: id,
-          fresh: fresh,
-        ),
+        (id) => flagged.contains(id)
+            ? Future.value(SplitDeleteStatus.split)
+            : splits.checkBeforeDelete(
+                accessToken: token,
+                transactionId: id,
+                fresh: fresh,
+              ),
       ),
     );
     if (!mounted) return true;
@@ -568,11 +598,18 @@ class _TransactionsListScreenState extends State<TransactionsListScreen> {
           final transactions = _getFilteredTransactions(allTransactions);
           // Group known split children under their parent, like the web list.
           final splits = context.watch<TransactionSplitsProvider>();
+          final flaggedParents = {
+            for (final t in transactions)
+              if (t.splitParent == true && t.id != null) t.id!,
+          };
           final entries = groupSplitEntries<OfflineTransaction>(
             transactions,
             idOf: (t) => t.id,
-            childIdsOf: (id) =>
-                splits.isSplitParent(id) ? splits.splitFor(id)?.childIds : null,
+            childIdsOf: (id) => splitChildIdsForList(
+              id,
+              splits: splits,
+              flaggedParents: flaggedParents,
+            ),
             parentIdOf: splits.parentIdFor,
           );
 
