@@ -319,7 +319,7 @@ end
 ```ruby
 # app/models/ai_model.rb
 class AiModel < ApplicationRecord
-  CAPABILITIES = %w[tools vision thinking streaming structured_output embedding judge calibrated_confidence].freeze
+  CAPABILITIES = %w[tools vision documents thinking streaming structured_output embedding judge calibrated_confidence].freeze
 
   belongs_to :ai_endpoint
   has_many :ai_routes, dependent: :destroy
@@ -1422,11 +1422,21 @@ scan) through every server it had (spike: "Bank statements as PDFs" and "OCR on 
   so an empty text layer is never sent. The PDF itself goes only to Anthropic, OpenAI, or
   OpenRouter with a named parsing engine. Page images read both statements completely on every
   vision model tried.
+- **Read as, per upload** (call by @josh-sanders during development of PR #4440). The PDF import form, and `import_bank_statement`'s optional
+  argument, offer Auto (the default), PDF, Images, OCR and Text. An option the route can't do is
+  greyed out with the reason: PDF needs a model with `documents` (it accepts a PDF itself, which
+  RubyLLM can't tell for an OpenAI-compatible server), Images need `vision`, OCR needs an OCR route
+  entry. A badly read statement can be read again another way without changing the config. Every
+  option sends the uploaded document, which PDF import's consent covers.
 - **Checks on every extraction**, which need no answer key: the opening balance plus every
   transaction makes the closing balance; every amount appears in the text the model read; and the
   date of at least half the rows is the last date printed shortly before that row's amount. On
   every recorded extraction they passed all 14 right ones and failed all 12 wrong ones. A failing
-  extraction is held back, not imported. The date threshold is tuned on two statements, a
+  extraction is offered for review, never dropped (call by @josh-sanders during development of PR #4440, after #3105's "nothing disappears
+  silently" and #1753's review before import): its rows show with the failed checks above them,
+  and publishing asks for confirmation. The balance check uses the opening and closing balances
+  `AccountStatement::TextMetadataParser` (#4054) read from the text when it found them, the
+  model's otherwise, since models write figures to fit. The date threshold is tuned on two statements, a
   heuristic to revisit. A check that each date falls in the statement's period was tried and
   dropped: models write the period to fit their dates.
 - **Local OCR is a two-step route:** an OCR model transcribes the pages, with a prompt per model
@@ -1434,14 +1444,15 @@ scan) through every server it had (spike: "Bank statements as PDFs" and "OCR on 
   then any text model extracts. Unlimited-OCR-2 then Qwen3.6 read both statements completely on
   CPU. One llama.cpp server holds one model at a time, so the transcribe step is its own route
   entry, usually on its own endpoint.
-- **Rendering pages** is a product choice with a security side. `pdftoppm` in a child process,
-  as today, keeps poppler out of the worker's memory only if hardened: an empty environment
+- **Rendering pages with a hardened `pdftoppm`** (call by @josh-sanders during development of PR #4440, keeping #3275's choice and its
+  concrete failure reason). A child process keeps poppler out of the worker's memory only if
+  hardened: an empty environment
   (today the child inherits the worker's API keys and database URL), its own process group
   killed on a timeout, CPU and memory limits, a page range (today every page is rendered to send
   five), and a size check after rendering, because `pdftoppm` writes a 1×1 page and exits 0 when
-  it can't allocate one. `ruby-vips`, already bundled, renders in process but needs Active
-  Storage's block on libvips's PDF loader lifted while it runs. Either way, a page over 25
-  million pixels is refused before rendering.
+  it can't allocate one. A page over 25 million pixels is refused before rendering. `ruby-vips`,
+  already bundled, would render in process but needs Active Storage's block on libvips's PDF
+  loader lifted while it runs.
 
 ### 8.2 Shadow runs
 
