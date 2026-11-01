@@ -89,6 +89,24 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  # The registry and the settings form both stop a custom base URL without a
+  # model before it gets here; this is the provider's own guard behind them.
+  test "a custom base URL without a model is refused" do
+    error = assert_raises(Provider::Openai::Error) do
+      Provider::Openai.new("ollama-local", uri_base: "http://localhost:11434/v1", model: nil)
+    end
+
+    assert_match(/Model is required/, error.message)
+  end
+
+  test "a custom base URL accepts any model name, as a local server's models are its own" do
+    local = Provider::Openai.new("ollama-local", uri_base: "http://localhost:11434/v1", model: "llama3.1")
+
+    assert local.custom_provider?
+    assert local.supports_model?("llama3.1")
+    assert local.supports_model?("qwen2.5:32b")
+  end
+
   test "legacy and custom PDF processing preserve the fallback output limit" do
     with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
       Setting.stubs(:llm_max_response_tokens).returns(nil)
