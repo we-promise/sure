@@ -213,7 +213,7 @@ app/models/ai/
     debug_log_subscriber.rb              # → DebugLogEntry
     comparison_subscriber.rb             # → Ai::Comparison (shadow runs)
 config/ai/presets/                       # one YAML file per provider
-  openai.yml  anthropic.yml  gemini.yml  openrouter.yml  llama_cpp.yml  ollama.yml  jev.yml  jev_local.yml
+  openai.yml  anthropic.yml  gemini.yml  openrouter.yml  llama_cpp.yml  ollama.yml  jev.yml  jev_local.yml  mistral.yml  cohere.yml
 config/ai.example.yml                    # documented example of the AI_CONFIG file
 app/prompts/                             # every prompt, one home; <name>.<locale>.txt.erb for translations
 app/jobs/ai/generation_job.rb            # generic, lane-aware, batch-yielding, cancellable
@@ -319,7 +319,7 @@ end
 ```ruby
 # app/models/ai_model.rb
 class AiModel < ApplicationRecord
-  CAPABILITIES = %w[tools vision documents thinking streaming structured_output embedding judge calibrated_confidence].freeze
+  CAPABILITIES = %w[tools vision documents ocr thinking streaming structured_output embedding judge calibrated_confidence].freeze
 
   belongs_to :ai_endpoint
   has_many :ai_routes, dependent: :destroy
@@ -968,10 +968,12 @@ end
   responder already caps rounds; the cap moves into the plumbing so every transport and the
   RubyLLM adapter get it. When chat runs on an agent endpoint, Sure can't see the agent's own
   loop, so only the turn timeout applies.
-- **The `embed` route picks the vector adapter.** If its endpoint has `vector_store`, documents go
+- **The `embed` route picks the vector adapter** (call by @josh-sanders during development of PR #4440, keeping the pluggable store #961,
+  #1211 and #1986 built). If its endpoint has `vector_store`, documents go
   to an OpenAI-style vector store, and the manifest says whole files are sent. Otherwise chunks go
   to the route's embedding model and are stored in `Setting.vector_store_backend` (pgvector or
-  Qdrant). `VECTOR_STORE_PROVIDER` is read through the deprecated ENV path (section 4.5).
+  Qdrant). `VECTOR_STORE_PROVIDER` is read through the deprecated ENV path (section 4.5), which
+  keeps today's defaults, pgvector on Anthropic installs included (#1986).
 - **The OpenAI vector store adapter, fixed** (spike, live on the two sample statements):
   - it waits for indexing and records the outcome as the document's status: indexing is
     asynchronous, and today a document is `ready` before it can be found;
@@ -1195,7 +1197,8 @@ end
   OpenRouter accepts it (and bills parsing it, even for free models); llama.cpp and Gemini's
   compatible API refuse it. The adapter turns off RubyLLM's upload of large files to a
   provider's Files API (`auto_upload_large_files = false`), where a statement would stay until
-  deleted. The `.ai` event records each file's name and size, never its bytes.
+  deleted (call by @josh-sanders during development of PR #4440). #1985 already sends the PDF inline, and the presets' provider PDF limits
+  keep it within what each provider accepts inline; a bigger file goes to the text layer. The `.ai` event records each file's name and size, never its bytes.
 - `Compatible` also implements `embed` and the vector store calls, and its agent mode for chat on
   an agent endpoint. It replaces `Provider::Openai`, the compatible code paths and
   `Assistant::External::Client`.
@@ -1482,13 +1485,20 @@ scan) through every server it had (spike: "Bank statements as PDFs" and "OCR on 
   model's otherwise, since models write figures to fit. The date threshold is tuned on two statements, a
   heuristic to revisit. A check that each date falls in the statement's period was tried and
   dropped: models write the period to fit their dates.
-- **Local OCR is a two-step route:** an OCR model transcribes the pages, with a prompt per model
-  (models differ: one GGUF's chat template writes the model card's prompt, another's doesn't),
-  then any text model extracts. Unlimited-OCR-2 then Qwen3.6 read both statements completely on
-  CPU. One llama.cpp server holds one model at a time, so the transcribe step is its own route
-  entry, usually on its own endpoint.
-- **Rendering pages with a hardened `pdftoppm`** (call by @josh-sanders during development of PR #4440, keeping #3275's choice and its
-  concrete failure reason). A child process keeps poppler out of the worker's memory only if
+- **OCR is a two-step route, local or cloud** (call by @josh-sanders during development of PR #4440). An OCR route entry, a model with
+  `ocr`, transcribes the pages; then the route's text model extracts, through the same chunks and
+  checks as the text layer. It can be either kind:
+  - **a local OCR model reading page images through chat**, with a prompt per model (models
+    differ: one GGUF's chat template writes the model card's prompt, another's doesn't).
+    Unlimited-OCR-2 then Qwen3.6 read both statements completely on CPU, as #808 wanted for small
+    local models. One llama.cpp server holds one model at a time, so the transcribe step is its
+    own route entry, usually on its own endpoint;
+  - **Mistral or Cohere through `RubyLLM.ocr`**, which returns markdown per page, for installs
+    without a GPU. They get presets, and the `compatible` transport gains an `ocr` call on
+    RubyLLM's `:mistral` and `:cohere` providers. The spike had no key for them, so PR 2e records
+    live cassettes before relying on them.
+- **Rendering pages with a hardened `pdftoppm`** (call by @josh-sanders during development of
+  PR #4440, keeping #3275's choice and its concrete failure reason). A child process keeps poppler out of the worker's memory only if
   hardened: an empty environment
   (today the child inherits the worker's API keys and database URL), its own process group
   killed on a timeout, CPU and memory limits, a page range (today every page is rendered to send
@@ -2576,7 +2586,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      choice moves into the `categorize` route).
    - **2e. Documents.** `transport.embed`, `extract_pdf` with the per-upload "Read as" switch,
      Auto's input step tuning itself per account, pages batched by `Ai::Batch` with no page limit,
-     the extraction checks offered for review and the hardened page rendering (section 8.1), `embed` and `search_documents`, and the OpenAI
+     the extraction checks offered for review, the hardened page rendering, and OCR route entries,
+     local through chat or Mistral and Cohere through `RubyLLM.ocr` with their presets (section 8.1), `embed` and `search_documents`, and the OpenAI
      vector store fixes (section 5.5).
      *Deletes:* the four PDF and statement workers, the usage recorders, the per-worker tracing,
      `preferred_llm_provider` and `llm_provider_order`, and their test stubs.
