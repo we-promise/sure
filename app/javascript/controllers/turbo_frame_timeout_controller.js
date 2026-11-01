@@ -7,8 +7,15 @@ import { Controller } from "@hotwired/stimulus"
 // controller connects, or never, so the frame declares when to start:
 //
 //   data-action="turbo:before-fetch-request->turbo-frame-timeout#startTimeout
-//                turbo:frame-load->turbo-frame-timeout#clearTimeout
+//                turbo:before-frame-render->turbo-frame-timeout#clearTimeout
 //                turbo:fetch-request-error->turbo-frame-timeout#handleError"
+//
+// It stops when Turbo is about to render a matching frame, not on
+// turbo:frame-load: Turbo inserts the new content several repaints before
+// frame-load fires, and a countdown expiring in that gap would overwrite the
+// rendered frame with the badge. Responses that bring no matching frame (an
+// error, or a sign-in page after a redirect) never render, so they keep
+// counting and still end in the badge.
 export default class extends Controller {
   static values = { timeout: { type: Number, default: 10000 } }
 
@@ -44,19 +51,11 @@ export default class extends Controller {
 
   handleTimeout() {
     this.timeoutId = null
-
-    // The response is in but not rendered yet: Turbo drops `busy` when the
-    // request finishes and fires turbo:frame-load only after rendering, and a
-    // busy main thread can let the countdown expire in between. The badge
-    // would then overwrite the sparkline that just arrived.
-    if (!this.element.hasAttribute("busy")) return
-
     this.showBadge()
   }
 
-  // A failed request (network error, dropped connection) clears `busy` without
-  // ever firing turbo:frame-load, so the timeout above would leave the loading
-  // placeholder in place for good. Show the badge right away instead.
+  // A failed request (network error, dropped connection) will never render,
+  // so there is nothing to wait for: show the badge right away.
   handleError() {
     this.clearTimeout()
     this.showBadge()

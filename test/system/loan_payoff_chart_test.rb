@@ -224,7 +224,200 @@ class LoanPayoffChartTest < ApplicationSystemTestCase
     end
   end
 
+  # The area under the scheduled line is split by each
+  # repayment's shares, principal from the bottom and interest above it up to
+  # the line. Measured from the drawn paths at every scheduled payment, against
+  # the y-axis's own ticks. The interest part's top must sit on the line: drawn
+  # as amounts instead of shares, the ratio between the two parts would look the
+  # same while the whole would be a sliver along the bottom.
+  test "the shading fills the area under the scheduled line, split by each repayment's shares" do
+    travel_to TODAY do
+      account = on_contract_loan_account
+      payload = Loan::PayoffChart.new(account.loan, as_of: TODAY, period: all_time_period).payload
+
+      visit account_path(account, period: "all_time")
+      find("[data-controller='loan-payoff-chart'] svg path[data-share='interest']")
+      %w[interest principal].each do |share|
+        path = find("[data-controller='loan-payoff-chart'] svg path[data-share='#{share}']")
+        assert path["d"].to_s.start_with?("M"), "the #{share} shading has no geometry"
+        assert_match(/-clip-plot\)\z/, path["clip-path"].to_s, "the #{share} shading must be clipped to the plot")
+      end
+
+      measured = share_extents(payload)
+      assert measured.size >= 12, "most of the 24 payments must be measurable, or this asserts little (got #{measured.size})"
+      measured.each do |m|
+        line_y = m["axis_y"]
+        principal_top = m["baseline"] - (m["baseline"] - line_y) * m["principal_share"]
+        assert_in_delta line_y, m["interest_top"], 1.5, "the interest part must reach the line on #{m["date"]}"
+        assert_in_delta principal_top, m["interest_bottom"], 1.5, "interest must start at the principal share on #{m["date"]}"
+        assert_in_delta principal_top, m["principal_top"], 1.5, "principal must reach its share on #{m["date"]}"
+        assert_in_delta m["baseline"], m["principal_bottom"], 1.5, "principal must start at zero on #{m["date"]}"
+      end
+    end
+  end
+
+  # Measured from the paths, not read back from the payload: the point of the
+  # shading is that interest's share falls as the loan runs.
+  test "the interest part's share of the shading is larger at the left edge than the right" do
+    travel_to TODAY do
+      account = on_contract_loan_account
+      payload = Loan::PayoffChart.new(account.loan, as_of: TODAY, period: all_time_period).payload
+
+      visit account_path(account, period: "all_time")
+      find("[data-controller='loan-payoff-chart'] svg path[data-share='interest']")
+      measured = share_extents(payload)
+      share = ->(m) { (m["interest_bottom"] - m["interest_top"]) / (m["principal_bottom"] - m["interest_top"]) }
+
+      assert_operator share.(measured.first), :>, share.(measured.last)
+    end
+  end
+
+  test "the two shares resolve to different colours in light and dark, and the legend names them" do
+    travel_to TODAY do
+      account = on_contract_loan_account
+
+      visit account_path(account, period: "all_time")
+      find("[data-controller='loan-payoff-chart'] svg path[data-share='interest']")
+      light = %w[interest principal].to_h { |share| [ share, fill_of(share) ] }
+      light.each { |share, fill| assert_not_equal "none", fill, "the #{share} shading has no resolved fill" }
+      assert_not_equal light["interest"], light["principal"]
+
+      page.execute_script("document.documentElement.setAttribute('data-theme', 'dark')")
+      wait_until { fill_of("interest") != light["interest"] }
+      dark = %w[interest principal].to_h { |share| [ share, fill_of(share) ] }
+      dark.each { |share, fill| assert_not_equal "none", fill, "the #{share} shading has no resolved fill in dark" }
+      assert_not_equal dark["interest"], dark["principal"]
+      assert_not_equal light["interest"], dark["interest"], "the interest shading must repaint from the dark token"
+
+      legend = "ul[aria-label='#{I18n.t("UI.account.chart.loan.legend")}'] li"
+      assert_selector legend, text: I18n.t("UI.account.chart.loan.interest_share")
+      assert_selector legend, text: I18n.t("UI.account.chart.loan.principal_share")
+    end
+  end
+
+  # The flat fill under the recorded line carried nothing the line did not; the
+  # shares replace it. Every filled path left in the plot is a share.
+  test "the only filled areas are the two shares" do
+    travel_to TODAY do
+      account = on_contract_loan_account
+
+      visit account_path(account, period: "all_time")
+      find("[data-controller='loan-payoff-chart'] svg path[data-share='interest']")
+      filled = page.evaluate_script(<<~JS)
+        Array.from(document.querySelectorAll("[data-controller='loan-payoff-chart'] svg path"))
+          .filter((path) => !path.closest("g.tick, defs") && path.getAttribute("class") !== "domain")
+          .filter((path) => getComputedStyle(path).fill !== "none")
+          .map((path) => path.dataset.share || path.dataset.shareHatch || path.getAttribute("data-series") || "unnamed")
+      JS
+
+      assert_equal %w[interest interest principal], filled.sort
+    end
+  end
+
+  # The opening point is the amount borrowed, not a payment, so it has no
+  # split of its own. It carries the first repayment's share as the left end
+  # of the shading, which is otherwise missing between origination and the
+  # first payment, and is all there is for a loan of one repayment, whose
+  # legend still names both shares.
+  test "the shading starts at origination, so a single repayment is shaded" do
+    travel_to TODAY do
+      account = Account.create!(
+        family: @user.family, name: "One Repayment Loan", balance: 500_000, currency: "USD",
+        accountable: Loan.new(subtype: "mortgage", interest_rate: 6, term_months: 1,
+                              rate_type: "fixed", start_date: Date.new(2026, 12, 1))
+      )
+      account.entries.create!(
+        date: Date.new(2026, 12, 1), name: "Opening balance", amount: 500_000, currency: "USD",
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+      payload = Loan::PayoffChart.new(account.loan, as_of: TODAY, period: all_time_period).payload
+      assert_equal 2, payload[:scheduled].size, "the opening point and the one repayment"
+
+      visit account_path(account, period: "all_time")
+      legend = "ul[aria-label='#{I18n.t("UI.account.chart.loan.legend")}'] li"
+      assert_selector legend, text: I18n.t("UI.account.chart.loan.principal_share")
+      %w[interest principal].each do |share|
+        path = find("[data-controller='loan-payoff-chart'] svg path[data-share='#{share}']")
+        assert path["d"].to_s.start_with?("M"), "the #{share} shading has no geometry"
+      end
+
+      # Just after origination, halfway up from the axis to the line, the
+      # principal share is filled: the opening point carries the repayment's
+      # own share, almost all principal, not an empty or a made-up one.
+      filled = page.evaluate_script(<<~JS)
+        (() => {
+          const svg = document.querySelector("[data-controller='loan-payoff-chart'] svg");
+          const clip = svg.querySelector("clipPath[id$='-clip-plot'] rect");
+          const at = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).getTime(); };
+          const start = at("#{payload[:domain_start]}"), finish = at("#{payload[:domain_end]}");
+          const left = +clip.getAttribute("x"), width = +clip.getAttribute("width");
+          const baseline = +clip.getAttribute("y") + +clip.getAttribute("height");
+          const opened = at("#{payload[:scheduled].first[:date]}");
+          const near = opened + (at("#{payload[:scheduled].last[:date]}") - opened) * 0.05;
+          const x = left + ((near - start) / (finish - start)) * width;
+          const ticks = Array.from(svg.querySelectorAll("g[transform^='translate(48,'] g.tick"))
+            .map((tick) => [tick.__data__, tick.transform.baseVal.consolidate().matrix.f]);
+          const [[v0, y0], [v1, y1]] = [ticks[0], ticks.at(-1)];
+          const lineY = y0 + ((#{payload[:scheduled].first[:balance]} - v0) * (y1 - y0)) / (v1 - v0);
+          return svg.querySelector("path[data-share='principal']").isPointInFill(new DOMPoint(x, (baseline + lineY) / 2));
+        })()
+      JS
+      assert filled, "the principal share must be shaded from origination, at the repayment's share"
+    end
+  end
+
   private
+    # At each scheduled payment inside the plot, the top and bottom of each
+    # share's fill, found by scanning the path's own fill down the payment's x,
+    # and where the y-axis puts that payment's balance. A payment whose
+    # interest part is under a pixel tall (the last, on a short loan) is
+    # skipped: there is no fill to find.
+    def share_extents(payload)
+      points = payload[:scheduled].drop(1).map do |point|
+        { date: point[:date], balance: point[:balance], principal_share: point[:principal] / (point[:principal] + point[:interest]) }
+      end
+      page.evaluate_script(<<~JS)
+        (() => {
+          const svg = document.querySelector("[data-controller='loan-payoff-chart'] svg");
+          const at = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d).getTime(); };
+          const start = at("#{payload[:domain_start]}");
+          const finish = at("#{payload[:domain_end]}");
+          const clip = svg.querySelector("clipPath[id$='-clip-plot'] rect");
+          const left = +clip.getAttribute("x"), width = +clip.getAttribute("width");
+          const top = +clip.getAttribute("y"), height = +clip.getAttribute("height");
+          const baseline = top + height;
+          // The y-axis: each tick's value and its translate(0,y), fitted to a line.
+          const ticks = Array.from(svg.querySelectorAll("g[transform^='translate(48,'] g.tick"))
+            .map((tick) => [tick.__data__, tick.transform.baseVal.consolidate().matrix.f]);
+          const [[v0, y0], [v1, y1]] = [ticks[0], ticks.at(-1)];
+          const axisY = (value) => y0 + ((value - v0) * (y1 - y0)) / (v1 - v0);
+          const extent = (path, x) => {
+            let first = null, last = null;
+            for (let y = top - 2; y <= baseline + 2; y += 0.25) {
+              if (path.isPointInFill(new DOMPoint(x, y))) { if (first === null) first = y; last = y; }
+            }
+            return [first, last];
+          };
+          const interest = svg.querySelector("path[data-share='interest']");
+          const principal = svg.querySelector("path[data-share='principal']");
+          return #{points.to_json}.map((p) => {
+            const x = left + ((at(p.date) - start) / (finish - start)) * width;
+            const lineY = axisY(p.balance);
+            if (x <= left + 1 || x >= left + width - 1 || (baseline - lineY) * (1 - p.principal_share) < 1) return null;
+            const [interestTop, interestBottom] = extent(interest, x);
+            const [principalTop, principalBottom] = extent(principal, x);
+            return { date: p.date, principal_share: p.principal_share, axis_y: lineY, baseline,
+                     interest_top: interestTop, interest_bottom: interestBottom,
+                     principal_top: principalTop, principal_bottom: principalBottom };
+          }).filter(Boolean);
+        })()
+      JS
+    end
+
+    def fill_of(share)
+      page.evaluate_script("getComputedStyle(document.querySelector(\"svg path[data-share='#{share}']\")).fill")
+    end
+
     def assert_series_painted
       SERIES.each do |key|
         path = find("[data-controller='loan-payoff-chart'] svg path[data-series='#{key}']")

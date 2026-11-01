@@ -13,6 +13,12 @@ import {
 //   projected  where today's balance is heading on the contract's repayment.
 //              Dashed.
 //
+// Under the scheduled line, the area down to zero is split by each repayment's
+// interest and principal SHARE: principal from the bottom, interest above it up
+// to the line. Shares, not amounts: a repayment is a fraction of a percent of
+// the balance, so amounts would be a sliver along the axis. The interest part
+// is hatched as well as tinted, for the same reason the lines are dashed.
+//
 // Series are distinguished by DASH PATTERN as well as colour. Hue alone fails
 // in greyscale and under deuteranopia, and red/green would be the worst
 // possible pair to rely on. Solid-versus-dashed also keeps "recorded fact"
@@ -99,6 +105,8 @@ export default class extends Controller {
     const success = "var(--color-success)";
     const destructive = "var(--color-destructive)";
     const muted = "var(--color-tertiary)";
+    const interestShare = "var(--color-warning)";
+    const principalShare = "var(--color-info)";
 
     // Drawing order: forecasts underneath, fact on top.
     const series = [
@@ -204,10 +212,54 @@ export default class extends Controller {
       .x((d) => x(d.date))
       .y((d) => y(d.balance))
       .curve(d3.curveMonotoneX);
-    const area = d3
+    // The scheduled payments' shares, for the shading. A share is clamped to
+    // 0..1 so a payment that adds to the balance cannot draw outside the area
+    // under the line.
+    const scheduledPoints = series.some((s) => s.key === "scheduled")
+      ? (data.scheduled || []).map(toPoint)
+      : [];
+    const paymentShares = scheduledPoints
+      .filter(
+        (p) =>
+          p.principal != null &&
+          p.interest != null &&
+          p.principal + p.interest > 0,
+      )
+      .map((p) => ({
+        date: p.date,
+        balance: p.balance,
+        principalShare: Math.min(
+          1,
+          Math.max(0, p.principal / (p.principal + p.interest)),
+        ),
+      }));
+    // The opening point is the amount borrowed, not a payment, so it has no
+    // split of its own. It anchors the shading's left end with the first
+    // payment's share, so the area under the line is shaded from origination
+    // and a loan of one repayment still has an interval to shade.
+    const opening = scheduledPoints[0];
+    const shares =
+      opening && opening.principal == null && paymentShares.length > 0
+        ? [
+            {
+              date: opening.date,
+              balance: opening.balance,
+              principalShare: paymentShares[0].principalShare,
+            },
+            ...paymentShares,
+          ]
+        : paymentShares;
+    const principalTop = (d) => y(d.balance * d.principalShare);
+    const principalArea = d3
       .area()
       .x((d) => x(d.date))
-      .y0(height - margin.bottom)
+      .y0(y(0))
+      .y1(principalTop)
+      .curve(d3.curveMonotoneX);
+    const interestArea = d3
+      .area()
+      .x((d) => x(d.date))
+      .y0(principalTop)
       .y1((d) => y(d.balance))
       .curve(d3.curveMonotoneX);
 
@@ -259,6 +311,50 @@ export default class extends Controller {
       )
       .call(styleAxis);
 
+    // The shading draws under every line. The hatch lives in the same defs as
+    // the clips, so its id is as unique as theirs.
+    if (shares.length > 1) {
+      const hatch = `${id}-hatch`;
+      defs
+        .append("pattern")
+        .attr("id", hatch)
+        .attr("patternUnits", "userSpaceOnUse")
+        .attr("width", 6)
+        .attr("height", 6)
+        .attr("patternTransform", "rotate(45)")
+        .append("line")
+        .attr("x1", 0)
+        .attr("y1", 0)
+        .attr("x2", 0)
+        .attr("y2", 6)
+        .style("stroke", interestShare)
+        .style("stroke-width", 1.5)
+        .style("stroke-opacity", 0.45);
+      svg
+        .append("path")
+        .datum(shares)
+        .attr("d", principalArea)
+        .attr("clip-path", `url(#${plotClip})`)
+        .attr("data-share", "principal")
+        .style("fill", principalShare)
+        .style("fill-opacity", 0.16);
+      svg
+        .append("path")
+        .datum(shares)
+        .attr("d", interestArea)
+        .attr("clip-path", `url(#${plotClip})`)
+        .attr("data-share", "interest")
+        .style("fill", interestShare)
+        .style("fill-opacity", 0.18);
+      svg
+        .append("path")
+        .datum(shares)
+        .attr("d", interestArea)
+        .attr("clip-path", `url(#${plotClip})`)
+        .attr("data-share-hatch", "interest")
+        .style("fill", `url(#${hatch})`);
+    }
+
     const stroke = (path, s, color) =>
       path
         .style("fill", "none")
@@ -270,13 +366,6 @@ export default class extends Controller {
 
     for (const s of series) {
       if (s.key === "actual") {
-        svg
-          .append("path")
-          .datum(s.points)
-          .attr("d", area)
-          .attr("clip-path", `url(#${plotClip})`)
-          .style("fill", s.color)
-          .style("opacity", 0.08);
         // The greyed remainder sits underneath; the coloured line on top is
         // the one that carries data-series, so a test asking for the actual
         // line finds the line that is meant to be seen.

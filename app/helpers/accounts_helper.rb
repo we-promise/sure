@@ -29,7 +29,7 @@ module AccountsHelper
       turbo_permanent: true,
       controller: "turbo-frame-timeout permanent-frame",
       action: "turbo:before-fetch-request->turbo-frame-timeout#startTimeout " \
-              "turbo:frame-load->turbo-frame-timeout#clearTimeout " \
+              "turbo:before-frame-render->turbo-frame-timeout#clearTimeout " \
               "turbo:fetch-request-error->turbo-frame-timeout#handleError",
       turbo_frame_timeout_timeout_value: SPARKLINE_FRAME_TIMEOUT_MS
     }
