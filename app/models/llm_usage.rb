@@ -250,7 +250,8 @@ class LlmUsage < ApplicationRecord
     # OpenRouter writes versions with dots ("claude-opus-4.6").
     if provider == "anthropic"
       family, version = model.tr(".", "-").match(/\A(claude-[a-z]+)((?:-\d{1,2}(?!\d))*)/)&.captures
-      return family && (provider_pricing["#{family}#{version}"] || provider_pricing[family])
+      # "-4-0" aliases ("claude-opus-4-0") name the "-4" rows.
+      return family && (provider_pricing["#{family}#{version.delete_suffix("-0")}"] || provider_pricing[family])
     end
 
     # Try exact match first

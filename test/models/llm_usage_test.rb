@@ -190,6 +190,8 @@ class LlmUsageTest < ActiveSupport::TestCase
     # Older listed models keep their own rate instead of the family fallback.
     assert_equal 15.00, LlmUsage.find_pricing("anthropic", "claude-opus-4-1-20250805")[:prompt]
     assert_equal 5.00, LlmUsage.find_pricing("anthropic", "claude-opus-4-5-20251101")[:prompt]
+    assert_equal 15.00, LlmUsage.find_pricing("anthropic", "claude-opus-4-0")[:prompt]
+    assert_equal 3.00, LlmUsage.find_pricing("anthropic", "claude-sonnet-4-0")[:prompt]
   end
 
   test "unlisted GPT-6 tier releases fall back to the tier's newest rate" do
