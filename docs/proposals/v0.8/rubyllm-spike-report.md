@@ -1,14 +1,16 @@
 # RubyLLM spike report (PR 1 of the AI plumbing redesign)
 
 **Companion to:** [`rubyllm-spike-prompt.md`](rubyllm-spike-prompt.md) (the brief), [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) (the plan, §19) and [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) (the question before it was run)
-**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`dcba91241`](https://github.com/josh-sanders/sure/commit/dcba91241). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
-**Status:** a recommendation with its evidence, not a decision. The spike's second purpose was to sort the plan's choices into product decisions and technical limits; none of the product decisions, and none of the scope lines, is final. This file is the spike's note (`docs/llm-guides/ai-pipeline.md` on the branch) as of that commit; the plan's own short note in that path comes with PR 2.
+**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`509757132`](https://github.com/josh-sanders/sure/commit/509757132). Every test and recording named below is on that branch; it is never merged. The tests replay without keys (the commands are under the recommendation); `SPIKE_RECORD=1`, with the spike's own variables in `.env.local`, records them again.
+**Status:** a recommendation with its evidence, not a decision. The spike's second purpose was to sort the plan's choices into product decisions and technical limits; none of the product decisions, and none of the scope lines, is final. Calls made by @josh-sanders during development of PR #4440 are marked in the register with their dates. This file is the spike's note (`docs/llm-guides/ai-pipeline.md` on the branch) as of that commit; the plan's own short note in that path comes with PR 2.
 
-**Recommendation: adopt, pinned to `ruby_llm` 2.1.1** (released 2026-10-11, the latest at the
+**Recommendation: adopt `ruby_llm`**, tested on 2.1.1 (released 2026-10-11, the latest at the
 start of the spike). Every criterion in section 19 of the plan passes or has a small fix. None
-fails. Adopting it is a product decision, and like every other one it stays open: the evidence
-on both sides is in the decisions register below.
-Live runs: llama.cpp on venus; Ollama, LM Studio and OpenClaw in temporary containers (see
+fails. **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** adopted, on 2.1.1 from PR 2 and 2.2 from PR 5
+(not waited for), with the Gemfile at `~> 2.1` during delivery and pinned when PR 9 lands.
+Like every product decision it stays open: the evidence on both sides is in the decisions
+register below.
+Live runs: llama.cpp on the test host (20 CPU cores, no discrete GPU); Ollama, LM Studio and OpenClaw in temporary containers (see
 "Local servers in containers"); Gemini through Google's OpenAI-compatible API
 (`gemini-3.5-flash-lite`); OpenRouter's chat completions with free models (see "OpenRouter chat
 on free models"); and Jev's protocol on OpenCode Zen and OpenRouter's decisions gateway.
@@ -34,7 +36,7 @@ around it.
 
 Branch: `spike/ruby-llm` (not merged). Tests: `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb` (377 runs, 57 skips:
 the live-only timeout, Red Candle and job-runner tests, and OCR combinations not recorded), and for Jev `bin/rails test test/models/provider/jev_test.rb
-test/models/provider/jev_gem_test.rb test/models/provider/jev_gem_live_test.rb` (62 runs). Live server: llama.cpp on venus, `qwen3.6-35b-a3b-mtp` (64k context,
+test/models/provider/jev_gem_test.rb test/models/provider/jev_gem_live_test.rb` (62 runs). Live server: llama.cpp on the test host, `qwen3.6-35b-a3b-mtp` (64k context,
 `--jinja`, tool calls on) and `granite-embedding-small-english-r2` (384 dimensions). Neither model
 is in RubyLLM's registry. Cassettes are under `test/vcr_cassettes/ai/llama_cpp/`.
 
@@ -44,7 +46,7 @@ is in RubyLLM's registry. Cassettes are under `test/vcr_cassettes/ai/llama_cpp/`
 |---|---|---|
 | Models missing from RubyLLM's registry still work (`assume_model_exists`) | Pass | Every live call used unregistered models. `generate_stubbed_test` "OpenRouter strict mode, model missing from the registry" asserts `ModelNotFoundError` from the registry, then a working call. With `assume_model_exists` the lookup failure falls back to `Model.default` (`lib/ruby_llm/models.rb:198-212`) |
 | One URL normaliser handles `/v1` for every compatible server | Small fix: Sure's `Ai::Transport::Http.compatible_base` feeds `openai_api_base` (or `openrouter_api_base`). It adds `/v1` only to a bare host and keeps a URL with a path, because Gemini's compatible base is `/v1beta/openai` | `generate_llama_cpp_test` "base URLs with or without /v1…" (live, `generate_base_url_{0,1,2}`); `gemini_live_test` (live, posts to `/v1beta/openai/chat/completions`); Ollama without `/v1` in `generate_stubbed_test`; `http_test` |
-| Prompts, outputs and each tool-loop step reach Langfuse | Pass, through Sure's own `.ai` events, not RubyLLM's | `test/models/ai/live/langfuse_check.rb` against the Langfuse v4 pod: one generation for `generate.ai`, then one `converse.ai` per round (round 1: `user`; round 2: `user>assistant>tool`), with prompt, output and usage, grouped by the correlation id as the session. The pod runs in `events_only` mode, so the check reads `/api/public/v2/observations`. RubyLLM's own OpenTelemetry tracing sends no content and is the `metadata` mode; see "Tracing modes" |
+| Prompts, outputs and each tool-loop step reach Langfuse | Pass, through Sure's own `.ai` events, not RubyLLM's | `test/models/ai/live/langfuse_check.rb` against a self-hosted Langfuse v4: one generation for `generate.ai`, then one `converse.ai` per round (round 1: `user`; round 2: `user>assistant>tool`), with prompt, output and usage, grouped by the correlation id as the session. The pod runs in `events_only` mode, so the check reads `/api/public/v2/observations`. RubyLLM's own OpenTelemetry tracing sends no content and is the `metadata` mode; see "Tracing modes" |
 | Tool loops stay under `Ai::Conversation`'s bounds, not the gem's own loop | Pass | `Chat#generate` makes one completion and doesn't run tools (`lib/ruby_llm/chat.rb:196-209`); `#ask`/`#complete` are the gem's loop and aren't used. `converse_test` "llama.cpp streams a tool call…" (live, `converse_tool_round`) expects `RubyLLM::Tool#call` never to run; the last-round and turn-deadline tests cover both bounds |
 | The default retries and timeout are overridden by the endpoint's settings | Pass | `errors_test`: 429, 500, 503 and a read timeout give one request with the endpoint's `max_retries: 0`, and four with RubyLLM's defaults (`max_retries = 3`, `request_timeout = 300`, so one call can wait 1,200 s plus backoff). Live: a 2 s timeout against a slow llama.cpp request raises `Ai::Error::Timeout` with one attempt per transport |
 | LM Studio's rejection of strict schemas and the `auto` fallback still work | Pass. Live, LM Studio no longer rejects strict schemas, so the fallback is proved by stubs | `lmstudio_live_test` (live, llmster 0.0.25): strict `json_schema` with `reasoning_effort: "low"` is accepted by both transports, `json_object` is refused with a 400 (`'response_format.type' must be 'json_schema' or 'text'`) and becomes `Refused`, and `none` parses the prompted shape. `generate_stubbed_test` "LM Studio rejects strict and json_object…" still proves the chain: strict → 400 → `json_object` without effort → 400 → `none` with the schema example, parsed from a fenced block. A mostly-null answer moves on and keeps the effort |
@@ -76,53 +78,54 @@ here is final, and that includes scope: an "out of scope" line is a product deci
 The first table holds the decisions with evidence on at least one side. The second lists those
 with none yet, including the plan's own design choices, its "not in scope" lines (§20) and the
 questions RubyLLM's features raise, with what would test each.
-Where the owner has made a call, the decision says so (**Owner**, with the date); a call stays
-open to new evidence like everything else here.
+Where @josh-sanders has made a call during development of PR #4440, the decision says so, with
+the date. A call is a proposal for the maintainers to accept or overturn, and it stays open to new
+evidence like everything else here.
 
 **Product decisions**
 
 | Decision (plan section) | For | Against | Evidence |
 |---|---|---|---|
-| Adopt RubyLLM for the transports (§19). **Owner, 31 Oct:** adopted: 2.1.1 for PR 2, 2.2 when it's released without waiting for it, `~> 2.1` during delivery, pinned when PR 9 lands | One streaming parser for every protocol; an explicit proxy for every client; unknown models; Gemini signatures and `reasoning_details` kept | `generate` is 26 lines longer; fast releases; some fixes lean on private API (`usage_entries:`); five ecosystem gems still pin 1.x | Criteria; "What the owner watches on upgrade"; feature tests |
+| Adopt RubyLLM for the transports (§19). **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** adopted: 2.1.1 for PR 2, 2.2 when it's released without waiting for it, `~> 2.1` during delivery, pinned when PR 9 lands | One streaming parser for every protocol; an explicit proxy for every client; unknown models; Gemini signatures and `reasoning_details` kept | `generate` is 26 lines longer; fast releases; some fixes lean on private API (`usage_entries:`); five ecosystem gems still pin 1.x | Criteria; "What to watch on upgrade"; feature tests |
 | Sure owns the tool loop (§5.5, §8.4) | Round cap, final round without tools, turn deadline, cancel; RubyLLM's `ask` has no round cap (12 rounds until the spike's guard) | `ask` needs no loop code; `run_tools` brings approvals, parallel tools and resume for about 40 lines; a `RubyLLM::Agent` stepped by Sure keeps the bounds and worked behind the gate, interrupted and resent without running a tool twice | "RubyLLM running Sure's tools"; "RubyLLM agents behind the gate"; `features/tool_loop` |
 | Sure stores chat history, not RubyLLM (§8.4, proposal 04) | Mobile API and broadcasts unchanged; model picked per turn; no usage ledger | RubyLLM's history knows each message's producer and strips other providers' leftovers; approvals that survive restarts | "Switching providers"; RubyLLM install templates |
 | Failover only at the start of a turn (§5.5) | No half-written answer from two models | Provider state can move (Google's placeholder signature); RubyLLM falls back even after chunks have streamed and reports it | `switch/placeholder_round_llama_gemini`; `fallback.rb` |
 | Gemini through Google's OpenAI-compatible API (§4.2) | One more compatible server, one code path | Native provider continues other models' tool rounds, prices calls, and has Gemini-only features (search grounding, batches) | `switch/round_llama_gemini_native`; `features/cost` |
-| The `auto` JSON-mode chain (§7). **Owner, 1 Nov:** keep it as the default, with the fixes: it stops on 400s unrelated to JSON, and each attempt has a time budget | Servers differ on strict schemas | Retries 400s unrelated to JSON (resent a whole PDF twice); re-asks when the answer is legitimately empty; a slow model's three attempts took 26 minutes | PDF and OCR spikes |
-| Prompts as `.md` with `%{}`, no ERB (§8.3). **Owner, 1 Nov:** Sure's prompt files are ERB (RubyLLM's `render_prompt`, partials, agent instructions); family overrides stay plain text, put into the template as data and never compiled, because ERB runs Ruby and a family admin isn't trusted with the server | Family overrides are user text; ERB would run code | RubyLLM's agent instructions and 2.1 partials need ERB templates | "Prompt partials" (discussion) |
-| Jev hand-written (§7). **Owner, 31 Oct:** Jev moves to RubyLLM's `judge` in PR 2 | Any gateway URL; no dependency | 72 lines to maintain; RubyLLM's `judge` works on OpenCode Zen; `ruby_decision_model` covers it in 54 | Jev section |
+| The `auto` JSON-mode chain (§7). **Call by @josh-sanders, 1 Nov 2026, during development of PR #4440:** keep it as the default, with the fixes: it stops on 400s unrelated to JSON, and each attempt has a time budget | Servers differ on strict schemas | Retries 400s unrelated to JSON (resent a whole PDF twice); re-asks when the answer is legitimately empty; a slow model's three attempts took 26 minutes | PDF and OCR spikes |
+| Prompts as `.md` with `%{}`, no ERB (§8.3). **Call by @josh-sanders, 1 Nov 2026, during development of PR #4440:** Sure's prompt files are ERB (RubyLLM's `render_prompt`, partials, agent instructions); family overrides stay plain text, put into the template as data and never compiled, because ERB runs Ruby and a family admin isn't trusted with the server | Family overrides are user text; ERB would run code | RubyLLM's agent instructions and 2.1 partials need ERB templates | RubyLLM 2.1.1's `Prompt` (`render_prompt`, partials, `.txt.erb`); discussion |
+| Jev hand-written (§7). **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** Jev moves to RubyLLM's `judge` in PR 2 | Any gateway URL; no dependency | 72 lines to maintain; RubyLLM's `judge` works on OpenCode Zen; `ruby_decision_model` covers it in 54 | Jev section |
 | PDF import: images for vision, text otherwise, unavailable for a scan (PDF spike) | Every right extraction came from those two inputs | Anthropic and OpenAI read PDFs natively (not tested live) | `statements/`, `ocr/` |
 | Page rendering in a child process vs `ruby-vips` in process | Child keeps poppler's memory away from the worker | `ruby-vips` is simpler, already bundled; the child needs limits to be worth it | `page_images_test` |
 | Answer-free checks on extractions, `dates_anchored` ≥ 0.5 | Separated all 14 right from all 12 wrong recordings | Threshold tuned on two statements | "Checks on an extraction" |
 | OpenAI vector stores vs pgvector (§5.5) | No embedding model to run | Indexing isn't awaited; scans index empty; no score threshold; files outlive removal | `openai/vector_store_statements` |
 | Tracing: `content` vs `metadata` (§10) | `metadata` sends no financial data | It loses route, prompt key, Sure's error class | "Tracing modes" |
 | Sure is an MCP server, not a client (§20, proposal 04) | No third-party server gets family data | RubyLLM's client worked against Sure's own `/mcp` in process, negotiating down to 2025-06-18 and showing only the tools `only` allows | `ruby_llm_mcp_live_test` |
-| RubyLLM's usage ledger off (no `ruby_llm_usages`); Sure writes `llm_usages` | The ledger has no feature, route, correlation id or metadata column, and its `operation` allows only RubyLLM's 11; local models have no price; `provider` is RubyLLM's slug (`openai` for llama.cpp); Jev isn't recorded; the table is RubyLLM's private model | A row per attempt with its status, written with no Sure code; the owner follows RubyLLM's tool threads; prices for registry models; where RubyLLM's history finds a message's producer | "RubyLLM's usage ledger"; `ruby_llm_usage_ledger_test` |
+| RubyLLM's usage ledger off (no `ruby_llm_usages`); Sure writes `llm_usages` | The ledger has no feature, route, correlation id or metadata column, and its `operation` allows only RubyLLM's 11; local models have no price; `provider` is RubyLLM's slug (`openai` for llama.cpp); Jev isn't recorded; the table is RubyLLM's private model | A row per attempt with its status, written with no Sure code; RubyLLM's usage owner follows its tool threads; prices for registry models; where RubyLLM's history finds a message's producer | "RubyLLM's usage ledger"; `ruby_llm_usage_ledger_test` |
 | Usage from Sure's `.ai` events, one per call (§10; whether to also record each request is open) | Feature, route, error class and correlation id in one place, shared with Langfuse | A call of four requests (two retried 503s, the `auto` chain's 400, the success) was one event with the last request's tokens; RubyLLM's `usage.ruby_llm` event fires for every attempt and its subscriber sees Sure's context | `ruby_llm_usage_ledger_test` |
 | Auto-upload of large files off | A statement never stays in a provider's Files API | Anthropic over 24 MB then can't take the file at all | `extract_statement_stubbed_test` |
-| Chat storage redesign out of scope (§20). **Owner, 31 Oct:** spike RubyLLM 2.2's persistence when it ships (PR 5), then decide before chat | The plumbing needs one additive column; one turn per chat can be Sure's own claim (31 lines) | RubyLLM's persistence pays off if RubyLLM runs the loop; 2.2 (unreleased) adds one process per chat and per tool call, cancel from another process, and approvals safe against a double click, all on that persistence | "Switching providers"; "One turn per chat" |
-| One turn per chat, with a claim on `chats` (not in the plan yet) | Two jobs on one turn ran the write tool twice today; with the claim, once | Two columns and a renewal before every tool run, or a lapsed turn writes again; a turn waiting longer than the claim wastes its model call | "One turn per chat"; `chat_claim_test` |
+| Chat storage redesign out of scope (§20). **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** spike RubyLLM 2.2's persistence when it ships (PR 5), then decide before chat | The plumbing needs one additive column; one turn per chat can be Sure's own claim (31 lines) | RubyLLM's persistence pays off if RubyLLM runs the loop; 2.2 (unreleased) adds one process per chat and per tool call, cancel from another process, and approvals safe against a double click, all on that persistence | "Switching providers"; "One turn per chat" |
+| One turn per chat, with a claim on `chats` (§8.4) | Two jobs on one turn ran the write tool twice today; with the claim, once | Two columns and a renewal before every tool run, or a lapsed turn writes again; a turn waiting longer than the claim wastes its model call | "One turn per chat"; `chat_claim_test` |
 | A message sent while a turn runs (today: a second turn starts at once) | Each message is answered as soon as possible | Two turns read the same history and ran at the same time; with a claim the second waits and runs after (re-enqueued), or could be refused | `chat_claim_test` |
-| One ordered model list per feature, failover down the list, the only failover layer (§5.2, §5.4). **Owner, 1 Nov:** yes; the list is tried in order, skipping what's down, with no move limit | One list holds local servers, gateways and several models on one gateway; every model that may see the data is a visible entry; failover shows in marks, usage and the footer | A gateway's or RubyLLM's own fallback needs no entry per model | `failover_test` |
-| What a failure marks down: the server, the key or the model (§5.4). **Owner, 1 Nov:** the smallest thing the error proves broken: the server when no response came back, or on a timeout or 5xx from a local endpoint; the key on a 401 or 403; otherwise the model. Anything else is for an issue | Marking the model keeps a gateway usable after one upstream's 503 or 429; marking the server is right for a hung local server; by location passed every case but a whole-key 429 | The plan's rule took a gateway's other models out for 60 s; marking only the model tried a second model on a hung local server and lost the call | "Failover on a gateway"; `failover_test` |
-| No RubyLLM `with_fallbacks` inside an entry (not in the plan). **Owner, 1 Nov:** agreed | Sure saw model-a succeed while model-b answered: no mark, model-b's usage at model-a's price, nothing in the footer; an unlisted model ID can't be a fallback | One call, no extra entries; RubyLLM reports a switch after chunks streamed | "Failover on a gateway"; `failover_test` |
-| A family's own key: its calls fail over only to routes on its own keys, never the operator's key or a local server, and the family admin is told (§4.2). **Owner, 1 Nov:** yes: the family gets what it chose, with no surprises | No bill for the operator and no data on a server the family didn't pick; a broken key is seen, not hidden | A local model or the operator's key could have answered | `failover_test` "a family's own key…" |
-| Per-family cost caps (§20). **Owner, 1 Nov:** in scope for PR 9, only for a family that brings its own key: the family admin takes responsibility for that endpoint's configuration, the cap included | The family that pays sets the limit; usage per attempt already carries family and cost | Nothing caps a family on the operator's key; a cap checked before a call can overshoot by one call or batch; cost is known only for priced models | Discussion; usage-ledger spike |
+| One ordered model list per feature, failover down the list, the only failover layer (§5.2, §5.4). **Call by @josh-sanders, 1 Nov 2026, during development of PR #4440:** yes; the list is tried in order, skipping what's down, with no move limit | One list holds local servers, gateways and several models on one gateway; every model that may see the data is a visible entry; failover shows in marks, usage and the footer | A gateway's or RubyLLM's own fallback needs no entry per model | `failover_test` |
+| What a failure marks down: the server, the key or the model (§5.4). **Call by @josh-sanders, 1 Nov 2026, during development of PR #4440:** the smallest thing the error proves broken: the server when no response came back, or on a timeout or 5xx from a local endpoint; the key on a 401 or 403; otherwise the model. Anything else is for an issue | Marking the model keeps a gateway usable after one upstream's 503 or 429; marking the server is right for a hung local server; by location passed every case but a whole-key 429 | The plan's rule took a gateway's other models out for 60 s; marking only the model tried a second model on a hung local server and lost the call | "Failover on a gateway"; `failover_test` |
+| No RubyLLM `with_fallbacks` inside an entry (not in the plan). **Call by @josh-sanders, 1 Nov 2026, during development of PR #4440:** agreed | Sure saw model-a succeed while model-b answered: no mark, model-b's usage at model-a's price, nothing in the footer; an unlisted model ID can't be a fallback | One call, no extra entries; RubyLLM reports a switch after chunks streamed | "Failover on a gateway"; `failover_test` |
+| A family's own key: its calls fail over only to routes on its own keys, never the operator's key or a local server, and the family admin is told (§4.2). **Call by @josh-sanders, 1 Nov 2026, during development of PR #4440:** yes: the family gets what it chose, with no surprises | No bill for the operator and no data on a server the family didn't pick; a broken key is seen, not hidden | A local model or the operator's key could have answered | `failover_test` "a family's own key…" |
+| Per-family cost caps (§20). **Call by @josh-sanders, 1 Nov 2026, during development of PR #4440:** in scope for PR 9, only for a family that brings its own key: the family admin takes responsibility for that endpoint's configuration, the cap included | The family that pays sets the limit; usage per attempt already carries family and cost | Nothing caps a family on the operator's key; a cap checked before a call can overshoot by one call or batch; cost is known only for priced models | Discussion; usage-ledger spike |
 | Local OCR as a two-step route (OCR model, then extraction) | Read both statements completely on CPU | Needs a second model or endpoint per route; a prompt per model | `ocr/` |
 | AI jobs on Sidekiq threads, not fiber workers (§11) | 200 threads made 200 cloud calls in 3.1 s (fibers 3.0 s) on a pool of 3 connections, with the same memory; chat as fast as on fibers with a 1-thread chat capsule (48.3 s against 48.2 s); interrupting works on threads; no second job runner | Fibers need no chat capsule and no AI thread count, and waiting costs nothing; one capsule of 4 threads left chat 136 s without a thread; Solid Queue's `limits_concurrency` was the only limit shared across workers that was tested | "Job runners and chat priority" |
-| Chat's wait behind background work on a local host: about 2 s, never more than 5 s (the owner, 2026-10-31) | Chat felt broken at 45 s; interrupting meets it (0.09 s) with MTP and the full context kept | Only interrupting or a kept slot meets it; both cost background throughput or lost work | `gpu_merchants_live_test` |
+| Chat's wait behind background work on a local host: about 2 s, never more than 5 s. **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** the target | Chat felt broken at 45 s; interrupting meets it (0.09 s) with MTP and the full context kept | Only interrupting or a kept slot meets it; both cost background throughput or lost work | `gpu_merchants_live_test` |
 | Chat interrupts the running background or prompt call on its host (§11) | Chat's first word at its time alone (48.3 s against 48.7 s) on 1 slot with MTP; public RubyLLM streaming only; threads and fibers | The interrupted call's work is lost (up to one call: 72 s at 25 transactions); a call still reading its prompt stops only when output starts; background calls on local hosts must stream | `sidekiq_preempt`, `preempt` |
 | No slot kept for chat; several server slots are the operator's choice (§11) | Keeps MTP and the full context; chat finished in 69 s against 103 s with a kept slot, because it had the CPU | Four slots without MTP did 29 transactions a minute against 20 with one; a kept slot needs no interrupt code | `gpu_merchants_live_test` |
 | Chat goes next, without interrupting (the plan before this) | No new mechanism | 45 s behind a 25-transaction call (up to 72 s), 8 s behind a 5-transaction one (up to 15 s) | `call_length`, `drain` |
 | The gate inside RubyLLM's instrumenter, per request, sized from the server (§11) | Every request passes it, streamed or not and with retries, embeddings and nested calls included, with no change where calls are made; no nested-call rule; llama-server's own queue stays empty | Holds per request, so a chat's tool rounds let background calls in between (the next round interrupts them); Jev's transport has to take it itself | `SlotInstrumenter`, `gpu_contention_live_test`, `drain` |
 | One worker per local host (§11) | The in-process gate is then the only one | Two workers, each with its own gate, let 6 calls through to a 4-slot server and chat waited 200 s; a shared limit (Solid Queue's held, Redis untested) would allow more workers | `two_workers_slot_each`, `two_workers_limits_concurrency` |
 | Fiber isolation for the whole app (needed by fiber workers) | Sure's full suite passed with it (13,944 runs; one timing failure that passes alone) | Every request and job changes; a fiber worker without it shares `Current` between jobs | `fiber_compat_live_test` |
-| Each PR replaces code outright, with no bridge code (§19). **Owner, 31 Oct:** a principle, not a ban: avoid duplicated work, wrappers and temporary code, but allow them where the whole order is clearly better | One question per review ("is this replacement right?"), and no temporary state to reason about | It fixed chat before the gate and config in the database: the gate needs chat's requests to pass through RubyLLM, and config in the database leaves nothing on old code, so neither could land before chat without a bridge | §19's dependencies (read, not tested) |
-| Build chat on RubyLLM 2.1.1 now, or wait for 2.2 (§19). **Owner, 31 Oct:** chat goes onto 2.2, so it's PR 6, after the 2.2 upgrade | Waiting builds chat once, on whichever chat storage the evidence picks; Jev can join the gate and usage through RubyLLM first | 2.2 has no release date; the gate (chat's wait, U1) and config in the database wait with chat; Sure's own claim already gives one turn per chat on 2.1.1 | rubyllm.com/next; "One turn per chat" |
-| Jev's endpoint takes any full URL (`JEV_ENDPOINT`, §4.5). **Owner, 31 Oct:** no custom paths; OpenRouter's Jev stops working from PR 2 until 2.2 (PR 5); an issue can bring a path back | Any gateway at any path works | Keeps Jev's 72 hand-written wire lines and its own gate and usage code; RubyLLM's `judge` reaches fixed paths only: TypeSafe-style servers on 2.1.1 (live, OpenCode Zen), OpenRouter from 2.2 (#1264, read, not run) | "Jev"; `judge_jev_live_test` |
-| Fix live chat bugs on `main` now, outside the redesign. **Owner, 31 Oct:** neither; both wait for chat (PR 6) | OpenClaw ignores Sure's agent headers, so a family's chats share one agent session, and two turns can run on one chat: both affect users today | The fixes touch code PR 3 replaces | "The external assistant"; `chat_claim_test` |
-| The gate before chat, with today's chat taking it (§19, PR 4). **Owner, 31 Oct:** yes | Chat's wait behind background work (56–104 s on one instance) is fixed before chat moves to 2.2 | A few temporary lines in `Assistant::Responder`, deleted by PR 6; today's chat requests can't be interrupted (they never need to be) | "Job runners and chat priority"; §19 |
-| Configuration in the database after chat (§19, PR 7). **Owner, 31 Oct:** yes | No wrapper for today's chat to read the new tables | The new settings pages wait for chat, and so for 2.2 | §19 |
+| Each PR replaces code outright, with no bridge code (§19). **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** a principle, not a ban: avoid duplicated work, wrappers and temporary code, but allow them where the whole order is clearly better | One question per review ("is this replacement right?"), and no temporary state to reason about | It fixed chat before the gate and config in the database: the gate needs chat's requests to pass through RubyLLM, and config in the database leaves nothing on old code, so neither could land before chat without a bridge | §19's dependencies (read, not tested) |
+| Build chat on RubyLLM 2.1.1 now, or wait for 2.2 (§19). **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** chat goes onto 2.2, so it's PR 6, after the 2.2 upgrade | Waiting builds chat once, on whichever chat storage the evidence picks; Jev can join the gate and usage through RubyLLM first | 2.2 has no release date; the gate (chat's wait, U1) and config in the database wait with chat; Sure's own claim already gives one turn per chat on 2.1.1 | rubyllm.com/next; "One turn per chat" |
+| Jev's endpoint takes any full URL (`JEV_ENDPOINT`, §4.5). **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** no custom paths; OpenRouter's Jev stops working from PR 2 until 2.2 (PR 5); an issue can bring a path back | Any gateway at any path works | Keeps Jev's 72 hand-written wire lines and its own gate and usage code; RubyLLM's `judge` reaches fixed paths only: TypeSafe-style servers on 2.1.1 (live, OpenCode Zen), OpenRouter from 2.2 (#1264, read, not run) | "Jev"; `judge_jev_live_test` |
+| Fix live chat bugs on `main` now, outside the redesign. **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** neither; both wait for chat (PR 6) | OpenClaw ignores Sure's agent headers, so a family's chats share one agent session, and two turns can run on one chat: both affect users today | The fixes touch code PR 3 replaces | "The external assistant"; `chat_claim_test` |
+| The gate before chat, with today's chat taking it (§19, PR 4). **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** yes | Chat's wait behind background work (56–104 s on one instance) is fixed before chat moves to 2.2 | A few temporary lines in `Assistant::Responder`, deleted by PR 6; today's chat requests can't be interrupted (they never need to be) | "Job runners and chat priority"; §19 |
+| Configuration in the database after chat (§19, PR 7). **Call by @josh-sanders, 31 Oct 2026, during development of PR #4440:** yes | No wrapper for today's chat to read the new tables | The new settings pages wait for chat, and so for 2.2 | §19 |
 
 **Product decisions with no evidence yet**
 
@@ -131,7 +134,7 @@ open to new evidence like everything else here.
 | Two-level consent: the family per feature, then the member (§6) | Admins and members trying the AI features page; whether `:no_family_consent` blocks anything people expect to work |
 | Config source all or nothing: the UI, `AI_CONFIG` or the old ENV, no per-field locks (§4.1) | Operators of compose, Helm and quadlet installs upgrading with each source |
 | One YAML file, `AI_CONFIG`, loaded into the tables at boot (§4.4) | A home-lab and a multi-tenant config written from scratch and exported again |
-| The old AI ENV kept for a deprecation period, read as a generated config file (§4.5). **Owner, 1 Nov:** yes: warned at every boot, removed in a later release | Every documented ENV setup booting on the new code, compared with today's resolution |
+| The old AI ENV kept for a deprecation period, read as a generated config file (§4.5). **Call by @josh-sanders, 1 Nov 2026, during development of PR #4440:** yes: warned at every boot, removed in a later release | Every documented ENV setup booting on the new code, compared with today's resolution |
 | Cloud endpoints must use https; local ones may use http (§4.2) | Installs whose cloud gateway sits behind plain http on a private network |
 | Three protocols: `compatible`, `anthropic`, `jev` (§4.2); a native Bedrock or Vertex AI endpoint (region, IAM or a service account) has none | Bedrock through RubyLLM's native provider and through an OpenAI-compatible proxy, against `AiEndpoint`'s columns |
 | Shadow runs for any feature, as their own job (§8.2) | A shadow run of `detect_merchants`, with the comparison page |
@@ -319,9 +322,9 @@ live against OpenClaw 2026.10.8, whose default agent ran on the llama.cpp server
 
 ## Local servers in containers
 
-venus has no discrete GPU, so Ollama and LM Studio ran on CPU (20 cores) with
+The test host has no discrete GPU, so Ollama and LM Studio ran on its CPU (20 cores) with
 `Qwen3-30B-A3B-Instruct-2507-Q4_K_M` from local GGUF files: about 7 seconds for a bill setup and
-30–45 seconds for a two-round tool turn. Each ran alone, as a rootless podman container with host
+30–45 seconds for a two-round tool turn. Each ran alone, as a rootless container with host
 networking and the server bound to 127.0.0.1, and was removed afterwards.
 
 - **Ollama 0.40.12** (`docker.io/ollama/ollama`): the GGUFs imported with `ollama create`, which
@@ -412,7 +415,7 @@ through RubyLLM's `:openrouter` provider, with Sure's app headers.
 ## Turning reasoning off, server by server
 
 `reasoning_switches_live_test` sends each setting in strict mode with both transports, so a
-refusal would surface. The venus llama.cpp server runs with thinking off, so its rows force it
+refusal would surface. The test host's llama.cpp server runs with thinking off, so its rows force it
 on with `chat_template_kwargs: {enable_thinking: true}` first. Ollama 0.40.13 ran in a temporary
 container with Qwen3.6-35B-A3B and gpt-oss-20b from local GGUFs. Completion tokens per bill
 setup, one run per transport; the OpenRouter rows from "OpenRouter chat on free models" count
@@ -672,7 +675,7 @@ So Sure can keep the loop and its bounds while RubyLLM runs the tools. The spike
   llama.cpp caches most of it between rounds, so time suffers less than context does. RubyLLM's
   tool search (`defer:`) only works natively on Anthropic and OpenAI's Responses API; every other
   server gets the whole list. RubyLLM's `input_tokens` left the cached part out here and reported
-  512, the usage-count difference listed under "What the owner watches on upgrade".
+  512, the usage-count difference listed under "What to watch on upgrade".
 - **Verdict:** it isn't a line saving; it's a feature trade. If Sure wants approvals or parallel
   tools, RubyLLM's `run_tools` brings them working, on its public API, for about 40 more lines
   than Sure's own loop. Without those features, Sure's loop is shorter and doesn't depend on
@@ -685,7 +688,7 @@ A chat changes provider when a family changes its chat model, when routing diffe
 on a failover. Sure stores the history and rebuilds RubyLLM messages from it each turn, carrying
 each message's `provider_state`: Gemini's thought signatures, reasoning text and
 `reasoning_details`. `provider_switch_live_test` (cassettes under `switch/`) ran Gemini
-(`gemini-3.5-flash-lite`, effort low) against gpt-oss-20b on the venus llama.cpp, which always
+(`gemini-3.5-flash-lite`, effort low) against gpt-oss-20b on the test host's llama.cpp, which always
 reasons, in both directions. The test covered two cases:
 - **Across turns:** turn 1 runs a tool round on provider A, then turn 2 runs on B with A's stored
   history.
@@ -943,7 +946,7 @@ engine behind `pdftoppm`. The spike's `Pdf::PageImages` (21 code lines) renders 
 process:
 
 - **Same output.** Sure's base image (`ruby:3.4.9-slim`, Debian 13, libvips 8.16.1) and the
-  toolbox (libvips 8.18.5) give the same page sizes as `pdftoppm` at 150 dpi, give or take a
+  test host (libvips 8.18.5) give the same page sizes as `pdftoppm` at 150 dpi, give or take a
   pixel: 1275×1650 for US Letter. Gemini read the `vips` renders exactly as it read
   `pdftoppm`'s, with the same results and input tokens.
 - **What it gains:** no subprocess, temp files or `system` return codes; errors are
@@ -973,7 +976,7 @@ path is Sure's call today, plus `-l` for a page limit. At 150 dpi `pdftoppm` giv
 
 ### OCR on llama.cpp: Unlimited-OCR-2 and WeVisOne-VL-4B
 
-`ocr_live_test`, cassettes under `ocr/`. Three vision models ran, each loaded in turn on the venus
+`ocr_live_test`, cassettes under `ocr/`. Three vision models ran, each loaded in turn on the test host's
 llama.cpp (CPU only), on both statements, with pages from both renderers at 150 dpi. Requests ran
 one at a time. Each run had two steps, recorded apart, because the server holds one model at a
 time:
@@ -1089,8 +1092,8 @@ someone could flip on.
   the model, usage and session, and checks that no span name, attribute, event or status contains
   the charges, categories, instructions, question, tool result or answer. A 500 whose body echoes
   a charge leaves only `error.type = RubyLLM::ServerError`.
-- `test/models/ai/live/langfuse_otel_check.rb` runs the `metadata` mode live against the Langfuse
-  pod. Langfuse groups the three generations under the job's session, with model, usage
+- `test/models/ai/live/langfuse_otel_check.rb` runs the `metadata` mode live against a self-hosted
+  Langfuse. Langfuse groups the three generations under the job's session, with model, usage
   (including cached tokens) and latency, and empty input and output.
 
 **What `metadata` loses:** the route and prompt key, Sure's `Ai::Error` class (it gets RubyLLM's),
@@ -1149,7 +1152,7 @@ Sure's whole suite with `SPIKE_ISOLATION=fiber` (fiber isolation app-wide): 13,9
 failure, `page_images_test`'s hang-kill timing check, which passed alone under both isolation
 levels.
 
-**One machine, chat first** (`gpu_priority_live_test`): llama.cpp on venus, qwen3.6 with
+**One machine, chat first** (`gpu_priority_live_test`): llama.cpp on the test host, qwen3.6 with
 reasoning off. Twelve bill setups (about 9 s each) are queued, then, 3 s later, one streamed
 chat; times are from the chat's enqueue.
 
@@ -1193,7 +1196,7 @@ other. Sixty embedding jobs (64 texts each, the prompt lane) are queued, then a 
   (`SlotInstrumenter.with_lane`), and forwards every event to the instrumenter it replaced. In
   the run the slot granted 61 requests, one at a time; chat waited at most 0.17 s, the end of one
   embedding request, and embeddings up to 17.8 s.
-- **On venus the embeddings barely slowed chat** (2.53 s against 2.22 s alone), with or without
+- **On the test host the embeddings barely slowed chat** (2.53 s against 2.22 s alone), with or without
   the slot. The embedding model is small, and the host already ranks chat above embeddings with
   `Nice=` on the shared cores. A larger embedding model, or no `Nice=` ladder, could change that;
   not tested.
@@ -1328,7 +1331,7 @@ RubyLLM:
 **For the plan** (§11 is rewritten on this): fiber workers don't replace the lanes. They replace
 the AI thread count, and for cloud work Sidekiq threads did as well at this scale, so AI jobs stay
 on Sidekiq with a one-thread chat capsule. What decides chat's wait on one machine is the per-host
-gate and what it does when the host is taken. Against the owner's target (about 2 s, never more
+gate and what it does when the host is taken. Against the target @josh-sanders set (about 2 s, never more
 than 5 s), only interrupting the running call meets it while keeping MTP and the full context:
 the gate sits in RubyLLM's instrumenter, sized from the server, and background and prompt calls
 on a local host stream so it can stop them. Lane order alone leaves chat behind one whole call; a
@@ -1337,7 +1340,7 @@ capsules on one of them, or a limit they share.
 
 ## RubyLLM agents behind the gate, outside the criteria
 
-`agent_gate_live_test`, llama.cpp on venus (`--parallel 1`, MTP), one run each. The agents are
+`agent_gate_live_test`, llama.cpp on the test host (`--parallel 1`, MTP), one run each. The agents are
 `RubyLLM::Agent` subclasses built on Sure's RubyLLM context for the endpoint (the agent's
 `context`), so their requests pass the instrumenter and the host's gate (`LaneSlot`, one place,
 interrupting on). Sure drives each one with `Agent#step` in a bounded loop instead of `ask`.
@@ -1413,7 +1416,7 @@ usage were compared: (A) the ledger as the record, (B) a Sure subscriber writing
   chain's resends.
 - **B's subscriber runs in the caller.** It saw Sure's correlation id (`Ai::Correlation`, a
   thread-local), so Sure's own context can fill the fields RubyLLM doesn't have.
-- **The owner follows RubyLLM's tool threads.** It lives in fiber storage, which threads
+- **RubyLLM's usage owner follows its tool threads.** It lives in fiber storage, which threads
   inherit. Two tools run with `concurrency: :threads` saw the family as owner, and a lane kept in
   fiber storage (`Fiber[:spike_lane]`) arrived as `:interactive`, while the same lane in
   `ActiveSupport::IsolatedExecutionState` arrived empty. Keeping the gate's lane in fiber storage
@@ -1493,7 +1496,8 @@ llama/qwen3-3b` or `llama/qwen3-3b, llama/gpt-oss-20b, gateway/model-a`:
 - **`:location`**: mark the smallest thing the error proves broken. The server when no response
   came back, or on a timeout or 5xx from a local endpoint (§4.2's `location`: one process fails as
   a whole); the key on a 401; otherwise the model. The next route is the next one not down. The
-  owner's call (1 Nov), with no move limit.
+  call by @josh-sanders (1 Nov 2026, during development of PR #4440), with no
+  move limit.
 
 | Case | `:plan` | `:response` | `:location` |
 |---|---|---|---|
@@ -1538,7 +1542,7 @@ What it shows:
   both 429 on the whole key, llama refusing connections, a second gateway) reached the second
   gateway after three marks: two models, one server. The next call skipped all three without a
   request.
-- **A family's own key, after the owner's call:** one model's 503 moved to the family's other
+- **A family's own key, after the call by @josh-sanders:** one model's 503 moved to the family's other
   model on its key; its key's 401 stood as the error, with neither the local server nor the
   operator's key on another gateway tried (one request in all).
 - **Not tested:** live gateways (OpenRouter, Vercel AI Gateway, Bedrock), a gateway's own fallback
@@ -1577,7 +1581,7 @@ measurement.
   would create a new cache key every call in RubyLLM's 64-entry connection cache.
 - Send the final round with the tools still declared and `tool_choice: :none`.
 
-## What the owner watches on upgrade
+## What to watch on upgrade
 
 - **Pin exactly** (`gem "ruby_llm", "2.1.1"`). Releases are fast: 2.0.0 on 2026-09-18, 2.1.0 on
   10-08 and 2.1.1 on 10-11. About 47 issues were closed in the 17 days after 2.1.1. One
