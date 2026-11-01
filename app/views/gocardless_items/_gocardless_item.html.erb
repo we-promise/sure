@@ -39,13 +39,26 @@
                 <%= t(".status_never") %>
               <% end %>
             </p>
+            <% if gocardless_item.consent_expiring_soon? %>
+              <p class="text-xs text-warning"><%= t(".consent_expiring", date: l(gocardless_item.consent_expires_at.to_date, format: :long)) %></p>
+            <% end %>
           <% end %>
         </div>
       </div>
 
       <% if Current.user&.admin? %>
       <div class="flex items-center gap-2">
-        <% if gocardless_item.requires_update? %>
+        <% if gocardless_item.needs_reconnect? && gocardless_item.institution_id.present? %>
+          <%= render DS::Button.new(
+            text: t(".reconnect"),
+            icon: "refresh-cw",
+            variant: :outline,
+            size: :sm,
+            href: reauthorize_gocardless_item_path(gocardless_item),
+            method: :post,
+            data: { turbo: false }
+          ) %>
+        <% elsif gocardless_item.requires_update? %>
           <%= render DS::Link.new(
             text: t(".update_credentials"),
             icon: "refresh-cw",

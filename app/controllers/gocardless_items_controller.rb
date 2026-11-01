@@ -5,13 +5,21 @@ class GocardlessItemsController < ApplicationController
 
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
-  before_action :set_gocardless_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
+  before_action :set_gocardless_item, only: [ :show, :edit, :update, :destroy, :sync, :reauthorize, :setup_accounts, :complete_account_setup ]
 
-  # GoCardless sends the user's browser back here after they consent at their bank. It
-  # carries no session, so the item is recovered from the `ref` we set when creating the
-  # requisition. `ref` is the item's own uuid, and the lookup is scoped to the current
-  # family, so a guessed or replayed value cannot reach another family's item.
+  REAUTH_SESSION_KEY = :gocardless_pending_reauths
+  MAX_PENDING_REAUTHS = 5
+
+  # GoCardless sends the user's browser back here after they consent at their bank, with
+  # the `ref` we set on the requisition. A reconnect uses a random ref held in this
+  # session; a first connection uses the item's own uuid. Both lookups are scoped to the
+  # current family, so a guessed or replayed value cannot reach another family's item.
   def callback
+    if (pending = consume_pending_reauth(params[:ref]))
+      complete_reauthorization(pending)
+      return
+    end
+
     item = Current.family.gocardless_items.find_by(id: params[:ref])
 
     if item.nil?
@@ -69,26 +77,7 @@ class GocardlessItemsController < ApplicationController
       return
     end
 
-    institution = provider.get_institution(institution_id: institution_id)
-
-    # Ask for as much history and as long an access window as this institution allows,
-    # rather than the API defaults. UK banks commonly offer 730 days of history but
-    # default to far less, and re-consenting is user-visible friction worth avoiding.
-    agreement = provider.create_agreement(
-      institution_id: institution_id,
-      max_historical_days: institution[:transaction_total_days].presence&.to_i ||
-                           Provider::Gocardless::DEFAULT_MAX_HISTORICAL_DAYS,
-      access_valid_for_days: institution[:max_access_valid_for_days].presence&.to_i ||
-                             Provider::Gocardless::DEFAULT_ACCESS_VALID_FOR_DAYS
-    )
-
-    requisition = provider.create_requisition(
-      institution_id: institution_id,
-      redirect: callback_gocardless_items_url,
-      reference: @gocardless_item.id,
-      agreement: agreement[:id],
-      user_language: "EN"
-    )
+    institution, agreement, requisition = create_consent(provider, institution_id, reference: @gocardless_item.id)
 
     @gocardless_item.update!(
       institution_id: institution_id,
@@ -96,7 +85,8 @@ class GocardlessItemsController < ApplicationController
       institution_url: institution[:logo],
       agreement_id: agreement[:id],
       requisition_id: requisition[:id],
-      requisition_status: requisition[:status]
+      requisition_status: requisition[:status],
+      consent_expires_at: consent_expiry_for(agreement)
     )
 
     safe_redirect_to_gocardless(
@@ -107,6 +97,31 @@ class GocardlessItemsController < ApplicationController
   rescue Provider::Gocardless::GocardlessError => e
     Rails.logger.error "GocardlessItemsController#connect - #{e.message}"
     redirect_to new_gocardless_item_path, alert: e.message, status: :see_other
+  end
+
+  # Renews consent for an existing connection. PSD2 consent lapses after the agreed
+  # access window (often 90 days), so this creates a fresh agreement and requisition
+  # for the same bank and swaps them in on callback, keeping the item and its accounts.
+  def reauthorize
+    provider = Provider::GocardlessAdapter.build_provider(family: Current.family)
+
+    if provider.nil? || @gocardless_item.institution_id.blank?
+      redirect_to settings_providers_path, alert: t(".not_configured"), status: :see_other
+      return
+    end
+
+    reference = SecureRandom.urlsafe_base64(32)
+    _institution, agreement, requisition = create_consent(provider, @gocardless_item.institution_id, reference: reference)
+    remember_pending_reauth(reference, @gocardless_item, agreement, requisition)
+
+    safe_redirect_to_gocardless(
+      requisition[:link],
+      fallback_path: accounts_path,
+      fallback_alert: t("gocardless_items.connect.invalid_redirect", default: "The bank connection returned an unexpected address, so it was not followed.")
+    )
+  rescue Provider::Gocardless::GocardlessError => e
+    Rails.logger.error "GocardlessItemsController#reauthorize - #{e.message}"
+    redirect_to accounts_path, alert: e.message, status: :see_other
   end
 
   def index
@@ -204,6 +219,7 @@ class GocardlessItemsController < ApplicationController
   end
 
   def destroy
+    revoke_requisition(@gocardless_item.requisition_id)
     @gocardless_item.destroy_later
     redirect_to settings_providers_path, notice: t(".success", default: "Scheduled Gocardless connection for deletion.")
   end
@@ -390,6 +406,110 @@ class GocardlessItemsController < ApplicationController
     # Configuring credentials in settings creates an item that has no requisition yet, so
     # the first connection reuses it instead of stranding it. Later connections get a
     # fresh item carrying a copy of the same account-level credentials.
+    # Asks for as much history and as long an access window as the institution allows,
+    # rather than the API defaults. UK banks commonly offer 730 days of history but
+    # default to far less, and re-consenting is user-visible friction worth avoiding.
+    def create_consent(provider, institution_id, reference:)
+      institution = provider.get_institution(institution_id: institution_id)
+
+      agreement = provider.create_agreement(
+        institution_id: institution_id,
+        max_historical_days: institution[:transaction_total_days].presence&.to_i ||
+                             Provider::Gocardless::DEFAULT_MAX_HISTORICAL_DAYS,
+        access_valid_for_days: institution[:max_access_valid_for_days].presence&.to_i ||
+                               Provider::Gocardless::DEFAULT_ACCESS_VALID_FOR_DAYS
+      )
+
+      requisition = provider.create_requisition(
+        institution_id: institution_id,
+        redirect: callback_gocardless_items_url,
+        reference: reference,
+        agreement: agreement[:id],
+        user_language: "EN"
+      )
+
+      [ institution, agreement, requisition ]
+    end
+
+    def consent_expiry_for(agreement)
+      days = agreement[:access_valid_for_days].presence || Provider::Gocardless::DEFAULT_ACCESS_VALID_FOR_DAYS
+      days.to_i.days.from_now
+    end
+
+    def complete_reauthorization(pending)
+      item = Current.family.gocardless_items.find_by(id: pending["item_id"])
+      if item.nil?
+        redirect_to accounts_path, alert: t("gocardless_items.callback.unknown_connection", default: "That bank connection could not be found."), status: :see_other
+        return
+      end
+
+      provider = Provider::GocardlessAdapter.build_provider(family: Current.family)
+      requisition = provider.get_requisition(requisition_id: pending["requisition_id"])
+
+      unless requisition[:status].to_s == "LN"
+        revoke_requisition(pending["requisition_id"])
+        redirect_to accounts_path,
+                    alert: t("gocardless_items.callback.not_linked", default: "The bank did not complete the connection (status #{requisition[:status]}). Please try connecting again."),
+                    status: :see_other
+        return
+      end
+
+      previous_requisition_id = item.requisition_id
+      item.update!(
+        requisition_id: pending["requisition_id"],
+        agreement_id: pending["agreement_id"],
+        requisition_status: requisition[:status],
+        consent_expires_at: Time.zone.parse(pending["consent_expires_at"].to_s),
+        status: :good
+      )
+      revoke_requisition(previous_requisition_id) unless previous_requisition_id == item.requisition_id
+      item.sync_later
+
+      redirect_to accounts_path, notice: t("gocardless_items.reauthorize.success", institution: item.institution_display_name), status: :see_other
+    end
+
+    # Pending reconnects map an unguessable requisition reference to the item being
+    # renewed, held in the session so the callback only completes in the browser that
+    # started it. Bounded so abandoned flows cannot grow the session cookie.
+    def remember_pending_reauth(reference, item, agreement, requisition)
+      pending = pending_reauths.merge(
+        reference => {
+          "item_id" => item.id,
+          "agreement_id" => agreement[:id],
+          "requisition_id" => requisition[:id],
+          "consent_expires_at" => consent_expiry_for(agreement).iso8601
+        }
+      )
+      session[REAUTH_SESSION_KEY] = pending.to_a.last(MAX_PENDING_REAUTHS).to_h
+    end
+
+    def consume_pending_reauth(reference)
+      return if reference.blank?
+
+      pending = pending_reauths
+      matched = pending.keys.find { |candidate| ActiveSupport::SecurityUtils.secure_compare(candidate, reference.to_s) }
+      return unless matched
+
+      entry = pending.delete(matched)
+      session[REAUTH_SESSION_KEY] = pending
+      entry
+    end
+
+    def pending_reauths
+      pending = session[REAUTH_SESSION_KEY]
+      pending.is_a?(Hash) ? pending.to_h : {}
+    end
+
+    # Best effort: a requisition left behind only holds a consent the user can also
+    # revoke at their bank, so a failure here must not block deleting or reconnecting.
+    def revoke_requisition(requisition_id)
+      return if requisition_id.blank?
+
+      Provider::GocardlessAdapter.build_provider(family: Current.family)&.delete_requisition(requisition_id: requisition_id)
+    rescue Provider::Gocardless::GocardlessError => e
+      Rails.logger.warn "GocardlessItemsController - could not revoke requisition #{requisition_id}: #{e.message}"
+    end
+
     def connection_item_for_new_bank
       credentials_source = Current.family.gocardless_items.where.not(secret_id: nil).first
       return nil if credentials_source.nil?

@@ -20,6 +20,7 @@ Rails.application.routes.draw do
 
     member do
       post :sync
+      post :reauthorize
       get :setup_accounts
       post :complete_account_setup
     end

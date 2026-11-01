@@ -160,4 +160,13 @@ class GocardlessItem < ApplicationRecord
   def credentials_configured?
     secret_id.present? && secret_key.present?
   end
+
+  def consent_expiring_soon?(within: 14.days)
+    consent_expires_at.present? && consent_expires_at <= within.from_now
+  end
+
+  # Expired (EX) or rejected requisitions never recover; only a new consent will.
+  def needs_reconnect?
+    requires_update? || consent_expiring_soon? || requisition_status.to_s.in?(%w[EX RJ])
+  end
 end

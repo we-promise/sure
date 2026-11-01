@@ -92,4 +92,74 @@ class GocardlessItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "details#gocardless-connection", count: 0
     assert_select "a[href=?]", connect_form_settings_providers_path(provider_key: "gocardless")
   end
+
+  test "reconnect renews consent and swaps the requisition on callback" do
+    @item.update!(institution_id: "TEST_BANK", institution_name: "Test bank", status: :requires_update)
+    stub_new_consent
+    reference = nil
+    Provider::Gocardless.any_instance.expects(:create_requisition).with { |args| reference = args[:reference] }
+                        .returns(id: "requisition-2", status: "CR", link: "https://bankaccountdata.gocardless.com/psd2/start/x")
+
+    post reauthorize_gocardless_item_url(@item)
+    assert_redirected_to "https://bankaccountdata.gocardless.com/psd2/start/x"
+    assert_not_equal @item.id, reference
+
+    Provider::Gocardless.any_instance.stubs(:get_requisition).with(requisition_id: "requisition-2").returns(status: "LN", accounts: [ "account-1" ])
+    Provider::Gocardless.any_instance.expects(:delete_requisition).with(requisition_id: "requisition-1")
+    GocardlessItem.any_instance.expects(:sync_later).once
+
+    get callback_gocardless_items_url(ref: reference)
+
+    @item.reload
+    assert_redirected_to accounts_path
+    assert_equal "requisition-2", @item.requisition_id
+    assert @item.good?
+    assert_in_delta 730.days.from_now, @item.consent_expires_at, 1.minute
+  end
+
+  test "an abandoned reconnect keeps the current requisition" do
+    @item.update!(institution_id: "TEST_BANK")
+    stub_new_consent
+    reference = nil
+    Provider::Gocardless.any_instance.stubs(:create_requisition).with { |args| reference = args[:reference] }
+                        .returns(id: "requisition-2", status: "CR", link: "https://bankaccountdata.gocardless.com/psd2/start/x")
+    post reauthorize_gocardless_item_url(@item)
+
+    Provider::Gocardless.any_instance.stubs(:get_requisition).with(requisition_id: "requisition-2").returns(status: "RJ", accounts: [])
+    Provider::Gocardless.any_instance.expects(:delete_requisition).with(requisition_id: "requisition-2")
+    get callback_gocardless_items_url(ref: reference)
+
+    assert_equal "requisition-1", @item.reload.requisition_id
+  end
+
+  test "a reconnect reference only completes in the session that started it" do
+    @item.update!(institution_id: "TEST_BANK")
+    stub_new_consent
+    reference = nil
+    Provider::Gocardless.any_instance.stubs(:create_requisition).with { |args| reference = args[:reference] }
+                        .returns(id: "requisition-2", status: "CR", link: "https://bankaccountdata.gocardless.com/psd2/start/x")
+    post reauthorize_gocardless_item_url(@item)
+
+    reset!
+    sign_in users(:family_admin)
+    Provider::Gocardless.any_instance.expects(:get_requisition).never
+
+    get callback_gocardless_items_url(ref: reference)
+
+    assert_redirected_to accounts_path
+    assert_equal "requisition-1", @item.reload.requisition_id
+  end
+
+  test "deleting a connection revokes its requisition" do
+    Provider::Gocardless.any_instance.expects(:delete_requisition).with(requisition_id: "requisition-1")
+    delete gocardless_item_url(@item)
+    assert @item.reload.scheduled_for_deletion?
+  end
+
+  private
+
+    def stub_new_consent
+      Provider::Gocardless.any_instance.stubs(:get_institution).returns(id: "TEST_BANK", name: "Test bank", transaction_total_days: "730", max_access_valid_for_days: "730")
+      Provider::Gocardless.any_instance.stubs(:create_agreement).returns(id: "agreement-2", access_valid_for_days: 730)
+    end
 end

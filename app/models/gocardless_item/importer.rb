@@ -70,6 +70,11 @@ class GocardlessItem::Importer
 
       gocardless_item.update(requisition_status: requisition[:status])
 
+      if requisition[:status].to_s == "EX"
+        gocardless_item.update!(status: :requires_update)
+        raise Provider::Gocardless::AuthenticationError.new("GoCardless consent has expired; reconnect the bank", :consent_expired)
+      end
+
       account_ids = Array(requisition[:accounts]).map(&:to_s).reject(&:blank?)
 
       if account_ids.empty?
@@ -80,6 +85,7 @@ class GocardlessItem::Importer
       end
 
       stats["total_accounts"] = account_ids.size
+      @requisition_account_ids = account_ids
       upstream_account_ids = []
 
       account_ids.each do |account_id|
@@ -135,6 +141,10 @@ class GocardlessItem::Importer
       gocardless_account = gocardless_item.gocardless_accounts.find_or_initialize_by(
         gocardless_account_id: account_id
       )
+      if gocardless_account.new_record? && (reissued = reissued_account_for(account_data))
+        reissued.gocardless_account_id = account_id
+        gocardless_account = reissued
+      end
 
       gocardless_account.upsert_from_gocardless!(account_data)
 
@@ -222,6 +232,19 @@ class GocardlessItem::Importer
           t.dig(:transactionAmount, :amount),
           t[:remittanceInformationUnstructured]
         ].join("|")
+    end
+
+    # A new consent can reissue account ids for the same bank account. Matching on IBAN
+    # moves the existing record (and its linked account and history) onto the new id,
+    # instead of creating a duplicate and pruning the original.
+    def reissued_account_for(account_data)
+      iban = account_data[:iban].presence || account_data.dig(:details, :iban).presence
+      return if iban.blank?
+
+      gocardless_item.gocardless_accounts
+        .where.not(gocardless_account_id: @requisition_account_ids)
+        .where("raw_payload->>'iban' = :iban OR raw_payload->'details'->>'iban' = :iban", iban: iban.to_s)
+        .first
     end
 
     def prune_removed_accounts(upstream_account_ids)

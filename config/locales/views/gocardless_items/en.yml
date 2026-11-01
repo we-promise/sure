@@ -87,6 +87,9 @@ en:
       success: "GoCardless connection removed"
     index:
       title: "GoCardless Connections"
+    reauthorize:
+      not_configured: "Add your GoCardless credentials first."
+      success: "Reconnected to %{institution}. Your accounts are being synced."
 
     # Loading states
     loading:
@@ -123,6 +126,8 @@ en:
       no_accounts_description: "This connection has no linked accounts yet."
       no_accounts_title: "No accounts"
       provider_name: "GoCardless"
+      reconnect: "Reconnect"
+      consent_expiring: "Bank consent expires on %{date}. Reconnect to keep syncing."
       requires_update: "Connection needs update"
       setup_action: "Set Up New Accounts"
       setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported GoCardless accounts."

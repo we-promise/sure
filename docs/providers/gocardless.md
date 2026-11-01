@@ -43,20 +43,29 @@ can obtain API credentials; check availability with GoCardless before deployment
   imports overlap the previous sync by seven days and deduplicate stable bank IDs.
 - Booked and pending transactions carry metadata under `extra["gocardless"]`.
 
+## Renewing consent
+
+Bank consent lasts for the access window the bank allows, often 90 days. Sure records
+the expiry and shows a **Reconnect** button on the connection from 14 days before it,
+or as soon as the requisition expires or sync reports an authentication failure.
+Reconnecting creates a fresh agreement for the same bank and, once the bank confirms,
+swaps it in and revokes the old requisition. Accounts stay linked: if the bank issues
+new account IDs, existing records are matched by IBAN rather than recreated.
+
 ## Current limitations
 
-- Consent renewal is not implemented. Once bank access expires, a new consent must
-  be created manually. Automatic reuse of existing account links needs further work.
 - Pending-to-booked reconciliation needs verification for banks that omit stable
   transaction IDs. Surrogate IDs can leave a pending copy alongside a booked entry.
 - Country selection currently lists 15 countries rather than discovering all supported
   countries dynamically.
-- Abandoned consents are not automatically removed. Deleting a local connection does
-  not revoke its bank consent; use the bank or GoCardless portal to revoke access.
+- Deleting a connection revokes its requisition. Consents abandoned before the bank
+  redirect are not swept and lapse on their own at GoCardless.
+- Accounts without an IBAN (some cards) cannot be matched if a bank reissues their
+  IDs on reconnect; they reappear as new accounts to set up.
 
 ## Database changes
 
-The additive migration creates `gocardless_items` and `gocardless_accounts`, with UUID
-keys, family ownership and foreign keys. Existing providers and account data are retained.
+Additive migrations create `gocardless_items` and `gocardless_accounts`, with UUID
+keys, family ownership and foreign keys, and add `gocardless_items.consent_expires_at`. Existing providers and account data are retained.
 Rolling back drops these provider tables. Unlink or export affected accounts before
 removing an integration in use.

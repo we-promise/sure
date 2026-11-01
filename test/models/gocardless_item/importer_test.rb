@@ -66,4 +66,32 @@ class GocardlessItem::ImporterTest < ActiveSupport::TestCase
 
     assert GocardlessAccount.exists?(account.id)
   end
+
+  test "a reissued account id moves onto the existing account instead of pruning it" do
+    item = families(:empty).gocardless_items.create!(name: "Test bank", secret_id: "test-id", secret_key: "test-key", requisition_id: "requisition-2")
+    account = item.gocardless_accounts.create!(name: "Current", currency: "GBP", gocardless_account_id: "old-id",
+                                               raw_payload: { iban: "GB33BUKB20201555555555" })
+    provider = mock("GoCardless")
+    provider.stubs(:get_requisition).returns(status: "LN", accounts: [ "new-id" ])
+    provider.stubs(:get_account).returns(iban: "GB33BUKB20201555555555", status: "READY")
+    provider.stubs(:get_account_details).returns(account: { currency: "GBP", name: "Current" })
+    provider.stubs(:get_account_balances).returns(balances: [])
+
+    GocardlessItem::Importer.new(item, gocardless_provider: provider).send(:import_accounts, item.gocardless_credentials)
+
+    assert_equal "new-id", account.reload.gocardless_account_id
+    assert_equal 1, item.gocardless_accounts.count
+  end
+
+  test "an expired requisition marks the item for reconnection" do
+    item = families(:empty).gocardless_items.create!(name: "Test bank", secret_id: "test-id", secret_key: "test-key", requisition_id: "requisition-1")
+    provider = mock("GoCardless")
+    provider.stubs(:get_requisition).returns(status: "EX", accounts: [ "account-1" ])
+
+    assert_raises(Provider::Gocardless::AuthenticationError) do
+      GocardlessItem::Importer.new(item, gocardless_provider: provider).send(:import_accounts, item.gocardless_credentials)
+    end
+    assert item.reload.requires_update?
+    assert item.needs_reconnect?
+  end
 end
