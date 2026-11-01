@@ -1735,7 +1735,7 @@ These are subscribers to one event:
 
 ```ruby
 # config/initializers/ai_instrumentation.rb
-ActiveSupport::Notifications.subscribe(/\.ai\z/, Ai::Instrumentation::UsageSubscriber.new)       # LlmUsage row, success AND failure (fixes drift bug 2)
+ActiveSupport::Notifications.subscribe("usage.ruby_llm", Ai::Instrumentation::UsageSubscriber.new) # LlmUsage row per request, success AND failure (fixes drift bug 2)
 ActiveSupport::Notifications.subscribe(/\.ai\z/, Ai::Instrumentation::LangfuseSubscriber.new)    # trace + generation; no-op when Langfuse unset
 ActiveSupport::Notifications.subscribe(/\.ai\z/, Ai::Instrumentation::DebugLogSubscriber.new)    # DebugLogEntry on failure / unavailable / failover
 ActiveSupport::Notifications.subscribe(/\A(generate|judge)\.ai\z/, Ai::Instrumentation::ComparisonSubscriber.new) # shadow: true only
@@ -1755,7 +1755,10 @@ ActiveSupport::Notifications.subscribe(/\A(generate|judge)\.ai\z/, Ai::Instrumen
   model, overrides, prompt), `error_class`, `failed_over_from` and `escalated_from`, which the
   health page's rates read (section 13).
 - Transports normalise usage once into
-  `Ai::Usage = Data.define(:input_tokens, :output_tokens, :cache_read_tokens, :cache_write_tokens, :cost)`.
+  `Ai::Tokens = Data.define(:input_tokens, :output_tokens, :cache_read_tokens, :cache_write_tokens, :cost)`,
+  named after `RubyLLM::Tokens`, which holds the same counts. v0.7.6 added a top-level `Usage`
+  (installation telemetry, #4295) beside `LlmUsage` (the table), so a third `Usage` would read
+  ambiguously (call by @josh-sanders during development of PR #4440).
   Cost is the provider's reported cost, otherwise the model's prices, so `LlmUsage.calculate_cost`
   and `.infer_provider` go away.
 - Agent calls report no tokens. They're still recorded, with zero cost, so the usage page shows
@@ -1764,24 +1767,33 @@ ActiveSupport::Notifications.subscribe(/\A(generate|judge)\.ai\z/, Ai::Instrumen
 - Secret redaction lives in one helper that every subscriber uses. What Langfuse traces contain
   doesn't change.
 - **Cached tokens.** RubyLLM's `input_tokens` excludes cached tokens, unlike the raw APIs: the
-  spike's 34-tool list showed as 512 input tokens where the prompt was 12,457. `Ai::Usage` keeps
+  spike's 34-tool list showed as 512 input tokens where the prompt was 12,457. `Ai::Tokens` keeps
   both, and the prompt size is `input_tokens + cache_read_tokens`.
 - **Why not RubyLLM's usage ledger.** RubyLLM 2.1 writes a `ruby_llm_usages` row for every
   provider attempt once the table exists. The spike compared it with this section's design
   (spike: "RubyLLM's usage ledger"). Against the ledger: no feature, route, correlation id or
   metadata column; `operation` limited to RubyLLM's eleven; `provider` is RubyLLM's slug
-  (`openai` for llama.cpp); local models have no price; Jev never reaches it; and the table is
-  RubyLLM's private model. For it: a row per attempt, with no Sure code, and RubyLLM's usage owner
+  (`openai` for llama.cpp); local models have no price; and the table is RubyLLM's private
+  model. Jev reaches it only once it goes through `judge` (PR 2d). For it: a row per attempt, with no Sure code, and RubyLLM's usage owner
   follows its tool threads. So Sure keeps `llm_usages` and doesn't create the table, which
-  costs no SQL per call. That stays a product decision.
-- **Attempts, not only calls.** An `.ai` event wraps a whole call, so RubyLLM's retries and the
-  `auto` chain's resends inside it aren't counted: four requests were one event with the last
-  one's tokens. RubyLLM's `usage.ruby_llm` event fires for every attempt, and its subscriber runs
-  in the caller, where it can read the correlation id and the feature. The usage subscriber can
-  take attempts from it and the rest from the `.ai` event, or record calls only; it's open. An
-  attempt the gate interrupts comes through as `failed`, so the health page's failure rates
-  leave out `Preempted`.
-- **Two tracing modes, never at once.** `content` (the default) sends Sure's `.ai` events to
+  costs no SQL per call (call by @josh-sanders during development of PR #4440).
+- **A row per request, shown per call** (call by @josh-sanders during development of PR #4440). An `.ai` event wraps a whole call, so
+  RubyLLM's retries and the `auto` chain's resends inside it would go uncounted: in the spike,
+  four requests were one event with the last one's tokens, and an answer the chain rejects as
+  mostly null is billed all the same. So `UsageSubscriber` writes one `llm_usages` row for each
+  `usage.ruby_llm` event, which RubyLLM publishes for every request, with its status (succeeded,
+  failed, cancelled) and tokens. The subscriber runs in the caller, so it reads Sure's call
+  context, which the transport sets around each call: the feature, the route, the correlation id
+  and a new `call_id` (spike: the subscriber saw the correlation id). `llm_usages` gains
+  `call_id` (uuid, indexed, nullable) and `status`; existing rows keep a null `call_id` and count
+  as one-request calls.
+  - **The usage page looks as it does today:** one row per call, grouped by `call_id`, with its
+    requests' tokens and cost summed, and the statistics count calls. Clicking a call opens its
+    requests: status, tokens, cost and error, so a reader sees how the call was summed.
+  - The `.ai` event still carries the call's summed `Ai::Tokens`, for Langfuse and the debug log.
+  - A request the gate interrupts comes through as `failed`, so the health page's failure rates
+    leave out `Preempted`.
+- **Two tracing modes, never at once, both in PR 2a** (call by @josh-sanders during development of PR #4440). `content` (the default) sends Sure's `.ai` events to
   Langfuse with prompts and outputs. `metadata` sends RubyLLM's own OpenTelemetry spans to any
   OTLP backend: model, settings, finish reason, tokens and latency, with no prompts, tool results
   or answers. It loses the route and prompt key, Sure's error class, and errors raised before
@@ -2347,6 +2359,7 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | `Ai::GenerationJob` and `Ai::ShadowJob` replace the AI job classes | Jobs queued in Redis | Shims for one release | — |
 | `CategorizationComparison` → `Ai::Comparison` | A persisted table | Rows copied | — |
 | `llm_usages.operation` values become feature keys | Usage history under old names | Rows rewritten | The usage page sums per feature |
+| `llm_usages` has a row per request, grouped per call (PR 2a) | Queries that count rows as calls; the table grows with retries | Additive `call_id` and `status`; old rows count as one-request calls | The usage page still shows one row per call; a click shows its requests |
 | The `embed` route picks the vector adapter | `VECTOR_STORE_PROVIDER` defaulting from `LLM_PROVIDER` | The deprecated ENV path maps it | Check which adapter `embed` uses |
 | Smart-fill and smart-configure become asynchronous | Response shape of `smart_fills#create` and `smart_configurations#show` | System tests for both dialogs land first | The dialog shows progress |
 | `AssistantMessage` stores the route that served it | Adds a column the mobile API reads | Additive | — |
@@ -2416,8 +2429,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    works between them, and each brings a transport call only with its first caller.
    - **2a. Transports and instrumentation.** The `compatible` and `anthropic` transports with
      `probe`, `Http`, `Ai::Result`, `Ai::Error` (with `NoCredit` and `ModelMissing`), the
-     per-attempt time budget, the instrumentation subscribers with the correlation id, and the
-     proxy fix (with loopback skipped). `AiHealth::Probe` calls `transport.probe`, which fixes
+     per-attempt time budget, the instrumentation subscribers with the correlation id, usage per
+     request with the usage page grouped per call (`llm_usages.call_id` and `status`), both
+     tracing modes, and the proxy fix (with loopback skipped). `AiHealth::Probe` calls `transport.probe`, which fixes
      drift bug 6. Adds the transport contract test and the AI test helpers (section 17).
      *Deletes:* `AiHealth::Probe`'s own clients.
    - **2b. Routing and consent.** `Ai::Config`, built in memory in each process by
