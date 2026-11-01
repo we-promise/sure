@@ -58,6 +58,28 @@ class CashFlowTest < ApplicationSystemTestCase
     assert_equal Date.current.iso8601, query.dig("q", "end_date")
   end
 
+  test "a category without subcategories stays in the category column" do
+    rent = @user.family.categories.create!(name: "Sankey Rent", color: "#654321")
+    create_transaction(account: @account, category: rent, amount: 80, date: @month)
+    sign_in @user
+    assert_selector "#cashflow-preview svg .sankey-link"
+    assert_selector "#cashflow-sankey-chart svg .sankey-link"
+
+    # By datum: the label rule can hide a bar's label at this width. The
+    # first chart of each is the inline one, not the dialog's copy.
+    columns = page.evaluate_script(<<~JS)
+      ["#cashflow-preview [data-controller='preview-sankey-chart']", "#cashflow-sankey-chart [data-controller='sankey-chart']"].map((chart) => {
+        const bars = Array.from(document.querySelector(chart).querySelectorAll("svg g > path:not(.sankey-link)"));
+        const x = (name) => bars.find((bar) => bar.__data__?.name === name)?.__data__.x0;
+        return [x("Sankey Rent"), x("Sankey Shopping"), x("Sankey Groceries")];
+      })
+    JS
+    columns.each do |rent_x, category_x, subcategory_x|
+      assert_equal category_x, rent_x
+      assert_operator rent_x, :<, subcategory_x
+    end
+  end
+
   test "bars labels Enter and Space share zoom and transaction actions" do
     # With the assistant panel open the chart is ~500px wide, and Sankey
     # Shopping's label would cover Cash Flow's, so it yields; give it room.
