@@ -214,7 +214,26 @@ class KrakenItem::Importer
         )
       end
 
-      carried
+      carried.map { |asset| reprice_carried_asset(asset) }
+    end
+
+    # A carried asset's balance is still real, but its price_usd/amount_usd
+    # are frozen at whatever they were the last time Earn actually answered
+    # -- every spot asset this sync gets a current price, so that staleness
+    # would only compound for as long as Earn keeps failing. Re-fetches a
+    # current price for the same price_symbol and recomputes amount_usd from
+    # the unchanged balance; when no current price is available, leaves the
+    # asset exactly as carried rather than guessing.
+    def reprice_carried_asset(asset)
+      price_usd, price_status = price_for(asset[:price_symbol])
+      return asset unless price_usd
+
+      balance = asset[:balance].to_d
+      asset.merge(
+        price_usd: price_usd.to_s("F"),
+        amount_usd: (balance * price_usd).round(2).to_s("F"),
+        price_status: price_status
+      )
     end
 
     def record_earn_unavailable(error)

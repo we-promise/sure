@@ -167,6 +167,65 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "2.0", earn_btc["balance"]
   end
 
+  test "reprices a carried-forward Earn asset with a current price instead of the stale one" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    # Earn fails on this sync and must carry the 2.0 BTC balance forward, but
+    # BTC's price moved since the last successful Earn sync -- every spot
+    # asset gets a current price every sync, so the carried Earn asset must
+    # not be the one stale figure left behind.
+    @provider.stubs(:get_earn_allocations).raises(Provider::Kraken::ApiError, "EGeneral:Internal error")
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "60000.00" ] })
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    account = @item.kraken_accounts.first
+    earn_btc = account.raw_payload["assets"].find { |asset| asset["symbol"] == "BTC" && asset["source"] == "earn" }
+    assert_equal "2.0", earn_btc["balance"], "the carried balance itself must be unchanged"
+    assert_in_delta 60000.0, earn_btc["price_usd"].to_f, 0.01
+    assert_in_delta 120000.0, earn_btc["amount_usd"].to_f, 0.01
+    assert_in_delta 120050.0, account.current_balance, 0.01
+  end
+
+  test "leaves a carried Earn asset unchanged when no current price is available" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    # Earn fails again, and this time no ticker price is available either
+    # (the blanket get_ticker stub from setup returns nil for every pair
+    # candidate) -- the carried asset must keep its last known price rather
+    # than guessing or zeroing it out.
+    @provider.stubs(:get_earn_allocations).raises(Provider::Kraken::ApiError, "EGeneral:Internal error")
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    account = @item.kraken_accounts.first
+    earn_btc = account.raw_payload["assets"].find { |asset| asset["symbol"] == "BTC" && asset["source"] == "earn" }
+    assert_in_delta 50000.0, earn_btc["price_usd"].to_f, 0.01
+    assert_in_delta 100000.0, earn_btc["amount_usd"].to_f, 0.01
+  end
+
   test "carries forward last known Earn assets rather than saving an undercount when one item is malformed" do
     @provider.stubs(:get_asset_info).returns(asset_metadata)
     @provider.stubs(:get_extended_balance).returns(
