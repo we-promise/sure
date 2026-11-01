@@ -24,7 +24,7 @@ module AccountsHelper
     {
       controller: "turbo-frame-timeout",
       action: "turbo:before-fetch-request->turbo-frame-timeout#startTimeout " \
-              "turbo:frame-load->turbo-frame-timeout#clearTimeout",
+              "turbo:before-frame-render->turbo-frame-timeout#clearTimeout",
       turbo_frame_timeout_timeout_value: SPARKLINE_FRAME_TIMEOUT_MS
     }
   end
@@ -56,7 +56,7 @@ module AccountsHelper
       end
 
     [
-      family.build_cache_key("account_sidebar_tabs_v5", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v6", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
       active_tab,
