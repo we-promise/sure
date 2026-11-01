@@ -86,6 +86,33 @@ class SimplefinAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1000.00"), acct.reload.balance
   end
 
+  test "applies a provider balance adjustment to linked cash accounts" do
+    sfin_acct = SimplefinAccount.create!(
+      simplefin_item: @item,
+      name: "Checking",
+      account_id: "dep_adjusted",
+      currency: "USD",
+      account_type: "checking",
+      current_balance: BigDecimal("1000.00")
+    )
+
+    acct = accounts(:depository)
+    acct.update!(
+      simplefin_account: sfin_acct,
+      provider_balance_adjustment: BigDecimal("-25"),
+      provider_balance_adjustment_reason: "Institution balance correction",
+      provider_balance_adjustment_effective_date: Date.current,
+      provider_balance_adjustment_provider_balance: BigDecimal("1000")
+    )
+
+    SimplefinAccount::Processor.new(sfin_acct).send(:process_account!)
+
+    assert_equal BigDecimal("975.00"), acct.reload.balance
+    assert_equal BigDecimal("975.00"), acct.cash_balance
+    assert_equal BigDecimal("975.00"), acct.current_anchor_balance
+    assert_equal BigDecimal("1000.00"), sfin_acct.reload.current_balance
+  end
+
   test "inverts negative balance for loan liabilities" do
     sfin_acct = SimplefinAccount.create!(
       simplefin_item: @item,

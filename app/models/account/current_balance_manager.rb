@@ -37,17 +37,30 @@ class Account::CurrentBalanceManager
   # as of a statement rather than of this moment. It only applies to a linked
   # account: a manual one has no statement, and its strategies reconcile against
   # today by design.
-  def set_current_balance(balance, date: nil)
-    if account.linked?
-      set_current_balance_for_linked_account(balance, date || Date.current)
-    else
-      result = set_current_balance_for_manual_account(balance)
+  def set_current_balance(balance, date: nil, apply_provider_adjustment: false)
+    balance = account.resolve_provider_balance_adjustment(balance) if apply_provider_adjustment
 
-      # Update cache field so changes appear immediately to the user
-      account.update!(balance: balance)
+    result =
+      if account.linked?
+        set_current_balance_for_linked_account(balance, date || Date.current)
+      else
+        manual_result = set_current_balance_for_manual_account(balance)
 
-      result
+        # Update cache field so changes appear immediately to the user
+        account.update!(balance: balance)
+
+        manual_result
+      end
+
+    # A cash account's cash is its whole balance, adjustment included. Only an
+    # adjustment in effect changes it; a statement behind the anchor leaves the
+    # cached figures alone.
+    if apply_provider_adjustment && account.provider_balance_adjusted? && result.success? &&
+        account.balance_type == :cash && !result.historical?
+      account.update!(cash_balance: balance)
     end
+
+    result
   rescue => e
     Result.new(success?: false, changes_made?: false, error: e.message)
   end
