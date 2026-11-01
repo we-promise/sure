@@ -57,6 +57,19 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
     assert_not @user.reload.authenticate("NewSecure1!")
   end
 
+  test "update lets a user without a local password set a first one" do
+    @user.update_column(:password_digest, nil)
+
+    patch password_path, params: { user: {
+      password_challenge: "",
+      password: "NewSecure1!",
+      password_confirmation: "NewSecure1!"
+    } }
+
+    assert_redirected_to root_url
+    assert @user.reload.authenticate("NewSecure1!")
+  end
+
   test "update rejects a mismatched confirmation" do
     patch password_path, params: { user: {
       password_challenge: user_password_test,

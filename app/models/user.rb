@@ -867,9 +867,11 @@ class User < ApplicationRecord
       skip_password_validation == true
     end
 
+    # As in Rails' own check, a user without a local password (signed up through
+    # SSO) has nothing to confirm and may set a first one.
     def password_challenge_matches
       digest_was = password_digest_was
-      return if digest_was.present? && BCrypt::Password.new(digest_was).is_password?(password_challenge)
+      return if digest_was.blank? || BCrypt::Password.new(digest_was).is_password?(password_challenge)
 
       errors.add(:password_challenge)
     end
