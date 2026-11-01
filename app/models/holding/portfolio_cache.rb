@@ -112,8 +112,13 @@ class Holding::PortfolioCache
       @split_ratios ||= splits.to_h { |split| [ [ split.security_id, split.ex_date ], split.ratio ] }
     end
 
+    # Entry.chronological, except that trades sharing a date and created_at, as
+    # a batch import stamps them, replay acquisitions before disposals: their
+    # ids say nothing about which came first, and a sale cannot precede the
+    # purchase it sells from. Rows with different created_at keep their order.
     def trades
       @trades ||= account.entries.includes(entryable: :security).trades.chronological.to_a
+        .sort_by.with_index { |entry, index| [ entry.date, entry.created_at, entry.entryable.qty.negative? ? 1 : 0, index ] }
     end
 
     def trades_by_date

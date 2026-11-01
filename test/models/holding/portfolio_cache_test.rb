@@ -19,6 +19,30 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     @trade = create_trade(@security, account: @account, qty: 1, date: 2.days.ago.to_date, price: 210.23).trade
   end
 
+  test "a day's trades stamped together come back purchases first, whatever their ids" do
+    sale = create_trade(@security, account: @account, qty: -1, date: 1.day.ago.to_date, price: 220)
+    purchase = create_trade(@security, account: @account, qty: 1, date: 1.day.ago.to_date, price: 215)
+    Entry.where(id: [ sale.id, purchase.id ]).update_all(created_at: Time.zone.parse("2026-01-01 10:00:00"))
+    Entry.where(id: sale.id).update_all(id: "00000000-0000-0000-0000-000000000001")
+    Entry.where(id: purchase.id).update_all(id: "ffffffff-ffff-ffff-ffff-ffffffffffff")
+
+    cache = Holding::PortfolioCache.new(@account)
+
+    assert_equal [ "ffffffff-ffff-ffff-ffff-ffffffffffff", "00000000-0000-0000-0000-000000000001" ],
+                 cache.get_trades(date: 1.day.ago.to_date).map(&:id)
+  end
+
+  test "a day's trades with different created_at keep the order they were entered in" do
+    sale = create_trade(@security, account: @account, qty: -1, date: 1.day.ago.to_date, price: 220)
+    purchase = create_trade(@security, account: @account, qty: 1, date: 1.day.ago.to_date, price: 215)
+    Entry.where(id: sale.id).update_all(created_at: 2.hours.ago)
+    Entry.where(id: purchase.id).update_all(created_at: 1.hour.ago)
+
+    cache = Holding::PortfolioCache.new(@account)
+
+    assert_equal [ sale.id, purchase.id ], cache.get_trades(date: 1.day.ago.to_date).map(&:id)
+  end
+
   test "gets price from DB if available" do
     db_price = 210
 
