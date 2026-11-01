@@ -21,6 +21,38 @@ import '../widgets/sure_icon.dart';
 import '../widgets/sure_list_group.dart';
 import 'cash_flow_screen.dart' show AccessTokenLoader;
 
+/// Kinds the income statement leaves out of income and spending
+/// (`Transaction::BUDGET_EXCLUDED_KINDS`).
+const Set<String> cashFlowExcludedKinds = {
+  'funds_movement',
+  'one_time',
+  'cc_payment',
+};
+
+/// Whether [transaction] counts in the cash flow report, as far as the
+/// transactions index says. Fields an older server leaves out don't filter.
+@visibleForTesting
+bool countsInCashFlow(Transaction transaction) {
+  if (transaction.excluded == true) return false;
+  if (transaction.splitParent == true) return false;
+  final kind = transaction.kind;
+  return kind == null || !cashFlowExcludedKinds.contains(kind);
+}
+
+/// Whether the report counts [transaction] as income. Loan payments and
+/// investment contributions are outflows whatever their sign
+/// (`IncomeStatement::ScopedTransactionsQuery#classification_sql`); other
+/// rows follow the amount's sign, so a refund still shows as money in.
+@visibleForTesting
+bool isCashFlowIncome(Transaction transaction) {
+  switch (transaction.kind) {
+    case 'loan_payment':
+    case 'investment_contribution':
+      return false;
+  }
+  return transaction.isIncome;
+}
+
 /// Transactions in one cash flow category (and its subcategories) for the
 /// report period, fetched page by page from `GET /api/v1/transactions` with
 /// `start_date`, `end_date` and `category_ids[]`. Refunds are included, since
@@ -30,6 +62,12 @@ import 'cash_flow_screen.dart' show AccessTokenLoader;
 /// the report leaves out because its refunds net it to zero. Its ids come
 /// from `GET /api/v1/categories?parent_id=…`; if that lookup fails, the
 /// subcategories named in the report are used.
+///
+/// Rows the report doesn't count are left out, using the index's `excluded`,
+/// `split_parent` and `kind` fields: excluded entries, split parents (their
+/// children carry the amount) and transfer-like kinds. Loan payments and
+/// investment contributions are shown as outflows whatever their sign, as
+/// the report counts them. Servers without these fields show every row.
 class CashFlowCategoryTransactionsScreen extends StatefulWidget {
   const CashFlowCategoryTransactionsScreen({
     super.key,
@@ -79,6 +117,11 @@ class _CashFlowCategoryTransactionsScreenState
 
   bool get _hasMore => _totalPages == null || _page < _totalPages!;
 
+  /// Pages in a row that had no row to show; capped so a long run of
+  /// filtered-out rows doesn't fetch every page at once.
+  int _emptyPagesInARow = 0;
+  static const int _maxEmptyPagesInARow = 3;
+
   @override
   void initState() {
     super.initState();
@@ -114,6 +157,7 @@ class _CashFlowCategoryTransactionsScreenState
       _totalPages = null;
       _failed = false;
       _loading = false;
+      _emptyPagesInARow = 0;
     });
     await _loadMore();
   }
@@ -150,10 +194,15 @@ class _CashFlowCategoryTransactionsScreenState
     }
     if (!mounted || generation != _generation) return;
 
+    var shown = 0;
     setState(() {
       _loading = false;
       if (result != null && result['success'] == true) {
-        final page = (result['transactions'] as List).cast<Transaction>();
+        final page = (result['transactions'] as List)
+            .cast<Transaction>()
+            .where(countsInCashFlow)
+            .toList();
+        shown = page.length;
         _transactions.addAll(page);
         _page = nextPage;
         // GET /api/v1/transactions always returns pagination.total_pages.
@@ -165,7 +214,20 @@ class _CashFlowCategoryTransactionsScreenState
         _failed = true;
       }
     });
-    if (unauthorized) await _handleUnauthorized();
+    if (unauthorized) {
+      await _handleUnauthorized();
+      return;
+    }
+    // A page whose rows were all filtered out leaves nothing to scroll, so
+    // fetch the next one (a few at most per scroll).
+    if (result != null && result['success'] == true) {
+      _emptyPagesInARow = shown == 0 ? _emptyPagesInARow + 1 : 0;
+      if (shown == 0 &&
+          _hasMore &&
+          _emptyPagesInARow < _maxEmptyPagesInARow) {
+        await _loadMore();
+      }
+    }
   }
 
   /// The category's id plus all of its subcategory ids. Falls back to the
@@ -315,8 +377,8 @@ class _CashFlowCategoryTransactionsScreenState
 
   Widget _amount(BuildContext context, Transaction transaction, bool hidden) {
     // The API's `amount` is a formatted string whose sign follows Sure's
-    // ledger convention; present it by classification instead.
-    final isIncome = transaction.isIncome;
+    // ledger convention; present it the way the report classifies it.
+    final isIncome = isCashFlowIncome(transaction);
     // AmountParser's display text drops hyphen/en/em/figure dashes, minus
     // signs and accounting parentheses.
     String magnitude;

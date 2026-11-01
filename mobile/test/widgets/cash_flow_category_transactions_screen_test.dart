@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:sure_mobile/l10n/app_localizations.dart';
 import 'package:sure_mobile/models/cash_flow.dart';
 import 'package:sure_mobile/models/category.dart';
+import 'package:sure_mobile/models/transaction.dart';
 import 'package:sure_mobile/providers/privacy_provider.dart';
 import 'package:sure_mobile/screens/cash_flow_category_transactions_screen.dart';
 import 'package:sure_mobile/screens/cash_flow_screen.dart'
@@ -28,6 +30,30 @@ String _page(List<String> names, {required int page, required int pages}) {
   return '{"transactions":[$rows],"pagination":{"page":$page,'
       '"per_page":50,"total_count":${names.length},"total_pages":$pages}}';
 }
+
+String _row(
+  String name, {
+  String amount = r'$1.00',
+  String classification = 'expense',
+  Map<String, Object> extra = const {},
+}) {
+  final fields = {
+    'id': name,
+    'account': {'id': 'a1'},
+    'name': name,
+    'date': '2026-10-03',
+    'amount': amount,
+    'currency': 'USD',
+    'classification': classification,
+    'category': {'id': 'cat_groceries', 'name': 'Groceries'},
+    ...extra,
+  };
+  return jsonEncode(fields);
+}
+
+String _rows(List<String> rows, {required int page, required int pages}) =>
+    '{"transactions":[${rows.join(',')}],"pagination":{"page":$page,'
+    '"per_page":50,"total_count":${rows.length},"total_pages":$pages}}';
 
 void main() {
   const category = CashFlowCategory(
@@ -196,6 +222,117 @@ void main() {
 
       expect(logouts, 1);
       expect(requested, isEmpty);
+    });
+  });
+
+  group('rows the report does not count (#4422 fields)', () {
+    testWidgets('hides split parents, excluded rows and transfer kinds',
+        (tester) async {
+      final service = TransactionsService(
+        client: MockClient((_) async => http.Response(
+              _rows([
+                _row('Plain'),
+                _row('Split parent', extra: {'split_parent': true}),
+                _row('Split child', extra: {'split_parent': false}),
+                _row('Excluded', extra: {'excluded': true}),
+                _row('Transfer', extra: {'kind': 'funds_movement'}),
+                _row('Card payment', extra: {'kind': 'cc_payment'}),
+                _row('One time', extra: {'kind': 'one_time'}),
+              ], page: 1, pages: 1),
+              200,
+            )),
+      );
+
+      await tester.pumpWidget(harness(service));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Plain'), findsOneWidget);
+      expect(find.text('Split child'), findsOneWidget);
+      for (final hidden in [
+        'Split parent',
+        'Excluded',
+        'Transfer',
+        'Card payment',
+        'One time',
+      ]) {
+        expect(find.text(hidden), findsNothing, reason: hidden);
+      }
+    });
+
+    testWidgets('shows a negative loan payment as an outflow', (tester) async {
+      final service = TransactionsService(
+        client: MockClient((_) async => http.Response(
+              _rows([
+                _row(
+                  'Loan',
+                  amount: r'-$250.00',
+                  classification: 'income',
+                  extra: {'kind': 'loan_payment'},
+                ),
+                _row(
+                  'Refund',
+                  amount: r'-$5.00',
+                  classification: 'income',
+                  extra: {'kind': 'standard'},
+                ),
+              ], page: 1, pages: 1),
+              200,
+            )),
+      );
+
+      await tester.pumpWidget(harness(service));
+      await tester.pumpAndSettle();
+
+      expect(find.text(r'-$250.00'), findsOneWidget);
+      // A refund keeps its direction.
+      expect(find.text(r'+$5.00'), findsOneWidget);
+    });
+
+    testWidgets('fetches the next page when a whole page is filtered out',
+        (tester) async {
+      final pages = <String>[];
+      final service = TransactionsService(
+        client: MockClient((request) async {
+          final page = request.url.queryParameters['page']!;
+          pages.add(page);
+          return http.Response(
+            page == '1'
+                ? _rows([
+                    _row('Parent', extra: {'split_parent': true}),
+                  ], page: 1, pages: 2)
+                : _rows([_row('Child')], page: 2, pages: 2),
+            200,
+          );
+        }),
+      );
+
+      await tester.pumpWidget(harness(service));
+      await tester.pumpAndSettle();
+
+      expect(pages, ['1', '2']);
+      expect(find.text('Child'), findsOneWidget);
+      expect(find.text('Parent'), findsNothing);
+    });
+
+    test('older servers without the fields show every row', () {
+      final t = Transaction.fromJson(jsonDecode(_row(
+        'Old',
+        amount: r'-$5.00',
+        classification: 'income',
+      )) as Map<String, dynamic>);
+      expect(countsInCashFlow(t), isTrue);
+      expect(isCashFlowIncome(t), isTrue);
+    });
+
+    test('an investment contribution counts as an outflow', () {
+      final t = Transaction.fromJson(jsonDecode(_row(
+        'Contribution',
+        amount: r'-$100.00',
+        classification: 'income',
+        extra: {'kind': 'investment_contribution'},
+      )) as Map<String, dynamic>);
+      expect(countsInCashFlow(t), isTrue);
+      expect(isCashFlowIncome(t), isFalse);
     });
   });
 }
