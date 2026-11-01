@@ -641,10 +641,10 @@ class Account < ApplicationRecord
   # decision in one place so the new-pledge controller / preview helper
   # can't disagree on what they're going to save.
   def default_pledge_kind
-    # Investment accounts never use manual_save: a positive valuation delta on a
-    # brokerage is usually a market move, not a deposit, and would false-match a
-    # pledge. They resolve on transfer (cash-inflow) entries only.
-    manual? && !investment? ? "manual_save" : "transfer"
+    # Investment and crypto accounts never use manual_save: a positive valuation
+    # delta there is usually a market move, not a deposit, and would false-match
+    # a pledge. They resolve on transfer (cash-inflow) entries only.
+    manual? && balance_type != :investment ? "manual_save" : "transfer"
   end
 
   # Total fixed earmark this account currently has reserved across every goal

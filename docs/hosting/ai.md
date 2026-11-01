@@ -1189,8 +1189,12 @@ and Gemini 2.5 Flash remains $0.30 / $2.50.
 Claude 4.6/4.7 use standard rates throughout their context window.
 
 Sure estimates individual requests using these tiers. Aggregate categorization
-previews assume short requests. Saved usage costs are historical estimates and
-are not recalculated by this update. Estimates exclude regional premiums,
+previews assume short requests. For [OpenRouter's official API endpoints](https://openrouter.ai/docs/cookbook/administration/usage-accounting), saved
+usage prefers a valid nonnegative provider-reported `usage.cost` in USD, including
+zero, over the token-price estimate. Other endpoints, or responses with absent or
+invalid costs, use the bundled estimates. Unknown models can therefore have a
+recorded post-call cost even when their pre-run estimate is N/A. Saved usage costs
+are not recalculated. Estimates exclude regional premiums,
 alternative service tiers, tool charges and audio-specific rates. Anthropic
 five-minute cache writes and reads are included when reported; OpenAI and Gemini
 cache discounts and cache-write/storage charges are not currently modeled.

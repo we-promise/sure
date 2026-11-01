@@ -1,0 +1,51 @@
+---
+id:
+  chats:
+    demo_banner_title: "Mode Demo Aktif"
+    demo_banner_message: "Token LLM gratis disediakan oleh Vercel AI Gateway. Hasil dapat bervariasi karena kami sering mengubah bobot model untuk keperluan pengujian. Silakan lihat dokumentasi Vercel untuk mengetahui alur percakapan Anda! 🤖"
+    thinking: "Sedang berpikir ..."
+    ai_busy: "Sedang menyelesaikan tugas latar belakang, setelah itu saya akan langsung menanggapi pesan Anda."
+    reservation:
+      ready_html: "Saya telah menunda beberapa tugas latar belakang agar dapat langsung memproses pesan Anda. Tugas akan dilanjutkan kembali dalam %{countdown} dtk, silakan lanjutkan mengetik!"
+      busy: "Sedang menyelesaikan tugas latar belakang, setelah itu saya siap membantu Anda. Lanjutkan mengetik!"
+    worker_unhealthy_warning: "Respons AI mungkin tidak dapat dikirimkan saat ini — worker latar belakang tampaknya tidak aktif atau antrean menumpuk. Pastikan worker Sidekiq Anda sedang berjalan."
+    ai_greeting:
+      greeting: "Halo %{name}! Saya asisten AI yang dapat membantu mengelola keuangan Anda. Saya memiliki akses ke web dan data rekening Anda."
+      there: "di sana"
+      commands_hint_html: "Anda dapat menggunakan <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> untuk mengakses perintah"
+      questions_intro: "Berikut beberapa pertanyaan yang bisa Anda ajukan:"
+      evaluate_portfolio: "Evaluasi portofolio investasi"
+      spending_insights: "Tampilkan wawasan pengeluaran"
+      unusual_patterns: "Temukan pola tidak biasa"
+    chat:
+      edit_chat_title: "Edit judul obrolan"
+      delete_chat: "Hapus obrolan"
+    chat_nav:
+      all_chats: "Semua obrolan"
+      start_new_chat: "Mulai obrolan baru"
+      edit_chat_title: "Edit judul obrolan"
+      delete_chat: "Hapus obrolan"
+    error:
+      retry: "Coba lagi"
+    destroy:
+      notice: "Obrolan berhasil dihapus"
+    index:
+      chats: "Obrolan"
+      new_chat: "Obrolan baru"
+    new:
+      default_title: "Obrolan baru %{timestamp}"
+    update:
+      success: "Obrolan diperbarui"
+    ai_consent:
+      title: "Aktifkan Obrolan AI"
+      available_description: "Obrolan AI dapat menjawab pertanyaan keuangan dan memberikan wawasan berdasarkan data Anda. Untuk menggunakan fitur ini, Anda harus mengaktifkannya secara eksplisit."
+      unavailable_description_html: "Untuk menggunakan asisten AI, Anda perlu mengatur variabel lingkungan <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> atau mengonfigurasikannya di pengaturan Self-Hosting instans Anda."
+      enable_button: "Aktifkan Obrolan AI"
+      disable_note: "Nonaktifkan kapan saja. Semua data yang dikirimkan ke penyedia LLM kami dianonimkan."
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: "Penalaran asisten"
+    tool_calls:
+      tool_calls: "Panggilan Alat"
+      function: "Fungsi:"
+      arguments: "Argumen:"
