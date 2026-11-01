@@ -6,11 +6,22 @@ class Holding::CurrentForInvestmentAccounts
   # subquery is limited to the requested accounts so its cost follows them,
   # not the whole table. Accounts without provider holdings likewise take each
   # security's latest row in one DISTINCT ON pass, not one lookup per row.
-  # A cash-anchored account carries holdings in their own currency (see
-  # Account#current_holdings), so it takes that latest row in any currency.
+  # A cash-anchored account carries holdings in their own currency, and carries
+  # a provider snapshot forward as a calculated row (see Account#current_holdings),
+  # so it takes each security's latest row in any currency, provider or not.
+  ANCHORED_ACCOUNT_IDS_SQL = <<~SQL.squish.freeze
+    SELECT anchor_entries.account_id
+    FROM entries anchor_entries
+    INNER JOIN valuations anchors ON anchors.id = anchor_entries.entryable_id
+    WHERE anchor_entries.account_id IN (:account_ids)
+      AND anchor_entries.entryable_type = 'Valuation'
+      AND anchors.kind = 'cash_anchor'
+  SQL
+
   CURRENT_HOLDINGS_SQL = <<~SQL.squish.freeze
     (
       holdings.account_provider_id IS NOT NULL
+      AND holdings.account_id NOT IN (#{ANCHORED_ACCOUNT_IDS_SQL})
       AND (holdings.account_id, holdings.updated_at::date) IN (
         SELECT provider_holdings.account_id, MAX(provider_holdings.updated_at::date)
         FROM holdings provider_holdings
@@ -25,20 +36,16 @@ class Holding::CurrentForInvestmentAccounts
       WHERE latest_holdings.account_id IN (:account_ids)
         AND accounts.id IN (:account_ids)
         AND (
-          latest_holdings.currency = accounts.currency
-          OR EXISTS (
-            SELECT 1 FROM entries anchor_entries
-            INNER JOIN valuations anchors ON anchors.id = anchor_entries.entryable_id
-            WHERE anchor_entries.account_id = accounts.id
-              AND anchor_entries.entryable_type = 'Valuation'
-              AND anchors.kind = 'cash_anchor'
+          latest_holdings.account_id IN (#{ANCHORED_ACCOUNT_IDS_SQL})
+          OR (
+            latest_holdings.currency = accounts.currency
+            AND latest_holdings.account_id NOT IN (
+              SELECT provider_holdings.account_id
+              FROM holdings provider_holdings
+              WHERE provider_holdings.account_id IN (:account_ids)
+                AND provider_holdings.account_provider_id IS NOT NULL
+            )
           )
-        )
-        AND latest_holdings.account_id NOT IN (
-          SELECT provider_holdings.account_id
-          FROM holdings provider_holdings
-          WHERE provider_holdings.account_id IN (:account_ids)
-            AND provider_holdings.account_provider_id IS NOT NULL
         )
       ORDER BY latest_holdings.account_id, latest_holdings.security_id, latest_holdings.date DESC
     )

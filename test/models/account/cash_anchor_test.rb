@@ -278,6 +278,8 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
       price.update!(price: 130)
       materialize
       assert_equal 260, @account.holdings.find_by!(security: @other, date: Date.current).amount
+      # Investment reports read the carried row too, not the original snapshot.
+      assert_equal 260, Holding::CurrentForInvestmentAccounts.new([ @account.id ]).relation.find_by!(security: @other).amount
     end
   end
 
