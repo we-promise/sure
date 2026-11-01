@@ -4,6 +4,7 @@ import { sankey, sankeyCenter } from "d3-sankey";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 import { sankeyLabelOnRight } from "utils/sankey_align";
 import { hiddenSankeyLabels } from "utils/sankey_labels";
+import { withoutSankeySubcategories } from "utils/sankey_subcategories";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
 import {
   buildCategoryTransactionsUrl,
@@ -27,6 +28,9 @@ export default class extends Controller {
   static HOVER_OPACITY = 0.4;
   static HOVER_FILTER = "saturate(1.3) brightness(1.1)";
   static EXTENT_MARGIN = 16;
+  // Below this chart width the subcategory column is dropped: five columns
+  // on a phone leave about 60px between bars, too little for most labels.
+  static SUBCATEGORY_MIN_WIDTH = 640;
   static MIN_NODE_PADDING = 4;
   static MAX_PADDING_RATIO = 0.4;
   static CORNER_RADIUS = 8;
@@ -104,7 +108,8 @@ export default class extends Controller {
   }
 
   #draw({ animate = false } = {}) {
-    const { nodes = [], links = [] } = this.#visibleData();
+    const width = this.#chartWidth();
+    const { nodes = [], links = [] } = this.#visibleData(width);
     if (!nodes.length || !links.length) return;
 
     // Hide tooltip and reset any hover states before redrawing
@@ -125,19 +130,18 @@ export default class extends Controller {
         .remove();
 
       this.drawTimeout = setTimeout(() => {
-        this.#render(nodes, links, true);
+        this.#render(nodes, links, width, true);
       }, this.constructor.ZOOM_TRANSITION_MS / 2);
     } else {
       chart.selectAll("svg").remove();
-      this.#render(nodes, links, false);
+      this.#render(nodes, links, width, false);
     }
   }
 
-  #render(nodes, links, animate) {
+  #render(nodes, links, width, animate) {
     const chartElement = this.#chartElement();
     const chart = d3.select(chartElement);
 
-    const width = chartElement.clientWidth || 600;
     const height = chartElement.clientHeight || 400;
 
     const svg = chart
@@ -178,10 +182,32 @@ export default class extends Controller {
     return this.hasChartTarget ? this.chartTarget : this.element;
   }
 
-  #visibleData() {
-    if (!this.zoomRootId) return this.dataValue || {};
+  // The data at the current zoom, before the narrow-chart filter. Drill-down
+  // is decided here, so a category whose children are all subcategories
+  // still opens on a phone; the zoomed-in view has no Cash Flow node for
+  // the filter to work from, so it keeps them.
+  #drillableData() {
+    return this.zoomRootId
+      ? zoomSankeyData(this.dataValue, this.zoomRootId)
+      : this.dataValue || {};
+  }
 
-    return zoomSankeyData(this.dataValue, this.zoomRootId);
+  // Decided on every draw from the width the chart is laid out at, so
+  // rotating a phone redraws with or without the subcategory column as the
+  // width allows.
+  #visibleData(width) {
+    const data = this.#drillableData();
+
+    return width < this.constructor.SUBCATEGORY_MIN_WIDTH
+      ? withoutSankeySubcategories(data)
+      : data;
+  }
+
+  // A container with no size yet (the expand dialog before it opens) gets
+  // the same fallback for the filter and the layout; the ResizeObserver
+  // redraws once it has one.
+  #chartWidth() {
+    return this.#chartElement().clientWidth || 600;
   }
 
   #syncZoomControls() {
@@ -191,7 +217,7 @@ export default class extends Controller {
   }
 
   #zoomIn(node) {
-    if (!node.id || !sankeyNodeHasChildren(this.#visibleData(), node.id))
+    if (!node.id || !sankeyNodeHasChildren(this.#drillableData(), node.id))
       return;
 
     this.zoomRootId = node.id;
@@ -530,7 +556,7 @@ export default class extends Controller {
     nodeGroups
       .selectAll("path")
       .style("cursor", (d) =>
-        sankeyNodeHasChildren(this.#visibleData(), d.id)
+        sankeyNodeHasChildren(this.#drillableData(), d.id)
           ? "pointer"
           : "default",
       )
@@ -560,7 +586,7 @@ export default class extends Controller {
       .selectAll("text")
       .style("cursor", (d) =>
         isNavigableCategoryNode(d.id) ||
-        sankeyNodeHasChildren(this.#visibleData(), d.id)
+        sankeyNodeHasChildren(this.#drillableData(), d.id)
           ? "pointer"
           : "default",
       )

@@ -63,3 +63,4 @@ pin "utils/sankey_comparison", to: "utils/sankey_comparison.mjs"
 
 pin "utils/sankey_labels", to: "utils/sankey_labels.mjs"
 pin "utils/sankey_align", to: "utils/sankey_align.mjs"
+pin "utils/sankey_subcategories", to: "utils/sankey_subcategories.mjs"

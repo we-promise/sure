@@ -61,6 +61,8 @@ class CashFlowTest < ApplicationSystemTestCase
   test "a category without subcategories stays in the category column" do
     rent = @user.family.categories.create!(name: "Sankey Rent", color: "#654321")
     create_transaction(account: @account, category: rent, amount: 80, date: @month)
+    # Wide enough for the dashboard chart to keep its subcategory column.
+    page.current_window.resize_to(1920, 1400)
     sign_in @user
     assert_selector "#cashflow-preview svg .sankey-link"
     assert_selector "#cashflow-sankey-chart svg .sankey-link"
