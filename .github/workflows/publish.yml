@@ -260,7 +260,7 @@ jobs:
     runs-on: 'ubuntu-24.04'
 
     environment:
-      name: demo
+      name: latest
       url: ${{ vars.RENDER_DEMO_URL }}
 
     concurrency:

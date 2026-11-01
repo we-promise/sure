@@ -37,8 +37,6 @@ fr:
       new: Nouvelle catégorie
       unlock_categories: Déverrouiller la création de catégories
     locked: Les catégories sont verrouillées. Déverrouillez-les pour ajouter une nouvelle catégorie.
-    menu:
-      loading: Chargement...
     merge:
       description: Sélectionnez une catégorie cible et les catégories à y fusionner. Les transactions et lignes budgétaires correspondantes seront déplacées vers la cible.
       select_target: Sélectionner la catégorie cible...

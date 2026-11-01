@@ -1,0 +1,108 @@
+<div id="truelayer-providers-panel" class="space-y-4">
+  <%
+    console_link = link_to("console.truelayer.com", "https://console.truelayer.com", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")
+    family = local_assigns[:family] || Current.family
+    items = (local_assigns[:truelayer_items] || @truelayer_items || family.truelayer_items.active.ordered).to_a
+    credentials_item = items.min_by(&:created_at)
+  %>
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t("settings.providers.truelayer_panel.step_1_html", link: console_link),
+               t("settings.providers.truelayer_panel.step_2_html", callback_url: tag.code(truelayer_callback_url)),
+               t("settings.providers.truelayer_panel.step_3"),
+               t("settings.providers.truelayer_panel.step_4")
+             ] %>
+
+  <% error_msg = local_assigns[:error_message] %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <%= styled_form_with model: credentials_item || family.truelayer_items.build,
+                       url: credentials_item ? truelayer_item_path(credentials_item) : truelayer_items_path,
+                       scope: :truelayer_item,
+                       method: credentials_item ? :patch : :post,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :client_id,
+                        label: t("settings.providers.truelayer_panel.client_id_label"),
+                        placeholder: t("settings.providers.truelayer_panel.client_id_placeholder"),
+                        autocomplete: "off" %>
+    <%= form.password_field :client_secret,
+                            label: t("settings.providers.truelayer_panel.client_secret_label"),
+                            placeholder: credentials_item ? t("settings.providers.truelayer_panel.client_secret_placeholder_update") : t("settings.providers.truelayer_panel.client_secret_placeholder_new"),
+                            value: nil,
+                            autocomplete: "off" %>
+    <div class="flex justify-end">
+      <%= form.submit credentials_item ? t("settings.providers.truelayer_panel.update_credentials") : t("settings.providers.truelayer_panel.save_credentials") %>
+    </div>
+  <% end %>
+
+  <% if credentials_item %>
+    <div class="border-t border-primary pt-4 space-y-3">
+      <% items.select(&:connected?).each do |item| %>
+        <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-container border border-primary">
+          <div class="flex items-center gap-3">
+            <%= render ProviderLogo.new(provider_key: :truelayer) %>
+            <div>
+              <p class="text-sm font-medium text-primary"><%= item.institution_display_name %></p>
+              <% if item.requires_update? %>
+                <p class="text-xs text-destructive"><%= t("settings.providers.truelayer_panel.reconnect_required") %></p>
+              <% elsif item.syncing? %>
+                <p class="text-xs text-secondary"><%= t("settings.providers.truelayer_panel.syncing") %></p>
+              <% elsif item.consent_expires_at %>
+                <p class="text-xs <%= item.consent_expiring_soon? ? "text-warning" : "text-secondary" %>">
+                  <%= t("settings.providers.truelayer_panel.consent_expires", date: l(item.consent_expires_at.to_date, format: :long)) %>
+                </p>
+              <% end %>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <% if item.requires_update? || item.consent_expiring_soon? %>
+              <%= render DS::Button.new(
+                text: t("settings.providers.truelayer_panel.reconnect"),
+                variant: :primary,
+                size: :sm,
+                href: reauthorize_truelayer_item_path(item),
+                method: :post,
+                data: { turbo: false }
+              ) %>
+            <% else %>
+              <%= render DS::Button.new(
+                text: t("settings.providers.truelayer_panel.sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                size: :sm,
+                href: sync_truelayer_item_path(item),
+                method: :post,
+                disabled: item.syncing?,
+                data: { turbo: false }
+              ) %>
+            <% end %>
+            <%= render DS::Button.new(
+              text: t("settings.providers.truelayer_panel.remove"),
+              icon: "trash-2",
+              variant: :outline_destructive,
+              size: :sm,
+              href: truelayer_item_path(item),
+              method: :delete,
+              data: { turbo_confirm: t("settings.providers.truelayer_panel.remove_confirm") }
+            ) %>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="flex justify-center pt-2">
+        <%= render DS::Button.new(
+          text: t("settings.providers.truelayer_panel.connect_bank"),
+          icon: "plus",
+          variant: :primary,
+          href: connect_truelayer_items_path,
+          method: :post,
+          data: { turbo: false }
+        ) %>
+      </div>
+    </div>
+  <% end %>
+</div>

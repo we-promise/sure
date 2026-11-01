@@ -94,7 +94,7 @@ Pending inclusion is provider- and layer-specific:
   only settled transactions. The same initializer bounds a sync against Monobank's
   one-request-per-minute limit and 31-day statement window
   (`max_statement_requests_per_sync`, `pending_lookback_days`,
-  `initial_history_days`); read [the hosting guide](../hosting/monobank.md) before
+  `initial_history_days`); read [the provider guide](../providers/monobank.md) before
   changing the [importer](../../app/models/monobank_item/importer.rb)'s request
   budgeting, and keep the pending lookback wide enough that live holds stay in the
   payload instead of being pruned as stale.

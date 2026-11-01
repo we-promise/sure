@@ -223,7 +223,7 @@ class McpController < ApplicationController
     def render_mcp_unauthorized
       response.set_header(
         "WWW-Authenticate",
-        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource\", scope=\"#{REQUIRED_SCOPE}\""
+        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource/mcp\", scope=\"#{REQUIRED_SCOPE}\""
       )
       render json: { error: "unauthorized" }, status: :unauthorized
     end
