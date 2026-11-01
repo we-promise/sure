@@ -78,6 +78,66 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     assert result[:success]
   end
 
+  test "carries forward last known Earn assets when a later sync's fetch fails" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    # A transient failure on the next sync -- even one that only shows up on a
+    # later cursor page -- must not erase the principal a previous successful
+    # sync already saw.
+    @provider.stubs(:get_earn_allocations).raises(Provider::Kraken::ApiError, "EGeneral:Internal error")
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    account = @item.kraken_accounts.first
+    earn_btc = account.raw_payload["assets"].find { |asset| asset["symbol"] == "BTC" && asset["source"] == "earn" }
+    assert_not_nil earn_btc, "expected the previously-seen Earn BTC position to be carried forward"
+    assert_equal "2.0", earn_btc["balance"]
+  end
+
+  test "carries forward last known Earn assets rather than saving an undercount when one item is malformed" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    # The next sync returns one good item and one with an unexpected shape
+    # (amount_allocated is a bare string, not the nested hash #dig expects --
+    # confirmed to raise TypeError, not just return nil) -- this must not be
+    # saved as a complete-but-undercounted snapshot that silently drops BTC.
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XETH", "amount_allocated" => "unexpected-string-shape" },
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    account = @item.kraken_accounts.first
+    earn_assets = account.raw_payload["assets"].select { |asset| asset["source"] == "earn" }
+    assert_equal 1, earn_assets.size, "expected the carried-forward snapshot, not a partial new one"
+    assert_equal "BTC", earn_assets.first["symbol"]
+  end
+
   test "preserves suffix assets in metadata and marks missing prices" do
     @provider.stubs(:get_asset_info).returns(asset_metadata)
     @provider.stubs(:get_extended_balance).returns(

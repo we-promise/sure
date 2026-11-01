@@ -21,7 +21,7 @@ class KrakenItem::Importer
     pair_metadata = kraken_provider.get_asset_pairs || {}
     balances = kraken_provider.get_extended_balance || {}
     assets = parse_assets(balances, asset_metadata)
-    assets += parse_earn_assets(fetch_earn_allocations, asset_metadata)
+    assets += fetch_and_parse_earn_assets(asset_metadata)
     trades = fetch_trades
     ledgers = fetch_ledgers
 
@@ -86,11 +86,35 @@ class KrakenItem::Importer
       end
     end
 
+    # Raised to mean "the Earn/Allocations response can't be trusted as a
+    # complete snapshot" -- a fetch that failed outright (any page, including
+    # a later cursor page after earlier ones succeeded) or a response whose
+    # items don't all parse. Either way, #fetch_and_parse_earn_assets carries
+    # forward the last known-good values instead of saving an undercount.
+    EarnAllocationsUnavailable = Class.new(StandardError)
+
     # Earn's allocated principal (staking/bonding) lives in a sub-ledger
     # BalanceEx never reports -- see Provider::Kraken#get_earn_allocations.
     # Without this, only Earn's reward payouts (ordinary Ledgers entries,
     # handled in KrakenAccount::LedgerProcessor) were ever visible; the
     # locked balance itself was invisible to holdings.
+    #
+    # On any failure -- the fetch itself (permission denied, a transient API
+    # error on any page) or one malformed item among otherwise-good ones --
+    # carries forward the last successful sync's own "earn" assets rather
+    # than saving a spot-only or undercounted snapshot. A source that failed
+    # tells us nothing about what it holds, and writing only what did answer
+    # would delete real principal from the account on a transient error; the
+    # carried assets are stale until the next successful sync, which beats
+    # gone. Same pattern as BinanceItem::Importer#carried_over_assets.
+    def fetch_and_parse_earn_assets(asset_metadata)
+      items = fetch_earn_allocations
+      parse_earn_assets(items, asset_metadata)
+    rescue Provider::Kraken::PermissionError, Provider::Kraken::ApiError, EarnAllocationsUnavailable => e
+      record_earn_unavailable(e)
+      carried_over_earn_assets
+    end
+
     def parse_earn_assets(items, asset_metadata)
       normalizer = KrakenAccount::AssetNormalizer.new(asset_metadata)
 
@@ -114,10 +138,14 @@ class KrakenItem::Importer
           price_status: price_status,
           source: "earn"
         )
-      rescue StandardError => e
-        Rails.logger.warn "KrakenItem::Importer - could not parse Earn allocation #{item.inspect}: #{e.message}"
-        nil
       end
+    rescue StandardError => e
+      # One malformed item among otherwise-good ones used to be dropped
+      # silently here, letting the importer save the remaining items as a
+      # complete snapshot -- silently undercounting current_balance. Raising
+      # instead routes it through #fetch_and_parse_earn_assets' carry-forward,
+      # same as a fetch failure.
+      raise EarnAllocationsUnavailable, "could not parse Earn allocation: #{e.message}"
     end
 
     def fetch_earn_allocations
@@ -134,26 +162,38 @@ class KrakenItem::Importer
       end
 
       all_items
-    rescue Provider::Kraken::PermissionError => e
-      # Key may not have Earn Allocations permission; degrade gracefully --
-      # the regular spot balance still imports.
+    end
+
+    # The prior sync's own "earn" assets, for #fetch_and_parse_earn_assets to
+    # carry forward when this sync's Earn data can't be trusted. nil/blank
+    # whenever there is nothing to fall back on (first sync, or a previous
+    # sync that itself had no Earn holdings) -- filter_map above then simply
+    # contributes nothing, same as Earn never having been reachable at all.
+    def carried_over_earn_assets
+      previous = kraken_item.kraken_accounts.find_by(account_id: "combined")&.raw_payload&.dig("assets")
+      return [] if previous.blank?
+
+      carried = previous.map(&:deep_symbolize_keys).select { |asset| asset[:source] == "earn" }
+
+      if carried.any?
+        Rails.logger.warn(
+          "KrakenItem::Importer #{kraken_item.id} - carrying #{carried.size} Earn asset(s) forward from the last successful sync"
+        )
+      end
+
+      carried
+    end
+
+    def record_earn_unavailable(error)
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "warn",
-        message: "Earn Allocations permission denied; skipping Earn balance import: #{e.message}",
+        message: "Earn allocations unavailable this sync (#{error.class.name.demodulize}); carrying forward last known values: #{error.message}",
         source: self.class.name,
         provider_key: "kraken",
         family: kraken_item.family,
         metadata: { kraken_item_id: kraken_item.id }
       )
-      []
-    rescue Provider::Kraken::ApiError => e
-      # Earn/Allocations is a newer endpoint than the rest of this
-      # integration -- an account region/tier that doesn't support it (or a
-      # transient error) must not fail the whole sync over a feature the
-      # spot balance never depended on.
-      Rails.logger.warn "KrakenItem::Importer - could not fetch Earn allocations: #{e.message}"
-      []
     end
 
     def price_for(symbol)
