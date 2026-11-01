@@ -249,6 +249,31 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  # Rows imported together share a created_at, so a sell-to-cover on the day of
+  # its vest has nothing but the ids to order it; the vest is offered, and the
+  # replay sells from it, whichever id is lower.
+  test "a same-day buy stamped with the sale's created_at is offered and sold from" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMV", 30)
+      trade(security, 10, 20, 2)
+      sale = trade(security, -3, 25, 6)
+      vest = trade(security, 5, 22, 6)
+      Entry.where(id: [ sale.id, vest.id ]).update_all(created_at: TODAY)
+      Entry.where(id: sale.id).update_all(id: "00000000-0000-0000-0000-000000000001")
+      Entry.where(id: vest.id).update_all(id: "ffffffff-ffff-ffff-ffff-ffffffffffff")
+      vest_id = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+
+      sale_trade = Trade.find(sale.entryable_id)
+      assert_includes sale_trade.lot_choices.pluck(:id), vest_id
+      sale_trade.update!(lot_source_entry_id: vest_id)
+
+      materialize(:forward)
+
+      assert_equal [ [ vest_id, 3 ] ], HoldingLotDisposal.where(sale_entry_id: "00000000-0000-0000-0000-000000000001").pluck(:lot_source_entry_id, :qty).map { |id, qty| [ id, qty.to_i ] }
+    end
+  end
+
   test "a sale's held choice stays offered even once the replay no longer reaches it first" do
     travel_to TODAY do
       setup_account(method: "fifo")

@@ -76,8 +76,9 @@ class Trade < ApplicationRecord
 
   # The acquisitions this sale can name as the lot it sold from: buys and
   # transfers-in of its security, in its account, that the replay applies
-  # before it (Entry.chronological: an earlier date, or the same date and
-  # entered first), leaving out a lot sales dated before it had already
+  # before it (an earlier date, or the same date and entered no later: a
+  # purchase stamped with the sale's own created_at replays first, see
+  # Holding::PortfolioCache#trades), leaving out a lot sales dated before it had already
   # emptied. Only a sale in an account that sells by fifo has any, since under
   # average a sale relieves every lot pro rata. The choice the sale already
   # holds is always among them, so an edit keeps it, and is replayed only
@@ -88,8 +89,8 @@ class Trade < ApplicationRecord
     acquisitions = entry.account.entries
       .where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security_id).where("qty > 0").select(:id))
     before_sale = acquisitions
-      .where("entries.date < :date OR (entries.date = :date AND (entries.created_at, entries.id) < (:created_at, :id))",
-             date: entry.date, created_at: entry.created_at || Time.current, id: entry.id || "ffffffff-ffff-ffff-ffff-ffffffffffff")
+      .where("(entries.date, entries.created_at) <= (:date, :created_at)",
+             date: entry.date, created_at: entry.created_at || Time.current)
       .where.not(id: lots_emptied_before_sale)
     before_sale.or(acquisitions.where(id: attribute_in_database(:lot_source_entry_id))).chronological
   end
