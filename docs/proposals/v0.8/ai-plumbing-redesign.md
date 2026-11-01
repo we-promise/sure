@@ -1,6 +1,6 @@
 # Sure — AI plumbing redesign
 
-Status: proposal, updated after the RubyLLM spike · Target: `we-promise/sure` (`origin/main` @ `a6767e931`; later commits to `5ed910330`, after v0.7.6, checked for impact) · 2026-10-28, updated 2026-11-01
+Status: proposal, updated after the RubyLLM spike · Target: `we-promise/sure` (`origin/main` @ `a6767e931`; later commits to `5ed910330`, after v0.7.6, and the open #3422 checked for impact) · 2026-10-28, updated 2026-11-01
 
 Audience: the Sure dev team. This document describes the structure the AI layer is moving to and
 the pull requests that get it there (section 19).
@@ -737,7 +737,7 @@ architecture tests and can't be changed at runtime.
 module Ai::Routes
   MATRIX = {
     chat:              { lane: :interactive, needs: %i[tools streaming],        consent: :user,
-                         sends: %i[chat_messages looked_up_financial_data] },
+                         sends: %i[chat_messages looked_up_financial_data stored_document_text] },
     bill_setup:        { lane: :interactive, needs: %i[structured_output],      consent: :user,
                          sends: %i[transaction_dates transaction_amounts transaction_names category_names bill_configuration] },
     extract_pdf:       { lane: :prompt,      needs: %i[structured_output],      consent: :user,   # vision, documents, ocr: per way of reading (8.1)
@@ -781,6 +781,12 @@ end
 - `search_documents` (the `search_family_files` tool, from chat or MCP) has no model list of its
   own: it uses `embed`'s route and needs, because a query vector must come from the same model as
   the stored ones, or the same vector store. Its lane is interactive, because someone is waiting.
+  It returns only documents the asking user may read: #3422 links each document to its account
+  (`FamilyDocument.readable_by`), and that filter stays.
+- `stored_document_text` is chat's tool `get_document_text` (#3422), which reads a vault
+  statement's text into the conversation and makes no AI call of its own. It's in chat's manifest
+  from PR 2, so 2b's migration counts it as agreed for families with chat on, whichever of #3422
+  and 2b lands first.
 - `Ai::Routes.needs_for(feature)` follows `shadow_of` and `route_of`, so the router checks
   capabilities against the feature the needs come from.
 - A hash of needs (`categorize`) means the feature has a generation and a judgement: a route
@@ -987,6 +993,29 @@ end
   - `search_documents` drops results below a score threshold: every search returned the one
     indexed statement, relevant or not;
   - its client is built by `Ai::Transport::Http`, so it gets the proxy, TLS settings and headers.
+- **Statements in the vault are indexed too (#3422, open and on the v0.7.7 milestone like PR 2).**
+  #3422 queues `IndexAccountStatementJob` after every statement upload (the web vault, MCP's
+  `upload_account_statement` and `/imports`), so `search_family_files` finds them. The plan works
+  whichever of #3422 and PRs 2b and 2e lands first. The recommendation posted on #3422 is that it
+  lands first, with three changes: the job runs on `ai_low_priority`, inside #4237's AI capsule; it's queued only
+  when `VectorStore.configured?` and the uploading user has `ai_enabled?`, because a vault upload
+  isn't an AI action and on an OpenAI vector store it sends the whole statement to OpenAI; and it
+  reads PDFs through `Pdf::TextExtractor` (#4054).
+  - **The job is an `embed` call.** It runs on `embed`'s lane, and is queued only when
+    `Ai.available?(:embed, family:, user:)` is true for the uploader and the uploader's
+    `ai_enabled` switch is on. If #3422 lands first, 2b replaces its check, as it does every
+    other; if 2b lands first, #3422 asks `Ai.available?(:embed)` itself. `/imports` keeps
+    indexing without the switch, as today: there the user asked for AI.
+  - **Indexing catches up** (call by @josh-sanders during development of PR #4440). From PR 7,
+    when a family admin turns Documents on, or an `embed` route appears for a family that has it
+    on, one `embed` job indexes every stored statement that isn't indexed yet. #3422's
+    idempotency key (`account_statement_id`) and statement row lock keep it from indexing one
+    twice, also against `ProcessPdfJob`.
+  - **Deleting a statement deletes its copy.** #3422 removes it through `Family#remove_document`,
+    which on an OpenAI store leaves the file in OpenAI's Files API until this section's fix lands
+    in 2e.
+  - **Not decided yet:** whether turning Documents off deletes the copies already in a cloud
+    store, and whether catching up skips statements whose uploader has the switch off.
 
 ### 5.6 The external assistant
 
@@ -1459,6 +1488,10 @@ scan) through every server it had (spike: "Bank statements as PDFs" and "OCR on 
      OCR entry;
   4. otherwise the extraction is offered for review, flagged, or `Unavailable` (`no_text_layer`)
      for a scan nothing can read, so an empty text layer is never sent.
+
+  `Pdf::TextExtractor` is also what chat's `get_document_text` (#3422) should read through, as
+  recommended on #3422. That tool makes no AI call. From 2e its note on a scan stops saying there
+  is no OCR, and suggests importing the statement with "Read as" set to OCR.
 
   The spike backs the order: the text layer gave capable models 13/13, page images read both
   statements completely on every vision model tried, and the checks caught every wrong answer.
@@ -2214,6 +2247,11 @@ AI call, in PR 3, with the other web-thread calls (section 19).
 
 - An AI-dependent tool is listed only when `Ai.available?(feature)` is true for the token's user,
   so a client never sees a tool that can't work by setup. This replaces today's check in PR 2.
+  `search_family_files` is the exception, because #3422 makes it useful without AI: it's always
+  listed, searches full text only when `search_documents` is available, and otherwise falls back
+  to #3422's metadata search over the vault, saying why (the router's reason, such as
+  `:not_configured` or `:no_family_consent`), never "no documents have been uploaded". This
+  keeps #3422's MCP-only case working: no AI configured, and the vault still searchable.
 - **Only the model call moves; nothing an MCP client sees changes** (call by @josh-sanders during development of PR #4440). Both tools run
   their AI work as an `Ai::ToolJob` and the MCP request waits for the result: `search_family_files`
   on `ai_interactive` for up to 30 seconds, then "busy, try again"; `import_bank_statement` on
@@ -2364,7 +2402,9 @@ end
   can act on it: "Turn on AI in your preferences" for the user, or "Turn on <feature> on the
   AI features page" for a family admin. Views stop writing `if @llm_available`.
 - Features degrade instead of disappearing because domain models own the fallback (Bayes before AI
-  for categorization). The AI layer doesn't know these fallbacks exist.
+  for categorization). The AI layer doesn't know these fallbacks exist. Another is
+  `search_family_files`' metadata search over the vault (#3422) when `search_documents` isn't
+  available (section 14).
 - **System test `NoAiSmokeTest`**: with no AI endpoints, visit dashboard, transactions, bills,
   merchants, rules, insights, imports and settings, and assert there are no AI affordances, no
   errors and no `DebugLogEntry` rows of level `error`. The MCP server still answers.
@@ -2453,7 +2493,12 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
 - `ai_batch_fairness_test.rb`: two families' imports on one AI thread against a stubbed cloud
   endpoint each get their first result before either import finishes.
 - `mcp_ai_tools_test.rb`: an AI-dependent MCP tool is listed only when its feature is available
-  for the token's user, and no MCP request calls a transport.
+  for the token's user, except `search_family_files`, which is always listed and falls back to
+  metadata search with the router's reason; and no MCP request calls a transport.
+- `ai_documents_test.rb`: a vault upload is indexed only when `embed` is available for its
+  uploader and the uploader's switch is on; a search returns only documents the asking user may
+  read; and, from PR 7, turning Documents on indexes each stored statement once, with no
+  duplicate when `ProcessPdfJob` indexes the same statement.
 - `ai_chat_mode_test.rb`: in external mode every chat entry point (chat page, API, "Dig in with
   AI", bills AI review) resolves to an agent route; in built-in mode none does; with the Chat row
   off (an `mcp_only` family before PR 7) all are unavailable; no other feature ever resolves to an agent endpoint.
@@ -2589,7 +2634,10 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
 2. **Generations: every AI call except chat**, in five parts, each its own PR into `main`, merged
    in order (2a to 2e). All five land in the same release, so today's AI job classes stay as
    shims for that one release, not between parts. Each part replaces something whole, so `main`
-   works between them, and each brings a transport call only with its first caller.
+   works between them, and each brings a transport call only with its first caller. The target
+   release is v0.7.7 (call by @josh-sanders during development of PR #4440).
+   #3422 (vault statements indexed and readable by chat tools) is on the same milestone and may
+   land before or after 2b and 2e; section 5.5 covers both orders.
    - **2a. Transports and instrumentation.** The `compatible` and `anthropic` transports with
      `probe`, `Http`, `Ai::Result`, `Ai::Error` (with `NoCredit` and `ModelMissing`), the
      per-attempt time budget, the instrumentation subscribers with the correlation id, usage per
@@ -2603,7 +2651,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `Ai::Routes` with its `sends:` manifest, `Ai::Router`, `Ai::Consent` with the user switch,
      `Ai.available?`, `AiFeatureGuard`, `Family::AiSettings` and `Sure/NoAiEnv`. Every non-chat
      availability check asks the router, which fixes drift bugs 1 and 5. The user switch keeps
-     today's checks until PR 7 (section 6). Adds the agreement test, with chat's entry points on its allowlist until PR 6.
+     today's checks until PR 7 (section 6). #3422's indexing job, if it has landed, asks
+     `Ai.available?(:embed)` with the uploader's switch (section 5.5). Adds the agreement test, with chat's entry points on its allowlist until PR 6.
      *Deletes:* the non-chat availability checks and their test stubs.
    - **2c. Generations.** `transport.generate` with the JSON-mode policy, `Ai::Generation`,
      `Ai::Requester`, `Ai::Batch` with per-item costs and splitting on overflow,
@@ -2633,7 +2682,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      Auto's input step tuning itself per account, pages batched by `Ai::Batch` with no page limit,
      the extraction checks offered for review, the hardened page rendering, and OCR route entries,
      local through chat or Mistral and Cohere through `RubyLLM.ocr` with their presets (section 8.1), `embed` and `search_documents`, and the OpenAI
-     vector store fixes (section 5.5).
+     vector store fixes (section 5.5). With #3422 landed: its indexing job on `embed`'s lane,
+     `search_family_files` always listed with its metadata fallback (section 14), and
+     `get_document_text`'s note on scans. Adds the documents test.
      *Deletes:* the four PDF and statement workers, the usage recorders, the per-worker tracing,
      `preferred_llm_provider` and `llm_provider_order`, and their test stubs.
 
@@ -2691,7 +2742,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    manifest: `families.ai_consents`, the consent migration (an `mcp_only` family gets chat
    switched off, and PR 6's `mcp_only` line goes), member emails, `:no_family_consent` and
    `:consent_outdated`, and the shadow comparison switch with `Setting.ai_shadow_rates` replacing
-   `families.categorization_shadow_rate` (section 8.2). That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
+   `families.categorization_shadow_rate` (section 8.2). Turning Documents on indexes the stored
+   statements not yet indexed (section 5.5). That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
    The test helpers switch to the new fixtures. Adds the config and consent tests.
    *Still on old code:* nothing; from here every process reads the same rows.
 8. **Health and settings pages.** The health page (lanes, down marks, AI threads per worker,
