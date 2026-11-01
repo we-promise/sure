@@ -1,7 +1,7 @@
 # RubyLLM spike report (PR 1 of the AI plumbing redesign)
 
 **Companion to:** [`rubyllm-spike-prompt.md`](rubyllm-spike-prompt.md) (the brief), [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) (the plan, §19) and [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) (the question before it was run)
-**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`6014a5d2e`](https://github.com/josh-sanders/sure/commit/6014a5d2e). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
+**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`dcba91241`](https://github.com/josh-sanders/sure/commit/dcba91241). Every test and recording named below is on that branch; it is never merged. Replay with `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb`, no keys needed; record again with `SPIKE_RECORD=1` and the spike's `.env.local`.
 **Status:** a recommendation with its evidence, not a decision. The spike's second purpose was to sort the plan's choices into product decisions and technical limits; none of the product decisions, and none of the scope lines, is final. This file is the spike's note (`docs/llm-guides/ai-pipeline.md` on the branch) as of that commit; the plan's own short note in that path comes with PR 2.
 
 **Recommendation: adopt, pinned to `ruby_llm` 2.1.1** (released 2026-10-11, the latest at the
@@ -32,7 +32,7 @@ Sure keeps the turn's bounds (it steps the tool loop; RubyLLM can run the tools,
 agents behind the gate"), the JSON-mode policy, error mapping, instrumentation and the routing
 around it.
 
-Branch: `spike/ruby-llm` (not merged). Tests: `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb` (365 runs, 57 skips:
+Branch: `spike/ruby-llm` (not merged). Tests: `bin/rails test test/models/ai test/models/pdf test/models/vector_store/openai_live_test.rb` (377 runs, 57 skips:
 the live-only timeout, Red Candle and job-runner tests, and OCR combinations not recorded), and for Jev `bin/rails test test/models/provider/jev_test.rb
 test/models/provider/jev_gem_test.rb test/models/provider/jev_gem_live_test.rb` (62 runs). Live server: llama.cpp on venus, `qwen3.6-35b-a3b-mtp` (64k context,
 `--jinja`, tool calls on) and `granite-embedding-small-english-r2` (384 dimensions). Neither model
@@ -88,8 +88,8 @@ open to new evidence like everything else here.
 | Sure stores chat history, not RubyLLM (§8.4, proposal 04) | Mobile API and broadcasts unchanged; model picked per turn; no usage ledger | RubyLLM's history knows each message's producer and strips other providers' leftovers; approvals that survive restarts | "Switching providers"; RubyLLM install templates |
 | Failover only at the start of a turn (§5.5) | No half-written answer from two models | Provider state can move (Google's placeholder signature); RubyLLM falls back even after chunks have streamed and reports it | `switch/placeholder_round_llama_gemini`; `fallback.rb` |
 | Gemini through Google's OpenAI-compatible API (§4.2) | One more compatible server, one code path | Native provider continues other models' tool rounds, prices calls, and has Gemini-only features (search grounding, batches) | `switch/round_llama_gemini_native`; `features/cost` |
-| The `auto` JSON-mode chain (§7) | Servers differ on strict schemas | Retries 400s unrelated to JSON (resent a whole PDF twice); re-asks when the answer is legitimately empty; a slow model's three attempts took 26 minutes | PDF and OCR spikes |
-| Prompts as `.md` with `%{}`, no ERB (§8.3) | Family overrides are user text; ERB would run code | RubyLLM's agent instructions and 2.1 partials need ERB templates | "Prompt partials" (discussion) |
+| The `auto` JSON-mode chain (§7). **Owner, 1 Nov:** keep it as the default, with the fixes: it stops on 400s unrelated to JSON, and each attempt has a time budget | Servers differ on strict schemas | Retries 400s unrelated to JSON (resent a whole PDF twice); re-asks when the answer is legitimately empty; a slow model's three attempts took 26 minutes | PDF and OCR spikes |
+| Prompts as `.md` with `%{}`, no ERB (§8.3). **Owner, 1 Nov:** Sure's prompt files are ERB (RubyLLM's `render_prompt`, partials, agent instructions); family overrides stay plain text, put into the template as data and never compiled, because ERB runs Ruby and a family admin isn't trusted with the server | Family overrides are user text; ERB would run code | RubyLLM's agent instructions and 2.1 partials need ERB templates | "Prompt partials" (discussion) |
 | Jev hand-written (§7). **Owner, 31 Oct:** Jev moves to RubyLLM's `judge` in PR 2 | Any gateway URL; no dependency | 72 lines to maintain; RubyLLM's `judge` works on OpenCode Zen; `ruby_decision_model` covers it in 54 | Jev section |
 | PDF import: images for vision, text otherwise, unavailable for a scan (PDF spike) | Every right extraction came from those two inputs | Anthropic and OpenAI read PDFs natively (not tested live) | `statements/`, `ocr/` |
 | Page rendering in a child process vs `ruby-vips` in process | Child keeps poppler's memory away from the worker | `ruby-vips` is simpler, already bundled; the child needs limits to be worth it | `page_images_test` |
@@ -103,6 +103,11 @@ open to new evidence like everything else here.
 | Chat storage redesign out of scope (§20). **Owner, 31 Oct:** spike RubyLLM 2.2's persistence when it ships (PR 5), then decide before chat | The plumbing needs one additive column; one turn per chat can be Sure's own claim (31 lines) | RubyLLM's persistence pays off if RubyLLM runs the loop; 2.2 (unreleased) adds one process per chat and per tool call, cancel from another process, and approvals safe against a double click, all on that persistence | "Switching providers"; "One turn per chat" |
 | One turn per chat, with a claim on `chats` (not in the plan yet) | Two jobs on one turn ran the write tool twice today; with the claim, once | Two columns and a renewal before every tool run, or a lapsed turn writes again; a turn waiting longer than the claim wastes its model call | "One turn per chat"; `chat_claim_test` |
 | A message sent while a turn runs (today: a second turn starts at once) | Each message is answered as soon as possible | Two turns read the same history and ran at the same time; with a claim the second waits and runs after (re-enqueued), or could be refused | `chat_claim_test` |
+| One ordered model list per feature, failover down the list, the only failover layer (§5.2, §5.4). **Owner, 1 Nov:** yes; the list is tried in order, skipping what's down, with no move limit | One list holds local servers, gateways and several models on one gateway; every model that may see the data is a visible entry; failover shows in marks, usage and the footer | A gateway's or RubyLLM's own fallback needs no entry per model | `failover_test` |
+| What a failure marks down: the server, the key or the model (§5.4). **Owner, 1 Nov:** the smallest thing the error proves broken: the server when no response came back, or on a timeout or 5xx from a local endpoint; the key on a 401 or 403; otherwise the model. Anything else is for an issue | Marking the model keeps a gateway usable after one upstream's 503 or 429; marking the server is right for a hung local server; by location passed every case but a whole-key 429 | The plan's rule took a gateway's other models out for 60 s; marking only the model tried a second model on a hung local server and lost the call | "Failover on a gateway"; `failover_test` |
+| No RubyLLM `with_fallbacks` inside an entry (not in the plan). **Owner, 1 Nov:** agreed | Sure saw model-a succeed while model-b answered: no mark, model-b's usage at model-a's price, nothing in the footer; an unlisted model ID can't be a fallback | One call, no extra entries; RubyLLM reports a switch after chunks streamed | "Failover on a gateway"; `failover_test` |
+| A family's own key: its calls fail over only to routes on its own keys, never the operator's key or a local server, and the family admin is told (§4.2). **Owner, 1 Nov:** yes: the family gets what it chose, with no surprises | No bill for the operator and no data on a server the family didn't pick; a broken key is seen, not hidden | A local model or the operator's key could have answered | `failover_test` "a family's own key…" |
+| Per-family cost caps (§20). **Owner, 1 Nov:** in scope for PR 9, only for a family that brings its own key: the family admin takes responsibility for that endpoint's configuration, the cap included | The family that pays sets the limit; usage per attempt already carries family and cost | Nothing caps a family on the operator's key; a cap checked before a call can overshoot by one call or batch; cost is known only for priced models | Discussion; usage-ledger spike |
 | Local OCR as a two-step route (OCR model, then extraction) | Read both statements completely on CPU | Needs a second model or endpoint per route; a prompt per model | `ocr/` |
 | AI jobs on Sidekiq threads, not fiber workers (§11) | 200 threads made 200 cloud calls in 3.1 s (fibers 3.0 s) on a pool of 3 connections, with the same memory; chat as fast as on fibers with a 1-thread chat capsule (48.3 s against 48.2 s); interrupting works on threads; no second job runner | Fibers need no chat capsule and no AI thread count, and waiting costs nothing; one capsule of 4 threads left chat 136 s without a thread; Solid Queue's `limits_concurrency` was the only limit shared across workers that was tested | "Job runners and chat priority" |
 | Chat's wait behind background work on a local host: about 2 s, never more than 5 s (the owner, 2026-10-31) | Chat felt broken at 45 s; interrupting meets it (0.09 s) with MTP and the full context kept | Only interrupting or a kept slot meets it; both cost background throughput or lost work | `gpu_merchants_live_test` |
@@ -126,10 +131,9 @@ open to new evidence like everything else here.
 | Two-level consent: the family per feature, then the member (§6) | Admins and members trying the AI features page; whether `:no_family_consent` blocks anything people expect to work |
 | Config source all or nothing: the UI, `AI_CONFIG` or the old ENV, no per-field locks (§4.1) | Operators of compose, Helm and quadlet installs upgrading with each source |
 | One YAML file, `AI_CONFIG`, loaded into the tables at boot (§4.4) | A home-lab and a multi-tenant config written from scratch and exported again |
-| The old AI ENV kept for a deprecation period, read as a generated config file (§4.5) | Every documented ENV setup booting on the new code, compared with today's resolution |
-| A family's own key for cloud endpoints, with no fallback to the instance key (§4.2) | A family key failing: whether failing over to the next route, not the instance key, is what admins want |
+| The old AI ENV kept for a deprecation period, read as a generated config file (§4.5). **Owner, 1 Nov:** yes: warned at every boot, removed in a later release | Every documented ENV setup booting on the new code, compared with today's resolution |
 | Cloud endpoints must use https; local ones may use http (§4.2) | Installs whose cloud gateway sits behind plain http on a private network |
-| One ordered model list per feature, failover down the list (§5.2, §5.4) | Routes with a local model first and a cloud model second, the local server down |
+| Three protocols: `compatible`, `anthropic`, `jev` (§4.2); a native Bedrock or Vertex AI endpoint (region, IAM or a service account) has none | Bedrock through RubyLLM's native provider and through an OpenAI-compatible proxy, against `AiEndpoint`'s columns |
 | Shadow runs for any feature, as their own job (§8.2) | A shadow run of `detect_merchants`, with the comparison page |
 | Smart-fill and smart-configure become asynchronous (§11) | Users on a slow local model: a skeleton and a broadcast against today's wait |
 | Small batches that re-enqueue at the back of the queue, so families take turns (§11) | Two families' imports on one AI thread: each family's first result time |
@@ -137,7 +141,7 @@ open to new evidence like everything else here.
 | Ruby ML engines and the classifier settings page left alone (§20) | Nothing in the plumbing; a separate proposal |
 | Suggestions instead of AI locks, and rule ordering (§20) | A user review of corrections, and evals of how often AI's answer is overridden |
 | Rules that run only after an AI rule (§20) | A prototype on the generation completion hook (§8.1) |
-| Family-owned endpoints and models, per-family cost caps (§20) | A security review of family-set base URLs (internal addresses), and demand on #3037 |
+| Family-owned endpoints and models (§20) | A security review of family-set base URLs (internal addresses), and demand on #3037 |
 | A member's private accounts sent to background AI (§20) | The consent test with private and shared accounts |
 | No `ai_calls` table replacing `llm_usages` (§20) | Partly covered: "RubyLLM's usage ledger" compared RubyLLM's table with `llm_usages`, not an `ai_calls` table |
 | Langfuse traces unchanged (§20) | Partly covered: "Tracing modes" |
@@ -167,6 +171,9 @@ open to new evidence like everything else here.
 - RubyLLM downloads non-image URL attachments from the Rails process (`Attachment#fetch_content`).
 - RubyLLM's fallbacks can't move between two endpoints of the same provider: `:openai` has one
   `openai_api_base`.
+- RubyLLM's fallback by model ID resolves through the registry, so a gateway model outside it
+  raises `ModelNotFoundError`; a `RubyLLM::Model` (`Model.default`, `:nodoc:`) works.
+- `RubyLLM::ModelNotFoundError` isn't a `RubyLLM::Error`, so a rescue of `RubyLLM::Error` misses it.
 - RubyLLM's `input_tokens` excludes cached tokens (reported 512 where the prompt was 12,457).
 - RubyLLM retries OpenAI's `insufficient_quota` 429 like a rate limit.
 - A claim taken inside a transaction is invisible to other processes until it commits.
@@ -1467,6 +1474,76 @@ re-enqueues itself 5 s later.
 - **Not tested:** the watchdog's interplay with claims (a turn queued behind other AI work has no
   claim yet, so the watchdog is still what resolves it), RubyLLM 2.2's own claims, and Sidekiq
   processes rather than threads.
+
+## Failover on a gateway (decision 12), outside the criteria
+
+Section 5.4 marks a whole server down on a timeout or 5xx and fails over only to a different
+server. That fits a local server, one process that fails as a whole. A gateway is one endpoint
+and key in front of many models (OpenRouter, Vercel AI Gateway, Bedrock), and its 503 or 429
+usually belongs to one upstream model. `Ai::Spike::Failover` (100 lines) is section 5.4's router
+loop with three marking rules, run in `failover_test` against a stubbed gateway (two models, one
+key) and a stubbed llama.cpp (two models), with routes `gateway/model-a, gateway/model-b,
+llama/qwen3-3b` or `llama/qwen3-3b, llama/gpt-oss-20b, gateway/model-a`:
+
+- **`:plan`**, section 5.4 as written: a timeout or 5xx marks the server, a 429 or 401 the key;
+  failover only to another server.
+- **`:response`**: the server only when no HTTP response came back (`Unreachable`, which includes
+  a connect timeout); a 401 the key; a read timeout, 5xx or 429 only that model on that key.
+  Failover may stay on the same server.
+- **`:location`**: mark the smallest thing the error proves broken. The server when no response
+  came back, or on a timeout or 5xx from a local endpoint (§4.2's `location`: one process fails as
+  a whole); the key on a 401; otherwise the model. The next route is the next one not down. The
+  owner's call (1 Nov), with no move limit.
+
+| Case | `:plan` | `:response` | `:location` |
+|---|---|---|---|
+| Gateway: 503 for model-a only | Llama answers; the gateway is down for 60 s, so a feature routed only to model-b is unavailable | Model-b answers, and stays usable | As `:response` |
+| Gateway: 429 for model-a only (an upstream's limit) | As the 503: the key is marked, model-b unusable | Model-b answers | As `:response` |
+| Gateway: 429 for the whole key | Llama answers (1 gateway call) | Model-a, then model-b (2 calls); the one move is spent, so the call fails although llama was listed | As `:response`; with two moves llama answers after 2 gateway calls |
+| Gateway: 401 | Key marked, model-b never tried, llama answers | Same | Same |
+| Llama: connection refused | Server marked, second llama model never tried, the gateway answers | Same | Same |
+| Llama: read timeout (hung server) | The gateway answers (1 llama call) | The second llama model is tried and times out too; the call fails | As `:plan` |
+| Llama: invalid output (escalation) | The bigger model on the same server answers; nothing marked | Same | Same |
+
+**RubyLLM's fallbacks inside one entry**, for contrast (`with_fallbacks` on the entry's chat:
+same context, key and base URL):
+
+- **By model ID, a model outside RubyLLM's registry can't be a fallback.**
+  `with_fallbacks("vendor-b/model-b")` resolves through the registry without
+  `assume_model_exists`, so the gateway's 503 became `RubyLLM::ModelNotFoundError`. That class
+  isn't a `RubyLLM::Error`, so it passed the transport's error mapping unmapped, and Sure's
+  failover didn't treat it as a failure to move on from.
+- **By `RubyLLM::Model` (`Model.default`, `:nodoc:`), model-b answered, and Sure saw model-a
+  succeed.** The router, the result's route and the `.ai` event all named model-a with no error:
+  no down mark, nothing for the health page or the footer line. The usage was model-b's tokens,
+  priced as model-a. Only RubyLLM's `after_fallback` knew (from, to, the error).
+- **The entry's settings carried over.** Model-b got model-a's strict schema. When model-b
+  refused it with a 400 (not a fallback error), Sure's `auto` chain retried `json_object` on a
+  new chat, which started again at model-a: four calls, two per model.
+
+What it shows:
+
+- **Marking the model, not the server, is what keeps a gateway usable** after one upstream fails.
+  Under the plan as written, one model's 503 or upstream 429 takes every model on that gateway out
+  for 60 seconds, for every feature.
+- **Marking only the model is wrong for a hung local server:** the next model on the same process
+  is tried and fails the same way, and "at most once" spends the move on it. `:location` passed
+  every case except the whole-key 429, which needs a second move or a 429 that marks the key.
+  Telling a key's 429 from an upstream's needs the gateway's error body, which isn't tested.
+- **RubyLLM's fallbacks hide the failover from Sure.** To use them, Sure would need the
+  `after_fallback` callback for marks, usage and the footer, `RubyLLM::Model` objects for unlisted
+  models, and a rule for per-entry settings. Several entries on one endpoint do the same with
+  none of that.
+- **With no move limit, `:location` passed every case.** A list of four (gateway model-a and model-b
+  both 429 on the whole key, llama refusing connections, a second gateway) reached the second
+  gateway after three marks: two models, one server. The next call skipped all three without a
+  request.
+- **A family's own key, after the owner's call:** one model's 503 moved to the family's other
+  model on its key; its key's 401 stood as the error, with neither the local server nor the
+  operator's key on another gateway tried (one request in all).
+- **Not tested:** live gateways (OpenRouter, Vercel AI Gateway, Bedrock), a gateway's own fallback
+  (OpenRouter's `models` list, Vercel's provider order, Bedrock's cross-region inference), streamed
+  chat turns, and how the family admin is told.
 
 ## Lines of code for bill setup
 

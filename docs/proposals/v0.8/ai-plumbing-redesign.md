@@ -195,7 +195,7 @@ app/models/ai/
 config/ai/presets/                       # one YAML file per provider
   openai.yml  anthropic.yml  gemini.yml  openrouter.yml  llama_cpp.yml  ollama.yml  jev.yml  jev_local.yml
 config/ai.example.yml                    # documented example of the AI_CONFIG file
-app/prompts/                             # every prompt, one home; <name>.<locale>.md for translations
+app/prompts/                             # every prompt, one home; <name>.<locale>.txt.erb for translations
 app/jobs/ai/generation_job.rb            # generic, lane-aware, batch-yielding, cancellable
 app/jobs/ai/shadow_job.rb                # a shadow run, on ai_background
 app/jobs/ai/probe_job.rb                 # health probe for one model
@@ -328,7 +328,7 @@ class AiRoute < ApplicationRecord
   # json_mode: an override for this entry only; nil means the endpoint's own value.
   def json_mode = super || ai_model.ai_endpoint.json_mode
 
-  # prompt: an app/prompts file name for this entry, without locale or .md; nil means the
+  # prompt: an app/prompts file name for this entry, without locale or .txt.erb; nil means the
   # feature's default prompt. Precedence is in section 8.3.
   validate :prompt_file_exists
 
@@ -356,7 +356,7 @@ class AiEndpointCredential < ApplicationRecord
   validate  :cloud_endpoint   # a local server's key belongs to the operator; agent endpoints too
 end
 
-# columns: family_id, ai_endpoint_id, api_key
+# columns: family_id, ai_endpoint_id, api_key, monthly_cost_cap (decimal, nullable: no cap)
 ```
 
 **A family's own key.** The instance admin still decides endpoints, models and routes. A family
@@ -366,9 +366,18 @@ the endpoint use it:
 - **Which key a call uses.** The family's key if it has one, otherwise the endpoint's own key.
   An endpoint saved with no key of its own is reachable only by families that bring one; that's
   how an operator makes every family pay for its own calls, with no extra setting.
-- **No silent fallback.** If a family's key fails, the call doesn't retry with the instance key.
-  That would bill the operator and hide the broken key. It fails over to the next route like any
-  other failure, and the family admin sees the "AI unavailable" notice naming the key.
+- **The family gets what it chose.** A call on a family's own key fails over only to routes on
+  the family's own keys: never to the instance key, which would bill the operator and hide the
+  broken key, and never to a local server, which the family didn't pick. When none is left, the
+  error stands and the family admin sees the "AI unavailable" notice naming the key (the owner,
+  1 Nov; spike: `failover_test`).
+- **A cost cap on each own key.** By bringing a key, the family admin takes responsibility for
+  that endpoint's configuration, including what it may spend (the owner, 1 Nov). The key has an
+  optional monthly cap in US dollars, as `llm_usages.estimated_cost` records. Once the month's
+  cost of the family's calls on that key reaches it, the router drops the family's routes on that
+  key with `:cost_cap_reached`, never falling back to the endpoint's own key, and the notice says
+  so. The cap is checked before a call, so it can overshoot by one call or batch, and it counts
+  only models with prices. Calls on the operator's key have no per-family cap.
 - **Down marks per key.** A 429 or 401 on a family's key marks only that key (section 5.4), so
   one household's quota never blocks another.
 - **Usage.** `llm_usages` gains `family_key` (boolean), so the usage page shows which calls the
@@ -789,8 +798,8 @@ shadow_categorize → jev/jev-latest
 embed             → embed/nomic-embed-text
 ```
 
-The first model is the normal choice. A later one is used only when an earlier one's server is
-down (failover) or the earlier model can't handle the request (escalation). A busy local host
+The first model is the normal choice. A later one is used only when an earlier one is down
+(failover) or the earlier model can't handle the request (escalation). A busy local host
 isn't a reason to move on: the call waits, interrupts background work or re-enqueues (section 11), so work never
 leaves for the cloud just because the local model is busy. One list covers all three, so there's
 no separate duty, standby, failover or escalation setting. A feature with no list is
@@ -821,7 +830,7 @@ class Ai::Router
 
     capable = listed.select { |route| route.agent? || route.model_capable?(Ai::Routes.needs_for(feature)) }
     allowed = capable.select { |route| @family.ai_endpoint_allowed?(route.endpoint) }
-    keyed   = allowed.filter_map { |route| route.with_key_for(@family) }   # family key, else endpoint key, else dropped
+    keyed   = allowed.filter_map { |route| route.with_key_for(@family) }   # family key (dropped at its cost cap), else endpoint key, else dropped
 
     return Ai::Availability.unavailable(:capability_missing)   if capable.empty?
     return Ai::Availability.unavailable(:endpoint_not_allowed) if allowed.empty?
@@ -857,30 +866,42 @@ end
 - **No overflow.** The sequencer takes the first route in the plan that isn't marked down. If its
   local host is busy, the call waits, interrupts or re-enqueues (section 11); it doesn't move to the next
   entry.
-- **Failover: the endpoint is unhealthy.** On `Ai::Error::Timeout`, `Upstream`, `RateLimited`,
-  `Unreachable`, `Unauthorized`, `NoCredit` or `ModelMissing`, the generation retries once on the
-  next route on a different server (a different normalised base URL), and the failed one is
-  marked down.
+- **Failover: something is down.** On `Ai::Error::Timeout`, `Upstream`, `RateLimited`,
+  `Unreachable`, `Unauthorized`, `NoCredit` or `ModelMissing`, the failure is marked down (below)
+  and the generation moves to the next route in the list that isn't marked down, on any server:
+  the next model on the same gateway, or another endpoint.
 - **Escalation: this model can't handle this request.** On `Ai::Error::InvalidOutput` or
-  `ContextTooLong`, the generation retries once on the next route, which may be a bigger model on
+  `ContextTooLong`, the generation moves to the next route, which may be a bigger model on
   the **same** endpoint (a 3B and a 20B on one llama.cpp host). Nothing is marked down: the
   endpoint is fine, and other requests may suit the small model. `InvalidOutput` is raised only
   after the transport's own JSON-mode fallbacks and tolerant parsing have failed, so the small
   model really couldn't do it.
 - **No retry on other `Refused` errors.** A malformed request is our bug, and every model would
   refuse it.
-- **Limits.** Each call fails over or escalates at most once. If the last route also fails, the
-  error stands. Both only use routes the admin listed and the family allows, and the failed
-  call's usage is still recorded.
-- **Down marks.** The router marks the failure down in `Rails.cache` for 60 seconds, so the next
-  call skips it without waiting for the same timeout. A fresh failed probe result marks it down
-  too. Connection failures (`Timeout`, `Upstream`, `Unreachable`) mark the **server**, keyed by
-  normalised base URL (host and port: a chat server can be down while the embedding server on the
-  same host is up), so every endpoint row on that server is skipped. `RateLimited`,
-  `Unauthorized` and `NoCredit` mark only the **key**: the endpoint row with its own key, or the
-  endpoint row and family when a family brought its own (section 4.2). A quota or key problem is
-  the key's, not the server's, so one family's 429 never blocks another family or the instance
-  key. `ModelMissing` marks only that model on that endpoint.
+- **Limits.** The list is the limit: a call moves down it until a route answers or none is left,
+  and then the last error stands. Each attempt's time budget (section 7), and for chat the turn
+  deadline and failover only before the first chunk (section 5.5), bound the wait. Both only use
+  routes the admin listed and the family allows, a call on a family's own key stays on its own
+  keys (section 4.2), and every failed attempt's usage is still recorded.
+- **One failover layer.** Sure's list is the only one: RubyLLM's `with_fallbacks` isn't used
+  (section 8.4). Several models on one gateway are several entries, each with its own settings,
+  and every model that may see the family's data is one the admin listed.
+- **Down marks: the smallest thing the error proves broken.** The router marks it down in
+  `Rails.cache` for 60 seconds, so the next call skips it without waiting for the same timeout. A
+  fresh failed probe result marks it down too. The owner's call (1 Nov), from the spike's
+  "Failover on a gateway"; other behaviour is for an issue.
+  - **The server**, keyed by normalised base URL (host and port: a chat server can be down while
+    the embedding server on the same host is up), so every endpoint row on it is skipped: when no
+    response came back (`Unreachable`, which includes a connect timeout), and on a `Timeout` or
+    `Upstream` from a `local` endpoint, one process that fails as a whole.
+  - **The key** on `Unauthorized` or `NoCredit`: the endpoint row with its own key, or the
+    endpoint row and family when a family brought its own (section 4.2), so one family's key
+    problem never blocks another family or the instance key.
+  - **The model on that key** otherwise: a cloud endpoint's `Upstream`, `Timeout` or
+    `RateLimited`, and `ModelMissing`. A gateway (OpenRouter, Vercel AI Gateway, Bedrock) is one
+    endpoint in front of many models, and its 503 or 429 usually belongs to one upstream model,
+    so the rest of the gateway stays in use. A 429 on the whole key costs one call per listed
+    model on it before the list moves on.
 - **What the user sees.** Chat shows the serving model below the message input
   (`claude-sonnet-4-6 · Anthropic`) and says so after a failover
   (`claude-sonnet-4-6 · Anthropic (gpu unreachable)`) or an escalation
@@ -970,7 +991,7 @@ keys), lives in `Family::AiSettings`, a concern in `app/models/family/ai_setting
 threshold and prompt overrides; PR 6 adds chat mode. PR 7 creates the AI features page with chat
 mode and per-feature consent (`families.ai_consents`, the consent migration, member emails,
 `:no_family_consent`, `:consent_outdated`), which fixes drift bug 4. PR 9 adds the family's
-allowed endpoints, its own keys and the member switch as new sections of that page. Until each
+allowed endpoints, its own keys with their cost caps and the member switch as new sections of that page. Until each
 lands, the router has no line for it: before PR 7 background features run without family
 consent, as today. One rule is carried over rather than stubbed: today `mcp_only` turns chat
 off (through `User#ai_available?`), so PR 6, which deletes that check, keeps the rule as one line
@@ -1192,7 +1213,7 @@ A feature is declared, not implemented. This replaces both `Provider::Openai::Bi
 # app/models/ai/generations/suggest_bill_setup.rb
 class Ai::Generations::SuggestBillSetup < Ai::Generation
   feature :bill_setup                      # → routing table row: lane, needs, consent, data manifest
-  prompt  :bill_setup                      # default → app/prompts/bill_setup.md (section 8.3)
+  prompt  :bill_setup                      # default → app/prompts/bill_setup.txt.erb (section 8.3)
 
   SCHEMA = {
     type: "object",
@@ -1247,9 +1268,9 @@ end
      gate (section 11); if an interactive call interrupts it (`Ai::Error::Preempted`), the same
      request waits for the gate again and is sent again, with no failover and no attempt counted.
 
-   On a failover error, retry once on the next route on a different server; on an escalation
-   error, retry once on the next route, whatever its endpoint (section 5.4). Coercion and
-   validation (step 4) run inside this retry, so invalid output can escalate.
+   On a failover or escalation error, move to the next route in the list that isn't marked down,
+   whatever its endpoint, until one answers or none is left (section 5.4). Coercion and
+   validation (step 4) run inside this loop, so invalid output can escalate.
 4. Coerce and validate the JSON against `schema` (`Ai::Schema`): `"null"` → nil, numeric strings →
    numbers, unknown enum values → nil, invalid → `Ai::Error::InvalidOutput`.
 5. `ActiveSupport::Notifications.instrument("generate.ai", feature:, route:, usage:, error:, family:, correlation_id:, shadow: false)`.
@@ -1420,7 +1441,7 @@ end
 - **Same model allowed.** Nothing requires the shadow to use a different endpoint or model.
   Same-model experiments are first-class:
   - a different prompt: `{ model: gpu/qwen3-8b, prompt: categorize_transactions_trial }` runs
-    `app/prompts/categorize_transactions_trial.md` against the live prompt;
+    `app/prompts/categorize_transactions_trial.txt.erb` against the live prompt;
   - a different JSON mode: `{ model: gpu/qwen3-8b, json_mode: json_object }` against the
     endpoint's `strict`;
   - a different reasoning effort: `{ model: openai/gpt-5.4-nano, reasoning_effort: high }`
@@ -1451,29 +1472,40 @@ end
 the provider workers' heredocs, which are deleted), the chat system prompt (from
 `Assistant::Configurable`), and the chat messages Sure drafts for a user: the "Dig in with AI"
 prefill (from i18n) and the bills AI review (`Bills::AiReviewsController::REVIEW_PROMPT`). i18n
-holds UI text only, never prompt text. Tool descriptions stay in the tool classes. Plain
-`%{placeholder}` interpolation, no ERB.
+holds UI text only, never prompt text. Tool descriptions stay in the tool classes.
 
-**Names.** A prompt file is `app/prompts/<name>.md`. The default for a feature is
-`<key>.md` (`categorize_transactions.md`). Any other name is just a name: a shorter prompt for a
+**ERB, with overrides as data.** Prompt files are ERB, rendered by RubyLLM's `render_prompt`
+(in 2.1.1): `app/prompts/<name>.txt.erb`, with partials for shared rules
+(`<%= render "shared/money_rules" %>`) and locals for what Sure fills in (`Chat#prompt_locals`:
+date, currency, accounts). Prompt files are application code, reviewed like code. A family
+override is never compiled: ERB runs Ruby, and a family admin isn't trusted with the server
+(`<%= ENV["OPENAI_ACCESS_TOKEN"] %>` would send the instance's key to the model). The override is
+plain text passed to the feature's template as a local and inserted with `<%= %>`, so the parts
+Sure adds around it today (chat's session context) stay in the template. Today's overrides have
+no placeholders, so nothing is lost. The owner chose this (1 Nov) over `%{}` everywhere and over
+a logic-less template language for both.
+
+**Names.** A prompt file is `app/prompts/<name>.txt.erb`. The default for a feature is
+`<key>.txt.erb` (`categorize_transactions.txt.erb`). Any other name is just a name: a shorter prompt for a
 small model, or a trial prompt for a shadow run, is a file the route entry names
 (`prompt: categorize_transactions_short`). The only naming convention is the locale suffix.
 
 **Which prompt runs.** The first that applies:
 
-1. the family's override, for keys a family can override (below);
+1. the family's override, for keys a family can override (below), inserted into the feature's
+   template as text;
 2. the route entry's `prompt:`, set by the instance admin;
-3. the feature's default, `<key>.md`.
+3. the feature's default, `<key>.txt.erb`.
 
-**Locale.** For whichever file was chosen in steps 2–3, Sure looks for `<name>.<locale>.md` and
-falls back to `<name>.md`. The locale is the user's when a user started the work (chat, bill
+**Locale.** For whichever file was chosen in steps 2–3, Sure looks for `<name>.<locale>.txt.erb` and
+falls back to `<name>.txt.erb`. The locale is the user's when a user started the work (chat, bill
 setup, PDF import, the dig-in prefill), otherwise the family's (background work). For a German
-user, `categorize_transactions.de.md` is used if it exists, otherwise `categorize_transactions.md`.
+user, `categorize_transactions.de.txt.erb` is used if it exists, otherwise `categorize_transactions.txt.erb`.
 Translations are optional files; today only the dig-in prefill has one
-(`insight_dig_in.de.md`, moved from `de.yml`). A family override isn't localised: the family
+(`insight_dig_in.de.txt.erb`, moved from `de.yml`). A family override isn't localised: the family
 wrote it in the language it wants.
 
-**Validation.** A route entry that names a prompt whose `<name>.md` doesn't exist fails
+**Validation.** A route entry that names a prompt whose `<name>.txt.erb` doesn't exist fails
 validation in the UI and stops the boot for `AI_CONFIG`; it's never silently replaced.
 `Ai::Comparison`'s route jsonb records the prompt that actually ran (family override, named file
 or default, and the locale file), so a shadow comparison shows which prompts were compared.
@@ -1549,7 +1581,7 @@ What happens to today's chat classes in PR 6:
 | `Assistant::Responder` | Its round cap and final no-tools round move into `respond`'s driver; RubyLLM runs the tools; deleted |
 | `Assistant::FunctionToolCaller` | Stays: it runs tools against the family's data, which is domain work. `SureTool` wraps each function for RubyLLM and calls it through the caller, so a tool's failure is still Sure's data (no SQL in a not-found, the retry hints) |
 | `Assistant::HistoryTrimmer`, `TokenBudget`, `TokenEstimator` | Move to `Ai::Conversation::History`. The budget comes from the model's `context_window` minus `max_output_tokens`, so `LLM_MAX_HISTORY_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE` go |
-| `Assistant::Configurable` | The system prompt text moves to `app/prompts/chat_system.md`; the values it fills in (date, currency, accounts) stay in the domain as `Chat#prompt_locals` |
+| `Assistant::Configurable` | The system prompt text moves to `app/prompts/chat_system.txt.erb`; the values it fills in (date, currency, accounts) stay in the domain as `Chat#prompt_locals` |
 | `Assistant::External`, `Assistant::External::Client` | Deleted; the `compatible` transport's agent mode |
 | `Assistant::External::ModelCatalog` | Deleted; the agent's model is the agent endpoint's model row |
 | `Provider::Openai` and `Provider::Anthropic` chat methods and stream parsers | Deleted; `converse` on the transports |
@@ -1603,13 +1635,15 @@ What happens to today's chat classes in PR 6:
   Anthropic's.
 - **What isn't used, and why.**
   - `ask` and `complete`: no round cap; Sure steps.
-  - `fallbacks`: they switch provider through the first endpoint's context and gate, and fall back
-    after chunks have streamed; failover stays Sure's.
+  - `fallbacks`: they switch model through the first endpoint's context and gate, fall back
+    after chunks have streamed, and hide the switch from Sure; failover stays Sure's, the one
+    layer (section 5.4; the owner agreed, 1 Nov). In the spike, with them, Sure recorded the first
+    model succeeding while another answered, with no down mark and the wrong price.
   - `ask_later`, RubyLLM's durable agents (one step per job): execution is at least once, so tools
     must be safe to run twice, which Sure's write tools aren't today.
-  - Instructions from ERB templates (`app/prompts/<agent>/instructions.txt.erb`): a family's
-    prompt override is user text, which ERB would run as code; the instructions come from
-    `Ai::Prompt.for`.
+  - The agent's own instructions convention (`app/prompts/<agent>/instructions.txt.erb`): Sure
+    chooses the prompt (family override, route entry, locale; section 8.3), so the instructions
+    are the string `Ai::Prompt.for` renders, through the same `render_prompt`.
   - `chat_model` (RubyLLM's Rails persistence): Sure keeps its own chat tables (section 20). If it
     were adopted, an interrupt would use `Agent#cancel`, whose error RubyLLM's persistence cleans
     up after; Sure's `Preempted` leaves a blank assistant row until the next step.
@@ -2168,8 +2202,8 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
 - `ai_shadow_test.rb`: every class that declares `shadow` also declares `compare:` and has a
   `shadow_<feature>` row; no `Ai::Conversation` declares `shadow`; only `ComparisonSubscriber`
   receives shadow results.
-- `ai_prompts_test.rb`: every `prompt` key has `<key>.md`; every `Family::AiPromptable` key maps
-  to a file; every `<name>.<locale>.md` has a base `<name>.md` and an available locale; no locale
+- `ai_prompts_test.rb`: every `prompt` key has `<key>.txt.erb`; every `Family::AiPromptable` key maps
+  to a file; every `<name>.<locale>.txt.erb` has a base `<name>.txt.erb` and an available locale; no locale
   YAML contains prompt text; no orphaned prompt files (a file is used by a key, a preset's default
   route or `config/ai.example.yml`).
 - `ai_schemas_test.rb`: every `schema` is valid JSON Schema and OpenAI-strict-compatible, so one
@@ -2184,11 +2218,13 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
   mapping (including each provider's context-length 400 → `ContextTooLong`), usage normalisation,
   proxy resolution, and reasoning effort (sent in both API forms, left out when unset, dropped on
   the 400 retry and kept on the unusable-output retry).
-- `ai_escalation_test.rb`: invalid output from the first model escalates once to the next route
-  on the same endpoint without a down mark; an unhealthy server fails over to a different server
-  and is marked down; two endpoint rows on one server share a down mark, and two local endpoints
+- `ai_escalation_test.rb`: invalid output from the first model escalates to the next route
+  on the same endpoint without a down mark; a refused connection, or a local server's timeout or
+  5xx, marks the server and skips its other entries; a cloud endpoint's 503 or 429 marks only that
+  model, and the next model on the same gateway answers; a call on a family's own key never moves
+  to the instance key or a local server; a list of four is tried to the end; two endpoint rows on one server share a down mark, and two local endpoints
   on one host (different ports) share a gate, with chat ahead of embedding; a busy local host
-  never sends a call to the next route; an interrupted request is sent again on the same route; cloud routes never wait; a 429 or 401 marks only the key
+  never sends a call to the next route; an interrupted request is sent again on the same route; cloud routes never wait; a 401 or 402 marks only the key
   that got it; other `Refused` errors aren't retried.
 - `ai_family_key_test.rb`: a family's key is used for its calls and the endpoint's key for
   everyone else's; a failing family key fails over to the next route and never retries with the
@@ -2430,9 +2466,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    test.
 9. **Allowed endpoints, own keys and the member switch.** `families.ai_blocked_endpoint_ids`,
    `ai_endpoint_credentials` and `users.ai_allowed`; the AI features page gains its endpoints
-   section, with the allow checkbox and the "use our own key" field with a probe on save, and its
-   members section. The router gains its endpoint and key lines (section 5.3), with
-   `:endpoint_not_allowed` and `:key_missing`, and `Ai::Consent` gains `:blocked_by_admin`. Adds
+   section, with the allow checkbox, the "use our own key" field with a probe on save and the
+   key's monthly cost cap, and its members section. The router gains its endpoint and key lines
+   (section 5.3), with `:endpoint_not_allowed`, `:key_missing` and `:cost_cap_reached`, and `Ai::Consent` gains `:blocked_by_admin`. Adds
    `llm_usages.family_key` and the family key test, and extends the consent test with the member
    cases. Needs PR 7.
 
@@ -2495,8 +2531,8 @@ chat tables (for the chat storage line).
 - Rules that run only after an AI rule. The rule runner can add this later as its own PR,
   triggering the dependent rule from the generation completion hook (section 8.1).
 - Family-owned endpoints, models and routes (the rest of #3037: a household choosing its own
-  endpoint or model), and per-family cost caps. A family's own key for an instance endpoint is in
-  scope (section 4.2). Family-owned endpoints would need protection against a family admin
+  endpoint or model), and per-family cost caps on calls the operator pays for. A family's own key
+  for an instance endpoint, with a cost cap on it, is in scope (section 4.2). Family-owned endpoints would need protection against a family admin
   pointing a base URL at internal services.
 - Keeping a member's private accounts out of background AI processing (section 6).
 - An `ai_calls` table replacing `llm_usages`.
