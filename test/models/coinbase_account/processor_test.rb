@@ -102,4 +102,128 @@ class CoinbaseAccount::ProcessorTest < ActiveSupport::TestCase
     holding = @account.holdings.find_by!(security: @security, date: Date.current)
     assert_equal quantity, holding.qty
   end
+
+  test "imports a staking reward with its native value as income, not zero" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    @coinbase_account.update!(raw_transactions_payload: {
+      "transactions" => [
+        coinbase_txn(id: "txn_reward_1", type: "staking_reward", btc_amount: "0.001", native_amount: "66.58")
+      ]
+    })
+
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    entry = @account.entries.find_by!(external_id: "coinbase_txn_txn_reward_1")
+    assert_equal "Dividend", entry.entryable.investment_activity_label
+    assert_equal BigDecimal("-66.58"), entry.amount
+    assert_equal BigDecimal("0.001"), entry.entryable.qty
+  end
+
+  test "maps an ambiguous send to Transfer instead of a cost-basis-affecting Other" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    @coinbase_account.update!(raw_transactions_payload: {
+      "transactions" => [
+        coinbase_txn(id: "txn_send_1", type: "send", btc_amount: "0.01", native_amount: "665.80")
+      ]
+    })
+
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    entry = @account.entries.find_by!(external_id: "coinbase_txn_txn_send_1")
+    assert_equal "Transfer", entry.entryable.investment_activity_label
+    assert entry.entryable.internal_movement?
+    assert_equal 0.to_d, entry.amount
+  end
+
+  test "imports exchange_withdrawal and vault_withdrawal instead of dropping them" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    @coinbase_account.update!(raw_transactions_payload: {
+      "transactions" => [
+        coinbase_txn(id: "txn_ew", type: "exchange_withdrawal", btc_amount: "-0.02", native_amount: "1331.60"),
+        coinbase_txn(id: "txn_vw", type: "vault_withdrawal", btc_amount: "-0.03", native_amount: "1997.40")
+      ]
+    })
+
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_ew")
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_vw")
+  end
+
+  test "does not shadow a send with an opposite-direction transfer of the same magnitude" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    @coinbase_account.update!(raw_transactions_payload: {
+      "transactions" => [
+        coinbase_txn(id: "txn_send_real", type: "send", btc_amount: "0.01", native_amount: "665.80"),
+        coinbase_txn(id: "txn_pro_withdraw", type: "pro_withdrawal", btc_amount: "-0.01", native_amount: "665.80")
+      ]
+    })
+
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_send_real"),
+      "an unrelated same-day transfer in the opposite direction must not shadow a real send"
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_pro_withdraw")
+  end
+
+  test "still shadows a send that duplicates a specific completed transfer in the same direction" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    @coinbase_account.update!(raw_transactions_payload: {
+      "transactions" => [
+        coinbase_txn(id: "txn_send_dup", type: "send", btc_amount: "-0.01", native_amount: "665.80"),
+        coinbase_txn(id: "txn_pro_withdraw_dup", type: "pro_withdrawal", btc_amount: "-0.01", native_amount: "665.80")
+      ]
+    })
+
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    refute @account.entries.exists?(external_id: "coinbase_txn_txn_send_dup")
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_pro_withdraw_dup")
+  end
+
+  test "does not let a pending sibling shadow a completed send" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    @coinbase_account.update!(raw_transactions_payload: {
+      "transactions" => [
+        coinbase_txn(id: "txn_send_pending_sib", type: "send", btc_amount: "-0.01", native_amount: "665.80"),
+        coinbase_txn(id: "txn_pro_pending", type: "pro_withdrawal", btc_amount: "-0.01", native_amount: "665.80", status: "pending")
+      ]
+    })
+
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_send_pending_sib"),
+      "a pending sibling never actually happened, so it can't shadow anything"
+  end
+
+  test "captures a per-transaction processing failure via DebugLogEntry" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    @coinbase_account.update!(raw_transactions_payload: {
+      "transactions" => [
+        coinbase_txn(id: "txn_bad", type: "staking_reward", btc_amount: "0.001", native_amount: "66.58", created_at: "not-a-real-date")
+      ]
+    })
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      CoinbaseAccount::Processor.new(@coinbase_account).process
+    end
+
+    entry = DebugLogEntry.last
+    assert_equal "provider_sync_error", entry.category
+    assert_equal "coinbase", entry.provider_key
+    assert_equal @family, entry.family
+  end
+
+  private
+
+    def coinbase_txn(id:, type:, btc_amount:, native_amount:, created_at: "2026-01-01T00:00:00Z", status: "completed")
+      {
+        "id" => id,
+        "type" => type,
+        "status" => status,
+        "created_at" => created_at,
+        "amount" => { "amount" => btc_amount, "currency" => "BTC" },
+        "native_amount" => { "amount" => native_amount, "currency" => "USD" }
+      }
+    end
 end

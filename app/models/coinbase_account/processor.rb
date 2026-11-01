@@ -19,11 +19,26 @@ class CoinbaseAccount::Processor
   #                                                   exchange the user controls)
   #   asset_migration                             -> Exchange   (security-for-security swap,
   #                                                   e.g. a token rebrand)
-  #   send                                        -> Other      (could be a reward relabeled as
+  #   exchange_withdrawal                         -> Transfer   (same asset, moved to another
+  #                                                   exchange the user controls - the withdrawal
+  #                                                   side of exchange_deposit above)
+  #   vault_withdrawal                            -> Transfer   (moved out of Coinbase Vault,
+  #                                                   another of the user's own sub-accounts)
+  #   send                                        -> Transfer   (could be a reward relabeled as
   #                                                   "send" - seen in real data - or a genuine
   #                                                   external transfer; no reliable way to tell
-  #                                                   from the payload, so left uncategorized
-  #                                                   rather than guessing)
+  #                                                   from the payload. "Other" would be worse:
+  #                                                   Trade::INTERNAL_MOVEMENT_LABELS doesn't
+  #                                                   include it, so #internal_movement? would
+  #                                                   see a real buy/sell and let it fabricate a
+  #                                                   cost-basis event from an ambiguous signal -
+  #                                                   exactly what this whole map exists to avoid)
+  #
+  # Deliberately not handled: fiat_deposit/fiat_withdrawal move real cash, not
+  # a crypto asset. CoinbaseAccount models a crypto wallet whose cash_balance
+  # is always zero (see #process_account!), so a fiat movement needs a plain
+  # cash Transaction entry on a different account, not a Trade here; that's
+  # outside what this crypto-focused processor can represent today.
   ACTIVITY_LABEL_BY_COINBASE_TXN_TYPE = {
     "staking_reward" => "Dividend",
     "interest" => "Interest",
@@ -32,9 +47,18 @@ class CoinbaseAccount::Processor
     "staking_transfer" => "Transfer",
     "unstaking_transfer" => "Transfer",
     "exchange_deposit" => "Transfer",
+    "exchange_withdrawal" => "Transfer",
+    "vault_withdrawal" => "Transfer",
     "asset_migration" => "Exchange",
-    "send" => "Other"
+    "send" => "Transfer"
   }.freeze
+
+  # Dividend/Interest are real income paid in-kind rather than cash, but
+  # InvestmentStatement::Totals reports dividends/interest as -SUM(entries.amount)
+  # (see investment_statement/totals.rb) - zeroing amount for every label here
+  # would make every imported staking reward look like $0 of income. Only the
+  # Transfer/Exchange labels are genuinely cash-neutral (see amount: below).
+  INCOME_LABELS = %w[Dividend Interest].freeze
 
   # Coinbase's transactions endpoint sometimes describes one real Pro/staking
   # transfer as two records in the same batch: a generic "send" plus a
@@ -235,6 +259,19 @@ class CoinbaseAccount::Processor
       txn_currency = txn_data.dig("native_amount", "currency") || native_currency
       received = raw_qty.positive?
 
+      # Transfer/Exchange move an asset the account already owns between its
+      # own sub-ledgers (Trade::INTERNAL_MOVEMENT_LABELS) or swap it for an
+      # equivalent one -- no real purchase or sale, so a real cash amount
+      # would invent a cost basis backed by no actual cash, and since the two
+      # legs of an internal transfer almost never share the same market
+      # price, it'd also leave a phantom, permanent cash drift every time one
+      # round-trips. Dividend/Interest is real income, just paid in-kind
+      # instead of cash -- InvestmentStatement::Totals reports it as
+      # -SUM(entries.amount), so zeroing it here would make every imported
+      # staking reward look like $0 of income. Same sign convention as a Buy:
+      # negative when received, since nothing here was paid for in cash.
+      amount = INCOME_LABELS.include?(label) ? (received ? -native_amount : native_amount) : 0
+
       notes_parts = []
       notes_parts << txn_data["description"] if txn_data["description"].present?
       notes_parts << txn_type.humanize
@@ -243,17 +280,7 @@ class CoinbaseAccount::Processor
       account.entries.create!(
         date: date,
         name: "#{received ? "Received" : "Sent"} #{qty.round(8)} #{security.ticker} (#{txn_type.humanize})",
-        # Not received ? -native_amount : native_amount: none of these types are
-        # a purchase or sale. staking_reward/interest is free income the account
-        # never paid cash for; pro_deposit/pro_withdrawal/staking_transfer/
-        # unstaking_transfer/exchange_deposit move an asset the account already
-        # owns between its own sub-ledgers (Trade::INTERNAL_MOVEMENT_LABELS).
-        # Giving either a real cash amount invents a cost basis with no actual
-        # cash behind it -- and since the two legs of an internal transfer
-        # almost never share the same market price, it also leaves a phantom,
-        # permanent cash drift every time one round-trips. Zero here, same as
-        # every other free-asset Trade this app creates.
-        amount: 0,
+        amount: amount,
         currency: txn_currency,
         external_id: external_id,
         source: "coinbase",
@@ -271,22 +298,39 @@ class CoinbaseAccount::Processor
       )
     rescue => e
       Rails.logger.error "CoinbaseAccount::Processor - Failed to process #{txn_data['type']} transaction #{txn_data['id']}: #{e.message}"
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Failed to process #{txn_data['type']} transaction #{txn_data['id']}: #{e.message}",
+        source: self.class.name,
+        provider_key: "coinbase",
+        family: coinbase_account.coinbase_item.family,
+        account_provider: coinbase_account.account_provider,
+        metadata: { coinbase_account_id: coinbase_account.id, coinbase_txn_id: txn_data["id"], txn_type: txn_data["type"] }
+      )
     end
 
     # True when txn_data (a "send") describes the same transfer as a
     # specific pro_deposit/pro_withdrawal/staking_transfer/etc sibling in the
-    # same batch - see SPECIFIC_TRANSFER_TYPES.
+    # same batch - see SPECIFIC_TRANSFER_TYPES. Matches on the *signed*
+    # amount, not its absolute value: Coinbase double-logs one real transfer
+    # as two records for the same leg (same sign), so comparing magnitude
+    # alone would also match an unrelated same-day send in the opposite
+    # direction for the same amount and currency, dropping a real,
+    # independent transaction. A sibling still pending/failed/canceled
+    # can't shadow anything either -- only a completed one actually happened.
     def shadowed_by_specific_transfer?(txn_data)
       siblings = coinbase_account.raw_transactions_payload&.dig("transactions") || []
       date = txn_data["created_at"].to_s[0, 10]
-      amount = txn_data.dig("amount", "amount").to_d.abs
+      amount = txn_data.dig("amount", "amount").to_d
       currency = txn_data.dig("amount", "currency")
 
       siblings.any? do |sibling|
         next false if sibling["id"] == txn_data["id"]
         next false unless SPECIFIC_TRANSFER_TYPES.include?(sibling["type"])
+        next false unless sibling["status"] == "completed"
         sibling["created_at"].to_s[0, 10] == date &&
-          sibling.dig("amount", "amount").to_d.abs == amount &&
+          sibling.dig("amount", "amount").to_d == amount &&
           sibling.dig("amount", "currency") == currency
       end
     end
