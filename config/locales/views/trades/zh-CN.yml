@@ -1,6 +1,9 @@
 ---
 zh-CN:
   trades:
+    sale_limit:
+      exceeds_holding: "无法卖出 %{qty} %{ticker}：该账户在 %{date} 仅持有 %{available}。"
+      exceeds_later_holding: "无法卖出 %{qty} %{ticker}：此日期最多可卖出 %{available}，否则持仓将在 %{date} 变为负数。"
     api_errors:
       activity_label_must_match_type: "当类型为 %{type} 时，investment_activity_label 必须为 %{label}"
       invalid_activity_label: 无效的投资活动标签
@@ -26,6 +29,9 @@ zh-CN:
       type_interest: 利息
       dividend_requires_security: 分红需要证券
       trade_requires_security: 买入和卖出交易必须指定证券（代码）
+      held_security: "%{name}（%{ticker}），持有 %{qty}"
+      held_security_prompt: 选择持仓
+      held_security_hint: 没有列出？请先添加买入记录。
     header:
       buy: 买入
       sell: 卖出
