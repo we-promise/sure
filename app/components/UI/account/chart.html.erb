@@ -68,11 +68,12 @@
       </div>
 
       <div class="h-64 px-4">
-        <%# privacy-sensitive: the axis, the lines and the tooltip are all
-            balances, and Privacy Mode blurs balances everywhere else here.
+        <%# privacy-sensitive-chart: the axis, the lines and the tooltip are
+            all balances, and Privacy Mode blurs balances everywhere else here;
+            the balance axis is marked on its own for the numbers-only mode.
             text-primary so the axis can draw in currentColor. %>
         <div id="<%= loan_chart_id %>"
-             class="w-full h-full privacy-sensitive text-primary"
+             class="w-full h-full privacy-sensitive-chart text-primary"
              data-controller="loan-payoff-chart"
              data-loan-payoff-chart-data-value="<%= loan_chart.to_json %>"></div>
       </div>
@@ -101,7 +102,7 @@
         <% if series.any? %>
           <div
           id="lineChart"
-          class="w-full h-full privacy-sensitive"
+          class="w-full h-full privacy-sensitive-chart"
           data-controller="time-series-chart"
           data-time-series-chart-selectable-value="true"
           data-time-series-chart-data-value="<%= series.to_json %>"></div>
