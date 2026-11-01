@@ -2,5 +2,5 @@
 id:
   syncs:
     cancel:
-      cancelled: Sinkronisasi dibatalkan. Data yang sudah tersinkron tetap disimpan; pekerjaan dalam antrean dihentikan.
+      cancelled: Sinkronisasi dibatalkan. Data yang sudah disinkronkan tetap disimpan; tugas dalam antrean telah dihentikan.
       not_cancellable: Sinkronisasi ini sudah selesai.

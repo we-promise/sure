@@ -21,8 +21,6 @@ nl:
       categories_incomes: Inkomenscategorieën
       empty: Geen categorieën gevonden
       new: Nieuwe categorie
-    menu:
-      loading: Laden...
     new:
       new_category: Nieuwe categorie
     update:

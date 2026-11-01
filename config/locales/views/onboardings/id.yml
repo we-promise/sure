@@ -5,62 +5,62 @@ id:
       sign_out: Keluar
       setup: Penyiapan
       preferences: Preferensi
-      goals: Target
+      goals: Tujuan
       start: Mulai
     logout:
       sign_out: Keluar
     show:
-      title: Mari siapkan akunmu
-      subtitle: Pertama-tama, siapkan profilmu dulu.
-      first_name: nama depan
-      first_name_placeholder: nama depan
+      title: Mari siapkan akun Anda
+      subtitle: Pertama-tama, mari lengkapi profil Anda.
+      first_name: Nama depan
+      first_name_placeholder: Nama depan
       last_name: Nama belakang
       last_name_placeholder: Nama belakang
       group_name: Nama grup
       group_name_placeholder: Nama grup
-      household_name: Nama rumah tangga
-      household_name_placeholder: Nama rumah tangga
-      moniker_prompt: Akan memakai %{product_name} dengan ...
-      moniker_family: Anggota keluarga (hanya kamu sendiri atau bersama pasangan, anak remaja, dll.)
-      moniker_group: Kelompok orang (perusahaan, klub, asosiasi, atau jenis lainnya)
+      household_name: Nama keluarga
+      household_name_placeholder: Nama keluarga
+      moniker_prompt: "Akan menggunakan %{product_name} bersama ..."
+      moniker_family: Anggota keluarga (sendiri atau bersama pasangan, anak, dll.)
+      moniker_group: Sekelompok orang (perusahaan, klub, organisasi, jenis lainnya)
       country: Negara
       submit: Lanjutkan
     preferences:
-      title: Atur preferensimu
-      subtitle: Mari atur preferensimu.
-      example: Contoh akun
-      preview: Lihat pratinjau tampilan data sesuai preferensi.
+      title: Atur preferensi Anda
+      subtitle: Mari konfigurasikan preferensi Anda.
+      example: Rekening contoh
+      preview: Pratinjau tampilan data berdasarkan preferensi Anda.
       color_theme: Tema warna
       theme_system: Sistem
       theme_light: Terang
       theme_dark: Gelap
       locale: Bahasa
-      currency: Mata Uang
-      date_format: format tanggal
+      currency: Mata uang
+      date_format: Format tanggal
       submit: Selesai
     goals:
-      title: Apa yang membawamu ke sini?
-      subtitle: Pilih satu atau beberapa target yang Anda miliki dalam menggunakan %{product_name} sebagai alat keuangan personal.
-      unified_accounts: Lihat semua akun saya di satu tempat
-      cashflow: Pahami arus kas dan pengeluaran
-      budgeting: Kelola rencana keuangan dan penganggaran
-      partner: Kelola keuangan dengan pasangan
-      investments: Lacak investasi
-      ai_insights: Biarkan AI membantuku memahami keuanganku
-      optimization: Analisis dan optimalkan akun
-      reduce_stress: Kurangi stres atau kecemasan finansial
+      title: Apa tujuan utama Anda?
+      subtitle: Pilih satu atau lebih tujuan Anda dalam menggunakan %{product_name} sebagai alat keuangan pribadi Anda.
+      unified_accounts: Melihat semua rekening saya di satu tempat
+      cashflow: Memahami arus kas dan pengeluaran
+      budgeting: Mengelola rencana keuangan dan anggaran
+      partner: Mengelola keuangan bersama pasangan
+      investments: Memantau investasi
+      ai_insights: Memanfaatkan AI untuk membantu memahami keuangan saya
+      optimization: Menganalisis dan mengoptimalkan rekening
+      reduce_stress: Mengurangi stres atau kecemasan finansial
       submit: Berikutnya
     trial:
       title: Coba Sure selama 45 hari
-      data_deletion: Data akan dihapus saat itu
-      description_html: Mulai hari ini Anda bisa melihat-lihat produknya.<br/>Kalau suka, pasang sendiri (self-host) atau berkontribusi untuk terus menggunakannya di sini.
+      data_deletion: Data akan dihapus setelah periode berakhir
+      description_html: Mulai hari ini Anda dapat mencoba produk ini secara menyeluruh.<br/>Jika Anda menyukainya, host sendiri atau berkontribusi untuk terus menggunakannya di sini.
       try_button: Coba Sure selama 45 hari
-      continue_trial: Lanjutkan trial
-      upgrade: Upgrade
-      how_it_works: Cara kerja di sini
+      continue_trial: Lanjutkan uji coba
+      upgrade: Tingkatkan
+      how_it_works: Cara kerja uji coba
       today: Hari ini
-      today_description: Anda akan mendapat akses gratis ke Sure selama 45 hari di AWS kami.
+      today_description: Anda mendapatkan akses gratis ke Sure selama 45 hari di AWS kami.
       in_40_days: Dalam 40 hari (%{date})
-      in_40_days_description: Kami akan mengingatkanmu untuk mengekspor datamu.
+      in_40_days_description: Kami akan memberi tahu Anda agar tidak lupa mengekspor data Anda.
       in_45_days: Dalam 45 hari (%{date})
-      in_45_days_description: Kami menghapus datamu — berkontribusilah untuk terus memakai Sure di sini!
+      in_45_days_description: Kami akan menghapus data Anda — berkontribusilah untuk terus menggunakan Sure di sini!

@@ -1,4 +1,4 @@
-<%= tag.div data: { controller: "DS--popover", DS__popover_placement_value: placement, DS__popover_offset_value: offset, DS__popover_mobile_fullwidth_value: mobile_fullwidth, testid: testid } do %>
+<%= tag.div data: { controller: "DS--popover", DS__popover_placement_value: placement, DS__popover_offset_value: offset, DS__popover_mobile_fullwidth_value: mobile_fullwidth, DS__popover_frame_id_value: frame_id, DS__popover_frame_src_value: frame_src, testid: testid } do %>
   <% if variant == :icon %>
     <%= render DS::Button.new(variant: "icon", icon: icon, aria_label: trigger_aria_label, aria: { haspopup: "dialog", expanded: "false", controls: panel_id }, data: { DS__popover_target: "button" }) %>
   <% elsif variant == :button %>
@@ -25,7 +25,12 @@
       <%= header %>
 
       <%= tag.div class: class_names("py-1" => !no_padding) do %>
-        <%= custom_content %>
+        <% if lazy_frame? %>
+          <%# Filled with the <turbo-frame> by the controller on first open. %>
+          <%= tag.div data: { DS__popover_target: "frame" } %>
+        <% else %>
+          <%= custom_content %>
+        <% end %>
       <% end %>
     <% end %>
   </div>
