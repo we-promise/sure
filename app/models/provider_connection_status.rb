@@ -12,6 +12,7 @@ class ProviderConnectionStatus
     { key: "lunchflow", type: "LunchflowItem", association: :lunchflow_items, accounts: :lunchflow_accounts },
     { key: "enable_banking", type: "EnableBankingItem", association: :enable_banking_items, accounts: :enable_banking_accounts },
     { key: "gocardless", type: "GocardlessItem", association: :gocardless_items, accounts: :gocardless_accounts },
+    { key: "truelayer", type: "TruelayerItem", association: :truelayer_items, accounts: :truelayer_accounts },
     { key: "coinbase", type: "CoinbaseItem", association: :coinbase_items, accounts: :coinbase_accounts },
     { key: "binance", type: "BinanceItem", association: :binance_items, accounts: :binance_accounts },
     { key: "kraken", type: "KrakenItem", association: :kraken_items, accounts: :kraken_accounts },

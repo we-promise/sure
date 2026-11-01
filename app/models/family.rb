@@ -6,7 +6,7 @@ class Family < ApplicationRecord
   include FioConnectable
   include GocardlessConnectable
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
-  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable
+  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable, TruelayerConnectable
   include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinspotConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
   include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
