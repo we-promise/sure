@@ -110,7 +110,7 @@ class KrakenItem::Importer
     def fetch_and_parse_earn_assets(asset_metadata)
       items = fetch_earn_allocations
       parse_earn_assets(items, asset_metadata)
-    rescue Provider::Kraken::PermissionError, Provider::Kraken::ApiError, EarnAllocationsUnavailable => e
+    rescue Provider::Kraken::PermissionError, Provider::Kraken::ApiError, Provider::Kraken::RateLimitError, EarnAllocationsUnavailable => e
       record_earn_unavailable(e)
       carried_over_earn_assets
     end

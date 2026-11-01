@@ -78,6 +78,24 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     assert result[:success]
   end
 
+  test "degrades gracefully when Earn Allocations is rate limited" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    # RateLimitError is a sibling of ApiError (both < Provider::Kraken::Error),
+    # not a subclass, so it must be rescued explicitly here or it propagates
+    # out of #import and aborts the whole sync -- including the spot balance
+    # that already succeeded -- over a transient, Earn-specific rate limit.
+    @provider.stubs(:get_earn_allocations).raises(Provider::Kraken::RateLimitError, "Rate limit exceeded")
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    account = @item.kraken_accounts.first
+    assert_in_delta 50.0, account.current_balance, 0.01
+  end
+
   test "carries forward last known Earn assets when a later sync's fetch fails" do
     @provider.stubs(:get_asset_info).returns(asset_metadata)
     @provider.stubs(:get_extended_balance).returns(
