@@ -13,14 +13,19 @@ fr:
     create:
       code_already_used: Ce code a déjà été utilisé. Veuillez saisir le code suivant de votre application d'authentification.
       invalid_code: Code de vérification invalide. Veuillez essayer à nouveau.
+      invalid_password: Mot de passe incorrect. Veuillez réessayer.
     disable:
+      invalid_password: Mot de passe incorrect. Veuillez réessayer.
       success: L'authentification à deux facteurs a été désactivée.
+    local_password_required: L'authentification à deux facteurs nécessite un mot de passe local. Le vôtre est géré par votre fournisseur d'identité.
     new:
       code_label: Code de vérification
       code_placeholder: Saisissez un code à 6 chiffres
       description: Améliorez la sécurité de votre compte en configurant l'authentification
         à deux facteurs.
       page_title: Configuration de l'authentification à deux facteurs
+      password_label: Confirmez avec votre mot de passe
+      password_placeholder: Entrez votre mot de passe
       scan_description: Utilisez une application d'authentification comme Google Authenticator
         ou 1Password pour scanner ce code QR.
       scan_title: 1. Scanner le code QR

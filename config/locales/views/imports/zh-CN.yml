@@ -109,6 +109,20 @@ zh-CN:
         instructions: 选择继续即可解析 CSV 并进入清理步骤。
       mint_import:
         date_format_label: 日期格式
+        account_optional: 账户（可选）
+        amount: 金额
+        apply_configuration: 应用配置
+        category_optional: 分类（可选）
+        currency: 货币
+        date: 日期
+        format: 格式
+        incomes_negative: 收入为负数
+        incomes_positive: 收入为正数
+        intro: 我们已为您预先配置好了 Mint 导入。请继续下一步。
+        leave_empty: 留空
+        name_optional: 名称（可选）
+        select_format: 选择格式
+        tags_optional: 标签（可选）
       actual_import:
         preconfigured_notice: 我们已为您的 Actual Budget 导入预先配置好了。请继续下一步。
         leave_empty: 留空
@@ -123,6 +137,17 @@ zh-CN:
         category_label: 分类（可选）
         notes_label: 备注（可选）
         apply_configuration: 应用配置
+      ynab_import:
+        preconfigured_notice: 我们已为您预先配置好了 YNAB 导入。请继续下一步。
+        amount_notice: 金额将自动从支出（Outflow）和流入（Inflow）列中识别。
+        leave_empty: 留空
+        date_label: 日期
+        date_format_label: 日期格式
+        account_label: 账户（可选）
+        name_label: 收款方（可选）
+        category_label: 分类（可选）
+        notes_label: 备忘录（可选）
+        apply_configuration: 应用配置
       rule_import:
         description: 配置您的规则导入。系统将根据 CSV 数据创建或更新规则。
         process_button: 处理规则
@@ -130,6 +155,11 @@ zh-CN:
       show:
         description: 选择与 CSV 中每个字段对应的列。
         title: 配置您的导入
+        template_found: 找到模板配置
+        template_description: 我们为此账户找到了此前导入所使用的配置。是否将其应用到本次导入？
+        manually_configure: 手动配置
+        apply_template: 应用模板
+        sample_caption: 上传的 CSV 样本数据
       merchant_import:
         button_label: 继续
         description: 导入商户列表，用于补全交易商户信息。
@@ -163,6 +193,7 @@ zh-CN:
     uploads:
       handle_qif_upload:
         qif_uploaded: QIF 文件上传成功。
+        qif_account_required: 请为 QIF 导入选择一个账户
       update:
         qif_uploaded: QIF 文件上传成功。
       show:
@@ -244,14 +275,33 @@ zh-CN:
       category_icon: Lucide 图标
       merchant_color: 颜色
       merchant_website: 网站 URL
+    summary:
+      title: 导入摘要
+      subtitle: "%{account} 中此对账单上每笔交易的处理结果。"
+      subtitle_no_account: 此对账单上每笔交易的处理结果。
+      extracted: 对账单中找到的交易
+      already_recorded: 已有记录
+      already_recorded_hint: 与此账户已有的交易匹配，并标记为已核对。
+      imported: 作为新记录导入
+      awaiting_review: 待审核
+      fully_reconciled:
+        one: 无需导入任何内容 — 对账单上仅有的一笔交易已存在于记录中。
+        other: 无需导入任何内容 — 所有 %{count} 笔交易均已存在于记录中。
+      statement_evidence_html: "已根据 %{statement} 完成核对。"
+      close: 关闭
     update:
       account_saved: 账户已保存。
+      account_locked: 此导入已发布，因此无法更改其账户。如需导入到其他位置，请先撤销。
       invalid_account: 未找到账户。
     publish:
       started: 您的导入已在后台开始。
       max_rows_exceeded: 您的导入超过了最大行数 %{max}。
+      guest_new_categories_or_tags: 访客无法创建分类或标签。请将其映射到现有项或留空。
     revert:
       started: 导入正在后台回滚。
+    cancel:
+      cancelled: 导入已标记为失败。您可以从导入页面重试。
+      not_cancellable: 当前无法将此导入标记为失败 — 其后台任务可能仍在运行。请在其闲置一小时后再试。
     index:
       title: 导入记录
       new: 新建导入
@@ -275,12 +325,15 @@ zh-CN:
           confirm_revert: 这将删除已导入的交易记录，但您仍然可以随时查看和重新导入您的数据。
           delete: 删除
           view: 查看
+          mark_failed: 标记为失败
+          confirm_mark_failed: 此导入已闲置一段时间，其后台任务可能已被中断。是否将其标记为失败以便重试？不会保留任何已导入数据。
         type_labels:
           transaction_import: 交易
           trade_import: 投资交易
           account_import: 账户
           mint_import: Mint
           actual_import: Actual
+          ynab_import: YNAB
           qif_import: QIF
           category_import: 分类
           rule_import: 规则
@@ -319,6 +372,28 @@ zh-CN:
       empty_summary: 在此文件中未找到可导入的记录。文件可能为空，或各行不符合预期的导出格式（每行应为包含「type」和「data」键的 JSON 对象，且类型须为本导入支持的类型）。
       publish_import: 发布导入
       back_to_imports: 返回导入列表
+      missing_merchant_warning_title: 此导出文件中缺少部分商户
+      missing_merchant_warning_description:
+        one: 此文件中有 1 处商户引用指向了未包含的商户。在将提供商分配的商户添加到 Sure 导出之前进行的导出可能会出现这种情况。您仍然可以发布此导入 — 受影响的记录将不带商户直接导入，之后您可以为其添加标签。
+        other: 此文件中有 %{count} 处商户引用指向了未包含的商户。在将提供商分配的商户添加到 Sure 导出之前进行的导出可能会出现这种情况。您仍然可以发布此导入 — 受影响的记录将不带商户直接导入，之后您可以为其添加标签。
+      skipped_recurring_description:
+        one: 1 笔循环交易没有名称且缺少商户，因此将被跳过。自动检测到的循环交易将在导入后重新构建。
+        other: "%{count} 笔循环交易没有名称且缺少商户，因此将被跳过。自动检测到的循环交易将在导入后重新构建。"
+      reused_taxonomy_notice_title: 部分分类、标签或商户已存在
+      reused_taxonomy_notice_description:
+        one: 此文件中的 1 个分类、标签或商户已存在于您的账户中（例如来自新手指引的默认分类）。它将被复用并使用此文件的数据进行更新，而不会创建重复项。
+        other: 此文件中的 %{count} 个分类、标签或商户已存在于您的账户中（例如来自新手指引的默认分类）。它们将被复用并使用此文件的数据进行更新，而不会创建重复项。
+      provider_merchant_diff_title: 部分商户已存在但详情不同
+      provider_merchant_diff_description:
+        one: 此文件中的 1 个商户已存在但详情不同。现有商户将被保留，此文件中的值将不会被应用。
+        other: 此文件中的 %{count} 个商户已存在但详情不同。现有商户将被保留，此文件中的值将不会被应用。
+      provider_merchant_diff_summary: 查看差异
+      provider_merchant_diff_none: 无
+      provider_merchant_diff_fields:
+        website_url: 网站
+        name: 名称
+        provider_merchant_id: 提供商 ID
+      provider_merchant_diff_row: "%{field}：保留 %{kept}，文件中为 %{imported}"
     apply_template:
       template_applied: 模板已应用。
       no_template_found: 找不到可用模板。
@@ -363,6 +438,7 @@ zh-CN:
       account_import: 账户导入
       mint_import: Mint 导入
       actual_import: Actual 导入
+      ynab_import: YNAB 导入
       qif_import: QIF 导入
       category_import: 分类导入
       rule_import: 规则导入
@@ -377,6 +453,7 @@ zh-CN:
       map: 映射
       confirm: 确认
       select: 选择
+      label: "第 %{step} 步"
       progress: 第 %{step} 步，共 %{total} 步
     empty:
       message: 未找到导入记录。
@@ -388,6 +465,7 @@ zh-CN:
       pdf_too_large: PDF 过大，最大允许 %{max_size}。
       pdf_processing: PDF 正在处理中。
       invalid_pdf: PDF 文件无效。
+      missing_upload: 我们未收到您的文件，请重新上传。
       duplicate_pdf_unavailable: 暂时无法检查重复 PDF。
       document_too_large: 文档过大，最大允许 %{max_size}。
       invalid_document_file_type: 文档文件类型无效。
@@ -400,6 +478,8 @@ zh-CN:
       finalize_mappings: 完成映射
     errors:
       custom_column_requires_inflow: 自定义列需要选择流入金额列。
+      interrupted: 后台处理程序在完成之前被中断。已导入的数据已回滚 — 您可以放心地重试。
+      presumed_lost: 后台任务疑似丢失，已标记为失败。已导入的数据已回滚 — 您可以放心地重试。
     document_types:
       bank_statement: 银行账单
       credit_card_statement: 信用卡账单
@@ -428,8 +508,13 @@ zh-CN:
       unknown_state_description: 此导入处于未知状态。请刷新页面或查看日志。
       processing_failed_with_message: "%{message}"
       processing_failed_generic: 处理失败：%{error}
+      errors:
+        provider_not_configured: AI 提供商尚未配置
+        provider_no_pdf_support: AI 提供商不支持 PDF 处理
       ready_for_review_title: 可供审核
-      ready_for_review_description: 已提取 %{count} 条交易，请审核后发布。
+      ready_for_review_description:
+        one: "对账单中有 %{count} 笔交易尚未进入此账户。请审核并发布以添加它们。"
+        other: "对账单中有 %{count} 笔交易尚未进入此账户。请审核并发布以添加它们。"
       transactions_extracted: 已提取交易
       transactions_extracted_count:
         one: "%{count} 笔交易"
@@ -444,5 +529,12 @@ zh-CN:
         one: 发布 %{count} 笔交易
         other: 发布 %{count} 笔交易
       review_transactions: 审核交易
+      view_summary: 查看导入摘要
+      already_recorded_note:
+        one: "%{count} 笔已存在于此账户中并与对账单完成匹配。"
+        other: "%{count} 笔已存在于此账户中并与对账单完成匹配。"
+      complete_fully_reconciled:
+        one: "此对账单上的每笔交易都已存在于您的账户中。已匹配 %{count} 笔并标记为已核对 — 无需导入任何内容。"
+        other: "此对账单上的每笔交易都已存在于您的账户中。所有 %{count} 笔均已匹配并标记为已核对 — 无需导入任何内容。"
       select_account_to_continue: 请选择账户后继续。
       unknown_document_type: 未知

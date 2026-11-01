@@ -9,8 +9,8 @@ class Assistant::Function::UpdateCategory < Assistant::Function
         Updates an existing category's name, color, icon, or parent.
 
         Use get_categories first to find the category id. At least one of name, color,
-        icon, or parent_id must be supplied. Changing a parent's color does not cascade to
-        existing subcategories (their colors are set when they are saved).
+        icon, or parent_id must be supplied. Changing a parent's color also changes the color
+        of all its subcategories.
 
         Pass parent_id to move the category under another top-level category (it takes the
         parent's color), or pass an empty string to make it a top-level category. A category
