@@ -439,6 +439,20 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "td", text: "10 / 7 / 4 / 3"
   end
 
+  test "index renders recent run execution types with design-system tones" do
+    RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "success", transactions_queued: 1,
+                    transactions_processed: 1, transactions_modified: 1, pending_jobs_count: 0, executed_at: Time.current)
+    RuleRun.create!(rule: rules(:one), execution_type: "scheduled", status: "success", transactions_queued: 1,
+                    transactions_processed: 1, transactions_modified: 1, pending_jobs_count: 0, executed_at: 1.minute.ago)
+
+    get rules_url
+
+    assert_response :success
+    assert_select "span.rounded-full[style*='--color-indigo-50']", text: I18n.t("rules.recent_runs.execution_types.manual")
+    assert_select "span.rounded-full[style*='--color-violet-50']", text: I18n.t("rules.recent_runs.execution_types.scheduled")
+    assert_no_match(/\bbg-(blue|purple)-50\b/, response.body)
+  end
+
   # The confirmation screen used to hardcode :openai, so it quoted a provider
   # that would not run — an Anthropic install saw the OpenAI model, and a family
   # on Jev saw whichever LLM model happened to be configured.
