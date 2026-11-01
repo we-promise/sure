@@ -1,6 +1,6 @@
 # Sure — AI plumbing redesign
 
-Status: proposal, updated after the RubyLLM spike · Target: `we-promise/sure` (`origin/main` @ `a6767e931`) · 2026-10-28, updated 2026-11-01
+Status: proposal, updated after the RubyLLM spike · Target: `we-promise/sure` (`origin/main` @ `a6767e931`; later commits to `5ed910330`, after v0.7.6, checked for impact) · 2026-10-28, updated 2026-11-01
 
 Audience: the Sure dev team. This document describes the structure the AI layer is moving to and
 the pull requests that get it there (section 19).
@@ -389,10 +389,10 @@ the endpoint use it:
 - **The family gets what it chose.** A call on a family's own key fails over only to routes on
   the family's own keys: never to the instance key, which would bill the operator and hide the
   broken key, and never to a local server, which the family didn't pick. When none is left, the
-  error stands and the family admin sees the "AI unavailable" notice naming the key (call by @josh-sanders, 1 Nov 2026, during development of PR #4440;
+  error stands and the family admin sees the "AI unavailable" notice naming the key (call by @josh-sanders during development of PR #4440;
   spike: `failover_test`).
 - **A cost cap on each own key.** By bringing a key, the family admin takes responsibility for
-  that endpoint's configuration, including what it may spend (call by @josh-sanders, 1 Nov 2026, during development of PR #4440). The key has an
+  that endpoint's configuration, including what it may spend (call by @josh-sanders during development of PR #4440). The key has an
   optional monthly cap in US dollars, as `llm_usages.estimated_cost` records. Once the month's
   cost of the family's calls on that key reaches it, the router drops the family's routes on that
   key with `:cost_cap_reached`, never falling back to the endpoint's own key, and the notice says
@@ -596,7 +596,7 @@ ENV["OPENAI_ACCESS_TOKEN"]`), so the accessor returns ENV values on an ENV-confi
 migration reads only stored rows (`Setting.where(var: ...)`), never the accessors, or it would save
 ENV values as if they had been set in the UI.
 
-**Installs configured in ENV** keep working for a deprecation period (call by @josh-sanders, 1 Nov 2026, during development of PR #4440). The old AI ENV is read as a
+**Installs configured in ENV** keep working for a deprecation period (call by @josh-sanders during development of PR #4440). The old AI ENV is read as a
 generated config file. At boot, an AI worker that finds old AI ENV and no `AI_CONFIG` runs
 `Ai::LegacyEnvConfig`:
 
@@ -638,7 +638,7 @@ migration (each variable's `Setting` field, where it has one, maps the same way)
 |---|---|
 | `OPENAI_ACCESS_TOKEN` (`openai_access_token`) | `api_key` of the OpenAI endpoint, or of the `compatible` endpoint when `OPENAI_URI_BASE` is set |
 | `OPENAI_URI_BASE` (`openai_uri_base`) | A `compatible` endpoint named `openai_compatible`; `location: local` for http, `cloud` for https, as for `EMBEDDING_URI_BASE` |
-| `OPENAI_MODEL` (`openai_model`) | A model on that endpoint, listed in every route the OpenAI side served |
+| `OPENAI_MODEL` (`openai_model`) | A model on that endpoint, listed in every route the OpenAI side served. With `OPENAI_URI_BASE` set and no model, today's code builds no client and the settings page refuses to save (`Setting.validate_openai_config!`, help text from #4408), so the endpoint gets no model or routes, with a boot warning naming the missing variable |
 | `OPENAI_SUPPORTS_RESPONSES_ENDPOINT` | `responses_api` on the endpoint |
 | `OPENAI_SUPPORTS_PDF_PROCESSING` | `vision` on the model |
 | `OPENAI_EXTRA_HEADERS` | `extra_headers` on the endpoint |
@@ -910,7 +910,7 @@ end
   and every model that may see the family's data is one the admin listed.
 - **Down marks: the smallest thing the error proves broken.** The router marks it down in
   `Rails.cache` for 60 seconds, so the next call skips it without waiting for the same timeout. A
-  fresh failed probe result marks it down too. This is a call by @josh-sanders, 1 Nov 2026, during development of PR #4440,
+  fresh failed probe result marks it down too. This is a call by @josh-sanders during development of PR #4440,
   from the spike's "Failover on a gateway"; other behaviour is for an issue.
   - **The server**, keyed by normalised base URL (host and port: a chat server can be down while
     the embedding server on the same host is up), so every endpoint row on it is skipped: when no
@@ -1148,7 +1148,7 @@ end
 
 Every transport, Jev's included, is a thin adapter over `ruby_llm`: 2.1.1 from PR 2 and 2.2 from
 PR 5, pinned at the end of this work (section 19,
-[`rubyllm-spike-report.md`](rubyllm-spike-report.md)). Adopted by @josh-sanders on 31 Oct 2026,
+[`rubyllm-spike-report.md`](rubyllm-spike-report.md)). Adopted by @josh-sanders
 during development of PR #4440; like every product decision it stays open to evidence. Jev goes through RubyLLM's `judge`, which reaches
 TypeSafe-style servers on 2.1.1 and OpenRouter's decisions gateway from 2.2, at fixed paths only.
 
@@ -1505,7 +1505,7 @@ override is never compiled: ERB runs Ruby, and a family admin isn't trusted with
 (`<%= ENV["OPENAI_ACCESS_TOKEN"] %>` would send the instance's key to the model). The override is
 plain text passed to the feature's template as a local and inserted with `<%= %>`, so the parts
 Sure adds around it today (chat's session context) stay in the template. Today's overrides have
-no placeholders, so nothing is lost. @josh-sanders chose this on 1 Nov 2026, during development of PR #4440, over `%{}`
+no placeholders, so nothing is lost. @josh-sanders chose this during development of PR #4440, over `%{}`
 everywhere and over a logic-less template language for both.
 
 **Names.** A prompt file is `app/prompts/<name>.txt.erb`. The default for a feature is
@@ -1601,11 +1601,11 @@ What happens to today's chat classes in PR 6:
 |---|---|
 | `Assistant.for_chat`, `config_for`, `available_types`, `implementation_for` | Deleted. `AssistantResponseJob` calls `Ai::Conversation`. `Assistant.function_classes` stays: it lists chat's tools, with today's preview and guest filtering |
 | `Assistant::Base`, `Assistant::Builtin`, `Assistant::Provided` | Deleted; their work is `Ai::Conversation#respond` |
-| `Assistant::Responder` | Its round cap and final no-tools round move into `respond`'s driver; RubyLLM runs the tools; deleted |
+| `Assistant::Responder` | Its round cap and final no-tools round move into `respond`'s driver; RubyLLM runs the tools; its `Usage.capture("ai_assistant_served_daily")` (installation telemetry, #4295) moves into `respond`, once per turn; deleted |
 | `Assistant::FunctionToolCaller` | Stays: it runs tools against the family's data, which is domain work. `SureTool` wraps each function for RubyLLM and calls it through the caller, so a tool's failure is still Sure's data (no SQL in a not-found, the retry hints) |
 | `Assistant::HistoryTrimmer`, `TokenBudget`, `TokenEstimator` | Move to `Ai::Conversation::History`. The budget comes from the model's `context_window` minus `max_output_tokens`, so `LLM_MAX_HISTORY_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE` go |
 | `Assistant::Configurable` | The system prompt text moves to `app/prompts/chat_system.txt.erb`; the values it fills in (date, currency, accounts) stay in the domain as `Chat#prompt_locals` |
-| `Assistant::External`, `Assistant::External::Client` | Deleted; the `compatible` transport's agent mode |
+| `Assistant::External`, `Assistant::External::Client` | Deleted; the `compatible` transport's agent mode. Its `Usage.capture("ai_assistant_served_daily")` is the same call in `respond`, which serves both chat modes |
 | `Assistant::External::ModelCatalog` | Deleted; the agent's model is the agent endpoint's model row |
 | `Provider::Openai` and `Provider::Anthropic` chat methods and stream parsers | Deleted; `converse` on the transports |
 
@@ -1660,7 +1660,7 @@ What happens to today's chat classes in PR 6:
   - `ask` and `complete`: no round cap; Sure steps.
   - `fallbacks`: they switch model through the first endpoint's context and gate, fall back
     after chunks have streamed, and hide the switch from Sure; failover stays Sure's, the one
-    layer (section 5.4; call by @josh-sanders, 1 Nov 2026, during development of PR #4440). In the spike, with them, Sure recorded the first
+    layer (section 5.4; call by @josh-sanders during development of PR #4440). In the spike, with them, Sure recorded the first
     model succeeding while another answered, with no down mark and the wrong price.
   - `ask_later`, RubyLLM's durable agents (one step per job): execution is at least once, so tools
     must be safe to run twice, which Sure's write tools aren't today.
@@ -1746,7 +1746,12 @@ ActiveSupport::Notifications.subscribe(/\A(generate|judge)\.ai\z/, Ai::Instrumen
 - `llm_usages.operation` values become feature keys, so usage sums per feature. A data migration
   rewrites existing rows.
 - The table keeps its columns: `provider` holds the endpoint's name, `model` the model's name,
-  and `estimated_cost` the cost from the model's prices. `metadata` gains `route` (endpoint,
+  and `estimated_cost` the provider's reported cost when it gives one, otherwise the cost from
+  the model's prices. Since #4549 (v0.7.6), an OpenRouter call records OpenRouter's own
+  `usage.cost` in US dollars; RubyLLM's `:openrouter` provider reads the same field as
+  `tokens.reported_cost`, and adds a BYOK key's upstream cost, which #4549 doesn't, so the
+  adapter takes it from there and `Provider::Openai::UsageCost` goes with the usage recorders
+  (PR 2e). `metadata` gains `route` (endpoint,
   model, overrides, prompt), `error_class`, `failed_over_from` and `escalated_from`, which the
   health page's rates read (section 13).
 - Transports normalise usage once into
@@ -1791,7 +1796,7 @@ setting. This section was rewritten after the RubyLLM spike's job-runner runs
 choices it makes are product decisions with the evidence in the report's decisions register.
 
 **The target.** A chat waits about 2 s, and never more than 5 s, for background work on a local
-host (call by @josh-sanders, 31 Oct 2026, during development of PR #4440). The time the model takes to read the chat's own context isn't counted: on a CPU it's tens
+host (call by @josh-sanders during development of PR #4440). The time the model takes to read the chat's own context isn't counted: on a CPU it's tens
 of seconds (48.7 s for 3.3k tokens on the spike's server) whatever the plumbing does.
 
 **What the spike measured** (qwen3.6 on llama.cpp, CPU only, one run each). Merchant detection
@@ -2037,7 +2042,9 @@ reads `assistant_type`.
 **AI-dependent tools run through the AI pipeline.** Two MCP tools call AI:
 `import_bank_statement` (`extract_pdf`) and `search_family_files` (`search_documents`: pgvector and
 Qdrant embed the query, and the OpenAI adapter calls the vector store's search). Both make that
-call inside the MCP web request today. Their AI work moves into the `ai` capsule like every other
+call inside the MCP web request today. `McpController` counts each permitted tool call
+(`Usage.capture("mcp_call_served_daily")`, #4295) before running it; that stays in the controller,
+before a tool is run or handed to `Ai::ToolJob`. Their AI work moves into the `ai` capsule like every other
 AI call, in PR 3, with the other web-thread calls (section 19).
 
 - An AI-dependent tool is listed only when `Ai.available?(feature)` is true for the token's user,
@@ -2356,7 +2363,7 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 Eight PRs after the spike, the first of them in five parts (2a to 2e). Each PR, and each part,
 is its own PR into `main`, merged in order. The spike branch (PR 1) is never merged; only its
 report is in PR #4440, which holds the proposal documents, no code, and stays a draft until the
-whole plan is done. These are calls by @josh-sanders, 1 Nov 2026, during development of
+whole plan is done. These are calls by @josh-sanders during development of
 PR #4440.
 
 The order follows a principle, not a ban: **each PR replaces something outright, and avoids
@@ -2366,17 +2373,17 @@ code isn't replaced yet, it keeps running as it does today, reading the same set
 code, so the two never disagree. That keeps most reviews to one question ("is this replacement
 right?"). A PR is as big as its replacement needs, and a replacement too big to review in one
 piece is split into parts that each replace something whole, as PR 2 is. The principle, and
-that it isn't a ban, is a call by @josh-sanders, 31 Oct 2026, during development of PR #4440.
+that it isn't a ban, is a call by @josh-sanders during development of PR #4440.
 
 **RubyLLM versions.** PR 2 builds on 2.1.1, and 2.2 comes in with PR 5 whenever it's released;
 nothing waits for it. During this work the Gemfile allows `~> 2.1`, while `Gemfile.lock` still
 fixes the exact version each PR is tested with, so a version changes only when a PR bumps it.
-When PR 9 lands, the Gemfile pins the version in use (call by @josh-sanders, 31 Oct 2026, during development of PR #4440).
+When PR 9 lands, the Gemfile pins the version in use (call by @josh-sanders during development of PR #4440).
 
 **Why chat is PR 6.** Chat goes onto RubyLLM 2.2, so it follows PR 5. The gate doesn't wait for
 it: today's chat takes the gate itself (PR 4). Configuration in the database (PR 7) follows chat,
 because today's chat would otherwise need a wrapper to read the new tables. All three are calls
-by @josh-sanders, 31 Oct 2026, during development of PR #4440.
+by @josh-sanders during development of PR #4440.
 
 Each PR deletes the code it replaces, lands with its own checks, and has a reviewer guide: what
 moved, what was deleted, what to read first. PRs are stacked so review can start early, and the
@@ -2394,8 +2401,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    **Done** ([`rubyllm-spike-report.md`](rubyllm-spike-report.md); evidence on
    [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm), never merged).
    Every criterion below passes or needs a small fix in Sure's adapter; none fails. It recommends
-   adopting `ruby_llm` 2.1.1, and adopting it stays a product decision (adopted by @josh-sanders,
-   31 Oct 2026, during development of PR #4440, with the version policy above). Beyond the
+   adopting `ruby_llm` 2.1.1, and adopting it stays a product decision (adopted by @josh-sanders during development of PR #4440, with the version policy above). Beyond the
    criteria it covered local servers in containers, the proxy, OpenRouter's free models,
    reasoning switches, Jev, Sure's tools in RubyLLM's loop and RubyLLM agents (section 8.4 is built on them), switching providers mid-chat, PDF
    import and local OCR, OpenAI vector stores, every RubyLLM 2.1 feature and its ecosystem gems,
@@ -2439,7 +2445,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      TypeSafe-style servers at `<base>/v1/systemone`, today's default and self-hosted servers. A
      Jev endpoint on OpenRouter stops working until PR 5 brings 2.2, and an endpoint at any other
      path isn't supported; the release notes say so, and an issue can bring a path back if
-     someone needs it (call by @josh-sanders, 31 Oct 2026, during development of PR #4440).
+     someone needs it (call by @josh-sanders during development of PR #4440).
      *Deletes:* `Provider::Jev`, `Family#shadow_categorization_provider`,
      `CategorizationComparison` and `families.categorization_provider` (a single-family Jev
      choice moves into the `categorize` route).
@@ -2495,7 +2501,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    and `Ai::LegacyEnvConfig` loads its structure into them as a deprecated source. The instance
    pages (endpoints with presets, models, routes with each entry's overrides: JSON mode, prompt,
    reasoning effort) and the family AI features page replace the
-   hostings AI sections. The AI features page has chat mode and each feature's switch and
+   hostings AI sections. The endpoint form requires a model once a base URL is set, and keeps the
+   local-server help today's OpenAI section has (#4408). The AI features page has chat mode and each feature's switch and
    manifest: `families.ai_consents`, the consent migration (an `mcp_only` family gets chat
    switched off, and PR 6's `mcp_only` line goes), member emails, `:no_family_consent` and
    `:consent_outdated`. That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
@@ -2588,7 +2595,7 @@ chat tables (for the chat storage line).
   (section 4.2); mapping it onto Anthropic's thinking settings is a later transport option.
 - Replacing Langfuse, Sidekiq or rails-settings-cached.
 - A chat storage redesign, such as RubyLLM's `acts_as_chat`, isn't decided here: PR 5's spike on
-  RubyLLM 2.2 decides PR 6's storage (call by @josh-sanders, 31 Oct 2026, during development of PR #4440). The evidence so far: the plumbing needs only
+  RubyLLM 2.2 decides PR 6's storage (call by @josh-sanders during development of PR #4440). The evidence so far: the plumbing needs only
   the additive `provider_state` column (section 18). RubyLLM's persistence pays off when RubyLLM runs the loop
   (approvals and MCP input that survive restarts); it would also migrate data the mobile API
   reads (#4421), touch how tool rounds are stored (#4133), and turn on RubyLLM's usage ledger,
@@ -2629,5 +2636,4 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 - **Down mark:** a 60-second `Rails.cache` entry for a failed server, key or model (section 5.4).
 - **Shadow run:** the same feature on another route, compared and never applied (section 8.2).
 - **Preset:** a provider's defaults in `config/ai/presets/*.yml` (section 4.3).
-- **A call by @josh-sanders:** a product decision made during development of PR #4440, with its
-  date; a proposal for the maintainers, open to evidence like every other decision.
+- **A call by @josh-sanders:** a product decision made during development of PR #4440; a proposal for the maintainers, open to evidence like every other decision.
