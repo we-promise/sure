@@ -52,4 +52,21 @@ class Money::CurrencyTest < ActiveSupport::TestCase
     expected_step = 1.0 / (10 ** eth.default_precision)
     assert_equal expected_step, eth.step
   end
+
+  # Regression for a stray duplicate `default_precision:` key left behind in
+  # config/currencies.yml by an earlier edit: YAML silently resolves a
+  # duplicate key to its last value rather than raising, so "uni" quietly
+  # had default_precision 2 instead of 8 with no parse error to catch it.
+  test "the 32 added crypto currencies share btc's precision and conversion" do
+    %w[
+      ada amp avax baby bal band bat boden bond cgld clv comp enj fet fil
+      forth grt knc nkn nos nu ogn pol ren skl sky snx sol storj sushi uni zec
+    ].each do |code|
+      currency = Money::Currency.new(code)
+      assert_equal code.upcase, currency.iso_code, "#{code}: iso_code"
+      assert_equal code.upcase, currency.symbol, "#{code}: symbol"
+      assert_equal 8, currency.default_precision, "#{code}: default_precision"
+      assert_equal 100_000_000, currency.minor_unit_conversion, "#{code}: minor_unit_conversion"
+    end
+  end
 end

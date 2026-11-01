@@ -2986,7 +2986,6 @@ uni:
   delimiter: ","
   default_format: "%u%n"
   default_precision: 8
-  default_precision: 2
 zec:
   name: Zcash
   priority: 100
