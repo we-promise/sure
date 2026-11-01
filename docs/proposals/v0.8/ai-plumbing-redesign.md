@@ -1009,7 +1009,7 @@ keys), lives in `Family::AiSettings`, a concern in `app/models/family/ai_setting
 `family.rb` has about 20 open PRs at any time, so it gains only one `include`.
 `Family::AiPromptable` stays as it is.
 
-**Delivery.** PR 2 ships `Ai::Consent` with the user switch, plus the
+**Delivery.** PR 2b ships `Ai::Consent` with the user switch, plus the
 threshold and prompt overrides; PR 6 adds chat mode. PR 7 creates the AI features page with chat
 mode and per-feature consent (`families.ai_consents`, the consent migration, member emails,
 `:no_family_consent`, `:consent_outdated`), which fixes drift bug 4. PR 9 adds the family's
@@ -1019,6 +1019,16 @@ consent, as today. One rule is carried over rather than stubbed: today `mcp_only
 off (through `User#ai_available?`), so PR 6, which deletes that check, keeps the rule as one line
 in `Ai::Consent` (`:no_family_consent` for `chat` when `assistant_type` is `mcp_only`). PR 7
 deletes the line when the consent migration turns those families' Chat row off.
+
+**The user switch before PR 7** (call by @josh-sanders during development of PR #4440). `users.ai_enabled` defaults to off, and only chat's
+consent prompt turns it on, so PR 2b keeps today's checks instead of the final rule: chat and
+bills need the switch; PDF import, document embedding and document search don't, unless the user
+said no. Chat's existing prompt (`chats/_ai_consent`) gains a "No" beside "Enable AI Chats". A
+"No", or turning AI off in settings, sets `users.ai_declined_at`, and from then on that user's
+PDF imports and documents get no AI (`:user_disabled`); turning AI on clears it. Not answering
+changes nothing. PR 7 then applies the rule in `Ai::Consent` below to every user feature, and its
+consent migration uses the answers: a "yes" stays on, a "no" stays off. What it does for users
+who never answered is PR 7's decision.
 
 **Two family AI pages.** The AI features page holds everything about what AI the family uses: six
 rows (Chat, Bills, PDF import, Documents, Categories, Merchants), each with its switch, manifest
@@ -2366,6 +2376,7 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | `AssistantMessage` stores the route that served it | Adds a column the mobile API reads | Additive | — |
 | `messages.provider_state` (jsonb) holds each assistant message's producer and provider state | Nothing; Gemini's signatures move from `tool_calls.extra_content` | Additive; existing signatures copied | — |
 | The route chooses the chat model | The API's `model` parameter on chats and messages is accepted and ignored | None | API clients: `model` in the response says which model served the turn |
+| `users.ai_declined_at` (PR 2b) | Nothing: a "No" on chat's consent prompt, or AI turned off, now also stops AI on that user's PDF imports and documents | Additive | Users who turned AI off get no AI on their PDF imports |
 | Cancel statuses | `cancelled` added to `Import` and `Message` statuses; `RecurringTransaction::Suggestion` added | Additive (string enums) | — |
 | The ENV override of the family confidence threshold goes | `CATEGORIZATION_CONFIDENCE_THRESHOLD` | None | Set it on the categorization page |
 | The shadow rate moves from the family to the instance | `families.categorization_shadow_rate`, `CATEGORIZATION_SHADOW_RATE` | One family: its rate is copied to `Setting.ai_shadow_rates`; several: 0 | Multi-family instances: the instance admin sets the rate on the routes page |
@@ -2436,11 +2447,13 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      drift bug 6. Adds the transport contract test and the AI test helpers (section 17).
      *Deletes:* `AiHealth::Probe`'s own clients.
    - **2b. Routing and consent.** `Ai::Config`, built in memory in each process by
-     `Ai::LegacyEnvConfig` from today's ENV and `Setting` fields with the table in section 4.5;
+     `Ai::LegacyEnvConfig` from today's ENV and `Setting` fields with the table in section 4.5
+     (so the web and the workers can disagree, as they do today, until PR 7);
      `Ai::Routes` with its `sends:` manifest, `Ai::Router`, `Ai::Consent` with the user switch,
      `Ai.available?`, `AiFeatureGuard`, `Family::AiSettings` and `Sure/NoAiEnv`. Every non-chat
-     availability check asks the router, which fixes drift bugs 1 and 5 and the user-switch part
-     of 4. Adds the agreement test, with chat's entry points on its allowlist until PR 6.
+     availability check asks the router, which fixes drift bugs 1 and 5. The user switch keeps
+     today's checks, and a "No" on chat's consent prompt (`users.ai_declined_at`) stops AI on that
+     user's PDF imports and documents at once (section 6). Adds the agreement test, with chat's entry points on its allowlist until PR 6.
      *Deletes:* the non-chat availability checks and their test stubs.
    - **2c. Generations.** `transport.generate` with the JSON-mode policy, `Ai::Generation`,
      `Ai::Requester`, `Ai::Batch`, `Ai::GenerationJob` with small batches, failover and
@@ -2476,7 +2489,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    `Setting` fields. Smart-fill, smart-configure, document embedding and the MCP AI tools call
    their requesters on the web thread, as today. Configuration is still edited on the hostings
    page, and the web and the workers each build `Ai::Config` from their own ENV, as they resolve
-   settings today, until PR 7.
+   settings today, until PR 7 (call by @josh-sanders during development of PR #4440). The
+   upgrade guide says to give the web and the workers the same AI variables.
 3. **Off the web thread.** Smart-fill and smart-configure through `RecurringTransaction::Suggestion`
    and a Turbo Stream, non-PDF document embedding as a job, `Ai::ProbeJob`, and the MCP tools
    through `Ai::ToolJob` (with its result handoff) and a pending import plus `get_import_status`
