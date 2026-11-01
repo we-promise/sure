@@ -31,11 +31,15 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
         },
         # days_overdue is deliberately left out: it changes every night, and
         # metadata drift would resurrect insights the user already dismissed.
+        # account_id lets the feed hide the row once the account stops being
+        # shared (Insight.about_shared_accounts); a series without an account
+        # leaves the key out, since an explicit null would always hide it.
         metadata: {
           recurring_transaction_id: recurring.id,
+          account_id: recurring.account_id,
           amount: round(occurrence.resolved_expected_amount, 2),
           expected_on: occurrence.due_on.iso8601
-        },
+        }.compact,
         dedup_key: "subscription_audit:#{recurring.id}"
       )
     end

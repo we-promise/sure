@@ -264,6 +264,21 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert insight.acknowledged?
   end
 
+  test "adding the account an insight is about keeps acknowledged state" do
+    stub_generated([ generated_insight.with(metadata: generated_insight.metadata.except(:account_id)) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+    insight.acknowledge!
+
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    insight.reload
+    assert_equal accounts(:depository).id, insight.metadata["account_id"]
+    assert insight.acknowledged?
+  end
+
   test "expires a visible insight whose condition cleared" do
     insight = insights(:cash_flow_warning)
     stub_generated([], succeeded_types: [ "cash_flow_warning" ])
