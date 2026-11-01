@@ -115,8 +115,8 @@ class LlmUsage < ApplicationRecord
       "o4-mini" => { prompt: 1.10, completion: 4.40 },
       "o3-mini" => { prompt: 1.10, completion: 4.40 },
       "o3-pro" => { prompt: 20.00, completion: 80.00 },
-      # Tier fallbacks: an unlisted release of a GPT-6 tier (e.g. "gpt-6.2-sol")
-      # is estimated at that tier's newest listed rate.
+      # Tier fallbacks: an unlisted release of a tier (e.g. "gpt-6.2-sol",
+      # "gpt-7-astra") is estimated at that tier's newest listed rate.
       "gpt-astra" => {
         prompt: 10.00, completion: 50.00,
         long_context: { threshold: 272_000, prompt: 20.00, completion: 75.00 }

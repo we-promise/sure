@@ -1195,9 +1195,9 @@ standard rates throughout their context window. Claude cache reads cost 0.1x
 input, except Opus 5.5 and Sonnet 5.5 (0.05x) and Fable 5.1 (0.025x).
 A Claude model released after the last review (for example `claude-opus-6`)
 is estimated at the newest listed rate of its family (Fable, Opus, Sonnet or
-Haiku) until the table is updated. Likewise, an unlisted release of a GPT-6
-tier (for example `gpt-6.2-sol`) is estimated at the newest listed Astra, Sol,
-Terra or Luna rate. A listed version row covers its dated snapshots but not
+Haiku) until the table is updated. Likewise, an unlisted release of an OpenAI
+tier (for example `gpt-6.2-sol` or `gpt-7-astra`) is estimated at the newest
+listed Astra, Sol, Terra or Luna rate. A listed version row covers its dated snapshots but not
 later versions, so other unlisted OpenAI models (for example `gpt-5.9`) show
 no estimate instead of an older model's rate.
 
@@ -1209,8 +1209,10 @@ invalid costs, use the bundled estimates. Unknown models can therefore have a
 recorded post-call cost even when their pre-run estimate is N/A. Saved usage costs
 are not recalculated. Estimates exclude regional premiums,
 alternative service tiers, tool charges and audio-specific rates. Anthropic
-five-minute cache writes and reads are included when reported; OpenAI and Gemini
-cache discounts and cache-write/storage charges are not currently modeled.
+five-minute cache writes and reads are included when reported. For Claude models
+reached through an OpenAI-compatible endpoint, `cached_tokens` are priced at the
+Claude cache-read rate. OpenAI and Gemini cache discounts and
+cache-write/storage charges are not currently modeled.
 Custom endpoints may charge different rates.
 
 For comparison, GPT-4.1 is $2 input / $8 output, GPT-5 is $1.25 / $10,
