@@ -110,7 +110,13 @@ class KrakenItem::Importer
     def fetch_and_parse_earn_assets(asset_metadata)
       items = fetch_earn_allocations
       parse_earn_assets(items, asset_metadata)
-    rescue Provider::Kraken::PermissionError, Provider::Kraken::ApiError, Provider::Kraken::RateLimitError, EarnAllocationsUnavailable => e
+    rescue Provider::Kraken::PermissionError, Provider::Kraken::ApiError, Provider::Kraken::RateLimitError,
+           EarnAllocationsUnavailable, Timeout::Error, SocketError, OpenSSL::SSL::SSLError, SystemCallError => e
+      # The last four are raw transport failures (HTTParty/Net::HTTP raise
+      # these before a response ever reaches Provider::Kraken#handle_response,
+      # so they're never classified into a Provider::Kraken::Error) -- a
+      # timeout or dropped connection on this call must degrade the same way
+      # as every other Earn-specific failure here, not crash the whole sync.
       record_earn_unavailable(e)
       carried_over_earn_assets
     end
@@ -165,7 +171,14 @@ class KrakenItem::Importer
       all_items = []
 
       MAX_EARN_PAGES.times do
-        result = kraken_provider.get_earn_allocations(cursor: cursor).to_h
+        raw_result = kraken_provider.get_earn_allocations(cursor: cursor)
+        # Provider::Kraken#handle_response validates the outer envelope but
+        # not the type of "result" itself -- a scalar has no #to_h at all,
+        # and a non-pair Array raises TypeError from it, neither of which
+        # the rescue below would catch, so this must be checked before #to_h
+        # ever runs, not after.
+        raise EarnAllocationsUnavailable, "Earn allocation result must be an object" unless raw_result.is_a?(Hash)
+        result = raw_result.to_h
         items = result["items"]
         # `|| []` here used to treat a missing "items" key as "genuinely zero
         # Earn assets this sync" -- a malformed response read as a clean

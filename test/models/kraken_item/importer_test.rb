@@ -96,6 +96,50 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     assert_in_delta 50.0, account.current_balance, 0.01
   end
 
+  test "degrades gracefully when Earn Allocations times out at the transport level" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    # HTTParty/Net::HTTP raise this before a response ever reaches
+    # Provider::Kraken#handle_response, so it's never classified into a
+    # Provider::Kraken::Error -- it has to be rescued explicitly here too,
+    # same reasoning as RateLimitError above, or a dropped connection on
+    # this one call aborts the whole sync.
+    @provider.stubs(:get_earn_allocations).raises(Timeout::Error, "execution expired")
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    account = @item.kraken_accounts.first
+    assert_in_delta 50.0, account.current_balance, 0.01
+  end
+
+  test "carries forward last known Earn assets when the result is not an object" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    # A scalar result has no #to_h at all (NoMethodError); calling #to_h on
+    # it must never be reached before this is checked.
+    @provider.stubs(:get_earn_allocations).returns("unexpected scalar result")
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    earn_assets = @item.kraken_accounts.first.raw_payload["assets"].select { |asset| asset["source"] == "earn" }
+    assert_equal 1, earn_assets.size, "expected the carried-forward snapshot, not a crash"
+    assert_equal "BTC", earn_assets.first["symbol"]
+  end
+
   test "carries forward last known Earn assets when a later sync's fetch fails" do
     @provider.stubs(:get_asset_info).returns(asset_metadata)
     @provider.stubs(:get_extended_balance).returns(
