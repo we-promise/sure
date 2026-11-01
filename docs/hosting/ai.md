@@ -1136,8 +1136,8 @@ Good test queries that exercise different capabilities:
 
 **Full pricing table last verified: October 17, 2026.** Every model
 listed in [`LlmUsage::PRICING`](../../app/models/llm_usage.rb) was checked against
-official sources on that date, except the Claude rows: those were last reviewed
-on November 1, 2026, without re-checking the rest of the table.
+official sources on that date, except the Claude and OpenAI rows: those were
+last reviewed on November 1, 2026, without re-checking the Gemini rows.
 `PRICING_VERIFIED_ON` supplies the full-table verification date shown on
 the LLM usage screen. This is a manual review date, not a claim that providers
 changed every price that day.
@@ -1146,7 +1146,7 @@ Rates are USD per million tokens at the Standard tier. The source coverage is:
 
 | Models in the code | Official pricing source |
 | --- | --- |
-| GPT-6 Sol/6.1 Sol, GPT-5.6, GPT-5.5, GPT-5.4, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1, o3, o4-mini (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
+| GPT-6 Astra, GPT-6 Sol/6.1 Sol, GPT-6.1 Terra, GPT-6 Luna, GPT-5.6, GPT-5.5, GPT-5.4, GPT-5.3 Codex, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1/o1-pro, o3, o4-mini, chat-latest (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
 | GPT-5.2/5.1 Chat aliases | [GPT-5.2 Chat](https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest), [GPT-5.1 Chat](https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest) |
 | o1-mini | [o1-mini](https://developers.openai.com/api/docs/models/o1-mini) |
 | Gemini 4 Argon, 3.8/3.7/3.6/3.5 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro, 3 Flash, 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
@@ -1176,7 +1176,8 @@ and Gemini 3.8, 3.7, and 3.6 Flash through December 31, 2026.
 
 #### Context tiers and estimate limits
 
-OpenAI's listed GPT-6 Sol, GPT-6.1 Sol, GPT-5.6, GPT-5.5/Pro and GPT-5.4/Pro
+OpenAI's listed GPT-6 Astra, GPT-6 Sol, GPT-6.1 Sol, GPT-6.1 Terra, GPT-6 Luna,
+GPT-5.6, GPT-5.5/Pro and GPT-5.4/Pro
 rates increase above 272,000 input tokens: input doubles and output increases
 by 50% for the entire request. GPT-5.4 mini/nano retain their flat rates.
 Gemini 4 Argon is $2.00 / $10.00 through November 2026 ($4.00 / $20.00 standard starting
@@ -1194,7 +1195,11 @@ standard rates throughout their context window. Claude cache reads cost 0.1x
 input, except Opus 5.5 and Sonnet 5.5 (0.05x) and Fable 5.1 (0.025x).
 A Claude model released after the last review (for example `claude-opus-6`)
 is estimated at the newest listed rate of its family (Fable, Opus, Sonnet or
-Haiku) until the table is updated.
+Haiku) until the table is updated. Likewise, an unlisted release of a GPT-6
+tier (for example `gpt-6.2-sol`) is estimated at the newest listed Astra, Sol,
+Terra or Luna rate. A listed version row covers its dated snapshots but not
+later versions, so other unlisted OpenAI models (for example `gpt-5.9`) show
+no estimate instead of an older model's rate.
 
 Sure estimates individual requests using these tiers. Aggregate categorization
 previews assume short requests. For [OpenRouter's official API endpoints](https://openrouter.ai/docs/cookbook/administration/usage-accounting), saved

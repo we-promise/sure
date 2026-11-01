@@ -18,6 +18,20 @@ class LlmUsage < ApplicationRecord
   # Source: https://developers.openai.com/api/docs/pricing
   PRICING = {
     "openai" => {
+      # GPT-6 Astra, GPT-6.1 Terra and GPT-6 Luna Standard pricing, November 2026.
+      # Source: https://developers.openai.com/api/docs/models/gpt-6-astra (and -6.1-terra, -6-luna)
+      "gpt-6-astra" => {
+        prompt: 10.00, completion: 50.00,
+        long_context: { threshold: 272_000, prompt: 20.00, completion: 75.00 }
+      },
+      "gpt-6.1-terra" => {
+        prompt: 1.00, completion: 5.00,
+        long_context: { threshold: 272_000, prompt: 2.00, completion: 7.50 }
+      },
+      "gpt-6-luna" => {
+        prompt: 0.10, completion: 0.50,
+        long_context: { threshold: 272_000, prompt: 0.20, completion: 0.75 }
+      },
       # GPT-6.1 Sol Standard pricing, September 2026.
       # Source: https://developers.openai.com/api/docs/models/gpt-6.1-sol
       "gpt-6.1-sol" => {
@@ -36,7 +50,11 @@ class LlmUsage < ApplicationRecord
       "gpt-4.1-nano" => { prompt: 0.10, completion: 0.40 },
       # 4o
       "gpt-4o" => { prompt: 2.50, completion: 10.00 },
+      "gpt-4o-2024-05-13" => { prompt: 5.00, completion: 15.00 },
       "gpt-4o-mini" => { prompt: 0.15, completion: 0.60 },
+      # Specialized models
+      "chat-latest" => { prompt: 5.00, completion: 30.00 },
+      "gpt-5.3-codex" => { prompt: 1.75, completion: 14.00 },
       # GPT-5 models
       # Sol promotion effective 2026-08-21, available at least through 2026-11-21.
       "gpt-5.6-sol" => {
@@ -82,12 +100,31 @@ class LlmUsage < ApplicationRecord
       "gpt-5-pro" => { prompt: 15.00, completion: 120.00 },
       # o1 models
       "o1-mini" => { prompt: 1.10, completion: 4.40 },
+      "o1-pro" => { prompt: 150.00, completion: 600.00 },
       "o1" => { prompt: 15.00, completion: 60.00 },
       # o-series models
       "o3" => { prompt: 2.00, completion: 8.00 },
       "o4-mini" => { prompt: 1.10, completion: 4.40 },
       "o3-mini" => { prompt: 1.10, completion: 4.40 },
-      "o3-pro" => { prompt: 20.00, completion: 80.00 }
+      "o3-pro" => { prompt: 20.00, completion: 80.00 },
+      # Tier fallbacks: an unlisted release of a GPT-6 tier (e.g. "gpt-6.2-sol")
+      # is estimated at that tier's newest listed rate.
+      "gpt-astra" => {
+        prompt: 10.00, completion: 50.00,
+        long_context: { threshold: 272_000, prompt: 20.00, completion: 75.00 }
+      },
+      "gpt-sol" => {
+        prompt: 2.00, completion: 10.00,
+        long_context: { threshold: 272_000, prompt: 4.00, completion: 15.00 }
+      },
+      "gpt-terra" => {
+        prompt: 1.00, completion: 5.00,
+        long_context: { threshold: 272_000, prompt: 2.00, completion: 7.50 }
+      },
+      "gpt-luna" => {
+        prompt: 0.10, completion: 0.50,
+        long_context: { threshold: 272_000, prompt: 0.20, completion: 0.75 }
+      }
     },
     # Source: https://ai.google.dev/gemini-api/docs/pricing
     "google" => {
@@ -221,12 +258,14 @@ class LlmUsage < ApplicationRecord
 
     # Try prefix matching longest-first so snapshot IDs for variants (e.g.,
     # "gpt-5.4-mini-2026-03-17") do not match a broader family row
-    # ("gpt-5.4") before their specific pricing row.
+    # ("gpt-5.4") before their specific pricing row. A row covers its snapshots
+    # but not later versions: "gpt-5" must not price "gpt-5.7-sol".
     provider_pricing.sort_by { |model_prefix, _pricing| -model_prefix.length }.each do |model_prefix, pricing|
-      return pricing if model.start_with?(model_prefix)
+      return pricing if model.start_with?(model_prefix) && !model.delete_prefix(model_prefix).match?(/\A\.?\d/)
     end
 
-    nil
+    tier = model[/\Agpt-[\d.]+-(astra|sol|terra|luna)\b/, 1]
+    tier && provider_pricing["gpt-#{tier}"]
   end
 
   # Infer provider from model name by checking which provider has pricing for it

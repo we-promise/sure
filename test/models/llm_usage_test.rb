@@ -192,6 +192,25 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_equal 5.00, LlmUsage.find_pricing("anthropic", "claude-opus-4-5-20251101")[:prompt]
   end
 
+  test "unlisted GPT-6 tier releases fall back to the tier's newest rate" do
+    assert_equal "openai", LlmUsage.infer_provider("gpt-6.2-sol")
+    assert_equal 2.00, LlmUsage.find_pricing("openai", "gpt-6.2-sol")[:prompt]
+    assert_equal 2.00, LlmUsage.find_pricing("openai", "gpt-5.7-sol")[:prompt]
+    assert_equal 1.00, LlmUsage.find_pricing("openai", "gpt-6.2-terra")[:prompt]
+    assert_equal 10.00, LlmUsage.find_pricing("openai", "gpt-7-astra-2027-01-01")[:prompt]
+
+    # A version row no longer prices later versions; unknown ones stay N/A.
+    assert_nil LlmUsage.find_pricing("openai", "gpt-5.9")
+  end
+
+  test "OpenAI rows still cover their dated snapshots" do
+    assert_equal 2.00, LlmUsage.find_pricing("openai", "gpt-4.1-2025-04-14")[:prompt]
+    assert_equal 2.50, LlmUsage.find_pricing("openai", "gpt-4o-2024-08-06")[:prompt]
+    assert_equal 5.00, LlmUsage.find_pricing("openai", "gpt-4o-2024-05-13")[:prompt]
+    assert_equal 150.00, LlmUsage.find_pricing("openai", "o1-pro-2025-03-19")[:prompt]
+    assert_equal 1.75, LlmUsage.find_pricing("openai", "gpt-5.3-codex")[:prompt]
+  end
+
   test "find_pricing reads OpenRouter's dotted Claude versions" do
     assert_equal 5.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-opus-4.6")[:prompt]
     assert_equal 15.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-opus-4.1")[:prompt]
@@ -199,6 +218,9 @@ class LlmUsageTest < ActiveSupport::TestCase
   end
 
   {
+    "gpt-6-astra" => [ 15.0, 27.5 ],
+    "gpt-6.1-terra" => [ 1.5, 2.75 ],
+    "gpt-6-luna" => [ 0.15, 0.275 ],
     "gpt-5.6-sol" => [ 6.0, 11.0 ],
     "gpt-5.6-terra" => [ 3.2, 5.8 ],
     "gpt-5.6-luna" => [ 0.32, 0.58 ],
