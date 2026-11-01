@@ -1022,13 +1022,10 @@ deletes the line when the consent migration turns those families' Chat row off.
 
 **The user switch before PR 7** (call by @josh-sanders during development of PR #4440). `users.ai_enabled` defaults to off, and only chat's
 consent prompt turns it on, so PR 2b keeps today's checks instead of the final rule: chat and
-bills need the switch; PDF import, document embedding and document search don't, unless the user
-said no. Chat's existing prompt (`chats/_ai_consent`) gains a "No" beside "Enable AI Chats". A
-"No", or turning AI off in settings, sets `users.ai_declined_at`, and from then on that user's
-PDF imports and documents get no AI (`:user_disabled`); turning AI on clears it. Not answering
-changes nothing. PR 7 then applies the rule in `Ai::Consent` below to every user feature, and its
-consent migration uses the answers: a "yes" stays on, a "no" stays off. What it does for users
-who never answered is PR 7's decision.
+bills need the switch; PDF import, document embedding and document search don't. Nothing is added
+to the prompt. PR 7 then applies the rule in `Ai::Consent` below to every user feature, and its
+consent migration uses who clicked "Enable AI Chats" (`ai_enabled` on). What it does for users
+who never did is PR 7's decision.
 
 **Two family AI pages.** The AI features page holds everything about what AI the family uses: six
 rows (Chat, Bills, PDF import, Documents, Categories, Merchants), each with its switch, manifest
@@ -2376,7 +2373,6 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | `AssistantMessage` stores the route that served it | Adds a column the mobile API reads | Additive | — |
 | `messages.provider_state` (jsonb) holds each assistant message's producer and provider state | Nothing; Gemini's signatures move from `tool_calls.extra_content` | Additive; existing signatures copied | — |
 | The route chooses the chat model | The API's `model` parameter on chats and messages is accepted and ignored | None | API clients: `model` in the response says which model served the turn |
-| `users.ai_declined_at` (PR 2b) | Nothing: a "No" on chat's consent prompt, or AI turned off, now also stops AI on that user's PDF imports and documents | Additive | Users who turned AI off get no AI on their PDF imports |
 | Cancel statuses | `cancelled` added to `Import` and `Message` statuses; `RecurringTransaction::Suggestion` added | Additive (string enums) | — |
 | The ENV override of the family confidence threshold goes | `CATEGORIZATION_CONFIDENCE_THRESHOLD` | None | Set it on the categorization page |
 | The shadow rate moves from the family to the instance | `families.categorization_shadow_rate`, `CATEGORIZATION_SHADOW_RATE` | One family: its rate is copied to `Setting.ai_shadow_rates`; several: 0 | Multi-family instances: the instance admin sets the rate on the routes page |
@@ -2452,8 +2448,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `Ai::Routes` with its `sends:` manifest, `Ai::Router`, `Ai::Consent` with the user switch,
      `Ai.available?`, `AiFeatureGuard`, `Family::AiSettings` and `Sure/NoAiEnv`. Every non-chat
      availability check asks the router, which fixes drift bugs 1 and 5. The user switch keeps
-     today's checks, and a "No" on chat's consent prompt (`users.ai_declined_at`) stops AI on that
-     user's PDF imports and documents at once (section 6). Adds the agreement test, with chat's entry points on its allowlist until PR 6.
+     today's checks until PR 7 (section 6). Adds the agreement test, with chat's entry points on its allowlist until PR 6.
      *Deletes:* the non-chat availability checks and their test stubs.
    - **2c. Generations.** `transport.generate` with the JSON-mode policy, `Ai::Generation`,
      `Ai::Requester`, `Ai::Batch`, `Ai::GenerationJob` with small batches, failover and
