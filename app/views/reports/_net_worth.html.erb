@@ -43,7 +43,7 @@
   <% if breakdown_series && breakdown_series[:values].size >= 2 %>
     <div
       id="reportsNetWorthChart"
-      class="w-full h-72 privacy-sensitive"
+      class="w-full h-72 privacy-sensitive-chart"
       data-controller="net-worth-chart"
       data-net-worth-chart-data-value="<%= breakdown_series.to_json %>"
       data-net-worth-chart-assets-label-value="<%= t("reports.net_worth.total_assets") %>"
