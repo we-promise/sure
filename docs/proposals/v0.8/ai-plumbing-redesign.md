@@ -740,7 +740,7 @@ module Ai::Routes
                          sends: %i[chat_messages looked_up_financial_data] },
     bill_setup:        { lane: :interactive, needs: %i[structured_output],      consent: :user,
                          sends: %i[transaction_dates transaction_amounts transaction_names category_names bill_configuration] },
-    extract_pdf:       { lane: :prompt,      needs: %i[vision structured_output], consent: :user,
+    extract_pdf:       { lane: :prompt,      needs: %i[structured_output],      consent: :user,   # vision, documents, ocr: per way of reading (8.1)
                          sends: %i[uploaded_document] },
     embed:             { lane: :prompt,      needs: %i[embedding],              consent: :user,
                          sends: :depends_on_vector_store },
@@ -2148,7 +2148,7 @@ and a PDF import.
 - **Probes run per model**, for every model that appears in any route. `Ai::ProbeJob` runs on
   `ai_background` through `route.transport.probe(model)`, so a probe exercises the same client,
   headers, timeout and proxy as production. It checks the declared capabilities: tool calling,
-  structured output, vision and embedding.
+  structured output, vision, documents (a PDF accepted as a file), OCR and embedding.
 - `AiHealth::Probe` keeps its caching, redaction, debug logging and `confirming_tools_refusal`
   logic, but stops building its own clients (call by @josh-sanders during development of PR #4440). #3155's 60-second cache, "Run checks
   again" and "opening a tab triggers no AI request" stay; only the probe itself moves into a job,
@@ -2442,7 +2442,9 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
   and embedding servers share one local host's gate, and the nested call is recorded with the
   chat's correlation id.
 - `ai_gate_test.rb`: waiters go in lane order; an interactive call interrupts the lowest running
-  lane and never another interactive call; a background call raises `Busy` instead of waiting;
+  lane by closing its connection, also while it's still reading its prompt, and never interrupts
+  another interactive call; the typing hold keeps new background and prompt calls off the host
+  and lapses at its cap; a background call raises `Busy` instead of waiting;
   with two or more slots one is kept for the interactive lane; the gate is sized from
   `parallel_requests` or llama.cpp's `total_slots`; cloud endpoints have none.
 - `ai_batch_split_test.rb`: a stubbed model that refuses more than N items, and one whose answer
@@ -2750,7 +2752,10 @@ queue latency and the model server's queue depth (for llama.cpp, its Prometheus 
   two-level; the "AI unavailable" notice appears; chat says when it failed over or escalated to
   another model; with more than one AI thread, each local model host takes as many calls at once as its
   server has slots, chat first; a family can use its own key for a cloud endpoint, with an
-  optional monthly cap, and its calls on that key never move to the instance key.
+  optional monthly cap, and its calls on that key never move to the instance key; a chat answer
+  can be stopped; PDF import offers "Read as" (Auto, PDF, Images, OCR, Text), reads every page
+  instead of the first five, and offers an extraction that fails its checks for review with the
+  failed checks shown; the usage page opens each call to show its requests.
 
 ## 20. Not in scope
 
