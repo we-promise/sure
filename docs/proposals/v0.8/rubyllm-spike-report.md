@@ -166,6 +166,7 @@ evidence like everything else here.
 | No `ai_calls` table replacing `llm_usages` (§20) | Partly covered: "RubyLLM's usage ledger" compared RubyLLM's table with `llm_usages`, not an `ai_calls` table |
 | Langfuse traces unchanged (§20) | Partly covered: "Tracing modes" |
 | The MCP server's renames, shared tool catalog, scopes and family switch (§20) | Partly covered: RubyLLM's MCP client chose Sure's tools with `only` (`ruby_llm_mcp_live_test`) |
+| One read-only or mutating classification of each `Assistant::Function` for MCP scopes, MCP annotations and chat approvals, taken from #4628 if it lands first, unclassified meaning mutating (§8.4, §14) | Chat approvals and an `mcp:read` token driven by the same classification; whether any tool needs different answers for the two (`preview_rule`, `search_family_files`) |
 | Product features from PR #4440's user review (§20) | Their own proposals |
 | New providers only as presets; no model discovery (#3694, §20) | Partly covered: RubyLLM's registry listed a retired model, so a seeded list needs checking |
 | Langfuse, Sidekiq and rails-settings-cached stay (§20) | Sidekiq covered ("Job runners and chat priority"); Langfuse partly ("Tracing modes": `metadata` goes to any OTLP backend); rails-settings-cached not |

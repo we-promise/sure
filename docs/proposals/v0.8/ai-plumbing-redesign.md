@@ -1,6 +1,6 @@
 # Sure — AI plumbing redesign
 
-Status: proposal, updated after the RubyLLM spike · Target: `we-promise/sure` (`origin/main` @ `a6767e931`; later commits to `5ed910330`, after v0.7.6, and the open #3422 checked for impact) · 2026-10-28, updated 2026-11-01
+Status: proposal, updated after the RubyLLM spike · Target: `we-promise/sure` (`origin/main` @ `a6767e931`; later commits to `5ed910330`, after v0.7.6, and the open #3422 and #4628 checked for impact) · 2026-10-28, updated 2026-11-01
 
 Audience: the Sure dev team. This document describes the structure the AI layer is moving to and
 the pull requests that get it there (section 19).
@@ -1753,8 +1753,12 @@ What happens to today's chat classes in PR 6:
   those users; the router skips it for anyone else (section 5.3), as
   `Assistant::External.available_for?` does today.
 - **Which tools write.** Each `Assistant::Function` declares whether it writes; nothing marks it
-  today (19 of the 34 do, by name). Chat needs it to ask before a write, and MCP needs it for
-  `destructiveHint`. With RubyLLM running the tools, a write tool declares `requires_approval`;
+  today (by name, 19 of the 36 default tools do, and 24 of 50 with preview features on). Chat
+  needs it to ask before a write, and MCP needs it for `destructiveHint` and read-only tokens.
+  #4628 (read-only MCP authorization) classifies every tool as read-only or mutating, with an
+  unclassified tool treated as mutating. If it lands first, chat uses that classification rather
+  than a flag of its own: one classification for MCP scopes, MCP annotations and chat approvals.
+  With RubyLLM running the tools, a write tool declares `requires_approval`, derived from it;
   an undecided call ends the turn `:awaiting_approval` with its history, the decision is kept in
   Sure's tables, and the next `respond` with that history runs or refuses the call (spike, live
   on llama.cpp). The approve and deny UI is a feature of its own, not part of this plan.
@@ -2252,6 +2256,13 @@ AI call, in PR 3, with the other web-thread calls (section 19).
   to #3422's metadata search over the vault, saying why (the router's reason, such as
   `:not_configured` or `:no_family_consent`), never "no documents have been uploaded". This
   keeps #3422's MCP-only case working: no AI configured, and the vault still searchable.
+- **With read-only MCP tokens (#4628).** `search_family_files` is a read, so an `mcp:read` token
+  can call it (and its searches spend the operator's AI tokens like any other);
+  `import_bank_statement` creates an import, so it needs `mcp:read_write`. #4628 intersects a
+  token's scope with the user's role, preview gates and tool settings in both `tools/list` and
+  `tools/call`; `Ai.available?` is one more term in that intersection. A call that AI can't serve
+  answers with the router's reason, never with `403 insufficient_scope`, so a client can tell
+  "AI isn't set up" from "this token can't write".
 - **Only the model call moves; nothing an MCP client sees changes** (call by @josh-sanders during development of PR #4440). Both tools run
   their AI work as an `Ai::ToolJob` and the MCP request waits for the result: `search_family_files`
   on `ai_interactive` for up to 30 seconds, then "busy, try again"; `import_bank_statement` on
@@ -2494,7 +2505,8 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
   endpoint each get their first result before either import finishes.
 - `mcp_ai_tools_test.rb`: an AI-dependent MCP tool is listed only when its feature is available
   for the token's user, except `search_family_files`, which is always listed and falls back to
-  metadata search with the router's reason; and no MCP request calls a transport.
+  metadata search with the router's reason; no MCP request calls a transport; and, once #4628
+  has landed, an `mcp:read` token sees `search_family_files` but not `import_bank_statement`.
 - `ai_documents_test.rb`: a vault upload is indexed only when `embed` is available for its
   uploader and the uploader's switch is on; a search returns only documents the asking user may
   read; and, from PR 7, turning Documents on indexes each stored statement once, with no
@@ -2725,7 +2737,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    in `Ai::Consent` (section 6), `previous_response_id` on the same
    endpoint, failover at the start of a turn, bounded turns, the serving route and
    `provider_state` on each message with the drop-on-switch rule and Gemini's placeholder
-   signature (section 5.5), the write flag on each `Assistant::Function`, OpenClaw's headers,
+   signature (section 5.5), `requires_approval` from #4628's read-only or mutating
+   classification of each `Assistant::Function` (or a write flag, if #4628 hasn't landed; section
+   8.4), OpenClaw's headers,
    and every chat entry point behind `requires_ai :chat` ("Dig in with AI", the bills AI review,
    and #3442 if it merged first). Deletes what remains of `Provider::Openai` and
    `Provider::Anthropic`, `Chat.default_model`, `Assistant::Provided#get_model_provider` and the
@@ -2832,7 +2846,8 @@ chat tables (for the chat storage line).
 - The MCP server: renames, a tool catalog shared with chat, `read_only?` and scopes, a family
   switch, and an asynchronous `import_bank_statement` with `get_import_status` and streaming for
   long tool calls. They're a separate proposal; only moving MCP's AI calls off the web thread is
-  here (section 14).
+  here (section 14). #4628 now tracks the scopes and annotations: `mcp:read` beside
+  `mcp:read_write`, every tool classified, and `readOnlyHint`/`destructiveHint` derived from it.
 - Product features from PR #4440's user review.
 - New providers beyond presets, and model discovery (#3694). They become presets, model columns or
   transport options. Reasoning effort (#3605) is in scope for the `compatible` transport
