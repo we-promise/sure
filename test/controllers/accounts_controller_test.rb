@@ -17,14 +17,23 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "show points an unmatched transaction with a counterpart to the transfer matcher" do
+    outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
+    create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "a[href='#{new_transaction_transfer_match_path(outflow)}']", text: I18n.t("transactions.transaction.transfer_hint")
+  end
+
   test "show filters account activity to uncategorized transactions" do
     uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
     categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))
 
-    get account_url(@account, q: { uncategorized: "1" })
+    get account_url(@account, q: { categories: [ Category::UNCATEGORIZED_FILTER_VALUE ] })
 
     assert_response :success
-    assert_select "input#q_uncategorized[checked]"
     assert_match uncategorized.name, response.body
     assert_no_match categorized.name, response.body
   end
@@ -378,6 +387,24 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, title
   end
 
+  # The default trail ends on "Accounts", which is never a link, so an account's
+  # page had no way back to the accounts list.
+  test "show links the Accounts crumb back to the accounts list" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-breadcrumbs] a[href=?]", accounts_path, text: I18n.t("breadcrumbs.accounts")
+    assert_select "[data-breadcrumbs] > span:last-child", text: @account.name
+  end
+
+  test "the accounts list itself stays the unlinked current crumb" do
+    get accounts_url
+
+    assert_response :success
+    assert_select "[data-breadcrumbs] a[href=?]", accounts_path, count: 0
+    assert_select "[data-breadcrumbs] > span:last-child", text: I18n.t("breadcrumbs.accounts")
+  end
+
   test "index offers a QR login on a Trade Republic connection that needs one" do
     item = trade_republic_items(:configured_item)
     item.update!(session_blob: trade_republic_session_blob(expires_at: 1.minute.ago))
@@ -471,6 +498,78 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # checked option instead of the custom row.
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='period=']", count: 0
     assert_select "a[role='menuitemradio'][aria-checked='true'][href*='start_date=']", count: 1
+  end
+
+  test "show filter menu offers the same filters as transactions except the account tab" do
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "account_filter", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "category_filter", count: 1
+    assert_select "#transaction-filters-menu button[data-id=?]", "tag_filter", count: 1
+    assert_select "#transaction-filters-menu button[data-id=?]", "merchant_filter", count: 1
+    assert_select "#transaction-filters-menu button[data-id=?]", "type_filter", count: 1
+  end
+
+  test "show filters activity by category and excludes non-Transaction entries" do
+    categorized = create_transaction(name: "Categorized", amount: 50, account: @account, category: categories(:food_and_drink))
+    uncategorized = create_transaction(name: "Uncategorized", amount: 60, account: @account)
+    valuation = @account.entries.create!(
+      name: "Balance update", date: 1.day.ago.to_date, amount: 1000, currency: "USD", entryable: Valuation.new
+    )
+
+    get account_url(@account), params: { q: { categories: [ "Food & Drink" ] } }
+
+    assert_response :success
+    assert_select "##{dom_id(categorized)}"
+    assert_select "##{dom_id(uncategorized)}", count: 0
+    assert_select "##{dom_id(valuation)}", count: 0
+  end
+
+  test "show renders a badge for each active filter" do
+    get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
+
+    assert_response :success
+    assert_select "#account-activity-filters li", count: 2
+  end
+
+  test "show renders badge delete links that preserve the other active filters" do
+    get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    badge = doc.css("#account-activity-filters li").find { |li| li.text.include?("Food & Drink") }
+    form = badge&.at_css("form")
+
+    assert_not_nil form, "expected the category badge to render a delete form"
+    action_uri = URI.parse(form["action"])
+    action_params = Rack::Utils.parse_nested_query(action_uri.query)
+
+    # Regression: the badge's delete link must carry the *other* active
+    # filters along (like clear_filter_transactions_path does via
+    # request.query_parameters), or clearing one filter wipes them all.
+    assert_equal "grocery", action_params.dig("q", "search"),
+      "clearing the category badge must not drop the search filter from the delete link"
+  end
+
+  test "clear_filter removes only the targeted filter value and preserves the rest" do
+    delete clear_filter_account_url(@account), params: {
+      q: { categories: [ "Food & Drink" ], search: "grocery" },
+      param_key: "categories",
+      param_value: "Food & Drink"
+    }
+
+    assert_redirected_to account_url(@account, q: { search: "grocery" }, tab: "activity", page: nil, per_page: nil)
+  end
+
+  test "clear_filter drops the amount_operator once amount is cleared" do
+    delete clear_filter_account_url(@account), params: {
+      q: { amount: "50", amount_operator: "equal" },
+      param_key: "amount",
+      param_value: "50"
+    }
+
+    assert_redirected_to account_url(@account, q: nil, tab: "activity", page: nil, per_page: nil)
   end
 
   test "show renders without missing translations" do
@@ -703,6 +802,293 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "input[type=file]", count: 0
+  end
+
+  test "credit card page offers an overview tab" do
+    sign_in users(:family_admin)
+
+    get account_url(accounts(:credit_card))
+
+    assert_response :success
+    assert_select "[role=tab][data-id=overview]"
+    assert_select "[role=tabpanel][data-id=overview]"
+  end
+
+  test "credit card overview renders the statement cycle" do
+    sign_in users(:family_admin)
+    card = accounts(:credit_card).credit_card
+    card.update!(statement_close_day: 25, due_day: 5, minimum_payment: 25)
+    accounts(:credit_card).entries.create!(
+      name: "Cycle charge",
+      date: Date.current.beginning_of_month + 9.days,
+      amount: 100,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    get account_url(accounts(:credit_card), tab: "overview")
+
+    assert_response :success
+    assert_match I18n.t("credit_cards.tabs.overview.statement_balance"), response.body
+  end
+
+  test "credit card overview hides the APR card when APR is blank" do
+    sign_in users(:family_admin)
+    accounts(:credit_card).credit_card.update!(statement_close_day: 25, due_day: 5, apr: nil, minimum_payment: nil)
+
+    get account_url(accounts(:credit_card), tab: "overview")
+
+    assert_response :success
+    assert_select "h4", text: I18n.t("credit_cards.tabs.overview.annual_percentage_rate"), count: 0
+    assert_select "[data-testid='credit-card-summary-grid'][class*='sm:grid-cols-2']", count: 1
+    assert_select "[data-testid='credit-card-summary-grid'][class*='@3xl:grid-cols-3']", count: 0
+  end
+
+  test "credit card overview shows the APR card when APR is present" do
+    sign_in users(:family_admin)
+    accounts(:credit_card).credit_card.update!(statement_close_day: 25, due_day: 5, apr: 18.99, minimum_payment: nil)
+
+    get account_url(accounts(:credit_card), tab: "overview")
+
+    assert_response :success
+    assert_select "h4", text: I18n.t("credit_cards.tabs.overview.annual_percentage_rate"), count: 1
+    assert_select "[data-testid='credit-card-summary-grid'][class*='sm:grid-cols-2']", count: 1
+    assert_select "[data-testid='credit-card-summary-grid'][class*='@3xl:grid-cols-3']", count: 1
+  end
+
+  test "credit card overview shows the estimated monthly interest for the APR" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26, apr: 12, minimum_payment: nil)
+
+    travel_to Date.new(2026, 10, 16) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 1200, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t("credit_cards.tabs.overview.estimated_interest_label"), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.per_month", amount: Money.new(12, "USD").format), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.monthly_rate_label"), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.balance_carried_label"), response.body
+      assert_match "1.000%", response.body
+    end
+  end
+
+  test "credit card overview hides the minimum warning when minimum payment is blank" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26, minimum_payment: nil)
+
+    travel_to Date.new(2026, 10, 16) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 100, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_no_match "This statement came to", response.body
+    end
+  end
+
+  test "credit card overview shows the remaining amount and partial status" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    travel_to Date.new(2026, 10, 16) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 100, currency: "USD",
+        entryable: Transaction.new
+      )
+      account.entries.create!(
+        name: "Card payment", date: Date.new(2026, 10, 12), amount: -40, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t("credit_cards.tabs.overview.remaining_due", amount: Money.new(60, "USD").format), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.status_partial"), response.body
+    end
+  end
+
+  test "credit card overview shows the cycle breakdown and next close" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    travel_to Date.new(2026, 10, 16) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 10, 12), amount: 100, currency: "USD",
+        entryable: Transaction.new
+      )
+      account.entries.create!(
+        name: "Card payment", date: Date.new(2026, 10, 14), amount: -40, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t("credit_cards.tabs.overview.charges"), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.payments_credits"), response.body
+      assert_match Money.new(100, "USD").format, response.body
+      assert_match Money.new(40, "USD").format, response.body
+      assert_match I18n.t("credit_cards.tabs.overview.closes_on", date: I18n.l(Date.new(2026, 11, 10), format: :long)), response.body
+    end
+  end
+
+  test "credit card overview shows the next open scheduled card payment" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    travel_to Date.new(2026, 10, 16) do
+      series = account.inbound_recurring_transfers.create!(
+        family: account.family,
+        account: accounts(:depository),
+        name: "Card payment",
+        amount: 40,
+        currency: "USD",
+        expected_day_of_month: 24,
+        last_occurrence_date: Date.new(2026, 9, 24),
+        next_expected_date: Date.new(2026, 10, 24),
+        manual: true
+      )
+      open_due = series.recurring_occurrences.open_status.minimum(:due_on)
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t(
+        "credit_cards.tabs.overview.scheduled_payment",
+        amount: Money.new(40, "USD").format,
+        date: I18n.l(open_due, format: :long)
+      ), response.body
+    end
+  end
+
+  test "credit card overview hides a scheduled payment from a member without its source" do
+    sign_in users(:family_member)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+    account.inbound_recurring_transfers.create!(
+      family: account.family,
+      account: accounts(:investment),
+      name: "Card payment",
+      amount: 40,
+      currency: "USD",
+      expected_day_of_month: 24,
+      last_occurrence_date: 2.months.ago.to_date,
+      next_expected_date: 1.month.from_now.to_date,
+      bill_type: "transfer",
+      manual: true
+    )
+
+    get account_url(account, tab: "overview")
+
+    assert_response :success
+    assert_no_match "Scheduled payment", response.body
+  end
+
+  test "credit card overview highlights an overdue statement" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 5, due_day: 21)
+
+    travel_to Date.new(2026, 10, 30) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 552, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_select "span.text-destructive", text: I18n.t("credit_cards.due.overdue", count: 9)
+    end
+  end
+
+  test "credit card overview shows the payment due this month for an early close day" do
+    sign_in users(:family_admin)
+    accounts(:credit_card).credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    # A card closing on the 10th and due on the 26th, read on the 16th. The
+    # bill due is the statement that closed on the 10th, which falls on the 26th
+    # of THIS month -- not the 26th of next, which is the statement still
+    # building and not yet owed.
+    travel_to Date.new(2026, 10, 16) do
+      get account_url(accounts(:credit_card), tab: "overview")
+
+      assert_response :success
+      assert_match I18n.l(Date.new(2026, 10, 26), format: :long), response.body
+      assert_match I18n.t("credit_cards.due.in_days", count: 10), response.body
+    end
+  end
+
+  test "credit card overview reads a negative since-statement balance as a credit" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    travel_to Date.new(2026, 10, 16) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 100, currency: "USD",
+        entryable: Transaction.new
+      )
+      account.entries.create!(
+        name: "Payment after the close", date: Date.new(2026, 10, 12), amount: -250, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t("credit_cards.tabs.overview.credit_toward_next"), response.body
+    end
+  end
+
+  test "credit card overview shows the credit label when a credit outlives the due date" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    # Read after the 26th: the due date has rolled to the statement still
+    # building, and the cardholder has paid down more than that statement has
+    # accrued. The credit is the fact worth stating; a due date here would
+    # promise a payment the credit may cancel.
+    travel_to Date.new(2026, 10, 30) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 100, currency: "USD",
+        entryable: Transaction.new
+      )
+      account.entries.create!(
+        name: "Payment after the close", date: Date.new(2026, 10, 12), amount: -250, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t("credit_cards.tabs.overview.credit_toward_next"), response.body
+      assert_no_match I18n.l(Date.new(2026, 11, 26), format: :long), response.body
+    end
+  end
+
+  test "credit card overview asks for a cycle when none is set" do
+    sign_in users(:family_admin)
+
+    get account_url(accounts(:credit_card), tab: "overview")
+
+    assert_response :success
+    assert_match I18n.t("credit_cards.tabs.overview.no_cycle_title"), response.body
   end
 
   test "account activity marks trade amounts as privacy-sensitive" do

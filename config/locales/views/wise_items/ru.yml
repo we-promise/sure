@@ -23,7 +23,7 @@ ru:
       disconnect: Отключить
       disconnect_label: Отключить %{name}
       disconnect_confirm: Вы уверены, что хотите отключить %{name}? Все синхронизированные данные счетов будут удалены.
-      sandbox_note_html: Для тестирования используйте базовый URL <strong>песочницы</strong> (<code>https://api.sandbox.transferwise.tech</code>). Задайте <code>WISE_BASE_URL</code> в окружении.
+      sandbox_note_html: Для тестирования используйте базовый URL <strong>песочницы</strong> (<code>https://api.wise-sandbox.com</code>). Задайте <code>WISE_BASE_URL</code> в окружении.
       encryption_warning:
         title: Шифрование базы данных не настроено
         message: Настройте ключи шифрования Active Record, прежде чем добавлять токены Wise в production. Без шифрования токены хранятся в открытом виде.

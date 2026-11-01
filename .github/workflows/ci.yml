@@ -10,8 +10,9 @@ on:
         default: false
 
 jobs:
+  # The pinned ruby/setup-ruby action does not support Ubuntu 26.04.
   scan_ruby:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -29,7 +30,7 @@ jobs:
         run: bin/brakeman --no-pager
 
   scan_js:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -65,7 +66,7 @@ jobs:
           done
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -105,8 +106,8 @@ jobs:
         run: npm run lint
 
   test_unit:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     env:
       PLAID_CLIENT_ID: foo
@@ -177,8 +178,8 @@ jobs:
           bin/rails test "${files[@]}"
 
   test_system:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
 
     env:
       PLAID_CLIENT_ID: foo

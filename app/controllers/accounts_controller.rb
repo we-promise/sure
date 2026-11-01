@@ -1,7 +1,7 @@
 class AccountsController < ApplicationController
   include StreamExtensions
 
-  before_action :set_account, only: %i[show sparkline sync set_default remove_default]
+  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
   before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
@@ -29,6 +29,7 @@ class AccountsController < ApplicationController
     @monobank_items = visible_provider_items(family.monobank_items.ordered.with_attached_logo.includes(:monobank_accounts))
     @fio_items = visible_provider_items(family.fio_items.active.ordered.with_attached_logo.includes(:fio_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
+    @truelayer_items = visible_provider_items(family.truelayer_items.connected.ordered.with_attached_logo.includes(:truelayer_accounts))
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.with_attached_logo.includes(:mercury_accounts))
     @brex_items = visible_provider_items(family.brex_items.ordered.with_attached_logo.includes(:accounts, brex_accounts: :account_provider))
@@ -83,6 +84,11 @@ class AccountsController < ApplicationController
   end
 
   def show
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.accounts"), accounts_path ],
+      [ @account.name, nil ]
+    ]
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     # One reference date for everything on the page that is date-sensitive:
@@ -91,8 +97,8 @@ class AccountsController < ApplicationController
     # date beside a table shaded against another.
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
-    @q = params.fetch(:q, {}).permit(:search, :uncategorized, status: [])
-    entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
+    @q = activity_search_params
+    entries = @account.entries.excluding_split_parents.search(@q, family).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -138,7 +144,7 @@ class AccountsController < ApplicationController
     if transactions.any?
       ActiveRecord::Associations::Preloader.new(
         records: transactions,
-        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant, :tags ]
+        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, { merchant: { logo_attachment: :blob } }, :tags ]
       ).call
     end
 
@@ -150,19 +156,17 @@ class AccountsController < ApplicationController
       ).call
     end
 
+    @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates(transactions, user: Current.user)
+
     entry_ids = @entries.map(&:id)
-    @split_parent_entry_ids = if entry_ids.any?
-      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
-    else
-      Set.new
-    end
+    @split_parent_entry_ids = Entry.split_parent_ids_among(entry_ids)
 
     # Load split parent entries for grouped display (only when grouping is enabled)
     @split_parents = if Current.user.show_split_grouped?
       split_parent_ids = @entries.filter_map(&:parent_entry_id).uniq
       if split_parent_ids.any?
         Entry.where(id: split_parent_ids)
-             .includes(:account, entryable: [ :category, :merchant ])
+             .includes(:account, entryable: [ :category, { merchant: { logo_attachment: :blob } } ])
              .index_by(&:id)
       else
         {}
@@ -196,6 +200,27 @@ class AccountsController < ApplicationController
     end
 
     redirect_to account_path(@account)
+  end
+
+  # Mirrors TransactionsController#clear_filter, but simpler: the account
+  # activity feed has no cross-request stored filters to update, so this only
+  # needs to redirect with one param removed from the current query string.
+  def clear_filter
+    q_params = activity_search_params.to_h
+
+    param_key = params[:param_key]
+    param_value = params[:param_value]
+
+    if q_params[param_key].is_a?(Array)
+      q_params[param_key].delete(param_value)
+      q_params.delete(param_key) if q_params[param_key].empty?
+    else
+      q_params.delete(param_key)
+    end
+
+    q_params.delete("amount_operator") unless q_params["amount"].present?
+
+    redirect_to account_path(@account, q: q_params.presence, tab: "activity", page: params[:page], per_page: params[:per_page])
   end
 
   def sparkline
@@ -386,6 +411,15 @@ class AccountsController < ApplicationController
       Current.family
     end
 
+    def activity_search_params
+      q = params.fetch(:q, {}).permit(
+        :search, :start_date, :end_date, :amount, :amount_operator,
+        categories: [], tags: [], merchants: [], types: [], status: []
+      )
+      q.delete(:amount_operator) unless q[:amount].present?
+      q
+    end
+
     # Shares the "per page" preference with TransactionsController's
     # prev_transaction_page_params so the page size the user picks on either
     # the account activity feed or the global transactions page applies to both.
@@ -456,6 +490,7 @@ class AccountsController < ApplicationController
         @monobank_items,
         @fio_items,
         @enable_banking_items,
+        @truelayer_items,
         @coinstats_items,
         @mercury_items,
         @brex_items,
@@ -617,6 +652,13 @@ class AccountsController < ApplicationController
         latest_sync = item.latest_sync_record
         @enable_banking_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
         @enable_banking_latest_sync_error_map[item.id] = latest_sync&.error
+      end
+
+      # TrueLayer sync stats
+      @truelayer_sync_stats_map = {}
+      @truelayer_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @truelayer_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # CoinStats sync stats

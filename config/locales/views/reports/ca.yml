@@ -25,26 +25,16 @@ ca:
       example: Exemple
       go_to_api_keys: Ves a claus API
       need_key: Per importar dades a Google Sheets, necessites una clau API.
-      open_sheets: Obre Google Sheets
-      ready: La teva URL CSV (amb clau API) està preparada.
-      security_warning: Aquesta URL inclou la teva clau API. Mantén-la segura!
       step1: Ves a Configuració → Claus API
       step2: Crea una nova clau API amb permisos de "lectura"
       step3: Copia la clau API
-      step4: 'Afegeix-la a aquesta URL com: ?api_key=LA_TEVA_CLAU'
-      steps: |-
-        Per importar a Google Sheets:
-        1. Crea un full de Google nou
-        2. A la cel·la A1, introdueix la fórmula que es mostra a continuació
-        3. Prem Retorn
+      step4: 'Afegeix-la a aquesta URL com: &api_key=LA_TEVA_CLAU'
       then_use: Després fes servir l'URL completa amb =IMPORTDATA() a Google Sheets.
-      title_no_key: "⚠️ Es requereix clau API"
-      title_with_key: "✅ Copia l'URL per a Google Sheets"
+      title_no_key: "Es requereix clau API"
     index:
       date_range:
         from: Des de
         to: Fins a
-      drag_to_reorder: Arrossega per reordenar la secció
       export: Exporta CSV
       next_decade: Dècada següent
       next_period: Període següent

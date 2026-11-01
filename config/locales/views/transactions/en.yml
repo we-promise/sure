@@ -41,6 +41,7 @@ en:
       date: Date
       description: Description
       description_placeholder: Describe transaction
+      description_placeholder_optional: Leave blank to use the category/merchant name, or select one of those first
       expense: Expense
       income: Income
       merchant_label: Merchant
@@ -185,6 +186,9 @@ en:
       split: Split
       split_tooltip: This transaction has been split into multiple entries
       split_child_tooltip: Part of a split transaction
+      transfer_hint: Transfer?
+      transfer_hint_dismiss: Not a transfer
+      transfer_hint_tooltip: A matching transaction in another account looks like the other side of a transfer — click to match them
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions

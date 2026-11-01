@@ -1,0 +1,27 @@
+---
+zh-CN:
+  providers:
+    property_valuation:
+      not_configured: 此房产数据提供商未配置。
+      missing_fields: 请提供名称和完整的美国地址（街道、城市、州和邮政编码）。
+      missing_fields_gb: 请提供名称、街道地址、邮编以及房产的 UPRN。
+      preview_expired: 此房产预览已过期，请重新查询地址。
+      entry_name: "%{provider} 估值"
+    rentcast:
+      errors:
+        no_valuation: RentCast 未返回此地址的估值。
+        not_found: RentCast 找不到与此地址匹配的房产。
+    realie:
+      errors:
+        no_property: Realie 未返回此地址的房产。
+        no_valuation: Realie 未返回此房产的估值。
+        not_found: Realie 找不到与此地址匹配的房产。
+        location_mismatch: Realie 匹配到了位于不同城市或邮编的房产。请仔细核对地址。
+    chimnie:
+      errors:
+        invalid_uprn: UPRN 是最多 12 位的数字。请检查 UPRN 后重试。
+        no_estimate: Chimnie 没有此房产的估值。
+        not_found: Chimnie 找不到具有此 UPRN 的房产。
+        unsupported_property: Chimnie 仅评估住宅房产；此 UPRN 属于商业或商住混合房产。
+        unauthorized: Chimnie 拒绝了该 API 密钥。请在“设置 → 自托管”中检查密钥。
+        insufficient_balance: 您的 Chimnie 账户余额不足以处理此请求。

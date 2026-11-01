@@ -41,6 +41,9 @@ class RecurringTransaction
         name: attrs[:name],
         amount: amount,
         bill_type: is_income ? "income" : "bill",
+        # A paycheck is not spend, so it carries no category. Ownership of the
+        # id is checked by the model's category_belongs_to_family validation.
+        category_id: is_income ? nil : attrs[:category_id].presence,
         account: account,
         currency: chosen_currency || account&.currency || family.currency,
         payment_url: attrs[:payment_url],
@@ -60,6 +63,15 @@ class RecurringTransaction
       # would otherwise become an accountless bill in the family currency.
       if attrs[:account_id].present? && account.nil?
         recurring.errors.add(:base, I18n.t("recurring_transactions.create.account_invalid"))
+        return recurring
+      end
+
+      # The same goes for a chosen category. A malformed id casts to nil on
+      # the uuid column, which category_belongs_to_family then skips, so it
+      # would save as an uncategorised bill. A paycheck takes no category, so
+      # whatever was posted for one is ignored.
+      if !is_income && attrs[:category_id].present? && recurring.category_id.nil?
+        recurring.errors.add(:base, I18n.t("recurring_transactions.create.category_invalid"))
         return recurring
       end
 
@@ -116,7 +128,10 @@ class RecurringTransaction
         return false
       end
 
-      recurring.save
+      # Its own savepoint: a caller may hold a transaction open around this
+      # (the add-bill form locks the source entry), and a unique violation
+      # inside that one would abort it before the rescue below could answer.
+      RecurringTransaction.transaction(requires_new: true) { recurring.save }
     rescue ActiveRecord::RecordNotUnique
       recurring.errors.add(:base, I18n.t("recurring_transactions.create.already_exists"))
       false

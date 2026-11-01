@@ -1041,4 +1041,132 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get chatConversationStartFailed =>
       'Det gick inte att starta konversationen. Försök igen.';
+
+  @override
+  String get moreBudgets => 'Budgetar';
+
+  @override
+  String get moreBudgetsSubtitle =>
+      'Budgeterat mot faktiskt utfall per kategori';
+
+  @override
+  String get budgetsTitle => 'Budgetar';
+
+  @override
+  String get budgetsPreviousMonth => 'Föregående månad';
+
+  @override
+  String get budgetsNextMonth => 'Nästa månad';
+
+  @override
+  String get budgetsBudgeted => 'Budgeterat';
+
+  @override
+  String get budgetsActual => 'Utfall';
+
+  @override
+  String get budgetsRemaining => 'Kvar';
+
+  @override
+  String get budgetsIncome => 'Inkomster';
+
+  @override
+  String budgetsExpectedIncome(String amount) {
+    return 'Förväntat $amount';
+  }
+
+  @override
+  String budgetsOfAmount(String amount) {
+    return 'av $amount';
+  }
+
+  @override
+  String budgetsAmountLeft(String amount) {
+    return '$amount kvar';
+  }
+
+  @override
+  String budgetsOverBy(String amount) {
+    return '$amount över';
+  }
+
+  @override
+  String budgetsRolledOver(String amount) {
+    return '+$amount överfört';
+  }
+
+  @override
+  String get budgetsSharedBudget => 'Delad budget';
+
+  @override
+  String get budgetsNoLimit => 'Ingen budget';
+
+  @override
+  String get budgetsCategoriesTitle => 'Kategorier';
+
+  @override
+  String budgetsFilterOverBudget(int count) {
+    return 'Över budget ($count)';
+  }
+
+  @override
+  String get budgetsOverBudget => 'Över budget';
+
+  @override
+  String get budgetsNearLimit => 'Nära gränsen';
+
+  @override
+  String budgetsBudgetNumber(int number) {
+    return 'Budget $number';
+  }
+
+  @override
+  String budgetsNoBudgetTitle(String month) {
+    return 'Ingen budget för $month';
+  }
+
+  @override
+  String get budgetsNoBudgetMessage =>
+      'Budgetar skapas i Sure på webben. Öppna Budgetar där för att skapa en för den här månaden.';
+
+  @override
+  String get budgetsNotSetUpMessage =>
+      'Inga utgiftsgränser är satta för den här månaden än. Ställ in dem i Sure på webben.';
+
+  @override
+  String get budgetsNoCategories =>
+      'Inga budgeterade kategorier eller utgifter den här månaden.';
+
+  @override
+  String get budgetsOfflineTitle => 'Du är offline';
+
+  @override
+  String get budgetsOfflineMessage =>
+      'Anslut till internet för att läsa in den här månadens budget.';
+
+  @override
+  String get budgetsOfflineCached =>
+      'Offline. Visar siffrorna som lästes in tidigare.';
+
+  @override
+  String get budgetsRefreshFailed =>
+      'Kunde inte uppdatera. Visar siffrorna som lästes in tidigare.';
+
+  @override
+  String get budgetsLoadFailed => 'Kunde inte läsa in budgetar';
+
+  @override
+  String get budgetsSessionExpired => 'Din session har gått ut. Logga in igen.';
+
+  @override
+  String budgetCategoryTransactionsEmpty(String month) {
+    return 'Inga transaktioner i den här kategorin för $month.';
+  }
+
+  @override
+  String get budgetCategoryTransactionsLoadMore => 'Visa fler';
+
+  @override
+  String get budgetCategoryTransactionsLoadFailed =>
+      'Kunde inte läsa in transaktioner';
 }
