@@ -60,9 +60,7 @@ class CoinbaseItem::Importer
   private
 
     def import_account(account_data)
-      # Skip accounts with zero balance unless they have transaction history
       balance = account_data.dig("balance", "amount").to_d
-      return if balance.zero? && account_data.dig("balance", "currency") != "USD"
 
       # Find or create the coinbase_account record
       coinbase_account = coinbase_item.coinbase_accounts.find_or_initialize_by(
@@ -90,10 +88,11 @@ class CoinbaseItem::Importer
         }
       )
 
-      # Fetch transactions for this account if it has a balance
-      if balance > 0
-        fetch_and_store_transactions(coinbase_account, account_data["id"])
-      end
+      # Fetch transactions for every account, regardless of current balance:
+      # a wallet that was fully sold or transferred out still needs its
+      # history imported to reconstruct realized gains, and a balance of
+      # zero here says nothing about whether that history exists.
+      fetch_and_store_transactions(coinbase_account, account_data["id"])
 
       coinbase_account.save!
     end
@@ -102,29 +101,46 @@ class CoinbaseItem::Importer
       # Fetch transactions for this account (includes buys, sells, sends, receives)
       # This endpoint returns better data than separate buys/sells endpoints
       transactions = coinbase_provider.get_transactions(account_id, limit: FULL_HISTORY_LIMIT)
-
-      # Store raw transaction data for processing later
-      coinbase_account.raw_transactions_payload = {
-        "transactions" => transactions,
-        "fetched_at" => Time.current.iso8601
-      }
-
-      Rails.logger.info(
-        "CoinbaseItem::Importer - Fetched #{transactions.count} transactions for #{coinbase_account.name}"
-      )
+      store_transactions(coinbase_account, transactions)
+    rescue Provider::Coinbase::PartialResultError => e
+      # A rate limit hit a later page after earlier ones already succeeded;
+      # Provider::Coinbase#paginated_get hands back those earlier pages
+      # instead of discarding them. Still never let a partial fetch look
+      # like a complete one by overwriting a previously-stored history that
+      # reached further back -- only store it when it's not a step backward.
+      previous_count = coinbase_account.raw_transactions_payload&.dig("transactions")&.size.to_i
+      store_transactions(coinbase_account, e.partial_results, truncated: true) if e.partial_results.size >= previous_count
+      record_transactions_incident(coinbase_account, e, account_id, partial: true)
     rescue Provider::Coinbase::ApiError, Provider::Coinbase::RateLimitError => e
       # RateLimitError is a sibling of ApiError (both < Provider::Coinbase::Error),
       # not a subclass, so it has to be listed explicitly here. Without it, a
       # 429 on this call propagates past coinbase_account.save! below, so this
       # account's balance update -- already fetched correctly above -- gets
       # silently skipped for the whole sync along with the transaction fetch.
+      record_transactions_incident(coinbase_account, e, account_id)
+    end
+
+    def store_transactions(coinbase_account, transactions, truncated: false)
+      coinbase_account.raw_transactions_payload = {
+        "transactions" => transactions,
+        "fetched_at" => Time.current.iso8601,
+        "truncated" => truncated
+      }
+
+      Rails.logger.info(
+        "CoinbaseItem::Importer - Fetched #{transactions.count} transactions for #{coinbase_account.name}#{" (truncated by a rate limit)" if truncated}"
+      )
+    end
+
+    def record_transactions_incident(coinbase_account, error, account_id, partial: false)
       DebugLogEntry.capture(
         category: "provider_sync_error",
         level: "warn",
-        message: "Transactions unavailable this sync (#{e.class.name.demodulize}) for account #{account_id}: #{e.message}",
+        message: "#{partial ? "Partial" : "No"} transactions fetched this sync (#{error.class.name.demodulize}) for account #{account_id}: #{error.message}",
         source: self.class.name,
         provider_key: "coinbase",
         family: coinbase_item.family,
+        account_provider: coinbase_account.account_provider,
         metadata: { coinbase_item_id: coinbase_item.id, account_id: account_id }
       )
     end
