@@ -207,10 +207,37 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     holding = @account.current_holdings.first
     holding.update!(cost_basis_locked: false)
 
+    get cost_basis_editor_holding_path(holding)
+
+    assert_select "turbo-frame##{dom_id(holding, :cost_basis_editor)}" do
+      assert_select "##{dom_id(holding, :popover_cost_basis)}_holding_per_share_cost_basis[name='holding[per_share_cost_basis]'][autofocus]", count: 1
+    end
+    assert_select "[id^=drawer_cost_basis_]", count: 0
+  end
+
+  test "holdings list loads each cost basis editor only when its popover opens" do
+    holding = @account.current_holdings.first
+    holding.update!(cost_basis_locked: false)
+
     get holdings_url(account_id: @account.id)
 
-    assert_select "##{dom_id(holding, :popover_cost_basis)}_holding_per_share_cost_basis[name='holding[per_share_cost_basis]']", count: 1
-    assert_select "[id^=drawer_cost_basis_]", count: 0
+    assert_select "turbo-frame##{dom_id(holding, :cost_basis_editor)}[loading=lazy][refresh=morph][src='#{cost_basis_editor_holding_path(holding)}']", count: 1
+    assert_select "form[data-controller=cost-basis-form]", count: 0
+  end
+
+  test "drawer cost basis editor does not take focus on page load" do
+    get holding_path(@holding)
+
+    assert_select "form[data-controller=cost-basis-form] input[autofocus]", count: 0
+  end
+
+  test "cost basis editor is not served for another family's holding" do
+    other_account = families(:empty).accounts.create!(name: "Other brokerage", balance: 0, currency: "USD", accountable: Investment.new)
+    other_holding = other_account.holdings.create!(security: securities(:aapl), date: Date.current, qty: 1, price: 1, amount: 1, currency: "USD")
+
+    get cost_basis_editor_holding_path(other_holding)
+
+    assert_response :not_found
   end
 
   test "unlock_cost_basis removes lock" do

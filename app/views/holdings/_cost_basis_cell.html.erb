@@ -26,13 +26,15 @@
           </div>
         <% end %>
       <% end %>
+      <%# The editor loads when the popover opens: a lazy frame inside the hidden
+          panel is fetched once it becomes visible, so the holdings list does not
+          render a form per row. %>
       <% popover.with_custom_content do %>
-        <div class="p-4 min-w-70 text-left">
-          <h4 class="font-medium text-sm mb-3">
-            <%= t(".set_cost_basis_header", ticker: holding.ticker) %>
-          </h4>
-          <%= render "holdings/cost_basis_form", holding: holding, context: :popover, cancel_action: "DS--popover#close" %>
-        </div>
+        <%# refresh: :morph, or a morph page refresh would reset the loaded frame
+            to its placeholder without fetching it again. %>
+        <%= turbo_frame_tag dom_id(holding, :cost_basis_editor), src: cost_basis_editor_holding_path(holding), loading: :lazy, refresh: :morph, class: "block min-w-70" do %>
+          <%= render "entries/loading" %>
+        <% end %>
       <% end %>
     <% end %>
   <% end %>
