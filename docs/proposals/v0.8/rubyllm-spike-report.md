@@ -1,7 +1,7 @@
 # RubyLLM spike report (PR 1 of the AI plumbing redesign)
 
 **Companion to:** [`rubyllm-spike-prompt.md`](rubyllm-spike-prompt.md) (the brief), [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) (the plan, §19) and [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) (the question before it was run)
-**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`e572aba51`](https://github.com/josh-sanders/sure/commit/e572aba51). Every test and recording named below is on that branch; it is never merged. The tests replay without keys (the commands are under the recommendation); `SPIKE_RECORD=1`, with the spike's own variables in `.env.local`, records them again.
+**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`1730b2c03`](https://github.com/josh-sanders/sure/commit/1730b2c03). Every test and recording named below is on that branch; it is never merged. The tests replay without keys (the commands are under the recommendation); `SPIKE_RECORD=1`, with the spike's own variables in `.env.local`, records them again.
 **Status:** a recommendation with its evidence, not a decision. The spike's second purpose was to sort the plan's choices into product decisions and technical limits; none of the product decisions, and none of the scope lines, is final. Calls made by @josh-sanders during development of PR #4440 are marked in the register. This file is the spike's note (`docs/llm-guides/ai-pipeline.md` on the branch) as of that commit; the plan's own short note in that path comes with PR 2.
 
 **Recommendation: adopt `ruby_llm`**, tested on 2.1.1 (released 2026-10-11, the latest at the
@@ -143,8 +143,8 @@ evidence like everything else here.
 | Three protocols: `compatible`, `anthropic`, `jev` (§4.2); a native Bedrock or Vertex AI endpoint (region, IAM or a service account) has none | Bedrock through RubyLLM's native provider and through an OpenAI-compatible proxy, against `AiEndpoint`'s columns |
 | Shadow runs for any feature, as their own job (§8.2) | A shadow run of `detect_merchants`, with the comparison page |
 | Smart-fill and smart-configure become asynchronous (§11) | Users on a slow local model: a skeleton and a broadcast against today's wait |
-| Small batches that re-enqueue at the back of the queue, so families take turns (§11) | Two families' imports on one AI thread: each family's first result time |
-| Prompts and models unchanged by this work (§20) | Sure's recorded evals before and after each PR |
+| Small batches that re-enqueue at the back of the queue, so families take turns (§11). **Call by @josh-sanders during development of PR #4440:** one batch per job for every install; local presets 10 per call, cloud presets today's 25; local models generally serve one family and cloud models many, so fairness is tested on cloud | Two families' imports on one AI thread: each family's first result time |
+| Prompts and models unchanged by this work (§20). **Call by @josh-sanders during development of PR #4440:** every one of today's prompts becomes its own file, word for word (OpenAI's, the simplified one for custom servers, Anthropic's), and the presets name the right one | Sure's recorded evals before and after each PR |
 | Ruby ML engines and the classifier settings page left alone (§20) | Nothing in the plumbing; a separate proposal |
 | Suggestions instead of AI locks, and rule ordering (§20) | A user review of corrections, and evals of how often AI's answer is overridden |
 | Rules that run only after an AI rule (§20) | A prototype on the generation completion hook (§8.1) |

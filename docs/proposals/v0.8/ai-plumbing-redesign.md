@@ -1965,7 +1965,20 @@ deadlock on the turn that called it.
 
 **Small batches.** `Ai::GenerationJob` runs one batch and enqueues the remainder at the back of
 its queue, so families' batches interleave and one family's large import takes turns with other
-families' work.
+families' work (call by @josh-sanders during development of PR #4440). One code path serves both kinds of install, which generally split
+by where the model runs:
+
+- **Local models, usually one family.** Re-enqueueing changes little, since chat has its own
+  capsule and gate. Small batches pay off: an interrupt loses one batch, and cancelling stops
+  sooner. The local presets set `batch_size: 10`.
+- **Cloud models, usually many families.** Re-enqueueing is what gives fairness: a big import
+  can't hold an AI thread until it's done, and its requests spread over the shared key's rate
+  limit (M3). Nothing interrupts a cloud call, and every call resends the instructions and the
+  category list, so smaller batches would only cost more. The cloud presets keep today's
+  `batch_size: 25` (`LLM_MAX_ITEMS_PER_CALL`).
+
+A home lab shared by several families is served the same way: the families take turns, and the
+gate keeps chat first.
 
 **One worker per local host.** Gates live in each process, so two workers would each admit a
 host's full size: in the spike two workers, each keeping one of four places for chat, let six
@@ -2307,6 +2320,8 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
   lane and never another interactive call; a background call raises `Busy` instead of waiting;
   with two or more slots one is kept for the interactive lane; the gate is sized from
   `parallel_requests` or llama.cpp's `total_slots`; cloud endpoints have none.
+- `ai_batch_fairness_test.rb`: two families' imports on one AI thread against a stubbed cloud
+  endpoint each get their first result before either import finishes.
 - `mcp_ai_tools_test.rb`: an AI-dependent MCP tool is listed only when its feature is available
   for the token's user, and no MCP request calls a transport.
 - `ai_chat_mode_test.rb`: in external mode every chat entry point (chat page, API, "Dig in with
@@ -2469,7 +2484,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      with its requester. Lanes map onto today's two queues (interactive → `ai_high_priority`,
      prompt and background → `ai_low_priority`) until PR 4. Records live cassettes for
      Anthropic's and OpenAI's successful paths before relying on them (the spike's keys had no
-     credits). Adds the recorded-eval CI gate and the `ai-live` label.
+     credits). Adds the recorded-eval CI gate, the `ai-live` label and the batch fairness test.
      *Deletes:* the eight workers for those features (`AutoCategorizer`, `AutoMerchantDetector`,
      `ProviderMerchantEnhancer` and `BillSetupSuggester`, for both providers) and
      `Family#resolved_categorization_provider`.
