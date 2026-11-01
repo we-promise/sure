@@ -205,11 +205,16 @@ class LlmUsage < ApplicationRecord
     return nil unless PRICING.key?(provider)
 
     model = model.delete_prefix("#{provider}/")
-    # OpenRouter writes Claude versions with dots ("claude-opus-4.6"); without
-    # this they would fall through to the newer-priced "claude-opus" family row.
-    model = model.tr(".", "-") if provider == "anthropic"
 
     provider_pricing = PRICING[provider]
+
+    # Claude: the exact version row (ignoring snapshot dates and suffixes), else
+    # the family row, so "claude-opus-5-6" doesn't take the "claude-opus-5" rate.
+    # OpenRouter writes versions with dots ("claude-opus-4.6").
+    if provider == "anthropic"
+      family, version = model.tr(".", "-").match(/\A(claude-[a-z]+)((?:-\d{1,2}(?!\d))*)/)&.captures
+      return family && (provider_pricing["#{family}#{version}"] || provider_pricing[family])
+    end
 
     # Try exact match first
     return provider_pricing[model] if provider_pricing.key?(model)

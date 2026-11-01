@@ -168,6 +168,10 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_in_delta 0.01225, LlmUsage.calculate_cost(
       model: "claude-haiku-5-5", prompt_tokens: 10_000, completion_tokens: 1_000, cache_read_tokens: 95_000
     ), 0.000001
+    # 10K new + 95K cache write = 105K > 100K: $0.005 + $0.059375 + $0.0025.
+    assert_in_delta 0.066875, LlmUsage.calculate_cost(
+      model: "claude-haiku-5-5", prompt_tokens: 10_000, completion_tokens: 1_000, cache_creation_tokens: 95_000
+    ), 0.000001
     assert_in_delta 0.0015, LlmUsage.calculate_cost(
       model: "claude-haiku-5-5", prompt_tokens: 10_000, completion_tokens: 1_000
     ), 0.000001
@@ -179,6 +183,9 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_equal 2.00, LlmUsage.find_pricing("anthropic", "claude-sonnet-6-20270101")[:prompt]
     assert_equal 0.10, LlmUsage.find_pricing("anthropic", "claude-haiku-6")[:prompt]
     assert_equal 10.00, LlmUsage.find_pricing("anthropic", "claude-fable-6")[:prompt]
+    # A later minor version of a listed major still takes the family's newest rate.
+    assert_equal 4.00, LlmUsage.find_pricing("anthropic", "claude-opus-5-6")[:prompt]
+    assert_equal 0.20, LlmUsage.find_pricing("anthropic", "claude-opus-5-6")[:cache_read]
 
     # Older listed models keep their own rate instead of the family fallback.
     assert_equal 15.00, LlmUsage.find_pricing("anthropic", "claude-opus-4-1-20250805")[:prompt]
@@ -188,6 +195,7 @@ class LlmUsageTest < ActiveSupport::TestCase
   test "find_pricing reads OpenRouter's dotted Claude versions" do
     assert_equal 5.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-opus-4.6")[:prompt]
     assert_equal 15.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-opus-4.1")[:prompt]
+    assert_equal 5.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-opus-4.6:thinking")[:prompt]
   end
 
   {
