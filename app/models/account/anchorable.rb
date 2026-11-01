@@ -108,15 +108,20 @@ module Account::Anchorable
   # Both come from the ledger as it is now, not the cached cash_balance, so a
   # movement not yet synced or dated after today is neither lost nor doubled.
   # Same-day total valuations yield to this new anchor until explicitly edited.
+  # The account lock keeps a concurrent caller from adding a second anchor for
+  # the day, which nothing in the schema forbids: kind and date live in
+  # different tables.
   def create_cash_anchor!
-    cash = Balance::ForwardCalculator.new(self).calculate.select { |balance| balance.date <= Date.current }.last&.cash_balance || 0
-    entry = entries.valuations.find_by(date: Date.current, entryable_id: Valuation.cash_anchor.select(:id)) ||
-      entries.new(date: Date.current, entryable: Valuation.new(kind: :cash_anchor))
-    entry.assign_attributes(amount: cash, currency: currency, name: I18n.t("valuations.cash_anchor", locale: family.locale))
-    entry.entryable.cash_entry_total = Balance::SyncCache.new(self).cash_entry_total(Date.current)
-    entry.save!
-    valuations.where.not(kind: "cash_anchor").joins(:entry).where(entries: { date: Date.current }).update_all(superseded_at: Time.current)
-    entry
+    with_lock do
+      cash = Balance::ForwardCalculator.new(self).calculate.select { |balance| balance.date <= Date.current }.last&.cash_balance || 0
+      entry = entries.valuations.find_by(date: Date.current, entryable_id: Valuation.cash_anchor.select(:id)) ||
+        entries.new(date: Date.current, entryable: Valuation.new(kind: :cash_anchor))
+      entry.assign_attributes(amount: cash, currency: currency, name: I18n.t("valuations.cash_anchor", locale: family.locale))
+      entry.entryable.cash_entry_total = Balance::SyncCache.new(self).cash_entry_total(Date.current)
+      entry.save!
+      valuations.where.not(kind: "cash_anchor").joins(:entry).where(entries: { date: Date.current }).update_all(superseded_at: Time.current)
+      entry
+    end
   end
 
   private
