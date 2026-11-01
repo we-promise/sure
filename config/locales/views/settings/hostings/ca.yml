@@ -191,7 +191,7 @@ ca:
         twelve_data_hint: requereix clau API, 800 crèdits/dia
         yahoo_finance_hint: gratuït, no cal clau API
         tinkoff_invest_hint: requereix un token de només lectura -- preus d'accions, fons i bons russos + logotips de marques
-        requires_api_key_mansa: requereix clau API, nivell gratuït de 100 crides/dia -- només NGX (Nigerian Exchange)
+        requires_api_key_mansa: requereix clau API, nivell gratuït de 100 crides/dia -- borses africanes (NGX, JSE, NSE, GSE, BRVM i més)
       show:
         ai_assistant: Assistent d'IA
         clear_cache: Neteja la memòria cau de dades
@@ -343,11 +343,11 @@ ca:
         step_3: Copia el token i enganxa'l a sota.
       mansa_settings:
         title: Mansa
-        description: Introdueix la clau API de Mansa API. Admet NGX (Nigerian Exchange), que no cobreix cap altre proveïdor d'aquí. Mansa també cobreix altres borses africanes, però només NGX s'ha verificat amb aquesta integració.
+        description: Introdueix la clau API de Mansa API. Admet 20 borses africanes, incloses NGX (Nigerian Exchange), JSE, NSE (Kenya), GSE (Ghana) i BRVM, diverses de les quals no cobreix cap altre proveïdor d'aquí.
         env_configured_message: Configurat correctament mitjançant la variable d'entorn MANSA_API_KEY.
         label: Clau API
         placeholder: Introdueix aquí la teva clau API de Mansa
         show_details: (mostra detalls)
         step_1_html: Visita <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> i obtén la teva clau API gratuïta -- no cal targeta.
         step_2: Copia la clau API i enganxa-la a sota.
-        rate_limit_warning: El nivell gratuït de Mansa està limitat a 100 crides d'API al dia i només ofereix cotitzacions actuals -- els preus històrics requereixen un pla de pagament. Només NGX (Nigerian Exchange) s'ha verificat amb aquesta integració; les altres borses africanes que cobreix Mansa encara no s'admeten aquí.
+        rate_limit_warning: El nivell gratuït de Mansa està limitat a 100 crides d'API al dia i només ofereix cotitzacions actuals -- els preus històrics requereixen un pla de pagament.
