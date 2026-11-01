@@ -74,9 +74,9 @@ id:
       invalid_merchants: Merchant yang dipilih tidak valid
     provider_merchant:
       edit: Edit
-      remove: Hapus
-      remove_confirm_title: Hapus merchant?
-      remove_confirm_body: Apakah Anda yakin ingin menghapus %{name}? Tindakan ini akan memutuskan tautan semua transaksi terkait dari merchant ini, tetapi tidak akan menghapus merchant itu sendiri.
+      remove: Putuskan tautan
+      remove_confirm_title: Putuskan tautan merchant?
+      remove_confirm_body: Apakah Anda yakin ingin memutuskan tautan %{name}? Tindakan ini akan memutuskan tautan semua transaksi terkait dari merchant ini, tetapi tidak akan menghapus merchant itu sendiri.
     enhance:
       success: Peningkatan merchant penyedia dimulai. Merchant akan segera ditingkatkan dan duplikat akan digabungkan.
       already_running: Peningkatan sedang berlangsung. Harap tunggu hingga selesai.
