@@ -1,7 +1,7 @@
 # RubyLLM spike report (PR 1 of the AI plumbing redesign)
 
 **Companion to:** [`rubyllm-spike-prompt.md`](rubyllm-spike-prompt.md) (the brief), [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) (the plan, §19) and [`04-rubyllm-thought-experiment.md`](04-rubyllm-thought-experiment.md) (the question before it was run)
-**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`509757132`](https://github.com/josh-sanders/sure/commit/509757132). Every test and recording named below is on that branch; it is never merged. The tests replay without keys (the commands are under the recommendation); `SPIKE_RECORD=1`, with the spike's own variables in `.env.local`, records them again.
+**Evidence:** branch [`spike/ruby-llm`](https://github.com/josh-sanders/sure/tree/spike/ruby-llm) @ [`305c1bbf3`](https://github.com/josh-sanders/sure/commit/305c1bbf3). Every test and recording named below is on that branch; it is never merged. The tests replay without keys (the commands are under the recommendation); `SPIKE_RECORD=1`, with the spike's own variables in `.env.local`, records them again.
 **Status:** a recommendation with its evidence, not a decision. The spike's second purpose was to sort the plan's choices into product decisions and technical limits; none of the product decisions, and none of the scope lines, is final. Calls made by @josh-sanders during development of PR #4440 are marked in the register with their dates. This file is the spike's note (`docs/llm-guides/ai-pipeline.md` on the branch) as of that commit; the plan's own short note in that path comes with PR 2.
 
 **Recommendation: adopt `ruby_llm`**, tested on 2.1.1 (released 2026-10-11, the latest at the
@@ -131,6 +131,8 @@ evidence like everything else here.
 
 | Decision (plan section) | What would test it |
 |---|---|
+| PR 2 in five parts (2a to 2e), each its own PR into `main`, merged in order, all in one release (§19). **Call by @josh-sanders, 1 Nov 2026, during development of PR #4440:** yes | Review time per part; `main` green and releasable after each part |
+| PR #4440 holds only the proposal documents and stays a draft until the whole plan is done; the spike branch is never merged, and only its report is in PR #4440 (§19). **Call by @josh-sanders, 1 Nov 2026, during development of PR #4440:** yes | The maintainers' review of PR #4440 and of the first code PR |
 | Two-level consent: the family per feature, then the member (§6) | Admins and members trying the AI features page; whether `:no_family_consent` blocks anything people expect to work |
 | Config source all or nothing: the UI, `AI_CONFIG` or the old ENV, no per-field locks (§4.1) | Operators of compose, Helm and quadlet installs upgrading with each source |
 | One YAML file, `AI_CONFIG`, loaded into the tables at boot (§4.4) | A home-lab and a multi-tenant config written from scratch and exported again |

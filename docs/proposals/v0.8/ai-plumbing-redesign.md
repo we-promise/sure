@@ -22,7 +22,7 @@ every AI call on one path:
   endpoints, the family's own keys with an optional cost cap, and a member switch.
 
 Delivery is a RubyLLM spike (done, [`rubyllm-spike-report.md`](rubyllm-spike-report.md)) and then
-eight PRs, each replacing code outright (section 19). Related documents and terms are in
+eight PRs, the first in five parts, each replacing code outright (section 19). Related documents and terms are in
 section 21.
 
 **Product decisions and technical limits.** The RubyLLM spike (PR 1,
@@ -2353,14 +2353,20 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 
 ## 19. Delivery
 
-Eight merged PRs plus one spike branch (PR 1) that isn't merged. The order follows a principle,
-not a ban: **each PR replaces something outright, and avoids duplicated work, wrappers and
-temporary code.** They're allowed where they make the whole order clearly better; PR 4's few
-lines in today's chat are the one case, and PR 6 deletes them. Where code isn't replaced yet, it
-keeps running as it does today, reading the same settings as the new code, so the two never
-disagree. That keeps most reviews to one question ("is this replacement right?"). Size is
-secondary: a PR is as big as its replacement needs. The principle, and that it isn't a ban, is a
-call by @josh-sanders, 31 Oct 2026, during development of PR #4440.
+Eight PRs after the spike, the first of them in five parts (2a to 2e). Each PR, and each part,
+is its own PR into `main`, merged in order. The spike branch (PR 1) is never merged; only its
+report is in PR #4440, which holds the proposal documents, no code, and stays a draft until the
+whole plan is done. These are calls by @josh-sanders, 1 Nov 2026, during development of
+PR #4440.
+
+The order follows a principle, not a ban: **each PR replaces something outright, and avoids
+duplicated work, wrappers and temporary code.** They're allowed where they make the whole order
+clearly better; PR 4's few lines in today's chat are the one case, and PR 6 deletes them. Where
+code isn't replaced yet, it keeps running as it does today, reading the same settings as the new
+code, so the two never disagree. That keeps most reviews to one question ("is this replacement
+right?"). A PR is as big as its replacement needs, and a replacement too big to review in one
+piece is split into parts that each replace something whole, as PR 2 is. The principle, and
+that it isn't a ban, is a call by @josh-sanders, 31 Oct 2026, during development of PR #4440.
 
 **RubyLLM versions.** PR 2 builds on 2.1.1, and 2.2 comes in with PR 5 whenever it's released;
 nothing waits for it. During this work the Gemfile allows `~> 2.1`, while `Gemfile.lock` still
@@ -2395,50 +2401,60 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    import and local OCR, OpenAI vector stores, every RubyLLM 2.1 feature and its ecosystem gems,
    job runners and chat priority on one CPU (Sidekiq threads against Solid Queue and Async::Job
    fibers, llama.cpp's slots, interrupting background calls; section 11 is built on it), and a
-   decisions register. PR 2 records live cassettes for Anthropic's and OpenAI's successful
+   decisions register. PR 2c records live cassettes for Anthropic's and OpenAI's successful
    paths before relying on them: the spike's keys had no credits.
-2. **Generations: every AI call except chat.**
-   - **Routing:** `Ai::Config`, built in memory in each process by `Ai::LegacyEnvConfig` from
-     today's ENV and `Setting` fields with the table in section 4.5; `Ai::Routes`, `Ai::Router`,
-     `Ai::Consent` with the user switch, `Ai.available?`, `AiFeatureGuard`, `Family::AiSettings`,
-     `Setting.ai_shadow_rates` replacing `families.categorization_shadow_rate`,
-     `Sure/NoAiEnv`.
-   - **Calls:** the transports' `generate`, `judge`, `embed` and `probe`, `Http`, `Ai::Generation`,
-     `Ai::Judgement`, `Ai::Requester`, `Ai::Batch`, `Ai::Result`, `Ai::Error`, the instrumentation
-     subscribers with the correlation id, the proxy fix (with loopback skipped), prompt files with
-     the key collapse, reasoning effort on route entries (#3605) with its per-preset mapping, the
-     `NoCredit` and `ModelMissing` errors, and the per-attempt time budget.
-   - **PDF import:** the input step, the extraction checks and the page rendering (section 8.1);
-     the OpenAI vector store fixes (section 5.5).
-   - **Jobs:** `Ai::GenerationJob` (with small batches) and `Ai::ShadowJob` replace the four AI
-     job classes, which stay one release as shims; `Ai::Comparison` replaces
-     `CategorizationComparison`. Lanes map onto today's two queues (interactive →
-     `ai_high_priority`, prompt and background → `ai_low_priority`) until PR 4.
-   - **Features:** `bill_setup`, `categorize` (generation and Jev judgement), `detect_merchants`,
-     `enhance_merchants`, `extract_pdf`, `embed` and `search_documents`, each with its requester.
-     `AiHealth::Probe` calls `transport.probe`.
-   - **Deletes:** the twelve structured-output workers, `Provider::Jev`, the usage recorders, the
-     per-worker tracing, `preferred_llm_provider`, `llm_provider_order`,
-     `Family#resolved_categorization_provider` and `#shadow_categorization_provider`, the
-     non-chat availability checks, their test stubs and `families.categorization_provider` (a
-     single-family Jev choice moves into the `categorize` route).
-   - **Jev on RubyLLM:** the Jev transport is a thin adapter over RubyLLM's `judge`, so Jev's
-     requests pass the gate and the usage path like every other call. It reaches TypeSafe-style
-     servers at `<base>/v1/systemone`, today's default and self-hosted servers. A Jev endpoint on
-     OpenRouter stops working until PR 5 brings 2.2, and an endpoint at any other path isn't
-     supported; the release notes say so, and an issue can bring a path back if someone needs it
-     (call by @josh-sanders, 31 Oct 2026, during development of PR #4440).
-   - **Adds:** the agreement test (chat entry points on its allowlist until PR 6), the transport
-     contract test, the AI test helpers (section 17), the recorded-eval CI gate and the `ai-live`
-     label.
+2. **Generations: every AI call except chat**, in five parts, each its own PR into `main`, merged
+   in order (2a to 2e). All five land in the same release, so today's AI job classes stay as
+   shims for that one release, not between parts. Each part replaces something whole, so `main`
+   works between them, and each brings a transport call only with its first caller.
+   - **2a. Transports and instrumentation.** The `compatible` and `anthropic` transports with
+     `probe`, `Http`, `Ai::Result`, `Ai::Error` (with `NoCredit` and `ModelMissing`), the
+     per-attempt time budget, the instrumentation subscribers with the correlation id, and the
+     proxy fix (with loopback skipped). `AiHealth::Probe` calls `transport.probe`, which fixes
+     drift bug 6. Adds the transport contract test and the AI test helpers (section 17).
+     *Deletes:* `AiHealth::Probe`'s own clients.
+   - **2b. Routing and consent.** `Ai::Config`, built in memory in each process by
+     `Ai::LegacyEnvConfig` from today's ENV and `Setting` fields with the table in section 4.5;
+     `Ai::Routes` with its `sends:` manifest, `Ai::Router`, `Ai::Consent` with the user switch,
+     `Ai.available?`, `AiFeatureGuard`, `Family::AiSettings` and `Sure/NoAiEnv`. Every non-chat
+     availability check asks the router, which fixes drift bugs 1 and 5 and the user-switch part
+     of 4. Adds the agreement test, with chat's entry points on its allowlist until PR 6.
+     *Deletes:* the non-chat availability checks and their test stubs.
+   - **2c. Generations.** `transport.generate` with the JSON-mode policy, `Ai::Generation`,
+     `Ai::Requester`, `Ai::Batch`, `Ai::GenerationJob` with small batches, failover and
+     escalation down the list (section 5.4), the ERB prompt files with the key collapse (section
+     8.3), and reasoning effort on route entries (#3605) with its per-preset mapping. Features:
+     `bill_setup`, `categorize` (the generation), `detect_merchants` and `enhance_merchants`, each
+     with its requester. Lanes map onto today's two queues (interactive → `ai_high_priority`,
+     prompt and background → `ai_low_priority`) until PR 4. Records live cassettes for
+     Anthropic's and OpenAI's successful paths before relying on them (the spike's keys had no
+     credits). Adds the recorded-eval CI gate and the `ai-live` label.
+     *Deletes:* the eight workers for those features (`AutoCategorizer`, `AutoMerchantDetector`,
+     `ProviderMerchantEnhancer` and `BillSetupSuggester`, for both providers) and
+     `Family#resolved_categorization_provider`.
+   - **2d. Jev and shadow runs.** The `jev` transport as a thin adapter over RubyLLM's `judge`, so
+     Jev's requests pass the gate and the usage path like every other call; `Ai::Judgement` and
+     `categorize`'s judgement; `Ai::ShadowJob` and `Ai::Comparison` for any feature;
+     `Setting.ai_shadow_rates` replacing `families.categorization_shadow_rate`. Jev reaches
+     TypeSafe-style servers at `<base>/v1/systemone`, today's default and self-hosted servers. A
+     Jev endpoint on OpenRouter stops working until PR 5 brings 2.2, and an endpoint at any other
+     path isn't supported; the release notes say so, and an issue can bring a path back if
+     someone needs it (call by @josh-sanders, 31 Oct 2026, during development of PR #4440).
+     *Deletes:* `Provider::Jev`, `Family#shadow_categorization_provider`,
+     `CategorizationComparison` and `families.categorization_provider` (a single-family Jev
+     choice moves into the `categorize` route).
+   - **2e. Documents.** `transport.embed`, `extract_pdf` with the input step, the extraction
+     checks and the page rendering (section 8.1), `embed` and `search_documents`, and the OpenAI
+     vector store fixes (section 5.5).
+     *Deletes:* the four PDF and statement workers, the usage recorders, the per-worker tracing,
+     `preferred_llm_provider` and `llm_provider_order`, and their test stubs.
 
-   `Generation#call` takes the plan's first route that isn't down; PR 4 adds the gate inside the
-   transport.
-   *Still on old code:* chat, through `Assistant`, `Provider::Openai` and `Provider::Anthropic`'s
-   chat methods and `Chat.default_model`, reading the same ENV and `Setting` fields. Smart-fill,
-   smart-configure, document embedding and the MCP AI tools call their requesters on the web thread,
-   as today. Configuration is still edited on the hostings page, and the web and the workers
-   each build `Ai::Config` from their own ENV, as they resolve settings today, until PR 7.
+   *Still on old code after 2e:* chat, through `Assistant`, `Provider::Openai` and
+   `Provider::Anthropic`'s chat methods and `Chat.default_model`, reading the same ENV and
+   `Setting` fields. Smart-fill, smart-configure, document embedding and the MCP AI tools call
+   their requesters on the web thread, as today. Configuration is still edited on the hostings
+   page, and the web and the workers each build `Ai::Config` from their own ENV, as they resolve
+   settings today, until PR 7.
 3. **Off the web thread.** Smart-fill and smart-configure through `RecurringTransaction::Suggestion`
    and a Turbo Stream, non-PDF document embedding as a job, `Ai::ProbeJob`, and the MCP tools
    through `Ai::ToolJob` (with its result handoff) and a pending import plus `get_import_status`
