@@ -1756,7 +1756,8 @@ ActiveSupport::Notifications.subscribe(/\A(generate|judge)\.ai\z/, Ai::Instrumen
   health page's rates read (section 13).
 - Transports normalise usage once into
   `Ai::Usage = Data.define(:input_tokens, :output_tokens, :cache_read_tokens, :cache_write_tokens, :cost)`.
-  Cost comes from the model's prices, so `LlmUsage.calculate_cost` and `.infer_provider` go away.
+  Cost is the provider's reported cost, otherwise the model's prices, so `LlmUsage.calculate_cost`
+  and `.infer_provider` go away.
 - Agent calls report no tokens. They're still recorded, with zero cost, so the usage page shows
   that they happened.
 - Cancelled calls are recorded too, because a request that isn't streamed still costs money.
