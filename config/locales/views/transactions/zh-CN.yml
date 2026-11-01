@@ -399,3 +399,6 @@ zh-CN:
       split: 拆分
       split_tooltip: 此交易已拆分为多条记录
       split_child_tooltip: 拆分交易的一部分
+      transfer_hint: 转账？
+      transfer_hint_dismiss: 不是转账
+      transfer_hint_tooltip: 另一账户中的匹配交易疑似为此转账的对应记录 — 点击进行匹配

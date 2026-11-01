@@ -6,61 +6,110 @@
 <% today = as_of %>
 <% card = account.credit_card %>
 
-<% if card.statement_cycle_configured? %>
-  <% last_balance = card.last_statement_balance_money(as_of: today) %>
-  <% accrued = card.accrued_since_last_close_money(as_of: today) %>
-  <% due_date = card.next_payment_due_date(as_of: today) %>
-  <% last_due_date = card.payment_due_date_for(card.last_statement_close_date(as_of: today)) %>
-  <% due_for_last_balance = due_date.present? && due_date == last_due_date %>
-  <% next_close = card.next_statement_close_date(as_of: today) %>
+<% if (summary = card.statement_summary(as_of: today, viewer: Current.user)) %>
+  <% due_for_last_balance = summary.due_date.present? && summary.due_date == summary.last_due_date %>
+  <% show_apr = card.apr.present? %>
+  <% summary_grid_class = show_apr ? "grid grid-cols-1 gap-2 sm:grid-cols-2 @3xl:grid-cols-3" : "grid grid-cols-1 gap-2 sm:grid-cols-2" %>
 
-  <div class="grid grid-cols-3 gap-2">
-    <%# The bill. This and the next card are a SPLIT of the balance in the page
-        header, not two more balances: the statement that closed is what you owe
-        now, and everything charged since belongs to the statement still
-        building. The two add back up to the debt, which is the one number the
-        header already gives; what the header cannot say is how much of it is
-        already a bill, and that is what this tab is for.
-
-        The due date sits under the amount rather than in a card of its own,
-        because a bare date beside a balance reads as a second, separate bill. %>
-    <%= summary_card title: t(".statement_balance") do %>
-      <%= last_balance ? format_money(last_balance) : t(".unknown") %>
-      <% if due_date && due_for_last_balance %>
-        <span class="block text-sm text-secondary">
-          <%= t(".due_on", date: l(due_date, format: :long)) %>
+  <div class="@container">
+    <div class="<%= summary_grid_class %>" data-testid="credit-card-summary-grid">
+      <%# The bill. This and the next card are a SPLIT of the balance in the page
+          header, not two more balances: the statement that closed is what you owe
+          now, and everything charged since belongs to the statement still
+          building. The two add back up to the debt, which is the one number the
+          header already gives; what the header cannot say is how much of it is
+          already a bill, and that is what this tab is for. %>
+      <%= summary_card title: t(".statement_balance") do %>
+        <%= summary.balance ? format_money(summary.balance) : t(".unknown") %>
+        <span class="mt-2 block space-y-1 text-sm text-secondary">
+          <% if summary.due_date && due_for_last_balance %>
+            <span class="block">
+              <%= t(".due_on", date: l(summary.due_date, format: :long)) %>
+            </span>
+            <span class="block <%= summary.status == :overdue ? "text-destructive" : "" %>">
+              <%= credit_card_due_countdown((summary.due_date - today).to_i) %>
+            </span>
+          <% end %>
+          <% if summary.remaining&.positive? && summary.balance && summary.remaining.amount < summary.balance.amount %>
+            <span class="block privacy-sensitive">
+              <%= t(".remaining_due", amount: format_money(summary.remaining)) %>
+            </span>
+          <% end %>
+          <% if summary.status == :paid %>
+            <span class="block text-success"><%= t(".status_paid") %></span>
+          <% elsif summary.status == :partial %>
+            <span class="block"><%= t(".status_partial") %></span>
+          <% end %>
+          <% if summary.scheduled_payment %>
+            <span class="block privacy-sensitive">
+              <%= t(".scheduled_payment",
+                    amount: format_money(summary.scheduled_payment.payment.amount_money),
+                    date: l(summary.scheduled_payment.due_date, format: :long)) %>
+            </span>
+          <% end %>
         </span>
-        <span class="block text-sm text-secondary"><%= credit_card_due_countdown(card.days_until_due(as_of: today)) %></span>
       <% end %>
-    <% end %>
 
-    <%# A negative figure here is not a nonsense balance: paying the card down
-        by more than has been charged since the close leaves a credit that
-        reduces the next statement. Labelling it as such keeps the two cards
-        summing to the debt in the header instead of appearing to contradict it.
+      <%# A negative figure here is not a nonsense balance: paying the card down
+          by more than has been charged since the close leaves a credit that
+          reduces the next statement. Labelling it as such keeps the two cards
+          summing to the debt in the header instead of appearing to contradict it.
 
-        The credit is checked before the due date rather than after it. A due
-        date that has already rolled past the last statement belongs to the
-        statement still building, and when the cardholder holds a credit that
-        statement may not produce a bill at all -- quoting a due date there
-        would promise a payment the credit may well cancel. %>
-    <%= summary_card title: t(".since_last_statement") do %>
-      <%= accrued ? format_money(accrued) : t(".unknown") %>
-      <% if accrued&.negative? %>
-        <span class="block text-sm text-secondary"><%= t(".credit_toward_next") %></span>
-      <% elsif due_date && !due_for_last_balance %>
-        <span class="block text-sm text-secondary">
-          <%= t(".due_on", date: l(due_date, format: :long)) %>
+          The credit is checked before the due date rather than after it. A due
+          date that has already rolled past the last statement belongs to the
+          statement still building, and when the cardholder holds a credit that
+          statement may not produce a bill at all -- quoting a due date there
+          would promise a payment the credit may well cancel. %>
+      <%= summary_card title: t(".since_last_statement") do %>
+        <%= summary.accrued ? format_money(summary.accrued) : t(".unknown") %>
+        <span class="mt-2 block space-y-1 text-sm text-secondary">
+          <% if summary.accrued&.negative? %>
+            <span class="block"><%= t(".credit_toward_next") %></span>
+          <% elsif summary.due_date && !due_for_last_balance %>
+            <span class="block">
+              <%= t(".due_on", date: l(summary.due_date, format: :long)) %>
+            </span>
+            <span class="block"><%= credit_card_due_countdown((summary.due_date - today).to_i) %></span>
+          <% elsif summary.next_close %>
+            <span class="block"><%= t(".closes_on", date: l(summary.next_close, format: :long)) %></span>
+          <% end %>
+          <% if summary.charges && summary.credits %>
+            <span class="flex items-center justify-between gap-4">
+              <span><%= t(".charges") %></span>
+              <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.charges) %></span>
+            </span>
+            <span class="flex items-center justify-between gap-4">
+              <span><%= t(".payments_credits") %></span>
+              <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.credits.abs) %></span>
+            </span>
+          <% end %>
         </span>
-        <span class="block text-sm text-secondary"><%= credit_card_due_countdown(card.days_until_due(as_of: today)) %></span>
-      <% elsif next_close %>
-        <span class="block text-sm text-secondary"><%= t(".closes_on", date: l(next_close, format: :long)) %></span>
       <% end %>
-    <% end %>
 
-    <%= summary_card title: t(".apr") do %>
-      <%= card.apr.present? ? number_to_percentage(card.apr, precision: 3) : t(".unknown") %>
-    <% end %>
+      <% if show_apr %>
+        <div class="col-span-full @3xl:col-span-1">
+          <%= summary_card title: t(".annual_percentage_rate") do %>
+            <%= number_to_percentage(card.apr, precision: 3) %>
+            <span class="mt-2 block space-y-1 text-sm text-secondary">
+              <span class="flex items-center justify-between gap-4">
+                <span><%= t(".monthly_rate_label") %></span>
+                <span class="font-medium text-primary"><%= number_to_percentage(summary.monthly_rate, precision: 3) %></span>
+              </span>
+              <span class="flex items-center justify-between gap-4">
+                <span><%= t(".estimated_interest_label") %></span>
+                <span class="font-medium text-primary">
+                  <%= summary.estimated_interest ? t(".per_month", amount: format_money(summary.estimated_interest)) : t(".unknown") %>
+                </span>
+              </span>
+              <span class="flex items-center justify-between gap-4">
+                <span><%= t(".balance_carried_label") %></span>
+                <span class="font-medium text-primary"><%= summary.remaining ? format_money(summary.remaining) : t(".unknown") %></span>
+              </span>
+            </span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
   </div>
 
   <%# The minimum payment earns its place here only as this comparison. On its
@@ -74,7 +123,7 @@
     <div class="mt-2">
       <%= render DS::Alert.new(variant: :warning) do %>
         <%= t(".above_minimum",
-              balance: format_money(last_balance),
+              balance: format_money(summary.balance),
               minimum: format_money(card.minimum_payment_money)) %>
       <% end %>
     </div>
@@ -84,7 +133,7 @@
       saying something different from one that totals zero: the first has
       entries we cannot add up in the card's own currency. Quoting $0.00 there
       would be a wrong number presented as a right one. %>
-  <% if accrued.nil? || last_balance.nil? %>
+  <% if summary.accrued.nil? || summary.balance.nil? %>
     <div class="mt-2">
       <%= render DS::Alert.new(variant: :info) do %>
         <%= t(".multi_currency_unavailable") %>

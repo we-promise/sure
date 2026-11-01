@@ -12,6 +12,11 @@ class Merchant < ApplicationRecord
   has_many :transactions, dependent: :nullify
   has_many :recurring_transactions, dependent: :destroy
 
+  # Declared here rather than on FamilyMerchant so lists mixing both types can preload it.
+  has_one_attached :logo, dependent: :purge_later do |attachable|
+    attachable.variant :small, resize_to_fill: [ 128, 128 ], convert: :webp, saver: { quality: 80 }, preprocessed: true
+  end
+
   validates :name, presence: true
   validates :name, exclusion: { in: [ NO_MERCHANT_FILTER_VALUE ] }
   validates :type, inclusion: { in: TYPES }
