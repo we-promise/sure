@@ -230,7 +230,7 @@ export default class extends Controller {
       .call((g) => g.select(".domain").remove())
       .selectAll("text")
       .attr("data-settled-resize-edge", "right")
-      .attr("class", "text-secondary fill-current")
+      .attr("class", "text-secondary fill-current privacy-sensitive")
       .style("font-size", "12px")
       .style("font-weight", "500");
   }
