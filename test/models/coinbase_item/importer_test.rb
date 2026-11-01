@@ -57,7 +57,7 @@ class CoinbaseItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ { "id" => "txn_1" } ], coinbase_account.raw_transactions_payload["transactions"]
   end
 
-  test "stores a rate-limited partial fetch when it's not a step backward" do
+  test "stores a rate-limited partial fetch when there is no previous history to merge with" do
     provider = mock("coinbase provider")
     provider.expects(:get_accounts).returns([ btc_account_payload ])
     partial = [ { "id" => "txn_a" }, { "id" => "txn_b" } ]
@@ -72,7 +72,7 @@ class CoinbaseItem::ImporterTest < ActiveSupport::TestCase
     assert coinbase_account.raw_transactions_payload["truncated"]
   end
 
-  test "keeps a previously-stored history instead of overwriting it with a smaller rate-limited fetch" do
+  test "keeps previously-stored transactions a smaller rate-limited fetch didn't reach" do
     @item.coinbase_accounts.create!(
       account_id: "cb_btc_123",
       name: "BTC Wallet",
@@ -91,6 +91,32 @@ class CoinbaseItem::ImporterTest < ActiveSupport::TestCase
 
     coinbase_account = @item.coinbase_accounts.find_by!(account_id: "cb_btc_123")
     assert_equal 3, coinbase_account.raw_transactions_payload["transactions"].size
+  end
+
+  test "merges new transactions from a rate-limited partial fetch instead of losing them to a size comparison" do
+    @item.coinbase_accounts.create!(
+      account_id: "cb_btc_123",
+      name: "BTC Wallet",
+      currency: "BTC",
+      current_balance: BigDecimal("0.000000000000000148"),
+      raw_transactions_payload: { "transactions" => [ { "id" => "txn_a" }, { "id" => "txn_b" }, { "id" => "txn_c" } ] }
+    )
+
+    provider = mock("coinbase provider")
+    provider.expects(:get_accounts).returns([ btc_account_payload ])
+    # Transactions are newest-first, so a partial fetch that only got through
+    # the first page can be *smaller* than the stored history while still
+    # containing a genuinely new transaction the stored history doesn't have.
+    # Comparing sizes to decide whether to keep it would lose txn_new here.
+    provider.expects(:get_transactions)
+      .with("cb_btc_123", limit: CoinbaseItem::Importer::FULL_HISTORY_LIMIT)
+      .raises(Provider::Coinbase::PartialResultError.new("Rate limit exceeded", [ { "id" => "txn_new" } ]))
+
+    CoinbaseItem::Importer.new(@item, coinbase_provider: provider).import
+
+    coinbase_account = @item.coinbase_accounts.find_by!(account_id: "cb_btc_123")
+    ids = coinbase_account.raw_transactions_payload["transactions"].map { |t| t["id"] }
+    assert_equal %w[txn_a txn_b txn_c txn_new].sort, ids.sort
   end
 
   test "includes the linked account_provider in a transactions-fetch DebugLogEntry" do

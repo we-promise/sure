@@ -105,11 +105,14 @@ class CoinbaseItem::Importer
     rescue Provider::Coinbase::PartialResultError => e
       # A rate limit hit a later page after earlier ones already succeeded;
       # Provider::Coinbase#paginated_get hands back those earlier pages
-      # instead of discarding them. Still never let a partial fetch look
-      # like a complete one by overwriting a previously-stored history that
-      # reached further back -- only store it when it's not a step backward.
-      previous_count = coinbase_account.raw_transactions_payload&.dig("transactions")&.size.to_i
-      store_transactions(coinbase_account, e.partial_results, truncated: true) if e.partial_results.size >= previous_count
+      # instead of discarding them. Transactions are newest-first, so a
+      # *shorter* partial fetch can still contain genuinely new transactions
+      # the last stored history doesn't have -- comparing sizes to decide
+      # whether to keep it would silently drop those. Merge by id instead:
+      # every stored transaction is kept, every new one is added, and an id
+      # present in both takes the freshly-fetched version.
+      merged = merge_transactions(coinbase_account, e.partial_results)
+      store_transactions(coinbase_account, merged, truncated: true)
       record_transactions_incident(coinbase_account, e, account_id, partial: true)
     rescue Provider::Coinbase::ApiError, Provider::Coinbase::RateLimitError => e
       # RateLimitError is a sibling of ApiError (both < Provider::Coinbase::Error),
@@ -118,6 +121,13 @@ class CoinbaseItem::Importer
       # account's balance update -- already fetched correctly above -- gets
       # silently skipped for the whole sync along with the transaction fetch.
       record_transactions_incident(coinbase_account, e, account_id)
+    end
+
+    def merge_transactions(coinbase_account, incoming)
+      stored = coinbase_account.raw_transactions_payload&.dig("transactions") || []
+      by_id = stored.index_by { |txn| txn["id"] }
+      incoming.each { |txn| by_id[txn["id"]] = txn }
+      by_id.values
     end
 
     def store_transactions(coinbase_account, transactions, truncated: false)
