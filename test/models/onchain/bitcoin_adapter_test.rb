@@ -41,6 +41,13 @@ class Onchain::BitcoinAdapterTest < ActiveSupport::TestCase
     assert_equal P2PKH, @adapter.canonical_address(P2PKH)
   end
 
+  test "mixed-case bech32 is not an address" do
+    mixed = "bc1Qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq"
+
+    assert_not @adapter.valid_address?(mixed)
+    assert_equal mixed, @adapter.canonical_address(mixed)
+  end
+
   test "fetch_snapshot refuses a malformed address before any request" do
     assert_raises Onchain::Chains::Error do
       @adapter.fetch_snapshot("not-an-address")

@@ -50,7 +50,7 @@ de:
     new_wallet:
       address_label: Wallet-Adresse
       address_placeholder: bc1..., 0x... oder eine Solana-Adresse
-      bitcoin_single_address_note: Bitcoin wird jeweils über eine einzelne Adresse verfolgt. Erweiterte Schlüssel (xpub/ypub/zpub) werden nicht unterstützt. Eine Wallet, die Guthaben auf abgeleitete Adressen verteilt, zeigt daher nur das Guthaben der eingegebenen Adresse.
+      single_address_note: '%{chains} werden jeweils über eine einzelne Adresse verfolgt. Erweiterte Schlüssel (xpub/ypub/zpub) werden nicht unterstützt. Eine Wallet, die Guthaben auf abgeleitete Adressen verteilt, zeigt daher nur das Guthaben der eingegebenen Adresse.'
       chain_auto_detect: Automatisch erkennen
       chain_label: Netzwerk
       continue: Weiter

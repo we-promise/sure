@@ -96,6 +96,32 @@ module Onchain
 
     POLKADOT = "polkadot"
 
+    # Shared by every Bitcoin-family adapter, so the alphabets have one source.
+    # Base58Check has no 0, O, I or l; bech32 has no 1, b, i or o after the
+    # separator.
+    BASE58_CHAR = "[1-9A-HJ-NP-Za-km-z]"
+    BECH32_CHAR = "[ac-hj-np-z02-9]"
+
+    # Read through SoChain (Onchain::UtxoAdapter). Base58 shapes mirror the
+    # Bitcoin adapter's; Zcash is transparent addresses only.
+    UTXO = [
+      {
+        key: "litecoin", symbol: "LTC", name: "Litecoin", sochain_network: "LTC",
+        address_patterns: [ /\A[LM3]#{BASE58_CHAR}{25,39}\z/ ],
+        case_insensitive_patterns: [ /\Altc1#{BECH32_CHAR}{11,87}\z/i ]
+      },
+      {
+        key: "dogecoin", symbol: "DOGE", name: "Dogecoin", sochain_network: "DOGE",
+        address_patterns: [ /\A[DA9]#{BASE58_CHAR}{25,39}\z/ ]
+      },
+      {
+        key: "zcash", symbol: "ZEC", name: "Zcash", sochain_network: "ZEC",
+        address_patterns: [ /\At[13]#{BASE58_CHAR}{33}\z/ ]
+      }
+    ].freeze
+
+    SINGLE_ADDRESS_ADAPTERS = %w[Onchain::BitcoinAdapter Onchain::UtxoAdapter].freeze
+
     BUILTIN = [
       Definition.new(
         key: BITCOIN,
@@ -137,7 +163,21 @@ module Onchain
         token_kind: nil,
         adapter_class_name: "Onchain::PolkadotAdapter",
         adapter_options: {}
-      )
+      ),
+      *UTXO.map do |utxo|
+        Definition.new(
+          key: utxo[:key],
+          native: NativeAsset.new(symbol: utxo[:symbol], name: utxo[:name], decimals: 8),
+          token_kind: nil,
+          adapter_class_name: "Onchain::UtxoAdapter",
+          adapter_options: {
+            chain: utxo[:key],
+            sochain_network: utxo[:sochain_network],
+            address_patterns: utxo[:address_patterns],
+            case_insensitive_patterns: utxo.fetch(:case_insensitive_patterns, [])
+          }
+        )
+      end
     ].freeze
 
     class << self
@@ -159,6 +199,13 @@ module Onchain
 
       def exists?(key)
         find(key).present?
+      end
+
+      # Chains read one address at a time. Their wallets are normally HD
+      # wallets that spread funds across many addresses, so the linking screen
+      # names them in its warning.
+      def single_address_chains
+        all.select { |definition| SINGLE_ADDRESS_ADAPTERS.include?(definition.adapter_class_name) }
       end
 
       def adapter_for(key, credentials: {})

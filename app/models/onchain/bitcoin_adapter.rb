@@ -19,10 +19,10 @@ class Onchain::BitcoinAdapter
   SATS_PER_BTC = 100_000_000.to_d
 
   # P2PKH ("1…") and P2SH ("3…"), Base58Check: no 0, O, I or l.
-  BASE58_PATTERN = /\A[13][1-9A-HJ-NP-Za-km-z]{25,39}\z/
+  BASE58_PATTERN = /\A[13]#{Onchain::Chains::BASE58_CHAR}{25,39}\z/
   # Bech32 (P2WPKH/P2WSH, "bc1q…") and Bech32m (Taproot, "bc1p…"). The bech32
   # character set excludes 1, b, i and o after the separator.
-  BECH32_PATTERN = /\Abc1[ac-hj-np-z02-9]{11,87}\z/i
+  BECH32_PATTERN = /\Abc1#{Onchain::Chains::BECH32_CHAR}{11,87}\z/i
 
   def initialize(credentials: {})
     @credentials = credentials
@@ -30,7 +30,7 @@ class Onchain::BitcoinAdapter
 
   def valid_address?(address)
     candidate = address.to_s.strip
-    BASE58_PATTERN.match?(candidate) || BECH32_PATTERN.match?(candidate)
+    BASE58_PATTERN.match?(candidate) || bech32?(candidate)
   end
 
   # Bech32 is case-insensitive and canonically lowercase — and the API reports it
@@ -38,7 +38,7 @@ class Onchain::BitcoinAdapter
   # produce zero movements. Base58 is case-sensitive and must be left alone.
   def canonical_address(address)
     candidate = address.to_s.strip
-    BECH32_PATTERN.match?(candidate) ? candidate.downcase : candidate
+    bech32?(candidate) ? candidate.downcase : candidate
   end
 
   def fetch_snapshot(address)
@@ -63,6 +63,10 @@ class Onchain::BitcoinAdapter
 
   private
     attr_reader :credentials
+
+    def bech32?(candidate)
+      single_case?(candidate) && BECH32_PATTERN.match?(candidate)
+    end
 
     def definition
       Onchain::Chains.find!(Onchain::Chains::BITCOIN)

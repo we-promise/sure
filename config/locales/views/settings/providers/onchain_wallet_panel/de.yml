@@ -3,7 +3,7 @@ de:
   settings:
     providers:
       taglines:
-        onchain_wallet: Verfolgt selbstverwahrte Bitcoin-, EVM-, Solana-, Cosmos- und Polkadot-Wallets über ihre öffentlichen Adressen.
+        onchain_wallet: Verfolgt selbstverwahrte Bitcoin-, Litecoin-, Dogecoin-, Zcash-, EVM-, Solana-, Cosmos- und Polkadot-Wallets über ihre öffentlichen Adressen.
       onchain_wallet_panel:
         add_wallet: Wallet hinzufügen
         advanced: Erweitert
@@ -13,9 +13,13 @@ de:
         etherscan_api_key_placeholder: Etherscan-API-Schlüssel einfügen
         etherscan_hint: Ethereum-Daten können ohne API-Schlüssel abgerufen werden. Ein Etherscan-API-Schlüssel erhöht lediglich das Anfragelimit für Ethereum.
         keep_etherscan_api_key: Lass das Feld leer, um den vorhandenen Schlüssel beizubehalten
+        keep_sochain_api_key: Lass das Feld leer, um den vorhandenen Schlüssel beizubehalten
         keyless_title: Nur Lesezugriff, keine Schlüssel erforderlich
         keyless_body: Sure liest ausschließlich öffentliche Blockchain-Daten. Dabei werden weder Schlüssel, Seed-Phrases noch Signaturen verwendet. Mit diesen Daten lassen sich keine Vermögenswerte übertragen.
         manage_wallets: Wallets verwalten
         save: Speichern
+        sochain_api_key_label: SoChain-API-Schlüssel (optional)
+        sochain_api_key_placeholder: SoChain-API-Schlüssel einfügen
+        sochain_hint: Litecoin-, Dogecoin- und Zcash-Daten können ohne API-Schlüssel abgerufen werden. Ein SoChain-Schlüssel von sochain.com/dashboard erhöht das Anfragelimit.
         sync_start_date_hint: Übertragungen vor diesem Datum werden ignoriert. Lass das Feld leer, um alles zu importieren, was der Explorer meldet.
         sync_start_date_label: Übertragungen vor diesem Datum ignorieren

@@ -19,7 +19,7 @@ module OnchainTestHelper
 
     class << self
       attr_accessor :snapshots, :activity, :error, :provider_error_classes, :errors_by_address
-      attr_reader :snapshot_calls, :activity_calls
+      attr_reader :snapshot_calls, :activity_calls, :snapshot_credentials
 
       def reset!
         @snapshots = {}
@@ -28,6 +28,7 @@ module OnchainTestHelper
         @errors_by_address = {}
         @provider_error_classes = []
         @snapshot_calls = []
+        @snapshot_credentials = []
         @activity_calls = []
       end
 
@@ -55,6 +56,7 @@ module OnchainTestHelper
     def fetch_snapshot(address)
       wrap_provider_errors do
         self.class.record_snapshot_call(address)
+        self.class.snapshot_credentials << credentials
         raise self.class.error if self.class.error
 
         per_address = self.class.errors_by_address[address]

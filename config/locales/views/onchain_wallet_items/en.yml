@@ -50,7 +50,7 @@ en:
     new_wallet:
       address_label: Wallet address
       address_placeholder: bc1..., 0x..., or a Solana address
-      bitcoin_single_address_note: Bitcoin is tracked one address at a time. Extended keys (xpub/ypub/zpub) are not supported, so a wallet that spreads funds across derived addresses will show only the balance of the address you enter.
+      single_address_note: '%{chains} are tracked one address at a time. Extended keys (xpub/ypub/zpub) are not supported, so a wallet that spreads funds across derived addresses will show only the balance of the address you enter.'
       chain_auto_detect: Detect automatically
       chain_label: Network
       continue: Continue

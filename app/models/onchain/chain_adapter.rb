@@ -83,4 +83,10 @@ module Onchain::ChainAdapter
   def has_activity?(address)
     valid_address?(address)
   end
+
+  # Bech32 is case-insensitive but never mixed-case (BIP-173): "bc1Q…" is not
+  # an address, and lowercasing it would link one the user did not type.
+  def single_case?(candidate)
+    candidate == candidate.downcase || candidate == candidate.upcase
+  end
 end

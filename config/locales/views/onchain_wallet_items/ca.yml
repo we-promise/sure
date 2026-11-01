@@ -50,7 +50,7 @@ ca:
     new_wallet:
       address_label: Adreça de la cartera
       address_placeholder: bc1..., 0x... o una adreça de Solana
-      bitcoin_single_address_note: Bitcoin se segueix adreça per adreça. No s'admeten les claus esteses (xpub/ypub/zpub), de manera que una cartera que reparteix els fons entre adreces derivades només mostrarà el saldo de l'adreça que introdueixis.
+      single_address_note: '%{chains} es segueixen adreça per adreça. No s''admeten les claus esteses (xpub/ypub/zpub), de manera que una cartera que reparteix els fons entre adreces derivades només mostrarà el saldo de l''adreça que introdueixis.'
       chain_auto_detect: Detecta automàticament
       chain_label: Xarxa
       continue: Continua

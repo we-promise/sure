@@ -37,10 +37,23 @@
                         { include_blank: t(".chain_auto_detect"), label: t(".chain_label") },
                         class: "w-full rounded-md border border-primary px-3 py-2 text-sm bg-container-inset text-primary" %>
 
+        <%# Until the first wallet is linked there is no connection, so the
+            settings panel has nowhere to keep a SoChain key; this one is saved
+            on the connection the link creates. %>
+        <% if Current.family.onchain_wallet_item.nil? %>
+          <%= form.text_field :sochain_api_key,
+                              label: t("settings.providers.onchain_wallet_panel.sochain_api_key_label"),
+                              placeholder: t("settings.providers.onchain_wallet_panel.sochain_api_key_placeholder"),
+                              type: :password,
+                              value: first_sochain_api_key,
+                              autocomplete: "off" %>
+          <p class="text-xs text-secondary"><%= t("settings.providers.onchain_wallet_panel.sochain_hint") %></p>
+        <% end %>
+
         <div class="rounded-lg bg-surface p-3 space-y-2 text-sm text-secondary">
           <p class="flex items-start gap-2">
             <%= icon "info", size: "sm", class: "text-primary mt-0.5 shrink-0" %>
-            <span><%= t(".bitcoin_single_address_note") %></span>
+            <span><%= t(".single_address_note", chains: Onchain::Chains.single_address_chains.map(&:label).to_sentence) %></span>
           </p>
           <p class="flex items-start gap-2">
             <%= icon "eye", size: "sm", class: "text-primary mt-0.5 shrink-0" %>

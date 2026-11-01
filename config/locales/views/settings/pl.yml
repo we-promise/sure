@@ -620,11 +620,15 @@ pl:
         etherscan_hint: Odczyt danych Ethereum działa bez klucza. Dodanie klucza Etherscan
           tylko podnosi limit zapytań dla Ethereum.
         keep_etherscan_api_key: Zostaw puste, aby zachować obecny klucz
+        keep_sochain_api_key: Zostaw puste, aby zachować obecny klucz
         keyless_body: Sure wyłącznie odczytuje publiczne dane blockchaina. Nie są
           potrzebne żadne klucze, frazy seed ani podpisy, i nic nie może zostać wydane.
         keyless_title: Tylko odczyt, bez wymaganych kluczy
         manage_wallets: Zarządzaj portfelami
         save: Zapisz
+        sochain_api_key_label: Klucz API SoChain (opcjonalnie)
+        sochain_api_key_placeholder: Wklej klucz API SoChain
+        sochain_hint: Odczyt danych Litecoin, Dogecoin i Zcash działa bez klucza. Klucz SoChain z sochain.com/dashboard podnosi limit zapytań.
         sync_start_date_hint: Przelewy sprzed tej daty są ignorowane. Zostaw puste,
           aby zaimportować wszystko, co zgłasza eksplorator.
         sync_start_date_label: Ignoruj przelewy sprzed
@@ -696,7 +700,7 @@ pl:
         mercury: Synchronizuj automatycznie swoje firmowe konta bankowe Mercury.
         monobank: Synchronizuj ukraińskie karty i skarbonki Monobank za pomocą osobistego
           tokenu API.
-        onchain_wallet: Śledź portfele Bitcoin, EVM, Solana, Cosmos i Polkadot z samodzielną kontrolą
+        onchain_wallet: Śledź portfele Bitcoin, Litecoin, Dogecoin, Zcash, EVM, Solana, Cosmos i Polkadot z samodzielną kontrolą
           kluczy na podstawie ich publicznych adresów.
         plaid: Połącz tysiące amerykańskich instytucji finansowych przez Plaid.
         plaid_eu: Połącz europejskie instytucje finansowe przez Plaid (PSD2 / otwarta

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Connects the item to the chain adapters, injecting the family's optional
-# explorer credential. Adapters are resolved through Onchain::Chains so this
+# explorer credentials. Adapters are resolved through Onchain::Chains so this
 # concern never learns a chain name.
 module OnchainWalletItem::Provided
   extend ActiveSupport::Concern
@@ -19,6 +19,6 @@ module OnchainWalletItem::Provided
   end
 
   def onchain_credentials
-    { etherscan_api_key: etherscan_api_key.presence }
+    { etherscan_api_key: etherscan_api_key.presence, sochain_api_key: sochain_api_key.presence }
   end
 end

@@ -50,7 +50,7 @@ tr:
     new_wallet:
       address_label: Cüzdan adresi
       address_placeholder: bc1..., 0x... veya bir Solana adresi
-      bitcoin_single_address_note: Bitcoin her seferinde tek bir adres olarak takip edilir. Genişletilmiş anahtarlar (xpub/ypub/zpub) desteklenmez; bu nedenle fonları türetilmiş adreslere dağıtan bir cüzdan yalnızca girdiğiniz adresin bakiyesini gösterir.
+      single_address_note: '%{chains} her seferinde tek bir adres olarak takip edilir. Genişletilmiş anahtarlar (xpub/ypub/zpub) desteklenmez; bu nedenle fonları türetilmiş adreslere dağıtan bir cüzdan yalnızca girdiğiniz adresin bakiyesini gösterir.'
       chain_auto_detect: Otomatik algıla
       chain_label: Ağ
       continue: Devam
