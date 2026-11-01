@@ -244,7 +244,16 @@ class CoinbaseAccount::Processor
       # duplicates of a specific-type sibling (most are standalone, e.g. Earn
       # rewards tagged as "send") - so only skip a "send" when a specific-type
       # sibling actually matches it.
-      return if txn_type == "send" && shadowed_by_specific_transfer?(txn_data)
+      if txn_type == "send" && shadowed_by_specific_transfer?(txn_data)
+        # A rate-limited partial fetch (see Provider::Coinbase::PartialResultError)
+        # can import this send on one sync before its matching sibling is ever
+        # fetched, so it wasn't shadowed yet. Once a later, more complete sync
+        # makes the sibling visible, remove that now-duplicate send instead of
+        # leaving both -- the sibling is imported separately, on its own merits,
+        # same as any other transaction.
+        reconcile_shadowed_send(account, txn_data)
+        return
+      end
 
       security = find_or_create_security(txn_data)
       return unless security
@@ -333,6 +342,23 @@ class CoinbaseAccount::Processor
           sibling.dig("amount", "amount").to_d == amount &&
           sibling.dig("amount", "currency") == currency
       end
+    end
+
+    # Removes a previously-imported "send" entry now that its matching
+    # specific-transfer sibling is visible (see #shadowed_by_specific_transfer?).
+    # A rate-limited partial fetch can import the send before the sibling is
+    # ever reachable in the same batch; once a later, more complete sync
+    # makes the sibling visible, leaving both would double-count one real
+    # transfer as two entries.
+    def reconcile_shadowed_send(account, txn_data)
+      external_id = "coinbase_txn_#{txn_data['id']}"
+      shadowed = account.entries.find_by(external_id: external_id)
+      return unless shadowed
+
+      shadowed.destroy!
+      Rails.logger.info(
+        "CoinbaseAccount::Processor - Removed send #{txn_data['id']}, now shadowed by a specific transfer"
+      )
     end
 
     # Buy/sell transaction handling (trade with a cost-basis-relevant price).

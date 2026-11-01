@@ -196,6 +196,28 @@ class CoinbaseAccount::ProcessorTest < ActiveSupport::TestCase
       "a pending sibling never actually happened, so it can't shadow anything"
   end
 
+  test "removes a previously-imported send once its matching transfer becomes visible" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    send_txn = coinbase_txn(id: "txn_send_later_shadowed", type: "send", btc_amount: "-0.01", native_amount: "665.80")
+    sibling_txn = coinbase_txn(id: "txn_pro_withdraw_later", type: "pro_withdrawal", btc_amount: "-0.01", native_amount: "665.80")
+
+    # A rate-limited partial fetch (Provider::Coinbase::PartialResultError)
+    # can import this send on one sync before its sibling is ever fetched,
+    # so it isn't shadowed yet.
+    @coinbase_account.update!(raw_transactions_payload: { "transactions" => [ send_txn ] })
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_send_later_shadowed")
+
+    # A later, more complete sync makes the sibling visible. The send is now
+    # shadowed -- its stale duplicate must be removed, leaving only the
+    # sibling's own entry.
+    @coinbase_account.update!(raw_transactions_payload: { "transactions" => [ send_txn, sibling_txn ] })
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    refute @account.entries.exists?(external_id: "coinbase_txn_txn_send_later_shadowed")
+    assert @account.entries.exists?(external_id: "coinbase_txn_txn_pro_withdraw_later")
+  end
+
   test "captures a per-transaction processing failure via DebugLogEntry" do
     CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
     @coinbase_account.update!(raw_transactions_payload: {
