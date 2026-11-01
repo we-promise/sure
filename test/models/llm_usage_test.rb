@@ -211,6 +211,8 @@ class LlmUsageTest < ActiveSupport::TestCase
     assert_equal 5.00, LlmUsage.find_pricing("openai", "gpt-4o-2024-05-13")[:prompt]
     assert_equal 150.00, LlmUsage.find_pricing("openai", "o1-pro-2025-03-19")[:prompt]
     assert_equal 1.75, LlmUsage.find_pricing("openai", "gpt-5.3-codex")[:prompt]
+    assert_equal 4.00, LlmUsage.find_pricing("openai", "gpt-5.6")[:prompt]
+    assert_equal 12.50, LlmUsage.find_pricing("openai", "gpt-5.6-cyber")[:prompt]
   end
 
   test "find_pricing reads OpenRouter's dotted Claude versions" do

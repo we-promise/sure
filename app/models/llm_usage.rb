@@ -61,6 +61,14 @@ class LlmUsage < ApplicationRecord
         prompt: 4.00, completion: 20.00,
         long_context: { threshold: 272_000, prompt: 8.00, completion: 30.00 }
       },
+      # OpenAI routes the gpt-5.6 alias to GPT-5.6 Sol.
+      "gpt-5.6" => {
+        prompt: 4.00, completion: 20.00,
+        long_context: { threshold: 272_000, prompt: 8.00, completion: 30.00 }
+      },
+      # Trusted-access cyber models; listed so they don't match the rows above.
+      "gpt-5.6-cyber" => { prompt: 12.50, completion: 75.00 },
+      "gpt-5.5-cyber" => { prompt: 12.50, completion: 75.00 },
       # Terra and Luna price reductions effective 2026-07-30.
       "gpt-5.6-terra" => {
         prompt: 2.00, completion: 12.00,

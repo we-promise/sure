@@ -1146,7 +1146,7 @@ Rates are USD per million tokens at the Standard tier. The source coverage is:
 
 | Models in the code | Official pricing source |
 | --- | --- |
-| GPT-6 Astra, GPT-6 Sol/6.1 Sol, GPT-6.1 Terra, GPT-6 Luna, GPT-5.6, GPT-5.5, GPT-5.4, GPT-5.3 Codex, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1/o1-pro, o3, o4-mini, chat-latest (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
+| GPT-6 Astra, GPT-6 Sol/6.1 Sol, GPT-6.1 Terra, GPT-6 Luna, GPT-5.6 (and its `gpt-5.6` alias for Sol), GPT-5.6/5.5 Cyber, GPT-5.5, GPT-5.4, GPT-5.3 Codex, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1/o1-pro, o3, o4-mini, chat-latest (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
 | GPT-5.2/5.1 Chat aliases | [GPT-5.2 Chat](https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest), [GPT-5.1 Chat](https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest) |
 | o1-mini | [o1-mini](https://developers.openai.com/api/docs/models/o1-mini) |
 | Gemini 4 Argon, 3.8/3.7/3.6/3.5 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro, 3 Flash, 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
