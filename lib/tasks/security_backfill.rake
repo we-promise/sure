@@ -74,6 +74,7 @@ namespace :security do
     results[:snaptrade_items] = backfill_model(SnaptradeItem, %i[client_id consumer_key snaptrade_user_secret oauth_access_token oauth_refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
     results[:sophtron_items] = backfill_model(SophtronItem, %i[user_id access_key raw_payload raw_institution_payload raw_customer_payload raw_job_payload], batch_size, dry_run)
     results[:trading212_items] = backfill_model(Trading212Item, %i[api_key api_secret raw_instruments_payload], batch_size, dry_run)
+    results[:truelayer_items] = backfill_model(TruelayerItem, %i[client_secret access_token refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
     results[:up_items] = backfill_model(UpItem, %i[access_token raw_payload raw_institution_payload], batch_size, dry_run)
     results[:wise_items] = backfill_model(WiseItem, %i[token raw_payload], batch_size, dry_run)
 
@@ -82,6 +83,7 @@ namespace :security do
     results[:simplefin_accounts] = backfill_model(SimplefinAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
     results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:truelayer_accounts] = backfill_model(TruelayerAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload account_number], batch_size, dry_run)
     results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)

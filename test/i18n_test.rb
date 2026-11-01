@@ -132,6 +132,17 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
+  # The All bills default status option. Every bills locale must translate it,
+  # or the default filter falls back to English.
+  def test_bills_current_bills_label_exists_for_each_bills_locale
+    locales = Dir[File.expand_path("../config/locales/views/bills/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    missing = locales.sort.reject do |locale|
+      I18n.t("bills.all.current_bills", locale: locale, fallback: false, default: nil)
+    end
+
+    assert_empty missing, "bills.all.current_bills is missing for: #{missing.join(", ")}"
+  end
+
   # The family setting that fills a blank transaction name and the form
   # placeholder that explains it. Fallbacks would show English, so each locale
   # that translates the neighbouring key must translate these too.
