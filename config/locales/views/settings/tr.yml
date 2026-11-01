@@ -1,6 +1,7 @@
 ---
 tr:
   settings:
+    encryption_migration_guide: Şifreleme kurulumu ve geçiş kılavuzu
     ai_prompts:
       show:
         disable_ai: Yapay Zeka Asistanını Devre Dışı Bırak
