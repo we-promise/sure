@@ -262,6 +262,7 @@ export default class extends Controller {
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", textSecondary)
+          .classed("privacy-sensitive", true)
           .text(this._fmtMoneyShort(tickValue, data.currency));
       });
     }
@@ -288,6 +289,7 @@ export default class extends Controller {
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", textPrimary)
+          .classed("privacy-sensitive", true)
           .text(`Target · ${data.target_amount_short_label}`);
       } else {
         // Plenty of room: keep the right-side full-format label.
@@ -298,6 +300,7 @@ export default class extends Controller {
           .attr("text-anchor", "end")
           .attr("font-size", 12)
           .attr("fill", textPrimary)
+          .classed("privacy-sensitive", true)
           .text(`Target · ${data.target_amount_label}`);
       }
     }
@@ -398,6 +401,7 @@ export default class extends Controller {
             .attr("stroke", containerBg)
             .attr("stroke-width", 4)
             .attr("stroke-linejoin", "round")
+            .classed("privacy-sensitive", true)
             .text(labelText);
         }
       }

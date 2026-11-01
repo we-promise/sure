@@ -1476,4 +1476,16 @@ class UserTest < ActiveSupport::TestCase
     assert_not @user.update_manual_account_order("transactions", [ accounts(:depository).id ])
     assert_equal({}, @user.reload.manual_account_order)
   end
+
+  test "privacy mode blurs charts whole unless the user turned that off" do
+    user = users(:family_admin)
+
+    assert user.privacy_mode_blur_charts?
+
+    user.update!(preferences: (user.preferences || {}).merge("privacy_mode_blur_charts" => false))
+    assert_not user.privacy_mode_blur_charts?
+
+    user.update!(preferences: user.preferences.merge("privacy_mode_blur_charts" => true))
+    assert user.privacy_mode_blur_charts?
+  end
 end

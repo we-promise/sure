@@ -6,12 +6,28 @@ import { Controller } from "@hotwired/stimulus"
 // State persists in localStorage so it survives page navigations.
 // A synchronous inline script in <head> pre-applies the class to prevent
 // a flash of unblurred content on first paint (see _privacy_mode_check.html.erb).
+//
+// numbersOnly is the user's Appearance preference for charts: with it on,
+// chart shapes stay visible and only the amounts inside them blur (see
+// privacy-mode.css). The layout renders it on <html> for first paint, but
+// Turbo leaves <html> alone on navigation, so this controller re-applies
+// it on every page.
 export default class extends Controller {
   static targets = ["toggle", "iconOn", "iconOff"]
+  static values = { numbersOnly: Boolean }
 
   connect() {
     this.active = localStorage.getItem("privacyMode") === "true"
     this._apply()
+  }
+
+  // Stimulus also calls this with the initial value, before connect().
+  numbersOnlyValueChanged() {
+    this._applyNumbersOnly()
+  }
+
+  _applyNumbersOnly() {
+    document.documentElement.classList.toggle("privacy-numbers-only", this.numbersOnlyValue)
   }
 
   toggle() {

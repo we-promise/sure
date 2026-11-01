@@ -834,6 +834,13 @@ class User < ApplicationRecord
     always_expanded_account_groups.include?(account_group_key.to_s)
   end
 
+  # Privacy Mode (the eye button in the header) blurs every amount. By default
+  # it blurs charts whole; with this off, chart shapes stay visible and only
+  # the amounts, axis labels and tooltips inside them are blurred.
+  def privacy_mode_blur_charts?
+    preferences&.dig("privacy_mode_blur_charts") != false
+  end
+
   # Returns whether clicking outside a modal is prevented from closing it.
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
