@@ -87,7 +87,7 @@ zh-CN:
         binance_public_hint: Binance 公共接口可用于加密资产行情。
         moex_public_hint: 免费，无需 API 密钥 -- 俄罗斯股票、基金和债券（MOEX），包括 RUB 外汇
         tinkoff_invest_hint: 需要只读令牌 -- 俄罗斯股票/基金/债券价格 + 品牌 Logo
-        requires_api_key_mansa: 需要 API 密钥，每日免费额度 100 次 -- 仅限 NGX（尼日利亚证券交易所）
+        requires_api_key_mansa: 需要 API 密钥，每日免费额度 100 次 -- 非洲交易所（NGX、JSE、NSE、GSE、BRVM 等）
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -302,14 +302,14 @@ zh-CN:
         step_3: 复制令牌并粘贴在下方。
       mansa_settings:
         title: Mansa
-        description: 输入 Mansa API 的 API 密钥。支持 NGX（尼日利亚证券交易所），此处的其他提供商均不支持该交易所。Mansa 也覆盖其他非洲交易所，但目前只有 NGX 经过本集成的验证。
+        description: 输入 Mansa API 的 API 密钥。支持 20 家非洲证券交易所，包括 NGX（尼日利亚证券交易所）、JSE、NSE（肯尼亚）、GSE（加纳）和 BRVM -- 其中多家交易所此处的其他提供商均未覆盖。
         env_configured_message: 已通过 MANSA_API_KEY 环境变量成功配置。
         label: API 密钥
         placeholder: 在此输入您的 Mansa API 密钥
         show_details: "（显示详情）"
         step_1_html: '访问 <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> 并获取您的免费 API 密钥 — 无需信用卡。'
         step_2: 复制您的 API 密钥并粘贴在下方。
-        rate_limit_warning: Mansa 的免费层限制为每天 100 次 API 调用，且仅提供当前报价 -- 历史价格需要付费方案。目前只有 NGX（尼日利亚证券交易所）经过本集成的验证；Mansa 覆盖的其他非洲交易所暂未在此处得到支持。
+        rate_limit_warning: Mansa 的免费层限制为每天 100 次 API 调用，且仅提供当前报价 -- 历史价格需要付费方案。
       eodhd_settings:
         title: EODHD
         description: 使用 EODHD 同步证券价格。

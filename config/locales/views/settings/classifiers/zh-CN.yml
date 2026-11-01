@@ -60,33 +60,33 @@ zh-CN:
         ran_at: 于 %{time}前评分，基于 %{count} 笔交易（%{months}）。
         reset: 恢复为默认
         reset_confirm: 将所有分类器设置恢复为默认值并进行测试？
-        right_wrong: 正确/错误
+        right_wrong: 每个单元格代表 正确 / 错误。
         run: 测试我的设置
-        running: 正在评分…
-        short_history: 历史记录不足 %{months} 个月，仅根据可用数据进行评分。
+        running: 正在测试… 完成后此区域将自动更新。
+        short_history: 尚无足够的历史记录来微调分类分类器。这需要大约 %{months} 个月的已分类交易，因此“应用”暂时不会修改其设置。
         similarity: 相似度
         stale: 设置已更改，请重新测试以更新分数。
         threshold: 阈值
         trying: "正在尝试：%{changes}…"
         uncategorized: "最常见未分类：%{threshold} 阈值下的 %{column}"
         unfilled: "最常见未补全：%{similarity} 相似度下的 %{column}"
-        weight: 赋予其与词语相同的权重
-        weight_hint: 如果关闭，仅当没有词语时才会使用它（作为后备）。开启时，即使只有账户与分类匹配，它也会为该分类计分。
+        weight: 单次错误代价
+        weight_hint: "决定“应用”所保存的设置：即粗体显示的单元格，此处（正确数量减去每个错误代价乘以错误数）最高。分类采用“最佳发现”的阈值；匹配器则采用相应截止值、相似度及商户数量。"
         weight_option:
           one: 1 个正确答案
           other: "%{count} 个正确答案"
       matcher:
-        lock_similar_merchants: 锁定相似商户
-        lock_similar_merchants_hint: 匹配器仅复制未锁定的商户，锁定可以防止其名称被覆盖。
-        rule: 使用匹配器补全商户
-        rule_hint: 商户匹配器规则，在“规则”中与其同步开启和关闭。它会在每次同步后补全缺失的商户。
-        similar_threshold: 相似度阈值
-        similar_threshold_hint: 判定为同一商户所需的最低相似度（0.5–1.0）。较低的数值会匹配更多商户，但也可能匹配错误。
+        lock_similar_merchants: 锁定匹配器设置的商户
+        lock_similar_merchants_hint: 阻止规则、AI 和同步更改它们，除非您在规则上点击“应用”。其自身产生的锁定不算作已确认（参见商户匹配器调优）。
+        rule: 通过近似重复项补全缺失的商户
+        rule_hint: 商户匹配器规则，在“规则”中与其同步开启和关闭。按照您的规则顺序，没有商户的交易将获得其近似重复项（例如“NETFLIX.COM 8812”和“Netflix com”）共有的商户。转账会被排除在外。
+        similar_threshold: 相似度
+        similar_threshold_hint: 忽略数字和参考代码后，交易描述的最低相似度（0.5–0.99）。较低的数值会补全更多商户，但也伴随更多错误。自动微调的“应用”也会设置此项。
       matcher_tuning:
-        similar_common_share: 共享词语比例
-        similar_common_share_hint: 两个名称之间必须共享的词语比例。
-        similar_min_neighbours: 最小邻近商户数
-        similar_min_neighbours_hint: 至少需要多少个相似的历史交易才能进行匹配。
+        similar_common_share: 截止值
+        similar_common_share_hint: 如果某个词语或 3 字母片段在据以复制的交易中所占比例超过此阈值（0.01–1），且至少出现在 50 笔交易中，则被视作过于通用而无法区分（例如“card”或“payment”），从而予以忽略。数值越高，计入的特征越多。自动微调的“应用”也会设置此项。
+        similar_min_neighbours: 一致的商户数
+        similar_min_neighbours_hint: 必须有多少个近似重复项具有该商户，且没有任何项具有其他商户。设为 1 时会直接复制单笔交易，哪怕是错误的。
         similar_min_neighbours_option:
           one: 1 个商户
           other: "%{count} 个商户"
