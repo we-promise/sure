@@ -78,4 +78,44 @@ class MerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  test "filters the list and summary by the search" do
+    create_transaction(account: accounts(:depository), name: "Netflix basic", merchant: @merchant, amount: 10)
+    create_transaction(account: accounts(:depository), name: "Netflix premium", merchant: @merchant, amount: 20)
+
+    get merchant_url(@merchant, q: { search: "premium" })
+
+    assert_response :success
+    assert_match "Netflix premium", response.body
+    assert_no_match "Netflix basic", response.body
+    assert_select "dt", text: "Total spending" do |dt|
+      assert_equal "$20.00", dt.first.next_element.text.strip
+    end
+    assert_select "#merchant-transaction-filters form[action^=?]", clear_filter_merchant_path(@merchant)
+  end
+
+  test "keeps the page's merchant when another one is passed in the filters" do
+    create_transaction(account: accounts(:depository), name: "Netflix plan", merchant: @merchant)
+    create_transaction(account: accounts(:depository), name: "Amazon order", merchant: merchants(:amazon))
+
+    get merchant_url(@merchant, q: { merchants: [ merchants(:amazon).name ] })
+
+    assert_response :success
+    assert_match "Netflix plan", response.body
+    assert_no_match "Amazon order", response.body
+  end
+
+  test "clearing a filter keeps the others" do
+    delete clear_filter_merchant_url(@merchant, param_key: "categories", param_value: "Food", q: { search: "plan", categories: [ "Food", "Income" ] })
+
+    assert_redirected_to merchant_path(@merchant, q: { search: "plan", categories: [ "Income" ] })
+  end
+
+  test "does not clear filters on another family's merchant" do
+    other = families(:empty).merchants.create!(name: "Elsewhere")
+
+    delete clear_filter_merchant_url(other, param_key: "search")
+
+    assert_response :not_found
+  end
 end

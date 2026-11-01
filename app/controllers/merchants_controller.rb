@@ -1,6 +1,7 @@
 class MerchantsController < ApplicationController
   def show
     @merchant = find_merchant
+    @q = search_params
 
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
@@ -27,7 +28,22 @@ class MerchantsController < ApplicationController
     @split_parents = load_split_parents
     @split_parent_entry_ids = Entry.split_parent_ids_among(@transactions.map { |t| t.entry.id })
     @projected_recurring = []
-    @q = {}
+  end
+
+  def clear_filter
+    merchant = find_merchant
+    q_params = search_params
+
+    if q_params[params[:param_key]].is_a?(Array)
+      q_params[params[:param_key]].delete(params[:param_value])
+      q_params.delete(params[:param_key]) if q_params[params[:param_key]].empty?
+    else
+      q_params.delete(params[:param_key])
+    end
+
+    q_params.delete("amount_operator") unless q_params["amount"].present?
+
+    redirect_to merchant_path(merchant, q: q_params.presence, page: params[:page], per_page: params[:per_page])
   end
 
   private
@@ -38,9 +54,18 @@ class MerchantsController < ApplicationController
     def merchant_search(**filters)
       Transaction::Search.new(
         Current.family,
-        filters: { merchants: [ @merchant.name ], **filters },
+        filters: { **@q.symbolize_keys, merchants: [ @merchant.name ], **filters },
         accessible_account_ids: @accessible_account_ids
       )
+    end
+
+    def search_params
+      q = params.fetch(:q, {}).permit(
+        :search, :start_date, :end_date, :amount, :amount_operator,
+        accounts: [], categories: [], tags: [], types: [], status: []
+      ).to_h.compact_blank
+      q.delete("amount_operator") unless q["amount"].present?
+      q
     end
 
     def load_split_parents
