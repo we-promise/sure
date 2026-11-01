@@ -102,18 +102,27 @@ class OnchainWalletItemsController < ApplicationController
     # failed read must not leave an empty one behind — the same reason previewing
     # uses an unsaved one.
     first_key = first_sochain_api_key
-    first_link = Current.family.onchain_wallet_item.nil?
-    connection = Current.family.onchain_wallet_item!
-    connection.update!(sochain_api_key: first_key) if first_key.present?
+    # The family's lock is held from finding the connection to cleaning it up, so
+    # a second request can't take this one's new connection and then lose it.
+    result = Current.family.with_lock do
+      connection = Current.family.onchain_wallet_item
+      first_link = connection.nil?
+      if first_link
+        connection = Current.family.create_onchain_wallet_item!
+        connection.update!(sochain_api_key: first_key) if first_key.present?
+      end
 
-    result = OnchainWalletItem::WalletLinker
-      .new(connection, chain: @chain, address: @address)
-      .link(snapshot: snapshot, selected_keys: params[:assets])
+      linked = OnchainWalletItem::WalletLinker
+        .new(connection, chain: @chain, address: @address)
+        .link(snapshot: snapshot, selected_keys: params[:assets])
 
-    unless result.success?
       # A first link that tracked nothing must not leave an empty connection
       # either, or the next try would no longer take a SoChain key.
-      connection.destroy! if first_link
+      connection.destroy! if first_link && !linked.success?
+      linked
+    end
+
+    unless result.success?
       @assets_truncated = snapshot.assets_truncated?
       @review = OnchainWalletItem::TokenReview.new(snapshot: snapshot)
       # Telling someone who ticked three assets to "pick at least one" sends them
