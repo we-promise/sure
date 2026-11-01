@@ -145,6 +145,51 @@ class LlmUsageTest < ActiveSupport::TestCase
     end
   end
 
+  test "calculate_cost uses Claude Opus 5.5 rates with its 0.05x cache read" do
+    cost = LlmUsage.calculate_cost(
+      model: "claude-opus-5-5", prompt_tokens: 100_000, completion_tokens: 10_000,
+      cache_creation_tokens: 20_000, cache_read_tokens: 50_000
+    )
+
+    # $0.40 input + $0.20 output + $0.10 cache write + $0.01 cache read.
+    assert_in_delta 0.71, cost, 0.000001
+  end
+
+  { "claude-sonnet-5-5" => 0.10, "claude-fable-5-1" => 0.25, "claude-sonnet-5" => 0.20 }.each do |model, rate|
+    test "calculate_cost uses Anthropic's listed cache read rate for #{model}" do
+      assert_in_delta rate, LlmUsage.calculate_cost(
+        model: model, prompt_tokens: 0, completion_tokens: 0, cache_read_tokens: 1_000_000
+      ), 0.000001
+    end
+  end
+
+  test "Claude Haiku 5.5 long-context tier counts cached input in the prompt length" do
+    # 10K new + 95K cache read = 105K > 100K: $0.005 + $0.00475 + 1K output * $2.50.
+    assert_in_delta 0.01225, LlmUsage.calculate_cost(
+      model: "claude-haiku-5-5", prompt_tokens: 10_000, completion_tokens: 1_000, cache_read_tokens: 95_000
+    ), 0.000001
+    assert_in_delta 0.0015, LlmUsage.calculate_cost(
+      model: "claude-haiku-5-5", prompt_tokens: 10_000, completion_tokens: 1_000
+    ), 0.000001
+  end
+
+  test "unlisted Claude models fall back to their family's newest rate" do
+    assert_equal "anthropic", LlmUsage.infer_provider("claude-opus-6")
+    assert_equal 4.00, LlmUsage.find_pricing("anthropic", "claude-opus-6")[:prompt]
+    assert_equal 2.00, LlmUsage.find_pricing("anthropic", "claude-sonnet-6-20270101")[:prompt]
+    assert_equal 0.10, LlmUsage.find_pricing("anthropic", "claude-haiku-6")[:prompt]
+    assert_equal 10.00, LlmUsage.find_pricing("anthropic", "claude-fable-6")[:prompt]
+
+    # Older listed models keep their own rate instead of the family fallback.
+    assert_equal 15.00, LlmUsage.find_pricing("anthropic", "claude-opus-4-1-20250805")[:prompt]
+    assert_equal 5.00, LlmUsage.find_pricing("anthropic", "claude-opus-4-5-20251101")[:prompt]
+  end
+
+  test "find_pricing reads OpenRouter's dotted Claude versions" do
+    assert_equal 5.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-opus-4.6")[:prompt]
+    assert_equal 15.00, LlmUsage.find_pricing("anthropic", "anthropic/claude-opus-4.1")[:prompt]
+  end
+
   {
     "gpt-5.6-sol" => [ 6.0, 11.0 ],
     "gpt-5.6-terra" => [ 3.2, 5.8 ],

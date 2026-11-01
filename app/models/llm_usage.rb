@@ -120,12 +120,37 @@ class LlmUsage < ApplicationRecord
       "gemini-2.5-flash" => { prompt: 0.30, completion: 2.50 }
     },
     # Source: https://platform.claude.com/docs/en/about-claude/pricing
+    # cache_read is set only where Anthropic lists a rate other than 0.1x input.
     "anthropic" => {
+      "claude-fable-5-1" => { prompt: 10.00, completion: 50.00, cache_read: 0.25 },
+      "claude-fable-5" => { prompt: 10.00, completion: 50.00 },
+      "claude-opus-5-5" => { prompt: 4.00, completion: 20.00, cache_read: 0.20 },
+      "claude-opus-5" => { prompt: 5.00, completion: 25.00 },
+      "claude-opus-4-8" => { prompt: 5.00, completion: 25.00 },
       "claude-opus-4-7" => { prompt: 5.00, completion: 25.00 },
       "claude-opus-4-6" => { prompt: 5.00, completion: 25.00 },
+      "claude-opus-4-5" => { prompt: 5.00, completion: 25.00 },
+      "claude-opus-4-1" => { prompt: 15.00, completion: 75.00 },
+      "claude-opus-4" => { prompt: 15.00, completion: 75.00 },
+      "claude-sonnet-5-5" => { prompt: 2.00, completion: 10.00, cache_read: 0.10 },
+      "claude-sonnet-5" => { prompt: 2.00, completion: 10.00 },
       "claude-sonnet-4-6" => { prompt: 3.00, completion: 15.00 },
       "claude-sonnet-4-5" => { prompt: 3.00, completion: 15.00 },
-      "claude-haiku-4-5" => { prompt: 1.00, completion: 5.00 }
+      "claude-sonnet-4" => { prompt: 3.00, completion: 15.00 },
+      "claude-haiku-5-5" => {
+        prompt: 0.10, completion: 0.50,
+        long_context: { threshold: 100_000, prompt: 0.50, completion: 2.50 }
+      },
+      "claude-haiku-4-5" => { prompt: 1.00, completion: 5.00 },
+      # Family fallbacks: a Claude model released after this review (e.g.
+      # "claude-opus-6") is estimated at its family's newest listed rate.
+      "claude-fable" => { prompt: 10.00, completion: 50.00, cache_read: 0.25 },
+      "claude-opus" => { prompt: 4.00, completion: 20.00, cache_read: 0.20 },
+      "claude-sonnet" => { prompt: 2.00, completion: 10.00, cache_read: 0.10 },
+      "claude-haiku" => {
+        prompt: 0.10, completion: 0.50,
+        long_context: { threshold: 100_000, prompt: 0.50, completion: 2.50 }
+      }
     }
   }.freeze
 
@@ -144,8 +169,11 @@ class LlmUsage < ApplicationRecord
       return nil
     end
 
+    # Anthropic reports cached input apart from input_tokens, but its
+    # long-context tier counts cache reads and writes in the prompt length.
+    cached_input_tokens = provider == "anthropic" ? cache_creation_tokens.to_i + cache_read_tokens.to_i : 0
     long_context = pricing[:long_context]
-    if apply_long_context_pricing && long_context && prompt_tokens > long_context[:threshold]
+    if apply_long_context_pricing && long_context && prompt_tokens + cached_input_tokens > long_context[:threshold]
       pricing = long_context
     end
 
@@ -154,7 +182,8 @@ class LlmUsage < ApplicationRecord
     completion_cost = (completion_tokens * pricing[:completion]) / 1_000_000.0
 
     # Anthropic prompt-cache tokens bill relative to the input rate: cache
-    # writes at 1.25x, cache reads at 0.1x. These multipliers are Anthropic's;
+    # writes at 1.25x, cache reads at 0.1x unless the model lists its own
+    # cache_read rate. These multipliers are Anthropic's;
     # gate on the provider so a non-Anthropic caller that happens to pass cache
     # counts can't be priced with the wrong rates (OpenAI cache rates vary by
     # model). Without cache pricing at all, estimated_cost
@@ -163,7 +192,7 @@ class LlmUsage < ApplicationRecord
     cache_read_cost = 0.0
     if provider == "anthropic"
       cache_creation_cost = (cache_creation_tokens.to_i * pricing[:prompt] * 1.25) / 1_000_000.0
-      cache_read_cost = (cache_read_tokens.to_i * pricing[:prompt] * 0.10) / 1_000_000.0
+      cache_read_cost = (cache_read_tokens.to_i * (pricing[:cache_read] || pricing[:prompt] * 0.10)) / 1_000_000.0
     end
 
     cost = (prompt_cost + completion_cost + cache_creation_cost + cache_read_cost).round(6)
@@ -176,6 +205,9 @@ class LlmUsage < ApplicationRecord
     return nil unless PRICING.key?(provider)
 
     model = model.delete_prefix("#{provider}/")
+    # OpenRouter writes Claude versions with dots ("claude-opus-4.6"); without
+    # this they would fall through to the newer-priced "claude-opus" family row.
+    model = model.tr(".", "-") if provider == "anthropic"
 
     provider_pricing = PRICING[provider]
 

@@ -1148,7 +1148,7 @@ Rates are USD per million tokens at the Standard tier. The source coverage is:
 | GPT-5.2/5.1 Chat aliases | [GPT-5.2 Chat](https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest), [GPT-5.1 Chat](https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest) |
 | o1-mini | [o1-mini](https://developers.openai.com/api/docs/models/o1-mini) |
 | Gemini 4 Argon, 3.8/3.7/3.6/3.5 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro, 3 Flash, 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
-| Claude Opus 4.6/4.7, Sonnet 4.5/4.6, Haiku 4.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
+| Claude Fable 5/5.1, Opus 4/4.1/4.5/4.6/4.7/4.8/5/5.5, Sonnet 4/4.5/4.6/5/5.5, Haiku 4.5/5.5 (Claude rows re-verified November 1, 2026) | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
 
 #### Dated pricing changes
 
@@ -1186,7 +1186,13 @@ $4.00 / $18.00 above 200,000 input tokens. Gemini 3.8 Flash, 3.7 Flash, and
 Gemini 3.5 Flash is $1.50 / $9.00, Gemini 3.5 Flash-Lite is $0.30 / $2.50,
 Gemini 3.1 Flash-Lite is $0.25 / $1.50, Gemini 3 Flash is $0.50 / $3.00,
 and Gemini 2.5 Flash remains $0.30 / $2.50.
-Claude 4.6/4.7 use standard rates throughout their context window.
+Claude Haiku 5.5 changes from $0.10 / $0.50 to $0.50 / $2.50 above 100,000
+prompt tokens, counting cache reads and writes. Other Claude models use
+standard rates throughout their context window. Claude cache reads cost 0.1x
+input, except Opus 5.5 and Sonnet 5.5 (0.05x) and Fable 5.1 (0.025x).
+A Claude model released after the last review (for example `claude-opus-6`)
+is estimated at the newest listed rate of its family (Fable, Opus, Sonnet or
+Haiku) until the table is updated.
 
 Sure estimates individual requests using these tiers. Aggregate categorization
 previews assume short requests. For [OpenRouter's official API endpoints](https://openrouter.ai/docs/cookbook/administration/usage-accounting), saved
