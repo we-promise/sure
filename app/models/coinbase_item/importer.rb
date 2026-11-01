@@ -112,8 +112,20 @@ class CoinbaseItem::Importer
       Rails.logger.info(
         "CoinbaseItem::Importer - Fetched #{transactions.count} transactions for #{coinbase_account.name}"
       )
-    rescue Provider::Coinbase::ApiError => e
-      # Some accounts may not support transaction endpoints
-      Rails.logger.debug "CoinbaseItem::Importer - Could not fetch transactions for account #{account_id}: #{e.message}"
+    rescue Provider::Coinbase::ApiError, Provider::Coinbase::RateLimitError => e
+      # RateLimitError is a sibling of ApiError (both < Provider::Coinbase::Error),
+      # not a subclass, so it has to be listed explicitly here. Without it, a
+      # 429 on this call propagates past coinbase_account.save! below, so this
+      # account's balance update -- already fetched correctly above -- gets
+      # silently skipped for the whole sync along with the transaction fetch.
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Transactions unavailable this sync (#{e.class.name.demodulize}) for account #{account_id}: #{e.message}",
+        source: self.class.name,
+        provider_key: "coinbase",
+        family: coinbase_item.family,
+        metadata: { coinbase_item_id: coinbase_item.id, account_id: account_id }
+      )
     end
 end

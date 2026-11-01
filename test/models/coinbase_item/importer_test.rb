@@ -15,9 +15,27 @@ class CoinbaseItem::ImporterTest < ActiveSupport::TestCase
   test "persists an eighteen-decimal Coinbase asset balance after reload" do
     provider = mock("coinbase provider")
     provider.expects(:get_accounts).returns([ btc_account_payload ])
-    provider.expects(:get_transactions).with("cb_btc_123", limit: 100).returns([])
+    provider.expects(:get_transactions).with("cb_btc_123", limit: CoinbaseItem::Importer::FULL_HISTORY_LIMIT).returns([])
 
     CoinbaseItem::Importer.new(@item, coinbase_provider: provider).import
+
+    coinbase_account = @item.coinbase_accounts.find_by!(account_id: "cb_btc_123")
+    assert_equal BigDecimal("0.000000000000000148"), coinbase_account.current_balance
+  end
+
+  test "still saves the fetched balance when the transactions fetch is rate limited" do
+    provider = mock("coinbase provider")
+    provider.expects(:get_accounts).returns([ btc_account_payload ])
+    # RateLimitError is a sibling of ApiError, not a subclass, so it has to be
+    # rescued explicitly in fetch_and_store_transactions or it propagates past
+    # coinbase_account.save!, silently skipping this account's balance update
+    # for the whole sync even though the balance above was fetched correctly.
+    provider.expects(:get_transactions)
+      .with("cb_btc_123", limit: CoinbaseItem::Importer::FULL_HISTORY_LIMIT)
+      .raises(Provider::Coinbase::RateLimitError, "Rate limit exceeded")
+
+    result = CoinbaseItem::Importer.new(@item, coinbase_provider: provider).import
+    assert result[:success]
 
     coinbase_account = @item.coinbase_accounts.find_by!(account_id: "cb_btc_123")
     assert_equal BigDecimal("0.000000000000000148"), coinbase_account.current_balance
