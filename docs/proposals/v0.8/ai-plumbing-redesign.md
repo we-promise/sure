@@ -1416,12 +1416,28 @@ it, in its own PR (section 20).
 
 **PDF import (`extract_pdf`).** The spike ran two public sample statements (an OCR'd one and a
 scan) through every server it had (spike: "Bank statements as PDFs" and "OCR on llama.cpp").
-- **One input step before `generate`** replaces today's three per-provider classes:
-  `ExtractBankStatement.for_pdf` sends page images when the route's model has `vision`, the text
-  layer otherwise, and returns `Unavailable` (`no_text_layer`) for a scan with no vision model,
-  so an empty text layer is never sent. The PDF itself goes only to Anthropic, OpenAI, or
-  OpenRouter with a named parsing engine. Page images read both statements completely on every
-  vision model tried.
+- **One input step before `generate`** replaces today's three per-provider classes. Auto
+  (call by @josh-sanders during development of PR #4440) keeps #3191's text-first order and #1985's native PDF:
+  1. the PDF itself when the model has `documents` and the file is within the provider's PDF
+     limits, which each preset records (bytes and pages; Anthropic 32 MB or 100 pages);
+  2. otherwise the text layer (`Pdf::TextExtractor`, #4054), in chunks sized to the model's
+     context window, as #808 intended for small models, with rows deduplicated across chunk
+     boundaries (#846);
+  3. when the text layer is empty or the extraction fails its checks: page images if the model
+     has `vision` (rendered at 150 dpi and sent at high detail; today's OpenAI path sends
+     `detail: "low"`, which shrinks a page to 512 pixels), or OCR then text if the route has an
+     OCR entry;
+  4. otherwise the extraction is offered for review, flagged, or `Unavailable` (`no_text_layer`)
+     for a scan nothing can read, so an empty text layer is never sent.
+
+  The spike backs the order: the text layer gave capable models 13/13, page images read both
+  statements completely on every vision model tried, and the checks caught every wrong answer.
+- **Auto tunes itself per account** (call by @josh-sanders during development of PR #4440). Each import records how it was read and whether
+  the extraction passed its checks. The next statement for the same account and route model starts
+  from the way that last passed, so a bank whose statements need images doesn't pay for a failed
+  text attempt each time. When that way fails, Auto falls back through the order and the new
+  success becomes the start; a new model starts afresh. It's a lookup, not a model, and needs no
+  setting.
 - **Read as, per upload** (call by @josh-sanders during development of PR #4440). The PDF import form, and `import_bank_statement`'s optional
   argument, offer Auto (the default), PDF, Images, OCR and Text. An option the route can't do is
   greyed out with the reason: PDF needs a model with `documents` (it accepts a PDF itself, which
