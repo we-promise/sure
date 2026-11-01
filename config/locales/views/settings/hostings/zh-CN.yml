@@ -73,18 +73,18 @@ zh-CN:
         ai_health_probe_timeout_help: 默认值：5。仅适用于“设置 → 系统健康状况”下的实时 AI 检查，绝不影响真实的 AI 调用。如果使用云端模型时 PDF 检查报告超时，请提高此值。AI_HEALTH_PROBE_TIMEOUT 会覆盖此字段。
       provider_selection:
         exchange_rate_title: 汇率提供商
-        exchange_rate_description: 选择用于同步汇率数据的提供商。
+        exchange_rate_description: 选择用于获取货币汇率的单一提供商。
         exchange_rate_provider_label: 汇率数据提供商
-        securities_title: 证券价格提供商
-        securities_description: 选择用于同步证券和投资价格的提供商。
-        env_configured_message: 提供商选择已禁用，因为环境变量（EXCHANGE_RATE_PROVIDER 或 SECURITIES_PROVIDER）已设置。要在此处启用选择，请从配置中移除这些环境变量。
-        twelve_data_hint: Twelve Data 支持股票、ETF 和部分基金价格。
-        yahoo_finance_hint: Yahoo Finance 可作为免密钥价格来源。
-        requires_api_key: 需要 API Key
-        requires_api_key_eodhd: EODHD 需要 API Token。
-        requires_api_key_alpha_vantage: Alpha Vantage 需要 API Key。
-        mfapi_hint: MFAPI.in 可用于部分印度基金数据。
-        binance_public_hint: Binance 公共接口可用于加密资产行情。
+        securities_title: 证券提供商
+        securities_description: 启用一个或多个提供商以获取股票、ETF 和共同基金价格。搜索时将查询所有启用的提供商并合并结果。
+        env_configured_message: 提供商选择已禁用，因为已设置环境变量。要在此处启用选择，请从配置中移除这些环境变量。
+        twelve_data_hint: 需要 API 密钥，每日额度 800 点
+        yahoo_finance_hint: 免费，无需 API 密钥
+        requires_api_key: 需要 API 密钥
+        requires_api_key_eodhd: 需要 API 密钥，限制每天 20 次调用
+        requires_api_key_alpha_vantage: 需要 API 密钥，限制每天 25 次调用
+        mfapi_hint: 免费，无需 API 密钥 -- 仅限印度共同基金
+        binance_public_hint: 免费，无需 API 密钥 -- 仅限加密货币（BTC、ETH 等）
         moex_public_hint: 免费，无需 API 密钥 -- 俄罗斯股票、基金和债券（MOEX），包括 RUB 外汇
         tinkoff_invest_hint: 需要只读令牌 -- 俄罗斯股票/基金/债券价格 + 品牌 Logo
         requires_api_key_mansa: 需要 API 密钥，每日免费额度 100 次 -- 非洲交易所（NGX、JSE、NSE、GSE、BRVM 等）
