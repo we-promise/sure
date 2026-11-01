@@ -5,11 +5,11 @@ nav_sections = [
     items: [
       { label: t(".accounts_label"), path: accounts_path, icon: "layers" },
       { label: t(".bank_sync_label"), path: settings_providers_path, icon: "banknote", if: Current.user&.admin? },
-      { label: t(".preferences_label"), path: settings_preferences_path, icon: "bolt" },
-      { label: t(".appearance_label"), path: settings_appearance_path, icon: "palette" },
-      { label: t(".profile_label"), path: settings_profile_path, icon: "circle-user" },
-      { label: t(".security_label"), path: settings_security_path, icon: "shield-check" },
-      { label: t(".payment_label"), path: settings_payment_path, icon: "circle-dollar-sign", if: !self_hosted? && Current.family&.can_manage_subscription? }
+      { label: t(".preferences_label"), path: settings_preferences_path, icon: "bolt", searchable: true },
+      { label: t(".appearance_label"), path: settings_appearance_path, icon: "palette", searchable: true },
+      { label: t(".profile_label"), path: settings_profile_path, icon: "circle-user", searchable: true },
+      { label: t(".security_label"), path: settings_security_path, icon: "shield-check", searchable: true },
+      { label: t(".payment_label"), path: settings_payment_path, icon: "circle-dollar-sign", searchable: true, if: !self_hosted? && Current.family&.can_manage_subscription? }
     ]
   },
   {
@@ -28,14 +28,14 @@ nav_sections = [
     Current.user&.admin? ? {
       header: t(".advanced_section_title"),
       items: [
-        { label: t(".ai_prompts_label"), path: settings_ai_prompts_path, icon: "bot" },
-        { label: t(".classifier_label"), path: settings_classifier_path, icon: "sliders-horizontal" },
+        { label: t(".ai_prompts_label"), path: settings_ai_prompts_path, icon: "bot", searchable: true },
+        { label: t(".classifier_label"), path: settings_classifier_path, icon: "sliders-horizontal", searchable: true },
         { label: t(".llm_usage_label"), path: settings_llm_usage_path, icon: "activity" },
-        { label: t(".api_keys_label"), path: settings_api_keys_path, icon: "key" },
-        { label: t(".mcp_label"), path: settings_mcp_path, icon: "plug" },
+        { label: t(".api_keys_label"), path: settings_api_keys_path, icon: "key", searchable: true },
+        { label: t(".mcp_label"), path: settings_mcp_path, icon: "plug", searchable: true },
         { label: t(".debug_label", default: "Debug"), path: settings_debug_path, icon: "bug", if: Current.user&.super_admin? },
         { label: t(".background_jobs_label"), path: settings_background_jobs_path, icon: "list-checks", if: Current.user&.super_admin? },
-        { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", if: self_hosted? },
+        { label: t(".self_hosting_label"), path: settings_hosting_path, icon: "database", searchable: true, if: self_hosted? },
         { label: t(".imports_label"), path: imports_path, icon: "download" },
         { label: t(".exports_label"), path: family_exports_path, icon: "upload" },
         { label: t(".sso_providers_label"), path: admin_sso_providers_path, icon: "key-round", if: Current.user&.super_admin? },
@@ -53,9 +53,13 @@ nav_sections = [
     ]
   }
 ]
+
+search_pages = nav_sections.compact.flat_map { |section| section[:items] }
+  .select { |item| item[:searchable] && item[:if] != false }
+  .map { |item| { path: item[:path], label: item[:label] } }
 %>
 
-<div class="space-y-4">
+<div class="space-y-4" data-controller="settings-search" data-settings-search-pages-value="<%= search_pages.to_json %>">
   <div class="hidden lg:flex items-center gap-2 p-1.5">
     <%= render DS::Link.new(
       text: t("settings.settings_nav_link_large.previous"),
@@ -67,54 +71,57 @@ nav_sections = [
       <kbd>esc</kbd>
     <% end %>
   </div>
-  <nav class="space-y-4 hidden md:block">
-    <% nav_sections.compact.each do |section| %>
-      <section class="space-y-2">
-        <div class="flex items-center gap-2 px-3">
-          <h3 class="uppercase text-secondary font-medium text-xs"><%= section[:header] %></h3>
-          <%= render "shared/ruler", classes: "w-full" %>
-        </div>
-        <ul class="space-y-1">
+  <%= render "settings/settings_search", nav_sections: nav_sections %>
+  <div class="space-y-4" data-settings-search-target="nav">
+    <nav class="space-y-4 hidden md:block">
+      <% nav_sections.compact.each do |section| %>
+        <section class="space-y-2">
+          <div class="flex items-center gap-2 px-3">
+            <h3 class="uppercase text-secondary font-medium text-xs"><%= section[:header] %></h3>
+            <%= render "shared/ruler", classes: "w-full" %>
+          </div>
+          <ul class="space-y-1">
+            <% section[:items].each do |item| %>
+              <% next if item[:if] == false %>
+              <li>
+                <%= render "settings/settings_nav_item", name: item[:label], path: item[:path], icon: item[:icon] %>
+              </li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+      <section>
+        <%= button_to session_path(Current.session), method: :delete, class: "flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-surface-hover w-full" do %>
+          <%= icon("log-out", color: "current") %>
+          <span><%= t(".logout") %></span>
+        <% end %>
+      </section>
+    </nav>
+    <nav class="space-y-4 overflow-x-auto md:hidden no-scrollbar overscroll-none" id="mobile-settings-nav" data-controller="preserve-scroll scroll-on-connect">
+      <ul class="flex flex-nowrap space-x-1">
+        <li>
+          <%= render DS::Link.new(
+            text: t("settings.settings_nav_link_large.previous"),
+            icon: "chevron-left",
+            href: previous_path,
+            variant: "ghost",
+          ) %>
+        </li>
+        <% nav_sections.compact.each do |section| %>
           <% section[:items].each do |item| %>
             <% next if item[:if] == false %>
             <li>
               <%= render "settings/settings_nav_item", name: item[:label], path: item[:path], icon: item[:icon] %>
             </li>
           <% end %>
-        </ul>
-      </section>
-    <% end %>
-    <section>
-      <%= button_to session_path(Current.session), method: :delete, class: "flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-surface-hover w-full" do %>
-        <%= icon("log-out", color: "current") %>
-        <span><%= t(".logout") %></span>
-      <% end %>
-    </section>
-  </nav>
-  <nav class="space-y-4 overflow-x-auto md:hidden no-scrollbar overscroll-none" id="mobile-settings-nav" data-controller="preserve-scroll scroll-on-connect">
-    <ul class="flex flex-nowrap space-x-1">
-      <li>
-        <%= render DS::Link.new(
-          text: t("settings.settings_nav_link_large.previous"),
-          icon: "chevron-left",
-          href: previous_path,
-          variant: "ghost",
-        ) %>
-      </li>
-      <% nav_sections.compact.each do |section| %>
-        <% section[:items].each do |item| %>
-          <% next if item[:if] == false %>
-          <li>
-            <%= render "settings/settings_nav_item", name: item[:label], path: item[:path], icon: item[:icon] %>
-          </li>
         <% end %>
-      <% end %>
-      <li>
-        <%= button_to session_path(Current.session), method: :delete, class: "flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-surface-hover w-full" do %>
-          <%= icon("log-out", color: "current") %>
-          <span><%= t(".logout") %></span>
-        <% end %>
-      </li>
-    </ul>
-  </nav>
+        <li>
+          <%= button_to session_path(Current.session), method: :delete, class: "flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-surface-hover w-full" do %>
+            <%= icon("log-out", color: "current") %>
+            <span><%= t(".logout") %></span>
+          <% end %>
+        </li>
+      </ul>
+    </nav>
+  </div>
 </div>

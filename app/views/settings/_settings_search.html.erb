@@ -1,0 +1,72 @@
+<%# locals: (nav_sections:) %>
+
+<%
+  visible_items = nav_sections.compact.flat_map do |section|
+    section[:items].reject { |item| item[:if] == false }.map { |item| item.merge(section: section[:header]) }
+  end
+  result_classes = "flex items-center gap-3 px-3 py-2 rounded-lg text-sm focus-ring hover:bg-surface-hover aria-selected:bg-surface-hover"
+%>
+
+<div class="space-y-2">
+  <div class="group relative">
+    <%= render DS::SearchInput.new(
+      class: "[&_input]:pr-10",
+      placeholder: t("settings.settings_search.placeholder"),
+      aria_label: t("settings.settings_search.aria_label"),
+      role: "combobox",
+      aria: { expanded: "false", controls: "settings-search-results", autocomplete: "list" },
+      data: {
+        controller: "hotkey",
+        hotkey: "/",
+        settings_search_target: "input",
+        action: "input->settings-search#filter keydown->settings-search#keydown focus->settings-search#load"
+      }
+    ) %>
+    <kbd class="hidden md:block group-has-[input:not(:placeholder-shown)]:invisible absolute right-3 top-1/2 -translate-y-1/2 uppercase bg-surface-inset-hover rounded-sm px-1.5 py-0.5 text-xs text-secondary shadow-sm pointer-events-none">/</kbd>
+  </div>
+
+  <div id="settings-search-results" data-settings-search-target="results" class="hidden w-0 min-w-full">
+    <ul role="listbox" aria-label="<%= t("settings.settings_search.results_label") %>" class="flex flex-col gap-1">
+      <% visible_items.each_with_index do |item, index| %>
+        <li
+          role="presentation"
+          class="hidden"
+          data-settings-search-target="item"
+          data-page-path="<%= item[:path] %>"
+          data-search-label="<%= item[:label] %>"
+          data-search-text="<%= [ item[:label], item[:section] ].compact_blank.join(" ") %>">
+          <%= link_to item[:path],
+                id: "settings-search-page-#{index}",
+                role: "option",
+                aria: { selected: "false", current: ("page" if page_active?(item[:path])) },
+                class: result_classes do %>
+            <%= icon(item[:icon], class: "shrink-0") if item[:icon] %>
+            <span class="min-w-0">
+              <span class="block text-primary font-medium truncate"><%= item[:label] %></span>
+              <span class="block text-secondary text-xs truncate"><%= item[:section] %></span>
+            </span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+
+    <p data-settings-search-target="empty" class="hidden px-3 py-2 text-sm text-secondary" role="status">
+      <%= t("settings.settings_search.no_results") %>
+    </p>
+
+    <%# Settings found inside the pages are listed beside the pages themselves. The
+        controller fills this row in for each match. A text fragment needs a full
+        page load to scroll to and highlight the setting, so these links opt out of Turbo. %>
+    <template data-settings-search-target="template">
+      <li role="presentation">
+        <%= link_to "#", role: "option", data: { turbo: false }, aria: { selected: "false" }, class: result_classes do %>
+          <span data-slot="icon" class="shrink-0"></span>
+          <span class="min-w-0">
+            <span data-slot="title" class="block text-primary font-medium truncate"></span>
+            <span data-slot="subtitle" class="block text-secondary text-xs truncate"></span>
+          </span>
+        <% end %>
+      </li>
+    </template>
+  </div>
+</div>
