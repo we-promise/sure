@@ -81,14 +81,14 @@ class FamilyMerchantsController < ApplicationController
         end
       else
         respond_to do |format|
-          format.html { redirect_to family_merchants_path, notice: t(".success") }
-          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+          format.html { redirect_to updated_merchant_return_path, notice: t(".success") }
+          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, updated_merchant_return_path) }
         end
       end
     elsif @merchant.update(effective_merchant_params)
       respond_to do |format|
-        format.html { redirect_to family_merchants_path, notice: t(".success") }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+        format.html { redirect_to updated_merchant_return_path, notice: t(".success") }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, updated_merchant_return_path) }
       end
     else
       render :edit, status: :unprocessable_entity
@@ -191,6 +191,10 @@ class FamilyMerchantsController < ApplicationController
       iban_changed = attrs.key?(:iban) && normalize_iban(attrs[:iban]) != @merchant.iban
 
       name_changed || website_changed || iban_changed
+    end
+
+    def updated_merchant_return_path
+      safe_return_to(params[:return_to]) || family_merchants_path
     end
 
     def merchant_params

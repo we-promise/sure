@@ -2,6 +2,7 @@
 
 <div data-controller="color-avatar">
   <%= styled_form_with model: family_merchant, url: family_merchant.persisted? ? family_merchant_path(family_merchant) : family_merchants_path, class: "space-y-4" do |f| %>
+    <%= hidden_field_tag :return_to, params[:return_to] if params[:return_to].present? %>
     <section class="space-y-4">
       <% if family_merchant.errors.any? %>
         <%= render "shared/form_errors", model: family_merchant %>

@@ -106,6 +106,16 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(outflow.transaction, :transfer_hint)} form[action='#{transaction_transfer_match_path(outflow)}'] input[name=_method][value=delete]"
   end
 
+  test "index links a transaction's merchant to its page" do
+    merchant = merchants(:netflix)
+    create_transaction(account: accounts(:depository), name: "Netflix", merchant: merchant, date: Date.current)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "a[href='#{merchant_path(merchant)}'][data-turbo-frame=_top][title=?]", I18n.t("transactions.transaction.view_merchant")
+  end
+
   test "the investment activity badge shows translated labels" do
     @user.update!(locale: "ru")
     accounts(:investment).entries.create!(
