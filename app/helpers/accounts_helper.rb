@@ -65,10 +65,15 @@ module AccountsHelper
         "#{count}-#{max_at}"
       end
 
+    # Linking or unlinking a provider doesn't touch the account, but changes its sparkline versions.
+    providers_version = AccountProvider.where(account_id: family.accounts.select(:id))
+      .pick(Arel.sql("count(*)"), Arel.sql("max(account_providers.updated_at)"))
+
     [
       family.build_cache_key("account_sidebar_tabs_v7", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
+      providers_version,
       active_tab,
       mobile,
       I18n.locale,

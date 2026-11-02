@@ -34,6 +34,15 @@ class AccountsHelperTest < ActionView::TestCase
     end
   end
 
+  test "sidebar cache key changes when a provider link is removed" do
+    link = AccountProvider.create!(account: accounts(:depository), provider: plaid_accounts(:one))
+    before = sidebar_key
+
+    link.destroy!
+
+    assert_not_equal before, sidebar_key
+  end
+
   private
     def sidebar_key
       account_sidebar_tabs_cache_key(family: @user.family, active_tab: "all", mobile: false)
