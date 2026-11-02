@@ -2826,7 +2826,7 @@ nos:
   html_code: ""
   symbol: NOS
   minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit_conversion: 1000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","

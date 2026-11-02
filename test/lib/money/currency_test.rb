@@ -64,20 +64,24 @@ class Money::CurrencyTest < ActiveSupport::TestCase
   # blanket copy of btc's -- money_to_minor_units and the API serializers
   # (balance_cents, amount_cents, etc.) multiply by this directly, so the
   # wrong factor here misreports a real balance by orders of magnitude.
-  # baby/boden/nos are left at the 8-decimal placeholder: multiple tokens
-  # share each of these tickers across different chains, and which contract
-  # Coinbase's own data refers to couldn't be confirmed from public sources.
+  # Every value below was confirmed individually against each asset's own
+  # contract or chain docs (ADA/SOL/ZEC/FIL's native units, and the 18-decimal
+  # Etherscan "Decimals" field for every ERC-20/EVM entry here), except
+  # baby/boden, which are left at the 8-decimal placeholder: multiple
+  # distinct tokens share each of these two tickers across different
+  # chains, and which contract Coinbase's own data refers to couldn't be
+  # confirmed from public sources.
   test "the 32 added crypto currencies use their correct precision and conversion" do
     expected_conversion = {
       "ada" => 1_000_000,             # lovelace
       "sol" => 1_000_000_000,         # lamport
       "zec" => 100_000_000,           # zatoshi
       "storj" => 100_000_000,         # confirmed 8-decimal ERC-20, not the 18-decimal default
+      "nos" => 1_000_000,             # confirmed 6-decimal SPL mint (nosXBVoaCTtYdLvKY6Csb4AC8JCdQKKAaWYtx2ZMoo7)
       "baby" => 100_000_000,          # unverified -- see note above
-      "boden" => 100_000_000,         # unverified -- see note above
-      "nos" => 100_000_000            # unverified -- see note above
+      "boden" => 100_000_000          # unverified -- see note above
     }
-    default_conversion = 1_000_000_000_000_000_000 # wei -- the 18-decimal ERC-20/EVM default
+    default_conversion = 1_000_000_000_000_000_000 # wei -- confirmed on Etherscan for every other entry here
 
     %w[
       ada amp avax baby bal band bat boden bond cgld clv comp enj fet fil
