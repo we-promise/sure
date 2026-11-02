@@ -3,7 +3,7 @@ nl:
   providers:
     ibkr:
       name: Interactive Brokers
-      connection_description: Verbind een Interactive Brokers Flex Web Service-rapport
+      connection_description: Koppel een Interactive Brokers Flex Web Service-rapport
       institution_name: Interactive Brokers
   ibkr_items:
     defaults:
@@ -75,7 +75,7 @@ nl:
     update:
       success: Interactive Brokers-configuratie succesvol bijgewerkt.
     destroy:
-      success: Interactive Brokers-verbinding is in de wachtrij voor verwijdering geplaatst.
+      success: Interactive Brokers-koppeling is in de wachtrij voor verwijdering geplaatst.
     select_accounts:
       not_configured: Interactive Brokers is niet geconfigureerd.
     link_existing_account:

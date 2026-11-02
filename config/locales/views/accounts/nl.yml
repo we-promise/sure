@@ -11,7 +11,7 @@ nl:
       edit: "Bewerken"
       link_lunchflow: "Koppel met Lunch Flow"
       link_provider: "Koppelen met provider"
-      unlink_provider: "Verbreek verbinding met provider"
+      unlink_provider: "Koppeling met provider verbreken"
       change_simplefin_account: "SimpleFIN-account wijzigen"
       troubleshoot: "Problemen oplossen"
       enable: "Account inschakelen"
@@ -65,7 +65,7 @@ nl:
       cannot_delete_linked: "Kan een gekoppeld account niet verwijderen. Koppel het eerst los."
       failed: "Verwijderen mislukt. Probeer het later opnieuw."
     empty:
-      empty_message: "Voeg een account toe via verbinding, importeren of handmatig invoeren."
+      empty_message: "Voeg een account toe via koppeling, importeren of handmatig invoeren."
       new_account: "Nieuw account"
       no_accounts: "Nog geen accounts"
     form:
@@ -242,7 +242,7 @@ nl:
       error: "Het ontkoppelen is mislukt: %{error}"
       generic_error: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     select_provider:
-      title: "Selecteer een provider om te verbinden"
+      title: "Selecteer een provider om te koppelen"
       description: "Kies welke provider u wilt gebruiken om %{account_name} te koppelen"
       already_linked: "Account is al gekoppeld aan een provider"
       no_providers: "Er zijn momenteel geen providers geconfigureerd"

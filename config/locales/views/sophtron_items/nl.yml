@@ -2,21 +2,21 @@
 nl:
   sophtron_items:
     defaults:
-      name: Sophtron-verbinding
+      name: Sophtron-koppeling
     new:
-      title: Sophtron verbinden
+      title: Sophtron koppelen
       user_id: Gebruikers-ID
       user_id_placeholder: plak uw Sophtron-gebruikers-ID
       access_key: Toegangssleutel
       access_key_placeholder: plak uw Sophtron-toegangssleutel
-      connect: Verbinden
+      connect: Koppelen
       cancel: Annuleren
     create:
-      success: Sophtron-verbinding succesvol aangemaakt
+      success: Sophtron-koppeling succesvol aangemaakt
     destroy:
-      success: Sophtron-verbinding verwijderd
+      success: Sophtron-koppeling verwijderd
     update:
-      success: Sophtron-verbinding succesvol bijgewerkt! Uw accounts worden opnieuw verbonden.
+      success: Sophtron-koppeling succesvol bijgewerkt! Uw accounts worden opnieuw gekoppeld.
       errors:
         blank_user_id: Voer een Sophtron-gebruikers-ID in.
         invalid_user_id: Ongeldige gebruikers-ID. Controleer of u de volledige gebruikers-ID van Sophtron hebt gekopieerd.
@@ -24,7 +24,7 @@ nl:
         blank_access_key: Voer een Sophtron-toegangssleutel in.
         invalid_access_key: Ongeldige toegangssleutel. Controleer of u de volledige toegangssleutel van Sophtron hebt gekopieerd.
         access_key_compromised: De toegangssleutel is mogelijk gecompromitteerd, verlopen of al gebruikt. Maak een nieuwe aan.
-        update_failed: "Verbinding kon niet worden bijgewerkt: %{message}"
+        update_failed: "Koppeling kon niet worden bijgewerkt: %{message}"
         unexpected: Er is een onverwachte fout opgetreden. Probeer het opnieuw of neem contact op met de ondersteuning.
     edit:
       user_id:
@@ -36,7 +36,7 @@ nl:
         placeholder: "Plak hier uw Sophtron-toegangssleutel..."
         help_text: "De toegangssleutel moet een lange tekenreeks zijn die begint met letters en cijfers"
     index:
-      title: Sophtron-verbindingen
+      title: Sophtron-koppelingen
     loading:
       loading_message: Sophtron-accounts laden...
       loading_title: Laden
@@ -55,35 +55,35 @@ nl:
       success:
         one: "%{count} account succesvol gekoppeld"
         other: "%{count} accounts succesvol gekoppeld"
-      no_credentials_configured: "Configureer eerst uw Sophtron-API-gebruikers-ID en -toegangssleutel in de Provider-instellingen."
+      no_credentials_configured: "Configureer eerst uw Sophtron-API-gebruikers-ID en -toegangssleutel in de providerinstellingen."
       no_accounts_found: Geen accounts gevonden. Controleer uw API-sleutelconfiguratie.
       no_access_key: Sophtron-toegangssleutel is niet geconfigureerd. Configureer deze in de Instellingen.
       no_user_id: Sophtron-gebruikers-ID is niet geconfigureerd. Configureer deze in de Instellingen.
-      no_institution_connected: Verbind eerst een bankinstelling met Sophtron.
+      no_institution_connected: Koppel eerst een bankinstelling met Sophtron.
     connect:
       cancel: Annuleren
       captcha: Captcha
-      connect: Verbinden
+      connect: Koppelen
       institution_search_label: Instelling
       institution_search_placeholder: Zoeken op banknaam
       no_institutions: Geen overeenkomende instellingen gevonden.
       password: Wachtwoord
       search: Zoeken
       search_too_short: Voer ten minste twee tekens in om te zoeken.
-      title: Sophtron-instelling verbinden
+      title: Sophtron-instelling koppelen
       username: Gebruikersnaam
     connect_institution:
-      api_error: "Sophtron-verbinding mislukt: %{message}"
+      api_error: "Sophtron-koppeling mislukt: %{message}"
       missing_parameters: Selecteer een instelling en voer uw bankinloggegevens in.
     connection_status:
       api_error: "API-verbindingsfout: %{message}"
       attempt: "Poging %{attempt} van %{max}"
       check_again: Opnieuw controleren
-      failed: Sophtron kon deze instellingsverbinding niet voltooien.
+      failed: Sophtron kon deze instellingskoppeling niet voltooien.
       failed_timeout: Sophtron kreeg een time-out terwijl de instelling de aanmelding voltooide.
-      timeout: Sophtron heeft het verbinden niet binnen de verwachte tijd voltooid. U kunt opnieuw controleren of later opnieuw proberen te verbinden.
-      title: Sophtron verbinden
-      waiting: Sophtron is nog verbinding aan het maken met uw instelling.
+      timeout: Sophtron heeft het koppelen niet binnen de verwachte tijd voltooid. U kunt opnieuw controleren of later opnieuw proberen te koppelen.
+      title: Sophtron koppelen
+      waiting: Sophtron is nog bezig met koppelen aan uw instelling.
     mfa:
       captcha: Captcha-tekst
       captcha_alt: Sophtron-captcha
@@ -98,10 +98,10 @@ nl:
     sophtron_item:
       accounts_need_setup: Accounts moeten worden ingesteld
       automatic_sync: Automatische synchronisatie gebruiken
-      delete: Verbinding verwijderen
+      delete: Koppeling verwijderen
       deletion_in_progress: verwijderen bezig...
       error: Fout
-      no_accounts_description: Deze verbinding heeft nog geen gekoppelde accounts.
+      no_accounts_description: Deze koppeling heeft nog geen gekoppelde accounts.
       no_accounts_title: Geen accounts
       manual_sync: Handmatige synchronisatie
       manual_sync_action: Handmatige synchronisatie vereisen
@@ -121,7 +121,7 @@ nl:
       preload_accounts: accounts vooraf laden
       api_error: "API-verbindingsfout"
       unexpected_error: "Er is een onverwachte fout opgetreden"
-      no_credentials_configured: "Configureer eerst uw Sophtron-API-gebruikers-ID en -toegangssleutel in de Provider-instellingen."
+      no_credentials_configured: "Configureer eerst uw Sophtron-API-gebruikers-ID en -toegangssleutel in de providerinstellingen."
       no_accounts_found: Geen accounts gevonden. Controleer uw API-sleutelconfiguratie.
       no_access_key: Sophtron-toegangssleutel is niet geconfigureerd. Configureer deze in de Instellingen.
       no_user_id: Sophtron-gebruikers-ID is niet geconfigureerd. Configureer deze in de Instellingen.
@@ -136,8 +136,8 @@ nl:
       no_accounts_found: Geen accounts gevonden. Controleer uw API-sleutelconfiguratie.
       no_access_key: Sophtron-toegangssleutel is niet geconfigureerd. Configureer deze in de Instellingen.
       no_user_id: Sophtron-gebruikers-ID is niet geconfigureerd. Configureer deze in de Instellingen.
-      no_credentials_configured: "Configureer eerst uw Sophtron-API-gebruikers-ID en -toegangssleutel in de Provider-instellingen."
-      no_institution_connected: Verbind eerst een bankinstelling met Sophtron.
+      no_credentials_configured: "Configureer eerst uw Sophtron-API-gebruikers-ID en -toegangssleutel in de providerinstellingen."
+      no_institution_connected: Koppel eerst een bankinstelling met Sophtron.
       no_name_placeholder: "(Geen naam)"
       title: Sophtron-accounts selecteren
     select_existing_account:
@@ -152,7 +152,7 @@ nl:
       no_accounts_found: Geen Sophtron-accounts gevonden. Controleer uw API-sleutelconfiguratie.
       no_access_key: Sophtron-toegangssleutel is niet geconfigureerd. Configureer deze in de Instellingen.
       no_user_id: Sophtron-gebruikers-ID is niet geconfigureerd. Configureer deze in de Instellingen.
-      no_institution_connected: Verbind eerst een bankinstelling met Sophtron.
+      no_institution_connected: Koppel eerst een bankinstelling met Sophtron.
       no_name_placeholder: "(Geen naam)"
       title: "%{account_name} koppelen aan Sophtron"
       unexpected_error: "Er is een onverwachte fout opgetreden"
@@ -164,7 +164,7 @@ nl:
       sophtron_account_already_linked: Dit Sophtron-account is al gekoppeld aan een ander account
       sophtron_account_not_found: Sophtron-account niet gevonden
       missing_parameters: Vereiste parameters ontbreken
-      no_institution_connected: Verbind eerst een bankinstelling met Sophtron.
+      no_institution_connected: Koppel eerst een bankinstelling met Sophtron.
       success: "%{account_name} succesvol gekoppeld aan Sophtron"
     setup_accounts:
       account_type_label: "Accounttype:"
@@ -173,9 +173,9 @@ nl:
       unexpected_error: "Er is een onverwachte fout opgetreden"
       fetch_failed: "Accounts ophalen mislukt"
       no_accounts_to_setup: "Geen accounts om in te stellen"
-      no_access_key: "Sophtron-toegangssleutel is niet geconfigureerd. Controleer uw verbindingsinstellingen."
-      no_user_id: "Sophtron-gebruikers-ID is niet geconfigureerd. Controleer uw verbindingsinstellingen."
-      no_institution_connected: "Sophtron-instelling is nog niet verbonden."
+      no_access_key: "Sophtron-toegangssleutel is niet geconfigureerd. Controleer uw koppelingsinstellingen."
+      no_user_id: "Sophtron-gebruikers-ID is niet geconfigureerd. Controleer uw koppelingsinstellingen."
+      no_institution_connected: "Sophtron-instelling is nog niet gekoppeld."
       account_types:
         skip: Dit account overslaan
         depository: Betaal- of spaarrekening
@@ -227,8 +227,8 @@ nl:
     sophtron_setup_required:
       title: Sophtron-installatie vereist
       message: >
-        Ga naar de pagina met Provider-instellingen en volg de instructies om uw Sophtron-verbinding te autoriseren en te configureren om de installatie van uw Sophtron-verbinding te voltooien.
-      go_to_provider_settings: Ga naar Provider-instellingen
+        Ga naar de pagina met providerinstellingen en volg de instructies om uw Sophtron-koppeling te autoriseren en te configureren om de installatie van uw Sophtron-koppeling te voltooien.
+      go_to_provider_settings: Ga naar providerinstellingen
       heading: "Gebruikers-ID en toegangssleutel niet geconfigureerd"
       description: "Voordat u Sophtron-accounts kunt koppelen, moet u uw Sophtron-gebruikers-ID en -toegangssleutel configureren."
       setup_steps_title: "Installatiestappen:"
@@ -238,11 +238,11 @@ nl:
       step_4: "Kom hier terug om uw accounts te koppelen"
     api_error:
       title: "Sophtron-verbindingsfout"
-      unable_to_connect: "Kan geen verbinding maken met Sophtron"
-      institution_unable_to_connect: "Kan geen verbinding maken met de instelling"
+      unable_to_connect: "Kan geen koppeling maken met Sophtron"
+      institution_unable_to_connect: "Kan geen koppeling maken met de instelling"
       common_issues_title: "Veelvoorkomende problemen:"
-      incorrect_user_id: "Onjuiste gebruikers-ID: Controleer uw gebruikers-ID in de Provider-instellingen"
-      invalid_access_key: "Ongeldige toegangssleutel: Controleer uw toegangssleutel in de Provider-instellingen"
+      incorrect_user_id: "Onjuiste gebruikers-ID: Controleer uw gebruikers-ID in de providerinstellingen"
+      invalid_access_key: "Ongeldige toegangssleutel: Controleer uw toegangssleutel in de providerinstellingen"
       expired_credentials: "Verlopen inloggegevens: Genereer een nieuwe gebruikers-ID en toegangssleutel bij Sophtron"
       network_issue: "Netwerkprobleem: Controleer uw internetverbinding"
       service_down: "Dienst niet beschikbaar: De Sophtron-API is mogelijk tijdelijk niet beschikbaar"
@@ -250,8 +250,8 @@ nl:
       verification_code: "Verificatiecode: Zorg ervoor dat de meest recente code is ingevoerd voordat deze verliep"
       institution_timeout: "Time-out instelling: De bankaanmeldpagina werd niet op tijd voltooid"
       unsupported_mfa: "MFA-ondersteuning: Sophtron ondersteunt mogelijk de huidige verificatiestroom van deze instelling niet"
-      check_provider_settings: "Provider-instellingen controleren"
-      try_again: "Opnieuw proberen te verbinden"
+      check_provider_settings: "Providerinstellingen controleren"
+      try_again: "Opnieuw proberen te koppelen"
     select_option: "%{type} selecteren"
     subtype: "subtype"
     type: "type"
@@ -291,7 +291,7 @@ nl:
       processor:
         unknown_transaction: "Onbekende transactie"
     render_connection_timeout:
-      timeout: "Time-out bij verbinding. Probeer het opnieuw."
+      timeout: "Time-out bij koppeling. Probeer het opnieuw."
     redirect_after_account_link:
       invalid_account_names:
         one: "Kan %{count} account met lege naam niet koppelen"

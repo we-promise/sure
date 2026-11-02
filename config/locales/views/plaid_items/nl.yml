@@ -1,28 +1,84 @@
 ---
 nl:
   plaid_items:
+    auto_link_opener:
+      create_failed: "We konden niet bevestigen dat deze koppeling is toegevoegd. Laad de pagina opnieuw om dit te controleren voordat u het nogmaals probeert."
     create:
-      success: Account succesvol gekoppeld. Wacht tot accounts zijn gesynchroniseerd.
+      already_connected: "U hebt al een koppeling voor deze instelling, dus deze is niet toegevoegd."
+      exchange_failed: "We konden deze koppeling niet toevoegen. Probeer het opnieuw en controleer de serverlogs als het probleem aanhoudt."
+      success: "Account succesvol gekoppeld. Wacht tot accounts zijn gesynchroniseerd."
+      token_expired: "Deze koppeling is verlopen voordat deze werd toegevoegd. Koppel de instelling opnieuw."
     destroy:
-      success: Accounts ingepland voor verwijdering.
+      success: "Accounts ingepland voor verwijdering."
+    duplicate_warning:
+      close: "Sluiten"
+      confirm: "Deze koppeling bevestigen"
+      connected_by: "Gekoppeld door %{name}"
+      eu_no_add_accounts: "Plaid ondersteunt het toevoegen van accounts aan een bestaande EU-koppeling niet. Om te wijzigen welke accounts zijn gekoppeld, verwijdert u deze koppeling en voegt u deze opnieuw toe."
+      linked_on: "Gekoppeld op %{date}"
+      manage_connection: "Naar accounts"
+      mask: "****%{mask}"
+      no_accounts: "Er zijn nog geen accounts gesynchroniseerd via deze koppeling."
+      overlap:
+        all_connected:
+          one: "Het account dat u probeerde toe te voegen is al gekoppeld, dus opnieuw toevoegen zou alleen een duplicaat opleveren."
+          other: "De %{count} accounts die u probeerde toe te voegen zijn allemaal al gekoppeld, dus opnieuw toevoegen zou alleen duplicaten opleveren."
+        different_login: "Om een andere login voor %{institution} te koppelen, kiest u opnieuw Nieuw account en logt u via Plaid in met die login."
+        more_accounts: "Om meer accounts aan deze koppeling toe te voegen, sluit u dit venster en kiest u Accounts toevoegen bij de koppeling met %{institution}."
+        others_connected:
+          one: "Sure heeft dit account al via de koppeling van %{name}, dus het toevoegen van uw koppeling zou alleen een duplicaat opleveren."
+          other: "Sure heeft deze accounts al via de koppeling van %{name}, dus het toevoegen van uw koppeling zou alleen duplicaten opleveren."
+        others_connected_several:
+          one: "Sure heeft dit account al via koppelingen van andere leden, dus het toevoegen van uw koppeling zou alleen een duplicaat opleveren."
+          other: "Sure heeft deze accounts al via koppelingen van andere leden, dus het toevoegen van uw koppeling zou alleen duplicaten opleveren."
+        none_connected: "Geen van de accounts die u probeerde toe te voegen is al gekoppeld, dus dit is waarschijnlijk een andere login. Toevoegen telt alleen als een extra Plaid-koppeling."
+        some_connected:
+          connected:
+            one: "Het andere account is al gekoppeld, dus het toevoegen van deze koppeling zou het dupliceren en telt als een extra Plaid-koppeling."
+            other: "De andere %{count} zijn al gekoppeld, dus het toevoegen van deze koppeling zou ze dupliceren en telt als een extra Plaid-koppeling."
+          unconnected:
+            one: "Eén account dat u probeerde toe te voegen is nog niet gekoppeld:"
+            other: "%{count} accounts die u probeerde toe te voegen zijn nog niet gekoppeld:"
+        unknown:
+          one: "Deze accounts kunnen niet worden vergeleken met uw bestaande koppeling. Als het dezelfde accounts zijn, zou het toevoegen van deze koppeling ze dupliceren en telt dit als een extra Plaid-koppeling."
+          other: "Deze accounts kunnen niet worden vergeleken met uw bestaande koppelingen. Als het dezelfde accounts zijn, zou het toevoegen van deze koppeling ze dupliceren en telt dit als een extra Plaid-koppeling."
+      title:
+        one: "U hebt al een koppeling voor deze instelling"
+        other: "U hebt al %{count} koppelingen voor deze instelling"
+      title_all_connected: "U hebt deze koppeling al gemaakt"
+      title_others_connected:
+        one: "Dit account is al gekoppeld"
+        other: "Deze accounts zijn al gekoppeld"
+      update_existing: "Bestaande koppeling bijwerken"
+    errors:
+      link_token_generic: "We konden Plaid nu niet openen. Probeer het opnieuw en controleer de serverlogs voor details als het probleem aanhoudt."
+      link_token_with_message: "Plaid kon de koppeling niet openen: %{message}"
     plaid_item:
-      add_new: Nieuwe verbinding toevoegen
-      confirm_accept: Instelling verwijderen
-      confirm_body: Dit verwijdert permanent alle accounts in deze groep en alle bijbehorende gegevens.
-      confirm_title: Instelling verwijderen?
-      connection_lost: Verbinding verloren
-      connection_lost_description: Deze verbinding is niet meer geldig. U moet deze verbinding verwijderen en opnieuw toevoegen om door te gaan met het synchroniseren van gegevens.
-      delete: Verwijderen
-      error: Fout opgetreden tijdens synchroniseren van gegevens
-      no_accounts_description: We konden geen accounts laden van deze financiële instelling.
-      no_accounts_title: Geen accounts gevonden
-      requires_update: Opnieuw verbinden
-      status: Laatst gesynchroniseerd %{timestamp} geleden
-      status_never: Vereist gegevenssynchronisatie
-      syncing: Synchroniseren...
-      update: Bijwerken
+      add_accounts: "Accounts toevoegen"
+      add_new: "Nieuwe koppeling toevoegen"
+      confirm_accept: "Instelling verwijderen"
+      confirm_body: "Dit verwijdert permanent alle accounts in deze groep en alle bijbehorende gegevens."
+      confirm_title: "Instelling verwijderen?"
+      connection_lost: "Koppeling verloren"
+      connection_lost_description: "Deze koppeling is niet meer geldig. U moet deze koppeling verwijderen en opnieuw toevoegen om door te gaan met het synchroniseren van gegevens."
+      delete: "Verwijderen"
+      deletion_in_progress: "(verwijdering bezig...)"
+      error: "Fout opgetreden tijdens synchroniseren van gegevens"
+      no_accounts_description: "We konden geen accounts laden van deze financiële instelling."
+      no_accounts_title: "Geen accounts gevonden"
+      provider_name: "Plaid"
+      requires_update: "Opnieuw koppelen"
+      status: "Laatst gesynchroniseerd %{timestamp} geleden"
+      status_never: "Vereist gegevenssynchronisatie"
+      syncing: "Synchroniseren..."
+      update: "Bijwerken"
     select_existing_account:
+      no_available_accounts: "Geen beschikbare Plaid-accounts om te koppelen. Koppel eerst een nieuw Plaid-account."
       title: "%{account_name} koppelen aan Plaid"
-      description: Selecteer een Plaid account om te koppelen aan uw bestaande account
-      cancel: Annuleren
-      link_account: Account koppelen
+      description: "Selecteer een Plaid account om te koppelen aan uw bestaande account"
+      cancel: "Annuleren"
+      link_account: "Account koppelen"
+    link_existing_account:
+      invalid_account: "Ongeldig Plaid-account geselecteerd"
+      already_linked: "Dit Plaid-account is al gekoppeld"
+      success: "Account gekoppeld aan Plaid"
