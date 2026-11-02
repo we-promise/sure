@@ -163,7 +163,8 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
       [ dom_id(counterpart, "category_menu_desktop"), dom_id(counterpart, "category_menu_mobile"), "category_name_mobile_#{counterpart.id}" ].each do |target|
         stream = response.body[/<turbo-stream action="replace" target="#{target}">.*?<\/turbo-stream>/m]
         assert stream, "expected a replacement for #{target}"
-        assert_includes stream, category.name
+        # The mobile category cell only renders the icon badge.
+        assert_includes stream, target.include?("category_menu_mobile") ? category.color : category.name
       end
     end
 end

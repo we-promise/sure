@@ -33,7 +33,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     get transactions_url
 
     assert_response :success
-    assert_select "##{dom_id(inflow_entry.transaction, "category_menu_desktop")} turbo-frame#category_dropdown", count: 1
+    assert_select "##{dom_id(inflow_entry.transaction, "category_menu_desktop")} [data-ds--popover-frame-id-value='category_dropdown']", count: 1
     assert_select "##{dom_id(outflow_entry.transaction, "category_menu_desktop")}", count: 0
     assert_select "turbo-frame##{dom_id(inflow_entry)} p", text: /\+\/-/
     assert_select "turbo-frame##{dom_id(inflow_entry)} p.text-success", count: 0
@@ -60,9 +60,9 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     # Its desktop column shows the investment activity label, as for any
-    # non-transfer row on an investment account; the mobile cell shows the category.
-    assert_select "##{dom_id(outflow_entry.transaction, "category_menu_mobile")}", text: /#{categories(:income).name}/
-    assert_select "##{dom_id(outflow_entry.transaction, "category_menu_mobile")} turbo-frame#category_dropdown", count: 0
+    # non-transfer row on an investment account; the mobile row shows the category.
+    assert_select "#category_name_mobile_#{outflow_entry.transaction.id}", text: /#{categories(:income).name}/
+    assert_select "##{dom_id(outflow_entry.transaction, "category_menu_mobile")} [data-ds--popover-frame-id-value='category_dropdown']", count: 0
     assert_select "turbo-frame##{dom_id(inflow_entry)}", count: 0
   end
 
@@ -224,6 +224,16 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_select "a[href='#{new_transaction_transfer_match_path(lone)}']", count: 0
     assert_select "##{dom_id(outflow.transaction, :transfer_hint)} form[action='#{transaction_transfer_match_path(outflow)}'] input[name=_method][value=delete]"
+  end
+
+  test "index links a transaction's merchant to its page" do
+    merchant = merchants(:netflix)
+    create_transaction(account: accounts(:depository), name: "Netflix", merchant: merchant, date: Date.current)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "a[href='#{merchant_path(merchant)}'][data-turbo-frame=_top][title=?]", I18n.t("transactions.transaction.view_merchant")
   end
 
   test "the investment activity badge shows translated labels" do
@@ -864,6 +874,33 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     patch tags_transaction_url(read_only_entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
 
     assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
+  # The category and tag dropdowns are fetched when their popover opens, so
+  # rows carry no <turbo-frame> markup for them.
+  test "transaction rows defer the category and tag dropdown frames until opened" do
+    get transactions_url
+
+    assert_response :success
+    assert_select "turbo-frame#category_dropdown", count: 0
+    assert_select "turbo-frame#tag_dropdown", count: 0
+
+    transaction = @entry.entryable
+    %w[desktop mobile].each do |variant|
+      assert_select "##{dom_id(transaction, "category_menu_#{variant}")} [data-ds--popover-frame-id-value='category_dropdown'][data-ds--popover-frame-src-value=?]",
+        category_dropdown_path(category_id: transaction.category_id, transaction_id: transaction.id, grouped: false)
+    end
+    assert_select "[data-ds--popover-frame-id-value='tag_dropdown'][data-ds--popover-frame-src-value=?]",
+      tag_dropdown_path(entry_id: @entry.id), count: 2
+  end
+
+  test "the mobile category cell renders only the icon badge, the desktop cell both" do
+    get transactions_url
+
+    assert_response :success
+    transaction = @entry.entryable
+    assert_select "##{dom_id(transaction, "category_menu_mobile")} [data-testid='category-name']", count: 0
+    assert_select "##{dom_id(transaction, "category_menu_desktop")} [data-testid='category-name']", count: 1
   end
 
   test "transaction rows show tags" do
@@ -2318,7 +2355,7 @@ end
     get transactions_url
 
     assert_response :success
-    assert_select "##{dom_id(outflow, "category_menu_desktop")} turbo-frame#category_dropdown"
+    assert_select "##{dom_id(outflow, "category_menu_desktop")} [data-ds--popover-frame-id-value='category_dropdown']"
   end
 
   test "update drops a category sent for a matched transfer's inflow leg" do
