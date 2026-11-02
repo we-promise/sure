@@ -1,0 +1,66 @@
+name: Refresh LLM pricing
+
+# Opens (or updates) a pull request that refreshes config/llm_pricing.yml from
+# LiteLLM's price list. A maintainer checks the changes against the providers'
+# pricing pages before merging.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: llm-pricing
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.repository == 'we-promise/sure'
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BRANCH: automation/refresh-llm-pricing
+    steps:
+      - name: Check out main
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: main
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@97ecb7b512899eb71ab1bf2310a624c6f1589ac6 # v1.308.0
+        with:
+          ruby-version: .ruby-version
+
+      - name: Refresh prices
+        run: bin/update_llm_pricing > "$RUNNER_TEMP/llm-pricing.md"
+
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- config/llm_pricing.yml; then
+            echo "LLM pricing already matches LiteLLM."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -m "Refresh LLM pricing from LiteLLM" -- config/llm_pricing.yml
+          git push --force origin "$BRANCH"
+
+          if [[ "$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json state --jq .state 2>/dev/null)" == "OPEN" ]]; then
+            gh pr edit "$BRANCH" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/llm-pricing.md"
+          else
+            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" \
+              --title "Refresh LLM pricing from LiteLLM" --body-file "$RUNNER_TEMP/llm-pricing.md"
+          fi
+
+          # Pull requests opened with GITHUB_TOKEN do not trigger pull_request workflows.
+          if ! gh workflow run pr.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"; then
+            echo "::warning::Could not dispatch pr.yml for $BRANCH"
+          fi
