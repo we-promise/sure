@@ -152,7 +152,7 @@ nl:
     skip_reasons:
       excluded: "Uitgesloten"
       user_modified: "Gebruiker aangepast"
-      import_locked: "CSV import"
+      import_locked: "CSV-import"
       protected: "Beschermd"
     holdings:
       title: "Posities"
@@ -193,4 +193,4 @@ nl:
         other: "%{count} transacties"
       data_warnings: "Datawaarschuwingen: %{count}"
       notices: "Mededelingen: %{count}"
-      view_data_quality: "Datakwaliteit details bekijken"
+      view_data_quality: "Details datakwaliteit bekijken"

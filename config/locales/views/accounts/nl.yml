@@ -144,7 +144,7 @@ nl:
         search_placeholder: "Items zoeken op naam"
         title: "Activiteit"
         confirmed: "Bevestigd"
-        pending: "In afwachting"
+        pending: "In behandeling"
         status: "Status"
       chart:
         balance: "Saldo"

@@ -125,8 +125,8 @@ nl:
         status_default: "De ingebouwde standaard wordt gebruikt"
         format_risk: "Uw %{provider}-prompt bevat het voorbeeld {\"%{key}\": ...} niet meer. Elk verzoek vraagt nog steeds om die vorm, dus het verwerken werkt meestal nog, maar een aanpassing die om een ander uitvoerformaat vraagt, zal het verwerken breken."
       show:
-        page_title: "AI Prompts"
-        disable_ai: "AI Assistent uitschakelen"
+        page_title: "AI-prompts"
+        disable_ai: "AI-assistent uitschakelen"
         save: "Prompts opslaan"
         save_confirm:
           title: "Aangepaste AI-prompts opslaan?"
@@ -330,7 +330,7 @@ nl:
         disable_mfa_password_label: "Bevestig met uw wachtwoord"
         disable_mfa_password_placeholder: "Voer uw wachtwoord in"
         mfa_sso_only: "Tweefactorauthenticatie wordt beheerd via uw identiteitsprovider."
-        sso_title: "Gekoppelde Accounts"
+        sso_title: "Gekoppelde accounts"
         sso_subtitle: "Beheer uw single sign-on accountverbindingen"
         sso_disconnect: "Loskoppelen"
         sso_last_used: "Laatst gebruikt"
@@ -374,7 +374,7 @@ nl:
       categories_label: "Categorieën"
       feedback_label: "Feedback"
       general_section_title: "Algemeen"
-      imports_label: "Importen"
+      imports_label: "Imports"
       exports_label: "Exporten"
       llm_usage_label: "LLM-gebruik"
       logout: "Uitloggen"

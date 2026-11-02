@@ -251,7 +251,7 @@ nl:
       recurring_transactions: "Terugkerende transacties"
       transfers: "Overboekingen"
       rejected_transfers: "Afgewezen overboekingen"
-      trades: "Transacties (handel)"
+      trades: "Handelstransacties"
       holdings: "Posities"
       valuations: "Waarderingen"
       budgets: "Budgetten"

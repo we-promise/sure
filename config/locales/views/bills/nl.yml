@@ -63,7 +63,7 @@ nl:
         other: "%{count} betalingen"
       notes: "Notities"
       trial_chip: "Proefperiode eindigt %{date}"
-      renews_chip: "Verlengt %{date}"
+      renews_chip: "Verlenging %{date}"
       cancelled_chip: "Opgezegd %{date}"
       price_changes: "Prijswijzigingen"
       price_change_line: "%{from} → %{to}"
@@ -132,7 +132,7 @@ nl:
         other: "%{count} dagen achterstallig, verviel op %{date}"
       today: "Vervalt vandaag"
       settled: "Verviel op %{date}"
-      due_since: "Vervalt %{date}"
+      due_since: "Verviel op %{date}"
       snoozed: "Uitgesteld tot %{date}"
       upcoming:
         one: "Vervalt morgen, %{date}"

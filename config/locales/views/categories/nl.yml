@@ -32,7 +32,7 @@ nl:
       bootstrap: "Standaardcategorieën gebruiken (aanbevolen)"
       categories: "Categorieën"
       categories_expenses: "Uitgavencategorieën"
-      categories_incomes: "Inkomenscategorieën"
+      categories_incomes: "Inkomstencategorieën"
       delete_all: "Alles verwijderen"
       empty: "Geen categorieën gevonden"
       lock_categories: "Aanmaken van categorieën vergrendelen"

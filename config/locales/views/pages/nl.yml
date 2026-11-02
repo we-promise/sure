@@ -142,7 +142,7 @@ nl:
         period_activity: "Activiteit %{period}"
         contributions: "Stortingen"
         withdrawals: "Opnames"
-        trades: "Transacties"
+        trades: "Handelstransacties"
         no_investments: "Geen beleggingsrekeningen"
         add_investment: "Voeg een beleggingsrekening toe om uw portfolio te volgen"
       money_flow:

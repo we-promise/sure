@@ -137,7 +137,7 @@ nl:
       bill_type_label: "Soort"
       installment_count_label: "Aantal betalingen"
       installment_count_hint: "Het plan eindigt na dit aantal betalingen en toont tot die tijd de voortgang."
-      renews_on_label: "Verlengt op"
+      renews_on_label: "Wordt verlengd op"
       trial_ends_on_label: "Proefperiode eindigt"
       amount_edit_hint: "Geldt voor vaste lasten die vanaf nu vervallen. Wat al vervallen is, behoudt het oorspronkelijke bedrag."
       income_amount_edit_hint: "Geldt voor betaaldagen vanaf nu. Wat al vervallen is, behoudt het oorspronkelijke bedrag."
