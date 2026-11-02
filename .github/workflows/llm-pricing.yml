@@ -1,8 +1,8 @@
 name: Refresh LLM pricing
 
-# Opens (or updates) a pull request that refreshes config/llm_pricing.yml from
-# LiteLLM's price list. A maintainer checks the changes against the providers'
-# pricing pages before merging.
+# Opens a pull request that refreshes config/llm_pricing.yml from LiteLLM's
+# price list, unless one is still open. A maintainer checks the changes against
+# the providers' pricing pages before merging.
 on:
   push:
     tags:
@@ -38,7 +38,7 @@ jobs:
       - name: Refresh prices
         run: bin/update_llm_pricing > "$RUNNER_TEMP/llm-pricing.md"
 
-      - name: Open or update the pull request
+      - name: Open the pull request
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -47,11 +47,13 @@ jobs:
             exit 0
           fi
 
+          # One refresh PR at a time: never rewrite a branch that may be under review.
           # An API error fails the step here rather than looking like "no pull request".
-          open_pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --state open --json number,commits)
-          reviewer_commits=$(jq '[.[].commits[].authors[].name | select(. != "github-actions[bot]")] | length' <<< "$open_pr")
-          if [[ "$reviewer_commits" != "0" ]]; then
-            echo "::warning::The open pricing pull request has reviewer commits, so $BRANCH was not overwritten. Merge or close it, then rerun this workflow."
+          open_pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --state open \
+            --json url,headRepositoryOwner \
+            --jq "[.[] | select(.headRepositoryOwner.login == \"$GITHUB_REPOSITORY_OWNER\") | .url][0] // empty")
+          if [[ -n "$open_pr" ]]; then
+            echo "::warning::A pricing refresh pull request is still open ($open_pr). Merge or close it, then rerun this workflow."
             exit 0
           fi
 
@@ -60,13 +62,8 @@ jobs:
           git switch -c "$BRANCH"
           git commit -m "Refresh LLM pricing from LiteLLM" -- config/llm_pricing.yml
           git push --force origin "$BRANCH"
-
-          if [[ "$(jq length <<< "$open_pr")" != "0" ]]; then
-            gh pr edit "$BRANCH" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/llm-pricing.md"
-          else
-            gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" \
-              --title "Refresh LLM pricing from LiteLLM" --body-file "$RUNNER_TEMP/llm-pricing.md"
-          fi
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" \
+            --title "Refresh LLM pricing from LiteLLM" --body-file "$RUNNER_TEMP/llm-pricing.md"
 
           # Pull requests opened with GITHUB_TOKEN do not trigger pull_request workflows.
           if ! gh workflow run pr.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"; then
