@@ -7,16 +7,5 @@
   "full" => "w-full h-full"
 } %>
 
-<% if account.logo_url.present? %>
-  <%= image_tag account.logo_url,
-        class: "shrink-0 rounded-full #{size_classes[size]}",
-        loading: "lazy" %>
-<% else %>
-  <%= render DS::FilledIcon.new(
-        variant: :text,
-        hex_color: color || account.accountable&.color,
-        text: account.name,
-        size: size,
-        rounded: true
-      ) %>
-<% end %>
+<%= render DS::Logo.new(src: account.logo_url, name: account.name,
+      class_name: size_classes[size], color: color || account.accountable&.color) %>

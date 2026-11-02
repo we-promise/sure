@@ -80,7 +80,7 @@ module DS
     def logo_markup(item)
       url = logo_for(item)
       content = if url
-        helpers.image_tag(url, class: "w-6 h-6 rounded-full border border-secondary", loading: "lazy")
+        render(DS::Logo.new(src: url, name: item[:label], class_name: "w-6 h-6 rounded-full border border-secondary"))
       else
         render(DS::FilledIcon.new(variant: :text, text: item[:label], size: "sm", rounded: true))
       end

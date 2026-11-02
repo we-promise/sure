@@ -55,6 +55,8 @@ class DS::SelectTest < ViewComponent::TestCase
     render_select(variant: :logo, items: [ account ], selected: account.id)
 
     assert_selector "button[data-select-target=button] [data-select-logo] img[src*='example-bank.com']"
+    assert_selector "button[data-select-target=button] [data-select-logo] [data-controller=image-fallback]"
+    assert_selector "[role=option] [data-select-logo] [data-controller=image-fallback]"
     assert_selector "button[data-select-target=button]", text: account.name
   end
 

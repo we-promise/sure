@@ -12,9 +12,8 @@
       <div class="flex items-center gap-3 lg:gap-4">
         <div class="hidden lg:flex shrink-0">
           <% if transaction.merchant&.logo_url.present? %>
-            <%= image_tag Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
-                class: "w-9 h-9 rounded-full border border-secondary",
-                loading: "lazy" %>
+            <%= render DS::Logo.new(src: Setting.transform_brand_fetch_url(transaction.merchant.logo_url),
+                name: transaction.merchant.name, class_name: "w-9 h-9 rounded-full border border-secondary") %>
           <% else %>
             <div class="hidden lg:flex">
               <%= render DS::FilledIcon.new(

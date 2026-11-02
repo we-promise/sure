@@ -1,6 +1,6 @@
 <div class="flex items-center">
     <% if combobox_security.logo_url.present? %>
-      <%= image_tag(combobox_security.logo_url, class: "rounded-full h-8 w-8 inline-block mr-2" ) %>
+      <%= render DS::Logo.new(src: combobox_security.logo_url, name: combobox_security.name.presence || combobox_security.symbol, class_name: "h-8 w-8 mr-2") %>
     <% end %>
   <div class="flex items-center justify-between w-full">
     <div class="flex flex-col">

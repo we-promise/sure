@@ -7,7 +7,7 @@
       </div>
       <div class="flex items-center gap-3">
         <% if (logo = @holding.security.display_logo_url).present? %>
-          <%= image_tag logo, loading: "lazy", class: "w-9 h-9 rounded-full" %>
+          <%= render DS::Logo.new(src: logo, name: @holding.name) %>
         <% else %>
           <%= render DS::FilledIcon.new(variant: :text, text: @holding.name, size: "md", rounded: true) %>
         <% end %>
