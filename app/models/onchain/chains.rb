@@ -33,7 +33,15 @@ module Onchain
 
     NativeAsset = Data.define(:symbol, :name, :decimals)
 
-    Definition = Data.define(:key, :native, :token_kind, :adapter_class_name, :adapter_options) do
+    # `detectable: false` keeps a chain out of address auto-detection: it is
+    # only linked when the user picks it. For chains that share an address
+    # format with an ordinary wallet chain, where probing both on every paste
+    # would turn each plain wallet into a question.
+    Definition = Data.define(:key, :native, :token_kind, :adapter_class_name, :adapter_options, :detectable) do
+      def initialize(detectable: true, **attributes)
+        super
+      end
+
       def label
         I18n.t("onchain.chains.#{key}", default: key.to_s.titleize)
       end
@@ -180,7 +188,8 @@ module Onchain
         native: NativeAsset.new(symbol: "SOL", name: "Solana", decimals: 9),
         token_kind: nil,
         adapter_class_name: "Onchain::SolanaStakeAdapter",
-        adapter_options: {}
+        adapter_options: {},
+        detectable: false
       ),
       # Native POL staked with Polygon validators, separate from the
       # `polygon` L2 wallet chain above - staking happens on Ethereum L1, see
@@ -190,7 +199,8 @@ module Onchain
         native: NativeAsset.new(symbol: "POL", name: "Polygon", decimals: 18),
         token_kind: nil,
         adapter_class_name: "Onchain::PolygonStakeAdapter",
-        adapter_options: {}
+        adapter_options: {},
+        detectable: false
       ),
       # A single Ethereum beacon-chain validator (native 32-ETH staking),
       # identified by its BLS pubkey rather than a wallet address - see

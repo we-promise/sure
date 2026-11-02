@@ -50,6 +50,12 @@ class Onchain::SolanaStakeAdapterTest < ActiveSupport::TestCase
     assert_equal false, @adapter.has_activity?(ADDRESS)
   end
 
+  test "is left out of auto-detection, so a Solana wallet resolves without a probe" do
+    candidates = OnchainWalletItem.new.matching_chain_adapters(ADDRESS).map { |definition, _| definition.key }
+
+    assert_equal [ Onchain::Chains::SOLANA ], candidates
+  end
+
   test "a node that could not answer is not read as an empty address" do
     stub_request(:post, Provider::SolanaRpc.url).to_timeout
 

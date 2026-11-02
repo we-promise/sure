@@ -44,16 +44,11 @@ class Onchain::PolygonStakeAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "an address with no delegations is not detected" do
-    stub_page(0, [])
+  test "is left out of auto-detection, so an EVM wallet is not asked about it" do
+    candidates = OnchainWalletItem.new.matching_chain_adapters(ADDRESS).map { |definition, _| definition.key }
 
-    assert_equal false, @adapter.has_activity?(ADDRESS)
-  end
-
-  test "an address with a delegation is detected" do
-    stub_page(0, [ delegation("1") ])
-
-    assert @adapter.has_activity?(ADDRESS)
+    assert_includes candidates, Onchain::Chains::ETHEREUM
+    assert_not_includes candidates, Onchain::Chains::POLYGON_STAKE
   end
 
   test "a throttled API is reported as rate limited" do

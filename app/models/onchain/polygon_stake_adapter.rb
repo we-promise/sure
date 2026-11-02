@@ -19,11 +19,8 @@ class Onchain::PolygonStakeAdapter
 
   WEI_PER_POL = BigDecimal("1e18")
 
-  # A 0x address is valid on every EVM network, which is exactly why
-  # Onchain::EvmAdapter's own has_activity? probes rather than assumes - the
-  # same reasoning applies here against the existing `polygon` chain (and
-  # every other EVM chain in the registry), so this overrides has_activity?
-  # too instead of leaving the default valid_address?-only answer.
+  # A 0x address is valid on every EVM network too, which is why this chain is
+  # not auto-detected (`detectable: false` in Onchain::Chains): the user picks it.
   ADDRESS_PATTERN = /\A0x[0-9a-fA-F]{40}\z/
 
   def initialize(credentials: {})
@@ -37,18 +34,6 @@ class Onchain::PolygonStakeAdapter
   # Hex has no case identity - see Onchain::EvmAdapter's own canonical_address.
   def canonical_address(address)
     address.to_s.strip.downcase
-  end
-
-  # One request, on the request thread, same contract as every other
-  # has_activity? override in this app (Onchain::EvmAdapter,
-  # Onchain::SolanaStakeAdapter).
-  def has_activity?(address)
-    return false unless valid_address?(address)
-
-    total_staked(address, detection_provider).positive?
-  rescue StandardError => e
-    Rails.logger.warn("Onchain::PolygonStakeAdapter - activity probe failed: #{e.class}")
-    nil
   end
 
   def fetch_snapshot(address)
@@ -78,14 +63,10 @@ class Onchain::PolygonStakeAdapter
       @provider ||= Provider::PolygonStakingApi.new
     end
 
-    def detection_provider
-      @detection_provider ||= Provider::PolygonStakingApi.new(request_timeout: Onchain::DetectionBudget.timeout)
-    end
-
     # Summed across every validator the address delegated to - one wallet's
     # staked position is the total, not any single delegation.
-    def total_staked(address, source = provider)
-      source.get_delegations(address).sum { |delegation| wei(delegation["stake"]) } / WEI_PER_POL
+    def total_staked(address)
+      provider.get_delegations(address).sum { |delegation| wei(delegation["stake"]) } / WEI_PER_POL
     end
 
     # A missing stake must fail the sync, not read as zero.

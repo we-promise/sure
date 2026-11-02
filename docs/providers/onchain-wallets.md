@@ -284,8 +284,10 @@ sources indexes transfers keylessly, so each reads one balance:
   (96 hex characters), not its index. Liquid staking tokens such as stETH or rETH
   need nothing extra: they are ordinary ERC-20s on Ethereum.
 
-A wallet address that both holds ETH and stakes POL matches Ethereum and Polygon
-staking, so Sure asks which you meant. Add it once per network to track both.
+Solana stake accounts and Polygon staking share their address format with
+ordinary Solana and EVM wallets, so they are never auto-detected: pick them from
+the network list when adding the address. A wallet that both holds ETH and stakes
+POL is added twice, once per network.
 
 **Fees are not itemised.** Network fees are included in the net effect of each
 transfer rather than recorded separately. On Solana, native balance changes below
