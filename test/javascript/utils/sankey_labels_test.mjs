@@ -225,6 +225,27 @@ test("same-depth nodes in different visual columns do not compete", () => {
   assert.equal(hidden.size, 0);
 });
 
+test("labels on opposite sides of one column do not compete", () => {
+  // Centre-aligned charts put Surplus in the category column with its label
+  // on the right, while the categories' labels sit on the left.
+  const nodes = [
+    { index: 0, x0: 300, x1: 315, value: 900, y0: 20, y1: 60 }, // Surplus
+    { index: 1, x0: 300, x1: 315, value: 400, y0: 61, y1: 63 }, // category
+  ];
+  const labelBoxes = new Map([
+    [0, { x: 321, y: 27, width: 60, height: 26 }],
+    [1, { x: 234, y: 49, width: 60, height: 26 }],
+  ]);
+  const { hidden, labelY } = layoutSankeyLabels(nodes, {
+    height: 400,
+    minSpacing: SPACING,
+    labelBoxes,
+  });
+  assert.equal(hidden.size, 0);
+  assert.equal(labelY.get(0), 40);
+  assert.equal(labelY.get(1), 62, "the category keeps its bar's centre");
+});
+
 // On a phone the columns sit ~100px apart, so "Investment Income" beside the
 // first column ran across the gap into the Cash Flow bar.
 test("a label that would run into another column's bar yields", () => {

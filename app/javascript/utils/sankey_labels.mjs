@@ -2,13 +2,15 @@
 // Nodes compete for labels only within their own
 // visual column: d3-sankey's justify alignment can place same-depth nodes
 // in different columns (sinks flush right), so columns are keyed by x0,
-// not depth. Within a column, labels are considered in descending
-// node-value order, and a placed label never moves again: the largest labels
-// sit at their bars' centres, and a smaller one may only slide into the free
-// space left between its neighbours, as long as it still touches its own
-// bar. It is hidden when no such space is left, and so is every smaller node
-// within a label of it, so a small category never takes the place of a larger
-// one's label; further along, the largest of the rest still get labels.
+// not depth. When label boxes are known, labels left and right of a column's
+// bars are placed apart, as they can't collide. Within a column, labels are
+// considered in descending node-value order, and a placed label never moves
+// again: the largest labels sit at their bars' centres, and a smaller one may
+// only slide into the free space left between its neighbours, as long as it
+// still touches its own bar. It is hidden when no such space is left, and so
+// is every smaller node within a label of it, so a small category never takes
+// the place of a larger one's label; further along, the largest of the rest
+// still get labels.
 //
 // On a narrow chart a label can also run across the gap into the next
 // column. When the caller passes each label's measured box, a label yields
@@ -34,6 +36,12 @@ export function layoutSankeyLabels(
         return box && { ...box, y: box.y + y - centre(node) };
       }));
   const bars = shiftedBox ? nodes.map(barBox) : [];
+  // The visual x position assigned by d3-sankey, plus the label's side.
+  const labelColumn = (node) => {
+    const box = shiftedBox?.(node, centre(node));
+    const side = box ? (box.x >= node.x1 ? ":right" : ":left") : "";
+    return `${Math.round(node.x0)}${side}`;
+  };
   const placedByColumn = new Map();
   const crowdedYsByColumn = new Map();
 
@@ -57,8 +65,7 @@ export function layoutSankeyLabels(
   // One pass in prominence order, so a label rejected for crossing into
   // another column never blocks a smaller neighbour that would fit.
   [...nodes].sort(byProminence).forEach((node) => {
-    // Columns are the visual x position assigned by d3-sankey
-    const column = Math.round(node.x0);
+    const column = labelColumn(node);
     const placed = placedByColumn.get(column) || [];
     const crowdedYs = crowdedYsByColumn.get(column) || [];
     const nearCrowded = crowdedYs.some(
@@ -239,7 +246,7 @@ function spreadWithin(group, [lo, hi], { padding, minSpacing }) {
 
   const labelled = new Set();
   const byProminence = group
-    .map((node, i) => i)
+    .map((_, i) => i)
     .sort((a, b) => group[b].value - group[a].value || a - b);
   for (const i of byProminence) {
     labelled.add(i);
