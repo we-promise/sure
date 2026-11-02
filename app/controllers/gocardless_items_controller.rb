@@ -336,18 +336,28 @@ class GocardlessItemsController < ApplicationController
     skipped_count = 0
 
     account_configs.each do |gocardless_account_id, config|
-      next if config[:account_type] == "skip"
+      if config[:account_type] == "skip"
+        skipped_count += 1
+        next
+      end
 
       gocardless_account = @gocardless_item.gocardless_accounts.find_by(id: gocardless_account_id)
       next unless gocardless_account
       next if gocardless_account.account_provider.present?
 
       accountable_type = infer_accountable_type(config[:account_type], config[:subtype])
-      account = create_account_from_gocardless(gocardless_account, accountable_type, config)
+      # Per account, so a failed link rolls back its own Account but not earlier successes.
+      linked = ActiveRecord::Base.transaction do
+        account = create_account_from_gocardless(gocardless_account, accountable_type, config)
 
-      if account&.persisted?
-        gocardless_account.ensure_account_provider!(account)
-        gocardless_account.update!(sync_start_date: config[:sync_start_date]) if config[:sync_start_date].present?
+        if account&.persisted?
+          gocardless_account.ensure_account_provider!(account)
+          gocardless_account.update!(sync_start_date: config[:sync_start_date]) if config[:sync_start_date].present?
+          true
+        end
+      end
+
+      if linked
         created_count += 1
       else
         skipped_count += 1
@@ -562,15 +572,17 @@ class GocardlessItemsController < ApplicationController
     def link_gocardless_account(gocardless_account, accountable_type)
       accountable_class = validated_accountable_class(accountable_type)
 
-      account = Current.family.accounts.create!(
-        name: gocardless_account.name,
-        balance: gocardless_account.current_balance || 0,
-        currency: gocardless_account.currency || "USD",
-        accountable: accountable_class.new
-      )
+      ActiveRecord::Base.transaction do
+        account = Current.family.accounts.create!(
+          name: gocardless_account.name,
+          balance: gocardless_account.current_balance || 0,
+          currency: gocardless_account.currency || "USD",
+          accountable: accountable_class.new
+        )
 
-      gocardless_account.ensure_account_provider!(account)
-      account
+        gocardless_account.ensure_account_provider!(account)
+        account
+      end
     end
 
     def create_account_from_gocardless(gocardless_account, accountable_type, config)
