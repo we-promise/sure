@@ -108,6 +108,7 @@ class McpController < ApplicationController
       end
 
       fn = fn_class.new(mcp_user)
+      Usage.capture("mcp_call_served_daily")
       result = fn.call(arguments)
 
       { content: [ { type: "text", text: result.to_json } ] }
@@ -222,7 +223,7 @@ class McpController < ApplicationController
     def render_mcp_unauthorized
       response.set_header(
         "WWW-Authenticate",
-        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource\", scope=\"#{REQUIRED_SCOPE}\""
+        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource/mcp\", scope=\"#{REQUIRED_SCOPE}\""
       )
       render json: { error: "unauthorized" }, status: :unauthorized
     end
