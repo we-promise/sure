@@ -63,6 +63,20 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     assert_equal @trade.price, cache.get_price(@security.id, @trade.entry.date).price
   end
 
+  test "a day's price from trades ignores the replay order" do
+    Security::Price.destroy_all
+    sale = create_trade(@security, account: @account, qty: -1, date: 1.day.ago.to_date, price: 220)
+    purchase = create_trade(@security, account: @account, qty: 1, date: 1.day.ago.to_date, price: 215)
+    Entry.where(id: [ sale.id, purchase.id ]).update_all(created_at: Time.zone.parse("2026-01-01 10:00:00"))
+    Entry.where(id: sale.id).update_all(id: "00000000-0000-0000-0000-000000000001")
+    Entry.where(id: purchase.id).update_all(id: "ffffffff-ffff-ffff-ffff-ffffffffffff")
+
+    cache = Holding::PortfolioCache.new(@account)
+
+    assert_equal "ffffffff-ffff-ffff-ffff-ffffffffffff", cache.get_trades(date: 1.day.ago.to_date).first.id
+    assert_equal 220, cache.get_price(@security.id, 1.day.ago.to_date).price
+  end
+
   test "if no price from db or trades, search holdings" do
     Security::Price.delete_all
     Entry.delete_all
