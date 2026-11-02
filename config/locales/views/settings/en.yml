@@ -6,6 +6,7 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    encryption_migration_guide: Encryption setup and migration guide
     background_jobs:
       show:
         page_title: "Background jobs"
@@ -188,6 +189,8 @@ en:
         dashboard_account_groups_description: These account sections will start expanded on the dashboard and in the account sidebar. You can still collapse them manually at any time.
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
+        auto_generate_transaction_names_title: Auto-generate transaction names
+        auto_generate_transaction_names_description: When a manually entered transaction's name is left blank, fill it in from the selected category and merchant (e.g. "Entertainment - Netflix"). A name is still required if neither is selected. Applies to the whole family, and only affects new transactions.
     preferences:
       show:
         country: Country
@@ -359,6 +362,7 @@ en:
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
+      auto_matches_label: Auto Matches
       classifier_label: Classifier
       background_jobs_label: Background jobs
       api_key_label: API Keys
@@ -475,6 +479,7 @@ en:
         monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
         fio: Sync a Fio banka account with a read-only API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
+        truelayer: Sync UK bank accounts and credit cards via TrueLayer open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
         mercury: Sync your Mercury business banking accounts automatically.
@@ -643,6 +648,8 @@ en:
         api_key_placeholder_update: "Enter new API key to update"
         base_url_label: "Base URL (Optional)"
         base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
+        sync_start_date_label: "Import transactions from"
+        sync_start_date_help: "Leave blank to import everything Lunch Flow has. Moving the date earlier imports the missing period on the next sync. Moving it later doesn't affect transactions already imported."
         save_and_connect: "Save and connect"
         update_connection: "Update connection"
       akahu_panel:
