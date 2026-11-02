@@ -67,15 +67,20 @@
           <% elsif summary.next_close %>
             <span class="block"><%= t(".closes_on", date: l(summary.next_close, format: :long)) %></span>
           <% end %>
-          <% if summary.charges && summary.credits %>
+          <% if summary.charges && summary.payments_applied %>
             <span class="flex items-center justify-between gap-4">
               <span><%= t(".charges") %></span>
               <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.charges) %></span>
             </span>
-            <span class="flex items-center justify-between gap-4">
-              <span><%= t(".payments_credits") %></span>
-              <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.credits.abs) %></span>
-            </span>
+            <%# Only the payments that reduced these charges appear here. The part
+                used to settle the closed bill is already on the card before this,
+                so the lines above add up to the total. %>
+            <% if summary.payments_applied.positive? %>
+              <span class="flex items-center justify-between gap-4">
+                <span><%= t(".payments_applied") %></span>
+                <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.payments_applied) %></span>
+              </span>
+            <% end %>
             <% if summary.adjustments && !summary.adjustments.zero? %>
               <span class="flex items-center justify-between gap-4">
                 <span><%= t(".balance_updates") %></span>

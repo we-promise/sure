@@ -8,7 +8,7 @@ class CreditCard < ApplicationRecord
   }.freeze
 
   StatementSummary = Data.define(
-    :balance, :remaining, :charges, :credits, :accrued, :adjustments,
+    :balance, :remaining, :charges, :credits, :payments_applied, :accrued, :adjustments,
     :due_date, :last_due_date, :next_close, :status, :scheduled_payment,
     :estimated_interest, :monthly_rate
   )
@@ -145,6 +145,7 @@ class CreditCard < ApplicationRecord
       remaining: remaining,
       charges: ledger[:charges],
       credits: credits,
+      payments_applied: payments_applied_to_open_cycle(ledger),
       accrued: accrued_after_bill_settlement(ledger),
       adjustments: ledger[:adjustments],
       due_date: statement_due_date(last_due_date, remaining, as_of),
@@ -237,18 +238,24 @@ class CreditCard < ApplicationRecord
     # the open cycle, so the figure is the debt still owed on that cycle (or a
     # credit when the surplus exceeds it).
     def accrued_after_bill_settlement(ledger)
-      charges, credits, adjustments, balance = ledger.values_at(:charges, :credits, :adjustments, :closed)
-      return nil if charges.nil? || credits.nil? || adjustments.nil?
+      charges, adjustments = ledger.values_at(:charges, :adjustments)
+      applied = payments_applied_to_open_cycle(ledger)
+      return nil if charges.nil? || adjustments.nil? || applied.nil?
 
-      open_cycle = charges.amount + adjustments.amount
+      Money.new(charges.amount + adjustments.amount - applied.amount, charges.currency)
+    end
 
-      # Without a known closed bill there is nothing to settle first, so keep
-      # the net of the open cycle and the payments.
-      return Money.new(open_cycle + credits.amount, charges.currency) if balance.nil?
+    # The part of the payments since the close that reduced the open cycle. The
+    # payments settle the closed bill first, up to its amount, so only the
+    # surplus is left for the open cycle. Without a known closed bill there is
+    # nothing to settle first, so every payment counts against the open cycle.
+    # Nil when the charges or payments cannot be totalled.
+    def payments_applied_to_open_cycle(ledger)
+      charges, credits, balance = ledger.values_at(:charges, :credits, :closed)
+      return nil if charges.nil? || credits.nil?
 
-      bill = [ balance.amount, 0 ].max
-      surplus = [ credits.amount.abs - bill, 0 ].max
-      Money.new(open_cycle - surplus, charges.currency)
+      bill = balance ? [ balance.amount, 0 ].max : 0
+      Money.new([ credits.amount.abs - bill, 0 ].max, charges.currency)
     end
 
     # What is still owed on the closed bill after payments since the close. A

@@ -474,6 +474,18 @@ class CreditCardTest < ActiveSupport::TestCase
     assert_equal 100, card.accrued_since_last_close_money(as_of: Date.new(2026, 10, 30)).amount
   end
 
+  test "the payments applied line is only the surplus that reduced the open cycle" do
+    card = statement_card(close_day: 16, due_day: 6)
+    charge(card.account, Date.new(2026, 10, 1), 800)
+    charge(card.account, Date.new(2026, 10, 20), 300)
+    charge(card.account, Date.new(2026, 10, 25), -1000)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 30), viewer: users(:family_admin))
+
+    assert_equal 200, summary.payments_applied.amount
+    assert_equal 100, summary.accrued.amount
+  end
+
   test "the statement summary marks a settled statement as paid and moves to the next due date" do
     card = statement_card(close_day: 10, due_day: 26)
     charge(card.account, Date.new(2026, 9, 20), 300)
