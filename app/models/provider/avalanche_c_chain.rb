@@ -28,6 +28,7 @@ class Provider::AvalancheCChain
   extend SslConfigurable
 
   class Error < StandardError; end
+  class RateLimitError < Error; end
   class ApiError < Error; end
 
   DEFAULT_BASE_URL = "https://api.avax.network/ext/bc/C/rpc"
@@ -38,9 +39,20 @@ class Provider::AvalancheCChain
     ENV["AVALANCHE_CCHAIN_URL"].presence || DEFAULT_BASE_URL
   end
 
+  # Detection reads on the request thread and cannot afford the sync's patience,
+  # same as Provider::SolanaRpc.
+  def initialize(request_timeout: nil)
+    @request_timeout = request_timeout
+  end
+
   # @return [String] balance in wei (18-decimal AVAX), as a hex string e.g. "0x1bc16d674ec80000"
   def get_balance(address)
     rpc("eth_getBalance", [ address, "latest" ])
+  end
+
+  # @return [String] the address's nonce (transactions it has sent), as a hex string
+  def get_transaction_count(address)
+    rpc("eth_getTransactionCount", [ address, "latest" ])
   end
 
   private
@@ -48,9 +60,12 @@ class Provider::AvalancheCChain
       translate_transport_errors do
         response = self.class.post(
           self.class.base_url,
-          headers: { "Content-Type" => "application/json" },
-          body: { jsonrpc: "2.0", id: 1, method: method, params: params }.to_json
+          **request_options(
+            headers: { "Content-Type" => "application/json" },
+            body: { jsonrpc: "2.0", id: 1, method: method, params: params }.to_json
+          )
         )
+        raise RateLimitError, "Avalanche C-Chain rate limit exceeded" if response.code == 429
 
         parsed = response.parsed_response
         raise ApiError, "Unexpected response from Avalanche C-Chain node" unless parsed.is_a?(Hash)
@@ -64,5 +79,11 @@ class Provider::AvalancheCChain
 
         result
       end
+    end
+
+    def request_options(**options)
+      return options if @request_timeout.nil?
+
+      options.merge(timeout: @request_timeout)
     end
 end

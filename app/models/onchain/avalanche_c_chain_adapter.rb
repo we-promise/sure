@@ -35,6 +35,22 @@ class Onchain::AvalancheCChainAdapter
     address.to_s.strip.downcase
   end
 
+  # Every EVM network shares the 0x shape, so without this override the default
+  # (a well-formed address is answer enough) would claim every EVM wallet for the
+  # C-Chain and turn each one's detection into a question. Same rule as
+  # Onchain::SolanaAdapter: the balance first, and the nonce only when the
+  # balance comes back zero, so the ordinary case costs one request.
+  def has_activity?(address)
+    return false unless valid_address?(address)
+
+    hex_to_i(detection_provider.get_balance(address)).positive? ||
+      hex_to_i(detection_provider.get_transaction_count(address)).positive?
+  rescue StandardError => e
+    Rails.logger.warn("Onchain::AvalancheCChainAdapter - activity probe failed: #{e.class}")
+    # Not false — see Onchain::ChainAdapter#has_activity? on the third answer.
+    nil
+  end
+
   def fetch_snapshot(address)
     raise Onchain::Chains::Error, "Invalid Avalanche C-Chain address" unless valid_address?(address)
 
@@ -50,7 +66,7 @@ class Onchain::AvalancheCChainAdapter
   end
 
   def provider_error_classes
-    [ [], Provider::AvalancheCChain::Error ]
+    [ Provider::AvalancheCChain::RateLimitError, Provider::AvalancheCChain::Error ]
   end
 
   private
@@ -64,10 +80,17 @@ class Onchain::AvalancheCChainAdapter
       @provider ||= Provider::AvalancheCChain.new
     end
 
+    def detection_provider
+      @detection_provider ||= Provider::AvalancheCChain.new(request_timeout: Onchain::DetectionBudget.timeout)
+    end
+
     def balance_in_avax(address)
-      hex_wei = provider.get_balance(address)
-      Integer(hex_wei, 16).to_d / WEI_PER_AVAX
+      hex_to_i(provider.get_balance(address)).to_d / WEI_PER_AVAX
+    end
+
+    def hex_to_i(hex)
+      Integer(hex, 16)
     rescue ArgumentError
-      raise Provider::AvalancheCChain::ApiError, "Avalanche C-Chain node returned a non-numeric balance"
+      raise Provider::AvalancheCChain::ApiError, "Avalanche C-Chain node returned a non-numeric value"
     end
 end
