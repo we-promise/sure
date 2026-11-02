@@ -163,6 +163,26 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='holding_lot[total_cost_basis]'][value='600.00']", count: 1
   end
 
+  test "a lot row discloses a form only where it can be edited" do
+    opening = HoldingLot.create!(account: @account, security: @security, origin_security: @security, qty: 5, currency: "USD")
+    @holding.update_columns(qty: @holding.qty + 5)
+
+    get holding_path(@holding)
+
+    assert_select "li[data-lot-id='#{@lot.id}'] details", 1
+    assert_select "li[data-lot-id='#{opening.id}'] details", 0
+    assert_select "li[data-lot-id='#{opening.id}']", text: /#{I18n.t("holdings.lots.opening")}/
+  end
+
+  test "a read-only share shows every lot without a disclosure" do
+    Account.stubs(:writable_by).returns(Account.none)
+
+    get holding_path(@holding)
+
+    assert_select "li[data-lot-id='#{@lot.id}']", 1
+    assert_select "li[data-lot-id] details", 0
+  end
+
   private
     def materialize
       Holding::Materializer.new(@account.reload, strategy: :forward, security_ids: [ @security.id ]).materialize_holdings
