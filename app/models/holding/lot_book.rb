@@ -158,15 +158,24 @@ class Holding::LotBook
       rescale_lots(remaining) { |lot| lot.with(qty: (lot.qty * remaining / open).round(Security::Split::QTY_SCALE)) }
     end
 
-    # Restates each lot, then gives the last open lot whatever rounding is left,
-    # so the lots always sum to exactly `target`.
+    # Restates each lot, then settles whatever rounding is left from the last
+    # lot back, so the lots always sum to exactly `target`.
     def rescale_lots(target)
       scaled = @lots.map { |lot| target.zero? ? lot.with(qty: BigDecimal("0")) : yield(lot) }
-      if target.positive? && scaled.any?
-        drift = target - scaled.sum(BigDecimal("0"), &:qty)
-        scaled[-1] = scaled[-1].with(qty: scaled[-1].qty + drift)
-      end
+      settle_drift(scaled, target - scaled.sum(BigDecimal("0"), &:qty)) if target.positive?
       @lots, closed = scaled.partition { |lot| lot.qty.positive? }
       @closed.concat(closed.map { |lot| lot.with(qty: BigDecimal("0")) })
+    end
+
+    # A negative drift can exceed the last lot, which may have rounded to zero,
+    # so no lot gives up more than it holds.
+    def settle_drift(lots, drift)
+      lots.each_index.reverse_each do |index|
+        break if drift.zero?
+
+        correction = drift.positive? ? drift : -[ lots[index].qty, -drift ].min
+        lots[index] = lots[index].with(qty: lots[index].qty + correction)
+        drift -= correction
+      end
     end
 end

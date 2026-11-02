@@ -10,7 +10,7 @@ export default class extends Controller {
   }
 
   updateSubtype(event) {
-    const selectElement = this.element.querySelector('select[name^="account_types"]')
+    const selectElement = this.element.querySelector('select[name^="account_types"], input[name^="account_types"]')
     const selectedType = selectElement ? selectElement.value : ''
     const container = this.subtypeContainerTarget
     const accountId = this.accountIdValue
@@ -21,7 +21,7 @@ export default class extends Controller {
       select.classList.add('hidden')
       select.style.removeProperty('display')
       // Clear the name attribute so it doesn't get submitted
-      const selectElement = select.querySelector('select')
+      const selectElement = select.querySelector('select, input[type="hidden"]')
       if (selectElement) {
         selectElement.removeAttribute('name')
       }
@@ -38,7 +38,7 @@ export default class extends Controller {
       relevantSubtype.classList.remove('hidden')
       relevantSubtype.style.removeProperty('display')
       // Re-add the name attribute so it gets submitted
-      const selectElement = relevantSubtype.querySelector('select')
+      const selectElement = relevantSubtype.querySelector('select, input[type="hidden"]')
       if (selectElement) {
         selectElement.setAttribute('name', `account_subtypes[${accountId}]`)
       }
