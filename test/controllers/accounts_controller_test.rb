@@ -1261,6 +1261,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # Linking or unlinking a provider doesn't touch the account, but it changes
+  # how a linked investment's series is normalized.
+  test "sparkline is re-rendered when the account is linked or unlinked" do
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    Account.any_instance.stubs(:linked?).returns(true)
+    get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+
+    assert_response :success
+  end
+
   test "sparkline renders an empty series without a trend" do
     empty_series = Series.new(
       start_date: 1.day.ago.to_date,
