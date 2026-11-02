@@ -101,6 +101,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
     return render_validation_error("Unknown tag id") if unknown_tag_ids?
+    return render_validation_error("Unknown category id") if unknown_category_id?
+    return render_validation_error("Unknown merchant id") if unknown_merchant_id?
 
     @entry = account.entries.new(entry_params_for_create)
 
@@ -149,6 +151,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
     return render_validation_error("Unknown tag id") if tags_provided? && unknown_tag_ids?
+    return render_validation_error("Unknown category id") if unknown_category_id?
+    return render_validation_error("Unknown merchant id") if unknown_merchant_id?
 
     Entry.transaction do
       if @entry.update(entry_params_for_update)
@@ -391,6 +395,27 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     def unknown_tag_ids?
       ids = Array(transaction_params[:tag_ids]).compact_blank.uniq
       ids.any? && current_resource_owner.family.tags.where(id: ids).count != ids.size
+    end
+
+    # A client re-sends the ids it read back, so the category or merchant a
+    # transaction already holds is not refused: no new link is made.
+    def unknown_category_id?
+      id = transaction_params[:category_id].presence
+      return false if id.nil? || id == @entry&.transaction&.category_id
+
+      !current_resource_owner.family.categories.exists?(id: id)
+    end
+
+    # The family's own merchants, and provider merchants the caller can reach.
+    # A family merchant on a reachable transaction isn't enough: it may be
+    # another family's, linked before this check.
+    def unknown_merchant_id?
+      id = transaction_params[:merchant_id].presence
+      return false if id.nil? || id == @entry&.transaction&.merchant_id
+
+      family = current_resource_owner.family
+      !family.merchants.exists?(id: id) &&
+        !family.available_merchants_for(current_resource_owner).where(type: "ProviderMerchant").exists?(id: id)
     end
 
     def split_financial_fields_changed?
