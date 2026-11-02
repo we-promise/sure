@@ -1238,15 +1238,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "sparkline is re-rendered when the account's balances change" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     get sparkline_account_url(@account)
     etag = response.headers["ETag"]
+    before = response.body
 
     travel 1.minute do
-      @account.balances.create!(date: 40.days.ago.to_date, balance: 1, currency: @account.currency)
+      @account.balances.create!(date: 3.days.ago.to_date, balance: 1234, start_cash_balance: 1234, currency: @account.currency)
       get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
     end
 
     assert_response :success
+    assert_not_equal before, response.body
   end
 
   test "sparkline is re-rendered after the account's own sync completes" do
