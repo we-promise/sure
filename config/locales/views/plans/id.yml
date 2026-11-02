@@ -27,8 +27,8 @@ id:
         other: "%{count} aktif"
       of_targets: dari %{total} di semua target
       behind_count:
-        one: 1 di bawah target
-        other: "%{count} di bawah target"
+        one: 1 tertinggal dari rencana
+        other: "%{count} tertinggal dari rencana"
       pending_count:
         one: 1 komitmen tertunda
         other: "%{count} komitmen tertunda"
