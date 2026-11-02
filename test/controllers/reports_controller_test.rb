@@ -116,6 +116,10 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "section[data-section-key='spending_vs_normal']", count: 0
 
     @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    # The treemap only draws spending inside the period, which for the current
+    # month runs up to today; fixture transactions are dated a few days ago, so
+    # on the 1st there would be nothing to draw.
+    create_transaction(date: Date.current, amount: 50, category: categories(:food_and_drink))
     get reports_path
     assert_response :ok
     assert_select "section[data-section-key='spending_vs_normal']" do

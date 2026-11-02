@@ -1,0 +1,37 @@
+---
+id:
+  account_order:
+    balance_asc:
+      label: Saldo (Rendah ke Tinggi)
+      label_short: Saldo ↑
+    balance_desc:
+      label: Saldo (Tinggi ke Rendah)
+      label_short: Saldo ↓
+    manual:
+      label: Manual (seret untuk mengubah urutan)
+      label_short: Manual
+    name_asc:
+      label: Nama (A-Z)
+      label_short: Nama ↑
+    name_desc:
+      label: Nama (Z-A)
+      label_short: Nama ↓
+  activerecord:
+    attributes:
+      account:
+        balance: Saldo
+        currency: Mata uang
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        name: Nama
+        subtype: Subtipe
+    models:
+      account: Rekening
+      account/credit: Kartu Kredit
+      account/depository: Rekening Bank
+      account/investment: Investasi
+      account/loan: Pinjaman
+      account/other_asset: Aset Lainnya
+      account/other_liability: Liabilitas Lainnya
+      account/property: Properti
+      account/vehicle: Kendaraan

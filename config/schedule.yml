@@ -108,3 +108,10 @@ notify_account_releases:
   active_job: true
   queue: "scheduled"
   description: "E-mails release reminders for locked accounts to members who chose e-mail (preview)"
+
+backfill_account_logos:
+  cron: "30 3 * * *" # 3:30 AM every day
+  class: "AccountLogoBackfillJob"
+  active_job: true
+  queue: "scheduled"
+  description: "Fetches icons for accounts with an institution domain and no logo"
