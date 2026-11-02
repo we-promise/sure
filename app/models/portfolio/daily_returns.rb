@@ -194,17 +194,19 @@ class Portfolio::DailyReturns
     def bind_and_splice(template)
       refuse_liabilities!
 
+      binds = query_binds
+
       # Split keeps the marker's capture, so odd positions are fragment names.
       template.split(FRAGMENT_MARKER).each_with_index.map do |part, index|
-        index.odd? ? fragments.fetch(part) : bind_values(part)
+        index.odd? ? fragments.fetch(part) : bind_values(part, binds)
       end.join
     end
 
     # A piece with no bind would reach sanitize_sql_array's `%` formatting.
-    def bind_values(sql)
+    def bind_values(sql, binds)
       return sql unless sql.match?(/:\w/)
 
-      ActiveRecord::Base.sanitize_sql_array([ sql, query_binds ])
+      ActiveRecord::Base.sanitize_sql_array([ sql, binds ])
     end
 
     # Every query this class runs goes through #bind_and_splice, so checking
