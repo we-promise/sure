@@ -3,7 +3,7 @@ nl:
   providers:
     trade_republic:
       name: "Trade Republic"
-      connection_description: "Koppel een Trade Republic-beleggingsrekening via een veilige webaanmelding"
+      connection_description: "Koppel een Trade Republic-beleggingsaccount via een veilige webaanmelding"
       institution_name: "Trade Republic"
   trade_republic_items:
     portfolio_categories:
@@ -11,7 +11,7 @@ nl:
       private_markets: "Privémarkten"
       interest_products: "Renteproducten"
       crypto_wallet: "Cryptowallet"
-    duplicate_connection: "Deze Trade Republic-rekening is al gekoppeld. De nieuwe koppeling is verwijderd."
+    duplicate_connection: "Deze Trade Republic-account is al gekoppeld. De nieuwe koppeling is verwijderd."
     defaults:
       name: "Trade Republic"
     trade_republic_item:
@@ -25,9 +25,9 @@ nl:
       setup_accounts: "Rekeningen instellen"
       delete: "Verwijderen"
       accounts_need_setup: "Rekening moet worden ingesteld"
-      accounts_need_setup_description: "Uw Trade Republic-rekening moet aan een Sure-account worden gekoppeld."
-      no_accounts_discovered: "Nog geen Trade Republic-rekening gevonden."
-      no_accounts_discovered_description: "Voltooi de aanmelding en voer een synchronisatie uit om uw rekening te vinden."
+      accounts_need_setup_description: "Uw Trade Republic-account moet aan een Sure-account worden gekoppeld."
+      no_accounts_discovered: "Nog geen Trade Republic-account gevonden."
+      no_accounts_discovered_description: "Voltooi de aanmelding en voer een synchronisatie uit om uw account te vinden."
       data_quality:
         title: "Datakwaliteit en synchronisatiedetails"
         repair: "Geïmporteerde gegevens herstellen"
@@ -58,9 +58,9 @@ nl:
           syncing: "Synchroniseren"
           stale: "Verouderd"
     setup_accounts:
-      page_title: "Trade Republic-rekening instellen"
+      page_title: "Trade Republic-account instellen"
       dialog_title: "Uw Trade Republic-account instellen"
-      subtitle: "Koppel uw Trade Republic-beleggingsrekening."
+      subtitle: "Koppel uw Trade Republic-beleggingsaccount."
       info_box:
         title: "Trade Republic-import"
         items:
@@ -98,7 +98,7 @@ nl:
         reauthentication_required: "De Trade Republic-sessie ontbreekt of is verlopen. Koppel opnieuw via Instellingen > Providers."
       status:
         checking_credentials: "Trade Republic-inloggegevens controleren..."
-        importing_account: "Trade Republic-rekening importeren..."
+        importing_account: "Trade Republic-account importeren..."
         checking_configuration: "Accountconfiguratie controleren..."
         accounts_need_setup:
           one: "1 Trade Republic-account moet worden ingesteld..."
@@ -114,7 +114,7 @@ nl:
         other: "%{count} accounts gekoppeld"
       partial: "%{linked} gekoppeld, %{unlinked} moeten worden ingesteld"
     select_existing_account:
-      title: "Trade Republic-rekening koppelen"
+      title: "Trade Republic-account koppelen"
       no_accounts_available: "Er zijn nog geen niet-gekoppelde Trade Republic-accounts beschikbaar."
       run_sync_hint: "Rond de aanmelding af en voer een synchronisatie uit via Instellingen > Providers."
       wait_for_sync: "Wacht tot de synchronisatie voor het zoeken naar accounts klaar is."
@@ -158,13 +158,13 @@ nl:
       failed: "Koppelen van Trade Republic-account mislukt."
     complete_account_setup:
       success:
-        one: "%{count} Trade Republic-rekening is aangemaakt."
-        other: "%{count} Trade Republic-rekeningen zijn aangemaakt."
+        one: "%{count} Trade Republic-account is aangemaakt."
+        other: "%{count} Trade Republic-accounts zijn aangemaakt."
       none_selected: "Er zijn geen accounts geselecteerd."
-      none_created: "Er zijn geen rekeningen aangemaakt."
+      none_created: "Er zijn geen accounts aangemaakt."
       partial_failure:
-        one: "Eén geselecteerde Trade Republic-rekening kon niet volledig worden ingesteld. Controleer het debuglogboek en probeer het opnieuw."
-        other: "%{count} geselecteerde Trade Republic-rekeningen konden niet volledig worden ingesteld. Controleer het debuglogboek en probeer het opnieuw."
+        one: "Eén geselecteerde Trade Republic-account kon niet volledig worden ingesteld. Controleer het debuglogboek en probeer het opnieuw."
+        other: "%{count} geselecteerde Trade Republic-accounts konden niet volledig worden ingesteld. Controleer het debuglogboek en probeer het opnieuw."
     activities:
       labels:
         contribution: "Storting"

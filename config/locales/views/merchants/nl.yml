@@ -26,7 +26,7 @@ nl:
       family_empty: "Nog geen handelaren van uw %{moniker}"
       provider_title: "Providerhandelaren"
       provider_empty: "Nog geen providerhandelaren gekoppeld aan uw %{moniker}"
-      provider_read_only: "Providerhandelaren worden gesynchroniseerd vanuit uw gekoppeld instellingen. Ze kunnen hier niet worden bewerkt."
+      provider_read_only: "Providerhandelaren worden gesynchroniseerd vanuit uw gekoppelde instellingen. Ze kunnen hier niet worden bewerkt."
       provider_info: "Deze handelaren zijn automatisch gedetecteerd door uw bankkoppelingen of AI. U kunt ze bewerken om uw eigen kopie aan te maken, of verwijderen om ze los te koppelen van uw transacties."
       enhance_info:
         one: "Bij %{count} providerhandelaar ontbreekt website-informatie. Verbeter met AI om websites te detecteren, logo's te tonen en dubbele handelaren samen te voegen."

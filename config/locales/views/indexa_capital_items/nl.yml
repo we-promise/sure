@@ -175,6 +175,9 @@ nl:
         depository: "Accountsubtype:"
         investment: "Beleggingstype:"
         loan: "Leningtype:"
+        credit_card: ""
+        crypto: ""
+        other_asset: ""
       subtype_messages:
         credit_card: "Creditcards worden automatisch ingesteld als creditcardaccounts."
         other_asset: "Voor overige bezittingen zijn geen extra opties nodig."

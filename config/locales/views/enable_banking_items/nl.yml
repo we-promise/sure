@@ -26,12 +26,12 @@ nl:
     create:
       success: "Enable Banking configuratie succesvol."
     destroy:
-      success: "Enable Banking koppeling is in de wachtrij voor verwijdering geplaatst."
+      success: "Enable Banking-koppeling is in de wachtrij voor verwijdering geplaatst."
     link_accounts:
       already_linked: "De geselecteerde accounts zijn al gekoppeld."
       link_failed: "Accounts koppelen mislukt"
       no_accounts_selected: "Geen accounts geselecteerd."
-      no_session: "Geen actieve Enable Banking koppeling. Maak eerst koppeling met een bank."
+      no_session: "Geen actieve Enable Banking-koppeling. Koppel eerst een bank."
       success: "Succesvol %{count} accounts gekoppeld."
     link_existing_account:
       success: "Account succesvol gekoppeld aan Enable Banking"

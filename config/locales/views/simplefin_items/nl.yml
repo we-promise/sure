@@ -4,34 +4,34 @@ nl:
     new:
       title: "Koppel SimpleFIN"
       setup_token: "Setup token"
-      setup_token_placeholder: "plak uw SimpleFIN setup token"
+      setup_token_placeholder: "plak uw SimpleFIN-setuptoken"
       connect: "Koppelen"
       cancel: "Annuleren"
     create:
-      success: "SimpleFIN koppeling succesvol toegevoegd! Uw accounts verschijnen binnenkort terwijl ze op de achtergrond synchroniseren."
+      success: "SimpleFIN-koppeling succesvol toegevoegd! Uw accounts verschijnen binnenkort terwijl ze op de achtergrond synchroniseren."
       errors:
-        blank_token: "Voer een SimpleFIN setup token in."
-        invalid_token: "Ongeldige setup token. Controleer of u de volledige token van SimpleFIN Bridge heeft gekopieerd."
-        token_compromised: "De setup token kan gecompromitteerd, verlopen of al gebruikt zijn. Maak een nieuwe aan."
+        blank_token: "Voer een SimpleFIN-setuptoken in."
+        invalid_token: "Ongeldig setuptoken. Controleer of u het volledige token van SimpleFIN Bridge heeft gekopieerd."
+        token_compromised: "Het setuptoken kan gecompromitteerd, verlopen of al gebruikt zijn. Maak een nieuwe aan."
         create_failed: "Koppelen mislukt: %{message}"
         unexpected: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     destroy:
-      success: "SimpleFIN koppeling wordt verwijderd"
+      success: "SimpleFIN-koppeling wordt verwijderd"
     update:
-      success: "SimpleFIN koppeling succesvol bijgewerkt! Uw accounts worden opnieuw gekoppeld."
+      success: "SimpleFIN-koppeling succesvol bijgewerkt! Uw accounts worden opnieuw gekoppeld."
       errors:
-        blank_token: "Voer een SimpleFIN setup token in."
-        invalid_token: "Ongeldige setup token. Controleer of u de volledige token van SimpleFIN Bridge heeft gekopieerd."
-        token_compromised: "De setup token kan gecompromitteerd, verlopen of al gebruikt zijn. Maak een nieuwe aan."
+        blank_token: "Voer een SimpleFIN-setuptoken in."
+        invalid_token: "Ongeldig setuptoken. Controleer of u het volledige token van SimpleFIN Bridge heeft gekopieerd."
+        token_compromised: "Het setuptoken kan gecompromitteerd, verlopen of al gebruikt zijn. Maak een nieuwe aan."
         update_failed: "Bijwerken koppeling mislukt: %{message}"
         unexpected: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     edit:
       setup_token:
         label: "SimpleFIN Setup Token:"
-        placeholder: "Plak uw SimpleFIN setup token hier..."
+        placeholder: "Plak uw SimpleFIN-setuptoken hier..."
         help_text: "De token moet een lange tekenreeks zijn die begint met letters en cijfers"
       title: "SimpleFIN-koppeling bijwerken"
-      header_subtitle: "Vraag een nieuw setup token aan om uw SimpleFIN-account opnieuw te koppelen"
+      header_subtitle: "Vraag een nieuw setuptoken aan om uw SimpleFIN-account opnieuw te koppelen"
       connection_needs_update: "Uw SimpleFIN-koppeling moet worden bijgewerkt:"
       step_1_html: "Ga naar <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> om een nieuw setup token aan te maken"
       step_2: "Kopieer het token en plak het hieronder"
@@ -73,7 +73,7 @@ nl:
           one: "1 dag geleden"
           other: "%{count} dagen geleden"
       stale_accounts:
-        title: "Accounts Niet Langer in SimpleFIN"
+        title: "Accounts niet langer in SimpleFIN"
         description: "Deze accounts bestaan in uw database maar worden niet langer aangeboden door SimpleFIN. Dit kan gebeuren wanneer accountconfiguraties upstream wijzigen."
         action_prompt: "Wat wilt u doen?"
         action_delete: "Verwijder account en alle transacties"
@@ -86,8 +86,8 @@ nl:
       all_skipped: "Alle accounts zijn overgeslagen. Geen accounts zijn aangemaakt."
       no_accounts: "Geen accounts om in te stellen."
       success:
-        one: "Succesvol %{count} SimpleFIN account aangemaakt! Uw transacties en bezittingen worden op de achtergrond geïmporteerd."
-        other: "Succesvol %{count} SimpleFIN accounts aangemaakt! Uw transacties en bezittingen worden op de achtergrond geïmporteerd."
+        one: "Succesvol %{count} SimpleFIN account aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
+        other: "Succesvol %{count} SimpleFIN-accounts aangemaakt! Uw transacties en bezittingen worden op de achtergrond geïmporteerd."
       stale_accounts_processed: "Verouderde accounts: %{deleted} verwijderd, %{moved} verplaatst."
       stale_accounts_errors:
         one: "%{count} verouderde accountactie mislukt. Controleer logs voor details."
@@ -114,7 +114,7 @@ nl:
       add_new: "Nieuwe koppeling toevoegen"
       confirm_accept: "Koppeling verwijderen"
       confirm_body: "Dit zal permanent alle accounts in deze groep en alle bijbehorende gegevens verwijderen."
-      confirm_title: "SimpleFIN koppeling verwijderen?"
+      confirm_title: "SimpleFIN-koppeling verwijderen?"
       delete: "Verwijderen"
       deletion_in_progress: "(verwijdering bezig...)"
       error: "Fout opgetreden bij synchroniseren van gegevens"
@@ -122,8 +122,8 @@ nl:
       no_accounts_title: "Geen accounts gevonden"
       requires_update: "Opnieuw koppelen"
       setup_needed: "Nieuwe accounts klaar om in te stellen"
-      setup_description: "Kies accounttypes voor uw nieuw geïmporteerde SimpleFIN accounts."
-      setup_action: "Nieuwe Accounts Instellen"
+      setup_description: "Kies accounttypes voor uw nieuw geïmporteerde SimpleFIN-accounts."
+      setup_action: "Nieuwe accounts instellen"
       setup_accounts_menu: "Accounts instellen"
       more_accounts_available:
         one: "Nog %{count} account beschikbaar om in te stellen"
@@ -150,7 +150,7 @@ nl:
       wait_for_sync: "Als u zojuist gekoppeld of gesynchroniseerd heeft, probeer het opnieuw nadat de synchronisatie is voltooid."
       check_provider_health: "Controleer onder Instellingen → Providers of uw SimpleFIN-koppeling in orde is."
       unlink_to_move: "Om een koppeling te verplaatsen, koppel deze eerst los via het actiemenu van het account."
-      all_accounts_already_linked: "Alle SimpleFIN accounts lijken al gekoppeld te zijn."
+      all_accounts_already_linked: "Alle SimpleFIN-accounts lijken al gekoppeld te zijn."
       currently_linked_to: "Momenteel gekoppeld aan: %{account_name}"
     link_existing_account:
       success: "Account succesvol gekoppeld aan SimpleFIN"

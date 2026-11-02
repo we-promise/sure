@@ -140,7 +140,7 @@ nl:
     snaptrade:
       name: "SnapTrade"
       connection_description: "Koppel uw broker via SnapTrade (25+ brokers ondersteund)"
-      description: "SnapTrade maakt koppeling met 25+ grote brokers (Fidelity, Vanguard, Schwab, Robinhood, enz.) en levert de volledige handelsgeschiedenis met activiteitslabels en kostprijs."
+      description: "SnapTrade biedt koppelingen met meer dan 25 grote brokers (Fidelity, Vanguard, Schwab, Robinhood, enz.) en levert de volledige handelsgeschiedenis met activiteitslabels en kostprijs."
       oauth_setup_step_1_html: "Registreer een OAuth-app op <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">dashboard.snaptrade.com</a>"
       oauth_setup_step_2_html: "Alleen voor de browserflow: voeg de callback-URL van deze app (<code>%{callback_url}</code>) toe als geregistreerde redirect-URI"
       oauth_setup_step_3: "Stel SNAPTRADE_OAUTH_CLIENT_ID in uw omgeving in en herstart. Dat is voldoende voor de apparaatcodeflow; voeg ook SNAPTRADE_OAUTH_CLIENT_SECRET toe voor de browserflow"

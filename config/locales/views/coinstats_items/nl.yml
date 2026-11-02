@@ -2,16 +2,16 @@
 nl:
   coinstats_items:
     create:
-      success: "CoinStats provider koppeling succesvol geconfigureerd."
-      default_name: "CoinStats Koppeling"
+      success: "CoinStats-providerkoppeling succesvol geconfigureerd."
+      default_name: "CoinStats-koppeling"
       errors:
         validation_failed: "Validatie mislukt: %{message}."
     update:
-      success: "CoinStats provider koppeling succesvol bijgewerkt."
+      success: "CoinStats-providerkoppeling succesvol bijgewerkt."
       errors:
         validation_failed: "Validatie mislukt: %{message}."
     destroy:
-      success: "CoinStats provider koppeling ingepland voor verwijdering."
+      success: "CoinStats-providerkoppeling ingepland voor verwijdering."
     link_wallet:
       success:
         one: "%{count} crypto wallet succesvol gekoppeld."
@@ -42,8 +42,8 @@ nl:
       exchange_select_blank: "Selecteer een beurs"
       exchange_label: "Beurs"
       link_exchange_submit: "Beurs koppelen"
-      not_configured_title: "CoinStats provider koppeling niet geconfigureerd"
-      not_configured_message: "Om een crypto wallet te koppelen moet u eerst de CoinStats provider koppeling configureren."
+      not_configured_title: "CoinStats-providerkoppeling niet geconfigureerd"
+      not_configured_message: "Om een cryptowallet te koppelen moet u eerst de CoinStats-providerkoppeling configureren."
       not_configured_step1_html: "Ga naar <strong>Instellingen → Providers</strong>"
       not_configured_step2_html: "Zoek de <strong>CoinStats</strong> provider"
       not_configured_step3_html: "Volg de <strong>installatie-instructies</strong> om de provider configuratie te voltooien"
@@ -56,7 +56,7 @@ nl:
       api_key_placeholder: "Vereist"
       configure: "Configureren"
       update_configuration: "Opnieuw configureren"
-      default_name: "CoinStats Koppeling"
+      default_name: "CoinStats-koppeling"
       link: "Crypto Wallet koppelen"
     coinstats_item:
       deletion_in_progress: "Crypto wallet gegevens worden verwijderd…"

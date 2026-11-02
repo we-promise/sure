@@ -2,8 +2,8 @@
 nl:
   mercury_items:
     api_error:
-      title: "Mercury-koppelingsfout"
-      unable_to_connect: "Kan geen koppeling maken met Mercury"
+      title: "Mercury-verbindingsfout"
+      unable_to_connect: "Kan geen verbinding maken met Mercury"
       common_issues: "Veelvoorkomende problemen:"
       invalid_api_token_label: "Ongeldig API-token"
       invalid_api_token_desc: "Controleer uw API-token in de providerinstellingen"
@@ -152,6 +152,8 @@ nl:
         depository: "Accountsubtype:"
         investment: "Beleggingstype:"
         loan: "Leningtype:"
+        credit_card: ""
+        other_asset: ""
       subtype_messages:
         credit_card: "Creditcards worden automatisch ingesteld als creditcardaccounts."
         other_asset: "Voor overige bezittingen zijn geen extra opties nodig."

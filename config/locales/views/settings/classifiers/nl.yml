@@ -151,6 +151,6 @@ nl:
         spread_filter_hint: "Ze zeggen niets over de categorie. Het getal geeft aan hoeveel het gebruik door één categorie boven een gelijk aandeel moet liggen."
         word_split: "Woorden bestaan uit"
         word_split_ascii: "a–z en 0–9"
-        word_split_hint: "Elk ander teken splitst woorden. Letters uit elk schrift houden woorden als Geschäft of Кофейня heel; met interne symbolen blijven letters die door één symbool zijn gekoppeld ook één woord, zoals mcdonald's, s/o en m&s (een symbool aan een van beide uiteinden, zoals in *netflix, wordt nog steeds weggelaten)."
+        word_split_hint: "Elk ander teken splitst woorden. Letters uit elk schrift houden woorden als Geschäft of Кофейня heel; met interne symbolen blijven letters die door één symbool zijn verbonden ook één woord, zoals mcdonald's, s/o en m&s (een symbool aan een van beide uiteinden, zoals in *netflix, wordt nog steeds weggelaten)."
         word_split_symbols: "Letters, cijfers, interne symbolen"
         word_split_unicode: "Letters en cijfers, elk schrift"

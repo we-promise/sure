@@ -24,7 +24,7 @@ nl:
     create:
       no_profiles_found: "Geen Wise-profielen gevonden. Controleer uw API-token."
       invalid_token: "Ongeldig API-token. Controleer het en probeer het opnieuw."
-      connection_failed: "Kan geen koppeling maken met Wise. Probeer het later opnieuw."
+      connection_failed: "Kan geen verbinding maken met Wise. Probeer het later opnieuw."
     destroy:
       success: "Wise-koppeling verwijderd"
     update:
@@ -75,7 +75,7 @@ nl:
       sandbox_note_html: "Gebruik de basis-URL van de <strong>sandbox</strong> (<code>https://api.wise-sandbox.com</code>) om te testen. Stel <code>WISE_BASE_URL</code> in uw omgeving in."
       encryption_warning:
         title: "Databaseversleuteling is niet geconfigureerd"
-        message: "Configureer Active Record-versleutelingssleutels voordat u in productie Wise-tokens toevoegt. Zonder versleuteling worden tokens als platte tekst opgeslagen."
+        message: "Configureer Active Record-encryptiesleutels voordat u in productie Wise-tokens toevoegt. Zonder versleuteling worden tokens als platte tekst opgeslagen."
       instructions:
         sign_in_html: "Ga naar %{link} en log in op uw account"
         open_tokens: "Ga naar Settings → Connect and manage apps → Developer tools → API tokens"

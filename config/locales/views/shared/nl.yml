@@ -59,7 +59,7 @@ nl:
       cta: "Systeemstatus bekijken"
       reasons:
         redis_unreachable: "De app kan Redis niet bereiken. Controleer uw REDIS_URL en of Redis draait."
-        no_worker_processes: "Er is geen Sidekiq-workerproces gekoppeld. Start de workercontainer of systemd-unit."
+        no_worker_processes: "Er is geen Sidekiq-workerproces verbonden. Start de workercontainer of systemd-unit."
         stale_heartbeat: "De Sidekiq-worker heeft recent geen heartbeat gemeld. Mogelijk is hij vastgelopen of gecrasht."
         ai_queues_not_polled: "Geen enkele worker verwerkt de AI-wachtrijen (chat, handelaarsdetectie, categorisering). Controleer of de worker config/sidekiq.yml laadt."
         queue_backed_up: "De oudste taak in de wachtrij wacht al langer dan het latentiebudget. De worker draait wel, maar loopt achter."

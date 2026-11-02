@@ -39,7 +39,7 @@ nl:
       common_issues: "Veelvoorkomende problemen:"
       expired_credentials: "Genereer een nieuw API-token bij Brex."
       expired_credentials_label: "Verlopen inloggegevens:"
-      heading: "Kan geen koppeling maken met Brex"
+      heading: "Kan geen verbinding maken met Brex"
       invalid_token: "Controleer uw API-token in de providerinstellingen."
       invalid_token_label: "Ongeldig API-token:"
       network: "Controleer uw internetverbinding."
@@ -103,9 +103,9 @@ nl:
       disconnect_confirm: "%{name} loskoppelen?"
       encryption_warning:
         title: "Databaseversleuteling is niet geconfigureerd"
-        message: "Configureer de Active Record-versleutelingssleutels voordat u Brex-tokens in productie toevoegt. Zonder versleutelingssleutels slaat Sure de Brex-provider-inloggegevens en momentopnamen op in platte tekst, net als andere providerrecords."
+        message: "Configureer de Active Record-encryptiesleutels voordat u Brex-tokens in productie toevoegt. Zonder encryptiesleutels slaat Sure de Brex-provider-inloggegevens en momentopnamen op in platte tekst, net als andere providerrecords."
       instructions:
-        copy_token_html: "Kopieer het token en voeg het hieronder toe als een benoemde koppeling. Sure bewaart het token alleen om dit gezin te synchroniseren."
+        copy_token_html: "Kopieer het token en voeg het hieronder toe als een benoemde koppeling. Sure bewaart het token alleen om dit huishouden te synchroniseren."
         create_token: "Maak een API-token met deze alleen-lezen-scopes: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly"
         open_tokens: "Ga naar de Brex-instellingen voor ontwikkelaars-/API-tokens voor het bedrijf dat u wilt koppelen"
         sign_in_html: "Ga naar %{link} en log in op het account dat u wilt koppelen"

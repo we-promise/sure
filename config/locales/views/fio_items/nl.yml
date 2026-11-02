@@ -7,7 +7,7 @@ nl:
   family:
     fio:
       create_fio_item:
-        default_name: "Fio bankkoppeling"
+        default_name: "Fio banka-koppeling"
   fio_item:
     errors:
       account_processing_failed: "Kan Fio-account niet synchroniseren"

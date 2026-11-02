@@ -46,7 +46,7 @@ nl:
       no_wallets: "Er worden nog geen wallets gevolgd."
       review_tokens: "Tokens controleren"
       subtitle: "Elk adres dat deze koppeling uitleest, en wat er per adres wordt gevolgd."
-      title: "Self-custody wallets beheren"
+      title: "Wallets in eigen beheer beheren"
     new_wallet:
       address_label: "Walletadres"
       address_placeholder: "bc1..., 0x... of een Solana-adres"
@@ -56,7 +56,7 @@ nl:
       continue: "Doorgaan"
       read_only_note: "Alleen openbare blockchaingegevens worden gelezen. Voer nooit een seed phrase of private key in."
       subtitle: "Volg een wallet waarvan u de sleutels beheert, via het openbare adres."
-      title: "Self-custody wallet toevoegen"
+      title: "Wallet in eigen beheer toevoegen"
     onchain_wallet_item:
       assets_tracked:
         one: "1 asset gevolgd"
@@ -85,7 +85,7 @@ nl:
       title: "Cryptoprijzen zijn niet geconfigureerd"
     provider_connection:
       description: "Volg een wallet waarvan u de sleutels beheert, via het openbare adres."
-      name: "Self-custody wallet"
+      name: "Wallet in eigen beheer"
     review_tokens:
       save: "Gevolgde assets opslaan"
       subtitle: "%{chain} · %{address}"

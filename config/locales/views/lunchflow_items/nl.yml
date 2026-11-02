@@ -2,11 +2,11 @@
 nl:
   lunchflow_items:
     api_error:
-      title: "Verbindingsfout Lunch Flow"
-      unable_to_connect: "Kan geen koppeling maken met Lunch Flow"
+      title: "Lunch Flow-verbindingsfout"
+      unable_to_connect: "Kan geen verbinding maken met Lunch Flow"
       common_issues: "Veelvoorkomende problemen:"
       invalid_api_key_label: "Ongeldige API-sleutel"
-      invalid_api_key_desc: "Controleer uw API-sleutel in de provider-instellingen"
+      invalid_api_key_desc: "Controleer uw API-sleutel in de providerinstellingen"
       expired_credentials_label: "Verlopen inloggegevens"
       expired_credentials_desc: "Genereer een nieuwe API-sleutel bij Lunch Flow"
       network_issue_label: "Netwerkprobleem"
@@ -30,7 +30,7 @@ nl:
     destroy:
       success: "Lunch Flow koppeling verwijderd"
     index:
-      title: "Lunch Flow Koppelingen"
+      title: "Lunch Flow-koppelingen"
     loading:
       loading_message: "Lunch Flow accounts laden..."
       loading_title: "Laden"

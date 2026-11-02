@@ -220,7 +220,7 @@ nl:
         title: "OpenAI"
       yahoo_finance_settings:
         title: "Yahoo Finance"
-        description: "Yahoo Finance biedt gratis toegang tot aandelenkoersen, wisselkoersen en financiële gegevens zonder API-sleutel vereiste."
+        description: "Yahoo Finance biedt gratis toegang tot aandelenkoersen, wisselkoersen en financiële gegevens zonder dat een API-sleutel nodig is."
         status_healthy: "Yahoo Finance is actief en werkt."
         status_rate_limited: "Yahoo Finance beperkt tijdelijk het aantal verzoeken."
         rate_limited_title: "Limiet van Yahoo Finance bereikt."
@@ -230,8 +230,8 @@ nl:
         unavailable_message: "Yahoo Finance was niet bereikbaar of gaf een onverwacht antwoord. Controleer uw internetverbinding en probeer het later opnieuw."
         status_unknown: "De status van Yahoo Finance wordt gecontroleerd."
         status_active: "Yahoo Finance is actief en werkt"
-        status_inactive: "Yahoo Finance koppeling mislukt"
-        connection_failed: "Kan geen koppeling maken met Yahoo Finance"
+        status_inactive: "Yahoo Finance-verbinding mislukt"
+        connection_failed: "Kan geen verbinding maken met Yahoo Finance"
         troubleshooting: "Controleer uw internetverbinding en firewallinstellingen. Yahoo Finance kan tijdelijk niet beschikbaar zijn."
       rentcast_settings:
         title: "RentCast"
@@ -306,7 +306,7 @@ nl:
         step_1_html: "Ga naar <a href=\"https://www.alphavantage.co/support/#api-key\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">alphavantage.co</a> en vraag uw gratis API-sleutel aan."
         step_2: "Kopieer de API-sleutel en plak deze hieronder."
         rate_limit_warning: "De gratis tier van Alpha Vantage is beperkt tot 25 API-aanroepen per dag. Het best te gebruiken als aanvullende provider voor Europese ETF's die niet bij andere providers beschikbaar zijn."
-        no_health_check_note: "Een statuscontrole van de koppeling is voor deze provider niet beschikbaar vanwege de strikte limiet."
+        no_health_check_note: "Een statuscontrole van de verbinding is voor deze provider niet beschikbaar vanwege de strikte limiet."
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API dagelijkse oproepen gebruikt (%{percentage})"
         description: "Voer de API-sleutel in die door Twelve Data is verstrekt"

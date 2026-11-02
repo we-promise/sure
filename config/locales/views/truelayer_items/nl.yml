@@ -70,6 +70,7 @@ nl:
       subtype_labels:
         depository: "Accountsubtype:"
         loan: "Leningtype:"
+        credit_card: ""
       subtype_messages:
         credit_card: "Creditcards worden automatisch ingesteld als creditcardaccounts."
     complete_account_setup:
