@@ -628,6 +628,22 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal :depleted, Goal.find(goal.id).status
   end
 
+  # The floor sits between the account's value (6,000) and what was put in
+  # (4,000), so the basis alone decides whether the reserve is whole.
+  test "a reserve on an investment account on the balance basis counts market gains" do
+    goal = investment_reserve(progress_basis: "balance")
+
+    assert_equal :funded, goal.status
+    assert_equal BigDecimal("6000"), goal.current_balance.to_d
+  end
+
+  test "a reserve on an investment account on the contributions basis leaves market gains out" do
+    goal = investment_reserve(progress_basis: "contributions")
+
+    assert_equal :depleted, goal.status
+    assert_equal BigDecimal("4000"), goal.current_balance.to_d
+  end
+
   # `complete` releases the earmark. For a reserve that is the opposite of the
   # point, so the transition is refused outright rather than hidden in the UI.
   test "a reserve cannot be completed" do
@@ -1523,6 +1539,14 @@ class GoalTest < ActiveSupport::TestCase
     def whole_account_goal(name, account)
       @family.goals.create!(name: name, target_amount: 5_000, currency: "USD") do |goal|
         goal.goal_accounts.build(account: account)
+      end
+    end
+
+    def investment_reserve(progress_basis:)
+      account = Account.create!(family: @family, accountable: Investment.new, name: "Reserve brokerage", currency: "USD", balance: 6_000)
+      account.balances.create!(date: 10.days.ago.to_date, balance: 6_000, currency: "USD", net_market_flows: 2_000)
+      @family.goals.create!(name: "Invested reserve", target_amount: 5_000, currency: "USD", kind: "maintained", progress_basis: progress_basis) do |g|
+        g.goal_accounts.build(account: account)
       end
     end
 
