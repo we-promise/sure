@@ -766,6 +766,63 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
     assert_equal 0, stored_rollover(second)
   end
 
+  test "an unchanged chain is not recomputed" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).never
+    recompute!
+  end
+
+  test "new spending recomputes a chain that was already settled" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    spend(30, budget: first)
+    recompute!
+
+    assert_equal 70, stored_rollover(second)
+  end
+
+  test "an allocation change recomputes a chain that was already settled" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    allocate(first, 40)
+    recompute!
+
+    assert_equal 40, stored_rollover(second)
+  end
+
+  test "a sync recomputes a chain that was already settled" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    @family.touch(:latest_sync_completed_at)
+    Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).once.returns(false)
+    recompute!
+  end
+
   test "recompute does not clobber an allocation changed underneath it" do
     first = initialized_budget(2.months.ago)
     allocate(first, 100)

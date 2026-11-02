@@ -29,11 +29,16 @@ class Budget::RolloverCalculator
   # may have changed while we waited for it.
   def recompute!
     return if first_relevant_budget_date.nil?
+    return if Rails.cache.read(inputs_cache_key) == inputs_fingerprint
 
     BudgetCategory.transaction do
       lock_chain!
+      fingerprint = inputs_fingerprint
       from = first_relevant_budget_date
-      recompute_chain!(from) if from
+      wrote = from ? recompute_chain!(from) : false
+
+      # Only a pass that changed nothing proves the stored amounts match these inputs.
+      Rails.cache.write(inputs_cache_key, fingerprint) unless wrote
     end
   end
 
@@ -113,6 +118,34 @@ class Budget::RolloverCalculator
       if updates.any?
         BudgetCategory.upsert_all(updates, unique_by: :id, update_only: %w[rolled_over_amount updated_at])
       end
+
+      updates.any?
+    end
+
+    def inputs_cache_key
+      "#{chain_key}:inputs"
+    end
+
+    # What the chain reads: its budgets and allocations, the entries, categories,
+    # accounts, shares and rates behind actual spending, and family settings
+    # (family.updated_at also moves with every sync).
+    def inputs_fingerprint
+      budgets = family.budgets.where(user_id: user&.id)
+
+      [
+        version_of(budgets),
+        version_of(BudgetCategory.where(budget_id: budgets.select(:id))),
+        version_of(AccountShare.where(account_id: family.accounts.select(:id))),
+        family.entries_cache_version,
+        family.accounts_status_version,
+        ExchangeRate.maximum(:updated_at)&.to_f,
+        family.updated_at.to_f
+      ].join("|")
+    end
+
+    def version_of(scope)
+      count, updated_at = scope.pick(Arel.sql("count(*)"), Arel.sql("max(#{scope.table_name}.updated_at)"))
+      "#{count}-#{updated_at&.to_f}"
     end
 
 
