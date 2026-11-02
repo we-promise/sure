@@ -80,14 +80,17 @@ class Provider::TradeRepublicWebsocketTest < ActiveSupport::TestCase
   end
 
   private
+    # Builds a WebSocket client with the given timeout and no stubbed proxy.
     def websocket(timeout: 2)
       Provider::TradeRepublicWebsocket.new(headers: {}, timeout: timeout)
     end
 
+    # Builds a WebSocket client whose proxy lookup returns the given URL.
     def websocket_with_proxy(url, timeout: 2)
       websocket(timeout: timeout).tap { |instance| instance.stubs(:proxy_uri).returns(url && URI(url)) }
     end
 
+    # Clears inherited proxy settings and applies the overrides for the block.
     def with_proxy_env(overrides)
       env = {
         "HTTP_PROXY" => nil, "http_proxy" => nil,
@@ -98,6 +101,8 @@ class Provider::TradeRepublicWebsocketTest < ActiveSupport::TestCase
       with_env_overrides(env) { yield }
     end
 
+    # Runs a local server that records the CONNECT request and replies with the
+    # given proxy response.
     def with_proxy_server(response: "HTTP/1.0 200 Connection established\r\n\r\n")
       server = TCPServer.new("127.0.0.1", 0)
       requests = Queue.new

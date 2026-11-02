@@ -19,6 +19,8 @@ class Provider::TradeRepublicWebsocket
     @driver = nil
   end
 
+  # Opens the TLS WebSocket connection, tunneling through the configured HTTP
+  # proxy when one applies to the Trade Republic host.
   def connect
     tcp = open_tunnel
     @socket = tcp
@@ -79,6 +81,8 @@ class Provider::TradeRepublicWebsocket
 
     PROXY_RESPONSE_LIMIT = 16_384
 
+    # Connects directly, or establishes a CONNECT tunnel to HOST:443 through
+    # the resolved proxy.
     def open_tunnel
       proxy = proxy_uri
       return Socket.tcp(HOST, 443, connect_timeout: @timeout) unless proxy
@@ -94,6 +98,8 @@ class Provider::TradeRepublicWebsocket
       end
     end
 
+    # Builds the CONNECT request, adding Basic proxy authentication when the
+    # proxy URL carries credentials.
     def connect_request(proxy)
       request = +"CONNECT #{HOST}:443 HTTP/1.1\r\nHost: #{HOST}:443\r\n"
       if proxy.user
@@ -103,6 +109,8 @@ class Provider::TradeRepublicWebsocket
       request << "\r\n"
     end
 
+    # Resolves the proxy for the WSS endpoint, preferring HTTPS_PROXY and
+    # falling back to HTTP_PROXY for deployments that only configure the latter.
     def proxy_uri
       proxy = find_proxy("https") || find_proxy("http")
       return unless proxy
@@ -118,10 +126,14 @@ class Provider::TradeRepublicWebsocket
             "Invalid Trade Republic WebSocket proxy configuration"
     end
 
+    # Resolves the scheme-specific proxy variable while preserving the URI
+    # library's NO_PROXY and loopback handling.
     def find_proxy(scheme)
       URI.parse("#{scheme}://#{HOST}:443").find_proxy
     end
 
+    # Reads and validates the proxy's CONNECT response, bounding its size and
+    # requiring a 2xx status before the tunnel is used.
     def read_proxy_response(socket)
       response = +""
       Timeout.timeout(@timeout, Timeout::Error) do
