@@ -5,7 +5,7 @@ id:
       paid: Lunas
       skipped: Dilewati
       missed: Terlewat
-      scheduled: Terbuka
+      scheduled: Terjadwal
     show:
       due_on: "Jatuh tempo pada %{date}"
       paid_of: "Dibayar %{paid} dari %{expected}"

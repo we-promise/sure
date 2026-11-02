@@ -9,7 +9,7 @@ id:
     create:
       success: Pembayaran dialokasikan
     destroy:
-      success: Tautan pembayaran diputuskan
+      success: Pembayaran sudah tidak ditautkan
     confirm:
       success: Pembayaran dialokasikan ke tagihan
     reject:
