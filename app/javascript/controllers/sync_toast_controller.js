@@ -15,10 +15,14 @@ export default class extends Controller {
   };
 
   connect() {
-    // A visit that starts after the toast (e.g. the account page's own refresh
-    // stream) already re-renders the page; a second one would only duplicate it.
-    this._onVisit = () => clearTimeout(this._timer);
-    document.addEventListener("turbo:visit", this._onVisit);
+    // A page fetch after the toast (e.g. the account page's refresh stream) already re-renders
+    // the page. Frame, form and prefetch fetches target their own element, so they don't count.
+    this._onFetch = (event) => {
+      const headers = event.detail.fetchOptions?.headers || {};
+      if (event.target === document.documentElement && !headers["Turbo-Frame"])
+        clearTimeout(this._timer);
+    };
+    document.addEventListener("turbo:before-fetch-request", this._onFetch);
 
     if (this.#dialogOpen()) {
       this.#deferUntilDialogCloses();
@@ -29,7 +33,7 @@ export default class extends Controller {
 
   disconnect() {
     clearTimeout(this._timer);
-    document.removeEventListener("turbo:visit", this._onVisit);
+    document.removeEventListener("turbo:before-fetch-request", this._onFetch);
     this.#removeDeferredDialogListener();
   }
 
