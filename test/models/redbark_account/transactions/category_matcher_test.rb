@@ -81,4 +81,16 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
     assert_nil @matcher.match("TRANSFER_IN", 6011), "ATM withdrawal MCC is money movement, not spending"
     assert_nil @matcher.match(nil, nil)
   end
+
+  test "does not let merchant_category_code override a recognized category with no local equivalent" do
+    bare_family = families(:dylan_family)
+    bare_family.categories.destroy_all
+    bare_family.categories.create!(name: "Groceries")
+    matcher = RedbarkAccount::Transactions::CategoryMatcher.new(bare_family.categories.reload.to_a)
+
+    # 5411 (supermarket) would resolve to Groceries via MCC, but ENTERTAINMENT is a
+    # recognized, non-excluded category code -- it must not fall through to MCC just
+    # because the family has no "Entertainment" category.
+    assert_nil matcher.match("ENTERTAINMENT", 5411)
+  end
 end

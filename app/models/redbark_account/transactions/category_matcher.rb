@@ -25,11 +25,16 @@ class RedbarkAccount::Transactions::CategoryMatcher
   end
 
   # category is the transaction's `category` field (Redbark's fixed bank-category code,
-  # e.g. "FOOD_AND_DRINK"). mcc is its `merchant_category_code`, tried only when category
-  # has no confident match. Returns a matching Category, or nil when neither signal has an
-  # equivalent among the user's categories.
+  # e.g. "FOOD_AND_DRINK"). mcc is its `merchant_category_code`, tried only when `category`
+  # is blank or one of the codes intentionally excluded from CATEGORY_GROUPS. A recognized
+  # category code with no local equivalent stays uncategorized rather than falling through
+  # to the noisier MCC signal -- the bank category already describes spending purpose, so
+  # letting merchant type override it would misclassify rather than merely miss.
   def match(category, mcc = nil)
-    match_group(category_group(category)) || match_group(mcc_group(mcc))
+    group = category_group(category)
+    return match_group(group) if group
+
+    match_group(mcc_group(mcc))
   end
 
   private
