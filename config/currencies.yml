@@ -2549,9 +2549,10 @@ kgs:
 
 # Additional crypto assets, needed so Money::Currency can value non-BTC
 # holdings (ETH, SOL, AVAX, ...) without raising UnknownCurrencyError on
-# sync. minor_unit_conversion/precision follow the btc entry above (8
-# decimals) except where a token's own convention differs (e.g. USDT, a
-# cent-denominated stablecoin).
+# sync. minor_unit_conversion is each asset's native-chain scale (lovelace
+# for ADA, lamports for SOL, the token's own decimals for an ERC-20), the
+# same convention as btc/satoshi and eth/wei above; default_precision is 8
+# for display.
 ada:
   name: Cardano
   priority: 100

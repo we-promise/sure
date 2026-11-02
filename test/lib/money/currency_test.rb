@@ -59,18 +59,14 @@ class Money::CurrencyTest < ActiveSupport::TestCase
   # Each currency's iso_code/symbol/precision/conversion must come out
   # exactly as its own entry defines, independent of every other one.
   #
-  # minor_unit_conversion is each asset's own real native-chain scale (the
-  # same convention already used for btc/satoshi and eth/wei above), not a
-  # blanket copy of btc's -- money_to_minor_units and the API serializers
-  # (balance_cents, amount_cents, etc.) multiply by this directly, so the
-  # wrong factor here misreports a real balance by orders of magnitude.
-  # Every value below was confirmed individually against each asset's own
-  # contract or chain docs (ADA/SOL/ZEC/FIL's native units, and the 18-decimal
-  # Etherscan "Decimals" field for every ERC-20/EVM entry here), except
-  # baby/boden, which are left at the 8-decimal placeholder: multiple
-  # distinct tokens share each of these two tickers across different
-  # chains, and which contract Coinbase's own data refers to couldn't be
-  # confirmed from public sources.
+  # minor_unit_conversion is each asset's native-chain scale (the same
+  # convention as btc/satoshi and eth/wei above): money_to_minor_units and the
+  # API serializers (balance_cents, amount_cents, etc.) multiply by it
+  # directly, so a wrong factor misreports a balance by orders of magnitude.
+  # Values follow each asset's chain docs (ADA/SOL/ZEC/FIL's native units) or
+  # its contract's decimals (every ERC-20/EVM entry). baby and boden stay at
+  # an 8-decimal placeholder: several distinct tokens share each ticker
+  # across chains, so no single contract's decimals apply.
   test "the 32 added crypto currencies use their correct precision and conversion" do
     expected_conversion = {
       "ada" => 1_000_000,             # lovelace
