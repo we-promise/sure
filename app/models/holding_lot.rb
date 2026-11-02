@@ -8,8 +8,9 @@ class HoldingLot < ApplicationRecord
   belongs_to :source_entry, class_name: "Entry", optional: true
   belongs_to :origin_security, class_name: "Security", optional: true
 
-  # A cost per unit is stored as a trade's price is, so it stays below 10^9.
-  MAX_UNIT_COST = BigDecimal("1e9")
+  # A cost per unit is stored with 15 digits before the point, as a
+  # holding's cost basis is, so it stays below 10^15.
+  MAX_UNIT_COST = BigDecimal("1e15")
 
   scope :derived, -> { where.not(source_entry_id: nil) }
   scope :opening, -> { where(source_entry_id: nil) }
