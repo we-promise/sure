@@ -479,6 +479,7 @@ en:
         monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
         fio: Sync a Fio banka account with a read-only API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
+        truelayer: Sync UK bank accounts and credit cards via TrueLayer open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
         mercury: Sync your Mercury business banking accounts automatically.
@@ -647,6 +648,8 @@ en:
         api_key_placeholder_update: "Enter new API key to update"
         base_url_label: "Base URL (Optional)"
         base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
+        sync_start_date_label: "Import transactions from"
+        sync_start_date_help: "Leave blank to import everything Lunch Flow has. Moving the date earlier imports the missing period on the next sync. Moving it later doesn't affect transactions already imported."
         save_and_connect: "Save and connect"
         update_connection: "Update connection"
       akahu_panel:
