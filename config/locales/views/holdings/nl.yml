@@ -8,7 +8,7 @@ nl:
       cannot_delete: "U kunt deze positie niet verwijderen"
     update:
       success: "Kostprijs opgeslagen."
-      error: "Ongeldige kostprijs waarde."
+      error: "Ongeldige kostprijs."
     unlock_cost_basis:
       success: "Kostprijs ontgrendeld. Kan worden bijgewerkt bij volgende sync."
     remap_security:
@@ -45,7 +45,7 @@ nl:
       average_cost: "Gemiddelde kostprijs"
       holdings: "Posities"
       name: "Naam"
-      new_holding: "Nieuwe transactie"
+      new_holding: "Nieuwe activiteit"
       no_holdings: "Geen posities om weer te geven."
       positions:
         one: "%{count} positie"

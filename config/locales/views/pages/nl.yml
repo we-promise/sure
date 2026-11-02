@@ -124,7 +124,7 @@ nl:
         add_transaction: "Transactie toevoegen"
       no_accounts:
         title: "Nog geen accounts"
-        description: "Voeg accounts toe om netto vermogen gegevens weer te geven"
+        description: "Voeg accounts toe om gegevens over uw netto vermogen weer te geven"
         add_account: "Account toevoegen"
       outflows_donut:
         title: "Uitgaven"
@@ -139,7 +139,7 @@ nl:
         weight: "Gewicht"
         value: "Waarde"
         return: "Rendement"
-        period_activity: "%{period} Activiteit"
+        period_activity: "Activiteit %{period}"
         contributions: "Stortingen"
         withdrawals: "Opnames"
         trades: "Transacties"

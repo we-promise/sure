@@ -130,7 +130,7 @@ nl:
       no_matching_icons: "Geen overeenkomende pictogrammen"
       search_placeholder: "Pictogrammen zoeken..."
   provider_sync_summary:
-    title: "Synchronisatie samenvatting"
+    title: "Synchronisatieoverzicht"
     last_sync: "Laatste sync: %{time_ago} geleden"
     accounts:
       title: "Accounts"
@@ -159,7 +159,7 @@ nl:
       found: "Gevonden: %{count}"
       processed: "Verwerkt: %{count}"
     trades:
-      title: "Transacties"
+      title: "Handelstransacties"
       imported: "Geïmporteerd: %{count}"
       skipped: "Overgeslagen: %{count}"
       fetching: "Activiteiten ophalen bij broker..."
@@ -170,23 +170,23 @@ nl:
       recently: "recent"
       errors: "Fouten: %{count}"
       pending_reconciled:
-        one: "%{count} dubbele pending transactie afgestemd"
-        other: "%{count} dubbele pending transacties afgestemd"
+        one: "%{count} dubbele transactie in behandeling afgestemd"
+        other: "%{count} dubbele transacties in behandeling afgestemd"
       view_reconciled: "Afgestemde transacties bekijken"
       duplicate_suggestions:
         one: "%{count} mogelijk duplicaat moet worden beoordeeld"
         other: "%{count} mogelijke duplicaten moeten worden beoordeeld"
       view_duplicate_suggestions: "Voorgestelde duplicaten bekijken"
       stale_pending:
-        one: "%{count} verlopen pending transactie (uitgesloten van budgetten)"
-        other: "%{count} verlopen pending transacties (uitgesloten van budgetten)"
+        one: "%{count} verlopen transactie in behandeling (uitgesloten van budgetten)"
+        other: "%{count} verlopen transacties in behandeling (uitgesloten van budgetten)"
       view_stale_pending: "Betrokken accounts bekijken"
       stale_pending_count:
         one: "%{count} transactie"
         other: "%{count} transacties"
       stale_unmatched:
-        one: "%{count} pending transactie moet handmatig worden beoordeeld"
-        other: "%{count} pending transacties moeten handmatig worden beoordeeld"
+        one: "%{count} transactie in behandeling moet handmatig worden beoordeeld"
+        other: "%{count} transacties in behandeling moeten handmatig worden beoordeeld"
       view_stale_unmatched: "Transacties bekijken die beoordeling nodig hebben"
       stale_unmatched_count:
         one: "%{count} transactie"

@@ -63,7 +63,7 @@ nl:
         on_track: "Op schema"
         over_budget: "Over budget"
       tabs:
-        actual: "Actueel"
+        actual: "Werkelijk"
         budgeted: "Gebudgetteerd"
     copy_previous_prompt:
       title: "Stel uw budget in"

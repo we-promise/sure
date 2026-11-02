@@ -127,7 +127,7 @@ nl:
     unattributed_outflows:
       heading: "Er is geld van deze accounts afgegaan"
       body: "Als een deel hiervan is uitgegeven aan %{goal}, geef dat dan aan; dan telt het niet meer mee tegen het doelbedrag."
-      attribute: "Dit was het"
+      attribute: "Deze was het"
     show:
       edit: "Bewerken"
       consume: "Ik heb een deel van dit geld gebruikt"

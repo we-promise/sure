@@ -192,4 +192,4 @@ nl:
       cash: "Contant geld bij broker"
       holdings: "Posities"
       total: "Portfoliosaldo"
-      total_value_tooltip: "Het totale portfolio saldo is de som van contant geld bij broker (beschikbaar voor handelen) en de huidige marktwaarde van uw bezittingen."
+      total_value_tooltip: "Het totale portfoliosaldo is de som van contant geld bij broker (beschikbaar voor handelen) en de huidige marktwaarde van uw bezittingen."

@@ -23,13 +23,13 @@ nl:
       parent_category_label: "Bovenliggende categorie (optioneel)"
       trigger_label: "Kleur en icoon kiezen"
       color: "Kleur"
-      icon: "Icoon"
+      icon: "Pictogram"
       auto_adjust: "automatisch aanpassen."
       poor_contrast: "Slecht contrast, kies een donkerdere kleur of"
     destroy_all:
       success: "Alle categorieën verwijderd"
     index:
-      bootstrap: "Gebruik standaardinstellingen (aanbevolen)"
+      bootstrap: "Standaardcategorieën gebruiken (aanbevolen)"
       categories: "Categorieën"
       categories_expenses: "Uitgavencategorieën"
       categories_incomes: "Inkomenscategorieën"
@@ -63,7 +63,7 @@ nl:
     virtual:
       transfer: "Overboeking"
       payment: "Betaling"
-      trade: "Transactie"
+      trade: "Handelstransactie"
   category:
     dropdowns:
       show:

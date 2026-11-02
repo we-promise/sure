@@ -10,7 +10,7 @@ nl:
       complete_setup: "Instellen voltooien"
       edit: "Bewerken"
       link_lunchflow: "Koppel met Lunch Flow"
-      link_provider: "Koppel met provider"
+      link_provider: "Koppelen met provider"
       unlink_provider: "Verbreek verbinding met provider"
       change_simplefin_account: "SimpleFIN-account wijzigen"
       troubleshoot: "Problemen oplossen"
@@ -69,7 +69,7 @@ nl:
       new_account: "Nieuw account"
       no_accounts: "Nog geen accounts"
     form:
-      balance: "Huidig saldo"
+      balance: "Saldo op datum:"
       opening_balance_date_label: "Datum beginsaldo"
       name_label: "Accountnaam"
       name_placeholder: "Voorbeeld accountnaam"
@@ -84,7 +84,7 @@ nl:
       logo_label: "Pictogram"
       logo_hint: "Of upload uw eigen PNG-, JPEG-, GIF-, WebP- of ICO-afbeelding van maximaal 1 MB. Deze vervangt het Brandfetch-logo."
       notes_label: "Notities"
-      notes_placeholder: "Sla aanvullende informatie op zoals rekeningnummers, sorteer codes, IBAN, routenummers, enz."
+      notes_placeholder: "Sla aanvullende informatie op zoals rekeningnummers, sorteercodes, IBAN, routenummers, enz."
       exclude_from_reports: "Uitsluiten van alle rapporten"
       enable_category_matcher_label: "Categoriekoppeling inschakelen"
       enable_category_matcher_hint: "Indien ingeschakeld wordt de door de provider voorgestelde categorie toegepast op geïmporteerde transacties. Schakel uit om nieuwe transacties zonder categorie te laten."
@@ -97,7 +97,7 @@ nl:
       manual_accounts:
         other_accounts: "Andere accounts"
       new_account: "Nieuw account"
-      sync: "Synchroniseer alles"
+      sync: "Alles synchroniseren"
     sync_all:
       syncing: "Accounts synchroniseren..."
     new:
@@ -113,7 +113,7 @@ nl:
         connected_entry_eu: "EU-account koppelen"
         link_with_provider: "Koppel met %{provider}"
         lunchflow_entry: "Koppel Lunch Flow account"
-        manual_entry: "Voer accountsaldo in"
+        manual_entry: "Accountsaldo invoeren"
         title: "Hoe wilt u het toevoegen?"
       title: "Wat wilt u toevoegen?"
     show:
@@ -129,8 +129,8 @@ nl:
         amount: "Bedrag"
         balance: "Saldo"
         date: "Datum"
-        entries: "vermeldingen"
-        entry: "vermelding"
+        entries: "items"
+        entry: "item"
         filter: "Filter"
         new: "Nieuw"
         new_activity: "Nieuwe activiteit"
@@ -138,9 +138,9 @@ nl:
         new_trade: "Nieuwe handelstransactie"
         new_transaction: "Nieuwe transactie"
         new_transfer: "Nieuwe overboeking"
-        no_entries: "Geen vermeldingen gevonden"
+        no_entries: "Geen items gevonden"
         search:
-          placeholder: "Zoek vermeldingen op naam"
+          placeholder: "Zoek items op naam"
         search_placeholder: "Items zoeken op naam"
         title: "Activiteit"
         confirmed: "Bevestigd"
@@ -153,14 +153,14 @@ nl:
         complete_setup: "Instellen voltooien"
       menu:
         confirm_accept: "Verwijder \"%{name}\""
-        confirm_body_html: "<p>Door dit account te verwijderen, wist u de waarde geschiedenis, wat verschillende aspecten van uw totale account beïnvloedt. Deze actie heeft een directe impact op uw netto waarde berekeningen en de account grafieken.</p><br /> <p>Na verwijdering is er geen manier om de account informatie te herstellen omdat u het als een nieuw account moet toevoegen.</p>"
+        confirm_body_html: "<p>Door dit account te verwijderen, wist u de waardegeschiedenis, wat verschillende aspecten van uw totale account beïnvloedt. Deze actie heeft een directe impact op de berekening van uw netto vermogen en de accountgrafieken.</p><br /> <p>Na verwijdering is er geen manier om de accountgegevens te herstellen omdat u het als een nieuw account moet toevoegen.</p>"
         confirm_title: "Account verwijderen?"
         delete_account: "Account verwijderen"
         edit: "Bewerken"
         import: "Transacties importeren"
         import_trades: "Handelstransacties importeren"
         import_transactions: "Transacties importeren"
-        manage: "Beheer accounts"
+        manage: "Accounts beheren"
         sharing: "Delen"
         statements: "Afschriften"
         exclude_from_reports: "Uitsluiten van alle rapporten"
@@ -170,7 +170,7 @@ nl:
       logo_not_applied: "Het account is opgeslagen, maar het gekozen pictogram kon niet worden gedownload. Probeer het opnieuw of upload uw eigen pictogram."
     sidebar:
       missing_data: "Ontbrekende historische gegevens"
-      missing_data_description: "%{product} gebruikt externe providers om historische wisselkoersen, beveiligingsprijzen en meer op te halen. Deze gegevens zijn nodig om nauwkeurige historische accountbalansen te berekenen."
+      missing_data_description: "%{product} gebruikt externe providers om historische wisselkoersen, effectenkoersen en meer op te halen. Deze gegevens zijn nodig om nauwkeurige historische accountsaldi te berekenen."
       configure_providers: "Configureer hier uw providers."
       tabs:
         all: "Alle"
@@ -189,7 +189,7 @@ nl:
         hint: "Sleep accounts aan hun greep om de volgorde te wijzigen."
         done: "Klaar"
     types:
-      depository: "Contant geld"
+      depository: "Bankrekening"
       investment: "Belegging"
       crypto: "Crypto"
       property: "Vastgoed"
@@ -199,7 +199,7 @@ nl:
       loan: "Lening"
       other_liability: "Overige schuld"
     types_plural:
-      depository: "Contant geld"
+      depository: "Bankrekeningen"
       investment: "Beleggingen"
       crypto: "Crypto"
       property: "Vastgoed"

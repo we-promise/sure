@@ -24,13 +24,13 @@ nl:
       operator_multiply: "Vermenigvuldigen"
       operator_divide: "Delen"
     exchange_rate_tabs:
-      calculate_rate_tab: "FX-tarief berekenen"
-      convert_tab: "Converteren met FX-tarief"
+      calculate_rate_tab: "Wisselkoers berekenen"
+      convert_tab: "Omrekenen met wisselkoers"
       destination_amount: "Doelbedrag"
       exchange_rate: "Wisselkoers"
       exchange_rate_help: "Kies hoe u het bedrag wilt invoeren."
     syncing_notice:
-      syncing: "Accountsgegevens synchroniseren..."
+      syncing: "Accountgegevens synchroniseren..."
     require_admin: "Alleen beheerders kunnen deze actie uitvoeren"
     require_non_guest: "Gasten kunnen deze actie niet uitvoeren"
     require_connector_owner: "U kunt alleen verbindingen beheren die u zelf heeft toegevoegd"
