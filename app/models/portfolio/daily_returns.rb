@@ -57,8 +57,6 @@ class Portfolio::DailyReturns
   end
 
   # Where a fragment built elsewhere goes in the query; see #bind_and_splice.
-  # A comment with no colon, so sanitize_sql_array passes over it. The bound
-  # values (ids, dates, a currency code) cannot spell one.
   FRAGMENT_MARKER = %r{/\* fragment (\w+) \*/}
 
   attr_reader :account_ids, :currency, :period, :active_until_dates
@@ -190,13 +188,23 @@ class Portfolio::DailyReturns
     # classifier's SQL -- already sanitized, and full of quoted labels -- would
     # raise there if a label or literal ever carried one (see
     # Portfolio::FlowClassifier#classify_ids). The template holds a marker
-    # where each fragment belongs, and the fragment replaces it after the binds
-    # are filled, so it is never scanned.
+    # where each fragment belongs, and it is split on those markers before any
+    # bind is filled, so a fragment is never scanned and a bound value that
+    # spells a marker stays a literal.
     def bind_and_splice(template)
       refuse_liabilities!
 
-      ActiveRecord::Base.sanitize_sql_array([ template, query_binds ])
-        .gsub(FRAGMENT_MARKER) { fragments.fetch(Regexp.last_match(1)) }
+      # Split keeps the marker's capture, so odd positions are fragment names.
+      template.split(FRAGMENT_MARKER).each_with_index.map do |part, index|
+        index.odd? ? fragments.fetch(part) : bind_values(part)
+      end.join
+    end
+
+    # A piece with no bind would reach sanitize_sql_array's `%` formatting.
+    def bind_values(sql)
+      return sql unless sql.match?(/:\w/)
+
+      ActiveRecord::Base.sanitize_sql_array([ sql, query_binds ])
     end
 
     # Every query this class runs goes through #bind_and_splice, so checking
