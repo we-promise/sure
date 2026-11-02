@@ -1,6 +1,8 @@
 class Balance::SyncCache
-  def initialize(account)
+  # start_date skips entries before it; only safe when the caller seeds balances from a persisted prior day.
+  def initialize(account, start_date: nil)
     @account = account
+    @start_date = start_date
     @unconvertible_entry_count = 0
     @unconvertible_holding_count = 0
   end
@@ -75,7 +77,7 @@ class Balance::SyncCache
       @converted_entries ||= begin
         missing_rate_pairs = []
 
-        converted = account.entries.excluding_pending.excluding_split_parents.includes(:entryable).order(:date).to_a.filter_map do |e|
+        converted = entries_scope.to_a.filter_map do |e|
           custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 
           # Use Money#exchange_to with custom rate if available, standard lookup otherwise.
@@ -114,6 +116,11 @@ class Balance::SyncCache
 
         converted
       end
+    end
+
+    def entries_scope
+      scope = account.entries.excluding_pending.excluding_split_parents.includes(:entryable).order(:date)
+      @start_date ? scope.where(date: @start_date..) : scope
     end
 
     def report_missing_rates(message:, counts:, missing_rate_pairs:)
