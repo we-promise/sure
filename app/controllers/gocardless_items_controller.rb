@@ -5,7 +5,7 @@ class GocardlessItemsController < ApplicationController
 
   ALLOWED_ACCOUNTABLE_TYPES = %w[Depository CreditCard Investment Loan OtherAsset OtherLiability Crypto Property Vehicle].freeze
 
-  before_action :set_gocardless_item, only: [ :show, :edit, :update, :destroy, :sync, :reauthorize, :setup_accounts, :complete_account_setup ]
+  before_action :set_gocardless_item, only: [ :update, :destroy, :sync, :reauthorize, :setup_accounts, :complete_account_setup ]
 
   REAUTH_SESSION_KEY = :gocardless_pending_reauths
   MAX_PENDING_REAUTHS = 5
@@ -124,13 +124,6 @@ class GocardlessItemsController < ApplicationController
     redirect_to accounts_path, alert: e.message, status: :see_other
   end
 
-  def index
-    @gocardless_items = Current.family.gocardless_items.ordered
-  end
-
-  def show
-  end
-
   # Bank picker. Institutions are scoped to a country by the API, so the country select
   # reloads the list rather than filtering client-side.
   def new
@@ -148,9 +141,6 @@ class GocardlessItemsController < ApplicationController
   rescue Provider::Gocardless::GocardlessError => e
     @institutions = []
     @error_message = e.message
-  end
-
-  def edit
   end
 
   def create
@@ -189,6 +179,8 @@ class GocardlessItemsController < ApplicationController
 
   def update
     if @gocardless_item.update(gocardless_item_params)
+      propagate_credentials(@gocardless_item)
+
       if turbo_frame_request?
         flash.now[:notice] = t(".success", default: "Successfully updated Gocardless configuration.")
         @gocardless_items = Current.family.gocardless_items.ordered
@@ -235,107 +227,83 @@ class GocardlessItemsController < ApplicationController
     end
   end
 
-  # Collection actions for account linking flow
+  # Collection actions for account linking flow. GoCardless credentials are account-level
+  # but each bank connection is its own item, so these search every connection of the
+  # family that has credentials rather than picking one.
 
   def preload_accounts
-    # Trigger a sync to fetch accounts from the provider
-    gocardless_item = Current.family.gocardless_items.first
-    unless gocardless_item&.credentials_configured?
+    items = linkable_items
+    if items.empty?
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 
-    gocardless_item.sync_later unless gocardless_item.syncing?
-    redirect_to select_accounts_gocardless_items_path(accountable_type: params[:accountable_type], return_to: params[:return_to])
-  end
-
-  def select_accounts
-    @accountable_type = params[:accountable_type]
-    @return_to = params[:return_to]
-
-    gocardless_item = Current.family.gocardless_items.first
-    unless gocardless_item&.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
-      return
-    end
-
-    @gocardless_accounts = gocardless_item.gocardless_accounts
-                                                .left_joins(:account_provider)
-                                                .where(account_providers: { id: nil })
-                                                .order(:name)
+    items.each { |item| item.sync_later unless item.syncing? }
+    redirect_to accounts_path
   end
 
   def link_accounts
-    gocardless_item = Current.family.gocardless_items.first
-    unless gocardless_item&.credentials_configured?
+    items = linkable_items
+    if items.empty?
       redirect_to settings_providers_path, alert: t(".no_api_key")
       return
     end
 
     selected_ids = params[:selected_account_ids] || []
     if selected_ids.empty?
-      redirect_to select_accounts_gocardless_items_path, alert: t(".no_accounts_selected")
+      redirect_to accounts_path, alert: t(".no_accounts_selected")
       return
     end
 
     accountable_type = params[:accountable_type] || "Depository"
     created_count = 0
-    already_linked_count = 0
-    invalid_count = 0
+    owners = {}
 
-    gocardless_item.gocardless_accounts.where(id: selected_ids).find_each do |gocardless_account|
-      # Skip if already linked
-      if gocardless_account.account_provider.present?
-        already_linked_count += 1
-        next
-      end
+    GocardlessAccount.where(gocardless_item_id: items.map(&:id), id: selected_ids).find_each do |gocardless_account|
+      # Skip if already linked or unnamed
+      next if gocardless_account.account_provider.present? || gocardless_account.name.blank?
 
-      # Skip if invalid name
-      if gocardless_account.name.blank?
-        invalid_count += 1
-        next
-      end
-
-      # Create Sure account and link
       link_gocardless_account(gocardless_account, accountable_type)
+      owners[gocardless_account.gocardless_item_id] = gocardless_account.gocardless_item
       created_count += 1
     rescue => e
       Rails.logger.error "GocardlessItemsController#link_accounts - Failed to link account: #{e.message}"
     end
 
     if created_count > 0
-      gocardless_item.sync_later unless gocardless_item.syncing?
+      owners.each_value { |item| item.sync_later unless item.syncing? }
       redirect_to accounts_path, notice: t(".success", count: created_count)
     else
-      redirect_to select_accounts_gocardless_items_path, alert: t(".link_failed")
+      redirect_to accounts_path, alert: t(".link_failed")
     end
   end
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
-    @gocardless_item = Current.family.gocardless_items.first
+    items = linkable_items
 
-    unless @gocardless_item&.credentials_configured?
+    if items.empty?
       redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 
-    @gocardless_accounts = @gocardless_item.gocardless_accounts
-                                                      .left_joins(:account_provider)
-                                                      .where(account_providers: { id: nil })
-                                                      .order(:name)
+    @gocardless_accounts = GocardlessAccount.where(gocardless_item_id: items.map(&:id))
+                                            .left_joins(:account_provider)
+                                            .where(account_providers: { id: nil })
+                                            .order(:name)
   end
 
   def link_existing_account
     account = Current.family.accounts.find(params[:account_id])
-    gocardless_item = Current.family.gocardless_items.first
+    items = linkable_items
 
-    unless gocardless_item&.credentials_configured?
+    if items.empty?
       redirect_to settings_providers_path, alert: t(".no_api_key")
       return
     end
 
-    gocardless_account = gocardless_item.gocardless_accounts.find(params[:gocardless_account_id])
+    gocardless_account = GocardlessAccount.where(gocardless_item_id: items.map(&:id)).find(params[:gocardless_account_id])
+    gocardless_item = gocardless_account.gocardless_item
 
     if gocardless_account.account_provider.present?
       redirect_to account_path(account), alert: t(".provider_account_already_linked")
@@ -400,6 +368,19 @@ class GocardlessItemsController < ApplicationController
   end
 
   private
+
+    def linkable_items
+      Current.family.gocardless_items.active.ordered.select(&:credentials_configured?)
+    end
+
+    # Credentials are account-level, so editing them on one connection updates the rest.
+    def propagate_credentials(item)
+      return unless item.credentials_configured?
+
+      Current.family.gocardless_items.where.not(id: item.id).find_each do |other|
+        other.update(secret_id: item.secret_id, secret_key: item.secret_key)
+      end
+    end
 
     # Returns the item that should carry this new bank connection.
     #
@@ -566,12 +547,16 @@ class GocardlessItemsController < ApplicationController
     # the consent flow, so they are deliberately NOT permitted here: letting a form set
     # them would allow pointing an item at an arbitrary requisition.
     def gocardless_item_params
-      params.require(:gocardless_item).permit(
+      permitted = params.require(:gocardless_item).permit(
         :name,
         :sync_start_date,
         :secret_id,
         :secret_key
       )
+      # A blank secret field means "unchanged", not "erase the stored credential".
+      permitted.delete(:secret_id) if permitted[:secret_id].blank?
+      permitted.delete(:secret_key) if permitted[:secret_key].blank?
+      permitted
     end
 
     def link_gocardless_account(gocardless_account, accountable_type)

@@ -23,6 +23,13 @@ class GocardlessAccount::ProcessorTest < ActiveSupport::TestCase
     assert_synced_balance Depository, "3335.71"
   end
 
+  test "keeps the existing balance when the provider reports none" do
+    link_account Depository, "100.00"
+    @provider_account.update!(current_balance: nil)
+    GocardlessAccount::Processor.new(@provider_account).process
+    assert_equal BigDecimal("100.00"), @account.reload.balance
+  end
+
   test "imports a debit once across repeated syncs" do
     link_account Depository, "100.00"
     @provider_account.update!(raw_transactions_payload: [ {

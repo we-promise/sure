@@ -140,20 +140,6 @@ en:
       unlinked: "Unlinked"
       update_credentials: "Update credentials"
 
-    # Select accounts view
-    select_accounts:
-      accounts_selected: "accounts selected"
-      api_error: "API error: %{message}"
-      cancel: "Cancel"
-      configure_name_in_provider: "Cannot import - please configure account name in GoCardless"
-      description: "Select the accounts you want to link to your %{product_name} account."
-      link_accounts: "Link selected accounts"
-      no_accounts_found: "No accounts found. Please check your API key configuration."
-      no_api_key: "GoCardless API key is not configured. Please configure it in Settings."
-      no_credentials_configured: "Please configure your GoCardless credentials first in Provider Settings."
-      no_name_placeholder: "(No name)"
-      title: "Select GoCardless Accounts"
-
     # Select existing account view
     select_existing_account:
       account_already_linked: "This account is already linked to a provider"
@@ -201,11 +187,10 @@ en:
       creating: "Creating accounts..."
       fetch_failed: "Failed to Fetch Accounts"
       import_selected: "Import selected accounts"
-      instructions: "Select the accounts you want to import from GoCardless. You can choose multiple accounts."
+      instructions: "Select the accounts you want to import from GoCardless. Choose a type for each, or skip the ones you do not want."
       no_accounts: "No unlinked accounts found from this GoCardless connection."
       no_accounts_to_setup: "No Accounts to Set Up"
       no_api_key: "GoCardless API key is not configured. Please check your connection settings."
-      select_all: "Select all"
       account_types:
         skip: "Skip this account"
         depository: "Checking or Savings Account"

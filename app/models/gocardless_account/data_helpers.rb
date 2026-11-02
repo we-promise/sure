@@ -21,6 +21,36 @@ module GocardlessAccount::DataHelpers
       obj.respond_to?(:to_h) ? obj.to_h : {}
     end
 
+    # Stable identity for a GoCardless transaction: the bank's own id when present, else a
+    # fingerprint of date, amount and description, so the snapshot merge and the imported
+    # entries agree on what counts as the same transaction.
+    def transaction_identity(data)
+      data = data.with_indifferent_access if data.respond_to?(:with_indifferent_access)
+
+      id = data[:transactionId].presence || data[:internalTransactionId].presence
+      return id.to_s if id.present?
+
+      fingerprint = [
+        data[:bookingDate] || data[:valueDate],
+        data.dig(:transactionAmount, :amount),
+        transaction_name(data)
+      ].join("|")
+
+      "pending:#{Digest::SHA256.hexdigest(fingerprint)[0..31]}"
+    end
+
+    # Banks scatter the human-readable description across several optional fields, and
+    # which one is populated varies by institution, so fall through them in order of
+    # usefulness rather than trusting any single one.
+    def transaction_name(data)
+      unstructured = data[:remittanceInformationUnstructured].presence ||
+                     Array(data[:remittanceInformationUnstructuredArray]).join(" ").presence
+
+      counterparty = data[:creditorName].presence || data[:debtorName].presence
+
+      (unstructured || counterparty || data[:additionalInformation].presence || "Transaction").to_s.squish
+    end
+
     def parse_decimal(value)
       return nil if value.nil?
 

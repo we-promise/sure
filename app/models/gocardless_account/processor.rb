@@ -40,7 +40,9 @@ class GocardlessAccount::Processor
 
     def update_account_balance(account)
       # Get balance from provider data
-      balance = gocardless_account.current_balance || 0
+      balance = gocardless_account.current_balance
+      # No balance reported: keep what we have rather than overwrite it with zero.
+      return if balance.nil?
 
       # The provider account already normalises liabilities to Sure's convention.
       Rails.logger.info "GocardlessAccount::Processor - Balance update: #{balance}"

@@ -59,7 +59,7 @@ class AccountsController < ApplicationController
       visible = item.accounts_visible_to(allowed_ids)
       [ item.id, { accounts: visible, address_count: item.address_count_for(visible) } ]
     end
-    @gocardless_items = visible_provider_items(family.gocardless_items.ordered.includes(:gocardless_accounts, :accounts))
+    @gocardless_items = visible_provider_items(family.gocardless_items.where.not(requisition_id: nil).ordered.includes(:gocardless_accounts, :accounts))
 
     preload_latest_sync_metadata_for_index!
 

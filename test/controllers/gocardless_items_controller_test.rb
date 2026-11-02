@@ -23,6 +23,16 @@ class GocardlessItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "blank secrets keep stored credentials and updates reach other connections" do
+    other = @family.gocardless_items.create!(name: "Second bank", secret_id: "old-id", secret_key: "old-key")
+    patch gocardless_item_url(@item), params: { gocardless_item: { secret_id: "", secret_key: "" } }
+    assert_equal "test-id", @item.reload.secret_id
+
+    patch gocardless_item_url(@item), params: { gocardless_item: { secret_id: "new-id", secret_key: "new-key" } }
+    assert_equal "new-id", other.reload.secret_id
+    assert_equal "new-key", other.secret_key
+  end
+
   test "cannot access another family's connection" do
     other = families(:empty).gocardless_items.create!(name: "Other bank", secret_id: "id", secret_key: "key")
     patch gocardless_item_url(other), params: { gocardless_item: { name: "Changed" } }

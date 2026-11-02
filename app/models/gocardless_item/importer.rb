@@ -38,6 +38,8 @@ class GocardlessItem::Importer
       import_account_data(gocardless_account, credentials)
     end
 
+    persist_stats!
+
     # Update raw payload on the item
     gocardless_item.upsert_gocardless_snapshot!(stats)
   rescue Provider::Gocardless::AuthenticationError => e
@@ -87,6 +89,7 @@ class GocardlessItem::Importer
       stats["total_accounts"] = account_ids.size
       @requisition_account_ids = account_ids
       upstream_account_ids = []
+      fetch_failed = false
 
       account_ids.each do |account_id|
         begin
@@ -100,12 +103,15 @@ class GocardlessItem::Importer
             Rails.logger.info "GocardlessItem::Importer - Account #{account_id} rate limited, skipping until quota resets"
             stats["accounts_rate_limited"] = stats.fetch("accounts_rate_limited", 0) + 1
             upstream_account_ids << account_id
+            fetch_failed = true
           else
             Rails.logger.error "GocardlessItem::Importer - Failed to import account #{account_id}: #{e.message}"
+            fetch_failed = true
             stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
             register_error(e, account_data: { account_id: account_id })
           end
         rescue => e
+          fetch_failed = true
           Rails.logger.error "GocardlessItem::Importer - Failed to import account #{account_id}: #{e.message}"
           stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
           register_error(e, account_data: { account_id: account_id })
@@ -114,7 +120,8 @@ class GocardlessItem::Importer
 
       persist_stats!
 
-      prune_removed_accounts(account_ids)
+      # A partial fetch is not proof the other accounts are gone.
+      prune_removed_accounts(account_ids) unless fetch_failed
     end
 
     # GoCardless splits one account across three endpoints, and each call is charged
@@ -216,22 +223,11 @@ class GocardlessItem::Importer
       by_id.values
     end
 
-    # Identity of a transaction for snapshot de-duplication.
-    #
-    # The generated default looked for :id, :date, :amount and :description. GoCardless
-    # uses none of those names, so EVERY transaction produced the same key ("--") and the
-    # merge collapsed a whole statement into a single row: 170 transactions stored as 1.
-    # Mirrors GocardlessAccount::Transactions::Processor#external_id_for so the snapshot
-    # and the imported entries agree on what counts as the same transaction.
+    # Identity of a transaction for snapshot de-duplication, shared with the
+    # transactions processor. The generated default looked for names GoCardless does not
+    # use, so every transaction got the same key and a statement collapsed into one row.
     def transaction_key(transaction)
-      t = transaction.is_a?(Hash) ? transaction.with_indifferent_access : transaction
-
-      t[:transactionId].presence || t[:internalTransactionId].presence ||
-        [
-          t[:bookingDate] || t[:valueDate],
-          t.dig(:transactionAmount, :amount),
-          t[:remittanceInformationUnstructured]
-        ].join("|")
+      transaction_identity(transaction)
     end
 
     # A new consent can reissue account ids for the same bank account. Matching on IBAN
