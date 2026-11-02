@@ -110,13 +110,18 @@ class KrakenItem::Importer
     def fetch_and_parse_earn_assets(asset_metadata)
       items = fetch_earn_allocations
       parse_earn_assets(items, asset_metadata)
-    rescue Provider::Kraken::PermissionError, Provider::Kraken::ApiError, Provider::Kraken::RateLimitError,
-           EarnAllocationsUnavailable, Timeout::Error, SocketError, OpenSSL::SSL::SSLError, SystemCallError => e
-      # The last four are raw transport failures (HTTParty/Net::HTTP raise
-      # these before a response ever reaches Provider::Kraken#handle_response,
-      # so they're never classified into a Provider::Kraken::Error) -- a
-      # timeout or dropped connection on this call must degrade the same way
-      # as every other Earn-specific failure here, not crash the whole sync.
+    rescue Provider::Kraken::Error, EarnAllocationsUnavailable, Timeout::Error, SocketError,
+           OpenSSL::SSL::SSLError, SystemCallError => e
+      # Provider::Kraken::Error covers every classified Kraken error
+      # (Permission/Api/RateLimit/Authentication/Nonce/OTPRequired) with one
+      # rescue, rather than naming only the three this started with -- a
+      # nonce collision or a transient "Invalid signature" on this one call
+      # is exactly as recoverable as a rate limit, and none of them should
+      # crash the whole sync (including trades/ledgers not yet fetched) over
+      # an Earn-specific hiccup. The last four are raw transport failures
+      # (HTTParty/Net::HTTP raise these before a response ever reaches
+      # Provider::Kraken#handle_response, so they're never classified into a
+      # Provider::Kraken::Error) -- same reasoning applies.
       record_earn_unavailable(e)
       carried_over_earn_assets
     end
@@ -136,7 +141,12 @@ class KrakenItem::Importer
         # quietly saving an undercounted snapshot.
         raw_balance = item.dig("amount_allocated", "total", "native")
         raise "Earn allocation missing amount_allocated.total.native: #{item.inspect}" if raw_balance.blank?
-        unless raw_balance.to_s.match?(/\A-?\d+(\.\d+)?\z/)
+        # Matches what String#to_d actually parses (leading +, exponent
+        # notation included) rather than only the plain decimal shape Kraken
+        # happens to use today -- strict enough to still reject real garbage
+        # like "N/A", which #to_d would otherwise silently coerce to 0 and
+        # let through as "genuinely zero" below.
+        unless raw_balance.to_s.match?(/\A[+-]?\d+(\.\d+)?([eE][+-]?\d+)?\z/)
           raise "Earn allocation has a non-numeric amount_allocated.total.native: #{raw_balance.inspect}"
         end
 
@@ -144,7 +154,16 @@ class KrakenItem::Importer
         next if balance.zero? # a genuine zero balance, not a parse failure
 
         parsed = normalizer.normalize(raw_asset)
-        price_usd, price_status = price_for(parsed[:price_symbol])
+        # Same canonicalization parse_assets uses: Earn/Allocations' own
+        # documented examples show a bare native_asset ("ETH"), but if a
+        # bonded/staked allocation is ever reported with a BalanceEx-style
+        # wallet-variant suffix (e.g. "DOT28.S"), pricing the raw variant
+        # instead of the underlying asset would price it as "missing" and
+        # drop the holding entirely, same failure mode canonical_asset
+        # already exists to prevent in parse_assets.
+        price_usd, price_status = price_for(
+          KrakenAccount::SecurityResolver.canonical_asset(parsed[:price_symbol])
+        )
         amount_usd = price_usd ? (balance * price_usd).round(2) : 0.to_d
 
         parsed.merge(
@@ -168,7 +187,7 @@ class KrakenItem::Importer
 
     def fetch_earn_allocations
       cursor = nil
-      all_items = []
+      all_items_by_id = {}
 
       MAX_EARN_PAGES.times do
         raw_result = kraken_provider.get_earn_allocations(cursor: cursor)
@@ -188,13 +207,37 @@ class KrakenItem::Importer
         # from #concat below, crashing the whole sync instead of degrading
         # gracefully like every other Earn failure here.
         raise EarnAllocationsUnavailable, "Earn allocation items must be an array" unless items.is_a?(Array)
-        all_items.concat(items)
+
+        # Keyed by strategy_id (Kraken's "Unique ID for Earn Strategy" --
+        # confirmed against Kraken's own API docs for Earn/Allocations), same
+        # dedup #fetch_trades/#fetch_ledgers already do by their own ids.
+        # Falls back to the item's own object_id (never equal across two
+        # distinct items, even identical-content ones) when strategy_id is
+        # missing, so an item lacking the field is never wrongly treated as
+        # a duplicate of another one that also lacks it.
+        duplicate_count = 0
+        items.each do |item|
+          key = item["strategy_id"] || item[:strategy_id] || item.object_id
+          duplicate_count += 1 if all_items_by_id.key?(key)
+          all_items_by_id[key] = item
+        end
+        if duplicate_count.positive?
+          DebugLogEntry.capture(
+            category: "provider_sync_error",
+            level: "warn",
+            message: "#{duplicate_count} duplicate Earn allocation id(s) from Kraken ignored",
+            source: self.class.name,
+            provider_key: "kraken",
+            family: kraken_item.family,
+            metadata: { kraken_item_id: kraken_item.id }
+          )
+        end
 
         cursor = result["next_cursor"].presence
         break if cursor.blank?
       end
 
-      all_items
+      all_items_by_id.values
     end
 
     # The prior sync's own "earn" assets, for #fetch_and_parse_earn_assets to
@@ -203,14 +246,28 @@ class KrakenItem::Importer
     # sync that itself had no Earn holdings) -- filter_map above then simply
     # contributes nothing, same as Earn never having been reachable at all.
     def carried_over_earn_assets
-      previous = kraken_item.kraken_accounts.find_by(account_id: "combined")&.raw_payload&.dig("assets")
+      kraken_account = kraken_item.kraken_accounts.find_by(account_id: "combined")
+      previous = kraken_account&.raw_payload&.dig("assets")
       return [] if previous.blank?
 
       carried = previous.map(&:deep_symbolize_keys).select { |asset| asset[:source] == "earn" }
 
       if carried.any?
-        Rails.logger.warn(
-          "KrakenItem::Importer #{kraken_item.id} - carrying #{carried.size} Earn asset(s) forward from the last successful sync"
+        # A carry-forward is exactly the "suspicious partial response" the
+        # support-diagnostics convention (docs/llm-guides/providers.md) means
+        # by this: record_earn_unavailable above already captures the
+        # failure that triggered it, but this is a second, distinct event
+        # (how many assets, carried forward or not) that was only ever in
+        # Rails.logger -- invisible in /settings/debug.
+        DebugLogEntry.capture(
+          category: "provider_sync_error",
+          level: "warn",
+          message: "Carrying #{carried.size} Earn asset(s) forward from the last successful sync",
+          source: self.class.name,
+          provider_key: "kraken",
+          family: kraken_item.family,
+          account_provider: kraken_account&.account_provider,
+          metadata: { kraken_item_id: kraken_item.id }
         )
       end
 
@@ -225,7 +282,9 @@ class KrakenItem::Importer
     # the unchanged balance; when no current price is available, leaves the
     # asset exactly as carried rather than guessing.
     def reprice_carried_asset(asset)
-      price_usd, price_status = price_for(asset[:price_symbol])
+      price_usd, price_status = price_for(
+        KrakenAccount::SecurityResolver.canonical_asset(asset[:price_symbol])
+      )
       return asset unless price_usd
 
       balance = asset[:balance].to_d

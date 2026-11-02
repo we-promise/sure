@@ -268,6 +268,110 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "BTC", earn_assets.first["symbol"]
   end
 
+  test "degrades gracefully when Earn Allocations hits a nonce error, not just permission/API/rate-limit" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    # AuthenticationError/NonceError/OTPRequiredError are siblings of
+    # ApiError/PermissionError/RateLimitError under Provider::Kraken::Error,
+    # not subclasses of any of those three -- rescuing Provider::Kraken::Error
+    # itself is what actually covers all of them in one place.
+    @provider.stubs(:get_earn_allocations).raises(Provider::Kraken::NonceError, "EAPI:Invalid nonce")
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    account = @item.kraken_accounts.first
+    assert_in_delta 50.0, account.current_balance, 0.01
+  end
+
+  test "deduplicates Earn allocations repeated across pages by strategy_id" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    btc_allocation = { "strategy_id" => "ESDQCOL-WTZEU-NU55QF", "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+    @provider.expects(:get_earn_allocations).with(cursor: nil).returns(
+      "items" => [ btc_allocation ], "next_cursor" => "page2"
+    )
+    @provider.expects(:get_earn_allocations).with(cursor: "page2").returns(
+      "items" => [ btc_allocation ] # same strategy_id repeated on a shifted cursor window
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    account = @item.kraken_accounts.first
+    earn_assets = account.raw_payload["assets"].select { |asset| asset["source"] == "earn" }
+    assert_equal 1, earn_assets.size, "a repeated allocation must not be double-counted into two holdings"
+    assert_in_delta 100_000, earn_assets.first["amount_usd"].to_f, 0.01
+  end
+
+  test "logs a carry-forward via DebugLogEntry, not only Rails.logger" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [
+        { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } }
+      ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    @provider.stubs(:get_earn_allocations).raises(Provider::Kraken::ApiError, "EGeneral:Internal error")
+
+    assert_difference -> { DebugLogEntry.count }, 2 do # record_earn_unavailable + the carry-forward itself
+      KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    end
+
+    carry_forward_entry = DebugLogEntry.where("message LIKE ?", "Carrying%").last
+    assert_not_nil carry_forward_entry, "the carry-forward itself must be visible in /settings/debug, not only Rails.logger"
+    assert_equal "provider_sync_error", carry_forward_entry.category
+  end
+
+  test "treats a signed or exponent-notation Earn balance as numeric, not garbage" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    # A leading "+" is valid input to String#to_d (so is exponent notation,
+    # e.g. "1e-08"); the stricter plain-decimal-only regex this replaced
+    # would have rejected this as "non-numeric" and routed it into the
+    # carry-forward path despite being a real balance.
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "+2.0" } } } ]
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+
+    result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    assert result[:success]
+
+    earn_btc = @item.kraken_accounts.first.raw_payload["assets"].find { |asset| asset["source"] == "earn" }
+    assert_not_nil earn_btc
+    assert_in_delta 100_000, earn_btc["amount_usd"].to_f, 0.01
+  end
+
+  test "prices a suffixed Earn allocation as its underlying asset" do
+    @provider.stubs(:get_asset_info).returns("DOT28.S" => { "altname" => "DOT28.S" })
+    @provider.stubs(:get_extended_balance).returns({})
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "native_asset" => "DOT28.S", "amount_allocated" => { "total" => { "native" => "10.0" } } } ]
+    )
+    @provider.stubs(:get_ticker).with("DOTUSD").returns("DOTUSD" => { "c" => [ "4.00" ] })
+
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    earn_dot = @item.kraken_accounts.first.raw_payload["assets"].find { |asset| asset["source"] == "earn" }
+    assert_not_nil earn_dot
+    assert_equal "exact", earn_dot["price_status"]
+    assert_in_delta 4.0, earn_dot["price_usd"].to_d, 0.001
+    assert_in_delta 40.0, earn_dot["amount_usd"].to_d, 0.01
+  end
+
   test "carries forward last known Earn assets when an item is missing native_asset" do
     @provider.stubs(:get_asset_info).returns(asset_metadata)
     @provider.stubs(:get_extended_balance).returns(
