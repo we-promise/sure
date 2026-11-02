@@ -133,8 +133,13 @@ class LlmPricingUpdater
 
       row = { "prompt" => prompt, "completion" => completion }
       # Sure prices cache reads for Anthropic only, at 0.1x input unless set.
-      cache_read = per_million(entry["cache_read_input_token_cost"])
-      row["cache_read"] = cache_read if provider == "anthropic" && cache_read && cache_read != (prompt * 0.1).round(6)
+      # Without a source rate, a reviewed cache_read would silently revert to 0.1x.
+      if provider == "anthropic"
+        cache_read = per_million(entry["cache_read_input_token_cost"])
+        return unless cache_read
+
+        row["cache_read"] = cache_read if cache_read != (prompt * 0.1).round(6)
+      end
 
       threshold = entry.keys.filter_map { |key| key[/\Ainput_cost_per_token_above_(\d+)k_tokens\z/, 1]&.to_i }.min
       if threshold

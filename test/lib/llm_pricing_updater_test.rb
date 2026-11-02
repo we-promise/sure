@@ -63,22 +63,25 @@ class LlmPricingUpdaterTest < ActiveSupport::TestCase
     assert_equal 3, result.missing.size
   end
 
-  test "keeps a reviewed long-context tier that LiteLLM cannot confirm" do
+  test "keeps reviewed long-context tiers and cache rates that LiteLLM cannot confirm" do
     config = <<~YAML
       providers:
         openai:
           gpt-5.4: { prompt: 2.5, completion: 15.0, long_context: { threshold: 272000, prompt: 5.0, completion: 22.5 } }
           gpt-5.5: { prompt: 5.0, completion: 30.0, long_context: { threshold: 272000, prompt: 10.0, completion: 45.0 } }
+        anthropic:
+          claude-opus-5-5: { prompt: 4.0, completion: 20.0, cache_read: 0.2 }
     YAML
 
     result = LlmPricingUpdater.new(config,
       "gpt-5.4" => litellm(3, 15),
-      "gpt-5.5" => litellm(6, 30, "input_cost_per_token_above_272k_tokens" => 12e-6, "output_cost_per_token_above_272k_tokens" => "45")
+      "gpt-5.5" => litellm(6, 30, "input_cost_per_token_above_272k_tokens" => 12e-6, "output_cost_per_token_above_272k_tokens" => "45"),
+      "claude-opus-5-5" => litellm(4, 20, provider: "anthropic")
     ).call
 
     assert_equal config, result.yaml
     assert_empty result.changed
-    assert_equal 2, result.missing.size
+    assert_equal 3, result.missing.size
   end
 
   test "the bundled config is unchanged when LiteLLM matches it" do
