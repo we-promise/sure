@@ -356,6 +356,30 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     assert_equal BigDecimal("20"), book.average_cost
   end
 
+  test "relief that rounds a lot away keeps the open sum exact" do
+    tiny = BigDecimal("1e-18")
+    book = Holding::LotBook.new
+    [ 3, 3, 3, 3, 3, 3, 2 ].each_with_index do |units, index|
+      book.apply(10, units * tiny, source_id: "buy-#{index}", acquired_on: Date.new(2024, 1, 1))
+    end
+
+    book.apply(10, -16 * tiny)
+
+    assert_equal 4 * tiny, book.open_qty
+    assert(book.lots.all? { |lot| lot.qty.positive? })
+  end
+
+  test "relief that rounds every lot down gives the rest to the last lot" do
+    book = Holding::LotBook.new
+    3.times { |index| book.apply(10, 1, source_id: "buy-#{index}", acquired_on: Date.new(2024, 1, 1)) }
+
+    book.apply(10, -2)
+
+    assert_equal 1, book.open_qty
+    assert_equal [ BigDecimal("0.333333333333333333"), BigDecimal("0.333333333333333333"), BigDecimal("0.333333333333333334") ],
+                 book.lots.map(&:qty)
+  end
+
   test "repeated partial relief keeps lot quantities at the trade scale and the open sum exact" do
     book = Holding::LotBook.new
     book.apply(BigDecimal("1"), 1, source_id: "a", acquired_on: Date.new(2024, 1, 1))
