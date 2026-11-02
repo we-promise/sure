@@ -49,6 +49,13 @@ export default class extends Controller {
     this.#syncZoomControls();
     this.#draw();
 
+    // A Turbo morph refresh (the sync toast's auto-refresh) keeps this
+    // element and its controller but puts the server markup back around
+    // them. Nothing else notices: the size has not changed and the data is
+    // unchanged unless the sync brought something new.
+    this.onMorph = () => this.#restoreAfterMorph();
+    document.addEventListener("turbo:morph", this.onMorph);
+
     // Labels are measured to keep them off neighbouring bars; measure again
     // once the page font has replaced the fallback.
     if (document.fonts?.status === "loading") {
@@ -68,10 +75,23 @@ export default class extends Controller {
 
   disconnect() {
     this.connected = false;
+    document.removeEventListener("turbo:morph", this.onMorph);
     this.resizeObserver?.disconnect();
     clearTimeout(this.drawTimeout);
     this.tooltip?.remove();
     this.tooltip = null;
+  }
+
+  // The morph dropped the drawing and the tooltip appended outside this
+  // element, and put the server's hidden zoom-out button back while the
+  // zoom is kept here.
+  #restoreAfterMorph() {
+    if (!this.connected) return;
+
+    this.tooltip?.remove();
+    this.#createTooltip();
+    this.#syncZoomControls();
+    if (!this.#chartElement().querySelector("svg")) this.#draw();
   }
 
   zoomOut() {
