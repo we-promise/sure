@@ -142,6 +142,53 @@ class MarketDataImporter
         pair_dates[key] = [ pair_dates[key], chosen_date ].compact.min
       end
 
+      # 3. REPORTING-CURRENCY PAIRS – a family that can view the dashboard in
+      # one of its additional currencies needs every currency it holds, the
+      # primary one included, converted into each of them. Without these the
+      # report queries fall back to a 1:1 rate and show the amounts unconverted.
+      # Provider holdings can be priced in a currency other than their account's,
+      # so holding currencies count as held too.
+      Family.where.not(enabled_currencies: nil).find_each do |family|
+        targets = family.reporting_currency_codes - [ family.primary_currency_code ]
+        next if targets.empty?
+
+        family_entries = Entry.joins(:account).where(accounts: { family_id: family.id })
+        family_holdings = Holding.joins(:account).where(accounts: { family_id: family.id })
+
+        # Each source needs rates from the first date the family held it: the
+        # earliest entry in that currency, entry in an account of that currency,
+        # or holding in it. The primary currency and account currencies count as
+        # held even before their first entry.
+        source_dates = {}
+        [
+          family_entries.group("entries.currency").minimum("entries.date"),
+          family_entries.group("accounts.currency").minimum("entries.date"),
+          family_holdings.group("holdings.currency").minimum("holdings.date")
+        ].each do |first_dates|
+          first_dates.each do |code, date|
+            source = Family.normalize_currency_code(code)
+            next unless source
+
+            source_dates[source] = [ source_dates[source], date ].compact.min
+          end
+        end
+        [ family.primary_currency_code, *family.accounts.distinct.pluck(:currency) ].each do |code|
+          source = Family.normalize_currency_code(code)
+          source_dates[source] = nil if source && !source_dates.key?(source)
+        end
+
+        source_dates.each do |source, first_date|
+          chosen_date = [ first_date, default_start_date ].compact.min
+
+          targets.each do |target|
+            next if source == target
+
+            key = [ source, target ]
+            pair_dates[key] = [ pair_dates[key], chosen_date ].compact.min
+          end
+        end
+      end
+
       # Convert to array of hashes for ease of use
       pair_dates.map do |(source, target), date|
         { source: source, target: target, start_date: date }
