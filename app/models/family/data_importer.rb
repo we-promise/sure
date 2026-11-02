@@ -342,6 +342,8 @@ class Family::DataImporter
         if account.supports_iban? && (data.key?("iban") || account.currency_changed?)
           assign_imported_iban(account, data.fetch("iban", account.iban), @family.accounts.where(currency: account.currency), "AccountIban")
         end
+        # Older exports predate the choice and keep the account's own.
+        account.logo_selection = data["logo_selection"] if Account.logo_selections.key?(data["logo_selection"])
 
         account.save!
 
