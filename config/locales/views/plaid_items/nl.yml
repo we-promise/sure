@@ -75,7 +75,7 @@ nl:
     select_existing_account:
       no_available_accounts: "Geen beschikbare Plaid-accounts om te koppelen. Koppel eerst een nieuw Plaid-account."
       title: "%{account_name} koppelen aan Plaid"
-      description: "Selecteer een Plaid account om te koppelen aan uw bestaande account"
+      description: "Selecteer een Plaid-account om te koppelen aan uw bestaande account"
       cancel: "Annuleren"
       link_account: "Account koppelen"
     link_existing_account:

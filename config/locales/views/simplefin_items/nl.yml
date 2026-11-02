@@ -3,7 +3,7 @@ nl:
   simplefin_items:
     new:
       title: "Koppel SimpleFIN"
-      setup_token: "Setup token"
+      setup_token: "Setuptoken"
       setup_token_placeholder: "plak uw SimpleFIN-setuptoken"
       connect: "Koppelen"
       cancel: "Annuleren"
@@ -33,7 +33,7 @@ nl:
       title: "SimpleFIN-koppeling bijwerken"
       header_subtitle: "Vraag een nieuw setuptoken aan om uw SimpleFIN-account opnieuw te koppelen"
       connection_needs_update: "Uw SimpleFIN-koppeling moet worden bijgewerkt:"
-      step_1_html: "Ga naar <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> om een nieuw setup token aan te maken"
+      step_1_html: "Ga naar <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> om een nieuw setuptoken aan te maken"
       step_2: "Kopieer het token en plak het hieronder"
       step_3: "Klik op \"Bijwerken\" om de toegang te herstellen"
       update: "Bijwerken"
