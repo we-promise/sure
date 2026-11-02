@@ -7,6 +7,7 @@ import '../services/balance_sheet_service.dart';
 import '../services/offline_storage_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/log_service.dart';
+import '../services/widget_bridge_service.dart';
 
 class AccountsProvider with ChangeNotifier {
   final AccountsService _accountsService = AccountsService();
@@ -101,6 +102,8 @@ class AccountsProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    unawaited(WidgetBridgeService.instance.pushConfig());
+
     try {
       // Always load from local storage first for instant display
       final cachedAccounts = await _offlineStorage.getAccounts();
@@ -133,6 +136,8 @@ class AccountsProvider with ChangeNotifier {
           // Update in-memory accounts
           _accounts = serverAccounts;
           _errorMessage = null;
+
+          unawaited(WidgetBridgeService.instance.syncAccounts(serverAccounts));
         } else {
           // If server fetch failed but we have cached data, that's OK
           if (_accounts.isEmpty) {
