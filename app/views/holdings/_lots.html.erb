@@ -4,31 +4,13 @@
   <p class="text-xs text-secondary"><%= t("holdings.lots.title") %></p>
   <ul class="space-y-2">
     <% lots.each do |lot| %>
-      <li class="rounded-lg border border-secondary px-3 py-2 text-sm">
-        <%= render DS::Disclosure.new(variant: :bare, summary_class: class_names("list-none flex items-center justify-between gap-2 focus-ring", "cursor-pointer" => !lot.opening?)) do |disclosure| %>
-          <% disclosure.with_summary_content do %>
-            <span class="text-secondary">
-              <%= lot.opening? ? t("holdings.lots.opening") : l(lot.acquired_on, format: :long) %>
-              &middot;
-              <span class="privacy-sensitive"><%= t("holdings.holding.shares", qty: format_quantity(lot.qty, exact: true)) %></span>
-            </span>
-            <span class="text-primary flex items-center gap-1">
-              <span class="privacy-sensitive">
-                <%= lot.unit_cost ? t("holdings.lots.per_unit", amount: format_money(Money.new(lot.unit_cost, lot.currency))) : t("holdings.lots.unknown") %>
-              </span>
-              <% if lot.manual_cost? %>
-                <%= icon "lock", size: "xs", class: "text-secondary" %>
-              <% end %>
-              <% if can_edit && !lot.opening? %>
-                <%# Unnamed group-open: matches ANY open ancestor disclosure (the
-                    Overview panel itself); follow the component's own chevron
-                    idiom so the pencil lights with THIS row's details only. %>
-                <%= icon "pencil", size: "xs", class: "text-secondary [details[open]>summary_&]:text-primary" %>
-              <% end %>
-            </span>
-          <% end %>
+      <li data-lot-id="<%= lot.id %>" class="rounded-lg border border-secondary px-3 py-2 text-sm">
+        <% if can_edit && !lot.opening? %>
+          <%= render DS::Disclosure.new(variant: :bare, summary_class: "list-none flex items-center justify-between gap-2 focus-ring cursor-pointer") do |disclosure| %>
+            <% disclosure.with_summary_content do %>
+              <%= render "holdings/lot_summary", lot: lot, editable: true %>
+            <% end %>
 
-          <% if can_edit && !lot.opening? %>
             <div class="mt-3 space-y-3">
               <%= styled_form_with url: holding_lot_path(holding, lot),
                     method: :patch,
@@ -62,6 +44,10 @@
               <% end %>
             </div>
           <% end %>
+        <% else %>
+          <div class="flex items-center justify-between gap-2">
+            <%= render "holdings/lot_summary", lot: lot, editable: false %>
+          </div>
         <% end %>
       </li>
     <% end %>
