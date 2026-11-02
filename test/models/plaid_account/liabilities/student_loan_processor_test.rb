@@ -211,4 +211,87 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     assert_nil loan.initial_balance
     assert_nil loan.term_months
   end
+
+  # This processor sends rate_type "fixed" on every sync, so a loan the user
+  # marked variable reverted each time.
+  test "a locked rate type is not forced back to fixed" do
+    loan = loan_with(rate_type: "variable", interest_rate: 5.0)
+    loan.lock_attr!(:rate_type)
+    payload("interest_rate_percentage" => 5.0)
+
+    process
+
+    assert_equal "variable", loan.reload.rate_type, "Plaid forced a locked rate type back to fixed"
+  end
+
+  # Locks hold per attribute: the unlocked terms in the same payload still land.
+  test "locked terms hold while the unlocked ones are still written" do
+    loan = loan_with(initial_balance: 50_000, term_months: 120, interest_rate: 5.0)
+    loan.lock_attr!(:initial_balance)
+    loan.lock_attr!(:term_months)
+    payload(
+      "interest_rate_percentage" => 6.5,
+      "origination_principal_amount" => 90_000,
+      "origination_date" => "2020-01-01",
+      "expected_payoff_date" => "2040-01-01"
+    )
+
+    process
+
+    loan.reload
+    assert_equal 50_000, loan.initial_balance.to_i, "a locked original balance was overwritten"
+    assert_equal 120, loan.term_months, "a locked term was overwritten"
+    assert_equal 6.5, loan.interest_rate.to_f, "the unlocked rate was not written"
+  end
+
+  # term_months is nil without both dates, and nil must not blank a stored term.
+  test "a payload missing a payoff date leaves the stored term alone" do
+    loan = loan_with(term_months: 120, interest_rate: 5.0)
+    payload("interest_rate_percentage" => 5.0, "origination_date" => "2020-01-01")
+
+    process
+
+    assert_equal 120, loan.reload.term_months, "an incomplete pair of dates blanked the stored term"
+  end
+
+  test "a payload without a rate leaves the stored rate alone" do
+    loan = loan_with(interest_rate: 4.5)
+    payload("origination_principal_amount" => 90_000)
+
+    process
+
+    assert_equal 4.5, loan.reload.interest_rate.to_f, "an omitted rate blanked the stored one"
+    assert_equal 90_000, loan.initial_balance.to_i
+  end
+
+  # The processor still sends rate_type "fixed", but a user's lock on
+  # "variable" holds, and the loan's rate change is then dated.
+  test "a student loan the user locked as variable has its rate change dated" do
+    loan = loan_with(interest_rate: 4.5, rate_type: "variable", start_date: Date.new(2020, 1, 1))
+    loan.lock_attr!(:rate_type)
+    payload("interest_rate_percentage" => 5.2)
+
+    PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account.reload, as_of: Date.new(2026, 1, 15)).process
+
+    loan.reload
+    assert_equal "variable", loan.rate_type
+    assert_equal 4.5, loan.interest_rate.to_f
+    assert_equal [ "2026-01-15" ], loan.variable_rate_schedule.keys
+    assert_equal BigDecimal("5.2"), BigDecimal(loan.variable_rate_schedule["2026-01-15"].to_s)
+  end
+
+  private
+    def loan_with(**attrs)
+      loan = @plaid_account.current_account.loan
+      loan.update!(attrs)
+      loan
+    end
+
+    def payload(data)
+      @plaid_account.update!(raw_liabilities_payload: { student: data })
+    end
+
+    def process
+      PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account.reload).process
+    end
 end

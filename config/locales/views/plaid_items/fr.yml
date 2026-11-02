@@ -1,10 +1,55 @@
 ---
 fr:
   plaid_items:
+    auto_link_opener:
+      create_failed: Nous n'avons pas pu confirmer l'ajout de cette connexion. Rechargez la page pour vérifier avant de réessayer.
     create:
+      already_connected: 'Vous avez déjà une connexion pour cet établissement : celle-ci n''a donc pas été ajoutée.'
+      exchange_failed: Nous n'avons pas pu ajouter cette connexion. Réessayez et, si le problème persiste, consultez les journaux du serveur.
       success: Compte lié avec succès. Veuillez patienter pendant que les comptes se synchronisent.
+      token_expired: Cette connexion a expiré avant d'être ajoutée. Connectez à nouveau l'établissement.
     destroy:
       success: Les comptes prévus pour la suppression ont été marqués.
+    duplicate_warning:
+      close: Fermer
+      confirm: Confirmer cette connexion
+      connected_by: Connecté par %{name}
+      eu_no_add_accounts: Plaid ne permet pas d'ajouter des comptes à une connexion européenne existante. Pour modifier les comptes connectés, supprimez celle-ci et ajoutez-la de nouveau.
+      linked_on: Lié le %{date}
+      manage_connection: Aller aux comptes
+      mask: "****%{mask}"
+      no_accounts: Aucun compte n'a encore été synchronisé depuis cette connexion.
+      overlap:
+        all_connected:
+          one: 'Le compte que vous avez essayé d''ajouter est déjà connecté : l''ajouter à nouveau ne ferait que créer un doublon.'
+          other: 'Les %{count} comptes que vous avez essayé d''ajouter sont tous déjà connectés : les ajouter à nouveau ne ferait que créer des doublons.'
+        different_login: Pour connecter un autre identifiant %{institution}, choisissez à nouveau Nouveau compte, puis connectez-vous avec cet identifiant via Plaid.
+        more_accounts: Pour ajouter d'autres comptes à cette connexion, fermez cette fenêtre et choisissez Ajouter des comptes sur la connexion %{institution}.
+        none_connected: 'Aucun des comptes que vous avez essayé d''ajouter n''est encore connecté : il s''agit probablement d''un autre identifiant. L''ajouter compte simplement comme une connexion Plaid supplémentaire.'
+        others_connected:
+          one: 'Sure dispose déjà de ce compte via la connexion de %{name} : ajouter la vôtre ne ferait que créer un doublon.'
+          other: 'Sure dispose déjà de ces comptes via la connexion de %{name} : ajouter la vôtre ne ferait que créer des doublons.'
+        others_connected_several:
+          one: 'Sure dispose déjà de ce compte via les connexions d''autres membres : ajouter la vôtre ne ferait que créer un doublon.'
+          other: 'Sure dispose déjà de ces comptes via les connexions d''autres membres : ajouter la vôtre ne ferait que créer des doublons.'
+        some_connected:
+          connected:
+            one: 'L''autre est déjà connecté : ajouter cette connexion le dupliquerait et compterait comme une connexion Plaid supplémentaire.'
+            other: 'Les %{count} autres sont déjà connectés : ajouter cette connexion les dupliquerait et compterait comme une connexion Plaid supplémentaire.'
+          unconnected:
+            one: 'Un compte que vous avez essayé d''ajouter n''est pas encore connecté :'
+            other: "%{count} comptes que vous avez essayé d'ajouter ne sont pas encore connectés :"
+        unknown:
+          one: Ces comptes ne peuvent pas être comparés à votre connexion existante. S'il s'agit des mêmes comptes, ajouter cette connexion les dupliquerait et compterait comme une connexion Plaid supplémentaire.
+          other: Ces comptes ne peuvent pas être comparés à vos connexions existantes. S'il s'agit des mêmes comptes, ajouter cette connexion les dupliquerait et compterait comme une connexion Plaid supplémentaire.
+      title:
+        one: Vous avez déjà une connexion pour cet établissement
+        other: Vous avez déjà %{count} connexions pour cet établissement
+      title_all_connected: Vous avez déjà créé cette connexion
+      title_others_connected:
+        one: Ce compte est déjà connecté
+        other: Ces comptes sont déjà connectés
+      update_existing: Mettre à jour la connexion existante
     errors:
       link_token_generic: Nous n'avons pas pu ouvrir Plaid pour le moment. Veuillez réessayer, et si le problème persiste, vérifiez les journaux du serveur pour plus de détails.
       link_token_with_message: 'Plaid n''a pas pu ouvrir la connexion : %{message}'
@@ -25,6 +70,7 @@ fr:
       error: Une erreur s'est produite lors de la synchronisation des données
       no_accounts_description: Nous ne pouvons pas charger des comptes depuis cette institution financière.
       no_accounts_title: Aucun compte trouvé
+      provider_name: Plaid
       requires_update: Re-authentification requise
       status: Dernière synchronisation il y a %{timestamp}
       status_never: Synchronisation de données requise

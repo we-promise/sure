@@ -16,10 +16,11 @@
       <%= icon "text" %>
       <p><%= "\"#{param_value}\"".truncate(20) %></p>
     </div>
-  <% elsif param_key == "accounts" %>
+  <% elsif param_key == "accounts" || param_key == "account_ids" %>
+    <% account_name = param_key == "account_ids" ? transaction_filter_account_name(param_value) : param_value %>
     <div class="flex items-center gap-2">
-      <div class="w-5 h-5 bg-blue-600/10 text-xs flex items-center justify-center rounded-full"><%= param_value[0].upcase %></div>
-      <p><%= param_value %></p>
+      <div class="w-5 h-5 bg-info/10 text-xs flex items-center justify-center rounded-full"><%= account_name.first.upcase %></div>
+      <p><%= account_name %></p>
     </div>
   <% elsif param_key == "amount" %>
     <div class="flex items-center gap-2">

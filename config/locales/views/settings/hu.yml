@@ -6,6 +6,7 @@ hu:
         renewal: "A hozzájárulásod %{date}-én megújul."
         cancellation: "A hozzájárulásod %{date}-én lejár."
   settings:
+    encryption_migration_guide: Titkosítási beállítási és migrációs útmutató
     llm_usages:
       show:
         page_title: "LLM-használat és -költségek"
