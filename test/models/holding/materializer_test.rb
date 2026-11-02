@@ -650,6 +650,43 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal 150, @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).cost_basis&.to_d, "the first lock still covers the day between"
   end
 
+  # A later lock at the figure the first one started from is a new statement
+  # once a buy has blended in, so it restarts the basis.
+  test "a same-figure lock after a buy is the opening basis" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 4.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 4.days.ago.to_date).set_manual_cost_basis!(150)
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    materialize
+    assert_equal 175, latest_holding.cost_basis&.to_d, "precondition: the buy blended into the first lock"
+
+    @account.holdings.find_by!(security: @aapl, date: 2.days.ago.to_date).set_manual_cost_basis!(150)
+    materialize
+
+    assert_equal 150, latest_holding.cost_basis&.to_d
+    assert_equal 175, @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).cost_basis&.to_d, "the first lock still covers the day of the buy"
+  end
+
+  # Rows the import locked before copies were marked read as the user's own.
+  # They keep the figure they already show, and unlocking the latest releases
+  # them all, as it does any earlier lock.
+  test "locked copies from before the carried mark keep their figure until the latest is unlocked" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 4.days.ago.to_date)
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    materialize
+    assert_equal 200, latest_holding.cost_basis&.to_d, "precondition: the calculated figure differs from the copies"
+    @account.holdings.where(security: @aapl).update_all(cost_basis: 150, cost_basis_source: "manual", cost_basis_locked: true, cost_basis_carried: false)
+
+    materialize
+    assert_equal 150, latest_holding.cost_basis&.to_d, "the upgrade moved a figure the user was already shown"
+
+    latest_holding.unlock_cost_basis!
+    materialize
+
+    assert_equal 200, latest_holding.cost_basis&.to_d
+    assert_equal 0, @account.holdings.where(security: @aapl, cost_basis_locked: true).count
+  end
+
   test "a transfer-in after a manual cost basis makes the position unknown" do
     create_trade(@aapl, account: @account, qty: 1, price: 200, date: 2.days.ago.to_date)
     materialize
