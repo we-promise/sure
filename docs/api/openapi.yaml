@@ -32,6 +32,20 @@ components:
             read: Read access
             read_write: Read and write access
   schemas:
+    Version:
+      type: object
+      additionalProperties: false
+      required:
+      - version
+      - commit_sha
+      properties:
+        version:
+          type: string
+          description: Running Sure version, without a v prefix.
+        commit_sha:
+          type: string
+          nullable: true
+          description: Build commit SHA, or null when unavailable.
     SplitRequest:
       type: object
       required:
@@ -10839,3 +10853,26 @@ paths:
                       type: string
                       description: Additional notes
         required: true
+  "/api/v1/version":
+    get:
+      summary: Get the running Sure version
+      tags:
+      - Version
+      description: Requires read or read_write access. Operators may explicitly enable
+        anonymous access with PUBLIC_VERSION_ENDPOINT=true. Responses are not cacheable.
+        Supplied credentials are still validated in public mode.
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          description: running version
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Version"
+        '401':
+          description: missing or invalid credentials (default configuration)
+        '403':
+          description: insufficient scope
