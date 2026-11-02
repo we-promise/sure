@@ -38,7 +38,7 @@ module Account::Chartable
       balance_count, balances_updated_at = balances.pick(Arel.sql("count(*)"), Arel.sql("max(balances.updated_at)"))
 
       [
-        "account_sparkline", SPARKLINE_CACHE_VERSION, id, updated_at.to_f, last_synced_at&.to_f,
+        "account_sparkline", SPARKLINE_CACHE_VERSION, id, updated_at.to_f, last_synced_at&.to_f, linked?,
         balance_count, balances_updated_at&.to_f, Date.current
       ].join("_")
     end
