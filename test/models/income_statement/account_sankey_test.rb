@@ -155,6 +155,19 @@ class IncomeStatement::AccountSankeyTest < ActiveSupport::TestCase
     assert_equal node(by_category, "expense_#{@shopping.id}")[:value], node(result, "expense_#{@shopping.id}")[:value]
   end
 
+  test "converts every flow into the statement's report currency" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: @month, rate: 0.5)
+    transaction(@checking, -1000, @salary)
+    transaction(@card, 200, @groceries)
+    result = IncomeStatement::AccountSankey.new(IncomeStatement.new(@family, currency: "EUR"), period: period).as_json
+
+    assert_equal "500.0", result[:income]
+    assert_equal "100.0", result[:spending]
+    assert_link result, "income_#{@salary.id}", "account_#{@checking.id}", "500.0"
+    assert_link result, "account_#{@card.id}", "expense_#{@shopping.id}", "100.0"
+  end
+
   private
     def transaction(account, amount, category)
       create_transaction(account: account, amount: amount, category: category, date: @month)

@@ -312,6 +312,7 @@ class PagesController < ApplicationController
     def dashboard_currency
       @dashboard_currency ||= Current.family.reporting_currency_code(params[:currency])
     end
+    helper_method :dashboard_currency
 
     # Use IncomeStatement for all cashflow data (now includes categorized trades)
     def dashboard_income_statement
