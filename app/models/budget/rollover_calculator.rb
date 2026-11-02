@@ -128,26 +128,26 @@ class Budget::RolloverCalculator
 
     # What the chain reads: its budgets and allocations, the entries, categories,
     # accounts, shares and rates behind actual spending, and family settings
-    # (family.updated_at also moves with every sync).
+    # (family.updated_at also moves with every sync). Rows are digested rather than
+    # versioned by max(updated_at) so a late-committing or update_all write still counts.
     def inputs_fingerprint
       budgets = family.budgets.where(user_id: user&.id)
 
       [
-        version_of(budgets),
-        version_of(BudgetCategory.where(budget_id: budgets.select(:id))),
-        version_of(AccountShare.where(account_id: family.accounts.select(:id))),
+        digest_of(budgets),
+        digest_of(BudgetCategory.where(budget_id: budgets.select(:id))),
+        digest_of(family.accounts),
+        digest_of(AccountShare.where(account_id: family.accounts.select(:id))),
         family.entries_cache_version,
-        family.accounts_status_version,
         ExchangeRate.maximum(:updated_at)&.to_f,
         family.updated_at.to_f
       ].join("|")
     end
 
-    def version_of(scope)
-      count, updated_at = scope.pick(Arel.sql("count(*)"), Arel.sql("max(#{scope.table_name}.updated_at)"))
-      "#{count}-#{updated_at&.to_f}"
+    def digest_of(scope)
+      table = scope.quoted_table_name
+      scope.pick(Arel.sql("md5(string_agg(#{table}::text, '|' ORDER BY #{table}.id))"))
     end
-
 
     # Earliest month this chain has anything to say about: rollover switched
     # on, or an amount left behind by a toggle that was switched off and

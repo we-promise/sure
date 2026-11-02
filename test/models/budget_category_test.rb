@@ -823,6 +823,36 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
     recompute!
   end
 
+  test "an allocation committed behind a later timestamp recomputes a settled chain" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    budget_category_for(first).update_columns(budgeted_spending: 40, updated_at: 1.day.ago)
+    recompute!
+
+    assert_equal 40, stored_rollover(second)
+  end
+
+  test "an account reassigned without a touch recomputes a settled chain" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    new_owner = @family.users.where.not(id: @account.owner_id).first!
+    Account.where(id: @account.id).update_all(owner_id: new_owner.id)
+    Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).once.returns(false)
+    recompute!
+  end
+
   test "recompute does not clobber an allocation changed underneath it" do
     first = initialized_budget(2.months.ago)
     allocate(first, 100)
