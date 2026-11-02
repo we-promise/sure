@@ -80,7 +80,7 @@ id:
       one: "1 tagihan tidak dicadangkan, belum ada nilai tukar"
       other: "%{count} tagihan tidak dicadangkan, belum ada nilai tukar"
     allocation_progress:
-      budget_exceeded_html: 'Anggaran terlampaui sebesar <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      budget_exceeded_html: Anggaran terlampaui sebesar <span class="text-red-500 privacy-sensitive">%{amount}</span>
       left_to_allocate: sisa untuk dialokasikan
       over_set: "> 100% ditetapkan"
       percent_set: "%{percent} ditetapkan"

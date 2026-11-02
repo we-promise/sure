@@ -211,7 +211,7 @@ id:
       step1: "Buka Pengaturan → Kunci API"
       step2: "Buat kunci API baru dengan izin \"baca\""
       step3: Salin kunci API
-      step4: "Tambahkan ke URL ini sebagai: &api_key=KUNCI_ANDA"
+      step4: "Tambahkan ke URL ini sebagai: &api_key=<kunci_api>"
       example: Contoh
       then_use: Kemudian gunakan URL lengkap dengan fungsi =IMPORTDATA() di Google Spreadsheet.
       go_to_api_keys: Buka Kunci API
