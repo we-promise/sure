@@ -1,3 +1,4 @@
+require "base64"
 require "json"
 require "net/http"
 require "openssl"
@@ -84,10 +85,7 @@ class Provider::TradeRepublicWebsocket
 
       socket = Socket.tcp(proxy.hostname, proxy.port, connect_timeout: @timeout)
       begin
-        socket.write(
-          "CONNECT #{HOST}:443 HTTP/1.1\r\n" \
-          "Host: #{HOST}:443\r\n\r\n"
-        )
+        socket.write(connect_request(proxy))
         read_proxy_response(socket)
         socket
       rescue StandardError
@@ -96,19 +94,32 @@ class Provider::TradeRepublicWebsocket
       end
     end
 
+    def connect_request(proxy)
+      request = +"CONNECT #{HOST}:443 HTTP/1.1\r\nHost: #{HOST}:443\r\n"
+      if proxy.user
+        credentials = "#{URI.decode_uri_component(proxy.user)}:#{URI.decode_uri_component(proxy.password.to_s)}"
+        request << "Proxy-Authorization: Basic #{Base64.strict_encode64(credentials)}\r\n"
+      end
+      request << "\r\n"
+    end
+
     def proxy_uri
-      proxy = URI.parse("https://#{HOST}").find_proxy
+      proxy = find_proxy("https") || find_proxy("http")
       return unless proxy
 
       unless proxy.scheme == "http"
-        raise Provider::TradeRepublicClient::ConfigurationError,
+        raise Provider::TradeRepublicClient::ProviderUnavailable,
               "Unsupported Trade Republic WebSocket proxy scheme"
       end
 
       proxy
-    rescue URI::InvalidURIError
-      raise Provider::TradeRepublicClient::ConfigurationError,
+    rescue URI::Error
+      raise Provider::TradeRepublicClient::ProviderUnavailable,
             "Invalid Trade Republic WebSocket proxy configuration"
+    end
+
+    def find_proxy(scheme)
+      URI.parse("#{scheme}://#{HOST}:443").find_proxy
     end
 
     def read_proxy_response(socket)
