@@ -27,7 +27,7 @@ nl:
         unexpected: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     edit:
       setup_token:
-        label: "SimpleFIN Setup Token:"
+        label: "SimpleFIN-setuptoken:"
         placeholder: "Plak uw SimpleFIN-setuptoken hier..."
         help_text: "De token moet een lange tekenreeks zijn die begint met letters en cijfers"
       title: "SimpleFIN-koppeling bijwerken"

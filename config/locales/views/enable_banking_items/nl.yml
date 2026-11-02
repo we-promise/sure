@@ -24,7 +24,7 @@ nl:
       no_accounts: "Geen accounts beschikbaar om in te stellen."
       success: "Succesvol %{count} accounts aangemaakt!"
     create:
-      success: "Enable Banking configuratie succesvol."
+      success: "Enable Banking-configuratie succesvol."
     destroy:
       success: "Enable Banking-koppeling is in de wachtrij voor verwijdering geplaatst."
     link_accounts:
@@ -37,7 +37,7 @@ nl:
       success: "Account succesvol gekoppeld aan Enable Banking"
       errors:
         only_manual: "Alleen handmatige accounts kunnen worden gekoppeld"
-        invalid_enable_banking_account: "Ongeldige Enable Banking account geselecteerd"
+        invalid_enable_banking_account: "Ongeldig Enable Banking-account geselecteerd"
     enable_banking_item:
       deletion_in_progress: "Verwijderen bezig"
       provider_name: "Enable Banking"
@@ -104,7 +104,7 @@ nl:
       beta_label: "Bèta"
       cancel: "Annuleren"
       check_country: "Controleer uw landcode instellingen."
-      credentials_required: "Configureer eerst uw Enable Banking inloggegevens."
+      credentials_required: "Configureer eerst uw Enable Banking-inloggegevens."
       description: "Selecteer de bank die u wilt koppelen aan uw accounts."
       no_banks: "Geen banken beschikbaar voor dit land/deze regio."
       no_search_results: "Geen banken gevonden die overeenkomen met uw zoekopdracht."
@@ -112,4 +112,4 @@ nl:
       search_placeholder: "Zoek uw bank..."
       title: "Selecteer uw bank"
     update:
-      success: "Enable Banking configuratie bijgewerkt."
+      success: "Enable Banking-configuratie bijgewerkt."

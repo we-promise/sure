@@ -673,10 +673,10 @@ nl:
         step_2: "Maak een token aan met alleen-lezentoegang (\"Sledování účtu\"). Hiervoor is sterke autorisatie nodig en het token is maximaal 180 dagen geldig."
         step_3: "Plak het token hieronder en sla op. Eén token geeft toegang tot één rekening, dus voeg per Fio-rekening een koppeling toe."
       simplefin_panel:
-        step_1_html: "Ga naar %{link} voor een eenmalig setup-token."
+        step_1_html: "Ga naar %{link} voor een eenmalig setuptoken."
         step_2: "Plak het token hieronder en koppel."
         step_3: "Ga daarna naar Accounts om uw gesynchroniseerde accounts te koppelen."
-        setup_token_label: "Setup-token"
+        setup_token_label: "Setuptoken"
         setup_token_placeholder: "Plak het SimpleFIN-setuptoken"
         save_and_connect: "Opslaan en koppelen"
       plaid_panel:

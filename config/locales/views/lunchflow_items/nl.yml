@@ -87,7 +87,7 @@ nl:
       no_accounts_found: "Geen accounts gevonden. Controleer uw API-sleutelconfiguratie."
       no_api_key: "Lunch Flow API-sleutel is niet geconfigureerd. Configureer deze in Instellingen."
       no_name_placeholder: "(Geen naam)"
-      title: "Lunch Flow Accounts selecteren"
+      title: "Lunch Flow-accounts selecteren"
     select_existing_account:
       account_already_linked: "Dit account is al gekoppeld aan een provider"
       all_accounts_already_linked: "Alle Lunch Flow-accounts zijn al gekoppeld"
@@ -168,7 +168,7 @@ nl:
       subtitle: "Kies de juiste accounttypen voor uw geïmporteerde accounts"
       sync_start_date_help: "Selecteer hoe ver terug u de transactiegeschiedenis wilt synchroniseren. Maximaal 3 jaar geschiedenis beschikbaar."
       sync_start_date_label: "Begin met synchroniseren van transacties vanaf:"
-      title: "Uw Lunch Flow Accounts instellen"
+      title: "Uw Lunch Flow-accounts instellen"
     complete_account_setup:
       all_skipped: "Alle accounts zijn overgeslagen. Geen accounts aangemaakt."
       creation_failed: "Accounts aanmaken mislukt: %{error}"
