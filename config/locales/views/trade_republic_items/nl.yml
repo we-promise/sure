@@ -142,18 +142,18 @@ nl:
       login_expired: "Het aanmeldverzoek is verlopen. Begin opnieuw."
     poll_qr_login:
       no_pending_login: "Er staat geen QR-aanmelding open."
-      success: "Trade Republic is succesvol gekoppeld."
+      success: "Trade Republic is gekoppeld."
     complete_login:
       no_pending_login: "Er staat momenteel geen aanmelding open. Start eerst een nieuwe aanmelding."
       approval_pending: "Nog niet bevestigd. Keur de aanmelding goed in de Trade Republic-app en probeer opnieuw."
       still_pending: "Nog niet bevestigd. Keur de aanmelding goed in de Trade Republic-app en probeer het opnieuw."
-      success: "Trade Republic is succesvol gekoppeld."
+      success: "Trade Republic is gekoppeld."
       login_expired: "De aanmeldingsaanvraag is verlopen. Start opnieuw."
     link_existing_account:
       not_found: "Account of Trade Republic-configuratie niet gevonden."
       only_manual_investment: "Alleen handmatige beleggingsaccounts kunnen aan Trade Republic worden gekoppeld."
       already_linked: "Dit Trade Republic-account is al gekoppeld."
-      success: "Account succesvol aan Trade Republic gekoppeld."
+      success: "Account gekoppeld aan Trade Republic."
       processing_failed: "Het account is gekoppeld, maar de eerste verwerking van de gegevens is mislukt. Er is een synchronisatie ingepland; controleer het foutopsporingslogboek als het onvolledig blijft."
       failed: "Koppelen van Trade Republic-account mislukt."
     complete_account_setup:

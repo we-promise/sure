@@ -69,12 +69,12 @@ nl:
       link_failed: "Accounts koppelen mislukt"
       no_accounts_selected: "Selecteer ten minste één account"
       no_api_token: "Brex-API-token niet gevonden. Configureer het in de providerinstellingen."
-      partial_invalid: "%{created_count} account(s) succesvol gekoppeld, %{already_linked_count} account(s) waren al gekoppeld, %{invalid_count} account(s) hadden ongeldige namen"
-      partial_success: "%{created_count} account(s) succesvol gekoppeld. %{already_linked_count} account(s) waren al gekoppeld: %{already_linked_names}"
+      partial_invalid: "%{created_count} account(s) gekoppeld, %{already_linked_count} account(s) waren al gekoppeld, %{invalid_count} account(s) hadden ongeldige namen"
+      partial_success: "%{created_count} account(s) gekoppeld. %{already_linked_count} account(s) waren al gekoppeld: %{already_linked_names}"
       select_connection: "Kies een Brex-koppeling voordat u accounts koppelt."
       success:
-        one: "%{count} account succesvol gekoppeld"
-        other: "%{count} accounts succesvol gekoppeld"
+        one: "%{count} account gekoppeld"
+        other: "%{count} accounts gekoppeld"
     brex_item:
       accounts_need_setup: "Accounts moeten worden ingesteld"
       delete: "Koppeling verwijderen"
@@ -176,7 +176,7 @@ nl:
       provider_account_already_linked: "Dit Brex-account is al gekoppeld aan een ander account"
       provider_account_not_found: "Brex-account niet gevonden"
       select_connection: "Kies een Brex-koppeling voordat u accounts koppelt."
-      success: "%{account_name} succesvol gekoppeld aan Brex"
+      success: "%{account_name} gekoppeld aan Brex"
     setup_accounts:
       account_type_label: "Accounttype:"
       all_accounts_linked: "Al uw Brex-accounts zijn al ingesteld."

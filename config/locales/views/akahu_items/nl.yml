@@ -41,7 +41,7 @@ nl:
       add_connection: "Akahu-koppeling toevoegen"
       update_connection: "Koppeling bijwerken"
       connection_name_label: "Naam koppeling"
-      connection_name_placeholder: "Hoofdkoppeling Akahu"
+      connection_name_placeholder: "Akahu (hoofd)"
       app_token_label: "App Token"
       app_token_placeholder: "Plak uw Akahu App Token"
       keep_app_token_placeholder: "Laat leeg om het huidige App Token te behouden"

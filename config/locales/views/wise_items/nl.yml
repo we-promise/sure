@@ -50,7 +50,7 @@ nl:
         other: "Bij %{count} saldi is het importeren van transacties mislukt."
       account_processing_failed:
         one: "Verwerken van %{count} Wise-account mislukt."
-        other: "%{count} Wise-accounts zijn mislukt tijdens het verwerken."
+        other: "Verwerken van %{count} Wise-accounts mislukt."
       account_sync_failed:
         one: "Synchronisatie van %{count} Wise-account kon niet worden ingepland."
         other: "Synchronisatie van %{count} Wise-accounts kon niet worden ingepland."

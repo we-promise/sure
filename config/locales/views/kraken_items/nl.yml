@@ -8,11 +8,11 @@ nl:
       description: "Koppelen aan %{name}"
     create:
       default_name: Kraken
-      success: Succesvol gekoppeld aan Kraken. Uw beursaccount wordt gesynchroniseerd.
+      success: Gekoppeld aan Kraken. Uw beursaccount wordt gesynchroniseerd.
     update:
       success: Kraken-koppeling succesvol bijgewerkt.
     destroy:
-      success: Kraken-koppeling is in de wachtrij voor verwijdering geplaatst.
+      success: Kraken-koppeling ingepland voor verwijdering.
     select_accounts:
       select_connection: Kies een Kraken-koppeling in de providerinstellingen.
       no_credentials_configured: Voeg Kraken-API-inloggegevens toe voordat u accounts instelt.
@@ -26,7 +26,7 @@ nl:
       link: Koppelen
       cancel: Annuleren
     link_existing_account:
-      success: Succesvol gekoppeld aan Kraken-account
+      success: Gekoppeld aan Kraken-account
       select_connection: Kies een Kraken-koppeling voordat u accounts koppelt.
       errors:
         only_manual: Alleen handmatige crypto-beursaccounts zonder bestaande providerkoppeling kunnen aan Kraken worden gekoppeld

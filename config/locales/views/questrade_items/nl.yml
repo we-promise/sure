@@ -26,7 +26,7 @@ nl:
       success: "Synchronisatie gestart"
     panel:
       eyebrow: "Instellen · alleen op desktop"
-      help_text: "Questrade API-documentatie"
+      help_text: "Questrade-API-documentatie"
       disconnect: "Loskoppelen"
       disconnect_confirm: "Questrade loskoppelen? Hiermee wordt de koppeling verwijderd en worden de gesynchroniseerde accounts ontkoppeld."
       steps:
@@ -85,8 +85,8 @@ nl:
       partial_invalid: "%{created_count} account(s) gekoppeld, %{already_linked_count} waren al gekoppeld, %{invalid_count} account(s) hadden een ongeldige naam"
       partial_success: "%{created_count} account(s) gekoppeld. %{already_linked_count} account(s) waren al gekoppeld: %{already_linked_names}"
       success:
-        one: "%{count} account succesvol gekoppeld"
-        other: "%{count} accounts succesvol gekoppeld"
+        one: "%{count} account gekoppeld"
+        other: "%{count} accounts gekoppeld"
     questrade_item:
       kind: "Effectenrekening"
       accounts_need_setup: "Accounts moeten worden ingesteld"

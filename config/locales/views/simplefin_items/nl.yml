@@ -147,13 +147,13 @@ nl:
       cancel: "Annuleren"
       link_account: "Account koppelen"
       no_accounts_found: "Geen SimpleFIN-accounts gevonden voor uw %{moniker}."
-      wait_for_sync: "Als u zojuist gekoppeld of gesynchroniseerd heeft, probeer het opnieuw nadat de synchronisatie is voltooid."
+      wait_for_sync: "Als u zojuist gekoppeld of gesynchroniseerd heeft, probeer het dan opnieuw nadat de synchronisatie is voltooid."
       check_provider_health: "Controleer onder Instellingen → Providers of uw SimpleFIN-koppeling in orde is."
       unlink_to_move: "Om een koppeling te verplaatsen, koppel deze eerst los via het actiemenu van het account."
       all_accounts_already_linked: "Alle SimpleFIN-accounts lijken al gekoppeld te zijn."
       currently_linked_to: "Momenteel gekoppeld aan: %{account_name}"
     link_existing_account:
-      success: "Account succesvol gekoppeld aan SimpleFIN"
+      success: "Account gekoppeld aan SimpleFIN"
       errors:
         only_manual: "Alleen handmatige accounts kunnen worden gekoppeld"
         different_provider: "Dit account is gekoppeld aan een andere provider. Ontkoppel het eerst van die provider en koppel het daarna aan SimpleFIN."

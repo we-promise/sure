@@ -99,7 +99,7 @@ nl:
       account_already_linked: "Dit account is al gekoppeld aan een provider."
       fio_account_already_linked: "Dit Fio-account is al gekoppeld."
       no_account_selected: "Er was geen Fio-account beschikbaar om te koppelen."
-      unsupported_account_type: "Fio kan alleen contant-geld- en leningaccounts synchroniseren."
+      unsupported_account_type: "Fio kan alleen betaal- en spaarrekeningen en leningen synchroniseren."
     setup_accounts:
       title: "Uw Fio-account koppelen"
       subtitle: "Kies hoe het account waartoe dit token toegang geeft in Sure moet verschijnen."

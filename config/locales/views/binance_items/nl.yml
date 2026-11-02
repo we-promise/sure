@@ -3,11 +3,11 @@ nl:
   binance_items:
     create:
       default_name: "Binance"
-      success: "Succesvol gekoppeld aan Binance! Uw account wordt gesynchroniseerd."
+      success: "Gekoppeld aan Binance! Uw account wordt gesynchroniseerd."
     update:
       success: "Binance-configuratie succesvol bijgewerkt."
     destroy:
-      success: "Binance-koppeling is in de wachtrij voor verwijdering geplaatst."
+      success: "Binance-koppeling ingepland voor verwijdering."
     select_accounts:
       connection_unavailable: "Die Binance-koppeling is niet beschikbaar. Kies er een in de providerinstellingen."
       no_credentials_configured: "Koppel Binance in de providerinstellingen voordat u de accounts toevoegt."
@@ -63,7 +63,7 @@ nl:
       link: "Koppelen"
       cancel: "Annuleren"
     link_existing_account:
-      success: "Succesvol gekoppeld aan Binance-account"
+      success: "Gekoppeld aan Binance-account"
       errors:
         only_manual: "Alleen handmatige accounts kunnen aan Binance worden gekoppeld"
         invalid_binance_account: "Ongeldig Binance-account"

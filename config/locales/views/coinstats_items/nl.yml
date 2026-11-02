@@ -14,11 +14,11 @@ nl:
       success: "CoinStats-providerkoppeling ingepland voor verwijdering."
     link_wallet:
       success:
-        one: "%{count} crypto wallet succesvol gekoppeld."
-        other: "%{count} crypto wallets succesvol gekoppeld."
+        one: "%{count} cryptowallet gekoppeld."
+        other: "%{count} cryptowallets gekoppeld."
       missing_params: "Ontbrekende vereiste parameters: adres en blockchain."
-      failed: "Crypto wallet koppelen mislukt."
-      error: "Crypto wallet koppelen mislukt: %{message}."
+      failed: "Cryptowallet koppelen mislukt."
+      error: "Cryptowallet koppelen mislukt: %{message}."
     link_exchange:
       success: "Beurs %{name} gekoppeld."
       missing_params: "Beurs en inloggegevens zijn verplicht."
@@ -26,7 +26,7 @@ nl:
       failed: "Koppelen van beurs mislukt."
       error: "Koppelen van beurs mislukt: %{message}."
     new:
-      title: "Koppel een Crypto Wallet met CoinStats"
+      title: "Crypto koppelen via CoinStats"
       blockchain_fetch_error: "Laden van Blockchains mislukt. Probeer het later opnieuw."
       link_wallet_title: "Walletadres koppelen"
       link_wallet_description: "Volg een self-custody wallet of één on-chain adres via CoinStats."
@@ -59,20 +59,20 @@ nl:
       default_name: "CoinStats-koppeling"
       link: "Crypto Wallet koppelen"
     coinstats_item:
-      deletion_in_progress: "Crypto wallet gegevens worden verwijderd…"
+      deletion_in_progress: "Gegevens van cryptowallet worden verwijderd…"
       provider_name: "CoinStats"
       syncing: "Synchroniseren…"
       sync_status:
-        no_accounts: "Geen crypto wallets gevonden"
+        no_accounts: "Geen cryptowallets gevonden"
         all_synced:
-          one: "%{count} crypto wallet gesynchroniseerd"
-          other: "%{count} crypto wallets gesynchroniseerd"
-        partial_sync: "%{linked_count} crypto wallets gesynchroniseerd, %{unlinked_count} hebben setup nodig"
+          one: "%{count} cryptowallet gesynchroniseerd"
+          other: "%{count} cryptowallets gesynchroniseerd"
+        partial_sync: "%{linked_count} cryptowallets gesynchroniseerd, %{unlinked_count} moeten worden ingesteld"
       reconnect: "Opnieuw koppelen"
       status: "Laatst gesynchroniseerd %{timestamp} geleden"
       status_never: "Nooit gesynchroniseerd"
       status_with_summary: "Laatst gesynchroniseerd %{timestamp} geleden • %{summary}"
       update_api_key: "API-sleutel bijwerken"
       delete: "Verwijderen"
-      no_wallets_title: "Geen crypto wallets gekoppeld"
-      no_wallets_message: "Er zijn momenteel geen crypto wallets gekoppeld aan CoinStats."
+      no_wallets_title: "Geen cryptowallets gekoppeld"
+      no_wallets_message: "Er zijn momenteel geen cryptowallets gekoppeld aan CoinStats."

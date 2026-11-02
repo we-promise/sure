@@ -106,7 +106,7 @@ nl:
         save_credentials: "Inloggegevens opslaan"
         step_1_html: "Maak een app aan op %{link} en kopieer de client-ID en het secret."
         step_2_html: "Voeg %{callback_url} toe aan de Allowed redirect URIs van de app."
-        step_3: "Sla hieronder de inloggegevens op en koppel daarna een bank. Sure importeert de volledige geschiedenis binnen enkele minuten nadat u toegang hebt verleend."
+        step_3: "Sla hieronder de inloggegevens op en koppel daarna een bank. Sure importeert de volledige geschiedenis binnen enkele minuten nadat u toegang heeft verleend."
         step_4: "Britse banken vragen u elke 90 dagen opnieuw te koppelen; Sure toont een knop Opnieuw koppelen voordat de toegang verloopt."
         sync: "Synchroniseren"
         syncing: "Synchroniseren..."

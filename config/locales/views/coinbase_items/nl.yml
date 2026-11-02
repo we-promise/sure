@@ -3,7 +3,7 @@ nl:
   coinbase_items:
     create:
       default_name: "Coinbase"
-      success: "Gekoppeld met Coinbase! Uw accounts worden gesynchroniseerd."
+      success: "Gekoppeld aan Coinbase! Uw accounts worden gesynchroniseerd."
     update:
       success: "Coinbase-configuratie bijgewerkt."
     destroy:

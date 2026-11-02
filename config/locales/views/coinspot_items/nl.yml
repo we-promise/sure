@@ -8,7 +8,7 @@ nl:
       description: "Koppelen aan %{name}"
     create:
       default_name: "CoinSpot"
-      success: "Gekoppeld met CoinSpot. Uw beursaccount wordt gesynchroniseerd."
+      success: "Gekoppeld aan CoinSpot. Uw beursaccount wordt gesynchroniseerd."
     update:
       success: "CoinSpot-koppeling bijgewerkt."
     destroy:

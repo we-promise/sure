@@ -6,7 +6,7 @@ nl:
     create:
       already_connected: "U heeft al een koppeling voor deze instelling, dus deze is niet toegevoegd."
       exchange_failed: "We konden deze koppeling niet toevoegen. Probeer het opnieuw en controleer de serverlogs als het probleem aanhoudt."
-      success: "Account succesvol gekoppeld. Wacht tot accounts zijn gesynchroniseerd."
+      success: "Account gekoppeld. Wacht tot accounts zijn gesynchroniseerd."
       token_expired: "Deze koppeling is verlopen voordat deze werd toegevoegd. Koppel de instelling opnieuw."
     destroy:
       success: "Accounts ingepland voor verwijdering."

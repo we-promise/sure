@@ -17,7 +17,7 @@ nl:
       invalid_callback: "Ongeldige callback parameters."
       item_not_found: "Koppeling niet gevonden."
       session_failed: "Kan autorisatie niet voltooien"
-      success: "Succesvol gekoppeld aan uw bank. Uw accounts worden gesynchroniseerd."
+      success: "Gekoppeld aan uw bank. Uw accounts worden gesynchroniseerd."
       unexpected_error: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     complete_account_setup:
       all_skipped: "Alle accounts zijn overgeslagen. U kunt ze later instellen op de accountpagina."
@@ -34,7 +34,7 @@ nl:
       no_session: "Geen actieve Enable Banking-koppeling. Koppel eerst een bank."
       success: "%{count} accounts gekoppeld."
     link_existing_account:
-      success: "Account succesvol gekoppeld aan Enable Banking"
+      success: "Account gekoppeld aan Enable Banking"
       errors:
         only_manual: "Alleen handmatige accounts kunnen worden gekoppeld"
         invalid_enable_banking_account: "Ongeldig Enable Banking-account geselecteerd"
@@ -57,7 +57,7 @@ nl:
     select_existing_account:
       title: "Enable Banking-account koppelen"
       all_linked: "Alle Enable Banking-accounts lijken al gekoppeld te zijn."
-      try_after_sync: "Als u net hebt gekoppeld of gesynchroniseerd, probeer het dan opnieuw nadat de synchronisatie is voltooid."
+      try_after_sync: "Als u net heeft gekoppeld of gesynchroniseerd, probeer het dan opnieuw nadat de synchronisatie is voltooid."
       unlink_to_move: "Om een ander account te koppelen, ontkoppelt u het eerst via het actiemenu van het account."
       balance: "Saldo"
       link: "Koppelen"

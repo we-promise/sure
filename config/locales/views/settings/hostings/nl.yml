@@ -164,7 +164,7 @@ nl:
         confidence_threshold_help: "Onder deze betrouwbaarheid wordt de categorie niet toegepast en blijft de transactie zonder categorie, zodat een latere run het opnieuw kan proberen. Er wordt niets weggegooid. Stel in op 0 om elk antwoord toe te passen."
         confidence_threshold_env_notice: "Vastgezet door de omgevingsvariabele CATEGORIZATION_CONFIDENCE_THRESHOLD."
         shadow_rate_label: "Percentage schaduwvergelijking (0–1)"
-        shadow_rate_help: "Voert de provider die u NIET hebt geselecteerd naast de gekozen provider uit en legt vast waar ze van mening verschillen, zonder een categorie te wijzigen. Dit verdubbelt de API-kosten van elke categorisatierun die in de steekproef valt. Stel in op 0 om dit uit te schakelen."
+        shadow_rate_help: "Voert de provider die u NIET heeft geselecteerd naast de gekozen provider uit en legt vast waar ze van mening verschillen, zonder een categorie te wijzigen. Dit verdubbelt de API-kosten van elke categorisatierun die in de steekproef valt. Stel in op 0 om dit uit te schakelen."
         shadow_rate_env_notice: "Vastgezet door de omgevingsvariabele CATEGORIZATION_SHADOW_RATE."
       categorization_shadow_results:
         shadow_results_heading: "Schaduwvergelijking"

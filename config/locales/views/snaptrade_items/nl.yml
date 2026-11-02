@@ -87,7 +87,7 @@ nl:
       info_history: "Tot 3 jaar transactiegeschiedenis"
       free_tier_note: "Met het gratis abonnement van SnapTrade kunt u 20 brokers koppelen."
       no_accounts_title: "Geen accounts gevonden"
-      no_accounts_message: "Er zijn geen brokeraccounts gevonden. Dit kan gebeuren als u het koppelen hebt geannuleerd of als uw broker niet wordt ondersteund."
+      no_accounts_message: "Er zijn geen brokeraccounts gevonden. Dit kan gebeuren als u het koppelen heeft geannuleerd of als uw broker niet wordt ondersteund."
       try_again: "Broker koppelen"
       back_to_settings: "Terug naar instellingen"
       available_accounts: "Beschikbare accounts"

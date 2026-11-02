@@ -22,7 +22,7 @@ nl:
       accounts_need_setup: "Account moet worden ingesteld"
       accounts_need_setup_description: "Uw Trading 212-account moet worden gekoppeld aan een Sure-account."
       no_accounts_discovered: "Nog geen Trading 212-account gevonden."
-      no_accounts_discovered_description: "Voer een synchronisatie uit nadat u uw API-sleutel hebt opgeslagen om uw account te vinden."
+      no_accounts_discovered_description: "Voer een synchronisatie uit nadat u uw API-sleutel heeft opgeslagen om uw account te vinden."
     setup_accounts:
       page_title: "Trading 212-account instellen"
       dialog_title: "Uw Trading 212-account instellen"
@@ -75,7 +75,7 @@ nl:
     select_existing_account:
       title: "Trading 212-account koppelen"
       no_accounts_available: "Er zijn nog geen ongekoppelde Trading 212-accounts beschikbaar."
-      run_sync_hint: "Voer een synchronisatie uit via Instellingen > Providers nadat u uw API-sleutel hebt opgeslagen."
+      run_sync_hint: "Voer een synchronisatie uit via Instellingen > Providers nadat u uw API-sleutel heeft opgeslagen."
       wait_for_sync: "Wacht tot de synchronisatie voor het vinden van accounts is voltooid."
       balance: "Saldo"
       link: "Koppelen"

@@ -127,7 +127,7 @@ nl:
           langfuse:
             title: "Langfuse"
             description: "Optionele AI-tracing en rapportage van evaluaties. Deze controle verstuurt geen traces of evaluatieverzoeken."
-            guidance: "Stel LANGFUSE_PUBLIC_KEY en LANGFUSE_SECRET_KEY samen in. LANGFUSE_HOST is optioneel. Herstart de betrokken diensten nadat u deze instellingen hebt gewijzigd."
+            guidance: "Stel LANGFUSE_PUBLIC_KEY en LANGFUSE_SECRET_KEY samen in. LANGFUSE_HOST is optioneel. Herstart de betrokken diensten nadat u deze instellingen heeft gewijzigd."
           sentry:
             title: "Sentry"
             description: "Optionele rapportage van fouten en prestaties. De huidige initializer schakelt rapportage alleen in productie in."
@@ -247,7 +247,7 @@ nl:
           latency: "Latentie"
         values:
           healthy: "Gezond"
-          unhealthy: "Verminderd"
+          unhealthy: "Verslechterd"
           time_ago: "%{time_ago} geleden"
           never: "Nooit"
           seconds: "%{seconds}s"
