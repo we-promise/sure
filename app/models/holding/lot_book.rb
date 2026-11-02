@@ -116,8 +116,8 @@ class Holding::LotBook
     end
 
     # Pro-rata relief across every open lot; an oversell closes them all.
-    # Rounding at the split scale, with #rescale_lots' drift correction on the
-    # last lot, keeps each quantity bounded and the open sum exact — without
+    # Rounding at the split scale, with #rescale_lots' drift correction, keeps
+    # each quantity bounded and the open sum exact — without
     # it, repeated partial relief at non-terminating ratios grows each
     # quantity one decimal place per step.
     def relieve_lots(qty)
@@ -128,14 +128,23 @@ class Holding::LotBook
       rescale_lots(remaining) { |lot| lot.with(qty: (lot.qty * remaining / open).round(Security::Split::QTY_SCALE)) }
     end
 
-    # Restates each lot, then gives the last open lot whatever rounding is left,
-    # so the lots always sum to exactly `target`.
+    # Restates each lot, then settles whatever rounding is left from the last
+    # lot back, so the lots always sum to exactly `target`.
     def rescale_lots(target)
       scaled = target.zero? ? [] : @lots.map { |lot| yield lot }
-      if scaled.any?
-        drift = target - scaled.sum(BigDecimal("0"), &:qty)
-        scaled[-1] = scaled[-1].with(qty: scaled[-1].qty + drift)
-      end
+      settle_drift(scaled, target - scaled.sum(BigDecimal("0"), &:qty))
       @lots = scaled.select { |lot| lot.qty.positive? }
+    end
+
+    # A negative drift can exceed the last lot, which may have rounded to zero,
+    # so no lot gives up more than it holds.
+    def settle_drift(lots, drift)
+      lots.each_index.reverse_each do |index|
+        break if drift.zero?
+
+        correction = drift.positive? ? drift : -[ lots[index].qty, -drift ].min
+        lots[index] = lots[index].with(qty: lots[index].qty + correction)
+        drift -= correction
+      end
     end
 end
