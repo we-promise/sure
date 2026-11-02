@@ -231,9 +231,10 @@ class Trade < ApplicationRecord
 
       holding = basis_holding
 
-      return nil unless holding&.avg_cost
+      avg_cost = holding&.avg_cost
+      return nil unless avg_cost
 
-      cost_basis = holding.avg_cost * qty.abs
+      cost_basis = avg_cost * qty.abs
       # A disposal's fee is what selling cost, so it comes off the proceeds.
       sale_proceeds = converted_to_basis_currency(price_money * qty.abs - fee_money, cost_basis.currency)
 
@@ -263,13 +264,10 @@ class Trade < ApplicationRecord
     # the rate, and its absence is a fact to report rather than a 1.0 nobody
     # can see.
     #
-    # A rate that is present but not positive is absent for this purpose.
-    # `ExchangeRate` validates presence only -- neither the model nor the
-    # column requires a positive number -- so a provider or an import can leave
-    # a 0 behind, and multiplying by it books the disposal as a total loss the
-    # user never made. A negative one is worse: it flips the sign. Both are the
-    # missing-rate case wearing a number, and reporting no figure is the whole
-    # point of the paragraph above.
+    # A rate that is present but not positive is absent for this purpose. The
+    # table refuses one, but a preloaded map is handed in. Multiplying by 0
+    # books the disposal as a total loss the user never made, and a negative
+    # flips the sign.
     def converted_to_basis_currency(proceeds, basis_currency)
       from = proceeds.currency.iso_code
       to = basis_currency.iso_code

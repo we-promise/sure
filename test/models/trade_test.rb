@@ -101,11 +101,10 @@ class TradeTest < ActiveSupport::TestCase
       create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR").entryable
     end
 
-    # The ivar directly, as ReportsController does on this branch -- there is
-    # no public writer for it upstream yet. Outside the capture on purpose: the
-    # cost being counted is the rates', not the holdings'.
+    # Outside the capture on purpose: the cost being counted is the rates', not
+    # the holdings'.
     holdings = account.holdings.to_a
-    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, holdings) }
+    trades.each { |trade| trade.preloaded_holdings = holdings }
 
     queries = capture_sql_queries do
       Trade.preload_exchange_rates(trades)
@@ -117,8 +116,7 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal(250) ] * 4, trades.map { |t| t.realized_gain_loss.value.amount }
   end
 
-  # A date with no rate is an answer too. Left out of the preload, each such
-  # disposal fell back to its own lookup and found nothing.
+  # A date with no rate is an answer too, so it costs no lookup of its own.
   test "preloading answers a disposal whose date has no rate without a lookup of its own" do
     account, security = cross_currency_account
 
@@ -130,7 +128,7 @@ class TradeTest < ActiveSupport::TestCase
     end
 
     holdings = account.holdings.to_a
-    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, holdings) }
+    trades.each { |trade| trade.preloaded_holdings = holdings }
 
     queries = capture_sql_queries do
       Trade.preload_exchange_rates(trades)
@@ -174,7 +172,7 @@ class TradeTest < ActiveSupport::TestCase
     end
 
     holdings = account.holdings.to_a
-    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, holdings) }
+    trades.each { |trade| trade.preloaded_holdings = holdings }
 
     queries = capture_sql_queries do
       Trade.preload_exchange_rates(trades)
