@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/amount_format.dart';
 import '../models/account.dart';
 import '../providers/auth_provider.dart';
 import '../providers/accounts_provider.dart';
@@ -17,6 +18,7 @@ import '../theme/sure_colors.dart';
 import '../theme/sure_spacing.dart';
 import '../theme/sure_tokens.dart';
 import '../theme/sure_typography.dart';
+import '../utils/money_formatter.dart';
 import 'transaction_form_screen.dart';
 import 'transactions_list_screen.dart';
 import '../l10n/app_localizations.dart';
@@ -227,19 +229,19 @@ class DashboardScreenState extends State<DashboardScreen> {
   }
 
   String _formatAmount(String currency, double amount) {
+    final format = context.select<AuthProvider, AmountFormat>(
+      (auth) => auth.amountFormat,
+    );
     final symbol = _getCurrencySymbol(currency);
     final isSmallAmount = amount.abs() < 1 && amount != 0;
-    final formattedAmount = amount.toStringAsFixed(isSmallAmount ? 4 : 0);
-
-    // Split into integer and decimal parts
-    final parts = formattedAmount.split('.');
-    final integerPart = parts[0].replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
+    final formatted = MoneyFormatter.currency(
+      amount,
+      format,
+      symbol: symbol,
+      maxFractionDigits: isSmallAmount ? 4 : 0,
+      keepTrailingZeros: isSmallAmount,
     );
-
-    final finalAmount = parts.length > 1 ? '$integerPart.${parts[1]}' : integerPart;
-    return '$symbol$finalAmount $currency';
+    return '$formatted $currency';
   }
 
   Set<String> _getAllCurrencies(AccountsProvider accountsProvider) {

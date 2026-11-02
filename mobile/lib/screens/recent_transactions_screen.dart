@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../models/amount_format.dart';
 import '../models/transaction.dart';
 import '../models/account.dart';
 import '../providers/transactions_provider.dart';
@@ -9,6 +10,7 @@ import '../providers/auth_provider.dart';
 import '../theme/sure_tokens.dart';
 import '../providers/privacy_provider.dart';
 import '../utils/amount_parser.dart';
+import '../utils/money_formatter.dart';
 import '../utils/money_masker.dart';
 import '../widgets/money_text.dart';
 import '../l10n/app_localizations.dart';
@@ -17,7 +19,8 @@ class RecentTransactionsScreen extends StatefulWidget {
   const RecentTransactionsScreen({super.key});
 
   @override
-  State<RecentTransactionsScreen> createState() => _RecentTransactionsScreenState();
+  State<RecentTransactionsScreen> createState() =>
+      _RecentTransactionsScreenState();
 }
 
 class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
@@ -217,8 +220,8 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
     String formattedDate;
     try {
       final date = DateTime.parse(transaction.date);
-      formattedDate = DateFormat('yyyy-MM-dd HH:mm',
-              Localizations.localeOf(context).toString())
+      formattedDate = DateFormat(
+              'yyyy-MM-dd HH:mm', Localizations.localeOf(context).toString())
           .format(date);
     } catch (e) {
       formattedDate = transaction.date;
@@ -296,8 +299,9 @@ class _RecentTransactionsScreenState extends State<RecentTransactionsScreen> {
   }
 
   String _formatAmount(double amount) {
-    // Support up to 8 decimal places, but omit unnecessary trailing zeros
-    final formatter = NumberFormat('#,##0.########');
-    return formatter.format(amount);
+    final format = context.select<AuthProvider, AmountFormat>(
+      (auth) => auth.amountFormat,
+    );
+    return MoneyFormatter.decimal(amount, format, maxFractionDigits: 8);
   }
 }

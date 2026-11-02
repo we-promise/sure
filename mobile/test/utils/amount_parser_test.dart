@@ -26,6 +26,26 @@ void main() {
       expect(amount.displayText, r'$1,234.56');
     });
 
+    test('parses Indian lakh/crore grouped values', () {
+      final amount = AmountParser.parse('₹12,34,567.89', locale: 'en_US');
+
+      expect(amount.value, 1234567.89);
+      expect(amount.canonicalValue, '1234567.89');
+    });
+
+    test('parses European grouped values', () {
+      final amount = AmountParser.parse('1.234.567,89 €', locale: 'de_DE');
+
+      expect(amount.value, 1234567.89);
+      expect(amount.canonicalValue, '1234567.89');
+    });
+
+    test('parses Indian values when the app locale uses decimal commas', () {
+      final amount = AmountParser.parse('₹12,34,567.89', locale: 'de_DE');
+
+      expect(amount.value, 1234567.89);
+    });
+
     test('uses locale separators for ambiguous single separators', () {
       expect(
         AmountParser.parse('1.234', locale: 'id_ID').canonicalValue,
