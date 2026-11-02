@@ -1261,14 +1261,34 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  # Linking or unlinking a provider doesn't touch the account, but it changes
-  # how a linked investment's series is normalized.
-  test "sparkline is re-rendered when the account is linked or unlinked" do
+  # AccountProvider rows don't touch the account, and swapping one keeps it linked.
+  test "sparkline is re-rendered when the account's provider link changes" do
+    AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
     get sparkline_account_url(@account)
     etag = response.headers["ETag"]
 
-    Account.any_instance.stubs(:linked?).returns(true)
-    get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    travel 1.minute do
+      @account.account_providers.destroy_all
+      other = PlaidAccount.create!(
+        plaid_item: plaid_items(:one), plaid_id: "acc_mock_swap", name: "Swapped", plaid_type: "depository",
+        currency: "USD", current_balance: 1
+      )
+      AccountProvider.create!(account: @account, provider: other)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
+  test "an investment sparkline is re-rendered after any family sync" do
+    investment = accounts(:investment)
+    get sparkline_account_url(investment)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      investment.family.touch(:latest_sync_completed_at)
+      get sparkline_account_url(investment), headers: { "If-None-Match" => etag }
+    end
 
     assert_response :success
   end
