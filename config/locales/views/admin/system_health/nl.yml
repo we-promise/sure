@@ -195,13 +195,13 @@ nl:
               not_configured: "De API-sleutels van de ingeschakelde providers van marktkoersen ontbreken. Automatisch zoeken naar effecten en opvragen van koersen zijn via deze providers niet beschikbaar."
               incomplete: "Bij ten minste één ingeschakelde provider van marktkoersen ontbreekt configuratie of is de selectie ongeldig. Effecten die aan die provider zijn toegewezen, krijgen mogelijk geen koersupdates."
               disabled: "Er is geen provider van marktkoersen ingeschakeld. Automatisch zoeken naar effecten en opvragen van koersen zijn niet beschikbaar."
-            guidance: "Kies providers en voeg eventueel vereiste API-sleutels toe in de zelfhostinginstellingen, of configureer ze in de deploymentomgeving. Overschrijvingen via de omgeving hebben voorrang. Openbare providers hebben geen API-sleutel nodig."
+            guidance: "Kies providers en voeg eventueel vereiste API-sleutels toe in de zelfhostinginstellingen, of configureer ze in de deploymentomgeving. Instellingen uit omgevingsvariabelen gaan voor. Openbare providers hebben geen API-sleutel nodig."
           exchange_rates:
             title: "Wisselkoersen"
             statuses:
               configured: "De geselecteerde wisselkoersprovider is geconfigureerd."
               not_configured: "Er is geen bruikbare wisselkoersprovider geconfigureerd. Automatische valutaomrekening is mogelijk niet beschikbaar wanneer een opgeslagen koers ontbreekt."
-            guidance: "Kies een wisselkoersprovider en voeg indien nodig de API-sleutel toe in de zelfhostinginstellingen, of configureer deze in de deploymentomgeving. EXCHANGE_RATE_PROVIDER en overschrijvingen van provider-API-sleutels via de omgeving hebben voorrang."
+            guidance: "Kies een wisselkoersprovider en voeg indien nodig de API-sleutel toe in de zelfhostinginstellingen, of configureer deze in de deploymentomgeving. EXCHANGE_RATE_PROVIDER en provider-API-sleutels uit omgevingsvariabelen gaan voor."
             issues:
               invalid_provider: "De geselecteerde wisselkoersprovider wordt niet herkend. Het automatisch opvragen van koersen mislukt totdat een ondersteunde provider is geselecteerd."
           storage:
