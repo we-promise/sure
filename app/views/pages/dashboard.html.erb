@@ -270,7 +270,7 @@
           <% if section[:key] == "cashflow_sankey" && preview_features_enabled? %>
             <%= render "pages/dashboard/cashflow_preview_opt_in" %>
             <% if Current.user.cashflow_preview_enabled? %>
-              <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: section[:locals][:sankey_data] %>
+              <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: section[:locals][:sankey_data], currency: dashboard_currency %>
             <% end %>
           <% end %>
         </div>
