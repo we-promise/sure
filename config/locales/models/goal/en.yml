@@ -25,7 +25,7 @@ en:
               blank: Say how many months of expenses this reserve should cover.
               only_with_months_mode: Months of expenses only apply when the target is set that way.
             linked_accounts:
-              must_be_fundable: All linked accounts must be cash or investment accounts.
+              must_be_fundable: All linked accounts must be cash, investment or crypto accounts.
               must_belong_to_family: Linked accounts must belong to the same family as the goal.
             kind:
               locked_while_released: Reopen this goal before turning it into a reserve.
