@@ -47,7 +47,7 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
     @plaid_item.expects(:upsert_plaid_snapshot!).with(item_data)
     @plaid_item.expects(:upsert_plaid_institution_snapshot!).with(institution_data)
 
-    @importer.import
+    assert_equal [], @importer.import
   end
 
   test "clears requires update status after a successful import" do
@@ -69,7 +69,7 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
     @importer.stubs(:fetch_and_import_item_data).raises(error)
     @importer.expects(:fetch_and_import_accounts_data).never
 
-    @importer.import
+    assert_equal [], @importer.import
 
     assert_predicate @plaid_item.reload, :requires_update?
   end
