@@ -29,7 +29,6 @@ class Onchain::SolanaStakeAdapter
   include Onchain::ChainAdapter
 
   LAMPORTS_PER_SOL = 1_000_000_000.to_d
-  STAKE_PROGRAM_ID = "Stake11111111111111111111111111111111111"
 
   # Same Base58 shape as a normal Solana address - a stake account is an
   # ordinary account, just one whose owner happens to be the Stake program.
@@ -55,10 +54,10 @@ class Onchain::SolanaStakeAdapter
   def has_activity?(address)
     return false unless valid_address?(address)
 
-    info = detection_provider.get_stake_account_info(address)
+    info = detection_provider.get_account_info(address)
     return false if info.nil?
 
-    info["owner"] == STAKE_PROGRAM_ID
+    info["owner"] == Provider::SolanaRpc::STAKE_PROGRAM_ID
   rescue StandardError => e
     Rails.logger.warn("Onchain::SolanaStakeAdapter - activity probe failed: #{e.class}")
     nil
@@ -68,9 +67,9 @@ class Onchain::SolanaStakeAdapter
     raise Onchain::Chains::Error, "Invalid Solana address" unless valid_address?(address)
 
     wrap_provider_errors do
-      info = provider.get_stake_account_info(address)
+      info = provider.get_account_info(address)
       raise Onchain::Chains::Error, "Account not found" if info.nil?
-      unless info["owner"] == STAKE_PROGRAM_ID
+      unless info["owner"] == Provider::SolanaRpc::STAKE_PROGRAM_ID
         raise Onchain::Chains::Error, "This address is not a Solana stake account"
       end
 

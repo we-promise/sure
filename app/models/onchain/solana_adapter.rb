@@ -60,7 +60,12 @@ class Onchain::SolanaAdapter
   def has_activity?(address)
     return false unless valid_address?(address)
 
-    return true if detection_provider.get_balance(address).positive?
+    # getAccountInfo rather than getBalance: the same one request, but it also
+    # names the owner. A stake account holds SOL too, and claiming it here would
+    # make every one an ambiguous match against Onchain::SolanaStakeAdapter.
+    account = detection_provider.get_account_info(address)
+    return false if account&.dig("owner") == Provider::SolanaRpc::STAKE_PROGRAM_ID
+    return true if account&.dig("lamports").to_i.positive?
 
     # A wallet can hold SPL tokens with no SOL of its own: each token account
     # carries its own rent, so an empty wallet address is not an empty wallet.
