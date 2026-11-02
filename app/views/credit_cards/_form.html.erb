@@ -33,6 +33,29 @@
                                         placeholder: t("credit_cards.form.annual_fee_placeholder"),
                                         min: 0 %>
       </div>
+
+      <%# The two days that make up the statement cycle. Only the close day is
+          load-bearing -- without it there is no telling which charge belongs to
+          which statement -- so the due day is allowed to stand on its own for a
+          card whose close day came from a provider. %>
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <%= credit_card_form.select :statement_close_day,
+                                      options_for_select(
+                                        credit_card_day_of_month_options,
+                                        credit_card_form.object.statement_close_day
+                                      ),
+                                      { include_blank: true, label: t("credit_cards.form.statement_close_day") } %>
+
+          <%= credit_card_form.select :due_day,
+                                      options_for_select(
+                                        credit_card_day_of_month_options,
+                                        credit_card_form.object.due_day
+                                      ),
+                                      { include_blank: true, label: t("credit_cards.form.due_day") } %>
+        </div>
+        <p class="text-secondary text-xs"><%= t("credit_cards.form.statement_cycle_description") %></p>
+      </div>
     <% end %>
 
     <% enable_banking_account = account.provider_account_for("EnableBankingAccount") if account.persisted? %>

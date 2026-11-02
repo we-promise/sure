@@ -121,7 +121,13 @@ class RuleTest < ActiveSupport::TestCase
       rule = @family.rules.build(resource_type: "transaction")
       action = rule.actions.build(action_type: key)
 
-      assert rule.valid?, "#{key}: #{rule.errors.full_messages.to_sentence}"
+      # A split action is only valid with a split configuration in `value`;
+      # its action_type is still accepted.
+      if key == "split_transaction"
+        rule.valid?
+      else
+        assert rule.valid?, "#{key}: #{rule.errors.full_messages.to_sentence}"
+      end
       assert_empty action.errors[:action_type], key
     end
   end
@@ -174,6 +180,60 @@ class RuleTest < ActiveSupport::TestCase
     transaction_entry.reload
 
     assert_equal @groceries_category, transaction_entry.transaction.category
+  end
+
+  test "split_transaction rule end to end" do
+    transaction_entry = create_transaction(
+      date: Date.current,
+      amount: 100,
+      account: @account,
+      name: "Netflix+Hulu Bundle"
+    )
+
+    hulu_category = @family.categories.create!(name: "Streaming")
+
+    rule = Rule.create!(
+      family: @family,
+      resource_type: "transaction",
+      effective_date: 1.day.ago.to_date,
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Netflix+Hulu Bundle"),
+        Rule::Condition.new(condition_type: "transaction_amount", operator: "=", value: 100)
+      ],
+      actions: [
+        Rule::Action.new(
+          action_type: "split_transaction",
+          value: {
+            splits: [
+              { type: "fixed", name: "Netflix", share: "70", category_id: @groceries_category.id },
+              { type: "fixed", name: "Hulu", share: "30", category_id: hulu_category.id }
+            ]
+          }.to_json
+        )
+      ]
+    )
+
+    rule.apply
+
+    transaction_entry.reload
+    assert transaction_entry.split_parent?
+    assert_equal [ 30, 70 ], transaction_entry.child_entries.order(:amount).pluck(:amount).map(&:to_i)
+  end
+
+  test "a split rule cannot have other actions" do
+    split = { splits: [ { type: "percentage", name: "A", share: "50" }, { type: "percentage", name: "B", share: "50" } ] }
+
+    rule = @family.rules.build(
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Bundle") ],
+      actions: [
+        Rule::Action.new(action_type: "split_transaction", value: split.to_json),
+        Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id)
+      ]
+    )
+
+    assert_not rule.valid?
+    assert_includes rule.errors[:base], I18n.t("activerecord.errors.models.rule.split_not_alone")
   end
 
   test "compound rule" do

@@ -34,14 +34,14 @@ class ReleaseHighlightsTest < ActiveSupport::TestCase
 
   test "dismissing a hotfix preserves the legacy base release acknowledgement" do
     @user.update!(preferences: { "last_seen_release_tag" => "v0.7.5", "custom_preference" => true })
-    Sure.stubs(:version).returns(Semver.new("0.7.5-hotfix.1"))
+    Sure.stubs(:version).returns(Calver.new("0.7.5-hotfix.1"))
 
     assert_equal "v0.7.5-hotfix.1", ReleaseHighlights.pending_tag_for(@user)
     @user.mark_release_seen!("v0.7.5-hotfix.1")
     assert_nil ReleaseHighlights.pending_tag_for(@user.reload)
     assert @user.preferences["custom_preference"]
 
-    Sure.stubs(:version).returns(Semver.new("0.7.5"))
+    Sure.stubs(:version).returns(Calver.new("0.7.5"))
     assert_nil ReleaseHighlights.pending_tag_for(@user)
   end
 
@@ -59,12 +59,12 @@ class ReleaseHighlightsTest < ActiveSupport::TestCase
 
     @user.reload
     [ "0.7.6-alpha.1", "0.7.5-hotfix.1" ].each do |version|
-      Sure.stubs(:version).returns(Semver.new(version))
+      Sure.stubs(:version).returns(Calver.new(version))
       assert_nil ReleaseHighlights.pending_tag_for(@user)
     end
     assert_equal 2, @user.preferences.fetch("seen_release_tags").size
 
-    Sure.stubs(:version).returns(Semver.new("0.7.6"))
+    Sure.stubs(:version).returns(Calver.new("0.7.6"))
     assert_equal "v0.7.6", ReleaseHighlights.pending_tag_for(@user)
   end
 
@@ -92,7 +92,7 @@ class ReleaseHighlightsTest < ActiveSupport::TestCase
   end
 
   test "every release is eligible while the rollout is being tested" do
-    assert ReleaseHighlights.eligible?(Semver.new("0.7.5-alpha.7"))
-    assert ReleaseHighlights.eligible?(Semver.new("0.7.4"))
+    assert ReleaseHighlights.eligible?(Calver.new("0.7.5-alpha.7"))
+    assert ReleaseHighlights.eligible?(Calver.new("0.7.4"))
   end
 end

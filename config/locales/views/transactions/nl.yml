@@ -11,6 +11,7 @@ nl:
       date: Datum
       description: Beschrijving
       description_placeholder: Beschrijf transactie
+      description_placeholder_optional: "Laat leeg om de naam van de categorie/handelaar te gebruiken, of kies eerst een van beide"
       expense: Uitgave
       income: Inkomsten
       none: (geen)

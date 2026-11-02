@@ -31,6 +31,7 @@ class Rule < ApplicationRecord
   # Every rule must have at least 1 action
   validate :min_actions
   validate :no_duplicate_actions
+  validate :split_is_only_action
 
   # Switching a rule on records the transactions it already matches as delivered,
   # so an email action only reports what appears afterwards. Rule::Action seeds the
@@ -121,10 +122,38 @@ class Rule < ApplicationRecord
     0
   end
 
+  # Whether the rule, as stored, has an email action. Read from the database,
+  # so actions built or marked for destruction in memory do not change it. The
+  # assistant reads it before replacing a rule's actions, so a replacement email
+  # action keeps the baseline the old one recorded (see
+  # Rule::Action#keep_notification_baseline). Each of its calls commits on its
+  # own; the importers, which do not, use .ids_with_stored_email_notification_action.
+  def stored_email_notification_action?
+    persisted? && actions.email_notifications.exists?
+  end
+
+  # The ids of the rules in `rules` that have an email action as stored now.
+  # An import writes every row in one transaction, so a rule named twice would
+  # see, on its second row, the email action its first row has only just
+  # written; that one is replaced before it commits and never records a
+  # baseline. The importers take this before writing anything and ask it
+  # instead of #stored_email_notification_action?.
+  def self.ids_with_stored_email_notification_action(rules)
+    rules.joins(:actions).merge(Rule::Action.email_notifications).distinct.pluck(:id).to_set
+  end
+
   # Reads the currently-matching transaction ids WITHOUT running executors
   # (e.g. the notification baseline pre-seed).
   def matching_transaction_ids
     matching_scope.pluck(:id)
+  end
+
+  # Holds the family's rule positions until the transaction ends. with_connection
+  # is the transaction's own connection and isn't leased to the thread for good.
+  def self.lock_positions!(family)
+    with_connection do |connection|
+      connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family.id.to_s ]))
+    end
   end
 
   # Sets the run order of all rules of a family. ordered_ids must list every
@@ -310,9 +339,7 @@ class Rule < ApplicationRecord
     def assign_next_position
       return if position.to_i.positive?
 
-      self.class.connection.execute(
-        self.class.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family_id.to_s ])
-      )
+      self.class.lock_positions!(family)
       self.position = family.rules.maximum(:position).to_i + 1
     end
 
@@ -328,6 +355,14 @@ class Rule < ApplicationRecord
       action_types = actions.reject(&:marked_for_destruction?).map(&:action_type)
 
       errors.add(:base, :duplicate_actions, types: action_types.inspect) if action_types.uniq.count != action_types.count
+    end
+
+    # Actions after a split find the parent hidden, and actions before it change only the
+    # hidden parent, so a split rule can't usefully do anything else.
+    def split_is_only_action
+      action_types = actions.reject(&:marked_for_destruction?).map(&:action_type)
+
+      errors.add(:base, :split_not_alone) if action_types.include?("split_transaction") && action_types.size > 1
     end
 
     # Validation: To keep rules simple and easy to understand, we don't allow nested compound conditions.
@@ -406,7 +441,7 @@ class Rule < ApplicationRecord
 
     def seed_notification_baseline
       @notification_baseline_timed_out = false
-      return unless actions.exists?(action_type: "send_email_notification")
+      return unless actions.email_notifications.exists?
 
       @notification_baseline_taken = true
       NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)
