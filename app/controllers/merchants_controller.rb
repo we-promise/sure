@@ -1,4 +1,6 @@
 class MerchantsController < ApplicationController
+  include FilterClearable
+
   def show
     @merchant = find_merchant
     @q = search_params
@@ -33,19 +35,7 @@ class MerchantsController < ApplicationController
   end
 
   def clear_filter
-    merchant = find_merchant
-    q_params = search_params
-
-    if q_params[params[:param_key]].is_a?(Array)
-      q_params[params[:param_key]].delete(params[:param_value])
-      q_params.delete(params[:param_key]) if q_params[params[:param_key]].empty?
-    else
-      q_params.delete(params[:param_key])
-    end
-
-    q_params.delete("amount_operator") unless q_params["amount"].present?
-
-    redirect_to merchant_path(merchant, q: q_params.presence, page: params[:page], per_page: params[:per_page])
+    redirect_to merchant_path(find_merchant, q: without_cleared_filter(search_params), page: params[:page], per_page: params[:per_page])
   end
 
   private
