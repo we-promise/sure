@@ -55,8 +55,10 @@ export default class extends Controller {
     this.dispatch("started");
     this.codeTarget.replaceChildren();
     this.statusTarget.textContent = this.loadingTextValue;
-    // Until the server answers, a cancel ends whichever QR login is current.
     this.loginTokenValue = "";
+    // The start's response status, "pending" until it arrives (or if it
+    // never does).
+    this.startStatus = "pending";
 
     let initiation = null;
     try {
@@ -71,6 +73,9 @@ export default class extends Controller {
       }).then(async (response) => {
         const result = response.ok ? await response.json() : null;
         this.loginTokenValue = result?.login_token || "";
+        // Set only once the body is read: a start whose token never arrived
+        // has an unknown outcome.
+        this.startStatus = response.status;
         return { response, result };
       });
       this.initiation = initiation;
@@ -230,6 +235,17 @@ export default class extends Controller {
 
     try {
       await this.initiation?.catch(() => {});
+      // A start that failed (or whose outcome is unknown) has no login token,
+      // and a cancel without one would end the current login, which another
+      // tab may own. A login rendered by the server was not started here.
+      if (this.startStatus !== undefined && !this.startSucceeded()) {
+        if (this.startStatus === 409) return this.showCurrentLogin();
+
+        this.setButtonDisabled(false);
+        this.dispatch("stopped");
+        return;
+      }
+
       const response = await fetch(this.cancelUrlValue, {
         method: "POST",
         headers: { ...this.headers(), Accept: "text/vnd.turbo-stream.html" },
@@ -257,6 +273,10 @@ export default class extends Controller {
       console.warn("[Trade Republic] QR login cancellation failed", error);
       this.showFailure();
     }
+  }
+
+  startSucceeded() {
+    return this.startStatus >= 200 && this.startStatus < 300;
   }
 
   streamReplacesElement(stream) {

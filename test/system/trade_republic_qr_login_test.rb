@@ -156,6 +156,45 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     assert_nil @item.reload.pending_login_state
   end
 
+  test "cancelling a QR login that failed to start leaves a login another tab stored" do
+    Provider::TradeRepublicClient.any_instance.stubs(:initiate_qr_login).raises(Provider::TradeRepublicClient::Error, "boom")
+
+    visit settings_providers_path
+    find("summary", text: "Trade Republic").click
+
+    within "##{TradeRepublic::ConnectionCardComponent.dom_id_for(@item)}" do
+      click_on qr_login
+      assert_text panel_t("qr_error")
+      @item.update_columns(pending_login_state: "other-tab")
+      click_on qr_cancel
+    end
+
+    assert_selector "#{connection_card} button:not([disabled])", exact_text: panel_t("pin_login")
+    assert_equal "other-tab", @item.reload.pending_login_state
+  end
+
+  test "cancelling a QR login whose start response could not be read leaves a login another tab stored" do
+    visit settings_providers_path
+    # The start succeeds, but its body never arrives intact.
+    page.execute_script(<<~JS)
+      const fetch = window.fetch;
+      window.fetch = (url, options) => String(url).includes("initiate_qr_login")
+        ? Promise.resolve(new Response("not json", { status: 202 }))
+        : fetch(url, options);
+    JS
+    find("summary", text: "Trade Republic").click
+
+    within "##{TradeRepublic::ConnectionCardComponent.dom_id_for(@item)}" do
+      click_on qr_login
+      assert_text panel_t("qr_error")
+      @item.update_columns(pending_login_state: "other-tab")
+      click_on qr_cancel
+    end
+
+    assert_selector "#{connection_card} button:not([disabled])", exact_text: panel_t("pin_login")
+    assert_equal "other-tab", @item.reload.pending_login_state
+  end
+
   test "a QR login replaced by a newer login shows that login instead of offering to cancel it" do
     item = @item
     # Another tab starts a newer login while this tab's poll waits.
@@ -199,6 +238,25 @@ class TradeRepublicQrLoginTest < ApplicationSystemTestCase
     end
     # Let the poll that was on its way finish.
     sleep 2.5
+    assert_equal newer, @item.reload.pending_login_state
+  end
+
+  test "a QR cancel sent while its login loses to another tab's login leaves that login" do
+    newer = Base64.strict_encode64(JSON.generate("challenge_id" => "newer-challenge", "session_blob" => "session=1"))
+    # Another tab stores its login while Trade Republic answers this one.
+    Provider::TradeRepublicClient.any_instance.stubs(:initiate_qr_login).with { sleep 1; @item.update_columns(pending_login_state: newer); true }.returns(
+      Provider::TradeRepublicClient::Result.new(data: { "status" => "qr_pending", "pending_login_b64" => "older", "qr_code_payload" => "https://example.com/qr" })
+    )
+
+    visit accounts_path
+
+    within card do
+      click_on qr_login
+      click_on qr_cancel
+    end
+    # The page reloads to show the newer login instead of cancelling it.
+    Timeout.timeout(10) { sleep 0.1 until @item.reload.pending_login_state == newer }
+    sleep 1
     assert_equal newer, @item.reload.pending_login_state
   end
 
