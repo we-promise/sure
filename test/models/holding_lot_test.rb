@@ -684,6 +684,21 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  test "a fifo sale of a position costing 10^9 or more a unit stores its disposal" do
+    travel_to TODAY do
+      @account = families(:empty).accounts.create!(name: "VND", balance: 0, cash_balance: 0, currency: "VND", cost_basis_method: "fifo", accountable: Investment.new)
+      security = Security.create!(ticker: "BRKD", name: "BRKD")
+      Security::Price.insert_all((d(1)..d(10)).map { |date| { security_id: security.id, date: date, price: 700_000, currency: "USD" } })
+      ExchangeRate.insert_all((d(1)..d(10)).map { |date| { from_currency: "USD", to_currency: "VND", date: date, rate: 25_000 } })
+      create_trade(security, account: @account, qty: 2, price: 700_000, currency: "USD", date: d(2))
+      sale = create_trade(security, account: @account, qty: -1, price: 700_000, currency: "USD", date: d(3))
+
+      materialize(:forward)
+
+      assert_equal BigDecimal("17500000000"), HoldingLotDisposal.find_by!(sale_entry_id: sale.id).unit_cost
+    end
+  end
+
   private
     def d(day)
       Date.new(2024, 6, day)
