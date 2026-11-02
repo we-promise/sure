@@ -11,7 +11,10 @@
         }
       ) %>
   <div class="my-2" id="list" data-list-filter-target="list">
-    <%= turbo_frame_tag "merchant_filter_options", src: transactions_merchant_filter_path(merchants: @q[:merchants]), loading: :lazy do %>
+    <%= turbo_frame_tag "merchant_filter_options",
+          src: transactions_merchant_filter_path(merchants: @q[:merchants]),
+          loading: :lazy,
+          data: { action: "turbo:frame-load->list-filter#filter" } do %>
       <% Array(@q[:merchants]).each do |value| %>
         <%= hidden_field_tag "q[merchants][]", value, id: nil %>
       <% end %>

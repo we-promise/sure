@@ -16,7 +16,7 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     get transactions_url(q: { merchants: [ "Amazon" ] })
 
     assert_response :success
-    assert_select "#transactions-search turbo-frame#merchant_filter_options[loading=lazy]" do
+    assert_select "#transactions-search turbo-frame#merchant_filter_options[loading=lazy][data-action=?]", "turbo:frame-load->list-filter#filter" do
       assert_select "input[type=hidden][name='q[merchants][]'][value=?]", "Amazon"
     end
     assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
