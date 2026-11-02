@@ -43,7 +43,7 @@ class AccountableSparkline
   # whenever the set does and never repeats for a different set.
   def cache_key
     @cache_key ||= family.build_cache_key(
-      "#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}_#{account_rows_digest}",
+      "#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}_#{Date.current}_#{account_rows_digest}",
       invalidate_on_data_updates: true
     )
   end

@@ -1326,6 +1326,19 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_not_equal before, sidebar_sparkline_src(dom_id(@account, :sparkline))
   end
 
+  test "sidebar sparkline URLs change the next day" do
+    get account_url(@account)
+    before = [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ]
+
+    travel 1.day do
+      get account_url(@account)
+      after = [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ]
+
+      assert_not_equal before[0], after[0]
+      assert_not_equal before[1], after[1]
+    end
+  end
+
   test "sparkline renders an empty series without a trend" do
     empty_series = Series.new(
       start_date: 1.day.ago.to_date,
