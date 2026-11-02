@@ -122,6 +122,7 @@ en:
       close: Close
     popover:
       avatar_default_label: Open menu
+      frame_error: Could not load this. Close and open it again to retry.
     tooltip:
       trigger_label: More info
     link:

@@ -9,7 +9,9 @@
     </div>
   <% else %>
     <%# Unlocked OR editable context (drawer) - show clickable menu %>
-    <%= render DS::Popover.new(variant: :button, placement: "bottom-end") do |popover| %>
+    <%# The editor loads the first time the popover opens, so the holdings list
+        does not render a form per row. %>
+    <%= render DS::Popover.new(variant: :button, placement: "bottom-end", frame_id: dom_id(holding, :cost_basis_editor), frame_src: cost_basis_editor_holding_path(holding)) do |popover| %>
       <% popover.with_button(class: "hover:text-primary cursor-pointer group") do %>
         <% if holding.avg_cost %>
           <div class="flex items-center gap-1">
@@ -24,16 +26,6 @@
             <%= icon "pencil", size: "xs" %>
             <span class="text-xs"><%= t(".set") %></span>
           </div>
-        <% end %>
-      <% end %>
-      <%# The editor loads when the popover opens: a lazy frame inside the hidden
-          panel is fetched once it becomes visible, so the holdings list does not
-          render a form per row. %>
-      <% popover.with_custom_content do %>
-        <%# refresh: :morph, or a morph page refresh would reset the loaded frame
-            to its placeholder without fetching it again. %>
-        <%= turbo_frame_tag dom_id(holding, :cost_basis_editor), src: cost_basis_editor_holding_path(holding), loading: :lazy, refresh: :morph, class: "block min-w-70" do %>
-          <%= render "entries/loading" %>
         <% end %>
       <% end %>
     <% end %>

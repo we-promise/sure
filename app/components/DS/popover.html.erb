@@ -1,4 +1,4 @@
-<%= tag.div data: { controller: "DS--popover", DS__popover_placement_value: placement, DS__popover_offset_value: offset, DS__popover_mobile_fullwidth_value: mobile_fullwidth, DS__popover_frame_id_value: frame_id, DS__popover_frame_src_value: frame_src, testid: testid } do %>
+<%= tag.div data: { controller: "DS--popover", DS__popover_placement_value: placement, DS__popover_offset_value: offset, DS__popover_mobile_fullwidth_value: mobile_fullwidth, DS__popover_frame_id_value: frame_id, DS__popover_frame_src_value: frame_src, DS__popover_frame_error_value: (frame_error_message if lazy_frame?), testid: testid } do %>
   <% if variant == :icon %>
     <%= render DS::Button.new(variant: "icon", icon: icon, aria_label: trigger_aria_label, aria: { haspopup: "dialog", expanded: "false", controls: panel_id }, data: { DS__popover_target: "button" }) %>
   <% elsif variant == :button %>
