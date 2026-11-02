@@ -16,7 +16,7 @@
         text: t(".edit"),
         icon: "pencil",
         variant: "outline",
-        href: edit_family_merchant_path(@merchant),
+        href: edit_family_merchant_path(@merchant, return_to: request.fullpath),
         frame: :modal
       ) %>
     <% end %>

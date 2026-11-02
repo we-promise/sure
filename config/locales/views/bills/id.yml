@@ -1,0 +1,317 @@
+---
+id:
+  bills:
+    row_overdue: Lewat jatuh tempo
+    row_today: Hari ini
+    detect:
+      found:
+        one: Menemukan 1 kemungkinan tagihan. Tinjau di bawah ini.
+        other: Menemukan %{count} kemungkinan tagihan. Tinjau di bawah ini.
+      none_found: Tidak ditemukan pola berulang baru. Anda dapat menambahkan tagihan secara manual.
+      already_running: Deteksi sedang berlangsung. Periksa kembali sebentar lagi.
+    feed:
+      calendar_name: Tagihan Sure
+    ai_prompts:
+      due_before_paycheck: Apa yang jatuh tempo sebelum gaji berikutnya?
+      subscriptions_up: Langganan apa saja yang naik tahun ini?
+      monthly_subscriptions: Berapa yang saya bayar setiap bulan untuk langganan?
+      safe_to_spend: Berapa banyak yang aman untuk dibelanjakan periode ini?
+    smart_configurations:
+      show:
+        trigger: Konfigurasikan dengan AI
+        title: "Saran AI untuk %{name}"
+        intro: Centang perubahan yang ingin diterapkan. Yang tidak dicentang akan dibiarkan persis seperti semula.
+        no_changes: Tagihan ini sudah sesuai dengan riwayat pembayarannya. Tidak ada yang perlu diubah.
+        failed: Tidak dapat menganalisis tagihan ini sekarang. Konfigurasinya tidak diubah.
+        field_name: Nama
+        field_amount: Jumlah
+        field_schedule: Jadwal
+        field_category: Kategori
+        field_kind: Jenis
+        field_autopay: Debit otomatis
+        uncategorized: Tanpa kategori
+        autopay_off: "Mati"
+        autopay_on: "Aktif"
+        apply: Terapkan yang dipilih
+    detail:
+      current: Saat ini
+      next_payment: Pembayaran berikutnya
+      around: "sekitar %{date}"
+      overview: Ringkasan
+      rules: Cara pencocokan tagihan ini
+      rule_named: "%{name}"
+      rule_amount_range: "dari %{min} hingga %{max}"
+      rule_aliases: "Juga cocok dengan %{names}"
+      rule_detected: "Cocok dengan transaksi bernama %{name}"
+      rule_learned_tolerance: "Jumlah dalam %{percent} dari jumlah biasanya cocok dengan tagihan ini"
+      history_title: 12 bulan terakhir
+      history_aria: Pembayaran selama dua belas bulan terakhir
+      key_metrics: Per tahun
+      year: Tahun
+      spent_per_year: Dibelanjakan
+      avg_payment: Rata-rata pembayaran
+      average: Rata-rata dibayar
+      range: "%{min} hingga %{max}"
+      annualized: Setahun
+      ytd: Dibayar tahun ini
+      last_account: Rekening terakhir yang digunakan
+      upcoming: Mendatang
+      manual_payment: Pembayaran manual
+      history: Riwayat
+      payment_count:
+        one: "1 pembayaran"
+        other: "%{count} pembayaran"
+      notes: Catatan
+      trial_chip: "Uji coba berakhir %{date}"
+      renews_chip: "Diperpanjang %{date}"
+      cancelled_chip: "Dibatalkan %{date}"
+      price_changes: Perubahan harga
+      price_change_line: "%{from} → %{to}"
+    month_pulse:
+      bill_count:
+        one: 1 tagihan
+        other: "%{count} tagihan"
+      left_to_pay: tersisa untuk dibayar
+      pulse_paid: dibayar
+      pulse_overdue: lewat jatuh tempo
+      pulse_next_seven: 7 hari ke depan
+      pulse_until: hingga %{date}
+      pulse_bar_aria: "%{percent}% tagihan bulan ini telah dibayar"
+      next_up: Berikutnya
+      view_calendar: Lihat kalender
+      date_today: Hari ini
+      date_tomorrow: Besok
+      unconvertible:
+        one: "1 tagihan tidak disertakan, nilai tukar tidak tersedia"
+        other: "%{count} tagihan tidak disertakan, nilai tukar tidak tersedia"
+    summary:
+      remaining: "Tersisa %{amount}"
+      paid_headline: "Dibayar %{amount}"
+    add_bill: Tambah tagihan
+    manage: Lihat
+    find_payment: Cari pembayaran
+    add_payment: Tambah pembayaran
+    review_match: Tinjau kecocokan
+    resolve: Selesaikan
+    manage_payments: Kelola pembayaran
+    match:
+      same_merchant: Merchant yang sama
+      name_matches: Nama cocok
+      same_transfer: Transfer ke rekening yang sama
+      exact_amount: Jumlah persis
+      amount_off: "selisih %{amount}"
+      due_date: Kecocokan tanggal jatuh tempo
+      days_before:
+        one: 1 hari sebelum jatuh tempo
+        other: "%{count} hari sebelum jatuh tempo"
+      days_after:
+        one: 1 hari setelah jatuh tempo
+        other: "%{count} hari setelah jatuh tempo"
+    attention:
+      paused: Dijeda
+      needs_review: Kecocokan perlu ditinjau
+      partial: Sebagian
+      amount_changed: Jumlah berubah
+      overdue:
+        one: Lewat jatuh tempo 1 hari
+        other: Lewat jatuh tempo %{count} hari
+    paid_label: Lunas
+    paid_over_short: Dibayar lebih
+    installment_progress: "Pembayaran %{done_plus_one} dari %{total}"
+    partial_progress: "Dibayar %{paid} dari %{expected}"
+    cancelled_still_scheduled: "Anda menandai ini dibatalkan pada %{date}, tetapi masih terjadwal, sehingga tagihan di masa mendatang akan terus muncul."
+    paid_over: "Dibayar %{paid}, lebih banyak dari yang diperkirakan"
+    remaining_label: tersisa
+    debt_payment: Pembayaran utang
+    paid_from: "dari %{account}"
+    amount_range: "berkisar %{min} hingga %{max}"
+    possible_duplicate: Kemungkinan duplikat
+    due_label:
+      overdue:
+        one: "Lewat jatuh tempo 1 hari, seharusnya %{date}"
+        other: "Lewat jatuh tempo %{count} hari, seharusnya %{date}"
+      today: "Jatuh tempo hari ini"
+      settled: "Jatuh tempo %{date}"
+      due_since: "Jatuh tempo %{date}"
+      snoozed: "Ditunda hingga %{date}"
+      upcoming:
+        one: "Jatuh tempo besok, %{date}"
+        other: "Jatuh tempo dalam %{count} hari, %{date}"
+    views:
+      aria_label: Tampilan tagihan
+      overview: Ringkasan
+      calendar: Kalender
+      paycheck: Rencana pemasukan
+      all: Semua tagihan
+    pay_period:
+      paycheck_on: "Gaji %{date}"
+      before_next_paycheck: Sebelum gaji Anda berikutnya
+      due_before_date: "%{amount} jatuh tempo sebelum %{date}"
+    paycheck:
+      unconvertible:
+        one: "1 kewajiban tidak disertakan, nilai tukar tidak tersedia"
+        other: "%{count} kewajiban tidak disertakan, nilai tukar tidak tersedia"
+      income_section_title: Jadwal pemasukan
+      manage: Kelola
+      add_income: Tambah pemasukan
+      income_paused: Dijeda, tidak direncanakan
+      income_detected: Terdeteksi secara otomatis, tidak menetapkan hari gajian
+      income_next_payday: "berikutnya %{date}"
+      income_source_count:
+        one: "%{count} sumber pemasukan"
+        other: "%{count} sumber pemasukan"
+      next_on: "Berikutnya %{date}"
+      no_upcoming_income: Tidak ada pemasukan yang terjadwal mulai dari sini.
+      empty:
+        title: Tentukan jadwal pemasukan Anda
+        description: Tambahkan pemasukan Anda untuk melihat apa yang harus dipenuhi oleh setiap hari gajian. Arus masuk yang terdeteksi tidak pernah menetapkan hari gajian sendiri -- Anda yang menentukannya.
+        action: Tambah pemasukan
+      all_clear:
+        title: Tidak ada yang perlu dibayar
+        description: "Tidak ada tagihan yang jatuh tempo antara sekarang dan %{date}, jadi tidak ada komitmen pengeluaran dalam rentang tersebut."
+      safe_after_bills: Aman setelah tagihan
+      short_after_bills: Kurang setelah tagihan
+      period_source: " · %{source}"
+      period_source_multiple: " · %{count} sumber pemasukan"
+      before_next_paycheck: "Sebelum %{date}"
+      no_income_arriving: Tidak ada pemasukan yang masuk
+      income_amount: "Pemasukan %{amount}"
+      due_this_period: Jatuh tempo periode ini
+      reserved_ahead: Dicadangkan ke depan
+      safe_short: Aman
+      short_short: Kurang
+      reserved_footer:
+        one: Dicadangkan ke depan untuk 1 tagihan berikutnya
+        other: "Dicadangkan ke depan untuk %{count} tagihan berikutnya"
+      bills_this_period:
+        one: Tagihan periode ini · 1
+        other: "Tagihan periode ini · %{count}"
+      bills_before_payday:
+        one: Tagihan sebelum hari gajian berikutnya · 1
+        other: "Tagihan sebelum hari gajian berikutnya · %{count}"
+      of_total: "dari %{amount}"
+      bridge_label: Sebelum gaji Anda berikutnya
+      bridge_amount: "· %{amount} jatuh tempo"
+      bridge_split: "Jatuh tempo sebelum %{date}, dicakup oleh %{cash} di rekening Anda."
+      bridge_left: "tersisa %{amount} setelah tagihan"
+      bridge_show_more:
+        one: Tampilkan 1 lagi
+        other: "Tampilkan %{count} lagi"
+      bridge_allocation_aria: "Dari %{cash} di rekening Anda, %{due} jatuh tempo sebelum gaji berikutnya dan tersisa %{left}."
+      item_overdue: Lewat jatuh tempo
+      shortfall_label: Kurang sebelum hari gajian berikutnya
+      shortfall_amount: "· %{amount}"
+      shortfall_split: "%{obligations} jatuh tempo sebelum %{date} dan rekening Anda memiliki %{cash}."
+      shortfall_largest: "Kewajiban mendatang terbesar:"
+      review_plan: Tinjau rencana
+      allocation_aria: "Dari %{income} pemasukan, %{due} jatuh tempo sekarang, %{reserved} dicadangkan untuk nanti, dan %{safe} aman untuk dibelanjakan."
+      allocation_aria_short: "%{income} pemasukan dialokasikan untuk komitmen di sini, dan masih diperlukan %{short} lagi."
+    reset_feed_token:
+      done: Tautan feed berhasil diatur ulang. Aplikasi kalender yang menggunakan tautan lama akan berhenti memperbarui; berlangganan kembali dengan tautan baru.
+      confirm: Atur ulang tautan feed kalender? Setiap tautan yang dibagikan sebelumnya akan berhenti berfungsi.
+    calendar:
+      subscribe_ical: Berlangganan (iCal)
+      reset_feed: Atur ulang tautan
+      previous_month: Bulan sebelumnya
+      next_month: Bulan berikutnya
+      today: Hari ini
+      month_totals: "Diharapkan %{expected} · Dibayar %{paid}"
+      empty_month: Tidak ada tagihan yang jatuh tempo bulan ini.
+    all:
+      search_placeholder: Cari tagihan
+      current_bills: Tagihan saat ini
+      dismissed_hidden_description: Tagihan yang ditutup disembunyikan.
+      status_filters:
+        overdue: Lewat jatuh tempo
+        due: Segera jatuh tempo
+        partial: Dibayar sebagian
+        paid: Lunas
+        paused: Dijeda
+        ended: Ditutup
+      subscription_monthly: Sebulan
+      subscription_annual: Setahun
+      subscription_active: Aktif
+      subscription_price_changes: Perubahan harga tahun ini
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      any_type: Semua jenis
+      sort_due: Berdasarkan jatuh tempo berikutnya
+      sort_name: Berdasarkan nama
+      sort_amount: Berdasarkan jumlah
+      no_matches_title: Tidak ada yang cocok
+      no_matches_description: Coba hapus filter atau pencarian.
+      col_name: Nama
+      col_amount: Jumlah
+      col_next: Jatuh tempo berikutnya
+      col_actions: Tindakan
+      monthly_equivalent: "%{amount}/bln"
+      types:
+        bill: Tagihan
+        subscription: Langganan
+        installment: Rencana cicilan
+        income: Pemasukan
+        transfer: Transfer
+        other: Lainnya
+    show:
+      edit: Edit tagihan
+    index:
+      left_to_pay: tersisa untuk dibayar
+      paid_so_far: Telah dibayar
+      hero_past_due: "%{amount} lewat jatuh tempo"
+      hero_next_seven: "%{amount} jatuh tempo dalam 7 hari ke depan"
+      add_bill: Tagihan baru
+      add_income: Pemasukan baru
+      review_with_ai: Tinjau dengan AI
+      detected_review:
+        one: Kami menemukan 1 pembayaran berulang dalam transaksi Anda. Periksa kembali agar total di sini sesuai dengan yang sebenarnya Anda bayar.
+        other: Kami menemukan %{count} pembayaran berulang dalam transaksi Anda. Periksa kembali agar total di sini sesuai dengan yang sebenarnya Anda bayar.
+      detected_review_action: Tinjau
+      notices_heading: Perubahan
+      needs_review: Perlu ditinjau
+      notice_trial: "Uji coba %{name} berakhir %{date}"
+      notice_renewal: "%{name} diperpanjang %{date}"
+      notice_price: "%{name} mengubah harga: %{from} → %{to} (%{percent})"
+      notices_routine:
+        one: "1 perubahan kecil"
+        other: "%{count} perubahan kecil"
+      suggestion_line: "%{entry} tampak seperti pembayaran dari %{bill}"
+      suggestion_unknown_entry: Sebuah transaksi
+      confidence: "%{percent}% cocok"
+      accept: Terapkan
+      reject: Bukan tagihan ini
+      title: Tagihan
+      summary_label: Jatuh tempo bulan ini
+      summary_count:
+        one: "1 tagihan jatuh tempo"
+        other: "%{count} tagihan jatuh tempo"
+      summary_needs_action:
+        one: "1 perlu tindakan Anda"
+        other: "%{count} perlu tindakan Anda"
+      all_automatic: "semua dalam debit otomatis"
+      recurring_label: Komitmen berulang
+      recurring_monthly: "%{amount} sebulan"
+      recurring_annual: "%{amount} setahun"
+      unconvertible:
+        one: "1 tagihan tidak disertakan, nilai tukar tidak tersedia"
+        other: "%{count} tagihan tidak disertakan, nilai tukar tidak tersedia"
+      overdue: Lewat jatuh tempo
+      needs_attention: Perlu perhatian
+      attention_overdue_total: "%{amount} lewat jatuh tempo"
+      this_month: Bulan ini
+      later: Setelah bulan ini
+      paid_this_month: Dibayar bulan ini
+      dormant: Dijeda
+      kpi_remaining: Tersisa bulan ini
+      kpi_paid: Dibayar bulan ini
+      kpi_next_seven: Jatuh tempo 7 hari ke depan
+      kpi_past_due: Lewat jatuh tempo
+      paid_count:
+        one: "1 tagihan lunas"
+        other: "%{count} tagihan lunas"
+      needs_action_count:
+        one: "1 perlu tindakan Anda"
+        other: "%{count} perlu tindakan Anda"
+      empty:
+        title: Belum ada tagihan
+        description: Tagihan adalah pengeluaran berulang Anda. Sure menemukannya secara otomatis dari riwayat transaksi Anda, dan Anda dapat menambahkan tautan pembayaran ke setiap tagihan sehingga Anda dapat membayar langsung dari sini.
+        action: Cari transaksi berulang
+        no_history_description: Belum ada transaksi. Hubungkan rekening atau impor riwayat transaksi dan Sure akan menemukan tagihan Anda secara otomatis, atau tambahkan secara manual.
