@@ -69,6 +69,23 @@ class Onchain::AvalanchePChainAdapterTest < ActiveSupport::TestCase
     assert_empty snapshot.movements
   end
 
+  test "a response without a staked amount is not read as zero" do
+    stub_platform_request("platform.getBalance", { "balance" => "2000000000" })
+    stub_platform_request("platform.getStake", {})
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
+  test "a throttled node is reported as rate limited" do
+    stub_request(:post, Provider::AvalanchePChain.base_url).to_return(status: 429)
+
+    assert_raises Onchain::Chains::RateLimitedError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
   private
     def stub_platform_request(method, result)
       stub_request(:post, Provider::AvalanchePChain.base_url)
