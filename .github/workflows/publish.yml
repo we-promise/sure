@@ -40,7 +40,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   # Select the release channel and legacy alias through December; no date pin.
   COMPATIBILITY_CHANNEL: 'alpha'
-  COMPATIBILITY_VERSION: '0.7.7-alpha.2'
+  COMPATIBILITY_VERSION: '0.7.7-alpha.3'
 
 permissions:
   contents: write
@@ -119,8 +119,7 @@ jobs:
             if [[ "$release" == true ]]; then
               echo "type=raw,value=$version"
               [[ -z "$compatibility" ]] || echo "type=raw,value=$compatibility"
-              [[ "$stable" != true ]] || echo 'type=raw,value=stable'
-              [[ "$alpha" != true ]] || echo 'type=raw,value=latest'
+              # Hold stable/latest image promotion until CalVer releases are validated.
             else
               echo 'type=sha,format=long'
               if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then

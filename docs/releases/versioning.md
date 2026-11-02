@@ -1,8 +1,8 @@
 # CalVer transition: October–December 2026
 
-The transition starts with the **`v0.7.7-alpha.2`** release, not the 0.7.6 train.
+The transition starts with the **`v0.7.7-alpha.3`** release, not the 0.7.6 train.
 Its primary version is **`vYYYY.M.D-alpha`**, using the actual UTC release date;
-`v0.7.7-alpha.2` is only a temporary compatibility alias. No release date is
+`v0.7.7-alpha.3` is only a temporary compatibility alias. No release date is
 checked into the workflow or chart metadata.
 Release tags supply the canonical date to every build.
 Git tags include `v`; Docker tags and chart versions do not.
@@ -32,14 +32,14 @@ commits or channel-state files are needed.
 
 ## Releasing
 
-1. Land this change on `main` before cutting the 0.7.7 alpha.2 candidate.
-   Leave 0.7.6 and 0.7.7-alpha.1 unchanged. Carry it to the 0.7.7 release branch
+1. Land this change on `main` before cutting the 0.7.7 alpha.3 candidate.
+   Leave 0.7.6, 0.7.7-alpha.1 and 0.7.7-alpha.2 unchanged. Carry it to the 0.7.7 release branch
    when that branch is cut; do not backport the transition to 0.7.6.
 2. Generate the canonical tag from the UTC build day, once, when starting the release:
    `tag="v$(date -u +%Y.%-m.%-d)-alpha"` (omit `-alpha` for stable).
    Push that tag at the intended release commit; retries reuse it, even after midnight.
    In `publish.yml`, `COMPATIBILITY_CHANNEL: alpha` selects alpha releases and
-   `COMPATIBILITY_VERSION: 0.7.7-alpha.2` supplies the legacy alias. No date edit is
+   `COMPATIBILITY_VERSION: 0.7.7-alpha.3` supplies the legacy alias. No date edit is
    needed. Before a subsequent release, advance the legacy alias; for stable set
    the channel to `stable` and alias to `0.7.7`. Clear the alias to opt out.
 3. Push only the canonical tag. The workflow creates/verifies the legacy Git
@@ -57,8 +57,14 @@ digests may have been built before that check, but named images and charts have 
 
 ## Version names
 
-Use unpadded `YYYY.M.D-alpha` for alpha releases, which update `latest`.
-Use unpadded `YYYY.M.D` for stable releases, which update `stable`.
+Use unpadded `YYYY.M.D-alpha` for alpha releases and `YYYY.M.D` for stable releases.
+
+**Floating Docker channel promotion is temporarily paused.** Neither release
+updates `latest` or `stable` while we validate the CalVer rollout. Existing channel
+tags are left pointing to their previous images; they are not deleted. Test using
+explicit CalVer image tags (or the temporary versioned compatibility aliases).
+Re-enabling channel promotion requires a separate workflow change after validation.
+Nightly tags and release/deployment jobs are unchanged.
 There are no numbered canonical prereleases, beta/RC tags or hotfix suffixes.
 Only the temporary legacy compatibility alias keeps its old numbered format.
 
