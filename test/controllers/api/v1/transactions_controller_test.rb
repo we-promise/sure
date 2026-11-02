@@ -858,6 +858,58 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal tags.map(&:id).sort, @transaction.reload.tag_ids.sort
   end
 
+  # Strong parameters drops a tag_ids of any other shape, which would otherwise
+  # read as "no tags" and clear them.
+  [
+    [ "an array holding a hash", ->(id) { [ id, {} ] } ],
+    [ "an array holding a false", ->(id) { [ id, false ] } ],
+    [ "a bare string", ->(id) { id } ],
+    [ "a hash", ->(id) { { id: id } } ]
+  ].each do |shape, build|
+    test "update with #{shape} as tag_ids is refused and changes nothing" do
+      own_tag = @family.tags.first
+      @transaction.update!(tag_ids: [ own_tag.id ])
+      name_before = @transaction.entry.reload.name
+
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { name: "Renamed", tag_ids: build.call(own_tag.id) } },
+          headers: api_headers(@api_key),
+          as: :json
+
+      assert_response :unprocessable_entity
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+      assert_equal [ own_tag.id ], @transaction.reload.tag_ids
+      assert_equal name_before, @transaction.entry.reload.name
+    end
+
+    test "create with #{shape} as tag_ids is refused and creates nothing" do
+      assert_no_difference -> { Entry.count } do
+        post api_v1_transactions_url,
+             params: { transaction: { account_id: @account.id, name: "Refused", amount: 10, date: Date.current,
+                                      currency: "USD", nature: "expense", tag_ids: build.call(@family.tags.first.id) } },
+             headers: api_headers(@api_key),
+             as: :json
+      end
+
+      assert_response :unprocessable_entity
+      assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    end
+  end
+
+  [ [ "an empty array", [] ], [ "a null", nil ], [ "a blank entry", [ "" ] ] ].each do |shape, value|
+    test "update with #{shape} as tag_ids still clears the tags" do
+      @transaction.update!(tag_ids: [ @family.tags.first.id ])
+
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { tag_ids: value } },
+          headers: api_headers(@api_key),
+          as: :json
+
+      assert_response :success
+      assert_empty @transaction.reload.tag_ids
+    end
+  end
+
   test "should clear tags when empty tag_ids explicitly provided in update" do
     # Set up transaction with existing tags
     @transaction.tags = [ Tag.first, Tag.second ]

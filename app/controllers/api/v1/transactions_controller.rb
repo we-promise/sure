@@ -99,6 +99,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return render_existing_idempotent_entry(existing_entry)
     end
 
+    return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
     return render_validation_error("Unknown tag id") if unknown_tag_ids?
 
     @entry = account.entries.new(entry_params_for_create)
@@ -146,6 +147,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
+    return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
     return render_validation_error("Unknown tag id") if tags_provided? && unknown_tag_ids?
 
     Entry.transaction do
@@ -375,6 +377,13 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # This distinguishes between "user wants to update tags" vs "user didn't specify tags".
     def tags_provided?
       params[:transaction].key?(:tag_ids)
+    end
+
+    # Strong parameters drops a tag_ids of any other shape, which would read as
+    # "no tags" and clear them on update.
+    def malformed_tag_ids?
+      tag_ids = params.require(:transaction)[:tag_ids]
+      !(tag_ids.nil? || (tag_ids.is_a?(Array) && tag_ids.all?(String)))
     end
 
     # Tags belong to a family: ids are resolved through the caller's own, so
