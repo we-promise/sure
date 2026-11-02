@@ -43,11 +43,12 @@ module AccountableResource
     Account.transaction do
       # A new account has no sales to restate, so it starts on the default method.
       @account = Current.family.accounts.create_and_sync(
-        account_params.except(:return_to, :opening_balance_date, :cost_basis_method).merge(owner: Current.user),
+        account_params.except(:return_to, :opening_balance_date, :cost_basis_method).merge(owner: Current.user, logo_chosen: logo_chosen?),
         opening_balance_date: opening_balance_date
       )
       @account.lock_saved_attributes!
     end
+    apply_logo_choice
 
     # Prefer the form-carried return_to, then the session value StoreLocation
     # captured from `?return_to=` (survives multi-step flows where the param
@@ -90,6 +91,9 @@ module AccountableResource
     # crypto account's subtype and with it whether the account trades.
     cost_basis_method = account_params[:cost_basis_method]
     previous_cost_basis_method = @account.cost_basis_method
+    # An uploaded logo is meant to be seen, so it takes over from Brandfetch.
+    update_params[:logo_selection] = "automatic" if account_params[:logo].present?
+    @account.logo_chosen = logo_chosen?
 
     # The balance change and the attribute update are one form, so they commit
     # or roll back as one. `set_current_balance` writes a valuation and the
@@ -132,6 +136,7 @@ module AccountableResource
       return
     end
 
+    apply_logo_choice
     # The stored figures were worked out under the old method; a sync restates
     # them. Compared by hand: lock_saved_attributes! saves again, which clears
     # saved_change_to_cost_basis_method?.
@@ -141,6 +146,28 @@ module AccountableResource
   end
 
   private
+    def logo_choice
+      params.dig(:account, :logo_choice).presence
+    end
+
+    # An icon picked or uploaded in the form wins over the automatic fetch
+    # that a new domain would otherwise queue.
+    def logo_chosen?
+      logo_choice.present? || account_params[:logo].present?
+    end
+
+    # The icon picked in the form downloads only on save, after the account
+    # committed, and an upload in the same submit wins over it.
+    def apply_logo_choice
+      return unless logo_choice && account_params[:logo].blank?
+      return if @account.choose_logo(logo_choice)
+
+      flash[:alert] = t("accounts.update.logo_not_applied")
+      # The choice held back the automatic fetch; with it gone, that fetch
+      # replaces or drops an automatic icon left from an earlier domain.
+      AccountLogoFetchJob.perform_paced(@account)
+    end
+
     # The account the 422 form renders when the exception carried none.
     #
     # `accountable_attributes` is defaulted the way `create_and_sync` defaults
@@ -184,7 +211,7 @@ module AccountableResource
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
         :institution_name, :institution_domain, :notes, :exclude_from_reports,
-        :enable_category_matcher, :cost_basis_method,
+        :enable_category_matcher, :cost_basis_method, :logo,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end

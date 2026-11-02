@@ -171,9 +171,11 @@ ru:
         max_response_tokens_label: Максимум токенов ответа (необязательно)
         model_label: Модель (необязательно)
         model_placeholder: gpt-4.1 (по умолчанию)
+        model_required_help: "Обязательно, если задан базовый URL API: укажите название модели на вашем сервере, например llama3.1 для Ollama."
         title: OpenAI
         uri_base_label: Базовый URL API (необязательно)
         uri_base_placeholder: https://api.openai.com/v1 (по умолчанию)
+        uri_base_local_help: "Для модели на вашем компьютере укажите её OpenAI-совместимый endpoint, например Ollama по адресу http://localhost:11434/v1 или http://ollama:11434/v1, если Sure и Ollama запущены как сервисы Docker Compose."
         model_function_calling_help: AI-ассистент читает ваши данные через вызовы функций, поэтому выберите модель, для которой ваш поставщик заявляет поддержку инструментов (tools/function calling). Модели без такой поддержки прерывают чат малопонятной ошибкой поставщика.
         model_function_calling_link: Проверить настроенную модель
         timeout_heading: Тайм-ауты
@@ -217,7 +219,7 @@ ru:
           фондов и облигаций + логотипы брендов
         twelve_data_hint: требуется API-ключ, 800 запросов/день
         yahoo_finance_hint: бесплатно, API-ключ не требуется
-        requires_api_key_mansa: требуется API-ключ, бесплатно 100 запросов/день — только NGX (Нигерийская биржа)
+        requires_api_key_mansa: требуется API-ключ, бесплатно 100 запросов/день — африканские биржи (NGX, JSE, NSE, GSE, BRVM и другие)
       show:
         ai_assistant: AI Ассистент
         clear_cache: Очистить кэш данных
@@ -347,11 +349,11 @@ ru:
         usage: Использовано %{used} из %{limit} запросов в месяц
       mansa_settings:
         title: Mansa
-        description: Введите API-ключ от Mansa API. Поддерживает NGX (Нигерийскую биржу), которую не охватывает ни один другой поставщик здесь. Mansa охватывает и другие африканские биржи, но с этой интеграцией проверена только NGX.
+        description: Введите API-ключ от Mansa API. Поддерживает 20 африканских бирж, включая NGX (Нигерийскую биржу), JSE, NSE (Кения), GSE (Гана) и BRVM, часть из которых не охватывает ни один другой поставщик здесь.
         env_configured_message: Успешно настроено через переменную окружения MANSA_API_KEY.
         label: API-ключ
         placeholder: Введите ваш API-ключ Mansa здесь
         show_details: (показать детали)
         step_1_html: Посетите <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> и получите бесплатный API-ключ — банковская карта не требуется.
         step_2: Скопируйте API-ключ и вставьте его ниже.
-        rate_limit_warning: Бесплатный тариф Mansa ограничен 100 API-вызовами в день и даёт только текущие котировки — для исторических цен нужен платный тариф. С этой интеграцией проверена только NGX (Нигерийская биржа); другие африканские биржи, которые охватывает Mansa, здесь пока не поддерживаются.
+        rate_limit_warning: Бесплатный тариф Mansa ограничен 100 API-вызовами в день и даёт только текущие котировки — для исторических цен нужен платный тариф.
