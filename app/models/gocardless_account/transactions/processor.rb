@@ -10,6 +10,8 @@ class GocardlessAccount::Transactions::Processor
   end
 
   def process
+    remove_cancelled_pending_entries
+
     unless gocardless_account.raw_transactions_payload.present?
       Rails.logger.info "GocardlessAccount::Transactions::Processor - No transactions in raw_transactions_payload for gocardless_account #{gocardless_account.id}"
       return { success: true, total: 0, imported: 0, failed: 0, errors: [] }
@@ -75,6 +77,20 @@ class GocardlessAccount::Transactions::Processor
 
     def account
       @gocardless_account.current_account
+    end
+
+    # The importer drops a pending hold from the snapshot once the bank stops returning
+    # it (cancelled), so its entry must go too. Booked entries are never touched.
+    def remove_cancelled_pending_entries
+      payload = gocardless_account.raw_transactions_payload
+      return if payload.nil? || account.blank?
+
+      kept = payload.map { |t| transaction_identity(t) }
+      account.entries.where(source: "gocardless", entryable_type: "Transaction")
+             .where.not(external_id: kept)
+             .includes(:entryable)
+             .select { |entry| entry.entryable.pending? }
+             .each(&:destroy)
     end
 
     def import_adapter

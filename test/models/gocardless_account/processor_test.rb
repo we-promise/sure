@@ -61,6 +61,38 @@ class GocardlessAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 1, @account.entries.where(source: "gocardless").count
   end
 
+  test "a cancelled pending hold is removed but booked entries stay" do
+    link_account Depository, "100.00"
+    transaction = lambda do |id, pending|
+      {
+        "transactionId" => id, "bookingDate" => Date.current.iso8601,
+        "transactionAmount" => { "amount" => "-10.00", "currency" => "GBP" },
+        "remittanceInformationUnstructured" => id, "pending" => pending
+      }
+    end
+    @provider_account.update!(raw_transactions_payload: [ transaction.call("hold", true), transaction.call("posted", false) ])
+    GocardlessAccount::Processor.new(@provider_account).process
+    assert_equal 2, @account.entries.where(source: "gocardless").count
+
+    @provider_account.update!(raw_transactions_payload: [ transaction.call("posted", false) ])
+    GocardlessAccount::Processor.new(@provider_account).process
+
+    assert_equal [ "posted" ], @account.entries.where(source: "gocardless").pluck(:external_id)
+  end
+
+  test "an unparseable balance never overwrites the account with zero" do
+    link_account Depository, "100.00"
+    @provider_account.upsert_from_gocardless!(
+      id: "test-account", details: { currency: "GBP", name: "Test account" },
+      balances: [ { balanceType: "interimAvailable", balanceAmount: { amount: "n/a", currency: "GBP" } } ]
+    )
+    assert_nil @provider_account.reload.current_balance
+
+    GocardlessAccount::Processor.new(@provider_account).process
+
+    assert_equal BigDecimal("100.00"), @account.reload.balance
+  end
+
   private
 
     def link_account(type, balance)

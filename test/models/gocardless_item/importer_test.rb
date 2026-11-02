@@ -52,6 +52,54 @@ class GocardlessItem::ImporterTest < ActiveSupport::TestCase
 
     assert_equal 3, merged.size, "expected a, b, c with b de-duplicated"
   end
+
+  test "same-day same-amount transactions with different counterparties do not collide" do
+    base = { "bookingDate" => "2026-08-15", "transactionAmount" => { "amount" => "-5.00", "currency" => "GBP" } }
+
+    assert_not_equal key(base.merge("creditorName" => "Alice")), key(base.merge("creditorName" => "Bob"))
+    assert_not_equal key(base.merge("remittanceInformationUnstructuredArray" => [ "Rent", "May" ])),
+                     key(base.merge("remittanceInformationUnstructuredArray" => [ "Rent", "June" ]))
+  end
+
+  test "a pending hold the bank stops returning is dropped from the snapshot" do
+    held = txn(id: "hold").merge("pending" => true, "bookingDate" => Date.current.iso8601)
+    booked = txn(id: "booked").merge("pending" => false, "bookingDate" => Date.current.iso8601)
+    old_hold = txn(id: "old-hold").merge("pending" => true, "bookingDate" => 200.days.ago.to_date.iso8601)
+
+    merged = @importer.send(:merge_transactions, [ held, booked, old_hold ].map(&:with_indifferent_access), [],
+                            covered_from: 30.days.ago.to_date)
+
+    assert_equal %w[booked old-hold], merged.map { |t| t["transactionId"] }.sort
+  end
+
+  test "a failed transaction fetch fails the import and is captured" do
+    item = families(:empty).gocardless_items.create!(name: "Test bank", secret_id: "test-id", secret_key: "test-key", requisition_id: "requisition-3")
+    account = item.gocardless_accounts.create!(name: "Current", currency: "GBP", gocardless_account_id: "acc-1")
+    account.ensure_account_provider!(item.family.accounts.create!(name: "Linked", balance: 0, currency: "GBP", accountable: Depository.new))
+    provider = mock("GoCardless")
+    provider.stubs(:get_requisition).returns(status: "LN", accounts: [])
+    provider.expects(:get_account_transactions).raises(Provider::Gocardless::GocardlessError.new("Server error", :fetch_failed))
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "gocardless").count }, 1 do
+      assert_raises(Provider::Gocardless::GocardlessError) do
+        GocardlessItem::Importer.new(item, gocardless_provider: provider).import
+      end
+    end
+  end
+
+  test "a rate-limited reissued account keeps the old record" do
+    item = families(:empty).gocardless_items.create!(name: "Test bank", secret_id: "test-id", secret_key: "test-key", requisition_id: "requisition-4")
+    account = item.gocardless_accounts.create!(name: "Current", currency: "GBP", gocardless_account_id: "old-id",
+                                               raw_payload: { iban: "GB33BUKB20201555555555" }) # pipelock:ignore IBAN
+    provider = mock("GoCardless")
+    provider.stubs(:get_requisition).returns(status: "LN", accounts: [ "new-id" ])
+    provider.stubs(:get_account).raises(Provider::Gocardless::GocardlessError.new("Rate limited", :rate_limited, retry_after: 60))
+
+    GocardlessItem::Importer.new(item, gocardless_provider: provider).send(:import_accounts, item.gocardless_credentials)
+
+    assert_equal "old-id", account.reload.gocardless_account_id
+  end
+
   test "an account fetch error does not prune an account still in the requisition" do
     family = families(:empty)
     item = family.gocardless_items.create!(name: "Test bank", secret_id: "test-id", secret_key: "test-key", requisition_id: "requisition-1")

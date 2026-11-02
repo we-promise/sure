@@ -33,6 +33,33 @@ class GocardlessItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "new-key", other.secret_key
   end
 
+  test "setup form creates accounts from the submitted per-account types" do
+    depository = @item.gocardless_accounts.create!(name: "Current", currency: "GBP", gocardless_account_id: "acc-1", current_balance: 10)
+    skipped = @item.gocardless_accounts.create!(name: "Savings", currency: "GBP", gocardless_account_id: "acc-2", current_balance: 20)
+
+    assert_difference -> { @family.accounts.count }, 1 do
+      post complete_account_setup_gocardless_item_url(@item), params: {
+        accounts: {
+          depository.id => { account_type: "depository" },
+          skipped.id => { account_type: "skip" }
+        }
+      }
+    end
+
+    assert_redirected_to accounts_url
+    assert depository.reload.account_provider.present?
+    assert skipped.reload.account_provider.blank?
+  end
+
+  test "setup form renders one type select per unlinked account" do
+    account = @item.gocardless_accounts.create!(name: "Current", currency: "GBP", gocardless_account_id: "acc-1")
+
+    get setup_accounts_gocardless_item_url(@item)
+
+    assert_response :success
+    assert_select "select[name='accounts[#{account.id}][account_type]']"
+  end
+
   test "cannot access another family's connection" do
     other = families(:empty).gocardless_items.create!(name: "Other bank", secret_id: "id", secret_key: "key")
     patch gocardless_item_url(other), params: { gocardless_item: { name: "Changed" } }

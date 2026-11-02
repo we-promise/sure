@@ -22,7 +22,8 @@ class GocardlessAccount::Processor
     transactions_count = gocardless_account.raw_transactions_payload&.size || 0
     Rails.logger.info "GocardlessAccount::Processor - Transactions payload has #{transactions_count} items"
 
-    if gocardless_account.raw_transactions_payload.present?
+    # An empty snapshot still runs: it means every pending hold was cancelled.
+    unless gocardless_account.raw_transactions_payload.nil?
       Rails.logger.info "GocardlessAccount::Processor - Processing transactions..."
       GocardlessAccount::Transactions::Processor.new(gocardless_account).process
     else

@@ -42,6 +42,10 @@ class GocardlessItem::Importer
 
     # Update raw payload on the item
     gocardless_item.upsert_gocardless_snapshot!(stats)
+
+    # Raised only after every account has been tried and the stats saved, so one failing
+    # account does not starve the others, yet the sync still fails and the cursor holds.
+    raise @transaction_failure if @transaction_failure
   rescue Provider::Gocardless::AuthenticationError => e
     gocardless_item.update!(status: :requires_update)
     raise
@@ -186,17 +190,44 @@ class GocardlessItem::Importer
 
         stats["api_requests"] = stats.fetch("api_requests", 0) + 1
 
-        if transactions_data.any?
-          # Convert SDK objects to hashes and merge with existing
-          transactions_hashes = transactions_data.map { |t| sdk_object_to_hash(t) }
-          merged = merge_transactions(gocardless_account.raw_transactions_payload || [], transactions_hashes)
-          gocardless_account.upsert_gocardless_transactions_snapshot!(merged)
-          stats["transactions_found"] = stats.fetch("transactions_found", 0) + transactions_data.size
+        # Reconcile even an empty response: a covered pending hold that is no longer
+        # returned has been cancelled and must leave the snapshot.
+        existing = gocardless_account.raw_transactions_payload || []
+        transactions_hashes = transactions_data.map { |t| sdk_object_to_hash(t) }
+        merged = merge_transactions(existing, transactions_hashes, covered_from: start_date)
+        gocardless_account.upsert_gocardless_transactions_snapshot!(merged) if merged != existing
+        stats["transactions_found"] = stats.fetch("transactions_found", 0) + transactions_data.size if transactions_data.any?
+      rescue Provider::Gocardless::GocardlessError => e
+        if e.rate_limited?
+          # Daily quota is a normal condition; the next sync's window overlaps this one.
+          Rails.logger.info "GocardlessItem::Importer - Transactions for account #{gocardless_account.id} rate limited"
+          register_error(e, context: "transactions", account_id: gocardless_account.id)
+        else
+          record_transaction_failure(gocardless_account, e)
         end
       rescue => e
-        Rails.logger.warn "GocardlessItem::Importer - Failed to fetch transactions: #{e.message}"
-        register_error(e, context: "transactions", account_id: gocardless_account.id)
+        record_transaction_failure(gocardless_account, e)
       end
+    end
+
+    # Swallowing a failed fetch would let the sync succeed and advance last_synced_at, so
+    # anything that outlasts the incremental overlap window is never requested again.
+    def record_transaction_failure(gocardless_account, error)
+      Rails.logger.warn "GocardlessItem::Importer - Failed to fetch transactions: #{error.message}"
+      register_error(error, context: "transactions", account_id: gocardless_account.id)
+
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "GoCardless transaction fetch failed: #{error.message}",
+        source: self.class.name,
+        provider_key: "gocardless",
+        family: gocardless_item.family,
+        account_provider: gocardless_account.account_provider,
+        metadata: { gocardless_item_id: gocardless_item.id, gocardless_account_id: gocardless_account.id, error_class: error.class.name }
+      )
+
+      @transaction_failure ||= error
     end
 
     def calculate_transaction_start_date(gocardless_account)
@@ -215,12 +246,26 @@ class GocardlessItem::Importer
       end
     end
 
-    def merge_transactions(existing, new_transactions)
-      # Merge by ID, preferring newer data
+    # Merge by identity, preferring newer data. A pending hold inside the fetched window
+    # that the bank no longer returns was cancelled (a posted one comes back as booked),
+    # so it is dropped; pending rows older than the window are left alone.
+    def merge_transactions(existing, new_transactions, covered_from: nil)
       by_id = {}
       existing.each { |t| by_id[transaction_key(t)] = t }
+      new_keys = new_transactions.map { |t| transaction_key(t) }
+      if covered_from
+        by_id.delete_if { |key, t| !new_keys.include?(key) && cancelled_pending?(t, covered_from) }
+      end
       new_transactions.each { |t| by_id[transaction_key(t)] = t }
       by_id.values
+    end
+
+    def cancelled_pending?(transaction, covered_from)
+      data = transaction.with_indifferent_access
+      return false unless data[:pending]
+
+      date = parse_date(data[:bookingDate] || data[:valueDate] || data[:bookingDateTime] || data[:valueDateTime])
+      date.present? && date >= covered_from
     end
 
     # Identity of a transaction for snapshot de-duplication, shared with the

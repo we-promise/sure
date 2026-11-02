@@ -91,6 +91,25 @@ en:
       not_configured: "Add your GoCardless credentials first."
       success: "Reconnected to %{institution}. Your accounts are being synced."
 
+    # Bank picker. Keys are quoted: a bare "no" parses as boolean false in YAML.
+    new:
+      countries:
+        "gb": "United Kingdom"
+        "ie": "Ireland"
+        "fr": "France"
+        "de": "Germany"
+        "es": "Spain"
+        "it": "Italy"
+        "nl": "Netherlands"
+        "be": "Belgium"
+        "pt": "Portugal"
+        "at": "Austria"
+        "dk": "Denmark"
+        "fi": "Finland"
+        "se": "Sweden"
+        "no": "Norway"
+        "pl": "Poland"
+
     # Loading states
     loading:
       loading_message: "Loading GoCardless accounts..."
