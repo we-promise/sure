@@ -2135,6 +2135,97 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "POWER CO REFUND", response.body, "a pending match paid nothing"
   end
 
+  # History is the only list of cycles older than this month, and the payment
+  # drawer it points into is the only place a payment can be unlinked. Rows
+  # were static text, so a past payment was a dead end here.
+  test "every settled cycle in history opens the payment drawer for its own cycle" do
+    bill = create_bill(name: "Power Co", amount: 80)
+    paid_due = 2.months.ago.to_date
+    skipped_due = 3.months.ago.to_date
+    paid = bill.recurring_occurrences.create!(
+      family: @family, original_due_on: paid_due, due_on: paid_due, currency: "USD"
+    )
+    skipped = bill.recurring_occurrences.create!(
+      family: @family, original_due_on: skipped_due, due_on: skipped_due, currency: "USD"
+    )
+    skipped.skip!
+    RecurringTransaction::Allocator.new(paid).allocate!(amount: "78.50")
+    assert paid.reload.paid?
+
+    get_bill_history(bill)
+
+    assert_response :success
+    [ paid, skipped ].each do |occurrence|
+      assert_select "a[data-turbo-frame=drawer][href=?]", recurring_occurrence_path(occurrence) do |links|
+        assert_select links.first, "p", text: I18n.l(occurrence.due_on, format: :long)
+        assert_select links.first, "svg", count: 1
+      end
+    end
+  end
+
+  # The drawer's primary verb only reaches the cycle it was opened on. On an
+  # open next cycle that is Find/Add/Review, so the bill's settled payments had
+  # no route from the drawer even though Unlink lives one level below it.
+  test "an open cycle's drawer offers Manage payments for the latest settled cycle" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    settled = settle_past_cycle(bill, months_ago: 2, amount: "78.50")
+
+    assert bill.reload.current_occurrence.scheduled?, "premise: the drawer shows the next open cycle"
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a[href=?]", recurring_occurrence_path(settled), text: I18n.t("bills.manage_payments")
+  end
+
+  test "the latest settled cycle is the one Manage payments opens" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    settle_past_cycle(bill, months_ago: 3, amount: "79")
+    latest = settle_past_cycle(bill, months_ago: 2, amount: "78.50")
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a[href=?]", recurring_occurrence_path(latest), text: I18n.t("bills.manage_payments")
+  end
+
+  # A closed cycle's own verb is already Manage payments (or Reopen); repeating
+  # the same action for a different cycle would make the drawer ambiguous.
+  test "the drawer does not repeat Manage payments when it already shows the settled cycle" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    settled = settle_past_cycle(bill, months_ago: 2, amount: "78.50")
+
+    get_bill_drawer(bill, occurrence: settled.id)
+
+    assert_response :success
+    assert_select "a[href=?]", recurring_occurrence_path(settled), text: I18n.t("bills.manage_payments"), count: 1
+  end
+
+  test "a bill with no settled payment offers no Manage payments action" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a", text: I18n.t("bills.manage_payments"), count: 0
+  end
+
+  # A pending match is not a payment: it is waiting on review and must not
+  # pretend there is a settled cycle to manage.
+  test "a suggested allocation does not create a Manage payments action" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    occurrence = bill.recurring_occurrences.open_status.order(:due_on).first
+    occurrence.allocations.create!(
+      entry: create_transaction_entry(name: "POWER CO", amount: 80, date: occurrence.due_on),
+      allocated_amount: 80, currency: "USD", state: "suggested", source: "auto_matched"
+    )
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a", text: I18n.t("bills.manage_payments"), count: 0
+  end
+
   # "Something changed" is only useful if the thing you can still act on is
   # the thing you see first. Notices used to sort by date ascending, so a
   # month-old one-dollar rise outranked a trial converting tomorrow.
@@ -2880,6 +2971,19 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
     def pay(occurrence)
       RecurringTransaction::Allocator.new(occurrence).mark_paid!(paid_on: Date.current)
+    end
+
+    # A settled cycle the bill's own generator did not create, for the history
+    # and Manage payments cases. The amount must be inside the bill's tolerance
+    # or the allocator leaves the cycle partially paid.
+    def settle_past_cycle(bill, months_ago:, amount:)
+      due = months_ago.months.ago.to_date
+      occurrence = bill.recurring_occurrences.create!(
+        family: @family, original_due_on: due, due_on: due, currency: "USD"
+      )
+      RecurringTransaction::Allocator.new(occurrence).allocate!(amount: amount)
+      assert occurrence.reload.paid?, "#{amount} against #{bill.amount} must settle the cycle"
+      occurrence
     end
 
     def create_transaction_entry(name:, amount:, date:, account: accounts(:depository))

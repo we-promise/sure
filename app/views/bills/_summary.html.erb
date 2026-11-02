@@ -1,4 +1,4 @@
-<%# locals: (series:, current_occurrence:, suggestion: nil) %>
+<%# locals: (series:, current_occurrence:, suggestion: nil, settled_occurrence: nil) %>
 
 <%# INSPECT. What is going on with this bill, and what to do about it?
 
@@ -73,5 +73,19 @@
     <%# Pay and Add link keep a home here, so the portal never leaves Bills
         just because the row got quieter. %>
     <%= render "recurring_transactions/pay_action", recurring_transaction: series %>
+
+    <%# An open cycle's verb (Find/Add/Review) cannot reach a payment already
+        settled in an earlier cycle. Offer that route here; when the drawer is
+        scoped to a settled cycle its own verb already manages it. %>
+    <% if settled_occurrence.present? && current_occurrence&.scheduled? %>
+      <%= render DS::Link.new(
+            text: t("bills.manage_payments"),
+            icon: "receipt-text",
+            variant: "outline",
+            size: "md",
+            href: recurring_occurrence_path(settled_occurrence),
+            frame: :drawer
+          ) %>
+    <% end %>
   </div>
 </div>
