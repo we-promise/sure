@@ -26,6 +26,14 @@ class AccountsHelperTest < ActionView::TestCase
     assert_not_equal before, sidebar_key
   end
 
+  test "sidebar cache key changes the next day" do
+    before = sidebar_key
+
+    travel 1.day do
+      assert_not_equal before, sidebar_key
+    end
+  end
+
   private
     def sidebar_key
       account_sidebar_tabs_cache_key(family: @user.family, active_tab: "all", mobile: false)
