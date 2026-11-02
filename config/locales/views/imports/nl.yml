@@ -1,100 +1,541 @@
 ---
 nl:
   import:
+    qif_category_selections:
+      update:
+        success: "Categorieën en tags opgeslagen."
+      show:
+        title: "Configureren en selecteren"
+        description: "Controleer het gedetecteerde datumformaat en kies vervolgens welke categorieën en tags uit uw QIF-bestand u naar %{product_name} wilt overnemen."
+        categories_heading: "Categorieën"
+        categories_found:
+          one: "1 categorie gevonden"
+          other: "%{count} categorieën gevonden"
+        category_name_col: "Categorienaam"
+        transactions_col: "Transacties"
+        tags_heading: "Tags"
+        tags_found:
+          one: "1 tag gevonden"
+          other: "%{count} tags gevonden"
+        tag_name_col: "Tagnaam"
+        txn_count:
+          one: "1 transactie"
+          other: "%{count} transacties"
+        split_warning_title: "Gesplitste transacties gedetecteerd"
+        split_warning_description: "Dit QIF-bestand bevat gesplitste transacties. Controleer hieronder de gedetecteerde categorieën en tags van de splitsingen voordat u importeert."
+        split_badge: "gesplitst"
+        empty_state_primary: "Er zijn geen categorieën of tags gevonden in dit QIF-bestand."
+        empty_state_secondary: "Alle transacties worden zonder categorieën of tags geïmporteerd."
+        submit: "Doorgaan naar controle"
     cleans:
       show:
-        description: Bewerk uw gegevens in de onderstaande tabel. Rode cellen zijn ongeldig.
-        errors_notice: U heeft fouten in uw gegevens. Beweeg over de fout om details te zien.
-        errors_notice_mobile: U heeft fouten in uw gegevens. Tik op de fout tooltip om details te zien.
-        title: Uw gegevens opschonen
+        not_configured: "Configureer uw import voordat u verdergaat."
+        description: "Bewerk uw gegevens in de onderstaande tabel. Rode cellen zijn ongeldig."
+        errors_notice: "U heeft fouten in uw gegevens. Beweeg over de fout om details te zien."
+        errors_notice_mobile: "U heeft fouten in uw gegevens. Tik op de fout tooltip om details te zien."
+        title: "Uw gegevens opschonen"
+        data_cleaned: "Uw gegevens zijn opgeschoond"
+        next_step: "Volgende stap"
+        all_rows: "Alle rijen"
+        error_rows: "Rijen met fouten"
     configurations:
       update:
-        success: Import succesvol geconfigureerd.
-      category_import:
-        button_label: Doorgaan
-        description: Upload een eenvoudig CSV-bestand (zoals het bestand dat we genereren wanneer u uw gegevens exporteert). We zullen de kolommen automatisch voor u koppelen.
-        instructions: Selecteer doorgaan om uw CSV te parsen en door te gaan naar de opschoon stap.
-      mint_import:
-        date_format_label: Datumformaat
-      rule_import:
-        description: Configureer uw regel import. Regels worden aangemaakt of bijgewerkt op basis van de CSV-gegevens.
-        process_button: Regels verwerken
-        process_help: Klik op de onderstaande knop om uw CSV te verwerken en regelrijen te genereren.
-      show:
-        description: Selecteer de kolommen die overeenkomen met elk veld in uw CSV.
-        title: Uw import configureren
-      trade_import:
-        date_format_label: Datumformaat
+        success: "Import succesvol geconfigureerd."
+      account_import:
+        leave_empty: "Leeg laten"
+        default: "Standaard"
+        entity_type: "Entiteitstype"
+        name: "Naam"
+        balance: "Saldo"
+        currency: "Valuta"
+        balance_date: "Saldodatum"
+        date_format: "Datumformaat"
+        select_format: "Selecteer formaat"
+        apply_configuration: "Configuratie toepassen"
       transaction_import:
-        date_format_label: Datumformaat
-        rows_to_skip_label: Eerste n rijen overslaan
+        date_label: "Datum"
+        select_column: "Selecteer kolom"
+        select_format: "Selecteer formaat"
+        amount_label: "Bedrag"
+        default: "Standaard"
+        currency_label: "Valuta"
+        format_label: "Formaat"
+        amount_type_strategy_label: "Strategie voor bedragtype"
+        select_strategy: "Selecteer strategie"
+        set: "Gebruik"
+        as_amount_type_column: "als kolom voor bedragtype"
+        select_value: "Selecteer waarde"
+        as_identifier_value: "als identificatiewaarde"
+        treat_as_html: "Behandel \"<span class=\"font-medium\">%{value}</span>\" als"
+        income_inflow: "Inkomsten (inkomend)"
+        expense_outflow: "Uitgave (uitgaand)"
+        select_type: "Selecteer type"
+        leave_empty: "Leeg laten"
+        account_label: "Account"
+        name_label: "Naam"
+        category_label: "Categorie"
+        tags_label: "Tags"
+        notes_label: "Notities"
+        apply_configuration: "Configuratie toepassen"
+        incomes_are_positive: "Inkomsten zijn positief"
+        incomes_are_negative: "Inkomsten zijn negatief"
+        amount_type_label: "Bedragtype"
+        select_convention: "Selecteer conventie"
+        date_format_label: "Datumformaat"
+        rows_to_skip_label: "Eerste n rijen overslaan"
+      trade_import:
+        select_column: "Selecteer kolom"
+        date_label: "Datum"
+        quantity_label: "Hoeveelheid"
+        buys_are_positive: "Aankopen hebben positieve hoeveelheid"
+        buys_are_negative: "Aankopen hebben negatieve hoeveelheid"
+        default: "Standaard"
+        currency_label: "Valuta"
+        format_label: "Formaat"
+        select_format: "Selecteer formaat"
+        ticker_label: "Ticker"
+        leave_empty: "Leeg laten"
+        stock_exchange_code_label: "Beurscode"
+        price_label: "Prijs"
+        account_label: "Account"
+        name_label: "Naam"
+        note_label: "Notitie"
+        no_security_provider_warning: "De provider voor effectenkoersen is niet geconfigureerd. Uw transactie-imports werken wel, maar Sure vult de koershistorie niet aan. Ga naar uw instellingen om dit te configureren."
+        date_format_label: "Datumformaat"
+        apply_configuration: "Configuratie toepassen"
+      category_import:
+        button_label: "Doorgaan"
+        description: "Upload een eenvoudig CSV-bestand (zoals het bestand dat we genereren wanneer u uw gegevens exporteert). We zullen de kolommen automatisch voor u koppelen."
+        instructions: "Selecteer doorgaan om uw CSV te parsen en door te gaan naar de opschoon stap."
+      merchant_import:
+        button_label: "Doorgaan"
+        description: "Upload een CSV-bestand met uw handelaren. We koppelen de kolommen automatisch voor u."
+        instructions: "Selecteer doorgaan om uw CSV te verwerken en naar de opschoonstap te gaan."
+      mint_import:
+        date_format_label: "Datumformaat"
+        account_optional: "Account (optioneel)"
+        amount: "Bedrag"
+        apply_configuration: "Configuratie toepassen"
+        category_optional: "Categorie (optioneel)"
+        currency: "Valuta"
+        date: "Datum"
+        format: "Formaat"
+        incomes_negative: "Inkomsten zijn negatief"
+        incomes_positive: "Inkomsten zijn positief"
+        intro: "We hebben uw Mint-import vooraf voor u geconfigureerd. Ga verder naar de volgende stap."
+        leave_empty: "Leeg laten"
+        name_optional: "Naam (optioneel)"
+        select_format: "Selecteer formaat"
+        tags_optional: "Tags (optioneel)"
+      actual_import:
+        preconfigured_notice: "We hebben uw Actual Budget-import vooraf voor u geconfigureerd. Ga verder naar de volgende stap."
+        leave_empty: "Leeg laten"
+        date_label: "Datum"
+        date_format_label: "Datumformaat"
+        amount_label: "Bedrag"
+        signage_convention_label: "Tekenconventie"
+        incomes_are_negative: "Inkomsten zijn negatief"
+        incomes_are_positive: "Inkomsten zijn positief"
+        account_label: "Account (optioneel)"
+        name_label: "Begunstigde (optioneel)"
+        category_label: "Categorie (optioneel)"
+        notes_label: "Notities (optioneel)"
+        apply_configuration: "Configuratie toepassen"
+      ynab_import:
+        preconfigured_notice: "We hebben uw YNAB-import vooraf voor u geconfigureerd. Ga verder naar de volgende stap."
+        amount_notice: "Bedragen worden automatisch bepaald uit de kolommen Outflow en Inflow."
+        leave_empty: "Leeg laten"
+        date_label: "Datum"
+        date_format_label: "Datumformaat"
+        account_label: "Account (optioneel)"
+        name_label: "Begunstigde (optioneel)"
+        category_label: "Categorie (optioneel)"
+        notes_label: "Memo (optioneel)"
+        apply_configuration: "Configuratie toepassen"
+      rule_import:
+        description: "Configureer uw regel import. Regels worden aangemaakt of bijgewerkt op basis van de CSV-gegevens."
+        process_button: "Regels verwerken"
+        process_help: "Klik op de onderstaande knop om uw CSV te verwerken en regelrijen te genereren."
+      show:
+        description: "Selecteer de kolommen die overeenkomen met elk veld in uw CSV."
+        title: "Uw import configureren"
+        template_found: "Sjabloonconfiguratie gevonden"
+        template_description: "We hebben een configuratie van een eerdere import voor dit account gevonden. Wilt u deze toepassen op deze import?"
+        manually_configure: "Handmatig configureren"
+        apply_template: "Sjabloon toepassen"
+        sample_caption: "Voorbeeldgegevens uit uw geüploade CSV"
     confirms:
+      sure_import:
+        title: "Uw import bevestigen"
+        description: "Controleer de gegevens die uit uw exportbestand worden geïmporteerd."
+        summary: "Importoverzicht"
+        empty_summary: "We konden geen importeerbare records in dit bestand vinden. Het bestand is mogelijk leeg, of de regels komen niet overeen met het verwachte exportformaat (elke regel moet een JSON-object zijn met de sleutels \"type\" en \"data\", met types die deze import ondersteunt)."
+        publish_button: "Import starten"
+        cancel: "Annuleren"
       mappings:
-        create_account: Account aanmaken
+        create_account: "Account aanmaken"
         csv_mapping_label: "%{mapping} in CSV"
         sure_mapping_label: "%{mapping} in %{product_name}"
-        no_accounts: U heeft nog geen accounts. Maak een account aan dat we kunnen gebruiken voor (niet-toegewezen) rijen in uw CSV of ga terug naar de Opschoon stap en geef een accountnaam op die we kunnen gebruiken.
-        rows_label: Rijen
-        unassigned_account: Moet u een nieuw account aanmaken voor niet-toegewezen rijen?
+        no_accounts: "U heeft nog geen accounts. Maak een account aan dat we kunnen gebruiken voor (niet-toegewezen) rijen in uw CSV of ga terug naar de Opschoon stap en geef een accountnaam op die we kunnen gebruiken."
+        rows_label: "Rijen"
+        unassigned_account: "Moet u een nieuw account aanmaken voor niet-toegewezen rijen?"
+        next: "Volgende"
       show:
-        account_mapping_description: Wijs alle accounts van uw geïmporteerde bestand toe aan bestaande %{product_name} accounts. U kunt ook nieuwe accounts toevoegen of ze ongecategoriseerd laten.
-        account_mapping_title: Uw accounts toewijzen
-        account_type_mapping_description: Wijs alle accounttypen van uw geïmporteerde bestand toe aan %{product_name} accounttypen
-        account_type_mapping_title: Uw accounttypen toewijzen
-        category_mapping_description: Wijs alle categorieën van uw geïmporteerde bestand toe aan bestaande %{product_name} categorieën. U kunt ook nieuwe categorieën toevoegen of ze ongecategoriseerd laten.
-        category_mapping_title: Uw categorieën toewijzen
-        tag_mapping_description: Wijs alle tags van uw geïmporteerde bestand toe aan bestaande %{product_name} tags. U kunt ook nieuwe tags toevoegen of ze ongecategoriseerd laten.
-        tag_mapping_title: Uw tags toewijzen
+        invalid_data: "U hebt ongeldige gegevens; bewerk ze totdat alle fouten zijn opgelost"
+        account_mapping_description: "Wijs alle accounts van uw geïmporteerde bestand toe aan bestaande %{product_name} accounts. U kunt ook nieuwe accounts toevoegen of ze ongecategoriseerd laten."
+        account_mapping_title: "Uw accounts toewijzen"
+        account_type_mapping_description: "Wijs alle accounttypen van uw geïmporteerde bestand toe aan %{product_name} accounttypen"
+        account_type_mapping_title: "Uw accounttypen toewijzen"
+        category_mapping_description: "Wijs alle categorieën van uw geïmporteerde bestand toe aan bestaande %{product_name} categorieën. U kunt ook nieuwe categorieën toevoegen of ze ongecategoriseerd laten."
+        category_mapping_title: "Uw categorieën toewijzen"
+        tag_mapping_description: "Wijs alle tags van uw geïmporteerde bestand toe aan bestaande %{product_name} tags. U kunt ook nieuwe tags toevoegen of ze ongecategoriseerd laten."
+        tag_mapping_title: "Uw tags toewijzen"
     uploads:
+      handle_qif_upload:
+        qif_uploaded: "QIF-bestand succesvol geüpload."
+        qif_account_required: "Selecteer een account voor de QIF-import"
+      update:
+        qif_uploaded: "QIF-bestand succesvol geüpload."
       show:
-        description: Plak of upload uw CSV-bestand hieronder. Bekijk de instructies in de onderstaande tabel voordat u begint.
-        instructions_1: Hieronder staat een voorbeeld CSV met kolommen die beschikbaar zijn voor import.
-        instructions_2: Uw CSV moet een koptekstrij hebben
-        instructions_3: U kunt uw kolommen elke naam geven die u wilt. U koppelt ze in een latere stap.
-        instructions_4: Kolommen gemarkeerd met een asterisk (*) zijn verplichte gegevens.
-        instructions_5: Geen komma's, geen valutasymbolen en geen haakjes in getallen.
-        title: Uw gegevens importeren
+        csv_invalid: "Moet een geldige CSV zijn met kopteksten en ten minste één rij gegevens"
+        drop_csv_title: "Sleep CSV hierheen om te uploaden"
+        drop_csv_subtitle: "Uw bestand wordt automatisch geüpload"
+        upload_csv_tab: "CSV uploaden"
+        copy_paste_tab: "Kopiëren en plakken"
+        account_optional_label: "Account (optioneel)"
+        multi_account_import: "Import met meerdere accounts"
+        upload_csv_button: "CSV uploaden"
+        paste_csv_placeholder: "Plak hier de inhoud van uw CSV-bestand"
+        download_sample_csv: "Download een voorbeeld-CSV"
+        to_see_format: "om het vereiste CSV-formaat te zien"
+        qif_title: "QIF-bestand uploaden"
+        qif_description: "Selecteer een account voor bestanden met één account, of laat leeg als uw QIF-export accountnamen bevat."
+        qif_account_label: "Account"
+        qif_account_placeholder: "Selecteer een account…"
+        qif_file_prompt: "om uw QIF-bestand hier toe te voegen"
+        qif_file_hint: "Alleen .qif-bestanden"
+        qif_submit: "QIF uploaden"
+        browse: "Bladeren"
+        csv_file_prompt: "om uw CSV-bestand hier toe te voegen"
+        description: "Plak of upload uw CSV-bestand hieronder. Bekijk de instructies in de onderstaande tabel voordat u begint."
+        instructions_1: "Hieronder staat een voorbeeld CSV met kolommen die beschikbaar zijn voor import."
+        instructions_2: "Uw CSV moet een koptekstrij hebben"
+        instructions_3: "U kunt uw kolommen elke naam geven die u wilt. U koppelt ze in een latere stap."
+        instructions_4: "Kolommen gemarkeerd met een asterisk (*) zijn verplichte gegevens."
+        instructions_5: "Geen komma's, geen valutasymbolen en geen haakjes in getallen."
+        title: "Uw gegevens importeren"
+      sure_import:
+        title: "Importeren vanuit export"
+        description: "Upload het bestand all.ndjson uit uw gegevensexport om uw accounts, transacties, categorieën en meer te herstellen."
+        drop_title: "Sleep NDJSON hierheen om te uploaden"
+        drop_subtitle: "Uw bestand wordt automatisch geüpload"
+        browse: "Bladeren"
+        browse_hint: "om uw all.ndjson-bestand hier toe te voegen"
+        upload_button: "NDJSON uploaden"
+        hint_html: "Upload het bestand <strong>all.ndjson</strong> uit de ZIP van uw gegevensexport"
+        ndjson_invalid: "Moet geldige NDJSON zijn met ten minste één record"
   imports:
-    index:
-      imports: Imports
-      new: Nieuwe import
-    table:
-      title: Imports
-      header:
-        date: Datum
-        operation: Operatie
-        status: Status
-        actions: Acties
-      row:
+    mapping_labels:
+      account_type: "Accounttype"
+      account: "Account"
+      category: "Categorie"
+      tag: "Tag"
+    dry_run_resources:
+      transactions: "Transacties"
+      balances: "Saldi"
+      accounts: "Accounts"
+      categories: "Categorieën"
+      tags: "Tags"
+      rules: "Regels"
+      merchants: "Handelaren"
+      recurring_transactions: "Terugkerende transacties"
+      transfers: "Overboekingen"
+      rejected_transfers: "Afgewezen overboekingen"
+      trades: "Transacties (handel)"
+      holdings: "Posities"
+      valuations: "Waarderingen"
+      budgets: "Budgetten"
+      budget_categories: "Budgetcategorieën"
+    column_labels:
+      date: "Datum"
+      amount: "Bedrag"
+      name: "Naam"
+      currency: "Valuta"
+      category: "Categorie"
+      tags: "Tags"
+      account: "Account"
+      notes: "Notities"
+      qty: "Hoeveelheid"
+      ticker: "Ticker"
+      exchange: "Beurs"
+      price: "Prijs"
+      entity_type: "Type"
+      category_parent: "Bovenliggende categorie"
+      category_color: "Kleur"
+      category_icon: "Lucide-icoon"
+      merchant_color: "Kleur"
+      merchant_website: "Website-URL"
+    summary:
+      title: "Importoverzicht"
+      subtitle: "Wat er met elke transactie op dit afschrift in %{account} is gebeurd."
+      subtitle_no_account: "Wat er met elke transactie op dit afschrift is gebeurd."
+      extracted: "Gevonden op het afschrift"
+      already_recorded: "Al geregistreerd"
+      already_recorded_hint: "Gekoppeld aan een transactie die dit account al had, en als afgestemd gemarkeerd."
+      imported: "Als nieuw geïmporteerd"
+      awaiting_review: "Wacht op import"
+      fully_reconciled:
+        one: "Er hoefde niets te worden geïmporteerd — de enige transactie op het afschrift was al geregistreerd."
+        other: "Er hoefde niets te worden geïmporteerd — alle %{count} transacties waren al geregistreerd."
+      statement_evidence_html: "Afgestemd met %{statement}."
+      close: "Sluiten"
+    update:
+      account_saved: "Account opgeslagen."
+      account_locked: "Deze import is al gepubliceerd, dus het account kan niet worden gewijzigd. Draai de import eerst terug als u deze ergens anders wilt importeren."
+      invalid_account: "Account niet gevonden."
+    publish:
+      started: "Uw import is op de achtergrond gestart."
+      max_rows_exceeded: "Uw import overschrijdt het maximale aantal rijen van %{max}."
+      guest_new_categories_or_tags: "Gasten kunnen geen categorieën of tags aanmaken. Koppel ze aan bestaande of laat ze leeg."
+    revert:
+      started: "Import wordt op de achtergrond teruggedraaid."
+    cancel:
+      cancelled: "Import gemarkeerd als mislukt. U kunt het opnieuw proberen vanaf de importpagina."
+      not_cancellable: "Deze import kan nu niet als mislukt worden gemarkeerd — de taak is mogelijk nog bezig. Probeer het opnieuw zodra deze een uur inactief is geweest."
+    apply_template:
+      template_applied: "Sjabloon toegepast."
+      no_template_found: "Geen sjabloon gevonden. Configureer uw import handmatig."
+    destroy:
+      deleted: "Uw import is verwijderd."
+    failure:
+      title: "Import mislukt"
+      description: "Controleer het bestandsformaat op fouten en of alle verplichte velden zijn ingevuld, en probeer het daarna opnieuw."
+      try_again: "Opnieuw proberen"
+    success:
+      title: "Import geslaagd"
+      description: "Uw geïmporteerde gegevens zijn toegevoegd aan de app en zijn nu klaar voor gebruik."
+      back_to_dashboard: "Terug naar dashboard"
+      verification:
+        title: "Controle na import"
+        checked: "Gecontroleerd"
+        mismatches: "Afwijkingen"
         status:
-          in_progress: Bezig
-          uploading: Rijen verwerken
-          reverting: Terugdraaien
-          revert_failed: Terugdraaien mislukt
-          complete: Voltooid
-          failed: Mislukt
+          not_verified: "Niet gecontroleerd"
+          matched: "Komt overeen"
+          mismatch: "Afwijking"
+          failed: "Mislukt"
+          reverted: "Teruggedraaid"
+    importing:
+      title: "Import bezig"
+      description: "Uw import is bezig. Bekijk het importmenu voor statusupdates of klik op 'Status controleren' om de pagina te vernieuwen. U kunt de app gewoon blijven gebruiken."
+      check_status: "Status controleren"
+      back_to_dashboard: "Terug naar dashboard"
+    revert_failure:
+      title: "Terugdraaien van import mislukt"
+      description: "Probeer het opnieuw"
+      try_again: "Opnieuw proberen"
+    date_format:
+      heading: "Datumformaat"
+      description: "Het datumformaat is automatisch gedetecteerd uit uw bestand. Wijzig het als de datums onjuist lijken."
+      preview: "Eerste verwerkte datum"
+      error_title: "Kan datumformaat niet detecteren"
+      error_description: "Geen van de ondersteunde datumformaten kon de datums in dit bestand verwerken. Controleer of het bestand geldige datums bevat."
+    type_labels:
+      transaction_import: "Transactie-import"
+      trade_import: "Handelstransactie-import"
+      account_import: "Accountimport"
+      mint_import: "Mint-import"
+      actual_import: "Actual-import"
+      ynab_import: "YNAB-import"
+      qif_import: "QIF-import"
+      category_import: "Categorie-import"
+      rule_import: "Regelimport"
+      merchant_import: "Handelaarsimport"
+      pdf_import: "PDF-import"
+      document_import: "Documentimport"
+      sure_import: "Sure-import"
+    steps:
+      upload: "Uploaden"
+      configure: "Configureren"
+      clean: "Opschonen"
+      map: "Koppelen"
+      confirm: "Bevestigen"
+      select: "Selecteren"
+      label: "Stap %{step}"
+      progress: "Stap %{step} van %{total}"
+    empty:
+      message: "Geen imports gevonden."
+    index:
+      title: "Imports"
+      new: "Nieuwe import"
+      imports: "Imports"
+    table:
+      title: "Imports"
+      header:
+        date: "Datum"
+        operation: "Operatie"
+        status: "Status"
+        actions: "Acties"
+      row:
+        type_labels:
+          transaction_import: "Transactie"
+          trade_import: "Handelstransactie"
+          account_import: "Account"
+          mint_import: "Mint"
+          actual_import: "Actual"
+          ynab_import: "YNAB"
+          qif_import: "QIF"
+          category_import: "Categorie"
+          rule_import: "Regel"
+          merchant_import: "Handelaar"
+          pdf_import: "PDF"
+          document_import: "Document"
+          sure_import: "Sure"
+        status:
+          in_progress: "Bezig"
+          uploading: "Rijen verwerken"
+          reverting: "Terugdraaien"
+          revert_failed: "Terugdraaien mislukt"
+          complete: "Voltooid"
+          failed: "Mislukt"
         actions:
-          revert: Terugdraaien
-          confirm_revert: Hierdoor worden de geïmporteerde transacties verwijderd, maar u kunt uw gegevens nog steeds op elk gewenst moment bekijken en opnieuw importeren.
-          delete: Verwijderen
-          view: Bekijken
-      empty: Nog geen imports.
+          revert: "Terugdraaien"
+          confirm_revert: "Hierdoor worden de geïmporteerde transacties verwijderd, maar u kunt uw gegevens nog steeds op elk gewenst moment bekijken en opnieuw importeren."
+          delete: "Verwijderen"
+          view: "Bekijken"
+          mark_failed: "Markeren als mislukt"
+          confirm_mark_failed: "Deze import is al een tijd inactief en de achtergrondtaak is waarschijnlijk onderbroken. Als mislukt markeren zodat u het opnieuw kunt proberen? Er worden geen geïmporteerde gegevens bewaard."
+      empty: "Nog geen imports."
     new:
-      description: U kunt handmatig verschillende soorten gegevens importeren via CSV of een van onze importsjablonen zoals Mint gebruiken.
-      import_accounts: Accounts importeren
-      import_categories: Categorieën importeren
-      import_mint: Importeren vanuit Mint
-      import_portfolio: Investeringen importeren
-      import_rules: Regels importeren
-      import_transactions: Transacties importeren
+      description: "U kunt handmatig verschillende soorten gegevens importeren via CSV of een van onze importsjablonen zoals Mint gebruiken."
+      tab_financial_tools: "Financiële tools en bestanden"
+      tab_raw_data: "Ruwe gegevens"
+      import_ynab: "Importeren vanuit YNAB"
+      import_accounts: "Accounts importeren"
+      import_categories: "Categorieën importeren"
+      import_merchants: "Handelaren importeren"
+      import_mint: "Importeren vanuit Mint"
+      import_actual: "Importeren vanuit Actual Budget"
+      import_portfolio: "Beleggingen importeren"
+      import_rules: "Regels importeren"
+      import_transactions: "Transacties importeren"
+      import_qif: "Importeren vanuit Quicken (QIF)"
+      import_sure: "Importeren vanuit Sure"
+      import_sure_description: ".ndjson-bestand van volledige export"
+      import_file: "Document importeren"
+      import_file_description: "AI-analyse voor PDF's en uploaden van doorzoekbare bestanden"
+      requires_account: "Importeer eerst accounts om deze optie te ontgrendelen."
       resume: "%{type} hervatten"
-      sources: Bronnen
-      title: Nieuwe CSV import
+      sources: "Bronnen"
+      title: "Nieuwe CSV import"
+    create:
+      file_too_large: "Bestand is te groot. Maximale grootte is %{max_size}MB."
+      invalid_file_type: "Ongeldig bestandstype. Upload een CSV-bestand."
+      csv_uploaded: "CSV succesvol geüpload."
+      ndjson_uploaded: "NDJSON-bestand succesvol geüpload."
+      pdf_too_large: "PDF-bestand is te groot. Maximale grootte is %{max_size}MB."
+      pdf_processing: "Uw PDF wordt verwerkt. U ontvangt een e-mail wanneer de analyse is voltooid."
+      invalid_pdf: "Het geüploade bestand is geen geldige PDF."
+      missing_upload: "We hebben uw bestand niet ontvangen. Probeer het opnieuw te uploaden."
+      duplicate_pdf_unavailable: "Deze PDF is al opgeslagen als een afschrift waartoe u geen toegang hebt."
+      document_too_large: "Documentbestand is te groot. Maximale grootte is %{max_size}MB."
+      invalid_document_file_type: "Ongeldig documentbestandstype voor de actieve vectoropslag."
+      document_uploaded: "Document succesvol geüpload."
+      document_upload_failed: "We konden het document niet uploaden naar de vectoropslag. Probeer het opnieuw."
+      invalid_ndjson_file_type: "Ongeldig bestandstype of -formaat. Upload een geldig .ndjson- of .json-exportbestand."
+      document_provider_not_configured: "Er is geen vectoropslag geconfigureerd voor het uploaden van documenten."
+    show:
+      finalize_upload: "Rond het uploaden van uw bestand af."
+      finalize_mappings: "Rond uw koppelingen af voordat u verdergaat."
     ready:
-      description: Hier is een samenvatting van de nieuwe items die aan uw account worden toegevoegd zodra u deze import publiceert.
-      title: Uw importgegevens bevestigen
-      summary_item_label: Item
-      summary_count_label: Aantal
-      empty_summary: Er zijn geen importeerbare records in dit bestand gevonden. Het bestand is mogelijk leeg, of de regels voldoen niet aan het verwachte exportformaat (elke regel moet een JSON-object zijn met de sleutels „type“ en „data“, met typen die deze import ondersteunt).
-      publish_import: Import publiceren
-      back_to_imports: Terug naar importen
+      description: "Hier is een samenvatting van de nieuwe items die aan uw account worden toegevoegd zodra u deze import publiceert."
+      title: "Uw importgegevens bevestigen"
+      summary_item_label: "Item"
+      summary_count_label: "Aantal"
+      empty_summary: "Er zijn geen importeerbare records in dit bestand gevonden. Het bestand is mogelijk leeg, of de regels voldoen niet aan het verwachte exportformaat (elke regel moet een JSON-object zijn met de sleutels „type“ en „data“, met typen die deze import ondersteunt)."
+      publish_import: "Import publiceren"
+      back_to_imports: "Terug naar importen"
+      missing_merchant_warning_title: "Sommige handelaren ontbreken in deze export"
+      missing_merchant_warning_description:
+        one: "1 handelaarsverwijzing in dit bestand verwijst naar een handelaar die niet is opgenomen. Dit kan gebeuren bij een export die is gemaakt voordat door providers toegewezen handelaren aan Sure-exports werden toegevoegd. U kunt deze import nog steeds publiceren -- het betreffende record wordt dan zonder handelaar geïmporteerd en u kunt het achteraf taggen."
+        other: "%{count} handelaarsverwijzingen in dit bestand verwijzen naar handelaren die niet zijn opgenomen. Dit kan gebeuren bij een export die is gemaakt voordat door providers toegewezen handelaren aan Sure-exports werden toegevoegd. U kunt deze import nog steeds publiceren -- de betreffende records worden dan zonder handelaar geïmporteerd en u kunt ze achteraf taggen."
+      skipped_recurring_description:
+        one: "1 terugkerende transactie heeft geen naam en de handelaar ontbreekt, dus deze wordt overgeslagen. Automatisch gedetecteerde terugkerende transacties worden na de import opnieuw opgebouwd."
+        other: "%{count} terugkerende transacties hebben geen naam en hun handelaren ontbreken, dus deze worden overgeslagen. Automatisch gedetecteerde terugkerende transacties worden na de import opnieuw opgebouwd."
+      reused_taxonomy_notice_title: "Sommige categorieën, tags of handelaren bestaan al"
+      reused_taxonomy_notice_description:
+        one: "1 categorie, tag of handelaar in dit bestand bestaat al in uw account (bijvoorbeeld uit de standaardcategorieën van de onboarding). Deze wordt hergebruikt en bijgewerkt met de gegevens uit dit bestand in plaats van een duplicaat aan te maken."
+        other: "%{count} categorieën, tags of handelaren in dit bestand bestaan al in uw account (bijvoorbeeld uit de standaardcategorieën van de onboarding). Deze worden hergebruikt en bijgewerkt met de gegevens uit dit bestand in plaats van duplicaten aan te maken."
+      provider_merchant_diff_title: "Sommige handelaren bestaan al met andere gegevens"
+      provider_merchant_diff_description:
+        one: "1 handelaar in dit bestand bestaat al met andere gegevens. De bestaande handelaar blijft behouden en de waarden uit dit bestand worden niet toegepast."
+        other: "%{count} handelaren in dit bestand bestaan al met andere gegevens. De bestaande handelaren blijven behouden en de waarden uit dit bestand worden niet toegepast."
+      provider_merchant_diff_summary: "Verschillen bekijken"
+      provider_merchant_diff_none: "geen"
+      provider_merchant_diff_fields:
+        website_url: "Website"
+        name: "Naam"
+        provider_merchant_id: "Provider-ID"
+      provider_merchant_diff_row: "%{field}: %{kept} blijft behouden, bestand bevat %{imported}"
+    errors:
+      custom_column_requires_inflow: "Bij imports met een aangepaste kolom moet een kolom voor inkomende bedragen worden geselecteerd"
+      interrupted: "De achtergrondverwerking werd onderbroken voordat deze klaar was. Geïmporteerde gegevens zijn teruggedraaid — u kunt het veilig opnieuw proberen."
+      presumed_lost: "Gemarkeerd als mislukt omdat de achtergrondtaak vermoedelijk verloren is gegaan. De geïmporteerde gegevens zijn teruggedraaid — u kunt het veilig opnieuw proberen."
+    document_types:
+      bank_statement: "Bankafschrift"
+      credit_card_statement: "Creditcardafschrift"
+      investment_statement: "Beleggingsafschrift"
+      financial_document: "Financieel document"
+      contract: "Contract"
+      other: "Ander document"
+      unknown: "Onbekend document"
+    pdf_import:
+      processing_title: "Uw PDF wordt verwerkt"
+      processing_description: "We analyseren uw document met AI. Dit kan even duren. U ontvangt een e-mail wanneer de analyse is voltooid."
+      check_status: "Status controleren"
+      back_to_dashboard: "Terug naar dashboard"
+      failed_title: "Verwerking mislukt"
+      failed_description: "We konden uw PDF-document niet verwerken. Probeer het opnieuw of neem contact op met support."
+      try_again: "Opnieuw proberen"
+      delete_import: "Import verwijderen"
+      complete_title: "Document geanalyseerd"
+      complete_description: "We hebben uw PDF geanalyseerd en dit is wat we hebben gevonden."
+      document_type_label: "Documenttype"
+      source_statement: "Bronafschrift"
+      summary_label: "Samenvatting"
+      email_sent_notice: "Er is een e-mail naar u verzonden met de volgende stappen."
+      back_to_imports: "Terug naar imports"
+      unknown_state_title: "Onbekende status"
+      unknown_state_description: "Deze import heeft een onverwachte status. Ga terug naar imports."
+      processing_failed_with_message: "%{message}"
+      processing_failed_generic: "Verwerking mislukt: %{error}"
+      errors:
+        provider_not_configured: "AI-provider niet geconfigureerd"
+        provider_no_pdf_support: "AI-provider ondersteunt geen PDF-verwerking"
+      ready_for_review_title: "Klaar voor controle"
+      ready_for_review_description:
+        one: "%{count} transactie van uw afschrift staat nog niet in dit account. Controleer en publiceer deze om deze toe te voegen."
+        other: "%{count} transacties van uw afschrift staan nog niet in dit account. Controleer en publiceer ze om ze toe te voegen."
+      transactions_extracted: "Geëxtraheerde transacties"
+      transactions_extracted_count:
+        one: "%{count} transactie"
+        other: "%{count} transacties"
+      select_account: "Importeren naar account"
+      select_account_placeholder: "Selecteer een account..."
+      select_account_hint: "Kies naar welk account u deze transacties wilt importeren."
+      no_accounts: "Geen accounts beschikbaar. Maak eerst een account aan."
+      create_account: "Account aanmaken"
+      save_account: "Opslaan"
+      publish_transactions:
+        one: "%{count} transactie publiceren"
+        other: "%{count} transacties publiceren"
+      review_transactions: "Transacties controleren"
+      view_summary: "Importoverzicht bekijken"
+      already_recorded_note:
+        one: "%{count} stond al in dit account en is gekoppeld aan het afschrift."
+        other: "%{count} stonden al in dit account en zijn gekoppeld aan het afschrift."
+      complete_fully_reconciled:
+        one: "Elke transactie op dit afschrift stond al in uw account. %{count} is gekoppeld en als afgestemd gemarkeerd — er hoefde niets te worden geïmporteerd."
+        other: "Elke transactie op dit afschrift stond al in uw account. Alle %{count} zijn gekoppeld en als afgestemd gemarkeerd — er hoefde niets te worden geïmporteerd."
+      select_account_to_continue: "Selecteer hierboven een account om door te gaan."
+      unknown_document_type: "Onbekend"
