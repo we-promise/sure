@@ -15,7 +15,8 @@ only when that environment work has been explicitly requested. In particular,
 
 | Task | Command |
 | --- | --- |
-| Initial setup | `cp .env.local.example .env.local` (only if the file does not exist), then `bin/setup` |
+| mise setup / startup | `mise install && mise run install` / `mise run dev`; see [mise guide](../mise.md) |
+| Initial setup (legacy) | `cp .env.local.example .env.local` (only if the file does not exist), then `bin/setup` |
 | Development processes | `bin/dev` (Rails, Sidekiq, Tailwind watcher) |
 | Rails console | `bin/rails console` |
 | Database preparation / migration | `bin/rails db:prepare` / `bin/rails db:migrate` |

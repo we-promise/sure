@@ -134,3 +134,6 @@ logs/security/
 # Ignore Playwright artifacts
 playwright-report/
 .playwright-mcp
+
+# Local mise overrides
+mise.local.toml
