@@ -17,6 +17,24 @@ class Transaction {
   final List<String> tagNames;
   final bool tagsProvided;
 
+  /// The stored amount, unrounded, as a plain decimal string in the API's
+  /// sign convention (positive = outflow, negative = inflow). Null when the
+  /// server predates the field.
+  final String? amountDecimal;
+
+  /// The transaction kind (`standard`, `loan_payment`,
+  /// `investment_contribution`, `funds_movement`, ...). Null when the server
+  /// predates the field.
+  final String? kind;
+
+  /// Whether the entry is left out of budgets and reports. Splitting marks
+  /// the parent excluded. Null when the server predates the field.
+  final bool? excluded;
+
+  /// Whether the entry has split children. Null when the server predates the
+  /// field.
+  final bool? splitParent;
+
   Transaction({
     this.id,
     required this.accountId,
@@ -35,6 +53,10 @@ class Transaction {
     List<String> tagIds = const [],
     List<String> tagNames = const [],
     bool? tagsProvided,
+    this.amountDecimal,
+    this.kind,
+    this.excluded,
+    this.splitParent,
   })  : tagIds = List.unmodifiable(tagIds),
         tagNames = List.unmodifiable(tagNames),
         categoryProvided =
@@ -142,7 +164,18 @@ class Transaction {
       tagIds: tagIds,
       tagNames: tagNames,
       tagsProvided: tagsProvided,
+      amountDecimal: _nonEmptyString(json['amount_decimal']),
+      kind: _nonEmptyString(json['kind']),
+      excluded: json['excluded'] is bool ? json['excluded'] as bool : null,
+      splitParent:
+          json['split_parent'] is bool ? json['split_parent'] as bool : null,
     );
+  }
+
+  static String? _nonEmptyString(Object? value) {
+    if (value == null) return null;
+    final text = value.toString().trim();
+    return text.isEmpty ? null : text;
   }
 
   Map<String, dynamic> toJson() {

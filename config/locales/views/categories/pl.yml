@@ -33,8 +33,6 @@ pl:
       empty: Nie znaleziono kategorii
       merge: Scal kategorie
       new: Nowa kategoria
-    menu:
-      loading: Ładowanie...
     merge:
       description: Wybierz kategorię docelową oraz kategorie do scalenia z nią. Pasujące
         transakcje i pozycje budżetu przeniosą się do kategorii docelowej.

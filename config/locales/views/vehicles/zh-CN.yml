@@ -9,6 +9,8 @@ zh-CN:
       mileage: 里程
       mileage_placeholder: '15000'
       mileage_unit: 单位
+      mileage_unit_kilometers: 公里
+      mileage_unit_miles: 英里
       model: 车型
       model_placeholder: 凯美瑞
       year: 年份
