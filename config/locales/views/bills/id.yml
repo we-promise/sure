@@ -62,9 +62,9 @@ id:
         one: "1 pembayaran"
         other: "%{count} pembayaran"
       notes: Catatan
-      trial_chip: "Uji coba berakhir %{date}"
-      renews_chip: "Diperpanjang %{date}"
-      cancelled_chip: "Dibatalkan %{date}"
+      trial_chip: "Uji coba berakhir pada %{date}"
+      renews_chip: "Diperpanjang pada %{date}"
+      cancelled_chip: "Dibatalkan pada %{date}"
       price_changes: Perubahan harga
       price_change_line: "%{from} → %{to}"
     month_pulse:
@@ -131,8 +131,8 @@ id:
         one: "Lewat jatuh tempo 1 hari, seharusnya %{date}"
         other: "Lewat jatuh tempo %{count} hari, seharusnya %{date}"
       today: "Jatuh tempo hari ini"
-      settled: "Jatuh tempo %{date}"
-      due_since: "Jatuh tempo %{date}"
+      settled: "Jatuh tempo pada %{date}"
+      due_since: "Jatuh tempo pada %{date}"
       snoozed: "Ditunda hingga %{date}"
       upcoming:
         one: "Jatuh tempo besok, %{date}"
@@ -267,13 +267,13 @@ id:
       detected_review_action: Tinjau
       notices_heading: Perubahan
       needs_review: Perlu ditinjau
-      notice_trial: "Uji coba %{name} berakhir %{date}"
-      notice_renewal: "%{name} diperpanjang %{date}"
+      notice_trial: "Uji coba %{name} berakhir pada %{date}"
+      notice_renewal: "%{name} diperpanjang pada %{date}"
       notice_price: "%{name} mengubah harga: %{from} → %{to} (%{percent})"
       notices_routine:
         one: "1 perubahan kecil"
         other: "%{count} perubahan kecil"
-      suggestion_line: "%{entry} tampak seperti pembayaran dari %{bill}"
+      suggestion_line: "%{entry} tampak seperti pembayaran untuk %{bill}"
       suggestion_unknown_entry: Sebuah transaksi
       confidence: "%{percent}% cocok"
       accept: Terapkan
