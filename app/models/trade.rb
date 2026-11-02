@@ -105,6 +105,7 @@ class Trade < ApplicationRecord
   # reads one preloaded set instead of a query per foreign disposal. Keyed
   # `[from, to, date]`.
   #
+  # A key present with nil means the rate was looked for and does not exist.
   # NOT authoritative when a key is absent, unlike preloaded_holdings: a caller
   # that preloads rates without preloading holdings leaves the basis side
   # unknowable without a query, so the preload keys it on the account's
@@ -154,6 +155,8 @@ class Trade < ApplicationRecord
         date: wanted.map(&:third).uniq
       )
       .to_h { |rate| [ [ rate.from_currency, rate.to_currency, rate.date ], rate.rate ] }
+
+    wanted.each { |key| rates[key] = nil unless rates.key?(key) }
 
     trades.each { |trade| trade.preloaded_exchange_rates = rates }
   end
@@ -272,16 +275,16 @@ class Trade < ApplicationRecord
       to = basis_currency.iso_code
       return proceeds if from == to
 
-      rate = preloaded_rate(from, to) ||
-             ExchangeRate.find_by(from_currency: from, to_currency: to, date: entry.date)&.rate
+      rate = exchange_rate_on_entry_date(from, to)
       return nil unless rate.to_d.positive?
 
       Money.new(proceeds.amount * rate, to)
     end
 
-    def preloaded_rate(from, to)
-      return nil unless defined?(@preloaded_exchange_rates)
+    def exchange_rate_on_entry_date(from, to)
+      key = [ from, to, entry.date ]
+      return @preloaded_exchange_rates[key] if @preloaded_exchange_rates&.key?(key)
 
-      (@preloaded_exchange_rates || {})[[ from, to, entry.date ]]
+      ExchangeRate.find_by(from_currency: from, to_currency: to, date: entry.date)&.rate
     end
 end
