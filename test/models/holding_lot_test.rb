@@ -438,6 +438,23 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # A cost per unit in the account's currency can pass 10^9 where the trade's
+  # own currency is far stronger: one share at USD 700,000 in a VND account.
+  test "a position costing 10^9 or more a unit in the account's currency syncs and stores its lots" do
+    travel_to TODAY do
+      @account = families(:empty).accounts.create!(name: "VND", balance: 0, cash_balance: 0, currency: "VND", accountable: Investment.new)
+      security = Security.create!(ticker: "BRKV", name: "BRKV")
+      Security::Price.insert_all((d(1)..d(10)).map { |date| { security_id: security.id, date: date, price: 700_000, currency: "USD" } })
+      ExchangeRate.insert_all((d(1)..d(10)).map { |date| { from_currency: "USD", to_currency: "VND", date: date, rate: 25_000 } })
+      create_trade(security, account: @account, qty: 1, price: 700_000, currency: "USD", date: d(2))
+
+      materialize(:forward)
+
+      assert_equal BigDecimal("17500000000"), HoldingLot.find_by!(account: @account, security: security).unit_cost
+      assert_equal BigDecimal("17500000000"), @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+    end
+  end
+
   private
     def d(day)
       Date.new(2024, 6, day)

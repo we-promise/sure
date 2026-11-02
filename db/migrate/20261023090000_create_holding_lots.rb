@@ -9,7 +9,7 @@ class CreateHoldingLots < ActiveRecord::Migration[8.1]
       t.references :origin_security, type: :uuid, foreign_key: { to_table: :securities, on_delete: :nullify }
       t.date :acquired_on
       t.decimal :qty, precision: 34, scale: 18, null: false
-      t.decimal :unit_cost, precision: 19, scale: 10
+      t.decimal :unit_cost, precision: 25, scale: 10
       t.string :currency, null: false
       # The provider reported fewer units than the trades add up to.
       t.boolean :clamped, null: false, default: false
