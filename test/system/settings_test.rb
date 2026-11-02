@@ -133,6 +133,15 @@ class SettingsTest < ApplicationSystemTestCase
     assert_selector "[data-settings-search-target=empty]"
   end
 
+  test "settings search names a preview toggle without its badge" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: I18n.t("settings.preferences.show.personal_budgets")
+    assert_selector "[data-settings-search-target=results] [data-slot=title]", exact_text: I18n.t("settings.preferences.show.personal_budgets")
+  end
+
   test "settings search lists pages first when their name matches and reports when nothing matches" do
     visit settings_profile_path
     search = find_field(I18n.t("settings.settings_search.placeholder"))
