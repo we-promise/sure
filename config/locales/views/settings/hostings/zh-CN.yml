@@ -30,6 +30,12 @@ zh-CN:
         default_family_title: 新用户默认家庭
         default_family_description: 选择使用邀请码注册的新用户默认加入哪个家庭。
         default_family_none: 无（创建新家庭）
+      demo_refresh_settings:
+        description: 仅自动刷新选定的演示家庭。其所有数据和登录信息都将被移除。其他家庭不受影响。需要运行内存至少为 2 GiB 的 Worker。首先使用演示生成器创建一个一次性演示家庭，然后在此处选择它。请勿选择真实用户的家庭。
+        none: 未选择演示家庭
+        family_label: 一次性演示家庭
+        save_family: 保存演示家庭
+        enabled_label: 启用每日演示家庭数据刷新
       not_authorized: 您没有执行此操作的权限
       openai_settings:
         access_token_label: 访问令牌
@@ -55,11 +61,33 @@ zh-CN:
         context_window_help: 留空时使用模型默认上下文窗口。
         max_response_tokens_label: 最大响应 Token（可选）
         max_response_tokens_help: 限制模型单次回答可生成的 Token 数。
+        model_function_calling_help: AI 助手通过函数调用（Function Calling）读取您的数据，因此请选择提供商文档中明确支持工具/函数调用的模型。不支持该特性的模型会导致对话失败，并报出难以排查的提供商错误。
+        model_function_calling_link: 检查配置的模型
+        timeout_heading: 超时时间
+        timeout_description: 控制在 Sure 放弃之前 OpenAI 兼容模型调用允许运行的最长时间。如果您在性能较低的硬件上运行本地模型，请增加这些值。
+        openai_request_timeout_label: 请求超时秒数（可选）
+        openai_request_timeout_help: 默认值：60。适用于每个 OpenAI 兼容的 HTTP 请求，包括自动分类、商户检测、聊天对话、PDF 处理和向量库调用。OPENAI_REQUEST_TIMEOUT 会覆盖此字段。
+        ai_response_timeout_label: 响应超时秒数（可选）
+        ai_response_timeout_help: 默认值：90。仅适用于聊天全轮次看门狗超时，因此应设置为以下总和：(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × 请求超时时间，再加上工具执行和队列等待时间。AI_RESPONSE_TIMEOUT 会覆盖此字段。
+        ai_health_probe_timeout_label: 健康检查超时秒数（可选）
+        ai_health_probe_timeout_help: 默认值：5。仅适用于“设置 → 系统健康状况”下的实时 AI 检查，绝不影响真实的 AI 调用。如果使用云端模型时 PDF 检查报告超时，请提高此值。AI_HEALTH_PROBE_TIMEOUT 会覆盖此字段。
       provider_selection:
-        description: 选择用于获取汇率和证券价格的服务。Yahoo Finance 免费且无需 API 密钥。Twelve Data 需要免费的
-          API 密钥，但可能提供更全面的数据覆盖。
-        env_configured_message: 提供商选择已禁用，因为环境变量（EXCHANGE_RATE_PROVIDER 或 SECURITIES_PROVIDER）已设置。要在此处启用选择，请从配置中移除这些环境变量。
+        exchange_rate_title: 汇率提供商
+        exchange_rate_description: 选择用于获取货币汇率的单一提供商。
         exchange_rate_provider_label: 汇率数据提供商
+        securities_title: 证券提供商
+        securities_description: 启用一个或多个提供商以获取股票、ETF 和共同基金价格。搜索时将查询所有启用的提供商并合并结果。
+        env_configured_message: 提供商选择已禁用，因为已设置环境变量。要在此处启用选择，请从配置中移除这些环境变量。
+        twelve_data_hint: 需要 API 密钥，每日额度 800 点
+        yahoo_finance_hint: 免费，无需 API 密钥
+        requires_api_key: 需要 API 密钥
+        requires_api_key_eodhd: 需要 API 密钥，限制每天 20 次调用
+        requires_api_key_alpha_vantage: 需要 API 密钥，限制每天 25 次调用
+        mfapi_hint: 免费，无需 API 密钥 -- 仅限印度共同基金
+        binance_public_hint: 免费，无需 API 密钥 -- 仅限加密货币（BTC、ETH 等）
+        moex_public_hint: 免费，无需 API 密钥 -- 俄罗斯股票、基金和债券（MOEX），包括 RUB 外汇
+        tinkoff_invest_hint: 需要只读令牌 -- 俄罗斯股票/基金/债券价格 + 品牌 Logo
+        requires_api_key_mansa: 需要 API 密钥，每日免费额度 100 次 -- 非洲交易所（NGX、JSE、NSE、GSE、BRVM 等）
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -69,21 +97,11 @@ zh-CN:
           mfapi: MFAPI.in
           binance_public: Binance
           moex_public: MOEX
-        securities_provider_label: 证券（股票价格）数据提供商
-        title: 数据提供商选择
-        exchange_rate_title: 汇率提供商
-        exchange_rate_description: 选择用于同步汇率数据的提供商。
-        securities_title: 证券价格提供商
-        securities_description: 选择用于同步证券和投资价格的提供商。
-        twelve_data_hint: Twelve Data 支持股票、ETF 和部分基金价格。
-        yahoo_finance_hint: Yahoo Finance 可作为免密钥价格来源。
-        requires_api_key: 需要 API Key
-        requires_api_key_eodhd: EODHD 需要 API Token。
-        requires_api_key_alpha_vantage: Alpha Vantage 需要 API Key。
-        mfapi_hint: MFAPI.in 可用于部分印度基金数据。
-        binance_public_hint: Binance 公共接口可用于加密资产行情。
-        moex_public_hint: 免费，无需 API 密钥 -- 俄罗斯股票、基金和债券（MOEX），包括 RUB 外汇
+          tinkoff_invest: T-Invest (T-Bank)
+          frankfurter: Frankfurter
+          mansa: Mansa
       show:
+        demo_refresh: 演示数据刷新
         clear_cache: 清除数据缓存
         clear_cache_warning: 清除数据缓存将移除所有汇率、证券价格、账户余额及其他数据。这不会删除账户、交易记录、分类或其他用户自有数据。
         confirm_clear_cache:
@@ -93,9 +111,11 @@ zh-CN:
         financial_data_providers: 金融数据提供商
         general: 通用设置
         invites: 邀请码设置
+        property_valuation_providers: 房产估值提供商
         title: 自托管配置
         ai_assistant: AI 助手
         sync_settings: 同步设置
+        instance_settings_restricted: 提供商凭据、共享 AI 连接和同步设置适用于此实例上的每个家庭，因此仅超级管理员可以修改。您家庭使用哪个助手仍按家庭单独设置。拥有服务器访问权限的人可以将用户提升为超级管理员；Docker 自托管指南在其升级说明中展示了该命令。
       twelve_data_settings:
         api_calls_used: 已使用 %{used} / %{limit} 次每日 API 调用（%{percentage}）
         description: 请输入 Twelve Data 提供的 API 密钥
@@ -113,6 +133,8 @@ zh-CN:
         requires_plan: 需要 %{plan} 计划
         view_pricing: 查看 Twelve Data 价格
       update:
+        invalid_demo_family: 选定的家庭必须拥有配置的演示邮箱。
+        select_demo_family: 请先选择一个一次性演示家庭。
         failure: 设置值无效
         invalid_onboarding_state: 无效的新用户注册状态
         success: 设置已更新
@@ -120,14 +142,20 @@ zh-CN:
         invalid_llm_budget: "%{field} 必须是大于等于 %{minimum} 的整数。"
         invalid_anthropic_base_url: Anthropic Base URL 无效。
         anthropic_model_required_for_base_url: 设置 Anthropic Base URL 时必须填写模型。
+        invalid_jev_endpoint: Jev 端点必须是 https URL。仅 localhost 接受普通 http。
+        invalid_categorization_rate: "%{field} 必须是 0 到 1 之间的数字。"
         scheduler_sync_failed: 设置已保存，但同步计划更新失败。请重试或检查服务器日志。
       yahoo_finance_settings:
-        connection_failed: 无法连接到 Yahoo Finance
-        description: Yahoo Finance 提供免费的股票价格、汇率和金融数据访问，无需 API 密钥。
-        status_active: Yahoo Finance 已激活并正常工作
-        status_inactive: Yahoo Finance 连接失败
         title: Yahoo Finance 设置
-        troubleshooting: 请检查您的互联网连接和防火墙设置。Yahoo Finance 可能暂时不可用。
+        description: Yahoo Finance 提供免费的股票价格、汇率和金融数据访问，无需 API 密钥。
+        status_healthy: Yahoo Finance 正常运行中。
+        status_rate_limited: Yahoo Finance 目前正在限制请求频率。
+        rate_limited_title: 已达到 Yahoo Finance 速率限制。
+        rate_limited_message: 无需任何操作。Sure 将在 30 分钟内避免额外的健康检查。价格和汇率操作将独立继续运行。
+        status_unavailable: Yahoo Finance 当前不可用。
+        unavailable_title: 无法验证 Yahoo Finance。
+        unavailable_message: 无法连接到 Yahoo Finance 或返回了异常响应。请检查您的网络连接并稍后重试。
+        status_unknown: 正在检查 Yahoo Finance 状态。
       assistant_settings:
         title: AI 助手
         description: 配置 Sure 使用的 AI 助手模式。
@@ -154,6 +182,20 @@ zh-CN:
         confirm_disconnect:
           title: 断开外部助手？
           body: 断开后将无法继续使用此远程助手。
+        type_mcp_only: 应用内不启用（通过 MCP 连接您自己的代理）
+        mcp_only_help: 此家庭中的所有成员均关闭应用内助手。账单 AI 快捷方式和 AI 编写的洞察文本也将停止。MCP 和后台分类仍然可用；可在“设置 > MCP”中连接外部代理。
+        agent_discovery_configure_first: 保存有效的端点 URL 和 API 令牌以加载可用代理。
+        external_agent_required: 保存前请选择一个外部代理。
+        external_agent_invalid: 请选择配置的端点所返回的代理。
+        external_agent_reselect: 端点已更改，之前选择的代理在新的端点不可用。请从新端点选择一个代理。
+        agent_discovery_error: "无法加载代理：%{error}"
+        external_info:
+          title: 外部 AI 配置
+          items:
+            - 输入以 /v1/chat/completions 结尾的完整 OpenAI 兼容端点 URL。
+            - 保存端点和令牌后，Sure 将从 /v1/models 发现可用代理。
+            - 外部服务决定每个代理背后的模型；Sure 仅选择代理路由。
+            - 认证、端点或代理错误均由外部服务返回。请求失败时请查看其日志。
       llm_provider_selector:
         title: AI 提供商
         description: 选择 Sure 调用的 LLM 提供商。
@@ -178,6 +220,44 @@ zh-CN:
         model_label: 默认模型（可选）
         model_placeholder: claude-sonnet-4-6（默认）
         model_help: 留空时使用系统默认模型。
+      categorization_provider_selector:
+        title: 交易分类
+        preview_pill: 预览
+        description: 选择由哪个提供商对交易进行分类。这与上方负责对话和 PDF 处理的 AI 提供商是分开的。
+        env_notice: 已通过环境变量设置为 %{type}。
+        provider_label: 分类提供商
+        provider_llm: AI 提供商（OpenAI 或 Anthropic）
+        provider_jev: Jev (TypeSafe)
+        provider_help: AI 提供商读取一批交易并写回分类名称。Jev 从您的分类列表中进行挑选，并为每笔交易返回校准后的置信度。
+        jev_configured: 已配置 Jev API 密钥。
+        jev_not_configured: 已选择 Jev，但尚未配置 API 密钥。在下方添加密钥之前，分类将继续使用 AI 提供商。
+        data_retention_heading: 数据共享
+        data_retention_direct: 交易描述、金额和您的分类名称将发送到 TypeSafe 进行分类。在真实数据上启用此功能之前，请查看其数据保留政策。
+        data_retention_proxied: "交易描述、金额和您的分类名称将发送到 %{host}，然后由其转发给 TypeSafe。在真实数据上启用此功能之前，请查看两个提供商的数据保留政策。"
+        confidence_threshold_label: 最低置信度（0–1）
+        confidence_threshold_help: 低于此置信度时将不应用分类，交易保持未分类状态，以便后续运行再次尝试。不会丢弃任何内容。设置为 0 则应用所有结果。
+        confidence_threshold_env_notice: 已由 CATEGORIZATION_CONFIDENCE_THRESHOLD 环境变量锁定。
+        shadow_rate_label: 影子对比采样率（0–1）
+        shadow_rate_help: 在运行您选择的提供商的同时，同步运行您未选择的提供商，记录它们存在分歧的地方，而不更改任何分类。这会使采样的每次分类运行的 API 费用增加一倍。设置为 0 可关闭此功能。
+        shadow_rate_env_notice: 已由 CATEGORIZATION_SHADOW_RATE 环境变量锁定。
+      categorization_shadow_results:
+        shadow_results_heading: 影子对比
+        shadow_results_empty: 暂无对比记录。将影子对比采样率设置为大于 0 并运行分类以收集数据。
+        shadow_results_summary: "%{count} 笔抽样交易中一致性达 %{agreement}%。"
+        shadow_disagreements_heading: 最近的分歧
+        shadow_disagreement_row: "%{applied_provider} 选择了 %{applied_category}；%{shadow_provider} 选择了 %{shadow_category}。"
+        shadow_disagreement_confidence: "(置信度 %{confidence})"
+        shadow_no_disagreements: 两个提供商在所有抽样交易中的结果完全一致。
+        shadow_no_category: 无分类
+      jev_settings:
+        env_configured_message: 已通过环境变量成功配置。
+        api_key_label: API 密钥
+        api_key_placeholder: 输入您的 TypeSafe API 密钥
+        endpoint_label: 端点（可选）
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone（默认）
+        model_label: 模型（可选）
+        model_placeholder: jev-latest（默认）
+        model_help: 默认直接连接 TypeSafe。若要通过 OpenRouter 连接 Jev，请将端点设置为 https://openrouter.ai/api/alpha/decisions，模型设置为 ~typesafe/jev-latest。
       tiingo_settings:
         title: Tiingo
         description: 使用 Tiingo 同步证券价格。
@@ -188,6 +268,48 @@ zh-CN:
         step_1_html: 注册或登录 Tiingo。
         step_2_html: 前往 <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a> 页面。
         step_3: 复制 API Token 并粘贴到下方。
+      rentcast_settings:
+        title: RentCast
+        description: 输入您的 RentCast API 密钥，以便在添加房产时查询美国房产详情和估值。免费额度限制为每月 50 次 API 请求，由房产查询和每日估值刷新共享。如果使用付费方案，可通过 RENTCAST_MAX_REQUESTS_PER_MONTH 环境变量提高上限。
+        env_configured_message: 已通过 RENTCAST_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 RentCast API 密钥
+        usage: "本月已使用 %{used} / %{limit} 次请求"
+      realie_settings:
+        title: Realie
+        description: 输入您的 Realie API 密钥，以便在添加房产时查询美国房产详情和估值。免费额度限制为每月 25 次 API 请求，由房产查询和每日估值刷新共享。如果使用付费方案，可通过 REALIE_MAX_REQUESTS_PER_MONTH 环境变量提高上限。
+        env_configured_message: 已通过 REALIE_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 Realie API 密钥
+        usage: "本月已使用 %{used} / %{limit} 次请求"
+      chimnie_settings:
+        title: Chimnie
+        description: 输入您的 Chimnie API 密钥，以便通过 UPRN 对英国住宅房产进行估值。在 dashboard.chimnie.com 创建免费密钥（注册需要企业或自定义域名邮箱；不接受 Gmail、Outlook 等公共邮箱）。UPRN 估值免费且每月刷新；Sure 将其限制为每月 1,000 次请求，您可以通过 CHIMNIE_MAX_REQUESTS_PER_MONTH 环境变量更改此限制。
+        env_configured_message: 已通过 CHIMNIE_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 Chimnie API 密钥
+        usage: "本月已使用 %{used} / %{limit} 次请求"
+      tinkoff_invest_settings:
+        title: T-Invest (T-Bank)
+        description: 输入只读 T-Invest API 令牌。用于获取证券的品牌 Logo（包括基金和债券，即使它们由 MOEX 定价），并在上方启用时获取俄罗斯金融产品的价格。
+        moex_only_notice: 上方未启用价格获取 — 只要配置了令牌，无论上方复选框如何，T-Invest 都会用于为您所有的证券获取品牌 Logo。
+        env_configured_message: 已通过 TINKOFF_INVEST_API_KEY 环境变量成功配置。
+        label: API 令牌
+        placeholder: 在此输入您的 T-Invest API 令牌
+        show_details: "（显示详情）"
+        step_1: 打开 T-Bank 投资，然后进入设置，再进入 API 令牌（需要开通 T-Bank 经纪账户）。
+        step_2: 创建一个具有只读访问权限的令牌。
+        step_3: 复制令牌并粘贴在下方。
+      mansa_settings:
+        title: Mansa
+        description: 输入 Mansa API 的 API 密钥。支持 20 家非洲证券交易所，包括 NGX（尼日利亚证券交易所）、JSE、NSE（肯尼亚）、GSE（加纳）和 BRVM -- 其中多家交易所此处的其他提供商均未覆盖。
+        env_configured_message: 已通过 MANSA_API_KEY 环境变量成功配置。
+        label: API 密钥
+        placeholder: 在此输入您的 Mansa API 密钥
+        show_details: "（显示详情）"
+        step_1_html: '访问 <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> 并获取您的免费 API 密钥 — 无需信用卡。'
+        step_2: 复制您的 API 密钥并粘贴在下方。
+        rate_limit_warning: Mansa 的免费层限制为每天 100 次 API 调用，且仅提供当前报价 -- 历史价格需要付费方案。
       eodhd_settings:
         title: EODHD
         description: 使用 EODHD 同步证券价格。
@@ -226,3 +348,7 @@ zh-CN:
         include_pending_label: 包含待处理交易
         include_pending_description: 同步时同时拉取提供商返回的待处理交易。
         env_configured_message: 已通过环境变量配置同步设置。
+        market_data_sync_label: 启用每日市场数据导入
+        market_data_sync_description: 启用后，将在指定时间每天（周一至周五）自动导入证券价格一次。
+        market_data_sync_time_label: 市场数据导入时间（HH:MM）
+        market_data_sync_time_description: 指定每日运行证券价格导入的时间 — 例如在您的主要交易所收盘后不久。
