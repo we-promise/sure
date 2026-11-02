@@ -3,6 +3,8 @@ require "test_helper"
 class RulesControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
   setup do
+    # Exercise controller jobs independently of the daily login sync.
+    families(:dylan_family).update!(auto_sync_on_login: false)
     sign_in @user = users(:family_admin)
   end
 
@@ -90,6 +92,26 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal categories(:food_and_drink).id, rule.actions.first.value
 
     assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
+  end
+
+  test "creating an email rule through the form records its current matches as the baseline" do
+    account = @user.family.accounts.create!(name: "Baseline", balance: 1000, currency: "USD", accountable: Depository.new)
+    match = account.entries.create!(
+      name: "Baseline cafe", date: Date.current, amount: 10, currency: "USD", entryable: Transaction.new
+    ).transaction
+
+    post rules_url, params: {
+      rule: {
+        name: "Baseline cafe alerts",
+        resource_type: "transaction",
+        conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "baseline cafe" } },
+        actions_attributes: { "0" => { action_type: "send_email_notification" } }
+      }
+    }
+
+    rule = @user.family.rules.find_by!(name: "Baseline cafe alerts")
+    assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
+    assert_equal [ match.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
   end
 
   test "creates rule with a split_transaction action from split_rows params" do
@@ -492,6 +514,8 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "guest cannot apply rule" do
+    # Keep the fixture sync on yesterday to cover runs that cross midnight.
+    families(:dylan_family).syncs.update_all(created_at: 1.day.ago)
     sign_in family_guest
     rule = rules(:one)
 

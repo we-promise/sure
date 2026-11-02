@@ -137,10 +137,14 @@ module Assistant::Function::RuleSupport
       if params.key?("actions")
         actions = params["actions"]
         if actions.is_a?(Array)
+          # An email action replacing the rule's own keeps the baseline it recorded
+          # (see Rule::Action#keep_notification_baseline).
+          had_email_action = rule.stored_email_notification_action?
           rule.actions.each(&:mark_for_destruction)
           actions.each_with_index do |action, index|
             problems.concat(build_action(rule, action, "actions[#{index}]"))
           end
+          rule.actions.select(&:new_record?).each { |a| a.keep_notification_baseline = had_email_action }
         else
           problems << "actions must be an array."
         end

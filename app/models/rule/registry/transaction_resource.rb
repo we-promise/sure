@@ -24,6 +24,8 @@ class Rule::Registry::TransactionResource < Rule::Registry
     Rule::ActionExecutor::SetAsTransferOrPayment,
     Rule::ActionExecutor::SplitTransaction,
     Rule::ActionExecutor::SendEmailNotification,
+    Rule::ActionExecutor::FillSimilarMerchants,
+    Rule::ActionExecutor::BayesCategorize,
     Rule::ActionExecutor::AutoCategorize,
     Rule::ActionExecutor::AutoDetectMerchants
   ].freeze

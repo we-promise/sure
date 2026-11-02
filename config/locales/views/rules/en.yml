@@ -12,6 +12,9 @@ en:
       hide_for_today: Hide for today
       hide_for_today_hint: "Hide for today pauses these suggestions for 24 hours."
       message: Updated to %{category_name}
+    classifier_rules:
+      category_classifier: Category classifier
+      merchant_matcher: Merchant matcher
     rule:
       edit: Edit
       re_apply_rule: Re-apply rule
