@@ -1,0 +1,273 @@
+---
+id:
+  reports:
+    index:
+      title: Laporan
+      subtitle: Wawasan menyeluruh tentang kesehatan finansial Anda
+      export: Ekspor CSV
+      print_report: Cetak Laporan
+      sections_aria: Bagian laporan
+      toggle_section: "Alihkan visibilitas bagian"
+      periods:
+        monthly: Bulanan
+        quarterly: Triwulanan
+        ytd: Tahun Berjalan
+        last_6_months: 6 Bulan Terakhir
+        custom: Rentang Kustom
+      date_range:
+        from: Dari
+        to: Hingga
+      showing_period: "Menampilkan data dari %{start} hingga %{end}"
+      previous_period: "Periode sebelumnya"
+      next_period: "Periode berikutnya"
+      shortcut_hint: "%{action} (%{key})"
+      today: "Hari ini"
+      period_label:
+        quarterly: "Kuartal %{quarter} %{year}"
+        ytd: "YTD %{year}"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "Kuartal %{quarter} %{year}"
+        ytd: "YTD %{year}"
+      previous_year: "Tahun sebelumnya"
+      next_year: "Tahun berikutnya"
+      previous_decade: "Dekade sebelumnya"
+      next_decade: "Dekade berikutnya"
+    invalid_date_range: "Tanggal akhir tidak boleh sebelum tanggal mulai. Urutan tanggal telah ditukar."
+    summary:
+      total_income: Total Pemasukan
+      total_expenses: Total Pengeluaran
+      net_savings: Tabungan Bersih
+      budget_performance: Kinerja Anggaran
+      vs_previous: vs periode sebelumnya
+      income_minus_expenses: Pemasukan dikurangi pengeluaran
+      of_budget_used: dari anggaran terpakai
+      no_budget_data: Tidak ada data anggaran untuk periode ini
+    budget_performance:
+      title: Kinerja Anggaran
+      spent: Terpakai
+      budgeted: Dianggarkan
+      remaining: Tersisa
+      over_by: Melebihi sebesar
+      shared: bersama
+      suggested_daily: "disarankan %{amount} per hari untuk %{days} hari tersisa"
+      no_budgets: Belum ada kategori anggaran yang diatur untuk bulan ini
+      status:
+        good: Sesuai Rencana
+        warning: Mendekati Batas
+        over: Melebihi Anggaran
+    trends:
+      title: Tren & Wawasan
+      monthly_breakdown: Rincian Bulanan
+      month: Bulan
+      income: Pemasukan
+      expenses: Pengeluaran
+      net: Bersih
+      savings_rate: Tingkat Tabungan
+      current: saat ini
+      avg_monthly_income: Rata-rata Pemasukan Bulanan
+      avg_monthly_expenses: Rata-rata Pengeluaran Bulanan
+      avg_monthly_savings: Rata-rata Tabungan Bulanan
+      no_data: Tidak ada data tren yang tersedia
+      spending_patterns: Pola Pengeluaran
+      weekday_spending: Pengeluaran Hari Kerja
+      weekend_spending: Pengeluaran Akhir Pekan
+      total: Total
+      avg_per_transaction: Rata-rata per transaksi
+      transactions: Transaksi
+      insight_title: Wawasan
+      insight_higher_weekend: "Anda membelanjakan %{percent}% lebih banyak per transaksi pada akhir pekan dibandingkan hari kerja"
+      insight_higher_weekday: "Anda membelanjakan %{percent}% lebih banyak per transaksi pada hari kerja dibandingkan akhir pekan"
+      insight_similar: "Pengeluaran per transaksi Anda relatif serupa antara hari kerja dan akhir pekan"
+      no_spending_data: Tidak ada data pengeluaran yang tersedia untuk periode ini
+    empty_state:
+      title: Data Tidak Tersedia
+      description: Mulai lacak keuangan Anda dengan menambahkan transaksi atau menghubungkan rekening untuk melihat laporan komprehensif
+      add_transaction: Tambah Transaksi
+      add_account: Tambah Rekening
+    transactions_breakdown:
+      title: Rincian Aktivitas
+      no_transactions: Tidak ada aktivitas yang ditemukan untuk periode dan filter yang dipilih
+      filters:
+        title: Filter
+        category: Kategori
+        account: Rekening
+        tag: Tag
+        amount_min: Jumlah Min
+        amount_max: Jumlah Maks
+        date_range: Rentang Tanggal
+        all_categories: Semua Kategori
+        all_accounts: Semua Rekening
+        all_tags: Semua Tag
+        apply: Terapkan Filter
+        clear: Hapus Filter
+      sort:
+        label: Urutkan berdasarkan
+        date_desc: Tanggal (Terbaru)
+        amount_desc: Jumlah (Tinggi ke Rendah)
+        amount_asc: Jumlah (Rendah ke Tinggi)
+      export:
+        label: Ekspor
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Buka di Google Spreadsheet
+      table:
+        category: Kategori
+        amount: Jumlah
+        type: Tipe
+        expense: Pengeluaran
+        income: Pemasukan
+        uncategorized: Tanpa Kategori
+        entries:
+          one: "%{count} entri"
+          other: "%{count} entri"
+        percentage: "% dari Total"
+      pagination:
+        showing:
+          one: Menampilkan %{count} entri
+          other: Menampilkan %{count} entri
+        previous: Sebelumnya
+        next: Berikutnya
+    net_worth:
+      title: Kekayaan Bersih
+      current_net_worth: Kekayaan Bersih Saat Ini
+      period_change: Perubahan Periode
+      assets_vs_liabilities: Aset vs Liabilitas
+      total_assets: Aset
+      total_liabilities: Liabilitas
+      no_assets: Tidak ada aset
+      no_liabilities: Tidak ada liabilitas
+    spending_vs_normal:
+      title: Pengeluaran vs normal
+      summary_html: "%{total} dibelanjakan pada periode ini. Pengeluaran normal untuk periode selama ini adalah %{normal}, berdasarkan %{baseline_start} hingga %{baseline_end}."
+      summary_so_far_html: "%{total} dibelanjakan sejauh ini. Pengeluaran normal untuk jumlah hari sebanyak ini adalah %{normal}, berdasarkan %{baseline_start} hingga %{baseline_end}."
+      no_history_html: "%{total} dibelanjakan pada periode ini. Belum ada cukup riwayat sebelumnya untuk menentukan jumlah normal."
+      no_history_short: Belum ada cukup riwayat sebelumnya sebagai pembanding.
+      no_spending: Tidak ada pengeluaran pada periode ini.
+      no_changes: Pengeluaran sesuai dengan tingkat normal di setiap kategori.
+      treemap_title: Ke mana uang dialokasikan
+      changes_title: Apa yang berubah
+      direct: "%{category} (tanpa subkategori)"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}: %{amount}"
+        normal: "Normal: %{amount}"
+        more: "%{amount} lebih banyak dari normal (%{percent})"
+        less: "%{amount} lebih sedikit dari normal (%{percent})"
+        more_no_percent: "%{amount} lebih banyak dari normal"
+        less_no_percent: "%{amount} lebih sedikit dari normal"
+        no_normal: Belum ada riwayat sebelumnya sebagai pembanding
+        open: Pilih untuk melihat transaksi ini
+      legend:
+        less: 50–100% lebih sedikit
+        slightly_less: 15–50% lebih sedikit
+        normal: Mendekati normal
+        slightly_more: 15–50% lebih banyak
+        more: 50–100% lebih banyak
+        much_more: 100%+ lebih banyak
+    investment_performance:
+      title: Kinerja Investasi
+      portfolio_value: Nilai Portofolio
+      total_return: Imbal Hasil Total
+      period_return: Imbal Hasil Periode
+      contributions: Kontribusi Periode
+      withdrawals: Penarikan Periode
+      top_holdings: Kepemilikan Teratas
+      holding: Kepemilikan
+      weight: Bobot
+      value: Nilai
+      return: Imbal Hasil
+      accounts: Rekening Investasi
+      gains_by_tax_treatment: Keuntungan berdasarkan Perlakuan Pajak
+      unrealized_gains: Keuntungan Belum Direalisasi
+      realized_gains: Keuntungan Terealisasi
+      total_gains: Total Keuntungan
+      taxable_realized_note: Keuntungan ini mungkin dikenakan pajak
+      no_data: "-"
+      view_details: Lihat detail
+      holdings_count:
+        one: "%{count} kepemilikan"
+        other: "%{count} kepemilikan"
+      sells_count:
+        one: "%{count} penjualan"
+        other: "%{count} penjualan"
+      holdings: Kepemilikan
+      sell_trades: Transaksi Jual
+      and_more: "+%{count} lainnya"
+    investment_flows:
+      title: Arus Investasi
+      description: Lacak perputaran uang yang masuk dan keluar dari rekening investasi Anda melalui kontribusi dan penarikan.
+      contributions: Kontribusi
+      contributions_description: Uang yang disetorkan ke investasi
+      withdrawals: Penarikan
+      withdrawals_description: Uang yang ditarik dari investasi
+      net_flow: Arus Bersih
+      net_flow_description: Total perubahan bersih
+    google_sheets_instructions:
+      title_no_key: "Kunci API Diperlukan"
+      need_key: Untuk mengimpor data ke Google Spreadsheet, Anda memerlukan kunci API.
+      step1: "Buka Pengaturan → Kunci API"
+      step2: "Buat kunci API baru dengan izin \"baca\""
+      step3: Salin kunci API
+      step4: "Tambahkan ke URL ini sebagai: &api_key=KUNCI_ANDA"
+      example: Contoh
+      then_use: Kemudian gunakan URL lengkap dengan fungsi =IMPORTDATA() di Google Spreadsheet.
+      go_to_api_keys: Buka Kunci API
+      close: Mengerti
+    print:
+      document_title: Laporan Keuangan
+      title: Laporan Keuangan
+      generated_on: "Dibuat pada %{date}"
+      # Summary section
+      summary:
+        title: Ringkasan
+        income: Pemasukan
+        expenses: Pengeluaran
+        net_savings: Tabungan Bersih
+        budget: Anggaran
+        vs_prior: "%{percent}% vs sebelumnya"
+        of_income: "%{percent}% dari pemasukan"
+        used: terpakai
+      # Net Worth section
+      net_worth:
+        title: Kekayaan Bersih
+        current_balance: Saldo Saat Ini
+        this_period: periode ini
+        assets: Aset
+        liabilities: Liabilitas
+        no_liabilities: Tidak ada liabilitas
+      # Monthly Trends section
+      trends:
+        title: Tren Bulanan
+        month: Bulan
+        income: Pemasukan
+        expenses: Pengeluaran
+        net: Bersih
+        savings_rate: Tingkat Tabungan
+        average: Rata-rata
+        current_month_note: "* Bulan berjalan (data parsial)"
+      # Investments section
+      investments:
+        title: Investasi
+        portfolio_value: Nilai Portofolio
+        total_return: Imbal Hasil Total
+        period_return: Imbal Hasil Periode
+        contributions: Kontribusi
+        withdrawals: Penarikan
+        this_period: periode ini
+        top_holdings: Kepemilikan Teratas
+        holding: Kepemilikan
+        weight: Bobot
+        value: Nilai
+        return: Imbal Hasil
+      # Spending by Category section
+      spending:
+        title: Pengeluaran berdasarkan Kategori
+        income: Pemasukan
+        expenses: Pengeluaran
+        category: Kategori
+        amount: Jumlah
+        percent: "%"
+        more_categories: "+ %{count} kategori lainnya"

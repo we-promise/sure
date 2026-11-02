@@ -1,0 +1,39 @@
+---
+id:
+  plans:
+    show:
+      title: Rencana
+      subtitle: Tentukan alokasi uang Anda — berapa yang Anda belanjakan dan berapa yang Anda tabung.
+    budget_card:
+      title: Bulan ini
+      edit_budget: Edit anggaran
+      of_total: dari %{total}
+      days_left:
+        one: sisa 1 hari
+        other: "sisa %{count} hari"
+      percent_used: "%{percent}% terpakai"
+      top_categories: Kategori teratas
+      view_budget: Lihat anggaran lengkap
+      empty_body: Tetapkan target pengeluaran bulanan dan batas per kategori untuk memantau perkembangan bulan ini.
+      set_up: Siapkan anggaran bulan ini
+    goals_card:
+      title: Target Anda
+      currency_warning:
+        one: "1 target tidak menyertakan saldo %{currencies} (belum ada nilai tukar)."
+        other: "%{count} target tidak menyertakan saldo %{currencies} (belum ada nilai tukar)."
+      new_goal: Target baru
+      active_count:
+        one: 1 aktif
+        other: "%{count} aktif"
+      of_targets: dari %{total} di semua target
+      behind_count:
+        one: 1 di bawah target
+        other: "%{count} di bawah target"
+      pending_count:
+        one: 1 komitmen tertunda
+        other: "%{count} komitmen tertunda"
+      all_on_pace: Semua sesuai rencana
+      active_goals: Target aktif
+      pending_marker: tertunda
+      runway: "ketahanan dana %{months} bln · %{pace}/bln"
+      all_goals: Semua target
