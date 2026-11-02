@@ -117,8 +117,12 @@ class Holding::PortfolioCache
     # ids say nothing about which came first, and a sale cannot precede the
     # purchase it sells from. Rows with different created_at keep their order.
     def trades
-      @trades ||= account.entries.includes(entryable: :security).trades.chronological.to_a
+      @trades ||= chronological_trades
         .sort_by.with_index { |entry, index| [ entry.date, entry.created_at, entry.entryable.qty.negative? ? 1 : 0, index ] }
+    end
+
+    def chronological_trades
+      @chronological_trades ||= account.entries.includes(entryable: :security).trades.chronological.to_a
     end
 
     def trades_by_date
@@ -126,7 +130,8 @@ class Holding::PortfolioCache
     end
 
     def trades_by_security_id
-      @trades_by_security_id ||= trades.group_by { |t| t.entryable.security_id }
+      # Which trade's price stands for a day must not depend on the replay order.
+      @trades_by_security_id ||= chronological_trades.group_by { |t| t.entryable.security_id }
     end
 
     def holdings
