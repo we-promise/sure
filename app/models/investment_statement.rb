@@ -987,7 +987,7 @@ class InvestmentStatement
 
     def totals_query(account_ids:, date_range:)
       if account_ids.empty?
-        return Totals.new(family, account_ids: account_ids, date_range: date_range).call
+        return Totals.new(family, account_ids: account_ids, date_range: date_range, currency: currency).call
       end
 
       # Which of those accounts settle trades changes what Totals counts
@@ -1000,7 +1000,7 @@ class InvestmentStatement
         # A rate stored later can complete totals that left an amount out.
         ExchangeRate.updated_at_version,
         transfers_version(account_ids)
-      ]) { Totals.new(family, account_ids: account_ids, settlement_account_ids: settlement_account_ids, date_range: date_range).call }
+      ]) { Totals.new(family, account_ids: account_ids, settlement_account_ids: settlement_account_ids, date_range: date_range, currency: currency).call }
     end
 
     # Contributions and withdrawals depend on which transactions a confirmed

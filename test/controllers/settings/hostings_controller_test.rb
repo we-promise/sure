@@ -500,6 +500,21 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "changing a provider that was already set up queues no reporting-currency rates" do
+    families(:dylan_family).update_columns(enabled_currencies: [ "EUR" ])
+
+    with_self_hosting do
+      with_env_overrides("TWELVE_DATA_API_KEY" => nil, "EXCHANGE_RATE_PROVIDER" => nil) do
+        Setting.exchange_rate_provider = "twelve_data"
+        Setting.twelve_data_api_key = "old-key"
+
+        assert_no_enqueued_jobs(only: ImportReportingCurrencyRatesJob) do
+          patch settings_hosting_url, params: { setting: { twelve_data_api_key: "new-key" } }
+        end
+      end
+    end
+  end
+
   test "can clear an encrypted api key by submitting a blank value" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
