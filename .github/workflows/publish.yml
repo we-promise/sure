@@ -38,9 +38,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  # Select the release channel and legacy alias through December; no date pin.
-  COMPATIBILITY_CHANNEL: 'alpha'
-  COMPATIBILITY_VERSION: '0.7.7-alpha.3'
 
 permissions:
   contents: write
@@ -60,9 +57,7 @@ jobs:
       release: ${{ steps.release.outputs.release }}
       stable: ${{ steps.release.outputs.stable }}
       alpha: ${{ steps.release.outputs.alpha }}
-      compatibility_version: ${{ steps.release.outputs.compatibility_version }}
       release_name: ${{ steps.release.outputs.release_name }}
-      alias_note: ${{ steps.release.outputs.alias_note }}
       image_tags: ${{ steps.release.outputs.image_tags }}
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
@@ -84,7 +79,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Legacy tags are aliases only; they must never start another release.
+          # Retired legacy tags must never start another release.
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/v0.* ]]; then
             printf '%s\n' 'publish=false' 'release=false' >> "$GITHUB_OUTPUT"
             exit 0
@@ -107,15 +102,9 @@ jobs:
             base="${version%%-*}"
             [[ "$(date -u -d "${base//./-}" +%Y.%-m.%-d)" == "$base" ]] || exit 1
           fi
-          stable=false; alpha=false; compatibility=""
+          stable=false; alpha=false
           [[ "$version" == *-* ]] || stable=true
           [[ "$version" != *-alpha ]] || alpha=true
-          channel=stable
-          [[ "$alpha" != true ]] || channel=alpha
-          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* && "$version" == 2026.* && "$channel" == "$COMPATIBILITY_CHANNEL" ]]; then
-            compatibility="$COMPATIBILITY_VERSION"
-            [[ -z "$compatibility" || "$compatibility" =~ ^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.(0|[1-9][0-9]*))?$ ]] || exit 1
-          fi
           publish=true; release=false
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* ]]; then
             release=true
@@ -124,13 +113,10 @@ jobs:
             echo "version=$version"
             echo "commit=$(git rev-parse HEAD)"
             printf '%s\n' "publish=$publish" "release=$release" "stable=$stable" "alpha=$alpha"
-            printf '%s\n' "compatibility_version=$compatibility"
-            echo "release_name=v${version}${compatibility:+ — compatibility: v${compatibility}}"
-            echo "alias_note=${compatibility:+Compatibility alias: v${compatibility} (same commit and image).}"
+            echo "release_name=v${version}"
             echo 'image_tags<<RELEASE_TAGS'
             if [[ "$release" == true ]]; then
               echo "type=raw,value=$version"
-              [[ -z "$compatibility" ]] || echo "type=raw,value=$compatibility"
               # Hold stable/latest image promotion until CalVer releases are validated.
             else
               echo "type=raw,value=sha-$(git rev-parse HEAD)"
@@ -258,30 +244,10 @@ jobs:
     runs-on: 'ubuntu-24.04'
 
     permissions:
-      contents: write
+      contents: read
       packages: write
 
     steps:
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
-        if: needs.prepare.outputs.release == 'true' && needs.prepare.outputs.compatibility_version != ''
-      - name: Create or verify compatibility tag
-        id: compatibility
-        if: needs.prepare.outputs.release == 'true' && needs.prepare.outputs.compatibility_version != ''
-        env:
-          COMPATIBILITY_VERSION: ${{ needs.prepare.outputs.compatibility_version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          [[ "$COMPATIBILITY_VERSION" =~ ^0\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|rc)\.(0|[1-9][0-9]*))?$ ]] || exit 1
-          # A non-force push either creates the alias or leaves the existing tag intact.
-          if ! git push origin "HEAD:refs/tags/v${COMPATIBILITY_VERSION}"; then
-            git fetch --no-tags origin "refs/tags/v${COMPATIBILITY_VERSION}"
-            if [[ "$(git rev-parse 'FETCH_HEAD^{commit}')" != "$(git rev-parse HEAD)" ]]; then
-              echo "Compatibility tag points to another commit; refusing to move it." >&2
-              exit 1
-            fi
-          fi
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
@@ -553,7 +519,6 @@ jobs:
       chart_version: ${{ github.ref_name }}
       app_version: ${{ github.ref_name }}
       update_gh_pages: true
-      compatibility_version: ${{ needs.prepare.outputs.compatibility_version }}
     secrets: inherit
 
   mobile:
@@ -669,8 +634,6 @@ jobs:
           files: |
             ${{ runner.temp }}/release-assets/*
           body: |
-            ${{ needs.prepare.outputs.alias_note }}
-
             ## Mobile Debug Builds
 
             This release includes debug builds of the mobile applications.  Download from the `Assets` area below.
