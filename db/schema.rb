@@ -1194,7 +1194,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
     t.uuid "lot_source_entry_id"
     t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "sale_entry_id", null: false
-    t.decimal "unit_cost", precision: 19, scale: 10
+    t.decimal "unit_cost", precision: 25, scale: 10
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_holding_lot_disposals_on_account_id"
     t.index ["sale_entry_id"], name: "index_holding_lot_disposals_on_sale_entry_id"
