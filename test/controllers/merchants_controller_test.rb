@@ -21,6 +21,12 @@ class MerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Amazon order", response.body
   end
 
+  test "edit link returns to the merchant page it was opened from" do
+    get merchant_url(@merchant, page: 2)
+
+    assert_select "a[href=?]", edit_family_merchant_path(@merchant, return_to: merchant_path(@merchant, page: 2))
+  end
+
   test "shows a provider merchant assigned to the family's transactions" do
     provider = ProviderMerchant.create!(name: "Coffee Co", source: "plaid")
     create_transaction(account: accounts(:depository), name: "Morning coffee", merchant: provider)
