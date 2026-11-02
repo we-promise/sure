@@ -120,7 +120,11 @@ export default class extends Controller {
 
   // Covers network errors and error responses without the frame (404, 500).
   // Turbo would otherwise keep the placeholder or show "Content missing".
+  // Fetch errors of a form inside the loaded frame bubble up here too; those
+  // leave the panel alone so the entered values stay.
   showFrameError = (event) => {
+    if (event.target !== event.currentTarget) return;
+
     event.preventDefault();
     const message = document.createElement("p");
     message.className = "p-4 text-sm text-secondary";
