@@ -47,13 +47,23 @@ jobs:
             exit 0
           fi
 
+          pr_state=$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json state --jq .state 2>/dev/null || true)
+          if [[ "$pr_state" == "OPEN" ]]; then
+            reviewer_commits=$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json commits \
+              --jq '[.commits[].authors[].name | select(. != "github-actions[bot]")] | length')
+            if [[ "$reviewer_commits" != "0" ]]; then
+              echo "::warning::The open pricing pull request has reviewer commits, so $BRANCH was not overwritten. Merge or close it, then rerun this workflow."
+              exit 0
+            fi
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git switch -c "$BRANCH"
           git commit -m "Refresh LLM pricing from LiteLLM" -- config/llm_pricing.yml
           git push --force origin "$BRANCH"
 
-          if [[ "$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json state --jq .state 2>/dev/null)" == "OPEN" ]]; then
+          if [[ "$pr_state" == "OPEN" ]]; then
             gh pr edit "$BRANCH" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/llm-pricing.md"
           else
             gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" \

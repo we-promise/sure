@@ -1145,7 +1145,8 @@ changed every price that day.
 The **Refresh LLM pricing** workflow runs on every release tag and on demand.
 It runs `bin/update_llm_pricing`, which reads
 [LiteLLM's price list](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)
-and then opens or updates a pull request. That pull request rewrites listed
+and then opens or updates a pull request. Once a reviewer has pushed to that
+pull request, later runs leave it alone. The pull request rewrites listed
 rows whose prices changed and adds new Claude and GPT tier releases (for
 example `claude-opus-6` or `gpt-6.2-sol`). Its description lists the changes
 and any rows LiteLLM does not have. Check each change against the provider's

@@ -35,7 +35,7 @@ class LlmPricingUpdater
         "Prices from [LiteLLM's price list](#{SOURCE_URL}). Check each change against the provider's official pricing page before merging; update `verified_on` only after reviewing every row.",
         section("Changed", changed),
         section("Added (point the family or tier fallback at the newest release if needed)", added),
-        section("Not in LiteLLM, left unchanged", missing)
+        section("Left unchanged", missing)
       ].compact.join("\n\n")
     end
 
@@ -79,7 +79,11 @@ class LlmPricingUpdater
       current = YAML.safe_load(match[:row])
 
       if row.nil?
-        missing << "`#{provider}/#{model}`"
+        missing << "`#{provider}/#{model}`: not in LiteLLM, or its entry is incomplete"
+        line
+      elsif current["long_context"] && !row["long_context"]
+        # LiteLLM often omits tiers; removing a reviewed one is a manual call.
+        missing << "`#{provider}/#{model}`: LiteLLM lists no long-context tier"
         line
       elsif row == current
         line
@@ -136,9 +140,10 @@ class LlmPricingUpdater
       if threshold
         long_prompt = per_million(entry["input_cost_per_token_above_#{threshold}k_tokens"])
         long_completion = per_million(entry["output_cost_per_token_above_#{threshold}k_tokens"])
-        if long_prompt && long_completion
-          row["long_context"] = { "threshold" => threshold * 1000, "prompt" => long_prompt, "completion" => long_completion }
-        end
+        # A partial tier is bad data: dropping it would underprice long prompts.
+        return unless long_prompt && long_completion
+
+        row["long_context"] = { "threshold" => threshold * 1000, "prompt" => long_prompt, "completion" => long_completion }
       end
 
       row
