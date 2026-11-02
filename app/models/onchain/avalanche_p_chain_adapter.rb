@@ -74,7 +74,7 @@ class Onchain::AvalanchePChainAdapter
   end
 
   def provider_error_classes
-    [ [], Provider::AvalanchePChain::Error ]
+    [ Provider::AvalanchePChain::RateLimitError, Provider::AvalanchePChain::Error ]
   end
 
   private

@@ -57,7 +57,7 @@ class Onchain::EthereumValidatorAdapter
   end
 
   def provider_error_classes
-    [ [], Provider::EthereumBeaconApi::Error ]
+    [ Provider::EthereumBeaconApi::RateLimitError, Provider::EthereumBeaconApi::Error ]
   end
 
   private

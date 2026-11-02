@@ -24,6 +24,7 @@ class Provider::EthereumBeaconApi
   extend SslConfigurable
 
   class Error < StandardError; end
+  class RateLimitError < Error; end
   class ApiError < Error; end
 
   DEFAULT_BASE_URL = "https://ethereum-beacon-api.publicnode.com"
@@ -46,6 +47,7 @@ class Provider::EthereumBeaconApi
       )
 
       return nil if response.code == 404
+      raise RateLimitError, "Ethereum beacon API rate limit exceeded" if response.code == 429
 
       parsed = response.parsed_response
       raise ApiError, "Unexpected response from Ethereum beacon API" unless parsed.is_a?(Hash)

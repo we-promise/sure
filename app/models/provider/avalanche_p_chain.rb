@@ -18,6 +18,7 @@ class Provider::AvalanchePChain
   extend SslConfigurable
 
   class Error < StandardError; end
+  class RateLimitError < Error; end
   class ApiError < Error; end
 
   DEFAULT_BASE_URL = "https://api.avax.network/ext/bc/P"
@@ -46,6 +47,7 @@ class Provider::AvalanchePChain
           headers: { "Content-Type" => "application/json" },
           body: { jsonrpc: "2.0", id: 1, method: method, params: params }.to_json
         )
+        raise RateLimitError, "Avalanche P-Chain rate limit exceeded" if response.code == 429
 
         parsed = response.parsed_response
         raise ApiError, "Unexpected response from Avalanche P-Chain node" unless parsed.is_a?(Hash)
