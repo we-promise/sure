@@ -16,7 +16,7 @@ nl:
       check_provider_settings: "Providerinstellingen controleren"
       unexpected_error: "Er is een onverwachte fout opgetreden. Probeer het later opnieuw."
     setup_required:
-      title: "Lunch Flow instellen vereist"
+      title: "Lunch Flow-installatie vereist"
       api_key_not_configured: "API-sleutel niet geconfigureerd"
       api_key_description: "Voordat u Lunch Flow-accounts kunt koppelen, moet u uw Lunch Flow-API-sleutel configureren."
       setup_steps_title: "Installatiestappen:"
@@ -26,13 +26,13 @@ nl:
       setup_step_4: "Keer hier terug om uw accounts te koppelen"
       go_to_provider_settings: "Ga naar providerinstellingen"
     create:
-      success: "Lunch Flow koppeling succesvol aangemaakt"
+      success: "Lunch Flow-koppeling succesvol aangemaakt"
     destroy:
-      success: "Lunch Flow koppeling verwijderd"
+      success: "Lunch Flow-koppeling verwijderd"
     index:
       title: "Lunch Flow-koppelingen"
     loading:
-      loading_message: "Lunch Flow accounts laden..."
+      loading_message: "Lunch Flow-accounts laden..."
       loading_title: "Laden"
     link_accounts:
       all_already_linked:
@@ -57,7 +57,7 @@ nl:
       no_accounts_description: "Deze koppeling heeft nog geen gekoppelde accounts."
       no_accounts_title: "Geen accounts"
       setup_action: "Nieuwe accounts instellen"
-      setup_description: "%{linked} van %{total} accounts gekoppeld. Kies accounttypen voor uw nieuw geïmporteerde Lunch Flow accounts."
+      setup_description: "%{linked} van %{total} accounts gekoppeld. Kies accounttypen voor uw nieuw geïmporteerde Lunch Flow-accounts."
       setup_needed: "Nieuwe accounts klaar om in te stellen"
       status: "Gesynchroniseerd %{timestamp} geleden"
       status_never: "Nooit gesynchroniseerd"
@@ -84,20 +84,20 @@ nl:
       configure_name_in_lunchflow: "Kan niet importeren - configureer accountnaam in Lunch Flow"
       description: "Selecteer de accounts die u wilt koppelen aan uw %{product_name} account."
       link_accounts: "Geselecteerde accounts koppelen"
-      no_accounts_found: "Geen accounts gevonden. Controleer uw API-sleutel configuratie."
+      no_accounts_found: "Geen accounts gevonden. Controleer uw API-sleutelconfiguratie."
       no_api_key: "Lunch Flow API-sleutel is niet geconfigureerd. Configureer deze in Instellingen."
       no_name_placeholder: "(Geen naam)"
       title: "Lunch Flow Accounts selecteren"
     select_existing_account:
       account_already_linked: "Dit account is al gekoppeld aan een provider"
-      all_accounts_already_linked: "Alle Lunch Flow accounts zijn al gekoppeld"
+      all_accounts_already_linked: "Alle Lunch Flow-accounts zijn al gekoppeld"
       api_error: "API fout: %{message}"
       cancel: "Annuleren"
       configure_name_in_lunchflow: "Kan niet importeren - configureer accountnaam in Lunch Flow"
-      description: "Selecteer een Lunch Flow account om te koppelen aan dit account. Transacties worden automatisch gesynchroniseerd en gededupliceerd."
+      description: "Selecteer een Lunch Flow-account om te koppelen aan dit account. Transacties worden automatisch gesynchroniseerd en gededupliceerd."
       link_account: "Account koppelen"
       no_account_specified: "Geen account opgegeven"
-      no_accounts_found: "Geen Lunch Flow accounts gevonden. Controleer uw API-sleutel configuratie."
+      no_accounts_found: "Geen Lunch Flow-accounts gevonden. Controleer uw API-sleutelconfiguratie."
       no_api_key: "Lunch Flow API-sleutel is niet geconfigureerd. Configureer deze in Instellingen."
       no_name_placeholder: "(Geen naam)"
       title: "%{account_name} koppelen met Lunch Flow"
@@ -105,13 +105,13 @@ nl:
       account_already_linked: "Dit account is al gekoppeld aan een provider"
       api_error: "API fout: %{message}"
       invalid_account_name: "Kan account met lege naam niet koppelen"
-      lunchflow_account_already_linked: "Dit Lunch Flow account is al gekoppeld aan een ander account"
-      lunchflow_account_not_found: "Lunch Flow account niet gevonden"
+      lunchflow_account_already_linked: "Dit Lunch Flow-account is al gekoppeld aan een ander account"
+      lunchflow_account_not_found: "Lunch Flow-account niet gevonden"
       missing_parameters: "Ontbrekende vereiste parameters"
       success: "Succesvol %{account_name} gekoppeld met Lunch Flow"
     setup_accounts:
       account_type_label: "Accounttype:"
-      all_accounts_linked: "Al uw Lunch Flow accounts zijn al ingesteld."
+      all_accounts_linked: "Al uw Lunch Flow-accounts zijn al ingesteld."
       api_error: "API fout: %{message}"
       fetch_failed: "Accounts ophalen mislukt"
       no_accounts_to_setup: "Geen accounts om in te stellen"
@@ -119,7 +119,7 @@ nl:
       page_title: "Lunch Flow-accounts instellen"
       account_types:
         skip: "Dit account overslaan"
-        depository: "Betaal- of Spaarrekening"
+        depository: "Betaal- of spaarrekening"
         credit_card: "Creditcard"
         investment: "Beleggingsrekening"
         loan: "Lening of Hypotheek"
@@ -161,7 +161,7 @@ nl:
           other: "Andere lening"
       balance: "Saldo"
       cancel: "Annuleren"
-      choose_account_type: "Kies het juiste accounttype voor elk Lunch Flow account:"
+      choose_account_type: "Kies het juiste accounttype voor elk Lunch Flow-account:"
       create_accounts: "Accounts aanmaken"
       creating_accounts: "Accounts aanmaken..."
       historical_data_range: "Historische gegevensbereik:"
@@ -178,4 +178,4 @@ nl:
     sync:
       success: "Synchronisatie gestart"
     update:
-      success: "Lunch Flow koppeling bijgewerkt"
+      success: "Lunch Flow-koppeling bijgewerkt"

@@ -10,7 +10,7 @@ nl:
       authorization_failed: "Autorisatie starten mislukt: %{message}"
       bank_required: "Selecteer een bank."
       invalid_redirect: "De ontvangen autorisatie URL is ongeldig. Probeer het opnieuw."
-      redirect_uri_not_allowed: "Redirect niet toegestaan. Configureer `%{callback_url}` in uw Enable Banking app instellingen."
+      redirect_uri_not_allowed: "Redirect niet toegestaan. Configureer `%{callback_url}` in uw Enable Banking-appinstellingen."
       unexpected_error: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     callback:
       authorization_error: "Autorisatie mislukt"

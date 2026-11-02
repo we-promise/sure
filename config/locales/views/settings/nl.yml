@@ -677,7 +677,7 @@ nl:
         step_2: "Plak het token hieronder en koppel."
         step_3: "Ga daarna naar Accounts om uw gesynchroniseerde accounts te koppelen."
         setup_token_label: "Setup-token"
-        setup_token_placeholder: "Plak het SimpleFIN setup-token"
+        setup_token_placeholder: "Plak het SimpleFIN-setuptoken"
         save_and_connect: "Opslaan en koppelen"
       plaid_panel:
         step_1_html: "Open het %{link} en kopieer uw Client ID en Secret Key."

@@ -86,8 +86,8 @@ nl:
       all_skipped: "Alle accounts zijn overgeslagen. Geen accounts zijn aangemaakt."
       no_accounts: "Geen accounts om in te stellen."
       success:
-        one: "Succesvol %{count} SimpleFIN account aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
-        other: "Succesvol %{count} SimpleFIN-accounts aangemaakt! Uw transacties en bezittingen worden op de achtergrond geïmporteerd."
+        one: "Succesvol %{count} SimpleFIN-account aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
+        other: "Succesvol %{count} SimpleFIN-accounts aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
       stale_accounts_processed: "Verouderde accounts: %{deleted} verwijderd, %{moved} verplaatst."
       stale_accounts_errors:
         one: "%{count} verouderde accountactie mislukt. Controleer logs voor details."
@@ -143,7 +143,7 @@ nl:
       duplicate_accounts_skipped: "Sommige accounts zijn overgeslagen als duplicaten — gebruik 'Koppel bestaande accounts' om samen te voegen."
     select_existing_account:
       title: "Koppel %{account_name} aan SimpleFIN"
-      description: "Selecteer een SimpleFIN account om te koppelen aan uw bestaande account"
+      description: "Selecteer een SimpleFIN-account om te koppelen aan uw bestaande account"
       cancel: "Annuleren"
       link_account: "Account koppelen"
       no_accounts_found: "Geen SimpleFIN-accounts gevonden voor uw %{moniker}."
@@ -157,7 +157,7 @@ nl:
       errors:
         only_manual: "Alleen handmatige accounts kunnen worden gekoppeld"
         different_provider: "Dit account is gekoppeld aan een andere provider. Ontkoppel het eerst van die provider en koppel het daarna aan SimpleFIN."
-        invalid_simplefin_account: "Ongeldig SimpleFIN account geselecteerd"
+        invalid_simplefin_account: "Ongeldig SimpleFIN-account geselecteerd"
     dismiss_replacement_suggestion:
       dismissed: "Vervangingssuggestie genegeerd"
     replacement_prompt:

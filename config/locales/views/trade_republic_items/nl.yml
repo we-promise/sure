@@ -11,7 +11,7 @@ nl:
       private_markets: "Privémarkten"
       interest_products: "Renteproducten"
       crypto_wallet: "Cryptowallet"
-    duplicate_connection: "Deze Trade Republic-account is al gekoppeld. De nieuwe koppeling is verwijderd."
+    duplicate_connection: "Dit Trade Republic-account is al gekoppeld. De nieuwe koppeling is verwijderd."
     defaults:
       name: "Trade Republic"
     trade_republic_item:
@@ -22,9 +22,9 @@ nl:
       error: "Fout"
       synced: "Gesynchroniseerd %{time} geleden. %{summary}."
       never_synced: "Nooit gesynchroniseerd."
-      setup_accounts: "Rekeningen instellen"
+      setup_accounts: "Accounts instellen"
       delete: "Verwijderen"
-      accounts_need_setup: "Rekening moet worden ingesteld"
+      accounts_need_setup: "Account moet worden ingesteld"
       accounts_need_setup_description: "Uw Trade Republic-account moet aan een Sure-account worden gekoppeld."
       no_accounts_discovered: "Nog geen Trade Republic-account gevonden."
       no_accounts_discovered_description: "Voltooi de aanmelding en voer een synchronisatie uit om uw account te vinden."
@@ -150,10 +150,10 @@ nl:
       success: "Trade Republic is succesvol gekoppeld."
       login_expired: "De aanmeldingsaanvraag is verlopen. Start opnieuw."
     link_existing_account:
-      not_found: "Rekening of Trade Republic-configuratie niet gevonden."
+      not_found: "Account of Trade Republic-configuratie niet gevonden."
       only_manual_investment: "Alleen handmatige beleggingsaccounts kunnen aan Trade Republic worden gekoppeld."
       already_linked: "Dit Trade Republic-account is al gekoppeld."
-      success: "Rekening succesvol aan Trade Republic gekoppeld."
+      success: "Account succesvol aan Trade Republic gekoppeld."
       processing_failed: "Het account is gekoppeld, maar de eerste verwerking van de gegevens is mislukt. Er is een synchronisatie ingepland; controleer het foutopsporingslogboek als het onvolledig blijft."
       failed: "Koppelen van Trade Republic-account mislukt."
     complete_account_setup:
@@ -163,7 +163,7 @@ nl:
       none_selected: "Er zijn geen accounts geselecteerd."
       none_created: "Er zijn geen accounts aangemaakt."
       partial_failure:
-        one: "Eén geselecteerde Trade Republic-account kon niet volledig worden ingesteld. Controleer het debuglogboek en probeer het opnieuw."
+        one: "Eén geselecteerd Trade Republic-account kon niet volledig worden ingesteld. Controleer het debuglogboek en probeer het opnieuw."
         other: "%{count} geselecteerde Trade Republic-accounts konden niet volledig worden ingesteld. Controleer het debuglogboek en probeer het opnieuw."
     activities:
       labels:
