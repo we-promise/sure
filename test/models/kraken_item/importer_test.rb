@@ -45,7 +45,12 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
 
   test "merges Earn allocated balances alongside spot assets" do
     @provider.stubs(:get_asset_info).returns(asset_metadata)
+    # Includes a spot XXBT holding of the *same* asset Earn reports, so this
+    # actually exercises what the importer's own comment promises: Earn
+    # assets are tagged source: "earn" so they land as a separate holding
+    # rather than colliding with a spot balance of the same asset.
     @provider.stubs(:get_extended_balance).returns(
+      "XXBT" => { "balance" => "1.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" },
       "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
     )
     @provider.stubs(:get_earn_allocations).returns(
@@ -61,11 +66,15 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     KrakenItem::Importer.new(@item, kraken_provider: @provider).import
 
     account = @item.kraken_accounts.first
+    spot_btc = account.raw_payload["assets"].find { |asset| asset["symbol"] == "BTC" && asset["source"] == "spot" }
     earn_btc = account.raw_payload["assets"].find { |asset| asset["symbol"] == "BTC" && asset["source"] == "earn" }
+    assert_not_nil spot_btc, "the spot BTC holding must survive alongside the Earn one, not be overwritten by it"
+    assert_equal "1.0", spot_btc["balance"]
     assert_not_nil earn_btc
     assert_equal "2.0", earn_btc["balance"]
     assert_equal "0", earn_btc["available"]
     assert_in_delta 100_000, earn_btc["amount_usd"].to_f, 0.01
+    # 1.0 BTC spot + 2.0 BTC Earn, both @ $50,000, plus $50 cash.
     assert_in_delta 150_050, account.current_balance, 0.01
   end
 
