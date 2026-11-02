@@ -2559,8 +2559,8 @@ ada:
   iso_numeric: ""
   html_code: ""
   symbol: ADA
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Lovelace
+  minor_unit_conversion: 1000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2573,8 +2573,8 @@ amp:
   iso_numeric: ""
   html_code: ""
   symbol: AMP
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2587,8 +2587,8 @@ avax:
   iso_numeric: ""
   html_code: ""
   symbol: AVAX
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2615,8 +2615,8 @@ bal:
   iso_numeric: ""
   html_code: ""
   symbol: BAL
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2629,8 +2629,8 @@ band:
   iso_numeric: ""
   html_code: ""
   symbol: BAND
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2643,8 +2643,8 @@ bat:
   iso_numeric: ""
   html_code: ""
   symbol: BAT
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2671,8 +2671,8 @@ bond:
   iso_numeric: ""
   html_code: ""
   symbol: BOND
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2685,8 +2685,8 @@ cgld:
   iso_numeric: ""
   html_code: ""
   symbol: CGLD
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2699,8 +2699,8 @@ clv:
   iso_numeric: ""
   html_code: ""
   symbol: CLV
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2713,8 +2713,8 @@ comp:
   iso_numeric: ""
   html_code: ""
   symbol: COMP
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2727,8 +2727,8 @@ enj:
   iso_numeric: ""
   html_code: ""
   symbol: ENJ
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2741,8 +2741,8 @@ fet:
   iso_numeric: ""
   html_code: ""
   symbol: FET
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2755,8 +2755,8 @@ fil:
   iso_numeric: ""
   html_code: ""
   symbol: FIL
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: AttoFIL
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2769,8 +2769,8 @@ forth:
   iso_numeric: ""
   html_code: ""
   symbol: FORTH
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2783,8 +2783,8 @@ grt:
   iso_numeric: ""
   html_code: ""
   symbol: GRT
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2797,8 +2797,8 @@ knc:
   iso_numeric: ""
   html_code: ""
   symbol: KNC
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2811,8 +2811,8 @@ nkn:
   iso_numeric: ""
   html_code: ""
   symbol: NKN
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2839,8 +2839,8 @@ nu:
   iso_numeric: ""
   html_code: ""
   symbol: NU
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2853,8 +2853,8 @@ ogn:
   iso_numeric: ""
   html_code: ""
   symbol: OGN
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2867,8 +2867,8 @@ pol:
   iso_numeric: ""
   html_code: ""
   symbol: POL
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2881,8 +2881,8 @@ ren:
   iso_numeric: ""
   html_code: ""
   symbol: REN
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2895,8 +2895,8 @@ skl:
   iso_numeric: ""
   html_code: ""
   symbol: SKL
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2909,8 +2909,8 @@ sky:
   iso_numeric: ""
   html_code: ""
   symbol: SKY
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2923,8 +2923,8 @@ snx:
   iso_numeric: ""
   html_code: ""
   symbol: SNX
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2937,8 +2937,8 @@ sol:
   iso_numeric: ""
   html_code: ""
   symbol: SOL
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Lamport
+  minor_unit_conversion: 1000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2965,8 +2965,8 @@ sushi:
   iso_numeric: ""
   html_code: ""
   symbol: SUSHI
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
@@ -2979,8 +2979,8 @@ uni:
   iso_numeric: ""
   html_code: ""
   symbol: UNI
-  minor_unit: Unit
-  minor_unit_conversion: 100000000
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
   smallest_denomination: 1
   separator: "."
   delimiter: ","
