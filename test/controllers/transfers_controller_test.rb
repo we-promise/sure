@@ -894,6 +894,24 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "investment_contribution", transfer.outflow_transaction.reload.kind
   end
 
+  # Updating a transfer needs write access to both sides, so a viewer who
+  # can only read the investment account picks the category in the list.
+  test "the drawer hides the category picker without write permission on both sides" do
+    sign_in users(:family_member)
+    accounts(:investment).account_shares.create!(user: users(:family_member), permission: "read_only")
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    get transfer_url(transfer)
+    assert_response :success
+    assert_select "[name='transfer[category_id]']", count: 0
+
+    sign_in users(:family_admin)
+    get transfer_url(transfer)
+    assert_select "[name='transfer[category_id]']", count: 1
+  end
+
   test "mark_as_recurring creates a recurring transfer" do
     transfer = transfers(:one)
     family = users(:family_admin).family

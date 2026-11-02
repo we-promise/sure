@@ -16,8 +16,9 @@ class TransfersController < ApplicationController
     @categories = Current.family.categories.alphabetically_by_hierarchy
     @tags = Current.family.tags.alphabetically
 
-    # Whether the current user can hit `mark_as_recurring` (feature flag on)
-    # or switch the investment contribution: both need write access to BOTH
+    # Whether the current user can hit `mark_as_recurring` (feature flag on),
+    # switch the investment contribution or pick the category here: all need
+    # write access to BOTH
     # transfer endpoints. Gating the view controls on this avoids showing a
     # CTA that the controller would reject via `require_account_permission!`
     # for read-only sharers.
@@ -26,6 +27,7 @@ class TransfersController < ApplicationController
     both_endpoints_writable = endpoint_ids.size == 2 && writable_endpoint_count == 2
     @can_mark_as_recurring_transfer = !Current.family.recurring_transactions_disabled? && both_endpoints_writable
     @can_switch_investment_contribution = both_endpoints_writable && @transfer.investment_contribution_switchable?
+    @can_update_transfer_category = both_endpoints_writable && @transfer.categorizable?
   end
 
   def create
