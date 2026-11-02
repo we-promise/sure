@@ -27,10 +27,10 @@ zh-CN:
         more_accounts: 若要向此连接添加更多账户，请关闭此窗口并在 %{institution} 连接上选择“添加账户”。
         others_connected:
           one: Sure 已通过 %{name} 的连接关联了此账户，因此添加您的账户只会产生重复项。
-          other: Sure 已通过 %{name} 的连接关联了这些账户，因此添加您的账户只会产生重复项。
+          other: Sure 已通过 %{name} 的连接关联了您尝试添加的账户，因此添加您的账户只会产生重复项。
         others_connected_several:
           one: Sure 已通过其他成员的连接关联了此账户，因此添加您的账户只会产生重复项。
-          other: Sure 已通过其他成员的连接关联了这些账户，因此添加您的账户只会产生重复项。
+          other: Sure 已通过其他成员的连接关联了您尝试添加的账户，因此添加您的账户只会产生重复项。
         none_connected: 您尝试添加的账户均未连接，因此这可能是另一个登录凭据。添加它仅会计为另一个 Plaid 连接。
         some_connected:
           connected:
@@ -41,14 +41,14 @@ zh-CN:
             other: "您尝试添加的 %{count} 个账户尚未连接："
         unknown:
           one: 无法根据您现有的连接检查这些账户。如果它们是相同的账户，添加此连接会产生重复项并计为另一个 Plaid 连接。
-          other: 无法根据您现有的连接检查这些账户。如果它们是相同的账户，添加此连接会产生重复项并计为另一个 Plaid 连接。
+          other: 无法根据您现有的连接检查您尝试添加的账户。如果与现有账户重复，添加此连接会产生重复项并计为另一个 Plaid 连接。
       title:
         one: 您已拥有此机构的连接
         other: 您已拥有此机构的 %{count} 个连接
       title_all_connected: 您已创建过此连接
       title_others_connected:
         one: 此账户已连接
-        other: 这些账户已连接
+        other: 您尝试添加的账户已连接
       update_existing: 更新现有连接
     errors:
       link_token_generic: 暂时无法打开 Plaid。请重试；如果问题仍然存在，请查看服务器日志。
