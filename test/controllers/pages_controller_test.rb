@@ -1382,6 +1382,19 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_cashflow_preview_opt_in checked: true
   end
 
+  test "dashboard passes the chosen currency to the experimental Sankey comparison" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+    @user.update!(preferences: (@user.preferences || {}).merge(
+      "preview_features_enabled" => true,
+      "cashflow_preview_enabled" => true
+    ))
+
+    get root_path(currency: "EUR")
+
+    assert_response :ok
+    assert_select "#cashflow-preview [data-cash-flow-url-value*='currency=EUR']"
+  end
+
   test "dashboard hides the Sankey comparison opt-in without preview features" do
     @user.update!(preferences: (@user.preferences || {}).merge(
       "preview_features_enabled" => false,

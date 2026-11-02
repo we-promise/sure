@@ -15,7 +15,7 @@ class IncomeStatement::CashFlowGraph
 
   def as_json(*)
     {
-      as_of: @as_of.iso8601, time_zone: @time_zone, currency: @statement.family.currency,
+      as_of: @as_of.iso8601, time_zone: @time_zone, currency: @statement.currency,
       period: { start_date: @period.start_date.iso8601, end_date: @period.end_date.iso8601 },
       sankey: GROUPINGS.fetch(@group_by).constantize.new(@statement, period: @period).as_json
     }
