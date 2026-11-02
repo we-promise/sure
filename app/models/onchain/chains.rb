@@ -102,6 +102,12 @@ module Onchain
     # Provider::AvalanchePChain).
     AVALANCHE_P = "avalanche_p"
 
+    SOLANA_STAKE = "solana_stake"
+
+    POLYGON_STAKE = "polygon_stake"
+
+    ETHEREUM_VALIDATOR = "ethereum_validator"
+
     # AVAX/token balances on Avalanche's actual EVM chain — not part of the
     # EVM array above because that array assumes every entry can share
     # Onchain::EvmAdapter's Blockscout-backed balance/token reads, and no
@@ -170,7 +176,7 @@ module Onchain
       # chain above - see Onchain::SolanaStakeAdapter for why a delegated
       # position can't be reached through the normal wallet balance read.
       Definition.new(
-        key: "solana_stake",
+        key: SOLANA_STAKE,
         native: NativeAsset.new(symbol: "SOL", name: "Solana", decimals: 9),
         token_kind: nil,
         adapter_class_name: "Onchain::SolanaStakeAdapter",
@@ -180,7 +186,7 @@ module Onchain
       # `polygon` L2 wallet chain above - staking happens on Ethereum L1, see
       # Onchain::PolygonStakeAdapter.
       Definition.new(
-        key: "polygon_stake",
+        key: POLYGON_STAKE,
         native: NativeAsset.new(symbol: "POL", name: "Polygon", decimals: 18),
         token_kind: nil,
         adapter_class_name: "Onchain::PolygonStakeAdapter",
@@ -192,7 +198,7 @@ module Onchain
       # rETH, etc.) need nothing new since they're already ordinary ERC-20s
       # the `ethereum` chain above picks up automatically.
       Definition.new(
-        key: "ethereum_validator",
+        key: ETHEREUM_VALIDATOR,
         native: NativeAsset.new(symbol: "ETH", name: "Ethereum", decimals: 18),
         token_kind: nil,
         adapter_class_name: "Onchain::EthereumValidatorAdapter",

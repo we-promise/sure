@@ -6,7 +6,7 @@ class Onchain::PolygonStakeAdapterTest < ActiveSupport::TestCase
   ADDRESS = "0xF086597e0e155f9e46fbda46d5549697a103ffb4"
 
   setup do
-    @adapter = Onchain::Chains.adapter_for("polygon_stake")
+    @adapter = Onchain::Chains.adapter_for(Onchain::Chains::POLYGON_STAKE)
   end
 
   test "is keyed by an ordinary 0x wallet address, in lowercase" do

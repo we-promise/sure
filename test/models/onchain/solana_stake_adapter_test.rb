@@ -7,7 +7,7 @@ class Onchain::SolanaStakeAdapterTest < ActiveSupport::TestCase
   SYSTEM_PROGRAM_ID = "11111111111111111111111111111111"
 
   setup do
-    @adapter = Onchain::Chains.adapter_for("solana_stake")
+    @adapter = Onchain::Chains.adapter_for(Onchain::Chains::SOLANA_STAKE)
   end
 
   test "accepts a Base58 account address" do

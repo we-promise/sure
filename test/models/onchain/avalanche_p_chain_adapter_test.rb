@@ -17,8 +17,7 @@ class Onchain::AvalanchePChainAdapterTest < ActiveSupport::TestCase
   # Many wallets/explorers show or export the bare bech32 payload with no
   # chain-context prefix at all - the same data is "X-avax1..." on the
   # X-Chain, so the prefix is a presentation convention, not part of the
-  # address itself. Confirmed live: a real user's wallet gave them exactly
-  # this form and it was rejected before this fix.
+  # address itself.
   test "accepts the bare form with no chain prefix" do
     assert @adapter.valid_address?(BARE_ADDRESS)
   end
@@ -39,7 +38,7 @@ class Onchain::AvalanchePChainAdapterTest < ActiveSupport::TestCase
   # The "P-" prefix is Avalanche's own chain-alias lookup, not part of the
   # bech32 payload, and the node only registers the uppercase alias "P" - a
   # fully-lowercased "p-avax1..." is rejected by the real RPC with "there is
-  # no ID with alias: p" (confirmed live against api.avax.network). So the
+  # no ID with alias: p". So the
   # prefix must stay uppercase in canonical form even though the bech32
   # payload after it is canonically lowercase.
   test "canonicalizes to the P- prefixed (uppercase prefix, lowercase payload) form regardless of input style" do

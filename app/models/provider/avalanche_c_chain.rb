@@ -5,11 +5,9 @@
 # P-Chain, where staking/delegation happens; see Provider::AvalanchePChain).
 # Onchain::EvmAdapter already covers six EVM networks, but all of them go
 # through Provider::Blockscout, and Avalanche's C-Chain has no Blockscout
-# instance to point it at — confirmed against Blockscout's own chain
-# directory (https://chains.blockscout.com/api/chains, key "43114"): no
-# entry. Snowtrace (Avalanche's actual explorer) is an Etherscan-family site
-# behind Cloudflare bot-protection that also blocks plain server-side
-# requests, so it isn't usable keylessly either.
+# instance to point it at. Snowtrace (Avalanche's actual explorer) is an
+# Etherscan-family site behind Cloudflare bot-protection that also blocks
+# plain server-side requests, so it isn't usable keylessly either.
 #
 # What IS keylessly reachable: Avalanche's own public C-Chain RPC, standard
 # Ethereum JSON-RPC.

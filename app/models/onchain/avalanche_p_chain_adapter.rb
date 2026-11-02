@@ -2,8 +2,8 @@
 
 # Avalanche's P-Chain, read from a single address. This is where AVAX
 # staking/delegation actually happens — the P-Chain is not EVM-compatible and
-# shares nothing with Onchain::EvmAdapter (which only ever sees the separate
-# C-Chain). See Provider::AvalanchePChain for the API this reads.
+# shares nothing with Onchain::AvalancheCChainAdapter. See
+# Provider::AvalanchePChain for the API this reads.
 #
 # P-Chain has no token concept in this app's asset model (no erc20/spl
 # equivalent), so — like Bitcoin — only a native AVAX quantity is reported:
@@ -81,7 +81,7 @@ class Onchain::AvalanchePChainAdapter
     attr_reader :credentials
 
     def definition
-      Onchain::Chains.find!("avalanche_p")
+      Onchain::Chains.find!(Onchain::Chains::AVALANCHE_P)
     end
 
     def provider

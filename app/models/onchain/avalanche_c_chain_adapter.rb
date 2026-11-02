@@ -73,7 +73,7 @@ class Onchain::AvalancheCChainAdapter
     attr_reader :credentials
 
     def definition
-      Onchain::Chains.find!("avalanche_c")
+      Onchain::Chains.find!(Onchain::Chains::AVALANCHE_C)
     end
 
     def provider

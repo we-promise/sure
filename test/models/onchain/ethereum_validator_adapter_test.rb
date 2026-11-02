@@ -6,7 +6,7 @@ class Onchain::EthereumValidatorAdapterTest < ActiveSupport::TestCase
   PUBKEY = "0x#{"A1d1" * 24}"
 
   setup do
-    @adapter = Onchain::Chains.adapter_for("ethereum_validator")
+    @adapter = Onchain::Chains.adapter_for(Onchain::Chains::ETHEREUM_VALIDATOR)
   end
 
   test "accepts a BLS public key and nothing an EVM chain would" do
@@ -18,7 +18,7 @@ class Onchain::EthereumValidatorAdapterTest < ActiveSupport::TestCase
   end
 
   test "no EVM chain claims a validator public key" do
-    assert_equal [ "ethereum_validator" ], Onchain::Chains.matching(PUBKEY).map(&:key)
+    assert_equal [ Onchain::Chains::ETHEREUM_VALIDATOR ], Onchain::Chains.matching(PUBKEY).map(&:key)
   end
 
   test "a public key and its lowercase form are one validator" do
@@ -42,6 +42,14 @@ class Onchain::EthereumValidatorAdapterTest < ActiveSupport::TestCase
 
     error = assert_raises(Onchain::Chains::Error) { @adapter.fetch_snapshot(PUBKEY) }
     assert_not_kind_of Onchain::Chains::UnreachableError, error
+  end
+
+  test "a validator without a balance is not read as zero" do
+    stub_validator(status: 200, body: { "data" => { "index" => "1", "status" => "active_ongoing" } })
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(PUBKEY)
+    end
   end
 
   test "a response without data is reported as unreachable" do

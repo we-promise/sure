@@ -5,10 +5,8 @@
 # account", not the wallet address that owns it, so it never shows up in
 # Onchain::SolanaAdapter's normal balance/token-account read. Discovering
 # every stake account owned by a wallet needs `getProgramAccounts` on the
-# Stake program, and that call is blocked without a paid API key on every
-# public RPC tested live (the default api.mainnet-beta.solana.com,
-# PublicNode, and Ankr's free tier all reject it outright). That's a hard
-# wall for a keyless adapter, the same category of constraint
+# Stake program, and public RPCs refuse that call without a paid key. That's
+# a hard wall for a keyless adapter, the same category of constraint
 # Onchain::BitcoinAdapter already documents for xpubs: this reads one stake
 # account at a time, given directly, the same way Bitcoin here reads one
 # address at a time instead of deriving a whole HD wallet.
@@ -91,7 +89,7 @@ class Onchain::SolanaStakeAdapter
     attr_reader :credentials
 
     def definition
-      Onchain::Chains.find!("solana_stake")
+      Onchain::Chains.find!(Onchain::Chains::SOLANA_STAKE)
     end
 
     def provider

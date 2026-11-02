@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 # Keyless data source for Avalanche's P-Chain (where staking/delegation
-# happens — distinct from the EVM-compatible C-Chain that Onchain::EvmAdapter
-# already handles). Talks to Avalanche's public node JSON-RPC API directly;
+# happens — distinct from the EVM-compatible C-Chain, see
+# Provider::AvalancheCChain). Talks to Avalanche's public node JSON-RPC API directly;
 # there is no Blockscout/mempool.space-style REST explorer for the P-Chain.
 #
 #   platform.getBalance {addresses: [...]} -> {balance, unlocked,

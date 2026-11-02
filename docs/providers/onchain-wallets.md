@@ -125,8 +125,9 @@ address, the cost is roughly:
 | Polygon staking | 1, plus a page per extra 100 validators delegated to |
 | Ethereum validator | 1 |
 
-The Avalanche and staking sources do not retry a 429: a throttled sync fails
-and is tried again on the next one.
+The Avalanche, Polygon staking and Ethereum validator sources do not retry a
+429: a throttled sync fails and is tried again on the next one. Solana stake
+accounts go through the Solana client above, which does.
 
 History is capped by default at 10 pages per source — 250 transactions for
 Bitcoin, 10 pages per EVM collection — and at 25 transactions for Solana, which

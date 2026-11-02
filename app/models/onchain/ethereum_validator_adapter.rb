@@ -46,7 +46,7 @@ class Onchain::EthereumValidatorAdapter
       data = provider.get_validator(address)
       raise Onchain::Chains::Error, "No validator found for this public key" if data.nil?
 
-      quantity = data["balance"].to_d / GWEI_PER_ETH
+      quantity = gwei(data["balance"]) / GWEI_PER_ETH
 
       Onchain::Snapshot.new(
         assets: [ definition.native_asset(quantity: quantity) ],
@@ -64,10 +64,17 @@ class Onchain::EthereumValidatorAdapter
     attr_reader :credentials
 
     def definition
-      Onchain::Chains.find!("ethereum_validator")
+      Onchain::Chains.find!(Onchain::Chains::ETHEREUM_VALIDATOR)
     end
 
     def provider
       @provider ||= Provider::EthereumBeaconApi.new
+    end
+
+    # A missing balance must fail the sync, not read as zero.
+    def gwei(amount)
+      raise Provider::EthereumBeaconApi::ApiError, "Ethereum beacon API returned a malformed balance" unless amount.is_a?(String) && amount.match?(/\A\d+\z/)
+
+      amount.to_d
     end
 end

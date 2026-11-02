@@ -71,7 +71,7 @@ class Onchain::PolygonStakeAdapter
     attr_reader :credentials
 
     def definition
-      Onchain::Chains.find!("polygon_stake")
+      Onchain::Chains.find!(Onchain::Chains::POLYGON_STAKE)
     end
 
     def provider
