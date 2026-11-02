@@ -257,8 +257,9 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
 
   test "transactions processor applies the matched Sure category" do
     @family.categories.bootstrap!
+    account, ra = link(Depository, provider: "fiskil", balance: "100")
 
-    @redbark_account.update!(raw_transactions_payload: [
+    ra.update!(raw_transactions_payload: [
       {
         "id" => "tx_cat_1",
         "status" => "posted",
@@ -271,16 +272,17 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
       }
     ])
 
-    RedbarkAccount::Transactions::Processor.new(@redbark_account).process
+    RedbarkAccount::Transactions::Processor.new(ra).process
 
-    entry = @account.entries.find_by(external_id: "redbark_tx_cat_1", source: "redbark")
+    entry = account.entries.find_by(external_id: "redbark_tx_cat_1", source: "redbark")
     assert_equal "Food & Drink", entry.transaction.category&.name
   end
 
   test "transactions processor falls back to merchant_category_code when category is unmapped" do
     @family.categories.bootstrap!
+    account, ra = link(Depository, provider: "fiskil", balance: "100")
 
-    @redbark_account.update!(raw_transactions_payload: [
+    ra.update!(raw_transactions_payload: [
       {
         "id" => "tx_cat_mcc",
         "status" => "posted",
@@ -294,17 +296,18 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
       }
     ])
 
-    RedbarkAccount::Transactions::Processor.new(@redbark_account).process
+    RedbarkAccount::Transactions::Processor.new(ra).process
 
-    entry = @account.entries.find_by(external_id: "redbark_tx_cat_mcc", source: "redbark")
+    entry = account.entries.find_by(external_id: "redbark_tx_cat_mcc", source: "redbark")
     assert_equal "Groceries", entry.transaction.category&.name
   end
 
   test "transactions processor skips category matching when the account has the matcher switched off" do
     @family.categories.bootstrap!
-    @account.update!(enable_category_matcher: false)
+    account, ra = link(Depository, provider: "fiskil", balance: "100")
+    account.update!(enable_category_matcher: false)
 
-    @redbark_account.update!(raw_transactions_payload: [
+    ra.update!(raw_transactions_payload: [
       {
         "id" => "tx_cat_2",
         "status" => "posted",
@@ -317,9 +320,9 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
       }
     ])
 
-    RedbarkAccount::Transactions::Processor.new(@redbark_account).process
+    RedbarkAccount::Transactions::Processor.new(ra).process
 
-    entry = @account.entries.find_by(external_id: "redbark_tx_cat_2", source: "redbark")
+    entry = account.entries.find_by(external_id: "redbark_tx_cat_2", source: "redbark")
     assert_nil entry.transaction.category_id
     # Still imported, still carries the raw category - only the auto-category is withheld.
     assert_equal "FOOD_AND_DRINK", entry.transaction.extra.dig("redbark", "category")
