@@ -45,7 +45,7 @@ class Onchain::PolygonStakeAdapter
   def has_activity?(address)
     return false unless valid_address?(address)
 
-    total_staked(address).positive?
+    total_staked(address, detection_provider).positive?
   rescue StandardError => e
     Rails.logger.warn("Onchain::PolygonStakeAdapter - activity probe failed: #{e.class}")
     nil
@@ -64,7 +64,7 @@ class Onchain::PolygonStakeAdapter
   end
 
   def provider_error_classes
-    [ [], Provider::PolygonStakingApi::Error ]
+    [ Provider::PolygonStakingApi::RateLimitError, Provider::PolygonStakingApi::Error ]
   end
 
   private
@@ -78,9 +78,20 @@ class Onchain::PolygonStakeAdapter
       @provider ||= Provider::PolygonStakingApi.new
     end
 
+    def detection_provider
+      @detection_provider ||= Provider::PolygonStakingApi.new(request_timeout: Onchain::DetectionBudget.timeout)
+    end
+
     # Summed across every validator the address delegated to - one wallet's
     # staked position is the total, not any single delegation.
-    def total_staked(address)
-      provider.get_delegations(address).sum { |d| BigDecimal(d["stake"].to_s.presence || "0") } / WEI_PER_POL
+    def total_staked(address, source = provider)
+      source.get_delegations(address).sum { |delegation| wei(delegation["stake"]) } / WEI_PER_POL
+    end
+
+    # A missing stake must fail the sync, not read as zero.
+    def wei(amount)
+      raise Provider::PolygonStakingApi::ApiError, "Polygon staking API returned a malformed stake" unless amount.is_a?(String) && amount.match?(/\A\d+\z/)
+
+      amount.to_d
     end
 end
