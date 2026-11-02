@@ -212,6 +212,19 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     assert_equal few, many, "2 foreign disposals and 6 must cost the same number of queries"
   end
 
+  # A date with no rate is an answer the preload holds, and the gain stays
+  # unknown, so these disposals cost no lookup each either.
+  test "the query count does not grow with disposals that have no rate" do
+    seed_disposals(2, currency: "EUR", rate: nil)
+    few = capture_sql_queries { measure_fully(realized) }.size
+
+    seed_disposals(4, currency: "EUR", rate: nil)
+    many = capture_sql_queries { measure_fully(realized) }.size
+
+    assert_equal 0, realized.trade_count, "an unmeasurable disposal must not count, or this proves nothing"
+    assert_equal few, many, "2 disposals with no rate and 6 must cost the same number of queries"
+  end
+
   # A disabled account stops contributing on its cut-off date.
   test "a disposal after an account's cut-off date does not count" do
     holding_snapshot account: @account, date: @march, cost_basis: 100
@@ -299,14 +312,14 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
 
     # n securities, each with a stored basis and one sale. A foreign `currency`
     # prices each sale on its own day, with that day's rate into the account's.
-    def seed_disposals(count, currency: nil)
+    def seed_disposals(count, currency: nil, rate: 1.5)
       @seeded ||= 0
       count.times do
         security = create_security
         date = @march + (@seeded += 1)
         holding_snapshot account: @account, date: @march, cost_basis: 100, security: security
         sell_trade account: @account, date: date, qty: 1, price: 150, security: security, currency: currency
-        set_rate from: currency, to: @account.currency, date: date, rate: 1.5 if currency
+        set_rate from: currency, to: @account.currency, date: date, rate: rate if currency && rate
       end
     end
 
