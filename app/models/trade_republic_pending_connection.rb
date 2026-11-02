@@ -28,8 +28,9 @@ class TradeRepublicPendingConnection < ApplicationRecord
 
   # The approval request lapsed (or never started). The row stays to show
   # that, and Add a connection is offered again; a new login replaces it.
-  def lapsed?
-    pending_login_state.blank? || login_stage == "expired"
+  # Callers that already decoded the stage can pass it in.
+  def lapsed?(stage = login_stage)
+    pending_login_state.blank? || stage == "expired"
   end
 
   def trade_republic_provider(pin: self.pin)

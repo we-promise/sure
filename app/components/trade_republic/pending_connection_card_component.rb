@@ -21,9 +21,8 @@ class TradeRepublic::PendingConnectionCardComponent < ApplicationComponent
     @login_stage = pending_connection.login_stage
   end
 
-  # TradeRepublicPendingConnection#lapsed?, with the stage read above.
   def expired?
-    pending_connection.pending_login_state.blank? || login_stage == "expired"
+    pending_connection.lapsed?(login_stage)
   end
 
   def identifier_text
