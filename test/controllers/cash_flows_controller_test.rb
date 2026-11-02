@@ -58,6 +58,27 @@ class CashFlowsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "reports in a requested currency the family has enabled" do
+    @user.family.update!(enabled_currencies: [ "EUR" ])
+    account = @user.family.accounts.create!(name: "Own", owner: @user, currency: "USD", balance: 0, accountable: Depository.new)
+    create_transaction(account: account, amount: 12, date: Date.new(2024, 2, 1))
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.new(2024, 2, 1), rate: 0.5)
+    sign_in @user
+
+    get dashboard_cash_flow_path, params: @dates.merge(currency: "EUR")
+    assert_response :success
+    assert_equal "EUR", response.parsed_body["currency"]
+    assert_equal "6.0", response.parsed_body.dig("sankey", "spending")
+
+    get dashboard_cash_flow_path, params: @dates.merge(currency: "EUR", group_by: "account")
+    assert_equal "6.0", response.parsed_body.dig("sankey", "spending")
+
+    # A currency the family has not enabled falls back to the primary one.
+    get dashboard_cash_flow_path, params: @dates.merge(currency: "GBP")
+    assert_equal "USD", response.parsed_body["currency"]
+    assert_equal "12.0", response.parsed_body.dig("sankey", "spending")
+  end
+
   test "groups the graph by account on request and rejects unknown groupings" do
     sign_in @user
     get dashboard_cash_flow_path(@dates.merge(group_by: "account"))
