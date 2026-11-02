@@ -238,7 +238,7 @@ class GocardlessItemsController < ApplicationController
       return
     end
 
-    items.each { |item| item.sync_later unless item.syncing? }
+    items.each { |item| item.sync_later if item.requisition_id.present? && !item.syncing? }
     redirect_to accounts_path
   end
 

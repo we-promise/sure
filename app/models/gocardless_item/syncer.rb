@@ -14,7 +14,16 @@ class GocardlessItem::Syncer
 
     # Phase 1: Import data from provider API
     sync.update!(status_text: I18n.t("gocardless_items.sync.status.importing")) if sync.respond_to?(:status_text)
-    gocardless_item.import_latest_gocardless_data(sync: sync)
+    # A transaction failure on one account must not starve the others, so hold it until
+    # linked accounts are processed. Auth errors still abort at once.
+    import_error = nil
+    begin
+      gocardless_item.import_latest_gocardless_data(sync: sync)
+    rescue Provider::Gocardless::AuthenticationError
+      raise
+    rescue => e
+      import_error = e
+    end
 
     # Phase 2: Collect setup statistics
     finalize_setup_counts(sync)
@@ -38,6 +47,8 @@ class GocardlessItem::Syncer
       account_ids = linked_gocardless_accounts.filter_map { |pa| pa.current_account&.id }
       collect_transaction_stats(sync, account_ids: account_ids, source: "gocardless")
     end
+
+    raise import_error if import_error
 
     # Mark sync health
     collect_health_stats(sync, errors: nil)

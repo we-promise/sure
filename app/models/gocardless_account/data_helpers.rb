@@ -31,7 +31,7 @@ module GocardlessAccount::DataHelpers
       return id.to_s if id.present?
 
       fingerprint = [
-        data[:bookingDate] || data[:valueDate],
+        data[:bookingDate] || data[:valueDate] || data[:bookingDateTime] || data[:valueDateTime],
         data.dig(:transactionAmount, :amount),
         transaction_name(data)
       ].join("|")
