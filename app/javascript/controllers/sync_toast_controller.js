@@ -11,10 +11,15 @@ import { Controller } from "@hotwired/stimulus";
 //   once the dialog closes — the first moment a refresh is actually safe.
 export default class extends Controller {
   static values = {
-    autoRefreshDelay: { type: Number, default: 2000 },
+    autoRefreshDelay: { type: Number, default: 500 },
   };
 
   connect() {
+    // A visit that starts after the toast (e.g. the account page's own refresh
+    // stream) already re-renders the page; a second one would only duplicate it.
+    this._onVisit = () => clearTimeout(this._timer);
+    document.addEventListener("turbo:visit", this._onVisit);
+
     if (this.#dialogOpen()) {
       this.#deferUntilDialogCloses();
       return;
@@ -24,6 +29,7 @@ export default class extends Controller {
 
   disconnect() {
     clearTimeout(this._timer);
+    document.removeEventListener("turbo:visit", this._onVisit);
     this.#removeDeferredDialogListener();
   }
 
