@@ -404,6 +404,17 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#cashflow-donut-section [data-donut-chart-account-ids-value='#{[ account.id.to_s ].to_json}']"
   end
 
+  test "the currency picker keeps the dashboard in customize mode" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+
+    get root_path(customize: true)
+    assert_response :ok
+
+    eur_link = css_select("a[href*='currency=EUR']").first
+    assert eur_link, "the currency picker lists EUR"
+    assert_includes eur_link["href"], "customize=true", "picking a currency left customize mode"
+  end
+
   test "dashboard reports account-filtered cash flow rings in the chosen currency" do
     @family.update!(enabled_currencies: [ "EUR" ])
     account = @family.accounts.create!(name: "Rings Currency Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
@@ -1488,7 +1499,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_select "button[aria-label='Currency: #{@family.currency}']"
-    assert_select "a[role='menuitemradio'][href*='currency=EUR']"
+    # A whole-page visit, so the header's links pick the currency up as well.
+    assert_select "a[role='menuitemradio'][href*='currency=EUR']:not([data-turbo-frame])"
   end
 
   test "dashboard shows a requested additional currency and keeps it across period picks" do

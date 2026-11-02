@@ -845,7 +845,7 @@ class InvestmentStatement
 
     def totals_query(account_ids:, date_range:)
       if account_ids.empty?
-        return Totals.new(family, account_ids: account_ids, date_range: date_range).call
+        return Totals.new(family, account_ids: account_ids, date_range: date_range, currency: currency).call
       end
 
       account_ids_hash = Digest::MD5.hexdigest(account_ids.sort.join(","))
@@ -855,7 +855,7 @@ class InvestmentStatement
         account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version,
         # A rate stored later can complete totals that left an amount out.
         ExchangeRate.updated_at_version
-      ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
+      ]) { Totals.new(family, account_ids: account_ids, date_range: date_range, currency: currency).call }
     end
 
     def monetizable_currency
