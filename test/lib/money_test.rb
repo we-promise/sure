@@ -216,6 +216,68 @@ class MoneyTest < ActiveSupport::TestCase
     assert_equal "TW$1,000.12", Money.new(1000.12, :twd).format(locale: :"zh-TW")
   end
 
+  test "formats INR amounts with the Indian numbering system" do
+    assert_equal "₹0.00", Money.new(0, :inr).format
+    assert_equal "₹50.00", Money.new(50, :inr).format
+    assert_equal "₹999.00", Money.new(999, :inr).format
+    assert_equal "₹1,000.00", Money.new(1000, :inr).format
+    assert_equal "₹10,000.00", Money.new(10_000, :inr).format
+    assert_equal "₹1,00,000.00", Money.new(100_000, :inr).format
+    assert_equal "₹1,00,000", Money.new(100_000, :inr).format(precision: 0)
+    assert_equal "₹12,34,567.89", Money.new(1_234_567.89, :inr).format
+    assert_equal "-₹12,34,567.89", Money.new(-1_234_567.89, :inr).format
+    assert_equal "₹1,00,00,000.00", Money.new(10_000_000, :inr).format
+    assert_equal "₹12,34,56,789.50", Money.new(123_456_789.5, :inr).format
+  end
+
+  test "formats with Indian grouping for Indian locales" do
+    assert_equal "₹12,34,567.89", Money.new(1234567.89, :inr).format(locale: :"en-IN")
+    assert_equal "₹12,34,567.89", Money.new(1234567.89, :inr).format(locale: :hi)
+    assert_equal "$1,00,000.00", Money.new(100_000, :usd).format(locale: :"en-IN")
+    assert_equal "$1,00,000.00", Money.new(100_000, :usd).format(locale: :hi)
+  end
+
+  test "uses Indian separators for non-INR currencies in Indian locales" do
+    assert_equal "€12,34,567.89", Money.new(1_234_567.89, :eur).format(locale: :"en-IN")
+    assert_equal "€12,34,567.89", Money.new(1_234_567.89, :eur).format(locale: :hi)
+  end
+
+  test "Indian grouping always uses Indian punctuation" do
+    assert_equal "12,34,567.89 ₹", Money.new(1_234_567.89, :inr).format(locale: :de)
+    assert_equal "12,34,567.89 ₹", Money.new(1_234_567.89, :inr).format(locale: :pl)
+    assert_equal "12,34,567.89 €", Money.new(1_234_567.89, :eur).format(locale: :de, indian_grouping: true)
+    assert_equal "12,34,567.89\u00A0€", Money.new(1_234_567.89, :eur).format(locale: :fr, indian_grouping: true)
+    assert_equal "€12,34,567.89", Money.new(1_234_567.89, :eur).format(locale: :ja, indian_grouping: true)
+  end
+
+  test "explicit locale applies that locale's zero stripping" do
+    assert_equal "1 000,5 $", I18n.with_locale(:en) { Money.new(1000.50, :usd).format(locale: :pl) }
+    assert_equal "1 000 $", I18n.with_locale(:en) { Money.new(1000.00, :usd).format(locale: :hu) }
+  end
+
+  test "explicit locale keeps decimal precision for money" do
+    assert_equal "1 000,12 $", I18n.with_locale(:en) { Money.new(1000.12, :usd).format(locale: :hu) }
+  end
+
+  test "allows opting out of Indian grouping" do
+    assert_equal "₹100,000.00", Money.new(100_000, :inr).format(indian_grouping: false)
+    assert_equal "₹1,234,567.89", Money.new(1_234_567.89, :inr).format(indian_grouping: false)
+    assert_equal "$100,000.00", Money.new(100_000, :usd).format(locale: :"en-IN", indian_grouping: false)
+  end
+
+  test "Indian locale separators survive the grouping opt-out" do
+    assert_equal "€1,234,567.89", Money.new(1_234_567.89, :eur).format(locale: :"en-IN", indian_grouping: false)
+    assert_equal "€1,234,567.89", Money.new(1_234_567.89, :eur).format(locale: :hi, indian_grouping: false)
+  end
+
+  test "allows opting into Indian grouping for other currencies" do
+    assert_equal "$1,00,000.00", Money.new(100_000, :usd).format(indian_grouping: true)
+  end
+
+  test "explicit unit overrides keep Indian grouping" do
+    assert_equal "&#x20b9;1,00,000.00", Money.new(100_000, :inr).format(unit: "&#x20b9;")
+  end
+
   test "formats correctly for Hungarian locale" do
     # Hungarian uses space as thousands delimiter, comma as decimal separator, symbol after number
     # HUF has 0 decimal places (no fillér)
