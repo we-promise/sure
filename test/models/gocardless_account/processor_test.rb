@@ -63,10 +63,11 @@ class GocardlessAccount::ProcessorTest < ActiveSupport::TestCase
 
   test "a cancelled pending hold is removed but booked entries stay" do
     link_account Depository, "100.00"
+    # Different amounts, or the import adapter auto-claims the hold as the booked row.
     transaction = lambda do |id, pending|
       {
         "transactionId" => id, "bookingDate" => Date.current.iso8601,
-        "transactionAmount" => { "amount" => "-10.00", "currency" => "GBP" },
+        "transactionAmount" => { "amount" => pending ? "-10.00" : "-25.00", "currency" => "GBP" },
         "remittanceInformationUnstructured" => id, "pending" => pending
       }
     end
