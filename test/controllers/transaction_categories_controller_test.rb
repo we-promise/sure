@@ -132,6 +132,20 @@ class TransactionCategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_counterpart_streams(outflow_entry.transaction, categories(:income))
   end
 
+  test "does not refresh a counterpart row on an account the viewer cannot access" do
+    sign_in users(:family_member)
+    assert_not users(:family_member).accessible_accounts.exists?(id: accounts(:investment).id)
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+    Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    patch_category(inflow_entry, categories(:income))
+
+    assert_response :success
+    assert_equal categories(:income), inflow_entry.transaction.reload.category
+    assert_not_includes response.body, outflow_entry.transaction.id
+  end
+
   test "refuses a category on the investment outflow of a withdrawal" do
     outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "funds_movement")
     inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")

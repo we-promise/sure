@@ -4,12 +4,15 @@ module PairedTransferCategoryStreams
   private
     # The other leg of a categorizable transfer shows this leg's category
     # read-only (Transaction#category_set_on_transfer_counterpart?), so
-    # refresh it whenever this leg's category may have changed.
+    # refresh it whenever this leg's category may have changed. A viewer who
+    # cannot access the other leg's account never has that row on the page.
     def paired_transfer_category_stream_items(transaction)
       transfer = transaction.transfer
       return [] unless transfer&.categorizable? && transfer.category_transaction.id == transaction.id
 
       counterpart = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction : transfer.inflow_transaction
+      return [] unless Current.user.accessible_accounts.exists?(id: counterpart.entry.account_id)
+
       %w[mobile desktop].map do |variant|
         turbo_stream.replace(
           helpers.dom_id(counterpart, "category_menu_#{variant}"),
