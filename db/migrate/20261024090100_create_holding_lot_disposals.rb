@@ -9,7 +9,7 @@ class CreateHoldingLotDisposals < ActiveRecord::Migration[8.1]
       # destroyed entry, and Trade#lots_emptied_before_sale filters on it too.
       t.references :lot_source_entry, type: :uuid, foreign_key: { to_table: :entries, on_delete: :nullify }
       t.decimal :qty, precision: 34, scale: 18, null: false
-      t.decimal :unit_cost, precision: 19, scale: 10
+      t.decimal :unit_cost, precision: 25, scale: 10
       t.string :currency, null: false
       t.timestamps
     end

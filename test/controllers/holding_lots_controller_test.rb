@@ -69,7 +69,7 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a negative, blank, non-numeric, non-finite or oversized total is rejected and the lot is unchanged" do
-    [ "-1", "", "abc", "12abc", "Infinity", "NaN", "40000000000" ].each do |total|
+    [ "-1", "", "abc", "12abc", "Infinity", "NaN", "10000000000000000" ].each do |total|
       patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: total } }
 
       assert_redirected_to account_path(@account, tab: "holdings")
@@ -78,12 +78,21 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # 40 units: a cost per unit must stay below 10^9, as a trade's price does.
-  test "a total is accepted only while its cost per unit fits a trade's price" do
-    patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: "39999999999.9999" } }
+  # The cost per unit is stored with 15 digits before the point, as a
+  # holding's cost basis is; on half a unit that bound comes before the
+  # total's own.
+  test "a total is accepted only while its cost per unit fits below 10^15" do
+    entry = create_trade(@security, account: @account, qty: BigDecimal("0.5"), price: 1, date: Date.current)
+    materialize
+    half = HoldingLot.find_by!(source_entry: entry)
 
+    patch holding_lot_path(@holding, half), params: { holding_lot: { total_cost_basis: "500000000000000" } }
+    assert_equal I18n.t("holding_lots.update.error"), flash[:alert], "10^15 a unit"
+    assert_nil half.reload.manual_total_cost
+
+    patch holding_lot_path(@holding, half), params: { holding_lot: { total_cost_basis: "499999999999999.9999" } }
     assert_equal I18n.t("holding_lots.update.success"), flash[:notice]
-    assert_equal BigDecimal("39999999999.9999"), @lot.reload.manual_total_cost
+    assert_equal BigDecimal("499999999999999.9999"), half.reload.manual_total_cost
   end
 
   test "a total is accepted only while it fits its column, however many units it spreads over" do
