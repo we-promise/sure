@@ -155,13 +155,13 @@ nl:
       description: "Voordat u Brex-accounts kunt koppelen, moet u uw Brex-API-token configureren."
       heading: "API-token niet geconfigureerd"
       settings_link: "Ga naar providerinstellingen"
-      setup_steps: "Installatiestappen:"
+      setup_steps: "Configuratiestappen:"
       steps:
         enter_token: "Voer uw Brex-API-token in"
         find_section_html: "Zoek het gedeelte <strong>Brex</strong>"
         open_settings_html: "Ga naar <strong>Instellingen > Providers</strong>"
         return_to_link: "Kom hier terug om uw accounts te koppelen"
-      title: "Brex-installatie vereist"
+      title: "Brex-configuratie vereist"
     subtype_select:
       placeholder:
         subtype: "Selecteer subtype"

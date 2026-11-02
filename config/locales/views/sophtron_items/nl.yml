@@ -225,13 +225,13 @@ nl:
       message: De transacties zijn gedownload na de Sophtron-verificatie.
       title: Sophtron-synchronisatie gestart
     sophtron_setup_required:
-      title: Sophtron-installatie vereist
+      title: Sophtron-configuratie vereist
       message: >
-        Ga naar de pagina met providerinstellingen en volg de instructies om uw Sophtron-koppeling te autoriseren en te configureren om de installatie van uw Sophtron-koppeling te voltooien.
+        Om het instellen van uw Sophtron-koppeling te voltooien, gaat u naar de pagina met providerinstellingen en volgt u de instructies om de koppeling te autoriseren en te configureren.
       go_to_provider_settings: Ga naar providerinstellingen
       heading: "Gebruikers-ID en toegangssleutel niet geconfigureerd"
       description: "Voordat u Sophtron-accounts kunt koppelen, moet u uw Sophtron-gebruikers-ID en -toegangssleutel configureren."
-      setup_steps_title: "Installatiestappen:"
+      setup_steps_title: "Configuratiestappen:"
       step_1_html: "Ga naar <strong>Instellingen → Bank-sync-providers</strong>"
       step_2_html: "Zoek het gedeelte <strong>Sophtron</strong>"
       step_3_html: "Voer uw Sophtron-gebruikers-ID en -toegangssleutel in"
@@ -256,7 +256,7 @@ nl:
     subtype: "subtype"
     type: "type"
     sophtron_panel:
-      setup_instructions_title: "Installatie-instructies:"
+      setup_instructions_title: "Configuratie-instructies:"
       setup_instructions:
         step_1_html: 'Ga naar <a href="%{url}" target="_blank" rel="noopener noreferrer" class="link">Sophtron</a> om uw API-inloggegevens te verkrijgen'
         step_2: "Kopieer uw gebruikers-ID en toegangssleutel uit uw Sophtron-accountinstellingen"

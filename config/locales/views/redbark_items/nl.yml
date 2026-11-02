@@ -160,7 +160,7 @@ nl:
           other: "Overige lening"
       balance: "Saldo"
       cancel: "Annuleren"
-      done: "Gereed"
+      done: "Klaar"
       choose_account_type: "Kies het juiste accounttype voor elk Redbark-account:"
       create_accounts: "Accounts aanmaken"
       creating_accounts: "Accounts aanmaken..."

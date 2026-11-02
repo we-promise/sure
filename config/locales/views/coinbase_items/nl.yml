@@ -59,7 +59,7 @@ nl:
       title: "Coinbase-account koppelen"
       no_accounts_found: "Geen Coinbase-accounts gevonden."
       wait_for_sync: "Wacht tot Coinbase klaar is met synchroniseren"
-      check_provider_health: "Controleer of uw Coinbase API-gegevens geldig zijn"
+      check_provider_health: "Controleer of uw Coinbase-API-inloggegevens geldig zijn"
       balance: "Saldo"
       currently_linked_to: "Momenteel gekoppeld aan: %{account_name}"
       link: "Koppelen"

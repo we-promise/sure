@@ -32,7 +32,7 @@ nl:
         items:
           item_1: "Huidige posities met koersen en aantallen"
           item_2: "Volledige ordergeschiedenis (aankopen en verkopen)"
-          item_3: "Dividenden en transacties in contant geld"
+          item_3: "Dividenden en geldtransacties"
       status:
         fetching_accounts: "Account ophalen bij Trading 212..."
         no_accounts_found_title: "Geen account gevonden."
@@ -55,7 +55,7 @@ nl:
         back_to_settings: "Terug naar instellingen"
         create_selected_accounts: "Geselecteerde accounts aanmaken"
         link: "Koppelen"
-        done: "Gereed"
+        done: "Klaar"
     sync:
       status:
         checking_credentials: "Trading 212-inloggegevens controleren..."

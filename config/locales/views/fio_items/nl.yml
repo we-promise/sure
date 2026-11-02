@@ -86,7 +86,7 @@ nl:
       link_failed: "Het account kon niet worden gekoppeld."
     select_existing_account:
       title: "Fio-account koppelen aan %{account_name}"
-      description: "Koppel het account waartoe dit token toegang geeft aan het account dat u hebt gekozen."
+      description: "Koppel het account waartoe dit token toegang geeft aan het account dat u heeft gekozen."
       awaiting_first_sync: "Fio heeft het account voor dit token nog niet doorgegeven. Voer een synchronisatie uit en kom dan terug."
       already_linked: "Het account van deze koppeling is al gekoppeld aan een Sure-account."
       sync_now: "Nu synchroniseren"

@@ -42,7 +42,7 @@ nl:
         one: "%{count} account beschikbaar"
         other: "%{count} accounts beschikbaar"
       select_all: "Alles selecteren"
-      import_selected: "Geselecteerde importeren"
+      import_selected: "Selectie importeren"
       cancel: "Annuleren"
       creating: "Importeren..."
     complete_account_setup:

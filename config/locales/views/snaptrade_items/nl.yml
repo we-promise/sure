@@ -106,7 +106,7 @@ nl:
       create_button: "Geselecteerde accounts aanmaken"
       cancel_button: "Annuleren"
       creating: "Accounts aanmaken..."
-      done_button: "Gereed"
+      done_button: "Klaar"
       or_link_existing: "Of koppel aan een bestaand account in plaats van een nieuw account aan te maken:"
       select_account: "Selecteer een account..."
       link_button: "Koppelen"
@@ -116,7 +116,7 @@ nl:
       accounts_need_setup:
         one: "%{count} account moet worden ingesteld"
         other: "%{count} accounts moeten worden ingesteld"
-      deletion_in_progress: "Wordt verwijderd..."
+      deletion_in_progress: "Verwijderen bezig..."
       syncing: "Synchroniseren..."
       requires_update: "Koppeling moet worden bijgewerkt"
       error: "Synchronisatiefout"

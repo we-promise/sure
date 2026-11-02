@@ -22,7 +22,7 @@ nl:
     complete_account_setup:
       all_skipped: "Alle accounts zijn overgeslagen. U kunt ze later instellen op de accountpagina."
       no_accounts: "Geen accounts beschikbaar om in te stellen."
-      success: "Succesvol %{count} accounts aangemaakt!"
+      success: "%{count} accounts aangemaakt!"
     create:
       success: "Enable Banking-configuratie succesvol."
     destroy:
@@ -32,7 +32,7 @@ nl:
       link_failed: "Accounts koppelen mislukt"
       no_accounts_selected: "Geen accounts geselecteerd."
       no_session: "Geen actieve Enable Banking-koppeling. Koppel eerst een bank."
-      success: "Succesvol %{count} accounts gekoppeld."
+      success: "%{count} accounts gekoppeld."
     link_existing_account:
       success: "Account succesvol gekoppeld aan Enable Banking"
       errors:
@@ -91,7 +91,7 @@ nl:
       add_connection: "Koppeling toevoegen"
       not_configured: "Enable Banking-koppeling niet geconfigureerd"
       not_configured_description: "Voordat u Enable Banking-accounts kunt koppelen, moet u uw Enable Banking-koppeling configureren."
-      setup_steps_title: "Installatiestappen:"
+      setup_steps_title: "Configuratiestappen:"
       setup_step_1_html: "Ga naar <strong>Instellingen → Providers</strong>"
       setup_step_2_html: "Zoek het onderdeel <strong>Enable Banking</strong>"
       setup_step_3: "Voer uw Enable Banking-inloggegevens in"

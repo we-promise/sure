@@ -15,7 +15,7 @@ nl:
     defaults:
       name: "Trade Republic"
     trade_republic_item:
-      deletion_in_progress: "Wordt verwijderd"
+      deletion_in_progress: "Verwijderen bezig"
       syncing: "Bezig met synchroniseren"
       requires_update: "Opnieuw authenticeren vereist"
       session_expires_in: "Login verloopt over %{time} (%{at})."
@@ -74,7 +74,7 @@ nl:
       available_accounts:
         title: "Beschikbaar account"
         account_type_investment: "Beleggingsportefeuille"
-        account_type_cash: "Contant-geldaccount"
+        account_type_cash: "Geldaccount"
         account_type_crypto: "Crypto-account"
         account_summary: "%{account_type} • Saldo: %{balance}"
         account_id: "Account-ID: %{account_id}"
@@ -91,7 +91,7 @@ nl:
         back_to_settings: "Terug naar instellingen"
         create_selected_accounts: "Geselecteerde accounts aanmaken"
         link: "Koppelen"
-        done: "Gereed"
+        done: "Klaar"
     sync:
       errors:
         phone_number_missing: "Het Trade Republic-telefoonnummer ontbreekt."
@@ -142,7 +142,7 @@ nl:
       login_expired: "Het aanmeldverzoek is verlopen. Begin opnieuw."
     poll_qr_login:
       no_pending_login: "Er staat geen QR-aanmelding open."
-      success: "Trade Republic is gekoppeld."
+      success: "Trade Republic is succesvol gekoppeld."
     complete_login:
       no_pending_login: "Er staat momenteel geen aanmelding open. Start eerst een nieuwe aanmelding."
       approval_pending: "Nog niet bevestigd. Keur de aanmelding goed in de Trade Republic-app en probeer opnieuw."

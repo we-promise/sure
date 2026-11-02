@@ -24,7 +24,7 @@ nl:
         needs_setup: "%{count} accounts moeten worden ingesteld..."
       success: "Synchronisatie gestart"
     panel:
-      setup_instructions: "Installatie-instructies:"
+      setup_instructions: "Configuratie-instructies:"
       step_1: "Ga naar uw Indexa Capital-dashboard om een alleen-lezen API-token aan te maken"
       step_2: "Plak uw API-token hieronder en klik op Opslaan"
       step_3: "Ga na een geslaagde koppeling naar het tabblad Accounts om nieuwe accounts in te stellen"
@@ -168,7 +168,7 @@ nl:
         depository: "Betaal- of spaarrekening"
         credit_card: "Creditcard"
         investment: "Beleggingsaccount"
-        crypto: "Cryptoaccount"
+        crypto: "Crypto-account"
         loan: "Lening of hypotheek"
         other_asset: "Overige bezittingen"
       subtype_labels:
@@ -181,7 +181,7 @@ nl:
       subtype_messages:
         credit_card: "Creditcards worden automatisch ingesteld als creditcardaccounts."
         other_asset: "Voor overige bezittingen zijn geen extra opties nodig."
-        crypto: "Cryptoaccounts worden ingesteld om posities en transacties te volgen."
+        crypto: "Crypto-accounts worden ingesteld om posities en transacties te volgen."
       subtypes:
         depository:
           checking: "Betaalrekening"

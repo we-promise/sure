@@ -49,7 +49,7 @@ nl:
         one: "Bij %{count} saldo is het importeren van transacties mislukt."
         other: "Bij %{count} saldi is het importeren van transacties mislukt."
       account_processing_failed:
-        one: "%{count} Wise-account is mislukt tijdens het verwerken."
+        one: "Verwerken van %{count} Wise-account mislukt."
         other: "%{count} Wise-accounts zijn mislukt tijdens het verwerken."
       account_sync_failed:
         one: "Synchronisatie van %{count} Wise-account kon niet worden ingepland."
@@ -79,7 +79,7 @@ nl:
       instructions:
         sign_in_html: "Ga naar %{link} en log in op uw account"
         open_tokens: "Ga naar Settings → Connect and manage apps → Developer tools → API tokens"
-        create_token: "Maak een nieuw persoonlijk API-token aan met alleen-lezen toegang"
+        create_token: "Maak een nieuw persoonlijk API-token aan met alleen-lezentoegang"
         copy_token_html: "Kopieer het token en plak het hieronder. Sure gebruikt het alleen om uw saldi en transacties te synchroniseren."
       sca:
         title: "Sterke klantauthenticatie (SCA)"

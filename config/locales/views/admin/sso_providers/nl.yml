@@ -107,7 +107,7 @@ nl:
         role_super_admin: "Superbeheerder"
         role_mapping_title: "Groep naar Rol Mapping (Optioneel)"
         role_mapping_help: "Koppel IdP groepen/claims aan applicatierollen. Gebruikers krijgen de hoogste overeenkomende rol toegewezen. Laat leeg om de bovenstaande standaard rol te gebruiken."
-        super_admin_groups: "Superbeheerdergroepen"
+        super_admin_groups: "Superbeheerdersgroepen"
         admin_groups: "Beheerder Groepen"
         guest_groups: "Gastgroepen"
         member_groups: "Lid Groepen"

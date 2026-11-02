@@ -34,7 +34,7 @@ nl:
       add_connection: "Up-koppeling toevoegen"
       update_connection: "Koppeling bijwerken"
       connection_name_label: "Naam van koppeling"
-      connection_name_placeholder: "Hoofdaccount Up"
+      connection_name_placeholder: "Up (hoofd)"
       access_token_label: "Persoonlijk toegangstoken"
       access_token_placeholder: "Plak uw persoonlijke Up-toegangstoken"
       keep_access_token_placeholder: "Laat leeg om het bestaande token te behouden"

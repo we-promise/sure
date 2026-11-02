@@ -112,7 +112,7 @@ nl:
           body: "Hiermee worden de opgeslagen URL, het token en de agent-ID verwijderd en wordt overgeschakeld naar de ingebouwde assistent. U kunt later opnieuw koppelen door nieuwe inloggegevens in te voeren."
       brand_fetch_settings:
         description: "Voer het Client ID in dat door Brandfetch is verstrekt"
-        env_configured_message: "U hebt uw Brandfetch Client ID succesvol geconfigureerd via de omgevingsvariabele BRAND_FETCH_CLIENT_ID."
+        env_configured_message: "U heeft uw Brandfetch Client ID succesvol geconfigureerd via de omgevingsvariabele BRAND_FETCH_CLIENT_ID."
         show_details: "(details tonen)"
         setup_step_1_html: "Ga naar <a href=\"https://brandfetch.com/developers\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">brandfetch.com</a> en maak een gratis Brandfetch Developer-account aan."
         setup_step_2_html: "Ga naar de pagina <a href=\"https://developers.brandfetch.com/dashboard/logo-api\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">Logo API</a>."
@@ -273,7 +273,7 @@ nl:
         placeholder: "Voer hier uw T-Invest-API-token in"
         show_details: "(details tonen)"
         step_1: "Open T-Bank-beleggingen, daarna Settings en vervolgens API tokens (vereist een geopende beleggingsrekening bij T-Bank)."
-        step_2: "Maak een token aan met alleen-lezen toegang."
+        step_2: "Maak een token aan met alleen-lezentoegang."
         step_3: "Kopieer het token en plak het hieronder."
       eodhd_settings:
         title: "EODHD"

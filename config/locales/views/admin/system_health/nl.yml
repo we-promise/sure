@@ -107,7 +107,7 @@ nl:
         queued: "Workercontrole in de wachtrij geplaatst. Deze verschijnt hieronder zodra een workerproces de controle oppakt, meestal binnen enkele seconden."
       optional_services:
         title: "Optionele diensten"
-        description: "Optionele integraties voor de beheerder van de server. Niet-geconfigureerde diensten zijn informatief. Deze controles bekijken alleen instellingen; ze testen geen koppeling, versturen geen testgebeurtenissen en wijzigen geen toestemming voor analytics. Klap een dienst uit voor installatiedetails."
+        description: "Optionele integraties voor de beheerder van de server. Niet-geconfigureerde diensten zijn informatief. Deze controles bekijken alleen instellingen; ze testen geen verbinding, versturen geen testgebeurtenissen en wijzigen geen toestemming voor analytics. Klap een dienst uit voor configuratiedetails."
         missing_settings: "Ontbrekende instellingen: %{settings}"
         statuses:
           configured: "Geconfigureerd"

@@ -4,7 +4,7 @@ nl:
     auto_link_opener:
       create_failed: "We konden niet bevestigen dat deze koppeling is toegevoegd. Laad de pagina opnieuw om dit te controleren voordat u het nogmaals probeert."
     create:
-      already_connected: "U hebt al een koppeling voor deze instelling, dus deze is niet toegevoegd."
+      already_connected: "U heeft al een koppeling voor deze instelling, dus deze is niet toegevoegd."
       exchange_failed: "We konden deze koppeling niet toevoegen. Probeer het opnieuw en controleer de serverlogs als het probleem aanhoudt."
       success: "Account succesvol gekoppeld. Wacht tot accounts zijn gesynchroniseerd."
       token_expired: "Deze koppeling is verlopen voordat deze werd toegevoegd. Koppel de instelling opnieuw."
@@ -43,9 +43,9 @@ nl:
           one: "Deze accounts kunnen niet worden vergeleken met uw bestaande koppeling. Als het dezelfde accounts zijn, zou het toevoegen van deze koppeling ze dupliceren en telt dit als een extra Plaid-koppeling."
           other: "Deze accounts kunnen niet worden vergeleken met uw bestaande koppelingen. Als het dezelfde accounts zijn, zou het toevoegen van deze koppeling ze dupliceren en telt dit als een extra Plaid-koppeling."
       title:
-        one: "U hebt al een koppeling voor deze instelling"
-        other: "U hebt al %{count} koppelingen voor deze instelling"
-      title_all_connected: "U hebt deze koppeling al gemaakt"
+        one: "U heeft al een koppeling voor deze instelling"
+        other: "U heeft al %{count} koppelingen voor deze instelling"
+      title_all_connected: "U heeft deze koppeling al gemaakt"
       title_others_connected:
         one: "Dit account is al gekoppeld"
         other: "Deze accounts zijn al gekoppeld"
@@ -59,7 +59,7 @@ nl:
       confirm_accept: "Instelling verwijderen"
       confirm_body: "Dit verwijdert permanent alle accounts in deze groep en alle bijbehorende gegevens."
       confirm_title: "Instelling verwijderen?"
-      connection_lost: "Koppeling verloren"
+      connection_lost: "Koppeling verbroken"
       connection_lost_description: "Deze koppeling is niet meer geldig. U moet deze koppeling verwijderen en opnieuw toevoegen om door te gaan met het synchroniseren van gegevens."
       delete: "Verwijderen"
       deletion_in_progress: "(verwijdering bezig...)"

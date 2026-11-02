@@ -46,7 +46,7 @@ nl:
       no_wallets: "Er worden nog geen wallets gevolgd."
       review_tokens: "Tokens controleren"
       subtitle: "Elk adres dat deze koppeling uitleest, en wat er per adres wordt gevolgd."
-      title: "Wallets in eigen beheer beheren"
+      title: "Wallets in eigen beheer"
     new_wallet:
       address_label: "Walletadres"
       address_placeholder: "bc1..., 0x... of een Solana-adres"
@@ -77,7 +77,7 @@ nl:
       status_never: "Nog niet gesynchroniseerd"
       syncing: "Synchroniseren..."
     price_provider_warning:
-      body: "Geen enkele ingeschakelde marktgegevensprovider kan crypto prijzen, dus deze wallets volgen hoeveelheden maar tonen een waarde van nul."
+      body: "Geen enkele ingeschakelde marktgegevensprovider levert prijzen voor crypto, dus deze wallets volgen hoeveelheden maar tonen een waarde van nul."
       enable: "Cryptoprijzen inschakelen"
       exchange_rate_body: "Crypto wordt geprijsd in USD en er is geen wisselkoersprovider geconfigureerd om dit om te rekenen naar %{currency}, dus deze wallets volgen hoeveelheden maar tonen een waarde van nul. Stel EXCHANGE_RATE_PROVIDER in — Frankfurter heeft geen API-sleutel nodig."
       exchange_rate_title: "Er is geen wisselkoersprovider geconfigureerd"

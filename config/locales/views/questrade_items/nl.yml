@@ -36,7 +36,7 @@ nl:
         s4: "Registreer een persoonlijke app met een naam en beschrijving en sla deze op."
         s5: "Voeg een nieuw apparaat toe en genereer een token."
         s6: "Plak het gegenereerde token hieronder en sla op."
-      setup_instructions: "Installatie-instructies:"
+      setup_instructions: "Configuratie-instructies:"
       step_1: "Ga naar uw Questrade-dashboard om uw inloggegevens op te halen"
       step_2: "Voer hieronder uw inloggegevens in en klik op Opslaan"
       step_3: "Ga na een geslaagde koppeling naar het tabblad Accounts om nieuwe accounts in te stellen"

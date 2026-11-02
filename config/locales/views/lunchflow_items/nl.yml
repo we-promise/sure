@@ -16,10 +16,10 @@ nl:
       check_provider_settings: "Providerinstellingen controleren"
       unexpected_error: "Er is een onverwachte fout opgetreden. Probeer het later opnieuw."
     setup_required:
-      title: "Lunch Flow-installatie vereist"
+      title: "Lunch Flow-configuratie vereist"
       api_key_not_configured: "API-sleutel niet geconfigureerd"
       api_key_description: "Voordat u Lunch Flow-accounts kunt koppelen, moet u uw Lunch Flow-API-sleutel configureren."
-      setup_steps_title: "Installatiestappen:"
+      setup_steps_title: "Configuratiestappen:"
       setup_step_1_html: "Ga naar <strong>Instellingen → Providers</strong>"
       setup_step_2_html: "Zoek het onderdeel <strong>Lunch Flow</strong>"
       setup_step_3: "Voer uw Lunch Flow-API-sleutel in"
@@ -47,8 +47,8 @@ nl:
       partial_invalid: "Succesvol %{created_count} account(s) gekoppeld, %{already_linked_count} waren al gekoppeld, %{invalid_count} account(s) hadden ongeldige namen"
       partial_success: "Succesvol %{created_count} account(s) gekoppeld. %{already_linked_count} account(s) waren al gekoppeld: %{already_linked_names}"
       success:
-        one: "Succesvol %{count} account gekoppeld"
-        other: "Succesvol %{count} accounts gekoppeld"
+        one: "%{count} account gekoppeld"
+        other: "%{count} accounts gekoppeld"
     lunchflow_item:
       accounts_need_setup: "Accounts moeten worden ingesteld"
       delete: "Koppeling verwijderen"
@@ -85,7 +85,7 @@ nl:
       description: "Selecteer de accounts die u wilt koppelen aan uw %{product_name} account."
       link_accounts: "Geselecteerde accounts koppelen"
       no_accounts_found: "Geen accounts gevonden. Controleer uw API-sleutelconfiguratie."
-      no_api_key: "Lunch Flow API-sleutel is niet geconfigureerd. Configureer deze in Instellingen."
+      no_api_key: "Lunch Flow-API-sleutel is niet geconfigureerd. Configureer deze in Instellingen."
       no_name_placeholder: "(Geen naam)"
       title: "Lunch Flow-accounts selecteren"
     select_existing_account:
@@ -98,7 +98,7 @@ nl:
       link_account: "Account koppelen"
       no_account_specified: "Geen account opgegeven"
       no_accounts_found: "Geen Lunch Flow-accounts gevonden. Controleer uw API-sleutelconfiguratie."
-      no_api_key: "Lunch Flow API-sleutel is niet geconfigureerd. Configureer deze in Instellingen."
+      no_api_key: "Lunch Flow-API-sleutel is niet geconfigureerd. Configureer deze in Instellingen."
       no_name_placeholder: "(Geen naam)"
       title: "%{account_name} koppelen met Lunch Flow"
     link_existing_account:
@@ -115,7 +115,7 @@ nl:
       api_error: "API fout: %{message}"
       fetch_failed: "Accounts ophalen mislukt"
       no_accounts_to_setup: "Geen accounts om in te stellen"
-      no_api_key: "Lunch Flow API-sleutel is niet geconfigureerd. Controleer uw koppelingsinstellingen."
+      no_api_key: "Lunch Flow-API-sleutel is niet geconfigureerd. Controleer uw koppelingsinstellingen."
       page_title: "Lunch Flow-accounts instellen"
       account_types:
         skip: "Dit account overslaan"
@@ -173,7 +173,7 @@ nl:
       all_skipped: "Alle accounts zijn overgeslagen. Geen accounts aangemaakt."
       creation_failed: "Accounts aanmaken mislukt: %{error}"
       no_accounts: "Geen accounts om in te stellen."
-      success: "Succesvol %{count} account(s) aangemaakt."
+      success: "%{count} account(s) aangemaakt."
       unexpected_error: "Er is een onverwachte fout opgetreden"
     sync:
       success: "Synchronisatie gestart"

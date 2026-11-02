@@ -12,7 +12,7 @@ nl:
       errors:
         blank_token: "Voer een SimpleFIN-setuptoken in."
         invalid_token: "Ongeldig setuptoken. Controleer of u het volledige token van SimpleFIN Bridge heeft gekopieerd."
-        token_compromised: "Het setuptoken kan gecompromitteerd, verlopen of al gebruikt zijn. Maak een nieuwe aan."
+        token_compromised: "Het setuptoken kan gecompromitteerd, verlopen of al gebruikt zijn. Maak een nieuw token aan."
         create_failed: "Koppelen mislukt: %{message}"
         unexpected: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     destroy:
@@ -22,7 +22,7 @@ nl:
       errors:
         blank_token: "Voer een SimpleFIN-setuptoken in."
         invalid_token: "Ongeldig setuptoken. Controleer of u het volledige token van SimpleFIN Bridge heeft gekopieerd."
-        token_compromised: "Het setuptoken kan gecompromitteerd, verlopen of al gebruikt zijn. Maak een nieuwe aan."
+        token_compromised: "Het setuptoken kan gecompromitteerd, verlopen of al gebruikt zijn. Maak een nieuw token aan."
         update_failed: "Bijwerken koppeling mislukt: %{message}"
         unexpected: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     edit:
@@ -86,8 +86,8 @@ nl:
       all_skipped: "Alle accounts zijn overgeslagen. Geen accounts zijn aangemaakt."
       no_accounts: "Geen accounts om in te stellen."
       success:
-        one: "Succesvol %{count} SimpleFIN-account aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
-        other: "Succesvol %{count} SimpleFIN-accounts aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
+        one: "%{count} SimpleFIN-account aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
+        other: "%{count} SimpleFIN-accounts aangemaakt! Uw transacties en posities worden op de achtergrond geïmporteerd."
       stale_accounts_processed: "Verouderde accounts: %{deleted} verwijderd, %{moved} verplaatst."
       stale_accounts_errors:
         one: "%{count} verouderde accountactie mislukt. Controleer logs voor details."
@@ -106,7 +106,7 @@ nl:
         one: "%{count} instelling"
         other: "%{count} instellingen"
     rate_limited:
-      daily_refresh: "U hebt de dagelijkse vernieuwingslimiet van SimpleFIN bereikt. Probeer het opnieuw nadat de bridge is vernieuwd (maximaal 24 uur)."
+      daily_refresh: "U heeft de dagelijkse vernieuwingslimiet van SimpleFIN bereikt. Probeer het opnieuw nadat de bridge is vernieuwd (maximaal 24 uur)."
     stale_sync:
       last_successful: "De laatste geslaagde synchronisatie was %{count} dagen geleden. Uw SimpleFIN-koppeling heeft mogelijk aandacht nodig."
       no_transactions: "Geen nieuwe transacties in %{count} dagen. Controleer uw SimpleFIN-dashboard of uw bankkoppelingen actief zijn."
