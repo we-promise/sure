@@ -8,7 +8,7 @@ class CreditCard < ApplicationRecord
   }.freeze
 
   StatementSummary = Data.define(
-    :balance, :remaining, :charges, :credits, :accrued,
+    :balance, :remaining, :charges, :credits, :accrued, :adjustments,
     :due_date, :last_due_date, :next_close, :status, :scheduled_payment,
     :estimated_interest, :monthly_rate
   )
@@ -116,14 +116,14 @@ class CreditCard < ApplicationRecord
     last_close = last_statement_close_date(as_of: as_of)
     return nil if last_close.nil?
 
-    sum_entries_in(..last_close)
+    statement_ledger(as_of: as_of, last_close: last_close)[:closed]
   end
 
   def accrued_since_last_close_money(as_of: Date.current)
     last_close = last_statement_close_date(as_of: as_of)
     return nil if last_close.nil?
 
-    sum_entries_in((last_close + 1)..as_of)
+    accrued_after_bill_settlement(statement_ledger(as_of: as_of, last_close: last_close))
   end
 
   # One read of the statement cycle for the Overview tab. The view needs the
@@ -134,21 +134,19 @@ class CreditCard < ApplicationRecord
     return nil unless statement_cycle_configured?
 
     last_close = last_statement_close_date(as_of: as_of)
-    balance = last_statement_balance_money(as_of: as_of)
-    window = (last_close + 1)..as_of
-    totals = cycle_totals(window)
-    charges = totals&.dig(:charges)
-    credits = totals&.dig(:credits)
-    accrued = totals&.dig(:accrued)
+    ledger = statement_ledger(as_of: as_of, last_close: last_close)
+    balance = ledger[:closed]
+    credits = ledger[:credits]
     remaining = statement_remaining(balance, credits)
     last_due_date = payment_due_date_for(last_close)
 
     StatementSummary.new(
       balance: balance,
       remaining: remaining,
-      charges: charges,
+      charges: ledger[:charges],
       credits: credits,
-      accrued: accrued,
+      accrued: accrued_after_bill_settlement(ledger),
+      adjustments: ledger[:adjustments],
       due_date: statement_due_date(last_due_date, remaining, as_of),
       last_due_date: last_due_date,
       next_close: next_statement_close_date(as_of: as_of),
@@ -159,68 +157,106 @@ class CreditCard < ApplicationRecord
     )
   end
 
-  def minimum_payment_shortfall?(as_of: Date.current)
+  # Takes the closed balance when the caller already has it, so the Overview
+  # does not build the statement cycle a second time.
+  def minimum_payment_shortfall?(as_of: Date.current, balance: last_statement_balance_money(as_of: as_of))
     minimum = minimum_payment_money
-    balance = last_statement_balance_money(as_of: as_of)
     return false if minimum.nil? || balance.nil?
 
     balance > minimum
   end
 
   private
-    def cycle_totals(window)
-      summable = summable_entries(window)
-      return nil if summable.nil?
+    # The figures for the statement cycle. Charges and payments come from the
+    # entries in the open cycle. What was owed at the close, and what is owed
+    # now, come from the account's balance records: the same records the account
+    # header reads, so the two cannot disagree, and no entry history has to be
+    # replayed. What is left over between them is the balance updates made in the
+    # open cycle, which keeps the figures adding up to the current debt.
+    #
+    # A part is nil when it holds an entry we cannot add up in the account's own
+    # currency, or when the balance records have not been built yet.
+    def statement_ledger(as_of:, last_close:)
+      currency = account.currency
+      scoped = account.entries.excluding_pending.excluding_split_parents
+      closed_scope = scoped.where(date: ..last_close)
+      window_scope = scoped.where(date: (last_close + 1)..as_of)
 
-      charges = BigDecimal(0)
-      credits = BigDecimal(0)
-      summable.pluck(:amount).each do |amount|
-        if amount.positive?
-          charges += amount
-        elsif amount.negative?
-          credits += amount
+      closed_known = all_in_currency?(closed_scope, currency)
+      window_known = all_in_currency?(window_scope, currency)
+
+      closed = closed_known ? balance_record_on_or_before(last_close, closed_scope) : nil
+
+      transactions = window_scope.where(entryable_type: "Transaction")
+      charges = window_known ? BigDecimal(transactions.where("amount > 0").sum(:amount).to_s) : nil
+      credits = window_known ? BigDecimal(transactions.where("amount < 0").sum(:amount).to_s) : nil
+
+      # Without a known closed bill there is nothing to measure an update
+      # against, so the fallback keeps the net of the open cycle and leaves
+      # updates out.
+      adjustments = nil
+      if window_known && charges && credits
+        if closed.nil?
+          adjustments = BigDecimal(0)
+        else
+          current = balance_record_on_or_before(as_of, scoped.where(date: ..as_of))
+          adjustments = current && (current.amount - closed.amount - charges - credits)
         end
       end
 
       {
-        charges: Money.new(charges, account.currency),
-        credits: Money.new(credits, account.currency),
-        accrued: Money.new(charges + credits, account.currency)
+        closed: closed,
+        charges: charges && Money.new(charges, currency),
+        credits: credits && Money.new(credits, currency),
+        adjustments: adjustments && Money.new(adjustments, currency)
       }
     end
 
-    def sum_entries_in(window, amount_sign: nil)
-      summable = summable_entries(window)
-      return nil if summable.nil?
-
-      amount_scope = case amount_sign
-      when :positive then summable.where("amount > 0")
-      when :negative then summable.where("amount < 0")
-      else summable
-      end
-
-      Money.new(amount_scope.sum(:amount), account.currency)
+    # Every entry in the scope is in the account's currency. Compared by count,
+    # because `where.not(currency:)` never matches an entry with no currency.
+    def all_in_currency?(scope, currency)
+      scope.where(currency: currency).count == scope.count
     end
 
-    def summable_entries(window)
-      scoped = account.entries.excluding_pending.excluding_split_parents.where(date: window)
+    # The balance the account had on the given date, or on the nearest earlier
+    # date that has one. Nothing in the scope means nothing was owed, so zero.
+    # nil when the scope has entries but no balance record covers them yet.
+    def balance_record_on_or_before(date, scope)
+      return Money.new(0, account.currency) if scope.none?
 
-      # An entry we cannot add up -- booked in another currency, or in none at
-      # all -- makes the total unknown rather than smaller. `where.not(currency:)`
-      # compiles to `!= AND IS NOT NULL`, so it never matches a NULL and the
-      # guard would sit there dead for the exact case it was written for. Compare
-      # the counts instead: anything outside the account's own currency refuses
-      # the whole statement, because quoting only the part that did match would
-      # report a partial figure as if it were the whole.
-      summable = scoped.where(currency: account.currency)
-      return nil if summable.count != scoped.count
+      amount = account.balances
+        .where(currency: account.currency, date: ..date)
+        .order(date: :desc)
+        .pick(:end_balance)
 
-      summable
+      amount && Money.new(amount, account.currency)
     end
 
+    # Payments made after the close settle the closed bill first, up to its
+    # amount. Only the surplus, if any, reduces what was charged or adjusted in
+    # the open cycle, so the figure is the debt still owed on that cycle (or a
+    # credit when the surplus exceeds it).
+    def accrued_after_bill_settlement(ledger)
+      charges, credits, adjustments, balance = ledger.values_at(:charges, :credits, :adjustments, :closed)
+      return nil if charges.nil? || credits.nil? || adjustments.nil?
+
+      open_cycle = charges.amount + adjustments.amount
+
+      # Without a known closed bill there is nothing to settle first, so keep
+      # the net of the open cycle and the payments.
+      return Money.new(open_cycle + credits.amount, charges.currency) if balance.nil?
+
+      bill = [ balance.amount, 0 ].max
+      surplus = [ credits.amount.abs - bill, 0 ].max
+      Money.new(open_cycle - surplus, charges.currency)
+    end
+
+    # What is still owed on the closed bill after payments since the close. A
+    # closed balance that is itself a credit is kept as a credit, so the card
+    # shows what the cardholder is owed rather than hiding it as zero.
     def statement_remaining(balance, credits)
       return nil if balance.nil? || credits.nil?
-      return Money.new(0, balance.currency) unless balance.positive?
+      return balance unless balance.positive?
 
       Money.new([ balance.amount + credits.amount, 0 ].max, balance.currency)
     end
@@ -230,7 +266,7 @@ class CreditCard < ApplicationRecord
     # it has passed, so the Overview still says it is overdue.
     def statement_due_date(last_due_date, remaining, as_of)
       return last_due_date if last_due_date.nil? || remaining.nil?
-      return last_due_date unless remaining.zero? && last_due_date < as_of
+      return last_due_date if remaining.positive? || last_due_date >= as_of
 
       payment_due_date_for(next_statement_close_date(as_of: as_of))
     end
@@ -284,12 +320,15 @@ class CreditCard < ApplicationRecord
     end
 
     def statement_settled?(as_of: Date.current)
-      balance = last_statement_balance_money(as_of: as_of)
+      last_close = last_statement_close_date(as_of: as_of)
+      return false if last_close.nil?
+
+      ledger = statement_ledger(as_of: as_of, last_close: last_close)
+      balance = ledger[:closed]
       return false if balance.nil?
       return true unless balance.positive?
 
-      last_close = last_statement_close_date(as_of: as_of)
-      credits = sum_entries_in((last_close + 1)..as_of, amount_sign: :negative)
+      credits = ledger[:credits]
       return false if credits.nil?
 
       credits.amount.abs >= balance.amount
