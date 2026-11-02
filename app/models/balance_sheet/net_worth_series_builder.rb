@@ -50,6 +50,10 @@ class BalanceSheet::NetWorthSeriesBuilder
         user&.id,
         shares_version,
         currency,
+        # A series built on the fallback before a rate arrived must not outlive
+        # it. Balances convert by account currency, so only those pairs count;
+        # with every account in the target currency there is nothing to query.
+        ExchangeRate.cache_version(to: currency, from: historical_accounts.map(&:currency)),
         period.start_date,
         period.end_date
       ].compact.join("_")

@@ -1432,7 +1432,8 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_select "button[aria-label='Currency: #{@family.currency}']"
-    assert_select "a[role='menuitemradio'][href*='currency=EUR']"
+    # A whole-page visit, so the header's links pick the currency up as well.
+    assert_select "a[role='menuitemradio'][href*='currency=EUR']:not([data-turbo-frame])"
   end
 
   test "dashboard shows a requested additional currency and keeps it across period picks" do

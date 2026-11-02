@@ -353,7 +353,9 @@ class IncomeStatement
         family.entries_cache_version,
         family.accounts_status_version,
         currency,
-        ExchangeRate.maximum(:updated_at)&.to_i,
+        # Sub-second: reporting-currency rates are written in a burst and can
+        # land within the second these figures were cached.
+        ExchangeRate.maximum(:updated_at)&.to_f,
         family.investment_contributions_as_spending?
       ]
     end

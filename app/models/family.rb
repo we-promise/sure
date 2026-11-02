@@ -274,6 +274,7 @@ class Family < ApplicationRecord
   before_validation :normalize_currency
   before_validation :normalize_enabled_currencies!
   after_create_commit :add_classifier_rules
+  after_update_commit :import_added_reporting_currency_rates, if: -> { saved_change_to_enabled_currencies? || saved_change_to_currency? }
 
   def primary_currency_code
     self.class.normalize_currency_code(currency) || "USD"
@@ -755,6 +756,10 @@ class Family < ApplicationRecord
   end
 
   def requires_exchange_rates_data_provider?
+    # An additional reporting currency converts every amount the family has,
+    # foreign or not, so without a provider its reports would read 1:1.
+    return true if (reporting_currency_codes - [ primary_currency_code ]).any? && accounts.exists?
+
     # If family has any accounts not denominated in the family's currency, they need a provider for historical exchange rates
     return true if accounts.where.not(currency: self.currency).any?
 
@@ -964,6 +969,22 @@ class Family < ApplicationRecord
     end
 
     # Bayes first, so the matcher lands above it.
+    # A currency that becomes a reporting currency is offered on the dashboard
+    # at once, so the rates into it are fetched now rather than at the next
+    # account sync or daily market data run, until which its history would
+    # convert at 1:1.
+    def import_added_reporting_currency_rates
+      before = reporting_currencies_in(attribute_before_last_save(:enabled_currencies), attribute_before_last_save(:currency))
+      after = reporting_currencies_in(enabled_currencies, currency)
+      ImportReportingCurrencyRatesJob.perform_later(self) if (after - before).any?
+    end
+
+    # The additional (non-primary) reporting currencies a stored currency list
+    # and primary currency stand for.
+    def reporting_currencies_in(codes, primary)
+      normalize_currency_codes(codes) - [ self.class.normalize_currency_code(primary) ]
+    end
+
     def add_classifier_rules
       CLASSIFIER_ACTION_TYPES.reverse_each { |action_type| add_classifier_rule!(action_type) }
     end

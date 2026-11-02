@@ -54,6 +54,22 @@ class IncomeStatementTest < ActiveSupport::TestCase
     IncomeStatement.new(@family).send(:category_stats)
   end
 
+  test "a new statement invalidates family_stats when a rate lands within the second it was cached" do
+    cached_at = Time.current.change(usec: 100_000)
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::FamilyStats.expects(:new).twice.returns(stub(call: []))
+
+    travel_to(cached_at, with_usec: true) do
+      ExchangeRate.create!(from_currency: "GBP", to_currency: "EUR", date: Date.current, rate: 1.1)
+      IncomeStatement.new(@family).send(:family_stats)
+    end
+    travel_to(cached_at + 0.5.seconds, with_usec: true) do
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+      IncomeStatement.new(@family).send(:family_stats)
+    end
+  end
+
   test "family_stats and category_stats are served from cache when nothing has changed" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     IncomeStatement::FamilyStats.expects(:new).once.returns(stub(call: []))

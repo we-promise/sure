@@ -866,6 +866,49 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal "SGD", family.reporting_currency_code("USD")
   end
 
+  test "an additional reporting currency needs an exchange rate provider even with only primary-currency data" do
+    family = families(:empty)
+    family.update!(currency: "USD", enabled_currencies: [])
+    family.accounts.create!(name: "Checking", balance: 100, currency: "USD", accountable: Depository.new)
+    assert_not family.requires_exchange_rates_data_provider?, "precondition: nothing to convert in USD"
+
+    family.update!(enabled_currencies: [ "EUR" ])
+
+    assert family.requires_exchange_rates_data_provider?
+    ExchangeRate.stubs(:provider).returns(nil)
+    Security.stubs(:provider).returns(nil)
+    assert family.missing_data_provider?
+  end
+
+  test "adding a reporting currency fetches its exchange rates" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [ "USD" ])
+
+    assert_enqueued_with(job: ImportReportingCurrencyRatesJob, args: [ family ]) do
+      family.update!(enabled_currencies: [ "USD", "EUR" ])
+    end
+  end
+
+  test "the old primary currency left enabled becomes a reporting currency and fetches its rates" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [ "USD" ])
+
+    assert_enqueued_with(job: ImportReportingCurrencyRatesJob, args: [ family ]) do
+      family.update!(currency: "USD")
+    end
+  end
+
+  test "removing or keeping reporting currencies fetches nothing" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [ "USD", "EUR" ])
+
+    assert_no_enqueued_jobs(only: ImportReportingCurrencyRatesJob) do
+      family.update!(enabled_currencies: [ "USD" ])
+      family.update!(enabled_currencies: [ "usd" ])
+      family.update!(enabled_currencies: [])
+    end
+  end
+
   private
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))

@@ -738,6 +738,42 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     InvestmentStatement.new(@family.reload).totals(period: period)
   end
 
+  test "totals cache invalidates when a rate lands within the second they were cached" do
+    create_investment_account(balance: 500)
+    period = Period.last_30_days
+    cached_at = Time.current.change(usec: 100_000)
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    dummy_result = { contributions: 0, withdrawals: 0, dividends: 0, interest: 0, trades_count: 0 }
+    InvestmentStatement::Totals.expects(:new).twice.returns(stub(call: dummy_result))
+
+    # Rates into the statement's currency (the family's USD) are the ones its
+    # totals convert with.
+    travel_to(cached_at, with_usec: true) do
+      ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: Date.current, rate: 1.3)
+      InvestmentStatement.new(@family).totals(period: period)
+    end
+    travel_to(cached_at + 0.5.seconds, with_usec: true) do
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+      InvestmentStatement.new(@family).totals(period: period)
+    end
+  end
+
+  test "totals cache ignores rates into other currencies" do
+    create_investment_account(balance: 500)
+    period = Period.last_30_days
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    dummy_result = { contributions: 0, withdrawals: 0, dividends: 0, interest: 0, trades_count: 0 }
+    InvestmentStatement::Totals.expects(:new).once.returns(stub(call: dummy_result))
+
+    InvestmentStatement.new(@family).totals(period: period)
+    travel 1.second do
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+      InvestmentStatement.new(@family).totals(period: period)
+    end
+  end
+
   # Two parcels of one security, materialised the way a sync does: 60 bought on
   # 2024-01-10 at $12 and 40 on 2024-03-05 at $20 (blended $15.20), then 40 sold
   # on 2024-06-01 at $25 and priced at $30 the day after. Average cost relieves
@@ -787,6 +823,18 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
       assert_nil sale.realized_gain_loss
     end
+  end
+
+  test "period totals convert each trade at its day's rate into the requested currency" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+    create_trade(account: account, qty: 2, amount: 120, date: period.start_date)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: period.start_date, rate: 0.5)
+
+    totals = InvestmentStatement.new(@family, user: nil, currency: "EUR").totals(period: period)
+
+    assert_equal Money.new(60, "EUR"), totals.contributions
+    assert_equal "EUR", totals.currency
   end
 
   test "portfolio_value and cash_balance convert to a requested currency" do

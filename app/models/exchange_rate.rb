@@ -18,6 +18,23 @@ class ExchangeRate < ApplicationRecord
     false
   end
 
+  # When the rates converting into +to+ last changed, for cache keys: a rate can
+  # arrive without touching entries or accounts. Sub-second, as rates are written
+  # in bursts and can land within the second a figure was cached. Scoped to the
+  # target currency (index_exchange_rates_on_to_currency) rather than every rate;
+  # +from+ narrows it to the pairs actually converted, and returns nil without a
+  # query when none of them needs converting.
+  def self.cache_version(to:, from: nil)
+    scope = where(to_currency: to)
+    unless from.nil?
+      from = Array(from).compact.uniq - [ to ]
+      return nil if from.empty?
+
+      scope = scope.where(from_currency: from)
+    end
+    scope.maximum(:updated_at)&.to_f
+  end
+
   private
     def rate_must_convert_amounts
       errors.add(:rate, :greater_than, count: 0) unless self.class.valid_rate?(rate)
