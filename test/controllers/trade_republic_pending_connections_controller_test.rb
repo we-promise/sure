@@ -314,6 +314,20 @@ class TradeRepublicPendingConnectionsControllerTest < ActionDispatch::Integratio
     assert_not TradeRepublicPendingConnection.exists?(pending_connection.id)
   end
 
+  test "a family member who is not an admin cannot start or cancel a login" do
+    pending_connection = @family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
+    sign_in users(:family_member)
+    Provider::TradeRepublicClient.expects(:new).never
+
+    assert_no_difference "TradeRepublicPendingConnection.count" do
+      post trade_republic_pending_connections_url, params: { login_method: "qr" }, headers: TURBO_STREAM
+      assert_response :forbidden
+
+      delete trade_republic_pending_connection_url(pending_connection), headers: TURBO_STREAM
+      assert_response :forbidden
+    end
+  end
+
   test "another family's pending connection cannot be touched" do
     other = families(:empty).trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
 
