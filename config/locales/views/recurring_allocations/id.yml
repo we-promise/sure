@@ -1,0 +1,16 @@
+---
+id:
+  recurring_allocations:
+    over_allocation: Itu akan mengalokasikan lebih banyak dari jumlah transaksi
+    missing_rate: Nilai tukar tidak tersedia; masukkan jumlahnya secara eksplisit
+    already_allocated: Transaksi tersebut sudah dialokasikan ke tagihan ini
+    entry_exhausted: Jumlah penuh dari transaksi tersebut sudah dialokasikan ke pembayaran lain yang jatuh tempo
+    invalid: Pembayaran tidak dapat dicatat
+    create:
+      success: Pembayaran dialokasikan
+    destroy:
+      success: Tautan pembayaran diputuskan
+    confirm:
+      success: Pembayaran dialokasikan ke tagihan
+    reject:
+      success: "Ditutup. Transaksi tersebut tidak akan disarankan untuk tagihan ini lagi."
