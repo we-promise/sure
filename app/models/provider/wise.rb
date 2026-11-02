@@ -5,7 +5,7 @@ class Provider::Wise
   extend SslConfigurable
 
   LIVE_BASE_URL = "https://api.wise.com"
-  SANDBOX_BASE_URL = "https://api.sandbox.transferwise.tech"
+  SANDBOX_BASE_URL = "https://api.wise-sandbox.com"
   # Wise caps a single balance-statement request at 469 days; chunk at 468 to
   # stay safely within the limit while covering the full requested range.
   MAX_STATEMENT_DAYS = 468

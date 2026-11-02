@@ -184,4 +184,42 @@ class RulesTest < ApplicationSystemTestCase
     assert_equal "set_transaction_category", rule.actions.first.action_type
     assert rule.actions.first.value.present?
   end
+
+  test "keeps a rule with long text inside a phone-width screen" do
+    @user.family.rules.destroy_all
+    rule = @user.family.rules.create!(
+      name: "Gift card promotion savings plan with a very long descriptive name",
+      resource_type: "transaction",
+      conditions: [
+        Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "EXAMPLEMARKETPLACEPAYMENTSEUROPESARL")
+      ],
+      actions: [
+        Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id)
+      ]
+    )
+
+    page.current_window.resize_to(320, 640)
+    visit rules_path
+
+    row = find("##{ActionView::RecordIdentifier.dom_id(rule)}")
+    viewport_width = page.evaluate_script("document.documentElement.clientWidth")
+
+    row_right = row.native.rect.x + row.native.rect.width
+    assert_operator row_right, :<=, viewport_width
+
+    [ "h3", "span.truncate", "button[aria-haspopup]", "label" ].each do |selector|
+      element = row.find(selector, match: :first, visible: :all)
+      assert_operator element.native.rect.x + element.native.rect.width, :<=, row_right, "#{selector} runs past the rule row"
+    end
+    assert_operator row.find("h3").evaluate_script("this.scrollWidth - this.clientWidth"), :<=, 0, "rule name overflows"
+
+    # On a phone the toggle and menu sit next to the rule name.
+    name = row.find("h3").native.rect
+    menu = row.find("button[aria-haspopup]").native.rect
+    assert_operator menu.y, :<, name.y + name.height
+    assert_operator menu.x, :>=, name.x + name.width
+
+    new_rule = find("a", text: I18n.t("rules.index.new_rule"))
+    assert_operator new_rule.native.rect.x + new_rule.native.rect.width, :<=, viewport_width
+  end
 end

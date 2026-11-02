@@ -26,7 +26,7 @@ class HoldingDrawerActionsTest < ApplicationSystemTestCase
     click_on I18n.t("holdings.show.unlock_cost_basis")
     within("#confirm-dialog") { find("button[value=confirm]").click }
 
-    assert_text I18n.t("holdings.unlock_cost_basis.success")
+    assert_current_path account_path(@holding.account, tab: "holdings")
     assert_not @holding.reload.cost_basis_locked?
   end
 
@@ -49,7 +49,7 @@ class HoldingDrawerActionsTest < ApplicationSystemTestCase
     click_on I18n.t("holdings.show.reset_to_provider")
     within("#confirm-dialog") { find("button[value=confirm]").click }
 
-    assert_text I18n.t("holdings.reset_security.success")
+    assert_current_path account_path(@holding.account, tab: "holdings")
     assert_equal securities(:aapl), @holding.reload.security
   end
 end

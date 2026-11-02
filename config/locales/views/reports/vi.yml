@@ -6,7 +6,6 @@ vi:
       subtitle: Thông tin chi tiết toàn diện về sức khỏe tài chính của bạn
       export: Xuất CSV
       print_report: In báo cáo
-      drag_to_reorder: "Kéo để sắp xếp lại phần"
       toggle_section: "Bật/tắt hiển thị phần"
       periods:
         monthly: Hàng tháng
@@ -176,19 +175,14 @@ vi:
       net_flow: Dòng tiền thuần
       net_flow_description: Tổng thay đổi thuần
     google_sheets_instructions:
-      title_with_key: "✅ Sao chép URL cho Google Sheets"
-      title_no_key: "⚠️ Cần khóa API"
-      ready: URL CSV (kèm khóa API) đã sẵn sàng.
-      steps: "Để nhập vào Google Sheets:\n1. Tạo Google Sheet mới\n2. Trong ô A1, nhập công thức bên dưới\n3. Nhấn Enter"
-      security_warning: "URL này chứa khóa API của bạn. Hãy giữ bí mật!"
+      title_no_key: "Cần khóa API"
       need_key: Để nhập dữ liệu vào Google Sheets, bạn cần khóa API.
       step1: "Vào Cài đặt → Khóa API"
       step2: "Tạo khóa API mới với quyền \"đọc\""
       step3: Sao chép khóa API
-      step4: "Thêm vào URL như sau: ?api_key=YOUR_KEY"
+      step4: "Thêm vào URL như sau: &api_key=YOUR_KEY"
       example: Ví dụ
       then_use: Sau đó dùng URL đầy đủ với =IMPORTDATA() trong Google Sheets.
-      open_sheets: Mở Google Sheets
       go_to_api_keys: Đến Khóa API
       close: Đã hiểu
     print:

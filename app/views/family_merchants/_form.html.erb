@@ -2,6 +2,7 @@
 
 <div data-controller="color-avatar">
   <%= styled_form_with model: family_merchant, url: family_merchant.persisted? ? family_merchant_path(family_merchant) : family_merchants_path, class: "space-y-4" do |f| %>
+    <%= hidden_field_tag :return_to, params[:return_to] if params[:return_to].present? %>
     <section class="space-y-4">
       <% if family_merchant.errors.any? %>
         <%= render "shared/form_errors", model: family_merchant %>
@@ -25,6 +26,24 @@
         <%= f.text_field :website_url, placeholder: t(".website_placeholder") %>
       </div>
       <p class="text-xs text-subdued"><%= t(".website_hint") %></p>
+
+      <% if family_merchant.is_a?(FamilyMerchant) %>
+        <% saved_logo = family_merchant.logo.attached? && family_merchant.logo.persisted? %>
+        <div class="flex items-center gap-3">
+          <% if saved_logo %>
+            <%= image_tag family_merchant.logo_url, class: "w-10 h-10 rounded-full shrink-0", alt: "" %>
+          <% end %>
+          <%= f.file_field :logo, label: t(".logo_label"), accept: FamilyMerchant::LOGO_CONTENT_TYPES.join(","), container_class: "flex-1" %>
+        </div>
+        <p class="text-xs text-subdued"><%= t(".logo_hint", max_megabytes: FamilyMerchant::LOGO_MAX_SIZE / 1.megabyte) %></p>
+
+        <% if saved_logo %>
+          <div class="flex items-center justify-between gap-4">
+            <span id="remove_logo_label" class="text-sm text-primary"><%= t(".remove_logo_label") %></span>
+            <%= f.toggle :remove_logo, "aria-labelledby": "remove_logo_label" %>
+          </div>
+        <% end %>
+      <% end %>
     </section>
 
     <section>
