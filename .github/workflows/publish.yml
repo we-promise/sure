@@ -79,6 +79,8 @@ jobs:
 
       - name: Resolve release tags
         id: release
+        env:
+          SELECTED_REF: ${{ github.event.inputs.ref || github.ref }}
         shell: bash
         run: |
           set -euo pipefail
@@ -88,9 +90,19 @@ jobs:
             exit 0
           fi
           version="${BUILD_DATE}-alpha"
-          # Release identity comes from the immutable tag, never the retry date.
+          # Selected tags determine identity; only tag pushes publish releases.
+          selected_tag=""
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* ]]; then
-            version="${GITHUB_REF#refs/tags/v}"
+            selected_tag="$GITHUB_REF"
+          elif [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            if [[ "$SELECTED_REF" == refs/tags/* ]]; then
+              selected_tag="$SELECTED_REF"
+            elif git show-ref --verify --quiet "refs/tags/$SELECTED_REF"; then
+              selected_tag="refs/tags/$SELECTED_REF"
+            fi
+          fi
+          if [[ -n "$selected_tag" ]]; then
+            version="${selected_tag#refs/tags/v}"
             [[ "$version" =~ ^[2-9][0-9]{3}\.[1-9][0-9]?\.[1-9][0-9]?(-alpha)?$ ]] || exit 1
             base="${version%%-*}"
             [[ "$(date -u -d "${base//./-}" +%Y.%-m.%-d)" == "$base" ]] || exit 1
@@ -121,7 +133,7 @@ jobs:
               [[ -z "$compatibility" ]] || echo "type=raw,value=$compatibility"
               # Hold stable/latest image promotion until CalVer releases are validated.
             else
-              echo 'type=sha,format=long'
+              echo "type=raw,value=sha-$(git rev-parse HEAD)"
               if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then
                 echo 'type=schedule,pattern=nightly'
                 echo "type=raw,value=${BUILD_DATE}-nightly"

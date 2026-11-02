@@ -17,9 +17,9 @@ module Sure
     private
       def version_string
         stripped_content = Rails.root.join(".sure-version").read.strip
-        stripped_content.presence || "0.0.0-dev"
+        stripped_content.presence || "0.0.0-dev.#{commit_sha.presence || 'unknown'}"
       rescue Errno::ENOENT
-        "0.0.0-dev"
+        "0.0.0-dev.#{commit_sha.presence || 'unknown'}"
       end
   end
 end

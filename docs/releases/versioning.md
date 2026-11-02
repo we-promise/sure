@@ -10,11 +10,12 @@ Git tags include `v`; Docker tags and chart versions do not.
 `.sure-version` is generated build metadata, ignored by Git. The Docker workflow
 writes it into the build context before packaging; Rails, Sentry and backups
 continue reading that immutable file inside the image. Source checkouts without
-it use `0.0.0-dev` (with the commit SHA available separately). Local Docker builds
+it use `0.0.0-dev.<commit_sha>` (or `0.0.0-dev.unknown` when unavailable). Local Docker builds
 can generate the file explicitly to label their image; without it they are dev builds.
 
 Tagged releases derive their version from the tag, so retries retain the same
-identity. Untagged Docker builds use the original workflow run's UTC date
+identity. Manual builds selecting a canonical tag retain its version but remain
+non-releases: they publish only the selected commit’s SHA image tag when requested. Untagged Docker builds use the original workflow run's UTC date
 (`YYYY.M.D-alpha`); retries retain that date. They keep the existing SHA tags and do not
 promote `stable` or `latest`. Scheduled builds additionally publish floating
 `nightly` and unpadded `YYYY.M.D-nightly` Docker tags (for example,

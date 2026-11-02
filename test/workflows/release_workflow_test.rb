@@ -91,7 +91,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
           assert_includes output, "type=raw,value=2026.10.28-nightly"
           assert_not_includes output, "pattern=nightly-"
         else
-          assert_not_includes output, "type=raw"
+          assert_includes output, "type=raw,value=sha-#{git!(dir, 'rev-parse', 'HEAD').strip}"
         end
       end
       success, output = resolve(dir, "2027.1.1", extra_env: { "COMPATIBILITY_CHANNEL" => "stable" })
@@ -100,6 +100,40 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
       assert_includes output, "type=raw,value=2027.1.1"
       assert_not_includes output, "type=raw,value=stable"
       assert_not_includes output, "type=raw,value=latest"
+    end
+  end
+
+  test "manual tag builds preserve selected identity without publishing a release" do
+    with_repo do |dir|
+      workflow_sha = git!(dir, "rev-parse", "HEAD").strip
+      git!(dir, "commit", "--allow-empty", "-m", "selected commit")
+      selected_sha = git!(dir, "rev-parse", "HEAD").strip
+      %w[2026.11.2 2026.11.2-alpha].each do |version|
+        git!(dir, "tag", "-a", "v#{version}", "-m", "release")
+        [ "v#{version}", "refs/tags/v#{version}" ].each do |selected_ref|
+          success, output = resolve(dir, version, event: "workflow_dispatch", ref: "refs/heads/main",
+            extra_env: { "SELECTED_REF" => selected_ref, "GITHUB_SHA" => workflow_sha })
+          assert success, output
+          assert_includes output, "version=#{version}\n"
+          assert_includes output, "release=false"
+          assert_includes output, "compatibility_version=\n"
+          assert_includes output, "type=raw,value=sha-#{selected_sha}"
+          assert_not_includes output, "type=raw,value=sha-#{workflow_sha}"
+          assert_not_includes output, "type=raw,value=#{version}"
+        end
+      end
+      [ "main", "refs/heads/main", selected_sha ].each do |selected_ref|
+        success, output = resolve(dir, "unused", event: "workflow_dispatch", ref: "refs/tags/v2026.11.2",
+          extra_env: { "SELECTED_REF" => selected_ref })
+        assert success, output
+        assert_includes output, "version=2026.10.28-alpha"
+        assert_includes output, "release=false"
+      end
+      %w[v2026.11.31 v2026.11.2-beta v0.7.7].each do |tag|
+        git!(dir, "tag", tag)
+        assert_not resolve(dir, "unused", event: "workflow_dispatch", ref: "refs/heads/main",
+          extra_env: { "SELECTED_REF" => tag }).first
+      end
     end
   end
 
@@ -152,7 +186,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
           success, output = resolve(dir, date, event: "schedule", ref: "refs/heads/main", extra_env: { "BUILD_DATE" => date })
           assert success
           assert_includes output, "type=raw,value=#{date}-nightly"
-          assert_includes output, "type=sha,format=long"
+          assert_includes output, "type=raw,value=sha-#{git!(dir, 'rev-parse', 'HEAD').strip}"
           assert_includes output, "type=schedule,pattern=nightly"
           assert_not_includes output, "pattern=nightly-"
         end
@@ -194,10 +228,10 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     def resolve(dir, version, event: "push", ref: "refs/tags/v#{version}", extra_env: {})
       path = File.join(dir, "output")
       File.write(path, "")
-      env = { "COMPATIBILITY_CHANNEL" => workflow.fetch("env").fetch("COMPATIBILITY_CHANNEL"), "COMPATIBILITY_VERSION" => workflow.fetch("env").fetch("COMPATIBILITY_VERSION"),
+      env = { "COMPATIBILITY_CHANNEL" => "alpha", "COMPATIBILITY_VERSION" => "0.7.7-alpha.3",
         "BUILD_DATE" => "2026.10.28", "GITHUB_RUN_NUMBER" => "42",
         "GITHUB_EVENT_NAME" => event,
-        "GITHUB_REF" => ref, "GITHUB_OUTPUT" => path }.merge(extra_env)
+        "SELECTED_REF" => ref, "GITHUB_REF" => ref, "GITHUB_OUTPUT" => path }.merge(extra_env)
       success, error = run_step(dir, "prepare", "release", env)
       [ success, File.read(path) + error ]
     end
