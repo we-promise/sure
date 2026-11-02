@@ -98,7 +98,7 @@ id:
       button_title: Pindahkan uang dari kategori ini
       cancel: Batal
       dialog_title: Pindahkan uang
-      no_destination: Ini satu-satunya pos tempat uang dapat dipindahkan saat ini — kategori tidak dapat mengirim ke induk atau subkategorinya sendiri.
+      no_destination: Saat ini tidak ada pos anggaran lain untuk memindahkan uang — kategori tidak dapat mengirim ke induk atau subkategorinya sendiri.
       submit: Pindahkan
       amount_label: Jumlah
       available: "tersedia %{amount}"

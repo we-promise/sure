@@ -27,12 +27,12 @@ id:
         other: "%{count} aktif"
       of_targets: dari %{total} di semua target
       behind_count:
-        one: 1 tertinggal dari rencana
-        other: "%{count} tertinggal dari rencana"
+        one: 1 tertinggal dari jadwal
+        other: "%{count} tertinggal dari jadwal"
       pending_count:
         one: 1 komitmen tertunda
         other: "%{count} komitmen tertunda"
-      all_on_pace: Semua sesuai rencana
+      all_on_pace: Semua sesuai jadwal
       active_goals: Target aktif
       pending_marker: tertunda
       runway: "ketahanan dana %{months} bln · %{pace}/bln"
