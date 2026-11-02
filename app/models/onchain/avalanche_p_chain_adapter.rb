@@ -91,9 +91,16 @@ class Onchain::AvalanchePChainAdapter
     # `balance` already excludes anything actively bonded (see provider
     # file), so summing it with `staked` double-counts nothing.
     def total_avax(address)
-      balance = provider.get_balance(address)["balance"].to_d
-      staked = provider.get_stake(address)["staked"].to_d
+      balance = nano_avax(provider.get_balance(address)["balance"])
+      staked = nano_avax(provider.get_stake(address)["staked"])
 
       (balance + staked) / NANO_AVAX_PER_AVAX
+    end
+
+    # A missing amount must fail the sync, not read as zero.
+    def nano_avax(amount)
+      raise Provider::AvalanchePChain::ApiError, "Avalanche P-Chain node returned a malformed amount" unless amount.is_a?(String) && amount.match?(/\A\d+\z/)
+
+      amount.to_d
     end
 end
