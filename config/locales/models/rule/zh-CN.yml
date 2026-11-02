@@ -7,3 +7,31 @@ zh-CN:
           min_actions: 至少必须有一个动作
           duplicate_actions: 规则不能有重复动作 %{types}
           nested_conditions: 复合条件不能嵌套
+          split_not_alone: 拆分规则不能包含其他动作
+        rule/action:
+          attributes:
+            value:
+              invalid_config: 必须是有效的拆分配置
+              invalid_split_count: 拆分数量必须在 %{min} 到 %{max} 之间
+              split_name_required: "拆分 #%{index} 缺少名称"
+              split_name_too_long: "拆分 #%{index} 名称过长（最多 255 个字符）"
+              split_name_invalid: "拆分 #%{index} 名称包含无效字符"
+              split_type_invalid: "拆分 #%{index} 类型必须为固定金额或百分比"
+              split_share_invalid: "拆分 #%{index} 份额必须为正数"
+              split_category_invalid: "拆分 #%{index} 分类不属于该家庭"
+              split_merchant_invalid: "拆分 #%{index} 商户不属于该家庭"
+              split_tags_invalid: "拆分 #%{index} 包含不属于该家庭的标签"
+              percentages_must_total_100: 百分比总和必须为 100（当前为 %{total}）
+              fixed_requires_exact_amount_condition: 固定金额拆分需要一条匹配精确交易金额的规则条件（例如：金额
+                = 42.00），否则各拆分份额无法可靠地合计为每笔匹配交易的总额
+              fixed_shares_must_equal_condition_amount: 拆分份额总和必须等于 %{amount}，即此规则条件所要求的确切金额
+        rule/condition:
+          attributes:
+            value:
+              regex_invalid: 不是有效的正则表达式
+              regex_too_complex: 过于复杂，无法安全运行
+              regex_too_long: 过长（最多 %{count} 个字符）
+              regex_backreference: 不能使用后向引用（\1 到 \9）
+  rule:
+    conditions:
+      unsupported_label: 不支持 (%{type})

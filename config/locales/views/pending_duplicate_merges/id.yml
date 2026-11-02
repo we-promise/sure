@@ -1,0 +1,21 @@
+---
+id:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: Silakan pilih transaksi terposting untuk digabungkan
+      invalid_transaction: Transaksi yang dipilih tidak valid untuk digabungkan
+      merge_success: Transaksi tertunda berhasil digabungkan dengan transaksi terposting
+      merge_failed: Tidak dapat menggabungkan transaksi
+    set_transaction:
+      pending_only: Fitur ini hanya tersedia untuk transaksi tertunda
+    new:
+      title: Gabungkan dengan Transaksi Terposting
+      warning_title: Penggabungan Duplikat Manual
+      warning_description: Gunakan ini untuk menggabungkan transaksi tertunda secara manual dengan versi terpostingnya. Tindakan ini akan menghapus transaksi tertunda dan hanya mempertahankan transaksi yang terposting.
+      pending_transaction: Transaksi Tertunda
+      select_posted: Pilih Transaksi Terposting untuk Digabungkan
+      showing_range: "Menampilkan %{start} - %{end}"
+      previous: "← 10 Sebelumnya"
+      next: "10 Berikutnya →"
+      no_candidates: Tidak ada transaksi terposting yang ditemukan di rekening ini.
+      submit_button: Gabungkan Transaksi

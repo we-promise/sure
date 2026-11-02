@@ -418,6 +418,20 @@ If you want to load sample/demo data on a small host:
 2. Apply the change with a **fresh deploy/restart of the worker**. Note for Render specifically: plan changes only take effect on the next deploy - they do **not** apply on a plain restart.
 3. Load the sample data, then optionally drop the worker back to the small plan with another fresh deploy.
 
+## Daily market data import
+
+Sure imports security prices once a day, Monday to Friday. By default the import runs at 22:00 UTC, about an hour after the New York close. To change the time or turn the import off, open **Settings > Self-Hosting** and use the market data import options under the sync settings. The time you save there is interpreted in your browser's timezone.
+
+You can also set the defaults in your `.env` file. A value saved on the settings page always takes precedence over these variables:
+
+```txt
+MARKET_DATA_SYNC_ENABLED=1        # 1 = on, anything else = off
+MARKET_DATA_SYNC_TIME=22:00       # HH:MM, 24-hour clock
+MARKET_DATA_SYNC_TIMEZONE=UTC     # IANA name such as Europe/Berlin; unknown names fall back to UTC
+```
+
+**Upgrading from an earlier version:** the import used to be a fixed entry in `config/schedule.yml`. It is now created by the worker when it starts, from the settings above. Without any change on your side it keeps running at 22:00 UTC, Monday to Friday. If prices stop updating after an upgrade, open `/sidekiq` (see [Inspecting background jobs](#inspecting-background-jobs-sidekiq)), check that the **Cron** tab lists `import_market_data`, and look for `[MarketDataScheduler]` lines in the worker log (`docker compose logs worker`). Saving the import time once on the settings page recreates the job.
+
 ## How to update your app
 
 The mechanism that updates your self-hosted Sure app is the GHCR (Github Container Registry) Docker image that you see in the `compose.yml` file:
@@ -439,6 +453,18 @@ docker compose run --rm backup create # Back up the current version (optional, r
 docker compose pull web worker # Pull the newest image for your tag
 docker compose up -d # Restart on the new version; database migrations run automatically
 ```
+
+### Upgrade note: instance-wide settings need a super admin
+
+Provider credentials (such as Plaid), the shared AI connection settings (LLM provider, endpoints, API keys and models), sync settings, and the external assistant connection are stored once for the whole instance and apply to every family. On an instance with more than one family, only a `super_admin` can change them. When there is a single family, its admins keep access. Family-scoped choices, such as which assistant a family uses, stay with that family's admins.
+
+Installs created before the first user was automatically made `super_admin` may have no super admin at all. If your instance has more than one family (for example, because someone else signed up), these instance-wide settings are hidden after the update and saving them returns "not authorized". Promote your own user once:
+
+```bash
+docker compose exec web bin/rails runner 'User.find_by!(email: "you@example.com").update!(role: :super_admin)'
+```
+
+After that, you can promote other users at `/admin/users`. See section 3.5 of the [OIDC guide](oidc.md) for the console variant.
 
 ## How to change which updates your app receives
 

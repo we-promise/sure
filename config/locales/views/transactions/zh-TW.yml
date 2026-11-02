@@ -35,6 +35,7 @@ zh-TW:
       date: 日期
       description: 描述
       description_placeholder: 描述此筆交易
+      description_placeholder_optional: "留空以使用類別／商家名稱，或先選擇其中一項"
       expense: 支出
       income: 收入
       merchant_label: 商家
