@@ -852,6 +852,17 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal 1, daily_returns(account_ids: [ @account.id, crypto.id ], end_date: @day_one).rows.size
   end
 
+  # A bound value is quoted text. Spelling a fragment marker in one must not
+  # put the fragment's SQL inside that literal, where its own quotes end it.
+  test "a bound value that spells a fragment marker stays a literal" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_100, market_flow: 100
+
+    unknown_currency = daily_returns_in("XXX").rows.map(&:value_close)
+    crafted_currency = daily_returns_in("/* fragment flow_class_sql */").rows.map(&:value_close)
+
+    assert_equal unknown_currency, crafted_currency
+  end
+
   # The classifier's CASE arrives already sanitized and full of quoted labels.
   # Handed back through sanitize_sql_array with the rest of the query, any
   # `:word` inside one of those literals is read as a bind variable, and the
@@ -931,6 +942,14 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
   end
 
   private
+
+    def daily_returns_in(currency)
+      Portfolio::DailyReturns.new(
+        account_ids: [ @account.id ],
+        currency: currency,
+        period: Period.custom(start_date: @day_one, end_date: @day_two)
+      )
+    end
     def daily_returns(account_ids: [ @account.id ], start_date: @day_one, end_date: @day_two)
       Portfolio::DailyReturns.new(
         account_ids: account_ids,
