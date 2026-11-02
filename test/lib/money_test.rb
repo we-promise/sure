@@ -225,6 +225,34 @@ class MoneyTest < ActiveSupport::TestCase
     assert_equal "1 000,12 €", Money.new(1000.12, :eur).format(locale: :hu)
   end
 
+  test "formats correctly for Indian numbering system (3,2,2 digit grouping)" do
+    assert_equal "₹0.00", Money.new(0, :inr).format
+    assert_equal "₹50.00", Money.new(50, :inr).format
+    assert_equal "₹999.00", Money.new(999, :inr).format
+    assert_equal "₹1,000.00", Money.new(1000, :inr).format
+    assert_equal "₹10,000.00", Money.new(10000, :inr).format
+    assert_equal "₹1,00,000.00", Money.new(100000, :inr).format
+    assert_equal "₹1,00,000", Money.new(100000, :inr).format(precision: 0)
+    assert_equal "₹12,34,567.89", Money.new(1234567.89, :inr).format
+    assert_equal "-₹12,34,567.89", Money.new(-1234567.89, :inr).format
+    assert_equal "₹1,00,00,000.00", Money.new(10000000, :inr).format
+    assert_equal "₹12,34,56,789.50", Money.new(123456789.5, :inr).format
+
+    # Numeric HTML-entity unit does not interfere with digit grouping
+    assert_equal "&#x20b9;1,00,000.00", Money.new(100000, :inr).format(unit: "&#x20b9;")
+
+    # Indian grouping uses comma delimiter and dot separator regardless of currency or locale defaults
+    assert_equal "$1,00,000.00", Money.new(100000, :usd).format(indian_grouping: true)
+    assert_equal "€12,34,567.00", Money.new(1234567, :eur).format(indian_grouping: true)
+    assert_equal "12,34,567.89 ₹", Money.new(1234567.89, :inr).format(locale: :de)
+    assert_equal "12,34,567.89 €", Money.new(1234567.89, :eur).format(locale: :de, indian_grouping: true)
+
+    # Can opt out with indian_grouping: false
+    assert_equal "₹100,000.00", Money.new(100000, :inr).format(indian_grouping: false)
+    assert_equal "₹1,234,567.89", Money.new(1234567.89, :inr).format(indian_grouping: false)
+    assert_equal "1.234.567,89 ₹", Money.new(1234567.89, :inr).format(locale: :de, indian_grouping: false)
+  end
+
   test "all supported locales can format money without errors" do
     # Ensure all supported locales from LanguagesHelper::SUPPORTED_LOCALES work
     supported_locales = LanguagesHelper::SUPPORTED_LOCALES
