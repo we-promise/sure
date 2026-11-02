@@ -5,6 +5,7 @@ uk:
         renewal: "Ваш внесок продовжується %{date}."
         cancellation: "Ваш внесок закінчується %{date}."
   settings:
+    encryption_migration_guide: Посібник із налаштування шифрування та міграції
     background_jobs:
       show:
         page_title: "Фонові завдання"

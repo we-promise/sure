@@ -55,7 +55,7 @@
     <%
       amount_content = tag.span(
         Money.new(item[:total], Current.family.currency).format,
-        class: "text-sm #{color_class} privacy-sensitive"
+        class: "text-sm #{color_class} whitespace-nowrap privacy-sensitive"
       )
     %>
     <% if clickable %>

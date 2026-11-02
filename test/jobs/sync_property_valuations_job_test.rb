@@ -37,6 +37,56 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
     assert_equal "RentCast valuation", @account.entries.valuations.find_by(date: Date.current).name
   end
 
+  def expect_rentcast_lookup(params_matcher)
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:valuation_currency).returns("USD")
+    provider.expects(:fetch_property_valuation)
+      .with(params_matcher)
+      .returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
+    Provider::Registry.stubs(:rentcast).returns(provider)
+  end
+
+  test "sends a user-set living area to providers that accept it" do
+    @property.lock_attr!(:area_value)
+    expect_rentcast_lookup(has_entry(:square_footage, 1000))
+
+    SyncPropertyValuationsJob.new.perform
+  end
+
+  test "sends a user-set living area stored in square meters as square feet" do
+    @property.update!(area_value: 100, area_unit: " SQM ")
+    @property.lock_attr!(:area_unit)
+    expect_rentcast_lookup(has_entry(:square_footage, 1076))
+
+    SyncPropertyValuationsJob.new.perform
+  end
+
+  [ nil, 0, -5 ].each do |area|
+    test "omits a user-set living area of #{area.inspect}" do
+      @property.update!(area_value: area)
+      @property.lock_attr!(:area_value)
+      expect_rentcast_lookup(Not(has_key(:square_footage)))
+
+      SyncPropertyValuationsJob.new.perform
+    end
+  end
+
+  test "does not send the living area to providers that do not accept it" do
+    @property.update!(avm_provider: "realie")
+    @property.lock_attr!(:area_value)
+
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:valuation_currency).returns("USD")
+    provider.expects(:fetch_property_valuation)
+      .with(Not(has_key(:square_footage)))
+      .returns(Provider::Response.new(success?: true, data: valuation_data, error: nil))
+    Provider::Registry.stubs(:realie).returns(provider)
+
+    SyncPropertyValuationsJob.new.perform
+  end
+
   test "resolves each provider once per run across multiple properties" do
     second_account = @account.family.accounts.create!(
       name: "Second AVM Property",

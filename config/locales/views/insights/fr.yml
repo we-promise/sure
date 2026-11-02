@@ -17,6 +17,7 @@ fr:
       acknowledge: Compris
       acknowledge_title: Masquer jusqu'à ce que les chiffres changent
       acknowledged: "Analyse ignorée"
+      dig_in: Approfondir avec l'IA
       dismiss: Ignorer
       dismissed: Analyse ignorée
       new: Nouveau
@@ -123,3 +124,14 @@ fr:
       savings_rate_change: Taux d'épargne
       spending_anomaly: Dépenses
       subscription_audit: Abonnements
+    dig_in:
+      prompt: |-
+        Aide-moi à approfondir cette analyse.
+    
+        Analyse : %{title}
+        Ce que Sure a trouvé : %{body}
+        Période : %{period}
+        Chiffres :
+        %{facts}
+    
+        Qu'est-ce qui l'explique, et y a-t-il quelque chose que je devrais faire ?
