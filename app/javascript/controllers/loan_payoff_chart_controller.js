@@ -6,12 +6,16 @@ import {
   createChartTooltip,
 } from "utils/chart_tooltip";
 
-// The loan balance chart: three series on one axis.
+// The loan balance chart: three series on one axis, and a fourth when the
+// Extra repayments tab has an amount applied.
 //
 //   actual     the recorded balance, origination -> today. Solid: fact.
 //   scheduled  the original contract, origination -> maturity. Dashed.
 //   projected  where today's balance is heading on the contract's repayment.
 //              Dashed.
+//   extra      the projection with the extra amount on top of every
+//              repayment. Dashed, in its own pattern. Absent from the
+//              payload when no extra applies.
 //
 // Under the scheduled line, the area down to zero is split by each repayment's
 // interest and principal SHARE: principal from the bottom, interest above it up
@@ -104,6 +108,7 @@ export default class extends Controller {
     // chart on a theme change by itself; no redraw is needed for that.
     const success = "var(--color-success)";
     const destructive = "var(--color-destructive)";
+    const info = "var(--color-info)";
     const muted = "var(--color-tertiary)";
     const interestShare = "var(--color-warning)";
     const principalShare = "var(--color-info)";
@@ -122,6 +127,13 @@ export default class extends Controller {
         points: (data.projected || []).map(toPoint),
         color: success,
         dash: "4 4",
+        width: 2,
+      },
+      {
+        key: "extra",
+        points: (data.extra || []).map(toPoint),
+        color: info,
+        dash: "10 3 2 3",
         width: 2,
       },
       {

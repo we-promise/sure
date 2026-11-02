@@ -79,6 +79,26 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "#000000", @merchant.reload.color
   end
 
+  test "edit keeps return_to in the form" do
+    get edit_family_merchant_url(@merchant, return_to: merchant_path(@merchant))
+
+    assert_select "input[type=hidden][name=return_to][value=?]", merchant_path(@merchant)
+  end
+
+  test "update returns to the given path" do
+    patch family_merchant_url(@merchant), params: { return_to: merchant_path(@merchant), family_merchant: { name: "new name" } }
+
+    assert_redirected_to merchant_path(@merchant)
+  end
+
+  test "update ignores an external return_to" do
+    [ "//evil.example", "/\t/evil.example" ].each do |return_to|
+      patch family_merchant_url(@merchant), params: { return_to: return_to, family_merchant: { name: "new name" } }
+
+      assert_redirected_to family_merchants_path
+    end
+  end
+
   test "should upload merchant logo" do
     patch family_merchant_url(@merchant), params: {
       family_merchant: { logo: file_fixture_upload("profile_image.png", "image/png", :binary) }

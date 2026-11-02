@@ -14,6 +14,14 @@ class StoreLocationTest < ActionDispatch::IntegrationTest
     assert_equal return_to, session[:return_to]
   end
 
+  test "ignores a return_to with control characters" do
+    [ "/\t/evil.example", "/\n/evil.example", "/\r/evil.example" ].each do |return_to|
+      get accounts_path(return_to: return_to)
+
+      assert_nil session[:return_to]
+    end
+  end
+
   test "drops the query string of a return_to too long for the session cookie" do
     account_ids = Array.new(32) { SecureRandom.uuid }
     return_to = "/transactions?" + { page: 1, q: { account_ids: account_ids } }.to_query
