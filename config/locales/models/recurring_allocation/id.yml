@@ -1,0 +1,9 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        recurring_allocation:
+          attributes:
+            currency:
+              must_match_occurrence: harus sesuai dengan mata uang tagihan ini
