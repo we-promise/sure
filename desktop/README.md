@@ -31,7 +31,7 @@ npm run tauri build -- --target universal-apple-darwin
 
 ## Publishing a release
 The desktop build runs automatically as part of the normal Sure `v*` release.
-The version comes from `.sure-version` and must match the release tag; it is
+The version comes from the release tag and is written to generated `.sure-version`; it is
 stamped into `desktop/package.json` and `desktop/src-tauri/tauri.conf.json`
 only while building. The universal `.dmg` is attached to that same GitHub
 Release—there is no separate desktop action, tag, or version.
