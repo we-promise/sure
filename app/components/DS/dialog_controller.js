@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { shouldCloseOnClick } from "utils/dialog_click_outside";
 
 const FOCUSABLE_SELECTOR = [
   "a[href]",
@@ -28,8 +29,13 @@ export default class extends Controller {
     this._frame = this.element.closest("turbo-frame");
     this._onKeydown = this.#onKeydown.bind(this);
     this._onClose = this.#onClose.bind(this);
+    this._pressTarget = null;
+    this._onPress = (e) => {
+      this._pressTarget = e.target;
+    };
 
     this.element.addEventListener("keydown", this._onKeydown);
+    this.element.addEventListener("pointerdown", this._onPress);
     this.element.addEventListener("close", this._onClose);
 
     if (this.element.matches(":modal")) return;
@@ -46,6 +52,7 @@ export default class extends Controller {
 
   disconnect() {
     this.element.removeEventListener("keydown", this._onKeydown);
+    this.element.removeEventListener("pointerdown", this._onPress);
     this.element.removeEventListener("close", this._onClose);
 
     // Replaced while still open: one drawer linking to the next inside the
@@ -62,7 +69,9 @@ export default class extends Controller {
   // If the user clicks anywhere outside of the visible content, close the dialog
   clickOutside(e) {
     if (this.disableClickOutsideValue) return;
-    if (!this.contentTarget.contains(e.target)) {
+    const pressTarget = this._pressTarget;
+    this._pressTarget = null;
+    if (shouldCloseOnClick(pressTarget, e.target, this.contentTarget)) {
       this.close();
     }
   }
