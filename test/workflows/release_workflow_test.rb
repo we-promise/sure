@@ -82,7 +82,8 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         success, output = resolve(dir, "2026.10.28", event: event, ref: "refs/heads/main")
         assert success
         assert_includes output, "release=false"
-        assert_includes output, "version=2026.10.28-alpha"
+        expected_version = event == "schedule" ? "2026.10.28-nightly" : "2026.10.28-alpha"
+        assert_includes output, "version=#{expected_version}\n"
         assert_not_includes output, "type=raw,value=latest"
         assert_not_includes output, "type=raw,value=stable"
         assert_not_includes output, "compatibility_version=0.7.7"
@@ -137,6 +138,30 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     end
   end
 
+  test "nightly identity is shared by the dated tag embedded version and OCI metadata" do
+    with_repo do |dir|
+      success, output = resolve(dir, "unused", event: "schedule", ref: "refs/heads/main",
+        extra_env: { "BUILD_DATE" => "2026.11.3" })
+      assert success, output
+      version = output.lines.find { |line| line.start_with?("version=") }.strip.delete_prefix("version=")
+      assert_equal "2026.11.3-nightly", version
+      assert_includes output, "type=raw,value=#{version}\n"
+      assert_includes output, "compatibility_version=\n"
+      assert run_step(dir, "build", "version_file", "VERSION" => version).first
+      assert_equal "#{version}\n", File.read(File.join(dir, ".sure-version"))
+
+      build_steps = workflow.fetch("jobs").fetch("build").fetch("steps")
+      version_step = build_steps.find { |step| step["id"] == "version_file" }
+      metadata = build_steps.find { |step| step["id"] == "meta" }.fetch("with")
+      assert_equal "${{ needs.prepare.outputs.version }}", version_step.fetch("env").fetch("VERSION")
+      assert_includes metadata.fetch("labels"), "org.opencontainers.image.version=${{ needs.prepare.outputs.version }}"
+
+      merge_step = workflow.fetch("jobs").fetch("merge").fetch("steps").find { |step| step["name"] == "Merge and push Docker image" }
+      assert_equal "${{ needs.prepare.outputs.version }}", merge_step.fetch("env").fetch("VERSION")
+      assert_includes merge_step.fetch("run"), "--annotation=index:org.opencontainers.image.version=$VERSION"
+    end
+  end
+
   test "non-force alias step accepts retries and annotated tags but not other commits" do
     with_repo do |dir|
       remote = File.join(dir, "remote.git")
@@ -185,6 +210,10 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         2.times do
           success, output = resolve(dir, date, event: "schedule", ref: "refs/heads/main", extra_env: { "BUILD_DATE" => date })
           assert success
+          assert_includes output, "version=#{date}-nightly\n"
+          assert_includes output, "release=false\n"
+          assert_includes output, "stable=false\n"
+          assert_includes output, "alpha=false\n"
           assert_includes output, "type=raw,value=#{date}-nightly"
           assert_includes output, "type=raw,value=sha-#{git!(dir, 'rev-parse', 'HEAD').strip}"
           assert_includes output, "type=schedule,pattern=nightly"
