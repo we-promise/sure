@@ -22,9 +22,9 @@
           <span class="text-sm text-secondary"><%= t("reports.investment_performance.total_return") %></span>
         </div>
         <% if investment_metrics[:unrealized_trend] %>
-          <p class="text-xl font-semibold whitespace-nowrap privacy-sensitive" style="color: <%= investment_metrics[:unrealized_trend].color %>">
-            <%= format_money(Money.new(investment_metrics[:unrealized_trend].value, Current.family.currency)) %>
-            (<%= investment_metrics[:unrealized_trend].percent_formatted %>)
+          <p class="text-xl font-semibold privacy-sensitive" style="color: <%= investment_metrics[:unrealized_trend].color %>">
+            <span class="whitespace-nowrap"><%= format_money(Money.new(investment_metrics[:unrealized_trend].value, Current.family.currency)) %></span>
+            <span class="whitespace-nowrap">(<%= investment_metrics[:unrealized_trend].percent_formatted %>)</span>
           </p>
         <% else %>
           <p class="text-xl font-semibold text-secondary"><%= t("reports.investment_performance.no_data") %></p>
@@ -38,9 +38,9 @@
           <span class="text-sm text-secondary"><%= t("reports.investment_performance.period_return") %></span>
         </div>
         <% if investment_metrics[:period_return_trend] %>
-          <p class="text-xl font-semibold whitespace-nowrap privacy-sensitive" style="color: <%= investment_metrics[:period_return_trend].color %>">
-            <%= format_money(Money.new(investment_metrics[:period_return_trend].value, Current.family.currency)) %>
-            (<%= investment_metrics[:period_return_trend].percent_formatted %>)
+          <p class="text-xl font-semibold privacy-sensitive" style="color: <%= investment_metrics[:period_return_trend].color %>">
+            <span class="whitespace-nowrap"><%= format_money(Money.new(investment_metrics[:period_return_trend].value, Current.family.currency)) %></span>
+            <span class="whitespace-nowrap">(<%= investment_metrics[:period_return_trend].percent_formatted %>)</span>
           </p>
         <% else %>
           <p class="text-xl font-semibold text-secondary"><%= t("reports.investment_performance.no_data") %></p>
@@ -74,7 +74,7 @@
     <% if investment_metrics[:top_holdings].any? %>
       <div class="space-y-3">
         <h4 class="text-lg font-medium"><%= t("reports.investment_performance.top_holdings") %></h4>
-        <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
+        <div class="bg-container-inset rounded-xl p-1 overflow-x-auto focus-ring" tabindex="0" role="region" aria-label="<%= t("reports.investment_performance.top_holdings") %>">
           <div class="w-max min-w-full">
           <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
           <table class="w-full">
@@ -228,8 +228,8 @@
             <%= link_to account_path(account), class: "bg-container-inset rounded-lg p-4 flex items-center justify-between gap-3 hover:bg-container-hover transition-colors" do %>
               <div class="flex items-center gap-3 min-w-0">
                 <%= render "accounts/logo", account: account, size: "sm" %>
-                <div>
-                  <p class="font-medium text-primary text-sm"><%= account.name %></p>
+                <div class="min-w-0">
+                  <p class="font-medium text-primary text-sm break-words"><%= account.name %></p>
                   <p class="text-xs text-secondary"><%= account.short_subtype_label %></p>
                 </div>
               </div>
