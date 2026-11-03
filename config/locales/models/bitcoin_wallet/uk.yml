@@ -1,0 +1,13 @@
+---
+uk:
+  activerecord:
+    errors:
+      models:
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: пов'язаний з іншим постачальником. Гаманці Bitcoin можна відстежувати лише на ручних криптовалютних рахунках.
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: потребує налаштованого шифрування Active Record

@@ -1,0 +1,13 @@
+---
+ca:
+  activerecord:
+    errors:
+      models:
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: està vinculat a un altre proveïdor. Les carteres Bitcoin només es poden seguir en comptes cripto manuals.
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: requereix tenir configurat el xifratge d'Active Record

@@ -1,0 +1,13 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: ist mit einem anderen Anbieter verbunden. Bitcoin-Wallets können nur auf manuellen Krypto-Konten verfolgt werden.
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: erfordert eine konfigurierte Active-Record-Verschlüsselung
