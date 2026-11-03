@@ -15,7 +15,7 @@
    end %>
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(transaction) do %>
-    <div class="group flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= "pl-8 lg:pl-12" if in_split_group %>"
+    <div class="group group/transaction flex lg:grid lg:grid-cols-12 items-center text-primary text-sm font-medium p-3 lg:p-4 <%= "pl-8 lg:pl-12" if in_split_group %>"
          data-controller="clickable-row"
          data-action="click->clickable-row#open">
 
@@ -172,7 +172,14 @@
                     </span>
                   <% else %>
                     <% if transaction.merchant&.present? %>
-                      <span class="hidden lg:inline truncate"><%= transaction.merchant.name %> • </span>
+                      <span class="hidden lg:inline truncate">
+                        <%= transaction.merchant.name %><%= link_to merchant_path(transaction.merchant),
+                              data: { turbo_frame: "_top" },
+                              class: "opacity-0 group-hover/transaction:opacity-100 focus-visible:opacity-100 transition-opacity inline-flex align-middle hover:text-primary",
+                              title: t("transactions.transaction.view_merchant") do %>
+                          <%= icon "arrow-up-right", size: "xs", color: "current" %>
+                        <% end %> •
+                      </span>
                     <% end %>
                     <span class="text-secondary hidden lg:inline">
                       <%= link_to entry.account.name,
