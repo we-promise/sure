@@ -1177,6 +1177,30 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.paycheck.safe_after_bills"), response.body
   end
 
+  test "the overview lists this month's paydays, past and upcoming, and next month's" do
+    travel_to Date.new(2026, 10, 23) do
+      income = @family.recurring_transactions.create!(
+        name: "Salary Overview", account: accounts(:depository), amount: -1840, currency: "USD",
+        bill_type: "income", expected_day_of_month: 15, anchor_date: Date.new(2026, 9, 15),
+        last_occurrence_date: Date.new(2026, 10, 15), next_expected_date: Date.new(2026, 11, 15),
+        status: "active", manual: true
+      )
+      [ Date.new(2026, 10, 15), Date.new(2026, 11, 15) ].each do |due|
+        income.recurring_occurrences.find_or_create_by!(original_due_on: due) do |occurrence|
+          occurrence.family = @family
+          occurrence.due_on = due
+          occurrence.currency = "USD"
+        end
+      end
+
+      get bills_url
+
+      assert_response :success
+      # One row for this month's payday and one under "After this month".
+      assert_equal 2, response.body.scan("Salary Overview").size
+    end
+  end
+
   # A lone materialized paycheck landing today collapses the planner's
   # boundary list to a single date, which yields an empty plan; the page must
   # treat that like no plan instead of crashing on plan.last.
