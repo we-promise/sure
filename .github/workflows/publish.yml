@@ -132,6 +132,8 @@ jobs:
               echo "type=raw,value=$version"
               [[ -z "$compatibility" ]] || echo "type=raw,value=$compatibility"
               # Hold stable/latest image promotion until CalVer releases are validated.
+              # [[ "$stable" != true ]] || echo 'type=raw,value=stable'
+              # [[ "$alpha" != true ]] || echo 'type=raw,value=latest'
             else
               echo "type=raw,value=sha-$(git rev-parse HEAD)"
               if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then
