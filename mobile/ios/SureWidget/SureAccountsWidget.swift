@@ -137,7 +137,10 @@ private struct ListLayout: View {
                     Text("+\(hidden) more")
                 }
                 Spacer(minLength: 0)
-                if !entry.isLive {
+                if entry.needsSetup {
+                    // No API key: showing saved balances, auto-refresh is off.
+                    Image(systemName: "key")
+                } else if !entry.isLive {
                     Image(systemName: "wifi.slash")
                 }
                 if let updated = entry.snapshot?.updatedAt {
