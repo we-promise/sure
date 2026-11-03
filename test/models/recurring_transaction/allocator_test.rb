@@ -195,6 +195,22 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_not @occurrence.overpaid?
   end
 
+  test "a payment 7.51% over the bill stores the ceiling of the deviation" do
+    # 7.51% rounds to 7.5 at one decimal but must store 7.6 (the ceiling).
+    allocation = @allocator.allocate!(entry: entry_for(BigDecimal("2150.20")))
+
+    assert_equal BigDecimal("2150.20"), allocation.allocated_amount
+    assert_equal 7.6, @rent.reload.matcher_hints["learned_tolerance_pct"].to_f
+  end
+
+  test "a non-numeric learned hint reads as no widening" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => "" })
+
+    allocation = @allocator.allocate!(entry: entry_for(2080))
+
+    assert_equal 2080, allocation.allocated_amount
+  end
+
   test "the first manual link of a payment outside the default band records the actual amount" do
     # The Codex case: a 40.00 bill, a 46.80 payment (17% over). The first link
     # teaches a 17% band and records 46.80, not the 40.00 estimate.
