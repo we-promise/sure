@@ -10,10 +10,13 @@ class RecurringTransaction
     # pre-converted to the family currency so no view has to convert money.
     Item = Data.define(:occurrence, :share, :remaining_total, :due_in_period)
 
+    # `received` is what the matched deposits actually brought in, or nil while
+    # any of the day's paychecks is still unmatched. When set, it is also what
+    # `income` carries, so the window is funded from the money that arrived.
     Period = Data.define(
       :starts_on, :ends_on, :income, :income_sources, :items,
       :due_total, :reserved_total, :obligation_total, :remaining, :leading, :final,
-      :cash_on_hand
+      :cash_on_hand, :received
     ) do
       # The window between today and the next payday: nothing arrives in it, so
       # what it needs must come from cash already in hand.
@@ -80,7 +83,7 @@ class RecurringTransaction
 
     # nil when no income schedule is declared (the view prompts for one).
     def plan(periods_limit: 3)
-      incomes = upcoming_income_occurrences
+      incomes = plannable_income_occurrences
       return nil if incomes.empty?
 
       boundaries = period_boundaries(incomes, periods_limit)
@@ -108,7 +111,8 @@ class RecurringTransaction
           remaining: period[:income] - obligation_total,
           leading: period[:leading],
           final: period[:final],
-          cash_on_hand: period[:leading] ? cash_on_hand : nil
+          cash_on_hand: period[:leading] ? cash_on_hand : nil,
+          received: period[:received]
         )
       end
     end
@@ -123,6 +127,23 @@ class RecurringTransaction
     end
 
     private
+      # Paychecks the plan still has to fund: open ones, and matched ones, which
+      # stay in the plan at their due date. Open-only would drop a paycheck the
+      # moment a deposit was matched to it. Skipped and missed ones are not
+      # paychecks anyone is waiting for, so they stay out.
+      def plannable_income_occurrences
+        @plannable_income_occurrences ||=
+          family.recurring_occurrences
+                .where(status: %w[scheduled paid])
+                .joins(:recurring_transaction)
+                .where(recurring_transactions: { status: :active, bill_type: :income, manual: true })
+                .merge(RecurringTransaction.accessible_by(user))
+                .where("recurring_occurrences.due_on >= ?", Date.current)
+                .includes(:recurring_transaction)
+                .order(:due_on)
+                .to_a
+      end
+
       # Declared income only. Sign alone proves nothing: a recurring one-cent
       # balance transfer is income by sign and a payday by nothing.
       def upcoming_income_occurrences
@@ -150,11 +171,13 @@ class RecurringTransaction
         boundaries.each_cons(2).map.with_index do |(starts_on, next_start), index|
           arrivals = incomes.select { |occurrence| occurrence.due_on == starts_on }
 
+          received = received_total(arrivals)
           {
             starts_on: starts_on,
             ends_on: next_start - 1,
-            income: arrivals.sum { |occurrence| to_family_currency(occurrence.resolved_expected_amount_money) },
+            income: received || arrivals.sum { |occurrence| to_family_currency(occurrence.resolved_expected_amount_money) },
             income_sources: arrivals.map { |occurrence| occurrence.recurring_transaction.display_name }.uniq,
+            received: received,
             items: [],
             leading: index.zero?,
             final: false
@@ -300,6 +323,15 @@ class RecurringTransaction
                                   .group(:recurring_occurrence_id)
                                   .sum(:allocated_amount)
         occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+      end
+
+      # Only when every paycheck landing that day is matched: a partly matched
+      # day still has an expected part, and mixing the two would misstate it.
+      def received_total(arrivals)
+        return nil if arrivals.empty?
+        return nil unless arrivals.all? { |occurrence| occurrence.confirmed_allocated.positive? }
+
+        arrivals.sum { |occurrence| to_family_currency(occurrence.confirmed_allocated_money.abs) }
       end
 
       def to_family_currency(money)
