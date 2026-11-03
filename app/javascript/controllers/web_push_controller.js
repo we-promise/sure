@@ -11,6 +11,7 @@ export default class extends Controller {
   };
 
   async connect() {
+    this.lifecycleGeneration = (this.lifecycleGeneration || 0) + 1;
     this.pollGeneration = (this.pollGeneration || 0) + 1;
     this.busy = true;
     this.subscriptionIdValue = "";
@@ -46,57 +47,71 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.lifecycleGeneration++;
     this.stopPolling();
   }
 
   async enable() {
-    await this.run(async () => {
+    await this.run(async (isCurrent) => {
       // Request permission before awaiting any other work: Safari requires the
       // permission request to retain this button's direct user activation.
       const permission = Notification.permission === "granted" ? "granted" :
         await Notification.requestPermission();
+      if (!isCurrent()) return;
       if (permission !== "granted") {
         this.setStatus(permission === "denied" ? "denied" : "permission");
         return;
       }
       await navigator.serviceWorker.ready;
-      this.subscription = await this.registration.pushManager.getSubscription();
+      if (!isCurrent()) return;
+      const currentSubscription = await this.registration.pushManager.getSubscription();
+      if (!isCurrent()) return;
+      this.subscription = currentSubscription;
       if (this.subscription && !this.subscriptionUsesCurrentKey(this.subscription)) {
         if (this.subscriptionIdValue) await this.request(this.deviceUrl(), "DELETE");
+        if (!isCurrent()) return;
         this.subscriptionIdValue = "";
-        if (!await this.subscription.unsubscribe()) throw new Error("Browser subscription replacement failed");
+        const unsubscribed = await this.subscription.unsubscribe();
+        if (!isCurrent()) return;
+        if (!unsubscribed) throw new Error("Browser subscription replacement failed");
         this.subscription = null;
       }
-      this.subscription ||= await this.registration.pushManager.subscribe({
+      const browserSubscription = this.subscription || await this.registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: this.applicationServerKey(),
       });
+      if (!isCurrent()) return;
+      this.subscription = browserSubscription;
       const subscription = this.subscription.toJSON();
       const result = await this.request(this.urlValue, "POST", {
         endpoint: subscription.endpoint,
         p256dh: subscription.keys.p256dh,
         auth: subscription.keys.auth,
       });
+      if (!isCurrent()) return;
       this.subscriptionIdValue = result.id;
       this.setStatus("enabled");
     });
   }
 
   async disable() {
-    await this.run(async () => {
+    await this.run(async (isCurrent) => {
       this.stopPolling();
       if (this.subscriptionIdValue) await this.request(this.deviceUrl(), "DELETE");
+      if (!isCurrent()) return;
       this.subscriptionIdValue = "";
       if (this.subscription) await this.subscription.unsubscribe();
+      if (!isCurrent()) return;
       this.subscription = null;
       this.setStatus("disabled");
     });
   }
 
   async test() {
-    await this.run(async () => {
+    await this.run(async (isCurrent) => {
       this.stopPolling();
       await this.request(`${this.deviceUrl()}/test_notification`, "POST");
+      if (!isCurrent()) return;
       this.setStatus("queued");
       this.pollCount = 0;
       this.pollTimer = setTimeout(() => this.pollTest(), 1500);
@@ -123,15 +138,19 @@ export default class extends Controller {
 
   async run(action) {
     if (this.busy) return;
+    const generation = this.lifecycleGeneration;
+    const isCurrent = () => generation === this.lifecycleGeneration;
     this.busy = true;
     this.updateControls();
     try {
-      await action();
+      await action(isCurrent);
     } catch (error) {
-      this.showError(error);
+      if (isCurrent()) this.showError(error);
     } finally {
-      this.busy = false;
-      this.updateControls();
+      if (isCurrent()) {
+        this.busy = false;
+        this.updateControls();
+      }
     }
   }
 
