@@ -5,7 +5,8 @@ class RulesController < ApplicationController
   before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index
-    @rules = Current.family.rules.includes(conditions: :sub_conditions).ordered
+    @rules = Current.family.rules.includes(:actions, conditions: :sub_conditions).ordered.to_a
+    Rule.share_option_lists(@rules)
 
     # Fetch recent rule runs with pagination
     recent_runs_scope = RuleRun
