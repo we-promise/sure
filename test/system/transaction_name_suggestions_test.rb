@@ -8,7 +8,7 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
   end
 
   test "recent and searched names share one keyboard-accessible picker with category autofill" do
-    visit new_transaction_url(account_id: accounts(:depository).id)
+    open_new_transaction
     find("#entry_name").click
     assert_selector ".hw-combobox [role='option']", text: "Starbucks"
     assert_selector "input[role='combobox']", count: 1
@@ -23,14 +23,14 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     fill_in "entry_name", with: "My custom purchase"
     find("input[name='entry[amount]']").set("12.34")
     click_button "Add transaction"
-    assert_text "Transaction created"
-    entry = @user.family.entries.order(created_at: :desc).first
+    assert_created_transaction "My custom purchase"
+    entry = accounts(:depository).entries.find_by!(name: "My custom purchase")
     assert_equal "My custom purchase", entry.name
     assert_equal categories(:food_and_drink), entry.entryable.category
   end
 
   test "blank names keep the live category and merchant preview and save the generated name" do
-    visit new_transaction_url(account_id: accounts(:depository).id)
+    open_new_transaction
     select_starbucks
     fill_in "entry_name", with: ""
     choose_category categories(:food_and_drink)
@@ -44,8 +44,10 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     assert_selector "#entry_name[placeholder='Food & Drink - Amazon']"
     find("input[name='entry[amount]']").set("12.34")
     click_button "Add transaction"
-    assert_text "Transaction created"
-    assert_equal "Food & Drink - Amazon", @user.family.entries.order(created_at: :desc).first.name
+    assert_created_transaction "Food & Drink - Amazon"
+    entry = accounts(:depository).entries.find_by!(name: "Food & Drink - Amazon")
+    assert_equal categories(:food_and_drink), entry.entryable.category
+    assert_equal merchants(:amazon), entry.entryable.merchant
   end
 
   test "manual keyboard category selection and clearing survive subsequent name suggestions" do
@@ -86,6 +88,26 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
   end
 
   private
+    def open_new_transaction
+      # Open the modal from its real parent page so submission returns to the
+      # account activity, rather than refreshing the standalone /new dialog.
+      visit account_url(accounts(:depository), tab: "activity")
+      within "[data-testid='activity-menu']" do
+        click_on "New"
+        click_on "New transaction"
+      end
+      assert_selector "turbo-frame#modal dialog[open] #entry_name"
+    end
+
+    def assert_created_transaction(name)
+      # The toast is short-lived and can disappear during a Turbo refresh.
+      # Wait for the durable result instead, retaining browser-level coverage.
+      assert_no_selector "turbo-frame#modal dialog[open]"
+      within "##{dom_id(accounts(:depository), :entries)}" do
+        assert_text name
+      end
+    end
+
     def select_starbucks
       fill_in "entry_name", with: "Starb"
       find(".hw-combobox [role='option']", text: "Starbucks").click
