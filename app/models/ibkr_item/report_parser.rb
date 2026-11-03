@@ -70,7 +70,7 @@ class IbkrItem::ReportParser
         name: account_id,
         currency: currency,
         cash_balance: extract_cash_balance(cash_report, currency),
-        current_balance: extract_nav_balance(equity_summary_in_base, currency) ||
+        current_balance: extract_nav_balance(equity_summary_in_base, currency, report_date) ||
           extract_total_balance(position_values, cash_report, currency),
         report_date: report_date,
         statement: statement_data,
@@ -139,29 +139,31 @@ class IbkrItem::ReportParser
     end
 
     # IBKR's own net asset value, which covers every asset class the account
-    # holds. ChangeInPositionValues does not: a statement carrying crypto or
-    # spot metals leaves them out of it, and the balance then came to cash plus
-    # the listed positions alone -- short by whatever else was held, and at
-    # odds with the account's own history, which reads this same section.
-    # Position values plus cash stays as the fallback, for a Flex Query
-    # configured without the equity summary.
+    # holds. ChangeInPositionValues is reported per asset category and omits
+    # crypto and spot metals, so position values plus cash is the fallback only
+    # for a Flex Query configured without an equity summary. This is also the
+    # section IbkrAccount::HistoricalBalancesSync reads, which keeps the
+    # current balance and the balance history on one figure.
     #
-    # Rows are filtered as IbkrAccount::HistoricalBalancesSync filters them:
-    # BASE_SUMMARY aggregates across currencies instead of stating a day's
-    # value, and a row with no currency at all is implicitly in base currency.
-    def extract_nav_balance(equity_rows, account_currency)
-      equity_rows
-        .filter_map do |row|
-          next unless nav_row_in_currency?(row, account_currency)
+    # report_date's own row is preferred, so the figure belongs to the date
+    # IbkrAccount::Processor anchors the balance on, and the latest row is taken
+    # only when that date has none.
+    #
+    # Rows are filtered as HistoricalBalancesSync filters them: BASE_SUMMARY
+    # aggregates across currencies instead of stating a day's value, and a row
+    # with no currency at all is implicitly in base currency.
+    def extract_nav_balance(equity_rows, account_currency, report_date)
+      totals_by_date = equity_rows.each_with_object({}) do |row, totals|
+        next unless nav_row_in_currency?(row, account_currency)
 
-          date = parse_date(row["report_date"])
-          total = parse_decimal(row["total"])
-          next unless date && total
+        date = parse_date(row["report_date"])
+        total = parse_decimal(row["total"])
+        next unless date && total
 
-          [ date, total ]
-        end
-        .max_by(&:first)
-        &.last
+        totals[date] = total
+      end
+
+      totals_by_date[report_date] || totals_by_date.max_by(&:first)&.last
     end
 
     def nav_row_in_currency?(row, account_currency)

@@ -23,9 +23,6 @@ class IbkrAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     @ibkr_account.ensure_account_provider!(@account)
   end
 
-  # A crypto or spot-metal position carries no ISIN and no listing, and used to
-  # be dropped for both reasons: counted among the positions the sync had
-  # processed, missing from the account, and absent from the debug log.
   test "imports crypto and commodity positions alongside stocks" do
     @ibkr_account.update!(raw_holdings_payload: [ stock_position, crypto_position, metal_position ])
 
@@ -43,28 +40,33 @@ class IbkrAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal 4_000, gold.amount
   end
 
-  # Nothing quotes them, so the statement's mark price is the only price they
-  # have; a fetch queued against them can only fail.
-  test "an unlisted position's security is created offline and named" do
-    @ibkr_account.update!(raw_holdings_payload: [ crypto_position ])
+  # The crypto namespace is quotable, so the row stays eligible for the price
+  # history every other integration sharing it expects. A spot metal is quoted
+  # by nobody, and offline keeps the daily fetch off it.
+  test "crypto is bound to the crypto price provider and a commodity is offline" do
+    @ibkr_account.update!(raw_holdings_payload: [ crypto_position, metal_position ])
 
     IbkrAccount::HoldingsProcessor.new(@ibkr_account).process
 
-    security = Security.find_by!(ticker: "CRYPTO:BTC")
-    assert_predicate security, :offline?
-    assert_equal "ibkr_unlisted", security.offline_reason
-    assert_equal "BITCOIN", security.name
+    bitcoin = Security.find_by!(ticker: "CRYPTO:BTC")
+    assert_not_predicate bitcoin, :offline?
+    assert_equal "binance_public", bitcoin.price_provider
+    assert_equal Provider::BinancePublic::BINANCE_MIC, bitcoin.exchange_operating_mic
+    assert_equal "BITCOIN", bitcoin.name
+
+    gold = Security.find_by!(ticker: "CMDTY:USGOLD")
+    assert_predicate gold, :offline?
+    assert_equal "ibkr_commodity", gold.offline_reason
+    assert_equal "Gold (London Fix) USD/oz", gold.name
   end
 
-  # "CRYPTO:" is the form every crypto integration here writes, so the IBKR
-  # position joins the row they already use rather than splitting the asset in
-  # two -- and the row's own pricing is left as that integration set it.
+  # Securities are global: whichever flow created the row chose its pricing.
   test "an unlisted position reuses an existing security as it stands" do
     existing = Security.create!(
       ticker: "CRYPTO:BTC",
       name: "Bitcoin",
-      exchange_operating_mic: "BNNC",
-      price_provider: "binance_public"
+      exchange_operating_mic: "XCBS",
+      price_provider: "twelve_data"
     )
     @ibkr_account.update!(raw_holdings_payload: [ crypto_position ])
 
@@ -74,12 +76,52 @@ class IbkrAccount::HoldingsProcessorTest < ActiveSupport::TestCase
 
     assert_equal existing, holdings_by_ticker["CRYPTO:BTC"].security
     existing.reload
-    assert_equal "binance_public", existing.price_provider
-    assert_not_predicate existing, :offline?
+    assert_equal "twelve_data", existing.price_provider
+    assert_equal "XCBS", existing.exchange_operating_mic
   end
 
-  # Only the ISIN requirement is lifted for them. A short position, or one with
-  # no price to value it at, is no more importable than it was.
+  # A holding is keyed on (security, date, currency), so two groups for one
+  # security would overwrite each other rather than sum.
+  test "one symbol reported under two conids sums into a single holding" do
+    @ibkr_account.update!(raw_holdings_payload: [
+      crypto_position,
+      crypto_position.merge("conid" => "641027225", "position" => "1.5", "cost_basis_price" => "50000.00")
+    ])
+
+    IbkrAccount::HoldingsProcessor.new(@ibkr_account).process
+
+    bitcoin = holdings_by_ticker["CRYPTO:BTC"]
+    assert_equal 1, @account.holdings.count
+    assert_equal 2, bitcoin.qty
+    assert_equal 120_000, bitcoin.amount
+  end
+
+  # valid_lots asks a lot only for a position and a cost basis, so a lot with
+  # no price of its own would otherwise add its quantity to the group's.
+  test "a lot with no mark price does not inflate its group's quantity" do
+    @ibkr_account.update!(raw_holdings_payload: [
+      crypto_position,
+      crypto_position.merge("mark_price" => "", "position" => "9")
+    ])
+
+    IbkrAccount::HoldingsProcessor.new(@ibkr_account).process
+
+    assert_equal 0.5, holdings_by_ticker["CRYPTO:BTC"].qty
+  end
+
+  # A group that cannot be imported must not leave a security behind with no
+  # holding on it.
+  test "an unparseable mark price creates no security" do
+    @ibkr_account.update!(raw_holdings_payload: [ crypto_position.merge("mark_price" => "N/A") ])
+
+    assert_no_difference -> { Security.count } do
+      IbkrAccount::HoldingsProcessor.new(@ibkr_account).process
+    end
+
+    assert_empty @account.holdings
+  end
+
+  # Only the securityID requirement is lifted for an unlisted position.
   test "unsupported categories and incomplete rows are still skipped" do
     @ibkr_account.update!(raw_holdings_payload: [
       crypto_position.merge("asset_category" => "OPT"),
@@ -116,8 +158,8 @@ class IbkrAccount::HoldingsProcessorTest < ActiveSupport::TestCase
       }
     end
 
-    # IBKR has no securityID or securityIDType to give for either of these, and
-    # sends the attributes through empty. Rows as reported in #3946.
+    # IBKR sends securityID and securityIDType through empty for both of these.
+    # Rows as reported in #3946.
     def crypto_position
       {
         "asset_category" => "CRYPTO",

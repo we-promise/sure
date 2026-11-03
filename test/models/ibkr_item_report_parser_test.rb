@@ -34,6 +34,17 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
     assert_equal BigDecimal("200.00"), account[:cash_balance]
   end
 
+  # The balance is anchored on the statement's report date, so the figure has
+  # to be the NAV of that date rather than of whichever row is newest.
+  test "prefers the NAV row dated with the statement's report date" do
+    xml = nav_statement_xml(open_positions: open_positions_on("2026-05-07"))
+
+    account = IbkrItem::ReportParser.new(xml).parse[:accounts].first
+
+    assert_equal Date.new(2026, 5, 7), account[:report_date]
+    assert_equal BigDecimal("1400.00"), account[:current_balance]
+  end
+
   test "falls back to position values plus cash when the statement carries no NAV" do
     xml = nav_statement_xml.sub(%r{<EquitySummaryInBase>.*</EquitySummaryInBase>}m, "")
 
@@ -78,9 +89,9 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
 
     # Positions (800) plus cash (200) come to 1000; the NAV says 1500, the
     # difference being whatever the statement holds outside ChangeInPositionValues.
-    # The BASE_SUMMARY row is dated with the latest one so that it would be
-    # picked if it were not skipped.
-    def nav_statement_xml
+    # The BASE_SUMMARY row shares the latest date, so it would be picked if it
+    # were not skipped.
+    def nav_statement_xml(open_positions: "")
       <<~XML
         <FlexQueryResponse queryName="Sure Test">
           <FlexStatement accountId="U1234567" fromDate="2026-05-07" toDate="2026-05-08">
@@ -91,6 +102,7 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
             <CashReport>
               <CashReportCurrency currency="BASE_SUMMARY" endingCash="200.00" />
             </CashReport>
+            #{open_positions}
             <EquitySummaryInBase>
               <EquitySummaryByReportDateInBase currency="USD" reportDate="2026-05-07" total="1400.00" />
               <EquitySummaryByReportDateInBase currency="USD" reportDate="2026-05-08" total="1500.00" />
@@ -98,6 +110,16 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
             </EquitySummaryInBase>
           </FlexStatement>
         </FlexQueryResponse>
+      XML
+    end
+
+    # report_date follows the open positions when the statement has any, so a
+    # date of their own is what puts it out of step with the latest NAV row.
+    def open_positions_on(date)
+      <<~XML
+        <OpenPositions>
+          <OpenPosition assetCategory="STK" conid="265598" securityID="US0378331005" securityIDType="ISIN" symbol="AAPL" position="10" markPrice="150.00" currency="USD" fxRateToBase="1" costBasisPrice="125.50" reportDate="#{date}" side="Long" />
+        </OpenPositions>
       XML
     end
 end

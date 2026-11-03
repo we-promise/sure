@@ -1,26 +1,29 @@
 class IbkrAccount::HoldingsProcessor
   include IbkrAccount::DataHelpers
 
-  # Only STK was accepted, so a crypto position (custodied at Paxos) or a spot
-  # metal was dropped on the way in: the sync counted it among the positions it
-  # had processed, the account was short its value, and nothing reached the
-  # debug log to say which ones had gone. Neither has an exchange listing to
-  # resolve against, so both are imported as offline securities, valued at the
-  # mark price the statement already carries for them.
+  # Categories this importer accepts. STK resolves to an exchange-listed
+  # security by symbol. CRYPTO (custodied at Paxos) and CMDTY (spot metals)
+  # have no listing to resolve against and carry no securityID, so they are
+  # tracked under a namespace of their own.
   UNLISTED_ASSET_CATEGORIES = %w[CRYPTO CMDTY].freeze
   SUPPORTED_ASSET_CATEGORIES = (%w[STK] + UNLISTED_ASSET_CATEGORIES).freeze
 
-  # The namespace an unlisted position is tracked under. "CRYPTO:" is the form
-  # every crypto integration in this codebase already writes, so an IBKR
-  # bitcoin position lands on the same Security row as a Binance or on-chain
-  # one -- and, which matters more, not on the exchange-listed stock that
-  # trades under the ticker "BTC" and would hand it that stock's prices.
+  # "CRYPTO:" is the ticker namespace every crypto integration here shares, so
+  # a coin lives in one Security row across providers. The prefix is also what
+  # keeps the position off an exchange-listed stock of the same symbol, which a
+  # bare-symbol lookup would match and then price. Spot metals take the
+  # symmetric "CMDTY:".
   TICKER_PREFIXES = { "CRYPTO" => "CRYPTO:", "CMDTY" => "CMDTY:" }.freeze
 
-  # Nothing quotes these: the statement's mark price is the only price they
-  # will ever have. Left online, each sync would queue a fetch that cannot
-  # succeed and count the failure against the security.
-  OFFLINE_REASON = "ibkr_unlisted"
+  # Crypto under this namespace is quotable, and is bound to the provider that
+  # quotes it the way Onchain::SecurityResolver binds it, so a row this importer
+  # creates first still gets price history for every other integration.
+  CRYPTO_PRICE_PROVIDER = "binance_public"
+
+  # Spot metals are quoted by nobody: the statement's mark price is the only
+  # price they have. Offline keeps the daily price fetch off them, and the
+  # reason says which flow decided that.
+  COMMODITY_OFFLINE_REASON = "ibkr_commodity"
 
   def initialize(ibkr_account)
     @ibkr_account = ibkr_account
@@ -49,20 +52,25 @@ class IbkrAccount::HoldingsProcessor
         data = position.with_indifferent_access
         next unless supported_position?(data)
 
-        # conid is guaranteed present by supported_position?, so no fallbacks needed
         currency = extract_currency(data, fallback: @ibkr_account.currency)
         report_date = parse_date(data[:report_date]) || @ibkr_account.report_date || Date.current
-        key = [ data[:conid], currency, report_date ]
+        key = [ position_key(data), currency, report_date ]
         groups[key] ||= []
         groups[key] << data
       end
     end
 
+    # conid, guaranteed present by supported_position?, identifies a listed
+    # position. An unlisted one groups by the ticker it resolves to: IBKR can
+    # report one asset under more than one conid, and a holding is keyed on
+    # (security, date, currency), so a second group for the same security would
+    # overwrite the first instead of summing with it.
+    def position_key(row)
+      unlisted?(row) ? unlisted_ticker(row) : row[:conid]
+    end
+
     def process_group(rows, report_date)
       sample = rows.first
-      security = resolve_position_security(sample)
-      return unless security
-
       price = parse_decimal(sample[:mark_price])
       # quantity and cost_basis are derived from the same set of valid lots so
       # they are always consistent — a lot with an unparseable cost_basis_price
@@ -70,11 +78,16 @@ class IbkrAccount::HoldingsProcessor
       aggregate = valid_lots(rows)
       return unless price && aggregate
 
+      # Resolved after the price, so a group that cannot be imported does not
+      # leave a security behind with no holding on it.
+      security = resolve_position_security(sample)
+      return unless security
+
       quantity   = aggregate[:quantity]
       cost_basis = aggregate[:cost_basis]
       amount = quantity * price
       currency = extract_currency(sample, fallback: @ibkr_account.currency)
-      external_id = [ "ibkr", @ibkr_account.ibkr_account_id, sample[:conid], report_date, currency ].join("_")
+      external_id = [ "ibkr", @ibkr_account.ibkr_account_id, position_key(sample), report_date, currency ].join("_")
 
       import_adapter.import_holding(
         security: security,
@@ -120,9 +133,6 @@ class IbkrAccount::HoldingsProcessor
       { quantity: total_quantity, cost_basis: total_cost / total_quantity }
     end
 
-    # An exchange listing is resolved by symbol, as it always was. Anything
-    # unlisted is tracked under its own namespaced ticker, which is also what
-    # keeps it from being matched to a stock that trades under the same symbol.
     def resolve_position_security(row)
       return resolve_security(row) unless unlisted?(row)
 
@@ -139,37 +149,41 @@ class IbkrAccount::HoldingsProcessor
     def unlisted_ticker(row)
       symbol = row[:symbol].to_s.strip.upcase
       return nil if symbol.blank?
-      return symbol if symbol.include?(":")
 
-      "#{TICKER_PREFIXES[row[:asset_category].to_s]}#{symbol}"
+      prefix = TICKER_PREFIXES[row[:asset_category].to_s]
+      symbol.start_with?(prefix) ? symbol : "#{prefix}#{symbol}"
     end
 
-    # Securities are shared across families, so an existing row is reused as it
-    # stands: its price provider and its offline state belong to whichever flow
-    # set them, and a crypto integration that has brought "CRYPTO:BTC" online
-    # must not have that undone by an IBKR sync.
-    #
-    # The savepoint is what keeps a lost create race from aborting the
-    # surrounding transaction and taking the rest of the import down with it.
+    # Securities are global, so an existing row is reused exactly as it stands:
+    # its price provider and its offline state belong to whichever flow set
+    # them. The savepoint is what keeps a lost create race from aborting the
+    # surrounding transaction and taking the rest of the import with it.
     def create_unlisted_security(ticker, row)
       Security.transaction(requires_new: true) do
         Security.create!(
           ticker: ticker,
           name: row[:description].presence || ticker,
-          offline: true,
-          offline_reason: OFFLINE_REASON
+          **pricing_attributes(row)
         )
       end
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
       Security.find_by(ticker: ticker)
     end
 
+    def pricing_attributes(row)
+      return { offline: true, offline_reason: COMMODITY_OFFLINE_REASON } unless row[:asset_category].to_s == "CRYPTO"
+
+      {
+        exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC,
+        price_provider: CRYPTO_PRICE_PROVIDER
+      }
+    end
+
     def supported_position?(row)
       SUPPORTED_ASSET_CATEGORIES.include?(row[:asset_category].to_s) &&
         row[:side].to_s == "Long" &&
         row[:conid].present? &&
-        # An unlisted position carries no ISIN or CUSIP, so requiring one was
-        # the second reason it was dropped. conid identifies it either way.
+        # conid identifies an unlisted position; IBKR sends it no securityID.
         (unlisted?(row) || (row[:security_id].present? && row[:security_id_type].present?)) &&
         row[:symbol].present? &&
         row[:currency].present? &&
