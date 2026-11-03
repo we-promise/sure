@@ -109,8 +109,14 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     end
 
     def select_starbucks
+      find("#entry_name").click
+      assert_selector ".hw-combobox [role='option']", text: "Starbucks"
       fill_in "entry_name", with: "Starb"
-      find(".hw-combobox [role='option']", text: "Starbucks").click
+      # Wait for filtered results before selecting; recent options can still be
+      # replaced by the asynchronous search response.
+      assert_selector ".hw-combobox [role='option']", count: 1
+      assert_selector ".hw-combobox [role='option']", text: "Starbucks"
+      find("#entry_name").send_keys(:arrow_down, :enter)
       assert_field "entry_name", with: "Starbucks"
     end
 
