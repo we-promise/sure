@@ -432,6 +432,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     travel_to Date.current.end_of_month - 2.days
     occurrence = snoozed_late_bill
     travel_to occurrence.reload.effective_due_on - 2.days
+    # Run in the first days of a month, this lands more than
+    # Session::INACTIVITY_TIMEOUT after setup signed in, with no request in
+    # between to keep the session alive; the user would sign in again.
+    sign_in @user
     pay(occurrence)
 
     get bills_url

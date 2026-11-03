@@ -53,6 +53,35 @@ en:
       type: Type
       unknown: Unknown
     tabs:
+      extra_repayments:
+        amount_label: Extra repayment
+        amount_placeholder: "0.00"
+        apply: Apply
+        baseline_not_cleared: On the current repayment this loan is not paid off by the original maturity, and %{balloon} would still be owed, so there is no earlier date or interest saving to compare. With this extra it is paid off on the date above.
+        clear: Clear
+        comparison_basis: Compared with paying the current repayment and nothing extra, from today's balance.
+        dated_note: Weekly and fortnightly extras are counted at the next repayment after each one is paid, so the interest saved is, if anything, understated.
+        extra_not_cleared: Even with this extra, the loan is not paid off by the original maturity. Try a larger amount.
+        frequencies:
+          fortnightly: Fortnightly
+          monthly: Monthly
+          weekly: Weekly
+        frequency_label: How often
+        interest_saved: Interest saved
+        intro: See how much sooner the loan is paid off, and how much interest you save, if you pay an extra amount each week, fortnight or month on top of your repayments.
+        invalid_amount: Enter an amount of zero or more, in digits.
+        invalid_frequency: Choose weekly, fortnightly or monthly.
+        months_sooner:
+          zero: Paid off in the same month
+          one: "%{count} month sooner"
+          other: "%{count} months sooner"
+        no_scheduled_repayments: No scheduled repayments remain on this loan, but a balance is still owing, so there is no repayment to add an extra to.
+        not_applicable: There is nothing left to repay on this loan, so there is no extra repayment to model.
+        payoff_with_extra: Payoff with extra
+        total_cost: Total cost from today
+        total_cost_not_cleared: Not paid off by the original maturity
+        total_cost_saved: "%{amount} less than without the extra"
+        variable_rate_notice: This loan's rate changes over time. These figures apply the rate changes already recorded; a change that has not been recorded yet will shift them.
       repayment_progress:
         instalment: Payment %{number} · %{date}
         insurance: Insurance
