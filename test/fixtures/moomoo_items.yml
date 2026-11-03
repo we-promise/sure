@@ -1,0 +1,23 @@
+connected_item:
+  family: dylan_family
+  name: "moomoo"
+  status: good
+  scheduled_for_deletion: false
+  pending_account_setup: false
+  oauth_client_id: "test-client-id"
+  oauth_redirect_uri: "http://www.example.com/moomoo_items/callback"
+  access_token: "test_access"
+  refresh_token: "test_refresh"
+  access_token_expires_at: <%= 1.hour.from_now.to_fs(:db) %>
+  oauth_scope: "trade:read accid:1234567890123456"
+  last_authorized_at: <%= 2.days.ago.to_fs(:db) %>
+  last_token_refresh_at: <%= 1.day.ago.to_fs(:db) %>
+
+pending_item:
+  family: dylan_family
+  name: "moomoo"
+  status: good
+  scheduled_for_deletion: false
+  pending_account_setup: false
+  oauth_client_id: "test-client-id"
+  oauth_redirect_uri: "http://www.example.com/moomoo_items/callback"

@@ -49,6 +49,33 @@ class SettingsHelperTest < ActionView::TestCase
     assert_equal I18n.t("settings.providers.meta.reconsent_required"), summary[:meta]
   end
 
+  test "provider_summary for moomoo is off while no connection has finished authorizing" do
+    @moomoo_items = [ MoomooItem.new(name: "moomoo", oauth_client_id: "cid") ]
+    @provider_sync_health = {}
+
+    assert_equal({ status: :off }, provider_summary("moomoo"))
+  end
+
+  test "provider_summary for moomoo asks for re-consent when no sync failed" do
+    @moomoo_items = [ MoomooItem.new(refresh_token: "r", status: :requires_update) ]
+    @provider_sync_health = {}
+
+    summary = provider_summary("moomoo")
+
+    assert_equal :warn, summary[:status]
+    assert_equal I18n.t("settings.providers.meta.reconsent_required"), summary[:meta]
+  end
+
+  test "provider_summary for moomoo asks for re-consent even when the last sync failed" do
+    @moomoo_items = [ MoomooItem.new(refresh_token: "r", status: :requires_update) ]
+    @provider_sync_health = { "moomoo" => { error: true } }
+
+    summary = provider_summary("moomoo")
+
+    assert_equal :warn, summary[:status]
+    assert_equal I18n.t("settings.providers.meta.reconsent_required"), summary[:meta]
+  end
+
   # A key provider_summary doesn't handle falls through to { status: :off },
   # which lists a connected provider under Available. Wise and CoinSpot
   # shipped that way. One key at a time, so a branch that reads another

@@ -1,0 +1,19 @@
+main_account:
+  moomoo_item: connected_item
+  name: "moomoo SG ••3456"
+  moomoo_account_id: "1234567890123456"
+  security_firm: FUTUSG
+  acc_type: margin
+  account_kind: securities
+  account_number_mask: "••3456"
+  enable_markets: [ 6, 2, 1 ]
+  currency: SGD
+  current_balance: 10000.0000
+  cash_balance: 500.0000
+  raw_account_payload: {}
+  raw_funds_payload: {}
+  raw_positions_payload: []
+  raw_fills_payload: []
+  raw_orders_payload: {}
+  raw_cash_logs_payload: []
+  history_cursors: {}
