@@ -280,6 +280,10 @@ class Account::CashAnchorTest < ActiveSupport::TestCase
       assert_equal 260, @account.holdings.find_by!(security: @other, date: Date.current).amount
       # Investment reports read the carried row too, not the original snapshot.
       assert_equal 260, Holding::CurrentForInvestmentAccounts.new([ @account.id ]).relation.find_by!(security: @other).amount
+
+      # A provider row dated after today stays out, as in Account#current_holdings.
+      @account.holdings.create!(security: @other, date: Date.current.next_day, qty: 9, price: 100, amount: 900, currency: "USD", account_provider_id: provider.id)
+      assert_equal 260, Holding::CurrentForInvestmentAccounts.new([ @account.id ]).relation.find_by!(security: @other).amount
     end
   end
 

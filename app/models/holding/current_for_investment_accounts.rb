@@ -8,7 +8,8 @@ class Holding::CurrentForInvestmentAccounts
   # security's latest row in one DISTINCT ON pass, not one lookup per row.
   # A cash-anchored account carries holdings in their own currency, and carries
   # a provider snapshot forward as a calculated row (see Account#current_holdings),
-  # so it takes each security's latest row in any currency, provider or not.
+  # so it takes each security's latest row up to today in any currency,
+  # provider or not.
   ANCHORED_ACCOUNT_IDS_SQL = <<~SQL.squish.freeze
     SELECT anchor_entries.account_id
     FROM entries anchor_entries
@@ -36,7 +37,7 @@ class Holding::CurrentForInvestmentAccounts
       WHERE latest_holdings.account_id IN (:account_ids)
         AND accounts.id IN (:account_ids)
         AND (
-          latest_holdings.account_id IN (#{ANCHORED_ACCOUNT_IDS_SQL})
+          (latest_holdings.account_id IN (#{ANCHORED_ACCOUNT_IDS_SQL}) AND latest_holdings.date <= :today)
           OR (
             latest_holdings.currency = accounts.currency
             AND latest_holdings.account_id NOT IN (
@@ -61,7 +62,7 @@ class Holding::CurrentForInvestmentAccounts
     Holding
       .where(account_id: account_ids)
       .where.not(qty: 0)
-      .where(CURRENT_HOLDINGS_SQL, account_ids: account_ids)
+      .where(CURRENT_HOLDINGS_SQL, account_ids: account_ids, today: Date.current)
   end
 
   private
