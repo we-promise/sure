@@ -674,18 +674,16 @@ ru:
           title: Шифрование не настроено
           message: Учётные данные и данные сессии Trade Republic нельзя хранить безопасно, пока не настроено шифрование Active Record.
         steps:
-          step_1: Введите номер телефона и PIN-код или пароль, которые вы используете в приложении Trade Republic, затем сохраните.
-          step_2: Введите код из приложения-аутентификатора, когда он будет запрошен.
-          step_3: Подтвердите вход в приложении Trade Republic, когда появится запрос.
+          step_1: "В разделе «Добавить подключение» выберите «Вход по QR» или «Вход по PIN»."
+          step_2: "Вход по QR: отсканируйте QR-код камерой телефона, затем подтвердите вход в приложении Trade Republic."
+          step_3: "Вход по PIN: введите номер телефона и PIN-код или пароль, которые вы используете в приложении Trade Republic, затем код из приложения-аутентификатора и подтвердите вход в приложении Trade Republic."
         phone_number_label: Номер телефона
         phone_number_placeholder_new: +49 170 1234567
         phone_number_placeholder_existing: Оставьте пустым, чтобы сохранить текущий номер телефона
         pin_label: PIN-код или пароль
         pin_placeholder_new: PIN-код или пароль приложения Trade Republic
-        pin_placeholder_existing: Оставьте пустым, чтобы сохранить текущий PIN-код или пароль
         currency_label: Валюта счёта
         connect: Войти
-        confirm_login: Проверить вход
         complete_login: Продолжить
         authenticator_code_label: Код аутентификатора (если запрошен)
         authenticator_code_placeholder: 6-значный код
@@ -696,27 +694,28 @@ ru:
         awaiting_confirmation: Ожидается подтверждение в приложении Trade Republic.
         awaiting_authenticator_code: Требуется код аутентификатора.
         login_expired: Срок действия запроса на подтверждение истёк.
-        restart_login: Начать вход заново
         connection_success:
           title: Trade Republic успешно подключён
           message: Подключение Trade Republic готово.
           description: Sure синхронизирует ваши данные Trade Republic в фоновом режиме.
           close: Готово
-        qr_login: Войти по QR-коду
+        qr_login: Вход по QR
         qr_cancel: Отменить вход по QR-коду
-        qr_back_to_credentials: Вернуться к номеру телефона и PIN-коду или паролю
         qr_loading: Подготовка QR-кода…
         qr_instruction: Отсканируйте QR-код камерой телефона, затем подтвердите вход в приложении Trade Republic.
         qr_success: Вход подтверждён. Sure обновляет страницу провайдера.
         qr_error: Не удалось начать вход по QR-коду. Пожалуйста, попробуйте снова.
         requires_update: "Войдите снова, чтобы возобновить синхронизацию."
         session_expires_in: "Вход истекает через %{time} (%{at})."
-        add_account: "Добавить ещё одно подключение"
-        save_configuration: Сохранить и войти
-        update_configuration: Обновить конфигурацию
+        pin_login: "Вход по PIN"
+        pin_cancel: "Отменить вход по PIN"
+        remove: "Удалить"
+        new_connection: "Новое подключение"
+        cancel_login: "Отменить"
+        add_connection: "Добавить подключение"
+        pin_login_hint: "Введите номер телефона и PIN-код или пароль, которые вы используете в приложении Trade Republic."
         sync: Синхронизировать
         syncing: "Синхронизация..."
-        disconnect: Отключить Trade Republic
         disconnect_confirm: Отключить Trade Republic? Ваши синхронизированные счета станут ручными.
         disconnect_confirm_with_identifier: "Отключить подключение Trade Republic, оканчивающееся на %{last4}? Ваши синхронизированные счета станут ручными."
         identifier_phone: Телефон

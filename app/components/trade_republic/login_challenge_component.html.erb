@@ -1,0 +1,29 @@
+<% if login_stage == "authenticator_code" %>
+  <%= render DS::Alert.new(message: translation("authenticator_code_notice"), variant: :info) %>
+
+  <%= helpers.styled_form_with url: login_path(:complete_login),
+                       method: :post,
+                       scope: :trade_republic_login,
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :code,
+                        label: translation("authenticator_code_label"),
+                        placeholder: translation("authenticator_code_placeholder"),
+                        value: nil,
+                        required: true %>
+    <div class="flex flex-wrap justify-end gap-2">
+      <%= form.submit(translation("complete_login")) %>
+    </div>
+  <% end %>
+<% else %>
+  <%= render DS::Alert.new(message: translation("push_login_notice"), variant: :info) %>
+  <div class="flex flex-wrap justify-end gap-2">
+    <%= render DS::Button.new(
+          text: translation("check_login_status"),
+          variant: :outline,
+          size: :sm,
+          icon: "refresh-cw",
+          href: login_path(:poll_login),
+          method: :post
+        ) %>
+  </div>
+<% end %>
