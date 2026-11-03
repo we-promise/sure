@@ -264,3 +264,33 @@ for (const action of ["enable", "disable"]) {
     assert.equal(instance.subscriptionIdValue, expectedId);
   });
 }
+
+for (const fails of [false, true]) {
+  test(`an old connect ${fails ? "error" : "result"} cannot overwrite a new connection`, async () => {
+    const endpoint = "https://fcm.googleapis.com/local";
+    const { instance, context } = await controller({ endpoint, registrations: { "local-id": await digest(endpoint) } });
+    const registration = await context.navigator.serviceWorker.getRegistration("/");
+    const original = registration.pushManager.getSubscription;
+    const entered = deferred();
+    const response = deferred();
+    let calls = 0;
+    registration.pushManager.getSubscription = () => {
+      if (++calls === 1) { entered.resolve(); return response.promise; }
+      return original();
+    };
+    const connecting = instance.connect();
+    await entered.promise;
+    instance.disconnect();
+    await instance.connect();
+    instance.busy = true;
+    instance.updateControls();
+    if (fails) response.reject(new Error("Old connection failed"));
+    else response.resolve(null);
+    await connecting;
+    assert.equal(instance.statusTarget.textContent, "enabled");
+    assert.equal(instance.subscriptionIdValue, "local-id");
+    assert.ok(instance.subscription);
+    assert.equal(instance.busy, true);
+    assert.equal(instance.testTarget.disabled, true);
+  });
+}

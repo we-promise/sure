@@ -12,6 +12,8 @@ export default class extends Controller {
 
   async connect() {
     this.lifecycleGeneration = (this.lifecycleGeneration || 0) + 1;
+    const generation = this.lifecycleGeneration;
+    const isCurrent = () => generation === this.lifecycleGeneration;
     this.pollGeneration = (this.pollGeneration || 0) + 1;
     this.busy = true;
     this.subscriptionIdValue = "";
@@ -26,11 +28,16 @@ export default class extends Controller {
       this.setStatus("unsupported");
     } else {
       try {
-        this.registration = await navigator.serviceWorker.getRegistration("/") ||
+        const registration = await navigator.serviceWorker.getRegistration("/") ||
           await navigator.serviceWorker.register("/service-worker");
-        this.subscription = await this.registration.pushManager.getSubscription();
+        if (!isCurrent()) return;
+        const subscription = await registration.pushManager.getSubscription();
+        if (!isCurrent()) return;
+        this.registration = registration;
+        this.subscription = subscription;
         if (this.subscription) {
           const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(this.subscription.endpoint));
+          if (!isCurrent()) return;
           const digest = Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
           this.subscriptionIdValue = Object.entries(this.registrationsValue)
             .find(([, registeredDigest]) => registeredDigest === digest)?.[0] || "";
@@ -39,9 +46,10 @@ export default class extends Controller {
           Notification.permission === "denied" ? "denied" :
           this.subscriptionIdValue && this.subscriptionUsesCurrentKey(this.subscription) ? "enabled" : "disabled");
       } catch {
-        this.setStatus("request");
+        if (isCurrent()) this.setStatus("request");
       }
     }
+    if (!isCurrent()) return;
     this.busy = false;
     this.updateControls();
   }
