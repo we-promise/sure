@@ -77,6 +77,15 @@ class Onchain::AvalanchePChainAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "an RPC error that is a bare string is reported as unreachable" do
+    stub_request(:post, Provider::AvalanchePChain.base_url)
+      .to_return(status: 200, body: { "error" => "temporarily unavailable" }.to_json, headers: { "Content-Type" => "application/json" })
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
   test "a throttled node is reported as rate limited" do
     stub_request(:post, Provider::AvalanchePChain.base_url).to_return(status: 429)
 

@@ -52,8 +52,9 @@ class Provider::AvalanchePChain
         parsed = response.parsed_response
         raise ApiError, "Unexpected response from Avalanche P-Chain node" unless parsed.is_a?(Hash)
 
-        if parsed["error"].present?
-          raise ApiError, parsed.dig("error", "message") || "Avalanche P-Chain RPC error"
+        if (error = parsed["error"]).present?
+          message = error.is_a?(Hash) ? error["message"] : error
+          raise ApiError, message.presence&.to_s || "Avalanche P-Chain RPC error"
         end
 
         result = parsed["result"]

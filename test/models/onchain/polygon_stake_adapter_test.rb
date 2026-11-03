@@ -63,6 +63,14 @@ class Onchain::PolygonStakeAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a delegation that is not an object is reported as unreachable" do
+    stub_page(0, [ nil ])
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
   test "a delegation without a stake is not read as zero" do
     stub_page(0, [ { "bondedValidator" => "1" } ])
 

@@ -36,6 +36,23 @@ class Onchain::SolanaStakeAdapterTest < ActiveSupport::TestCase
     assert_match "not a Solana stake account", error.message
   end
 
+  test "a missing or negative lamport balance is not read as a balance" do
+    [ nil, "5", -1 ].each do |lamports|
+      stub_rpc("value" => { "owner" => STAKE_PROGRAM_ID, "lamports" => lamports })
+
+      assert_raises(Onchain::Chains::UnreachableError, lamports.inspect) { @adapter.fetch_snapshot(ADDRESS) }
+    end
+  end
+
+  test "a response without a value is reported as unreachable, not as a missing account" do
+    stub_request(:post, Provider::SolanaRpc.url)
+      .to_return(status: 200, body: { "result" => nil }.to_json, headers: { "Content-Type" => "application/json" })
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
   test "an account that does not exist is refused" do
     stub_rpc("value" => nil)
 

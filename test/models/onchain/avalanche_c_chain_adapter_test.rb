@@ -41,6 +41,14 @@ class Onchain::AvalancheCChainAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a balance that is not a 0x hex quantity is refused rather than parsed" do
+    [ "1000000000000000000", "-0x1" ].each do |balance|
+      stub_rpc("eth_getBalance" => balance)
+
+      assert_raises(Onchain::Chains::UnreachableError, balance) { @adapter.fetch_snapshot(ADDRESS) }
+    end
+  end
+
   # Every EVM network shares this address shape: answering yes for any
   # well-formed address would make every Ethereum wallet ambiguous.
   test "an address with no AVAX is not detected, in one request" do
@@ -67,6 +75,15 @@ class Onchain::AvalancheCChainAdapterTest < ActiveSupport::TestCase
     stub_request(:post, Provider::AvalancheCChain.base_url).to_return(status: 429)
 
     assert_raises Onchain::Chains::RateLimitedError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
+  test "an RPC error that is a bare string is reported as unreachable" do
+    stub_request(:post, Provider::AvalancheCChain.base_url)
+      .to_return(status: 200, body: { "error" => "temporarily unavailable" }.to_json, headers: json_headers)
+
+    assert_raises Onchain::Chains::UnreachableError do
       @adapter.fetch_snapshot(ADDRESS)
     end
   end

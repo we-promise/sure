@@ -39,7 +39,9 @@ class Provider::EthereumBeaconApi
   #   ("0x" + 96 hex chars) - the Beacon API accepts either interchangeably.
   # @return [Hash, nil] {"index", "balance" (Gwei string), "status",
   #   "validator" => {"pubkey", ...}}, or nil if no such validator exists or
-  #   the node rejects the id as malformed (400).
+  #   the node rejects the id as malformed (400). Only the Beacon API's own
+  #   {"code", "message"} error body counts: any other 404, such as a wrong
+  #   ETHEREUM_BEACON_API_URL, is an unreachable source, not an unknown key.
   def get_validator(validator_id)
     translate_transport_errors do
       response = self.class.get(
@@ -47,11 +49,11 @@ class Provider::EthereumBeaconApi
         headers: { "Content-Type" => "application/json" }
       )
 
-      return nil if response.code.in?([ 400, 404 ])
       raise RateLimitError, "Ethereum beacon API rate limit exceeded" if response.code == 429
 
       parsed = response.parsed_response
       raise ApiError, "Unexpected response from Ethereum beacon API" unless parsed.is_a?(Hash)
+      return nil if response.code.in?([ 400, 404 ]) && parsed["code"].to_s == response.code.to_s
 
       data = parsed["data"]
       raise ApiError, "Ethereum beacon API returned no data" unless data.is_a?(Hash)

@@ -57,14 +57,21 @@ class Provider::SolanaRpc
   # authentication. Its owner is what tells a stake account from a wallet.
   # @return [Hash, nil] {"owner" => program_id, "lamports" => Integer,
   #   "program" => "stake"|"vote"|...}, or nil if the account doesn't exist.
+  #   A response that is neither raises, so it is never read as a balance.
   def get_account_info(address)
     result = rpc("getAccountInfo", [ address, { encoding: "jsonParsed" } ])
-    value = result.is_a?(Hash) ? result["value"] : nil
+    raise ApiError, "Unexpected getAccountInfo response" unless result.is_a?(Hash) && result.key?("value")
+
+    value = result["value"]
     return nil if value.nil?
+    raise ApiError, "Unexpected getAccountInfo response" unless value.is_a?(Hash)
+
+    lamports = value["lamports"]
+    raise ApiError, "getAccountInfo returned a malformed lamport balance" unless lamports.is_a?(Integer) && lamports >= 0
 
     {
       "owner" => value["owner"],
-      "lamports" => value["lamports"].to_i,
+      "lamports" => lamports,
       "program" => value.dig("data", "program")
     }
   end

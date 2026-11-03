@@ -87,9 +87,11 @@ class Onchain::AvalancheCChainAdapter
       hex_to_i(provider.get_balance(address)).to_d / WEI_PER_AVAX
     end
 
+    # A JSON-RPC quantity is always 0x-prefixed hex. Integer(_, 16) alone would
+    # also take "10" or "-0x1" and read a malformed answer as a balance.
     def hex_to_i(hex)
+      raise Provider::AvalancheCChain::ApiError, "Avalanche C-Chain node returned a non-numeric value" unless hex.match?(/\A0x\h+\z/)
+
       Integer(hex, 16)
-    rescue ArgumentError
-      raise Provider::AvalancheCChain::ApiError, "Avalanche C-Chain node returned a non-numeric value"
     end
 end

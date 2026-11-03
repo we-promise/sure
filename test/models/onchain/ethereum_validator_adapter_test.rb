@@ -51,6 +51,15 @@ class Onchain::EthereumValidatorAdapterTest < ActiveSupport::TestCase
     assert_not_kind_of Onchain::Chains::UnreachableError, error
   end
 
+  test "a 404 that is not the Beacon API's own answer is reported as unreachable" do
+    stub_request(:get, "#{Provider::EthereumBeaconApi.base_url}/eth/v1/beacon/states/head/validators/#{PUBKEY}")
+      .to_return(status: 404, body: "<html>Not Found</html>", headers: { "Content-Type" => "text/html" })
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(PUBKEY)
+    end
+  end
+
   test "a validator without a balance is not read as zero" do
     stub_validator(status: 200, body: { "data" => { "index" => "1", "status" => "active_ongoing" } })
 

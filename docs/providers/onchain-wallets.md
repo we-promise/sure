@@ -235,12 +235,12 @@ uses for valuation. That change belongs to how crypto enters Sure's price
 pipeline rather than to this feature, so it is not something you can configure
 your way out of today.
 
-**DeFi positions are not seen at all.** Staked ETH, liquidity-pool tokens,
-lending positions and Solana stake accounts are invisible: only natively-held
-coins and fungible tokens sitting at the address are read. A wallet holding most
-of its value in a staking or lending protocol will report a fraction of it. This
-is a scope limit, not a bug — nothing in the UI claims those positions were
-checked.
+**DeFi positions are not seen at all.** Liquidity-pool tokens and lending
+positions are invisible: only natively-held coins and fungible tokens sitting at
+the address are read. A wallet holding most of its value in a lending protocol
+will report a fraction of it. This is a scope limit, not a bug — nothing in the
+UI claims those positions were checked. Native staking is the exception, tracked
+as its own network: see the Avalanche and staked positions below.
 
 **Bitcoin is one address at a time.** Extended keys (`xpub`, `ypub`, `zpub`) are
 not supported and are rejected as addresses. This matters: most Bitcoin wallets
