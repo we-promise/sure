@@ -141,6 +141,61 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert @occurrence.reload.partially_paid?
   end
 
+  test "a single payment inside the tolerance band is recorded at its real amount" do
+    # The bill is 2000 and the charge is 2080 (4%, inside the 7.5% band).
+    allocation = @allocator.allocate!(entry: entry_for(2080))
+
+    assert_equal 2080, allocation.allocated_amount
+    assert_equal 2080, @occurrence.reload.confirmed_allocated
+    assert @occurrence.paid?
+    assert_not @occurrence.overpaid?, "a payment inside the band is the bill, not an overpayment"
+  end
+
+  test "a single payment outside the band is still capped at the estimate" do
+    # 2300 is 15% over; the default must not swallow it.
+    allocation = @allocator.allocate!(entry: entry_for(2300))
+
+    assert_equal 2000, allocation.allocated_amount
+  end
+
+  test "a learned tolerance widens the band the allocator uses" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => 10 })
+
+    allocation = @allocator.allocate!(entry: entry_for(2180))
+
+    assert_equal 2180, allocation.allocated_amount, "9% over is inside the learned 10% band"
+  end
+
+  test "a payment just past the band is recorded in full once the manual attach has taught the band" do
+    # 2151 is 7.55% over 2000, just outside the 7.5% default. The first attach
+    # is capped and teaches a band that covers it; relinking then records it whole.
+    first = @allocator.allocate!(entry: entry_for(2151))
+    assert_equal 2000, first.allocated_amount
+    assert_equal 7.6, @rent.reload.matcher_hints["learned_tolerance_pct"].to_f
+
+    @allocator.unallocate!(first)
+    relinked = @allocator.allocate!(entry: entry_for(2151))
+
+    assert_equal 2151, relinked.allocated_amount
+    assert_equal 2151, @occurrence.reload.confirmed_allocated
+    assert @occurrence.paid?
+    assert_not @occurrence.overpaid?
+  end
+
+  test "a partial payment is never recorded as the whole bill" do
+    allocation = @allocator.allocate!(entry: entry_for(1500))
+
+    assert_equal 1500, allocation.allocated_amount
+    assert @occurrence.reload.partially_paid?
+  end
+
+  test "a second payment on an occurrence is capped at what remains, not the band" do
+    @allocator.allocate!(entry: entry_for(1900))
+    allocation = @allocator.allocate!(entry: entry_for(500))
+
+    assert_equal 100, allocation.allocated_amount
+  end
+
   test "overpayment closes and flags" do
     # The default allocation takes only what the occurrence needs, so an
     # overpay has to be explicit.
