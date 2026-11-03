@@ -85,11 +85,11 @@ class Provider::TradeRepublicWebsocket
     # the resolved proxy.
     def open_tunnel
       proxy = proxy_uri
-      return Socket.tcp(HOST, 443, connect_timeout: @timeout) unless proxy
+      return Socket.tcp(HOST, 443, connect_timeout: @timeout, resolv_timeout: @timeout) unless proxy
 
-      socket = Socket.tcp(proxy.hostname, proxy.port, connect_timeout: @timeout)
+      socket = Socket.tcp(proxy.hostname, proxy.port, connect_timeout: @timeout, resolv_timeout: @timeout)
       begin
-        socket.write(connect_request(proxy))
+        Timeout.timeout(@timeout, Timeout::Error) { socket.write(connect_request(proxy)) }
         read_proxy_response(socket)
         socket
       rescue StandardError
@@ -112,7 +112,7 @@ class Provider::TradeRepublicWebsocket
     # Resolves the proxy for the WSS endpoint, preferring HTTPS_PROXY and
     # falling back to HTTP_PROXY for deployments that only configure the latter.
     def proxy_uri
-      proxy = find_proxy("https") || find_proxy("http")
+      proxy = HttpProxy.resolve(scheme: "https", host: HOST, fallback: true)
       return unless proxy
 
       unless proxy.scheme == "http"
@@ -124,12 +124,6 @@ class Provider::TradeRepublicWebsocket
     rescue URI::Error
       raise Provider::TradeRepublicClient::ProviderUnavailable,
             "Invalid Trade Republic WebSocket proxy configuration"
-    end
-
-    # Resolves the scheme-specific proxy variable while preserving the URI
-    # library's NO_PROXY and loopback handling.
-    def find_proxy(scheme)
-      URI.parse("#{scheme}://#{HOST}:443").find_proxy
     end
 
     # Reads and validates the proxy's CONNECT response, bounding its size and

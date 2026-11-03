@@ -36,7 +36,9 @@ class Provider::TradeRepublicWebsocketTest < ActiveSupport::TestCase
 
   test "connects directly when no proxy is configured" do
     socket = stub
-    Socket.stubs(:tcp).with(Provider::TradeRepublicWebsocket::HOST, 443, connect_timeout: 5).returns(socket)
+    Socket.stubs(:tcp).with(
+      Provider::TradeRepublicWebsocket::HOST, 443, connect_timeout: 5, resolv_timeout: 5
+    ).returns(socket)
 
     assert_same socket, websocket_with_proxy(nil, timeout: 5).send(:open_tunnel)
   end
@@ -55,6 +57,12 @@ class Provider::TradeRepublicWebsocketTest < ActiveSupport::TestCase
 
   test "honors NO_PROXY when resolving the proxy" do
     with_proxy_env("HTTP_PROXY" => "http://proxy.example:8888", "NO_PROXY" => ".traderepublic.com") do
+      assert_nil websocket.send(:proxy_uri)
+    end
+  end
+
+  test "honors a wildcard NO_PROXY when resolving the proxy" do
+    with_proxy_env("HTTP_PROXY" => "http://proxy.example:8888", "NO_PROXY" => "*") do
       assert_nil websocket.send(:proxy_uri)
     end
   end
