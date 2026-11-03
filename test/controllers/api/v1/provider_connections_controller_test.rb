@@ -153,6 +153,23 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
     assert_not_includes ids, other_item.id
   end
 
+  # A moomoo row holds years of encrypted fills, orders and cash logs; the
+  # status only counts its links.
+  test "moomoo connection status loads no moomoo row's raw history" do
+    queries = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, payload| queries << payload[:sql] }
+
+    get api_v1_provider_connections_url, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert JSON.parse(response.body)["data"].any? { |connection| connection["provider"] == "moomoo" }, "no moomoo connection listed"
+    rows = queries.grep(/FROM "moomoo_accounts"/)
+    assert rows.any?, "the status read no moomoo rows"
+    assert_empty rows.grep(/"moomoo_accounts"\.\*|raw_\w+_payload/), "the status loaded moomoo rows whole"
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
+  end
+
   test "read_write key can list provider connection status" do
     get api_v1_provider_connections_url, headers: api_headers(@read_write_key)
     assert_response :success

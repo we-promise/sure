@@ -551,6 +551,34 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    # A cash account of a moomoo account split by currency is a cash
+    # (Depository) account, its stocks accounts and an account not split are
+    # brokerage accounts (see MoomooAccount#sure_accountable).
+    def create_from_moomoo_account(moomoo_account)
+      raise ArgumentError, "only moomoo securities accounts can be linked" unless moomoo_account.linkable?
+
+      family = moomoo_account.moomoo_item.family
+      accountable = moomoo_account.sure_accountable
+
+      attributes = {
+        family: family,
+        name: moomoo_account.name.presence || "moomoo",
+        balance: 0,
+        cash_balance: 0,
+        currency: moomoo_account.currency.presence || family.currency,
+        accountable_type: accountable[:type],
+        accountable_attributes: {
+          subtype: accountable[:subtype]
+        }
+      }
+
+      account = create_and_sync(attributes, skip_initial_sync: true)
+      # Recorded on the row, so an account the user made and linked is never
+      # taken for Sure's own (MoomooAccount::CashAccountConversion).
+      moomoo_account.update!(setup_account_id: account.id) if account.persisted?
+      account
+    end
+
     TRADE_REPUBLIC_ACCOUNT_TYPES = {
       "portfolio" => [ "Investment", "brokerage", "Trade Republic Portfolio" ],
       "cash" => [ "Depository", "checking", "Trade Republic Cash" ],

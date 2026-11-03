@@ -50,6 +50,7 @@ class AccountsController < ApplicationController
     @kraken_items = visible_provider_items(family.kraken_items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts))
     @coinspot_items = visible_provider_items(family.coinspot_items.ordered.with_attached_logo.includes(:coinspot_accounts, :accounts))
     @trading212_items = visible_provider_items(family.trading212_items.ordered.with_attached_logo.includes(:trading212_accounts)).sort_by(&:created_at)
+    @moomoo_items = visible_provider_items(family.moomoo_items.connected.ordered.with_attached_logo).sort_by(&:created_at)
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
     @sharesight_items = visible_provider_items(family.sharesight_items.ordered.with_attached_logo.includes(sharesight_accounts: [ :account, :linked_account ])).sort_by(&:created_at)
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
@@ -554,6 +555,7 @@ class AccountsController < ApplicationController
         @kraken_items,
         @coinspot_items,
         @trading212_items,
+        @moomoo_items,
         @questrade_items,
         @sharesight_items,
         @wise_items,

@@ -7,6 +7,9 @@ Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :openai_access_token,
   :client_id, :application_id, :consumer_key, :snaptrade_user_id, :snaptrade_user_secret,
   :oauth_access_token, :oauth_refresh_token, :code_verifier, :code_challenge,
+  # moomoo's pending OAuth client registrations, with their registration
+  # tokens, in one JSON column that no other name here matches.
+  :pending_oauth_client,
   /\Apin\z/i,
   # One-time codes that act as credentials: MFA TOTP/backup codes, OAuth and
   # bank authorization codes and the desktop SSO exchange all arrive as
