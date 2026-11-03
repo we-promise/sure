@@ -58,6 +58,20 @@ export default class extends Controller {
     // keep every instance on the page in step when one changes the order.
     this.onSortChanged = (event) => this.#applySortOrder(event.detail.order);
     window.addEventListener(this.constructor.SORT_EVENT, this.onSortChanged);
+    // A Turbo morph refresh (the sync toast's auto-refresh, or a broadcast
+    // refresh stream) keeps this element and its controller but puts the
+    // server markup back inside, so the sort controls show the default while
+    // the order is kept here, and the tooltip appended outside this element
+    // is dropped. The graph is fetched again by the cash-flow controller,
+    // and the data value callback resets the zoom.
+    this.onMorph = () => {
+      if (!this.connected) return;
+
+      this.tooltip?.remove();
+      this.#createTooltip();
+      this.#syncSortControls();
+    };
+    document.addEventListener("turbo:morph", this.onMorph);
     this.#createTooltip();
     this.#syncZoomControls();
     this.#syncSortControls();
@@ -83,6 +97,7 @@ export default class extends Controller {
   disconnect() {
     this.connected = false;
     window.removeEventListener(this.constructor.SORT_EVENT, this.onSortChanged);
+    document.removeEventListener("turbo:morph", this.onMorph);
     this.resizeObserver?.disconnect();
     clearTimeout(this.drawTimeout);
     this.tooltip?.remove();
