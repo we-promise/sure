@@ -348,6 +348,9 @@ Rails.application.routes.draw do
     end
   end
 
+  # Per-connection sync cadence; the connection is given as ?syncable_type=&syncable_id=
+  resource :sync_schedule, only: %i[edit update]
+
   get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
 
   get "changelog", to: "pages#changelog"
