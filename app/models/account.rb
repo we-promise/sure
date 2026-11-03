@@ -495,6 +495,24 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_etoro_account(etoro_account)
+      family = etoro_account.etoro_item.family
+
+      attributes = {
+        family: family,
+        name: etoro_account.name.presence || "eToro",
+        balance: 0,
+        cash_balance: 0,
+        currency: etoro_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     TRADE_REPUBLIC_ACCOUNT_TYPES = {
       "portfolio" => [ "Investment", "brokerage", "Trade Republic Portfolio" ],
       "cash" => [ "Depository", "checking", "Trade Republic Cash" ],

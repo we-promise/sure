@@ -41,6 +41,18 @@ class Balance::LinkedInvestmentSeriesNormalizer
       new(account: account, series: nil).supported_history_start_date
     end
 
+    # Reconciliations a provider recorded, such as eToro's daily balances, are
+    # history it reported. The anchors a sync rotates into reconciliations
+    # carry no source and do not count, nor do the valuations a data import
+    # tags with its session (Family::DataImporter), which an account linked
+    # afterwards still holds.
+    def provider_reconciliations(entries)
+      entries
+        .where.not(source: nil)
+        .where.not("entries.source LIKE ?", "#{Family::DataImporter::SESSION_SOURCE_PREFIX}%")
+        .where(entryable_type: "Valuation", entryable_id: Valuation.reconciliation.select(:id))
+    end
+
     private
       def common_supported_history_start_date(account_ids)
         account_ids = Array(account_ids).compact
@@ -53,10 +65,19 @@ class Balance::LinkedInvestmentSeriesNormalizer
           .group(:account_id)
           .minimum(:date)
 
+        # Only a linked account's reconciliations are provider history. A
+        # manual account can hold sourced ones too (an API import session
+        # tags its valuations, an unlinked eToro account keeps its own), and
+        # those must not move the group's start.
+        linked_account_ids = Account.linked.where(id: account_ids).select(:id)
+        reconciliation_dates = provider_reconciliations(Entry.where(account_id: linked_account_ids))
+          .group(:account_id)
+          .minimum(:date)
+
         stable_holding_dates = stable_provider_holding_start_dates(account_ids)
 
         account_ids.filter_map do |account_id|
-          [ activity_dates[account_id], stable_holding_dates[account_id] ].compact.min
+          [ activity_dates[account_id], stable_holding_dates[account_id], reconciliation_dates[account_id] ].compact.min
         end.max
       end
 
@@ -94,7 +115,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
   # deposit on the opening day reads as a change in value rather than as
   # the starting value.
   def normalize
-    return series unless account.linked? && account.balance_type == :investment
+    return series unless account.linked_investment?
 
     first_supported_history_date = supported_history_start_date
     return series unless first_supported_history_date.present?
@@ -103,15 +124,21 @@ class Balance::LinkedInvestmentSeriesNormalizer
     return series if active_points.blank?
 
     opening_money = Money.new(opening_amount(first_supported_history_date), active_points.first.value.currency)
+    # A provider reconciliation on the inception date reports the balance
+    # there, so the series starts from recorded values, not an opening one.
+    recorded_inception = first_provider_reconciliation_date == first_supported_history_date
 
     if first_supported_history_date >= series.start_date && active_points.first.date > first_supported_history_date
       # Periodic sampling missed the exact opening date (e.g. coarse 1-month or
       # 1-week intervals): prepend an anchor point on the exact opening date with
       # the initial balance (e.g. $0), only when the inception date falls within
       # the requested series date range.
-      active_points = [ opening_point(date: first_supported_history_date, date_formatted: nil, value: opening_money), *active_points ]
+      unless recorded_inception
+        active_points = [ opening_point(date: first_supported_history_date, date_formatted: nil, value: opening_money), *active_points ]
+      end
     elsif active_points.first.date == first_supported_history_date &&
-          first_provider_activity_date == first_supported_history_date
+          first_provider_activity_date == first_supported_history_date &&
+          !recorded_inception
       # Sampling landed exactly on the opening date (e.g. a daily "All" chart)
       # and that date is the first provider activity date: the first point
       # carries the day's closing balance, which already includes the first
@@ -137,7 +164,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
   end
 
   def supported_history_start_date
-    [ first_provider_activity_date, stable_provider_holding_start_date ].compact.min
+    [ first_provider_activity_date, stable_provider_holding_start_date, first_provider_reconciliation_date ].compact.min
   end
 
   private
@@ -187,6 +214,12 @@ class Balance::LinkedInvestmentSeriesNormalizer
         .where.not(source: nil)
         .where.not(entryable_type: "Valuation")
         .minimum(:date)
+    end
+
+    def first_provider_reconciliation_date
+      return @first_provider_reconciliation_date if defined?(@first_provider_reconciliation_date)
+
+      @first_provider_reconciliation_date = self.class.provider_reconciliations(account.entries).minimum(:date)
     end
 
     def provider_holdings_scope

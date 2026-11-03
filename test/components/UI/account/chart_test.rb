@@ -319,6 +319,45 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal I18n.t("UI.account.chart.vs_available_history"), component.comparison_label
   end
 
+  test "all_time reaches back to a linked investment account's history before the family's first activity" do
+    provider_history_start = 300.days.ago.to_date
+    @account.stubs(:linked?).returns(true)
+    @account.stubs(:history_start_date).returns(provider_history_start)
+
+    family_activity_start = 100.days.ago.to_date
+    all_time_period = Period.new(key: "all_time", start_date: family_activity_start, end_date: Date.current)
+
+    component = UI::Account::Chart.new(account: @account, period: all_time_period)
+
+    assert_equal "all_time", component.period.key
+    assert_equal provider_history_start, component.period.start_date
+  end
+
+  test "all_time does not reach back to a linked account's older history unless it is an investment account" do
+    depository = accounts(:depository)
+    depository.stubs(:linked?).returns(true)
+    depository.stubs(:history_start_date).returns(300.days.ago.to_date)
+
+    family_activity_start = 100.days.ago.to_date
+    all_time_period = Period.new(key: "all_time", start_date: family_activity_start, end_date: Date.current)
+
+    component = UI::Account::Chart.new(account: depository, period: all_time_period)
+
+    assert_equal family_activity_start, component.period.start_date
+  end
+
+  test "all_time does not reach back to an unlinked account's older history" do
+    @account.stubs(:linked?).returns(false)
+    @account.stubs(:history_start_date).returns(300.days.ago.to_date)
+
+    family_activity_start = 100.days.ago.to_date
+    all_time_period = Period.new(key: "all_time", start_date: family_activity_start, end_date: Date.current)
+
+    component = UI::Account::Chart.new(account: @account, period: all_time_period)
+
+    assert_equal family_activity_start, component.period.start_date
+  end
+
   test "empty account with nil history_start_date leaves all_time period unchanged" do
     @account.stubs(:history_start_date).returns(nil)
 
