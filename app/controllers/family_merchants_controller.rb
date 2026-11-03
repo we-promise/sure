@@ -81,14 +81,14 @@ class FamilyMerchantsController < ApplicationController
         end
       else
         respond_to do |format|
-          format.html { redirect_to family_merchants_path, notice: t(".success") }
-          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+          format.html { redirect_to updated_merchant_return_path, notice: t(".success") }
+          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, updated_merchant_return_path) }
         end
       end
     elsif @merchant.update(merchant_params)
       respond_to do |format|
-        format.html { redirect_to family_merchants_path, notice: t(".success") }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+        format.html { redirect_to updated_merchant_return_path, notice: t(".success") }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, updated_merchant_return_path) }
       end
     else
       render :edit, status: :unprocessable_entity
@@ -169,6 +169,10 @@ class FamilyMerchantsController < ApplicationController
         merchant_params[:website_url].to_s.strip != @merchant.website_url.to_s
 
       name_changed || website_changed
+    end
+
+    def updated_merchant_return_path
+      safe_return_to(params[:return_to]) || family_merchants_path
     end
 
     def merchant_params
