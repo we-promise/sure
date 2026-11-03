@@ -51,6 +51,18 @@ class GocardlessItemsControllerTest < ActionDispatch::IntegrationTest
     assert skipped.reload.account_provider.blank?
   end
 
+  test "setup form reports failure, not skipped, when account creation raises" do
+    account = @item.gocardless_accounts.create!(name: "Current", currency: "GBP", gocardless_account_id: "acc-1")
+    GocardlessItemsController.any_instance.stubs(:create_account_from_gocardless).raises(StandardError, "boom")
+
+    assert_no_difference -> { @family.accounts.count } do
+      post complete_account_setup_gocardless_item_url(@item), params: { accounts: { account.id => { account_type: "depository" } } }
+    end
+
+    assert_redirected_to setup_accounts_gocardless_item_url(@item)
+    assert_equal I18n.t("gocardless_items.complete_account_setup.creation_failed", error: "Unknown error"), flash[:alert]
+  end
+
   test "setup form renders one type select per unlinked account" do
     account = @item.gocardless_accounts.create!(name: "Current", currency: "GBP", gocardless_account_id: "acc-1")
 

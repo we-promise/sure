@@ -334,6 +334,7 @@ class GocardlessItemsController < ApplicationController
 
     created_count = 0
     skipped_count = 0
+    failed_count = 0
 
     account_configs.each do |gocardless_account_id, config|
       if config[:account_type] == "skip"
@@ -360,17 +361,17 @@ class GocardlessItemsController < ApplicationController
       if linked
         created_count += 1
       else
-        skipped_count += 1
+        failed_count += 1
       end
     rescue => e
       Rails.logger.error "GocardlessItemsController#complete_account_setup - Error: #{e.message}"
-      skipped_count += 1
+      failed_count += 1
     end
 
     if created_count > 0
       @gocardless_item.sync_later unless @gocardless_item.syncing?
       redirect_to accounts_path, notice: t(".success", count: created_count)
-    elsif skipped_count > 0 && created_count == 0
+    elsif failed_count == 0 && skipped_count > 0
       redirect_to accounts_path, notice: t(".all_skipped")
     else
       redirect_to setup_accounts_gocardless_item_path(@gocardless_item), alert: t(".creation_failed", error: "Unknown error")
