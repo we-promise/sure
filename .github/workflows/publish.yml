@@ -132,6 +132,8 @@ jobs:
               echo "type=raw,value=$version"
               [[ -z "$compatibility" ]] || echo "type=raw,value=$compatibility"
               # Hold stable/latest image promotion until CalVer releases are validated.
+              # [[ "$stable" != true ]] || echo 'type=raw,value=stable'
+              # [[ "$alpha" != true ]] || echo 'type=raw,value=latest'
             else
               echo "type=raw,value=sha-$(git rev-parse HEAD)"
               if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then
@@ -375,6 +377,7 @@ jobs:
 
     steps:
       - name: Verify Render deployment configuration
+        id: render_config
         env:
           DEMO_URL: ${{ vars.RENDER_DEMO_URL }}
           WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WEB_DEPLOY_HOOK_URL }}
@@ -387,11 +390,14 @@ jobs:
           [[ -n "${WORKER_DEPLOY_HOOK_URL}" ]] || missing+=(RENDER_DEMO_WORKER_DEPLOY_HOOK_URL)
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing demo environment configuration: %s\n' "${missing[*]}" >&2
-            exit 1
+            printf '::notice::Skipping Render demo deployment; missing configuration: %s\n' "${missing[*]}"
+            exit 0
           fi
 
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
       - name: Deploy web service
+        if: steps.render_config.outputs.configured == 'true'
         env:
           WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WEB_DEPLOY_HOOK_URL }}
         shell: bash
@@ -403,6 +409,7 @@ jobs:
             "${WEB_DEPLOY_HOOK_URL}"
 
       - name: Wait for web service
+        if: steps.render_config.outputs.configured == 'true'
         env:
           DEMO_URL: ${{ vars.RENDER_DEMO_URL }}
         shell: bash
@@ -427,6 +434,7 @@ jobs:
           exit 1
 
       - name: Smoke test sign-in page
+        if: steps.render_config.outputs.configured == 'true'
         env:
           DEMO_URL: ${{ vars.RENDER_DEMO_URL }}
         shell: bash
@@ -435,6 +443,7 @@ jobs:
             "${DEMO_URL%/}/sessions/new" > /dev/null
 
       - name: Deploy worker
+        if: steps.render_config.outputs.configured == 'true'
         env:
           WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WORKER_DEPLOY_HOOK_URL }}
         shell: bash
@@ -468,28 +477,32 @@ jobs:
 
     steps:
       - name: Verify Render deployment configuration
+        id: render_config
         env:
           APP_URL: https://sure-web-6y53.onrender.com
           WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WEB_DEPLOY_HOOK_URL }}
           WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WORKER_DEPLOY_HOOK_URL }}
         shell: bash
         run: |
-          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "Expected a stable vMAJOR.MINOR.PATCH tag." >&2
-            exit 1
-          fi
-
           missing=()
           [[ -n "${APP_URL}" ]] || missing+=(RENDER_APP_URL)
           [[ -n "${WEB_DEPLOY_HOOK_URL}" ]] || missing+=(RENDER_APP_WEB_DEPLOY_HOOK_URL)
           [[ -n "${WORKER_DEPLOY_HOOK_URL}" ]] || missing+=(RENDER_APP_WORKER_DEPLOY_HOOK_URL)
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing stable environment configuration: %s\n' "${missing[*]}" >&2
+            printf '::notice::Skipping Render stable deployment; missing configuration: %s\n' "${missing[*]}"
+            exit 0
+          fi
+
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected a stable vMAJOR.MINOR.PATCH tag." >&2
             exit 1
           fi
 
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
       - name: Deploy web service
+        if: steps.render_config.outputs.configured == 'true'
         env:
           WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WEB_DEPLOY_HOOK_URL }}
         shell: bash
@@ -501,6 +514,7 @@ jobs:
             "${WEB_DEPLOY_HOOK_URL}"
 
       - name: Wait for web service
+        if: steps.render_config.outputs.configured == 'true'
         env:
           APP_URL: https://sure-web-6y53.onrender.com
         shell: bash
@@ -525,6 +539,7 @@ jobs:
           exit 1
 
       - name: Smoke test sign-in page
+        if: steps.render_config.outputs.configured == 'true'
         env:
           APP_URL: https://sure-web-6y53.onrender.com
         shell: bash
@@ -533,6 +548,7 @@ jobs:
             "${APP_URL%/}/sessions/new" > /dev/null
 
       - name: Deploy worker
+        if: steps.render_config.outputs.configured == 'true'
         env:
           WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WORKER_DEPLOY_HOOK_URL }}
         shell: bash
