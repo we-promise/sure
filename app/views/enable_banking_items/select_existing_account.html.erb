@@ -22,7 +22,7 @@
                 <div class="flex flex-col">
                   <span class="text-sm text-primary font-medium"><%= eba.name.presence || eba.account_id %></span>
                   <span class="text-xs text-secondary">
-                    <%= eba.currency %> • <%= t(".balance") %>: <%= number_to_currency((eba.current_balance || 0), unit: eba.currency) %>
+                    <%= eba.currency %> • <%= t(".balance") %>: <%= format_money(eba.current_balance || 0, currency: eba.currency, unit: eba.currency) %>
                   </span>
                 </div>
               </label>

@@ -43,12 +43,14 @@ class User < ApplicationRecord
   accepts_nested_attributes_for :family, update_only: true
 
   MFA_BACKUP_CODE_COUNT = 8
+  AMOUNT_FORMATS = %w[language international indian european].freeze
 
   validates :email, presence: true, uniqueness: true, format: { with: URI::MailTo::EMAIL_REGEXP }
   validate :ensure_valid_profile_image
   validates :default_period, inclusion: { in: Period::PERIODS.keys }
   validates :default_account_order, inclusion: { in: AccountOrder::ORDERS.keys }
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }, allow_nil: true
+  validates :amount_format, inclusion: { in: AMOUNT_FORMATS }, allow_blank: true
 
   # Password is required on create unless the user is being created via SSO JIT.
   # SSO JIT users have password_digest = nil and authenticate via OIDC only.
@@ -159,6 +161,10 @@ class User < ApplicationRecord
 
   def admin?
     super_admin? || role == "admin"
+  end
+
+  def effective_amount_format
+    amount_format.presence_in(AMOUNT_FORMATS) || "language"
   end
 
   # Setting values are shared by every family on the instance, so changing them

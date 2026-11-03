@@ -67,8 +67,18 @@ class Insight::Generator
       )
     end
 
-    def format_money(amount)
-      Money.new(amount, family.currency).format
+    def format_money(amount, **options)
+      Money.new(amount, family.currency).format(**family_format_options, **options)
+    end
+
+    # Insight text is shared between web and mobile, so it uses the family's
+    # locale and never a per-user override. Otherwise one member's preference
+    # would leak into another member's stored insight text.
+    def family_format_options
+      {
+        locale: family.locale.presence || I18n.locale,
+        amount_format: Money::Formatting::LANGUAGE_FORMAT
+      }
     end
 
     # Normalizes BigDecimal/Rational math results so metadata survives a jsonb

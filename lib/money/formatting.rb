@@ -9,11 +9,24 @@ module Money::Formatting
   # European style: dot as thousands delimiter, comma as decimal separator, symbol before number
   EUROPEAN_SYMBOL_BEFORE = %i[nl pt-BR].freeze
   # Currencies and locales that use the South Asian numbering system (lakh/crore).
-  # Grouping is decided once in #format_options so every caller (web, exports,
-  # API formatted strings) agrees on it.
+  # The default is resolved once in #format_options so web, exports and API
+  # formatted strings all agree.
   INDIAN_GROUPING_CURRENCIES = %w[INR].freeze
   INDIAN_LOCALES = %i[en-IN en-IND hi hi-IN mr-IN ta te bn gu kn ml pa].freeze
   INDIAN_DELIMITER_PATTERN = /(\d+?)(?=(\d\d)+(\d)(?!\d))/.freeze
+  LANGUAGE_FORMAT = "language".freeze
+
+  # Explicit per-user overrides. Only the numeric grouping and separators change;
+  # symbol placement and precision stay locale/currency driven.
+  AMOUNT_FORMATS = {
+    "international" => { delimiter: ",", separator: "." },
+    "indian" => {
+      delimiter: ",",
+      separator: ".",
+      delimiter_pattern: INDIAN_DELIMITER_PATTERN
+    },
+    "european" => { delimiter: ".", separator: "," }
+  }.freeze
 
   FAST_FORMAT_KEYS = %i[unit precision delimiter separator format].freeze
   DELIMITER_REGEX = /(\d)(?=(\d\d\d)+(?!\d))/
@@ -23,7 +36,9 @@ module Money::Formatting
     requested_locale = options.delete(:locale)
     locale = requested_locale || I18n.locale
     indian_grouping = options.delete(:indian_grouping)
-    opts = format_options(locale, indian_grouping: indian_grouping).merge(options)
+    amount_format = resolve_amount_format(options)
+    options.delete(:amount_format)
+    opts = format_options(locale, amount_format: amount_format, indian_grouping: indian_grouping).merge(options)
 
     # Rails resolves number.format settings (strip_insignificant_zeros, ...)
     # from the locale passed to number_to_currency. Bypass the fast path when
@@ -42,7 +57,7 @@ module Money::Formatting
   end
   alias_method :to_s, :format
 
-  def format_options(locale = nil, indian_grouping: nil)
+  def format_options(locale = nil, amount_format: nil, indian_grouping: nil)
     opts = {
       unit: get_symbol,
       precision: currency.default_precision,
@@ -51,15 +66,24 @@ module Money::Formatting
       format: currency.default_format
     }.merge(locale_options(locale))
 
-    indian = indian_grouping?(locale, indian_grouping)
-    opts[:delimiter_pattern] = INDIAN_DELIMITER_PATTERN if indian
+    explicit = amount_format.presence&.to_s
 
-    # Indian grouping and Indian locales always use Indian punctuation. A
-    # currency's own separators can otherwise produce mixed output such as
-    # "€12.34.567,00" or "12 34 567,00 €".
-    if indian || indian_locale?(locale)
-      opts[:delimiter] = ","
-      opts[:separator] = "."
+    # A per-user override always wins, including over the INR/locale default.
+    if explicit && explicit != LANGUAGE_FORMAT
+      opts.merge!(AMOUNT_FORMATS.fetch(explicit, {}))
+      # International/European must not inherit an Indian grouping pattern.
+      opts.delete(:delimiter_pattern) unless explicit == "indian"
+    else
+      indian = indian_grouping?(locale, indian_grouping)
+      opts[:delimiter_pattern] = INDIAN_DELIMITER_PATTERN if indian
+
+      # Indian grouping and Indian locales always use Indian punctuation. A
+      # currency's own separators can otherwise produce mixed output such as
+      # "€12.34.567,00" or "12 34 567,00 €".
+      if indian || indian_locale?(locale)
+        opts[:delimiter] = ","
+        opts[:separator] = "."
+      end
     end
 
     opts
@@ -107,6 +131,15 @@ module Money::Formatting
 
     def indian_locale?(locale)
       INDIAN_LOCALES.include?((locale || I18n.locale || :en).to_sym)
+    end
+
+    def resolve_amount_format(options)
+      explicit = options[:amount_format]
+      return explicit.to_s if explicit.present?
+
+      if defined?(Current) && Current.respond_to?(:user)
+        Current.user&.effective_amount_format
+      end
     end
 
     def get_symbol

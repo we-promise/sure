@@ -179,7 +179,9 @@ module ApplicationHelper
   def format_money(number_or_money, options = {})
     return nil unless number_or_money
 
-    Money.new(number_or_money).format(options)
+    options = options.dup
+    currency = options.delete(:currency)
+    Money.new(number_or_money, currency || Money.default_currency).format(options)
   end
 
   # Format each native-currency total independently, preserving order and transfer exclusions.

@@ -7,6 +7,16 @@
           language_options,
           { label: t(".language"), include_blank: t(".language_auto") },
           { data: { auto_submit_form_target: "auto" } } %>
+      <%= form.select :amount_format,
+          [
+            [t(".amount_format_language"), "language"],
+            [t(".amount_format_international"), "international"],
+            [t(".amount_format_indian"), "indian"],
+            [t(".amount_format_european"), "european"]
+          ],
+          { label: t(".amount_format") },
+          { data: { auto_submit_form_target: "auto" } } %>
+      <p class="text-xs italic pl-2 text-secondary"><%= t(".amount_format_hint") %></p>
       <%= form.fields_for :family do |family_form| %>
         <%= family_form.select :timezone,
             timezone_options,

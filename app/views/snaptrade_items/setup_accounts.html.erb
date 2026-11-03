@@ -132,7 +132,7 @@
                           <%= snaptrade_account.account_type.titleize %> •
                         <% end %>
                         <%= t("snaptrade_items.setup_accounts.balance_label", default: "Balance:") %>
-                        <%= number_to_currency(snaptrade_account.current_balance || 0, unit: Money::Currency.new(snaptrade_account.currency || "USD").symbol) %>
+                        <%= format_money(snaptrade_account.current_balance || 0, currency: snaptrade_account.currency || "USD") %>
                       </p>
                       <% if snaptrade_account.account_number.present? %>
                         <p class="text-xs text-secondary"><%= t("snaptrade_items.setup_accounts.account_number", default: "Account:") %> <%= mask_last4(snaptrade_account.account_number) %></p>
@@ -200,7 +200,7 @@
                   <p class="text-xs text-primary mb-1"><%= snaptrade_account.name %></p>
                   <div class="flex items-center gap-2">
                     <%= link_form.select :account_id,
-                          options_for_select(@linkable_accounts.map { |a| ["#{a.name} (#{number_to_currency(a.balance, unit: Money::Currency.new(a.currency || "USD").symbol)})", a.id] }),
+                          options_for_select(@linkable_accounts.map { |a| ["#{a.name} (#{format_money(a.balance, currency: a.currency || "USD")})", a.id] }),
                           { prompt: t("snaptrade_items.setup_accounts.select_account", default: "Select an account...") },
                           class: "bg-container border border-primary rounded px-2 py-1 text-sm text-primary flex-1 min-w-0" %>
                     <%= render DS::Button.new(

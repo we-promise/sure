@@ -216,38 +216,62 @@ class MoneyTest < ActiveSupport::TestCase
     assert_equal "TW$1,000.12", Money.new(1000.12, :twd).format(locale: :"zh-TW")
   end
 
+  test "formats with an explicit Indian override" do
+    assert_equal "$12,34,567.89", Money.new(1234567.89, :usd).format(locale: :en, amount_format: "indian")
+    assert_equal "12,34,567.89 €", Money.new(1234567.89, :eur).format(locale: :de, amount_format: "indian")
+  end
+
   test "formats INR amounts with the Indian numbering system" do
     assert_equal "₹0.00", Money.new(0, :inr).format
-    assert_equal "₹50.00", Money.new(50, :inr).format
     assert_equal "₹999.00", Money.new(999, :inr).format
-    assert_equal "₹1,000.00", Money.new(1000, :inr).format
-    assert_equal "₹10,000.00", Money.new(10_000, :inr).format
+    assert_equal "₹1,000.00", Money.new(1_000, :inr).format
     assert_equal "₹1,00,000.00", Money.new(100_000, :inr).format
-    assert_equal "₹1,00,000", Money.new(100_000, :inr).format(precision: 0)
     assert_equal "₹12,34,567.89", Money.new(1_234_567.89, :inr).format
     assert_equal "-₹12,34,567.89", Money.new(-1_234_567.89, :inr).format
     assert_equal "₹1,00,00,000.00", Money.new(10_000_000, :inr).format
     assert_equal "₹12,34,56,789.50", Money.new(123_456_789.5, :inr).format
+    assert_equal "₹1,00,000", Money.new(100_000, :inr).format(precision: 0)
   end
 
-  test "formats with Indian grouping for Indian locales" do
-    assert_equal "₹12,34,567.89", Money.new(1234567.89, :inr).format(locale: :"en-IN")
-    assert_equal "₹12,34,567.89", Money.new(1234567.89, :inr).format(locale: :hi)
-    assert_equal "$1,00,000.00", Money.new(100_000, :usd).format(locale: :"en-IN")
-    assert_equal "$1,00,000.00", Money.new(100_000, :usd).format(locale: :hi)
+  test "formats with an explicit International override" do
+    assert_equal "1,234,567.89 €", Money.new(1234567.89, :eur).format(locale: :de, amount_format: "international")
+    assert_equal "1,234,567.89\u00A0$", Money.new(1234567.89, :usd).format(locale: :fr, amount_format: "international")
   end
 
-  test "uses Indian separators for non-INR currencies in Indian locales" do
-    assert_equal "€12,34,567.89", Money.new(1_234_567.89, :eur).format(locale: :"en-IN")
-    assert_equal "€12,34,567.89", Money.new(1_234_567.89, :eur).format(locale: :hi)
+  test "formats with an explicit European override" do
+    assert_equal "$1.234.567,89", Money.new(1234567.89, :usd).format(locale: :en, amount_format: "european")
+    assert_equal "€1.234.567,89", Money.new(1234567.89, :eur).format(locale: :en, amount_format: "european")
+  end
+
+  test "language amount format keeps the locale rules" do
+    assert_equal "1.234.567,89 €", Money.new(1234567.89, :eur).format(locale: :de, amount_format: "language")
+    assert_equal "1 234 567,89 €", Money.new(1234567.89, :eur).format(locale: :pl, amount_format: "language")
+    assert_equal "1\u00A0234\u00A0567,89\u00A0€", Money.new(1234567.89, :eur).format(locale: :fr, amount_format: "language")
+  end
+
+  test "language amount format applies Indian grouping to INR and Indian locales" do
+    assert_equal "₹12,34,567.89", Money.new(1_234_567.89, :inr).format(locale: :en, amount_format: "language")
+    assert_equal "₹1,00,00,000.00", Money.new(10_000_000, :inr).format(amount_format: "language")
+    assert_equal "$1,00,000.00", Money.new(100_000, :usd).format(locale: :"en-IN", amount_format: "language")
+  end
+
+  test "Indian locales also use Indian separators for non-INR currencies" do
+    assert_equal "€12,34,567.89", Money.new(1_234_567.89, :eur).format(locale: :"en-IN", amount_format: "language")
+    assert_equal "€12,34,567.89", Money.new(1_234_567.89, :eur).format(locale: :hi, amount_format: "language")
   end
 
   test "Indian grouping always uses Indian punctuation" do
-    assert_equal "12,34,567.89 ₹", Money.new(1_234_567.89, :inr).format(locale: :de)
-    assert_equal "12,34,567.89 ₹", Money.new(1_234_567.89, :inr).format(locale: :pl)
+    assert_equal "12,34,567.89 ₹", Money.new(1_234_567.89, :inr).format(locale: :de, amount_format: "language")
+    assert_equal "12,34,567.89 ₹", Money.new(1_234_567.89, :inr).format(locale: :pl, amount_format: "language")
     assert_equal "12,34,567.89 €", Money.new(1_234_567.89, :eur).format(locale: :de, indian_grouping: true)
     assert_equal "12,34,567.89\u00A0€", Money.new(1_234_567.89, :eur).format(locale: :fr, indian_grouping: true)
     assert_equal "€12,34,567.89", Money.new(1_234_567.89, :eur).format(locale: :ja, indian_grouping: true)
+  end
+
+  test "an explicit override wins over the INR default" do
+    assert_equal "₹1,234,567.89", Money.new(1_234_567.89, :inr).format(locale: :en, amount_format: "international")
+    assert_equal "₹1.234.567,89", Money.new(1_234_567.89, :inr).format(locale: :en, amount_format: "european")
+    assert_equal "₹12,34,567.89", Money.new(1_234_567.89, :inr).format(locale: :en, amount_format: "indian")
   end
 
   test "explicit locale applies that locale's zero stripping" do
@@ -261,21 +285,52 @@ class MoneyTest < ActiveSupport::TestCase
 
   test "allows opting out of Indian grouping" do
     assert_equal "₹100,000.00", Money.new(100_000, :inr).format(indian_grouping: false)
-    assert_equal "₹1,234,567.89", Money.new(1_234_567.89, :inr).format(indian_grouping: false)
+    assert_equal "₹1,234,567.89", Money.new(1_234_567.89, :inr).format(locale: :en, indian_grouping: false)
     assert_equal "$100,000.00", Money.new(100_000, :usd).format(locale: :"en-IN", indian_grouping: false)
   end
 
   test "Indian locale separators survive the grouping opt-out" do
-    assert_equal "€1,234,567.89", Money.new(1_234_567.89, :eur).format(locale: :"en-IN", indian_grouping: false)
-    assert_equal "€1,234,567.89", Money.new(1_234_567.89, :eur).format(locale: :hi, indian_grouping: false)
+    assert_equal "€1,234,567.89", Money.new(1_234_567.89, :eur).format(
+      locale: :"en-IN", amount_format: "language", indian_grouping: false
+    )
+    assert_equal "€1,234,567.89", Money.new(1_234_567.89, :eur).format(
+      locale: :hi, amount_format: "language", indian_grouping: false
+    )
   end
 
-  test "allows opting into Indian grouping for other currencies" do
-    assert_equal "$1,00,000.00", Money.new(100_000, :usd).format(indian_grouping: true)
+  test "an explicit format still wins over Indian locale separators" do
+    assert_equal "€1.234.567,89", Money.new(1_234_567.89, :eur).format(
+      locale: :"en-IN", amount_format: "european"
+    )
   end
 
-  test "explicit unit overrides keep Indian grouping" do
+  test "indian_grouping can opt in for other currencies" do
+    assert_equal "$1,00,000.00", Money.new(100_000, :usd).format(locale: :en, indian_grouping: true)
+  end
+
+  test "an explicit unit keeps Indian grouping" do
     assert_equal "&#x20b9;1,00,000.00", Money.new(100_000, :inr).format(unit: "&#x20b9;")
+  end
+
+  test "amount format overrides keep negative values, zero and precision" do
+    assert_equal "-$12,34,567.89", Money.new(-1234567.89, :usd).format(locale: :en, amount_format: "indian")
+    assert_equal "$0,00", Money.new(0, :usd).format(locale: :en, amount_format: "european")
+    assert_equal "$12,34,568", Money.new(1234567.89, :usd).format(locale: :en, amount_format: "indian", precision: 0)
+  end
+
+  test "amount format overrides keep zero-decimal currencies" do
+    assert_equal "¥12,34,567", Money.new(1234567, :jpy).format(locale: :en, amount_format: "indian")
+    assert_equal "¥1.234.567", Money.new(1234567, :jpy).format(locale: :en, amount_format: "european")
+  end
+
+  test "explicit delimiter and separator win over an amount format override" do
+    assert_equal "$1|234|567;89", Money.new(1234567.89, :usd).format(
+      locale: :en, amount_format: "european", delimiter: "|", separator: ";"
+    )
+  end
+
+  test "unknown amount format is ignored" do
+    assert_equal "$1,234,567.89", Money.new(1234567.89, :usd).format(locale: :en, amount_format: "roman")
   end
 
   test "formats correctly for Hungarian locale" do

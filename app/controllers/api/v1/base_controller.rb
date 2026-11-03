@@ -24,8 +24,11 @@ class Api::V1::BaseController < ApplicationController
   before_action :force_json_format
   # Use our custom authentication that supports both OAuth and API keys
   before_action :authenticate_request!
-  # Localize registers this before API authentication in ApplicationController.
-  # Resolve the family zone only after the API identity has populated Current.
+  # Localize registers these before API authentication in ApplicationController,
+  # when Current is still empty. Re-register them after authentication so
+  # Money#format and localized responses follow the authenticated user.
+  skip_around_action :switch_locale
+  around_action :switch_locale
   skip_around_action :switch_timezone
   around_action :switch_timezone
   before_action :check_api_key_rate_limit
@@ -179,6 +182,21 @@ class Api::V1::BaseController < ApplicationController
     def current_resource_owner
       @current_user
     end
+
+    # Shared mobile/API user payload. Used by auth responses and GET /users/me
+    # so both surfaces stay in sync.
+    def user_payload(user)
+      {
+        id: user.id,
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        ui_layout: user.ui_layout,
+        ai_enabled: user.ai_enabled?,
+        amount_format: Money::DisplayFormat.for_user(user)
+      }
+    end
+    helper_method :user_payload
 
     # Get current scopes from either authentication method
     def current_scopes

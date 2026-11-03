@@ -24,6 +24,17 @@ class Insight::Generators::IdleCashGeneratorTest < ActiveSupport::TestCase
     assert_includes nudged_account_ids, @private.id
   end
 
+  test "formats balances with the family locale and ignores per-user overrides" do
+    @family.update_columns(locale: "de", currency: "EUR")
+    users(:family_admin).update_columns(amount_format: "indian")
+    @shared.update_columns(currency: "EUR", balance: 5_000)
+    @private.update_columns(currency: "EUR", balance: 5_000)
+
+    insight = Insight::Generators::IdleCashGenerator.new(@family).generate.first
+
+    assert_equal "5.000,00 €", insight.facts[:balance]
+  end
+
   private
     def nudged_account_ids
       Insight::Generators::IdleCashGenerator.new(@family).generate.map { |insight| insight.metadata[:account_id] }

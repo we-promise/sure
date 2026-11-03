@@ -211,6 +211,12 @@ en:
         month_start_day: Budget month starts on
         month_start_day_hint: Set when your budget month starts (e.g., payday)
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
+        amount_format: Number format
+        amount_format_hint: Language follows your selected language and currency. The other options override the number grouping only.
+        amount_format_language: Language
+        amount_format_international: International (1,234,567.89)
+        amount_format_indian: Indian (12,34,567.89)
+        amount_format_european: European (1.234.567,89)
         investment_contributions_as_spending: Count investing as spending
         investment_contributions_as_spending_hint: Money moved into investment accounts counts as spending in budgets, reports and the cash flow chart. Turn off to show it as invested instead.
         personal_budgets: Personal budgets

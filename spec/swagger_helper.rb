@@ -1938,6 +1938,32 @@ RSpec.configure do |config|
               message: { type: :string }
             }
           },
+          AmountFormat: {
+            type: :object,
+            required: %w[key grouping delimiter separator symbol_position symbol_spacing],
+            description: 'Resolved number formatting rules for this user. Clients should render amounts with these rules instead of inferring grouping from their own locale or country.',
+            properties: {
+              key: { type: :string, enum: %w[language international indian european] },
+              grouping: { type: :string, enum: %w[standard indian] },
+              delimiter: { type: :string, description: 'Exact thousands delimiter character.' },
+              separator: { type: :string, description: 'Exact decimal separator character.' },
+              symbol_position: { type: :string, enum: %w[before after] },
+              symbol_spacing: { type: :string, description: 'Exact spacing character between the currency symbol and the amount, or an empty string.' }
+            }
+          },
+          CurrentUserResponse: {
+            type: :object,
+            required: %w[id email first_name last_name ui_layout ai_enabled amount_format],
+            properties: {
+              id: { type: :string, format: :uuid },
+              email: { type: :string },
+              first_name: { type: :string, nullable: true },
+              last_name: { type: :string, nullable: true },
+              ui_layout: { type: :string },
+              ai_enabled: { type: :boolean },
+              amount_format: { '$ref' => '#/components/schemas/AmountFormat' }
+            }
+          },
           ResetInitiatedResponse: {
             type: :object,
             required: %w[message status job_id family_id status_url],

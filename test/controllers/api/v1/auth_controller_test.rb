@@ -275,6 +275,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal user.email, response_data["user"]["email"]
     assert_equal user.ui_layout, response_data["user"]["ui_layout"]
     assert_equal user.ai_enabled?, response_data["user"]["ai_enabled"]
+    assert_equal "language", response_data["user"]["amount_format"]["key"]
 
     # OAuth token assertions
     assert response_data["access_token"].present?

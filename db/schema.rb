@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_02_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2916,6 +2916,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
   create_table "users", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.boolean "ai_enabled", default: false, null: false
+    t.string "amount_format", default: "language", null: false
     t.datetime "created_at", null: false
     t.uuid "default_account_id"
     t.string "default_account_order", default: "name_asc"
@@ -2956,6 +2957,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
     t.index ["otp_secret"], name: "index_users_on_otp_secret", unique: true, where: "(otp_secret IS NOT NULL)"
     t.index ["preferences"], name: "index_users_on_preferences", using: :gin
     t.index ["webauthn_id"], name: "index_users_on_webauthn_id", unique: true, where: "(webauthn_id IS NOT NULL)"
+    t.check_constraint "amount_format::text = ANY (ARRAY['language'::character varying, 'international'::character varying, 'indian'::character varying, 'european'::character varying]::text[])", name: "chk_users_amount_format"
   end
 
   create_table "valuations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

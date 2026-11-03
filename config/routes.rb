@@ -855,6 +855,7 @@ Rails.application.routes.draw do
       end
 
       get "users/reset/status", to: "users#reset_status"
+      get "users/me", to: "users#show"
       delete "users/reset", to: "users#reset"
       delete "users/me", to: "users#destroy"
 

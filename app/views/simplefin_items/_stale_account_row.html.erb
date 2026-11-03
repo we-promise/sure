@@ -13,7 +13,7 @@
         <% end %>
       </h3>
       <p class="text-sm text-secondary">
-        <%= number_to_currency(simplefin_account.current_balance || 0, unit: simplefin_account.currency || "USD") %>
+        <%= format_money(simplefin_account.current_balance || 0, currency: simplefin_account.currency || "USD", unit: simplefin_account.currency || "USD") %>
         <span class="mx-1">•</span>
         <%= t("simplefin_items.setup_accounts.stale_accounts.transaction_count", count: transaction_count) %>
       </p>

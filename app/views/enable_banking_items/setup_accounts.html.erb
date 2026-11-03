@@ -81,7 +81,7 @@
                     <p><%= enable_banking_account.account_type_display %></p>
                   <% end %>
                   <% if enable_banking_account.current_balance.present? %>
-                    <p><%= t(".balance") %>: <%= number_to_currency(enable_banking_account.current_balance, unit: enable_banking_account.currency) %></p>
+                    <p><%= t(".balance") %>: <%= format_money(enable_banking_account.current_balance || 0, currency: enable_banking_account.currency, unit: enable_banking_account.currency) %></p>
                   <% end %>
                 </div>
               </div>
