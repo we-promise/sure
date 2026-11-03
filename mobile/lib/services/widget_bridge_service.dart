@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -17,6 +18,10 @@ import 'log_service.dart';
 /// logged in with, or a separate (ideally read-only) key saved for the widget.
 /// The app's login tokens are never shared, because refreshing them from the
 /// widget would log the app out.
+///
+/// Key changes and channel calls run one at a time, in call order. [clear]
+/// bumps [_epoch], and any work started before it is dropped, so no
+/// pre-logout write can land after the widget data is cleared.
 class WidgetBridgeService {
   WidgetBridgeService._();
   static final WidgetBridgeService instance = WidgetBridgeService._();
@@ -24,6 +29,9 @@ class WidgetBridgeService {
   static const MethodChannel _channel = MethodChannel('am.sure.mobile/widget');
   static const String _widgetApiKeyKey = 'widget_api_key';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  int _epoch = 0;
+  Future<void> _queue = Future.value();
 
   bool get isSupported => !kIsWeb && Platform.isIOS;
 
@@ -40,20 +48,25 @@ class WidgetBridgeService {
 
   /// Saves (or removes, when empty) the widget's own API key and pushes the
   /// updated connection details to the widget.
-  Future<void> setWidgetApiKey(String? apiKey) async {
+  Future<void> setWidgetApiKey(String? apiKey) {
+    final epoch = _epoch;
     final trimmed = apiKey?.trim() ?? '';
-    if (trimmed.isEmpty) {
-      await _storage.delete(key: _widgetApiKeyKey);
-    } else {
-      await _storage.write(key: _widgetApiKeyKey, value: trimmed);
-    }
-    await _send({'config': await _config()});
+    return _enqueue(() async {
+      if (epoch != _epoch) return;
+      if (trimmed.isEmpty) {
+        await _storage.delete(key: _widgetApiKeyKey);
+      } else {
+        await _storage.write(key: _widgetApiKeyKey, value: trimmed);
+      }
+      await _update(epoch, () async => {'config': await _config()});
+    });
   }
 
   /// Re-shares the server URL and key, e.g. after login or a server change.
   Future<void> pushConfig() async {
     if (!isSupported) return;
-    await _send({'config': await _config()});
+    final epoch = _epoch;
+    await _send(epoch, () async => {'config': await _config()});
   }
 
   /// The key the widget will use, if any.
@@ -88,12 +101,24 @@ class WidgetBridgeService {
 
   /// Gives the widget the latest balances so it has something to show even
   /// before (or without) fetching on its own.
-  Future<void> syncAccounts(List<Account> accounts) async {
+  ///
+  /// [fromServer] is false for accounts loaded from the app's offline cache;
+  /// those only fill an empty widget and never replace newer data.
+  /// [netWorth] is the server-formatted net worth from the balance sheet.
+  Future<void> syncAccounts(
+    List<Account> accounts, {
+    required bool fromServer,
+    String? netWorth,
+  }) async {
     if (!isSupported) return;
-    await _send({
+    final epoch = _epoch;
+    final updatedAt = fromServer ? DateTime.now() : _latestUpdate(accounts);
+    await _send(epoch, () async => {
       'config': await _config(),
+      'replaceExisting': fromServer,
       'snapshot': {
-        'updatedAt': _iso8601Seconds(DateTime.now()),
+        'updatedAt': _iso8601Seconds(updatedAt),
+        if (netWorth != null) 'netWorth': netWorth,
         'accounts': [
           for (final a in accounts)
             if (a.status == null || a.status == 'active')
@@ -112,16 +137,24 @@ class WidgetBridgeService {
     });
   }
 
-  /// Removes the balances and connection details the widget can see. The
-  /// widget's own key stays in the app's keychain so it is re-shared after the
-  /// next login; remove it from the widget settings screen.
-  Future<void> clear() async {
-    if (!isSupported) return;
-    try {
-      await _channel.invokeMethod('clear');
-    } catch (e) {
-      LogService.instance.warning('WidgetBridge', 'clear failed: ${e.runtimeType}');
-    }
+  /// Logout cleanup: removes the widget's saved key, so it can't be reused by
+  /// the next account, and the balances and connection details the widget can
+  /// see.
+  Future<void> clear() {
+    if (!isSupported) return Future.value();
+    _epoch++;
+    return _enqueue(() async {
+      try {
+        await _storage.delete(key: _widgetApiKeyKey);
+      } catch (e) {
+        LogService.instance.warning('WidgetBridge', 'key delete failed: ${e.runtimeType}');
+      }
+      try {
+        await _channel.invokeMethod('clear');
+      } catch (e) {
+        LogService.instance.warning('WidgetBridge', 'clear failed: ${e.runtimeType}');
+      }
+    });
   }
 
   Future<Map<String, dynamic>> _config() async {
@@ -133,15 +166,50 @@ class WidgetBridgeService {
     };
   }
 
-  Future<void> _send(Map<String, dynamic> payload) async {
-    if (!isSupported) return;
+  /// Runs [operation] after everything queued before it. Errors reach the
+  /// caller but don't stop later operations.
+  Future<void> _enqueue(Future<void> Function() operation) {
+    final next = _queue.then((_) => operation());
+    _queue = next.catchError((Object _) {});
+    return next;
+  }
+
+  Future<void> _send(
+    int epoch,
+    Future<Map<String, dynamic>> Function() buildPayload,
+  ) {
+    if (!isSupported) return Future.value();
+    return _enqueue(() => _update(epoch, buildPayload));
+  }
+
+  /// Sends an update unless [clear] ran since [epoch] was read. Must run inside
+  /// the queue. The epoch is re-checked after building the payload, because
+  /// that reads secure storage.
+  Future<void> _update(
+    int epoch,
+    Future<Map<String, dynamic>> Function() buildPayload,
+  ) async {
+    if (!isSupported || epoch != _epoch) return;
     try {
+      final payload = await buildPayload();
+      if (epoch != _epoch) return;
       // Round-trip through JSON so only plain JSON types cross the channel.
       final plain = jsonDecode(jsonEncode(payload));
       await _channel.invokeMethod('update', plain);
     } catch (e) {
       LogService.instance.warning('WidgetBridge', 'update failed: ${e.runtimeType}');
     }
+  }
+
+  static DateTime _latestUpdate(List<Account> accounts) {
+    DateTime? latest;
+    for (final account in accounts) {
+      final updated = account.updatedAt;
+      if (updated != null && (latest == null || updated.isAfter(latest))) {
+        latest = updated;
+      }
+    }
+    return latest ?? DateTime.now();
   }
 
   /// The widget's decoder expects ISO 8601 without fractional seconds.

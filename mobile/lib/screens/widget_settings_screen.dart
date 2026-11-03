@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/account.dart';
 import '../providers/accounts_provider.dart';
 import '../services/api_config.dart';
 import '../services/widget_bridge_service.dart';
@@ -61,10 +60,19 @@ class _WidgetSettingsScreenState extends State<WidgetSettingsScreen> {
     final error = await _bridge.testApiKey(key);
     if (error == null) {
       await _bridge.setWidgetApiKey(key);
-      final accounts = context.mounted
-          ? Provider.of<AccountsProvider>(context, listen: false).accounts
-          : const <Account>[];
-      if (accounts.isNotEmpty) await _bridge.syncAccounts(accounts);
+      if (context.mounted) {
+        final provider = Provider.of<AccountsProvider>(context, listen: false);
+        final accounts = provider.accounts;
+        // With a key saved the widget fetches fresh data itself; this only
+        // fills it if it has nothing yet.
+        if (accounts.isNotEmpty) {
+          await _bridge.syncAccounts(
+            accounts,
+            fromServer: false,
+            netWorth: provider.isBalanceSheetStale ? null : provider.netWorthFormatted,
+          );
+        }
+      }
     }
 
     if (!mounted) return;
@@ -84,10 +92,14 @@ class _WidgetSettingsScreenState extends State<WidgetSettingsScreen> {
 
   Future<void> _remove() async {
     await _bridge.setWidgetApiKey(null);
+    // When logged in with an API key, the widget falls back to that key.
+    final stillRefreshing = await _bridge.effectiveApiKey() != null;
     if (!mounted) return;
     setState(() {
       _hasWidgetKey = false;
-      _message = 'Removed. The widget will only show balances from when you last opened the app.';
+      _message = stillRefreshing
+          ? 'Removed. The widget will keep refreshing using the API key you logged in with.'
+          : 'Removed. The widget will only show balances from when you last opened the app.';
       _messageIsError = false;
     });
   }

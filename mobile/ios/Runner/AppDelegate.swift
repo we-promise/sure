@@ -25,11 +25,13 @@ import WidgetKit
 }
 
 /// Writes the files the home screen widget reads from the shared App Group.
-/// Keep the group lookup in sync with SureWidgetStore in the widget target.
+/// Keep the group lookup and generation handling in sync with SureWidgetStore
+/// in the widget target.
 enum WidgetBridge {
   private static let baseGroup = "group.am.sure.mobile"
   private static let configFile = "sure-widget-config.json"
   private static let snapshotFile = "sure-widget-snapshot.json"
+  private static let generationFile = "sure-widget-generation.json"
 
   static func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
@@ -41,17 +43,28 @@ enum WidgetBridge {
         result(false)
         return
       }
-      if let config = args["config"] {
+      let generation = currentGeneration(in: dir)
+      if var config = args["config"] as? [String: Any] {
+        config["generation"] = generation
         write(config, to: dir.appendingPathComponent(configFile))
       }
-      if let snapshot = args["snapshot"] {
-        write(snapshot, to: dir.appendingPathComponent(snapshotFile))
+      if var snapshot = args["snapshot"] as? [String: Any] {
+        // Cached data only fills an empty widget; it never replaces newer data.
+        let replaceExisting = args["replaceExisting"] as? Bool ?? true
+        if replaceExisting || !hasSnapshot(in: dir, generation: generation) {
+          snapshot["generation"] = generation
+          write(snapshot, to: dir.appendingPathComponent(snapshotFile))
+        }
       }
       WidgetCenter.shared.reloadAllTimelines()
       result(true)
 
     case "clear":
       if let dir = containerURL() {
+        // Invalidate first, so a widget fetch already in progress can't save
+        // the old account's data after the files are deleted.
+        let next: [String: Any] = ["generation": currentGeneration(in: dir) + 1]
+        write(next, to: dir.appendingPathComponent(generationFile))
         for name in [configFile, snapshotFile] {
           try? FileManager.default.removeItem(at: dir.appendingPathComponent(name))
         }
@@ -62,6 +75,20 @@ enum WidgetBridge {
     default:
       result(FlutterMethodNotImplemented)
     }
+  }
+
+  private static func readObject(at url: URL) -> [String: Any]? {
+    guard let data = try? Data(contentsOf: url) else { return nil }
+    return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+  }
+
+  private static func currentGeneration(in dir: URL) -> Int {
+    readObject(at: dir.appendingPathComponent(generationFile))?["generation"] as? Int ?? 0
+  }
+
+  private static func hasSnapshot(in dir: URL, generation: Int) -> Bool {
+    guard let snapshot = readObject(at: dir.appendingPathComponent(snapshotFile)) else { return false }
+    return (snapshot["generation"] as? Int ?? 0) == generation
   }
 
   private static func write(_ object: Any, to url: URL) {

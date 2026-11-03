@@ -79,21 +79,10 @@ extension AccountsEntry {
         }
     }
 
-    /// Net worth, only when every account shares one currency.
+    /// Net worth as computed by the server (in the family's currency), if loaded.
     var netWorth: String? {
-        guard configuration.showNetWorth, let all = snapshot?.accounts, !all.isEmpty else { return nil }
-        let currencies = Set(all.map(\.currency))
-        guard currencies.count == 1, let currency = currencies.first else { return nil }
-        guard all.allSatisfy({ $0.balanceCents != nil }) else { return nil }
-
-        let cents = all.reduce(0) { sum, account in
-            sum + (account.isLiability ? -(account.balanceCents ?? 0) : (account.balanceCents ?? 0))
-        }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = currency
-        let divisor = pow(10.0, Double(formatter.maximumFractionDigits))
-        return formatter.string(from: NSNumber(value: Double(cents) / divisor))
+        guard configuration.showNetWorth else { return nil }
+        return snapshot?.netWorth
     }
 }
 
@@ -204,6 +193,7 @@ private struct AccountRow: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .privacySensitive()
                 balanceText.font(.subheadline.weight(.semibold))
             }
         } else {
@@ -211,6 +201,7 @@ private struct AccountRow: View {
                 Text(account.name)
                     .font(.footnote)
                     .lineLimit(1)
+                    .privacySensitive()
                 Spacer(minLength: 8)
                 balanceText.font(.footnote.weight(.semibold))
             }
@@ -234,7 +225,9 @@ private struct LockScreenView: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(entry.accounts.prefix(3))) { account in
                 HStack {
-                    Text(account.name).lineLimit(1)
+                    Text(account.name)
+                        .lineLimit(1)
+                        .privacySensitive()
                     Spacer(minLength: 4)
                     Text(account.balance)
                         .monospacedDigit()

@@ -687,6 +687,7 @@
 				CODE_SIGN_ENTITLEMENTS = SureWidget/SureWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C8WT3YC922;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SureWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Sure;
@@ -715,6 +716,7 @@
 				CODE_SIGN_ENTITLEMENTS = SureWidget/SureWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C8WT3YC922;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SureWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Sure;
@@ -743,6 +745,7 @@
 				CODE_SIGN_ENTITLEMENTS = SureWidget/SureWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C8WT3YC922;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SureWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Sure;

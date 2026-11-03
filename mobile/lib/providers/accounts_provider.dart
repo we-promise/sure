@@ -118,6 +118,7 @@ class AccountsProvider with ChangeNotifier {
       final isOnline = _connectivityService?.isOnline ?? false;
       final maybeTruncated =
           cachedAccounts.length == AccountsService.legacyPageSize;
+      var fetchedFromServer = false;
       if (isOnline &&
           (forceSync || cachedAccounts.isEmpty || maybeTruncated)) {
         final result = await _accountsService.getAllAccounts(
@@ -136,8 +137,7 @@ class AccountsProvider with ChangeNotifier {
           // Update in-memory accounts
           _accounts = serverAccounts;
           _errorMessage = null;
-
-          unawaited(WidgetBridgeService.instance.syncAccounts(serverAccounts));
+          fetchedFromServer = true;
         } else {
           // If server fetch failed but we have cached data, that's OK
           if (_accounts.isEmpty) {
@@ -153,6 +153,16 @@ class AccountsProvider with ChangeNotifier {
       // Fetch balance sheet independently — works even with cached accounts
       if (isOnline) {
         await _fetchBalanceSheet(accessToken);
+      }
+
+      // Cached accounts are shared too, so the widget has data even when it
+      // can't fetch on its own; they never replace newer widget data.
+      if (_accounts.isNotEmpty) {
+        unawaited(WidgetBridgeService.instance.syncAccounts(
+          _accounts,
+          fromServer: fetchedFromServer,
+          netWorth: _isBalanceSheetStale ? null : _netWorthFormatted,
+        ));
       }
 
       _isLoading = false;
