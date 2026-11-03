@@ -391,7 +391,18 @@ class TransfersController < ApplicationController
       # Confirming from the transaction list sends only the status; leave the
       # category and notes alone unless the form actually submitted them.
       if transfer_update_params.key?(:category_id)
-        @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+        outflow = @transfer.outflow_transaction
+        # Reloaded under its row lock, so a cleanup clearing the category
+        # meanwhile cannot leave an unchanged choice saved as a locked blank.
+        # The lock marks it the user's choice, which syncs and the
+        # stale-category cleanup leave alone, as they do a category set on the
+        # transaction itself. Dropping the automatic categorizers' claim keeps
+        # it the user's even where it is the value the AI or Bayes had set.
+        outflow.with_lock do
+          outflow.update!(category_id: transfer_update_params[:category_id])
+          outflow.lock_attr!(:category_id)
+          Transaction.drop_automatic_category_claims!([ outflow.id ])
+        end
       end
       if transfer_update_params.key?(:notes)
         @transfer.update!(notes: transfer_update_params[:notes])

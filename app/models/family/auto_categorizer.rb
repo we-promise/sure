@@ -77,15 +77,23 @@ class Family::AutoCategorizer
         next
       end
 
-      categorized_transaction_ids << transaction.id
-      was_modified = transaction.enrich_attribute(
-        :category_id,
-        category_id,
-        source: "ai"
-      )
-      transaction.lock_attr!(:category_id)
-      # enrich_attribute returns true if the transaction was actually modified
-      modified_count += 1 if was_modified
+      # Rechecked under the row's lock (which reloads it): a sync or a
+      # transfer confirmation may have made it a plain transfer, or someone
+      # categorized it, since the scope's SELECT.
+      applied = transaction.with_lock do
+        next false if transaction.category_id.present? || Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(transaction.kind)
+
+        was_modified = transaction.enrich_attribute(
+          :category_id,
+          category_id,
+          source: "ai"
+        )
+        transaction.lock_attr!(:category_id)
+        # enrich_attribute returns true if the transaction was actually modified
+        modified_count += 1 if was_modified
+        true
+      end
+      categorized_transaction_ids << transaction.id if applied
     end
 
     record_shadow_comparisons(result.data, shadow_decisions) if shadow_decisions
@@ -306,8 +314,14 @@ class Family::AutoCategorizer
       )
     end
 
+    # Plain transfers (funds_movement, cc_payment) carry no category
+    # (Transaction::UNCATEGORIZED_EXCLUDED_KINDS), so they are left out, as
+    # Family#bayes_categorize_uncategorized leaves them out. Otherwise the AI
+    # could put back a category Transaction.drop_stale_contribution_categories!
+    # removed.
     def scope
       family.transactions.where(id: transaction_ids, category_id: nil)
+                         .where.not(kind: Transaction::UNCATEGORIZED_EXCLUDED_KINDS)
                          .enrichable(:category_id)
                          .includes(:category, :merchant, :entry)
     end
