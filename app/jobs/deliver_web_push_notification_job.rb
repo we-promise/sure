@@ -21,6 +21,8 @@ class DeliverWebPushNotificationJob < ApplicationJob
   # Reuse the existing generator as the outbox recovery trigger. Failed or
   # abandoned claims are retried; terminal provider outcomes stay put.
   def self.retry_enqueue_failures_for(family)
+    return unless WebPush::Client.configured?
+
     WebPushDelivery.joins(web_push_subscription: :user)
       .where(users: { family_id: family.id })
       .where("web_push_deliveries.status = 'enqueue_failed' OR (web_push_deliveries.status = 'pending' AND (enqueued_at IS NULL OR enqueued_at < ?))", WebPushDelivery::CLAIM_TIMEOUT.ago)

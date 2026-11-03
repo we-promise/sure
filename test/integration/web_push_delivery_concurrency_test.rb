@@ -60,4 +60,37 @@ class WebPushDeliveryConcurrencyTest < ActiveSupport::TestCase
     [ old_session, new_session ].compact.each(&:destroy!)
     user&.update!(preferences: original_preferences) if original_preferences
   end
+  test "simultaneous registrations cannot exceed the per-user device limit" do
+    user = users(:family_admin)
+    session = user.sessions.create!
+    19.times { |i| register_web_push(user: user, session: session, endpoint: "https://fcm.googleapis.com/cap-existing-#{i}") }
+    start = Queue.new
+    results = Queue.new
+    workers = 2.times.map do |i|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          start.pop
+          register_web_push(user: User.find(user.id), session: Session.find(session.id), endpoint: "https://fcm.googleapis.com/cap-concurrent-#{i}")
+          results << :registered
+        rescue ActiveRecord::RecordInvalid
+          results << :limited
+        rescue => error
+          results << error
+        end
+      end
+    end
+    2.times { start << true }
+    workers.each { |worker| assert worker.join(10), "Registration must finish without a lock cycle" }
+    outcomes = 2.times.map { results.pop }
+    assert_equal 1, outcomes.count(:registered), outcomes.inspect
+    assert_equal 1, outcomes.count(:limited), outcomes.inspect
+    assert_equal 20, user.web_push_subscriptions.count
+  ensure
+    workers&.each do |worker|
+      worker.join(10)
+      worker.kill if worker.alive?
+    end
+    session&.destroy!
+  end
+
 end

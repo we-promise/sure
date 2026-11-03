@@ -98,7 +98,7 @@ insights; it does not introduce additional financial analysis or thresholds.
 
 ## Configure Web Push
 
-Run the included database migration and set these variables in the secret store
+Run the included database migrations and set these variables in the secret store
 for both Rails and Sidekiq:
 
 | Variable | Purpose |
@@ -134,11 +134,18 @@ from request logs and encrypted at rest when Rails encryption is configured.
    iOS/iPadOS 16.4 or later. Other browser and operating system support varies.
 3. Select **Test this device**. Only the registration bound to this browser's
    current Sure session can be tested. The control is limited to once per
-   30 seconds per registration.
+   30 seconds per registration and twice per minute across the signed-in user's
+   devices.
 4. Wait for the displayed result, then check the actual device. **Queued** means
    the background job was queued. **Accepted by the push service** means the
    provider accepted it; it does not prove that the operating system displayed
    it. Browser permission, Focus/Do Not Disturb, and OS settings affect display.
+
+Each user can have up to 20 browser subscriptions. Renewing an existing device
+or moving it to a new session does not consume another slot. Remove unused
+devices or revoke their sessions in Security settings before adding more.
+Registration requests are limited to 10 per minute per user. Production uses
+the existing shared Rails cache (Redis) to coordinate request limits.
 
 Notifications are bound to the authenticated Sure session. Signing out, revoking
 that session, deactivating the account, or **30 days of session inactivity** stops

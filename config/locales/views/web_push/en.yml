@@ -22,7 +22,7 @@ en:
       unconfigured: Browser notifications have not been configured on this server.
       queued: Test queued. Waiting for the push service to accept it.
       accepted: Accepted by the push service. Check this device for the notification; acceptance does not confirm it was displayed.
-      skipped: Test skipped because this session, preview access, or notification configuration changed. Enable this device and try again.
+      skipped: Test skipped because this session or preview access changed, or the test expired. Enable this device and try again.
       rejected: The push service rejected this test. Disable this device, then enable it again.
       failed: The test could not be delivered. Try again later.
       enqueue_failed: The test could not be queued. Try again later.
@@ -32,7 +32,7 @@ en:
       registration: Could not register this device. Try disabling it, then enabling it again.
       preview: Enable preview features before using browser notifications.
       unconfigured: Browser notifications have not been configured on this server.
-      rate_limited: Please wait 30 seconds before testing this device again.
+      rate_limited: Too many notification requests. Wait a minute, then try again.
       enqueue: Could not queue the test notification. Try again later.
       request: Could not update browser notifications. Check your connection and try again.
       permission: Notification permission was not granted.

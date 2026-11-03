@@ -11,6 +11,8 @@ const source = (await readFile(new URL("../../app/javascript/controllers/web_pus
 async function controller({ endpoint, registrations, subscriptionKey = [1, 2, 3], unsubscribeSucceeds = true }) {
   const calls = { permission: 0, subscribe: 0, fetch: 0, unsubscribe: 0 };
   const posts = [];
+  const timers = new Map();
+  let nextTimer = 0;
   const makeSubscription = (url, key) => ({
     endpoint: url,
     options: { applicationServerKey: Uint8Array.from(key).buffer },
@@ -42,11 +44,12 @@ async function controller({ endpoint, registrations, subscriptionKey = [1, 2, 3]
     TextEncoder,
     Uint8Array,
     atob,
-    clearTimeout,
+    clearTimeout: (id) => timers.delete(id),
+    setTimeout: (callback) => { const id = ++nextTimer; timers.set(id, callback); return id; },
     document: { querySelector: () => ({ content: "csrf-token" }) },
     fetch: async (_url, options) => {
       calls.fetch++;
-      if (options.method === "POST") posts.push(JSON.parse(options.body));
+      if (options.method === "POST" && options.body) posts.push(JSON.parse(options.body));
       return { status: options.method === "DELETE" ? 204 : 201, ok: true, json: async () => ({ id: "new-id" }) };
     },
   });
@@ -56,14 +59,14 @@ async function controller({ endpoint, registrations, subscriptionKey = [1, 2, 3]
   instance.registrationsValue = registrations;
   instance.subscriptionIdValue = Object.keys(registrations)[0] || "";
   instance.urlValue = "/web_push_subscriptions";
-  instance.messagesValue = { enabled: "enabled", disabled: "disabled", request: "Localized retry guidance" };
+  instance.messagesValue = { accepted: "accepted", pending: "pending", enabled: "enabled", disabled: "disabled", request: "Localized retry guidance" };
   instance.iosGuidanceTarget = { classList: { toggle() {} } };
   instance.statusTarget = {};
   instance.enableTarget = {};
   instance.disableTarget = {};
   instance.testTarget = {};
   await instance.connect();
-  return { instance, calls, posts };
+  return { instance, calls, posts, timers, context };
 }
 
 async function digest(endpoint) {
@@ -137,4 +140,84 @@ test("failed old-key unsubscription does not register or report a working replac
   assert.equal(calls.fetch, 0);
   assert.equal(calls.subscribe, 0);
   assert.equal(instance.statusTarget.textContent, "Localized retry guidance");
+});
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+test("disable invalidates a poll already awaiting a provider result", async () => {
+  const endpoint = "https://fcm.googleapis.com/local";
+  const { instance, timers } = await controller({ endpoint, registrations: { "local-id": await digest(endpoint) } });
+  const response = deferred();
+  instance.request = (_url, method) => method === "GET" ? response.promise : Promise.resolve({});
+  const polling = instance.pollTest();
+  await instance.disable();
+  response.resolve({ test_status: "accepted" });
+  await polling;
+  assert.equal(instance.statusTarget.textContent, "disabled");
+  assert.equal(timers.size, 0);
+});
+
+test("a new failed Test cancels the earlier timer and ignores its in-flight result", async () => {
+  const endpoint = "https://fcm.googleapis.com/local";
+  const { instance, timers } = await controller({ endpoint, registrations: { "local-id": await digest(endpoint) } });
+  instance.messagesValue.queued = "queued";
+  await instance.test();
+  assert.equal(timers.size, 1);
+  const response = deferred();
+  instance.request = (_url, method) => {
+    if (method === "GET") return response.promise;
+    return Promise.reject(Object.assign(new Error("429"), { userMessage: "Too many tests" }));
+  };
+  const polling = instance.pollTest();
+  await instance.test();
+  response.resolve({ test_status: "pending" });
+  await polling;
+  assert.equal(instance.statusTarget.textContent, "Too many tests");
+  assert.equal(timers.size, 0);
+});
+
+test("disconnect invalidates late poll errors", async () => {
+  const { instance, timers } = await controller({ endpoint: "https://fcm.googleapis.com/local", registrations: {} });
+  const response = deferred();
+  instance.request = () => response.promise;
+  const polling = instance.pollTest();
+  instance.disconnect();
+  response.reject(new Error("Network failed"));
+  await polling;
+  assert.equal(instance.statusTarget.textContent, "disabled");
+  assert.equal(timers.size, 0);
+});
+
+test("a superseded poll 404 cannot remove a replacement registration", async () => {
+  const endpoint = "https://fcm.googleapis.com/local";
+  const { instance, context } = await controller({ endpoint, registrations: { "local-id": await digest(endpoint) } });
+  const response = deferred();
+  const originalFetch = context.fetch;
+  context.fetch = (url, options) => options.method === "GET" ? response.promise : originalFetch(url, options);
+  const polling = instance.pollTest();
+  await instance.disable();
+  await instance.enable();
+  response.resolve({ status: 404, ok: false, json: async () => ({}) });
+  await polling;
+  assert.equal(instance.subscriptionIdValue, "new-id");
+  assert.equal(instance.statusTarget.textContent, "enabled");
+  assert.equal(instance.testTarget.disabled, false);
+});
+
+test("reconnecting the same controller does not revive a previous connection's poll", async () => {
+  const endpoint = "https://fcm.googleapis.com/local";
+  const { instance } = await controller({ endpoint, registrations: { "local-id": await digest(endpoint) } });
+  const response = deferred();
+  instance.request = () => response.promise;
+  const polling = instance.pollTest();
+  instance.disconnect();
+  await instance.connect();
+  response.resolve({ test_status: "accepted" });
+  await polling;
+  assert.equal(instance.statusTarget.textContent, "enabled");
 });

@@ -8,7 +8,7 @@ const source = await readFile(
   "utf8",
 );
 
-function worker() {
+function worker(windows = []) {
   const handlers = new Map();
   const shown = [];
   const opened = [];
@@ -19,7 +19,7 @@ function worker() {
       showNotification: async (title, options) => shown.push({ title, options }),
     },
     clients: {
-      matchAll: async () => [],
+      matchAll: async () => windows,
       openWindow: async (url) => opened.push(url),
     },
   };
@@ -88,4 +88,21 @@ test("notification clicks retain the valid insight anchor", async () => {
   });
   assert.equal(new URL(state.opened[0], "https://sure.example").hash,
     "#insight_123e4567-e89b-12d3-a456-426614174000");
+});
+
+test("notification clicks navigate and focus the existing insights window", async () => {
+  const calls = [];
+  const path = "/insights#insight_123e4567-e89b-12d3-a456-426614174000";
+  const state = worker([{ url: "https://sure.example/insights", navigate: async (url) => calls.push(url), focus: async () => calls.push("focus") }]);
+  await dispatch(state, "notificationclick", { notification: { data: { path }, close() {} } });
+  assert.deepEqual(calls, [`https://sure.example${path}`, "focus"]);
+  assert.equal(state.opened.length, 0);
+});
+
+test("failed existing-window navigation falls back to a new insight window", async () => {
+  let focused = false;
+  const state = worker([{ url: "https://sure.example/insights", navigate: async () => { throw new Error("Window closed"); }, focus: async () => { focused = true; } }]);
+  await dispatch(state, "notificationclick", { notification: { data: { path: "/insights" }, close() {} } });
+  assert.equal(focused, false);
+  assert.deepEqual(state.opened, ["https://sure.example/insights"]);
 });

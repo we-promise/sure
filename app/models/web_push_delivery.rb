@@ -21,11 +21,19 @@ class WebPushDelivery < ApplicationRecord
   end
 
   def self.for_insight(subscription, insight)
-    create_or_find_by!(web_push_subscription: subscription, insight: insight,
-      insight_version: insight.notification_version)
+    transaction do
+      # The device can disappear after event-time eligibility was read. Lock
+      # the parent before inserting its ledger row so deletion cannot race it.
+      current_subscription = WebPushSubscription.lock.find_by(id: subscription.id)
+      next unless current_subscription
+      create_or_find_by!(web_push_subscription: current_subscription, insight: insight,
+        insight_version: insight.notification_version)
+    end
   end
 
   def enqueue!(recover: false)
+    return false unless WebPush::Client.configured?
+
     claimed_at = Time.current
     claimed = with_lock do
       claim_available = enqueued_at.nil? || (recover && enqueued_at < CLAIM_TIMEOUT.ago)
@@ -52,6 +60,8 @@ class WebPushDelivery < ApplicationRecord
   # The reservation commits before provider IO. A lost worker therefore spends
   # an attempt, and a recovered ActiveJob cannot start a fresh provider budget.
   def claim_attempt!
+    return unless WebPush::Client.configured?
+
     with_lock do
       next unless status_pending?
       next if attempted_at && attempted_at > CLAIM_TIMEOUT.ago
@@ -102,7 +112,7 @@ class WebPushDelivery < ApplicationRecord
 
   def eligible?
     subscription = web_push_subscription
-    return false unless WebPush::Client.configured? && subscription.eligible? && subscription.user.preview_features_enabled?
+    return false unless subscription.eligible? && subscription.user.preview_features_enabled?
     if insight
       insight.notification_version == insight_version && subscription.eligible_for?(insight)
     else

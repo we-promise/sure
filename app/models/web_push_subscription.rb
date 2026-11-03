@@ -7,6 +7,8 @@ require "uri"
 class WebPushSubscription < ApplicationRecord
   include Encryptable
 
+  MAX_SUBSCRIPTIONS_PER_USER = 20
+
   belongs_to :user
   belongs_to :session
   has_many :web_push_deliveries, dependent: :destroy
@@ -33,20 +35,26 @@ class WebPushSubscription < ApplicationRecord
 
     attempts = 0
     begin
-      transaction(requires_new: true) do
-        existing = lock.find_by(endpoint_digest: candidate.endpoint_digest)
-        if existing && (existing.user_id != user.id || existing.session_id != session.id)
-          unless existing.matches_keys?(p256dh, auth)
-            candidate.errors.add(:base, :taken)
+      user.with_lock do
+        transaction(requires_new: true) do
+          existing = lock.find_by(endpoint_digest: candidate.endpoint_digest)
+          if existing&.user_id != user.id && user.web_push_subscriptions.count >= MAX_SUBSCRIPTIONS_PER_USER
+            candidate.errors.add(:base, :invalid)
             raise ActiveRecord::RecordInvalid, candidate
           end
-          existing.destroy!
-          existing = nil
+          if existing && (existing.user_id != user.id || existing.session_id != session.id)
+            unless existing.matches_keys?(p256dh, auth)
+              candidate.errors.add(:base, :taken)
+              raise ActiveRecord::RecordInvalid, candidate
+            end
+            existing.destroy!
+            existing = nil
+          end
+          registration = existing || candidate
+          registration.assign_attributes(p256dh: p256dh, auth: auth)
+          registration.save!
+          registration
         end
-        registration = existing || candidate
-        registration.assign_attributes(p256dh: p256dh, auth: auth)
-        registration.save!
-        registration
       end
     rescue ActiveRecord::RecordNotUnique
       attempts += 1
@@ -94,6 +102,11 @@ class WebPushSubscription < ApplicationRecord
 
   private
     def set_endpoint_digest
+      if self.class.allowed_endpoint?(endpoint)
+        uri = URI.parse(endpoint)
+        uri.host = uri.host.downcase
+        self.endpoint = uri.to_s
+      end
       self.endpoint_digest = Digest::SHA256.hexdigest(endpoint.to_s)
     end
 
