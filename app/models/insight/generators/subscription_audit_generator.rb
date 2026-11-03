@@ -63,6 +63,8 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
         .includes(recurring_transaction: [ :merchant, :recurrence_rules ])
         .to_a
 
+      candidates -= paid_from_private_accounts(candidates)
+
       stale = candidates.select do |occurrence|
         cycle_days = 365.25 / occurrence.recurring_transaction.schedule.occurrences_per_year
         (Date.current - occurrence.due_on).to_i >= [ cycle_days.round, 1 ].max
@@ -73,5 +75,29 @@ class Insight::Generators::SubscriptionAuditGenerator < Insight::Generator
            .map { |group| group.min_by(&:due_on) }
            .sort_by(&:due_on)
            .first(MAX_INSIGHTS)
+    end
+
+    # A series without an account can match payments from any family account.
+    # Under the "last" and "average" strategies its expected amount comes from
+    # those payments, so the audit would reveal what a private account paid.
+    # Such series are skipped while any of their payments sits in an account
+    # not every member can see; a fixed amount reveals no payment and stays.
+    def paid_from_private_accounts(candidates)
+      at_risk = candidates.select do |occurrence|
+        occurrence.expected_amount.blank? &&
+          occurrence.recurring_transaction.account_id.nil? &&
+          !occurrence.recurring_transaction.amount_fixed?
+      end
+      return [] if at_risk.empty?
+
+      private_series_ids = RecurringAllocation.confirmed
+        .joins(:recurring_occurrence, :entry)
+        .where(recurring_occurrences: { recurring_transaction_id: at_risk.map(&:recurring_transaction_id).uniq })
+        .where.not(entries: { account_id: shared_account_ids })
+        .distinct
+        .pluck("recurring_occurrences.recurring_transaction_id")
+        .to_set
+
+      at_risk.select { |occurrence| private_series_ids.include?(occurrence.recurring_transaction_id) }
     end
 end
