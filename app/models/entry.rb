@@ -30,7 +30,7 @@ class Entry < ApplicationRecord
   # already nullifies on delete, so this adds no lifecycle behaviour.
   has_many :recurring_allocations, dependent: nil, inverse_of: :entry
 
-  delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
+  delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy, inverse_of: :entry
   accepts_nested_attributes_for :entryable
 
   validates :date, :name, :amount, :currency, presence: true
