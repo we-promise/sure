@@ -91,4 +91,5 @@ class WebPushDeliveryConcurrencyTest < ActiveSupport::TestCase
       worker.kill if worker.alive?
     end
     session&.destroy!
-  endend
+  end
+end

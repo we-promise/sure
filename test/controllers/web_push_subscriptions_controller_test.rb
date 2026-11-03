@@ -107,4 +107,5 @@ class WebPushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
         assert_equal I18n.t("web_push.errors.rate_limited"), response.parsed_body.fetch("error")
       end
     end
-  endend
+  end
+end
