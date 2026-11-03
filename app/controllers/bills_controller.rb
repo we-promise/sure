@@ -82,7 +82,10 @@ class BillsController < ApplicationController
 
     compute_kpis(today, month_end)
 
-    @month_pay_periods = month_pay_periods(today, month_end)
+    planned_periods = plan_pay_periods
+    @month_pay_periods = month_pay_periods(planned_periods, today, month_end)
+    # After this month gets the same markers for next month's paychecks.
+    @later_pay_periods = later_pay_periods(planned_periods, month_end.next_day, today.next_month.end_of_month)
 
     @detected_awaiting_review = detected_awaiting_review
     # Fresh detections wait here for confirm/dismiss. Reviewing them is bill
@@ -535,14 +538,27 @@ class BillsController < ApplicationController
     # when income actually subdivides the month: monthly income yields a single
     # overlapping period and undeclared income yields none, and in both cases
     # the list renders exactly as it did before.
-    def month_pay_periods(today, month_end)
-      periods = RecurringTransaction::PaycheckPlanner
-                  .new(Current.family, user: Current.user)
-                  .plan(periods_limit: PAY_PERIOD_LIMIT)
+    def plan_pay_periods
+      RecurringTransaction::PaycheckPlanner
+        .new(Current.family, user: Current.user)
+        .plan(periods_limit: PAY_PERIOD_LIMIT)
+    end
+
+    # A period that started before the range overlaps it too, so counting
+    # overlaps would split monthly income across two periods. Only periods that
+    # begin inside the range count, and it takes more than one to subdivide it.
+    def later_pay_periods(periods, from, to)
+      return [] if periods.blank?
+
+      starting = periods.select { |period| period.starts_on.between?(from, to) }
+      starting.size > 1 ? starting : []
+    end
+
+    def month_pay_periods(periods, from, to)
       return [] if periods.blank?
 
       overlapping = periods.select do |period|
-        period.starts_on <= month_end && period.ends_on >= today
+        period.starts_on <= to && period.ends_on >= from
       end
 
       overlapping.size > 1 ? overlapping : []
