@@ -1,4 +1,4 @@
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="grid grid-cols-1 @lg:grid-cols-2 @5xl:grid-cols-4 gap-4">
   <%# Total Income Card %>
   <div class="bg-container rounded-xl shadow-border-xs p-6">
     <div class="flex items-start justify-between mb-3">
@@ -11,7 +11,7 @@
     </div>
 
     <div class="space-y-2">
-      <p class="text-2xl font-semibold text-primary privacy-sensitive">
+      <p class="text-2xl font-semibold text-primary whitespace-nowrap privacy-sensitive">
         <%= metrics[:current_income].format %>
       </p>
 
@@ -48,7 +48,7 @@
     </div>
 
     <div class="space-y-2">
-      <p class="text-2xl font-semibold text-primary privacy-sensitive">
+      <p class="text-2xl font-semibold text-primary whitespace-nowrap privacy-sensitive">
         <%= metrics[:current_expenses].format %>
       </p>
 
@@ -85,7 +85,7 @@
     </div>
 
     <div class="space-y-2">
-      <p class="text-2xl font-semibold privacy-sensitive <%= metrics[:net_savings] >= 0 ? "text-success" : "text-destructive" %>">
+      <p class="text-2xl font-semibold whitespace-nowrap privacy-sensitive <%= metrics[:net_savings] >= 0 ? "text-success" : "text-destructive" %>">
         <%= metrics[:net_savings].format %>
       </p>
 
