@@ -62,7 +62,7 @@ class ComboboxDarkThemeTest < ApplicationSystemTestCase
       option.call("Microsoft")
       option.call("Apple").hover
 
-      assert_equal token_color("--color-container-inset-hover"), computed(option.call("Apple"), "backgroundColor")
+      assert_equal token_color("--color-container-hover"), computed(option.call("Apple"), "backgroundColor")
       assert_equal element_style("text-primary", "color"), computed(option.call("Apple"), "color")
       assert_equal token_color("--color-container"), computed(option.call("Microsoft"), "backgroundColor")
     end
