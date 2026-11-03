@@ -38,7 +38,8 @@ class Provider::EthereumBeaconApi
   # @param validator_id [String] a validator index ("1") or BLS pubkey
   #   ("0x" + 96 hex chars) - the Beacon API accepts either interchangeably.
   # @return [Hash, nil] {"index", "balance" (Gwei string), "status",
-  #   "validator" => {"pubkey", ...}}, or nil if no such validator exists.
+  #   "validator" => {"pubkey", ...}}, or nil if no such validator exists or
+  #   the node rejects the id as malformed (400).
   def get_validator(validator_id)
     translate_transport_errors do
       response = self.class.get(
@@ -46,7 +47,7 @@ class Provider::EthereumBeaconApi
         headers: { "Content-Type" => "application/json" }
       )
 
-      return nil if response.code == 404
+      return nil if response.code.in?([ 400, 404 ])
       raise RateLimitError, "Ethereum beacon API rate limit exceeded" if response.code == 429
 
       parsed = response.parsed_response

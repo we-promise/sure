@@ -44,6 +44,13 @@ class Onchain::EthereumValidatorAdapterTest < ActiveSupport::TestCase
     assert_not_kind_of Onchain::Chains::UnreachableError, error
   end
 
+  test "a key the node rejects as malformed is refused, not reported as unreachable" do
+    stub_validator(status: 400, body: { "code" => 400, "message" => "Invalid validator ID" })
+
+    error = assert_raises(Onchain::Chains::Error) { @adapter.fetch_snapshot(PUBKEY) }
+    assert_not_kind_of Onchain::Chains::UnreachableError, error
+  end
+
   test "a validator without a balance is not read as zero" do
     stub_validator(status: 200, body: { "data" => { "index" => "1", "status" => "active_ongoing" } })
 

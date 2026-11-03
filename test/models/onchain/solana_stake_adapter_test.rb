@@ -5,6 +5,8 @@ require "test_helper"
 class Onchain::SolanaStakeAdapterTest < ActiveSupport::TestCase
   ADDRESS = "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
   SYSTEM_PROGRAM_ID = "11111111111111111111111111111111"
+  # Written out rather than read from the constant, so a mistyped constant fails here.
+  STAKE_PROGRAM_ID = "Stake11111111111111111111111111111111111111"
 
   setup do
     @adapter = Onchain::Chains.adapter_for(Onchain::Chains::SOLANA_STAKE)
@@ -16,7 +18,7 @@ class Onchain::SolanaStakeAdapterTest < ActiveSupport::TestCase
   end
 
   test "a stake account's lamports are its SOL, with no history" do
-    stub_account(owner: Provider::SolanaRpc::STAKE_PROGRAM_ID, lamports: 5_002_282_880)
+    stub_account(owner: STAKE_PROGRAM_ID, lamports: 5_002_282_880)
 
     snapshot = @adapter.fetch_snapshot(ADDRESS)
 
@@ -42,24 +44,10 @@ class Onchain::SolanaStakeAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "only an account the Stake program owns is detected" do
-    stub_account(owner: Provider::SolanaRpc::STAKE_PROGRAM_ID, lamports: 1)
-    assert @adapter.has_activity?(ADDRESS)
-
-    stub_account(owner: SYSTEM_PROGRAM_ID, lamports: 1)
-    assert_equal false, @adapter.has_activity?(ADDRESS)
-  end
-
   test "is left out of auto-detection, so a Solana wallet resolves without a probe" do
     candidates = OnchainWalletItem.new.matching_chain_adapters(ADDRESS).map { |definition, _| definition.key }
 
     assert_equal [ Onchain::Chains::SOLANA ], candidates
-  end
-
-  test "a node that could not answer is not read as an empty address" do
-    stub_request(:post, Provider::SolanaRpc.url).to_timeout
-
-    assert_nil @adapter.has_activity?(ADDRESS)
   end
 
   private

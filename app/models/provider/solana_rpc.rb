@@ -25,7 +25,7 @@ class Provider::SolanaRpc
   ].freeze
 
   # The owner of every stake account: a delegated SOL position, not a wallet.
-  STAKE_PROGRAM_ID = "Stake11111111111111111111111111111111111"
+  STAKE_PROGRAM_ID = "Stake11111111111111111111111111111111111111"
 
   MIN_REQUEST_INTERVAL = 0.2
   MAX_RETRIES = 3

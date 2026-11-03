@@ -36,6 +36,33 @@ class Onchain::PolygonStakeAdapterTest < ActiveSupport::TestCase
     assert_equal BigDecimal(Provider::PolygonStakingApi::PAGE_LIMIT + 1), quantity
   end
 
+  test "a page the API capped below the requested size is not taken for the last" do
+    stub_page(0, [ delegation("1000000000000000000") ] * 2, applied_limit: 2)
+    stub_page(2, [ delegation("1000000000000000000") ], applied_limit: 2)
+
+    assert_equal BigDecimal(3), @adapter.fetch_snapshot(ADDRESS).assets.sole.quantity
+  end
+
+  test "delegations that exactly fill every page are read in full" do
+    limit = Provider::PolygonStakingApi::PAGE_LIMIT
+    pages = Provider::PolygonStakingApi::MAX_PAGES
+    pages.times { |page| stub_page(page * limit, Array.new(limit) { delegation("1000000000000000000") }) }
+    stub_page(pages * limit, [])
+
+    assert_equal BigDecimal(pages * limit), @adapter.fetch_snapshot(ADDRESS).assets.sole.quantity
+  end
+
+  test "more delegations than the page cap fail rather than undercount" do
+    limit = Provider::PolygonStakingApi::PAGE_LIMIT
+    pages = Provider::PolygonStakingApi::MAX_PAGES
+    pages.times { |page| stub_page(page * limit, Array.new(limit) { delegation("1000000000000000000") }) }
+    stub_page(pages * limit, [ delegation("1000000000000000000") ])
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
   test "a delegation without a stake is not read as zero" do
     stub_page(0, [ { "bondedValidator" => "1" } ])
 
@@ -81,9 +108,9 @@ class Onchain::PolygonStakeAdapterTest < ActiveSupport::TestCase
       { "bondedValidator" => "1", "stake" => stake }
     end
 
-    def stub_page(offset, result)
+    def stub_page(offset, result, applied_limit: Provider::PolygonStakingApi::PAGE_LIMIT)
       stub_request(:get, delegators_url)
         .with(query: { "limit" => Provider::PolygonStakingApi::PAGE_LIMIT.to_s, "offset" => offset.to_s })
-        .to_return(status: 200, body: { "success" => true, "result" => result }.to_json, headers: json_headers)
+        .to_return(status: 200, body: { "success" => true, "result" => result, "summary" => { "limit" => applied_limit, "offset" => offset } }.to_json, headers: json_headers)
     end
 end

@@ -42,25 +42,6 @@ class Onchain::SolanaStakeAdapter
     ADDRESS_PATTERN.match?(address.to_s.strip)
   end
 
-  # A stake account's address is indistinguishable in *format* from a normal
-  # Solana wallet address - valid_address? alone can't tell them apart, so
-  # unlike every format-unique adapter (Bitcoin, Avalanche's P-Chain), this
-  # one has to actually ask the chain which kind it is, the same way
-  # Onchain::EvmAdapter must for every EVM network sharing the 0x shape.
-  # One request, on the request thread, same contract as every other
-  # has_activity? override in this app.
-  def has_activity?(address)
-    return false unless valid_address?(address)
-
-    info = detection_provider.get_account_info(address)
-    return false if info.nil?
-
-    info["owner"] == Provider::SolanaRpc::STAKE_PROGRAM_ID
-  rescue StandardError => e
-    Rails.logger.warn("Onchain::SolanaStakeAdapter - activity probe failed: #{e.class}")
-    nil
-  end
-
   def fetch_snapshot(address)
     raise Onchain::Chains::Error, "Invalid Solana address" unless valid_address?(address)
 
@@ -94,15 +75,5 @@ class Onchain::SolanaStakeAdapter
 
     def provider
       @provider ||= Provider::SolanaRpc.new
-    end
-
-    # Same reasoning as Onchain::SolanaAdapter's own detection_provider: this
-    # runs on the request thread during chain detection, not the sync's, so
-    # it gets the shorter detection budget instead of the sync's patience.
-    def detection_provider
-      @detection_provider ||= Provider::SolanaRpc.new(
-        request_timeout: Onchain::DetectionBudget.timeout,
-        max_retries: Onchain::DetectionBudget.retries
-      )
     end
 end

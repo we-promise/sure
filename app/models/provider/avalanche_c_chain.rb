@@ -48,11 +48,6 @@ class Provider::AvalancheCChain
     rpc("eth_getBalance", [ address, "latest" ])
   end
 
-  # @return [String] the address's nonce (transactions it has sent), as a hex string
-  def get_transaction_count(address)
-    rpc("eth_getTransactionCount", [ address, "latest" ])
-  end
-
   private
     def rpc(method, params)
       translate_transport_errors do

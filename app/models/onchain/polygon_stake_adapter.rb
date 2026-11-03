@@ -21,7 +21,7 @@ class Onchain::PolygonStakeAdapter
 
   # A 0x address is valid on every EVM network too, which is why this chain is
   # not auto-detected (`detectable: false` in Onchain::Chains): the user picks it.
-  ADDRESS_PATTERN = /\A0x[0-9a-fA-F]{40}\z/
+  ADDRESS_PATTERN = Onchain::EvmAdapter::ADDRESS_PATTERN
 
   def initialize(credentials: {})
     @credentials = credentials

@@ -19,7 +19,7 @@ class Onchain::AvalancheCChainAdapter
 
   WEI_PER_AVAX = (10**18).to_d
 
-  ADDRESS_PATTERN = /\A0x[0-9a-fA-F]{40}\z/
+  ADDRESS_PATTERN = Onchain::EvmAdapter::ADDRESS_PATTERN
 
   def initialize(credentials: {})
     @credentials = credentials
@@ -37,14 +37,13 @@ class Onchain::AvalancheCChainAdapter
 
   # Every EVM network shares the 0x shape, so without this override the default
   # (a well-formed address is answer enough) would claim every EVM wallet for the
-  # C-Chain and turn each one's detection into a question. Same rule as
-  # Onchain::SolanaAdapter: the balance first, and the nonce only when the
-  # balance comes back zero, so the ordinary case costs one request.
+  # C-Chain and turn each one's detection into a question. Only the AVAX balance
+  # is ever read here, so a zero balance has nothing to track, and one request
+  # fits inside the detection deadline.
   def has_activity?(address)
     return false unless valid_address?(address)
 
-    hex_to_i(detection_provider.get_balance(address)).positive? ||
-      hex_to_i(detection_provider.get_transaction_count(address)).positive?
+    hex_to_i(detection_provider.get_balance(address)).positive?
   rescue StandardError => e
     Rails.logger.warn("Onchain::AvalancheCChainAdapter - activity probe failed: #{e.class}")
     # Not false — see Onchain::ChainAdapter#has_activity? on the third answer.

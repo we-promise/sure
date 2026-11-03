@@ -17,7 +17,8 @@
 # entry per validator the address has delegated to, summed by the adapter for
 # the address's total staked position. It is paged by `limit`/`offset`, and
 # `summary.total` counts only the page returned, so a short page is the only
-# sign of the last one.
+# sign of the last one. `summary.limit` echoes the page size actually applied,
+# which is what a page is measured against.
 class Provider::PolygonStakingApi
   include HTTParty
   include Provider::HttpTransport
@@ -37,12 +38,6 @@ class Provider::PolygonStakingApi
     ENV["POLYGON_STAKING_API_URL"].presence || DEFAULT_BASE_URL
   end
 
-  # Detection reads on the request thread and cannot afford the sync's patience,
-  # same as Provider::SolanaRpc.
-  def initialize(request_timeout: nil)
-    @request_timeout = request_timeout
-  end
-
   # Reads every page: a partial list would pass for a whole, lower stake.
   # @return [Array<Hash>] one entry per validator delegated to, each with a
   #   "stake" key (POL wei, string). Empty array for an address with no
@@ -50,13 +45,16 @@ class Provider::PolygonStakingApi
   def get_delegations(address)
     entries = []
 
-    MAX_PAGES.times do |page|
-      batch = get_page(address, offset: page * PAGE_LIMIT)
+    MAX_PAGES.times do
+      batch, page_size = get_page(address, offset: entries.size)
       entries.concat(batch)
-      return entries if batch.size < PAGE_LIMIT
+      return entries if batch.size < page_size
     end
 
-    raise ApiError, "Polygon staking API returned more than #{MAX_PAGES} pages"
+    # The last page was full: only an empty page after it shows nothing is left.
+    raise ApiError, "Polygon staking API returned more than #{MAX_PAGES} pages" if get_page(address, offset: entries.size).first.any?
+
+    entries
   end
 
   private
@@ -64,10 +62,8 @@ class Provider::PolygonStakingApi
       translate_transport_errors do
         response = self.class.get(
           "#{self.class.base_url}/delegators/#{ERB::Util.url_encode(address)}",
-          **request_options(
-            headers: { "Content-Type" => "application/json" },
-            query: { limit: PAGE_LIMIT, offset: offset }
-          )
+          headers: { "Content-Type" => "application/json" },
+          query: { limit: PAGE_LIMIT, offset: offset }
         )
         raise RateLimitError, "Polygon staking API rate limit exceeded" if response.code == 429
 
@@ -76,13 +72,10 @@ class Provider::PolygonStakingApi
         raise ApiError, parsed["message"] || "Polygon staking API error" if parsed["success"] == false
         raise ApiError, "Polygon staking API returned no result" unless parsed["result"].is_a?(Array)
 
-        parsed["result"]
+        applied_limit = parsed.dig("summary", "limit")
+        page_size = applied_limit.is_a?(Integer) && applied_limit.positive? ? [ applied_limit, PAGE_LIMIT ].min : PAGE_LIMIT
+
+        [ parsed["result"], page_size ]
       end
-    end
-
-    def request_options(**options)
-      return options if @request_timeout.nil?
-
-      options.merge(timeout: @request_timeout)
     end
 end

@@ -7,7 +7,6 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
   TOKEN_ACCOUNT = "4Qk1Ai1cWJKQZ4pQ9sTLC1z3TBcvxRuHF6vRzGBNRUR2"
   USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
   UNKNOWN_MINT = "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
-  SYSTEM_PROGRAM_ID = "11111111111111111111111111111111"
 
   setup do
     @adapter = Onchain::Chains.adapter_for(Onchain::Chains::SOLANA)
@@ -28,16 +27,10 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
   end
 
   test "activity is one request, and a node that rejects the key means not here" do
-    account = stub_rpc("getAccountInfo", { "value" => { "owner" => SYSTEM_PROGRAM_ID, "lamports" => 2_000_000_000 } })
+    balance = stub_rpc("getBalance", { "value" => 2_000_000_000 })
 
     assert @adapter.has_activity?(ADDRESS)
-    assert_requested account, times: 1
-  end
-
-  test "a stake account is left to the stake chain rather than claimed as a wallet" do
-    stub_rpc("getAccountInfo", { "value" => { "owner" => Provider::SolanaRpc::STAKE_PROGRAM_ID, "lamports" => 5_000_000_000 } })
-
-    assert_equal false, @adapter.has_activity?(ADDRESS)
+    assert_requested balance, times: 1
   end
 
   test "an address the node rejects is not detected instead of raising" do
@@ -389,8 +382,6 @@ class Onchain::SolanaAdapterTest < ActiveSupport::TestCase
     def stub_snapshot(lamports:, token_accounts:, signatures: [], transaction: nil)
       responses = {
         "getBalance" => { "value" => lamports },
-        # A wallet with no SOL of its own has no account at all.
-        "getAccountInfo" => { "value" => (lamports.zero? ? nil : { "owner" => SYSTEM_PROGRAM_ID, "lamports" => lamports }) },
         "getTokenAccountsByOwner" => { "value" => token_accounts },
         "getSignaturesForAddress" => signatures,
         "getTransaction" => transaction

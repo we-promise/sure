@@ -43,10 +43,11 @@ class Onchain::AvalancheCChainAdapterTest < ActiveSupport::TestCase
 
   # Every EVM network shares this address shape: answering yes for any
   # well-formed address would make every Ethereum wallet ambiguous.
-  test "an address with no AVAX and no transactions is not detected" do
-    stub_rpc("eth_getBalance" => "0x0", "eth_getTransactionCount" => "0x0")
+  test "an address with no AVAX is not detected, in one request" do
+    probe = stub_rpc("eth_getBalance" => "0x0")
 
     assert_equal false, @adapter.has_activity?(ADDRESS)
+    assert_requested probe, times: 1
   end
 
   test "a funded address is detected in one request" do
@@ -54,12 +55,6 @@ class Onchain::AvalancheCChainAdapterTest < ActiveSupport::TestCase
 
     assert @adapter.has_activity?(ADDRESS)
     assert_requested probe, times: 1
-  end
-
-  test "an emptied address that has sent transactions is still detected" do
-    stub_rpc("eth_getBalance" => "0x0", "eth_getTransactionCount" => "0x3")
-
-    assert @adapter.has_activity?(ADDRESS)
   end
 
   test "a node that could not answer is not read as an empty address" do
