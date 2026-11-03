@@ -19,6 +19,9 @@ de:
               not_match_configured: 'stimmt nicht mit der Serverkonfiguration überein.'
 
   doorkeeper:
+    scopes:
+      "mcp:read_write": "Deine Finanzdaten über MCP lesen und ändern"
+
     applications:
       confirmations:
         destroy: 'Bist du sicher?'

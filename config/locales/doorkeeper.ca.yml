@@ -19,6 +19,9 @@ ca:
             scopes:
               not_match_configured: no coincideix amb la configuració del servidor.
   doorkeeper:
+    scopes:
+      "mcp:read_write": "Llegir i modificar les teves dades financeres a través de MCP"
+
     applications:
       buttons:
         authorize: Autoritza

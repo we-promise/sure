@@ -1,5 +1,8 @@
 ---
 nl:
+  mcp:
+    errors:
+      insufficient_scope: "Dit token geeft geen toegang tot MCP. Autoriseer opnieuw met de scope mcp:read_write of voeg deze connector opnieuw toe."
   activerecord:
     errors:
       messages:

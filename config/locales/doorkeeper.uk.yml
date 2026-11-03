@@ -19,6 +19,9 @@ uk:
               not_match_configured: "не відповідає налаштуванням на сервері."
 
   doorkeeper:
+    scopes:
+      "mcp:read_write": "Читати та змінювати ваші фінансові дані через MCP"
+
     applications:
       confirmations:
         destroy: 'Ви впевнені?'

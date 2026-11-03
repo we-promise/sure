@@ -1,0 +1,4 @@
+pt-BR:
+  doorkeeper:
+    scopes:
+      "mcp:read_write": "Ler e modificar seus dados financeiros pelo MCP"

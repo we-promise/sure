@@ -7,6 +7,8 @@ class Oauth::AuthorizationsController < Doorkeeper::AuthorizationsController
       return if params[:scope].present?
 
       application = Doorkeeper::Application.find_by(uid: params[:client_id])
-      params[:scope] = "read_write" if application&.scopes.to_s.split == [ "read_write" ]
+      # Use the application's sole MCP or legacy scope when the client omits it.
+      scopes = application&.scopes.to_s.split
+      params[:scope] = scopes.first if scopes == [ "mcp:read_write" ] || scopes == [ "read_write" ]
     end
 end

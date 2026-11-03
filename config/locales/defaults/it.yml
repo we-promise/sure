@@ -7,6 +7,9 @@ it:
       close: "Chiudi"
   global:
     expand: "Espandi"
+  mcp:
+    errors:
+      insufficient_scope: "Questo token non consente l’accesso a MCP. Autorizza nuovamente con l’ambito mcp:read_write oppure aggiungi di nuovo questo connettore."
   activerecord:
     errors:
       messages:
