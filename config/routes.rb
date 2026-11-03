@@ -712,6 +712,7 @@ Rails.application.routes.draw do
   resources :accounts, only: %i[index new show destroy], shallow: true do
     member do
       post :sync
+      get :logo_options
       get :sparkline
       patch :toggle_active
       patch :toggle_exclude_from_reports
@@ -725,6 +726,7 @@ Rails.application.routes.draw do
 
     collection do
       post :sync_all
+      get :logo_options, action: :new_logo_options
       patch :reorder
     end
 
