@@ -912,6 +912,7 @@ class RecurringTransaction < ApplicationRecord
   def effective_amount_tolerance_pct
     learned = BigDecimal((matcher_hints || {})["learned_tolerance_pct"].to_s, exception: false)
     learned = BigDecimal("0") unless learned&.finite?
+    learned = [ learned, Matcher::MAX_LEARNED_TOLERANCE_PCT ].min
     [ amount_tolerance_pct, learned ].max
   end
 
