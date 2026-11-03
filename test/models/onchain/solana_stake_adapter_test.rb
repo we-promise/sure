@@ -36,6 +36,23 @@ class Onchain::SolanaStakeAdapterTest < ActiveSupport::TestCase
     assert_match "not a Solana stake account", error.message
   end
 
+  # jsonParsed has no parser for a plain wallet, so its data comes back as a
+  # [payload, "base64"] array rather than an object.
+  test "an ordinary wallet with unparsed data is refused as not a stake account" do
+    stub_rpc("value" => { "owner" => SYSTEM_PROGRAM_ID, "lamports" => 1_000_000_000, "data" => [ "", "base64" ] })
+
+    error = assert_raises(Onchain::Chains::Error) { @adapter.fetch_snapshot(ADDRESS) }
+    assert_match "not a Solana stake account", error.message
+  end
+
+  test "an account without an owner is reported as unreachable, not as a wallet" do
+    stub_rpc("value" => { "lamports" => 1_000_000_000 })
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
   test "a missing or negative lamport balance is not read as a balance" do
     [ nil, "5", -1 ].each do |lamports|
       stub_rpc("value" => { "owner" => STAKE_PROGRAM_ID, "lamports" => lamports })

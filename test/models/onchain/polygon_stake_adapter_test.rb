@@ -71,6 +71,15 @@ class Onchain::PolygonStakeAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a summary that is not an object is reported as unreachable" do
+    stub_request(:get, delegators_url).with(query: hash_including({}))
+      .to_return(status: 200, body: { "success" => true, "result" => [], "summary" => "unavailable" }.to_json, headers: json_headers)
+
+    assert_raises Onchain::Chains::UnreachableError do
+      @adapter.fetch_snapshot(ADDRESS)
+    end
+  end
+
   test "a delegation without a stake is not read as zero" do
     stub_page(0, [ { "bondedValidator" => "1" } ])
 

@@ -55,8 +55,8 @@ class Provider::SolanaRpc
   # unlike getProgramAccounts on the Stake program (which every public RPC
   # tested requires a paid key for), this works on the default endpoint with no
   # authentication. Its owner is what tells a stake account from a wallet.
-  # @return [Hash, nil] {"owner" => program_id, "lamports" => Integer,
-  #   "program" => "stake"|"vote"|...}, or nil if the account doesn't exist.
+  # @return [Hash, nil] {"owner" => program_id, "lamports" => Integer}, or nil
+  #   if the account doesn't exist.
   #   A response that is neither raises, so it is never read as a balance.
   def get_account_info(address)
     result = rpc("getAccountInfo", [ address, { encoding: "jsonParsed" } ])
@@ -69,11 +69,10 @@ class Provider::SolanaRpc
     lamports = value["lamports"]
     raise ApiError, "getAccountInfo returned a malformed lamport balance" unless lamports.is_a?(Integer) && lamports >= 0
 
-    {
-      "owner" => value["owner"],
-      "lamports" => lamports,
-      "program" => value.dig("data", "program")
-    }
+    owner = value["owner"]
+    raise ApiError, "getAccountInfo returned a malformed owner" unless owner.is_a?(String) && owner.present?
+
+    { "owner" => owner, "lamports" => lamports }
   end
 
   # @return [Array<Hash>] { pubkey:, mint:, raw_amount:, decimals: }

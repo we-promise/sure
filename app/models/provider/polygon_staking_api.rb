@@ -72,6 +72,7 @@ class Provider::PolygonStakingApi
         raise ApiError, parsed["message"] || "Polygon staking API error" if parsed["success"] == false
         raise ApiError, "Polygon staking API returned no result" unless parsed["result"].is_a?(Array)
         raise ApiError, "Polygon staking API returned a malformed delegation" unless parsed["result"].all?(Hash)
+        raise ApiError, "Polygon staking API returned a malformed summary" unless parsed["summary"].nil? || parsed["summary"].is_a?(Hash)
 
         applied_limit = parsed.dig("summary", "limit")
         page_size = applied_limit.is_a?(Integer) && applied_limit.positive? ? [ applied_limit, PAGE_LIMIT ].min : PAGE_LIMIT
