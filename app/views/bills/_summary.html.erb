@@ -74,10 +74,11 @@
         just because the row got quieter. %>
     <%= render "recurring_transactions/pay_action", recurring_transaction: series %>
 
-    <%# An open cycle's verb (Find/Add/Review) cannot reach a payment already
-        settled in an earlier cycle. Offer that route here; when the drawer is
-        scoped to a settled cycle its own verb already manages it. %>
-    <% if settled_occurrence.present? && current_occurrence&.scheduled? %>
+    <%# The primary verb only reaches the cycle the drawer is showing. When
+        that is a different cycle -- an open one, or a skipped/missed one whose
+        own verb has no payment to manage -- offer the latest settled cycle
+        here. When the drawer already shows it, the primary action covers it. %>
+    <% if settled_occurrence.present? && settled_occurrence != current_occurrence %>
       <%= render DS::Link.new(
             text: t("bills.manage_payments"),
             icon: "receipt-text",

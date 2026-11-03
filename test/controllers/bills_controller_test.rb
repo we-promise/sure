@@ -2149,13 +2149,18 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       family: @family, original_due_on: skipped_due, due_on: skipped_due, currency: "USD"
     )
     skipped.skip!
+    missed_due = 4.months.ago.to_date
+    missed = bill.recurring_occurrences.create!(
+      family: @family, original_due_on: missed_due, due_on: missed_due, currency: "USD"
+    )
+    missed.miss!
     RecurringTransaction::Allocator.new(paid).allocate!(amount: "78.50")
     assert paid.reload.paid?
 
     get_bill_history(bill)
 
     assert_response :success
-    [ paid, skipped ].each do |occurrence|
+    [ paid, skipped, missed ].each do |occurrence|
       assert_select "a[data-turbo-frame=drawer][href=?]", recurring_occurrence_path(occurrence) do |links|
         assert_select links.first, "p", text: I18n.l(occurrence.due_on, format: :long)
         assert_select links.first, "svg", count: 1
@@ -2189,6 +2194,50 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", recurring_occurrence_path(latest), text: I18n.t("bills.manage_payments")
   end
 
+  # A skipped or missed cycle has no payment of its own, so its Manage payments
+  # verb opened an empty drawer. The earlier payment is still the thing to
+  # manage, and it must remain reachable when no cycle is open.
+  test "skipped and missed cycles still offer the latest settled payment" do
+    { skip!: "skipped", miss!: "missed" }.each do |closing, status|
+      bill = declare_bill(name: "Power Co #{status}", amount: 80, due: Date.current + 5)
+      settled = settle_past_cycle(bill, months_ago: 2, amount: "80")
+      bill.recurring_occurrences.open_status.each { |occurrence| occurrence.public_send(closing) }
+      current = bill.recurring_occurrences.order(due_on: :desc).first
+
+      assert_equal status, current.status
+      assert_equal current.id, bill.reload.current_occurrence.id,
+        "premise: the drawer shows the #{status} cycle"
+
+      get_bill_drawer(bill)
+
+      assert_response :success
+      assert_select "a[href=?]", recurring_occurrence_path(settled), text: I18n.t("bills.manage_payments")
+    end
+  end
+
+  # History stops at the 12 newest closed cycles. A settled payment older than
+  # that window must still be reachable from the drawer, or repeating skips and
+  # misses locks it away for good.
+  test "a settled payment older than the history window is still offered" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    settled = settle_past_cycle(bill, months_ago: 18, amount: "80")
+    bill.recurring_occurrences.open_status.each(&:skip!)
+    13.times do |i|
+      due = i.months.ago.to_date
+      bill.recurring_occurrences.create!(
+        family: @family, original_due_on: due, due_on: due, currency: "USD"
+      ).skip!
+    end
+
+    window = bill.recurring_occurrences.closed.order(due_on: :desc).limit(12).to_a
+    assert_not_includes window, settled, "premise: the payment is outside the history window"
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a[href=?]", recurring_occurrence_path(settled), text: I18n.t("bills.manage_payments")
+  end
+
   # A closed cycle's own verb is already Manage payments (or Reopen); repeating
   # the same action for a different cycle would make the drawer ambiguous.
   test "the drawer does not repeat Manage payments when it already shows the settled cycle" do
@@ -2219,6 +2268,25 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       entry: create_transaction_entry(name: "POWER CO", amount: 80, date: occurrence.due_on),
       allocated_amount: 80, currency: "USD", state: "suggested", source: "auto_matched"
     )
+
+    get_bill_drawer(bill)
+
+    assert_response :success
+    assert_select "a", text: I18n.t("bills.manage_payments"), count: 0
+  end
+
+  # Unlinking the last payment leaves a user-closed cycle paid with no
+  # allocations. It has nothing to manage, so the confirmed-allocation filter
+  # must keep it out of the shortcut.
+  test "a settled cycle with no confirmed allocation offers no Manage payments action" do
+    bill = declare_bill(name: "Power Co", amount: 80, due: Date.current + 5)
+    settled = bill.recurring_occurrences.create!(
+      family: @family, original_due_on: 2.months.ago.to_date,
+      due_on: 2.months.ago.to_date, currency: "USD"
+    )
+    pay(settled)
+    RecurringTransaction::Allocator.new(settled).unallocate!(settled.allocations.sole)
+    assert settled.reload.paid?
 
     get_bill_drawer(bill)
 
