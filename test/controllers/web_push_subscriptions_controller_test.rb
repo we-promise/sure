@@ -91,4 +91,22 @@ class WebPushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
   ensure
     ActionController::Base.allow_forgery_protection = previous
   end
+  test "test requests are rate limited across all devices of the user" do
+    WebPushSubscriptionsController.cache_store.stubs(:increment)
+      .with { |key, *| key.include?("web-push-test") && key.end_with?(@user.id) }
+      .returns(1, 2, 3)
+    devices = 3.times.map { |i| register_web_push(user: @user, session: @session, endpoint: "https://fcm.googleapis.com/rate-#{i}") }
+    assert_enqueued_jobs 2, only: DeliverWebPushNotificationJob do
+      devices.first(2).each do |device|
+        post "/web_push_subscriptions/#{device.id}/test_notification", as: :json
+        assert_response :accepted
+      end
+      assert_no_difference "WebPushDelivery.count" do
+        post "/web_push_subscriptions/#{devices.last.id}/test_notification", as: :json
+        assert_response :too_many_requests
+        assert_equal I18n.t("web_push.errors.rate_limited"), response.parsed_body.fetch("error")
+      end
+    end
+  end
+
 end

@@ -133,4 +133,21 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, device.endpoint
     assert_not_includes response.body, device.auth
   end
+  test "enabling preview and budget warnings together saves both values" do
+    user = users(:family_admin)
+    user.update!(preferences: {})
+    patch settings_preferences_url, params: { user: { preview_features_enabled: "1", web_push_budget_warnings_enabled: "1" } }
+    assert_redirected_to settings_preferences_url
+    assert user.reload.preview_features_enabled?
+    assert user.web_push_budget_warnings_enabled?
+  end
+
+  test "disabling preview in the request prevents enabling budget warnings" do
+    user = users(:family_admin)
+    user.update!(preferences: { "preview_features_enabled" => true })
+    patch settings_preferences_url, params: { user: { preview_features_enabled: "0", web_push_budget_warnings_enabled: "1" } }
+    assert_not user.reload.preview_features_enabled?
+    assert_not user.web_push_budget_warnings_enabled?
+  end
+
 end

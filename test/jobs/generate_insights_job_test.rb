@@ -174,6 +174,36 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal original_version + 1, insight.reload.notification_version
   end
 
+  test "a material metadata change increments the browser delivery version" do
+    register_web_push(user: @family.users.first)
+    WebPush::Client.stubs(:configured?).returns(true)
+    stub_generated([ generated_insight(priority: "high") ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    insight = @family.insights.find_by!(dedup_key: "idle_cash:test-account:2026-07")
+    version = insight.notification_version
+    stub_generated([ generated_insight(balance: 7500.0, priority: "high") ])
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+    assert_equal version + 1, insight.reload.notification_version
+    assert_equal [ version, version + 1 ], WebPushDelivery.where(insight: insight).order(:insight_version).pluck(:insight_version)
+  end
+
+  test "deleting a device between eligibility and delivery recording preserves the insight" do
+    subscription = register_web_push(user: @family.users.first)
+    WebPush::Client.stubs(:configured?).returns(true)
+    stub_generated([ generated_insight(priority: "high") ])
+    WebPushSubscription.any_instance.stubs(:eligible_for?).with do |_insight|
+      WebPushSubscription.where(id: subscription.id).delete_all
+      true
+    end.returns(true)
+    assert_difference "Insight.count", 1 do
+      assert_no_difference "WebPushDelivery.count" do
+        GenerateInsightsJob.perform_now(family_id: @family.id)
+      end
+    end
+  end
+
   test "a failed broadcast leaves an atomic unclaimed delivery that an unchanged rerun recovers once" do
     subscription = register_web_push(user: @family.users.first)
     WebPush::Client.stubs(:configured?).returns(true)
