@@ -21,15 +21,16 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     end
   end
 
-  test "alpha and stable releases publish explicit versions without floating channels" do
+  test "alpha and stable releases publish only their matching floating channel" do
     with_repo do |dir|
       %w[2026.11.2-alpha 2026.11.2].each do |version|
         success, output = resolve(dir, version)
         assert success, version
         assert_includes output, "release=true"
         assert_includes output, "type=raw,value=#{version}"
-        assert_not_includes output, "type=raw,value=stable"
-        assert_not_includes output, "type=raw,value=latest"
+        channel, other_channel = version.end_with?("-alpha") ? %w[latest stable] : %w[stable latest]
+        assert_includes output, "type=raw,value=#{channel}"
+        assert_not_includes output, "type=raw,value=#{other_channel}"
       end
     end
   end
@@ -70,7 +71,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
 
   test "invalid dates and all canonical suffixes other than alpha are rejected" do
     with_repo do |dir|
-      %w[2026.11.02 2026.11.0 2026.2.29 2026.4.31 2026.10.28-hotfix.1 2026.10.28-1 2026.10.30-alpha.2 2026.10.30-alpha.0 2026.10.30-beta 2026.10.30-rc.1].each do |version|
+      %w[2026.11.02 2026.11.0 2026.2.29 2026.4.31 2026.10.28-hotfix.1 2026.10.28-1 2026.10.30-alpha.2 2026.10.30-alpha.0 2026.10.30-beta 2026.10.30-rc.1 2026.10.30-daily 2026.10.30-nightly].each do |version|
         assert_not resolve(dir, version).first, version
       end
     end
@@ -99,7 +100,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
       assert success
       assert_not_includes output, "type=raw,value=0.7.7"
       assert_includes output, "type=raw,value=2027.1.1"
-      assert_not_includes output, "type=raw,value=stable"
+      assert_includes output, "type=raw,value=stable"
       assert_not_includes output, "type=raw,value=latest"
     end
   end
@@ -121,6 +122,8 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
           assert_includes output, "type=raw,value=sha-#{selected_sha}"
           assert_not_includes output, "type=raw,value=sha-#{workflow_sha}"
           assert_not_includes output, "type=raw,value=#{version}"
+          assert_not_includes output, "type=raw,value=stable"
+          assert_not_includes output, "type=raw,value=latest"
         end
       end
       [ "main", "refs/heads/main", selected_sha ].each do |selected_ref|
