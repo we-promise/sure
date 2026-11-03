@@ -97,11 +97,15 @@ class UI::Account::Chart < ApplicationComponent
     Money.new(loan_chart[:interest_saved].to_f, loan_chart[:currency])
   end
 
+  # All reaches back to a linked investment account's history start even when
+  # it predates the family's first transaction or trade: that start is where
+  # the history its provider reported begins (Account#history_start_date),
+  # never a stray valuation or opening anchor.
   def period
     @effective_period ||= begin
       p = @period || Period.last_30_days
       acc_start = account.history_start_date
-      if p.key == "all_time" && acc_start.present? && acc_start > p.start_date
+      if p.key == "all_time" && acc_start.present? && (acc_start > p.start_date || account.linked_investment?)
         Period.new(key: "all_time", start_date: acc_start, end_date: p.end_date)
       else
         p

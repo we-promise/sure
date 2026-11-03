@@ -1,0 +1,11 @@
+<%# locals: (etoro_account:) %>
+<%# A copy-trading portfolio shown as an account of its own: where its history
+    starts, as eToro reports no past figures of a copy, and whether it is closed. %>
+<div class="flex flex-wrap items-center gap-2 mt-1">
+  <% if (since = etoro_account.copy_recorded_since) %>
+    <p class="text-xs text-secondary"><%= t("etoro_items.copy_status.recorded_since", date: l(since, format: :long)) %></p>
+  <% end %>
+  <% if (closed_on = etoro_account.copy_closed_on) %>
+    <%= render DS::Pill.new(label: t("etoro_items.copy_status.closed", date: l(closed_on, format: :long)), tone: :neutral, marker: false) %>
+  <% end %>
+</div>

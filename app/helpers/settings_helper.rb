@@ -115,6 +115,9 @@ module SettingsHelper
     when "trading212"
       return { status: :off } unless @trading212_items&.any?
       sync_based_summary(key)
+    when "etoro"
+      return { status: :off } unless @etoro_items&.any?
+      sync_based_summary(key)
     when "snaptrade"
       configured_item = @snaptrade_items&.find(&:oauth_configured?)
       return { status: :off } unless configured_item

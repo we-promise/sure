@@ -88,6 +88,7 @@ en:
         onchain_wallet: Track self-custody Bitcoin, EVM, Solana, Cosmos and Polkadot wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
+        etoro: Sync your eToro portfolio and daily account value using a read-only API key.
         sharesight: Sync the portfolios you track in Sharesight using its API.
         trade_republic: Sync your Trade Republic investment account via secure read-only web login.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
@@ -397,6 +398,27 @@ en:
           other: "%{count} Trade Republic accounts discovered."
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
+      etoro_panel:
+        steps:
+          step_1: On eToro, go to Settings → Trading → API Key Management and choose Create New Key.
+          step_2: Pick the Real environment and Read permission, then confirm with the code eToro sends you.
+          step_3: Paste the public API key and the generated user key below, then save.
+        api_key_label: Public API key
+        api_key_placeholder_new: Paste your eToro public API key
+        api_key_placeholder_existing: Leave blank to keep the current public API key
+        user_key_label: User key
+        user_key_placeholder_new: Paste your eToro user key
+        user_key_placeholder_existing: Leave blank to keep the current user key
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        sync: Sync
+        syncing: Syncing...
+        disconnect: Disconnect eToro account
+        disconnect_confirm: Disconnect eToro?
+        default_account_name: eToro Account
+        add_account: Add another account
+        own_securities_label: Price holdings with eToro only
+        own_securities_hint: Each eToro instrument becomes a security of its own, named ETORO:SYMBOL and priced from eToro's daily quotes, so no price provider is asked about it. A stock you also hold in another account is a separate security there. Changing this moves the connection's trades and holdings on the next sync.
       sharesight_panel:
         steps:
           step_1: Ask Sharesight support to enable API access. It's available on paid plans.
