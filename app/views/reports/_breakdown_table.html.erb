@@ -14,8 +14,8 @@
     <span class="font-medium text-secondary <%= color_class %> whitespace-nowrap privacy-sensitive"> <%= Money.new(total, Current.family.currency).format %></span>
   </div>
 
-  <div class="bg-container-inset rounded-xl p-1 overflow-x-auto focus-ring" tabindex="0" role="region" aria-label="<%= t(title_key) %>">
-    <div class="w-max min-w-full">
+  <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
+    <div class="w-max sm:w-full">
     <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
     <table class="w-full">
       <thead class="bg-container-inset">
