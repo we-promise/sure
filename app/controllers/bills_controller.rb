@@ -525,9 +525,16 @@ class BillsController < ApplicationController
     # One period per paycheck already received this month, each running to the
     # next one, and the last to the day before today: from today on, the
     # planner's periods take over, and they must not overlap these.
-    PaycheckPeriod = Data.define(:starts_on, :ends_on, :income) do
+    # `received` is what the matched deposits actually brought in, or nil while
+    # any of the day's paychecks is still unmatched. Every period here is over,
+    # so nothing in it is left to pay and the header never shows a due amount.
+    PaycheckPeriod = Data.define(:starts_on, :ends_on, :income, :received) do
       def bridge?
         false
+      end
+
+      def past?
+        true
       end
     end
 
@@ -549,16 +556,24 @@ class BillsController < ApplicationController
       days = occurrences.group_by(&:due_on).sort_by(&:first)
       days.each_with_index.map do |(day, paychecks), index|
         next_day = days[index + 1]&.first || to.next_day
+        received = paychecks.all? { |occurrence| occurrence.confirmed_allocated.positive? }
         PaycheckPeriod.new(
           starts_on: day,
           ends_on: next_day - 1,
-          income: paychecks.sum { |occurrence| paycheck_amount(occurrence) }
+          income: paychecks.sum { |occurrence| paycheck_amount(occurrence) },
+          received: received ? paychecks.sum { |occurrence| received_amount(occurrence) } : nil
         )
       end
     end
 
     def paycheck_amount(occurrence)
       occurrence.resolved_expected_amount_money.exchange_to(Current.family.currency).amount.abs
+    rescue Money::ConversionError
+      BigDecimal("0")
+    end
+
+    def received_amount(occurrence)
+      occurrence.confirmed_allocated_money.exchange_to(Current.family.currency).amount.abs
     rescue Money::ConversionError
       BigDecimal("0")
     end

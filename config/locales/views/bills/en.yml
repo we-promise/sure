@@ -151,6 +151,8 @@ en:
       all: All bills
     pay_period:
       paycheck_on: "Paycheck %{date}"
+      expected: expected
+      not_matched: "(not matched)"
       before_next_paycheck: Before your next paycheck
       due_before_date: "%{amount} due before %{date}"
     paycheck:

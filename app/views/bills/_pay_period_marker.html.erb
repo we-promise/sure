@@ -14,6 +14,12 @@
     date four days out, and "due before next" never said before what, so the
     band described a pay period without ever saying where it ended. %>
 <% next_payday = period.ends_on + 1 %>
+<%# A matched paycheck shows what actually arrived. An unmatched one shows what
+    was expected, and says so: "not matched" once its day has passed, "expected"
+    while it is still ahead. Only windows still ahead keep their due amount,
+    since a past window's bills are already settled. %>
+<% received = period.try(:received) %>
+<% past = period.try(:past?) %>
 
 <%# Below @lg the two halves stack, the total under the label's text. Side by
     side they need about 350px, so on a phone the label wrapped into two ragged
@@ -37,13 +43,14 @@
       <p class="text-xs font-medium text-secondary">
         <%= t("bills.pay_period.paycheck_on", date: l(period.starts_on, format: :short)) %>
         <span class="text-subdued">&middot;</span>
-        <span class="text-success privacy-sensitive">
-          +<%= format_money(Money.new(period.income, currency)) %>
-        </span>
+        <span class="privacy-sensitive"><%= format_money(Money.new(received || period.income, currency)) %></span>
+        <% if received.nil? %>
+          <span class="text-subdued"><%= past ? t("bills.pay_period.not_matched") : t("bills.pay_period.expected") %></span>
+        <% end %>
       </p>
     <% end %>
 
-    <% if due_total.positive? %>
+    <% if due_total.positive? && !past %>
       <p class="@lg:ml-auto text-xs text-subdued privacy-sensitive shrink-0">
         <%= t("bills.pay_period.due_before_date",
               amount: format_money(Money.new(due_total, currency)),
