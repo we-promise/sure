@@ -86,8 +86,7 @@ class Session < ApplicationRecord
   end
 
   def set_merchant_page_params(params)
-    data["merchant_page_params"] = params
-    save!
+    update_data! { |fresh| fresh["merchant_page_params"] = params }
   end
 
   def get_preferred_tab(tab_key)
@@ -97,9 +96,7 @@ class Session < ApplicationRecord
   def set_preferred_tab(tab_key, tab_value)
     return unless ALLOWED_TAB_KEYS.include?(tab_key)
 
-    data["tab_preferences"] ||= {}
-    data["tab_preferences"][tab_key] = tab_value
-    save!
+    update_data! { |fresh| (fresh["tab_preferences"] ||= {})[tab_key] = tab_value }
   end
 
   def expired?
@@ -107,6 +104,16 @@ class Session < ApplicationRecord
   end
 
   private
+    # Concurrent requests share one session row; reloading under a row lock keeps
+    # one writer's key from being dropped by another writer's stale `data` copy.
+    def update_data!
+      with_lock do
+        self.data ||= {}
+        yield data
+        save!
+      end
+    end
+
 
     def capture_session_info
       self.user_agent = Current.user_agent

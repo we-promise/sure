@@ -116,4 +116,16 @@ class SessionTest < ActiveSupport::TestCase
     session.set_preferred_tab("some_arbitrary_key", "evil")
     assert_nil session.get_preferred_tab("some_arbitrary_key")
   end
+
+  test "session data writers keep each other's keys" do
+    session = @user.sessions.create!
+    stale_copy = Session.find(session.id)
+
+    session.set_preferred_tab("account_sidebar_tab", "asset")
+    stale_copy.set_merchant_page_params({ "per_page" => "50" })
+
+    session.reload
+    assert_equal "asset", session.get_preferred_tab("account_sidebar_tab")
+    assert_equal({ "per_page" => "50" }, session.merchant_page_params)
+  end
 end
