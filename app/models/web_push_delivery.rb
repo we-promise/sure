@@ -7,6 +7,7 @@ class WebPushDelivery < ApplicationRecord
 
   TEST_SEND_WINDOW = 15.minutes
   CLAIM_TIMEOUT = 15.minutes
+  MAX_PROVIDER_ATTEMPTS = 5
 
   # Called inside the insight version's transaction. Recipient eligibility is
   # captured at the event, so later registration or opt-in cannot add a backlog.
@@ -25,20 +26,78 @@ class WebPushDelivery < ApplicationRecord
   end
 
   def enqueue!(recover: false)
-    # Claim before contacting Redis. A process crash can leave this pending;
-    # the next generation pass recovers claims older than the retry window.
-    with_lock do
+    claimed_at = Time.current
+    claimed = with_lock do
       claim_available = enqueued_at.nil? || (recover && enqueued_at < CLAIM_TIMEOUT.ago)
-      return false unless status_enqueue_failed? || (status_pending? && claim_available)
-      update!(status: :pending, enqueued_at: Time.current)
+      next false unless status_enqueue_failed? || (status_pending? && claim_available)
+      next false if attempted_at && attempted_at > CLAIM_TIMEOUT.ago
+      if provider_attempts >= MAX_PROVIDER_ATTEMPTS
+        update!(status: :failed)
+        next false
+      end
+      update!(status: :pending, enqueued_at: claimed_at)
+      true
     end
+    return false unless claimed
+
     job = DeliverWebPushNotificationJob.perform_later(web_push_delivery_id: id)
     return true if job
-    update!(status: :enqueue_failed)
+    mark_enqueue_failed!(claimed_at)
     false
   rescue ActiveJob::EnqueueError, Redis::BaseError, RedisClient::Error
-    update!(status: :enqueue_failed)
+    mark_enqueue_failed!(claimed_at)
     false
+  end
+
+  # The reservation commits before provider IO. A lost worker therefore spends
+  # an attempt, and a recovered ActiveJob cannot start a fresh provider budget.
+  def claim_attempt!
+    with_lock do
+      next unless status_pending?
+      next if attempted_at && attempted_at > CLAIM_TIMEOUT.ago
+      unless eligible?
+        update!(status: :skipped)
+        next
+      end
+      if provider_attempts >= MAX_PROVIDER_ATTEMPTS
+        update!(status: :failed)
+        next
+      end
+      update!(provider_attempts: provider_attempts + 1, attempted_at: Time.current)
+      provider_attempts
+    end
+  end
+
+  def retry_attempt!(attempt)
+    with_lock do
+      next false unless current_attempt?(attempt)
+      update!(attempted_at: nil, status: provider_attempts >= MAX_PROVIDER_ATTEMPTS ? :failed : :pending)
+      status_pending?
+    end
+  end
+
+  def complete_attempt!(attempt, result:, subscription_updated_at:)
+    if result == :gone
+      # Registration takes parent then child locks. Cleanup uses that same
+      # order, and never holds either lock while contacting the provider.
+      self.class.transaction do
+        subscription = WebPushSubscription.lock.find_by(id: web_push_subscription_id)
+        next unless subscription
+        with_lock do
+          next unless current_attempt?(attempt)
+          if subscription.updated_at == subscription_updated_at
+            subscription.destroy!
+          else
+            update!(status: :rejected, attempted_at: nil)
+          end
+        end
+      end
+    else
+      with_lock do
+        next unless current_attempt?(attempt)
+        update!(status: result == :accepted ? :accepted : :rejected, attempted_at: nil)
+      end
+    end
   end
 
   def eligible?
@@ -61,4 +120,14 @@ class WebPushDelivery < ApplicationRecord
       }
     end
   end
+
+  private
+    def current_attempt?(attempt)
+      status_pending? && provider_attempts == attempt
+    end
+
+    def mark_enqueue_failed!(claimed_at)
+      self.class.where(id: id, status: :pending, enqueued_at: claimed_at, attempted_at: nil)
+        .update_all(status: :enqueue_failed, updated_at: Time.current)
+    end
 end

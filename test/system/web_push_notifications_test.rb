@@ -74,7 +74,11 @@ class WebPushNotificationsTest < ApplicationSystemTestCase
         };
         const registration = { pushManager: {
           getSubscription: async () => window.pushTest.current,
-          subscribe: async () => { window.pushTest.current = device; return device; }
+          subscribe: async (options) => {
+            device.options = { applicationServerKey: options.applicationServerKey.buffer };
+            window.pushTest.current = device;
+            return device;
+          }
         } };
         Object.defineProperty(window, "isSecureContext", { configurable: true, value: true });
         Object.defineProperty(window, "PushManager", { configurable: true, value: function() {} });
