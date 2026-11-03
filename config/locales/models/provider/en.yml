@@ -7,6 +7,7 @@ en:
       not_configured: This property data provider is not configured.
       missing_fields: Please provide a name and a complete US address (street, city, state, and ZIP code).
       missing_fields_gb: Please provide a name, the street address and postcode, and the property's UPRN.
+      missing_fields_fr: Please provide a name, the street address and postcode, the property type (apartment or house) and the living area. DVF has no data for Alsace-Moselle (57, 67, 68) or Mayotte.
       preview_expired: This property preview has expired — please look up the address again.
       entry_name: "%{provider} valuation"
     rentcast:
@@ -27,3 +28,10 @@ en:
         unsupported_property: Chimnie only values residential properties; this UPRN belongs to a commercial or mixed-use property.
         unauthorized: Chimnie rejected the API key. Check the key in Settings → Self-Hosting.
         insufficient_balance: Your Chimnie account balance is too low for this request.
+    dvf:
+      errors:
+        address_not_found: This address could not be found in the French national address base. Please check the street address and postcode.
+        area_required: Enter the property's living area to value it from DVF sales.
+        not_enough_sales: There are not enough recent comparable sales near this address to estimate its value.
+        unavailable: The French open data service (DVF) could not be reached. Please try again later.
+        unsupported_property_type: DVF can only value apartments and houses. Set the property type to Apartment, Condominium, Single Family Home, Townhouse or Second Home.

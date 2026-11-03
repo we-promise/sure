@@ -203,6 +203,14 @@ class Provider::Registry
 
         Provider::Chimnie.new(api_key)
       end
+
+      def dvf
+        enabled = ENV["DVF_ENABLED"].present? ? ENV["DVF_ENABLED"] == "true" : Setting.dvf_enabled
+
+        return nil unless enabled
+
+        Provider::Dvf.new
+      end
   end
 
   def initialize(concept)
@@ -245,7 +253,7 @@ class Provider::Registry
         # builds them by name when benchmarking against Jev.
         %i[jev]
       when :property_valuations
-        %i[rentcast realie chimnie]
+        %i[rentcast realie chimnie dvf]
       else
         %i[plaid_us plaid_eu github openai anthropic]
       end

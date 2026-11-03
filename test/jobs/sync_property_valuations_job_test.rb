@@ -360,4 +360,67 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
       SyncPropertyValuationsJob.new.perform
     end
   end
+  # DVF (France, valued from comparable sales)
+
+  def create_french_property(area_value: 35, subtype: "apartment")
+    @account.family.accounts.create!(
+      name: "Paris Flat",
+      balance: 0,
+      currency: "EUR",
+      owner: @account.owner,
+      accountable: Property.new(
+        avm_provider: "dvf",
+        subtype: subtype,
+        area_value: area_value,
+        area_unit: "sqm",
+        address_attributes: { line1: "82 rue Exemple", locality: "Paris", country: "FR", postal_code: "75020" }
+      )
+    )
+  end
+
+  def stub_dvf_provider
+    provider = mock
+    provider.stubs(:requests_remaining?).returns(true)
+    provider.stubs(:valuation_currency).returns("EUR")
+    Provider::Registry.stubs(:dvf).returns(provider)
+    provider
+  end
+
+  test "refreshes French properties with their area and type, even when the area came from the lookup" do
+    @property.update!(avm_provider: nil)
+    french_account = create_french_property
+
+    stub_dvf_provider.expects(:fetch_property_valuation).with(
+      line1: "82 rue Exemple",
+      locality: "Paris",
+      region: nil,
+      postal_code: "75020",
+      square_footage: 377,
+      property_type: "apartment"
+    ).returns(Provider::Response.new(
+      success?: true,
+      data: Provider::PropertyValuationConcept::PropertyValuation.new(
+        valuation: 312_000, currency: "EUR", property_type: "apartment", year_built: nil, area_value: 35, area_unit: "sqm"
+      ),
+      error: nil
+    ))
+
+    SyncPropertyValuationsJob.new.perform
+
+    french_account.reload
+    assert_equal 312_000, french_account.balance
+    assert_equal "DVF valuation", french_account.entries.valuations.order(:date).last.name
+  end
+
+  test "skips French properties without an area or a type DVF can value without spending a request" do
+    @property.update!(avm_provider: nil)
+    create_french_property(area_value: nil)
+    create_french_property(subtype: "plot")
+
+    stub_dvf_provider.expects(:fetch_property_valuation).never
+
+    assert_difference "DebugLogEntry.count" => 2 do
+      SyncPropertyValuationsJob.new.perform
+    end
+  end
 end

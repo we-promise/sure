@@ -13,7 +13,8 @@ module Provider::PropertyValuationConcept
   # upcasing and removing periods ("U.S.A." → "USA").
   COUNTRY_ALIASES = {
     "US" => [ "US", "USA", "UNITED STATES", "UNITED STATES OF AMERICA" ],
-    "GB" => [ "GB", "UK", "GBR", "UNITED KINGDOM", "GREAT BRITAIN" ]
+    "GB" => [ "GB", "UK", "GBR", "UNITED KINGDOM", "GREAT BRITAIN" ],
+    "FR" => [ "FR", "FRA", "FRANCE" ]
   }.freeze
 
   # `external_id` is the provider's own identifier for the property (e.g. a
@@ -64,6 +65,25 @@ module Provider::PropertyValuationConcept
       false
     end
 
+    # Whether the living area is required for a lookup, for providers that
+    # value from comparable sales rather than a record of the property.
+    # Implies `accepts_square_footage?`.
+    def requires_area?
+      false
+    end
+
+    # Whether lookups take the property's subtype (passed as
+    # `property_type:`), for providers whose estimate depends on it.
+    def accepts_property_type?
+      false
+    end
+
+    # Property subtypes the provider can value; only checked for providers
+    # that `accepts_property_type?`.
+    def property_type_supported?(property_type)
+      true
+    end
+
     def required_address_fields
       %i[line1 locality region postal_code]
     end
@@ -73,13 +93,15 @@ module Provider::PropertyValuationConcept
       1.day
     end
 
-    # Whether a lookup can be made for this address/identifier — checked
-    # before spending a request, both when creating a property and when
-    # refreshing.
-    def lookup_ready?(address, external_id = nil)
+    # Whether a lookup can be made for this address/identifier/living area
+    # (in square feet)/subtype — checked before spending a request, both when
+    # creating a property and when refreshing.
+    def lookup_ready?(address, external_id = nil, area: nil, property_type: nil)
       return false if address.nil?
       return false if required_address_fields.any? { |field| address[field].blank? }
       return false if requires_external_id? && external_id.blank?
+      return false if requires_area? && !area.to_i.positive?
+      return false if accepts_property_type? && !property_type_supported?(property_type)
 
       country = address[:country].to_s.delete(".").squish.upcase
       country.blank? || COUNTRY_ALIASES.fetch(supported_country, [ supported_country ]).include?(country)
@@ -87,8 +109,10 @@ module Provider::PropertyValuationConcept
   end
 
   # `external_id:` is only passed to providers that `requires_external_id?`,
-  # and `square_footage:` only to providers that `accepts_square_footage?`.
-  def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil, external_id: nil, square_footage: nil)
+  # `square_footage:` only to providers that `accepts_square_footage?`, and
+  # `property_type:` (a Property subtype) only to providers that
+  # `accepts_property_type?`.
+  def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil, external_id: nil, square_footage: nil, property_type: nil)
     raise NotImplementedError, "Subclasses must implement #fetch_property_valuation"
   end
 

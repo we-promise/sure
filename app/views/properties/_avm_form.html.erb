@@ -44,6 +44,28 @@
           </div>
         <% end %>
 
+        <% if provider&.requires_area? || provider&.accepts_property_type? %>
+          <%= form.fields_for :property, (@avm_property || Property.new(area_unit: "sqm")) do |property_form| %>
+            <% if provider.accepts_property_type? %>
+              <%= property_form.select :subtype,
+                                       Property::SUBTYPES.select { |key, _| provider.property_type_supported?(key) }.map { |key, labels| [ labels[:long], key ] },
+                                       { label: t("properties.overview_fields.property_type_label"), prompt: t("properties.form.subtype_prompt") },
+                                       required: true %>
+            <% end %>
+            <% if provider.requires_area? %>
+              <div class="flex items-center gap-2">
+                <%= property_form.number_field :area_value,
+                                               label: t("properties.form.area"),
+                                               min: 1,
+                                               required: true %>
+                <%= property_form.select :area_unit,
+                                         [ [ t("properties.overview_fields.square_meters"), "sqm" ], [ t("properties.overview_fields.square_feet"), "sqft" ] ],
+                                         { label: t("properties.form.area_unit") } %>
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+
         <% if provider&.requires_external_id? %>
           <%= form.fields_for :property, Property.new(avm_external_id: @avm_external_id) do |property_form| %>
             <%= property_form.text_field :avm_external_id,
@@ -56,7 +78,8 @@
           <% end %>
         <% end %>
 
-        <p class="text-sm text-secondary"><%= uk ? t("properties.new.avm_uk_only", provider: provider_name) : t("properties.new.avm_us_only", provider: provider_name) %></p>
+        <% coverage_key = { "GB" => "avm_uk_only", "FR" => "avm_fr_only" }.fetch(provider&.supported_country, "avm_us_only") %>
+        <p class="text-sm text-secondary"><%= t("properties.new.#{coverage_key}", provider: provider_name) %></p>
       </div>
 
       <div class="flex justify-end mt-4">

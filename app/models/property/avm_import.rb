@@ -6,13 +6,17 @@
 class Property::AvmImport
   Error = Class.new(StandardError)
 
-  def initialize(family:, owner:, provider_key:, name:, address_attributes:, external_id: nil)
+  # `area_value`/`area_unit` and `property_type` are only collected for
+  # providers that value from them (`requires_area?`, `accepts_property_type?`).
+  def initialize(family:, owner:, provider_key:, name:, address_attributes:, external_id: nil, area_value: nil, area_unit: nil, property_type: nil)
     @family = family
     @owner = owner
     @provider_key = provider_key.to_s
     @name = name
     @address_attributes = address_attributes
     @external_id = external_id.to_s.strip.presence
+    @area_sqft = Property.new(area_value: area_value.presence, area_unit: area_unit.presence || "sqft").area_in_sqft
+    @property_type = property_type.presence
   end
 
   # Step 1: validates the inputs, then spends one provider request. Returns
@@ -30,6 +34,8 @@ class Property::AvmImport
       postal_code: address_attributes[:postal_code]
     }
     lookup_params[:external_id] = external_id if provider_class.requires_external_id?
+    lookup_params[:square_footage] = area_sqft if provider_class.accepts_square_footage? && area_sqft.present?
+    lookup_params[:property_type] = property_type if provider_class.accepts_property_type?
 
     response = provider.fetch_property_valuation(**lookup_params)
     raise Error.new(response.error.message) unless response.success?
@@ -78,7 +84,7 @@ class Property::AvmImport
   end
 
   private
-    attr_reader :family, :owner, :provider_key, :name, :address_attributes, :external_id
+    attr_reader :family, :owner, :provider_key, :name, :address_attributes, :external_id, :area_sqft, :property_type
 
     def provider_class
       @provider_class ||= Provider::PropertyValuationConcept.provider_class(provider_key) ||
@@ -89,9 +95,13 @@ class Property::AvmImport
     # bypass that — validate locally before spending a monthly-budget request
     # on a lookup that can't produce a property.
     def validate_inputs!
-      return unless name.blank? || !provider_class.lookup_ready?(address_attributes, external_id)
+      return unless name.blank? || !provider_class.lookup_ready?(address_attributes, external_id, area: area_sqft, property_type: property_type)
 
-      message_key = provider_class.supported_country == "GB" ? "missing_fields_gb" : "missing_fields"
+      message_key = case provider_class.supported_country
+      when "GB" then "missing_fields_gb"
+      when "FR" then "missing_fields_fr"
+      else "missing_fields"
+      end
       raise Error.new(I18n.t("providers.property_valuation.#{message_key}"))
     end
 end
