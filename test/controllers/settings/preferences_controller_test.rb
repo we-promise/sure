@@ -148,6 +148,4 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     patch settings_preferences_url, params: { user: { preview_features_enabled: "0", web_push_budget_warnings_enabled: "1" } }
     assert_not user.reload.preview_features_enabled?
     assert_not user.web_push_budget_warnings_enabled?
-  end
-
-end
+  endend
