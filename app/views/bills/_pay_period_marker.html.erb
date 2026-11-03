@@ -43,7 +43,7 @@
       <p class="text-xs font-medium text-secondary">
         <%= t("bills.pay_period.paycheck_on", date: l(period.starts_on, format: :short)) %>
         <span class="text-subdued">&middot;</span>
-        <span class="privacy-sensitive"><%= format_money(Money.new(received || period.income, currency)) %></span>
+        <span class="<%= received ? "text-success" : "" %> privacy-sensitive"><%= format_money(Money.new(received || period.income, currency)) %></span>
         <% if received.nil? %>
           <span class="text-subdued"><%= past ? t("bills.pay_period.not_matched") : t("bills.pay_period.expected") %></span>
         <% end %>
