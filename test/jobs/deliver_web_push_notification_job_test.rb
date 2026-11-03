@@ -231,6 +231,38 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     assert_equal "failed", delivery.reload.status
   end
 
+  test "an in-flight attempt cannot be duplicated or reclaimed just because its queue claim is old" do
+    delivery = enqueue_delivery
+    delivery.update!(enqueued_at: 1.hour.ago)
+    @client.expects(:deliver).once.with do |**_arguments|
+      assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+        DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      end
+      true
+    end.returns(:accepted)
+
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+
+    assert_equal "accepted", delivery.reload.status
+    assert_equal 1, delivery.provider_attempts
+  end
+
+  test "a gone response does not delete credentials refreshed during provider IO" do
+    delivery = enqueue_delivery
+    @client.expects(:deliver).with do |**_arguments|
+      travel 1.second do
+        register_web_push(user: @user, session: @subscription.session, endpoint: @subscription.endpoint)
+      end
+      true
+    end.returns(:gone)
+
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+
+    assert WebPushSubscription.exists?(@subscription.id)
+    assert_equal "rejected", delivery.reload.status
+  end
+
   test "an abandoned pending claim is recovered after fifteen minutes" do
     delivery = enqueue_delivery
     clear_enqueued_jobs

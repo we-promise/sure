@@ -35,7 +35,7 @@ export default class extends Controller {
         }
         this.setStatus(!this.publicKeyValue ? "unconfigured" :
           Notification.permission === "denied" ? "denied" :
-          this.subscriptionIdValue && this.subscription ? "enabled" : "disabled");
+          this.subscriptionIdValue && this.subscriptionUsesCurrentKey(this.subscription) ? "enabled" : "disabled");
       } catch {
         this.setStatus("request");
       }
@@ -59,11 +59,17 @@ export default class extends Controller {
         return;
       }
       await navigator.serviceWorker.ready;
-      this.subscription = await this.registration.pushManager.getSubscription() ||
-        await this.registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: this.applicationServerKey(),
-        });
+      this.subscription = await this.registration.pushManager.getSubscription();
+      if (this.subscription && !this.subscriptionUsesCurrentKey(this.subscription)) {
+        if (this.subscriptionIdValue) await this.request(this.deviceUrl(), "DELETE");
+        this.subscriptionIdValue = "";
+        if (!await this.subscription.unsubscribe()) throw new Error("Browser subscription replacement failed");
+        this.subscription = null;
+      }
+      this.subscription ||= await this.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: this.applicationServerKey(),
+      });
       const subscription = this.subscription.toJSON();
       const result = await this.request(this.urlValue, "POST", {
         endpoint: subscription.endpoint,
@@ -152,6 +158,14 @@ export default class extends Controller {
     return result;
   }
 
+  subscriptionUsesCurrentKey(subscription) {
+    const boundKey = subscription?.options?.applicationServerKey;
+    if (!boundKey || !this.publicKeyValue) return false;
+    const expected = this.applicationServerKey();
+    const actual = new Uint8Array(boundKey);
+    return actual.length === expected.length && expected.every((byte, index) => byte === actual[index]);
+  }
+
   applicationServerKey() {
     const encoded = this.publicKeyValue.replace(/-/g, "+").replace(/_/g, "/");
     const decoded = atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, "="));
@@ -172,9 +186,10 @@ export default class extends Controller {
 
   updateControls() {
     const available = Boolean(this.supported && this.publicKeyValue && this.registration);
-    const enabled = Boolean(this.subscriptionIdValue && this.subscription);
+    const registered = Boolean(this.subscriptionIdValue && this.subscription);
+    const enabled = registered && this.subscriptionUsesCurrentKey(this.subscription);
     this.enableTarget.disabled = this.busy || !available || enabled;
-    this.disableTarget.disabled = this.busy || !enabled;
+    this.disableTarget.disabled = this.busy || !registered;
     this.testTarget.disabled = this.busy || !available || !enabled;
   }
 }

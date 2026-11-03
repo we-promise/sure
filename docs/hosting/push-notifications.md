@@ -111,7 +111,8 @@ Generate the key pair once with the maintained `web-push` gem, for example from
 your deployment's Rails console using `WebPush.generate_key`. Store its
 `public_key` and `private_key` in your secret store. Keep the same pair on web and
 worker processes and across deploys. Never commit the private key. Rotating the
-pair requires browsers to disable and enable notifications again.
+pair requires a new browser subscription; Enable this device replaces an old-key
+subscription when the browser is next enabled.
 
 The application must be served over HTTPS, and workers must consume `scheduled`.
 Allow outbound TLS on port 443 to the browser push services: `fcm.googleapis.com`,
@@ -171,7 +172,9 @@ Routine generator refreshes do not create a new version. Send-time checks repeat
 session, user, preview, budget preference, family, active insight, version, and
 shared-account visibility checks. Retries and ordinary duplicate jobs reuse the
 same ledger entry. HTTP 404/410 removes an invalid subscription. Connection
-failures, HTTP 429, and HTTP 5xx receive up to five attempts with bounded backoff;
+failures, HTTP 429, and HTTP 5xx receive at most five provider attempts across
+recovered jobs, with bounded backoff. Each attempt is reserved durably before
+contacting the provider, so an interrupted worker still consumes its attempt;
 other rejections are terminal. Each send has connection and read timeouts and a
 five-minute provider TTL.
 

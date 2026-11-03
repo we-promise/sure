@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_03_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2966,10 +2966,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
   end
 
   create_table "web_push_deliveries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "attempted_at"
     t.datetime "created_at", null: false
     t.datetime "enqueued_at"
     t.uuid "insight_id"
     t.integer "insight_version"
+    t.integer "provider_attempts", default: 0, null: false
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.uuid "web_push_subscription_id", null: false
@@ -2978,6 +2980,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
     t.index ["web_push_subscription_id", "insight_id", "insight_version"], name: "index_web_push_deliveries_on_insight_version", unique: true
     t.index ["web_push_subscription_id"], name: "index_web_push_deliveries_on_web_push_subscription_id"
     t.check_constraint "insight_id IS NULL AND insight_version IS NULL OR insight_id IS NOT NULL AND insight_version IS NOT NULL AND insight_version > 0", name: "chk_web_push_deliveries_insight_version"
+    t.check_constraint "provider_attempts >= 0", name: "chk_web_push_deliveries_provider_attempts"
     t.check_constraint "status::text = ANY (ARRAY['pending'::character varying, 'accepted'::character varying, 'skipped'::character varying, 'rejected'::character varying, 'failed'::character varying, 'enqueue_failed'::character varying]::text[])", name: "chk_web_push_deliveries_status"
   end
 

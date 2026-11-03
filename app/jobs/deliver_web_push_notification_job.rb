@@ -1,12 +1,10 @@
 class DeliverWebPushNotificationJob < ApplicationJob
   queue_as :scheduled
-  # ActiveJob owns the bounded retries; Sidekiq must not start another retry
-  # sequence after the fifth failed provider attempt.
+  # The persisted delivery owns the total budget; ActiveJob only schedules
+  # backoff. Sidekiq must not start a separate retry chain.
   sidekiq_options retry: false
 
-  retry_on WebPush::Client::TransientError, wait: :polynomially_longer, attempts: 5 do |job, _error|
-    WebPushDelivery.find_by(id: job.arguments.first[:web_push_delivery_id])&.update!(status: :failed)
-  end
+  retry_on WebPush::Client::TransientError, wait: :polynomially_longer, attempts: WebPushDelivery::MAX_PROVIDER_ATTEMPTS
   discard_on ActiveRecord::RecordNotFound
 
   def self.enqueue_for(insight)
@@ -37,19 +35,13 @@ class DeliverWebPushNotificationJob < ApplicationJob
 
   def perform(web_push_delivery_id:)
     delivery = WebPushDelivery.find(web_push_delivery_id)
-    # A row lock also serializes duplicate workers for the same material version.
-    delivery.with_lock do
-      return unless delivery.status_pending?
-      unless delivery.eligible?
-        delivery.update!(status: :skipped)
-        return
-      end
-      result = WebPush::Client.new.deliver(subscription: delivery.web_push_subscription, payload: delivery.payload)
-      if result == :gone
-        delivery.web_push_subscription.destroy!
-      else
-        delivery.update!(status: result == :accepted ? :accepted : :rejected)
-      end
-    end
+    attempt = delivery.claim_attempt!
+    return unless attempt
+
+    subscription = delivery.web_push_subscription
+    result = WebPush::Client.new.deliver(subscription: subscription, payload: delivery.payload)
+    delivery.complete_attempt!(attempt, result: result, subscription_updated_at: subscription.updated_at)
+  rescue WebPush::Client::TransientError
+    raise if delivery.retry_attempt!(attempt)
   end
 end
