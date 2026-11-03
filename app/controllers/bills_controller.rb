@@ -112,13 +112,6 @@ class BillsController < ApplicationController
                  .select { |occurrence| occurrence.effective_due_on >= today }
                  .sort_by(&:effective_due_on)
                  .first(NEXT_UP_LIMIT)
-
-    # Paydays join the lists after the counts above, so they are not counted as
-    # bills. This month's join the month list in date order; next month's sit
-    # under After this month.
-    payday_this_month, payday_next_month = overview_paydays(today).partition { |occurrence| occurrence.effective_due_on <= month_end }
-    @month_rows = (@month_rows + payday_this_month).sort_by { |occurrence| [ occurrence.effective_due_on, occurrence.id ] }
-    @later = (@later + payday_next_month).sort_by(&:effective_due_on)
   end
 
   # One-click detection for a page with nothing on it: run the full pipeline
@@ -467,25 +460,6 @@ class BillsController < ApplicationController
                          .where(recurring_occurrences: { recurring_transaction_id: @series.id })
                          .where("recurring_allocations.paid_on >= ?", Date.current.beginning_of_year)
                          .sum(:allocated_amount)
-    end
-
-    # Manually declared income due this month or next, whether or not its date
-    # has passed. Income is not owed, so payable_series_ids leaves it out; this
-    # is the only place it is loaded for the overview.
-    def overview_paydays(today)
-      series_ids = Current.family.recurring_transactions
-                          .accessible_by(Current.user)
-                          .where(bill_type: "income", manual: true, status: "active")
-                          .select(:id)
-
-      paydays = Current.family.recurring_occurrences
-                       .where(recurring_transaction_id: series_ids)
-                       .due_between(today.beginning_of_month, today.next_month.end_of_month)
-                       .includes(recurring_transaction: :merchant)
-                       .order(:due_on)
-                       .to_a
-      preload_allocation_sums(paydays)
-      paydays
     end
 
     # Open occurrences through the horizon plus everything closed this
