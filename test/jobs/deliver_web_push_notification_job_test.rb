@@ -334,6 +334,38 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
     DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
   end
 
+  test "configuration outages preserve pending attempts until recovery" do
+    delivery = enqueue_delivery
+    clear_enqueued_jobs
+    WebPush::Client.stubs(:configured?).returns(false)
+    @client.expects(:deliver).never
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    assert_equal "pending", delivery.reload.status
+    assert_equal 0, delivery.provider_attempts
+    travel 16.minutes do
+      assert_no_enqueued_jobs { DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family) }
+      assert_equal "pending", delivery.reload.status
+      WebPush::Client.stubs(:configured?).returns(true)
+      assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+      end
+    end
+  end
+
+  test "configuration outages preserve enqueue failures for later recovery" do
+    DeliverWebPushNotificationJob.stubs(:perform_later).returns(false)
+    delivery = enqueue_delivery
+    assert_equal "enqueue_failed", delivery.reload.status
+    WebPush::Client.stubs(:configured?).returns(false)
+    DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    assert_equal "enqueue_failed", delivery.reload.status
+    WebPush::Client.stubs(:configured?).returns(true)
+    DeliverWebPushNotificationJob.unstub(:perform_later)
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    end
+  end
+
   private
     def enqueue_delivery
       WebPushDelivery.record_for_insight!(@insight)
@@ -341,4 +373,5 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
       WebPushDelivery.find_by!(web_push_subscription: @subscription, insight: @insight,
         insight_version: @insight.notification_version)
     end
+
 end

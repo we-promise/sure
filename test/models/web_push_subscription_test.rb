@@ -88,4 +88,34 @@ class WebPushSubscriptionTest < ActiveSupport::TestCase
     assert_equal "[FILTERED]", filtered["p256dh"]
     assert_equal "[FILTERED]", filtered["auth"]
   end
+  test "equivalent host case and default port share one canonical endpoint identity" do
+    original = register_web_push(**@attributes)
+    equivalent = @attributes.merge(endpoint: @attributes[:endpoint].sub("fcm.googleapis.com", "FCM.GOOGLEAPIS.COM:443"))
+    assert_no_difference "WebPushSubscription.count" do
+      renewed = WebPushSubscription.register_for!(user: @user, session: original.session, **equivalent)
+      assert_equal original.id, renewed.id
+      assert_equal @attributes[:endpoint], renewed.endpoint
+    end
+    assert_raises ActiveRecord::RecordInvalid do
+      register_web_push(user: users(:family_member), endpoint: equivalent[:endpoint])
+    end
+  end
+
+  test "caps registrations per user while permitting renewal and session replacement" do
+    devices = 20.times.map { |i| register_web_push(user: @user, session: @session, endpoint: "https://fcm.googleapis.com/device-#{i}") }
+    assert_raises ActiveRecord::RecordInvalid do
+      register_web_push(user: @user, endpoint: "https://fcm.googleapis.com/device-excess")
+    end
+    original = devices.first
+    assert_no_difference "WebPushSubscription.count" do
+      renewed = WebPushSubscription.register_for!(user: @user, session: @session,
+        endpoint: original.endpoint, p256dh: original.p256dh, auth: original.auth)
+      assert_equal original.id, renewed.id
+      replacement = register_web_push(user: @user,
+        endpoint: original.endpoint, p256dh: original.p256dh, auth: original.auth)
+      assert_not_equal original.id, replacement.id
+    end
+    assert register_web_push(user: users(:family_member), endpoint: "https://fcm.googleapis.com/another-user").persisted?
+  end
+
 end
