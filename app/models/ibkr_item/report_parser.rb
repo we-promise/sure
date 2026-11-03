@@ -70,7 +70,8 @@ class IbkrItem::ReportParser
         name: account_id,
         currency: currency,
         cash_balance: extract_cash_balance(cash_report, currency),
-        current_balance: extract_total_balance(position_values, cash_report, currency),
+        current_balance: extract_nav_balance(equity_summary_in_base, currency) ||
+          extract_total_balance(position_values, cash_report, currency),
         report_date: report_date,
         statement: statement_data,
         cash_report: cash_report,
@@ -135,6 +136,39 @@ class IbkrItem::ReportParser
       row = base_summary || account_row
 
       parse_decimal(row&.fetch("end_of_period_value", nil)) || BigDecimal("0")
+    end
+
+    # IBKR's own net asset value, which covers every asset class the account
+    # holds. ChangeInPositionValues does not: a statement carrying crypto or
+    # spot metals leaves them out of it, and the balance then came to cash plus
+    # the listed positions alone -- short by whatever else was held, and at
+    # odds with the account's own history, which reads this same section.
+    # Position values plus cash stays as the fallback, for a Flex Query
+    # configured without the equity summary.
+    #
+    # Rows are filtered as IbkrAccount::HistoricalBalancesSync filters them:
+    # BASE_SUMMARY aggregates across currencies instead of stating a day's
+    # value, and a row with no currency at all is implicitly in base currency.
+    def extract_nav_balance(equity_rows, account_currency)
+      equity_rows
+        .filter_map do |row|
+          next unless nav_row_in_currency?(row, account_currency)
+
+          date = parse_date(row["report_date"])
+          total = parse_decimal(row["total"])
+          next unless date && total
+
+          [ date, total ]
+        end
+        .max_by(&:first)
+        &.last
+    end
+
+    def nav_row_in_currency?(row, account_currency)
+      currency = row["currency"].presence&.upcase
+      return false if currency == "BASE_SUMMARY"
+
+      currency.blank? || currency == account_currency
     end
 
     def extract_total_balance(position_values, cash_rows, account_currency)

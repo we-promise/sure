@@ -24,6 +24,24 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
     assert_equal 1, second_account[:equity_summary_in_base].size
   end
 
+  # ChangeInPositionValues covers the listed positions only, so a statement
+  # that also holds crypto or spot metals totals short of IBKR's own NAV.
+  test "reads the current balance from the latest NAV row" do
+    parsed = IbkrItem::ReportParser.new(nav_statement_xml).parse
+    account = parsed[:accounts].first
+
+    assert_equal BigDecimal("1500.00"), account[:current_balance]
+    assert_equal BigDecimal("200.00"), account[:cash_balance]
+  end
+
+  test "falls back to position values plus cash when the statement carries no NAV" do
+    xml = nav_statement_xml.sub(%r{<EquitySummaryInBase>.*</EquitySummaryInBase>}m, "")
+
+    account = IbkrItem::ReportParser.new(xml).parse[:accounts].first
+
+    assert_equal BigDecimal("1000.00"), account[:current_balance]
+  end
+
   test "raises parse error for malformed xml" do
     error = assert_raises(IbkrItem::ReportParser::ParseError) do
       IbkrItem::ReportParser.new("<FlexQueryResponse><FlexStatement>").parse
@@ -55,4 +73,31 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
 
     assert_equal "Invalid IBKR Flex XML: missing account identifier in FlexStatement.", error.message
   end
+
+  private
+
+    # Positions (800) plus cash (200) come to 1000; the NAV says 1500, the
+    # difference being whatever the statement holds outside ChangeInPositionValues.
+    # The BASE_SUMMARY row is dated with the latest one so that it would be
+    # picked if it were not skipped.
+    def nav_statement_xml
+      <<~XML
+        <FlexQueryResponse queryName="Sure Test">
+          <FlexStatement accountId="U1234567" fromDate="2026-05-07" toDate="2026-05-08">
+            <AccountInformation accountId="U1234567" currency="USD" />
+            <ChangeInPositionValues>
+              <ChangeInPositionValue accountId="U1234567" currency="BASE_SUMMARY" endOfPeriodValue="800.00" />
+            </ChangeInPositionValues>
+            <CashReport>
+              <CashReportCurrency currency="BASE_SUMMARY" endingCash="200.00" />
+            </CashReport>
+            <EquitySummaryInBase>
+              <EquitySummaryByReportDateInBase currency="USD" reportDate="2026-05-07" total="1400.00" />
+              <EquitySummaryByReportDateInBase currency="USD" reportDate="2026-05-08" total="1500.00" />
+              <EquitySummaryByReportDateInBase currency="BASE_SUMMARY" reportDate="2026-05-08" total="9999.00" />
+            </EquitySummaryInBase>
+          </FlexStatement>
+        </FlexQueryResponse>
+      XML
+    end
 end
