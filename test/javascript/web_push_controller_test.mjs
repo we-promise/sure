@@ -221,3 +221,46 @@ test("reconnecting the same controller does not revive a previous connection's p
   await polling;
   assert.equal(instance.statusTarget.textContent, "enabled");
 });
+
+for (const status of [202, 404]) {
+  test(`a Test POST completing with ${status} after reconnect cannot change the new lifecycle`, async () => {
+    const endpoint = "https://fcm.googleapis.com/local";
+    const { instance, context, timers } = await controller({ endpoint, registrations: { "local-id": await digest(endpoint) } });
+    instance.messagesValue.queued = "queued";
+    const response = deferred();
+    context.fetch = () => response.promise;
+    const testing = instance.test();
+    instance.disconnect();
+    await instance.connect();
+    instance.busy = true;
+    instance.updateControls();
+    response.resolve({ status, ok: status === 202, json: async () => ({}) });
+    await testing;
+    assert.equal(instance.statusTarget.textContent, "enabled");
+    assert.equal(instance.subscriptionIdValue, "local-id");
+    assert.equal(instance.busy, true);
+    assert.equal(instance.testTarget.disabled, true);
+    assert.equal(timers.size, 0);
+  });
+}
+
+for (const action of ["enable", "disable"]) {
+  test(`an old ${action} continuation cannot overwrite a reconnected controller`, async () => {
+    const endpoint = "https://fcm.googleapis.com/local";
+    const registrations = action === "disable" ? { "local-id": await digest(endpoint) } : {};
+    const { instance } = await controller({ endpoint, registrations });
+    const entered = deferred();
+    const response = deferred();
+    instance.request = () => { entered.resolve(); return response.promise; };
+    const operation = instance[action]();
+    await entered.promise;
+    instance.disconnect();
+    await instance.connect();
+    const expectedStatus = instance.statusTarget.textContent;
+    const expectedId = instance.subscriptionIdValue;
+    response.resolve({ id: "old-operation-id" });
+    await operation;
+    assert.equal(instance.statusTarget.textContent, expectedStatus);
+    assert.equal(instance.subscriptionIdValue, expectedId);
+  });
+}
