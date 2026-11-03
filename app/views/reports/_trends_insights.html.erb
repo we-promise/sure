@@ -1,4 +1,4 @@
-<div class="space-y-8">
+<div class="@container space-y-8">
     <%# Month-over-Month Trends %>
     <div>
       <h3 class="text-lg font-medium mb-4">
@@ -7,7 +7,7 @@
 
       <% if trends_data.any? %>
         <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
-          <div class="w-max sm:w-full">
+          <div class="w-max min-w-full">
           <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
           <table class="w-full">
             <thead class="bg-container-inset">
@@ -30,13 +30,13 @@
                       <% end %>
                     </span>
                   </td>
-                  <td class="py-3 px-4 lg:px-6 text-right privacy-sensitive">
+                  <td class="py-3 px-4 lg:px-6 text-right whitespace-nowrap privacy-sensitive">
                     <%= Money.new(trend[:income], Current.family.currency).format %>
                   </td>
-                  <td class="py-3 px-4 lg:px-6 text-right privacy-sensitive">
+                  <td class="py-3 px-4 lg:px-6 text-right whitespace-nowrap privacy-sensitive">
                     <%= Money.new(trend[:expenses], Current.family.currency).format %>
                   </td>
-                  <td class="py-3 px-4 lg:px-6 text-right privacy-sensitive <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
+                  <td class="py-3 px-4 lg:px-6 text-right whitespace-nowrap privacy-sensitive <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
                     <%= Money.new(trend[:net], Current.family.currency).format %>
                   </td>
                   <td class="py-3 px-4 lg:px-6 text-right <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
@@ -52,28 +52,28 @@
         </div>
 
         <%# Trend Insights %>
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="mt-6 grid grid-cols-1 @2xl:grid-cols-3 gap-4">
           <% avg_income = trends_data.sum { |t| t[:income] } / trends_data.length %>
           <% avg_expenses = trends_data.sum { |t| t[:expenses] } / trends_data.length %>
           <% avg_net = trends_data.sum { |t| t[:net] } / trends_data.length %>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_income") %></p>
-            <p class="text-lg font-semibold text-success privacy-sensitive">
+            <p class="text-lg font-semibold text-success whitespace-nowrap privacy-sensitive">
               <%= Money.new(avg_income, Current.family.currency).format %>
             </p>
           </div>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_expenses") %></p>
-            <p class="text-lg font-semibold text-primary privacy-sensitive">
+            <p class="text-lg font-semibold text-primary whitespace-nowrap privacy-sensitive">
               <%= Money.new(avg_expenses, Current.family.currency).format %>
             </p>
           </div>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_savings") %></p>
-            <p class="text-lg font-semibold privacy-sensitive <%= avg_net >= 0 ? "text-success" : "text-destructive" %>">
+            <p class="text-lg font-semibold whitespace-nowrap privacy-sensitive <%= avg_net >= 0 ? "text-success" : "text-destructive" %>">
               <%= Money.new(avg_net, Current.family.currency).format %>
             </p>
           </div>
