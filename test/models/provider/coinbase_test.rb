@@ -142,4 +142,35 @@ class Provider::CoinbaseTest < ActiveSupport::TestCase
     refute @provider.send(:ed25519_secret?, @test_key_multiline)
     refute @provider.send(:ed25519_secret?, @test_key_single_line)
   end
+
+  # --- paginated_get: rate limits mid-pagination ---
+
+  test "paginated_get preserves earlier pages when a later page is rate limited" do
+    stub_request(:get, "https://api.coinbase.com/v2/accounts/acct_1/transactions")
+      .to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {
+          "data" => [ { "id" => "txn_1" } ],
+          "pagination" => { "next_uri" => "/v2/accounts/acct_1/transactions?starting_after=txn_1" }
+        }.to_json
+      )
+    stub_request(:get, "https://api.coinbase.com/v2/accounts/acct_1/transactions?starting_after=txn_1")
+      .to_return(status: 429, headers: { "Content-Type" => "application/json" }, body: { "error" => "rate limited" }.to_json)
+
+    error = assert_raises(Provider::Coinbase::PartialResultError) do
+      @provider.get_transactions("acct_1", limit: 100)
+    end
+
+    assert_equal [ { "id" => "txn_1" } ], error.partial_results
+  end
+
+  test "paginated_get raises a plain RateLimitError when the very first page is rate limited" do
+    stub_request(:get, "https://api.coinbase.com/v2/accounts/acct_1/transactions")
+      .to_return(status: 429, headers: { "Content-Type" => "application/json" }, body: { "error" => "rate limited" }.to_json)
+
+    assert_raises(Provider::Coinbase::RateLimitError) do
+      @provider.get_transactions("acct_1", limit: 100)
+    end
+  end
 end
