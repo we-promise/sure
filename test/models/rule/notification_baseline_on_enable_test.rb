@@ -170,10 +170,9 @@ class Rule::NotificationBaselineOnEnableTest < ActiveSupport::TestCase
     rule.update!(name: "Renamed")
     NotificationDelivery.where(rule: rule).delete_all
 
-    action = rule.actions.create!(action_type: "send_email_notification")
-
+    # Creating the action seeds its baseline from its own commit callback.
     assert_difference -> { NotificationDelivery.where(rule: rule).count }, 1 do
-      action.send(:seed_notification_baseline)
+      rule.actions.create!(action_type: "send_email_notification")
     end
   end
 

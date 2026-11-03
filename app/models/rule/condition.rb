@@ -33,6 +33,24 @@ class Rule::Condition < ApplicationRecord
     condition_type == "compound"
   end
 
+  # Whether saving this condition would change which resources it matches: it is
+  # new, it is about to be destroyed, its type, operator or value is changing, or
+  # one of its sub-conditions is. Reads only what is in memory, which is where
+  # nested attributes put pending changes, so it costs no query.
+  #
+  # The edit form resubmits every condition with its current values; those are
+  # not changes. Nor is a value moving between nil and "": the form sends a
+  # valueless condition's hidden value field back as "" where an import stored
+  # nil, and no filter reads a blank value (validation requires one for every
+  # operator that does).
+  def match_criteria_changing?
+    return true if new_record? || marked_for_destruction?
+    return true if will_save_change_to_condition_type? || will_save_change_to_operator?
+    return true if will_save_change_to_value? && value_in_database.presence != value.presence
+
+    association(:sub_conditions).target.any?(&:match_criteria_changing?)
+  end
+
   def regex?
     Rule::ConditionFilter::REGEX_OPERATORS.include?(operator)
   end

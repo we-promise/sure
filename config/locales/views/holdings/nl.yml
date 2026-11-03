@@ -16,10 +16,9 @@ nl:
       provider: Van provider
     cost_basis_cell:
       unknown: "--"
-      set_cost_basis_header: "Kostprijs instellen voor %{ticker} (%{qty} aandelen)"
+      set_cost_basis_header: "Kostprijs instellen voor %{ticker}"
       total_cost_basis_label: Totale kostprijs
-      or_per_share_label: "Of voer per aandeel in:"
-      per_share: per aandeel
+      per_share_label: "Per aandeel"
       cancel: Annuleren
       save: Opslaan
       overwrite_confirm_title: Kostprijs overschrijven?

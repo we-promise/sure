@@ -1,0 +1,76 @@
+<%# locals: (comparison:, start_date:, end_date:) %>
+<%
+  whole = ->(amount) { Money.new(amount, Current.family.currency).format(precision: 0) }
+  tree = spending_treemap_nodes(comparison, start_date: start_date, end_date: end_date)
+  changes = spending_changes(comparison, start_date: start_date, end_date: end_date)
+%>
+<div class="@container space-y-4">
+  <p class="text-sm text-secondary">
+    <% if comparison.comparable? %>
+      <%= t(comparison.in_progress? ? "reports.spending_vs_normal.summary_so_far_html" : "reports.spending_vs_normal.summary_html",
+            total: tag.span(whole.call(comparison.total), class: "privacy-sensitive"),
+            normal: tag.span(whole.call(comparison.normal_total), class: "privacy-sensitive"),
+            baseline_start: l(comparison.baseline_period.start_date, format: :long),
+            baseline_end: l(comparison.baseline_period.end_date, format: :long)) %>
+    <% else %>
+      <%= t("reports.spending_vs_normal.no_history_html", total: tag.span(whole.call(comparison.total), class: "privacy-sensitive")) %>
+    <% end %>
+  </p>
+
+  <% if tree.empty? %>
+    <p class="text-sm text-secondary py-6 text-center"><%= t("reports.spending_vs_normal.no_spending") %></p>
+  <% else %>
+    <div class="grid grid-cols-1 @3xl:grid-cols-5 gap-6">
+      <div class="@3xl:col-span-3 min-w-0">
+        <h3 id="spending-treemap-title" class="text-sm font-medium text-secondary mb-2"><%= t("reports.spending_vs_normal.treemap_title") %></h3>
+        <div class="privacy-sensitive"
+             data-controller="spending-treemap"
+             data-spending-treemap-tree-value="<%= tree.to_json %>"
+             data-spending-treemap-labels-value="<%= {
+               open: t("reports.spending_vs_normal.tooltip.open"),
+               legend: {
+                 less: t("reports.spending_vs_normal.legend.less"),
+                 slightly_less: t("reports.spending_vs_normal.legend.slightly_less"),
+                 normal: t("reports.spending_vs_normal.legend.normal"),
+                 slightly_more: t("reports.spending_vs_normal.legend.slightly_more"),
+                 more: t("reports.spending_vs_normal.legend.more"),
+                 much_more: t("reports.spending_vs_normal.legend.much_more")
+               }
+             }.to_json %>"
+             data-spending-treemap-comparable-value="<%= comparison.comparable? %>"
+             role="group"
+             aria-labelledby="spending-treemap-title">
+          <div class="h-90 @3xl:h-110 w-full" data-spending-treemap-target="chart"></div>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-xs text-secondary" data-spending-treemap-target="legend"></div>
+        </div>
+      </div>
+
+      <div class="@3xl:col-span-2 min-w-0">
+        <h3 class="text-sm font-medium text-secondary mb-2"><%= t("reports.spending_vs_normal.changes_title") %></h3>
+        <% if changes.empty? %>
+          <p class="text-sm text-secondary"><%= comparison.comparable? ? t("reports.spending_vs_normal.no_changes") : t("reports.spending_vs_normal.no_history_short") %></p>
+        <% else %>
+          <ul class="space-y-1" data-testid="spending-changes">
+            <% changes.each do |change| %>
+              <li>
+                <%= link_to change[:href],
+                      class: "grid grid-cols-[minmax(0,9rem)_1fr_5rem] items-center gap-2 rounded-md px-1 py-1 hover:bg-container-inset text-sm" do %>
+                  <span class="truncate text-primary"><%= change[:row].category.name %></span>
+                  <span class="grid grid-cols-2 h-3" aria-hidden="true">
+                    <span class="flex justify-end">
+                      <% if change[:row].change.negative? %><span class="h-3 rounded-l bg-success" style="width: <%= change[:width] %>%"></span><% end %>
+                    </span>
+                    <span class="flex justify-start border-l border-secondary">
+                      <% if change[:row].change.positive? %><span class="h-3 rounded-r bg-destructive" style="width: <%= change[:width] %>%"></span><% end %>
+                    </span>
+                  </span>
+                  <span class="text-right text-secondary privacy-sensitive tabular-nums"><%= change[:amount_label] %></span>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>
