@@ -116,4 +116,5 @@ class WebPushSubscriptionTest < ActiveSupport::TestCase
       assert_not_equal original.id, replacement.id
     end
     assert register_web_push(user: users(:family_member), endpoint: "https://fcm.googleapis.com/another-user").persisted?
-  endend
+  end
+end

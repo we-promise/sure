@@ -372,4 +372,5 @@ class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
       DeliverWebPushNotificationJob.enqueue_for(@insight)
       WebPushDelivery.find_by!(web_push_subscription: @subscription, insight: @insight,
         insight_version: @insight.notification_version)
-    endend
+    end
+end
