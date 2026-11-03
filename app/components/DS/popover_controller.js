@@ -108,6 +108,7 @@ export default class extends Controller {
     frame.id = this.frameIdValue;
     frame.setAttribute("src", this.frameSrcValue);
     frame.addEventListener("turbo:fetch-request-error", this.showFrameError);
+    frame.addEventListener("turbo:before-fetch-response", this.showFrameErrorOnFailure);
     frame.addEventListener("turbo:frame-missing", this.showFrameError);
     const placeholder = document.createElement("div");
     placeholder.className = "p-6 flex items-center justify-center";
@@ -117,6 +118,14 @@ export default class extends Controller {
     frame.append(placeholder);
     this.frameTarget.replaceChildren(frame);
   }
+
+  // An error response with an empty body (head :not_found) fires no Turbo
+  // frame event at all, so the status is checked before Turbo handles it.
+  showFrameErrorOnFailure = (event) => {
+    if (event.detail.fetchResponse.succeeded) return;
+
+    this.showFrameError(event);
+  };
 
   // Covers network errors and error responses without the frame (404, 500).
   // Turbo would otherwise keep the placeholder or show "Content missing".
