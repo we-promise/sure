@@ -24,7 +24,7 @@ class Settings::PreferencesController < ApplicationController
         updated_prefs["preview_features_enabled"] =
           ActiveModel::Type::Boolean.new.cast(user_params[:preview_features_enabled])
       end
-      if user_params.key?(:web_push_budget_warnings_enabled) && @user.preview_features_enabled?
+      if user_params.key?(:web_push_budget_warnings_enabled) && updated_prefs["preview_features_enabled"] == true
         updated_prefs["web_push_budget_warnings_enabled"] =
           ActiveModel::Type::Boolean.new.cast(user_params[:web_push_budget_warnings_enabled])
       end

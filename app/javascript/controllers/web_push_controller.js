@@ -11,6 +11,7 @@ export default class extends Controller {
   };
 
   async connect() {
+    this.pollGeneration = (this.pollGeneration || 0) + 1;
     this.busy = true;
     this.subscriptionIdValue = "";
     this.supported = window.isSecureContext && "serviceWorker" in navigator &&
@@ -94,17 +95,19 @@ export default class extends Controller {
 
   async test() {
     await this.run(async () => {
+      this.stopPolling();
       await this.request(`${this.deviceUrl()}/test_notification`, "POST");
       this.setStatus("queued");
       this.pollCount = 0;
-      this.stopPolling();
       this.pollTimer = setTimeout(() => this.pollTest(), 1500);
     });
   }
 
   async pollTest() {
+    const generation = this.pollGeneration;
     try {
       const result = await this.request(this.deviceUrl(), "GET");
+      if (generation !== this.pollGeneration) return;
       const status = result.test_status || "pending";
       this.setStatus(status);
       if (status === "pending" && ++this.pollCount < 20) {
@@ -113,7 +116,8 @@ export default class extends Controller {
         this.setStatus("expired");
       }
     } catch (error) {
-      this.statusTarget.textContent = error.userMessage || this.messagesValue.request;
+      if (generation !== this.pollGeneration) return;
+      this.showError(error);
     }
   }
 
@@ -124,7 +128,7 @@ export default class extends Controller {
     try {
       await action();
     } catch (error) {
-      this.statusTarget.textContent = error.userMessage || this.messagesValue.request;
+      this.showError(error);
     } finally {
       this.busy = false;
       this.updateControls();
@@ -145,17 +149,22 @@ export default class extends Controller {
     });
     if (response.status === 204) return {};
     if (response.status === 404 && method === "DELETE") return {};
-    if (response.status === 404) {
-      this.subscriptionIdValue = "";
-      this.updateControls();
-    }
     const result = await response.json();
     if (!response.ok) {
       const error = new Error("Browser notification request failed");
+      error.status = response.status;
       error.userMessage = result.error || this.messagesValue.request;
       throw error;
     }
     return result;
+  }
+
+  showError(error) {
+    if (error.status === 404) {
+      this.subscriptionIdValue = "";
+      this.updateControls();
+    }
+    this.statusTarget.textContent = error.userMessage || this.messagesValue.request;
   }
 
   subscriptionUsesCurrentKey(subscription) {
@@ -181,6 +190,7 @@ export default class extends Controller {
   }
 
   stopPolling() {
+    this.pollGeneration++;
     clearTimeout(this.pollTimer);
   }
 

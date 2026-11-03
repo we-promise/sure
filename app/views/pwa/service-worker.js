@@ -101,7 +101,13 @@ self.addEventListener("notificationclick", (event) => {
       for (const client of windows) {
         const url = new URL(client.url);
         if (url.origin === destination.origin && url.pathname === destination.pathname && "focus" in client) {
-          if ("navigate" in client) await client.navigate(destination.href);
+          if ("navigate" in client) {
+            try {
+              await client.navigate(destination.href);
+            } catch {
+              continue;
+            }
+          }
           return client.focus();
         }
       }

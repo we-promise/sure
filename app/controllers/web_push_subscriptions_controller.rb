@@ -3,6 +3,11 @@ class WebPushSubscriptionsController < ApplicationController
   before_action :require_web_push_configuration, only: [ :create, :test_notification ]
   before_action :set_subscription, only: [ :show, :destroy, :test_notification ]
 
+  rate_limit to: 10, within: 1.minute, by: -> { Current.user.id }, only: :create, name: "web-push-registration",
+    with: -> { render json: { error: t("web_push.errors.rate_limited") }, status: :too_many_requests }
+  rate_limit to: 2, within: 1.minute, by: -> { Current.user.id }, only: :test_notification, name: "web-push-test",
+    with: -> { render json: { error: t("web_push.errors.rate_limited") }, status: :too_many_requests }
+
   def create
     attributes = params.permit(:endpoint, :p256dh, :auth)
     subscription = WebPushSubscription.register_for!(user: Current.user, session: Current.session,
