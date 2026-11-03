@@ -372,7 +372,8 @@ class RecurringTransaction
         expected = occurrence.resolved_expected_amount
         if expected.positive? && occurrence.allocations.confirmed.count == 1 && close_worthy?
           deviation_pct = (entry.amount.abs - expected).abs / expected * 100
-          current = BigDecimal(hints["learned_tolerance_pct"].to_s, exception: false) || BigDecimal("0")
+          current = BigDecimal(hints["learned_tolerance_pct"].to_s, exception: false)
+          current = BigDecimal("0") unless current&.finite?
 
           if deviation_pct > series.amount_tolerance_pct &&
              deviation_pct > current &&

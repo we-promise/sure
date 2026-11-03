@@ -211,6 +211,16 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal 2080, allocation.allocated_amount
   end
 
+  test "a non-finite learned hint reads as no widening" do
+    # "Infinity" would otherwise widen the band to everything. 30% over is
+    # beyond the 25% learnable limit, so the default must still cap it.
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => "Infinity" })
+
+    allocation = @allocator.allocate!(entry: entry_for(2600))
+
+    assert_equal 2000, allocation.allocated_amount
+  end
+
   test "the first manual link of a payment outside the default band records the actual amount" do
     # The Codex case: a 40.00 bill, a 46.80 payment (17% over). The first link
     # teaches a 17% band and records 46.80, not the 40.00 estimate.
