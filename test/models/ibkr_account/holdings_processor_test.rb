@@ -88,25 +88,41 @@ class IbkrAccount::HoldingsProcessorTest < ActiveSupport::TestCase
       crypto_position.merge("conid" => "641027225", "position" => "1.5", "cost_basis_price" => "50000.00")
     ])
 
-    IbkrAccount::HoldingsProcessor.new(@ibkr_account).process
+    bitcoin = process_and_find("CRYPTO:BTC")
 
-    bitcoin = holdings_by_ticker["CRYPTO:BTC"]
     assert_equal 1, @account.holdings.count
     assert_equal 2, bitcoin.qty
     assert_equal 120_000, bitcoin.amount
   end
 
-  # valid_lots asks a lot only for a position and a cost basis, so a lot with
-  # no price of its own would otherwise add its quantity to the group's.
-  test "a lot with no mark price does not inflate its group's quantity" do
+  # A group holds every lot of one asset, and IBKR marks each conid on its own.
+  test "each lot is valued at its own mark price" do
     @ibkr_account.update!(raw_holdings_payload: [
       crypto_position,
-      crypto_position.merge("mark_price" => "", "position" => "9")
+      crypto_position.merge("conid" => "641027225", "position" => "1.5", "mark_price" => "40000.00")
     ])
 
-    IbkrAccount::HoldingsProcessor.new(@ibkr_account).process
+    bitcoin = process_and_find("CRYPTO:BTC")
 
-    assert_equal 0.5, holdings_by_ticker["CRYPTO:BTC"].qty
+    assert_equal 2, bitcoin.qty
+    assert_equal 90_000, bitcoin.amount, "0.5 at 60,000 plus 1.5 at 40,000"
+    assert_equal 45_000, bitcoin.price, "the weighted average the amount implies"
+  end
+
+  # supported_position? only asks that mark_price be present, and a group's
+  # other lots carry it past that check, so an unparseable one would otherwise
+  # add its quantity to the group at no value.
+  test "a lot with an unusable mark price does not inflate its group's quantity" do
+    @ibkr_account.update!(raw_holdings_payload: [
+      crypto_position,
+      crypto_position.merge("mark_price" => "N/A", "position" => "9"),
+      crypto_position.merge("mark_price" => "", "position" => "7")
+    ])
+
+    bitcoin = process_and_find("CRYPTO:BTC")
+
+    assert_equal 0.5, bitcoin.qty
+    assert_equal 30_000, bitcoin.amount
   end
 
   # A group that cannot be imported must not leave a security behind with no
@@ -135,6 +151,11 @@ class IbkrAccount::HoldingsProcessorTest < ActiveSupport::TestCase
   end
 
   private
+
+    def process_and_find(ticker)
+      IbkrAccount::HoldingsProcessor.new(@ibkr_account).process
+      holdings_by_ticker.fetch(ticker)
+    end
 
     def holdings_by_ticker
       @account.holdings.includes(:security).index_by { |holding| holding.security.ticker }

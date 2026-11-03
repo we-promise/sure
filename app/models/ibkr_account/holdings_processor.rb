@@ -71,32 +71,25 @@ class IbkrAccount::HoldingsProcessor
 
     def process_group(rows, report_date)
       sample = rows.first
-      price = parse_decimal(sample[:mark_price])
-      # quantity and cost_basis are derived from the same set of valid lots so
-      # they are always consistent — a lot with an unparseable cost_basis_price
-      # is excluded from both counts rather than inflating qty while shrinking basis.
       aggregate = valid_lots(rows)
-      return unless price && aggregate
+      return unless aggregate
 
-      # Resolved after the price, so a group that cannot be imported does not
-      # leave a security behind with no holding on it.
+      # Resolved after the lots, so a group with nothing importable in it does
+      # not leave a security behind with no holding on it.
       security = resolve_position_security(sample)
       return unless security
 
-      quantity   = aggregate[:quantity]
-      cost_basis = aggregate[:cost_basis]
-      amount = quantity * price
       currency = extract_currency(sample, fallback: @ibkr_account.currency)
       external_id = [ "ibkr", @ibkr_account.ibkr_account_id, position_key(sample), report_date, currency ].join("_")
 
       import_adapter.import_holding(
         security: security,
-        quantity: quantity,
-        amount: amount,
+        quantity: aggregate[:quantity],
+        amount: aggregate[:amount],
         currency: currency,
         date: report_date,
-        price: price,
-        cost_basis: cost_basis,
+        price: aggregate[:price],
+        cost_basis: aggregate[:cost_basis],
         external_id: external_id,
         source: "ibkr",
         account_provider_id: @ibkr_account.account_provider&.id,
@@ -104,33 +97,45 @@ class IbkrAccount::HoldingsProcessor
       )
     end
 
-    # Aggregates only the lots that have both a parseable position and cost_basis_price.
-    # Returns { quantity:, cost_basis: } so the caller uses a consistent lot set for
-    # both values — a lot skipped here is excluded from quantity too, preventing the
-    # case where qty covers more shares than the cost basis was computed from.
+    # Aggregates only the lots carrying a parseable position, cost_basis_price and
+    # mark_price. Every returned figure comes from that one lot set, so a lot
+    # skipped here is out of the quantity as well — otherwise qty would cover
+    # more shares than the cost basis and the value were computed from.
+    #
+    # Each lot is valued at its own mark: a group holds every lot of one asset,
+    # which for an unlisted position can span conids that IBKR marks separately.
+    # price is the weighted average that amount and quantity imply.
     def valid_lots(rows)
       total_quantity = BigDecimal("0")
       total_cost = BigDecimal("0")
+      total_value = BigDecimal("0")
 
       rows.each do |row|
         row_quantity   = parse_decimal(row[:position])
         row_cost_basis = parse_decimal(row[:cost_basis_price])
+        row_price      = parse_decimal(row[:mark_price])
 
-        unless row_quantity && row_cost_basis
+        unless row_quantity && row_cost_basis && row_price
           Rails.logger.warn(
-            "IbkrAccount::HoldingsProcessor - Skipping lot with missing position or cost_basis_price " \
-            "for conid=#{row[:conid].inspect}"
+            "IbkrAccount::HoldingsProcessor - Skipping lot with missing position, cost_basis_price " \
+            "or mark_price for conid=#{row[:conid].inspect}"
           )
           next
         end
 
         total_quantity += row_quantity.abs
         total_cost     += row_quantity.abs * row_cost_basis
+        total_value    += row_quantity.abs * row_price
       end
 
       return nil if total_quantity.zero?
 
-      { quantity: total_quantity, cost_basis: total_cost / total_quantity }
+      {
+        quantity: total_quantity,
+        cost_basis: total_cost / total_quantity,
+        amount: total_value,
+        price: total_value / total_quantity
+      }
     end
 
     def resolve_position_security(row)

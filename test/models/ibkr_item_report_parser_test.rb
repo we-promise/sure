@@ -45,6 +45,17 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1400.00"), account[:current_balance]
   end
 
+  # A NAV dated after report_date is a value the account did not hold on that
+  # date, and the balance is written to report_date.
+  test "ignores a NAV row dated after the statement's report date" do
+    xml = nav_statement_xml(open_positions: open_positions_on("2026-05-06"))
+
+    account = IbkrItem::ReportParser.new(xml).parse[:accounts].first
+
+    assert_equal Date.new(2026, 5, 6), account[:report_date]
+    assert_equal BigDecimal("1000.00"), account[:current_balance]
+  end
+
   test "falls back to position values plus cash when the statement carries no NAV" do
     xml = nav_statement_xml.sub(%r{<EquitySummaryInBase>.*</EquitySummaryInBase>}m, "")
 

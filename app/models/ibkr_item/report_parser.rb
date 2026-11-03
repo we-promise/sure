@@ -145,9 +145,13 @@ class IbkrItem::ReportParser
     # section IbkrAccount::HistoricalBalancesSync reads, which keeps the
     # current balance and the balance history on one figure.
     #
-    # report_date's own row is preferred, so the figure belongs to the date
-    # IbkrAccount::Processor anchors the balance on, and the latest row is taken
-    # only when that date has none.
+    # Only a row on or before report_date is eligible, so the balance is never a
+    # value the account reached after the date IbkrAccount::Processor anchors it
+    # on. report_date normally has its own row; when it does not, the most recent
+    # one before it is carried forward, as HistoricalBalancesSync#fill_gaps
+    # carries a total across the days IBKR does not report. A statement whose
+    # equity summary begins after its positions has no NAV that can stand for
+    # that date, and takes the fallback.
     #
     # Rows are filtered as HistoricalBalancesSync filters them: BASE_SUMMARY
     # aggregates across currencies instead of stating a day's value, and a row
@@ -163,7 +167,7 @@ class IbkrItem::ReportParser
         totals[date] = total
       end
 
-      totals_by_date[report_date] || totals_by_date.max_by(&:first)&.last
+      totals_by_date.select { |date, _| date <= report_date }.max_by(&:first)&.last
     end
 
     def nav_row_in_currency?(row, account_currency)
