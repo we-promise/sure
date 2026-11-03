@@ -85,6 +85,7 @@ class RecurringTransaction
           )
 
           learn_from_manual_attach!(allocation) if entry
+          allocation = promote_settlement!(allocation) if entry && amount.blank?
           refresh_close_state!
           allocation
         end
@@ -295,13 +296,37 @@ class RecurringTransaction
       # yet, and its amount sits inside the same tolerance band the matcher uses.
       # Partial payments and accumulations keep the capped behaviour.
       def settles_bill?(entry, entry_total)
-        expected = occurrence.resolved_expected_amount
-        return false unless expected.positive?
         return false if occurrence.allocations.confirmed.exists?
         return false if RecurringAllocation.where(entry: entry).exists?
 
+        within_settlement_band?(entry_total)
+      end
+
+      def within_settlement_band?(entry_total)
+        expected = occurrence.resolved_expected_amount
+        return false unless expected.positive?
+
         tolerance = expected * (occurrence.recurring_transaction.effective_amount_tolerance_pct / BigDecimal("100"))
         (entry_total - expected).abs <= tolerance
+      end
+
+      # A manual link can teach the band that covers it (learn_from_manual_attach!),
+      # but only after its own allocation was capped. When the band it just taught
+      # now covers this payment, and it is the only settlement of the bill and the
+      # only use of the entry, record the whole entry so the history shows what
+      # was actually paid. Explicit amounts are never changed.
+      def promote_settlement!(allocation)
+        entry = allocation.entry
+        return allocation unless entry.currency == occurrence.currency
+        return allocation unless occurrence.allocations.confirmed.count == 1
+        return allocation unless RecurringAllocation.where(entry: entry).count == 1
+
+        entry_total = entry.amount.abs
+        return allocation if allocation.allocated_amount == entry_total
+        return allocation unless within_settlement_band?(entry_total)
+
+        allocation.update!(allocated_amount: entry_total, source_amount: entry_total)
+        allocation
       end
 
       # True once any allocation on this entry lacks a source amount, which

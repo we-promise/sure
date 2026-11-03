@@ -910,7 +910,7 @@ class RecurringTransaction < ApplicationRecord
   # The tolerance band the matcher uses: the series' own tolerance, widened by
   # what a manual attach has taught. Every amount decision reads this one value.
   def effective_amount_tolerance_pct
-    learned = BigDecimal((matcher_hints || {}).fetch("learned_tolerance_pct", 0).to_s)
+    learned = BigDecimal(((matcher_hints || {})["learned_tolerance_pct"] || 0).to_s)
     [ amount_tolerance_pct, learned ].max
   end
 
