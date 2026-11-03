@@ -63,6 +63,21 @@ class GocardlessItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("gocardless_items.complete_account_setup.creation_failed", error: "Unknown error"), flash[:alert]
   end
 
+  test "setup form reports failed accounts alongside the success notice" do
+    ok = @item.gocardless_accounts.create!(name: "Current", currency: "GBP", gocardless_account_id: "acc-1", current_balance: 10)
+    bad = @item.gocardless_accounts.create!(name: "Savings", currency: "GBP", gocardless_account_id: "acc-2", current_balance: 20)
+    created = @family.accounts.create!(name: "Current", balance: 10, currency: "GBP", accountable: Depository.new)
+    GocardlessItemsController.any_instance.stubs(:create_account_from_gocardless).returns(created).then.raises(StandardError, "boom")
+
+    post complete_account_setup_gocardless_item_url(@item), params: {
+      accounts: { ok.id => { account_type: "depository" }, bad.id => { account_type: "depository" } }
+    }
+
+    assert_redirected_to accounts_url
+    assert flash[:alert].present?
+    assert_equal I18n.t("gocardless_items.complete_account_setup.partial_failure", count: 1), flash[:alert]
+  end
+
   test "setup form renders one type select per unlinked account" do
     account = @item.gocardless_accounts.create!(name: "Current", currency: "GBP", gocardless_account_id: "acc-1")
 

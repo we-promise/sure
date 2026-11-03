@@ -252,6 +252,9 @@ en:
       all_skipped: "All accounts were skipped. No accounts were created."
       creation_failed: "Failed to create accounts: %{error}"
       no_accounts: "No accounts to set up."
+      partial_failure:
+        one: "%{count} account could not be set up. Try it again from the setup page."
+        other: "%{count} accounts could not be set up. Try them again from the setup page."
       success: "Successfully created %{count} account(s)."
 
     # Preload accounts

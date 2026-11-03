@@ -370,7 +370,8 @@ class GocardlessItemsController < ApplicationController
 
     if created_count > 0
       @gocardless_item.sync_later unless @gocardless_item.syncing?
-      redirect_to accounts_path, notice: t(".success", count: created_count)
+      redirect_to accounts_path, notice: t(".success", count: created_count),
+                                 alert: (t(".partial_failure", count: failed_count) if failed_count > 0)
     elsif failed_count == 0 && skipped_count > 0
       redirect_to accounts_path, notice: t(".all_skipped")
     else
