@@ -87,6 +87,42 @@ class Provider::TradeRepublicWebsocketTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects a proxy URI without a hostname without requiring reauthentication" do
+    with_proxy_env("HTTP_PROXY" => "http://") do
+      error = assert_raises(Provider::TradeRepublicClient::ProviderUnavailable) do
+        websocket.send(:proxy_uri)
+      end
+
+      refute_kind_of Provider::TradeRepublicClient::ConfigurationError, error
+    end
+  end
+
+  test "connect sends the CONNECT request through the configured proxy" do
+    with_proxy_server do |port, requests|
+      websocket = websocket_with_proxy("http://127.0.0.1:#{port}")
+
+      OpenSSL::SSL::SSLContext.any_instance.stubs(:set_params)
+      OpenSSL::SSL::SSLSocket.any_instance.stubs(:hostname=)
+      OpenSSL::SSL::SSLSocket.any_instance.stubs(:sync_close=)
+      OpenSSL::SSL::SSLSocket.any_instance.stubs(:connect)
+      OpenSSL::SSL::SSLSocket.any_instance.stubs(:post_connection_check)
+      OpenSSL::SSL::SSLSocket.any_instance.stubs(:close)
+
+      driver = mock("driver")
+      driver.stubs(:set_header)
+      driver.stubs(:on)
+      driver.stubs(:start)
+      driver.stubs(:state).returns(:open)
+      driver.stubs(:close)
+      WebSocket::Driver.stubs(:client).returns(driver)
+
+      assert_same websocket, websocket.connect
+      assert_equal "CONNECT #{Provider::TradeRepublicWebsocket::HOST}:443 HTTP/1.1\r\n", requests.pop.lines.first
+
+      websocket.close
+    end
+  end
+
   private
     # Builds a WebSocket client with the given timeout and no stubbed proxy.
     def websocket(timeout: 2)

@@ -79,6 +79,16 @@ class HttpProxyTest < ActiveSupport::TestCase
     end
   end
 
+  test "falls back to lowercase no_proxy when NO_PROXY is empty" do
+    with_proxy_env(
+      "HTTPS_PROXY" => "http://proxy.example:8443",
+      "NO_PROXY" => "",
+      "no_proxy" => ".example.com"
+    ) do
+      assert_nil HttpProxy.resolve(scheme: "https", host: "api.example.com")
+    end
+  end
+
   test "raises for an invalid proxy URL" do
     with_proxy_env("HTTPS_PROXY" => "http://[invalid") do
       assert_raises(URI::InvalidURIError) do

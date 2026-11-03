@@ -14,7 +14,7 @@ class HttpProxy
 
       proxy_url = env_keys.filter_map { |key| ENV[key].presence || ENV[key.downcase].presence }.first
       return if proxy_url.blank?
-      return if bypassed?(host, ENV["NO_PROXY"] || ENV["no_proxy"])
+      return if bypassed?(host, ENV["NO_PROXY"].presence || ENV["no_proxy"])
 
       URI(proxy_url)
     end

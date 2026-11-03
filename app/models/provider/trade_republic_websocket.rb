@@ -120,6 +120,11 @@ class Provider::TradeRepublicWebsocket
               "Unsupported Trade Republic WebSocket proxy scheme"
       end
 
+      if proxy.hostname.blank?
+        raise Provider::TradeRepublicClient::ProviderUnavailable,
+              "Invalid Trade Republic WebSocket proxy configuration"
+      end
+
       proxy
     rescue URI::Error
       raise Provider::TradeRepublicClient::ProviderUnavailable,
