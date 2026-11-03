@@ -115,6 +115,9 @@ module SettingsHelper
     when "trading212"
       return { status: :off } unless @trading212_items&.any?
       sync_based_summary(key)
+    when "moomoo"
+      return { status: :off } unless @moomoo_items&.any?(&:oauth_configured?)
+      moomoo_summary
     when "snaptrade"
       configured_item = @snaptrade_items&.find(&:oauth_configured?)
       return { status: :off } unless configured_item
@@ -326,6 +329,15 @@ module SettingsHelper
       else
         { status: :ok, last_synced_at: nil }
       end
+    end
+
+    # A connection moomoo stopped accepting also fails its syncs, so the row
+    # asks for the reconnect that fixes both.
+    def moomoo_summary
+      summary = sync_based_summary("moomoo")
+      return summary unless @moomoo_items.any? { |item| item.oauth_configured? && item.requires_update? }
+
+      summary.merge(status: :warn, meta: t("settings.providers.meta.reconsent_required"))
     end
 
     def not_self_hosted?

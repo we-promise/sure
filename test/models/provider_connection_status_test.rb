@@ -144,4 +144,17 @@ class ProviderConnectionStatusTest < ActiveSupport::TestCase
     assert_equal "good", status[:status]
     assert_equal false, status[:requires_update]
   end
+
+  test "moomoo account counts leave out futures and crypto accounts, which can't be linked" do
+    item = moomoo_items(:connected_item)
+    manual = Account.create!(family: item.family, name: "moomoo SG", balance: 0, currency: "SGD", accountable: Investment.new)
+    AccountProvider.create!(account: manual, provider: moomoo_accounts(:main_account))
+    item.moomoo_accounts.create!(moomoo_account_id: "2222", name: "Futures", currency: "SGD", account_kind: "futures", enable_markets: [ 5 ])
+    item.moomoo_accounts.create!(moomoo_account_id: "3333", name: "Crypto", currency: "SGD", account_kind: "crypto", enable_markets: [ 7 ])
+
+    status = ProviderConnectionStatus.for_family(item.family).find { |entry| entry[:provider] == "moomoo" && entry[:id] == item.id }
+
+    assert_equal({ total_count: 1, linked_count: 1, unlinked_count: 0 }, status[:accounts])
+    assert_equal item.unlinked_accounts_count, status.dig(:accounts, :unlinked_count)
+  end
 end

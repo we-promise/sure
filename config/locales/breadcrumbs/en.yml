@@ -55,6 +55,7 @@ en:
     messages: Messages
     mfa: Two-factor authentication
     monobank_items: Monobank
+    moomoo_items: moomoo
     oidc_accounts: SSO accounts
     onboardings: Onboarding
     other_assets: Other assets

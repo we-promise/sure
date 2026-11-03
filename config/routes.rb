@@ -214,6 +214,23 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :moomoo_items, only: [ :destroy ] do
+    collection do
+      post :connect
+      get :callback
+      get :select_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      post :reauthorize
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   # Trade Republic routes (login steps are TR-specific: web login needs a
   # two-phase initiate/confirm handshake with the Trade Republic app)
   resources :trade_republic_items, only: [ :show, :create, :update, :destroy ] do

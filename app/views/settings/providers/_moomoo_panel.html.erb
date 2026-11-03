@@ -1,0 +1,103 @@
+<div id="moomoo-providers-panel" class="space-y-4">
+  <% items = (local_assigns[:moomoo_items] || @moomoo_items || Current.family.moomoo_items.active.ordered).to_a %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t(".steps.step_1"),
+               t(".steps.step_2"),
+               t(".steps.step_3"),
+               t(".steps.step_4")
+             ] %>
+
+  <p class="text-xs text-secondary wrap-anywhere">
+    <%= t(".callback_hint") %>
+    <%= tag.code(moomoo_callback_url, class: "font-mono text-primary") %>
+  </p>
+
+  <% error_msg = local_assigns[:error_message] %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <% items.each do |item| %>
+    <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg bg-container border border-primary">
+      <div class="flex items-center gap-3 min-w-0">
+        <%= render ProviderLogo.new(provider_key: :moomoo) %>
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-primary"><%= item.name %></p>
+          <% if !item.connected? %>
+            <p class="text-xs text-secondary"><%= t(".waiting_for_authorization") %></p>
+          <% elsif item.requires_update? %>
+            <p class="text-xs text-destructive"><%= t(".reconnect_required") %></p>
+            <% if item.reauth_reason_message.present? %>
+              <p class="text-xs text-secondary"><%= item.reauth_reason_message %></p>
+            <% end %>
+          <% elsif item.syncing? %>
+            <p class="text-xs text-secondary"><%= t(".syncing") %></p>
+          <% end %>
+          <% if item.connected? && !item.requires_update? %>
+            <% if item.token_inactive_soon? %>
+              <p class="text-xs text-warning"><%= t(".inactivity_warning") %></p>
+            <% end %>
+            <% if item.history_backfill_pending? %>
+              <p class="text-xs text-secondary"><%= t(".backfill_pending") %></p>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <% if item.connected? && item.requires_update? %>
+          <%= render DS::Button.new(
+                text: t(".reconnect"),
+                icon: "refresh-cw",
+                variant: :primary,
+                size: :sm,
+                href: reauthorize_moomoo_item_path(item),
+                method: :post,
+                data: { turbo: false }
+              ) %>
+        <% elsif item.connected? %>
+          <%= render DS::Button.new(
+                text: t(".change_accounts"),
+                icon: "list-checks",
+                variant: :outline,
+                size: :sm,
+                href: reauthorize_moomoo_item_path(item),
+                method: :post,
+                data: { turbo: false }
+              ) %>
+          <%= render DS::Button.new(
+                text: t(".sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                size: :sm,
+                href: sync_moomoo_item_path(item, source: "panel"),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
+        <% end %>
+        <%= render DS::Button.new(
+              text: t(".remove"),
+              icon: "trash-2",
+              variant: :outline_destructive,
+              size: :sm,
+              href: moomoo_item_path(item),
+              method: :delete,
+              data: { turbo_confirm: t(".remove_confirm") }
+            ) %>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="flex justify-center pt-2">
+    <%= render DS::Button.new(
+          text: t(".connect"),
+          icon: "plus",
+          variant: :primary,
+          href: connect_moomoo_items_path,
+          method: :post,
+          data: { turbo: false }
+        ) %>
+  </div>
+</div>
