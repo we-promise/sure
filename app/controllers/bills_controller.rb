@@ -83,7 +83,11 @@ class BillsController < ApplicationController
     compute_kpis(today, month_end)
 
     planned_periods = plan_pay_periods
-    @month_pay_periods = month_pay_periods(planned_periods, today, month_end)
+    # Paychecks already received this month get headers too, so the month is
+    # split the same way whether a payday has passed or not. The planner only
+    # looks forward, so the past stretch comes from the income occurrences.
+    month_planned = month_pay_periods(planned_periods, today, month_end)
+    @month_pay_periods = month_planned.any? ? (past_paycheck_periods(today.beginning_of_month, today - 1) + month_planned) : []
     # After this month gets the same markers for next month's paychecks.
     @later_pay_periods = later_pay_periods(planned_periods, month_end.next_day, today.next_month.end_of_month)
 
@@ -516,6 +520,47 @@ class BillsController < ApplicationController
       RecurringTransaction::PaycheckPlanner
         .new(Current.family, user: Current.user)
         .plan(periods_limit: PAY_PERIOD_LIMIT)
+    end
+
+    # One period per paycheck already received this month, each running to the
+    # next one, and the last to the day before today: from today on, the
+    # planner's periods take over, and they must not overlap these.
+    PaycheckPeriod = Data.define(:starts_on, :ends_on, :income) do
+      def bridge?
+        false
+      end
+    end
+
+    def past_paycheck_periods(from, to)
+      return [] if to < from
+
+      series_ids = Current.family.recurring_transactions
+                          .accessible_by(Current.user)
+                          .where(bill_type: "income", manual: true, status: "active")
+                          .select(:id)
+      occurrences = Current.family.recurring_occurrences
+                           .where(recurring_transaction_id: series_ids)
+                           .due_between(from, to)
+                           .includes(:recurring_transaction)
+                           .order(:due_on)
+                           .to_a
+      return [] if occurrences.empty?
+
+      days = occurrences.group_by(&:due_on).sort_by(&:first)
+      days.each_with_index.map do |(day, paychecks), index|
+        next_day = days[index + 1]&.first || to.next_day
+        PaycheckPeriod.new(
+          starts_on: day,
+          ends_on: next_day - 1,
+          income: paychecks.sum { |occurrence| paycheck_amount(occurrence) }
+        )
+      end
+    end
+
+    def paycheck_amount(occurrence)
+      occurrence.resolved_expected_amount_money.exchange_to(Current.family.currency).amount.abs
+    rescue Money::ConversionError
+      BigDecimal("0")
     end
 
     # A period that started before the range overlaps it too, so counting
