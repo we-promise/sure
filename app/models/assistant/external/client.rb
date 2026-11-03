@@ -126,6 +126,9 @@ class Assistant::External::Client
       http
     end
 
+    # Returns the configured proxy URI for the request, or nil when no proxy
+    # applies. Invalid proxy URLs are ignored so the request can proceed
+    # directly.
     def resolve_proxy(uri)
       HttpProxy.resolve(scheme: uri.scheme, host: uri.host)
     rescue URI::InvalidURIError => e

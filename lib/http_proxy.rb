@@ -19,6 +19,7 @@ class HttpProxy
       URI(proxy_url)
     end
 
+    # Returns true when the host matches an entry in NO_PROXY.
     def bypassed?(host, no_proxy)
       return false if no_proxy.blank?
 
