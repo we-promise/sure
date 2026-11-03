@@ -4,16 +4,7 @@
   <% @q.reject { |key| key == "amount_operator" }.each do |param_key, param_value| %>
     <% unless param_value.blank? %>
       <% if param_key == "amount" %>
-        <% amount_operator = case @q[:amount_operator]
-                             when "equal"
-                               t(".equal_to")
-                             when "greater"
-                               t(".greater_than")
-                             when "less"
-                               t(".less_than")
-                             else
-                               t(@q[:amount_operator])
-                             end %>
+        <% amount_operator = transaction_amount_operator_label(@q[:amount_operator]) %>
         <%= render partial: "transactions/searches/filters/badge", locals: { param_key: "amount", param_value: "#{amount_operator} #{param_value}" } %>
       <% else %>
         <% Array(param_value).each do |value| %>

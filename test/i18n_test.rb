@@ -132,6 +132,38 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
+  # The All bills default status option. Every bills locale must translate it,
+  # or the default filter falls back to English.
+  def test_bills_current_bills_label_exists_for_each_bills_locale
+    locales = Dir[File.expand_path("../config/locales/views/bills/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    missing = locales.sort.reject do |locale|
+      I18n.t("bills.all.current_bills", locale: locale, fallback: false, default: nil)
+    end
+
+    assert_empty missing, "bills.all.current_bills is missing for: #{missing.join(", ")}"
+  end
+
+  # The family setting that fills a blank transaction name and the form
+  # placeholder that explains it. Fallbacks would show English, so each locale
+  # that translates the neighbouring key must translate these too.
+  def test_auto_generate_transaction_name_keys_exist_beside_their_siblings
+    {
+      "settings.appearances.show.split_grouped_title" => %w[
+        settings.appearances.show.auto_generate_transaction_names_title
+        settings.appearances.show.auto_generate_transaction_names_description
+      ],
+      "transactions.form.description_placeholder" => %w[transactions.form.description_placeholder_optional]
+    }.each do |sibling, keys|
+      locales = I18n.available_locales.select { |locale| I18n.t(sibling, locale: locale, fallback: false, default: nil) }
+      assert_includes locales, :de
+
+      locales.each do |locale|
+        missing = keys.reject { |key| I18n.t(key, locale: locale, fallback: false, default: nil) }
+        assert_empty missing, "missing in #{locale}: #{missing.join(", ")}"
+      end
+    end
+  end
+
   def test_trade_republic_activity_labels_exist_for_each_locale
     required_labels = %w[
       contribution withdrawal interest dividend card_payment cash_withdrawal
