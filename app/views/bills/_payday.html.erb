@@ -30,15 +30,6 @@
         <span class="@lg:hidden"><%= bills_row_date(occurrence) %> &middot;</span>
         <%= frequency_label(series) %>
       </p>
-      <% if due_before %>
-        <p class="text-xs text-secondary privacy-sensitive truncate">
-          <% if due_before[:until] %>
-            <%= t("bills.payday.due_before", amount: format_money(due_before[:amount]), date: format_date(due_before[:until])) %>
-          <% else %>
-            <%= t("bills.payday.due_before_next", amount: format_money(due_before[:amount])) %>
-          <% end %>
-        </p>
-      <% end %>
     </div>
 
     <%# The same amount column as a bill row: the figure, then its status under
@@ -49,6 +40,16 @@
       </p>
       <p class="text-xs <%= received ? "text-success" : "text-secondary" %>">
         <%= t("bills.payday.#{state}") %>
+        <% if due_before %>
+          &middot;
+          <span class="privacy-sensitive">
+            <% if due_before[:until] %>
+              <%= t("bills.payday.due_before", amount: format_money(due_before[:amount]), date: l(due_before[:until], format: "%-d %b")) %>
+            <% else %>
+              <%= t("bills.payday.due_before_next", amount: format_money(due_before[:amount])) %>
+            <% end %>
+          </span>
+        <% end %>
       </p>
     </div>
   <% end %>
