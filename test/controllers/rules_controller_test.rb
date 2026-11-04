@@ -319,6 +319,28 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal ordered_ids, css_select("[data-sortable-list-target='item']").map { |item| item["data-sortable-list-id"] }
   end
 
+  test "index runs the same number of queries however many rules it lists" do
+    family = @user.family
+    create_listed_rule = lambda do
+      family.rules.create!(resource_type: "transaction",
+        conditions: [ Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: merchants(:netflix).id) ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id),
+                   Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+    2.times { create_listed_rule.call }
+
+    # Each capture follows a write, which clears the query cache tests keep
+    # across requests.
+    queries_with_few = capture_sql_queries { get rules_url }.size
+
+    4.times { create_listed_rule.call }
+    queries_with_more = capture_sql_queries { get rules_url }.size
+
+    assert_response :success
+    assert_equal queries_with_few, queries_with_more
+    assert_select "span", text: /Netflix/, minimum: 6
+  end
+
   test "reorder saves the new order" do
     family = @user.family
     second = family.rules.create!(resource_type: "transaction",

@@ -1,0 +1,45 @@
+---
+nl:
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: "Monobank-koppeling"
+  monobank_account:
+    jar_fallback: "Monobank-spaarpot"
+    card_types:
+      black: "Zwarte kaart"
+      white: "Witte kaart"
+      platinum: "Platinum kaart"
+      iron: "Iron-kaart"
+      yellow: "Gele kaart"
+      eaid: "eAid-kaart"
+      fop: "Zakelijke rekening"
+      jar: "Spaarpot"
+      unknown: "Monobank-kaart"
+  monobank_item:
+    errors:
+      account_processing_failed: "Kon Monobank-account niet synchroniseren"
+      account_sync_schedule_failed: "Kon synchronisatie van Monobank-account niet inplannen"
+      transactions_failed: "Kon Monobank-afschrift niet ophalen"
+      sync_failed: "Kon Monobank-koppeling niet synchroniseren"
+    sync:
+      status:
+        importing: "Accounts importeren uit Monobank..."
+        checking_setup: "Accountconfiguratie controleren..."
+        needs_setup:
+          one: "1 account moet worden ingesteld..."
+          other: "%{count} accounts moeten worden ingesteld..."
+        processing: "Transacties verwerken..."
+        calculating: "Saldi berekenen..."
+    sync_status:
+      no_accounts: "Geen accounts gevonden"
+      all_synced:
+        one: "1 account gesynchroniseerd"
+        other: "%{count} accounts gesynchroniseerd"
+      partial: "%{linked} gesynchroniseerd, %{unlinked} moeten worden ingesteld"
+    institution_summary:
+      none: "Geen instellingen gekoppeld"
+      one: "1 instelling"
+      count:
+        one: "1 instelling"
+        other: "%{count} instellingen"
