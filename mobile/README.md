@@ -50,7 +50,7 @@ cd ..
 flutter pub run flutter_launcher_icons
 ```
 
-This step generates the app icons for all platforms based on the source icon in `assets/icon/app_icon.png`. This is required before building the app locally.
+This step generates the app icons for all platforms based on the source icon in `assets/icon/app_icon.png`, plus `app_icon_dark.png` and `app_icon_tinted.png` for the iOS dark and tinted (iOS 18) home screen styles. This is required before building the app locally.
 
 ### 4. Configure API Endpoint
 

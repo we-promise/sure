@@ -294,6 +294,33 @@ class Rule < ApplicationRecord
     displayable_conditions.first
   end
 
+  # The action the rule list shows: the saved one `actions.first` loads (lowest
+  # id), picked from preloaded actions without a query.
+  def displayed_action
+    actions.select(&:persisted?).min_by(&:id)
+  end
+
+  # Option lists (categories, merchants, accounts) that conditions and actions
+  # look their values up in, loaded once per key. They depend only on the family
+  # and the current user, so rules listed together share one cache
+  # (.share_option_lists).
+  attr_writer :option_lists
+
+  def option_list(key)
+    @option_lists ||= {}
+    @option_lists.fetch(key) { @option_lists[key] = yield }
+  end
+
+  def self.share_option_lists(rules)
+    option_lists = {}
+    rules.each { |rule| rule.option_lists = option_lists }
+  end
+
+  def reload(*)
+    @option_lists = nil
+    super
+  end
+
   def additional_displayable_conditions_count
     [ displayable_conditions.size - 1, 0 ].max
   end
