@@ -117,6 +117,16 @@ class _WidgetSettingsScreenState extends State<WidgetSettingsScreen> {
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  if (!WidgetBridgeService.widgetAllowsServer(ApiConfig.baseUrl))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(
+                        'The widget can only reach this server over HTTPS. Plain HTTP '
+                        'works for IP addresses and .local names only.',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(color: theme.colorScheme.error),
+                      ),
+                    ),
                   if (!_available)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),

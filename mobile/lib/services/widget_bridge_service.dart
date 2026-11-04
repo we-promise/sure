@@ -69,6 +69,19 @@ class WidgetBridgeService {
     await _send(epoch, () async => {'config': await _config()});
   }
 
+  /// Whether the widget can connect to [baseUrl]. The widget extension
+  /// enforces App Transport Security, which allows plain HTTP only to IP
+  /// addresses, `.local` names and unqualified hostnames.
+  static bool widgetAllowsServer(String baseUrl) {
+    final uri = Uri.tryParse(baseUrl);
+    if (uri == null) return false;
+    if (uri.scheme == 'https') return true;
+    final host = uri.host;
+    return InternetAddress.tryParse(host) != null ||
+        host.endsWith('.local') ||
+        !host.contains('.');
+  }
+
   /// The key the widget will use, if any.
   Future<String?> effectiveApiKey() async {
     final widgetKey = await getWidgetApiKey();
