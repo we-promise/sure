@@ -52,7 +52,7 @@ id:
           Membayar hanya jumlah minimum akan menyisakan saldo pada kartu dengan bunga APR ini."
         annual_percentage_rate: Tingkat Persentase Tahunan
         apr: APR
-        balance_carried_label: Saldo berjalan
+        balance_carried_label: Sisa saldo terutang
         charges: Beban biaya
         estimated_interest_label: Estimasi bunga
         monthly_rate_label: Suku bunga bulanan
