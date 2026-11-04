@@ -22,6 +22,7 @@ class DataEnrichment < ApplicationRecord
     similar: "similar",
     simplefin: "simplefin",
     sophtron: "sophtron",
+    stashaway: "stashaway",
     synth: "synth",
     trade_republic: "trade_republic",
     truelayer: "truelayer",

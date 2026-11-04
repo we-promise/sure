@@ -115,6 +115,9 @@ module SettingsHelper
     when "trading212"
       return { status: :off } unless @trading212_items&.any?
       sync_based_summary(key)
+    when "stashaway"
+      return { status: :off } unless @stashaway_items&.any?
+      stashaway_summary
     when "snaptrade"
       configured_item = @snaptrade_items&.find(&:oauth_configured?)
       return { status: :off } unless configured_item
@@ -280,6 +283,15 @@ module SettingsHelper
       else
         { status: :ok, last_synced_at: nil }
       end
+    end
+
+    # A connection that needs a new sign-in cannot sync, so that warning
+    # replaces any sync error.
+    def stashaway_summary
+      summary = sync_based_summary("stashaway")
+      return summary if @stashaway_items.all?(&:ready_for_sync?)
+
+      summary.merge(status: :warn, meta: t("settings.providers.meta.login_required"))
     end
 
     # Like Enable Banking, the row warns before a session ends and once a

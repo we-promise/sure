@@ -491,6 +491,7 @@ en:
         onchain_wallet: Track self-custody Bitcoin, EVM, Solana, Cosmos and Polkadot wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
+        stashaway: Sync your StashAway portfolios, dividends, fees and monthly returns with your StashAway login.
         trade_republic: Sync your Trade Republic investment account via secure read-only web login.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         questrade: Sync your Questrade investment accounts directly via the Questrade API.
@@ -798,6 +799,42 @@ en:
           other: "%{count} Trade Republic accounts discovered."
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
+      stashaway_panel:
+        encryption_warning:
+          title: Encryption is not configured
+          message: Without Active Record encryption the StashAway token and email are stored unencrypted, and the password cannot be kept for signing in again until encryption is configured.
+        steps:
+          step_1: Choose the region of your StashAway account and enter the email and password you sign in with. Sure passes the password to StashAway and keeps it only if you ask it to, so it can sign in again by itself.
+          step_2: If StashAway sends a code by SMS, enter it here to finish signing in.
+          step_3: Set up the portfolios that appear, as new accounts or linked to existing ones.
+        syncing: Syncing...
+        awaiting_code: Waiting for the SMS code
+        sign_in_required: Sign in again to keep syncing
+        sync: Sync
+        disconnect: Disconnect StashAway
+        disconnect_confirm: Disconnect StashAway?
+        code_notice: StashAway sent a code to your phone by SMS.
+        code_label: SMS code
+        code_placeholder: Code from StashAway
+        verify_code: Verify code
+        resend_code: Send a new code
+        cancel_login: Cancel
+        code_expired_notice: The sign-in timed out before the code was entered. Sign in again.
+        sign_in_notice: StashAway needs you to sign in again.
+        password_label: Password
+        remember_password_label: Keep my password so Sure can sign in again by itself
+        sign_in: Sign in
+        password_saved: Password saved; Sure signs in again by itself.
+        forget_password: Forget password
+        accounts_discovered:
+          one: 1 StashAway portfolio is ready to set up.
+          other: "%{count} StashAway portfolios are ready to set up."
+        setup_accounts: Set up accounts
+        add_connection: Add another StashAway login
+        region_label: StashAway region
+        email_label: Email
+        email_placeholder: you@example.com
+        connect: Connect StashAway
       trading212_panel:
         steps:
           step_1: Go to Trading 212 → Settings → API (web or mobile app).

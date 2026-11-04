@@ -1,0 +1,27 @@
+<div id="stashaway-providers-panel" class="space-y-4">
+  <% unless StashawayItem.encryption_ready? %>
+    <%= render DS::Alert.new(
+          variant: :warning,
+          title: t(".encryption_warning.title"),
+          message: t(".encryption_warning.message")
+        ) %>
+  <% end %>
+
+  <%= render "settings/providers/setup_steps",
+             steps: [
+               t(".steps.step_1"),
+               t(".steps.step_2"),
+               t(".steps.step_3")
+             ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <%= render Stashaway::AccountEditorComponent.new(
+               items: local_assigns[:stashaway_items] || @stashaway_items,
+               family: Current.family,
+               new_item: local_assigns[:new_item]
+             ) %>
+</div>

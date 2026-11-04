@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_04_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1606,7 +1606,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
-    t.check_constraint "day_count_convention::text = ANY (ARRAY['thirty_360'::character varying, 'actual_365'::character varying, 'actual_actual'::character varying]::text[])", name: "chk_loans_day_count_convention"
+    t.check_constraint "day_count_convention::text = ANY (ARRAY['thirty_360'::character varying::text, 'actual_365'::character varying::text, 'actual_actual'::character varying::text])", name: "chk_loans_day_count_convention"
     t.check_constraint "down_payment IS NULL OR down_payment >= 0::numeric", name: "chk_loans_down_payment_non_negative"
     t.check_constraint "insurance_rate IS NULL OR insurance_rate >= 0::numeric", name: "chk_loans_insurance_rate_non_negative"
     t.check_constraint "insurance_rate_type IS NULL OR (insurance_rate_type::text = ANY (ARRAY['level_term'::character varying::text, 'decreasing_life'::character varying::text]))", name: "chk_loans_insurance_rate_type"
@@ -1975,7 +1975,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2619,6 +2619,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.index ["name"], name: "index_sso_providers_on_name", unique: true
   end
 
+  create_table "stashaway_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "funding_source"
+    t.string "goal_ids", default: [], null: false, array: true
+    t.string "goal_type"
+    t.string "group_key", null: false
+    t.decimal "import_base", precision: 19, scale: 4
+    t.date "import_start_date"
+    t.date "last_nav_date"
+    t.string "name"
+    t.jsonb "raw_goals_payload", default: [], null: false
+    t.uuid "stashaway_item_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["stashaway_item_id"], name: "index_stashaway_accounts_on_stashaway_item_id"
+  end
+
+  create_table "stashaway_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "api_token"
+    t.datetime "created_at", null: false
+    t.string "device_id", null: false
+    t.string "email"
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.text "password"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.datetime "pending_login_started_at"
+    t.text "pending_login_token"
+    t.string "region", default: "sg", null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "stashaway_user_id"
+    t.string "status", default: "good", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_stashaway_items_on_family_id"
+    t.index ["status"], name: "index_stashaway_items_on_status"
+  end
+
   create_table "subscriptions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.decimal "amount", precision: 19, scale: 4
     t.boolean "cancel_at_period_end", default: false, null: false
@@ -3204,6 +3242,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
   add_foreign_key "sophtron_accounts", "sophtron_items"
   add_foreign_key "sophtron_items", "families"
   add_foreign_key "sso_audit_logs", "users"
+  add_foreign_key "stashaway_accounts", "stashaway_items"
+  add_foreign_key "stashaway_items", "families"
   add_foreign_key "subscriptions", "families"
   add_foreign_key "syncs", "syncs", column: "parent_id"
   add_foreign_key "taggings", "tags"
