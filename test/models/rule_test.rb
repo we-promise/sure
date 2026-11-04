@@ -10,6 +10,21 @@ class RuleTest < ActiveSupport::TestCase
     @groceries_category = @family.categories.create!(name: "Groceries")
   end
 
+  test "displayed_action skips an unsaved action and option lists reset on reload" do
+    rule = @family.rules.create!(resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ])
+    saved = rule.actions.first
+    rule.actions.build(action_type: "exclude_transaction")
+
+    assert_equal saved, rule.displayed_action
+
+    assert_equal "Groceries", saved.value_display
+    @groceries_category.update!(name: "Food")
+    rule.reload
+
+    assert_equal "Food", rule.actions.first.value_display
+  end
+
   test "rejects a null byte in the rule name" do
     rule = @family.rules.build(name: "bad\0name", resource_type: "transaction")
     rule.actions.build(action_type: "exclude_transaction")
