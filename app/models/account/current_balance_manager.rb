@@ -37,9 +37,15 @@ class Account::CurrentBalanceManager
   # as of a statement rather than of this moment. It only applies to a linked
   # account: a manual one has no statement, and its strategies reconcile against
   # today by design.
-  def set_current_balance(balance, date: nil)
+  #
+  # `record_waypoint: false` moves a linked account's anchor without leaving
+  # the previous one behind as a reconciliation. It is for a provider whose
+  # entries reach the reported value only on the days it books them, such as
+  # month-end returns: a waypoint on any other day would pin the history to
+  # a balance those entries do not yet add up to.
+  def set_current_balance(balance, date: nil, record_waypoint: true)
     if account.linked?
-      set_current_balance_for_linked_account(balance, date || Date.current)
+      set_current_balance_for_linked_account(balance, date || Date.current, record_waypoint: record_waypoint)
     else
       result = set_current_balance_for_manual_account(balance)
 
@@ -103,7 +109,7 @@ class Account::CurrentBalanceManager
     # Before overwriting a stale (previous-day) current_anchor, we convert it to a
     # reconciliation valuation. This preserves the API-reported balance as a historical
     # waypoint that the ReverseCalculator uses for more accurate balance history.
-    def set_current_balance_for_linked_account(balance, date)
+    def set_current_balance_for_linked_account(balance, date, record_waypoint:)
       changes_made = false
       error = nil
       historical = false
@@ -127,7 +133,7 @@ class Account::CurrentBalanceManager
           # Only a statement that moves the balance forward leaves the previous
           # anchor behind as a reconciliation. One carrying the anchor's own date
           # is that same anchor restated, so it is updated rather than duplicated.
-          preserve_anchor_as_reconciliation_if_stale(date) if current_anchor_valuation
+          preserve_anchor_as_reconciliation_if_stale(date) if record_waypoint && current_anchor_valuation
 
           # Re-check: the memoized value was cleared if the anchor was converted
           if current_anchor_valuation
