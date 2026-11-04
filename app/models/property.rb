@@ -98,7 +98,8 @@ class Property < ApplicationRecord
     provider_class = Provider::PropertyValuationConcept.provider_class(provider_key)
     return false if provider_class.nil? || provider_class.requires_external_id?
 
-    account.currency == provider_class.valuation_currency && provider_class.lookup_ready?(address)
+    account.currency == provider_class.valuation_currency &&
+      provider_class.lookup_ready?(address, area: area_in_sqft, property_type: subtype)
   end
 
   # Configured providers this property can be linked to.

@@ -100,6 +100,8 @@ class Setting < RailsSettings::Base
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
   field :realie_api_key, type: :string, default: ENV["REALIE_API_KEY"]
   field :chimnie_api_key, type: :string, default: ENV["CHIMNIE_API_KEY"]
+  # DVF needs no key; this opts in to calling the French open-data endpoints.
+  field :dvf_enabled, type: :boolean, default: ENV.fetch("DVF_ENABLED", "false") == "true"
 
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept

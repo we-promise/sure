@@ -26,6 +26,7 @@ en:
       rentcast: RentCast
       realie: Realie
       chimnie: Chimnie
+      dvf: DVF
     new:
       title: Enter property manually
       next: "Next"
@@ -34,6 +35,7 @@ en:
       avm_description: "Enter a name for the property and its address. %{provider} will look up the property details and estimated market value for you."
       avm_us_only: "%{provider} only supports properties located in the United States."
       avm_uk_only: "%{provider} only supports residential properties located in the United Kingdom."
+      avm_fr_only: "%{provider} values apartments and houses in France from comparable recent sales. It has no data for Alsace-Moselle or Mayotte."
       avm_uprn_label: "UPRN"
       avm_uprn_placeholder: "100023336956"
       avm_uprn_help: "The Unique Property Reference Number (up to 12 digits) identifies every UK address. Find it on GeoPlace's findmyaddress.co.uk or ask your local council. %{provider} uses it to value the property for free."
@@ -53,6 +55,7 @@ en:
         medium: "Medium"
         low: "Low"
       avm_attribution_chimnie: "Valuation data from Chimnie. Contains OS data © Crown copyright and database right, Royal Mail data © Royal Mail copyright and database right, and HM Land Registry data © Crown copyright and database right, licensed under the Open Government Licence v3.0."
+      avm_attribution_dvf: "Estimate from comparable sales in DVF (Demandes de valeurs foncières, DGFiP), republished by Etalab under the Licence Ouverte 2.0. DVF doesn't record floor, condition or view, so the estimate can differ from a professional appraisal."
       avm_preview_confirm: "Add property"
     address:
       title: "Enter property manually"

@@ -855,6 +855,115 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action*='avm_provider=chimnie']", count: 0
   end
 
+  # DVF (France, valued from comparable sales)
+
+  def dvf_avm_response
+    Provider::Response.new(
+      success?: true,
+      data: Provider::PropertyValuationConcept::PropertyValuation.new(
+        valuation: 312_000,
+        currency: "EUR",
+        property_type: "apartment",
+        year_built: nil,
+        area_value: 35,
+        area_unit: "sqm",
+        valuation_low: 276_000,
+        valuation_high: 345_000,
+        confidence: "high"
+      ),
+      error: nil
+    )
+  end
+
+  def dvf_lookup_params(area_value: "35")
+    {
+      avm_provider: "dvf",
+      account: {
+        name: "Paris Flat",
+        accountable_type: "Property",
+        address: { line1: "82 rue Exemple", locality: "Paris", region: "", postal_code: "75020" },
+        property: { subtype: "apartment", area_value: area_value, area_unit: "sqm" }
+      }
+    }
+  end
+
+  test "DVF lookup form asks for the property type and living area" do
+    Provider::Registry.stubs(:dvf).returns(mock)
+
+    get new_property_path(method: "dvf")
+
+    assert_response :success
+    assert_select "select[name='account[property][subtype]'][required]"
+    assert_select "select[name='account[property][subtype]'] option[value='apartment']"
+    assert_select "select[name='account[property][subtype]'] option[value='commercial']", count: 0
+    assert_select "input[name='account[property][area_value]'][required]"
+    assert_select "input[name='account[address][locality]']:not([required])"
+    assert_match "France", response.body
+  end
+
+  test "DVF lookup sends the area and type and previews the estimate range" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).with(
+      line1: "82 rue Exemple",
+      locality: "Paris",
+      region: "",
+      postal_code: "75020",
+      square_footage: 377,
+      property_type: "apartment"
+    ).returns(dvf_avm_response)
+    Provider::Registry.stubs(:dvf).returns(provider)
+
+    assert_no_difference "Account.count" do
+      post properties_path, params: dvf_lookup_params
+    end
+
+    assert_response :success
+    assert_match "Confirm property details", response.body
+    assert_match "Estimate range", response.body
+    assert_match "Demandes de valeurs foncières", response.body
+  end
+
+  test "DVF lookup requires the living area without spending a request" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:dvf).returns(provider)
+
+    assert_no_difference "Account.count" do
+      post properties_path, params: dvf_lookup_params(area_value: "")
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "living area", response.body
+  end
+
+  test "DVF confirm creates a EUR property with its area and type" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).once.returns(dvf_avm_response)
+    Provider::Registry.stubs(:dvf).returns(provider)
+
+    post properties_path, params: dvf_lookup_params
+    token = css_select("input[name='avm_preview_token']").first["value"]
+
+    assert_difference -> { Account.count } => 1 do
+      post properties_path, params: {
+        avm_provider: "dvf",
+        avm_step: "confirm",
+        avm_preview_token: token,
+        account: { accountable_type: "Property" }
+      }
+    end
+
+    account = Account.order(:created_at).last
+    assert_equal "EUR", account.currency
+    assert_equal 312_000, account.balance
+    assert_equal "dvf", account.property.avm_provider
+    assert_equal "apartment", account.property.subtype
+    assert_equal 35, account.property.area_value
+    assert_equal "sqm", account.property.area_unit
+    assert_equal "FR", account.property.address.country
+    assert_equal "DVF valuation", account.entries.valuations.last.name
+  end
+
   private
     def valuation_data(valuation)
       Provider::PropertyValuationConcept::PropertyValuation.new(

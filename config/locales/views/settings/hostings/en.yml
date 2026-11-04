@@ -248,6 +248,11 @@ en:
         label: API Key
         placeholder: Enter your Chimnie API key here
         usage: "%{used} of %{limit} monthly requests used"
+      dvf_settings:
+        title: DVF (France)
+        description: Value apartments and houses in France from comparable recent sales in DVF, the government's open record of property sales. No API key is needed; enabling this lets Sure query the French open data services (data.gouv.fr and the Géoplateforme geocoder). Valuations refresh monthly, as DVF is republished twice a year.
+        env_configured_message: Configured through the DVF_ENABLED environment variable.
+        usage: "%{used} of %{limit} monthly lookups used"
       tiingo_settings:
         title: Tiingo
         description: Enter the API token provided by Tiingo. Free tier supports 50 unique symbols per hour with 30+ years of historical data.
