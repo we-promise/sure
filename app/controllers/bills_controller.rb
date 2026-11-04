@@ -476,21 +476,44 @@ class BillsController < ApplicationController
       upcoming = paydays.select { |payday| payday.scheduled? && payday.effective_due_on >= today }
       return {} if upcoming.empty?
 
-      income_series = Current.family.recurring_transactions
-                             .where(bill_type: "income", manual: true, status: "active")
-                             .accessible_by(Current.user)
-                             .select(:id)
+      income_records = Current.family.recurring_transactions
+                              .where(bill_type: "income", manual: true, status: "active")
+                              .accessible_by(Current.user)
+                              .to_a
+      income_ids = income_records.map(&:id)
 
       # Every income payday that has not been skipped ends a window, including
       # one already settled, so a window never runs past a payday that arrived.
+      effective_sql = RecurringOccurrence::EFFECTIVE_DUE_ON_SQL
       payday_dates = Current.family.recurring_occurrences
-                            .where(recurring_transaction_id: income_series)
+                            .where(recurring_transaction_id: income_ids)
                             .where.not(status: "skipped")
-                            .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} >= ?", today)
+                            .where("#{effective_sql} >= ?", today)
                             .distinct
-                            .pluck(Arel.sql(RecurringOccurrence::EFFECTIVE_DUE_ON_SQL))
+                            .pluck(Arel.sql(effective_sql))
                             .map(&:to_date)
-                            .sort
+
+      # Rows are only materialized up to a horizon, so the payday after the
+      # last upcoming one may not exist yet. Derive each series' next payday from
+      # its schedule, stepping past any the user skipped, so the last window is
+      # still bounded.
+      skipped_dates = Current.family.recurring_occurrences
+                             .where(recurring_transaction_id: income_ids, status: "skipped")
+                             .pluck(:recurring_transaction_id, Arel.sql(effective_sql))
+                             .group_by(&:first)
+                             .transform_values { |pairs| pairs.map { |_, date| date.to_date }.to_set }
+      last_payday = upcoming.last.effective_due_on
+      derived = income_records.filter_map do |series|
+        skipped = skipped_dates.fetch(series.id, Set.new)
+        candidate = series.schedule.next_occurrence_after(last_payday)
+        12.times do # a bounded walk past consecutive skipped paydays
+          break unless candidate && skipped.include?(candidate)
+
+          candidate = series.schedule.next_occurrence_after(candidate)
+        end
+        candidate unless candidate.nil? || skipped.include?(candidate)
+      end
+      payday_dates = (payday_dates + derived).uniq.sort
 
       # Paydays on the same date share one window, so the bills are counted once.
       upcoming.group_by(&:effective_due_on).flat_map do |from, same_day|
