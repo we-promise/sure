@@ -254,6 +254,21 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_equal [ "Frito Lay", "Side work" ], period.income_sources.sort
   end
 
+  # A matched paycheck funds its window from the deposit that arrived, not the
+  # amount the plan expected, so a short deposit is not reported as a shortfall
+  # the user already covered.
+  test "a matched paycheck funds its window from the deposit, not the expected amount" do
+    payday = Date.current + 2
+    series = create_series(name: "Paycheck", amount: -1840, due: payday, preset: "weekly", income: true)
+    series.recurring_occurrences.find_by!(due_on: payday)
+          .allocations.create!(allocated_amount: 1700, currency: "USD", source: "user_confirmed", state: "confirmed")
+
+    period = Planner.new(@family, user: @user).plan(periods_limit: 3).find { |candidate| candidate.starts_on == payday }
+
+    assert_equal 1700, period.income
+    assert_equal 1700, period.received
+  end
+
   # The income list and the plan used to read different sources for one fact,
   # so a series could name two different next paydays on one screen.
   test "next income per series comes from occurrences, not the stored column" do

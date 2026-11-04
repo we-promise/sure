@@ -20,6 +20,7 @@
     since a past window's bills are already settled. %>
 <% received = period.try(:received) %>
 <% past = period.try(:past?) %>
+<% unknown = period.try(:unknown) %>
 
 <%# Below @lg the two halves stack, the total under the label's text. Side by
     side they need about 350px, so on a phone the label wrapped into two ragged
@@ -43,9 +44,13 @@
       <p class="text-xs font-medium text-secondary">
         <%= t("bills.pay_period.paycheck_on", date: l(period.starts_on, format: :short)) %>
         <span class="text-subdued">&middot;</span>
-        <span class="<%= received ? "text-success" : "" %> privacy-sensitive"><%= format_money(Money.new(received || period.income, currency)) %></span>
-        <% if received.nil? %>
-          <span class="text-subdued"><%= past ? t("bills.pay_period.not_matched") : t("bills.pay_period.expected") %></span>
+        <% if unknown %>
+          <span class="text-subdued"><%= t("bills.pay_period.amount_unavailable") %></span>
+        <% else %>
+          <span class="<%= received ? "text-success" : "" %> privacy-sensitive"><%= format_money(Money.new(received || period.income, currency)) %></span>
+          <% if received.nil? %>
+            <span class="text-subdued"><%= past ? t("bills.pay_period.not_matched") : t("bills.pay_period.expected") %></span>
+          <% end %>
         <% end %>
       </p>
     <% end %>

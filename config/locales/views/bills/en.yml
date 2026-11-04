@@ -153,6 +153,7 @@ en:
       paycheck_on: "Paycheck %{date}"
       expected: expected
       not_matched: "(not matched)"
+      amount_unavailable: "amount unavailable"
       before_next_paycheck: Before your next paycheck
       due_before_date: "%{amount} due before %{date}"
     paycheck:

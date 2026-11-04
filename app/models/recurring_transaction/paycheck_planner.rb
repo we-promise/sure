@@ -16,12 +16,12 @@ class RecurringTransaction
     Period = Data.define(
       :starts_on, :ends_on, :income, :income_sources, :items,
       :due_total, :reserved_total, :obligation_total, :remaining, :leading, :final,
-      :cash_on_hand, :received
+      :cash_on_hand, :received, :unknown
     ) do
       # The window between today and the next payday: nothing arrives in it, so
       # what it needs must come from cash already in hand.
       def bridge?
-        leading && !income.positive?
+        leading && !income.positive? && !unknown
       end
 
       # A bridge window earns no income by construction, so measuring it the
@@ -34,6 +34,8 @@ class RecurringTransaction
       # did. When the balance cannot be established, cash_on_hand is nil and
       # nothing is claimed: an unknown balance is not evidence of a shortfall.
       def short?
+        return false if unknown
+
         if bridge?
           # An unknown balance is not evidence of a shortfall.
           cash_on_hand.present? && obligation_total > cash_on_hand
@@ -82,11 +84,11 @@ class RecurringTransaction
     end
 
     # nil when no income schedule is declared (the view prompts for one).
-    def plan(periods_limit: 3)
+    def plan(periods_limit: 3, through: nil)
       incomes = plannable_income_occurrences
       return nil if incomes.empty?
 
-      boundaries = period_boundaries(incomes, periods_limit)
+      boundaries = period_boundaries(incomes, periods_limit, through)
       periods = build_periods(boundaries, incomes)
       # A single boundary (every upcoming paycheck lands today) yields no
       # periods to spread anything across.
@@ -112,7 +114,8 @@ class RecurringTransaction
           leading: period[:leading],
           final: period[:final],
           cash_on_hand: period[:leading] ? cash_on_hand : nil,
-          received: period[:received]
+          received: period[:received],
+          unknown: period[:unknown]
         )
       end
     end
@@ -142,6 +145,7 @@ class RecurringTransaction
                 .includes(:recurring_transaction)
                 .order(:due_on)
                 .to_a
+                .tap { |occurrences| preload_confirmed_sums(occurrences) }
       end
 
       # Declared income only. Sign alone proves nothing: a recurring one-cent
@@ -160,7 +164,14 @@ class RecurringTransaction
       end
 
       # Today up to the first paycheck is its own period, then one per paycheck.
-      def period_boundaries(incomes, periods_limit)
+      # With `through`, every paycheck up to that date is included, and the last
+      # window closes the day after it so the final paycheck's window is not open.
+      def period_boundaries(incomes, periods_limit, through)
+        if through
+          dates = incomes.map(&:due_on).uniq.select { |date| date <= through }
+          return ([ Date.current ] + dates + [ through.next_day ]).uniq
+        end
+
         dates = incomes.map(&:due_on).uniq.first(periods_limit + 1)
         boundaries = ([ Date.current ] + dates).uniq
 
@@ -171,13 +182,14 @@ class RecurringTransaction
         boundaries.each_cons(2).map.with_index do |(starts_on, next_start), index|
           arrivals = incomes.select { |occurrence| occurrence.due_on == starts_on }
 
-          received = received_total(arrivals)
+          arrival = arrival_income(arrivals)
           {
             starts_on: starts_on,
             ends_on: next_start - 1,
-            income: received || arrivals.sum { |occurrence| to_family_currency(occurrence.resolved_expected_amount_money) },
+            income: arrival[:income],
             income_sources: arrivals.map { |occurrence| occurrence.recurring_transaction.display_name }.uniq,
-            received: received,
+            received: arrival[:received],
+            unknown: arrival[:unknown],
             items: [],
             leading: index.zero?,
             final: false
@@ -327,18 +339,33 @@ class RecurringTransaction
 
       # Only when every paycheck landing that day is matched: a partly matched
       # day still has an expected part, and mixing the two would misstate it.
-      def received_total(arrivals)
-        return nil if arrivals.empty?
-        return nil unless arrivals.all? { |occurrence| occurrence.confirmed_allocated.positive? }
+      # What a day's paychecks bring in: the matched deposits when every paycheck
+      # landing that day is matched, otherwise the expected amounts. An amount
+      # that cannot be converted makes the day unknown. It is reported as such,
+      # never folded in as zero, which would read as a paycheck that never came.
+      def arrival_income(arrivals)
+        matched = arrivals.any? && arrivals.all? { |occurrence| occurrence.confirmed_allocated.positive? }
+        amounts = arrivals.map do |occurrence|
+          if matched
+            family_amount(occurrence.confirmed_allocated_money.abs)
+          else
+            family_amount(occurrence.resolved_expected_amount_money)
+          end
+        end
+        total = amounts.include?(nil) ? nil : amounts.sum(BigDecimal("0"))
 
-        arrivals.sum { |occurrence| to_family_currency(occurrence.confirmed_allocated_money.abs) }
+        { income: total || BigDecimal("0"), received: matched ? total : nil, unknown: total.nil? }
       end
 
-      def to_family_currency(money)
+      def family_amount(money)
         money.exchange_to(family.currency).amount
       rescue Money::ConversionError
         @unconvertible_count += 1
-        BigDecimal("0")
+        nil
+      end
+
+      def to_family_currency(money)
+        family_amount(money) || BigDecimal("0")
       end
   end
 end

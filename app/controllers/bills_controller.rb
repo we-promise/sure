@@ -71,6 +71,9 @@ class BillsController < ApplicationController
 
     # Beyond this month, one row per series: a weekly bill's next six
     # occurrences are not six separate things to think about yet.
+    # The collapsed rows below are for display only. The due totals of later pay
+    # periods need every bill in them, not just the first of each series.
+    @later_all = later
     @later = later.group_by(&:recurring_transaction_id)
                   .values
                   .map { |group| group.min_by(&:effective_due_on) }
@@ -82,12 +85,18 @@ class BillsController < ApplicationController
 
     compute_kpis(today, month_end)
 
-    planned_periods = plan_pay_periods
-    # Paychecks already received this month get headers too, so the month is
-    # split the same way whether a payday has passed or not. The planner only
-    # looks forward, so the past stretch comes from the income occurrences.
-    month_planned = month_pay_periods(planned_periods, today, month_end)
-    @month_pay_periods = month_planned.any? ? (past_paycheck_periods(today.beginning_of_month, today - 1) + month_planned) : []
+    # The overview reads two calendar months of paydays, so the plan runs
+    # through the end of next month. A fixed window count starved next month's
+    # markers early in a month.
+    planned_periods = plan_pay_periods(through: today.next_month.end_of_month) || []
+    # A month is split by its paydays, past and upcoming together, and only when
+    # there is more than one. Monthly income has one payday in the month, so it
+    # stays undivided. The planner only looks forward, so the past paydays come
+    # from the income occurrences.
+    past_periods = past_paycheck_periods(today.beginning_of_month, today - 1)
+    month_paydays = past_periods.size +
+                    planned_periods.count { |period| period.income_sources.any? && period.starts_on.between?(today, month_end) }
+    @month_pay_periods = month_paydays > 1 ? (past_periods + overlapping_pay_periods(planned_periods, today, month_end)) : []
     # After this month gets the same markers for next month's paychecks.
     @later_pay_periods = later_pay_periods(planned_periods, month_end.next_day, today.next_month.end_of_month)
 
@@ -516,19 +525,22 @@ class BillsController < ApplicationController
     # when income actually subdivides the month: monthly income yields a single
     # overlapping period and undeclared income yields none, and in both cases
     # the list renders exactly as it did before.
-    def plan_pay_periods
+    def plan_pay_periods(through: nil)
       RecurringTransaction::PaycheckPlanner
         .new(Current.family, user: Current.user)
-        .plan(periods_limit: PAY_PERIOD_LIMIT)
+        .plan(periods_limit: PAY_PERIOD_LIMIT, through: through)
     end
 
     # One period per paycheck already received this month, each running to the
     # next one, and the last to the day before today: from today on, the
     # planner's periods take over, and they must not overlap these.
+    #
     # `received` is what the matched deposits actually brought in, or nil while
-    # any of the day's paychecks is still unmatched. Every period here is over,
-    # so nothing in it is left to pay and the header never shows a due amount.
-    PaycheckPeriod = Data.define(:starts_on, :ends_on, :income, :received) do
+    # any of the day's paychecks is still unmatched. `unknown` means an amount
+    # could not be converted to the family currency: it is shown as unknown,
+    # never as zero. Every period here is over, so nothing in it is left to pay
+    # and the header never shows a due amount.
+    PaycheckPeriod = Data.define(:starts_on, :ends_on, :income, :received, :unknown) do
       def bridge?
         false
       end
@@ -538,6 +550,8 @@ class BillsController < ApplicationController
       end
     end
 
+    # Skipped and missed paychecks did not fund anything, so they neither count
+    # as paydays nor split the month, matching the planner.
     def past_paycheck_periods(from, to)
       return [] if to < from
 
@@ -547,6 +561,7 @@ class BillsController < ApplicationController
                           .select(:id)
       occurrences = Current.family.recurring_occurrences
                            .where(recurring_transaction_id: series_ids)
+                           .where.not(status: %w[skipped missed])
                            .due_between(from, to)
                            .includes(:recurring_transaction)
                            .order(:due_on)
@@ -556,26 +571,32 @@ class BillsController < ApplicationController
       days = occurrences.group_by(&:due_on).sort_by(&:first)
       days.each_with_index.map do |(day, paychecks), index|
         next_day = days[index + 1]&.first || to.next_day
-        received = paychecks.all? { |occurrence| occurrence.confirmed_allocated.positive? }
+        matched = paychecks.all? { |occurrence| occurrence.confirmed_allocated.positive? }
+        amounts = paychecks.map do |occurrence|
+          if matched
+            family_amount(occurrence.confirmed_allocated_money)
+          else
+            family_amount(occurrence.resolved_expected_amount_money)
+          end
+        end
+        total = amounts.include?(nil) ? nil : amounts.sum(BigDecimal("0"))
+
         PaycheckPeriod.new(
           starts_on: day,
           ends_on: next_day - 1,
-          income: paychecks.sum { |occurrence| paycheck_amount(occurrence) },
-          received: received ? paychecks.sum { |occurrence| received_amount(occurrence) } : nil
+          income: total || BigDecimal("0"),
+          received: matched ? total : nil,
+          unknown: total.nil?
         )
       end
     end
 
-    def paycheck_amount(occurrence)
-      occurrence.resolved_expected_amount_money.exchange_to(Current.family.currency).amount.abs
+    # nil when the amount cannot be converted to the family currency. It is
+    # reported as unknown, never folded in as zero.
+    def family_amount(money)
+      money.exchange_to(Current.family.currency).amount.abs
     rescue Money::ConversionError
-      BigDecimal("0")
-    end
-
-    def received_amount(occurrence)
-      occurrence.confirmed_allocated_money.exchange_to(Current.family.currency).amount.abs
-    rescue Money::ConversionError
-      BigDecimal("0")
+      nil
     end
 
     # A period that started before the range overlaps it too, so counting
@@ -588,14 +609,12 @@ class BillsController < ApplicationController
       starting.size > 1 ? starting : []
     end
 
-    def month_pay_periods(periods, from, to)
+    # Every period overlapping the range. Whether the month is split at all is
+    # decided by its paydays in index, not by how many of these overlap.
+    def overlapping_pay_periods(periods, from, to)
       return [] if periods.blank?
 
-      overlapping = periods.select do |period|
-        period.starts_on <= to && period.ends_on >= from
-      end
-
-      overlapping.size > 1 ? overlapping : []
+      periods.select { |period| period.starts_on <= to && period.ends_on >= from }
     end
 
     def compute_kpis(today, month_end)
