@@ -92,6 +92,12 @@ class RecurringOccurrence < ApplicationRecord
     effective_due_on < Date.current ? :unmatched : :expected
   end
 
+  # When the money actually arrived: the latest confirmed allocation's date,
+  # or the expected date when nothing is confirmed.
+  def received_on
+    allocations.confirmed.maximum(:paid_on) || effective_due_on
+  end
+
   def remaining_amount
     [ resolved_expected_amount - confirmed_allocated, 0 ].max
   end

@@ -474,36 +474,42 @@ class BillsController < ApplicationController
     # currency carries nothing either, rather than a total that leaves it out.
     def payday_due_before(paydays, today)
       upcoming = paydays.select { |payday| payday.scheduled? && payday.effective_due_on >= today }
-                        .sort_by(&:effective_due_on)
       return {} if upcoming.empty?
 
       income_series = Current.family.recurring_transactions
                              .where(bill_type: "income", manual: true, status: "active")
                              .accessible_by(Current.user)
                              .select(:id)
-      after_last = Current.family.recurring_occurrences
-                          .where(recurring_transaction_id: income_series)
-                          .scheduled
-                          .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} > ?", upcoming.last.effective_due_on)
-                          .order(Arel.sql(RecurringOccurrence::EFFECTIVE_DUE_ON_SQL))
-                          .limit(1)
-                          .pluck(Arel.sql(RecurringOccurrence::EFFECTIVE_DUE_ON_SQL))
-                          .first
-                          &.to_date
 
-      upcoming.each_with_index.filter_map do |payday, index|
-        from = payday.effective_due_on
-        until_on = upcoming[index + 1]&.effective_due_on || after_last
+      # Every income payday that has not been skipped ends a window, including
+      # one already settled, so a window never runs past a payday that arrived.
+      payday_dates = Current.family.recurring_occurrences
+                            .where(recurring_transaction_id: income_series)
+                            .where.not(status: "skipped")
+                            .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} >= ?", today)
+                            .distinct
+                            .pluck(Arel.sql(RecurringOccurrence::EFFECTIVE_DUE_ON_SQL))
+                            .map(&:to_date)
+                            .sort
+
+      # Paydays on the same date share one window, so the bills are counted once.
+      upcoming.group_by(&:effective_due_on).flat_map do |from, same_day|
+        until_on = payday_dates.find { |date| date > from }
 
         bills = Current.family.recurring_occurrences
-                       .where(recurring_transaction_id: payable_series_ids)
+                       .where(recurring_transaction_id: payable_series_ids(statuses: %w[active]))
                        .scheduled
                        .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} >= ?", from)
         bills = bills.where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} < ?", until_on) if until_on
-        total, unconvertible = total_of(bills.to_a) { |occurrence| occurrence.resolved_expected_amount_money.abs }
-        next if unconvertible.positive?
+        bills = bills.to_a
+        preload_allocation_sums(bills)
 
-        [ payday.id, { amount: total || Money.new(0, Current.family.currency), until: until_on } ]
+        total, unconvertible = total_of(bills) { |occurrence| occurrence.remaining_amount_money.abs }
+        next [] if unconvertible.positive?
+
+        same_day.map do |payday|
+          [ payday.id, { amount: total || Money.new(0, Current.family.currency), until: until_on } ]
+        end
       end.to_h
     end
 
@@ -518,9 +524,10 @@ class BillsController < ApplicationController
 
       paydays = Current.family.recurring_occurrences
                        .where(recurring_transaction_id: series_ids)
-                       .due_between(today.beginning_of_month, today.next_month.end_of_month)
+                       .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} BETWEEN ? AND ?",
+                              today.beginning_of_month, today.next_month.end_of_month)
                        .includes(recurring_transaction: :merchant)
-                       .order(:due_on)
+                       .order(Arel.sql(RecurringOccurrence::EFFECTIVE_DUE_ON_SQL))
                        .to_a
       preload_allocation_sums(paydays)
       paydays
@@ -530,11 +537,11 @@ class BillsController < ApplicationController
     # month, for every payable series (bills, subscriptions, and debt
     # payments alike). Inactive series ride along so their leftover open
     # occurrences can render as Dormant instead of haunting Past Due.
-    def payable_series_ids
+    def payable_series_ids(statuses: %w[active inactive])
       debt_accounts = Account.where(accountable_type: %w[CreditCard Loan]).select(:id)
 
       Current.family.recurring_transactions
-             .where(status: %w[active inactive])
+             .where(status: statuses)
              .where("amount > 0")
              .merge(
                RecurringTransaction.where(destination_account_id: nil)

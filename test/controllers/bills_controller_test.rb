@@ -180,6 +180,34 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert response.body.index(title, later_at), "next month's payday should be under After this month"
   end
 
+  test "a paused bill does not count toward a payday's due-before total" do
+    travel_to Date.new(2026, 10, 23)
+    declare_income(name: "Santa Maria", amount: -1700, payday: Date.new(2026, 10, 26))
+    bill = declare_bill(name: "Rent", amount: 900, due: Date.new(2026, 10, 27))
+    bill.update!(status: "inactive")
+
+    get bills_url
+
+    assert_response :success
+    until_text = I18n.l(Date.new(2026, 11, 26), format: "%-d %b")
+    assert_match I18n.t("bills.payday.due_before", amount: money_string(0), date: until_text), response.body
+    assert_no_match I18n.t("bills.payday.due_before", amount: money_string(900), date: until_text), response.body
+  end
+
+  test "two paydays on one date share one due-before window, so each bill counts once" do
+    travel_to Date.new(2026, 10, 23)
+    declare_income(name: "Santa Maria", amount: -1700, payday: Date.new(2026, 10, 26))
+    declare_income(name: "OutSystems", amount: -4300, payday: Date.new(2026, 10, 26))
+    declare_bill(name: "Rent", amount: 900, due: Date.new(2026, 10, 27))
+
+    get bills_url
+
+    assert_response :success
+    until_text = I18n.l(Date.new(2026, 11, 26), format: "%-d %b")
+    assert_no_match I18n.t("bills.payday.due_before", amount: money_string(0), date: until_text), response.body
+    assert_equal 2, response.body.scan(I18n.t("bills.payday.due_before", amount: money_string(900), date: until_text)).size
+  end
+
   test "index excludes income and inactive rows but shows debt payments" do
     create_bill(name: "Real bill", amount: 50)
     create_bill(name: "Salary deposit", amount: -2000)

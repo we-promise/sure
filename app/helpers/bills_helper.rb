@@ -288,7 +288,8 @@ module BillsHelper
     # closed the only useful fact left is when it had been due.
     unless occurrence.scheduled?
       if occurrence.recurring_transaction.typed_income?
-        return t(occurrence.paid? ? "bills.due_label.received" : "bills.due_label.expected", date: date)
+        return t("bills.due_label.received", date: bills_upcoming_date(occurrence.received_on)) if occurrence.paid?
+        return t("bills.due_label.expected", date: date)
       end
       return t("bills.due_label.settled", date: date)
     end
