@@ -92,12 +92,36 @@ class PlaidItem::Importer
       return unless persistent_id
 
       matches = plaid_item.plaid_accounts.where.not(plaid_id: returned_ids).select do |candidate|
-        payload = candidate.raw_payload
-        payload.is_a?(Hash) && payload["persistent_account_id"] == persistent_id
+        persistent_account_id_of(candidate) == persistent_id
       end
       plaid_account = matches.max_by { |candidate| [ candidate.current_account ? 1 : 0, candidate.created_at ] }
 
       plaid_account&.plaid_id = raw_account.account_id
       plaid_account
+    end
+
+    # A payload that cannot be decrypted is left unmatched, so the account is
+    # imported as it was before this matching rather than failing the import.
+    def persistent_account_id_of(plaid_account)
+      payload = plaid_account.raw_payload
+      payload["persistent_account_id"] if payload.is_a?(Hash)
+    rescue ActiveRecord::Encryption::Errors::Decryption
+      log_unreadable_payload(plaid_account)
+      nil
+    end
+
+    def log_unreadable_payload(plaid_account)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Skipped a Plaid account with an unreadable payload when matching a reissued account_id",
+        source: self.class.name,
+        provider_key: "plaid",
+        family: plaid_item.family,
+        metadata: {
+          plaid_item_id: plaid_item.id,
+          plaid_account_id: plaid_account.id
+        }
+      )
     end
 end
