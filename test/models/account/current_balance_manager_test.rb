@@ -701,6 +701,40 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     end
   end
 
+  test "moves a linked account's anchor without a waypoint when asked not to record one" do
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    assert manager.set_current_balance(1000).success?
+    anchor_id = @linked_account.valuations.current_anchor.sole.id
+
+    travel_to Date.current + 1.day do
+      assert_no_difference -> { @linked_account.valuations.count } do
+        assert manager.set_current_balance(2000, record_waypoint: false).success?
+      end
+
+      anchor = @linked_account.valuations.current_anchor.sole
+      assert_equal anchor_id, anchor.id
+      assert_equal [ 2000, Date.current ], [ anchor.entry.amount, anchor.entry.date ]
+      assert_empty @linked_account.valuations.reconciliation
+    end
+  end
+
+  # record_waypoint: false decides on its own: the anchor moves in place even
+  # when the caller does not trust the ledger to explain the change.
+  test "moves a linked account's anchor without a waypoint even when the ledger is not trusted" do
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    assert manager.set_current_balance(1000).success?
+    anchor_id = @linked_account.valuations.current_anchor.sole.id
+
+    travel_to Date.current + 1.day do
+      assert_no_difference -> { @linked_account.valuations.count } do
+        assert manager.set_current_balance(2000, reuse_explained_anchor: false, record_waypoint: false).success?
+      end
+
+      assert_equal anchor_id, @linked_account.valuations.current_anchor.sole.id
+      assert_empty @linked_account.valuations.reconciliation
+    end
+  end
+
   test "does not preserve same-day anchor as reconciliation" do
     manager = Account::CurrentBalanceManager.new(@linked_account)
 
