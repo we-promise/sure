@@ -497,21 +497,29 @@ class BillsController < ApplicationController
       # last upcoming one may not exist yet. Derive each series' next payday from
       # its schedule, stepping past any the user skipped, so the last window is
       # still bounded.
-      skipped_dates = Current.family.recurring_occurrences
-                             .where(recurring_transaction_id: income_ids, status: "skipped")
-                             .pluck(:recurring_transaction_id, Arel.sql(effective_sql))
-                             .group_by(&:first)
-                             .transform_values { |pairs| pairs.map { |_, date| date.to_date }.to_set }
+      # Compared by scheduled date (due_on), not effective date: a snooze moves
+      # effective_due_on but the schedule still produces the original date.
+      income_rows = Current.family.recurring_occurrences
+                           .where(recurring_transaction_id: income_ids)
+                           .pluck(:recurring_transaction_id, :status, :due_on)
+      skipped_dates = income_rows.select { |_, status, _| status == "skipped" }
+                                 .group_by(&:first)
+                                 .transform_values { |rows| rows.map { |_, _, due| due.to_date }.to_set }
+      # A non-skipped row already sits on this scheduled date, so it is not derived.
+      scheduled_dates = income_rows.reject { |_, status, _| status == "skipped" }
+                                   .map { |id, _, due| [ id, due.to_date ] }
+                                   .to_set
       last_payday = upcoming.last.effective_due_on
       derived = income_records.filter_map do |series|
         skipped = skipped_dates.fetch(series.id, Set.new)
+        taken = ->(date) { skipped.include?(date) || scheduled_dates.include?([ series.id, date ]) }
         candidate = series.schedule.next_occurrence_after(last_payday)
         12.times do # a bounded walk past consecutive skipped paydays
-          break unless candidate && skipped.include?(candidate)
+          break unless candidate && taken.call(candidate)
 
           candidate = series.schedule.next_occurrence_after(candidate)
         end
-        candidate unless candidate.nil? || skipped.include?(candidate)
+        candidate unless candidate.nil? || taken.call(candidate)
       end
       payday_dates = (payday_dates + derived).uniq.sort
 
