@@ -28,6 +28,7 @@ class DataEnrichment < ApplicationRecord
     sync: "sync",
     synth: "synth",
     trade_republic: "trade_republic",
+    truelayer: "truelayer",
     up: "up"
   }
 end

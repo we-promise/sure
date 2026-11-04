@@ -1,196 +1,409 @@
 ---
 nl:
   transactions:
-    unknown_name: Onbekende transactie
+    bulk_updates:
+      new:
+        cancel: "Annuleren"
+        category_label: "Categorie"
+        category_prompt: "Selecteer een categorie"
+        date_label: "Datum"
+        header_title: "Transacties bewerken"
+        merchant_label: "Handelaar"
+        merchant_prompt: "Selecteer een handelaar"
+        name_label: "Naam"
+        name_placeholder: "Voer een naam in die op de geselecteerde transacties wordt toegepast"
+        none: "(geen)"
+        notes_label: "Notities"
+        notes_placeholder: "Voer een notitie in die op de geselecteerde transacties wordt toegepast"
+        overview: "Overzicht"
+        save: "Opslaan"
+        tags_label: "Tags"
+        transactions_section: "Transacties"
+    unknown_name: "Onbekende transactie"
+    selection_bar:
+      duplicate: "Dupliceren"
+      edit: "Bewerken"
+      selected: "geselecteerd"
     form:
-      account: Account
-      account_prompt: Selecteer een Account
-      amount: Bedrag
-      category: Categorie
-      category_prompt: Selecteer een Categorie
-      date: Datum
-      description: Beschrijving
-      description_placeholder: Beschrijf transactie
+      details: "Details"
+      account: "Account"
+      account_prompt: "Selecteer een account"
+      amount: "Bedrag"
+      category: "Categorie"
+      category_label: "Categorie"
+      category_prompt: "Selecteer een categorie"
+      category_search_placeholder: "Categorieën zoeken"
+      create_category: "\"%{name}\" aanmaken"
+      create_category_error: "Kon categorie niet aanmaken"
+      create_as_subcategory: "Toevoegen als subcategorie…"
+      choose_parent: "\"%{name}\" aanmaken onder:"
+      back_to_categories: "Terug"
+      date: "Datum"
+      description: "Beschrijving"
+      description_placeholder: "Beschrijf transactie"
       description_placeholder_optional: "Laat leeg om de naam van de categorie/handelaar te gebruiken, of kies eerst een van beide"
-      expense: Uitgave
-      income: Inkomsten
-      none: (geen)
-      note_label: Notities
-      note_placeholder: Voer een notitie in
-      create_tag: Maken
-      submit: Transactie toevoegen
-      tag_search_placeholder: Tag zoeken of aanmaken
-      tags_label: Tags
-      transfer: Overboeking
+      expense: "Uitgave"
+      income: "Inkomsten"
+      merchant_label: "Handelaar"
+      none: "(geen)"
+      note_label: "Notities"
+      note_placeholder: "Voer een notitie in"
+      create_tag: "Aanmaken"
+      create_merchant: "Aanmaken"
+      create_merchant_error: "Kon handelaar niet aanmaken"
+      merchant_search_placeholder: "Handelaar zoeken of aanmaken"
+      no_matching_categories: "Geen overeenkomende categorieën"
+      submit: "Transactie toevoegen"
+      tag_search_placeholder: "Tag zoeken of aanmaken"
+      tags_label: "Tags"
+      transfer: "Overboeking"
+    create:
+      created: "Transactie aangemaakt"
+    update:
+      updated: "Transactie bijgewerkt"
     new:
-      new_transaction: Nieuwe transactie
+      new_transaction: "Nieuwe transactie"
+    transaction_category:
+      set_on_outflow: "De categorie hoort bij de uitgaande kant van deze overboeking en kan alleen daar worden gewijzigd"
     show:
-      account_label: Account
-      amount: Bedrag
-      category_label: Categorie
-      date_label: Datum
-      delete: Verwijderen
-      delete_subtitle: Dit verwijdert permanent de transactie, beïnvloedt uw historische
-        saldi en kan niet ongedaan worden gemaakt.
-      delete_title: Transactie verwijderen
-      details: Details
-      exclude: Uitsluiten
-      exclude_description: Uitgesloten transacties worden verwijderd uit budgetberekeningen en rapporten.
+      category_set_on_hidden_outflow: "Dit is de inkomende kant van een overboeking. De categorie hoort bij de uitgaande kant, op een account waartoe u geen toegang hebt, en kan alleen daar worden gewijzigd."
+      category_set_on_outflow: "Dit is de inkomende kant van een overboeking. De categorie hoort bij de uitgaande kant en kan alleen daar worden gewijzigd, zodat budgetten haar maar één keer meetellen."
+      keep_both: "Nee, beide behouden"
+      loan_payment: "Leningbetaling"
+      mark_recurring: "Markeren als terugkerend"
+      create_bill: "Vaste last aanmaken"
+      mark_recurring_subtitle: "Volg dit als terugkerende transactie. De afwijking in het bedrag wordt automatisch berekend op basis van vergelijkbare transacties uit de afgelopen 6 maanden."
+      mark_recurring_title: "Terugkerende transactie"
+      applied_to_title: "Hiermee betaalde vaste lasten"
+      applied_to_detail: "%{amount} voor de vaste last die vervalt op %{date}"
+      applied_to_unreviewed: "Controle nodig"
+      merge_duplicate: "Ja, samenvoegen"
+      potential_duplicate_description: "Deze transactie in behandeling is mogelijk dezelfde als de verwerkte transactie hieronder. Voeg ze in dat geval samen om dubbeltelling te voorkomen."
+      potential_duplicate_title: "Mogelijk duplicaat gevonden"
+      transfer: "Overboeking"
+      account_label: "Account"
+      amount: "Bedrag"
+      category_label: "Categorie"
+      date_label: "Datum"
+      delete: "Verwijderen"
+      delete_subtitle: "Dit verwijdert permanent de transactie, beïnvloedt uw historische saldi en kan niet ongedaan worden gemaakt."
+      delete_title: "Transactie verwijderen"
+      details: "Details"
+      attachments: "Bijlagen"
+      exclude: "Uitsluiten"
+      exclude_description: "Uitgesloten transacties worden verwijderd uit budgetberekeningen en rapporten."
+      activity_type: "Activiteitstype"
+      activity_type_description: "Type beleggingsactiviteit (Kopen, Verkopen, Dividend, etc.). Automatisch gedetecteerd of handmatig ingesteld."
+      one_time_title: "Eenmalige %{type}"
+      one_time_description: "Eenmalige transacties worden uitgesloten van bepaalde budgetberekeningen en rapporten om u te helpen zien wat echt belangrijk is."
+      convert_to_trade_title: "Omzetten naar handelstransactie"
+      convert_to_trade_description: "Zet deze transactie om in een koop- of verkooptransactie met effectgegevens voor portfoliobeheer."
+      convert_to_trade_button: "Omzetten naar handelstransactie"
+      transfer_matcher_description: "Koppel deze transactie aan de tegenhanger in een ander account."
+      pending_duplicate_merger_title: "Duplicaat van verwerkte transactie?"
+      pending_duplicate_merger_description: "Voeg deze transactie in behandeling handmatig samen met de verwerkte versie."
+      pending_duplicate_merger_button: "Samenvoegen openen"
+      merchant_label: "Handelaar"
+      name_label: "Naam"
+      nature: "Type"
+      none: "(geen)"
+      note_label: "Notities"
+      note_placeholder: "Voer een notitie in"
+      overview: "Overzicht"
+      settings: "Instellingen"
+      tags_label: "Tags"
+      tab_transactions: "Transacties"
+      tab_upcoming: "Aankomend"
+      uncategorized: "(ongecategoriseerd)"
+      additional_details: "Aanvullende gegevens"
+      payee: "Begunstigde"
+      description: "Omschrijving"
+      memo: "Memo"
+      original_description: "Oorspronkelijke omschrijving"
+      payment_channel: "Betaalkanaal"
+      transaction_code: "Transactiecode"
+      provider_extras: "Extra providergegevens"
+      plaid_payment_meta_label: "Betalingsmetadata · %{name}"
+      plaid_counterparty_label: "Tegenpartij %{index}"
+      provider_extra_fields:
+        by_order_of: "In opdracht van"
+        confidence_level: "Betrouwbaarheidsniveau"
+        entity_id: "Entiteit-ID"
+        logo_url: "Logo-URL"
+        name: "Naam"
+        payee: "Begunstigde"
+        payer: "Betaler"
+        phone_number: "Telefoonnummer"
+        ppd_id: "PPD-ID"
+        reason: "Reden"
+        reference_number: "Referentienummer"
+        type: "Type"
+        website: "Website"
+      transfer_or_debt_payment: "Overboeking of schuldaflossing?"
+      open_matcher: "Koppelen openen"
+      convert: "Omzetten"
       auto_excluded_title: "Automatisch uitgesloten"
       auto_excluded_stale_pending: "Op %{date} heeft de banksynchronisatie deze openstaande transactie uitgesloten omdat ze na %{days} dagen nog niet was verwerkt."
       auto_excluded_posted_match: "Op %{date} heeft de banksynchronisatie deze openstaande transactie uitgesloten omdat de verwerkte versie als aparte transactie binnenkwam."
       auto_excluded_other: "Op %{date} heeft de banksynchronisatie deze transactie uitgesloten."
-      activity_type: Activiteitstype
-      activity_type_description: Type beleggingsactiviteit (Kopen, Verkopen, Dividend, etc.). Automatisch gedetecteerd of handmatig ingesteld.
-      one_time_title: "Eenmalige %{type}"
-      one_time_description: Eenmalige transacties worden uitgesloten van bepaalde budgetberekeningen en rapporten om u te helpen zien wat echt belangrijk is.
-      convert_to_trade_title: Converteer naar Effectentransactie
-      convert_to_trade_description: Converteer deze transactie naar een Koop- of Verkooptransactie met effectendetails voor portfoliobeheer.
-      convert_to_trade_button: Converteer naar Trade
-      merchant_label: Handelaar
-      name_label: Naam
-      nature: Type
-      none: "(geen)"
-      note_label: Notities
-      note_placeholder: Voer een notitie in
-      overview: Overzicht
-      settings: Instellingen
-      tags_label: Tags
-      uncategorized: "(ongecategoriseerd)"
     activity_labels:
-      buy: Kopen
-      sell: Verkopen
-      sweep_in: Sweep In
-      sweep_out: Sweep Out
-      dividend: Dividend
-      reinvestment: Herbelegging
-      interest: Rente
-      fee: Kosten
-      transfer: Overboeking
-      contribution: Storting
-      withdrawal: Opname
-      exchange: Wissel
-      other: Anders
-    mark_recurring: Markeer als Terugkerend
-    mark_recurring_subtitle: Volg dit als een terugkerende transactie. Bedragvariatie wordt automatisch berekend uit de afgelopen 6 maanden van vergelijkbare transacties.
-    mark_recurring_title: Terugkerende Transactie
-    potential_duplicate_title: Mogelijk duplicaat gedetecteerd
-    potential_duplicate_description: Deze wachtende transactie kan hetzelfde zijn als de geposte transactie hieronder. Indien ja, voeg ze samen om dubbeltelling te voorkomen.
-    keep_both: Nee, bewaar beide
+      buy: "Kopen"
+      sell: "Verkopen"
+      sweep_in: "Sweep In"
+      sweep_out: "Sweep Out"
+      dividend: "Dividend"
+      reinvestment: "Herbelegging"
+      interest: "Rente"
+      fee: "Kosten"
+      transfer: "Overboeking"
+      contribution: "Storting"
+      withdrawal: "Opname"
+      exchange: "Wissel"
+      other: "Anders"
+    mark_recurring: "Markeren als terugkerend"
+    mark_recurring_subtitle: "Volg dit als een terugkerende transactie. Bedragvariatie wordt automatisch berekend uit de afgelopen 6 maanden van vergelijkbare transacties."
+    mark_recurring_title: "Terugkerende transactie"
+    potential_duplicate_title: "Mogelijk duplicaat gedetecteerd"
+    potential_duplicate_description: "Deze transactie in behandeling kan dezelfde zijn als de verwerkte transactie hieronder. Zo ja, voeg ze samen om dubbeltelling te voorkomen."
+    keep_both: "Nee, bewaar beide"
+    split_parent_row:
+      split_label: "Gesplitst"
+    transfer_match:
+      auto_matched: "Automatisch gekoppeld"
+      auto_matched_short: "Auto"
+      confirm_match: "Koppeling bevestigen"
+      payment_confirmed: "Betaling is bevestigd"
+      reject_match: "Koppeling afwijzen"
+      transfer_confirmed: "Overboeking is bevestigd"
     transaction:
-      pending: Wachtend
-      pending_tooltip: Wachtende transactie — kan wijzigen bij posting
-      linked_with_provider: Gekoppeld met %{provider}
-      activity_type_tooltip: Beleggingsactiviteitstype
-      possible_duplicate: Duplicaat?
-      potential_duplicate_tooltip: Dit kan een duplicaat zijn van een andere transactie
-      review_recommended: Beoordeel
-      review_recommended_tooltip: Groot bedragverschil — beoordeling aanbevolen om te controleren of dit een duplicaat is
+      pending: "In behandeling"
+      pending_tooltip: "Transactie in behandeling — kan nog wijzigen bij verwerking"
+      linked_with_provider: "Gekoppeld met %{provider}"
+      activity_type_tooltip: "Beleggingsactiviteitstype"
+      possible_duplicate: "Duplicaat?"
+      potential_duplicate_tooltip: "Dit kan een duplicaat zijn van een andere transactie"
+      review_recommended: "Beoordeel"
+      review_recommended_tooltip: "Groot bedragverschil — beoordeling aanbevolen om te controleren of dit een duplicaat is"
+      split: "Gesplitst"
+      split_tooltip: "Deze transactie is opgesplitst in meerdere boekingen"
+      split_child_tooltip: "Onderdeel van een gesplitste transactie"
+      transfer_hint: "Overboeking?"
+      transfer_hint_dismiss: "Geen overboeking"
+      transfer_hint_tooltip: "Een overeenkomende transactie in een ander account lijkt de andere kant van een overboeking — klik om ze te koppelen"
+      view_merchant: "Handelaar bekijken"
     merge_duplicate:
-      success: Transacties succesvol samengevoegd
-      failure: Kon transacties niet samenvoegen
+      success: "Transacties succesvol samengevoegd"
+      failure: "Kon transacties niet samenvoegen"
     dismiss_duplicate:
-      success: Bewaard als aparte transacties
-      failure: Kon duplicaatsuggestie niet afwijzen
+      success: "Bewaard als aparte transacties"
+      failure: "Kon duplicaatsuggestie niet afwijzen"
+    pending_duplicate_merge:
+      possible_duplicate: "Duplicaat?"
+      possible_duplicate_short: "Dup?"
+      review_recommended: "Controleren"
+      review_recommended_short: "Contr."
+      confirm_title: "Samenvoegen met verwerkte transactie (%{posted_amount})"
+      reject_title: "Als afzonderlijke transacties behouden"
+    summary:
+      total_transactions: "Totaal aantal transacties"
+      income: "Inkomsten"
+      expenses: "Uitgaven"
+      inflow: "Inkomend"
+      outflow: "Uitgaand"
     header:
-      edit_categories: Categorieën bewerken
-      edit_imports: Imports bewerken
-      edit_merchants: Handelaren bewerken
-      edit_tags: Tags bewerken
-      import: Importeren
+      edit_categories: "Categorieën bewerken"
+      edit_imports: "Imports bewerken"
+      edit_merchants: "Handelaren bewerken"
+      edit_tags: "Tags bewerken"
+      import: "Importeren"
     index:
-      transaction: transactie
-      transactions: transacties
-      import: Importeren
-    toggle_recurring_section: Schakel aankomende terugkerende transacties in/uit
+      title: "Transacties"
+      transaction: "transactie"
+      transactions: "transacties"
+      import: "Importeren"
+      new_rule: "Nieuwe regel"
+      edit_rules: "Regels bewerken"
+      edit_categories: "Categorieën bewerken"
+      edit_tags: "Tags bewerken"
+      edit_merchants: "Handelaren bewerken"
+      edit_imports: "Imports bewerken"
+      new_transaction: "Nieuwe transactie"
+      categorize_button:
+        one: "Categoriseren (1)"
+        other: "Categoriseren (%{count})"
+    categorizes:
+      show:
+        exit: "Afsluiten"
+        skip: "Overslaan"
+        remaining:
+          one: "Nog 1 transactie zonder categorie"
+          other: "Nog %{count} transacties zonder categorie"
+        transaction_count:
+          one: "1 transactie"
+          other: "%{count} transacties"
+        transactions_hint: "Vink een transactie uit om die uit te sluiten, of wijs er direct in de rij een andere categorie aan toe."
+        assign_category: "Categorie toewijzen"
+        assign_category_prompt: "→ toewijzen"
+        filter_placeholder: "Categorieën zoeken..."
+        col_transaction: "Transactie"
+        col_date: "Datum"
+        col_amount: "Bedrag"
+        col_category: "Categorie"
+        type_income: "Inkomsten"
+        type_expense: "Uitgave"
+        create_rule_label: "Categoriseringsregel aanmaken"
+        rule_description_prefix: "Toekomstige transacties (%{type}) met een naam die"
+        rule_description_suffix: "bevat, krijgen ook deze categorie."
+        no_categories: "Geen overeenkomende categorieën"
+        all_done: "Alle transacties zijn gecategoriseerd"
+      create:
+        categorized:
+          one: "1 transactie gecategoriseerd"
+          other: "%{count} transacties gecategoriseerd"
+        rule_creation_failed: "Transacties gecategoriseerd, maar de regel kon niet worden aangemaakt (mogelijk bestaat die al)."
+      entry_row:
+        include_checkbox: "%{name} opnemen"
+        assign_category_select: "Categorie toewijzen voor %{name}"
+    list:
+      drag_drop_title: "Sleep een CSV hierheen om te importeren"
+      drag_drop_subtitle: "Transacties direct uploaden"
+      transaction: "transactie"
+      transactions: "transacties"
+    toggle_recurring_section: "Schakel aankomende terugkerende transacties in/uit"
     search:
       filters:
-        account: Account
-        date: Datum
-        type: Type
-        status: Status
-        amount: Bedrag
-        category: Categorie
-        tag: Tag
-        merchant: Handelaar
+        account: "Account"
+        date: "Datum"
+        type: "Type"
+        status: "Status"
+        amount: "Bedrag"
+        category: "Categorie"
+        tag: "Tag"
+        merchant: "Handelaar"
+        ai: "AI"
+        attachment: "Bijlage"
     convert_to_trade:
-      title: Converteer naar Effectentransactie
-      description: Converteer deze transactie naar een trade met effectendetails
+      title: "Omzetten naar handelstransactie"
+      description: "Zet deze transactie om in een handelstransactie met effectgegevens"
       date_label: "Datum:"
       account_label: "Account:"
       amount_label: "Bedrag:"
-      security_label: Effect
-      security_prompt: Selecteer een effect...
+      security_label: "Effect"
+      security_prompt: "Selecteer een effect..."
       security_custom: "+ Voer aangepaste ticker in"
-      security_not_listed_hint: Ziet u uw effect niet? Selecteer "Voer aangepaste ticker in" onderaan de lijst.
-      ticker_placeholder: AAPL
-      ticker_hint: Voer het aandelen/ETF ticker symbool in (bijv. AAPL, MSFT)
-      ticker_search_placeholder: Zoek naar een ticker...
-      ticker_search_hint: Zoek op ticker symbool of bedrijfsnaam, of typ een aangepaste ticker
-      price_mismatch_title: Prijs komt mogelijk niet overeen
+      security_not_listed_hint: "Ziet u uw effect niet? Selecteer \"Voer aangepaste ticker in\" onderaan de lijst."
+      ticker_placeholder: "AAPL"
+      ticker_hint: "Voer het aandelen/ETF tickersymbool in (bijv. AAPL, MSFT)"
+      ticker_search_placeholder: "Zoek naar een ticker..."
+      ticker_search_hint: "Zoek op tickersymbool of bedrijfsnaam, of typ een aangepaste ticker"
+      price_mismatch_title: "Prijs komt mogelijk niet overeen"
       price_mismatch_message: "Uw prijs (%{entered_price}/aandeel) verschilt aanzienlijk van de huidige marktprijs van %{ticker} (%{market_price}). Als dit verkeerd lijkt, heeft u mogelijk het verkeerde effect geselecteerd — probeer \"Voer aangepaste ticker in\" te gebruiken om het juiste effect op te geven."
-      quantity_label: Hoeveelheid (Aandelen)
-      quantity_placeholder: bijv. 20
-      quantity_hint: Aantal verhandelde aandelen
-      price_label: Prijs per Aandeel
-      price_placeholder: bijv. 52.15
+      quantity_label: "Hoeveelheid (Aandelen)"
+      quantity_placeholder: "bijv. 20"
+      quantity_hint: "Aantal verhandelde aandelen"
+      price_label: "Prijs per aandeel"
+      price_placeholder: "bijv. 52.15"
       price_hint: "Prijs per aandeel (%{currency})"
       qty_or_price_hint: "Voer minimaal hoeveelheid OF prijs in. De andere wordt berekend uit het transactiebedrag (%{amount})."
-      trade_type_label: Trade Type
-      trade_type_hint: Aandelen van een effect kopen of verkopen
-      exchange_label: Beurs (Optioneel)
-      exchange_placeholder: XNAS
-      exchange_hint: Laat leeg voor automatische detectie
-      cancel: Annuleren
-      submit: Converteer naar Trade
-      success: Transactie geconverteerd naar trade
+      trade_type_label: "Type handelstransactie"
+      trade_type_hint: "Aandelen van een effect kopen of verkopen"
+      exchange_label: "Beurs (optioneel)"
+      exchange_placeholder: "XNAS"
+      exchange_hint: "Laat leeg voor automatische detectie"
+      cancel: "Annuleren"
+      submit: "Omzetten naar handelstransactie"
+      success: "Transactie omgezet naar handelstransactie"
+      conversion_note: "Omgezet van transactie: %{original_name} (%{original_date})"
       errors:
-        not_investment_account: Alleen transacties in beleggingsaccounts kunnen worden geconverteerd naar trades
-        already_converted: Deze transactie is al geconverteerd of uitgesloten
-        enter_ticker: Voer een ticker symbool in
-        security_not_found: Geselecteerd effect bestaat niet meer. Selecteer een ander.
-        select_security: Selecteer of voer een effect in
-        enter_qty_or_price: Voer hoeveelheid of prijs per aandeel in. De andere wordt berekend uit het transactiebedrag.
-        invalid_qty_or_price: Ongeldige hoeveelheid of prijs. Voer geldige positieve waarden in.
+        not_investment_account: "Alleen transacties in beleggingsaccounts kunnen worden omgezet naar handelstransacties"
+        already_converted: "Deze transactie is al geconverteerd of uitgesloten"
+        enter_ticker: "Voer een tickersymbool in"
+        security_not_found: "Geselecteerd effect bestaat niet meer. Selecteer een ander."
+        select_security: "Selecteer of voer een effect in"
+        enter_qty_or_price: "Voer hoeveelheid of prijs per aandeel in. De andere wordt berekend uit het transactiebedrag."
+        invalid_qty_or_price: "Ongeldige hoeveelheid of prijs. Voer geldige positieve waarden in."
         conversion_failed: "Converteren van transactie mislukt: %{error}"
         unexpected_error: "Onverwachte fout tijdens conversie: %{error}"
     searches:
       filters:
+        account_filter:
+          filter_accounts: "Accounts filteren"
+        category_filter:
+          filter_category: "Categorie filteren"
+        date_filter:
+          start_date: "Begindatum"
+          end_date: "Einddatum"
+        merchant_filter:
+          filter_merchants: "Handelaren filteren"
+        tag_filter:
+          filter_tags: "Tags filteren"
         amount_filter:
-          equal_to: Gelijk aan
-          greater_than: Groter dan
-          less_than: Kleiner dan
-          placeholder: '0'
+          equal_to: "Gelijk aan"
+          greater_than: "Groter dan"
+          less_than: "Kleiner dan"
+          placeholder: "0"
         badge:
-          expense: Uitgave
-          income: Inkomsten
-          on_or_after: op of na %{date}
-          on_or_before: op of voor %{date}
-          transfer: Overboeking
-          confirmed: Bevestigd
-          pending: Wachtend
+          expense: "Uitgave"
+          income: "Inkomsten"
+          on_or_after: "op of na %{date}"
+          on_or_before: "op of voor %{date}"
+          transfer: "Overboeking"
+          confirmed: "Bevestigd"
+          pending: "In behandeling"
+          ai_current: "AI"
+          ai_history: "AI-geschiedenis"
+          attachment_with: "Met bijlage"
+          attachment_without: "Zonder bijlage"
+        attachment_filter:
+          with: "Met bijlage"
+          without: "Zonder bijlage"
+        ai_filter:
+          current: "AI"
+          current_description: "De categorie is nog steeds de automatisch toegewezen categorie (AI of Bayes)."
+          history: "AI-geschiedenis"
+          history_description: "Is automatisch gecategoriseerd, maar de categorie is sindsdien gewijzigd."
         type_filter:
-          expense: Uitgave
-          income: Inkomsten
-          transfer: Overboeking
+          expense: "Uitgave"
+          income: "Inkomsten"
+          transfer: "Overboeking"
         status_filter:
-          confirmed: Bevestigd
-          pending: Wachtend
+          confirmed: "Bevestigd"
+          pending: "In behandeling"
       menu:
-        account_filter: Account
-        amount_filter: Bedrag
-        apply: Toepassen
-        cancel: Annuleren
-        category_filter: Categorie
-        clear_filters: Filters wissen
-        date_filter: Datum
-        merchant_filter: Handelaar
-        status_filter: Status
-        tag_filter: Tag
-        type_filter: Type
+        account_filter: "Account"
+        amount_filter: "Bedrag"
+        apply: "Toepassen"
+        cancel: "Annuleren"
+        category_filter: "Categorie"
+        clear_filters: "Filters wissen"
+        date_filter: "Datum"
+        merchant_filter: "Handelaar"
+        status_filter: "Status"
+        tag_filter: "Tag"
+        type_filter: "Type"
       search:
-        equal_to: gelijk aan
-        greater_than: groter dan
-        less_than: kleiner dan
+        equal_to: "gelijk aan"
+        greater_than: "groter dan"
+        less_than: "kleiner dan"
       form:
-        toggle_selection_checkboxes: Schakel alle selectievakjes in/uit
+        toggle_selection_checkboxes: "Schakel alle selectievakjes in/uit"
+        search_placeholder: "Transacties zoeken ..."
+        filter: "Filteren"
+    attachments:
+      cannot_exceed: "Maximaal %{count} bijlagen per transactie"
+      uploaded_one: "Bijlage geüpload"
+      uploaded_many: "%{count} bijlagen geüpload"
+      failed_upload: "Uploaden van bijlage mislukt: %{error}"
+      no_files_selected: "Geen bestanden geselecteerd om te uploaden"
+      attachment_deleted: "Bijlage verwijderd"
+      failed_delete: "Verwijderen van bijlage mislukt: %{error}"
+      upload_failed: "Uploaden van bijlage mislukt. Probeer het opnieuw of neem contact op met support."
+      delete_failed: "Verwijderen van bijlage mislukt. Probeer het opnieuw of neem contact op met support."
+      upload: "Uploaden"
+      no_attachments: "Nog geen bijlagen"
+      select_up_to: "Selecteer maximaal %{count} bestanden (afbeeldingen of PDF's, max. %{size} MB per stuk) • %{used} van %{count} gebruikt"
+      files:
+        one: "Bestand (1)"
+        other: "Bestanden (%{count})"
+      browse_to_add: "Bladeren om bestanden toe te voegen"
+      max_reached: "Maximaal aantal bestanden bereikt (%{count}/%{max}). Verwijder een bestaand bestand om een ander te uploaden."

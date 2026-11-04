@@ -1,0 +1,30 @@
+---
+nl:
+  family:
+    fio:
+      create_fio_item:
+        default_name: "Fio banka-verbinding"
+  fio_item:
+    errors:
+      account_processing_failed: "Kan Fio-account niet synchroniseren"
+      account_mismatch: "Dit token hoort bij een ander Fio-account dan het account dat deze verbinding al synchroniseert. Voeg het toe als aparte verbinding."
+      account_sync_schedule_failed: "Kan synchronisatie van Fio-account niet inplannen"
+      statement_too_large: "Het afschrift bevat meer transacties dan Fio in één verzoek levert. Zet de startdatum van de synchronisatie later en synchroniseer opnieuw."
+      statement_fetch_failed: "Kan het afschrift niet ophalen bij Fio"
+      history_locked: "Fio heeft deze afschriftperiode geweigerd. Ontgrendel de volledige geschiedenis van het account in internetbankieren onder Settings → API en synchroniseer daarna binnen 10 minuten opnieuw."
+      sync_failed: "Kan Fio-verbinding niet synchroniseren"
+    sync:
+      status:
+        importing: "Afschrift importeren van Fio..."
+        checking_setup: "Accountconfiguratie controleren..."
+        needs_setup:
+          one: "1 account moet worden ingesteld..."
+          other: "%{count} accounts moeten worden ingesteld..."
+        processing: "Transacties verwerken..."
+        calculating: "Saldi berekenen..."
+    sync_status:
+      no_accounts: "Nog geen account gevonden"
+      all_synced:
+        one: "1 account gesynchroniseerd"
+        other: "%{count} accounts gesynchroniseerd"
+      partial: "%{linked} gesynchroniseerd, %{unlinked} moeten worden ingesteld"

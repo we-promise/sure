@@ -27,7 +27,7 @@ nl:
           body: Weet u zeker dat u de datacache wilt wissen? Dit verwijdert alle wisselkoersen, effectenprijzen, accountsaldo's en andere gegevens. Deze actie kan niet ongedaan worden gemaakt.
       provider_selection:
         title: Providerselectie
-        description: Kies welke service te gebruiken voor het ophalen van wisselkoersen en effectenprijzen. Yahoo Finance is gratis en vereist geen API Key. Twelve Data vereist een gratis API Key maar biedt mogelijk meer gegevensdekking.
+        description: Kies welke service te gebruiken voor het ophalen van wisselkoersen en effectenprijzen. Yahoo Finance is gratis en vereist geen API-sleutel. Twelve Data vereist een gratis API-sleutel maar biedt mogelijk meer gegevensdekking.
         exchange_rate_provider_label: Wisselkoersprovider
         securities_provider_label: Effecten (aandelenprijzen) provider
         env_configured_message: Providerselectie is uitgeschakeld omdat omgevingsvariabelen (EXCHANGE_RATE_PROVIDER of SECURITIES_PROVIDER) zijn ingesteld. Om selectie hier in te schakelen, verwijder deze omgevingsvariabelen uit uw configuratie.
@@ -59,17 +59,17 @@ nl:
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance
-        description: Yahoo Finance biedt gratis toegang tot aandelenkoersen, wisselkoersen en financiële gegevens zonder API Key vereiste.
+        description: Yahoo Finance biedt gratis toegang tot aandelenkoersen, wisselkoersen en financiële gegevens zonder API-sleutel vereiste.
         status_active: Yahoo Finance is actief en werkt
         status_inactive: Yahoo Finance verbinding mislukt
         connection_failed: Kan geen verbinding maken met Yahoo Finance
         troubleshooting: Controleer uw internetverbinding en firewallinstellingen. Yahoo Finance kan tijdelijk niet beschikbaar zijn.
       twelve_data_settings:
         api_calls_used: "%{used} / %{limit} API dagelijkse oproepen gebruikt (%{percentage})"
-        description: Voer de API Key in die door Twelve Data is verstrekt
+        description: Voer de API-sleutel in die door Twelve Data is verstrekt
         env_configured_message: Succesvol geconfigureerd via de TWELVE_DATA_API_KEY omgevingsvariabele.
-        label: API Key
-        placeholder: Voer hier uw API Key in
+        label: API-sleutel
+        placeholder: Voer hier uw API-sleutel in
         plan: "%{plan} plan"
         title: Twelve Data
       update:

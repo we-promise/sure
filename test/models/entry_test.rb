@@ -23,6 +23,16 @@ class EntryTest < ActiveSupport::TestCase
     assert_equal entry_ids.sort.reverse, Entry.where(id: entry_ids).reverse_chronological.pluck(:id)
   end
 
+  test "an entryable preloaded from its entry reads that entry without a query" do
+    entry = create_transaction(account: accounts(:depository), name: "Preloaded", date: Date.new(2026, 5, 5))
+
+    loaded = Entry.where(id: entry.id).includes(:entryable).first
+
+    assert_queries_count(0) do
+      assert_same loaded, loaded.entryable.entry
+    end
+  end
+
   # Regression: lock_saved_attributes! and mark_user_modified! save again and used
   # to drop the original date, so moving an entry later double-counted it.
   test "sync_account_later keeps the original date across later saves" do
