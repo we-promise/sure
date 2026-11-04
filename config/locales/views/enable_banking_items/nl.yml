@@ -2,7 +2,7 @@
 nl:
   enable_banking_items:
     authorize:
-      authorization_failed: Autorisatie starten mislukt
+      authorization_failed: "Autorisatie starten mislukt: %{message}"
       bank_required: Selecteer een bank.
       invalid_redirect: De ontvangen autorisatie URL is ongeldig. Probeer het opnieuw.
       redirect_uri_not_allowed: Redirect niet toegestaan. Configureer `%{callback_url}` in uw Enable Banking app instellingen.
