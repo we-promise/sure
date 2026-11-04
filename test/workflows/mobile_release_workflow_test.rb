@@ -39,8 +39,9 @@ class MobileReleaseWorkflowTest < ActiveSupport::TestCase
     [ [ "flutter-build", "build-android" ], [ "flutter-build", "build-ios" ],
       [ "ios-testflight", "build-and-upload" ] ].each do |file, job|
       result = resolve(file, job, ref: "main")
-      assert_equal "0.6.9\n", result[:metadata]
-      assert_includes result[:output], "=0.6.9\n"
+      assert_equal "0.0.0-dev\n", result[:metadata]
+      name = job == "build-android" ? "0.0.0-dev" : "0.0.0"
+      assert_includes result[:output], "=#{name}\n"
     end
   end
 
@@ -123,6 +124,20 @@ class MobileReleaseWorkflowTest < ActiveSupport::TestCase
     end
   end
 
+  test "unsigned iOS packaging overrides the development build number" do
+    Dir.mktmpdir do |dir|
+      File.write(File.join(dir, "flutter"), "#!/bin/bash\nprintf '%s\\n' \"$*\"\n")
+      FileUtils.chmod(0755, File.join(dir, "flutter"))
+      script = workflow("flutter-build").fetch("jobs").fetch("build-ios").fetch("steps")
+        .find { |step| step["name"] == "Build iOS (No Code Signing)" }.fetch("run")
+      %w[0.0.0 2026.11.4].each do |name|
+        output, status = Open3.capture2e({ "PATH" => "#{dir}:#{ENV.fetch('PATH')}", "SURE_BUILD_NAME" => name }, "bash", "-e", "-c", script)
+        assert status.success?, output
+        assert_equal "build ios --release --no-codesign --build-name=#{name} --build-number=1\n", output
+      end
+    end
+  end
+
   private
     def android_number(timestamp)
       Dir.mktmpdir do |dir|
@@ -144,7 +159,7 @@ class MobileReleaseWorkflowTest < ActiveSupport::TestCase
     def execute(file, job, step_name, env)
       Dir.mktmpdir do |dir|
         FileUtils.mkdir_p(File.join(dir, "mobile"))
-        File.write(File.join(dir, "mobile/pubspec.yaml"), "version: 0.6.9+42\n")
+        FileUtils.cp(Rails.root.join("mobile/pubspec.yaml"), File.join(dir, "mobile/pubspec.yaml"))
         output_path = File.join(dir, "output")
         env = env.merge("GITHUB_ENV" => output_path, "GITHUB_OUTPUT" => output_path)
         script = workflow(file).fetch("jobs").fetch(job).fetch("steps").find { |step| step["name"] == step_name }.fetch("run")
