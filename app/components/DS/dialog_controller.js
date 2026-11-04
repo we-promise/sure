@@ -30,12 +30,8 @@ export default class extends Controller {
     this._onKeydown = this.#onKeydown.bind(this);
     this._onClose = this.#onClose.bind(this);
     this._pressTarget = null;
-    this._onPress = (e) => {
-      this._pressTarget = e.target;
-    };
 
     this.element.addEventListener("keydown", this._onKeydown);
-    this.element.addEventListener("pointerdown", this._onPress);
     this.element.addEventListener("close", this._onClose);
 
     if (this.element.matches(":modal")) return;
@@ -52,7 +48,6 @@ export default class extends Controller {
 
   disconnect() {
     this.element.removeEventListener("keydown", this._onKeydown);
-    this.element.removeEventListener("pointerdown", this._onPress);
     this.element.removeEventListener("close", this._onClose);
 
     // Replaced while still open: one drawer linking to the next inside the
@@ -66,10 +61,22 @@ export default class extends Controller {
     }
   }
 
+  // Where the gesture that may end in a click started. Only the primary
+  // pointer counts, so a second finger cannot overwrite the first one's origin.
+  trackPress(e) {
+    if (e.isPrimary === false) return;
+    this._pressTarget = e.target;
+  }
+
+  clearPress() {
+    this._pressTarget = null;
+  }
+
   // If the user clicks anywhere outside of the visible content, close the dialog
   clickOutside(e) {
     if (this.disableClickOutsideValue) return;
-    const pressTarget = this._pressTarget;
+    // A click with no detail comes from the keyboard, not from the press kept here.
+    const pressTarget = e.detail === 0 ? null : this._pressTarget;
     this._pressTarget = null;
     if (shouldCloseOnClick(pressTarget, e.target, this.contentTarget)) {
       this.close();
