@@ -144,6 +144,7 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
   test "imports a reissued account as new when a stored payload cannot be decrypted" do
     existing = plaid_accounts(:one)
     existing.update!(raw_payload: { "account_id" => existing.plaid_id, "persistent_account_id" => "persistent_acc_1" })
+    account_provider = AccountProvider.create!(account: accounts(:connected), provider: existing)
     PlaidAccount.any_instance.stubs(:raw_payload).raises(ActiveRecord::Encryption::Errors::Decryption)
 
     stub_accounts_snapshot(
@@ -155,7 +156,10 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
     end
 
     assert_equal "acc_mock_1", existing.reload.plaid_id
-    assert DebugLogEntry.exists?(source: "PlaidItem::Importer", level: "warn", provider_key: "plaid")
+
+    entry = DebugLogEntry.find_by!(source: "PlaidItem::Importer", level: "warn", provider_key: "plaid")
+    assert_equal account_provider, entry.account_provider
+    assert_equal accounts(:connected), entry.account
   end
 
   test "reads and logs an unreadable payload once per import" do

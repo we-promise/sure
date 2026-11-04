@@ -129,6 +129,8 @@ class PlaidItem::Importer
         source: self.class.name,
         provider_key: "plaid",
         family: plaid_item.family,
+        account: plaid_account.current_account,
+        account_provider: plaid_account.account_provider,
         metadata: {
           plaid_item_id: plaid_item.id,
           plaid_account_id: plaid_account.id
