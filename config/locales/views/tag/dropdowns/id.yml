@@ -1,0 +1,9 @@
+---
+id:
+  tag:
+    dropdowns:
+      show:
+        empty: Belum ada tag
+        manage: Kelola tag
+        no_tags: Tag tidak ditemukan
+        search_placeholder: Cari

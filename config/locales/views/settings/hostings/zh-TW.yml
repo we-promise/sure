@@ -129,8 +129,10 @@ zh-TW:
         access_token_placeholder: 在此輸入您的 Access Token
         uri_base_label: API 基礎 URL（選填）
         uri_base_placeholder: 預設為 https://api.openai.com/v1
+        uri_base_local_help: "如果模型執行在您自己的電腦上，請填寫其相容 OpenAI 的端點，例如 Ollama 的 http://localhost:11434/v1；如果 Sure 和 Ollama 以 Docker Compose 服務執行，則填寫 http://ollama:11434/v1。"
         model_label: 模型名稱（選填）
         model_placeholder: 預設為 gpt-4.1
+        model_required_help: "設定了 API 基礎 URL 時必填：填寫您的伺服器使用的模型名稱，例如 Ollama 的 llama3.1。"
         json_mode_label: JSON 模式
         json_mode_auto: 自動（建議）
         json_mode_strict: 嚴格 (Strict) - 最適合思考模型
