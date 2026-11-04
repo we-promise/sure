@@ -50,12 +50,11 @@ class PlaidItem::Importer
 
     def fetch_and_import_accounts_data
       snapshot = PlaidItem::AccountsSnapshot.new(plaid_item, plaid_provider: plaid_provider)
+      returned_ids = snapshot.accounts.map(&:account_id)
 
       PlaidItem.transaction do
         snapshot.accounts.each do |raw_account|
-          plaid_account = plaid_item.plaid_accounts.find_or_initialize_by(
-            plaid_id: raw_account.account_id
-          )
+          plaid_account = plaid_account_for(raw_account, returned_ids: returned_ids)
 
           PlaidAccount::Importer.new(
             plaid_account,
@@ -68,5 +67,34 @@ class PlaidItem::Importer
         # Once we know all data has been imported, save the cursor to avoid re-fetching the same data next time
         plaid_item.update!(next_cursor: snapshot.transactions_cursor)
       end
+    end
+
+    def plaid_account_for(raw_account, returned_ids:)
+      plaid_item.plaid_accounts.find_by(plaid_id: raw_account.account_id) ||
+        reissued_plaid_account(raw_account, returned_ids: returned_ids) ||
+        plaid_item.plaid_accounts.new(plaid_id: raw_account.account_id)
+    end
+
+    # At institutions with tokenized account numbers, such as Chase, re-consenting
+    # through update mode can make Plaid issue a new account_id for an account it
+    # already shares, while persistent_account_id stays the same. Moving the
+    # existing PlaidAccount to the new id keeps it, and the Sure account linked to
+    # it, instead of importing the account a second time. Only an account Plaid no
+    # longer returns under its old id is taken over. An Item that was already
+    # duplicated before this matching existed holds a stale copy next to the one in
+    # use, so the most recently updated is preferred. The payload is encrypted, so
+    # the match is made in Ruby.
+    def reissued_plaid_account(raw_account, returned_ids:)
+      persistent_id = raw_account.try(:persistent_account_id).presence
+      return unless persistent_id
+
+      candidates = plaid_item.plaid_accounts.where.not(plaid_id: returned_ids).order(updated_at: :desc)
+      plaid_account = candidates.detect do |candidate|
+        payload = candidate.raw_payload
+        payload.is_a?(Hash) && payload["persistent_account_id"] == persistent_id
+      end
+
+      plaid_account&.plaid_id = raw_account.account_id
+      plaid_account
     end
 end
