@@ -157,6 +157,37 @@ class IncomeStatement
     totals(transactions_scope: scope, date_range: period.date_range)
   end
 
+  # Income/expense totals for every calendar month touched by `period`,
+  # keyed by each month's first day. Equivalent to calling `totals_for` once
+  # per month (with that month clipped to `period`), but cached per calendar
+  # month: a sliding window (e.g. the dashboard's money flow chart moving one
+  # month) reuses the months it already computed, and every month that isn't
+  # cached yet is fetched together in a single query. Months with no activity
+  # map to zero totals.
+  def monthly_totals_for(period, account_ids: nil)
+    account_ids = account_ids.presence
+    month_ranges = monthly_ranges_within(period)
+    cache_keys = month_ranges.to_h { |month, range| [ month, monthly_totals_cache_key(range, account_ids) ] }
+
+    cached = Rails.cache.read_multi(*cache_keys.values)
+    rows_by_month = cache_keys.to_h { |month, key| [ month, cached[key] ] }.compact
+
+    missing_months = month_ranges.keys - rows_by_month.keys
+    if missing_months.any?
+      fetched = fetch_monthly_totals_rows(
+        Period.custom(start_date: month_ranges[missing_months.first].begin, end_date: month_ranges[missing_months.last].end),
+        account_ids
+      ).group_by(&:month)
+
+      missing_months.each do |month|
+        rows_by_month[month] = fetched.fetch(month, [])
+        Rails.cache.write(cache_keys[month], rows_by_month[month])
+      end
+    end
+
+    month_ranges.keys.to_h { |month| [ month, scope_totals_from_monthly_rows(rows_by_month[month]) ] }
+  end
+
   # Accounts actually reflected in totals/totals_for: visible, not excluded
   # from reports, not tax-advantaged, and (when scoped to a user) included in
   # that user's finances. Callers offering an account filter (e.g. a
@@ -350,6 +381,48 @@ class IncomeStatement
         ExchangeRate.maximum(:updated_at)&.to_i,
         family.investment_contributions_as_spending?
       ]
+    end
+
+    # Each calendar month touched by `period`, clipped to it, keyed by the
+    # month's first day.
+    def monthly_ranges_within(period)
+      month = period.start_date.beginning_of_month
+      {}.tap do |ranges|
+        while month <= period.end_date
+          ranges[month] = [ month, period.start_date ].max..[ month.end_of_month, period.end_date ].min
+          month = month.next_month
+        end
+      end
+    end
+
+    # Keyed by the (clipped) month rather than the caller's whole window, so
+    # overlapping windows share entries. The clipped end is part of the key
+    # because an in-progress month is capped at today.
+    def monthly_totals_cache_key(range, account_ids)
+      account_filter_hash = account_ids && Digest::MD5.hexdigest(account_ids.map(&:to_s).sort.join(","))
+
+      [
+        "income_statement", "monthly_totals", "v2", family.id, user&.id, included_account_ids_hash,
+        account_filter_hash, range.begin, range.end, *cache_freshness_key
+      ]
+    end
+
+    def fetch_monthly_totals_rows(period, account_ids)
+      scope = family.transactions.visible.excluding_pending.in_period(period)
+      scope = scope.where(entries: { account_id: account_ids }) if account_ids
+
+      MonthlyTotals.new(family, transactions_scope: scope, date_range: period.date_range, included_account_ids: included_account_ids).call
+    end
+
+    def scope_totals_from_monthly_rows(rows)
+      sum_for = ->(classification) { rows.select { |r| r.classification == classification }.sum(&:total) }
+
+      ScopeTotals.new(
+        transactions_count: rows.sum(&:transactions_count),
+        income_money: Money.new(sum_for.call("income"), family.currency),
+        expense_money: Money.new(sum_for.call("expense"), family.currency),
+        invested_money: Money.new(sum_for.call("investment"), family.currency)
+      )
     end
 
     def totals_query(transactions_scope:, date_range:)
