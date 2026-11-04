@@ -2,134 +2,135 @@
 id:
   budgets:
     switcher:
-      aria_label: Ganti anggaran
-      household: Rumah tangga
+      aria_label: "Ganti anggaran"
+      household: "Keluarga"
     budget_donut:
-      spent: Terpakai
-      new_budget: Anggaran baru
-      of_budget: sebesar %{amount}
-      unused: Tidak terpakai
+      spent: "Terpakai"
+      new_budget: "Anggaran baru"
+      of_budget: "dari %{amount}"
+      unused: "Tersisa"
     budget_header:
-      today: Hari ini
+      today: "Hari ini"
     budget_nav:
       categories: Kategori
-      setup: Penyiapan
+      setup: Pengaturan
     over_allocation_warning:
-      over_allocated_message: Anda mengalokasikan anggaran melebihi batas. Perbaiki alokasi Anda.
-      fix_allocations: Perbaiki alokasi
+      over_allocated_message: "Anda telah mengalokasikan anggaran melebihi batas. Harap perbaiki alokasi Anda."
+      fix_allocations: "Perbaiki alokasi"
     actuals_summary:
-      income: Pemasukan
-      expenses: Pengeluaran
+      income: "Pemasukan"
+      expenses: "Pengeluaran"
     budgeted_summary:
-      expected_income: Pemasukan ekspektasi
-      budgeted: Dianggarkan
-      earned: '%{amount} diperoleh'
-      over: '%{amount} lebih'
-      left: '%{amount} tersisa'
-      spent: '%{amount} terpakai'
+      expected_income: "Pemasukan yang diharapkan"
+      budgeted: "Dianggarkan"
+      earned: "%{amount} diperoleh"
+      over: "%{amount} lebih"
+      left: "sisa %{amount}"
+      spent: "%{amount} terpakai"
     edit:
-      setup_title: Siapkan anggaran Anda
-      setup_description: Masukkan penghasilan bulanan dan rencana belanjamu di bawah untuk menyiapkan anggaranmu.
-      budgeted_spending: Pengeluaran yang dianggarkan
-      expected_income: Pemasukan ekspektasi
-      autosuggest_title: Sarankan anggaran pemasukan & pengeluaran otomatis
-      autosuggest_description: Ini akan berdasarkan riwayat transaksi. AI bisa salah, verifikasi dulu sebelum lanjut.
-      continue: Lanjutkan
+      setup_title: "Atur anggaran Anda"
+      setup_description: "Masukkan pendapatan bulanan dan rencana pengeluaran Anda di bawah ini untuk mengatur anggaran."
+      budgeted_spending: "Pengeluaran yang dianggarkan"
+      expected_income: "Pemasukan yang diharapkan"
+      autosuggest_title: "Saran otomatis anggaran pemasukan & pengeluaran"
+      autosuggest_description: "Ini akan didasarkan pada riwayat transaksi. AI dapat membuat kesalahan, verifikasi sebelum melanjutkan."
+      continue: "Lanjutkan"
     name:
-      custom_range: '%{start} - %{end_date}'
-      month_year: '%{month}'
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
     available_cash:
       heading: Kas di tangan
-      subtitle: Di samping rencana di atas, bukan bagian darinya.
-      available: Tersedia tunai
+      subtitle: Di luar rencana di atas, bukan bagian darinya.
+      available: Tersedia dalam kas
       earmarked: Sudah dialokasikan untuk target
-      free: Benar-benar gratis
-      goals_link: Lihat tujuan
+      free: Benar-benar bebas
+      goals_link: Lihat target
+      currency_warning: "Saldo %{currencies} tidak disertakan karena nilai tukar ke %{currency} belum tersedia."
     show:
       categories:
         amount: Jumlah
         edit: Edit
         title: Kategori
       on_track_categories:
-        short_title: Sesuai target
-        title: Sesuai target
+        short_title: Sesuai Rencana
+        title: Sesuai Rencana
       over_budget_categories:
         short_title: Melebihi Anggaran
         title: Melebihi Anggaran
       filter:
         all: Semua
         aria_label: Filter kategori anggaran
-        on_track: Sesuai target
+        on_track: Sesuai Rencana
         over_budget: Melebihi Anggaran
       tabs:
         actual: Aktual
         budgeted: Dianggarkan
     copy_previous_prompt:
-      title: Siapkan anggaran Anda
-      description: Anda bisa menyalin anggaran dari %{source_name} atau mulai dari awal.
-      copy_button: Salin dari %{source_name}
-      fresh_button: Mulai dari awal
+      title: "Atur anggaran Anda"
+      description: "Anda dapat menyalin anggaran dari %{source_name} atau mulai dari awal."
+      copy_button: "Salin dari %{source_name}"
+      fresh_button: "Mulai dari awal"
     copy_previous:
-      success: Anggaran disalin dari %{source_name}
-      no_source: Tidak ada anggaran sebelumnya yang ditemukan untuk disalin
-      already_initialized: Anggaran ini sudah disiapkan
+      success: "Anggaran disalin dari %{source_name}"
+      no_source: "Tidak ditemukan anggaran sebelumnya untuk disalin"
+      already_initialized: "Anggaran ini sudah diatur sebelumnya"
   budget_categories:
-    bills_reserved: '%{amount} dicadangkan untuk tagihan'
+    bills_reserved: "%{amount} dicadangkan untuk tagihan"
     bills_reserved_unconvertible:
-      one: 1 tagihan tidak dicadangkan, kurs tidak tersedia
-      other: '%{count} tagihan tidak dicadangkan, kurs tidak tersedia'
+      one: "1 tagihan tidak dicadangkan, belum ada nilai tukar"
+      other: "%{count} tagihan tidak dicadangkan, belum ada nilai tukar"
     allocation_progress:
       budget_exceeded_html: Anggaran terlampaui sebesar <span class="text-red-500 privacy-sensitive">%{amount}</span>
-      left_to_allocate: tersisa untuk dialokasikan
-      over_set: '> 100% diatur'
-      percent_set: '%{percent} ditetapkan'
+      left_to_allocate: sisa untuk dialokasikan
+      over_set: "> 100% ditetapkan"
+      percent_set: "%{percent} ditetapkan"
     budget_category:
-      rolled_over: +%{amount} digulirkan
+      rolled_over: "+%{amount} dialihkan"
     budget_category_form:
-      monthly_average: '%{amount}/bln rata-rata'
+      monthly_average: "rata-rata %{amount}/bln"
       rollover_label: Rollover
-      rollover_title: Pertahankan sisa uang kategori ini dari satu bulan ke bulan berikutnya
-      shared_placeholder: Dibagikan
-      shared_title: Kosongkan untuk memakai anggaran induk
+      rollover_title: Simpan uang yang belum terpakai di kategori ini dari satu bulan ke bulan berikutnya
+      shared_placeholder: Bersama
+      shared_title: Biarkan kosong untuk berbagi anggaran induk
     confirm_button:
-      confirm: Konfirmasi
+      confirm: "Konfirmasi"
     move:
       button_title: Pindahkan uang dari kategori ini
       cancel: Batal
       dialog_title: Pindahkan uang
-      no_destination: Ini adalah satu-satunya amplop yang bisa digunakan untuk memindahkan uang saat ini — kategori tidak bisa mengirim ke induk atau anaknya sendiri.
+      no_destination: Saat ini tidak ada pos anggaran lain untuk memindahkan uang — kategori tidak dapat mengirim ke induk atau subkategorinya sendiri.
       submit: Pindahkan
       amount_label: Jumlah
-      available: '%{amount} tersedia'
+      available: "tersedia %{amount}"
       from_label: Dari
       to_label: Ke
-      success: Uang dipindahkan.
+      success: Uang berhasil dipindahkan.
       errors:
-        different_budgets: Kedua kategori harus termasuk dalam anggaran yang sama.
-        insufficient_funds: Jumlahnya melebihi yang dialokasikan kategori ini.
-        non_positive_amount: Masukkan jumlah lebih dari nol.
-        parent_child: Uang tidak bisa dipindahkan antara kategori dan subkategorinya sendiri — sesuaikan subkategori secara langsung.
-        same_category: Pilih kategori lain untuk memindahkan uang ke sana.
-        uncategorized: '"Tanpa kategori" bukan envelope sungguhan, jadi uang tidak bisa masuk atau keluar darinya.'
+        different_budgets: Kedua kategori harus berasal dari anggaran yang sama.
+        insufficient_funds: Jumlah tersebut melebihi alokasi kategori ini.
+        non_positive_amount: Masukkan jumlah yang lebih besar dari nol.
+        parent_child: Uang tidak dapat dipindahkan antara kategori dan subkategorinya sendiri — sesuaikan subkategori secara langsung.
+        same_category: Pilih kategori yang berbeda untuk memindahkan uang.
+        uncategorized: Tanpa Kategori bukanlah pos riil, sehingga uang tidak dapat dipindahkan ke dalam atau ke luarnya.
     no_categories:
-      oops: Ups!
-      no_categories_message: Anda belum membuat atau menetapkan kategori pengeluaran apa pun pada transaksi Anda.
-      use_defaults: Gunakan bawaan (disarankan)
-      new_category: Kategori baru
+      oops: "Ups!"
+      no_categories_message: "Anda belum membuat atau menetapkan kategori pengeluaran ke transaksi Anda."
+      use_defaults: "Gunakan setelan default (disarankan)"
+      new_category: "Kategori baru"
     index:
-      title: Edit anggaran kategorimu
-      description: Sesuaikan anggaran kategori untuk menetapkan batas belanja. Dana yang belum dialokasikan akan otomatis jadi belum terkategori.
+      title: "Edit anggaran kategori Anda"
+      description: "Sesuaikan anggaran kategori untuk menetapkan batas pengeluaran. Dana yang tidak dialokasikan akan secara otomatis ditetapkan sebagai tanpa kategori."
     show:
-      category: Kategori
-      overview: Ikhtisar
-      spending: Pengeluaran %{date}
-      status: Status
-      overspent: kelebihan belanja
-      left: tersisa
-      budgeted: Dianggarkan
-      rolled_over: Digulirkan
-      monthly_average_spending: Rata-rata pengeluaran bulanan
-      monthly_median_spending: Median pengeluaran bulanan
-      recent_transactions: Transaksi Terbaru
-      view_all_transactions: Lihat semua transaksi kategori
-      no_transactions: Tidak ada transaksi yang ditemukan untuk periode anggaran ini.
+      category: "Kategori"
+      overview: "Ringkasan"
+      spending: "Pengeluaran %{date}"
+      status: "Status"
+      overspent: "melebihi anggaran"
+      left: "sisa"
+      budgeted: "Dianggarkan"
+      rolled_over: "Dialihkan"
+      monthly_average_spending: "Pengeluaran rata-rata bulanan"
+      monthly_median_spending: "Pengeluaran median bulanan"
+      recent_transactions: "Transaksi Terkini"
+      view_all_transactions: "Lihat semua transaksi kategori"
+      no_transactions: "Tidak ada transaksi yang ditemukan untuk periode anggaran ini."

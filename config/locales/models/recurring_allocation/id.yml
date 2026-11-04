@@ -6,4 +6,4 @@ id:
         recurring_allocation:
           attributes:
             currency:
-              must_match_occurrence: harus sesuai dengan mata uang kejadian
+              must_match_occurrence: harus sesuai dengan mata uang tagihan ini

@@ -259,8 +259,13 @@
         </div>
         <div class="py-4" data-dashboard-section-target="content">
           <%= render partial: section[:partial], locals: section[:locals] %>
+          <%# Preview features reveal the opt-in. The comparison chart itself
+              stays hidden until this user turns that preference on. %>
           <% if section[:key] == "cashflow_sankey" && preview_features_enabled? %>
-            <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: section[:locals][:sankey_data] %>
+            <%= render "pages/dashboard/cashflow_preview_opt_in" %>
+            <% if Current.user.cashflow_preview_enabled? %>
+              <%= render "pages/dashboard/cashflow_preview", period: @period, legacy_data: section[:locals][:sankey_data] %>
+            <% end %>
           <% end %>
         </div>
       </section>

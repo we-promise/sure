@@ -1,4 +1,4 @@
 ---
 id:
   passkey_sessions:
-    invalid_credential: Tidak bisa masuk dengan passkey itu. Silakan coba lagi atau pakai kata sandimu.
+    invalid_credential: Tidak dapat masuk dengan passkey tersebut. Silakan coba lagi atau gunakan kata sandi Anda.

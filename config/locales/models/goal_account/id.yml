@@ -6,4 +6,4 @@ id:
         goal_account:
           attributes:
             base:
-              account_already_fully_earmarked: Akun ini sudah sepenuhnya dicadangkan untuk "%{goal_name}". Masukkan jumlah untuk membaginya.
+              account_already_fully_earmarked: Rekening ini sudah dialokasikan sepenuhnya untuk “%{goal_name}”. Masukkan jumlah untuk membaginya.

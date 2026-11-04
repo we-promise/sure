@@ -2,19 +2,19 @@
 id:
   goal_pledges:
     new:
-      helper_transfer: Sure akan mencari setoran yang cocok di akun tertaut kamu. Komitmen itu tetap tertunda selama 7 hari, lalu terkonfirmasi otomatis begitu Sure menemukannya.
-      helper_manual: Sure akan mencatat ini saat kamu mengedit saldo secara manual berikutnya dan mengonfirmasi kontribusinya.
+      helper_transfer: Sure akan mencari setoran yang cocok di rekening terhubung Anda. Komitmen ini tetap berstatus tertunda selama 7 hari, lalu otomatis terkonfirmasi saat Sure mendeteksinya.
+      helper_manual: Sure akan mencatat ini pada pengeditan saldo manual berikutnya dan mengonfirmasi kontribusi tersebut.
       amount_label: Jumlah
-      account_label: Ke akun
-      submit: Catat pledge
-      preview_zero: Saat ini terkumpul {current} dari {target}.
-      preview_nonzero: Mencapai {percent}%, {newTotal} dari {target}.
-      preview_reached: Mencapai target {target} kamu. Target tercapai.
+      account_label: Ke rekening
+      submit: Catat komitmen
+      preview_zero: "Saat ini tersimpan {current} dari {target}."
+      preview_nonzero: "Mencapai {percent}%, {newTotal} dari {target}."
+      preview_reached: "Mencapai target {target} Anda. Target tercapai."
     create:
-      success: Pledge tercatat. Sure akan mengonfirmasinya pada sinkronisasi berikutnya.
+      success: Komitmen dicatat. Sure akan mengonfirmasinya pada sinkronisasi berikutnya.
     renew:
-      success: Jangka waktu pledge diperpanjang 7 hari.
-      not_open: Hanya janji yang masih terbuka yang dapat diperpanjang.
+      success: Batas waktu komitmen diperpanjang 7 hari.
+      not_open: Hanya komitmen terbuka yang dapat diperpanjang.
     destroy:
-      success: Pledge dibatalkan.
-      not_open: Hanya janji yang masih terbuka yang dapat dibatalkan.
+      success: Komitmen dibatalkan.
+      not_open: Hanya komitmen terbuka yang dapat dibatalkan.

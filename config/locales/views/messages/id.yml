@@ -2,8 +2,8 @@
 id:
   messages:
     create:
-      chat_not_found: Chat ini tidak tersedia lagi.
+      chat_not_found: Obrolan ini sudah tidak tersedia.
     chat_form:
-      placeholder: Tanya apa saja ...
-      disclaimer: Jawaban AI hanya bersifat informatif. Bukan nasihat keuangan!
+      placeholder: "Tanyakan apa saja ..."
+      disclaimer: "Respons AI hanya bersifat informatif. Bukan nasihat keuangan!"
       coming_soon: Segera hadir

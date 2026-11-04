@@ -2,11 +2,14 @@
 id:
   account_order:
     balance_asc:
-      label: Saldo (Terendah ke Tertinggi)
+      label: Saldo (Rendah ke Tinggi)
       label_short: Saldo ↑
     balance_desc:
-      label: Saldo (Tertinggi ke Terendah)
+      label: Saldo (Tinggi ke Rendah)
       label_short: Saldo ↓
+    manual:
+      label: Manual (seret untuk mengubah urutan)
+      label_short: Manual
     name_asc:
       label: Nama (A-Z)
       label_short: Nama ↑
@@ -17,13 +20,13 @@ id:
     attributes:
       account:
         balance: Saldo
-        currency: Mata Uang
-        family: '%{moniker}'
-        family_id: '%{moniker}'
+        currency: Mata uang
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         name: Nama
         subtype: Subtipe
     models:
-      account: Akun
+      account: Rekening
       account/credit: Kartu Kredit
       account/depository: Rekening Bank
       account/investment: Investasi

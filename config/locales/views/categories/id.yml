@@ -3,6 +3,10 @@ id:
   categories:
     bootstrap:
       success: Kategori default berhasil dibuat
+    locked: Kategori terkunci. Buka kunci untuk menambahkan kategori baru.
+    toggle_lock:
+      locked: Kategori dikunci
+      unlocked: Kategori dibuka
     category:
       delete: Hapus kategori
       edit: Edit kategori
@@ -15,37 +19,35 @@ id:
     form:
       placeholder: Nama kategori
       name_label: Nama
-      unassigned: (belum ditetapkan)
-      parent_category_label: Kategori induk (opsional)
+      unassigned: "(belum ditetapkan)"
+      parent_category_label: "Kategori induk (opsional)"
       trigger_label: Pilih warna dan ikon
       color: Warna
       icon: Ikon
-      auto_adjust: penyesuaian otomatis.
-      poor_contrast: Kontras kurang, pilih warna yang lebih gelap atau
+      auto_adjust: sesuaikan otomatis.
+      poor_contrast: "Kontras rendah, pilih warna lebih gelap atau"
     destroy_all:
-      success: Semua kategori dihapus
+      success: Semua kategori berhasil dihapus
     index:
-      bootstrap: Gunakan bawaan (disarankan)
+      bootstrap: Gunakan default (disarankan)
       categories: Kategori
       categories_expenses: Kategori pengeluaran
       categories_incomes: Kategori pemasukan
       delete_all: Hapus semua
-      empty: Tidak ada kategori yang ditemukan
+      empty: Kategori tidak ditemukan
+      lock_categories: Kunci pembuatan kategori
+      locked_message: Pembuatan kategori dikunci. Impor dan sinkronisasi bank masih dapat menambahkan kategori.
       merge: Gabungkan kategori
       new: Kategori baru
-      lock_categories: Kunci pembuatan kategori
-      locked_message: Pembuatan kategori dikunci. Impor dan sinkronisasi bank tetap bisa menambahkan kategori.
       unlock_categories: Buka kunci pembuatan kategori
     merge:
       title: Gabungkan kategori
-      description: Pilih kategori target dan kategori yang akan digabungkan ke dalamnya. Transaksi yang cocok dan baris anggaran akan pindah ke target.
+      description: Pilih kategori target dan kategori yang akan digabungkan ke dalamnya. Transaksi dan baris anggaran yang cocok akan dipindahkan ke target.
       target_label: Gabungkan ke (target)
       select_target: Pilih kategori target...
-      sources_label: Kategori yang akan digabung
-      sources_hint: Kategori yang dipilih akan dihapus setelah transaksi dan baris anggarannya pindah ke target. Jangan pilih target sebagai sumber.
+      sources_label: Kategori yang akan digabungkan
+      sources_hint: Kategori yang dipilih akan dihapus setelah transaksi dan baris anggarannya dipindahkan ke target. Jangan pilih target sebagai sumber.
       submit: Gabungkan yang dipilih
-    menu:
-      loading: Memuat...
     new:
       new_category: Kategori baru
     perform_merge:
@@ -61,17 +63,13 @@ id:
     virtual:
       transfer: Transfer
       payment: Pembayaran
-      trade: Trade
-    locked: Kategori terkunci. Buka kuncinya untuk menambahkan kategori baru.
-    toggle_lock:
-      locked: Kategori dikunci
-      unlocked: Kategori dibuka
+      trade: Transaksi efek
   category:
     dropdowns:
       show:
         bootstrap: Buat kategori default
-        empty: Tidak ada kategori yang ditemukan
+        empty: Kategori tidak ditemukan
         match_transfer: Cocokkan transfer/pembayaran
-        one_time: '%{type} sekali saja'
+        one_time: "%{type} satu kali"
         income: pemasukan
         expense: pengeluaran

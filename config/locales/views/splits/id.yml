@@ -2,46 +2,49 @@
 id:
   splits:
     new:
-      title: Pecah Transaksi
-      description: Pecah transaksi ini menjadi beberapa entri dengan kategori dan jumlah yang berbeda.
-      submit: Pecah Transaksi
+      title: Bagi Transaksi
+      description: Bagi transaksi ini menjadi beberapa entri dengan kategori dan jumlah berbeda.
+      submit: Bagi Transaksi
       cancel: Batal
-      add_row: Tambah split
+      add_row: Tambah pembagian
       remove_row: Hapus
       remaining: Sisa
-      amounts_must_match: Jumlah pecahan harus sama dengan jumlah transaksi asli.
+      amounts_must_match: Jumlah pembagian harus sama dengan jumlah transaksi asli.
       name_label: Nama
-      name_placeholder: Nama pecahan
+      name_placeholder: Nama pembagian
       amount_label: Jumlah
       category_label: Kategori
-      uncategorized: (belum terkategori)
-      original_name: 'Nama:'
-      original_date: 'Tanggal:'
-      original_amount: Jumlah
-      split_number: 'Pecah #%{number}'
+      uncategorized: "(tanpa kategori)"
+      merchant_label: Merchant
+      no_merchant: "(merchant transaksi)"
+      tags_label: Tag
+      original_name: "Nama:"
+      original_date: "Tanggal:"
+      original_amount: "Jumlah"
+      split_number: "Pembagian #%{number}"
     create:
-      success: Transaksi berhasil dipecah
-      not_splittable: Transaksi ini tidak bisa dipecah.
+      success: Transaksi berhasil dibagi
+      not_splittable: Transaksi ini tidak dapat dibagi.
     destroy:
-      success: Transaksi berhasil dikembalikan
+      success: Pembagian transaksi berhasil dibatalkan
     show:
-      title: Entri Pecahan
-      description: Transaksi ini sudah dipecah menjadi entri-entri berikut.
-      button_title: Pecah Transaksi
-      button_description: Pecah transaksi ini menjadi beberapa entri dengan kategori dan jumlah yang berbeda.
-      button: Pecah
-      unsplit_title: Batalkan Pemisahan Transaksi
-      unsplit_button: Batalkan pemisahan
-      unsplit_confirm: Ini akan menghapus semua entri pecahan dan mengembalikan transaksi asli.
+      title: Entri Pembagian
+      description: Transaksi ini telah dibagi menjadi entri-entri berikut.
+      button_title: Bagi Transaksi
+      button_description: Bagi transaksi ini menjadi beberapa entri dengan kategori dan jumlah berbeda.
+      button: Bagi
+      unsplit_title: Batalkan Pembagian Transaksi
+      unsplit_button: Batalkan Pembagian
+      unsplit_confirm: Ini akan menghapus semua entri pembagian dan memulihkan transaksi asli.
     edit:
       title: Edit Pembagian
-      description: Ubah entri pecahan untuk transaksi ini.
-      submit: Perbarui Pemisahan
-      not_split: Transaksi ini tidak dipecah.
+      description: Ubah entri pembagian untuk transaksi ini.
+      submit: Perbarui Pembagian
+      not_split: Transaksi ini tidak dibagi.
     update:
-      success: Pecahan berhasil diperbarui
+      success: Pembagian berhasil diperbarui
     child:
-      title: Bagian dari Pemisahan
-      description: Entri ini bagian dari transaksi split.
+      title: Bagian dari Pembagian
+      description: Entri ini merupakan bagian dari transaksi yang dibagi.
       edit_split: Edit Pembagian
-      unsplit: Batalkan pemisahan
+      unsplit: Batalkan Pembagian

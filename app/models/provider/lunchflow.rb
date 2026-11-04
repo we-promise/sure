@@ -32,11 +32,11 @@ class Provider::Lunchflow
     query_params = {}
 
     if start_date
-      query_params[:start_date] = start_date.to_date.to_s
+      query_params[:from] = start_date.to_date.to_s
     end
 
     if end_date
-      query_params[:end_date] = end_date.to_date.to_s
+      query_params[:to] = end_date.to_date.to_s
     end
 
     if include_pending
