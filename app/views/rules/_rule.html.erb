@@ -39,18 +39,19 @@
       </div>
       <p class="flex min-w-0 items-center flex-wrap gap-x-1.5 gap-y-1 m-0">
         <span class="max-w-full truncate px-2 py-1 border border-secondary rounded-full">
-          <% if rule.actions.first.nil? %>
+          <% displayed_action = rule.displayed_action %>
+          <% if displayed_action.nil? %>
             <%= t("rules.no_action") %>
           <% else %>
-            <% if rule.actions.first.value && rule.actions.first.options %>
-              <%= t(".action_label_to", label: rule.actions.first.executor.label, value: rule.actions.first.value_display) %>
+            <% if displayed_action.value && displayed_action.options %>
+              <%= t(".action_label_to", label: displayed_action.executor.label, value: displayed_action.value_display) %>
             <% else %>
-              <%= rule.actions.first.executor.label %>
+              <%= displayed_action.executor.label %>
             <% end %>
           <% end %>
         </span>
-        <% if rule.actions.count > 1 %>
-          <%= t(".and_more_actions", count: rule.actions.count - 1) %>
+        <% if rule.actions.size > 1 %>
+          <%= t(".and_more_actions", count: rule.actions.size - 1) %>
         <% end %>
       </p>
     </div>

@@ -265,6 +265,21 @@ Rails.application.routes.draw do
       post :new_connection
     end
   end
+  resources :truelayer_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :callback
+      post :connect
+      get :select_existing_account
+      post :link_existing_account
+    end
+    member do
+      post :sync
+      post :reauthorize
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   get ".well-known/oauth-protected-resource(/*resource_path)",
       to: "oauth_metadata#protected_resource",
       as: :oauth_protected_resource_metadata,
@@ -504,6 +519,8 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :merchants, only: :show
+
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
       get :merge
@@ -688,6 +705,7 @@ Rails.application.routes.draw do
   resources :accounts, only: %i[index new show destroy], shallow: true do
     member do
       post :sync
+      get :logo_options
       get :sparkline
       patch :toggle_active
       patch :toggle_exclude_from_reports
@@ -701,6 +719,7 @@ Rails.application.routes.draw do
 
     collection do
       post :sync_all
+      get :logo_options, action: :new_logo_options
       patch :reorder
     end
 

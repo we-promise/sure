@@ -89,7 +89,7 @@ class BillsController < ApplicationController
     # work, so the strip lives on this page as well as in Settings.
     # Loaded once: the view asks any?/none? and the partial counts and
     # iterates, which would otherwise be separate queries.
-    @suggested_series = accessible_suggested_series.includes(:merchant).order(next_expected_date: :asc).load
+    @suggested_series = accessible_suggested_series.includes(merchant: { logo_attachment: :blob }).order(next_expected_date: :asc).load
     @has_transaction_history = Current.family.entries.where(entryable_type: "Transaction").exists?
     @suggested_allocations = suggested_allocations(open_occurrences + @paid_this_month)
     # A row waiting on a match decision offers Review rather than Find.
@@ -144,7 +144,7 @@ class BillsController < ApplicationController
   def show
     @series = Current.family.recurring_transactions
                      .accessible_by(Current.user)
-                     .includes(:merchant)
+                     .includes(merchant: { logo_attachment: :blob })
                      .find(params[:id])
 
     # Outside a frame (a new tab, a pasted link, a notification) there is
@@ -289,7 +289,7 @@ class BillsController < ApplicationController
     def load_all_series
       scope = Current.family.recurring_transactions
                      .accessible_by(Current.user)
-                     .includes(:merchant)
+                     .includes(merchant: { logo_attachment: :blob })
 
       if (search = params.dig(:q, :search)).present?
         pattern = "%#{ActiveRecord::Base.sanitize_sql_like(search)}%"
@@ -431,7 +431,7 @@ class BillsController < ApplicationController
       occurrences = Current.family.recurring_occurrences
                            .where(recurring_transaction_id: payable_series_ids)
                            .due_between(@grid_start, @grid_end)
-                           .includes(recurring_transaction: :merchant)
+                           .includes(recurring_transaction: { merchant: { logo_attachment: :blob } })
                            .to_a
       preload_allocation_sums(occurrences)
 
@@ -486,7 +486,7 @@ class BillsController < ApplicationController
              .where(recurring_transaction_id: payable_series_ids)
              .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} >= ? OR status = 'scheduled'", Date.current.beginning_of_month)
              .where("due_on <= ?", Date.current + 90)
-             .includes(recurring_transaction: [ :merchant, :recurring_price_changes, :recurrence_rules ])
+             .includes(recurring_transaction: [ { merchant: { logo_attachment: :blob } }, :recurring_price_changes, :recurrence_rules ])
              .to_a
     end
 
@@ -646,7 +646,7 @@ class BillsController < ApplicationController
         # Income never reviews here: the matcher no longer suggests it, and
         # this filter also retires any suggestion written before that rule.
         .merge(RecurringTransaction.not_typed_income)
-        .includes(:entry, recurring_occurrence: { recurring_transaction: :merchant })
+        .includes(:entry, recurring_occurrence: { recurring_transaction: { merchant: { logo_attachment: :blob } } })
         # The confidence the matcher scored these with was sitting unused on
         # the row while the queue ordered itself by when the job happened to
         # run. Most-certain question first.

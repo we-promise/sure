@@ -1,0 +1,13 @@
+---
+nl:
+  coinbase_item:
+    syncer:
+      checking_credentials: "Inloggegevens controleren..."
+      credentials_invalid: "Ongeldige API-inloggegevens. Controleer uw API-sleutel en -secret."
+      importing_accounts: "Accounts importeren vanuit Coinbase..."
+      checking_configuration: "Accountconfiguratie controleren..."
+      accounts_need_setup:
+        one: "%{count} account moet worden ingesteld"
+        other: "%{count} accounts moeten worden ingesteld"
+      processing_accounts: "Accountgegevens verwerken..."
+      calculating_balances: "Saldi berekenen..."

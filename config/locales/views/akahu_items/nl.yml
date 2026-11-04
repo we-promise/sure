@@ -1,0 +1,33 @@
+---
+nl:
+  family:
+    akahu:
+      create_akahu_item:
+        default_name: "Akahu-verbinding"
+  akahu_account:
+    fallback: "Akahu-account"
+  akahu_entry:
+    notes:
+      reference: "Referentie"
+      particulars: "Bijzonderheden"
+      code: "Code"
+      other_account: "Tegenrekening"
+  akahu_item:
+    errors:
+      account_processing_failed: "Kan Akahu-account niet synchroniseren"
+      account_sync_schedule_failed: "Kan synchronisatie van Akahu-account niet inplannen"
+      pending_transactions_failed: "Kan Akahu-transacties in behandeling niet ophalen"
+      transactions_failed: "Kan Akahu-transacties niet ophalen"
+      sync_failed: "Kan Akahu-verbinding niet synchroniseren"
+    sync_status:
+      no_accounts: "Geen accounts gevonden"
+      all_synced:
+        one: "1 account gesynchroniseerd"
+        other: "%{count} accounts gesynchroniseerd"
+      partial: "%{linked} gesynchroniseerd, %{unlinked} moeten nog worden ingesteld"
+    institution_summary:
+      none: "Geen instellingen verbonden"
+      one: "1 instelling"
+      count:
+        one: "1 instelling"
+        other: "%{count} instellingen"

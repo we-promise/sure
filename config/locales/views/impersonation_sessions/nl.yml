@@ -2,14 +2,24 @@
 nl:
   impersonation_sessions:
     approve:
-      success: Verzoek goedgekeurd
+      success: "Verzoek goedgekeurd"
     complete:
-      success: Sessie voltooid
+      success: "Sessie voltooid"
     create:
-      success: Verzoek naar gebruiker verzonden. Wachten op goedkeuring.
+      success: "Verzoek naar gebruiker verzonden. Wachten op goedkeuring."
     join:
-      success: Sessie gestart
+      success: "Sessie gestart"
     leave:
-      success: Sessie verlaten
+      success: "Sessie verlaten"
     reject:
-      success: Verzoek afgewezen
+      success: "Verzoek afgewezen"
+    super_admin_bar:
+      super_admin: "Superbeheerder"
+      jobs: "Jobs"
+      impersonating: "Imiteert"
+      leave: "Verlaten"
+      terminate: "Beëindigen"
+      join_a_session: "Deelnemen aan een sessie"
+      join: "Deelnemen"
+      uuid_placeholder: "UUID"
+      request_impersonation: "Imitatie aanvragen"
