@@ -72,17 +72,6 @@ class PlaidItem < ApplicationRecord
     end
   end
 
-  # Queue a fresh import after an in-flight sync. Plaid Link can finish adding
-  # accounts after the active sync already fetched its account list.
-  def sync_later_with_follow_up
-    active_sync = syncs.visible.ordered.first
-    sync_later
-
-    return unless active_sync&.reload&.in_progress?
-
-    PlaidFollowUpSyncJob.set(wait: PlaidFollowUpSyncJob::RETRY_DELAY).perform_later(self, active_sync_id: active_sync.id)
-  end
-
   def request_transactions_refresh_later
     return unless supports_product?("transactions")
     return unless shared_transactions_refresh_cache?
@@ -108,7 +97,9 @@ class PlaidItem < ApplicationRecord
 
   def sync_later_with_provider_refresh
     request_transactions_refresh_later
-    sync_later_with_follow_up
+    # Plaid Link can finish adding accounts after a running sync fetched its
+    # account list; sync_later then queues a follow-up that fetches them.
+    sync_later
   end
 
   def import_latest_plaid_data
