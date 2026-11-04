@@ -153,9 +153,7 @@
                 <%= run.executed_at.strftime("%b %d, %Y %I:%M %p") %>
               </td>
               <td class="px-4 py-3 text-sm text-primary text-center">
-                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium <%= run.execution_type == "manual" ? "bg-blue-50 text-blue-700 theme-dark:bg-blue-950/30 theme-dark:text-blue-400" : "bg-purple-50 text-purple-700 theme-dark:bg-purple-950/30 theme-dark:text-purple-400" %>">
-                  <%= t("rules.recent_runs.execution_types.#{run.execution_type}") %>
-                </span>
+                <%= render DS::Pill.new(label: t("rules.recent_runs.execution_types.#{run.execution_type}"), tone: run.execution_type == "manual" ? :indigo : :violet, marker: false) %>
               </td>
               <td class="px-4 py-3 text-sm text-center">
                 <div class="flex items-center justify-center gap-2">
