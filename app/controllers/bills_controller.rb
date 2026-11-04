@@ -497,10 +497,13 @@ class BillsController < ApplicationController
       # last upcoming one may not exist yet. Derive each series' next payday from
       # its schedule, stepping past any the user skipped, so the last window is
       # still bounded.
+      last_payday = upcoming.last.effective_due_on
       # Compared by scheduled date (due_on), not effective date: a snooze moves
       # effective_due_on but the schedule still produces the original date.
+      # Only rows after the last upcoming payday can change the derived successor.
       income_rows = Current.family.recurring_occurrences
                            .where(recurring_transaction_id: income_ids)
+                           .where("recurring_occurrences.due_on > ?", last_payday)
                            .pluck(:recurring_transaction_id, :status, :due_on)
       skipped_dates = income_rows.select { |_, status, _| status == "skipped" }
                                  .group_by(&:first)
@@ -509,17 +512,13 @@ class BillsController < ApplicationController
       scheduled_dates = income_rows.reject { |_, status, _| status == "skipped" }
                                    .map { |id, _, due| [ id, due.to_date ] }
                                    .to_set
-      last_payday = upcoming.last.effective_due_on
       derived = income_records.filter_map do |series|
         skipped = skipped_dates.fetch(series.id, Set.new)
         taken = ->(date) { skipped.include?(date) || scheduled_dates.include?([ series.id, date ]) }
         candidate = series.schedule.next_occurrence_after(last_payday)
-        12.times do # a bounded walk past consecutive skipped paydays
-          break unless candidate && taken.call(candidate)
-
-          candidate = series.schedule.next_occurrence_after(candidate)
-        end
-        candidate unless candidate.nil? || taken.call(candidate)
+        # Step past every taken date. Each step moves later and taken is finite.
+        candidate = series.schedule.next_occurrence_after(candidate) while candidate && taken.call(candidate)
+        candidate
       end
       payday_dates = (payday_dates + derived).uniq.sort
 
