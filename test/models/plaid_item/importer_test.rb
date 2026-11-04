@@ -158,6 +158,21 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
     assert DebugLogEntry.exists?(source: "PlaidItem::Importer", level: "warn", provider_key: "plaid")
   end
 
+  test "reads and logs an unreadable payload once per import" do
+    existing = plaid_accounts(:one)
+    existing.update!(raw_payload: { "account_id" => existing.plaid_id, "persistent_account_id" => "persistent_acc_1" })
+    PlaidAccount.any_instance.expects(:raw_payload).once.raises(ActiveRecord::Encryption::Errors::Decryption)
+
+    stub_accounts_snapshot(
+      raw_plaid_account(account_id: "acc_mock_1_reissued", persistent_account_id: "persistent_acc_1"),
+      raw_plaid_account(account_id: "acc_new_card", persistent_account_id: "persistent_acc_2")
+    )
+
+    assert_difference -> { DebugLogEntry.where(source: "PlaidItem::Importer").count }, 1 do
+      @importer.import
+    end
+  end
+
   test "clears requires update status after a successful import" do
     @plaid_item.update!(status: :requires_update)
     @importer.stubs(:fetch_and_import_item_data)
