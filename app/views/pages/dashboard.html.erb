@@ -195,7 +195,7 @@
             <% end %>
             <% layout = section[:layout] %>
             <% show_width = layout[:width_toggle] && two_column %>
-            <% if layout[:grow] || show_width %>
+            <% if layout[:grow] || show_width || layout[:gridlines_toggle] %>
               <details
                 class="relative hidden lg:block"
                 data-controller="dashboard-widget-size"
@@ -239,6 +239,22 @@
                              ) %>
                         <% end %>
                       <% end %>
+                    </div>
+                  <% end %>
+                  <% if layout[:gridlines_toggle] %>
+                    <div class="flex items-center justify-between gap-2">
+                      <label
+                        for="gridlines-<%= section[:key] %>"
+                        class="flex items-center gap-1.5 text-xs font-medium text-secondary cursor-pointer">
+                        <%= icon("align-justify", size: "xs") %>
+                        <%= t("pages.dashboard.widget_size.gridlines_label") %>
+                      </label>
+                      <%= render DS::Toggle.new(
+                        id: "gridlines-#{section[:key]}",
+                        name: "gridlines_#{section[:key]}",
+                        checked: layout[:gridlines],
+                        data: { action: "change->dashboard-widget-size#toggleGridlines" }
+                      ) %>
                     </div>
                   <% end %>
                 </div>

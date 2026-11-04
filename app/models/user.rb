@@ -732,6 +732,12 @@ class User < ApplicationRecord
     preferences&.dig("dashboard_section_layout", section_key, "col_span")
   end
 
+  # Per-widget "show gridlines" toggle for charts that support it. Off until the
+  # user switches it on (nil = never touched = off).
+  def dashboard_section_gridlines?(section_key)
+    preferences&.dig("dashboard_section_layout", section_key, "gridlines") == true
+  end
+
   # laid_out_order is the order the dashboard laid its widgets out in, which
   # also places widgets the saved order doesn't list yet.
   def update_dashboard_preferences(prefs, laid_out_order: nil)

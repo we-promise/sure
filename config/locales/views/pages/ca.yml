@@ -95,6 +95,7 @@ ca:
         compact: Compacta
         auto: Automàtica
         tall: Alta
+        gridlines_label: Línies de la quadrícula
       insights_feed:
         title: Observacions
       money_flow:

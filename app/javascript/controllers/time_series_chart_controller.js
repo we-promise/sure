@@ -1,8 +1,20 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
+import {
+  drawYGridlines,
+  gridlineLabelGutter,
+  gridlineLabels,
+} from "utils/chart_gridlines";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 
 const parseLocalDate = d3.timeParse("%Y-%m-%d");
+
+// With gridlines on, the date labels hang below the plot with this much air
+// under the bottom gridline (about the gap between the stats row and the top
+// gridline), so a gridline near the bottom edge never runs through them. The
+// bottom margin is that gap plus the height of the 12px date text.
+const DATE_LABEL_GAP = 22;
+const DATE_LABEL_HEIGHT = 18;
 
 export default class extends Controller {
   static values = {
@@ -11,6 +23,10 @@ export default class extends Controller {
     useLabels: { type: Boolean, default: true },
     useTooltip: { type: Boolean, default: true },
     selectable: { type: Boolean, default: false },
+    // Dashed horizontal reference lines with compact currency labels. Off
+    // unless a chart opts in (the dashboard Net Worth widget does, via its
+    // per-user setting).
+    gridlines: { type: Boolean, default: false },
   };
 
   _d3SvgMemo = null;
@@ -36,11 +52,20 @@ export default class extends Controller {
 
   connect() {
     this._install();
+    this._connected = true;
     document.addEventListener("turbo:load", this._reinstall);
     this._setupResizeObserver();
   }
 
+  // Fires once during initialization (before connect) and again whenever the
+  // attribute changes, e.g. when the widget's Gridlines switch is toggled.
+  // Only the latter needs a redraw: the margins change with it.
+  gridlinesValueChanged() {
+    if (this._connected) this._reinstall();
+  }
+
   disconnect() {
+    this._connected = false;
     this._teardown();
     document.removeEventListener("turbo:load", this._reinstall);
     this._resizeObserver?.disconnect();
@@ -58,6 +83,7 @@ export default class extends Controller {
     this._normalDataPoints = [];
     this._d3DragSelectBrush = null;
     this._d3DragSelectGroup = null;
+    this._gutterMemo = null;
 
     this._d3Container.selectAll("*").remove();
   }
@@ -129,6 +155,15 @@ export default class extends Controller {
   }
 
   _drawChart() {
+    // Drawn first so the lines sit behind the trendline and gradient.
+    if (this.useLabelsValue && this.gridlinesValue) {
+      drawYGridlines(this._d3Group, this._d3YScale, {
+        width: this._d3ContainerWidth,
+        currency: this._seriesCurrency,
+        ticks: this._gridlineTicks,
+      });
+    }
+
     this._drawTrendline();
 
     if (this.useLabelsValue) {
@@ -228,25 +263,32 @@ export default class extends Controller {
   }
 
   _drawXAxisLabels() {
-    // Add ticks
-    this._d3Group
-      .append("g")
-      .attr("transform", `translate(0,${this._d3ContainerHeight})`)
-      .call(
-        d3
-          .axisBottom(this._d3XScale)
-          .tickValues([
-            this._normalDataPoints[0].date,
-            this._normalDataPoints[this._normalDataPoints.length - 1].date,
-          ])
-          .tickSize(0)
-          .tickFormat(d3.timeFormat("%b %d, %Y")),
-      )
-      .select(".domain")
-      .remove();
+    // With gridlines on, the date labels hang below the plot so a gridline near
+    // the bottom edge never runs through them. Without gridlines they stay just
+    // inside it, as before.
+    const belowPlot = this.gridlinesValue;
+    const bottomAxis = d3
+      .axisBottom(this._d3XScale)
+      .tickValues([
+        this._normalDataPoints[0].date,
+        this._normalDataPoints[this._normalDataPoints.length - 1].date,
+      ])
+      .tickSize(0)
+      .tickFormat(d3.timeFormat("%b %d, %Y"));
+    if (belowPlot) bottomAxis.tickPadding(DATE_LABEL_GAP);
 
-    // Style ticks
-    this._d3Group
+    // Add ticks
+    const axis = this._d3Group
+      .append("g")
+      .attr("class", "x-axis-labels")
+      .attr("transform", `translate(0,${this._d3ContainerHeight})`)
+      .call(bottomAxis);
+
+    axis.select(".domain").remove();
+
+    // Style ticks. Scoped to this axis: the y-axis gridline labels are .tick
+    // text too, and the positional dx below assumes exactly these two dates.
+    const labels = axis
       .selectAll(".tick text")
       .attr("class", "text-secondary")
       .style("font-size", "12px")
@@ -255,8 +297,8 @@ export default class extends Controller {
       .attr("dx", (_d, i) => {
         // We know we only have 2 values
         return i === 0 ? "5em" : "-5em";
-      })
-      .attr("dy", "0em");
+      });
+    if (!belowPlot) labels.attr("dy", "0em");
   }
 
   _drawGradientBelowTrendline() {
@@ -640,10 +682,49 @@ export default class extends Controller {
   }
 
   get _margin() {
-    if (this.useLabelsValue) {
+    if (!this.useLabelsValue) {
+      return { top: 0, right: 0, bottom: 0, left: 0 };
+    }
+
+    if (!this.gridlinesValue) {
       return { top: 20, right: 0, bottom: 10, left: 0 };
     }
-    return { top: 0, right: 0, bottom: 0, left: 0 };
+
+    // Gridlines on: the right gutter holds the y-axis labels (sized to the
+    // widest one) and the bottom margin holds the date labels beneath the plot.
+    return {
+      top: 20,
+      right: this._gridlineGutter,
+      bottom: DATE_LABEL_GAP + DATE_LABEL_HEIGHT,
+      left: 0,
+    };
+  }
+
+  get _gridlineGutter() {
+    if (this._gutterMemo == null) {
+      const labels = gridlineLabels(this._gridlineTicks, this._seriesCurrency);
+      this._gutterMemo = gridlineLabelGutter(
+        labels,
+        getComputedStyle(this.element).fontFamily,
+      );
+    }
+    return this._gutterMemo;
+  }
+
+  // ISO currency code of the series, read from the first point's Money value.
+  get _seriesCurrency() {
+    const value = this.dataValue.values?.[0]?.value;
+    return typeof value === "object" && value !== null
+      ? value.currency
+      : undefined;
+  }
+
+  // The gridline values: d3's ~4 round numbers inside the Y domain. Derived from
+  // the domain (data only) rather than the scale, because the scale needs the
+  // plot height, which needs the margins, which need these labels.
+  get _gridlineTicks() {
+    const [low, high] = this._yDomain;
+    return d3.ticks(low, high, 4);
   }
 
   get _d3ContainerWidth() {
@@ -681,16 +762,21 @@ export default class extends Controller {
   }
 
   get _d3YScale() {
+    return d3
+      .scaleLinear()
+      .rangeRound([this._d3ContainerHeight, 0])
+      .domain(this._yDomain);
+  }
+
+  // [min, max] of the Y axis, from the data alone (no pixel sizes).
+  get _yDomain() {
     const dataMin = d3.min(this._normalDataPoints, this._getDatumValue);
     const dataMax = d3.max(this._normalDataPoints, this._getDatumValue);
 
     // All values identical: fall back to a fixed pad so the line sits centered.
     if (dataMin === dataMax) {
       const padding = dataMax === 0 ? 100 : Math.abs(dataMax) * 0.5;
-      return d3
-        .scaleLinear()
-        .rangeRound([this._d3ContainerHeight, 0])
-        .domain([dataMin - padding, dataMax + padding]);
+      return [dataMin - padding, dataMax + padding];
     }
 
     const dataRange = dataMax - dataMin;
@@ -724,10 +810,7 @@ export default class extends Controller {
       yMax += extraPadding;
     }
 
-    return d3
-      .scaleLinear()
-      .rangeRound([this._d3ContainerHeight, 0])
-      .domain([yMin, yMax]);
+    return [yMin, yMax];
   }
 
   _setupResizeObserver() {

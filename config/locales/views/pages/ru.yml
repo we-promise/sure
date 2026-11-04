@@ -89,6 +89,7 @@ ru:
         height_label: Высота
         label: Размер
         tall: Высокий
+        gridlines_label: Линии сетки
         width_label: Ширина
       insights_feed:
         title: Инсайты

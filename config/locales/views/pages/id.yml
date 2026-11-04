@@ -61,6 +61,7 @@ id:
         compact: "Ringkas"
         auto: "Otomatis"
         tall: "Tinggi"
+        gridlines_label: "Garis kisi"
       net_worth_chart:
         data_not_available: Data tidak tersedia untuk periode yang dipilih
         title: Kekayaan Bersih

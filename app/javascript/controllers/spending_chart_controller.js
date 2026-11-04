@@ -1,5 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
+import { GRIDLINE_LABEL_GUTTER, drawYGridlines } from "utils/chart_gridlines";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 
 // Cumulative spending chart for the dashboard "spending" widget: the selected
@@ -59,7 +60,12 @@ export default class extends Controller {
 
     // Room on the right for the axis labels ($0, $1.5K, …), like the
     // reference design; the curves run to the axis, not the card edge.
-    const margin = { top: 8, right: 48, bottom: 20, left: 4 };
+    const margin = {
+      top: 8,
+      right: GRIDLINE_LABEL_GUTTER,
+      bottom: 20,
+      left: 4,
+    };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
 
@@ -84,7 +90,10 @@ export default class extends Controller {
       .nice()
       .range([innerHeight, 0]);
 
-    this._drawGridlines(group, y, innerWidth, innerHeight);
+    drawYGridlines(group, y, {
+      width: innerWidth,
+      currency: this.currencyValue,
+    });
     this._drawXAxis(group, x, days, innerHeight, axisLabels, currentDays);
 
     const line = d3
@@ -136,40 +145,6 @@ export default class extends Controller {
       innerWidth,
       innerHeight,
     );
-  }
-
-  _drawGridlines(group, y, innerWidth, innerHeight) {
-    const ticks = y.ticks(4);
-
-    group
-      .append("g")
-      .selectAll("line")
-      .data(ticks)
-      .join("line")
-      .attr("x1", 0)
-      .attr("x2", innerWidth)
-      .attr("y1", (d) => y(d))
-      .attr("y2", (d) => y(d))
-      .attr("stroke", "var(--color-gray-300)")
-      .attr("stroke-dasharray", "4, 4")
-      .attr("stroke-opacity", 0.6);
-
-    group
-      .append("g")
-      .attr("transform", `translate(${innerWidth},0)`)
-      .call(
-        d3
-          .axisRight(y)
-          .tickValues(ticks)
-          .tickSize(0)
-          .tickPadding(8)
-          .tickFormat((d) => this._formatCompact(d)),
-      )
-      .call((g) => g.select(".domain").remove())
-      .selectAll("text")
-      .attr("class", "text-secondary fill-current")
-      .style("font-size", "12px")
-      .style("font-weight", "500");
   }
 
   _drawXAxis(group, x, days, innerHeight, axisLabels, currentDays = days) {
@@ -309,19 +284,6 @@ export default class extends Controller {
       return new Intl.NumberFormat(undefined, {
         style: "currency",
         currency: this.currencyValue,
-      }).format(value);
-    } catch {
-      return value;
-    }
-  }
-
-  _formatCompact(value) {
-    try {
-      return new Intl.NumberFormat(undefined, {
-        style: "currency",
-        currency: this.currencyValue,
-        notation: "compact",
-        maximumFractionDigits: 1,
       }).format(value);
     } catch {
       return value;
