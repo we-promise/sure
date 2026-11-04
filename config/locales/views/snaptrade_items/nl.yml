@@ -1,0 +1,27 @@
+---
+nl:
+  snaptrade_item:
+    sync_status:
+      no_accounts: "Geen accounts gevonden"
+      synced:
+        one: "%{count} account gesynchroniseerd"
+        other: "%{count} accounts gesynchroniseerd"
+      synced_with_setup: "%{linked} gesynchroniseerd, %{unlinked} moeten worden ingesteld"
+    institution_summary:
+      none: "Geen instellingen gekoppeld"
+      count:
+        one: "%{count} instelling"
+        other: "%{count} instellingen"
+    brokerage_summary:
+      none: "Geen brokers gekoppeld"
+      count:
+        one: "%{count} broker"
+        other: "%{count} brokers"
+    syncer:
+      discovering: "Accounts zoeken..."
+      importing: "Accounts importeren uit SnapTrade..."
+      processing: "Posities en activiteiten verwerken..."
+      calculating: "Saldi berekenen..."
+      checking_config: "Accountconfiguratie controleren..."
+      needs_setup: "%{count} accounts moeten worden ingesteld..."
+      activities_fetching_async: "Activiteiten worden op de achtergrond opgehaald. Bij nieuwe brokerkoppelingen kan dit tot een minuut duren."

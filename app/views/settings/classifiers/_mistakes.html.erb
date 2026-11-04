@@ -1,0 +1,31 @@
+<%# locals: (confusions_title:, confusions:, no_confusions:, left_title:, left:, no_left:) %>
+<%# The most common mistakes, [[actual, predicted, count]], and what was
+    left unanswered, [[actual, count]], for one table's column. Side by side
+    when there's room, stacked on a phone. Absolute keys: also rendered from
+    BayesEvaluationJob. %>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  <div class="space-y-1">
+    <p class="text-sm text-primary"><%= confusions_title %></p>
+    <% if confusions.empty? %>
+      <p class="text-xs text-secondary"><%= no_confusions %></p>
+    <% else %>
+      <ul class="text-sm text-secondary space-y-0.5">
+        <% confusions.each do |actual, predicted, count| %>
+          <li><span class="tabular-nums text-primary"><%= count %></span> <%= t("settings.classifiers.evaluation.confusion", actual: actual, predicted: predicted) %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
+  <div class="space-y-1">
+    <p class="text-sm text-primary"><%= left_title %></p>
+    <% if left.empty? %>
+      <p class="text-xs text-secondary"><%= no_left %></p>
+    <% else %>
+      <ul class="text-sm text-secondary space-y-0.5">
+        <% left.each do |actual, count| %>
+          <li><span class="tabular-nums text-primary"><%= count %></span> <%= actual %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </div>
+</div>

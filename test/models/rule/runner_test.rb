@@ -282,6 +282,26 @@ class Rule::RunnerTest < ActiveSupport::TestCase
     assert_equal @dining, @whole_foods.reload.category
   end
 
+  test "a split rule higher up keeps the categories it gives the children" do
+    split = { splits: [
+      { type: "percentage", name: "Whole Foods groceries", share: "50", category_id: @groceries.id },
+      { type: "percentage", name: "Whole Foods other", share: "50" }
+    ] }
+    @family.rules.create!(
+      name: "Split", resource_type: "transaction", active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "Whole Foods") ],
+      actions: [ Rule::Action.new(action_type: "split_transaction", value: split.to_json) ]
+    )
+    create_rule("Bottom", "Whole Foods", category: @dining)
+
+    run_active_rules
+
+    children = @whole_foods.entry.reload.child_entries.index_by(&:name)
+    assert_equal @groceries, children["Whole Foods groceries"].transaction.category
+    # The split set no category here, so the rule below still may.
+    assert_equal @dining, children["Whole Foods other"].transaction.category
+  end
+
   test "raises LockBusy while another run holds the family lock" do
     create_rule("Top", "Whole Foods", category: @groceries)
 

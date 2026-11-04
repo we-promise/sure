@@ -32,3 +32,6 @@ zh-CN:
     name_desc:
       label: 名称（Z-A）
       label_short: 名称 ↓
+    manual:
+      label: 手动（拖动重新排序）
+      label_short: 手动

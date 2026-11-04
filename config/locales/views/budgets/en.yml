@@ -45,6 +45,7 @@ en:
       earmarked: Already earmarked for goals
       free: Really free
       goals_link: View goals
+      currency_warning: "%{currencies} balances aren't included because no exchange rate to %{currency} is available yet."
     show:
       categories:
         amount: Amount

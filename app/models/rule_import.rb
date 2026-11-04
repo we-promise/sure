@@ -1,6 +1,7 @@
 class RuleImport < Import
   def import!
     transaction do
+      @rules_with_stored_email_action = Rule.ids_with_stored_email_notification_action(family.rules)
       rows.each do |row|
         create_or_update_rule_from_row(row)
       end
@@ -50,6 +51,15 @@ class RuleImport < Import
         "",
         '[{"condition_type":"transaction_name","operator":"like","value":"amazon"}]',
         '[{"action_type":"auto_categorize"}]'
+      ]
+
+      csv << [
+        "Split shared rent",
+        "transaction",
+        "true",
+        "",
+        '[{"condition_type":"transaction_name","operator":"like","value":"rent"}]',
+        '[{"action_type":"split_transaction","value":{"splits":[{"type":"percentage","name":"My share","share":"50","category":"Rent"},{"type":"percentage","name":"Partner share","share":"50","category":"Rent","tags":["Shared"]}]}}]'
       ]
     end
 
@@ -103,8 +113,8 @@ class RuleImport < Import
       text.strip
     end
 
-    def reject_invalid_text!(value, label:)
-      return if DatabaseTextValidator.acceptable?(value)
+    def reject_invalid_text!(value, label:, acceptable: DatabaseTextValidator.acceptable?(value))
+      return if acceptable
 
       errors.add(:base, :invalid, message: "#{label} #{I18n.t("errors.messages.invalid")}")
       raise ActiveRecord::RecordInvalid.new(self)
@@ -165,8 +175,15 @@ class RuleImport < Import
       rule.active = row.active || false
       rule.effective_date = parse_date(row.effective_date)
 
-      # Clear existing conditions and actions
-      rule.conditions.destroy_all
+      # An email action replacing the rule's own keeps the baseline it recorded
+      # (see Rule::Action#keep_notification_baseline), as stored before this
+      # import: not one an earlier row of it wrote.
+      had_email_action = rule.persisted? && @rules_with_stored_email_action.include?(rule.id)
+
+      # Clear existing conditions and actions. The conditions are marked rather
+      # than destroyed now, so the rule's save removes them and sees its
+      # conditions change (Rule re-seeds an email rule's baseline then).
+      rule.conditions.each(&:mark_for_destruction)
       rule.actions.destroy_all
 
       # Create conditions
@@ -176,7 +193,7 @@ class RuleImport < Import
 
       # Create actions
       actions_data.each do |action_data|
-        build_action(rule, action_data)
+        build_action(rule, action_data).keep_notification_baseline = had_email_action
       end
 
       rule.save!
@@ -253,6 +270,8 @@ class RuleImport < Import
 
       return value unless value.present?
 
+      return resolve_import_split_value(value) if action_type == "split_transaction"
+
       # Map category names to UUIDs
       if action_type == "set_transaction_category"
         return find_or_create_category(value).id
@@ -279,6 +298,27 @@ class RuleImport < Import
       return value if names.empty?
 
       names.map { |name| find_or_create_tag(name).id }.join(",")
+    end
+
+    # Names resolve like the other actions; a raw id is kept only if it belongs to the family.
+    def resolve_import_split_value(value)
+      reject_invalid_text!(value, label: Rule::Action.human_attribute_name(:value),
+                                  acceptable: Rule::ActionExecutor::SplitTransaction.acceptable_text?(value))
+
+      Rule::ActionExecutor::SplitTransaction.localize_value(value) do |kind, name: nil, id: nil|
+        next (id if family_record_ids(kind.to_s.pluralize.to_sym).include?(id)) unless name
+
+        case kind
+        when :category then find_or_create_category(name).id
+        when :merchant then find_or_create_merchant(name).id
+        when :tag then find_or_create_tag(name).id
+        end
+      end
+    end
+
+    def family_record_ids(relation)
+      @family_record_ids ||= {}
+      @family_record_ids[relation] ||= family.public_send(relation).pluck(:id).to_set
     end
 
     # Preloaded once per import and extended in place on cache-miss, so a
