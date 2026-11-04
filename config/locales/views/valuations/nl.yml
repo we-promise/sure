@@ -42,6 +42,7 @@ nl:
       entry_updated: "Boeking bijgewerkt"
     errors:
       amount_required: "Bedrag is verplicht"
+      duplicate_date: "Voor deze datum bestaat al een saldo-update. Vernieuw de pagina en probeer het opnieuw."
     form:
       amount: "Bedrag"
       submit: "Voeg balansupdate toe"
