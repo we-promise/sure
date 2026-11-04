@@ -112,6 +112,23 @@ class DS::SelectTest < ViewComponent::TestCase
     assert_selector "button#parent_id_trigger", text: "Groceries"
   end
 
+  test "omit_unless_selected leaves the hidden field disabled when nothing is selected" do
+    render_select(items: [ accounts(:depository) ], selected: nil, omit_unless_selected: true)
+
+    assert_selector(
+      "input[type=hidden][name='transfer_match[account_id]'][disabled]",
+      visible: :all
+    )
+  end
+
+  test "omit_unless_selected submits the hidden field once a value is selected" do
+    account = accounts(:depository)
+
+    render_select(items: [ account ], selected: account.id, omit_unless_selected: true)
+
+    assert_selector "input[type=hidden][name='transfer_match[account_id]']:not([disabled])", visible: :all
+  end
+
   private
     def render_select(**options)
       with_request_url "/" do

@@ -4,6 +4,9 @@ export default class extends Controller {
   static targets = ["input"]
 
   onSelect(event) {
+    // Selects that start disabled to signal "untouched" become submittable
+    // as soon as the user picks any option, including the blank "(none)".
+    this.inputTarget.disabled = false
     this.inputTarget.value = event.detail.value
 
     const inputEvent = new Event("input", { bubbles: true })

@@ -46,8 +46,20 @@ class Transactions::BulkUpdatesController < ApplicationController
         scoped[:category_id] = Current.family.categories.where(id: scoped[:category_id]).pick(:id)
       end
 
-      if scoped[:merchant_id].present?
-        scoped[:merchant_id] = Current.family.available_merchants_for(Current.user).where(id: scoped[:merchant_id]).pick(:id)
+      if scoped.key?(:merchant_id)
+        if scoped[:merchant_id].blank?
+          # An explicit blank means "no merchant" and clears the association.
+          scoped[:merchant_id] = nil
+        else
+          resolved_id = Current.family.available_merchants_for(Current.user).where(id: scoped[:merchant_id]).pick(:id)
+
+          # A merchant outside the family is dropped so the existing value stays.
+          if resolved_id
+            scoped[:merchant_id] = resolved_id
+          else
+            scoped.delete(:merchant_id)
+          end
+        end
       end
 
       if scoped.key?(:tag_ids)
