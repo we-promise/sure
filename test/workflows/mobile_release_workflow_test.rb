@@ -94,7 +94,7 @@ class MobileReleaseWorkflowTest < ActiveSupport::TestCase
 
   test "Android APK and AAB commands receive the same dynamic build number" do
     job = workflow("flutter-build").fetch("jobs").fetch("build-android")
-    assert_equal({ "group" => "android-build-number", "cancel-in-progress" => false }, job.fetch("concurrency"))
+    assert_equal({ "group" => "android-build-number", "cancel-in-progress" => false, "queue" => "max" }, job.fetch("concurrency"))
     %w[true false].each do |signed|
       Dir.mktmpdir do |dir|
         File.write(File.join(dir, "flutter"), "#!/bin/bash\nprintf '%s\\n' \"$*\" >> \"$COMMAND_LOG\"\n")
@@ -112,6 +112,14 @@ class MobileReleaseWorkflowTest < ActiveSupport::TestCase
         assert_equal [ "build apk --#{mode} --build-name=2026.11.3-alpha --build-number=216000001",
                        "build appbundle --release --build-name=2026.11.3-alpha --build-number=216000001" ], commands
       end
+    end
+  end
+
+  test "Android release bundle steps require a keystore" do
+    steps = workflow("flutter-build").fetch("jobs").fetch("build-android").fetch("steps")
+    [ "Build App Bundle (Release)", "Upload AAB artifact" ].each do |name|
+      step = steps.find { |candidate| candidate["name"] == name }
+      assert_equal "steps.check_secrets.outputs.has_keystore == 'true'", step.fetch("if")
     end
   end
 

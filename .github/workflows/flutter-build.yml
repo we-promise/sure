@@ -25,6 +25,7 @@ jobs:
     concurrency:
       group: android-build-number
       cancel-in-progress: false
+      queue: max
     outputs:
       has_app_release_aab: ${{ steps.check_secrets.outputs.has_keystore }}
 
