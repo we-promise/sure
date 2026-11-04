@@ -693,7 +693,8 @@ class BillsHelperTest < ActionView::TestCase
         leading: leading,
         final: false,
         cash_on_hand: cash_on_hand,
-        received: nil
+        received: nil,
+        unknown: false
       )
     end
 end
