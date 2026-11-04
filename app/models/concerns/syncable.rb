@@ -44,8 +44,12 @@ module Syncable
     end
   end
 
-  # Schedules a sync for syncable.  If there is an existing sync pending/syncing for this syncable,
-  # we do not create a new sync, and attempt to expand the sync window if needed.
+  # Schedules a sync for syncable.  If a sync for this syncable is still pending, we do not create
+  # a new sync, and attempt to expand its window if needed.
+  #
+  # A sync that is already running may have read the syncable's data before the change behind
+  # this request, so it cannot absorb the request. A new sync is queued instead; SyncJob holds
+  # it back until the running sync finishes, and later requests join it while it is pending.
   #
   # NOTE: Uses `visible` scope (syncs < 5 min old) instead of `incomplete` to prevent
   # getting stuck on stale syncs after server/Sidekiq restarts. If a sync is older than
@@ -53,7 +57,7 @@ module Syncable
   def sync_later(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     Sync.transaction do
       with_lock do
-        sync = self.syncs.visible.first
+        sync = self.syncs.visible.pending.ordered.first
 
         if sync
           Rails.logger.info("There is an existing recent sync, expanding window if needed (#{sync.id})")
