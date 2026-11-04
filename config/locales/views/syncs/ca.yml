@@ -1,0 +1,6 @@
+---
+ca:
+  syncs:
+    cancel:
+      cancelled: Sincronització cancel·lada. Es conserva tot el que ja s'havia sincronitzat; s'han aturat les tasques pendents a la cua.
+      not_cancellable: Aquesta sincronització ja ha acabat.

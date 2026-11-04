@@ -70,15 +70,15 @@ class Provider::Realie < Provider
       # Realie returns modelValue: 0 when it couldn't produce an AVM
       # estimate, so zero counts as absent and falls back to the assessed
       # total market value.
-      valuation = [ record["modelValue"], record["totalMarketValue"] ].find { |value| value.present? && value.to_d.positive? }
+      valuation = [ model_value(record), total_market_value(record) ].find { |value| value.present? && value.to_d.positive? }
       raise Error.new(I18n.t("providers.realie.errors.no_valuation")) if valuation.nil?
 
       PropertyValuation.new(
         valuation: BigDecimal(valuation.to_s),
         currency: "USD",
         property_type: subtype_for_use_code(record["useCode"]),
-        year_built: record["yearBuilt"],
-        area_value: record["buildingArea"],
+        year_built: year_built(record),
+        area_value: building_area(record),
         area_unit: "sqft"
       )
     end
@@ -92,7 +92,7 @@ class Provider::Realie < Provider
     # street name can resolve to properties in other cities. A candidate
     # matches unless its returned city/ZIP contradict what the user entered.
     def location_match?(record, locality:, postal_code:)
-      returned_city = record["city"].to_s.strip
+      returned_city = city(record).to_s.strip
       returned_zip = record["zipCode"].to_s.strip.first(5)
       entered_city = locality.to_s.strip
       entered_zip = postal_code.to_s.strip.first(5)
@@ -101,6 +101,48 @@ class Provider::Realie < Provider
       zip_mismatch = returned_zip.present? && entered_zip.present? && returned_zip != entered_zip
 
       !(city_mismatch || zip_mismatch)
+    end
+
+    # Realie serves two response shapes for these endpoints. The shape is an
+    # account-level setting that every API key on the account inherits: the
+    # v2-compatible flat record, and the v3 nested parcel record, which is the
+    # default for accounts created after the 2026-08-19 v3 release and a
+    # one-way opt-in from the dashboard for older ones. The URL, the auth and
+    # the top-level "property" key are identical in both, so the only way to
+    # tell them apart is to look at the record itself.
+    #
+    # Read the flat key first and fall back to the nested path, which keeps
+    # both shapes working without asking the user which one their account is
+    # on. Mapping per https://docs.realie.ai/api-reference/v3/migration.
+    def model_value(record)
+      record["modelValue"] || record.dig("realieValuation", "ml", "value")
+    end
+
+    def total_market_value(record)
+      record["totalMarketValue"] || record.dig("valuationInformation", "totalMarketValue")
+    end
+
+    def city(record)
+      record["city"].presence || record.dig("propertyLocation", "city")
+    end
+
+    def year_built(record)
+      record["yearBuilt"] || primary_building(record)&.dig("actualYearBuilt")
+    end
+
+    def building_area(record)
+      record["buildingArea"] || primary_building(record)&.dig("buildingArea")
+    end
+
+    # The nested shape carries one entry per building on the parcel. Match the
+    # flat shape, which describes the primary building only: buildingNumber 1
+    # when the field is populated, otherwise the first entry.
+    def primary_building(record)
+      buildings = record.dig("buildingInformation", "buildings")
+      return nil unless buildings.is_a?(Array)
+
+      candidates = buildings.select { |building| building.is_a?(Hash) }
+      candidates.find { |building| building["buildingNumber"].to_i == 1 } || candidates.first
     end
 
     # Use codes arrive either as Realie's documented numeric codes (mapped

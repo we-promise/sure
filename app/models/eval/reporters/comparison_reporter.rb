@@ -2,7 +2,10 @@ class Eval::Reporters::ComparisonReporter
   attr_reader :runs
 
   def initialize(runs)
-    @runs = Array(runs).sort_by(&:model)
+    # Sorted and identified by provider as well as model: the same model name
+    # can be served by more than one provider, and a comparison run exists
+    # precisely to put two providers side by side.
+    @runs = Array(runs).sort_by { |run| [ run.provider.to_s, run.model.to_s ] }
   end
 
   # Generate a text table for terminal display
@@ -59,17 +62,23 @@ class Eval::Reporters::ComparisonReporter
 
     {
       best_accuracy: {
+        provider: best_accuracy.provider,
         model: best_accuracy.model,
+        label: run_label(best_accuracy),
         value: best_accuracy.metrics["accuracy"],
         run_id: best_accuracy.id
       },
       lowest_cost: {
+        provider: lowest_cost.provider,
         model: lowest_cost.model,
+        label: run_label(lowest_cost),
         value: lowest_cost.total_cost&.to_f,
         run_id: lowest_cost.id
       },
       fastest: {
+        provider: fastest.provider,
         model: fastest.model,
+        label: run_label(fastest),
         value: fastest.metrics["avg_latency_ms"],
         run_id: fastest.id
       },
@@ -91,13 +100,14 @@ class Eval::Reporters::ComparisonReporter
   private
 
     def build_headers
-      [ "Model", "Status", "Accuracy", "Precision", "Recall", "F1", "Latency (ms)", "Cost ($)", "Samples" ]
+      [ "Provider", "Model", "Status", "Accuracy", "Precision", "Recall", "F1", "Latency (ms)", "Cost ($)", "Samples" ]
     end
 
     def build_row(run)
       metrics = run.metrics || {}
 
       [
+        run.provider,
         run.model,
         run.status,
         format_percentage(metrics["accuracy"]),
@@ -146,6 +156,13 @@ class Eval::Reporters::ComparisonReporter
       ]
     end
 
+    # Identifies a run in prose and in summary keys. Model alone is ambiguous
+    # once two providers are in the same comparison — and can collide outright
+    # when both serve the same model name.
+    def run_label(run)
+      "#{run.provider}:#{run.model}"
+    end
+
     def format_percentage(value)
       return "-" if value.nil?
       "#{value}%"
@@ -163,6 +180,7 @@ class Eval::Reporters::ComparisonReporter
       runs.combination(2).each do |run1, run2|
         comparisons << {
           models: [ run1.model, run2.model ],
+          labels: [ run_label(run1), run_label(run2) ],
           accuracy_diff: ((run1.metrics["accuracy"] || 0) - (run2.metrics["accuracy"] || 0)).round(2),
           cost_diff: ((run1.total_cost || 0) - (run2.total_cost || 0)).to_f.round(6),
           latency_diff: ((run1.metrics["avg_latency_ms"] || 0) - (run2.metrics["avg_latency_ms"] || 0)).round(0)
@@ -176,19 +194,19 @@ class Eval::Reporters::ComparisonReporter
 
       # If one model wins all categories
       if best_accuracy.id == lowest_cost.id && lowest_cost.id == fastest.id
-        return "#{best_accuracy.model} is the best choice overall (highest accuracy, lowest cost, fastest)."
+        return "#{run_label(best_accuracy)} is the best choice overall (highest accuracy, lowest cost, fastest)."
       end
 
       # Accuracy recommendation
       if best_accuracy.metrics["accuracy"] && best_accuracy.metrics["accuracy"] >= 90
-        parts << "For maximum accuracy, use #{best_accuracy.model} (#{best_accuracy.metrics['accuracy']}% accuracy)"
+        parts << "For maximum accuracy, use #{run_label(best_accuracy)} (#{best_accuracy.metrics['accuracy']}% accuracy)"
       end
 
       # Cost recommendation if significantly cheaper
       if lowest_cost.total_cost && lowest_cost.total_cost > 0
         cost_ratio = (best_accuracy.total_cost || 0) / lowest_cost.total_cost
         if cost_ratio > 1.5
-          parts << "For cost efficiency, consider #{lowest_cost.model} (#{format_cost(lowest_cost.total_cost)} vs #{format_cost(best_accuracy.total_cost)})"
+          parts << "For cost efficiency, consider #{run_label(lowest_cost)} (#{format_cost(lowest_cost.total_cost)} vs #{format_cost(best_accuracy.total_cost)})"
         end
       end
 
@@ -196,7 +214,7 @@ class Eval::Reporters::ComparisonReporter
       if fastest.metrics["avg_latency_ms"] && fastest.id != best_accuracy.id
         latency_ratio = (best_accuracy.metrics["avg_latency_ms"] || 0) / (fastest.metrics["avg_latency_ms"] || 1)
         if latency_ratio > 1.5
-          parts << "For speed, consider #{fastest.model} (#{fastest.metrics['avg_latency_ms']}ms vs #{best_accuracy.metrics['avg_latency_ms']}ms)"
+          parts << "For speed, consider #{run_label(fastest)} (#{fastest.metrics['avg_latency_ms']}ms vs #{best_accuracy.metrics['avg_latency_ms']}ms)"
         end
       end
 

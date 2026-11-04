@@ -36,7 +36,7 @@ tr:
       set_up_accounts: Hesapları kur
       setup_needed: Kurulum gerekli
       setup_needed_description:
-        one: Enable Banking'den içe aktarılan 1 hesabın kurulumu yapılmalı
+        one: "Enable Banking'den içe aktarılan %{count} hesabın kurulumu yapılmalı"
         other: Enable Banking'den içe aktarılan %{count} hesabın kurulumu yapılmalı
       syncing: Eşitleniyor...
       update: Güncelle

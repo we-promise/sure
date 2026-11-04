@@ -18,7 +18,9 @@ class Assistant::Function::GetBills < Assistant::Function
           bank data, awaiting the user's confirmation -- not yet a real bill),
           "paused" (set aside by the user), "ended" (dismissed or finished), "all".
         - payment_state filters on the CURRENT occurrence instead: "overdue", "due",
-          "upcoming", "partial" (partly paid), "paid".
+          "upcoming", "partial" (partly paid), "paid". Nobody is paying a paused or ended
+          bill, so its unpaid occurrence is never "overdue" or "due"; its state reads the
+          bill's status instead.
         - bill_type "income" is a declared income schedule (paycheck), not an obligation.
           Amounts are always positive magnitudes; bill_type carries the direction.
         - totals exclude income and transfers (a transfer moves money, it is not spend),
@@ -192,8 +194,8 @@ class Assistant::Function::GetBills < Assistant::Function
 
       case state
       when "overdue" then occurrence.overdue?
-      when "due" then occurrence.derived_state == :due
-      when "upcoming" then occurrence.derived_state == :upcoming
+      when "due" then occurrence.due?
+      when "upcoming" then occurrence.recurring_transaction.active? && occurrence.derived_state == :upcoming
       when "partial" then occurrence.partially_paid?
       when "paid" then occurrence.paid?
       else false

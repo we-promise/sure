@@ -79,7 +79,7 @@ nl:
       description: Selecteer een SimpleFIN account om te koppelen aan uw bestaande account
       cancel: Annuleren
       link_account: Account koppelen
-      no_accounts_found: Geen SimpleFIN accounts gevonden voor dit gezin.
+      no_accounts_found: "Geen SimpleFIN-accounts gevonden voor uw %{moniker}."
       wait_for_sync: Als u zojuist verbonden of gesynchroniseerd heeft, probeer het opnieuw nadat de synchronisatie is voltooid.
       unlink_to_move: Om een koppeling te verplaatsen, koppel deze eerst los via het actiemenu van het account.
       all_accounts_already_linked: Alle SimpleFIN accounts lijken al gekoppeld te zijn.

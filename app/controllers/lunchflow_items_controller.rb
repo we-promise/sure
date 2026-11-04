@@ -417,32 +417,9 @@ class LunchflowItemsController < ApplicationController
       # Trigger initial sync to fetch accounts
       @lunchflow_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @lunchflow_items = Current.family.lunchflow_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "lunchflow-providers-panel",
-            partial: "settings/providers/lunchflow_panel",
-            locals: { lunchflow_items: @lunchflow_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @lunchflow_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "lunchflow-providers-panel",
-          partial: "settings/providers/lunchflow_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_back_or_to accounts_path, alert: @error_message
-      end
+      render_provider_panel("lunchflow", alert: @lunchflow_item.errors.full_messages.join(", "))
     end
   end
 
@@ -451,32 +428,9 @@ class LunchflowItemsController < ApplicationController
 
   def update
     if @lunchflow_item.update(lunchflow_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @lunchflow_items = Current.family.lunchflow_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "lunchflow-providers-panel",
-            partial: "settings/providers/lunchflow_panel",
-            locals: { lunchflow_items: @lunchflow_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("lunchflow", notice: t(".success"), fallback_path: accounts_path)
     else
-      @error_message = @lunchflow_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "lunchflow-providers-panel",
-          partial: "settings/providers/lunchflow_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        render :edit, status: :unprocessable_entity
-      end
+      render_provider_panel("lunchflow", alert: @lunchflow_item.errors.full_messages.join(", "))
     end
   end
 
@@ -665,7 +619,7 @@ class LunchflowItemsController < ApplicationController
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }
@@ -683,10 +637,11 @@ class LunchflowItemsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@lunchflow_item),
           partial: "lunchflow_items/lunchflow_item",
-          locals: { lunchflow_item: @lunchflow_item }
+          locals: { lunchflow_item: @lunchflow_item, visible_accounts: @lunchflow_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else

@@ -6,6 +6,7 @@ hu:
         renewal: "A hozzájárulásod %{date}-én megújul."
         cancellation: "A hozzájárulásod %{date}-én lejár."
   settings:
+    encryption_migration_guide: Titkosítási beállítási és migrációs útmutató
     llm_usages:
       show:
         page_title: "LLM-használat és -költségek"
@@ -31,7 +32,7 @@ hu:
         failed: "Sikertelen"
         no_usage_data: "Nem található használati adat a kiválasztott időszakra"
         cost_estimates_title: "A költségbecslésekről"
-        cost_estimates_description: "A költségek a szolgáltatók közzétett árazása alapján vannak becsülve, beleértve az OpenAI 2026. júliusi árait. A tényleges költségek eltérhetnek. Az árazás millió tokenenként van megadva, és modellenként változik. Az egyéni vagy önállóan üzemeltetett modellek \"N/A\"-t mutatnak, és nem szerepelnek a költségösszesítőkben."
+        cost_estimates_description: "A költségek a szolgáltatók közzétett árai alapján becsültek, utoljára ellenőrizve: %{date}. A tényleges költségek eltérhetnek. Az árazás millió tokenenként van megadva, és modellenként változik. Az egyéni vagy önállóan üzemeltetett modellek \"N/A\"-t mutatnak, és nem szerepelnek a költségösszesítőkben."
     ai_prompts:
       show:
         page_title: MI promptok
@@ -82,6 +83,8 @@ hu:
         dashboard_two_column_title: Kétoszlopos elrendezés
         dashboard_two_column_description: Az irányítópult-widgetek megjelenítése két oszlopban nagy képernyőkön. Ha ki van kapcsolva, a widgetek egyetlen oszlopban egymás alatt jelennek meg.
         split_grouped_title: Felosztott tranzakciók csoportosítása
+        auto_generate_transaction_names_title: "Tranzakciónevek automatikus létrehozása"
+        auto_generate_transaction_names_description: "Ha egy kézzel rögzített tranzakció neve üresen marad, a kiválasztott kategóriából és kereskedőből töltődik ki (pl. „Szórakozás - Netflix”). Ha egyik sincs kiválasztva, a név továbbra is kötelező. Az egész háztartásra vonatkozik, és csak az új tranzakciókra."
         split_grouped_description: A felosztott tranzakciók megjelenítése szülőjük alatt csoportosítva a tranzakciólistában. Ha ki van kapcsolva, a felosztott tételek egyedi sorként jelennek meg.
     preferences:
       show:
@@ -193,6 +196,7 @@ hu:
       accounts_label: Számlák
       advanced_section_title: Speciális
       ai_prompts_label: MI promptok
+      auto_matches_label: Automatikus egyeztetés
       api_key_label: API-kulcs
       payment_label: Fizetés
       categories_label: Kategóriák
@@ -263,6 +267,8 @@ hu:
         sync_error: Szinkronizálási hiba
         no_recent_sync: Szinkronizálás lejárt
         reconsent_required: Újrahozzájárulás szükséges
+        login_required: "Bejelentkezés szükséges"
+        login_expires_soon: "A bejelentkezés %{time} múlva lejár (%{at})"
         reconsent_needed:
           one: Újrahozzájárulás szükséges 1 napon belül
           other: Újrahozzájárulás szükséges %{count} napon belül
@@ -316,6 +322,7 @@ hu:
         connect_button: Coinbase csatlakoztatása
         syncing: Szinkronizálás...
         sync: Szinkronizálás
+        disconnect: Lecsatlakozás
         disconnect_confirm: Biztosan le szeretnéd választani ezt a Coinbase-kapcsolatot? A szinkronizált számlák manuális számlákká válnak.
       binance_panel:
         setup_instructions: "A Binance csatlakoztatásához hozz létre egy csak olvasási jogosultsággal rendelkező API-kulcsot:"
@@ -335,6 +342,7 @@ hu:
         connect_button: Binance csatlakoztatása
         syncing: Szinkronizálás...
         sync: Szinkronizálás
+        disconnect: Lecsatlakozás
         disconnect_confirm: "Biztosan le szeretnéd választani a Binance-t?"
       kraken_panel:
         step1_html: 'Nyisd meg a <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API-beállításait</a>'
@@ -370,6 +378,7 @@ hu:
         application_id_placeholder_new: "Add meg az alkalmazásazonosítót"
         application_id_placeholder_update: "Add meg az új azonosítót a frissítéshez"
         client_certificate_label: "Ügyfél-tanúsítvány (privát kulccsal)"
+        keep_client_certificate_hint: "Hagyd üresen az aktuális tanúsítvány megtartásához"
         save_and_connect: "Mentés és csatlakozás"
         update_connection: "Kapcsolat frissítése"
         connected_bank: "Csatlakoztatott bank"

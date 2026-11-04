@@ -7,6 +7,14 @@ class Rule::ActionExecutor::SetTransactionMerchant < Rule::ActionExecutor
     family.merchants.alphabetically.pluck(:name, :id)
   end
 
+  def claimed_attributes
+    [ :merchant_id ]
+  end
+
+  def actionable?(value)
+    family.merchants.exists?(id: value)
+  end
+
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     merchant = family.merchants.find_by_id(value)
     return 0 unless merchant

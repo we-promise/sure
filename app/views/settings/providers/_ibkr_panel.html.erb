@@ -1,9 +1,4 @@
 <div id="ibkr-providers-panel" class="space-y-4">
-  <% error_msg = local_assigns[:error_message] || @error_message %>
-  <% if error_msg.present? %>
-    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
-  <% end %>
-
   <%= render "settings/providers/setup_steps",
              steps: [
                t(".steps.step_1"),
@@ -12,6 +7,11 @@
                t(".steps.step_4"),
                t(".steps.step_5")
              ] %>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
 
   <%= render DS::Disclosure.new(variant: :card_inset) do |disclosure| %>
     <% disclosure.with_summary_content do %>
@@ -98,7 +98,7 @@
 
   <% if ibkr_item.persisted? %>
     <div class="flex flex-wrap justify-end gap-2">
-      <%= button_to sync_ibkr_item_path(ibkr_item),
+      <%= button_to sync_ibkr_item_path(ibkr_item, source: "panel"),
                     method: :post,
                     class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
                     disabled: ibkr_item.syncing? do %>
@@ -141,7 +141,7 @@
       <div class="w-2 h-2 bg-success rounded-full"></div>
       <p class="text-sm text-secondary">
         <%= t(".status_configured_prefix", summary: ibkr_item.sync_status_summary) %>
-        <%= link_to t(".accounts_tab"), accounts_path, class: "link" %>
+        <%= link_to t(".accounts_tab"), accounts_path, class: "text-link underline" %>
         <%= t(".status_configured_suffix") %>
       </p>
     <% else %>

@@ -21,8 +21,6 @@ zh-TW:
           trial_expiring_soon: 7 天內到期
           trial_trialing: 試用中
           submit: 篩選
-        summary:
-          trials_expiring_7_days: 未來 7 天內到期的試用
         table:
           user: 使用者
           trial_ends_at: 試用結束

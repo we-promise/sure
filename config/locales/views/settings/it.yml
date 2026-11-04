@@ -6,6 +6,7 @@ it:
         renewal: "Il tuo contributo continua il %{date}."
         cancellation: "Il tuo contributo termina il %{date}."
   settings:
+    encryption_migration_guide: Guida alla configurazione della crittografia e alla migrazione
     debugs:
       show:
         page_title: "Debug"
@@ -67,7 +68,7 @@ it:
         failed: "Fallita"
         no_usage_data: "Nessun dato di utilizzo trovato per il periodo selezionato"
         cost_estimates_title: "Informazioni sulle stime dei costi"
-        cost_estimates_description: "I costi sono stimati in base ai prezzi di OpenAI del 2025. I costi effettivi possono variare. I prezzi sono per 1 milione di token e variano per modello. I modelli personalizzati o self-hosted mostreranno \"N/A\" e non sono inclusi nei totali dei costi."
+        cost_estimates_description: "I costi sono stimati in base ai prezzi pubblicati dai fornitori, verificati l’ultima volta il %{date}. I costi effettivi possono variare. I prezzi sono per 1 milione di token e variano per modello. I modelli personalizzati o self-hosted mostreranno \"N/A\" e non sono inclusi nei totali dei costi."
     ai_prompts:
       show:
         page_title: Prompt AI
@@ -118,6 +119,8 @@ it:
         dashboard_two_column_title: Layout a due colonne
         dashboard_two_column_description: Visualizza i widget del dashboard in due colonne su schermi grandi, con controlli larghezza e altezza per widget nell'intestazione di ciascun widget. Se disattivato, i widget si impilano in una singola colonna.
         split_grouped_title: Raggruppa transazioni suddivise
+        auto_generate_transaction_names_title: "Genera automaticamente i nomi delle transazioni"
+        auto_generate_transaction_names_description: "Se il nome di una transazione inserita manualmente viene lasciato vuoto, viene compilato con la categoria e l'esercente selezionati (es. «Intrattenimento - Netflix»). Il nome resta obbligatorio se nessuno dei due è selezionato. Vale per tutto il nucleo familiare e solo per le nuove transazioni."
         split_grouped_description: Mostra le transazioni suddivise raggruppate sotto la voce principale nell'elenco transazioni. Se disattivato, le voci figlie appaiono come righe individuali.
     preferences:
       show:
@@ -264,6 +267,7 @@ it:
       accounts_label: Conti
       advanced_section_title: Avanzate
       ai_prompts_label: Prompt AI
+      auto_matches_label: Corrispondenze automatiche
       api_key_label: Chiave API
       payment_label: Pagamento
       categories_label: Categorie
@@ -337,6 +341,8 @@ it:
         no_recent_sync: Sincronizzazione in ritardo
         registration_needed: Registrazione richiesta
         reconsent_required: Nuovo consenso richiesto
+        login_required: "Accesso richiesto"
+        login_expires_soon: "L'accesso scade tra %{time} (%{at})"
         reconsent_needed:
           one: Nuovo consenso richiesto tra 1 giorno
           other: Nuovo consenso richiesto tra %{count} giorni
@@ -391,6 +397,7 @@ it:
         connect_button: Connetti Coinbase
         syncing: Sincronizzazione...
         sync: Sincronizza
+        disconnect: Disconnetti
         disconnect_confirm: Sei sicuro di voler disconnettere questa connessione Coinbase? I tuoi conti sincronizzati diventeranno conti manuali.
       binance_panel:
         setup_instructions: "Per connettere Binance, crea una chiave API in sola lettura:"
@@ -412,6 +419,7 @@ it:
         historical_import: "Impostazioni importazione storica"
         sync_start_date_label: "Importa dati da"
         sync_start_date_help: "Seleziona fino a quando indietro recuperare le operazioni storiche."
+        disconnect: Disconnetti
         disconnect_confirm: "Sei sicuro di voler disconnettere Binance?"
       kraken_panel:
         step1_html: 'Vai alle <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">impostazioni API Kraken</a>'
@@ -447,6 +455,7 @@ it:
         application_id_placeholder_new: "Inserisci ID applicazione"
         application_id_placeholder_update: "Inserisci nuovo ID per aggiornare"
         client_certificate_label: "Certificato client (con chiave privata)"
+        keep_client_certificate_hint: "Lascia vuoto per mantenere il certificato attuale"
         save_and_connect: "Salva e connetti"
         update_connection: "Aggiorna connessione"
         connected_bank: "Banca collegata"

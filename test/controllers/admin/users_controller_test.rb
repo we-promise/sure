@@ -7,6 +7,14 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:sure_support_staff)
   end
 
+  test "index leaves the expiring trial summary to hosted system health" do
+    get admin_users_url
+
+    assert_response :success
+    assert_no_match I18n.t("admin.system_health.hosted_usage.summary.trials_expiring_soon_count", raise: true), response.body
+    assert_select "select[name='trial_status'] option[value='expiring_soon']"
+  end
+
   test "index groups users by family sorted by transaction count" do
     family_with_more = users(:family_admin).family
     family_with_fewer = users(:empty).family
@@ -515,6 +523,74 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_match(/Set new password/, response.body, "Should show set password field for local users")
+  end
+
+  test "update rejects setting a password when only SSO login is allowed" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: "admin", password: "Secure1!pass" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.password_disabled"), flash[:alert]
+    target.reload
+    assert_equal old_digest, target.password_digest
+    assert_equal "member", target.role, "Nothing else should be saved alongside a rejected password"
+  end
+
+  test "update still changes the role without a password when only SSO login is allowed" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+    target = users(:family_member)
+
+    patch admin_user_url(target), params: { user: { role: "admin", password: "" } }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.success_role"), flash[:notice]
+    assert_equal "admin", target.reload.role
+  end
+
+  test "update rejects passwords for regular users under the local admin override" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "Secure1!pass" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.password_disabled"), flash[:alert]
+    assert_equal old_digest, target.reload.password_digest
+  end
+
+  test "update sets a super admin password under the local admin override" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+    target = users(:sure_support_staff)
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "Secure1!pass" }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_equal I18n.t("admin.users.update.success_password"), flash[:notice]
+    assert target.reload.authenticate("Secure1!pass")
+  end
+
+  test "index hides the set password field when only SSO login is allowed" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+
+    get admin_users_url
+    assert_response :success
+
+    assert_select "input[type=password][name='user[password]']", count: 0
   end
 
   test "index shows removed SSO identities with a recovery action" do

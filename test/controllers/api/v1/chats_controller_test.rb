@@ -43,6 +43,30 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "feature_disabled", response_body["error"]
   end
 
+  test "rejects chat creation for a consenting user when the assistant type is mcp_only" do
+    api_key = ApiKey.create!(
+      user: @user,
+      name: "MCP Only Key",
+      scopes: [ "read_write" ],
+      source: "web",
+      display_key: "test_rw_#{SecureRandom.hex(8)}"
+    )
+
+    get "/api/v1/chats", headers: api_headers(api_key)
+    assert_response :success
+
+    @user.family.update!(assistant_type: "mcp_only")
+
+    assert_no_difference "Chat.count" do
+      post "/api/v1/chats",
+        params: { title: "New chat", message: "Hello AI" },
+        headers: api_headers(api_key)
+    end
+
+    assert_response :forbidden
+    assert_equal "feature_disabled", JSON.parse(response.body)["error"]
+  end
+
   test "should list chats with read scope" do
     get "/api/v1/chats", headers: bearer_auth_header(@read_token)
     assert_response :success
@@ -191,5 +215,9 @@ class Api::V1::ChatsControllerTest < ActionDispatch::IntegrationTest
 
     def bearer_auth_header(token)
       { "Authorization" => "Bearer #{token.token}" }
+    end
+
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.plain_key }
     end
 end

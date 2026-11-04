@@ -1,0 +1,17 @@
+---
+ca:
+  providers:
+    property_valuation:
+      not_configured: Aquest proveïdor de dades immobiliàries no està configurat.
+      missing_fields: Indica un nom i una adreça completa dels EUA (carrer, ciutat, estat i codi ZIP).
+      preview_expired: Aquesta previsualització de la propietat ha caducat; torna a cercar l'adreça.
+    rentcast:
+      errors:
+        no_valuation: RentCast no ha retornat cap valor estimat per a aquesta adreça.
+        not_found: RentCast no ha trobat cap propietat que coincideixi amb aquesta adreça.
+    realie:
+      errors:
+        no_property: Realie no ha retornat cap propietat per a aquesta adreça.
+        no_valuation: Realie no ha retornat cap valoració per a aquesta propietat.
+        not_found: Realie no ha trobat cap propietat que coincideixi amb aquesta adreça.
+        location_mismatch: Realie ha trobat una propietat en una altra ciutat o codi ZIP. Revisa l'adreça.

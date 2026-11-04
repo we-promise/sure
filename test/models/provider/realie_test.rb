@@ -23,6 +23,30 @@ class Provider::RealieTest < ActiveSupport::TestCase
     }.to_json
   end
 
+  # The v3 nested parcel record, the shape served to accounts created after the
+  # 2026-08-19 v3 release and to older accounts that opted in. Same URL, same
+  # auth, same top-level "property" key -- only the field layout differs.
+  # Trimmed to the fields this provider reads.
+  def nested_address_lookup_body(overrides = {})
+    {
+      "property" => {
+        "useCode" => "1001",
+        "state" => "CA",
+        "zipCode" => "90001",
+        "propertyLocation" => { "city" => "LOS ANGELES" },
+        "realieValuation" => {
+          "ml" => { "value" => 420_000.0, "low" => 390_000.0, "high" => 450_000.0 }
+        },
+        "valuationInformation" => { "totalMarketValue" => 400_000 },
+        "buildingInformation" => {
+          "buildings" => [
+            { "actualYearBuilt" => 1985, "buildingArea" => 1500.0, "livingArea" => 1400.0 }
+          ]
+        }
+      }.merge(overrides)
+    }.to_json
+  end
+
   test "fetches valuation and property attributes in a single request" do
     stub = stub_request(:get, "https://app.realie.ai/api/public/property/address/")
       .with(
@@ -169,6 +193,93 @@ class Provider::RealieTest < ActiveSupport::TestCase
         assert_equal expected, actual, "expected #{use_code.inspect} to map to #{expected.inspect}"
       end
     end
+  end
+
+  test "reads the v3 nested parcel record" do
+    stub = stub_request(:get, "https://app.realie.ai/api/public/property/address/")
+      .with(
+        query: { "address" => "123 Main Street", "state" => "CA" },
+        headers: { "Authorization" => "test_api_key" }
+      )
+      .to_return(status: 200, body: nested_address_lookup_body)
+
+    response = @provider.fetch_property_valuation(
+      line1: "123 Main Street",
+      locality: "Los Angeles",
+      region: "CA",
+      postal_code: "90001"
+    )
+
+    assert response.success?
+    data = response.data
+    assert_equal 420_000, data.valuation
+    assert_equal "single_family_home", data.property_type
+    assert_equal 1985, data.year_built
+    assert_equal 1500, data.area_value
+    assert_equal "sqft", data.area_unit
+    assert_requested stub
+  end
+
+  test "falls back to the nested assessed market value when the nested model value is absent" do
+    stub_request(:get, "https://app.realie.ai/api/public/property/address/")
+      .with(query: hash_including("address" => "123 Main Street"))
+      .to_return(status: 200, body: nested_address_lookup_body("realieValuation" => { "ml" => {} }))
+
+    response = @provider.fetch_property_valuation(line1: "123 Main Street", region: "CA")
+
+    assert response.success?
+    assert_equal 400_000, response.data.valuation
+  end
+
+  test "matches the entered city against the nested property location" do
+    stub_request(:get, "https://app.realie.ai/api/public/property/address/")
+      .with(query: hash_including("address" => "123 Main Street"))
+      .to_return(status: 200, body: nested_address_lookup_body)
+
+    response = @provider.fetch_property_valuation(
+      line1: "123 Main Street",
+      locality: "San Diego",
+      region: "CA",
+      postal_code: "90001"
+    )
+
+    assert_not response.success?
+    assert_equal I18n.t("providers.realie.errors.location_mismatch"), response.error.message
+  end
+
+  test "picks the primary building when the nested record lists several" do
+    body = nested_address_lookup_body(
+      "buildingInformation" => {
+        "buildings" => [
+          { "buildingNumber" => 2, "actualYearBuilt" => 1999, "buildingArea" => 400.0 },
+          { "buildingNumber" => 1, "actualYearBuilt" => 1985, "buildingArea" => 1500.0 }
+        ]
+      }
+    )
+
+    stub_request(:get, "https://app.realie.ai/api/public/property/address/")
+      .with(query: hash_including("address" => "123 Main Street"))
+      .to_return(status: 200, body: body)
+
+    response = @provider.fetch_property_valuation(line1: "123 Main Street", region: "CA")
+
+    assert response.success?
+    assert_equal 1985, response.data.year_built
+    assert_equal 1500, response.data.area_value
+  end
+
+  test "raises no_valuation when neither shape carries a usable value" do
+    stub_request(:get, "https://app.realie.ai/api/public/property/address/")
+      .with(query: hash_including("address" => "123 Main Street"))
+      .to_return(status: 200, body: nested_address_lookup_body(
+        "realieValuation" => { "ml" => { "value" => 0 } },
+        "valuationInformation" => { "totalMarketValue" => nil }
+      ))
+
+    response = @provider.fetch_property_valuation(line1: "123 Main Street", region: "CA")
+
+    assert_not response.success?
+    assert_equal I18n.t("providers.realie.errors.no_valuation"), response.error.message
   end
 
   test "stops issuing requests once the monthly limit is reached" do

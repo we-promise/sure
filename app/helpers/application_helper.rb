@@ -14,6 +14,14 @@ module ApplicationHelper
     form_with(**options, &block)
   end
 
+  # Masks a sensitive identifier (IBAN, account number, ...) down to its last
+  # 4 characters for display, e.g. "•••1234". Returns nil for blank input.
+  def mask_last4(value)
+    return nil if value.blank?
+
+    "•••#{value.to_s.last(4)}"
+  end
+
   # Locale-aware ordinal label for integers.
   # English falls through to Ruby's ordinalize ("1st"); Catalan returns "1r"/"2n"/...
   def localized_ordinal(number)
@@ -53,6 +61,11 @@ module ApplicationHelper
     else
       safe_lucide_icon(resolved_key, class: icon_classes, **opts)
     end
+  end
+
+  # The chevron for a DS::Disclosure summary_content slot; it turns as the disclosure opens.
+  def disclosure_chevron
+    icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90"
   end
 
   # Convert alpha (0-1) to 8-digit hex (00-FF)
@@ -169,6 +182,7 @@ module ApplicationHelper
     Money.new(number_or_money).format(options)
   end
 
+  # Format each native-currency total independently, preserving order and transfer exclusions.
   def totals_by_currency(collection:, money_method:, separator: " | ", negate: false)
     collection.group_by(&:currency)
               .transform_values { |item| calculate_total(item, money_method, negate) }
@@ -201,7 +215,7 @@ module ApplicationHelper
   end
 
   def assistant_icon
-    type = ENV["ASSISTANT_TYPE"].presence || Current.family&.assistant_type.presence || "builtin"
+    type = Current.family&.effective_assistant_type || "builtin"
     type == "external" ? "claw" : "ai"
   end
 
@@ -243,6 +257,13 @@ module ApplicationHelper
     return callback_enable_banking_items_url if Rails.env.production?
 
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
+  end
+
+  # The redirect URI registered on the TrueLayer app. TRUELAYER_REDIRECT_URI
+  # overrides it for instances behind a proxy that doesn't forward the
+  # public host; it must exactly match one registered on the TrueLayer app.
+  def truelayer_callback_url
+    ENV["TRUELAYER_REDIRECT_URI"].presence || callback_truelayer_items_url
   end
 
   # Formats a holding quantity with adaptive precision based on the value size.
@@ -287,6 +308,7 @@ module ApplicationHelper
       normalized.downcase
     end
 
+    # Exclude transfers while preserving the original group currency even when its total is zero.
     def calculate_total(item, money_method, negate)
       # Filter out transfer-type transactions from entries
       # Only Entry objects have entryable transactions, Account objects don't
@@ -295,7 +317,8 @@ module ApplicationHelper
         i.entryable.is_a?(Transaction) &&
         i.entryable.transfer?
       end
-      total = items.sum(&money_method)
+      # Keep the group's currency when every entry is excluded from the total.
+      total = items.sum(Money.new(0, item.first.currency), &money_method)
       negate ? -total : total
     end
 end

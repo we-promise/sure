@@ -82,7 +82,9 @@ module Assistant::Function::BillsSupport
         status: display_status(series),
         amount: series.amount_money.abs.format,
         currency: series.currency,
-        frequency: detection.key || "custom",
+        # The tools' frequency enum is PRESETS; an every-N cadence outside it
+        # reads as custom there, as it did before the picker could set one.
+        frequency: detection.key.presence_in(RecurringTransaction::FrequencyPreset::PRESETS) || "custom",
         next_due_date: series.next_due_date&.iso8601,
         autopay: series.autopay,
         detected_automatically: !series.manual,
@@ -102,10 +104,19 @@ module Assistant::Function::BillsSupport
       expected = occurrence.resolved_expected_amount
       paid = occurrence.confirmed_allocated
 
+      # Nobody is paying a bill that isn't active, so its leftover reports the
+      # pause, not a schedule state that calls it overdue.
+      series = occurrence.recurring_transaction
+      state = if occurrence.scheduled? && !series.active?
+        display_status(series)
+      else
+        occurrence.derived_state.to_s
+      end
+
       {
         due_on: occurrence.due_on.iso8601,
         effective_due_on: occurrence.effective_due_on.iso8601,
-        state: occurrence.derived_state.to_s,
+        state: state,
         expected: Money.new(expected, occurrence.currency).format,
         paid: Money.new(paid, occurrence.currency).format,
         remaining: Money.new([ expected - paid, 0 ].max, occurrence.currency).format,

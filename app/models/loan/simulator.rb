@@ -39,13 +39,38 @@ class Loan
     # was never asked for, and loses the remaining balance without saying so.
     MAX_PERIODS = 1200
 
-    PAYMENT_STRATEGIES = %i[reamortize hold].freeze
+    # How the repayment behaves from one period to the next:
+    #
+    #   :reamortize  sized from the balance in front of it, and re-sized
+    #                whenever the sizing rate moves -- what a lender does to a
+    #                contracted schedule
+    #   :hold        one figure, seeded or sized on the first period, held to
+    #                the end whatever the rate does
+    #   :scheduled   asked for every period from a callable, regardless of the
+    #                balance -- what a projection uses to pay the CONTRACT's
+    #                repayment against a balance that is no longer the
+    #                contracted one, so a borrower who is ahead finishes early
+    #                instead of being re-sized back onto the original maturity
+    PAYMENT_STRATEGIES = %i[reamortize hold scheduled].freeze
 
     # Built once: `monthly_rate` runs twice per period, up to MAX_PERIODS times
     # per simulation. The two-step division is kept as it was so results stay
     # bit-identical to the schedules already asserted in the tests.
     PERCENT = BigDecimal("100")
     MONTHS_PER_YEAR = BigDecimal("12")
+
+    # How a period's interest is measured against a year.
+    #
+    # `thirty_360` is the default because it IS the flat 1/12 this engine has
+    # always charged -- 30/360 reduces to 1/12 exactly -- so a loan that does
+    # not choose a convention produces the schedule it produced before, row for
+    # row. `actual_actual` is NOT a substitute for that: it charges 31/365 in
+    # January and 28/365 in February, and only reaches 1/12 when a whole
+    # calendar year is summed.
+    DAY_COUNT_CONVENTIONS = %i[thirty_360 actual_365 actual_actual].freeze
+    DEFAULT_DAY_COUNT_CONVENTION = :thirty_360
+    DAYS_PER_YEAR = BigDecimal("365")
+    DAYS_PER_LEAP_YEAR = BigDecimal("366")
 
     def initialize(
       starting_balance:,
@@ -55,7 +80,9 @@ class Loan
       currency_precision:,
       re_amortisation_events: nil,
       payment_strategy: :reamortize,
-      settle_at_schedule_end: true
+      payment_amount: nil,
+      settle_at_schedule_end: true,
+      day_count_convention: DEFAULT_DAY_COUNT_CONVENTION
     )
       @starting_balance = BigDecimal(starting_balance.to_s)
       @accrual_start_date = accrual_start_date
@@ -66,7 +93,16 @@ class Loan
       )
       @currency_precision = currency_precision
       @payment_strategy = payment_strategy.to_sym
+      # A caller-supplied repayment. Under :hold and :reamortize a number that
+      # seeds the run; under :scheduled a callable, asked every period for the
+      # amount the contract requires then -- see #run.
+      @payment_amount =
+        if payment_amount.respond_to?(:call) then payment_amount
+        elsif payment_amount.nil? then nil
+        else BigDecimal(payment_amount.to_s)
+        end
       @settle_at_schedule_end = settle_at_schedule_end
+      @day_count_convention = (day_count_convention || DEFAULT_DAY_COUNT_CONVENTION).to_sym
 
       raise ArgumentError, "payment schedule must not be empty" if @payment_schedule.empty?
       if @payment_schedule.length > MAX_PERIODS
@@ -76,6 +112,14 @@ class Loan
       end
       unless PAYMENT_STRATEGIES.include?(@payment_strategy)
         raise ArgumentError, "unsupported payment strategy: #{@payment_strategy.inspect}"
+      end
+      if (@payment_strategy == :scheduled) != @payment_amount.respond_to?(:call)
+        raise ArgumentError, ":scheduled takes a callable payment_amount; the other strategies take a number"
+      end
+      unless DAY_COUNT_CONVENTIONS.include?(@day_count_convention)
+        raise ArgumentError,
+              "unsupported day-count convention: #{@day_count_convention.inspect} " \
+              "(expected one of #{DAY_COUNT_CONVENTIONS.join(', ')})"
       end
     end
 
@@ -92,32 +136,68 @@ class Loan
 
         # See the class comment: opening rate charges the period, closing rate
         # sizes the payment.
-        accrual_rate = monthly_rate(@accrual_rate_for.call(period_start))
+        #
+        # The day count applies to the charge, not to the sizing. `level_payment`
+        # is an annuity formula and assumes ONE constant periodic rate; a factor
+        # that moves with the length of the month would differ every period, so
+        # under :reamortize the payment would be recomputed every month and stop
+        # being level. Sizing therefore stays on the nominal monthly rate, which
+        # is also what the borrower's contracted payment is set from.
+        accrual_annual = @accrual_rate_for.call(period_start)
+        accrual_rate = accrual_factor(period_start, payment_date, accrual_annual)
         sizing_rate = monthly_rate(rate_on(payment_date))
 
-        # Interest first, on the balance the period opened with: one charge
-        # per period under monthly accrual. Sizing needs it when the two rates
+        # Interest first, on the balance the period OPENED with: one charge per
+        # period under monthly accrual. Sizing needs it when the two rates
         # differ, see below.
         interest = (balance * accrual_rate).round(@currency_precision)
 
-        # Resize only when the sizing rate actually moves. Recomputing every
-        # period would be arithmetically identical while the rate holds, but it
-        # would also silently absorb a payment the borrower is contracted to,
-        # which is what `:hold` exists to refuse.
-        #
-        # When the period straddles the change -- accrued at the old rate,
-        # sized at the new -- the annuity formula alone over-covers this
-        # period and the payment is not level to maturity (a final settlement
-        # thousands short). The sizing is told what this period actually
-        # charged so the figure covers it and amortises the rest evenly.
-        if payment.nil? || (@payment_strategy == :reamortize && sizing_rate != previous_sizing_rate)
-          payment = AmortizationMath.level_payment(
+        if @payment_strategy == :scheduled
+          # The contract's repayment for THIS period, whatever balance is in
+          # front of it. Sizing from the balance would shrink a borrower who is
+          # ahead back onto the original maturity; paying what the contract
+          # asks is how they finish sooner.
+          payment = BigDecimal(@payment_amount.call(
+            index: index,
             balance: balance,
-            monthly_rate: sizing_rate,
-            remaining_payments: @payment_schedule.length - index,
-            currency_precision: @currency_precision,
-            first_period_interest: (interest if sizing_rate != accrual_rate)
-          )
+            sizing_rate: sizing_rate,
+            remaining_payments: @payment_schedule.length - index
+          ).to_s)
+        else
+          # Resize only when the sizing rate actually moves. Recomputing every
+          # period would be arithmetically identical while the rate holds, but
+          # it would also silently absorb a payment the borrower is contracted
+          # to, which is what `:hold` exists to refuse.
+          if payment.nil?
+            # A supplied amount seeds the run -- a projection opens on the
+            # repayment the borrower is contracted to, not one re-derived from
+            # today's balance, which would make every loan look on track.
+            payment = @payment_amount
+          end
+          # `previous_sizing_rate.nil?` guards the first period: there is no
+          # earlier rate to have moved away from, so the opening rate is not a
+          # rate CHANGE. Without it, a seeded repayment is overwritten on the
+          # very first period it was supposed to govern.
+          rate_moved = !previous_sizing_rate.nil? && sizing_rate != previous_sizing_rate
+          # When the period straddles the change -- accrued at the old rate,
+          # sized at the new -- the annuity formula alone over-covers this
+          # period and the payment is not level to maturity (a final
+          # settlement thousands short). The sizing is told what this period
+          # actually charged so the figure covers it and amortises the rest
+          # evenly.
+          if payment.nil? || (@payment_strategy == :reamortize && rate_moved)
+            payment = AmortizationMath.level_payment(
+              balance: balance,
+              monthly_rate: sizing_rate,
+              remaining_payments: @payment_schedule.length - index,
+              currency_precision: @currency_precision,
+              # "Did the rate move mid-period?", asked of the rates themselves.
+              # Comparing the derived factors would answer "yes" every month once
+              # a day count is in play, because January and February differ by
+              # length rather than by rate.
+              first_period_interest: (interest if sizing_rate != monthly_rate(accrual_annual))
+            )
+          end
         end
         previous_sizing_rate = sizing_rate
 
@@ -135,7 +215,9 @@ class Loan
 
         # Two rates on the row, named for what each did: `interest_rate` is
         # the one the interest column was computed with, so a reader who
-        # recomputes beginning_balance * rate / 12 gets this row's figure;
+        # recomputes the charge from beginning_balance, this rate and the
+        # period's day count (a flat twelfth under thirty_360) gets this row's
+        # figure;
         # `sizing_rate` is the one the payment was sized at. They differ only
         # on a row whose period straddles a rate change.
         payments << {
@@ -149,7 +231,12 @@ class Loan
         balance = step[:ending_balance]
       end
 
-      SimulationResult.new(payments: payments, currency_precision: @currency_precision)
+      SimulationResult.new(
+        payments: payments,
+        converged: balance.zero?,
+        balloon_amount: balance,
+        currency_precision: @currency_precision
+      )
     end
 
     private
@@ -170,6 +257,47 @@ class Loan
       # `annual_percentage` is whatever the caller's rate callable returned --
       # an Integer in the tests, a BigDecimal from RateResolver -- so the
       # coercion at this boundary stays.
+      # 30/360 keeps the original two-step division untouched, so a default
+      # loan's figures are bit-identical rather than merely close.
+      def accrual_factor(period_start, period_end, annual_percentage)
+        return monthly_rate(annual_percentage) if @day_count_convention == :thirty_360
+
+        # After the 30/360 return, so the default path stays bit-identical.
+        if period_end < period_start
+          raise ArgumentError, "period ends (#{period_end}) before it starts (#{period_start})"
+        end
+
+        rate = BigDecimal(annual_percentage.to_s) / PERCENT
+
+        if @day_count_convention == :actual_365
+          return (rate * BigDecimal((period_end - period_start).to_i.to_s)) / DAYS_PER_YEAR
+        end
+
+        rate * actual_actual_year_fraction(period_start, period_end)
+      end
+
+      # actual/actual measures each calendar year's days against THAT year's
+      # own length, so a period crossing New Year is two fractions rather than
+      # one. Taking the opening year's denominator for the whole period would
+      # charge the days after 1 January at the wrong rate -- 15 December 2027
+      # to 15 January 2028 would put the 2028 days over 365 instead of 366.
+      def actual_actual_year_fraction(period_start, period_end)
+        fraction = BigDecimal("0")
+        cursor = period_start
+
+        while cursor < period_end
+          next_year_start = Date.new(cursor.year + 1, 1, 1)
+          segment_end = [ next_year_start, period_end ].min
+          days = BigDecimal((segment_end - cursor).to_i.to_s)
+          denominator = Date.leap?(cursor.year) ? DAYS_PER_LEAP_YEAR : DAYS_PER_YEAR
+
+          fraction += days / denominator
+          cursor = segment_end
+        end
+
+        fraction
+      end
+
       def monthly_rate(annual_percentage)
         (BigDecimal(annual_percentage.to_s) / PERCENT) / MONTHS_PER_YEAR
       end

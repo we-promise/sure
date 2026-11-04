@@ -527,7 +527,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
   # Returns failed result when balances fetch fails
 
   test "returns failed result when STANDARD balances fetch fails" do
-    provider = FakeWiseProvider.new(raise_on: { get_balances: "unauthorized" })
+    provider = FakeWiseProvider.new(raise_on: { get_balances: "server error" })
 
     result = WiseItem::Importer.new(@wise_item, wise_provider: provider).import
 

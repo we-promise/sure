@@ -1,18 +1,22 @@
 class Eval::Langfuse::ExperimentRunner
   attr_reader :dataset, :model, :provider, :client, :provider_config
 
-  BATCH_SIZE = 25
-
   def initialize(dataset, model:, provider: "openai", client: nil, provider_config: {})
     @dataset = dataset
     @model = model
     @provider = provider
     @client = client || Eval::Langfuse::Client.new
-    @provider_config = provider_config
+    # This class reads provider_config with symbol keys, but the same config is
+    # spelled with string keys everywhere else — Eval::Run#provider_config is a
+    # jsonb column, so it always reads back as strings. Normalizing means a
+    # caller passing either spelling gets the configured value instead of
+    # silently falling through to ENV.
+    @provider_config = (provider_config || {}).with_indifferent_access
   end
 
   def run(run_name: nil)
     @run_name = run_name || generate_run_name
+    @experiment_id = SecureRandom.uuid
 
     Rails.logger.info("[Langfuse Experiment] Starting experiment '#{@run_name}'")
     Rails.logger.info("[Langfuse Experiment] Dataset: #{dataset.name} (#{dataset.sample_count} samples)")
@@ -20,6 +24,7 @@ class Eval::Langfuse::ExperimentRunner
 
     # Ensure dataset exists in Langfuse
     ensure_dataset_exported
+    @dataset_id = client.get_dataset(name: langfuse_dataset_name).fetch("id")
 
     # Get dataset items from Langfuse
     items = fetch_langfuse_items
@@ -40,6 +45,8 @@ class Eval::Langfuse::ExperimentRunner
       samples_processed: results.size,
       metrics: metrics
     }
+  ensure
+    client.shutdown
   end
 
   private
@@ -78,8 +85,9 @@ class Eval::Langfuse::ExperimentRunner
     def process_items(items)
       results = []
 
-      items.each_slice(BATCH_SIZE).with_index do |batch, batch_idx|
-        Rails.logger.info("[Langfuse Experiment] Processing batch #{batch_idx + 1}/#{(items.size.to_f / BATCH_SIZE).ceil}")
+      batch_size = Provider::LlmConcept.max_items_per_call
+      items.each_slice(batch_size).with_index do |batch, batch_idx|
+        Rails.logger.info("[Langfuse Experiment] Processing batch #{batch_idx + 1}/#{(items.size.to_f / batch_size).ceil}")
 
         batch_results = process_batch(batch)
         results.concat(batch_results)
@@ -89,7 +97,8 @@ class Eval::Langfuse::ExperimentRunner
     end
 
     def process_batch(items)
-      case dataset.eval_type
+      @pending_scores = []
+      results = case dataset.eval_type
       when "categorization"
         process_categorization_batch(items)
       when "merchant_detection"
@@ -99,6 +108,13 @@ class Eval::Langfuse::ExperimentRunner
       else
         raise "Unsupported eval type: #{dataset.eval_type}"
       end
+      client.flush_experiment_items
+      @pending_scores.each { |args| score_result(*args) }
+      results
+    rescue => e
+      handle_batch_error(items, e)
+    ensure
+      @pending_scores = nil
     end
 
     def process_categorization_batch(items)
@@ -136,8 +152,8 @@ class Eval::Langfuse::ExperimentRunner
           score_value = correct ? 1.0 : 0.0
 
           # Create trace and score in Langfuse
-          trace_id = create_trace_for_item(item, actual_category, latency_ms)
-          score_result(trace_id, item["id"], score_value, correct, actual_category, expected_category)
+          observation = create_trace_for_item(item, actual_category, latency_ms)
+          queue_score_result(observation, item["id"], score_value, correct, actual_category, expected_category)
 
           {
             item_id: item["id"],
@@ -189,8 +205,8 @@ class Eval::Langfuse::ExperimentRunner
 
           # Create trace and score in Langfuse
           actual_output = { business_name: actual_name, business_url: actual_url }
-          trace_id = create_trace_for_item(item, actual_output, latency_ms)
-          score_result(trace_id, item["id"], score_value, correct, actual_output, item["expectedOutput"])
+          observation = create_trace_for_item(item, actual_output, latency_ms)
+          queue_score_result(observation, item["id"], score_value, correct, actual_output, item["expectedOutput"])
 
           {
             item_id: item["id"],
@@ -234,8 +250,8 @@ class Eval::Langfuse::ExperimentRunner
       score_value = correct ? 1.0 : 0.0
 
       # Create trace and score in Langfuse
-      trace_id = create_trace_for_item(item, { functions: actual_functions }, latency_ms)
-      score_result(trace_id, item["id"], score_value, correct, actual_functions, expected_functions)
+      observation = create_trace_for_item(item, { functions: actual_functions }, latency_ms)
+      queue_score_result(observation, item["id"], score_value, correct, actual_functions, expected_functions)
 
       {
         item_id: item["id"],
@@ -249,49 +265,40 @@ class Eval::Langfuse::ExperimentRunner
     end
 
     def create_trace_for_item(item, output, latency_ms)
-      trace_id = client.create_trace(
+      client.create_experiment_item(
         name: "#{dataset.eval_type}_eval",
         input: item["input"],
         output: output,
-        metadata: {
-          run_name: @run_name,
-          model: model,
-          latency_ms: latency_ms,
-          dataset_item_id: item["id"]
-        }
+        expected_output: item["expectedOutput"],
+        experiment_id: @experiment_id,
+        experiment_name: @run_name,
+        dataset_id: @dataset_id,
+        item_id: item.fetch("id"),
+        start_time: Time.current - latency_ms / 1000.0,
+        metadata: (item["metadata"] || {}).merge(model: model, latency_ms: latency_ms)
       )
-
-      Rails.logger.debug("[Langfuse Experiment] Created trace #{trace_id} for item #{item['id']}")
-      trace_id
     end
 
-    def score_result(trace_id, item_id, score_value, correct, actual, expected)
-      return unless trace_id
+    def queue_score_result(observation, item_id, score_value, correct, actual, expected)
+      @pending_scores << [ observation, item_id, score_value, correct, actual, expected ]
+    end
 
-      # Score the accuracy
+    def score_result(observation, item_id, score_value, correct, actual, expected)
+      return unless observation
+
       client.create_score(
-        trace_id: trace_id,
+        trace_id: observation.id,
+        observation_id: observation.span_id,
         name: "accuracy",
         value: score_value,
         comment: correct ? "Correct" : "Expected: #{expected.inspect}, Got: #{actual.inspect}"
-      )
-
-      # Link to dataset run
-      client.create_dataset_run_item(
-        run_name: @run_name,
-        dataset_item_id: item_id,
-        trace_id: trace_id,
-        metadata: {
-          correct: correct,
-          actual: actual,
-          expected: expected
-        }
       )
     rescue => e
       Rails.logger.warn("[Langfuse Experiment] Failed to score item #{item_id}: #{e.message}")
     end
 
     def handle_batch_error(items, error)
+      @pending_scores&.clear
       error_message = error.is_a?(Exception) ? error.message : error.to_s
       Rails.logger.error("[Langfuse Experiment] Batch error: #{error_message}")
 
@@ -348,23 +355,11 @@ class Eval::Langfuse::ExperimentRunner
       @llm_provider ||= build_provider
     end
 
+    # Mirrors Eval::Runners::Base#build_provider — the two runners construct
+    # providers independently, so a provider added to one has to be added here
+    # too or Langfuse experiments reject it.
     def build_provider
-      case provider
-      when "openai"
-        access_token = provider_config[:access_token] ||
-                       ENV["OPENAI_ACCESS_TOKEN"] ||
-                       Setting.openai_access_token
-
-        raise "OpenAI access token not configured" unless access_token.present?
-
-        uri_base = provider_config[:uri_base] ||
-                   ENV["OPENAI_URI_BASE"] ||
-                   Setting.openai_uri_base
-
-        Provider::Openai.new(access_token, uri_base: uri_base, model: model)
-      else
-        raise "Unsupported provider: #{provider}"
-      end
+      Eval::ProviderFactory.build(provider: provider, model: model, config: provider_config)
     end
 
     # Determine the effective JSON mode for a batch based on expected null ratio

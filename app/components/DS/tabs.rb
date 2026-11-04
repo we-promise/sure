@@ -47,13 +47,12 @@ class DS::Tabs < DesignSystemComponent
     }
   }
 
-  attr_reader :active_tab, :url_param_key, :session_key, :variant, :testid, :navigate_on_change
+  attr_reader :active_tab, :url_param_key, :session_key, :variant, :testid
 
-  def initialize(active_tab:, url_param_key: nil, session_key: nil, navigate_on_change: false, variant: :default, active_btn_classes: "", inactive_btn_classes: "", testid: nil)
+  def initialize(active_tab:, url_param_key: nil, session_key: nil, variant: :default, active_btn_classes: "", inactive_btn_classes: "", testid: nil)
     @active_tab = active_tab
     @url_param_key = url_param_key
     @session_key = session_key
-    @navigate_on_change = navigate_on_change
     @variant = variant.to_sym
     @active_btn_classes = active_btn_classes
     @inactive_btn_classes = inactive_btn_classes

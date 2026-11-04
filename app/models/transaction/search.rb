@@ -2,6 +2,152 @@ class Transaction::Search
   include ActiveModel::Model
   include ActiveModel::Attributes
 
+  class << self
+    # Filter by category, supporting the synthetic "Uncategorized" bucket and
+    # its budget-tracking exclusions. Shared with EntrySearch (see
+    # https://github.com/we-promise/sure/issues/1480), so `query` need not be
+    # rooted on Transaction: it only needs a `transactions` table already
+    # joined in (EntrySearch adds that join explicitly before calling this).
+    #
+    # `family` scopes the category-name lookup so two families that each
+    # named a category the same way don't cross-contaminate the parent-id
+    # match. Required (rather than silently falling back to a global
+    # Category.all scope) so a future caller that forgets to thread family
+    # through fails loudly instead of resolving parent categories across
+    # every family's data.
+    def apply_category_filter(query, categories, family)
+      return query unless categories.present?
+      raise ArgumentError, "family is required to filter by category" if family.nil?
+
+      include_uncategorized = categories.include?(Category::UNCATEGORIZED_FILTER_VALUE)
+      real_categories = categories - [ Category::UNCATEGORIZED_FILTER_VALUE ]
+
+      parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
+
+      # The Uncategorized bucket answers "which rows have no category", so it
+      # excludes only the kinds that have nothing to categorize — the paired
+      # legs of a Transfer. Shared with Entry.uncategorized_transactions so
+      # this list, the uncategorized badge count and the Quick Categorize
+      # wizard can't drift apart. https://github.com/we-promise/sure/issues/2592
+      #
+      # For a non-Transaction entry (Valuation, Trade) `transactions.kind` is
+      # NULL (no joined transaction row), so `NOT IN (...)` evaluates to NULL
+      # and the row is excluded — no separate entryable_type guard needed.
+      uncategorized_condition = "categories.id IS NULL AND transactions.kind NOT IN (?)"
+      uncategorized_excluded_kinds = Transaction::UNCATEGORIZED_EXCLUDED_KINDS
+
+      query = query.joins("LEFT JOIN categories ON categories.id = transactions.category_id")
+
+      if parent_category_ids.empty?
+        if include_uncategorized
+          query.where(
+            "categories.name IN (?) OR (#{uncategorized_condition})",
+            real_categories.presence || [], uncategorized_excluded_kinds
+          )
+        else
+          query.where(categories: { name: real_categories })
+        end
+      else
+        if include_uncategorized
+          query.where(
+            "categories.name IN (?) OR categories.parent_id IN (?) OR (#{uncategorized_condition})",
+            real_categories, parent_category_ids, uncategorized_excluded_kinds
+          )
+        else
+          query.where(
+            "categories.name IN (?) OR categories.parent_id IN (?)",
+            real_categories, parent_category_ids
+          )
+        end
+      end
+    end
+
+    # Filter by type (expense, income, or transfer). Table-qualified so it
+    # works whether `query`'s own model is Transaction or (via EntrySearch) Entry.
+    def apply_type_filter(query, types)
+      return query unless types.present?
+      return query if types.sort == [ "expense", "income", "transfer" ]
+
+      case types.sort
+      when [ "transfer" ]
+        query.where(transactions: { kind: Transaction::TRANSFER_KINDS })
+      when [ "expense" ]
+        query.where("entries.amount >= 0").where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      when [ "income" ]
+        query.where("entries.amount < 0").where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      when [ "expense", "transfer" ]
+        query.where("entries.amount >= 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+      when [ "income", "transfer" ]
+        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
+      when [ "expense", "income" ]
+        query.where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      else
+        query
+      end
+    end
+
+    # Filter by merchant name, supporting the synthetic "No merchant" bucket.
+    def apply_merchant_filter(query, merchants)
+      return query unless merchants.present?
+
+      include_no_merchant = merchants.include?(Merchant::NO_MERCHANT_FILTER_VALUE)
+      real_merchants = merchants - [ Merchant::NO_MERCHANT_FILTER_VALUE ]
+
+      query = query.joins("LEFT JOIN merchants ON merchants.id = transactions.merchant_id")
+
+      if include_no_merchant
+        # entries.entryable_type guards this branch specifically: without it,
+        # a non-Transaction entry (no joined transaction row, so
+        # merchants.id is also NULL) would satisfy "merchants.id IS NULL" and
+        # wrongly show up under "No merchant" once EntrySearch reuses this.
+        query.where(
+          "(merchants.name IN (?) OR merchants.id IS NULL) AND entries.entryable_type = 'Transaction'",
+          real_merchants
+        )
+      else
+        query.where(merchants: { name: real_merchants })
+      end
+    end
+
+    # Filter by tag name, matching any transaction that carries at least one
+    # of the given tags (or, via the synthetic "Untagged" bucket, none at all).
+    def apply_tag_filter(query, tags)
+      return query unless tags.present?
+
+      include_untagged = tags.include?(Tag::UNTAGGED_FILTER_VALUE)
+      real_tags = tags - [ Tag::UNTAGGED_FILTER_VALUE ]
+
+      # Use a subquery instead of an INNER/LEFT JOIN: `.joins(:tags)` fans out to
+      # one row per matching tag, so a transaction tagged with two of the
+      # filtered tags produces two rows and double-counts in the summary
+      # box (COUNT / SUM) even though the list renders it once. A top-level
+      # `.distinct` doesn't work either, since PostgreSQL rejects DISTINCT
+      # combined with reverse_chronological's CASE-expression ORDER BY unless
+      # that expression is also in the select list (PG::InvalidColumnReference).
+      # `query` is already scoped to the current family, so the subquery
+      # inherits that scoping too.
+      # See https://github.com/we-promise/sure/issues/3174
+      tagging_join = "LEFT JOIN taggings ON taggings.taggable_id = transactions.id AND taggings.taggable_type = 'Transaction'"
+      tags_join = "LEFT JOIN tags ON tags.id = taggings.tag_id"
+
+      matching_ids = if include_untagged
+        # Same entryable_type guard as the merchant filter above: a
+        # non-Transaction entry has no taggings row either, so tags.id is
+        # NULL and would otherwise match "Untagged".
+        query.joins(tagging_join).joins(tags_join)
+          .where("(tags.name IN (?) OR tags.id IS NULL) AND entries.entryable_type = 'Transaction'", real_tags)
+          .distinct.select(:id)
+      else
+        query.joins(tagging_join).joins(tags_join).where(tags: { name: real_tags }).distinct.select(:id)
+      end
+      query.where(id: matching_ids)
+    end
+  end
+  # Automatic-categorization provenance filter values (used by the view)
+  AI_STATUSES = %w[current history].freeze
+
+  ATTACHMENT_STATUSES = %w[with without].freeze
+
   attribute :search, :string
   attribute :amount, :string
   attribute :amount_operator, :string
@@ -14,6 +160,8 @@ class Transaction::Search
   attribute :categories, array: true
   attribute :merchants, array: true
   attribute :tags, array: true
+  attribute :ai_status, array: true
+  attribute :attachment_status, array: true
   attribute :active_accounts_only, :boolean, default: true
 
   attr_reader :family, :accessible_account_ids
@@ -35,11 +183,13 @@ class Transaction::Search
       query = query.where(entries: { account_id: accessible_account_ids }) unless accessible_account_ids.nil?
 
       query = apply_active_accounts_filter(query, active_accounts_only)
-      query = apply_category_filter(query, categories)
-      query = apply_type_filter(query, types)
+      query = self.class.apply_category_filter(query, categories, family)
+      query = self.class.apply_type_filter(query, types)
       query = apply_status_filter(query, status)
-      query = apply_merchant_filter(query, merchants)
-      query = apply_tag_filter(query, tags)
+      query = self.class.apply_merchant_filter(query, merchants)
+      query = self.class.apply_tag_filter(query, tags)
+      query = apply_ai_status_filter(query, ai_status)
+      query = apply_attachment_status_filter(query, attachment_status)
       query = EntrySearch.apply_search_filter(query, search)
       query = EntrySearch.apply_date_filters(query, start_date, end_date)
       query = EntrySearch.apply_amount_filter(query, amount, amount_operator)
@@ -107,6 +257,7 @@ class Transaction::Search
   def cache_key_base
     [
       family.id,
+      family.currency,
       Digest::SHA256.hexdigest(attributes.sort.to_h.to_json), # cached by filters
       family.entries_cache_version,
       Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json), # stable across processes
@@ -127,112 +278,55 @@ class Transaction::Search
     end
 
 
-    # Filter transactions by category, supporting uncategorized and budget exclusions
-    def apply_category_filter(query, categories)
-      return query unless categories.present?
+    # Filter by automatic-categorization provenance. Uses EXISTS so a
+    # transaction with both an ai and a bayes enrichment row can't be
+    # duplicated in the list or double-counted in totals (see #3174).
+    def apply_ai_status_filter(query, statuses)
+      wanted = Array(statuses) & AI_STATUSES
+      return query if wanted.empty?
 
-      include_uncategorized = categories.include?(Category::UNCATEGORIZED_FILTER_VALUE)
-      real_categories = categories - [ Category::UNCATEGORIZED_FILTER_VALUE ]
-
-      # Get parent category IDs for the given category names
-      parent_category_ids = family.categories.where(name: real_categories).pluck(:id)
-
-      # The Uncategorized bucket answers "which rows have no category", so it
-      # excludes only the kinds that have nothing to categorize — the paired
-      # legs of a Transfer. Shared with Entry.uncategorized_transactions so
-      # this list, the uncategorized badge count and the Quick Categorize
-      # wizard can't drift apart. https://github.com/we-promise/sure/issues/2592
-      uncategorized_condition = "categories.id IS NULL AND transactions.kind NOT IN (?)"
-      uncategorized_excluded_kinds = Transaction::UNCATEGORIZED_EXCLUDED_KINDS
-
-      # Build condition based on whether parent_category_ids is empty
-      if parent_category_ids.empty?
-        if include_uncategorized
-          query = query.left_joins(:category).where(
-            "categories.name IN (?) OR (#{uncategorized_condition})",
-            real_categories.presence || [], uncategorized_excluded_kinds
-          )
-        else
-          query = query.left_joins(:category).where(categories: { name: real_categories })
-        end
-      else
-        if include_uncategorized
-          query = query.left_joins(:category).where(
-            "categories.name IN (?) OR categories.parent_id IN (?) OR (#{uncategorized_condition})",
-            real_categories, parent_category_ids, uncategorized_excluded_kinds
-          )
-        else
-          query = query.left_joins(:category).where(
-            "categories.name IN (?) OR categories.parent_id IN (?)",
-            real_categories, parent_category_ids
-          )
-        end
-      end
-
-      query
-    end
-
-    # Filter transactions by type (expense, income, or transfer)
-    def apply_type_filter(query, types)
-      return query unless types.present?
-      return query if types.sort == [ "expense", "income", "transfer" ]
-
-      case types.sort
-      when [ "transfer" ]
-        query.where(kind: Transaction::TRANSFER_KINDS)
-      when [ "expense" ]
-        query.where("entries.amount >= 0").where.not(kind: Transaction::TRANSFER_KINDS)
-      when [ "income" ]
-        query.where("entries.amount < 0").where.not(kind: Transaction::TRANSFER_KINDS)
-      when [ "expense", "transfer" ]
-        query.where("entries.amount >= 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
-      when [ "income", "transfer" ]
-        query.where("entries.amount < 0 OR transactions.kind IN (?)", Transaction::TRANSFER_KINDS)
-      when [ "expense", "income" ]
-        query.where.not(kind: Transaction::TRANSFER_KINDS)
-      else
+      case wanted.sort
+      when [ "current" ]
+        query.where(auto_enrichment_exists_sql("de.value = to_jsonb(transactions.category_id::text)"), sources: Transaction::AUTO_CATEGORY_SOURCES)
+      when [ "history" ]
         query
+          .where(auto_enrichment_exists_sql, sources: Transaction::AUTO_CATEGORY_SOURCES)
+          .where.not(auto_enrichment_exists_sql("de.value = to_jsonb(transactions.category_id::text)"), sources: Transaction::AUTO_CATEGORY_SOURCES)
+      else
+        query.where(auto_enrichment_exists_sql, sources: Transaction::AUTO_CATEGORY_SOURCES)
       end
     end
 
-    # Filter transactions by merchant name
-    def apply_merchant_filter(query, merchants)
-      return query unless merchants.present?
-
-      include_no_merchant = merchants.include?(Merchant::NO_MERCHANT_FILTER_VALUE)
-      real_merchants = merchants - [ Merchant::NO_MERCHANT_FILTER_VALUE ]
-
-      if include_no_merchant
-        query.left_joins(:merchant).where("merchants.name IN (?) OR merchants.id IS NULL", real_merchants)
-      else
-        query.joins(:merchant).where(merchants: { name: real_merchants })
-      end
+    # Correlated EXISTS predicate over the transaction's automatic category
+    # enrichments. to_jsonb(NULL::text) is NULL, so an uncategorized
+    # transaction never satisfies the "matches current category" variant.
+    def auto_enrichment_exists_sql(extra_condition = nil)
+      sql = "EXISTS (SELECT 1 FROM data_enrichments de WHERE de.enrichable_type = 'Transaction' AND de.enrichable_id = transactions.id AND de.attribute_name = 'category_id' AND de.source IN (:sources)"
+      sql += " AND #{extra_condition}" if extra_condition
+      sql + ")"
     end
 
-    # Filter transactions by tag name, matching any transaction that carries
-    # at least one of the given tags.
-    def apply_tag_filter(query, tags)
-      return query unless tags.present?
+    # EXISTS, not a join: several files on one transaction would duplicate
+    # it in the list and double-count it in totals.
+    def apply_attachment_status_filter(query, statuses)
+      wanted = Array(statuses) & ATTACHMENT_STATUSES
+      return query unless wanted.one?
 
-      include_untagged = tags.include?(Tag::UNTAGGED_FILTER_VALUE)
-      real_tags = tags - [ Tag::UNTAGGED_FILTER_VALUE ]
+      # Splitting leaves files on the hidden parent, so a split child counts
+      # as attached when its parent is.
+      attached_sql = <<~SQL.squish
+        EXISTS (
+          SELECT 1 FROM active_storage_attachments asa
+          WHERE asa.record_type = 'Transaction'
+            AND asa.name = 'attachments'
+            AND asa.record_id IN (
+              transactions.id,
+              (SELECT pe.entryable_id FROM entries pe WHERE pe.id = entries.parent_entry_id)
+            )
+        )
+      SQL
 
-      # Use a subquery instead of an INNER/LEFT JOIN: `.joins(:tags)` fans out to
-      # one row per matching tag, so a transaction tagged with two of the
-      # filtered tags produces two rows and double-counts in the summary
-      # box (COUNT / SUM) even though the list renders it once. A top-level
-      # `.distinct` doesn't work either, since PostgreSQL rejects DISTINCT
-      # combined with reverse_chronological's CASE-expression ORDER BY unless
-      # that expression is also in the select list (PG::InvalidColumnReference).
-      # `query` is already scoped to the current family, so the subquery
-      # inherits that scoping too.
-      # See https://github.com/we-promise/sure/issues/3174
-      matching_ids = if include_untagged
-        query.left_joins(:tags).where("tags.name IN (?) OR tags.id IS NULL", real_tags).distinct.select(:id)
-      else
-        query.joins(:tags).where(tags: { name: real_tags }).distinct.select(:id)
-      end
-      query.where(id: matching_ids)
+      wanted == [ "with" ] ? query.where(attached_sql) : query.where.not(attached_sql)
     end
 
     # Filter transactions by status (pending or confirmed)

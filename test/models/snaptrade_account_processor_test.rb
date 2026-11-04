@@ -396,6 +396,68 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal 1, entries.count
   end
 
+  test "activities processor handles SPLIT as zero-amount trade" do
+    security = securities(:aapl)
+
+    @snaptrade_account.update!(
+      raw_activities_payload: [
+        {
+          "id" => "activity_split_1",
+          "type" => "SPLIT",
+          "symbol" => { "symbol" => security.ticker, "description" => security.name },
+          "units" => "10",
+          "price" => "150.00",
+          "amount" => "1500.00",
+          "settlement_date" => Date.current.to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    processor = SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account)
+    result = processor.process
+
+    assert_equal 1, result[:trades]
+    trade_entry = @account.entries.find_by(external_id: "activity_split_1")
+    assert_not_nil trade_entry
+    assert_equal "Other", trade_entry.entryable.investment_activity_label
+    assert_equal 10, trade_entry.entryable.qty
+    assert_equal 0.0, trade_entry.amount.to_f
+  end
+
+  test "activities processor handles internal cash transfers with proper inflow and outflow signs" do
+    @snaptrade_account.update!(
+      raw_activities_payload: [
+        {
+          "id" => "activity_xfer_in_1",
+          "type" => "INTERNAL_CASH_TRANSFER_IN",
+          "amount" => "500.00",
+          "settlement_date" => Date.current.to_s,
+          "currency" => "USD"
+        },
+        {
+          "id" => "activity_xfer_out_1",
+          "type" => "INTERNAL_CASH_TRANSFER_OUT",
+          "amount" => "200.00",
+          "settlement_date" => Date.current.to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    processor = SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account)
+    result = processor.process
+
+    assert_equal 2, result[:transactions]
+    in_entry = @account.entries.find_by(external_id: "activity_xfer_in_1")
+    assert_equal "Transfer", in_entry.entryable.investment_activity_label
+    assert_equal(-500.00, in_entry.amount.to_f)
+
+    out_entry = @account.entries.find_by(external_id: "activity_xfer_out_1")
+    assert_equal "Transfer", out_entry.entryable.investment_activity_label
+    assert_equal 200.00, out_entry.amount.to_f
+  end
+
   # === Multi-currency cash (issue #1809) ===
 
   test "upsert_balances! persists all entries and keeps the primary currency in cash_balance" do
@@ -617,5 +679,116 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
 
     eur_cash = @account.holdings.joins(:security).where(securities: { kind: "cash" }, currency: "EUR")
     assert_equal 1, eur_cash.select(:external_id).distinct.count
+  end
+
+  # === Full Account Sync Integration ===
+
+  test "processor synchronizes balances, holdings, and activities end-to-end without cash distortion" do
+    security = securities(:aapl)
+
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("5000.00"),
+      cash_balance: BigDecimal("1500.00"),
+      raw_holdings_payload: [
+        {
+          "symbol" => {
+            "symbol" => { "symbol" => security.ticker, "description" => security.name }
+          },
+          "units" => "20",
+          "price" => "175.00",
+          "currency" => "USD"
+        }
+      ],
+      raw_activities_payload: [
+        {
+          "id" => "activity_full_split",
+          "type" => "SPLIT",
+          "symbol" => { "symbol" => security.ticker },
+          "units" => "10",
+          "price" => "175.00",
+          "amount" => "1750.00",
+          "settlement_date" => Date.current.to_s,
+          "currency" => "USD"
+        },
+        {
+          "id" => "activity_full_xfer",
+          "type" => "INTERNAL_CASH_TRANSFER_IN",
+          "amount" => "300.00",
+          "settlement_date" => Date.current.to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    result = SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    assert result[:holdings_processed]
+    assert result[:activities_processed]
+
+    @account.reload
+    assert_equal BigDecimal("5000.00"), @account.balance
+    assert_equal BigDecimal("1500.00"), @account.cash_balance
+
+    holding = @account.holdings.find_by(security: security)
+    assert_not_nil holding
+    assert_equal BigDecimal("20"), holding.qty
+
+    split_entry = @account.entries.find_by(external_id: "activity_full_split")
+    assert_not_nil split_entry
+    assert_equal "Other", split_entry.entryable.investment_activity_label
+    assert_equal 0.0, split_entry.amount.to_f
+
+    xfer_entry = @account.entries.find_by(external_id: "activity_full_xfer")
+    assert_not_nil xfer_entry
+    assert_equal "Transfer", xfer_entry.entryable.investment_activity_label
+    assert_equal(-300.00, xfer_entry.amount.to_f)
+  end
+
+  test "processor cleanly reclassifies pre-existing activity from transaction to trade on resync" do
+    security = securities(:aapl)
+
+    # 1. Simulate an entry already synced as a Transaction under old code
+    stale_entry = @account.entries.create!(
+      external_id: "resync_split_001",
+      source: "snaptrade",
+      amount: 1750.00,
+      currency: "USD",
+      date: Date.current,
+      name: "DISTRIBUTION AAPL",
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+    stale_id = stale_entry.id
+
+    # 2. Configure raw payloads for the next sync
+    @snaptrade_account.update!(
+      raw_holdings_payload: [],
+      raw_activities_payload: [
+        {
+          "id" => "resync_split_001",
+          "type" => "SPLIT",
+          "symbol" => { "symbol" => security.ticker },
+          "units" => "10",
+          "price" => "0.0",
+          "amount" => "1750.00",
+          "settlement_date" => Date.current.to_s,
+          "currency" => "USD"
+        }
+      ]
+    )
+
+    # 3. Run full account processor
+    result = SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    assert result[:activities_processed]
+
+    # 4. Verify stale entry was reclassified to Trade
+    entry = @account.entries.find_by(external_id: "resync_split_001", source: "snaptrade")
+    assert_not_nil entry
+    assert_not_equal stale_id, entry.id
+    assert entry.entryable.is_a?(Trade)
+    assert_equal BigDecimal("10"), entry.entryable.qty
+    assert_equal 0.0, entry.amount.to_f
+    assert_equal 0.0, entry.entryable.price.to_f
   end
 end

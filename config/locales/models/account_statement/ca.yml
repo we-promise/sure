@@ -10,7 +10,7 @@ ca:
         content_sha256: Resum del contingut
         currency: Divisa
         filename: Nom del fitxer
-        institution_name_hint: Pista de la institució
+        institution_name_hint: Pista de l'entitat
         opening_balance: Saldo inicial
         original_file: Fitxer de l'extracte
         period_end_on: Final del període

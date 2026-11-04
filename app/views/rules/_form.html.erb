@@ -101,5 +101,13 @@
     </div>
   </section>
 
+  <section class="flex items-center gap-4 justify-between">
+    <div class="text-sm space-y-1">
+      <h3 class="font-medium text-primary"><%= t(".stop_processing_label") %></h3>
+      <p class="text-secondary"><%= t(".stop_processing_description") %></p>
+    </div>
+    <%= f.toggle :stop_processing %>
+  </section>
+
   <%= f.submit %>
 <% end %>

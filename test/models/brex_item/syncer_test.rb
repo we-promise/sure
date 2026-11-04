@@ -98,6 +98,35 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
     assert_equal I18n.t("brex_items.syncer.credentials_invalid"), error.message
   end
 
+  test "a rejected token fails the sync and flags the connection" do
+    Provider::Brex.any_instance.stubs(:get_accounts)
+                  .raises(Provider::Brex::BrexError.new("Unauthorized", :unauthorized, http_status: 401))
+    sync = Sync.create!(syncable: @brex_item)
+
+    sync.perform
+
+    assert sync.reload.failed?, "expected the sync to fail, was #{sync.status}"
+    assert_equal I18n.t("brex_items.syncer.credentials_invalid"), sync.error
+    assert @brex_item.reload.requires_update?
+  end
+
+  # Brex scopes accounts and transactions separately, so a token can list the
+  # accounts and still be refused their transactions.
+  test "a token refused transactions fails the sync and flags the connection" do
+    account = @brex_item.family.accounts.create!(name: "Linked Brex Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    AccountProvider.create!(account: account, provider: brex_accounts(:checking_account))
+    Provider::Brex.any_instance.stubs(:get_accounts).returns(accounts: [])
+    Provider::Brex.any_instance.stubs(:get_cash_transactions)
+                  .raises(Provider::Brex::BrexError.new("Access forbidden", :access_forbidden, http_status: 403))
+    sync = Sync.create!(syncable: @brex_item)
+
+    sync.perform
+
+    assert sync.reload.failed?, "expected the sync to fail, was #{sync.status}"
+    assert_equal I18n.t("brex_items.syncer.credentials_invalid"), sync.error
+    assert @brex_item.reload.requires_update?
+  end
+
   private
 
     def mock_sync(window_start_date:)

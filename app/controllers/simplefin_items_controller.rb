@@ -22,9 +22,9 @@ class SimplefinItemsController < ApplicationController
     return render_error(t(".errors.blank_token"), context: :edit) if setup_token.blank?
 
     begin
-      # Validate token shape early so the user gets immediate feedback.
-      claim_url = Base64.decode64(setup_token)
-      URI.parse(claim_url)
+      # Validate the token's claim URL (shape and address) early so the user
+      # gets immediate feedback; the job claims it later.
+      Provider::Simplefin.new.validate_setup_token!(setup_token)
 
       # Updating a SimpleFin connection can involve network retries/backoff and account import.
       # Do it asynchronously so web requests aren't blocked by retry sleeps.
@@ -46,6 +46,8 @@ class SimplefinItemsController < ApplicationController
       error_message = case e.error_type
       when :token_compromised
         t(".errors.token_compromised")
+      when :invalid_url
+        t(".errors.invalid_token")
       else
         t(".errors.update_failed", message: e.message)
       end
@@ -71,26 +73,15 @@ class SimplefinItemsController < ApplicationController
         item_name: "SimpleFIN Connection"
       )
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @simplefin_items = Current.family.simplefin_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "simplefin-providers-panel",
-            partial: "settings/providers/simplefin_panel",
-            locals: { simplefin_items: @simplefin_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token)
     rescue Provider::Simplefin::SimplefinError => e
       error_message = case e.error_type
       when :token_compromised
         t(".errors.token_compromised")
+      when :invalid_url
+        t(".errors.invalid_token")
       else
         t(".errors.create_failed", message: e.message)
       end
@@ -329,7 +320,7 @@ class SimplefinItemsController < ApplicationController
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }
@@ -348,10 +339,11 @@ class SimplefinItemsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@simplefin_item),
           partial: "simplefin_items/simplefin_item",
-          locals: { simplefin_item: @simplefin_item }
+          locals: { simplefin_item: @simplefin_item, visible_accounts: @simplefin_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else
@@ -416,6 +408,7 @@ class SimplefinItemsController < ApplicationController
     end
 
     # Relink behavior: detach any legacy link and point provider link at the chosen account
+    orphaned_account = nil
     Account.transaction do
       simplefin_account.lock!
 
@@ -455,7 +448,7 @@ class SimplefinItemsController < ApplicationController
             # consolidation we want the duplicate to disappear from the UI.
             # Use the app's standard deletion path (async) so the "pending_deletion" state
             # remains truthful in the UI.
-            previous_account.destroy_later if previous_account.may_mark_for_deletion?
+            orphaned_account = previous_account if previous_account.may_mark_for_deletion?
           else
             Rails.logger.info("Skipped disabling account ##{previous_account.id} after relink because it still has active provider links")
           end
@@ -463,6 +456,16 @@ class SimplefinItemsController < ApplicationController
           Rails.logger.warn("Failed disabling-orphan check for account ##{previous_account&.id}: #{e.class} - #{e.message}")
         end
       end
+    end
+
+    # Queue the orphan for deletion only after the relink commits. destroy_later
+    # pushes DestroyJob only once every open transaction commits, so called in
+    # the block above, an enqueue error would leave it from the commit, past
+    # the rescue inside it.
+    begin
+      orphaned_account&.destroy_later
+    rescue => e
+      Rails.logger.warn("Failed disabling-orphan check for account ##{orphaned_account.id}: #{e.class} - #{e.message}")
     end
 
     if turbo_frame_request?
@@ -474,7 +477,7 @@ class SimplefinItemsController < ApplicationController
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }
@@ -497,10 +500,11 @@ class SimplefinItemsController < ApplicationController
         # Optimistic removal of the specific account row if it exists in the DOM
         turbo_stream.remove(ActionView::RecordIdentifier.dom_id(@account)),
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "simplefin_items/simplefin_item",
-          locals: { simplefin_item: item }
+          locals: { simplefin_item: item, visible_accounts: item.accounts }
         ),
         turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
       ] + Array(flash_notification_stream_items)
@@ -547,14 +551,11 @@ class SimplefinItemsController < ApplicationController
       end
       @error_message = message
 
-      if turbo_frame_request?
-        # Re-render the SimpleFIN providers panel in place to avoid "Content missing"
-        @simplefin_items = Current.family.simplefin_items.ordered
-        render turbo_stream: turbo_stream.replace(
-          "simplefin-providers-panel",
-          partial: "settings/providers/simplefin_panel",
-          locals: { simplefin_items: @simplefin_items }
-        ), status: :unprocessable_entity
+      # The Bank sync panel and the new-connection modal send the same Turbo
+      # request, so the panel marks its form. The modals render their template,
+      # which the edit modal's frame picks out of the response.
+      if provider_panel_form?
+        render_provider_panel("simplefin", alert: message)
       else
         render context, status: :unprocessable_entity
       end

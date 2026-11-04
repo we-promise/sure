@@ -15,7 +15,14 @@ en:
       cancel: Cancel
       title: Are you sure?
     money_field:
+      above_max: Enter an amount of at most %{max}.
+      below_min: Enter an amount of at least %{min}.
+      invalid_amount: Enter a valid amount or expression.
       label: Amount
+      operator_add: Add
+      operator_subtract: Subtract
+      operator_multiply: Multiply
+      operator_divide: Divide
     exchange_rate_tabs:
       calculate_rate_tab: Calculate FX rate
       convert_tab: Convert with FX rate
@@ -25,6 +32,8 @@ en:
     syncing_notice:
       syncing: Syncing accounts data...
     require_admin: "Only admins can perform this action"
+    require_non_guest: "Guests cannot perform this action"
+    require_connector_owner: "You can only manage connections you added"
     custom_confirm:
       default_title: "Are you sure?"
       default_body: "This is not reversible."
@@ -52,4 +61,5 @@ en:
         redis_unreachable: "The app can't reach Redis. Check your REDIS_URL and that Redis is running."
         no_worker_processes: "No Sidekiq worker process is connected. Start the worker container or systemd unit."
         stale_heartbeat: "The Sidekiq worker hasn't reported a heartbeat recently. It may be stuck or crashed."
+        ai_queues_not_polled: "No worker is processing the AI queues (chat, merchant detection, categorization). Check that the worker loads config/sidekiq.yml."
         queue_backed_up: "The oldest enqueued job has been waiting beyond the latency budget. The worker is alive but falling behind."

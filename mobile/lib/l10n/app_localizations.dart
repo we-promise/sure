@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
+import 'app_localizations_sv.dart';
 
 // ignore_for_file: type=lint
 
@@ -62,7 +63,7 @@ import 'app_localizations_en.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -85,14 +86,17 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
-  static const List<Locale> supportedLocales = <Locale>[Locale('en')];
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('sv'),
+  ];
 
   /// Application title shown in the OS task switcher.
   ///
@@ -1911,6 +1915,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to start conversation. Please try again.'**
   String get chatConversationStartFailed;
+
+  /// Menu item title for Budgets in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgets'**
+  String get moreBudgets;
+
+  /// Subtitle for the Budgets menu item in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgeted vs. actual spending by category'**
+  String get moreBudgetsSubtitle;
+
+  /// App bar title of the Budgets screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgets'**
+  String get budgetsTitle;
+
+  /// Tooltip for the button that shows the previous month's budget.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous month'**
+  String get budgetsPreviousMonth;
+
+  /// Tooltip for the button that shows the next month's budget.
+  ///
+  /// In en, this message translates to:
+  /// **'Next month'**
+  String get budgetsNextMonth;
+
+  /// Label for the total amount budgeted for spending this month.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgeted'**
+  String get budgetsBudgeted;
+
+  /// Label for the amount actually spent this month.
+  ///
+  /// In en, this message translates to:
+  /// **'Actual'**
+  String get budgetsActual;
+
+  /// Label for the amount left to spend this month.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get budgetsRemaining;
+
+  /// Label for the month's actual income in the budget summary.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get budgetsIncome;
+
+  /// Expected income for the month, shown next to actual income.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected {amount}'**
+  String budgetsExpectedIncome(String amount);
+
+  /// Budget limit shown after the amount spent in a category, e.g. '$120 of $300'.
+  ///
+  /// In en, this message translates to:
+  /// **'of {amount}'**
+  String budgetsOfAmount(String amount);
+
+  /// Amount still available to spend in a category.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} left'**
+  String budgetsAmountLeft(String amount);
+
+  /// Amount by which a category's spending exceeds its budget.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} over'**
+  String budgetsOverBy(String amount);
+
+  /// Unspent amount carried over from the previous month into this category.
+  ///
+  /// In en, this message translates to:
+  /// **'+{amount} rolled over'**
+  String budgetsRolledOver(String amount);
+
+  /// Shown for a subcategory without its own limit that draws from its parent category's budget.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared budget'**
+  String get budgetsSharedBudget;
+
+  /// Shown for a category with spending but no budgeted amount.
+  ///
+  /// In en, this message translates to:
+  /// **'No budget'**
+  String get budgetsNoLimit;
+
+  /// Heading of the per-category budget list.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get budgetsCategoriesTitle;
+
+  /// Filter showing only categories that are over budget, with how many there are.
+  ///
+  /// In en, this message translates to:
+  /// **'Over budget ({count})'**
+  String budgetsFilterOverBudget(int count);
+
+  /// Badge on a category that has spent more than its budget.
+  ///
+  /// In en, this message translates to:
+  /// **'Over budget'**
+  String get budgetsOverBudget;
+
+  /// Badge on a category that has spent at least 90% of its budget.
+  ///
+  /// In en, this message translates to:
+  /// **'Near limit'**
+  String get budgetsNearLimit;
+
+  /// Label for one of several budgets that exist for the same month (household, personal or shared).
+  ///
+  /// In en, this message translates to:
+  /// **'Budget {number}'**
+  String budgetsBudgetNumber(int number);
+
+  /// Title shown when the server has no budget for the selected month.
+  ///
+  /// In en, this message translates to:
+  /// **'No budget for {month}'**
+  String budgetsNoBudgetTitle(String month);
+
+  /// Explains how to create a budget when none exists for the selected month.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgets are created in Sure on the web. Open Budgets there to set one up for this month.'**
+  String get budgetsNoBudgetMessage;
+
+  /// Shown when a budget exists for the month but has no amounts set.
+  ///
+  /// In en, this message translates to:
+  /// **'No spending limits are set for this month yet. Set them up in Sure on the web.'**
+  String get budgetsNotSetUpMessage;
+
+  /// Shown when no category line has a budget or spending.
+  ///
+  /// In en, this message translates to:
+  /// **'No budgeted categories or spending this month.'**
+  String get budgetsNoCategories;
+
+  /// Title shown when the budget cannot be loaded without a connection.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline'**
+  String get budgetsOfflineTitle;
+
+  /// Shown when offline and the selected month has not been loaded yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to the internet to load this month\'s budget.'**
+  String get budgetsOfflineMessage;
+
+  /// Banner shown when offline and the budget shown was loaded earlier in the session.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline. Showing the figures loaded earlier.'**
+  String get budgetsOfflineCached;
+
+  /// Banner shown when refreshing a budget fails but the month loaded earlier is still on screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t refresh. Showing the figures loaded earlier.'**
+  String get budgetsRefreshFailed;
+
+  /// Title shown when loading budgets fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load budgets'**
+  String get budgetsLoadFailed;
+
+  /// Shown when the budgets request is rejected as unauthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Please sign in again.'**
+  String get budgetsSessionExpired;
+
+  /// Empty state of a budget category's transaction list.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions in this category for {month}.'**
+  String budgetCategoryTransactionsEmpty(String month);
+
+  /// Button that loads the next page of a budget category's transactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get budgetCategoryTransactionsLoadMore;
+
+  /// Shown when a budget category's transactions fail to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load transactions'**
+  String get budgetCategoryTransactionsLoadFailed;
+
+  /// Menu item title for the Cash Flow report in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Flow'**
+  String get moreCashFlow;
+
+  /// Subtitle for the Cash Flow menu item in the More screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Income, spending and savings by category'**
+  String get moreCashFlowSubtitle;
+
+  /// App bar title of the Cash Flow report screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Flow'**
+  String get cashFlowTitle;
+
+  /// Period chip: the current month (web MTD), or the whole current custom month when the family has a custom month start day.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get cashFlowPeriodCurrentMonth;
+
+  /// Period chip: the previous month (web LM), following the family's custom month start day when set.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get cashFlowPeriodLastMonth;
+
+  /// Period chip: last 30 days (web 30D).
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get cashFlowPeriodLast30Days;
+
+  /// Period chip: last 90 days (web 90D).
+  ///
+  /// In en, this message translates to:
+  /// **'Last 90 days'**
+  String get cashFlowPeriodLast90Days;
+
+  /// Period chip: current year to date (web YTD).
+  ///
+  /// In en, this message translates to:
+  /// **'Year to date'**
+  String get cashFlowPeriodCurrentYear;
+
+  /// Period chip: last 365 days (web 365D).
+  ///
+  /// In en, this message translates to:
+  /// **'Last 365 days'**
+  String get cashFlowPeriodLast365Days;
+
+  /// Summary label and segment label for income.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get cashFlowIncome;
+
+  /// Summary label and segment label for expenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Expenses'**
+  String get cashFlowExpenses;
+
+  /// Summary label for income minus expenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Net savings'**
+  String get cashFlowNetSavings;
+
+  /// Savings rate shown under net savings, e.g. '18.2% savings rate'.
+  ///
+  /// In en, this message translates to:
+  /// **'{rate} savings rate'**
+  String cashFlowSavingsRate(String rate);
+
+  /// Section header for the expense category chart and list.
+  ///
+  /// In en, this message translates to:
+  /// **'Expenses by category'**
+  String get cashFlowExpensesByCategory;
+
+  /// Section header for the income category chart and list.
+  ///
+  /// In en, this message translates to:
+  /// **'Income by category'**
+  String get cashFlowIncomeByCategory;
+
+  /// Category row subtitle with its share of total expenses.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent} of expenses'**
+  String cashFlowShareOfExpenses(String percent);
+
+  /// Category row subtitle with its share of total income.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent} of income'**
+  String cashFlowShareOfIncome(String percent);
+
+  /// Empty state title when the period has no categorized cash flow.
+  ///
+  /// In en, this message translates to:
+  /// **'No income or expenses in this period'**
+  String get cashFlowEmpty;
+
+  /// Empty state subtitle on the Cash Flow screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Try another period or pull to refresh.'**
+  String get cashFlowEmptySubtitle;
+
+  /// Shown in the category section when the expense side is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No expenses in this period'**
+  String get cashFlowNoExpenses;
+
+  /// Shown in the category section when the income side is empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No income in this period'**
+  String get cashFlowNoIncome;
+
+  /// Error state title when the cash flow request fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load cash flow'**
+  String get cashFlowLoadFailed;
+
+  /// Error state message when the device is offline and no report is loaded.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline. Cash flow is calculated by your Sure server, so it needs a connection.'**
+  String get cashFlowOffline;
+
+  /// Badge shown when the displayed report could not be refreshed.
+  ///
+  /// In en, this message translates to:
+  /// **'Outdated'**
+  String get cashFlowOutdated;
+
+  /// Empty state of the category transactions screen.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions in this period'**
+  String get cashFlowTransactionsEmpty;
+
+  /// Error state of the category transactions screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load transactions'**
+  String get cashFlowTransactionsLoadFailed;
 }
 
 class _AppLocalizationsDelegate
@@ -1924,7 +2288,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en'].contains(locale.languageCode);
+      <String>['en', 'sv'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -1935,11 +2299,14 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'en':
       return AppLocalizationsEn();
+    case 'sv':
+      return AppLocalizationsSv();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

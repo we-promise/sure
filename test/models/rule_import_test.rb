@@ -1,6 +1,8 @@
 require "test_helper"
 
 class RuleImportTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @family = families(:dylan_family)
     @category = @family.categories.create!(
@@ -213,6 +215,46 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal [ existing_tag.id, comma_tag.id ], action.value.split(",")
   end
 
+  test "imports a split action by mapping row category, merchant and tag names to ids" do
+    actions = [
+      {
+        action_type: "split_transaction",
+        value: {
+          splits: [
+            { type: "percentage", name: "Food", share: "70", category: "Groceries", merchant: "Corner Shop", tags: [ "Shared" ] },
+            { type: "percentage", name: "Other", share: "30", category_id: categories(:food_and_drink).id }
+          ]
+        }
+      }
+    ].to_json
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [ "Split groceries", "transaction", "true", "", '[{"condition_type":"transaction_name","operator":"like","value":"market"}]', actions ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    food, other = JSON.parse(Rule.find_by!(family: @family, name: "Split groceries").actions.sole.value)["splits"]
+    assert_equal @category.id, food["category_id"]
+    assert_equal @family.merchants.find_by!(name: "Corner Shop").id, food["merchant_id"]
+    assert_equal [ Tag.find_by!(family: @family, name: "Shared").id ], food["tag_ids"]
+    # A raw id that belongs to the importing family is kept as is
+    assert_equal categories(:food_and_drink).id, other["category_id"]
+  end
+
+  test "csv template rows import, including the split example" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: RuleImport.new.csv_template.to_csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    splits = JSON.parse(Rule.find_by!(family: @family, name: "Split shared rent").actions.sole.value)["splits"]
+    rent = @family.categories.find_by!(name: "Rent")
+    assert_equal [ rent.id, rent.id ], splits.map { |split| split["category_id"] }
+    assert_equal [ @family.tags.find_by!(name: "Shared").id ], splits.last["tag_ids"]
+  end
+
   test "imports transaction_tag condition and maps tag name to id" do
     existing_tag = @family.tags.create!(name: "Existing Tag")
 
@@ -308,6 +350,118 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal "auto_categorize", action.action_type
   end
 
+  test "re-importing an email rule with wider conditions does not email existing matches" do
+    account = @family.accounts.create!(name: "Baseline test", balance: 1000, currency: "USD", accountable: Depository.new)
+    Entry.create!(account: account, name: "Coffee shop", date: 90.days.ago.to_date, amount: 10, currency: "USD", entryable: Transaction.new)
+    tea = Entry.create!(account: account, name: "Tea house", date: 60.days.ago.to_date, amount: 20, currency: "USD", entryable: Transaction.new).transaction
+
+    rule = @family.rules.create!(
+      name: "Coffee alerts",
+      resource_type: "transaction",
+      active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+      actions_attributes: [ { action_type: "send_email_notification" } ]
+    )
+    # Rule::Action's create-time seed does not run today (its after_update_commit
+    # names the same method and replaces it), so take that baseline here.
+    rule.actions.first.send(:seed_notification_baseline)
+
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Coffee alerts","transaction",true,,"[{\"condition_type\":\"transaction_name\",\"operator\":\"like\",\"value\":\"house\"}]","[{\"action_type\":\"send_email_notification\"}]"
+    CSV
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+      RuleJob.perform_now(Rule.find(rule.id))
+    end
+    assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), tea.id
+  end
+
+  # Review of we-promise/sure#4150 (Codex, P1). The import clears the rule's
+  # conditions with destroy_all before it saves, so a row with no conditions left
+  # nothing for the rule to see changing, and a rule with no conditions matches
+  # every transaction.
+  test "re-importing an email rule with no conditions does not email existing matches" do
+    account = @family.accounts.create!(name: "Baseline test", balance: 1000, currency: "USD", accountable: Depository.new)
+    Entry.create!(account: account, name: "Coffee shop", date: 90.days.ago.to_date, amount: 10, currency: "USD", entryable: Transaction.new)
+    tea = Entry.create!(account: account, name: "Tea house", date: 60.days.ago.to_date, amount: 20, currency: "USD", entryable: Transaction.new).transaction
+
+    rule = @family.rules.create!(
+      name: "Coffee alerts",
+      resource_type: "transaction",
+      active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ],
+      actions_attributes: [ { action_type: "send_email_notification" } ]
+    )
+    rule.actions.first.send(:seed_notification_baseline)
+    assert_not_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), tea.id, "precondition: Tea house is outside the baseline"
+
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Coffee alerts","transaction",true,,"[]","[{\"action_type\":\"send_email_notification\"}]"
+    CSV
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+    assert_empty rule.reload.conditions, "precondition: the import left the rule with no conditions"
+
+    assert_no_enqueued_jobs only: RuleEmailNotificationJob do
+      RuleJob.perform_now(Rule.find(rule.id))
+    end
+    assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), tea.id
+  end
+
+  # Review of we-promise/sure#4150 (CodeRabbit). The import replaces every
+  # condition, so each one reads as changing even when the row holds the same
+  # criteria. Re-seeding then would record a match still waiting for the next run
+  # as delivered, and it would never be emailed.
+  test "re-importing an email rule with identical conditions still emails a pending match" do
+    rule, coffee_bar = email_rule_with_pending_match(conditions: [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ])
+
+    assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
+      import_rule_rows(rule.name, [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ])
+    end
+
+    assert_equal [ coffee_bar.id ], emailed_transaction_ids(rule)
+  end
+
+  test "re-importing an email rule's conditions in a different order still emails a pending match" do
+    rule, coffee_bar = email_rule_with_pending_match(conditions: [
+      { condition_type: "transaction_name", operator: "like", value: "coffee" },
+      { condition_type: "transaction_name", operator: "like", value: "bar" }
+    ])
+
+    assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
+      import_rule_rows(rule.name, [
+        { condition_type: "transaction_name", operator: "like", value: "bar" },
+        { condition_type: "transaction_name", operator: "like", value: "coffee" }
+      ])
+    end
+
+    assert_equal [ coffee_bar.id ], emailed_transaction_ids(rule)
+  end
+
+  test "re-importing a valueless condition with a blank value still emails a pending match" do
+    rule, coffee_bar = email_rule_with_pending_match(conditions: [
+      { condition_type: "transaction_name", operator: "like", value: "coffee" },
+      { condition_type: "transaction_notes", operator: "is_null", value: nil }
+    ])
+    assert_nil rule.conditions.find_by!(condition_type: "transaction_notes").value
+
+    assert_no_difference -> { NotificationDelivery.where(rule: rule).count } do
+      import_rule_rows(rule.name, [
+        { condition_type: "transaction_name", operator: "like", value: "coffee" },
+        { condition_type: "transaction_notes", operator: "is_null", value: "" }
+      ])
+    end
+    assert_equal "", rule.reload.conditions.find_by!(condition_type: "transaction_notes").value, "precondition: the import stored the blank value"
+
+    assert_equal [ coffee_bar.id ], emailed_transaction_ids(rule)
+  end
+
   test "validates resource_type" do
     csv = <<~CSV
       name,resource_type,active,effective_date,conditions,actions
@@ -348,6 +502,144 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_raises ActiveRecord::RecordInvalid do
       import.send(:import!)
     end
+  end
+
+  test "reports a validation error for a null byte in an imported condition" do
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [
+        "Invalid condition rule",
+        "transaction",
+        true,
+        nil,
+        [ { condition_type: "transaction_name", operator: "like", value: "bad\0value" } ].to_json,
+        [ { action_type: "exclude_transaction" } ].to_json
+      ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    error = assert_raises(ActiveRecord::RecordInvalid) { import.send(:import!) }
+    assert_match(/value is invalid/i, error.message)
+    assert_nil @family.rules.find_by(name: "Invalid condition rule")
+  end
+
+  test "reports a validation error for a null byte inside a split action" do
+    split = { splits: [
+      { type: "percentage", name: "A", share: "50", category: "Bad\0Category" },
+      { type: "percentage", name: "B", share: "50" }
+    ] }
+    category_count = @family.categories.count
+
+    # As an object and as a JSON string (where the NUL byte is escaped in the raw text).
+    [ split, split.to_json ].each do |value|
+      csv = CSV.generate do |rows|
+        rows << %w[name resource_type active effective_date conditions actions]
+        rows << [
+          "Invalid split rule", "transaction", true, nil,
+          [ { condition_type: "transaction_name", operator: "like", value: "rent" } ].to_json,
+          [ { action_type: "split_transaction", value: value } ].to_json
+        ]
+      end
+
+      import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+      import.generate_rows_from_csv
+
+      error = assert_raises(ActiveRecord::RecordInvalid, value.class.name) { import.send(:import!) }
+      assert_match(/value is invalid/i, error.message)
+      assert_nil @family.rules.find_by(name: "Invalid split rule")
+      assert_equal category_count, @family.categories.count
+    end
+  end
+
+  test "rejects an imported name with a trailing null byte" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    import.generate_rows_from_csv
+    row = import.rows.first
+    row.name = "Invalid name\0"
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      import.send(:create_or_update_rule_from_row, row)
+    end
+
+    assert_match(/Name is invalid/, error.message)
+    assert_nil @family.rules.find_by(name: "Invalid name")
+  end
+
+  test "rejects an imported resource type with a trailing null byte" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    import.generate_rows_from_csv
+    row = import.rows.first
+    row.resource_type = "transaction\0"
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      import.send(:create_or_update_rule_from_row, row)
+    end
+
+    assert_match(/Resource type is invalid/, error.message)
+  end
+
+  test "rejects null bytes in imported references before looking them up" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    counts = [ @family.categories.count, @family.merchants.count, @family.tags.count ]
+
+    {
+      resolve_import_condition_value: [ "transaction_category", "transaction_merchant", "transaction_tag" ],
+      resolve_import_action_value: [ "set_transaction_category", "set_transaction_merchant", "set_transaction_tags" ]
+    }.each do |resolver, types|
+      type_key = resolver == :resolve_import_condition_value ? "condition_type" : "action_type"
+
+      types.each do |type|
+        error = assert_raises(ActiveRecord::RecordInvalid, type) do
+          import.send(resolver, { type_key => type, "value" => "Bad\0reference" })
+        end
+        assert_match(/Value is invalid/, error.message)
+      end
+    end
+
+    assert_equal counts, [ @family.categories.count, @family.merchants.count, @family.tags.count ]
+  end
+
+  test "rejects null bytes in imported operator and action type" do
+    [
+      [ "like\0", "exclude_transaction" ],
+      [ "like", "exclude_transaction\0" ]
+    ].each do |operator, action_type|
+      csv = CSV.generate do |rows|
+        rows << %w[name resource_type active effective_date conditions actions]
+        rows << [
+          "Invalid metadata rule", "transaction", true, nil,
+          [ { condition_type: "transaction_name", operator: operator, value: "coffee" } ].to_json,
+          [ { action_type: action_type } ].to_json
+        ]
+      end
+
+      import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+      import.generate_rows_from_csv
+
+      error = assert_raises(ActiveRecord::RecordInvalid) { import.send(:import!) }
+      assert_match(/is invalid/, error.message)
+      assert_nil @family.rules.find_by(name: "Invalid metadata rule")
+    end
+  end
+
+  test "rejects an unknown imported action type" do
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [
+        "Unknown action rule", "transaction", true, nil,
+        [ { condition_type: "transaction_name", operator: "like", value: "coffee" } ].to_json,
+        [ { action_type: "garbage" } ].to_json
+      ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    error = assert_raises(ActiveRecord::RecordInvalid) { import.send(:import!) }
+    assert_match(/is not included in the list/, error.message)
+    assert_nil @family.rules.find_by(name: "Unknown action rule")
   end
 
   test "imports valid JSON conditions whose values contain escaped quotes" do
@@ -428,4 +720,46 @@ class RuleImportTest < ActiveSupport::TestCase
 
     assert_equal 'C:\new\test', condition.value
   end
+
+  private
+    # An email rule with its baseline taken, plus a later Coffee bar transaction
+    # the rule has not run against yet.
+    def email_rule_with_pending_match(conditions:)
+      account = @family.accounts.create!(name: "Baseline test", balance: 1000, currency: "USD", accountable: Depository.new)
+      Entry.create!(account: account, name: "Coffee shop", date: 90.days.ago.to_date, amount: 10, currency: "USD", entryable: Transaction.new)
+      rule = @family.rules.create!(
+        name: "Coffee alerts",
+        resource_type: "transaction",
+        active: true,
+        conditions_attributes: conditions,
+        actions_attributes: [ { action_type: "send_email_notification" } ]
+      )
+      rule.actions.first.send(:seed_notification_baseline)
+      coffee_bar = Entry.create!(account: account, name: "Coffee bar", date: Date.current, amount: 5, currency: "USD", entryable: Transaction.new).transaction
+      assert_not_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), coffee_bar.id, "precondition: Coffee bar is outside the baseline"
+
+      [ Rule.find(rule.id), coffee_bar ]
+    end
+
+    def import_rule_rows(name, conditions)
+      csv = CSV.generate do |rows|
+        rows << %w[name resource_type active effective_date conditions actions]
+        rows << [ name, "transaction", "true", nil, conditions.to_json, [ { action_type: "send_email_notification" } ].to_json ]
+      end
+      import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+      import.generate_rows_from_csv
+      import.send(:import!)
+    end
+
+    # The transaction ids a RuleJob run enqueues for emailing, for this rule only.
+    def emailed_transaction_ids(rule)
+      before = enqueued_jobs.size
+      RuleJob.perform_now(Rule.find(rule.id))
+      enqueued_jobs.drop(before)
+        .select { |job| job[:job] == RuleEmailNotificationJob }
+        .map { |job| ActiveJob::Arguments.deserialize(job[:args]) }
+        .select { |rule_id, _| rule_id == rule.id }
+        .flat_map(&:second)
+        .sort
+    end
 end

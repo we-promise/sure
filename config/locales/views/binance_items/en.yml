@@ -8,6 +8,10 @@ en:
       success: Successfully updated Binance configuration.
     destroy:
       success: Scheduled Binance connection for deletion.
+    select_accounts:
+      connection_unavailable: That Binance connection isn't available. Choose one in Provider Settings.
+      no_credentials_configured: Connect Binance in Provider Settings before adding its accounts.
+      select_connection: Choose a Binance connection in Provider Settings.
     setup_accounts:
       title: Import Binance Account
       subtitle: Select which portfolios to track

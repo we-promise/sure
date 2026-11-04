@@ -55,6 +55,40 @@ class KrakenAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     KrakenAccount::HoldingsProcessor.new(@kraken_account).process
   end
 
+  test "sums priced wallet lines of one asset into one holding at their balance-weighted price" do
+    @kraken_account.update!(raw_payload: { "assets" => [
+      { "symbol" => "ETH.B", "price_symbol" => "ETH", "balance" => "3.0", "price_usd" => "2500.0", "source" => "spot" },
+      { "symbol" => "ETH", "price_symbol" => "ETH", "balance" => "1.0", "price_usd" => "2504.0", "source" => "spot" },
+      { "symbol" => "DOT28.S", "price_symbol" => "DOT28", "balance" => "100.0", "price_usd" => nil, "source" => "spot" },
+      { "symbol" => "DOT", "price_symbol" => "DOT", "balance" => "2.0", "price_usd" => "5.0", "source" => "spot" }
+    ] })
+    import_adapter = mock
+    import_adapter.expects(:import_holding).once.with(
+      has_entries(quantity: 4.to_d, amount: 10_004.to_d, price: 2501.to_d, external_id: "kraken_ETH_spot_#{Date.current}")
+    )
+    import_adapter.expects(:import_holding).once.with(
+      has_entries(quantity: 2.to_d, amount: 10.to_d, external_id: "kraken_DOT_spot_#{Date.current}")
+    )
+    Account::ProviderImportAdapter.stubs(:new).returns(import_adapter)
+
+    KrakenAccount::HoldingsProcessor.new(@kraken_account).process
+  end
+
+  # Fiat at the exchange is cash the ledger already moved. Held as a holding
+  # too it is valued twice, and it can never be reversed into history because
+  # no trade ever moves it.
+  test "does not import a fiat balance as a holding" do
+    @kraken_account.update!(raw_payload: { "assets" => [
+      { "symbol" => "EUR", "price_symbol" => "EUR", "balance" => "500", "price_usd" => "1.1", "source" => "spot" },
+      { "symbol" => "ZUSD", "price_symbol" => "USD", "balance" => "50", "price_usd" => "1.0", "source" => "spot" }
+    ] })
+    import_adapter = mock
+    import_adapter.expects(:import_holding).never
+    Account::ProviderImportAdapter.stubs(:new).returns(import_adapter)
+
+    KrakenAccount::HoldingsProcessor.new(@kraken_account).process
+  end
+
   test "does not overwrite a different provider holding with the same security/date/currency" do
     binance_item = BinanceItem.create!(family: @family, name: "Binance", api_key: "b", api_secret: "s")
     binance_account = binance_item.binance_accounts.create!(name: "Binance", account_type: "combined", currency: "USD")

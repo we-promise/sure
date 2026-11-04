@@ -23,7 +23,7 @@ class Insight::Generators::MaintainedGoalDepletedGeneratorTest < ActiveSupport::
     reserve(name: "Notgroschen", balance: 4_000, target: 6_000)
 
     generated = I18n.with_locale(:de) { generate.first }
-    body = I18n.with_locale(:de) { Insight::BodyWriter.new(@family).write(generated) }
+    body = I18n.with_locale(:de) { Insight::BodyWriter.new.write(generated) }
 
     assert_equal "Notgroschen liegt unter dem Zielstand", generated.title
     assert_equal "Für Notgroschen sind #{generated.facts[:saved]} von #{generated.facts[:target]} zurückgelegt. " \
@@ -41,6 +41,16 @@ class Insight::Generators::MaintainedGoalDepletedGeneratorTest < ActiveSupport::
   # put down is noise, not a signal.
   test "says nothing about a reserve the user paused" do
     reserve(name: "Shelved", balance: 1_000, target: 6_000).pause!
+
+    assert_empty generate
+  end
+
+  test "says nothing about a reserve that only looks short for want of a rate" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    reserve = @family.goals.create!(name: "Euro pot", target_amount: 6_000, currency: "USD", kind: "maintained") do |g|
+      g.goal_accounts.build(account: fresh_account(6_000, currency: "EUR"))
+    end
+    assert_equal :depleted, Goal.find(reserve.id).status
 
     assert_empty generate
   end
@@ -84,10 +94,10 @@ class Insight::Generators::MaintainedGoalDepletedGeneratorTest < ActiveSupport::
     # A dedicated account each time: the fixtures already have goals claiming
     # `depository`, and a shared one would drag the pro-rata haircut into every
     # shortfall figure asserted here.
-    def fresh_account(balance)
+    def fresh_account(balance, currency: "USD")
       Account.create!(
         family: @family, accountable: Depository.new,
-        name: "Pot #{SecureRandom.hex(4)}", currency: "USD", balance: balance
+        name: "Pot #{SecureRandom.hex(4)}", currency: currency, balance: balance
       )
     end
 

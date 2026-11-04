@@ -13,8 +13,7 @@ class PropertiesEditTest < ApplicationSystemTestCase
 
   test "can persist property subtype" do
     click_link "[system test] Property Account"
-    open_account_edit_dialog
-    assert_field "account_accountable_attributes_subtype", with: "single_family_home"
+    assert_edit_dialog_field "account_accountable_attributes_subtype", with: "single_family_home"
   end
 
   private
@@ -26,15 +25,20 @@ class PropertiesEditTest < ApplicationSystemTestCase
     # turbo-frame before the dialog is interactive — and can detach the menu
     # node mid-click ("Node with given id does not belong to the document"),
     # which Capybara does not auto-retry. Open via the account menu and retry
-    # until the edit form is present so the test is deterministic instead of
-    # racing the broadcast.
-    def open_account_edit_dialog
-      3.times do
+    # until the edit form shows the expected value. The value is checked inside
+    # the retry: checking only that the field exists and asserting the value
+    # afterwards lets a morph remove the modal in between, and the caller's
+    # assertion then waits on a field that never comes back.
+    def assert_edit_dialog_field(locator, with:)
+      found = 3.times.any? do
         # A prior (slow) attempt may have already opened the edit form. Check
         # the field is enabled, not just present — the select briefly exists
-        # but disabled while the form finishes hydrating, and assert_field's
-        # default matcher (used by the caller) excludes disabled fields.
-        return if has_field?("account_accountable_attributes_subtype", wait: 0)
+        # but disabled while the form finishes hydrating, and has_field?'s
+        # default matcher excludes disabled fields.
+        next true if has_field?(locator, with: with, wait: 0)
+        # An open form with another value is a real failure; reopening the
+        # dialog would not change the value, so let the final assertion report it.
+        next false if has_field?(locator, wait: 0)
 
         begin
           within_testid("account-menu") do
@@ -51,11 +55,13 @@ class PropertiesEditTest < ApplicationSystemTestCase
           raise unless e.message.match?(
             /does not belong to the document|stale element reference/i,
           )
-          next
+          next false
         end
-        return if has_field?("account_accountable_attributes_subtype", wait: 2)
+        has_field?(locator, with: with, wait: 2)
       end
-      assert_field "account_accountable_attributes_subtype"
+      return pass if found
+
+      assert_field locator, with: with
     end
 
     def open_new_account_modal

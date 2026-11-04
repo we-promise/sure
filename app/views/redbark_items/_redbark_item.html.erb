@@ -1,4 +1,4 @@
-<%# locals: (redbark_item:) %>
+<%# locals: (redbark_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(redbark_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -77,8 +77,8 @@
 
     <% unless redbark_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if redbark_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: redbark_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -89,7 +89,7 @@
            end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: redbark_item
+          provider_item: redbark_item, show_account_details: visible_accounts.size == redbark_item.accounts.size
         ) %>
 
         <%# Compute unlinked accounts (no AccountProvider link) %>

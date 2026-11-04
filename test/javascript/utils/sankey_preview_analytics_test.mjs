@@ -55,19 +55,22 @@ test("routes managed environments to their existing project and self-hosting onl
 
 test("dedicated initialization is optional, idempotent and announces readiness after the named client exists", async () => {
   const calls = [];
-  const sdk = { init(...args) { calls.push(args); args[1].loaded(); this.sankeyFeedback = {}; } };
+  const properties = {};
+  const client = { register(values) { Object.assign(properties, values); } };
+  const sdk = { init(...args) { calls.push(args); args[1].loaded(client); this.sankeyFeedback = client; } };
   let readyClient;
   const ready = () => { readyClient = sdk.sankeyFeedback; };
-  initializeSelfHostedFeedback(sdk, "", "https://us.i.posthog.com", ready);
+  initializeSelfHostedFeedback(sdk, "", "https://us.i.posthog.com", ready, "0.7.5-alpha.10");
   assert.equal(calls.length, 0);
-  initializeSelfHostedFeedback(sdk, "public-feedback-token", "https://us.i.posthog.com", ready);
-  initializeSelfHostedFeedback(sdk, "public-feedback-token", "https://us.i.posthog.com", ready);
+  initializeSelfHostedFeedback(sdk, "public-feedback-token", "https://us.i.posthog.com", ready, "0.7.5-alpha.10");
+  initializeSelfHostedFeedback(sdk, "public-feedback-token", "https://us.i.posthog.com", ready, "0.7.5-alpha.10");
   assert.equal(calls.length, 1);
   assert.equal(calls[0][0], "public-feedback-token");
   assert.equal(calls[0][2], "sankeyFeedback");
   assert.equal(readyClient, undefined);
   await Promise.resolve();
   assert.equal(readyClient, sdk.sankeyFeedback);
+  assert.deepEqual(properties, { sure_version: "0.7.5-alpha.10" });
   assert.doesNotThrow(() => initializeSelfHostedFeedback({ init() { throw Error("blocked"); } }, "key", "host", ready));
   initializeSelfHostedFeedback({ has_opted_out_capturing: () => true, init() { assert.fail("opt-out must prevent initialization"); } }, "key", "host", ready);
 });
@@ -79,10 +82,10 @@ test("self-hosted feedback disables automatic collection and strips incidental S
   assert.equal(options.person_profiles, "never");
   assert.equal(options.persistence, "memory");
   const event = options.before_send({ event: "sankey_preview_displayed", properties: {
-    token: "public-project-token", distinct_id: "anonymous", preview_version: "cash_flow_v1", surface: "inline", state: "content",
+    token: "public-project-token", distinct_id: "anonymous", sure_version: "0.7.5-alpha.10", preview_version: "cash_flow_v1", surface: "inline", state: "content",
     $current_url: "https://private.example/", $referrer: "https://private.example/accounts", email: "private@example.test", $set: { name: "Private" }, $device_id: "device",
   } });
-  assert.deepEqual(event.properties, { token: "public-project-token", distinct_id: "anonymous", preview_version: "cash_flow_v1", surface: "inline", state: "content", $geoip_disable: true, $process_person_profile: false });
+  assert.deepEqual(event.properties, { token: "public-project-token", distinct_id: "anonymous", sure_version: "0.7.5-alpha.10", preview_version: "cash_flow_v1", surface: "inline", state: "content", $geoip_disable: false, $process_person_profile: false });
   assert.equal(sanitizeSelfHostedFeedback({ event: "$pageview" }), null);
   assert.equal(sanitizeSelfHostedFeedback({ event: "$identify" }), null);
   const responseKey = "$survey_response_01a0a162-73a2-0000-9402-ffab5bc45b4a";
@@ -98,7 +101,7 @@ test("comparison events send only the outcome and preview version", async () => 
     assert.equal(captureSankeyComparison(sdk, result), true);
     assert.deepEqual(events, [[`new_sankey_${result}`, { preview_version: "cash_flow_v1" }]]);
     const sanitized = sanitizeSelfHostedFeedback({ event: `new_sankey_${result}`, properties: { preview_version: "cash_flow_v1", nodes: ["private"], amount: 123, user_id: "private" } });
-    assert.deepEqual(sanitized.properties, { preview_version: "cash_flow_v1", $geoip_disable: true, $process_person_profile: false });
+    assert.deepEqual(sanitized.properties, { preview_version: "cash_flow_v1", $geoip_disable: false, $process_person_profile: false });
   }
 });
 
@@ -109,4 +112,27 @@ test("comparison waits for analytics and preserves invalid, opted-out and failed
   }
   const sdk = { __loaded: true, capture: () => assert.fail("must not capture") };
   assert.equal(captureSankeyComparison(sdk, null), false);
+});
+
+
+test("all allowed feedback events retain the registered Sure version and enable GeoIP", () => {
+  let options;
+  const registered = {};
+  const client = {
+    __loaded: true,
+    register(properties) { Object.assign(registered, properties); },
+    capture(event, properties) {
+      return options.before_send({ event, properties: { ...registered, ...properties } });
+    },
+  };
+  const sdk = { init(_key, config) { options = config; config.loaded(client); } };
+  initializeSelfHostedFeedback(sdk, "public-token", "https://us.i.posthog.com", () => {}, "0.7.5-alpha.10");
+  for (const name of ["sankey_preview_displayed", "sankey_preview_feedback_clicked", "new_sankey_match", "new_sankey_mismatch", "survey shown", "survey sent", "survey dismissed"]) {
+    const event = client.capture(name, { $geoip_disable: true, $ip: "private", amount: 123 });
+    assert.deepEqual(event.properties, {
+      sure_version: "0.7.5-alpha.10",
+      $geoip_disable: false,
+      $process_person_profile: false,
+    });
+  }
 });

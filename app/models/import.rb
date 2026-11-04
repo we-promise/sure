@@ -40,6 +40,9 @@ class Import < ApplicationRecord
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
   TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport YnabImport CategoryImport RuleImport MerchantImport PdfImport QifImport SureImport].freeze
+  # Imports that write family-wide configuration (categories, tags, rules,
+  # merchants), which guests may view but not change.
+  FAMILY_CONFIG_TYPES = %w[CategoryImport MerchantImport RuleImport SureImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
@@ -470,6 +473,45 @@ class Import < ApplicationRecord
 
   def revertable?
     complete? || revert_failed?
+  end
+
+  def family_config?
+    FAMILY_CONFIG_TYPES.include?(type)
+  end
+
+  # Guests may view family configuration but not change it, so they may only
+  # edit an import that doesn't write family configuration and isn't being
+  # (or already) published.
+  def editable_by?(user)
+    return true unless user&.guest?
+
+    (pending? || failed?) && !family_config?
+  end
+
+  # Whether publishing would add new categories or tags to the family.
+  def creates_categories_or_tags?
+    mappings.creational.where(type: %w[Import::CategoryMapping Import::TagMapping]).where.not(key: [ nil, "" ]).exists?
+  end
+
+  # Whether the user may write to every pre-existing account this import
+  # targets (its own account, account mappings) or has already written into
+  # (entries). Accounts the import created itself are excluded.
+  def accounts_writable_by?(user)
+    ids = [ account_id ]
+    ids += mappings.accounts.where.not(mappable_id: nil).pluck(:mappable_id)
+    ids += entries.distinct.pluck(:account_id)
+    ids += preexisting_target_account_ids
+    ids = ids.compact.uniq - accounts.pluck(:id)
+    return true if ids.empty?
+    return false if user.nil?
+
+    (ids - family.accounts.writable_by(user).where(id: ids).pluck(:id)).empty?
+  end
+
+  # Existing family accounts the import resolves on its own at publish time
+  # (e.g. by name). Subclasses that do this override it.
+  def preexisting_target_account_ids
+    []
   end
 
   def has_unassigned_account?

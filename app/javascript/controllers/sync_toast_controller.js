@@ -37,15 +37,18 @@ export default class extends Controller {
   }
 
   #arm() {
-    if (this.#userIsInteracting()) return; // mid-form: wait for a manual refresh
+    if (this.#userIsInteracting() || this.#ctaPending()) return; // mid-form / unread CTA: wait for a manual refresh
     // Re-check at fire time, not just arm time: the post-dialog reveal often
     // lands on a form the dialog was sitting on, and the user resumes typing
     // inside this window (a morph would wipe their non-turbo-permanent
     // input). A dialog opened during the window is the same hazard — the
-    // refresh would close it. Either way, bail and leave the toast visible
-    // for a manual refresh, matching the mid-form behavior.
+    // refresh would close it. A "create a rule?" CTA revealed by the same
+    // dialog close is a third: it's un-acknowledged, server-flash-backed
+    // content a morph would silently discard before the user could act on
+    // it. Either way, bail and leave the toast visible for a manual refresh.
     this._timer = setTimeout(() => {
-      if (this.#userIsInteracting() || this.#dialogOpen()) return;
+      if (this.#userIsInteracting() || this.#dialogOpen() || this.#ctaPending())
+        return;
       this.refresh();
     }, this.autoRefreshDelayValue);
   }
@@ -103,7 +106,16 @@ export default class extends Controller {
     return !!document.querySelector("dialog[open]");
   }
 
+  #ctaPending() {
+    return !!document.getElementById("cta")?.firstElementChild;
+  }
+
   #userIsInteracting() {
+    // A grabbed list item (sortable-list) is only saved when it is released;
+    // a morph would drop the move. Focus may have left it, so look it up in
+    // the whole document.
+    if (document.querySelector("[aria-grabbed='true']")) return true;
+
     const el = document.activeElement;
     if (!el || el === document.body || el === document.documentElement)
       return false;

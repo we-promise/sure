@@ -1,4 +1,4 @@
-<%# locals: (plaid_item:) %>
+<%# locals: (plaid_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(plaid_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
@@ -40,7 +40,7 @@
           </div>
         </div>
 
-        <% if Current.user&.admin? %>
+        <% if plaid_item.manageable_by?(Current.user) %>
           <div class="flex items-center gap-2">
             <% if plaid_item.requires_update? %>
               <%= render DS::Link.new(
@@ -83,8 +83,12 @@
 
     <% unless plaid_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if plaid_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: plaid_item.accounts %>
+        <%# The accounts index passes visible_accounts filtered to the viewer
+            (AccountsController#visible_card_accounts). Nothing here reads
+            Current.user: the partial can be rendered outside a request, where
+            it is nil. %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
@@ -95,7 +99,7 @@
            end %>
         <%= render ProviderSyncSummary.new(
           stats: stats,
-          provider_item: plaid_item
+          provider_item: plaid_item, show_account_details: visible_accounts.size == plaid_item.accounts.size
         ) %>
 
         <% if plaid_item.accounts.empty? %>

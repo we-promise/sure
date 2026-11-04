@@ -20,6 +20,9 @@ ca:
       sharing: Compartició
       troubleshoot: Resolució de problemes
       unlink_provider: Desenllaça del proveïdor
+      exclude_from_reports: Exclou de tots els informes
+      include_in_reports: Inclou als informes
+      excluded_from_reports_indicator: Exclòs dels informes
     chart:
       data_not_available: Dades no disponibles per al període seleccionat
     confirm_unlink:
@@ -47,9 +50,9 @@ ca:
     form:
       additional_details: Detalls addicionals
       balance: 'Saldo a la data:'
-      institution_domain_label: Domini de la institució
+      institution_domain_label: Domini de l'entitat
       institution_domain_placeholder: p. ex., chase.com
-      institution_name_label: Nom de la institució
+      institution_name_label: Nom de l'entitat
       institution_name_placeholder: p. ex., Chase Bank
       name_label: Nom del compte
       name_placeholder: Exemple de nom de compte
@@ -57,6 +60,9 @@ ca:
       notes_placeholder: Emmagatzema informació addicional com números de compte,
         codis de sortida, IBAN, números de ruta, etc.
       opening_balance_date_label: Data del saldo inicial
+      exclude_from_reports: Exclou de tots els informes
+      enable_category_matcher_label: Activa l'assignació de categories
+      enable_category_matcher_hint: Si està activat, la categoria suggerida pel proveïdor s'aplica a les transaccions importades. Desactiva-ho per deixar les transaccions noves sense categoria.
     index:
       accounts: Comptes
       cancel_sync: Cancel·la la sincronització
@@ -69,6 +75,8 @@ ca:
         close: Tanca
         navigate: Navega
         select: Selecciona
+        next: Següent
+        previous: Anterior
       import_accounts: Importa comptes
       method_selector:
         connected_entry: Enllaça el compte
@@ -135,11 +143,14 @@ ca:
         manage: Gestiona els comptes
         sharing: Compartició
         statements: Extractes
+        exclude_from_reports: Exclou de tots els informes
+        include_in_reports: Inclou als informes
       tabs:
         activity: Activitat
         holdings: Posicions
         overview: Resum
         statements: Extractes
+        schedule: Amortització
     sidebar:
       configure_providers: Configura els teus proveïdors aquí.
       missing_data: Falten dades històriques
@@ -154,6 +165,8 @@ ca:
         all: Tots
         assets: Actius
         debts: Deutes
+      expand_all: Desplega-ho tot
+      collapse_all: Plega-ho tot
     subtype_regions:
       au: Austràlia
       ca: Canadà

@@ -319,6 +319,52 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert filtered.none? { |t| t.tags.include?(tag) }
   end
 
+  test "applies != condition for transaction_tag" do
+    scope = @rule_scope
+
+    tag = @family.tags.create!(name: "Reimbursable")
+    other_tag = @family.tags.create!(name: "Business")
+    @account.transactions.first.tags << tag
+    @account.transactions.second.tags << other_tag
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_tag",
+      operator: "!=",
+      value: tag.id
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # Every transaction except the one carrying the tag, including untagged ones
+    assert_equal 4, filtered.count
+    assert filtered.none? { |t| t.tags.include?(tag) }
+  end
+
+  test "applies is_not_null condition for transaction_tag" do
+    scope = @rule_scope
+
+    tag = @family.tags.create!(name: "Reimbursable")
+    other_tag = @family.tags.create!(name: "Business")
+    @account.transactions.first.tags << [ tag, other_tag ]
+    @account.transactions.second.tags << other_tag
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_tag",
+      operator: "is_not_null",
+      value: nil
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # The 2 tagged transactions, once each
+    assert_equal 2, filtered.count
+    assert_equal [ @account.transactions.first.id, @account.transactions.second.id ].sort, filtered.map(&:id).sort
+  end
+
   test "compound AND of two transaction_tag conditions matches transactions having both tags" do
     scope = @rule_scope
 
@@ -468,6 +514,57 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     scope = condition_lowercase.prepare(scope)
     filtered = condition_lowercase.apply(scope)
     assert_equal 0, filtered.count
+  end
+
+  # Casting extra to text searched its keys as well as its values, so a rule for
+  # "payment" matched any row whose provider stored a payment_channel key, whatever
+  # that channel was. Plaid rows already carried pending and pending_transaction_id,
+  # which made "pending" and "transaction" match every one of them.
+  test "applies transaction_details condition to values, never to key names" do
+    entry = create_transaction(date: Date.current, account: @account, amount: 40, name: "Costco")
+    entry.transaction.update!(
+      extra: {
+        "plaid" => {
+          "pending" => false,
+          "pending_transaction_id" => "txn_1",
+          "payment_channel" => "in store",
+          "original_description" => "COSTCO WHSE 0112"
+        }
+      }
+    )
+
+    %w[payment description pending transaction channel original].each do |key_word|
+      assert_equal 0, details_matches("like", key_word).count,
+        "#{key_word.inspect} appears only as a key and must not match"
+    end
+
+    assert_equal [ entry.transaction.id ], details_matches("like", "in store").map(&:id)
+    assert_equal [ entry.transaction.id ], details_matches("like", "costco").map(&:id)
+  end
+
+  test "applies transaction_details condition to values nested at any depth" do
+    entry = create_transaction(date: Date.current, account: @account, amount: 40, name: "Costco")
+    entry.transaction.update!(
+      extra: {
+        "plaid" => {
+          "payment_meta" => { "reference_number" => "REF-9" },
+          "counterparties" => [ { "name" => "Costco", "confidence_level" => "VERY_HIGH" } ]
+        }
+      }
+    )
+
+    assert_equal [ entry.transaction.id ], details_matches("like", "REF-9").map(&:id)
+    assert_equal [ entry.transaction.id ], details_matches("like", "VERY_HIGH").map(&:id)
+  end
+
+  # true, false and null carry no text a rule would target, and matching "false"
+  # against every unposted pending flag was never what a details rule meant.
+  test "applies transaction_details condition without matching boolean or null literals" do
+    entry = create_transaction(date: Date.current, account: @account, amount: 40, name: "Costco")
+    entry.transaction.update!(extra: { "plaid" => { "pending" => false, "payment_meta" => nil } })
+
+    assert_equal 0, details_matches("like", "false").count
+    assert_equal 0, details_matches("like", "null").count
   end
 
   test "applies transaction_details condition with is_null operator" do
@@ -769,4 +866,15 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     # Should NOT include investment_contribution even with negative amount
     assert_not filtered.map(&:id).include?(contribution_entry.transaction.id)
   end
+
+  private
+    # @param operator [String] a transaction_details operator
+    # @param value [String] the text the rule searches for
+    # @return [ActiveRecord::Relation] transactions in this test's account the condition selects
+    def details_matches(operator, value)
+      condition = Rule::Condition.new(
+        rule: @transaction_rule, condition_type: "transaction_details", operator: operator, value: value
+      )
+      condition.apply(condition.prepare(@rule_scope))
+    end
 end

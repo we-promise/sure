@@ -28,9 +28,7 @@ module VectorStore::Embeddable
     end
 
     def extract_pdf_text(file_content)
-      io = StringIO.new(file_content)
-      reader = PDF::Reader.new(io)
-      reader.pages.map(&:text).join("\n\n")
+      Pdf::TextExtractor.pages(file_content).join("\n\n")
     rescue => e
       Rails.logger.error("VectorStore::Embeddable PDF extraction error: #{e.message}")
       nil

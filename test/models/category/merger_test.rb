@@ -49,6 +49,27 @@ class Category::MergerTest < ActiveSupport::TestCase
     assert_not Category.exists?(source.id)
   end
 
+  test "merging categories invalidates entries_cache_version" do
+    target = create_category(@family, "Cache Merge Target")
+    source = create_category(@family, "Cache Merge Source")
+    transaction = create_transaction_for(@family, source)
+
+    before = @family.reload.entries_cache_version
+
+    travel 1.second do
+      merger = Category::Merger.new(
+        family: @family,
+        target_category: target,
+        source_categories: [ source ]
+      )
+
+      assert merger.merge!
+    end
+
+    assert_equal target.id, transaction.reload.category_id
+    assert_not_equal before, @family.reload.entries_cache_version
+  end
+
   private
     def create_category(family, name, parent: nil)
       family.categories.create!(

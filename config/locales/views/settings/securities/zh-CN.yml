@@ -18,6 +18,8 @@ zh-CN:
         webauthn_empty: 暂未注册通行密钥或安全密钥。
         webauthn_last_used: 上次使用于 %{time_ago} 前
         webauthn_name_label: 密钥名称
+        webauthn_code_label: "验证器代码或备用代码"
+        webauthn_code_placeholder: "当前验证器代码或未使用的备用代码"
         webauthn_name_placeholder: MacBook Touch ID、YubiKey 等
         webauthn_remove: 移除
         webauthn_remove_confirm: 确定要移除此通行密钥或安全密钥？
@@ -25,6 +27,9 @@ zh-CN:
         webauthn_title: 通行密钥和安全密钥
         webauthn_unsupported: 此浏览器不支持通行密钥或安全密钥。
   webauthn_credentials:
+    code_already_used: "该代码已被使用。请等待验证器应用生成下一个代码。"
+    invalid_code: "该代码无效。请输入验证器应用中的当前代码或未使用的备用代码。"
+    rate_limited: "尝试次数过多。请等待一分钟后重试。"
     default_name: 安全密钥
     failure: 无法保存该通行密钥或安全密钥。请重试。
     mfa_required: 添加通行密钥或安全密钥前，请先启用双重认证。

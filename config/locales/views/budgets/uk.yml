@@ -12,8 +12,8 @@ uk:
       categories: "Категорії"
       setup: "Налаштування"
     over_allocation_warning:
-      over_allocated_message: "Ви перевищили свій бюджет. Будь ласка, виправте свої асигнування."
-      fix_allocations: "Виправити асигнування"
+      over_allocated_message: "Ви розподілили більше, ніж дозволяє бюджет. Будь ласка, виправте розподіл коштів."
+      fix_allocations: "Виправити розподіл"
     actuals_summary:
       income: "Дохід"
       expenses: "Витрати"
@@ -63,6 +63,16 @@ uk:
       success: "Бюджет скопійовано з %{source_name}"
       no_source: "Не знайдено попереднього бюджету для копіювання"
       already_initialized: "Цей бюджет уже налаштовано"
+    switcher:
+      aria_label: Перемкнути бюджет
+      household: Домогосподарство
+    available_cash:
+      heading: Доступні кошти
+      subtitle: Поруч із планом вище, але не входить до нього.
+      available: Доступно на грошових рахунках
+      earmarked: Уже виділено на цілі
+      free: Справді вільні
+      goals_link: Переглянути цілі
   budget_categories:
     allocation_progress:
       budget_exceeded_html: 'Бюджет перевищено на <span class="text-red-500 privacy-sensitive">%{amount}</span>'
@@ -73,6 +83,8 @@ uk:
       monthly_average: "%{amount}/міс. сер."
       shared_placeholder: "Спільний"
       shared_title: "Залиште порожнім, щоб використовувати бюджет батьківської категорії"
+      rollover_label: Перенесення залишку
+      rollover_title: Переносити невитрачені кошти цієї категорії з місяця на місяць
     confirm_button:
       confirm: "Підтвердити"
     no_categories:
@@ -96,3 +108,30 @@ uk:
       recent_transactions: "Останні транзакції"
       view_all_transactions: "Переглянути всі транзакції категорії"
       no_transactions: "За цей бюджетний період транзакцій не знайдено."
+      rolled_over: Перенесено
+    bills_reserved: '%{amount} зарезервовано під платежі'
+    bills_reserved_unconvertible:
+      one: '%{count} платіж не зарезервовано: немає обмінного курсу'
+      few: '%{count} платежі не зарезервовано: немає обмінного курсу'
+      many: '%{count} платежів не зарезервовано: немає обмінного курсу'
+      other: '%{count} платежу не зарезервовано: немає обмінного курсу'
+    budget_category:
+      rolled_over: +%{amount} перенесено
+    move:
+      button_title: Перемістити кошти з цієї категорії
+      cancel: Скасувати
+      dialog_title: Перемістити кошти
+      no_destination: Зараз немає іншого конверта, куди можна перемістити кошти, — категорія не може переміщувати кошти до своєї батьківської або дочірньої категорії.
+      submit: Перемістити
+      amount_label: Сума
+      available: Доступно %{amount}
+      from_label: З
+      to_label: До
+      success: Кошти переміщено.
+      errors:
+        different_budgets: Обидві категорії мають належати до одного бюджету.
+        insufficient_funds: Це більше, ніж розподілено на цю категорію.
+        non_positive_amount: Введіть суму, більшу за нуль.
+        parent_child: Кошти не можна переміщувати між категорією та її власною підкатегорією — змініть бюджет підкатегорії напряму.
+        same_category: Виберіть іншу категорію, до якої перемістити кошти.
+        uncategorized: «Без категорії» — не справжній конверт, тому кошти не можна переміщувати в нього чи з нього.

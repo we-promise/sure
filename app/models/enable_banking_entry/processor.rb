@@ -2,6 +2,7 @@ require "digest/md5"
 
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
+  include CardAuthorizationHold
 
   # Small-merchant card terminal providers that prefix the payee with "KEYWORD *"
   PAYMENT_PROCESSOR_PREFIX = /\A(SUMUP|SQ|IZETTLE|ZETTLE|PAYPAL)\s*\*\s*/i
@@ -22,6 +23,21 @@ class EnableBankingEntry::Processor
   # 2-letter FamilyMerchant name matching inside unrelated text, like "IT" would
   # inside "NAME IT" -- a real chain name observed in this issue's own data).
   MIN_KNOWN_MERCHANT_MATCH_LENGTH = 3
+
+  # Prefix of the identifier synthesised for a transaction the ASPSP returned
+  # with neither transaction_id nor entry_reference.
+  CONTENT_ID_PREFIX = "enable_banking_content_"
+
+  # extra key listing external_ids a transaction was previously stored under.
+  #
+  # Deliberately not auto_claimed_pending_ids. That key also makes
+  # Account::ProviderImportAdapter#import_transaction keep the stored date and
+  # ignore the incoming one, which is right for a pending row claimed by its
+  # booked twin and wrong here: these are BOOK rows whose date the ASPSP may
+  # still correct, and the key is never removed, so the date would freeze
+  # permanently. EnableBankingAccount::Transactions::Processor reads both keys
+  # into excluded_ids, which is the behaviour actually wanted.
+  SUPERSEDED_IDS_KEY = "superseded_external_ids"
 
   # enable_banking_transaction is the raw hash fetched from Enable Banking API
   # Transaction structure from Enable Banking:
@@ -51,7 +67,155 @@ class EnableBankingEntry::Processor
     content = [ date, amount, currency, direction, creditor, debtor, remittance_key ].map(&:to_s).join("\x1F")
     return nil if content.gsub("\x1F", "").blank?
 
-    "enable_banking_content_#{Digest::MD5.hexdigest(content)}"
+    "#{CONTENT_ID_PREFIX}#{Digest::MD5.hexdigest(content)}"
+  end
+
+  # True when the ASPSP supplied no identifier of its own, so compute_external_id
+  # falls back to hashing the content.
+  #
+  # Read from the raw fields rather than from the synthesised id's prefix: an
+  # ASPSP identifier may itself begin with "content_", which would make a real
+  # identifier look synthesised and skip the claim below.
+  #
+  # @return [Boolean]
+  def self.identifierless?(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    data[:transaction_id].blank? && data[:entry_reference].blank?
+  end
+
+  def self.party_name(data, key)
+    value = data[key]
+    nested = value.is_a?(Hash) ? value[:name] : (value if value.is_a?(String))
+    nested.presence || data[:"#{key}_name"].presence
+  end
+
+  # True when a single remittance line is a technical terminal/POS booking line
+  # rather than a merchant or transaction descriptor.
+  #
+  # Terminal booking line, e.g. "POS   45,13 AT  D6   31.07. 10:27": require the
+  # keyword+amount prefix AND the trailing date+time stamp TOGETHER, not either
+  # alone. Either signal in isolation false-positives on legitimate descriptors:
+  # a line like "POS 45,13 BILLA DANKT ..." (merchant appended after the amount,
+  # no separate technical-only element) would wrongly match on the prefix alone,
+  # and a line like "Invoice paid 31.07. 10:27" would wrongly match on the date
+  # suffix alone. Requiring both matches every real technical line observed in
+  # production while leaving both of those legitimate shapes untouched. Day/month
+  # accept 1-2 digits (not just 2) so an un-padded ASPSP date ("1.07." instead of
+  # "01.07.") is still recognized as technical.
+  def self.technical_remittance_line?(value)
+    line = value.to_s.strip
+    line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{1,2}[.\/]\d{1,2}\.?\s+\d{2}:\d{2}\z/i)
+  end
+
+  # Prefer booking_date, fall back to value_date, then transaction_date.
+  # Timestamps are read in the family's timezone.
+  def self.transaction_date(raw_transaction_data, timezone)
+    data = raw_transaction_data.with_indifferent_access
+    date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
+
+    case date_value
+    when String
+      if date_value.include?("T") || date_value.include?(":")
+        Time.parse(date_value).in_time_zone(timezone).to_date
+      else
+        Date.parse(date_value)
+      end
+    when Integer, Float
+      Time.at(date_value).in_time_zone(timezone).to_date
+    when Time, DateTime
+      date_value.in_time_zone(timezone).to_date
+    when Date
+      date_value
+    else
+      Rails.logger.error("Enable Banking transaction has invalid date value: #{date_value.inspect}")
+      raise ArgumentError, "Invalid date format: #{date_value.inspect}"
+    end
+  end
+
+  # True when the transaction represents an unfinalized card authorization hold
+  # (missing provider identifiers, no legitimate counterparty name, and a masked
+  # card descriptor in remittance or transaction code).
+  # Certain institutions expose un-finalized card holds this way even under a "BOOK" status payload.
+  #
+  # @return [Boolean]
+  def self.unidentified_hold?(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    return false unless identifierless?(data)
+    return false if party_name(data, :creditor).present?
+
+    if data[:credit_debit_indicator] == "CRDT"
+      return false if party_name(data, :debtor).present?
+    end
+
+    masked_card_descriptor?(data)
+  end
+
+  # True when the transaction's remittance information or bank transaction code
+  # consists of a masked card descriptor.
+  #
+  # When remittance information is present, requires any descriptive (non-technical)
+  # lines to match MASKED_CARD_DESCRIPTOR and prevents firing if a legitimate
+  # payee or merchant descriptor is present alongside a masked card PAN.
+  #
+  # @return [Boolean]
+  def self.masked_card_descriptor?(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    remittance = data[:remittance_information]
+
+    if remittance.present?
+      lines = Array.wrap(remittance)
+        .map { |line| line.to_s.strip.sub(WALLET_PREFIX, "").strip }
+        .reject(&:blank?)
+
+      descriptive_lines = lines.reject { |line| technical_remittance_line?(line) }
+
+      if descriptive_lines.any?
+        return descriptive_lines.all? { |line| masked_card_text?(line) }
+      end
+    end
+
+    masked_card_text?(data.dig(:bank_transaction_code, :description))
+  end
+
+  # True when the ASPSP has flagged this raw payload as not yet settled, or when
+  # the payload represents an unidentified card hold.
+  #
+  # Named pending_payload? rather than the bare pending? that Transaction#pending?
+  # already uses, on purpose: this checks the incoming provider hash, not a
+  # persisted row, and the two are easy to conflate at a glance.
+  #
+  # @return [Boolean]
+  def self.pending_payload?(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    data[:_pending] == true || unidentified_hold?(data)
+  end
+
+  # External ids of the rows stored under a synthesised content hash, which are
+  # the only rows a later identifier can claim.
+  #
+  # Far smaller than the account's history: these are only the transactions the
+  # ASPSP has not yet given an identifier to, which it typically does within a
+  # day.
+  #
+  # Excludes pending rows deliberately: a pending row settling into a booked one
+  # is Enable Banking's own pending->booked reconciliation's job
+  # (Account::ProviderImportAdapter's pending_match), which matches and protects
+  # that transition more conservatively than this claim mechanism does. Without
+  # this exclusion a pending, identifierless row could be claimed here instead,
+  # by a payload that has nothing to do with it settling.
+  #
+  # @return [Set<String>]
+  def self.identifierless_external_ids_for(account)
+    return Set.new if account.blank?
+
+    prefix = ActiveRecord::Base.sanitize_sql_like(CONTENT_ID_PREFIX)
+    Transaction.excluding_pending
+               .joins(:entry)
+               .where(entries: { account_id: account.id, source: "enable_banking" })
+               .where("entries.external_id LIKE ?", "#{prefix}%")
+               .pluck("entries.external_id")
+               .compact
+               .to_set
   end
 
   # known_merchant_names: optional pre-fetched Family#known_merchant_names, so a
@@ -59,11 +223,19 @@ class EnableBankingEntry::Processor
   # EnableBankingAccount::Transactions::Processor) can compute it once instead of
   # once per row -- same pattern as the shared import_adapter. Falls back to
   # fetching it lazily per-instance when not provided (e.g. in isolation/tests).
-  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil)
+  #
+  # identifierless_external_ids / excluded_external_ids: the batch's live sets,
+  # same pattern again. Both are mutated as claims happen, so a row later in the
+  # same batch sees what earlier rows did -- excluded_ids in the batch processor
+  # is built once, before the loop, and would otherwise be stale.
+  def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil,
+                 identifierless_external_ids: nil, excluded_external_ids: nil)
     @enable_banking_transaction = enable_banking_transaction
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
     @known_merchant_names = known_merchant_names
+    @identifierless_external_ids = identifierless_external_ids
+    @excluded_external_ids = excluded_external_ids
   end
 
   def process
@@ -76,7 +248,17 @@ class EnableBankingEntry::Processor
       return nil
     end
 
-    begin
+    claim_identifierless_predecessor!
+
+    # EnableBankingAccount::Transactions::Processor re-processes the whole stored
+    # payload on every sync, so a live hold passes through here once per sync until
+    # it settles. Only the first import is worth a diagnostic. Evaluated before the
+    # import, which is what creates the row. A hold is always identifierless with a
+    # masked descriptor, so safe_id is its real content-hash id, never "unknown".
+    first_hold_import = unidentified_hold? &&
+      !account.entries.exists?(source: "enable_banking", external_id: safe_id)
+
+    entry = begin
       import_adapter.import_transaction(
         external_id: external_id,
         amount: amount,
@@ -99,6 +281,10 @@ class EnableBankingEntry::Processor
       Rails.logger.error e.backtrace.join("\n")
       raise StandardError.new("Unexpected error importing transaction: #{e.message}")
     end
+
+    capture_unidentified_hold_diagnostic(entry, external_id: safe_id) if first_hold_import && entry
+
+    entry
   end
 
   private
@@ -124,6 +310,8 @@ class EnableBankingEntry::Processor
     end
 
     def name
+      return HOLD_TRANSACTION_NAME if unidentified_hold?
+
       # Build name from available Enable Banking transaction fields
       # Priority: counterparty name > bank_transaction_code description > remittance_information
 
@@ -150,6 +338,8 @@ class EnableBankingEntry::Processor
     end
 
     def merchant
+      return nil if unidentified_hold?
+
       # Use the counterparty when it is human readable; otherwise fall back to remittance
       # for CARD-* transactions where the remittance often contains the actual merchant
       merchant_name = merchant_name_candidate
@@ -194,7 +384,7 @@ class EnableBankingEntry::Processor
       end
 
       eb[:merchant_category_code] = data[:merchant_category_code] if data[:merchant_category_code].present?
-      eb[:pending] = true if data[:_pending] == true
+      eb[:pending] = true if pending_payload?
 
       eb.compact!
       eb.empty? ? nil : { enable_banking: eb }
@@ -217,7 +407,18 @@ class EnableBankingEntry::Processor
         # Sure convention: positive = outflow (expense/debit from account), negative = inflow (income/credit)
         # Enable Banking: DBIT = debit from account (outflow), CRDT = credit to account (inflow)
         # Therefore: DBIT → +absolute_amount, CRDT → -absolute_amount
-        credit_debit_indicator == "CRDT" ? -absolute_amount : absolute_amount
+        #
+        # For unidentified card authorization holds, the ASPSP
+        # erroneously returns credit_debit_indicator: "CRDT" for an authorization hold on an outflow.
+        # Force these holds to positive (outflow/expense in Sure) so they appear as pending expenses
+        # and match the settled expense when it arrives.
+        if unidentified_hold?
+          absolute_amount
+        elsif credit_debit_indicator == "CRDT"
+          -absolute_amount
+        else
+          absolute_amount
+        end
       rescue ArgumentError => e
         Rails.logger.error "Failed to parse Enable Banking transaction amount: #{raw_amount.inspect} - #{e.message}"
         raise
@@ -270,18 +471,7 @@ class EnableBankingEntry::Processor
     end
 
     def technical_remittance_line?(value)
-      line = value.to_s.strip
-      # Terminal booking line, e.g. "POS   45,13 AT  D6   31.07. 10:27": require the
-      # keyword+amount prefix AND the trailing date+time stamp TOGETHER, not either
-      # alone. Either signal in isolation false-positives on legitimate descriptors:
-      # a line like "POS 45,13 BILLA DANKT ..." (merchant appended after the amount,
-      # no separate technical-only element) would wrongly match on the prefix alone,
-      # and a line like "Invoice paid 31.07. 10:27" would wrongly match on the date
-      # suffix alone. Requiring both matches every real technical line observed in
-      # production while leaving both of those legitimate shapes untouched. Day/month
-      # accept 1-2 digits (not just 2) so an un-padded ASPSP date ("1.07." instead of
-      # "01.07.") is still recognized as technical.
-      line.match?(/\A(POS|ATM)\s+\d+[.,]\d{2}\b.*\d{1,2}[.\/]\d{1,2}\.?\s+\d{2}:\d{2}\z/i)
+      self.class.technical_remittance_line?(value)
     end
 
     def strip_payment_processor_prefix(value)
@@ -311,6 +501,101 @@ class EnableBankingEntry::Processor
 
     def known_merchant_names
       @known_merchant_names ||= account&.family&.known_merchant_names || []
+    end
+
+    def identifierless_external_ids
+      @identifierless_external_ids ||= self.class.identifierless_external_ids_for(account)
+    end
+
+    def excluded_external_ids
+      @excluded_external_ids ||= Set.new
+    end
+
+    # Re-key the row this movement was already imported under, when the ASPSP has
+    # since given it an identifier.
+    #
+    # Some ASPSPs return a transaction with neither transaction_id nor
+    # entry_reference on the day it happens and assign one once the statement
+    # closes. compute_external_id prefers the identifier and falls back to a
+    # content hash, so the same movement arrives under a second identity, does not
+    # match existing_ids, and imports again.
+    #
+    # Re-keying rather than skipping means import_transaction upserts onto the row
+    # that is already there, so its category, merchant and any transfer link
+    # survive.
+    #
+    # @return [void]
+    def claim_identifierless_predecessor!
+      return if account.blank?
+      return if self.class.identifierless?(data)
+      # A pending row can carry a real transaction_id/entry_reference (unlike a
+      # BOOK row without one, which is the case this method exists for) and
+      # Enable Banking's own pending->booked reconciliation in
+      # Account::ProviderImportAdapter already matches and protects that
+      # transition more conservatively. Keeping this claim scoped to BOOK on both
+      # sides avoids the two mechanisms fighting over the same row.
+      return if pending_payload?
+
+      incoming = self.class.compute_external_id(data)
+      return if incoming.blank?
+
+      content_id = self.class.compute_external_id(data.except(:transaction_id, :entry_reference))
+      return if content_id.blank? || !identifierless_external_ids.include?(content_id)
+
+      # Already stored under its own identifier: nothing to claim, and re-keying
+      # would collide with it. This also keeps two genuinely identical charges
+      # apart within this mechanism -- the second finds the predecessor already
+      # taken and imports as its own row. (Such charges only get this far when
+      # they differ in transaction_id: EnableBankingItem::Importer's content-level
+      # dedup collapses them otherwise, see #2720.) Only reached once a
+      # predecessor has been found, so it costs a query per claim rather than one
+      # per transaction.
+      return if account.entries.exists?(source: "enable_banking", external_id: incoming)
+
+      predecessor = account.entries.find_by(source: "enable_banking", external_id: content_id)
+      return if predecessor.nil?
+
+      # Both writes or neither. A re-key whose superseded record was lost would
+      # leave the next sync free to reimport the identifierless payload row as a
+      # fresh duplicate, which is the bug this method exists to prevent.
+      #
+      # The row is locked and re-read inside the transaction because the
+      # predecessor was found outside it: EnableBankingItem::Syncer#perform_sync
+      # processes transactions before scheduling account syncs, so two overlapping
+      # item syncs can reach the same row. Re-checking external_id under the lock
+      # means the second one steps aside instead of overwriting the identifier the
+      # first just assigned.
+      claimed = false
+      ActiveRecord::Base.transaction do
+        predecessor.lock!
+        next unless predecessor.external_id == content_id
+
+        predecessor.update_column(:external_id, incoming)
+        record_superseded_identifier!(predecessor, content_id)
+        claimed = true
+      end
+      return unless claimed
+
+      identifierless_external_ids.delete(content_id)
+      excluded_external_ids.add(content_id)
+    end
+
+    # Record the identifier a row no longer answers to.
+    #
+    # The stored raw payload is never pruned and every sync re-walks all of it, so
+    # without this the identifierless row would find nothing under its content
+    # hash and insert a duplicate on the next run.
+    #
+    # @return [void]
+    def record_superseded_identifier!(entry, abandoned_id)
+      transaction = entry.entryable
+      return unless transaction.is_a?(Transaction)
+
+      extra = transaction.extra.presence || {}
+      recorded = Array(extra[SUPERSEDED_IDS_KEY])
+      return if recorded.include?(abandoned_id)
+
+      transaction.update_column(:extra, extra.merge(SUPERSEDED_IDS_KEY => recorded + [ abandoned_id ]))
     end
 
     def merchant_name_candidate
@@ -348,28 +633,44 @@ class EnableBankingEntry::Processor
     end
 
     def date
-      # Prefer booking_date, fall back to value_date, then transaction_date
-      date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
-
-      case date_value
-      when String
-        if date_value.include?("T") || date_value.include?(":")
-          Time.parse(date_value).in_time_zone(account&.family&.timezone).to_date
-        else
-          Date.parse(date_value)
-        end
-      when Integer, Float
-        Time.at(date_value).in_time_zone(account&.family&.timezone).to_date
-      when Time, DateTime
-        date_value.in_time_zone(account&.family&.timezone).to_date
-      when Date
-        date_value
-      else
-        Rails.logger.error("Enable Banking transaction has invalid date value: #{date_value.inspect}")
-        raise ArgumentError, "Invalid date format: #{date_value.inspect}"
-      end
+      self.class.transaction_date(data, account&.family&.timezone)
     rescue ArgumentError, TypeError => e
+      date_value = data[:booking_date] || data[:value_date] || data[:transaction_date]
       Rails.logger.error("Failed to parse Enable Banking transaction date '#{date_value}': #{e.message}")
       raise ArgumentError, "Unable to parse transaction date: #{date_value.inspect}"
+    end
+
+    def pending_payload?
+      data[:_pending] == true || unidentified_hold?
+    end
+
+    # Called only after a successful first import of a hold. Every argument was
+    # already evaluated by that import, so nothing here can raise before
+    # DebugLogEntry.capture's own rescue takes over.
+    #
+    # Enable Banking amounts are absolute and the direction is carried by
+    # credit_debit_indicator, so the sign was inverted exactly when the hold
+    # arrived as CRDT. A DBIT hold is still normalized (name, merchant, pending)
+    # but keeps its sign.
+    def capture_unidentified_hold_diagnostic(entry, external_id:)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: HOLD_DIAGNOSTIC_MESSAGE,
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: account.family,
+        account: account,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          external_id: external_id,
+          entry_id: entry.id,
+          raw_amount: (data.dig(:transaction_amount, :amount) || data[:amount]).to_s,
+          credit_debit_indicator: credit_debit_indicator,
+          sign_inverted: credit_debit_indicator == "CRDT",
+          amount: amount.to_s,
+          currency: currency
+        }
+      )
     end
 end

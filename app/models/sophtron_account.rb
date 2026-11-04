@@ -16,6 +16,7 @@
 # @attr [JSONB] raw_payload Raw account data from Sophtron API
 # @attr [JSONB] raw_transactions_payload Raw transaction data from Sophtron API
 # @attr [DateTime] last_updated When Sophtron last updated this account
+# @attr [String, nil] balance_sign_override Credit card meaning: "credit", "debt", or nil for automatic
 class SophtronAccount < ApplicationRecord
   include CurrencyNormalizable
 
@@ -30,12 +31,33 @@ class SophtronAccount < ApplicationRecord
   scope :automatic_sync, -> { where(manual_sync: false) }
 
   validates :name, :currency, presence: true
+  validates :balance_sign_override, inclusion: { in: %w[credit debt], allow_nil: true }
   validate :has_balance
+
   # Returns the linked Maybe Account for this Sophtron account.
   #
   # @return [Account, nil] The linked Maybe Account, or nil if not linked
   def current_account
     account
+  end
+
+  # Saves the override, applies it to the stored provider balance, and schedules
+  # the linked account sync atomically. A failure leaves the previous setting in
+  # place so the same selection can be retried.
+  #
+  # An item sync is not enough when this card or its parent item is marked for
+  # manual sync: SophtronItem::Syncer only processes automatic accounts, so the
+  # override would sit unused until the user finishes that flow.
+  #
+  # @return [void]
+  def apply_balance_sign_override!(override)
+    transaction(requires_new: true) do
+      update!(balance_sign_override: override)
+      next unless saved_change_to_balance_sign_override? && current_account.present?
+
+      SophtronAccount::Processor.new(self).process_account!
+      current_account.sync_later
+    end
   end
 
   def institution_name

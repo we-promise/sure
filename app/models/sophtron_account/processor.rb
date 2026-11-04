@@ -5,7 +5,7 @@
 # 2. Processing stored transactions to create Maybe Transaction records
 #
 # The processor handles currency normalization and sign conventions for
-# different account types (e.g., credit cards use inverted signs).
+# different account types. Credit cards can override the historical sign flip.
 class SophtronAccount::Processor
   include CurrencyNormalizable
 
@@ -46,46 +46,42 @@ class SophtronAccount::Processor
     process_transactions
   end
 
-  private
-
-    # Updates the linked Maybe Account's balance from Sophtron data.
-    #
-    # Handles sign conventions for different account types:
-    # - CreditCard and Loan accounts use inverted signs (negated)
-    # - Other account types use Sophtron's native sign convention
-    #
-    # @return [void]
-    # @raise [ActiveRecord::RecordInvalid] if the account update fails
-    def process_account!
-      if sophtron_account.current_account.blank?
-        Rails.logger.error("Sophtron account #{sophtron_account.id} has no associated Account")
-        return
-      end
-
-      # Update account balance from latest Sophtron data
-      account = sophtron_account.current_account
-      balance = sophtron_account.balance || sophtron_account.available_balance || 0
-
-      # Sophtron balance convention matches our app convention:
-      # - Positive balance = debt (you owe money)
-      # - Negative balance = credit balance (bank owes you, e.g., overpayment)
-      # No sign conversion needed - pass through as-is (same as Plaid)
-      #
-      # Exception: CreditCard and Loan accounts return inverted signs
-      # Provider returns negative for positive balance, so we negate it
-      if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
-        balance = -balance
-      end
-
-      # Normalize currency with fallback chain: parsed sophtron currency -> existing account currency -> USD
-      currency = parse_currency(sophtron_account.currency) || account.currency || "USD"
-      # Update account balance
-      account.update!(
-        balance: balance,
-        cash_balance: balance,
-        currency: currency
-      )
+  # Updates the linked Maybe Account's balance from Sophtron data.
+  #
+  # Handles sign conventions for different account types:
+  # - Credit cards negate the provider balance unless a balance sign
+  #   override says the amount is debt or a genuine credit
+  # - Loans always use inverted signs (negated)
+  # - Other account types use Sophtron's native sign convention
+  #
+  # @return [void]
+  # @raise [StandardError] if the account or its current balance anchor cannot be updated
+  def process_account!
+    account = sophtron_account.current_account
+    if account.blank?
+      Rails.logger.error("Sophtron account #{sophtron_account.id} has no associated Account")
+      return
     end
+
+    # Update account balance from latest Sophtron data
+    observed = sophtron_account.balance || sophtron_account.available_balance || 0
+    balance = signed_balance(account, observed)
+
+    # Normalize currency with fallback chain: parsed sophtron currency -> existing account currency -> USD
+    currency = parse_currency(sophtron_account.currency) || account.currency || "USD"
+
+    # The anchor is what a later account sync reads. Write it here, without
+    # queueing that sync, so the caller can schedule one sync after every
+    # account has been updated.
+    ActiveRecord::Base.transaction do
+      account.update!(currency: currency)
+      result = account.set_current_balance(balance, schedule_sync: false)
+      raise StandardError, "Failed to set current balance: #{result.error}" unless result.success?
+      account.update!(cash_balance: balance) unless result.historical?
+    end
+  end
+
+  private
 
     # Processes all stored transactions for this account.
     #
@@ -101,6 +97,33 @@ class SophtronAccount::Processor
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
       report_exception(e, "transactions")
       raise
+    end
+
+    # Converts a Sophtron balance into Sure's stored sign.
+    #
+    # Sure stores liability debt as a positive amount. Automatic mode keeps
+    # the historical flip for credit cards and loans. An explicit credit card
+    # override is authoritative because some Sophtron institutions already
+    # report debt as positive and others report it as negative.
+    #
+    # @param account [Account] The linked Maybe account
+    # @param observed [Numeric] The provider balance
+    # @return [Numeric] The balance to store
+    def signed_balance(account, observed)
+      if account.accountable_type == "CreditCard"
+        case sophtron_account.balance_sign_override
+        when "credit"
+          -observed.abs
+        when "debt"
+          observed.abs
+        else
+          -observed
+        end
+      elsif account.accountable_type == "Loan"
+        -observed
+      else
+        observed
+      end
     end
 
     # Reports an exception to Sentry with Sophtron account context.

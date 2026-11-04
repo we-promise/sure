@@ -182,7 +182,9 @@ class Holding::Materializer
     end
 
     # Remove only calculated holdings that collide with an authoritative provider snapshot
-    # on the exact same key. This preserves reverse-calculated history for linked accounts.
+    # for the same security and date. This preserves reverse-calculated history for linked accounts.
+    # Currency is not part of the match: providers can report a position in its own currency while
+    # calculated rows are always in the account currency, and keeping both counts the position twice.
     def cleanup_shadowed_calculated_holdings
       deleted_count = account.holdings
         .where(account_provider_id: nil)
@@ -193,7 +195,6 @@ class Holding::Materializer
             WHERE provider_holdings.account_id = holdings.account_id
               AND provider_holdings.security_id = holdings.security_id
               AND provider_holdings.date = holdings.date
-              AND provider_holdings.currency = holdings.currency
               AND provider_holdings.account_provider_id IS NOT NULL
           )
         SQL
@@ -246,11 +247,45 @@ class Holding::Materializer
       return nil unless result
 
       cost_basis, snap_currency, snap_date = result
+      cost_basis = split_adjusted_cost_basis(cost_basis, holding.security_id, snap_date, holding.date)
       return cost_basis if snap_currency == holding.currency
 
       Money.new(cost_basis, snap_currency).exchange_to(holding.currency, date: snap_date).amount
     rescue Money::ConversionError
       nil
+    end
+
+    # The snapshot's per-share cost, restated for the share count the holding
+    # is on.
+    #
+    # The figure carried forward is per share, and a split changes how many
+    # shares the same money bought: a $100 basis across a 2-for-1 split is $50
+    # a share afterwards, on twice as many shares, for the same $1,000 total.
+    # Carried across unchanged it doubled every position's recorded cost, and
+    # every gain and return computed from it, without anything looking wrong.
+    def split_adjusted_cost_basis(cost_basis, security_id, snap_date, holding_date)
+      factor = cumulative_split_factor(security_id, snap_date, holding_date)
+      return cost_basis if factor == 1
+
+      Security::Split.unscale(cost_basis, factor)
+    end
+
+    def cumulative_split_factor(security_id, from, to)
+      return Rational(1) if from.nil? || to.nil? || from >= to
+
+      splits_by_security[security_id].reduce(Rational(1)) do |factor, split|
+        next factor unless split.ex_date > from && split.ex_date <= to
+
+        factor * split.ratio
+      end
+    end
+
+    def splits_by_security
+      @splits_by_security ||= Security::Split
+        .where(security_id: @holdings.map(&:security_id).uniq)
+        .order(:ex_date)
+        .group_by(&:security_id)
+        .tap { |grouped| grouped.default = [] }
     end
 
     def provider_cost_basis_snapshots

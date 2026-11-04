@@ -146,6 +146,8 @@ ru:
           title: API-ключ
           what_you_can_do: 'Что вы можете делать с API:'
         title: Управление API-ключами
+      key_reveal:
+        copied: Скопировано!
     api_keys_controller:
       revoke_failed: Не удалось отозвать API-ключ
       revoked_successfully: API-ключ успешно отозван

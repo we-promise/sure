@@ -1,0 +1,15 @@
+---
+tr:
+  recurring_allocations:
+    over_allocation: Bu, işlem tutarından daha fazlasını tahsis eder
+    missing_rate: Kullanılabilir döviz kuru yok; tutarı açıkça girin
+    already_allocated: Bu işlem zaten bu faturaya ödeme olarak kaydedilmiş
+    invalid: Ödeme kaydedilemedi
+    create:
+      success: Ödeme kaydedildi
+    destroy:
+      success: Ödeme bağlantısı kaldırıldı
+    confirm:
+      success: Ödeme faturaya kaydedildi
+    reject:
+      success: Yok sayıldı. Bu işlem bu fatura için bir daha önerilmeyecek.

@@ -60,7 +60,7 @@ tr:
         gerektiriyorsa, buradan bağlamadan önce bu adımı tamamlayın.
       link_exchange_submit: Borsayı Bağla
       link_exchange_title: Borsa API'sini Bağla
-      link_wallet_description: CoinStats üzerinden kendi kontrolünüzdeki bir cüzdanı
+      link_wallet_description: CoinStats üzerinden gözetimsiz bir cüzdanı
         veya tek bir zincir üstü adresi takip edin.
       link_wallet_submit: Kripto Cüzdanı Bağla
       link_wallet_title: Cüzdan Adresini Bağla

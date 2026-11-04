@@ -13,6 +13,8 @@ tr:
       model_placeholder: Camry
       year: Yıl
       year_placeholder: '2023'
+      mileage_unit_kilometers: Kilometre
+      mileage_unit_miles: Mil
     new:
       title: Araç bilgilerini girin
     overview:

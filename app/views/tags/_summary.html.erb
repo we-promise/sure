@@ -1,0 +1,35 @@
+<%# locals: (transaction:, variant: :desktop, editable: true) %>
+<% tags = transaction.tags.sort_by { |tag| [ tag.name.downcase, tag.id ] } %>
+
+<%# Several tags render both as full pills and as the compact summary;
+    the tag-fit controller shows the pills whenever they all fit the
+    available width and falls back to the summary otherwise. %>
+<span id="<%= dom_id(transaction, "tag_summary_#{variant}") %>" class="inline-flex min-w-0 max-w-full" <%= "data-tag-empty" if tags.empty? %>>
+  <% if tags.empty? %>
+    <% if editable && variant.to_sym == :desktop %>
+      <%= render DS::Tooltip.new(text: t(".add")) do |tooltip| %>
+        <% tooltip.with_trigger do %>
+          <span class="invisible group-hover:visible in-focus-visible:visible inline-flex items-center justify-center w-7 h-7 rounded-full text-secondary hover:bg-container-inset-hover">
+            <%= icon("tag", size: "sm", color: "current") %>
+            <span class="sr-only"><%= t(".add") %></span>
+          </span>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% elsif tags.one? %>
+    <%= render "tags/summary_tooltip", tags: tags, editable: editable %>
+  <% else %>
+    <span class="inline-flex min-w-0 max-w-full" data-controller="tag-fit">
+      <span data-tag-fit-target="full" hidden>
+        <%= tag.span class: ["inline-flex items-center gap-1", { "rounded-full focus-ring": !editable }] do %>
+          <% tags.each do |tag| %>
+            <%= render DS::Pill.new(label: tag.name, custom_color: tag.color, marker: false, size: :md, title: "") %>
+          <% end %>
+        <% end %>
+      </span>
+      <span class="inline-flex min-w-0 max-w-full" data-tag-fit-target="compact">
+        <%= render "tags/summary_tooltip", tags: tags, editable: editable %>
+      </span>
+    </span>
+  <% end %>
+</span>

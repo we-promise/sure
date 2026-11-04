@@ -11,6 +11,7 @@ tr:
       page_title: Yedek Kodlar
       title: Yedek Kodlarınızı Kaydedin
     create:
+      code_already_used: Bu kod zaten kullanıldı. Lütfen kimlik doğrulayıcı uygulamanızdaki bir sonraki kodu girin.
       invalid_code: Geçersiz doğrulama kodu. Lütfen tekrar deneyin.
     disable:
       success: İki faktörlü kimlik doğrulama devre dışı bırakıldı

@@ -1,0 +1,92 @@
+---
+tr:
+  coinspot_items:
+    provider_connection:
+      default_name: CoinSpot
+      default_description: Bir CoinSpot borsa hesabına bağlanın
+      name: CoinSpot - %{name}
+      description: '%{name} bağlantısını kullanın'
+    create:
+      default_name: CoinSpot
+      success: CoinSpot'a başarıyla bağlanıldı. Borsa hesabınız senkronize ediliyor.
+    update:
+      success: CoinSpot bağlantısı başarıyla güncellendi.
+    destroy:
+      success: CoinSpot bağlantısı silinmek üzere zamanlandı.
+      unlink_failed: CoinSpot bağlantısı kesilemedi
+    select_accounts:
+      select_connection: Sağlayıcı Ayarları'ndan bir CoinSpot bağlantısı seçin.
+      no_credentials_configured: Hesapları kurmadan önce CoinSpot API kimlik bilgilerini ekleyin.
+    link_accounts:
+      select_connection: Hesapları bağlamadan önce bir CoinSpot bağlantısı seçin.
+    select_existing_account:
+      title: CoinSpot Hesabını Bağla
+      no_accounts_found: CoinSpot hesabı bulunamadı.
+      wait_for_sync: CoinSpot'un senkronizasyonu bitirmesini bekleyin.
+      check_provider_health: CoinSpot API kimlik bilgilerinizin geçerli olduğunu kontrol edin.
+      link: Bağla
+      cancel: İptal
+    link_existing_account:
+      success: CoinSpot hesabına başarıyla bağlandı
+      select_connection: Hesapları bağlamadan önce bir CoinSpot bağlantısı seçin.
+      errors:
+        only_manual: Yalnızca mevcut bir sağlayıcı bağlantısı olmayan manuel Kripto borsa hesapları CoinSpot'a bağlanabilir
+        invalid_coinspot_account: Geçersiz CoinSpot hesabı
+        coinspot_account_already_linked: Bu CoinSpot hesabı zaten bağlı
+    setup_accounts:
+      title: CoinSpot Hesabını İçe Aktar
+      subtitle: Takip edilecek borsa hesabını seçin
+      instructions: CoinSpot, bu bağlantı için bakiyeleri, AUD değerlerini, transferleri, para yatırma ve çekme işlemlerini ve emir geçmişini içeren tek bir birleşik Kripto borsa hesabı içe aktarır.
+      no_accounts: Tüm CoinSpot hesapları içe aktarıldı.
+      accounts_count:
+        one: '%{count} hesap mevcut'
+        other: '%{count} hesap mevcut'
+      select_all: Tümünü seç
+      import_selected: Seçilenleri İçe Aktar
+      cancel: İptal
+      creating: İçe aktarılıyor...
+    complete_account_setup:
+      success:
+        one: '%{count} hesap içe aktarıldı'
+        other: '%{count} hesap içe aktarıldı'
+      none_selected: Hiç hesap seçilmedi
+      no_accounts: İçe aktarılacak hesap yok
+      setup_failed:
+        one: '%{count} hesap içe aktarılamadı'
+        other: '%{count} hesap içe aktarılamadı'
+    coinspot_item:
+      provider_name: CoinSpot
+      syncing: Senkronize ediliyor...
+      reconnect: Kimlik bilgileri güncellenmeli
+      deletion_in_progress: Siliniyor...
+      sync_status:
+        no_accounts: Hesap bulunamadı
+        all_synced:
+          one: '%{count} hesap senkronize edildi'
+          other: '%{count} hesap senkronize edildi'
+        partial_sync: '%{linked_count} senkronize edildi, %{unlinked_count} kurulum gerektiriyor'
+      status: Son senkronizasyon %{timestamp} önce
+      status_with_summary: Son senkronizasyon %{timestamp} önce - %{summary}
+      status_never: Hiç senkronize edilmedi
+      delete: Sil
+      no_accounts_title: Hesap bulunamadı
+      no_accounts_message: CoinSpot borsa hesabınız senkronizasyondan sonra burada görünecek.
+      setup_needed: Hesap içe aktarmaya hazır
+      setup_description: Bu CoinSpot bağlantısını bir Kripto borsa hesabı olarak içe aktarın.
+      setup_action: Hesabı İçe Aktar
+      import_accounts_menu: Hesabı İçe Aktar
+      stale_rate_warning: Bakiye yaklaşık bir değerdir çünkü %{date} tarihi için kesin döviz kuru mevcut değildi. Bir sonraki senkronizasyonda güncellenecektir.
+  coinspot_item:
+    syncer:
+      checking_credentials: Kimlik bilgileri kontrol ediliyor...
+      credentials_invalid: Geçersiz CoinSpot API kimlik bilgileri. Lütfen API anahtarınızı ve gizli anahtarınızı kontrol edin.
+      importing_accounts: CoinSpot'tan hesaplar içe aktarılıyor...
+      checking_configuration: Hesap yapılandırması kontrol ediliyor...
+      accounts_need_setup:
+        one: '%{count} hesap kurulum gerektiriyor'
+        other: '%{count} hesap kurulum gerektiriyor'
+      processing_accounts: Hesap verileri işleniyor...
+      processing_failed:
+        one: '%{count} CoinSpot hesabı işlenemedi'
+        other: '%{count} CoinSpot hesabı işlenemedi'
+      calculating_balances: Bakiyeler hesaplanıyor...

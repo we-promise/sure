@@ -1,7 +1,10 @@
-<%# locals: (simplefin_item:) %>
+<%# locals: (simplefin_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(simplefin_item) do %>
   <% accounts = simplefin_item.accounts %>
+  <%# The names below come from every account on the connection, so a viewer
+      shared only some of them sees counts, not names (#3630). %>
+  <% all_accounts_visible = visible_accounts.size == accounts.size %>
   <%# Compute unlinked count early so it's available for both menu and bottom section %>
   <% unlinked_count = if defined?(@simplefin_unlinked_count_map) && @simplefin_unlinked_count_map
        @simplefin_unlinked_count_map[simplefin_item.id] || 0
@@ -33,7 +36,7 @@
                 <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
               <% end %>
             </div>
-            <% if accounts.any? %>
+            <% if all_accounts_visible && accounts.any? %>
               <p class="text-xs text-secondary">
                 <%= simplefin_item.institution_summary %>
               </p>
@@ -96,7 +99,7 @@
                   <%= tag.span pending_status[:message], class: "text-sm" %>
                   <span class="text-xs text-subdued"><%= t(".stale_pending_note") %></span>
                 </div>
-                <% if pending_status[:accounts]&.any? %>
+                <% if all_accounts_visible && pending_status[:accounts]&.any? %>
                   <div class="text-xs text-subdued ml-5">
                     <%= t(".stale_pending_accounts", accounts: pending_status[:accounts].join(", ")) %>
                   </div>
@@ -187,14 +190,14 @@
         <%# Replacement suggestions from the ReplacementDetector (card-fraud swap, etc.).
            Only rendered when the latest sync flagged candidate pairs. %>
         <% suggestions = ((@simplefin_sync_stats_map || {})[simplefin_item.id] || {})["replacement_suggestions"] %>
-        <% if suggestions.is_a?(Array) && suggestions.any? %>
+        <% if all_accounts_visible && suggestions.is_a?(Array) && suggestions.any? %>
           <%= render "simplefin_items/replacement_prompt",
                      simplefin_item: simplefin_item,
                      suggestions: suggestions %>
         <% end %>
 
-        <% if accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <%# Sync summary (collapsible) - using shared ProviderSyncSummary component
@@ -209,7 +212,8 @@
         <%= render ProviderSyncSummary.new(
           stats: stats,
           provider_item: simplefin_item,
-          institutions_count: simplefin_item.connected_institutions.size
+          institutions_count: simplefin_item.connected_institutions.size,
+          show_account_details: all_accounts_visible
         ) %>
 
         <% if unlinked_count.to_i > 0 && accounts.empty? %>

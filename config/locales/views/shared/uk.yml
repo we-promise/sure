@@ -22,12 +22,15 @@ uk:
       exchange_rate: Обмінний курс
       exchange_rate_help: Виберіть, як вводити суму.
     syncing_notice:
-      syncing: Синхронізація даних облікових записів...
+      syncing: Синхронізація даних рахунків...
     require_admin: "Тільки адміністратори можуть виконувати цю дію"
     custom_confirm:
       default_title: "Ви впевнені?"
       default_body: "Це незворотно."
       default_btn_text: "Підтвердити"
+      resource_deletion_title: Видалити %{resource}?
+      resource_deletion_body: Ви впевнені, що хочете видалити %{resource}? Цю дію неможливо скасувати.
+      resource_deletion_btn_text: Видалити %{resource}
     family_moniker:
       group_plural: Групи
       group_singular: Група
@@ -40,3 +43,13 @@ uk:
       expense: Витрата
       income: Дохід
       transfer: Переказ
+    require_connector_owner: Ви можете керувати лише з'єднаннями, які додали самі
+    sidekiq_health_banner:
+      title: Деякі дані можуть бути застарілими
+      body: Фонові завдання не обробляються, тому баланси, чистий капітал і синхронізація рахунків можуть бути застарілими або відсутніми.
+      cta: Переглянути стан системи
+      reasons:
+        redis_unreachable: Застосунок не може під'єднатися до Redis. Перевірте REDIS_URL і чи запущено Redis.
+        no_worker_processes: Не підключено жодного робочого процесу Sidekiq. Запустіть контейнер воркера або модуль systemd.
+        stale_heartbeat: Робочий процес Sidekiq останнім часом не надсилав сигналів активності. Можливо, він завис або аварійно завершився.
+        queue_backed_up: Найстаріше завдання в черзі чекає довше за допустиму затримку. Робочий процес працює, але не встигає.
