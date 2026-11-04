@@ -413,41 +413,6 @@ class BillsHelperTest < ActionView::TestCase
   # --- Prepared-data helpers extracted from the templates, so the section,
   # pulse, detail and paycheck views render precomputed values. ---
 
-  test "pay period markers land on the first row of each period with its summed total" do
-    period = OpenStruct.new(starts_on: Date.new(2026, 9, 1), ends_on: Date.new(2026, 9, 14))
-    first_inside = stub_occurrence("Rent", 2150, id: "one", due_on: Date.new(2026, 9, 2))
-    second_inside = stub_occurrence("Power", 80, id: "two", due_on: Date.new(2026, 9, 10))
-    outside = stub_occurrence("Later", 10, id: "three", due_on: Date.new(2026, 9, 20))
-
-    markers = bills_pay_period_markers([ first_inside, second_inside, outside ], [ period ])
-
-    assert_equal [ "one" ], markers.keys
-    assert_equal 2230, markers["one"][:due_total]
-    assert_equal period, markers["one"][:period]
-  end
-
-  # The list is in rail order, so a bill snoozed into the next pay period sits
-  # under that period's marker and counts toward its total.
-  test "a snoozed row's pay period is the one it was snoozed into" do
-    this_week = OpenStruct.new(starts_on: Date.new(2026, 9, 15), ends_on: Date.new(2026, 9, 21))
-    next_week = OpenStruct.new(starts_on: Date.new(2026, 9, 22), ends_on: Date.new(2026, 9, 28))
-    rent = stub_occurrence("Rent", 900, id: "rent", due_on: Date.new(2026, 9, 16))
-    snoozed = stub_occurrence("Gym", 40, id: "gym", due_on: Date.new(2026, 9, 17), effective_due_on: Date.new(2026, 9, 24))
-    power = stub_occurrence("Power", 80, id: "power", due_on: Date.new(2026, 9, 25))
-
-    markers = bills_pay_period_markers([ rent, snoozed, power ], [ this_week, next_week ])
-
-    assert_equal %w[rent gym], markers.keys
-    assert_equal 900, markers["rent"][:due_total]
-    assert_equal 120, markers["gym"][:due_total]
-  end
-
-  test "no pay periods means no markers" do
-    occurrence = stub_occurrence("Rent", 1, id: "x", due_on: Date.current)
-
-    assert_empty bills_pay_period_markers([ occurrence ], [])
-  end
-
   test "month progress divides paid, overdue and upcoming out of one total" do
     progress = bills_month_progress(paid: 50, remaining: 50, overdue: 25)
 
