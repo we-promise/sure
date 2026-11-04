@@ -25,8 +25,9 @@ class Account::Syncer
 
   private
     # A method saved while this run was calculating left its figures on the
-    # old one, and the form's sync_later folded into this run. Once it has
-    # completed, a new sync restates them. Post-sync also runs after a failed
+    # old one. Once this run has completed, a sync restates them; if the save
+    # already queued one through sync_later, that pending sync is joined
+    # rather than a second one queued. Post-sync also runs after a failed
     # sync; that one queues nothing, since each failure would queue another,
     # and the next sync to complete restates the figures.
     def restate_if_cost_basis_method_changed

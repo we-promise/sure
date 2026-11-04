@@ -156,7 +156,7 @@ class SophtronItemTest < ActiveSupport::TestCase
     sync = @item.syncs.create!
     sync.start!
 
-    assert_no_difference "@item.syncs.count" do
+    assert_difference "@item.syncs.count", 1 do
       assert_enqueued_with job: SophtronInitialLoadJob do
         @item.start_initial_load_later
       end

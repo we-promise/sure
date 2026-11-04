@@ -69,7 +69,7 @@ class Financekit::DisconnectTest < ActiveSupport::TestCase
   test "a discard hands an emptied account back to sync so its balance matches what remains" do
     accept_and_apply
     link_lineage!
-    # Asserted on the call rather than on an enqueue: sync_later reuses a visible
+    # Asserted on the call rather than on an enqueue: sync_later reuses a pending
     # sync, and the import that just ran already created one.
     Account.any_instance.expects(:sync_later).at_least_once
 

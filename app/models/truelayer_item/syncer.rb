@@ -46,10 +46,11 @@ class TruelayerItem::Syncer
     raise
   end
 
-  # A consent that completes while a sync is running attaches to that sync
-  # (Syncable#sync_later), which decided at its start not to backfill. Run
-  # once more while the bank still releases full history; a sync that began
-  # after the consent already had its chance, so this cannot loop.
+  # A sync that is running when a consent completes decided at its start not
+  # to backfill. Run once more while the bank still releases full history; if
+  # the consent's own sync_later already queued a sync, that pending sync is
+  # joined rather than a second one queued. A sync that began after the
+  # consent already had its chance, so this cannot loop.
   def perform_post_sync
     return unless truelayer_item.full_history_available? && truelayer_item.history_backfilled_at.nil?
 

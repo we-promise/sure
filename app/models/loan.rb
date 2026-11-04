@@ -338,9 +338,9 @@ class Loan < ApplicationRecord
     @balance_inputs_changed = false
     return unless account
 
-    # A running sync cannot widen its window, so reusing it would keep the
-    # balance seeded from the old window. Mark it for a full sync after it
-    # finishes.
+    # A running sync cannot widen its window and keeps the balance seeded from
+    # the old one. Mark it for a full sync after it finishes rather than
+    # queuing a partial follow-up behind it.
     if (sync = account.syncs.visible.where(status: "syncing").first)
       sync.update!(full_resync_requested: true)
       # The sync can finish between the lookup and the update. Its own

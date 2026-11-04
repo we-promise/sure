@@ -219,9 +219,8 @@ class SnaptradeItem < ApplicationRecord
     super || linked_snaptrade_accounts.where(activities_fetch_pending: true).exists?
   end
 
-  # Queue a fresh import after an in-flight item sync. This is needed when a
-  # user completes OAuth, adds a brokerage, or links an account midway through
-  # a sync: Syncable#sync_later intentionally reuses the in-flight Sync.
+  # Queue a fresh import after an in-flight item sync, for a user who completes
+  # OAuth, adds a brokerage, or links an account midway through a sync.
   def sync_later_with_follow_up
     active_sync = syncs.visible.ordered.first
     sync_later
