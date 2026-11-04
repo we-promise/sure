@@ -1,0 +1,11 @@
+connected:
+  family: dylan_family
+  name: StashAway
+  status: good
+  scheduled_for_deletion: false
+  pending_account_setup: false
+  email: "investor@example.com"
+  device_id: "4f9c1f0e-6a51-4c39-9d36-0c7d3c5a0b11"
+  region: sg
+  stashaway_user_id: "sa-user-1"
+  api_token: "test-api-token"

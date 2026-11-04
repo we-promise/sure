@@ -1,0 +1,176 @@
+---
+en:
+  providers:
+    stashaway:
+      name: StashAway
+      connection_description: Connect StashAway portfolios with your StashAway login
+      institution_name: StashAway
+  stashaway_items:
+    defaults:
+      name: StashAway
+      display_name: StashAway %{region}
+      account_name: "StashAway %{region}: %{name}"
+    regions:
+      sg: Singapore
+      my: Malaysia
+      hk: Hong Kong
+      ae: MENA
+      th: Thailand
+    # Names of the rows a sync books, in the family's locale.
+    entries:
+      deposit: Deposit
+      withdrawal: Withdrawal
+      portfolio_closed: Withdrawal (portfolio closed)
+      dividend_received: Dividend received
+      dividend_received_for: Dividend received %{code}
+      dividend_rebate: Dividend rebate
+      dividend_tax_reimbursement: Dividend tax reimbursement
+      cash_rebate: Cash rebate
+      management_fee: Management fee
+      management_fee_for: Management fee (%{month})
+      returns_month_end: Returns (month-end adjustment, %{month})
+      returns_month_to_date: Returns (month-to-date adjustment, %{month})
+      converted: "%{name} (%{amount} @ %{rate})"
+    # What a sync reports about the rows it could not plan.
+    plan_warnings:
+      nothing_applied: "nothing applied: %{reason}"
+      reasons:
+        balance_unknown: the account's balance on %{date} is not known yet
+        no_value_history: no %{currency} value history for any portfolio
+        unvalued: "%{names}: no %{currency} value history"
+        undetailed: "%{names}: StashAway has not served this portfolio's detail yet"
+      unknown_type:
+        one: '%{count} StashAway row of unknown type "%{type}" skipped (left to the month-end adjustment)'
+        other: '%{count} StashAway rows of unknown type "%{type}" skipped (left to the month-end adjustment)'
+      no_detail: "%{name}: StashAway has no detail for this portfolio (%{reason})"
+      no_detail_or_value_history: "%{name}: StashAway has no detail for this portfolio (%{reason}) and the detail stored last has no %{currency} value history"
+      stored_detail_used: "%{name}: StashAway has no detail for this portfolio (%{reason}); the detail stored last is used"
+      no_transaction_id: '%{portfolio} %{date}: "%{name}" %{amount} has no StashAway transaction id; left to the month-end adjustment'
+      no_rate: '%{portfolio} %{date}: no %{from}→%{to} rate for "%{name}" %{amount}; left to the month-end adjustment'
+      unavailable:
+        closed: closed
+        error: error
+        not_found: not found
+        empty: empty
+        stale: stale
+        malformed: unreadable answer
+        unlisted: unlisted
+    scheduled_for_deletion: This StashAway connection is being deleted.
+    stashaway_item:
+      deletion_in_progress: Deletion in progress
+      syncing: Syncing
+      requires_update: Sign-in needed
+      sign_in: Sign in
+      error: Error
+      synced: Synced %{time} ago. %{summary}.
+      never_synced: Never synced.
+      setup_accounts: Set up accounts
+      delete: Delete
+      accounts_need_setup: Portfolios need setup
+      accounts_need_setup_description: Link your StashAway portfolios to Sure accounts.
+      no_accounts_discovered: No StashAway portfolios discovered yet.
+      no_accounts_discovered_description: Portfolios appear here after the first sync.
+    setup_accounts:
+      page_title: Set Up StashAway Portfolios
+      dialog_title: Set Up Your StashAway Portfolios
+      subtitle: Link your StashAway portfolios.
+      info_box:
+        title: StashAway Import
+        items:
+          item_1: Portfolios with the same name, funding source and type become one account, such as an archived and an active one.
+          item_2: Deposits, withdrawals, dividends, rebates and management fees, with foreign-currency rows converted at StashAway's own rate.
+          item_3: One returns adjustment per month, so every month ends on StashAway's portfolio value.
+          item_4: An existing account keeps its entries; the import starts the day after its last one.
+      status:
+        fetching_accounts: Fetching portfolios from StashAway...
+        no_accounts_found_title: No portfolios found.
+        no_accounts_found_description: StashAway returned no open portfolio with transactions.
+        not_synced_title: StashAway has not synced yet.
+        not_synced_description: Finish signing in to StashAway in Settings > Providers. Portfolios appear here after the first sync.
+      available_accounts:
+        title: Available portfolios
+        account_types:
+          investment: Investment
+          depository: Savings
+        account_summary: "%{account_type} • Balance: %{balance}"
+        portfolio_count:
+          one: 1 StashAway portfolio
+          other: "%{count} StashAway portfolios"
+      link_existing:
+        description: Or link a portfolio to an existing manual investment or savings account.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Select an account...
+      linked_accounts:
+        title: Already linked
+        linked_to_html: "Linked to: %{account}"
+      buttons:
+        refresh: Refresh
+        cancel: Cancel
+        back_to_settings: Back to Settings
+        create_selected_accounts: Create selected accounts
+        link: Link
+        done: Done
+    sync:
+      status:
+        signing_in: Signing in to StashAway again...
+        importing: Importing StashAway portfolios...
+        accounts_need_setup:
+          one: 1 StashAway portfolio needs setup...
+          other: "%{count} StashAway portfolios need setup..."
+        processing: Processing transactions and returns...
+      errors:
+        sign_in_required: StashAway needs a new sign-in
+        code_required: StashAway asked for an SMS code. Enter it in Settings > Providers to finish signing in.
+        password_refused: "StashAway refused the saved password (%{detail}). Sure has forgotten it; sign in again in Settings > Providers."
+    sync_status:
+      no_accounts: No StashAway portfolios discovered yet
+      all_linked:
+        one: 1 account linked
+        other: "%{count} accounts linked"
+      partial: "%{linked} linked, %{unlinked} need setup"
+    select_existing_account:
+      title: Link StashAway portfolio
+      no_accounts_available: No unlinked StashAway portfolios are available for this account.
+      run_sync_hint: Connect StashAway in Settings > Providers and let it sync.
+      wait_for_sync: Wait for the first sync to finish.
+      account_summary: "%{currency} • Balance: %{balance}"
+      link: Link
+      cancel: Cancel
+    login:
+      password_required: Enter your StashAway password.
+      connected: Signed in to StashAway.
+      code_sent: StashAway sent a code by SMS. Enter it to finish signing in.
+      invalid_credentials: "StashAway did not accept the sign-in: %{detail}"
+      already_connected: This StashAway login is already connected.
+      account_mismatch: That is a different StashAway login from the one this connection belongs to.
+      code_expired: The sign-in timed out. Sign in again for a new code.
+    login_errors:
+      rate_limited: StashAway is limiting requests. Try again in a few minutes.
+      unsupported_verification: StashAway asks for a verification method Sure does not support yet.
+      unsupported_client: StashAway no longer accepts the version of its web app Sure signs in as. Sure needs an update.
+      unavailable: StashAway is not responding right now. Try again later.
+      signed_out: StashAway ended the sign-in. Sign in again.
+      failed: StashAway could not complete the sign-in. Try again later.
+    verify_code:
+      success: Signed in to StashAway.
+      invalid_code: "StashAway did not accept the code: %{detail}"
+    resend_code:
+      success: StashAway sent a new code.
+    forget_password:
+      success: Forgot the StashAway password.
+    destroy:
+      success: Scheduled the StashAway connection for deletion.
+    select_accounts:
+      not_configured: StashAway is not connected.
+    link_existing_account:
+      not_found: Account or StashAway portfolio not found.
+      only_manual: Only manual investment or savings accounts can be linked to StashAway.
+      already_linked: This StashAway portfolio is already linked.
+      success: Linked to the StashAway portfolio.
+      failed: Failed to link the StashAway portfolio.
+    complete_account_setup:
+      success:
+        one: Created %{count} StashAway account.
+        other: Created %{count} StashAway accounts.
+      none_selected: No portfolios were selected.
+      none_created: No accounts were created.
