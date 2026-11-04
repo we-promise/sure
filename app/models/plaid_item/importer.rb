@@ -80,19 +80,22 @@ class PlaidItem::Importer
     # already shares, while persistent_account_id stays the same. Moving the
     # existing PlaidAccount to the new id keeps it, and the Sure account linked to
     # it, instead of importing the account a second time. Only an account Plaid no
-    # longer returns under its old id is taken over. An Item that was already
-    # duplicated before this matching existed holds a stale copy next to the one in
-    # use, so the most recently updated is preferred. The payload is encrypted, so
+    # longer returns under its old id is taken over. The payload is encrypted, so
     # the match is made in Ruby.
+    #
+    # An Item duplicated before this matching existed holds stale copies next to
+    # the one in use. A copy linked to a Sure account is preferred, then the most
+    # recently created, which is the one Plaid moved to last. updated_at cannot
+    # tell them apart, because clearing an omitted copy's liabilities updates it.
     def reissued_plaid_account(raw_account, returned_ids:)
       persistent_id = raw_account.try(:persistent_account_id).presence
       return unless persistent_id
 
-      candidates = plaid_item.plaid_accounts.where.not(plaid_id: returned_ids).order(updated_at: :desc)
-      plaid_account = candidates.detect do |candidate|
+      matches = plaid_item.plaid_accounts.where.not(plaid_id: returned_ids).select do |candidate|
         payload = candidate.raw_payload
         payload.is_a?(Hash) && payload["persistent_account_id"] == persistent_id
       end
+      plaid_account = matches.max_by { |candidate| [ candidate.current_account ? 1 : 0, candidate.created_at ] }
 
       plaid_account&.plaid_id = raw_account.account_id
       plaid_account

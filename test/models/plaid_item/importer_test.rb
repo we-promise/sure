@@ -101,19 +101,15 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "acc_mock_1", existing.reload.plaid_id
   end
 
-  test "takes over the most recently updated copy of an already duplicated account" do
+  # Clearing the liabilities of an omitted copy saves it, so the stale copy can
+  # carry the newest updated_at.
+  test "takes over the newest copy of an already duplicated account" do
     stale = plaid_accounts(:one)
     stale.update!(raw_payload: { "account_id" => stale.plaid_id, "persistent_account_id" => "persistent_acc_1" })
-    stale.update_columns(updated_at: 2.days.ago)
-
-    in_use = @plaid_item.plaid_accounts.create!(
-      plaid_id: "acc_mock_1_duplicate",
-      name: stale.name,
-      plaid_type: "depository",
-      currency: "USD",
-      current_balance: 1000,
-      raw_payload: { "account_id" => "acc_mock_1_duplicate", "persistent_account_id" => "persistent_acc_1" }
-    )
+    in_use = duplicate_plaid_account(plaid_id: "acc_mock_1_duplicate", persistent_account_id: "persistent_acc_1")
+    AccountProvider.create!(account: accounts(:credit_card), provider: in_use)
+    stale.update_columns(created_at: 2.days.ago, updated_at: Time.current)
+    in_use.update_columns(created_at: 1.day.ago, updated_at: 1.day.ago)
 
     stub_accounts_snapshot(
       raw_plaid_account(account_id: "acc_mock_1_reissued", persistent_account_id: "persistent_acc_1")
@@ -125,6 +121,24 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
 
     assert_equal "acc_mock_1_reissued", in_use.reload.plaid_id
     assert_equal "acc_mock_1", stale.reload.plaid_id
+  end
+
+  test "prefers a copy linked to a Sure account over a newer unlinked copy" do
+    linked = plaid_accounts(:one)
+    linked.update!(raw_payload: { "account_id" => linked.plaid_id, "persistent_account_id" => "persistent_acc_1" })
+    linked.update_columns(created_at: 2.days.ago)
+    unlinked = duplicate_plaid_account(plaid_id: "acc_mock_1_duplicate", persistent_account_id: "persistent_acc_1")
+
+    stub_accounts_snapshot(
+      raw_plaid_account(account_id: "acc_mock_1_reissued", persistent_account_id: "persistent_acc_1")
+    )
+
+    assert_no_difference -> { @plaid_item.plaid_accounts.count } do
+      @importer.import
+    end
+
+    assert_equal "acc_mock_1_reissued", linked.reload.plaid_id
+    assert_equal "acc_mock_1_duplicate", unlinked.reload.plaid_id
   end
 
   test "clears requires update status after a successful import" do
@@ -161,6 +175,17 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
         type: "depository",
         subtype: "checking",
         balances: Plaid::AccountBalance.new(current: 1000, available: 1000, iso_currency_code: "USD")
+      )
+    end
+
+    def duplicate_plaid_account(plaid_id:, persistent_account_id:)
+      @plaid_item.plaid_accounts.create!(
+        plaid_id: plaid_id,
+        name: "Plaid Depository Account",
+        plaid_type: "depository",
+        currency: "USD",
+        current_balance: 1000,
+        raw_payload: { "account_id" => plaid_id, "persistent_account_id" => persistent_account_id }
       )
     end
 
