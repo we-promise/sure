@@ -1,0 +1,15 @@
+---
+id:
+  category:
+    deletions:
+      create:
+        success: Kategori transaksi berhasil dihapus
+      new:
+        category: Kategori
+        delete_and_leave_uncategorized: Hapus "%{category_name}" dan biarkan tanpa kategori
+        delete_and_recategorize: Hapus "%{category_name}" dan tetapkan kategori baru
+        delete_category: Hapus kategori?
+        explanation: Dengan menghapus kategori ini, setiap transaksi dengan kategori "%{category_name}"
+          akan menjadi tanpa kategori. Alih-alih membiarkannya tanpa kategori, Anda
+          juga dapat menetapkan kategori baru di bawah ini.
+        replacement_category_prompt: Pilih kategori

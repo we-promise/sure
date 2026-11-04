@@ -1,0 +1,16 @@
+---
+nl:
+  coinspot_item:
+    syncer:
+      checking_credentials: "Inloggegevens controleren..."
+      credentials_invalid: "Ongeldige CoinSpot-API-gegevens. Controleer uw API-sleutel en secret."
+      importing_accounts: "Accounts importeren uit CoinSpot..."
+      checking_configuration: "Accountconfiguratie controleren..."
+      accounts_need_setup:
+        one: "%{count} account moet worden ingesteld"
+        other: "%{count} accounts moeten worden ingesteld"
+      processing_accounts: "Accountgegevens verwerken..."
+      processing_failed:
+        one: "%{count} CoinSpot-account kon niet worden verwerkt"
+        other: "%{count} CoinSpot-accounts konden niet worden verwerkt"
+      calculating_balances: "Saldi berekenen..."

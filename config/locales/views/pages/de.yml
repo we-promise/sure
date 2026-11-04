@@ -15,7 +15,6 @@ de:
       welcome: "Willkommen zurück, %{name}"
       subtitle: "Hier siehst du, was in deinen Finanzen passiert."
       new: "Neu"
-      drag_to_reorder: "Bereich per Drag & Drop neu anordnen"
       toggle_section: "Sichtbarkeit des Bereichs umschalten"
       net_worth_chart:
         data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar.
