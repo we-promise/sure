@@ -862,20 +862,26 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
   end
 
   test "excluding an account from reports recomputes a settled chain" do
-    settle_chain
+    second = settle_chain { |first| spend(30, budget: first) }.last
+    assert_equal 70, stored_rollover(second)
 
     Account.where(id: @account.id).update_all(exclude_from_reports: true)
+    @family = Family.find(@family.id)
+    recompute!
 
-    assert_recompute
+    assert_equal 100, stored_rollover(second)
   end
 
   test "a tax-advantaged subtype recomputes a settled chain" do
     investment = @family.accounts.create!(accountable: Investment.new(subtype: "brokerage"), name: "Brokerage", currency: "USD", balance: 0, status: "active")
-    settle_chain
+    second = settle_chain { |first| create_transaction(account: investment, date: first.start_date, amount: 30, category: @category) }.last
+    assert_equal 70, stored_rollover(second)
 
-    investment.accountable.update_columns(subtype: "401k")
+    investment.accountable.update!(subtype: "401k")
+    @family = Family.find(@family.id)
+    recompute!
 
-    assert_recompute
+    assert_equal 100, stored_rollover(second)
   end
 
   test "a share permission change keeps a settled chain" do
@@ -1233,10 +1239,14 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
 
     def settle_chain
       Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-      allocate(initialized_budget(2.months.ago), 100)
-      allocate(initialized_budget(1.month.ago), 100)
+      first = initialized_budget(2.months.ago)
+      allocate(first, 100)
+      yield first if block_given?
+      second = initialized_budget(1.month.ago)
+      allocate(second, 100)
       recompute!
       recompute!
+      [ first, second ]
     end
 
     # A fresh family, as on the next request: Family memoizes derived reads.
