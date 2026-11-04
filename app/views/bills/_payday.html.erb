@@ -32,25 +32,22 @@
       </p>
     </div>
 
-    <%# The same amount column as a bill row: the figure, then its status under
-        it. Received uses the success tone the Paid label uses on bills. %>
+    <%# The status sits beside the amount, so the figure reads as expected or
+        received. What falls due before the next payday is its own line below. %>
     <div class="shrink-0 text-right min-w-0">
-      <p class="text-sm font-medium text-primary privacy-sensitive whitespace-nowrap">
-        <%= format_money(received && occurrence.confirmed_allocated.positive? ? occurrence.confirmed_allocated_money : amount) %>
+      <p class="flex items-baseline justify-end gap-1.5 text-sm font-medium text-primary privacy-sensitive whitespace-nowrap">
+        <span class="text-xs font-normal <%= received ? "text-success" : "text-secondary" %>"><%= t("bills.payday.#{state}") %></span>
+        <span><%= format_money(received && occurrence.confirmed_allocated.positive? ? occurrence.confirmed_allocated_money : amount) %></span>
       </p>
-      <p class="text-xs <%= received ? "text-success" : "text-secondary" %>">
-        <%= t("bills.payday.#{state}") %>
-        <% if due_before %>
-          &middot;
-          <span class="privacy-sensitive">
-            <% if due_before[:until] %>
-              <%= t("bills.payday.due_before", amount: format_money(due_before[:amount]), date: l(due_before[:until], format: "%-d %b")) %>
-            <% else %>
-              <%= t("bills.payday.due_before_next", amount: format_money(due_before[:amount])) %>
-            <% end %>
-          </span>
-        <% end %>
-      </p>
+      <% if due_before %>
+        <p class="text-xs text-secondary privacy-sensitive">
+          <% if due_before[:until] %>
+            <%= t("bills.payday.due_before", amount: format_money(due_before[:amount]), date: l(due_before[:until], format: "%-d %b")) %>
+          <% else %>
+            <%= t("bills.payday.due_before_next", amount: format_money(due_before[:amount])) %>
+          <% end %>
+        </p>
+      <% end %>
     </div>
   <% end %>
 
