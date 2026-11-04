@@ -52,13 +52,14 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_not item.syncing?
   end
 
-  test "sync_later_with_follow_up queues a follow-up after an active sync" do
+  test "a sync requested during an active sync queues a follow-up" do
     item = snaptrade_items(:configured_item)
     active_sync = item.syncs.create!
     active_sync.start!
 
-    assert_enqueued_with job: SnaptradeFollowUpSyncJob do
-      item.sync_later_with_follow_up
+    assert_difference "item.syncs.count", 1 do
+      item.sync_later
     end
+    assert item.syncs.pending.where.not(id: active_sync.id).exists?
   end
 end
