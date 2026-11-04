@@ -90,6 +90,8 @@ jobs:
             exit 0
           fi
           version="${BUILD_DATE}-alpha"
+          # Scheduled image tags, OCI metadata and embedded identity must agree.
+          [[ "$GITHUB_EVENT_NAME" != schedule ]] || version="${BUILD_DATE}-nightly"
           # Selected tags determine identity; only tag pushes publish releases.
           selected_tag=""
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* ]]; then
@@ -131,14 +133,13 @@ jobs:
             if [[ "$release" == true ]]; then
               echo "type=raw,value=$version"
               [[ -z "$compatibility" ]] || echo "type=raw,value=$compatibility"
-              # Hold stable/latest image promotion until CalVer releases are validated.
-              # [[ "$stable" != true ]] || echo 'type=raw,value=stable'
-              # [[ "$alpha" != true ]] || echo 'type=raw,value=latest'
+              [[ "$stable" != true ]] || echo 'type=raw,value=stable'
+              [[ "$alpha" != true ]] || echo 'type=raw,value=latest'
             else
               echo "type=raw,value=sha-$(git rev-parse HEAD)"
               if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then
                 echo 'type=schedule,pattern=nightly'
-                echo "type=raw,value=${BUILD_DATE}-nightly"
+                echo "type=raw,value=$version"
               fi
             fi
             echo 'RELEASE_TAGS'

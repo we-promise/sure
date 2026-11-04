@@ -1,0 +1,26 @@
+---
+nl:
+  family:
+    up:
+      create_up_item:
+        default_name: "Up-verbinding"
+  up_account:
+    fallback: "Up-account"
+  up_item:
+    errors:
+      account_processing_failed: "Kon Up-account niet synchroniseren"
+      account_sync_schedule_failed: "Kon synchronisatie van Up-account niet inplannen"
+      transactions_failed: "Kon Up-transacties niet ophalen"
+      sync_failed: "Kon Up-verbinding niet synchroniseren"
+    sync_status:
+      no_accounts: "Geen accounts gevonden"
+      all_synced:
+        one: "1 account gesynchroniseerd"
+        other: "%{count} accounts gesynchroniseerd"
+      partial: "%{linked} gesynchroniseerd, %{unlinked} moeten worden ingesteld"
+    institution_summary:
+      none: "Geen instellingen verbonden"
+      one: "1 instelling"
+      count:
+        one: "1 instelling"
+        other: "%{count} instellingen"
