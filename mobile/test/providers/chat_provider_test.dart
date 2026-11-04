@@ -38,7 +38,77 @@ http.Response _chatPage({
   );
 }
 
+http.Response _chatListPage({
+  required int page,
+  required int totalPages,
+  required List<int> chatIds,
+}) {
+  return http.Response(
+    jsonEncode({
+      'chats': chatIds
+          .map((id) => {
+                'id': 'chat_$id',
+                'title': 'Chat $id',
+                'created_at': '2026-06-01T00:00:00Z',
+                'updated_at': '2026-06-01T00:00:00Z',
+              })
+          .toList(),
+      'pagination': {
+        'page': page,
+        'per_page': 20,
+        'total_count': 5,
+        'total_pages': totalPages,
+      },
+    }),
+    200,
+  );
+}
+
 void main() {
+  group('ChatProvider.fetchChats pagination', () {
+    test('loads every page of the chat list', () async {
+      final requestedPages = <String>[];
+      final client = MockClient((request) async {
+        expect(request.url.path, '/api/v1/chats');
+        final page = request.url.queryParameters['page'] ?? '1';
+        requestedPages.add(page);
+        switch (page) {
+          case '1':
+            return _chatListPage(page: 1, totalPages: 3, chatIds: [1, 2]);
+          case '2':
+            return _chatListPage(page: 2, totalPages: 3, chatIds: [3, 4]);
+          case '3':
+            return _chatListPage(page: 3, totalPages: 3, chatIds: [5]);
+          default:
+            return http.Response('{"error":"unexpected page"}', 500);
+        }
+      });
+
+      final provider = ChatProvider(chatService: ChatService(client: client));
+      await provider.fetchChats(accessToken: 'token');
+
+      expect(requestedPages, ['1', '2', '3']);
+      expect(provider.chats.map((c) => c.id).toList(),
+          ['chat_1', 'chat_2', 'chat_3', 'chat_4', 'chat_5']);
+      expect(provider.errorMessage, isNull);
+    });
+
+    test('keeps the pages already loaded when a later page fails', () async {
+      final client = MockClient((request) async {
+        final page = request.url.queryParameters['page'] ?? '1';
+        if (page == '1') {
+          return _chatListPage(page: 1, totalPages: 2, chatIds: [1, 2]);
+        }
+        return http.Response('{"error":"not_found"}', 404);
+      });
+
+      final provider = ChatProvider(chatService: ChatService(client: client));
+      await provider.fetchChats(accessToken: 'token');
+
+      expect(provider.chats.map((c) => c.id).toList(), ['chat_1', 'chat_2']);
+    });
+  });
+
   group('ChatProvider.fetchChat pagination', () {
     test('merges every page so older and newer messages both surface', () async {
       final requestedPages = <String>[];

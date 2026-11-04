@@ -70,7 +70,11 @@ class ChatProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        _chats = result['chats'] as List<Chat>;
+        _chats = await _loadRemainingChatPages(
+          accessToken: accessToken,
+          perPage: perPage,
+          firstPage: result,
+        );
         _errorMessage = null;
       } else {
         _errorMessage = result['error'] ?? 'Failed to fetch chats';
@@ -82,6 +86,44 @@ class ChatProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Upper bound on chat-list pages followed in one refresh, so a bogus
+  /// `total_pages` from the server cannot trigger an unbounded request loop.
+  static const _maxChatListPages = 100;
+
+  /// Fetches the pages after [firstPage] of the chat list and returns all
+  /// chats. The API paginates `/chats`, so without this only the first page
+  /// would ever be shown. If a later page fails, the pages already loaded are
+  /// kept rather than discarding the list.
+  Future<List<Chat>> _loadRemainingChatPages({
+    required String accessToken,
+    required int perPage,
+    required Map<String, dynamic> firstPage,
+  }) async {
+    final chats = <Chat>[...(firstPage['chats'] as List<Chat>)];
+    final pagination = firstPage['pagination'] as Map<String, dynamic>?;
+    final totalPages = (pagination?['total_pages'] as int?) ?? 1;
+    final lastPage = totalPages < _maxChatListPages ? totalPages : _maxChatListPages;
+    final seen = chats.map((c) => c.id).toSet();
+
+    for (var page = 2; page <= lastPage; page++) {
+      final pageResult = await _chatService.getChats(
+        accessToken: accessToken,
+        page: page,
+        perPage: perPage,
+      );
+
+      if (pageResult['success'] != true) {
+        _log.warning('ChatProvider', 'fetchChats page $page failed; stopping');
+        break;
+      }
+      for (final chat in pageResult['chats'] as List<Chat>) {
+        if (seen.add(chat.id)) chats.add(chat);
+      }
+    }
+
+    return chats;
   }
 
   /// Fetch a specific chat with messages
