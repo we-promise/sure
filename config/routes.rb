@@ -577,6 +577,7 @@ Rails.application.routes.draw do
 
   namespace :transactions do
     resource :bulk_deletion, only: :create
+    resource :merchant_filter, only: :show
     resource :bulk_update, only: %i[new create]
     resource :categorize, only: %i[show create] do
       patch :assign_entry, on: :collection
@@ -702,9 +703,17 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :rule_groups, only: %i[new create edit update destroy] do
+    member do
+      patch :reorder
+      patch :activation
+    end
+  end
+
   resources :accounts, only: %i[index new show destroy], shallow: true do
     member do
       post :sync
+      get :logo_options
       get :sparkline
       patch :toggle_active
       patch :toggle_exclude_from_reports
@@ -718,6 +727,7 @@ Rails.application.routes.draw do
 
     collection do
       post :sync_all
+      get :logo_options, action: :new_logo_options
       patch :reorder
     end
 

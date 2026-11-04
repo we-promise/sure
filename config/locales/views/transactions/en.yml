@@ -189,6 +189,7 @@ en:
       transfer_hint: Transfer?
       transfer_hint_dismiss: Not a transfer
       transfer_hint_tooltip: A matching transaction in another account looks like the other side of a transfer — click to match them
+      view_merchant: View merchant
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions
