@@ -685,6 +685,26 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/not found/i, flash[:alert])
   end
 
+  # SnapTrade's link moves an existing AccountProvider (ensure_account_provider!
+  # updates it in place); its select dialog only lists unlinked accounts.
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_snaptrade_items_url,
+    link_url: :link_existing_account_snaptrade_items_url,
+    target: ->(owner) {
+      @user.family.accounts.create!(owner: owner, name: "Manual Brokerage", balance: 0, currency: "USD",
+                                    accountable: Investment.create!(subtype: "brokerage"))
+    },
+    provider_account: -> {
+      @snaptrade_item.snaptrade_accounts.create!(name: "Brokerage", snaptrade_account_id: SecureRandom.hex(6),
+                                                 currency: "USD", current_balance: 1000)
+    },
+    provider_param: :snaptrade_account_id,
+    params: -> { { snaptrade_item_id: @snaptrade_item.id } },
+    relinks: true,
+    setup_url: ->(record) { setup_accounts_snaptrade_item_url(record.snaptrade_item) }
+  )
+
   # --- setup_accounts throttle-sync fix ---
   #
   # The fix on setup_accounts ensures sync_later is only called when there are no

@@ -115,6 +115,21 @@ class RedbarkItemsControllerTest < ActionDispatch::IntegrationTest
     assert_not @redbark_item.reload.unlinked_redbark_accounts.exists?(id: @redbark_account.id)
   end
 
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_redbark_items_url,
+    link_url: :link_existing_account_redbark_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Savings", balance: 0, currency: "AUD",
+                               accountable: Depository.create!(subtype: "savings"))
+    },
+    provider_account: -> {
+      @redbark_item.redbark_accounts.create!(name: "Redbark Saver", redbark_account_id: SecureRandom.hex(6),
+                                             currency: "AUD", current_balance: 100)
+    },
+    provider_param: :redbark_account_id
+  )
+
   test "complete_account_setup persists the chosen sync_start_date on the account" do
     start_date = 6.months.ago.to_date
 
