@@ -198,6 +198,22 @@ This app provides a foundation for additional features:
 - Push notifications
 - Biometric authentication
 
+## Android release version codes
+
+Release CI leaves `pubspec.yaml` unchanged and supplies Flutter's `--build-name`
+(CalVer for canonical releases) and `--build-number` (Android `versionCode`).
+The shared `flutter-build.yml` allocates UTC seconds since 2020-01-01 once per
+Android build attempt, using the same code for its APK and AAB. Android builds
+are serialized across callers to avoid simultaneous allocations. A later rebuild,
+including a retry of a run containing this workflow change, receives a newer code.
+Uploading an already-built artifact preserves its original code; do not upload
+older bundles after newer ones or reuse a code already accepted by Google Play.
+
+The allocator rejects codes at or below the legacy `20260402` baseline or above
+Google Play's `2100000000` limit (reached in 2086). It does not query Play Console:
+any independently uploaded higher code must be accounted for before switching.
+Local builds retain the pubspec fallback. iOS/TestFlight numbering is unchanged.
+
 ## License
 
 This project is distributed under the AGPLv3 license.
