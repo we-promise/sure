@@ -219,7 +219,8 @@ jobs:
 
       - name: Build iOS (No Code Signing)
         working-directory: mobile
-        run: flutter build ios --release --no-codesign --build-name="$SURE_BUILD_NAME"
+        # Unsigned validation artifact, not a store upload; do not inherit the +0 placeholder.
+        run: flutter build ios --release --no-codesign --build-name="$SURE_BUILD_NAME" --build-number=1
 
       - name: Create IPA archive info
         working-directory: mobile

@@ -1,8 +1,8 @@
 name: sure_mobile
 description: A mobile app for Sure personal finance management
 publish_to: 'none'
-# Local fallback only. Release CI overrides the name and Android build number.
-version: 0.6.9+20260402
+# Development placeholder only. CI supplies platform-specific versions/build numbers.
+version: 0.0.0-dev+0
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

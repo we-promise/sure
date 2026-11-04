@@ -212,7 +212,17 @@ older bundles after newer ones or reuse a code already accepted by Google Play.
 The allocator rejects codes at or below the legacy `20260402` baseline or above
 Google Play's `2100000000` limit (reached in 2086). It does not query Play Console:
 any independently uploaded higher code must be accounted for before switching.
-Local builds retain the pubspec fallback. iOS/TestFlight numbering is unchanged.
+The checked-in `version: 0.0.0-dev+0` is a development placeholder, not a
+publishable version. Android CI always replaces its build number. Unsigned iOS
+CI strips `-dev` from the marketing version and explicitly uses build number `1`;
+signed TestFlight builds continue to supply their existing timestamp build number.
+
+For local native builds, supply a positive build number (for example,
+`flutter build apk --debug --build-number=1`). For iOS, also supply a numeric name:
+`flutter build ios --no-codesign --build-name=0.0.0 --build-number=1`.
+A lower Android code cannot upgrade an installed higher-code app: uninstall the
+existing app or explicitly use a higher code. Direct native packaging of the raw
+`0.0.0-dev+0` placeholder is not a supported distribution path.
 
 ## License
 
