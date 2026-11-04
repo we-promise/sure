@@ -173,6 +173,22 @@ class PlaidItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "takes over an omitted account only once per import" do
+    existing = plaid_accounts(:one)
+    existing.update!(raw_payload: { "account_id" => existing.plaid_id, "persistent_account_id" => "persistent_acc_1" })
+
+    stub_accounts_snapshot(
+      raw_plaid_account(account_id: "acc_mock_1_reissued", persistent_account_id: "persistent_acc_1"),
+      raw_plaid_account(account_id: "acc_mock_1_reissued_again", persistent_account_id: "persistent_acc_1")
+    )
+
+    assert_difference -> { @plaid_item.plaid_accounts.count }, 1 do
+      @importer.import
+    end
+
+    assert_equal "acc_mock_1_reissued", existing.reload.plaid_id
+  end
+
   test "clears requires update status after a successful import" do
     @plaid_item.update!(status: :requires_update)
     @importer.stubs(:fetch_and_import_item_data)

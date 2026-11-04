@@ -51,13 +51,10 @@ class PlaidItem::Importer
     def fetch_and_import_accounts_data
       snapshot = PlaidItem::AccountsSnapshot.new(plaid_item, plaid_provider: plaid_provider)
       returned_ids = snapshot.accounts.map(&:account_id)
-      # A stored payload is decrypted only when an unknown account_id needs it,
-      # and at most once per import, so an unreadable one is logged once.
-      persistent_ids = Hash.new { |ids, plaid_account| ids[plaid_account] = persistent_account_id_of(plaid_account) }
 
       PlaidItem.transaction do
         snapshot.accounts.each do |raw_account|
-          plaid_account = plaid_account_for(raw_account, returned_ids: returned_ids, persistent_ids: persistent_ids)
+          plaid_account = plaid_account_for(raw_account, returned_ids: returned_ids)
 
           PlaidAccount::Importer.new(
             plaid_account,
@@ -72,9 +69,9 @@ class PlaidItem::Importer
       end
     end
 
-    def plaid_account_for(raw_account, returned_ids:, persistent_ids:)
+    def plaid_account_for(raw_account, returned_ids:)
       plaid_item.plaid_accounts.find_by(plaid_id: raw_account.account_id) ||
-        reissued_plaid_account(raw_account, returned_ids: returned_ids, persistent_ids: persistent_ids) ||
+        reissued_plaid_account(raw_account, returned_ids: returned_ids) ||
         plaid_item.plaid_accounts.new(plaid_id: raw_account.account_id)
     end
 
@@ -90,17 +87,28 @@ class PlaidItem::Importer
     # the one in use. A copy linked to a Sure account is preferred, then the most
     # recently created, which is the one Plaid moved to last. updated_at cannot
     # tell them apart, because clearing an omitted copy's liabilities updates it.
-    def reissued_plaid_account(raw_account, returned_ids:, persistent_ids:)
+    def reissued_plaid_account(raw_account, returned_ids:)
       persistent_id = raw_account.try(:persistent_account_id).presence
       return unless persistent_id
 
-      matches = plaid_item.plaid_accounts.where.not(plaid_id: returned_ids).select do |candidate|
-        persistent_ids[candidate] == persistent_id
-      end
+      candidates = omitted_accounts(returned_ids)
+      matches = candidates.select { |_, candidate_persistent_id| candidate_persistent_id == persistent_id }.keys
       plaid_account = matches.max_by { |candidate| [ candidate.current_account ? 1 : 0, candidate.created_at ] }
+      return unless plaid_account
 
-      plaid_account&.plaid_id = raw_account.account_id
+      candidates.delete(plaid_account)
+      plaid_account.plaid_id = raw_account.account_id
       plaid_account
+    end
+
+    # The accounts Plaid did not return in this import, each with its
+    # persistent_account_id. They are loaded and their payloads decrypted once,
+    # when the first unknown account_id needs them, so an unreadable payload is
+    # logged once. An account is removed once it has been taken over.
+    def omitted_accounts(returned_ids)
+      @omitted_accounts ||= plaid_item.plaid_accounts.where.not(plaid_id: returned_ids).to_h do |plaid_account|
+        [ plaid_account, persistent_account_id_of(plaid_account) ]
+      end
     end
 
     # A payload that cannot be decrypted is left unmatched, so the account is
