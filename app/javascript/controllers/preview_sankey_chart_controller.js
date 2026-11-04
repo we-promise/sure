@@ -1,6 +1,6 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
-import { sankey } from "d3-sankey";
+import { sankey, sankeyCenter } from "d3-sankey";
 import { formatCashFlowCurrency } from "utils/cash_flow_chart_data";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 import { layoutSankeyLabels } from "utils/sankey_labels";
@@ -58,6 +58,20 @@ export default class extends Controller {
     // keep every instance on the page in step when one changes the order.
     this.onSortChanged = (event) => this.#applySortOrder(event.detail.order);
     window.addEventListener(this.constructor.SORT_EVENT, this.onSortChanged);
+    // A Turbo morph refresh (the sync toast's auto-refresh, or a broadcast
+    // refresh stream) keeps this element and its controller but puts the
+    // server markup back inside, so the sort controls show the default while
+    // the order is kept here, and the tooltip appended outside this element
+    // is dropped. The graph is fetched again by the cash-flow controller,
+    // and the data value callback resets the zoom.
+    this.onMorph = () => {
+      if (!this.connected) return;
+
+      this.tooltip?.remove();
+      this.#createTooltip();
+      this.#syncSortControls();
+    };
+    document.addEventListener("turbo:morph", this.onMorph);
     this.#createTooltip();
     this.#syncZoomControls();
     this.#syncSortControls();
@@ -83,6 +97,7 @@ export default class extends Controller {
   disconnect() {
     this.connected = false;
     window.removeEventListener(this.constructor.SORT_EVENT, this.onSortChanged);
+    document.removeEventListener("turbo:morph", this.onMorph);
     this.resizeObserver?.disconnect();
     clearTimeout(this.drawTimeout);
     this.tooltip?.remove();
@@ -293,6 +308,10 @@ export default class extends Controller {
   #generateSankeyData(nodes, links, width, height, nodePadding) {
     const margin = this.constructor.EXTENT_MARGIN;
     const sankeyGenerator = sankey()
+      // Centre alignment: a sink sits at its depth, a source one column
+      // before the nearest node it feeds. The default pushes every sink to
+      // the last column, which is the subcategories' once a family has any.
+      .nodeAlign(sankeyCenter)
       .nodeWidth(this.nodeWidthValue)
       .nodePadding(nodePadding)
       .extent([
@@ -391,7 +410,12 @@ export default class extends Controller {
       .attr("fill", (d) => d.color || this.constructor.DEFAULT_COLOR)
       .attr("stroke", (d) => (d.color ? "none" : "var(--color-gray-500)"));
 
-    const hiddenLabels = this.#addNodeLabels(svg, nodeGroups, width, nodes);
+    const hiddenLabels = this.#addNodeLabels(
+      svg,
+      nodeGroups,
+      sankeyLabelOnRight(nodes, width),
+      nodes,
+    );
 
     return { nodeGroups, hiddenLabels };
   }
@@ -448,11 +472,11 @@ export default class extends Controller {
             L ${x0},${y1} Z`;
   }
 
-  #addNodeLabels(svg, nodeGroups, width, nodes) {
+  #addNodeLabels(svg, nodeGroups, labelOnRight, nodes) {
     const controller = this;
     const { hidden: hiddenLabels, labelY } = this.#layoutLabels(
       nodes,
-      this.#measureLabels(svg, nodes, width),
+      this.#measureLabels(svg, nodes, labelOnRight),
     );
 
     nodeGroups
@@ -470,22 +494,28 @@ export default class extends Controller {
       )
       .style("transition", "opacity 0.2s ease")
       .each(function (d) {
-        controller.#writeLabel(d3.select(this), d, width, labelY.get(d.index));
+        controller.#writeLabel(
+          d3.select(this),
+          d,
+          labelOnRight,
+          labelY.get(d.index),
+        );
       });
 
     return hiddenLabels;
   }
 
-  // Name above amount, beside the bar on the side facing the chart's middle,
+  // Name above amount, beside the bar on the side the label rule picks,
   // centred on `y` (the bar's centre unless the layout moved it).
-  #writeLabel(textEl, d, width, y = (d.y1 + d.y0) / 2) {
-    const x = d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6;
+  #writeLabel(textEl, d, labelOnRight, y = (d.y1 + d.y0) / 2) {
+    const right = labelOnRight(d);
+    const x = right ? d.x1 + 6 : d.x0 - 6;
 
     textEl
       .attr("x", x)
       .attr("y", y)
       .attr("dy", "-0.2em")
-      .attr("text-anchor", d.x0 < width / 2 ? "start" : "end");
+      .attr("text-anchor", right ? "start" : "end");
 
     textEl.selectAll("tspan").remove();
     textEl.append("tspan").text(d.name);
@@ -501,7 +531,7 @@ export default class extends Controller {
   // Where each label lands at this width, measured with an invisible probe
   // before the real labels are drawn, so the overlap rule can see a label
   // that reaches into the next column.
-  #measureLabels(svg, nodes, width) {
+  #measureLabels(svg, nodes, labelOnRight) {
     const probe = svg
       .append("text")
       .attr("class", "text-xs font-medium select-none")
@@ -509,7 +539,7 @@ export default class extends Controller {
 
     const boxes = new Map();
     nodes.forEach((d) => {
-      this.#writeLabel(probe, d, width);
+      this.#writeLabel(probe, d, labelOnRight);
       const { x, y, width: boxWidth, height } = probe.node().getBBox();
       boxes.set(d.index, { x, y, width: boxWidth, height });
     });
