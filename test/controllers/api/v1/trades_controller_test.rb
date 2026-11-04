@@ -215,25 +215,62 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
-  test "rejects an inaccessible category without persisting a trade" do
-    security = Security.create!(ticker: "BADCAT", name: "Bad Category Security", country_code: "US")
-    other_category = families(:empty).categories.create!(name: "Other family category", color: "#123456", lucide_icon: "circle")
+  # Trades have no category column, so a category_id is not a trade field: it
+  # is ignored like any other unpermitted parameter, whoever owns the category.
+  test "create ignores a category_id and saves the trade" do
+    security = Security.create!(ticker: "CATBUY", name: "Category Buy Security", country_code: "US")
 
-    assert_no_difference [ "Entry.count", "Trade.count" ] do
-      post "/api/v1/trades",
-        params: { trade: {
-          account_id: @investment_account.id,
-          type: "buy",
-          date: Date.current,
-          qty: 10,
-          price: 1,
-          security_id: security.id,
-          category_id: other_category.id
-        } },
-        headers: api_headers(read_write_api_key)
+    category_ids_from_every_source.each do |source, category_id|
+      assert_difference [ "Entry.count", "Trade.count" ], 1, "#{source} category" do
+        post "/api/v1/trades",
+          params: { trade: {
+            account_id: @investment_account.id,
+            type: "buy",
+            date: Date.current,
+            qty: 10,
+            price: 3,
+            security_id: security.id,
+            category_id: category_id
+          } },
+          headers: api_headers(read_write_api_key)
+      end
+
+      assert_response :created, "#{source} category"
+      body = JSON.parse(response.body)
+      trade = Trade.find(body["id"])
+      assert_equal 10, trade.qty, "#{source} category"
+      assert_equal 3, trade.price, "#{source} category"
+      assert body.key?("category"), "#{source} category"
+      assert_nil body["category"], "#{source} category"
     end
+  end
 
-    assert_response :unprocessable_entity
+  test "update ignores a category_id and saves the other fields" do
+    trade_id = create_buy_trade("CATUPD")
+
+    category_ids_from_every_source.each do |source, category_id|
+      put api_v1_trade_url(trade_id),
+        params: { trade: { notes: "Notes with #{source} category", category_id: category_id } },
+        headers: api_headers(read_write_api_key)
+
+      assert_response :success, "#{source} category"
+      body = JSON.parse(response.body)
+      assert_equal "Notes with #{source} category", body["notes"]
+      assert_equal "Notes with #{source} category", Trade.find(trade_id).entry.notes
+      assert_nil body["category"], "#{source} category"
+    end
+  end
+
+  test "an update carrying only a category_id changes nothing" do
+    trade_id = create_buy_trade("CATNOOP")
+    before = Trade.find(trade_id).entry.attributes.except("updated_at")
+
+    put api_v1_trade_url(trade_id),
+      params: { trade: { category_id: categories(:food_and_drink).id } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :success
+    assert_equal before, Trade.find(trade_id).entry.reload.attributes.except("updated_at")
   end
 
   test "create deposit returns 201" do
@@ -1001,6 +1038,31 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def category_ids_from_every_source
+      {
+        "own" => categories(:food_and_drink).id,
+        "foreign" => families(:empty).categories.create!(name: "Other family category", color: "#123456", lucide_icon: "circle").id,
+        "unknown" => SecureRandom.uuid
+      }
+    end
+
+    def create_buy_trade(ticker)
+      security = Security.create!(ticker: ticker, name: "#{ticker} Security", country_code: "US")
+      post "/api/v1/trades",
+        params: { trade: {
+          account_id: @investment_account.id,
+          type: "buy",
+          date: Date.current,
+          qty: 5,
+          price: 100,
+          currency: "USD",
+          security_id: security.id
+        } },
+        headers: api_headers(read_write_api_key)
+      assert_response :created
+      JSON.parse(response.body)["id"]
+    end
 
     def read_write_api_key
       @read_write_api_key ||= ApiKey.create!(

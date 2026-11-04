@@ -9940,10 +9940,6 @@ paths:
                     investment_activity_label:
                       type: string
                       description: Activity label (e.g. Buy, Sell)
-                    category_id:
-                      type: string
-                      format: uuid
-                      description: Category ID
                     transfer_account_id:
                       type: string
                       format: uuid
@@ -10059,9 +10055,6 @@ paths:
                       type: string
                     investment_activity_label:
                       type: string
-                    category_id:
-                      type: string
-                      format: uuid
         required: true
     delete:
       summary: Delete trade

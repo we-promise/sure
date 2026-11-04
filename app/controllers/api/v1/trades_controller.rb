@@ -163,7 +163,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_params
       params.require(:trade).permit(
         :account_id, :date, :qty, :price, :currency,
-        :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id,
+        :security_id, :ticker, :manual_ticker, :investment_activity_label,
         :fee, :type, :amount, :transfer_account_id
       )
     end
@@ -171,7 +171,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_update_params
       params.require(:trade).permit(
         :name, :date, :amount, :currency, :notes, :nature, :type,
-        :qty, :price, :investment_activity_label, :category_id
+        :qty, :price, :investment_activity_label
       )
     end
 
@@ -186,8 +186,7 @@ class Api::V1::TradesController < Api::V1::BaseController
         entryable_type: "Trade",
         entryable_attributes: {
           id: @trade.id,
-          investment_activity_label: flat[:investment_activity_label],
-          category_id: flat[:category_id]
+          investment_activity_label: flat[:investment_activity_label]
         }.compact_blank
       }.compact
 
@@ -390,14 +389,6 @@ class Api::V1::TradesController < Api::V1::BaseController
           return {}
         end
         attrs[:investment_activity_label] = label
-      end
-      if trade_params[:category_id].present?
-        category = current_resource_owner.family.categories.find_by(id: trade_params[:category_id])
-        unless category
-          render_validation_error("Category not found or does not belong to your family", [ "category_id is invalid" ])
-          return {}
-        end
-        attrs[:category_id] = category.id
       end
       attrs
     end
