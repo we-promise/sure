@@ -1,23 +1,10 @@
 require "test_helper"
 
 class SnaptradeFollowUpSyncJobTest < ActiveJob::TestCase
-  test "queues a sync after the active sync has finished" do
+  test "a job queued before follow-ups were built in still requests a sync" do
     item = snaptrade_items(:configured_item)
+    item.expects(:sync_later).once
 
-    assert_difference "item.syncs.count", 1 do
-      SnaptradeFollowUpSyncJob.perform_now(item)
-    end
-  end
-
-  test "retries while an item sync is in progress" do
-    item = snaptrade_items(:configured_item)
-    active_sync = item.syncs.create!
-    active_sync.start!
-
-    assert_no_difference "item.syncs.count" do
-      assert_enqueued_with job: SnaptradeFollowUpSyncJob do
-        SnaptradeFollowUpSyncJob.perform_now(item)
-      end
-    end
+    SnaptradeFollowUpSyncJob.perform_now(item, attempts_remaining: 30)
   end
 end
