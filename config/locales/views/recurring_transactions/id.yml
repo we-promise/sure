@@ -1,21 +1,21 @@
 ---
 id:
   recurring_transactions:
-    title: Transaksi Berkala
-    upcoming: Transaksi Berkala Mendatang
-    projected: Proyeksi
-    recurring: Berkala
-    expected_today: Diekspektasi hari ini
+    title: Transaksi Berulang
+    upcoming: Transaksi Berulang Mendatang
+    projected: Diproyeksikan
+    recurring: Berulang
+    expected_today: "Diharapkan hari ini"
     expected_in:
-      one: Diekspektasi dalam %{count} hari
-      other: Diekspektasi dalam %{count} hari
-    day_of_month: Hari ke-%{day} setiap bulan
+      one: "Diharapkan dalam %{count} hari"
+      other: "Diharapkan dalam %{count} hari"
+    day_of_month: Tanggal %{day} setiap bulan
     frequency_presets:
       monthly: Bulanan
       weekly: Mingguan
       biweekly: Setiap 2 minggu
       semimonthly: Dua kali sebulan
-      quarterly: Kuartalan
+      quarterly: Triwulanan
       semiannual: Setiap 6 bulan
       annual: Tahunan
       custom: Jadwal kustom
@@ -25,20 +25,20 @@ id:
       monthly: bulan
       yearly: tahun
     frequency:
-      monthly: Bulanan pada tanggal %{day}
-      weekly: Mingguan tiap %{weekday}
-      biweekly: Setiap 2 minggu pada %{weekday}
-      semimonthly: Dua kali sebulan, tanggal %{first} dan %{second}
-      quarterly: Kuartalan pada tanggal %{day}
-      semiannual: Setiap 6 bulan pada tanggal %{day}
-      annual: Tahunan pada %{month} %{day}
-      every_n_weeks: Setiap %{interval} minggu pada %{weekday}
-      every_n_months: Setiap %{interval} bulan pada tanggal %{day}
-      every_n_years: Setiap %{interval} tahun pada %{month} %{day}
+      monthly: "Bulanan pada tanggal %{day}"
+      weekly: "Mingguan pada hari %{weekday}"
+      biweekly: "Setiap 2 minggu pada hari %{weekday}"
+      semimonthly: "Dua kali sebulan, pada tanggal %{first} dan %{second}"
+      quarterly: "Triwulanan pada tanggal %{day}"
+      semiannual: "Setiap 6 bulan pada tanggal %{day}"
+      annual: "Tahunan pada tanggal %{day} %{month}"
+      every_n_weeks: "Setiap %{interval} minggu pada hari %{weekday}"
+      every_n_months: "Setiap %{interval} bulan pada tanggal %{day}"
+      every_n_years: "Setiap %{interval} tahun pada tanggal %{day} %{month}"
       custom: Jadwal kustom
       last_day: hari terakhir
     identify_patterns: Identifikasi Pola
-    cleanup_stale: Bersihkan yang Basi
+    cleanup_stale: Bersihkan yang Usang
     actions:
       edit_payment_link: Edit tautan pembayaran
       pause: Jeda
@@ -46,167 +46,183 @@ id:
       delete: Hapus
     pay_action:
       pay: Bayar
-      pay_aria: Bayar %{name} (terbuka di tab baru)
+      pay_aria: "Bayar %{name} (buka di tab baru)"
       add_link: Tambah tautan
-      add_link_aria: Tambahkan tautan pembayaran untuk %{name}
-      autopay: Autopay
-      autopay_aria: '%{name} membayar otomatis, buka portalnya di tab baru'
+      add_link_aria: "Tambah tautan pembayaran untuk %{name}"
+      autopay: Debit otomatis
+      autopay_aria: "%{name} dibayar otomatis, buka portalnya di tab baru"
     new:
-      title: Tambah tagihan
-      income_title: Tambah pemasukan
-      start_from_title: Mulai dari biaya berkala yang kami temukan
-      start_from_income_title: Mulai dari setoran berkala yang kami temukan
-      start_from_hint: Opsional. Memilih salah satu hanya mengisi formulir; Anda tetap dapat mengubah apa pun.
-      candidate_meta: '%{count}× · terakhir %{date}'
-      search_all_prompt: Tidak menemukan yang kamu cari?
+      title: Tagihan baru
+      income_title: Pemasukan baru
+      start_from_title: Mulai dari tagihan berulang yang kami temukan
+      start_from_income_title: Mulai dari setoran berulang yang kami temukan
+      start_from_hint: Opsional. Memilih salah satu hanya akan mengisi formulir; Anda tetap dapat mengubah apa pun.
+      candidate_meta: "%{count}× · terakhir pada %{date}"
+      search_all_prompt: Tidak menemukan yang Anda cari?
       search_all_cta: Cari semua transaksi Anda
       pick_different: Mulai dari transaksi lain
-      smart_fill: Isi otomatis dengan AI
-      smart_fill_applied: AI menyarankan nilai ini dari riwayat tagihan. Tinjau sebelum menyimpan.
+      smart_fill: Isi otomatis pintar dengan AI
+      smart_fill_applied: AI menyarankan nilai-nilai ini dari riwayat tagihan. Tinjau sebelum menyimpan.
+      covered_title: Transaksi ini sudah termasuk dalam tagihan
+      covered_body: "%{name} sudah melacak pembayaran ini, sehingga tagihan baru akan menghitungnya dua kali."
+      covered_open: Buka tagihan
+      covered_suggested_title: Sure sudah menyarankan tagihan untuk pembayaran ini
+      covered_suggested_body: "%{name} sedang menunggu di saran Anda. Konfirmasikan untuk mulai melacaknya, agar tagihan baru tidak menghitung pembayaran ini dua kali. Pembayaran yang cocok akan ditautkan secara otomatis, dan Anda dapat menautkan yang satu ini dari tagihan."
+      covered_confirm: Konfirmasi tagihan
+      covered_create_anyway: Tetap buat tagihan terpisah
+      covered_income_title: Setoran ini sudah termasuk dalam pemasukan
+      covered_income_body: "%{name} sudah melacak setoran ini, sehingga menambahkannya lagi akan menghitungnya dua kali."
+      covered_income_open: Buka pemasukan
+      covered_income_suggested_title: Sure sudah menyarankan pemasukan ini
+      covered_income_suggested_body: "%{name} sedang menunggu di saran Anda. Tambahkan untuk mulai melacaknya, agar setoran ini tidak dihitung dua kali. Setoran yang cocok akan ditautkan secara otomatis, dan Anda dapat menautkan yang satu ini dari pemasukan."
+      covered_income_confirm: Tambah pemasukan
+      covered_income_create_anyway: Tetap tambah pemasukan terpisah
     smart_fills:
       create:
-        failed: Tidak bisa menganalisis riwayat tagihan saat ini. Formulir mempertahankan nilai asli transaksi.
+        failed: Tidak dapat menganalisis riwayat tagihan saat ini. Formulir mempertahankan nilai asli transaksi.
     pick_entry:
-      title: Cari transaksi sebagai titik awal
-      income_title: Cari setoran sebagai titik awal
-      hint: Memilih salah satu hanya mengisi formulir; Anda tetap bisa mengubah apa pun.
+      title: Temukan transaksi untuk memulai
+      income_title: Temukan setoran untuk memulai
+      hint: Memilih salah satu hanya akan mengisi formulir; Anda tetap dapat mengubah apa pun.
       search_placeholder: Cari berdasarkan nama, catatan, atau merchant
       back: Kembali ke formulir
-      showing_recent: Menampilkan %{count} terbaru Anda. Cari untuk mempersempit.
-      no_results: Tidak ada yang cocok dengan “%{query}”. Coba gunakan kata yang lebih sedikit, atau kembali dan isi formulirnya sendiri.
+      showing_recent: Menampilkan %{count} transaksi terbaru Anda. Cari untuk mempersempit.
+      no_results: Tidak ada yang cocok dengan “%{query}”. Coba kata yang lebih sedikit, atau kembali dan isi formulir sendiri.
     picker_row:
       claimed: Bagian dari %{name}
     create:
       success: Tagihan ditambahkan
       success_income: Pemasukan ditambahkan
-      due_date_required: Masukkan tanggal jatuh tempo tagihan berikutnya
-      amount_invalid: Masukkan jumlah sebagai angka biasa
-      account_invalid: Pilih akun yang bisa ditambahi tagihan, atau biarkan kosong
-      already_exists: Tagihan ini sudah ada
-      amount_too_precise: Gunakan maksimal 4 angka desimal
+      due_date_required: "Masukkan tanggal jatuh tempo berikutnya untuk tagihan"
+      amount_invalid: "Masukkan jumlah sebagai angka biasa"
+      amount_too_precise: Gunakan paling banyak 4 tempat desimal
+      account_invalid: "Pilih rekening yang dapat ditambahkan tagihan, atau biarkan kosong"
+      category_invalid: "Pilih salah satu kategori Anda, atau biarkan kosong"
+      already_exists: "Tagihan ini sudah ada"
     edit:
       trigger_label: Edit tagihan
-      title: Edit %{name}
-      income_title: Edit pemasukan · %{name}
+      title: "Edit %{name}"
+      income_title: "Edit pemasukan · %{name}"
     form:
       payment_url_label: Tautan pembayaran
-      payment_url_placeholder: bank.example.com/pay
-      payment_url_hint: Tempatmu membayar tagihan ini. Terbuka di tab baru dari daftar berkala dan mendatangmu.
-      autopay_label: Membayar secara otomatis
-      autopay_hint: Pertahankan di daftar tagihanmu, tapi berhenti memperlakukannya sebagai hal yang harus dikerjakan.
+      payment_url_placeholder: bank.example.com/bayar
+      payment_url_hint: Tempat Anda membayar tagihan ini. Dibuka di tab baru dari daftar berulang dan mendatang Anda.
+      autopay_label: Bayar otomatis
+      autopay_hint: Tetap simpan di daftar tagihan Anda, tetapi berhenti menganggapnya sebagai sesuatu yang perlu dilakukan manual.
       more_options: Opsi lainnya
       notes_label: Catatan
-      notes_placeholder: Akun 4821, ditagihkan ke Amex
-      notes_hint: Apa pun yang ingin kamu lihat saat membayar. Ditampilkan di tagihan.
+      notes_placeholder: Rekening 4821, dibebankan ke Amex
+      notes_hint: Apa pun yang ingin Anda lihat saat membayar. Ditampilkan pada tagihan.
       apply_to_siblings:
-        one: Gunakan juga tautan ini untuk tagihan %{name} lainnya
-        other: Gunakan juga tautan ini untuk %{count} tagihan %{name} lainnya
+        one: "Gunakan juga tautan ini untuk 1 tagihan %{name} lainnya"
+        other: "Gunakan juga tautan ini untuk %{count} tagihan %{name} lainnya"
       submit: Simpan tagihan
       submit_income: Simpan pemasukan
       income_name_label: Sumber
-      income_name_placeholder: Pemberi kerja, klien, kerja sampingan
-      income_amount_label: Jumlah per gajian
-      income_due_on_label: Gajian berikutnya
-      income_account_label: Setoran ke
-      income_frequency_hint: Seberapa sering kamu digaji. Pilih detail harinya sesuai hari gajianmu.
-      income_frequency_label: Seberapa sering kamu digaji
-      income_frequency_new_hint: Detail tanggal gajian berasal dari tanggal di atas. Anda bisa menyempurnakan jadwal setelah menyimpan.
-      income_notes_placeholder: Setoran langsung, terbagi ke dua akun
-      income_notes_hint: Hal yang perlu diingat tentang pemasukan ini.
+      income_name_placeholder: Pemberi kerja, klien, pekerjaan sampingan
+      income_amount_label: Jumlah per pembayaran gaji
+      income_due_on_label: Hari gajian berikutnya
+      income_account_label: Disetorkan ke
+      income_frequency_hint: Seberapa sering Anda dibayar. Pilih detail hari yang sesuai dengan hari gajian Anda.
+      income_frequency_label: Seberapa sering Anda dibayar
+      income_frequency_new_hint: Detail hari gajian berasal dari tanggal di atas. Anda dapat menyempurnakan jadwal setelah menyimpan.
+      income_notes_placeholder: Setoran langsung, dibagi ke dua rekening
+      income_notes_hint: Hal apa pun yang perlu diingat tentang pemasukan ini.
       name_label: Nama
-      name_placeholder: Sewa, PG&E, Netflix
+      name_placeholder: Sewa, Listrik, Netflix
       amount_label: Jumlah
       first_due_on_label: Jatuh tempo berikutnya
-      account_label: Terbayar dari
-      account_blank: Akun mana pun
+      account_label: Dibayar dari
+      account_blank: Rekening mana pun
       bill_type_label: Jenis
       installment_count_label: Jumlah pembayaran
-      installment_count_hint: Rencana berakhir setelah sekian pembayaran dan menunjukkan progresnya sampai saat itu.
+      installment_count_hint: Rencana cicilan berakhir setelah sekian pembayaran ini dan menampilkan progresnya hingga selesai.
       renews_on_label: Diperpanjang
-      trial_ends_on_label: Masa trial berakhir
-      amount_edit_hint: Berlaku untuk tagihan yang jatuh tempo mulai sekarang. Tagihan yang sudah jatuh tempo tetap memakai nominal semula.
-      income_amount_edit_hint: Berlaku untuk hari gajian mulai sekarang. Yang sudah jatuh tempo tetap memakai nominal semula.
+      trial_ends_on_label: Uji coba berakhir
+      amount_edit_hint: Berlaku untuk tagihan yang jatuh tempo mulai sekarang. Yang sudah jatuh tempo tetap menggunakan jumlah sebelumnya.
+      income_amount_edit_hint: Berlaku untuk hari gajian mulai sekarang. Yang sudah jatuh tempo tetap menggunakan jumlah sebelumnya.
       cancelled_on_label: Dibatalkan
-      cancelled_on_hint: Mencatat tanggal hanya untuk referensi Anda. Jeda tagihannya agar tagihan berikutnya tidak muncul.
+      cancelled_on_hint: Pencatatan tanggal hanya untuk referensi Anda sendiri. Jeda tagihan untuk menghentikan tagihan di masa mendatang muncul.
       category_blank: Tanpa kategori
-      frequency_new_hint: Detail hari berasal dari tanggal jatuh tempo di atas. Anda bisa menyempurnakan jadwal setelah menyimpan.
+      frequency_new_hint: Detail hari berasal dari tanggal jatuh tempo di atas. Anda dapat menyempurnakan jadwal setelah menyimpan.
       frequency_label: Seberapa sering
-      frequency_hint: Seberapa sering tagihan ini jatuh tempo. Pilih detail harinya sesuai mutasimu.
-      frequency_day_label: Pada hari
+      frequency_hint: Seberapa sering tagihan ini jatuh tempo. Pilih detail hari yang sesuai dengan tagihan Anda.
+      frequency_day_label: Pada tanggal
       frequency_interval_label: Berulang setiap
-      frequency_interval_unit_label: Unit
-      frequency_second_day_label: Dan hari
-      frequency_weekday_label: Nyala
-      frequency_month_label: Dalam
+      frequency_interval_unit_label: Satuan
+      frequency_second_day_label: Dan tanggal
+      frequency_weekday_label: "Pada hari"
+      frequency_month_label: "Pada bulan"
     update:
       success: Tagihan diperbarui
       success_with_siblings:
-        one: Tagihan diperbarui, dan tautan pembayaran disalin ke 1 tagihan lain
-        other: Tagihan diperbarui, dan tautan pembayaran disalin ke %{count} tagihan lain
+        one: "Tagihan diperbarui, dan tautan pembayaran disalin ke 1 tagihan lainnya"
+        other: "Tagihan diperbarui, dan tautan pembayaran disalin ke %{count} tagihan lainnya"
     manage:
-      title: Tagihan Anda ada di halaman Tagihan
-      description: Nyatakan, edit, jeda, dan bayar semuanya dari sana. Halaman ini mengendalikan deteksi.
+      title: Tagihan Anda berada di halaman Tagihan
+      description: Tentukan, edit, jeda, dan bayar semuanya dari sana. Halaman ini mengontrol deteksi.
       cta: Buka semua tagihan
     settings:
-      enable_label: Aktifkan Transaksi Berkala
-      enable_description: Deteksi otomatis pola transaksi berkala dan tampilkan proyeksi transaksi mendatang.
-    settings_updated: Pengaturan transaksi berkala diperbarui
+      enable_label: Aktifkan Transaksi Berulang
+      enable_description: Deteksi pola transaksi berulang secara otomatis dan tampilkan proyeksi transaksi mendatang.
+    settings_updated: Pengaturan transaksi berulang diperbarui
     info:
       title: Deteksi Pola Otomatis
-      manual_description: Anda bisa mengidentifikasi pola secara manual atau membersihkan transaksi berkala yang basi menggunakan tombol di atas.
-      automatic_description: 'Identifikasi otomatis juga berjalan setelah:'
+      manual_description: Anda dapat mengidentifikasi pola secara manual atau membersihkan transaksi berulang yang usang menggunakan tombol di atas.
+      automatic_description: "Identifikasi otomatis juga berjalan setelah:"
       triggers:
-      - CSV imports complete (transactions, trades, accounts, etc. )
-      - Any provider sync completes ( Plaid, SimpleFIN, etc. )
-    identified: Teridentifikasi %{count} pola transaksi berkala
-    identify_already_running: Deteksi sudah berjalan. Cek lagi sebentar lagi.
-    cleaned_up: Membersihkan %{count} transaksi berkala yang basi
-    marked_inactive: Dijeda. Tidak akan muncul lagi sampai Anda melanjutkannya.
+        - Impor CSV selesai (transaksi, transaksi efek, rekening, dll.)
+        - Sinkronisasi penyedia apa pun selesai (Plaid, SimpleFIN, dll.)
+    identified: Berhasil mengidentifikasi %{count} pola transaksi berulang
+    identify_already_running: Deteksi sedang berlangsung. Periksa kembali sebentar lagi.
+    cleaned_up: Berhasil membersihkan %{count} transaksi berulang yang usang
+    marked_inactive: Dijeda. Ini tidak akan muncul lagi sampai Anda melanjutkannya.
     marked_active: Dilanjutkan.
-    deleted: Tagihan dihapus. Transaksimu tidak tersentuh.
-    deleted_income: Pemasukan dihapus. Transaksimu tidak diubah.
-    confirm_delete: Hapus %{name} dari tagihan Anda? Transaksi Anda tetap seperti semula. Ini hanya menghapus tagihan dan jadwal pembayarannya.
-    confirm_delete_income: Hapus %{name} sebagai pemasukan? Transaksi Anda tetap seperti semula. Ini hanya menghapus pemasukan dan jadwalnya.
-    marked_as_recurring: Transaksi ditandai sebagai berkala
-    already_exists: Transaksi berkala manual untuk pola ini sudah ada
-    creation_failed: Gagal membuat transaksi berkala. Periksa detail transaksinya lalu coba lagi.
-    unexpected_error: Terjadi kesalahan tak terduga saat membuat transaksi berkala
-    amount_range: 'Rentang: %{min} sampai %{max}'
+    deleted: Tagihan dihapus. Transaksi Anda tidak disentuh.
+    deleted_income: Pemasukan dihapus. Transaksi Anda tidak disentuh.
+    confirm_delete: "Hapus %{name} dari tagihan Anda? Transaksi Anda tetap persis seperti semula. Ini hanya menghapus tagihan dan jadwal pembayarannya."
+    confirm_delete_income: "Hapus %{name} sebagai pemasukan? Transaksi Anda tetap persis seperti semula. Ini hanya menghapus pemasukan dan jadwalnya."
+    marked_as_recurring: Transaksi ditandai sebagai berulang
+    already_exists: Transaksi berulang manual sudah ada untuk pola ini
+    already_covered: Transaksi ini sudah cocok dengan transaksi berulang
+    creation_failed: Gagal membuat transaksi berulang. Silakan periksa detail transaksi dan coba lagi.
+    unexpected_error: Terjadi kesalahan tak terduga saat membuat transaksi berulang
+    amount_range: "Rentang: %{min} hingga %{max}"
     empty:
-      title: Tidak ada transaksi berkala yang ditemukan
-      description: Klik "Identify Patterns" untuk mendeteksi otomatis transaksi berkala dari riwayat transaksimu.
+      title: Tidak ada transaksi berulang yang ditemukan
+      description: Klik "Identifikasi Pola" untuk mendeteksi transaksi berulang secara otomatis dari riwayat transaksi Anda.
     table:
       merchant: Nama
       amount: Jumlah
       frequency: Frekuensi
       next_date: Tanggal Berikutnya
-      last_occurrence: Kejadian Terakhir
+      last_occurrence: Kemunculan Terakhir
       status: Status
-      actions: Aksi
+      actions: Tindakan
     status:
       active: Aktif
       inactive: Dijeda
       suggested: Kemungkinan tagihan
       paused: Dijeda
-      ended: Diabaikan
+      ended: Ditutup
     suggested:
       title: Kemungkinan tagihan baru
       seen_count:
-        one: terlihat sekali
-        other: terlihat %{count} kali
+        one: "terlihat 1 kali"
+        other: "terlihat %{count} kali"
       collapsed_hint: Ketuk untuk meninjau
       confirm: Tambah tagihan
       dismiss: Bukan tagihan
-    confirmed: Tagihan ditambahkan ke transaksi berkalamu
-    dismissed: Diabaikan. Pola ini tidak akan disarankan lagi.
+    suggested_income:
+      title: Kemungkinan pemasukan baru
+      confirm: Tambah pemasukan
+      dismiss: Bukan pemasukan
+    confirmed: Tagihan ditambahkan ke transaksi berulang Anda
+    confirmed_income: Pemasukan ditambahkan ke transaksi berulang Anda
+    dismissed: "Ditutup. Pola ini tidak akan disarankan lagi."
     badges:
       manual: Manual
-    transfer_marked_as_recurring: Transfer ditandai sebagai berkala
-    transfer_already_exists: Transfer berkala untuk pasangan akun ini sudah ada
-    transfer_creation_failed: Gagal membuat transfer berkala. Periksa detail transfernya lalu coba lagi.
-    transfer_feature_disabled: Transaksi berkala dinonaktifkan untuk family ini
-    suggested_income:
-      title: Kemungkinan pendapatan baru
-      confirm: Tambah pendapatan
-      dismiss: Bukan pendapatan
-    confirmed_income: Pendapatan ditambahkan ke transaksi berulang Anda
+    transfer_marked_as_recurring: Transfer ditandai sebagai berulang
+    transfer_already_exists: Transfer berulang sudah ada untuk pasangan rekening ini
+    transfer_creation_failed: Gagal membuat transfer berulang. Silakan periksa detail transfer dan coba lagi.
+    transfer_feature_disabled: Transaksi berulang dinonaktifkan untuk keluarga ini

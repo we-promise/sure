@@ -3,33 +3,33 @@ id:
   activerecord:
     attributes:
       recurrence_rule:
-        frequency: Frekuensi
-        interval: Interval
-        day_of_month: Hari dalam sebulan
-        weekday: Hari kerja
-        weekday_ordinal: Minggu dalam bulan
-        month_of_year: Bulan
+        frequency: "Frekuensi"
+        interval: "Interval"
+        day_of_month: "Tanggal"
+        weekday: "Hari"
+        weekday_ordinal: "Minggu ke"
+        month_of_year: "Bulan"
       recurring_transaction/recurrence_rules:
-        base: 'Aturan pengulangan:'
-        frequency: Frekuensi
-        interval: Interval
-        day_of_month: Hari dalam sebulan
-        weekday: Hari kerja
-        weekday_ordinal: Minggu dalam bulan
-        month_of_year: Bulan
+        base: "Aturan pengulangan:"
+        frequency: "Frekuensi"
+        interval: "Interval"
+        day_of_month: "Tanggal"
+        weekday: "Hari"
+        weekday_ordinal: "Minggu ke"
+        month_of_year: "Bulan"
     errors:
       models:
         recurrence_rule:
-          day_spec_required: 'Pilih tepat satu: tanggal dalam sebulan atau hari dalam seminggu'
+          day_spec_required: "Pilih salah satu dari tanggal atau hari dalam seminggu"
           attributes:
             weekday:
-              required_for_weekly: wajib untuk aturan mingguan
+              required_for_weekly: "wajib diisi untuk aturan mingguan"
             weekday_ordinal:
-              not_allowed_for_weekly: tidak berlaku untuk aturan mingguan
-              required_with_weekday: wajib ketika hari kerja diatur
-              not_allowed_without_weekday: hanya berlaku ketika hari kerja diatur
+              not_allowed_for_weekly: "tidak berlaku untuk aturan mingguan"
+              required_with_weekday: "wajib diisi ketika hari dalam seminggu ditentukan"
+              not_allowed_without_weekday: "hanya berlaku ketika hari dalam seminggu ditentukan"
             day_of_month:
-              not_allowed_for_weekly: tidak berlaku untuk aturan mingguan
+              not_allowed_for_weekly: "tidak berlaku untuk aturan mingguan"
             month_of_year:
-              required_for_yearly: wajib untuk aturan tahunan
-              not_allowed: hanya berlaku untuk aturan tahunan
+              required_for_yearly: "wajib diisi untuk aturan tahunan"
+              not_allowed: "hanya berlaku untuk aturan tahunan"

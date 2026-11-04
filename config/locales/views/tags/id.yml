@@ -3,7 +3,7 @@ id:
   tags:
     create:
       created: Tag dibuat
-      error: 'Error membuat tag: %{error}'
+      error: 'Terjadi kesalahan saat membuat tag: %{error}'
     destroy:
       deleted: Tag dihapus
     destroy_all:
@@ -19,7 +19,6 @@ id:
       delete_all: Hapus semua
     menu:
       label: Edit tag
-      loading: Memuat tag...
     new:
       new: Tag baru
     summary:

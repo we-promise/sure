@@ -2,17 +2,17 @@
 id:
   recurring_occurrences:
     history_status:
-      paid: Terbayar
+      paid: Lunas
       skipped: Dilewati
       missed: Terlewat
-      scheduled: Buka
+      scheduled: Terjadwal
     show:
-      due_on: Jatuh tempo %{date}
-      paid_of: '%{paid} dari %{expected} terbayar'
-      paid_headline: '%{amount} terbayar'
-      remaining: '%{amount} tersisa'
-      settled: Lunas sepenuhnya
-      overpaid: lebih dari yang diharapkan
+      due_on: "Jatuh tempo pada %{date}"
+      paid_of: "Dibayar %{paid} dari %{expected}"
+      paid_headline: "Dibayar %{amount}"
+      remaining: "Tersisa %{amount}"
+      settled: Lunas
+      overpaid: lebih banyak dari yang diperkirakan
       skipped: Dilewati
       missed: Ditandai terlewat
       payments: Pembayaran
@@ -20,26 +20,26 @@ id:
       unlink: Putuskan tautan
       review_heading: Tinjau pembayaran
       find_heading: Cari pembayaran
-      add_heading: Tambah pembayaran lain
-      other_matches: Kemungkinan kecocokan lain
-      no_ranked_candidates: Belum ada yang terlihat seperti pembayaran untuk tagihan ini.
+      add_heading: Tambah pembayaran lainnya
+      other_matches: Kecocokan lain yang mungkin
+      no_ranked_candidates: Belum ada yang tampak seperti pembayaran untuk tagihan ini.
       search_all: Cari semua transaksi
       search_placeholder: Cari transaksi
-      no_candidates: Tidak ada transaksi terdekat untuk ditautkan.
-      no_search_results: Tidak ada yang cocok dengan %{query}.
+      no_candidates: Tidak ada transaksi di sekitar tanggal ini untuk ditautkan.
+      no_search_results: "Tidak ada yang cocok dengan %{query}."
       link_payment: Tautkan pembayaran
       not_this_one: Bukan yang ini
-      cant_find: Tidak menemukan transaksinya?
-      manual_explainer: Catat pembayaran yang Anda tahu terjadi saat tidak ada transaksi yang cocok di sini.
+      cant_find: Tidak dapat menemukan transaksinya?
+      manual_explainer: Catat pembayaran yang Anda tahu telah terjadi ketika tidak ada transaksi di sini yang cocok.
       manual_amount_label: Jumlah
       manual_date_label: Tanggal
       record_payment: Catat pembayaran
-      mark_paid: Tandai dibayar
-      mark_paid_hint: Menyelesaikan sisanya tanpa mencatat transaksi.
+      mark_paid: Tandai lunas
+      mark_paid_hint: Melunasi sisanya tanpa mencatat transaksi baru.
       skip: Lewati
       snooze_week: Tunda seminggu
-      reopen: Buka lagi
-      view_bill: Lihat tagihan penuh
+      reopen: Buka kembali
+      view_bill: Lihat tagihan
     mark_paid:
       success: Tagihan ditandai lunas
     skip:
@@ -47,7 +47,7 @@ id:
     reopen:
       success: Tagihan dibuka kembali
     snooze:
-      success: Ditunda hingga %{date}
-      invalid_date: Tanggal tersebut tidak bisa dibaca
+      success: "Ditunda hingga %{date}"
+      invalid_date: Tanggal tersebut tidak dapat dibaca
     override_amount:
-      success: Jumlah ekspektasi diperbarui
+      success: Jumlah yang diharapkan diperbarui
