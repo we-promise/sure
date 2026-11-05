@@ -10,7 +10,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       name: "Test Enable Banking",
       country_code: "DE",
       application_id: "test_app_id",
-      client_certificate: "test_cert"
+      client_certificate: "test_cert", sync_start_date: 3.months.ago.to_date
     )
     @enable_banking_account = EnableBankingAccount.create!(
       enable_banking_item: @enable_banking_item,

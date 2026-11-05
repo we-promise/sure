@@ -3,6 +3,7 @@ vi:
   enable_banking_items:
     errors:
       api_error: "Đã xảy ra lỗi giao tiếp với ngân hàng."
+      history_truncated: "Chỉ nhập được một phần lịch sử giao dịch vì ngân hàng trả về nhiều trang hơn mức một lần đồng bộ có thể tải. Các giao dịch cũ hơn bị thiếu."
       network_unreachable: "Dịch vụ ngân hàng tạm thời không khả dụng. Vui lòng thử lại sau."
       session_invalid: "Phiên đã hết hạn. Vui lòng kết nối lại ngân hàng của bạn."
       unexpected: "Đã xảy ra lỗi không mong muốn trong quá trình đồng bộ."
