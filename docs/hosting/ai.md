@@ -1550,6 +1550,7 @@ Read and analysis:
 
 Write:
 - `update_transaction`, `update_budget`, `create_goal`
+- `split_transaction` / `unsplit_transaction` - Split a transaction into parts, re-split it, or undo the split
 - `unmatch_transfer` - Unlink a wrongly matched transfer
 - `update_transfer` - Count a transfer into an investment account as spending or as a plain transfer
 - `create_tag` / `update_tag`, `create_category` / `update_category` / `delete_category`
