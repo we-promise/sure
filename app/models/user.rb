@@ -259,6 +259,14 @@ class User < ApplicationRecord
 
   after_update_commit :purge_later, if: -> { saved_change_to_active?(from: true, to: false) }
   after_update_commit :revoke_all_access_tokens, if: -> { saved_change_to_active?(from: true, to: false) }
+  # Runs inside the update's transaction: the user row stays locked until commit,
+  # so a concurrent /api/v1/auth/refresh (which takes the same lock) cannot mint
+  # a token the revocation misses. Doorkeeper's own /oauth/token refresh locks
+  # only the old token, so a refresh already holding it can still commit a new
+  # token the in-transaction sweep does not see; the second sweep after commit
+  # revokes it, and any later refresh finds the old token revoked.
+  after_update :revoke_oauth_access, if: :saved_change_to_password_digest?
+  after_update_commit :revoke_oauth_access, if: :saved_change_to_password_digest?
 
   def deactivate
     return true unless active?
@@ -343,18 +351,27 @@ class User < ApplicationRecord
   # can never be confused with an unrelated persistence failure.
   class InactiveError < StandardError; end
 
+  # Raised by #with_active_lock! when the password changed between the
+  # caller's password check and the locked issuance step. The new password's
+  # revocation sweep has already run by then, so issuing would hand out a
+  # session or token for the old password that nothing revokes.
+  class StaleCredentialsError < StandardError; end
+
   # The one locked primitive for the actual authorization boundary: asserts
   # this user is eligible for new session/token issuance *right now*, under
   # a row lock, immediately before minting. Callers may additionally check
   # #active? earlier for a fast, friendly rejection (skip an MFA/device
   # round trip) — that's a UX optimization only, never a substitute for
   # this check, however "obviously" already-checked the user seems.
-  def with_active_lock!
+  # Pass the #password_fingerprint taken when the password was checked to
+  # also reject issuance after a concurrent password change.
+  def with_active_lock!(password_fingerprint: nil)
     lock_acquired = false
 
     with_lock do
       lock_acquired = true
       raise InactiveError unless active?
+      raise StaleCredentialsError if password_fingerprint && password_fingerprint != self.password_fingerprint
       yield self
     end
   rescue ActiveRecord::RecordNotFound
@@ -469,8 +486,7 @@ class User < ApplicationRecord
   # before deactivation could otherwise be exchanged for a fresh token
   # afterward.
   def revoke_all_access_tokens
-    tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
-    grants_revoked = Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    tokens_revoked, grants_revoked = revoke_doorkeeper_tokens_and_grants
     keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
 
     if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
@@ -479,6 +495,33 @@ class User < ApplicationRecord
         "and #{keys_revoked} API key(s) for deactivated user_id=#{id}"
       )
     end
+  end
+
+  # A new password must lock out whoever signed in to the mobile app or an
+  # OAuth client with the old one: their access and refresh tokens would
+  # otherwise stay valid for up to 30 days and keep renewing. API keys are
+  # created deliberately for integrations and do not depend on the password,
+  # so they stay.
+  def revoke_oauth_access
+    tokens_revoked, grants_revoked = revoke_doorkeeper_tokens_and_grants
+
+    if tokens_revoked > 0 || grants_revoked > 0
+      Rails.logger.info(
+        "[AUTH] Revoked #{tokens_revoked} access token(s) and #{grants_revoked} authorization grant(s) " \
+        "after password change for user_id=#{id}"
+      )
+    end
+  end
+
+  def password_fingerprint
+    Digest::SHA256.hexdigest(password_digest.to_s)
+  end
+
+  def revoke_doorkeeper_tokens_and_grants
+    [
+      Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current),
+      Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    ]
   end
 
   def purge

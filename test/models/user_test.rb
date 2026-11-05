@@ -1392,6 +1392,105 @@ class UserTest < ActiveSupport::TestCase
     assert grant.reload.revoked_at.present?
   end
 
+  test "changing the password revokes OAuth access tokens and grants but keeps API keys" do
+    user = users(:family_member)
+    api_key = ApiKey.create!( # pipelock:ignore
+      user: user,
+      name: "Test Key",
+      display_key: "test_password_key_#{SecureRandom.hex(8)}",
+      scopes: [ "read" ]
+    )
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: user.id,
+      scopes: "read_write",
+      expires_in: 1.year,
+      use_refresh_token: true
+    )
+    grant = Doorkeeper::AccessGrant.create!(
+      application: app,
+      resource_owner_id: user.id,
+      redirect_uri: app.redirect_uri,
+      expires_in: 10.minutes,
+      scopes: "read_write"
+    )
+    other_token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: users(:family_admin).id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    user.update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+
+    assert token.reload.revoked_at.present?
+    assert grant.reload.revoked_at.present?
+    assert api_key.reload.active?
+    assert_nil other_token.reload.revoked_at
+  end
+
+  test "updating a user without changing the password keeps OAuth access tokens" do
+    user = users(:family_member)
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+
+    user.update!(first_name: "Renamed")
+
+    assert_nil token.reload.revoked_at
+  end
+
+  test "changing the password revokes a token minted before the change commits" do
+    user = users(:family_member)
+    app = Doorkeeper::Application.create!(
+      name: "Test App #{SecureRandom.hex(4)}",
+      redirect_uri: "https://example.com/callback",
+      confidential: false
+    )
+    late_token = nil
+
+    User.transaction do
+      user.update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+      # Stands in for a concurrent /oauth/token refresh that held the old token's
+      # row lock and committed its replacement after the in-transaction sweep.
+      late_token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+        application: app,
+        resource_owner_id: user.id,
+        scopes: "read_write",
+        expires_in: 1.year,
+        use_refresh_token: true
+      )
+    end
+
+    assert late_token.reload.revoked_at.present?
+  end
+
+  test "with_active_lock! rejects a password fingerprint taken before a password change" do
+    user = users(:family_member)
+    fingerprint = user.password_fingerprint
+
+    assert_equal :ok, user.with_active_lock!(password_fingerprint: fingerprint) { :ok }
+
+    User.find(user.id).update!(password: "NewSecure1!pass", password_confirmation: "NewSecure1!pass")
+
+    assert_raises(User::StaleCredentialsError) do
+      user.with_active_lock!(password_fingerprint: fingerprint) { flunk "must not run" }
+    end
+  end
+
   test "update_manual_account_order keeps other groups and only accessible accounts" do
     @user.update_manual_account_order("credit_card", [ accounts(:credit_card).id ])
     foreign = families(:empty).accounts.create!(name: "Foreign", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:empty))
