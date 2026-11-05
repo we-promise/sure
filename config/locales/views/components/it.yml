@@ -75,6 +75,11 @@ it:
           holdings: Posizioni
           total_value: Valore totale
         vs_available_history: vs. cronologia disponibile
+        net_contributions:
+          difference: Differenza
+          incomplete: "I contributi netti potrebbero essere incompleti: non è stato possibile valorizzare un versamento o un prelievo."
+          label: Contributi netti
+          legend: Serie del grafico
       activity_date:
         balance_tooltip: "Il saldo a fine giornata, dopo tutte le transazioni e rettifiche"
         no_balance_data: "Nessun dato di saldo disponibile per questa data"

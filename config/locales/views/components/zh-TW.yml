@@ -77,6 +77,11 @@ zh-TW:
           holdings: 持股
           total_value: 總價值
         vs_available_history: （對比可用歷史資料）
+        net_contributions:
+          difference: 差額
+          incomplete: 淨投入可能不完整：有一筆存入或提領無法估值。
+          label: 淨投入
+          legend: 圖表系列
       activity_date:
         balance_tooltip: 計入所有交易與調整之後的當日結束餘額
         no_balance_data: 這一天沒有可用的餘額資料

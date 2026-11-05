@@ -111,7 +111,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
       # the requested series date range.
       active_points = [ opening_point(date: first_supported_history_date, date_formatted: nil, value: opening_money), *active_points ]
     elsif active_points.first.date == first_supported_history_date &&
-          first_provider_activity_date == first_supported_history_date
+          resets_point_on?(first_supported_history_date)
       # Sampling landed exactly on the opening date (e.g. a daily "All" chart)
       # and that date is the first provider activity date: the first point
       # carries the day's closing balance, which already includes the first
@@ -138,6 +138,14 @@ class Balance::LinkedInvestmentSeriesNormalizer
 
   def supported_history_start_date
     [ first_provider_activity_date, stable_provider_holding_start_date ].compact.min
+  end
+
+  # True when a point the balance query sampled on `date` is replaced by the
+  # balance before that day's activity: the date is where supported history
+  # starts and is the first provider activity date. The replacement can
+  # equal the day's close, so its value cannot tell it apart.
+  def resets_point_on?(date)
+    date.present? && date == supported_history_start_date && date == first_provider_activity_date
   end
 
   private
