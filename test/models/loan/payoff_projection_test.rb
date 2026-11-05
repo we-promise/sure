@@ -162,6 +162,26 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_not matured.payoff_projection(as_of: Date.new(2040, 1, 1)).applicable?
   end
 
+  # Two reasons a projection does not apply, which the Extra repayments tab
+  # words differently: nothing is owed, or something is owed with no
+  # scheduled repayment left to pay it. Both sides of zero.
+  test "settled only when nothing is owed, not when the schedule has run out" do
+    loan = build_loan(term_months: 24)
+
+    { 0 => true, -1 => true, BigDecimal("0.01") => false, 500_000 => false }.each do |balance, settled|
+      loan.account.update_columns(balance: balance)
+      assert_equal settled, loan.reload.payoff_projection(as_of: @today).settled?, "balance #{balance}"
+    end
+
+    loan.account.update_columns(balance: nil)
+    assert loan.reload.payoff_projection(as_of: @today).settled?, "no balance yet reads as zero"
+
+    loan.account.update_columns(balance: 500_000)
+    matured = loan.reload.payoff_projection(as_of: Date.new(2040, 1, 1))
+    assert_not matured.applicable?
+    assert_not matured.settled?, "past maturity with a balance still owing is not settled"
+  end
+
 
   # A variable loan's CONTRACT resizes the repayment at each rate change.
   # Holding one figure to maturity projects a repayment the lender will never
@@ -217,6 +237,179 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
       "on contract, the projection must charge the running month what the schedule charges it"
   end
 
+  # The extra rides on top of the contract's repayment in every period, so
+  # each period pays exactly the extra more than the same loan without it.
+  # The last row settles the balance and is the one exception.
+  test "a monthly extra adds to every period's repayment" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    baseline = loan.payoff_projection(as_of: @today)
+    with_extra = loan.payoff_projection(as_of: @today, extra: 1_000)
+
+    assert_operator with_extra.payments.length, :>, 1
+    with_extra.payments[0..-2].each_with_index do |payment, index|
+      assert_equal BigDecimal("1000"), payment[:payment_amount] - baseline.payments[index][:payment_amount],
+        "period #{index + 1} must pay the extra on top of the contract's repayment"
+    end
+  end
+
+  # Months sooner and interest saved are measured against the same loan paying
+  # no extra, not against the contract. On an overpaid loan the two differ, so
+  # comparing against the contract would fold in how far ahead the borrower
+  # already is.
+  test "the extra clears the loan sooner, and saves interest against no extra" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today) - 50_000)
+
+    baseline = loan.payoff_projection(as_of: @today)
+    with_extra = loan.payoff_projection(as_of: @today, extra: 5_000)
+
+    # The first period by hand: 6% a year is 0.5% a month on the balance the
+    # period opened with, and the payment is the contract's plus the extra.
+    opening = loan.account.balance
+    first = with_extra.payments.first
+    expected_interest = (opening * BigDecimal("0.005")).round(2)
+    assert_equal expected_interest, first[:interest_payment]
+    assert_equal baseline.payments.first[:payment_amount] + 5_000 - expected_interest, first[:principal_payment]
+
+    assert_equal baseline.payments.length - with_extra.payments.length, with_extra.months_sooner_than(baseline)
+    assert_operator with_extra.months_sooner_than(baseline), :>, 0
+    saved = baseline.total_interest.amount - with_extra.total_interest.amount
+    assert_equal Money.new(saved, "USD"), with_extra.interest_saved_versus(baseline)
+    assert_operator saved, :>, 0
+    assert_not_equal with_extra.interest_saved, with_extra.interest_saved_versus(baseline),
+      "against no extra, not against the contract: this loan was already ahead"
+  end
+
+  # A baseline that never clears has no payoff date, so there is no "sooner"
+  # to quote and no comparable total interest. Nor is there for an extra that
+  # does not clear the loan either.
+  test "a baseline that never clears quotes no months sooner or interest saved" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: 400_000)
+
+    baseline = loan.payoff_projection(as_of: @today)
+    clearing = loan.payoff_projection(as_of: @today, extra: 20_000)
+    too_small = loan.payoff_projection(as_of: @today, extra: 10)
+
+    assert_not baseline.converged?
+    assert clearing.converged?, "an extra this large clears the loan"
+    assert clearing.payoff_date
+    assert_nil clearing.months_sooner_than(baseline)
+    assert_nil clearing.interest_saved_versus(baseline)
+
+    assert_not too_small.converged?
+    assert_nil too_small.months_sooner_than(baseline)
+    assert_nil too_small.interest_saved_versus(baseline)
+  end
+
+  # Weekly extras are dated, starting the day after as_of, and each period is
+  # credited with the extras falling in (previous payment date, payment date].
+  # Payments land on the 1st and as_of is Friday 15 January 2027, so the
+  # extras fall on Saturdays from the 16th: three before 1 February, then four,
+  # four, and five before 1 May. The fifth is on 1 May itself, so a payment
+  # date belongs to the period it closes.
+  test "a weekly extra credits each date in its period" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    baseline = loan.payoff_projection(as_of: @today)
+    weekly = loan.payoff_projection(as_of: @today, extra: 100, extra_frequency: "weekly")
+
+    assert_equal [ 3, 4, 4, 5, 4 ], extra_counts(weekly, baseline, 100).first(5)
+  end
+
+  # The first dated extra is the day after as_of, never as_of itself: that
+  # day's period is already open. With as_of the day before a payment, the
+  # first extra lands on the payment date, so that period carries exactly one.
+  test "the first weekly extra falls the day after as_of" do
+    as_of = Date.new(2027, 1, 31)
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, as_of))
+
+    baseline = loan.payoff_projection(as_of: as_of)
+    weekly = loan.payoff_projection(as_of: as_of, extra: 100, extra_frequency: "weekly")
+
+    assert_equal 1, extra_counts(weekly, baseline, 100).first, "1 February, the day after as_of, is in the first period"
+  end
+
+  # Every fourteen days from the 16th: two in most periods, three in the
+  # period that closes on 1 August (3, 17 and 31 July).
+  test "a fortnightly extra credits two or three times a period" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    baseline = loan.payoff_projection(as_of: @today)
+    fortnightly = loan.payoff_projection(as_of: @today, extra: 100, extra_frequency: "fortnightly")
+
+    assert_equal [ 2, 2, 2, 2, 2, 2, 3 ], extra_counts(fortnightly, baseline, 100).first(7)
+  end
+
+  test "monthly is the default, one extra in every period" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    default = loan.payoff_projection(as_of: @today, extra: 100)
+    monthly = loan.payoff_projection(as_of: @today, extra: 100, extra_frequency: "monthly")
+
+    assert_equal default.payments, monthly.payments
+  end
+
+  # A programming error, not user input: Loan::ExtraRepayment refuses an
+  # unknown frequency before it reaches the projection.
+  test "an unknown frequency is refused" do
+    loan = build_loan(term_months: 24)
+
+    error = assert_raises(ArgumentError) { loan.payoff_projection(as_of: @today, extra: 100, extra_frequency: "daily") }
+    assert_equal "Unknown extra frequency: \"daily\"", error.message
+  end
+
+  # What is still to repay from today: the balance plus every remaining
+  # period's interest. The extra pays the same principal, so its total is
+  # lower by exactly the interest it saves.
+  test "total cost is today's balance plus the interest still to pay" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    baseline = loan.payoff_projection(as_of: @today)
+    with_extra = loan.payoff_projection(as_of: @today, extra: 1_000)
+
+    assert_equal Money.new(loan.account.balance + baseline.total_interest.amount, "USD"), baseline.total_cost
+    assert_equal baseline.payments.sum { |payment| payment[:payment_amount] }, baseline.total_cost.amount,
+      "the total is what the payments add up to"
+    assert_equal baseline.total_cost - with_extra.total_cost, with_extra.total_cost_saved_versus(baseline)
+    assert_equal with_extra.interest_saved_versus(baseline), with_extra.total_cost_saved_versus(baseline)
+  end
+
+  # A run that never clears the balance has no total: a balloon would still
+  # be owed, and adding it in would quote a cost the borrower never agreed.
+  test "a projection that never clears has no total cost" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: 400_000)
+
+    baseline = loan.payoff_projection(as_of: @today)
+    clearing = loan.payoff_projection(as_of: @today, extra: 20_000)
+
+    assert_nil baseline.total_cost
+    assert clearing.total_cost
+    assert_nil clearing.total_cost_saved_versus(baseline)
+  end
+
+  test "no extra leaves the projection identical" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today) - 10_000)
+
+    baseline = loan.payoff_projection(as_of: @today)
+
+    [ nil, 0 ].each do |extra|
+      projection = loan.payoff_projection(as_of: @today, extra: extra)
+      assert_equal baseline.payments, projection.payments, "extra: #{extra.inspect}"
+      assert_equal 0, projection.months_sooner_than(baseline)
+      assert_equal Money.new(0, "USD"), projection.interest_saved_versus(baseline)
+    end
+  end
+
   # The projection is the second caller of Loan::Simulator, and it builds its
   # own. A loan on actual/365 must be projected on actual/365: otherwise the
   # schedule reconciles to the lender's statement while the projection beside
@@ -263,6 +456,15 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
         entryable: Valuation.new(kind: "opening_anchor")
       )
       account.loan
+    end
+
+    # How many extras each period carried: its payment above the same loan's
+    # without the extra, in units of the extra. The last row settles the
+    # balance and is left out.
+    def extra_counts(projection, baseline, extra)
+      projection.payments[0..-2].each_with_index.map do |payment, index|
+        ((payment[:payment_amount] - baseline.payments[index][:payment_amount]) / extra).to_i
+      end
     end
 
     def scheduled_balance_at(loan, date)

@@ -5,7 +5,7 @@ class Family < ApplicationRecord
 
   include FioConnectable
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
-  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable
+  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable, TruelayerConnectable
   include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinspotConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
   include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
@@ -59,6 +59,7 @@ class Family < ApplicationRecord
   has_many :entries, through: :accounts
   has_many :transactions, through: :accounts
   has_many :rules, dependent: :destroy
+  has_many :rule_groups, dependent: :destroy
   has_many :trades, through: :accounts
   has_many :holdings, through: :accounts
 
@@ -258,7 +259,9 @@ class Family < ApplicationRecord
   validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
+  validate :currency_must_be_known, if: :currency_changed?
 
+  before_validation :normalize_currency
   before_validation :normalize_enabled_currencies!
   after_create_commit :add_classifier_rules
 
@@ -570,11 +573,13 @@ class Family < ApplicationRecord
   end
 
   # A rule with no conditions at the top of the order, the others moving
-  # down one.
+  # down one. Rule groups share the rules' positions (see Rule::Layout), so
+  # they move too.
   def add_classifier_rule!(action_type, active: true)
     Rule.transaction do
       Rule.lock_positions!(self)
       rules.update_all("position = position + 1")
+      rule_groups.update_all("position = position + 1")
       rules.create!(name: self.class.classifier_rule_name(action_type), resource_type: "transaction", active: active, position: 1,
                     actions_attributes: [ { action_type: action_type } ])
     end
@@ -916,6 +921,14 @@ class Family < ApplicationRecord
       all_codes = Money::Currency.as_options.map(&:iso_code)
       all_selected = normalized_codes.size == all_codes.size && (normalized_codes - all_codes).empty?
       self.enabled_currencies = all_selected ? nil : normalized_codes
+    end
+
+    def normalize_currency
+      self.currency = self.class.normalize_currency_code(currency) || currency
+    end
+
+    def currency_must_be_known
+      errors.add(:currency, :invalid) if self.class.normalize_currency_code(currency).nil?
     end
 
     def normalize_currency_codes(values)

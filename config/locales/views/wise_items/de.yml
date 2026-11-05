@@ -22,6 +22,7 @@ de:
     entries:
       default_name: Wise-Transaktion
       fee_name: Wise-Gebühr
+      refund_name: Wise-Rückerstattung
     generate_sca_keypair:
       failed: Das neue SCA-Schlüsselpaar ließ sich nicht erzeugen. Versuch es noch einmal.
       success: Neues SCA-Schlüsselpaar erzeugt. Registriere den öffentlichen Schlüssel bei Wise, um die Einrichtung abzuschließen.
@@ -30,9 +31,12 @@ de:
       not_found: Wise-Guthaben nicht gefunden.
       success: Wise-Guthaben mit dem Konto verknüpft.
     link_existing_account:
+      account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
+      currency_mismatch: "Dieses Wise-Guthaben lautet auf %{balance_currency}, das Konto auf %{account_currency}. Wähl ein Guthaben in der Währung des Kontos."
       failed: Das Konto ließ sich nicht verknüpfen. Versuch es noch einmal.
       not_found: Konto oder Wise-Guthaben nicht gefunden.
       success: "%{account_name} mit Wise verknüpft"
+      unsupported_account_type: Wise-Guthaben lassen sich nur mit Bankkonten verknüpfen.
     link_profiles:
       already_connected: Alle gewählten Profile sind bereits verbunden.
       no_profiles_selected: Wähl mindestens ein Profil.
@@ -76,7 +80,7 @@ de:
         generate: Schlüsselpaar erzeugen
         regenerate: Neues Schlüsselpaar erzeugen
         regenerate_confirm: "Dadurch wird ein neues Schlüsselpaar erzeugt. Wise akzeptiert den bisherigen öffentlichen Schlüssel weiterhin, bis du ihn selbst in deinem Wise-Konto entfernst – Sure kann ihn nicht aus der Ferne widerrufen. Du musst den neuen öffentlichen Schlüssel bei Wise registrieren, bevor Kontoauszüge wieder synchronisiert werden können. Fortfahren?"
-      import_all_history_help: Holt alle historischen Wise-Kontoauszüge statt nur das letzte Jahr.
+      import_all_history_help: Importiert die gesamte Wise-Historie (Überweisungen, Aktivitäten und Kontoauszüge) statt nur das letzte Jahr. Jedes Guthaben beginnt dann bei 0 an dem Tag, an dem Wise es eröffnet hat.
       import_all_history_label: Vollständige Transaktionshistorie importieren
       keep_token_placeholder: Leer lassen, um den bisherigen Token zu behalten
       not_configured: Nicht eingerichtet
@@ -145,6 +149,9 @@ de:
       checking_account_configuration: Kontokonfiguration wird geprüft …
       credentials_invalid: Ungültiger Wise-API-Token oder fehlende Berechtigungen
       failed: Der Sync ist fehlgeschlagen. Versuch es noch einmal oder wende dich an den Support.
+      fetch_failed:
+        one: "%{count} Wise-Anfrage ist fehlgeschlagen. Der nächste Sync versucht es erneut."
+        other: "%{count} Wise-Anfragen sind fehlgeschlagen. Der nächste Sync versucht es erneut."
       import_failed: Der Wise-Import ist fehlgeschlagen.
       importing_accounts: Konten werden aus Wise importiert …
       processing_transactions: Transaktionen werden verarbeitet …
