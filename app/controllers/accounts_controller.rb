@@ -241,11 +241,9 @@ class AccountsController < ApplicationController
   end
 
   def sparkline
-    etag_key = @account.family.build_cache_key("#{@account.id}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
-
     # Short-circuit with 304 Not Modified when the client already has the latest version.
     # We defer the expensive series computation until we know the content is stale.
-    if stale?(etag: etag_key, last_modified: @account.family.latest_sync_completed_at)
+    if stale?(etag: @account.sparkline_cache_key)
       @sparkline_series = @account.sparkline_series
       render layout: false
     end
