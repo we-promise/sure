@@ -39,13 +39,7 @@ class Assistant::Function::UnsplitTransaction < Assistant::Function
     return error("not_authorized", "You do not have permission to unsplit this transaction.") unless permitted_to_split?(entry.account)
     return error("not_split", "Transaction is not split.") unless entry.unsplit_once!
 
-    entry.sync_account_later
-
-    {
-      success: true,
-      transaction: serialize_split(entry.reload),
-      message: "Transaction '#{entry.name}' is no longer split."
-    }
+    split_response(entry, "Transaction '#{entry.name}' is no longer split.")
   rescue ActiveRecord::RecordInvalid => e
     error("validation_failed", e.record.errors.full_messages.presence&.join("; ") || e.message)
   end

@@ -13,6 +13,7 @@ module Assistant::Function::SplitSupport
 
       family.transactions
         .joins(:entry)
+        .includes(:entry)
         .where(entries: { account_id: user.accessible_accounts.visible.select(:id) })
         .find_by(id: id)
     end
@@ -33,8 +34,25 @@ module Assistant::Function::SplitSupport
       account.permission_for(user).in?([ :owner, :full_control ])
     end
 
+    # Not memoized: the assistant reuses a function instance across tool
+    # rounds, and a category created in an earlier round must be accepted.
     def split_references
-      @split_references ||= Entry::SplitReferences.for_user(family, user)
+      Entry::SplitReferences.for_user(family, user)
+    end
+
+    # The split is committed by the time the sync is enqueued, so a failure to
+    # enqueue is reported as a warning rather than as a failed call.
+    def split_response(entry, message)
+      sync_warning = nil
+      begin
+        entry.sync_account_later
+      rescue StandardError => e
+        sync_warning = "The change was saved, but the account sync could not be enqueued (#{e.class}). Balances will recalculate on the next sync."
+      end
+
+      response = { success: true, transaction: serialize_split(entry.reload), message: message }
+      response[:warning] = sync_warning if sync_warning
+      response
     end
 
     def not_splittable_reason(transaction, entry)
