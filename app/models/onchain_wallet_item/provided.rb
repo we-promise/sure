@@ -11,9 +11,10 @@ module OnchainWalletItem::Provided
   end
 
   # Chains whose address format matches, paired with their adapter. Used by the
-  # linking flow to work out which chain(s) an address could belong to.
+  # linking flow to work out which chain(s) an address could belong to, so a
+  # chain the user must pick explicitly is left out.
   def matching_chain_adapters(address)
-    Onchain::Chains.matching(address).map do |definition|
+    Onchain::Chains.matching(address).select(&:detectable).map do |definition|
       [ definition, definition.adapter(credentials: onchain_credentials) ]
     end
   end

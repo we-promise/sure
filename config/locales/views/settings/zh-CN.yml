@@ -489,7 +489,7 @@ zh-CN:
         fio: 使用只读 API 令牌同步 Fio banka 账户。
         wise: 自动同步您的 Wise 多币种余额与国际转账。
         coinspot: 使用只读 API 密钥同步 CoinSpot 余额、澳元估值、转账、充值、提现及订单历史。
-        onchain_wallet: 通过链上公开地址追踪比特币、EVM、Solana、Cosmos 和 Polkadot 自托管钱包。
+        onchain_wallet: 通过链上公开地址追踪比特币、EVM、Solana、Avalanche、Cosmos 和 Polkadot 自托管钱包。
         trading212: 使用只读 API 密钥同步您的 Trading 212 投资组合。
         trade_republic: 通过安全只读网页登录同步您的 Trade Republic 投资账户。
         questrade: 通过 Questrade API 直接同步您的 Questrade 投资账户。
