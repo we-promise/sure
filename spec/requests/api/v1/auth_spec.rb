@@ -17,7 +17,7 @@ RSpec.describe 'API V1 Auth', type: :request do
             type: :object,
             properties: {
               email: { type: :string, format: :email, description: 'User email address' },
-              password: { type: :string, description: 'Password (min 8 chars, mixed case, number, special char)' },
+              password: { type: :string, description: 'Password (min 8 chars, max 72 bytes, mixed case, number, special char)' },
               first_name: { type: :string },
               last_name: { type: :string }
             },

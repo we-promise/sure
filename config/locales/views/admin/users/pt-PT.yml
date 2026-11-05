@@ -94,6 +94,7 @@ pt-PT:
         password_and_family_conflict: "A palavra-passe e a associação à família/grupo não podem ser atualizadas ao mesmo tempo."
         password_disabled: "Definir uma palavra-passe está desativado porque os utilizadores só podem iniciar sessão com SSO."
         password_too_short: "A palavra-passe tem de ter pelo menos 8 caracteres."
+        password_too_long: "A palavra-passe pode ter no máximo %{count} bytes (letras acentuadas e emojis ocupam mais de um byte)."
         password_missing_case: "A palavra-passe tem de incluir letras maiúsculas e minúsculas."
         password_missing_number: "A palavra-passe tem de incluir pelo menos um número."
         password_missing_special: "A palavra-passe tem de incluir pelo menos um caráter especial."

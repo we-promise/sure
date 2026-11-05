@@ -401,6 +401,19 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal old_digest, target.reload.password_digest
   end
 
+  test "update with a password longer than 72 bytes shows too long error" do
+    target = users(:family_member)
+    old_digest = target.password_digest
+
+    patch admin_user_url(target), params: {
+      user: { role: target.role, password: "Aa1!" + "a" * 69 }
+    }
+
+    assert_redirected_to admin_users_url
+    assert_match(/at most 72 bytes/i, flash[:alert])
+    assert_equal old_digest, target.reload.password_digest
+  end
+
   test "update with password missing uppercase or lowercase shows case error" do
     target = users(:family_member)
     old_digest = target.password_digest

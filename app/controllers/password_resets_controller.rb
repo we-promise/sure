@@ -37,7 +37,7 @@ class PasswordResetsController < ApplicationController
       return
     end
 
-    if @user.update(password_params)
+    if @user.update(password_params.merge(require_password_complexity: true))
       redirect_to new_session_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity

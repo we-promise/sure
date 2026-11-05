@@ -99,6 +99,39 @@ class RegistrationsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "sign-up names each broken password rule" do
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: { email: "weakpassword@example.com", password: "abc" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "p", text: /too short \(minimum is 8 characters\)/
+    assert_select "p", text: /uppercase and lowercase/
+    assert_select "p", text: /at least one number/
+    assert_select "p", text: /at least one special character/
+  end
+
+  test "sign-up names the broken password rules in the user's language" do
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: { email: "weakpassword@example.com", password: "abc" } },
+        headers: { "Accept-Language" => "de" }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "p", text: /Groß- und Kleinbuchstaben/
+    assert_select "p", text: /mindestens eine Ziffer/
+    assert_select "p", text: /mindestens ein Sonderzeichen/
+  end
+
+  test "sign-up rejects a password longer than 72 bytes" do
+    assert_no_difference "User.count" do
+      post registration_url, params: { user: { email: "longpassword@example.com", password: "Aa1!" + "a" * 69 } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "p", text: /maximum is 72 bytes/
+  end
+
   test "invalid invite code does not create a user" do
     with_env_overrides REQUIRE_INVITE_CODE: "true" do
       assert_no_difference "User.count" do

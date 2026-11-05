@@ -10,11 +10,17 @@ it:
         last_name: Cognome
         password: Password
         password_confirmation: Conferma password
+        password_challenge: Password attuale
     errors:
       models:
         user:
           attributes:
             base:
               cannot_deactivate_admin_with_other_users: L'amministratore non può eliminare l'account mentre altri utenti sono presenti. Elimina prima tutti i membri.
+            password:
+              missing_case: deve contenere lettere maiuscole e minuscole
+              missing_number: deve contenere almeno un numero
+              missing_special: deve contenere almeno un carattere speciale
+              too_long: "è troppo lunga (massimo %{count} byte; le lettere accentate e le emoji occupano più di un byte)"
             profile_image:
               invalid_file_size: la dimensione del file deve essere inferiore a %{max_megabytes}MB

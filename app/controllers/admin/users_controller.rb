@@ -208,13 +208,15 @@ module Admin
         user.has_local_password? && AuthConfig.local_login_allowed_for?(user)
       end
 
+      # i18n-tasks-use t("admin.users.update.password_too_short")
+      # i18n-tasks-use t("admin.users.update.password_too_long")
+      # i18n-tasks-use t("admin.users.update.password_missing_case")
+      # i18n-tasks-use t("admin.users.update.password_missing_number")
+      # i18n-tasks-use t("admin.users.update.password_missing_special")
       def validate_password_criteria(password)
-        errors = []
-        errors << t(".password_too_short") if password.length < 8
-        errors << t(".password_missing_case") unless password.match?(/[A-Z]/) && password.match?(/[a-z]/)
-        errors << t(".password_missing_number") unless password.match?(/\d/)
-        errors << t(".password_missing_special") unless password.match?(/[!@#$%^&*(),.?":{}|<>]/)
-        errors
+        PasswordPolicy.unmet_requirements(password).map do |requirement|
+          requirement == :too_long ? t(".password_too_long", count: PasswordPolicy::MAX_BYTES) : t(".password_#{requirement}")
+        end
       end
 
       def membership_change_requested?
