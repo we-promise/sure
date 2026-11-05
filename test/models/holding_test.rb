@@ -147,6 +147,87 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 2, queries.count { |sql| sql.include?('FROM "trades"') }
   end
 
+  # Each case pins the figure #avg_cost gives on its own, then checks the batch
+  # hands the holding that same figure and that reading it afterwards runs no
+  # query, so the answer is the preload's and not the per-holding fallback's.
+  test "the batched average cost matches the per-holding one" do
+    sweep = create_security("SWP", prices: [ { date: Date.current, price: 10 } ])
+    plain = create_security("PLN", prices: [ { date: Date.current, price: 10 } ])
+    unrated = create_security("CADX", prices: [ { date: Date.current, price: 10 } ])
+    sweep_holding = create_holding(sweep, Date.current, 5)
+    plain_holding = create_holding(plain, Date.current, 5)
+    unrated_holding = create_holding(unrated, Date.current, 5)
+
+    # fee: (10 * 212 + 10 + 15 * 216 + 5) / 25
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, fee: 10, date: 1.day.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, fee: 5, date: Date.current)
+    # a foreign purchase converted at the rate it carries: 10 * 128 CAD at 1.25
+    create_trade(@nvda.security, account: @account, qty: 10, price: 128.00, date: 1.day.ago.to_date, currency: "CAD")
+      .entryable.update!(exchange_rate: 1.25)
+    # a foreign purchase with no rate anywhere
+    create_trade(unrated, account: @account, qty: 5, price: 10, date: Date.current, currency: "CAD")
+    # a sweep is an internal movement, so the position has no knowable cost
+    create_trade(sweep, account: @account, qty: 5, price: 10, date: Date.current)
+      .entryable.update!(investment_activity_label: "Sweep In")
+    create_trade(plain, account: @account, qty: 5, price: 8, date: Date.current)
+
+    expected = {
+      @amzn => Money.new(BigDecimal("215")),
+      @nvda => Money.new(BigDecimal("160")),
+      unrated_holding => nil,
+      sweep_holding => nil,
+      plain_holding => Money.new(BigDecimal("8"))
+    }
+    expected.each { |holding, value| assert_cost value, Holding.find(holding.id).avg_cost, holding.ticker }
+
+    batch = Holding.where(id: expected.keys.map(&:id)).includes(:security).to_a
+    Holding.preload_avg_costs(batch)
+
+    batch.each do |holding|
+      original = expected.keys.find { |h| h.id == holding.id }
+      # uncached: the per-holding reads above put the fallback's SQL in the
+      # query cache, which capture_sql_queries does not count.
+      queries = Holding.uncached { capture_sql_queries { assert_cost expected[original], holding.avg_cost, holding.ticker } }
+      assert_empty queries, "#{holding.ticker} read its cost after the preload"
+    end
+  end
+
+  test "the batched average cost reads every holding's trades in one query" do
+    batch_sizes = [ 2, 4 ].map do |count|
+      holdings = Array.new(count) do |i|
+        security = create_security("B#{count}#{i}", prices: [ { date: Date.current, price: 10 } ])
+        create_trade(security, account: @account, qty: 1, price: 10, date: Date.current)
+        create_holding(security, Date.current, 1)
+      end
+
+      capture_sql_queries { Holding.preload_avg_costs(holdings) }.size
+    end
+
+    assert_equal [ 1, 1 ], batch_sizes
+  end
+
+  test "the batch leaves a stored cost basis alone and does not query for it" do
+    @amzn.update!(cost_basis: 100)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: Date.current)
+
+    queries = capture_sql_queries { Holding.preload_avg_costs([ @amzn ]) }
+
+    assert_empty queries
+    assert_equal Money.new(100), @amzn.avg_cost
+  end
+
+  test "a reload drops the preloaded average cost and the trend built on it" do
+    Holding.preload_avg_costs([ @amzn ])
+    assert_nil @amzn.avg_cost
+    assert_nil @amzn.trend
+
+    create_trade(@amzn.security, account: @account, qty: 15, price: 200.00, date: Date.current)
+    @amzn.reload
+
+    assert_equal Money.new(200), @amzn.avg_cost
+    assert_not_nil @amzn.trend
+  end
+
   test "calculates total return trend" do
     @amzn.stubs(:avg_cost).returns(Money.new(214.00))
     @nvda.stubs(:avg_cost).returns(Money.new(126.00))
@@ -490,6 +571,10 @@ class HoldingTest < ActiveSupport::TestCase
   end
 
   private
+
+    def assert_cost(expected, actual, message)
+      expected.nil? ? assert_nil(actual, message) : assert_equal(expected, actual, message)
+    end
 
     def load_holdings
       security1 = create_security("AMZN", prices: [
