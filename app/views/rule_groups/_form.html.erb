@@ -1,0 +1,7 @@
+<%# locals: (rule_group:) %>
+<%= styled_form_with model: rule_group, class: "space-y-4", data: { turbo_frame: :_top } do |f| %>
+  <%= f.text_field :name, label: t("rule_groups.form.name_label"), placeholder: t("rule_groups.form.name_placeholder"), autofocus: true, required: true %>
+  <p class="text-xs text-secondary"><%= t("rule_groups.form.hint") %></p>
+
+  <%= f.submit %>
+<% end %>
