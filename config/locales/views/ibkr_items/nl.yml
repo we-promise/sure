@@ -3,7 +3,7 @@ nl:
   providers:
     ibkr:
       name: Interactive Brokers
-      connection_description: Verbind een Interactive Brokers Flex Web Service-rapport
+      connection_description: Koppel een Interactive Brokers Flex Web Service-rapport
       institution_name: Interactive Brokers
   ibkr_items:
     defaults:
@@ -21,7 +21,7 @@ nl:
       accounts_need_setup: Accounts moeten worden ingesteld
       accounts_need_setup_description: Sommige accounts van IBKR moeten worden gekoppeld aan Sure-accounts.
       no_accounts_discovered: Nog geen IBKR-accounts gevonden.
-      no_accounts_discovered_description: Voer een synchronisatie uit nadat u uw Flex-query hebt geconfigureerd om accounts te vinden.
+      no_accounts_discovered_description: Voer een synchronisatie uit nadat u uw Flex-query heeft geconfigureerd om accounts te vinden.
     setup_accounts:
       page_title: Interactive Brokers-accounts instellen
       dialog_title: Stel uw Interactive Brokers-accounts in
@@ -65,7 +65,7 @@ nl:
     select_existing_account:
       title: Interactive Brokers-account koppelen
       no_accounts_available: Er zijn nog geen niet-gekoppelde Interactive Brokers-accounts beschikbaar.
-      run_sync_hint: "Voer een synchronisatie uit via Instellingen > Providers nadat u uw Flex-query hebt bijgewerkt."
+      run_sync_hint: "Voer een synchronisatie uit via Instellingen > Providers nadat u uw Flex-query heeft bijgewerkt."
       wait_for_sync: Wacht tot de synchronisatie voor accountdetectie is voltooid.
       balance: Saldo
       link: Koppelen
@@ -75,14 +75,14 @@ nl:
     update:
       success: Interactive Brokers-configuratie succesvol bijgewerkt.
     destroy:
-      success: Interactive Brokers-verbinding is in de wachtrij voor verwijdering geplaatst.
+      success: Interactive Brokers-koppeling ingepland voor verwijdering.
     select_accounts:
       not_configured: Interactive Brokers is niet geconfigureerd.
     link_existing_account:
       not_found: Account of Interactive Brokers-configuratie niet gevonden.
       only_manual_investment: Alleen handmatige beleggingsaccounts kunnen aan Interactive Brokers worden gekoppeld.
       already_linked: Dit Interactive Brokers-account is al gekoppeld.
-      success: Succesvol gekoppeld aan Interactive Brokers-account.
+      success: Gekoppeld aan Interactive Brokers-account.
       failed: Koppelen aan Interactive Brokers-account mislukt.
     complete_account_setup:
       success:

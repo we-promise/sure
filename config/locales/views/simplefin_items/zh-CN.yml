@@ -92,6 +92,24 @@ zh-CN:
       stale_accounts_errors:
         one: "%{count} 个过期账户操作失败，请查看日志了解详情。"
         other: "%{count} 个过期账户操作失败，请查看日志了解详情。"
+    sync_status:
+      no_accounts: 未找到账户
+      synced:
+        one: 已同步 %{count} 个账户
+        other: 已同步 %{count} 个账户
+      partial_setup:
+        one: 已同步 %{linked} 个，%{unlinked} 个需要设置
+        other: 已同步 %{linked} 个，%{unlinked} 个需要设置
+    institution_summary:
+      none: 未连接任何机构
+      count:
+        one: "%{count} 个机构"
+        other: "%{count} 个机构"
+    rate_limited:
+      daily_refresh: 您已达到 SimpleFIN 的每日刷新上限。请在 Bridge 刷新后重试（最多 24 小时）。
+    stale_sync:
+      last_successful: 上次成功同步是在 %{count} 天前。您的 SimpleFIN 连接可能需要注意。
+      no_transactions: 已有 %{count} 天没有新交易。请检查您的 SimpleFIN 仪表盘以确保银行连接处于活跃状态。
     simplefin_item:
       add_new: 添加新连接
       confirm_accept: 删除连接
