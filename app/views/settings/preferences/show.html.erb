@@ -299,3 +299,7 @@
     </label>
   <% end %>
 <% end %>
+
+<% if preview_features_enabled? %>
+  <%= render "web_push" %>
+<% end %>

@@ -28,6 +28,7 @@ class User < ApplicationRecord
   has_many :chats, dependent: :destroy
   has_many :api_keys, dependent: :destroy
   has_many :push_subscriptions, dependent: :destroy
+  has_many :web_push_subscriptions, dependent: :destroy
   has_many :webauthn_credentials, dependent: :destroy
   has_many :mobile_devices, dependent: :destroy
   has_many :invitations, foreign_key: :inviter_id, dependent: :destroy
@@ -801,6 +802,10 @@ class User < ApplicationRecord
   # Returns whether clicking outside a modal is prevented from closing it.
   def disable_modal_click_outside?
     preferences&.dig("disable_modal_click_outside") == true
+  end
+
+  def web_push_budget_warnings_enabled?
+    preferences&.dig("web_push_budget_warnings_enabled") == true
   end
 
   def preview_features_enabled?
