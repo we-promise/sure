@@ -1,0 +1,7 @@
+<%# locals: (settings:) %>
+<%# The merchant's two forms: its name as words (the original), and its identity
+    as one token. %>
+<%= classifier_section_form do %>
+  <%= render "settings/classifiers/option", key: :merchant_name_words, settings: settings, label: t(".merchant_name_words"), hint: t(".merchant_name_words_hint") %>
+  <%= render "settings/classifiers/option", key: :merchant_field, settings: settings, label: t(".merchant_field"), hint: t(".merchant_field_hint") %>
+<% end %>

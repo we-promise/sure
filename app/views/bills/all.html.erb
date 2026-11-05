@@ -49,7 +49,7 @@
             data: { "auto-submit-form-target": "auto" }) %>
       <%= form.select :status,
             options_for_select(
-              [ [ t(".any_status"), "" ] ] + BillsController::STATUS_FILTERS.map { |status| [ t(".status_filters.#{status}"), status ] },
+              [ [ t(".current_bills"), "" ] ] + BillsController::STATUS_FILTERS.map { |status| [ t(".status_filters.#{status}"), status ] },
               params.dig(:q, :status)
             ),
             { container_class: "w-auto py-2.5" },
@@ -71,11 +71,28 @@
     <% end %>
 
     <% if @all_series.empty? %>
-      <%= render DS::EmptyState.new(
-            icon: "receipt",
-            title: t(".no_matches_title"),
-            description: t(".no_matches_description")
-          ) %>
+      <% if @dismissed_series_hidden %>
+        <%= render DS::EmptyState.new(
+              icon: "receipt",
+              title: t(".no_matches_title"),
+              description: t(".dismissed_hidden_description")
+            ) do |empty| %>
+          <% empty.with_action do %>
+            <%= render DS::Link.new(
+                  text: t(".status_filters.ended"),
+                  icon: "receipt",
+                  variant: "outline",
+                  href: bills_path(view: "all", q: { status: "ended" })
+                ) %>
+          <% end %>
+        <% end %>
+      <% else %>
+        <%= render DS::EmptyState.new(
+              icon: "receipt",
+              title: t(".no_matches_title"),
+              description: t(".no_matches_description")
+            ) %>
+      <% end %>
     <% else %>
       <%# A table on a phone is a table you scroll sideways to read. The same
           rows, laid out the way the Calendar already does it: a purpose-built

@@ -163,6 +163,18 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[data-controller=cost-basis-form][data-turbo=false]", count: 0
   end
 
+  test "cost basis overwrite confirmation labels its button in the user's language" do
+    users(:family_admin).update!(locale: "de")
+    @holding.update!(qty: 10, cost_basis: 12.5, cost_basis_locked: true)
+
+    get holding_path(@holding)
+
+    form = css_select("form[data-controller=cost-basis-form]").first
+    confirmation = JSON.parse(form["data-turbo-confirm"])
+    assert_equal I18n.t("holdings.cost_basis_cell.overwrite_confirm_title", locale: :de), confirmation["title"]
+    assert_equal I18n.t("shared.custom_confirm.default_btn_text", locale: :de), confirmation["confirmText"]
+  end
+
   test "cost basis editor shows a stored zero basis instead of placeholders" do
     @holding.update!(qty: 10, cost_basis: 0, cost_basis_locked: true)
 
@@ -210,12 +222,24 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
     # Redirects to account page holdings tab to refresh list
     assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.unlock_cost_basis.success"), flash[:notice]
     @holding.reload
 
     # Then: lock is removed but cost_basis and source remain
     assert_not @holding.cost_basis_locked?
     assert_equal 50.0, @holding.cost_basis.to_f
     assert_equal "manual", @holding.cost_basis_source
+  end
+
+  test "reset_security restores the provider security and confirms it" do
+    @holding.account.update!(plaid_account: plaid_accounts(:one))
+    @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+
+    post reset_security_holding_path(@holding)
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+    assert_equal I18n.t("holdings.reset_security.success"), flash[:notice]
+    assert_equal securities(:aapl), @holding.reload.security
   end
 
   test "remap_security brings offline security back online" do
