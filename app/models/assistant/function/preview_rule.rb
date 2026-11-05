@@ -69,5 +69,7 @@ class Assistant::Function::PreviewRule < Assistant::Function
     end
 
     { success: true, rule: serialize_rule(rule), preview: preview(rule, sample_size: resolved_sample_size(params)) }
+  rescue Rule::SafeRegex::TimeoutError
+    regex_timeout_error(rule, "Nothing was changed.")
   end
 end

@@ -24,12 +24,15 @@ class Provider::Registry
     # one configured) keeps working. Returns nil when neither is configured —
     # callers guard on that.
     def preferred_llm_provider
-      order = Setting.llm_provider == "anthropic" ? %i[anthropic openai] : %i[openai anthropic]
-      order.each do |name|
+      llm_provider_order.each do |name|
         provider = get_provider(name)
         return provider if provider
       end
       nil
+    end
+
+    def llm_provider_order
+      Setting.llm_provider == "anthropic" ? %i[anthropic openai] : %i[openai anthropic]
     end
 
     def plaid_provider_for_region(region)

@@ -23,7 +23,7 @@
                 <%= icon "loader", size: "sm", class: "animate-spin" %>
                 <%= tag.span t(".syncing") %>
               </div>
-            <% elsif trade_republic_item.requires_update? %>
+            <% elsif trade_republic_item.needs_login? %>
               <div class="text-warning flex items-center gap-1">
                 <%= icon "alert-triangle", size: "sm", color: "warning" %>
                 <%= tag.span t(".requires_update") %>
@@ -41,6 +41,9 @@
                   <%= t(".never_synced") %>
                 <% end %>
               </p>
+              <% if trade_republic_item.ready_for_sync? && trade_republic_item.session_expires_at.present? %>
+                <p class="text-secondary"><%= trade_republic_session_expiry("trade_republic_items.trade_republic_item.session_expires_in", trade_republic_item.session_expires_at) %></p>
+              <% end %>
             <% end %>
           </div>
         </div>
@@ -51,7 +54,7 @@
               "refresh-cw",
               as_button: true,
               href: sync_trade_republic_item_path(trade_republic_item),
-              disabled: trade_republic_item.syncing?
+              disabled: trade_republic_item.syncing? || !trade_republic_item.ready_for_sync?
             ) %>
 
             <%= render DS::Menu.new do |menu| %>
@@ -80,6 +83,17 @@
 
     <% unless trade_republic_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
+        <% if Current.user&.admin? && trade_republic_item.needs_login? %>
+          <% login_stage = trade_republic_item.login_stage %>
+          <% if trade_republic_item.pending_login_state.blank? || login_stage.in?(%w[qr_pending expired]) %>
+            <%= render TradeRepublic::QrLoginComponent.new(
+                  item: trade_republic_item,
+                  return_url: accounts_path,
+                  active: login_stage == "qr_pending"
+                ) %>
+          <% end %>
+        <% end %>
+
         <% if visible_accounts.any? %>
           <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>

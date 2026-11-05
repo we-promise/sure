@@ -14,6 +14,14 @@ module ApplicationHelper
     form_with(**options, &block)
   end
 
+  # Masks a sensitive identifier (IBAN, account number, ...) down to its last
+  # 4 characters for display, e.g. "•••1234". Returns nil for blank input.
+  def mask_last4(value)
+    return nil if value.blank?
+
+    "•••#{value.to_s.last(4)}"
+  end
+
   # Locale-aware ordinal label for integers.
   # English falls through to Ruby's ordinalize ("1st"); Catalan returns "1r"/"2n"/...
   def localized_ordinal(number)
@@ -249,6 +257,13 @@ module ApplicationHelper
     return callback_enable_banking_items_url if Rails.env.production?
 
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
+  end
+
+  # The redirect URI registered on the TrueLayer app. TRUELAYER_REDIRECT_URI
+  # overrides it for instances behind a proxy that doesn't forward the
+  # public host; it must exactly match one registered on the TrueLayer app.
+  def truelayer_callback_url
+    ENV["TRUELAYER_REDIRECT_URI"].presence || callback_truelayer_items_url
   end
 
   # Formats a holding quantity with adaptive precision based on the value size.

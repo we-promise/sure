@@ -447,6 +447,7 @@ de:
       category: Kategorie
       tag: Tag
     publish:
+      guest_new_categories_or_tags: Gäste können keine Kategorien oder Tags anlegen. Ordne sie bestehenden zu oder lass sie leer.
       max_rows_exceeded: Dein Import überschreitet die Höchstzahl von %{max} Zeilen.
       started: Dein Import läuft jetzt im Hintergrund.
     revert:

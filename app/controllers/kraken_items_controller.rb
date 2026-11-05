@@ -46,7 +46,8 @@ class KrakenItemsController < ApplicationController
     kraken_item = account_flow[:kraken_item]
 
     unless kraken_item
-      redirect_to settings_providers_path, alert: kraken_item_selection_message(account_flow[:credentialed_items])
+      message = kraken_item_selection_message(account_flow[:credentialed_items])
+      frame_redirect_to(settings_providers_path, alert: message)
       return
     end
 

@@ -1,6 +1,7 @@
 ---
 pt-PT:
   passwords:
+    disabled: "A alteração da palavra-passe através do Sure está desativada. Gira a sua palavra-passe através do seu serviço de identidade."
     edit:
       password: Nova Palavra-passe
       password_challenge: Palavra-passe Atual

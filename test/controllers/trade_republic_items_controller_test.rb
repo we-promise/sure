@@ -80,6 +80,28 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal existing_item.session_blob, existing_item.reload.session_blob
   end
 
+  test "a connection whose session ended is not synced" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+
+    assert_no_difference "Sync.count" do
+      post sync_trade_republic_item_url(item), headers: { "Referer" => accounts_url }
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "sync from the panel says nothing started for a connection whose session ended" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+
+    post sync_trade_republic_item_url(item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: TradeRepublic::ConnectionCardComponent.dom_id_for(item)
+    assert_not_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert_select "form[action='#{sync_trade_republic_item_path(item, source: "panel")}'] button[disabled]"
+  end
+
   test "Trade Republic PIN is filtered from logs" do
     parameter_filter = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters)
     filtered_params = parameter_filter.filter(
@@ -110,6 +132,19 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     item.reload
     assert_equal original_phone_number, item.phone_number
     assert_equal original_session_blob, item.session_blob
+  end
+
+  test "update keeps the phone number when it is left blank" do
+    item = trade_republic_items(:requires_update_item)
+    provider = mock
+    provider.expects(:initiate_login).returns(
+      Provider::TradeRepublicClient::Result.new(data: { "status" => "verification_required", "pending_login_b64" => "pending" })
+    )
+    TradeRepublicItem.any_instance.stubs(:trade_republic_provider).returns(provider)
+
+    patch trade_republic_item_url(item), params: { trade_republic_item: { phone_number: "", pin: "1234" } }
+
+    assert_equal "+491709876543", item.reload.phone_number
   end
 
   test "initiate login does not destroy a working session when the PIN is missing" do
@@ -153,6 +188,39 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
     provider_account.reload
     assert_not_nil provider_account.current_account
+  end
+
+  test "complete account setup after the session ended leaves the sync for the next login" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+
+    assert_no_difference "Sync.count" do
+      post complete_account_setup_trade_republic_item_url(item), params: { account_ids: [ trade_republic_accounts(:main_account).id ] }
+    end
+
+    assert_not_nil trade_republic_accounts(:main_account).reload.current_account
+  end
+
+  test "linking an existing account after the session ended leaves the sync for the next login" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+    account = families(:dylan_family).accounts.create!(name: "Manual brokerage", balance: 0, currency: "EUR", accountable: Investment.new)
+
+    assert_no_difference "Sync.count" do
+      post link_existing_account_trade_republic_items_url, params: { account_id: account.id, trade_republic_account_id: trade_republic_accounts(:main_account).id }
+    end
+
+    assert_equal account, trade_republic_accounts(:main_account).reload.current_account
+  end
+
+  test "opening account setup after the session ended starts no sync" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(session_expires_at: 1.minute.ago)
+    item.trade_republic_accounts.destroy_all
+
+    assert_no_difference "Sync.count" do
+      get setup_accounts_trade_republic_item_url(item)
+    end
   end
 
   test "complete account setup creates a Crypto exchange account for the Crypto account" do
@@ -733,6 +801,17 @@ class TradeRepublicItemsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate item, :good?
     assert_equal "fresh-session", item.session_blob
     assert_not item.scheduled_for_deletion?
+  end
+
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    families(:dylan_family).trade_republic_items.update_all(scheduled_for_deletion: true)
+
+    get select_accounts_trade_republic_items_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("trade_republic_items.select_accounts.not_configured"), flash[:alert]
   end
 
   private

@@ -3,83 +3,85 @@
 <%= tag.div id: dom_id(binance_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
-      <div class="flex items-center gap-2">
-        <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-        <%= render ProviderLogo.new(provider_key: :binance) %>
+          <%= render ProviderLogo.new(provider_key: :binance) %>
 
-        <div class="pl-1 text-sm flex-1">
-          <div class="flex items-center gap-2">
-            <%= tag.p binance_item.institution_display_name, class: "font-medium text-primary" %>
-            <% if binance_item.scheduled_for_deletion? %>
-              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p binance_item.institution_display_name, class: "font-medium text-primary" %>
+              <% if binance_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+            <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+            <% if binance_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif binance_item.requires_update? %>
+              <div class="text-warning flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t(".reconnect") %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if binance_item.last_synced_at %>
+                  <% if binance_item.sync_status_summary %>
+                    <%= t(".status_with_summary", timestamp: time_ago_in_words(binance_item.last_synced_at), summary: binance_item.sync_status_summary) %>
+                  <% else %>
+                    <%= t(".status", timestamp: time_ago_in_words(binance_item.last_synced_at)) %>
+                  <% end %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
             <% end %>
           </div>
-          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
-          <% if binance_item.syncing? %>
-            <div class="text-secondary flex items-center gap-1">
-              <%= icon "loader", size: "sm", class: "animate-spin" %>
-              <%= tag.span t(".syncing") %>
-            </div>
-          <% elsif binance_item.requires_update? %>
-            <div class="text-warning flex items-center gap-1">
-              <%= icon "alert-triangle", size: "sm", color: "warning" %>
-              <%= tag.span t(".reconnect") %>
-            </div>
-          <% else %>
-            <p class="text-secondary">
-              <% if binance_item.last_synced_at %>
-                <% if binance_item.sync_status_summary %>
-                  <%= t(".status_with_summary", timestamp: time_ago_in_words(binance_item.last_synced_at), summary: binance_item.sync_status_summary) %>
-                <% else %>
-                  <%= t(".status", timestamp: time_ago_in_words(binance_item.last_synced_at)) %>
-                <% end %>
-              <% else %>
-                <%= t(".status_never") %>
-              <% end %>
-            </p>
-          <% end %>
         </div>
-      </div>
-    <% end %>
 
-    <% if Current.user&.admin? %>
-      <div class="flex items-center justify-end gap-2 mt-2">
-        <% if binance_item.requires_update? %>
-          <%= render DS::Link.new(
-            text: t(".update_credentials"),
-            icon: "refresh-cw",
-            variant: "secondary",
-            href: settings_providers_path,
-            frame: "_top"
-          ) %>
-        <% else %>
-          <%= icon(
-            "refresh-cw",
-            as_button: true,
-            href: sync_binance_item_path(binance_item),
-            disabled: binance_item.syncing?
-          ) %>
-        <% end %>
+        <% if Current.user&.admin? %>
+          <div class="ml-auto flex items-center gap-2">
+            <% if binance_item.requires_update? %>
+              <%= render DS::Link.new(
+                text: t(".update_credentials"),
+                icon: "refresh-cw",
+                variant: "secondary",
+                href: settings_providers_path,
+                frame: "_top"
+              ) %>
+            <% else %>
+              <%= icon(
+                "refresh-cw",
+                as_button: true,
+                href: sync_binance_item_path(binance_item),
+                disabled: binance_item.syncing?
+              ) %>
+            <% end %>
 
-        <%= render DS::Menu.new do |menu| %>
-          <% if binance_item.unlinked_accounts_count > 0 %>
-            <% menu.with_item(
-              variant: "link",
-              text: t(".import_accounts_menu"),
-              icon: "plus",
-              href: setup_accounts_binance_item_path(binance_item),
-              frame: :modal
-            ) %>
-          <% end %>
-          <% menu.with_item(
-            variant: "button",
-            text: t(".delete"),
-            icon: "trash-2",
-            href: binance_item_path(binance_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(binance_item.institution_display_name, high_severity: true)
-          ) %>
+            <%= render DS::Menu.new do |menu| %>
+              <% if binance_item.unlinked_accounts_count > 0 %>
+                <% menu.with_item(
+                  variant: "link",
+                  text: t(".import_accounts_menu"),
+                  icon: "plus",
+                  href: setup_accounts_binance_item_path(binance_item),
+                  frame: :modal
+                ) %>
+              <% end %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete"),
+                icon: "trash-2",
+                href: binance_item_path(binance_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(binance_item.institution_display_name, high_severity: true)
+              ) %>
+            <% end %>
+          </div>
         <% end %>
       </div>
     <% end %>

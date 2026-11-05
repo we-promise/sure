@@ -77,6 +77,21 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal @device_info[:device_type], device.device_type
   end
 
+  # RegistrationsController refuses to register when the instance is closed.
+  # The API creates the same account and did not check.
+  test "signup is refused when the instance is closed to registration" do
+    Setting.stubs(:onboarding_state).returns("closed")
+
+    assert_no_difference("User.count") do
+      post "/api/v1/auth/signup", params: {
+        user: { email: "closed@example.com", password: "Password1!", password_confirmation: "Password1!" },
+        device: @device_info
+      }
+    end
+
+    assert_response :forbidden
+  end
+
   test "should not signup without device info" do
     assert_no_difference("User.count") do
       post "/api/v1/auth/signup", params: {
@@ -271,6 +286,64 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     device = user.mobile_devices.where(device_id: @device_info[:device_id]).first
     assert device.present?
     assert device.active?
+  end
+
+  # SessionsController refuses local sign-in when SSO-only mode is on, with a
+  # single exception for a super-admin when the emergency override is enabled.
+  # The API mints the same credentials and enforced neither.
+  test "login is refused when local login is disabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+    user = users(:family_admin)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email, password: user_password_test, device: @device_info
+      }
+    end
+
+    assert_response :forbidden
+  end
+
+  test "login allows a super admin through the emergency override" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+    user = users(:family_admin)
+    user.update!(role: :super_admin)
+    user.mobile_devices.destroy_all
+
+    post "/api/v1/auth/login", params: {
+      email: user.email, password: user_password_test, device: @device_info
+    }
+
+    assert_response :success
+  end
+
+  test "login refuses a non super admin even with the emergency override on" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+    user = users(:family_member)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email, password: user_password_test, device: @device_info
+      }
+    end
+
+    assert_response :forbidden
+  end
+
+  test "login refuses a deactivated user" do
+    user = users(:family_admin)
+    user.update_column(:active, false)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email, password: user_password_test, device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
   end
 
   test "should require MFA when enabled" do
@@ -1236,5 +1309,34 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil invitee
     assert_equal family.id, invitee.family_id
     assert_equal 0, AccountShare.where(user: invitee).count
+  end
+
+  test "sso_providers lists configured providers without secrets" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { id: "authentik", name: "authentik", strategy: "openid_connect", label: "Authentik", client_secret: "shh", issuer: "https://idp.example.com" },
+      { id: "oidc", name: "openid_connect", strategy: "openid_connect", label: "", client_secret: "shh" },
+      { id: "google", name: "google_oauth2", strategy: "google_oauth2", client_secret: "shh" },
+      { name: "my_keycloak", strategy: "openid_connect" }
+    ])
+
+    get "/api/v1/auth/sso_providers"
+
+    assert_response :success
+    assert_equal [
+      { "name" => "authentik", "strategy" => "openid_connect", "label" => "Authentik" },
+      { "name" => "openid_connect", "strategy" => "openid_connect", "label" => "Sign in with OpenID Connect" },
+      { "name" => "google_oauth2", "strategy" => "google_oauth2", "label" => "Sign in with Google" },
+      { "name" => "my_keycloak", "strategy" => "openid_connect", "label" => "My Keycloak" }
+    ], JSON.parse(response.body)["providers"]
+    assert_not_includes response.body, "shh"
+  end
+
+  test "sso_providers returns an empty list when no providers are configured" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([])
+
+    get "/api/v1/auth/sso_providers"
+
+    assert_response :success
+    assert_equal [], JSON.parse(response.body)["providers"]
   end
 end

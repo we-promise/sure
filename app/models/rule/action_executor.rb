@@ -1,12 +1,16 @@
 class Rule::ActionExecutor
-  TYPES = [ "select", "multi_select", "function", "text" ]
+  TYPES = [ "select", "multi_select", "function", "text", "split" ]
 
   def initialize(rule)
     @rule = rule
   end
 
+  def self.key
+    name.demodulize.underscore
+  end
+
   def key
-    self.class.name.demodulize.underscore
+    self.class.key
   end
 
   def label
@@ -54,6 +58,13 @@ class Rule::ActionExecutor
       label: label,
       options: options
     }
+  end
+
+  # Executors with a non-trivial value format (e.g. structured JSON) can override this
+  # to provide a human-readable summary for the rule list view. Returning nil falls back
+  # to the default (options-based) display logic in Rule::Action#value_display.
+  def value_display(value)
+    nil
   end
 
   protected

@@ -139,6 +139,22 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ "simplefin_false" ], account.entries.where(excluded: false).pluck(:name)
   end
 
+  test "a rejected access URL marks the item for reconnection and logs it" do
+    provider = mock
+    provider.expects(:get_accounts).raises(
+      Provider::Simplefin::SimplefinError.new("SimpleFIN URL points to a disallowed network address", :invalid_url)
+    )
+    importer = SimplefinItem::Importer.new(@item, simplefin_provider: provider)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "simplefin", family: @family).count }, 1 do
+      assert_raises(Provider::Simplefin::SimplefinError) do
+        importer.send(:fetch_accounts_data, start_date: nil, pending: false)
+      end
+    end
+
+    assert @item.reload.requires_update?
+  end
+
   private
 
     def create_pending_entry(account, name, provider, pending, amount)

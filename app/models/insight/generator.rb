@@ -1,11 +1,9 @@
 # Base class for insight generators. Subclasses compute a financial signal in
 # pure Ruby and return GeneratedInsight records — numbers only, no prose. The
 # prose (`body`) is written later by Insight::BodyWriter, and only when the
-# insight is new or its numbers changed, so nightly re-runs don't re-invoke
-# the LLM for unchanged insights.
+# insight is new or its numbers changed.
 class Insight::Generator
-  # `facts` doubles as the i18n interpolation args for the template fallback
-  # and as the grounding data handed to the LLM writer. `metadata` is what the
+  # `facts` are the i18n interpolation args for the body template. `metadata` is what the
   # job compares between runs to decide whether an insight changed — keep its
   # values JSON-primitive (floats, strings, ISO dates) so comparisons are stable.
   GeneratedInsight = Data.define(
@@ -86,7 +84,7 @@ class Insight::Generator
 
     # Formats a number for display facts with a true minus sign (U+2212) —
     # the app types negatives with a minus, not a hyphen. Keep raw numerics
-    # in `metadata`; this is for interpolation into template/LLM prose only.
+    # in `metadata`; this is for interpolation into template prose only.
     def signed_number(value)
       value.negative? ? "−#{value.abs}" : value.to_s
     end

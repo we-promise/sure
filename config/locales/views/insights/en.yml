@@ -19,6 +19,18 @@ en:
       acknowledge: Got it
       acknowledge_title: Hide this until the numbers change
       new: New
+      dig_in: Dig in with AI
+    dig_in:
+      prompt: |-
+        Help me dig into this insight.
+
+        Insight: %{title}
+        What Sure found: %{body}
+        Period: %{period}
+        Figures:
+        %{facts}
+
+        What's behind it, and is there anything I should do?
     feed:
       view_all: View all insights
       header: Latest

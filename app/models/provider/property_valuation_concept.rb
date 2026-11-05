@@ -8,9 +8,12 @@
 module Provider::PropertyValuationConcept
   extend ActiveSupport::Concern
 
+  # Addresses entered by hand store the country as typed, so full names
+  # ("United States") must match as well as codes. Compared after
+  # upcasing and removing periods ("U.S.A." → "USA").
   COUNTRY_ALIASES = {
-    "US" => %w[US USA],
-    "GB" => %w[GB UK GBR]
+    "US" => [ "US", "USA", "UNITED STATES", "UNITED STATES OF AMERICA" ],
+    "GB" => [ "GB", "UK", "GBR", "UNITED KINGDOM", "GREAT BRITAIN" ]
   }.freeze
 
   # `external_id` is the provider's own identifier for the property (e.g. a
@@ -54,6 +57,13 @@ module Provider::PropertyValuationConcept
       false
     end
 
+    # Whether lookups take the property's living area (passed as
+    # `square_footage:`) and value the property at that size instead of the
+    # provider's own record of it.
+    def accepts_square_footage?
+      false
+    end
+
     def required_address_fields
       %i[line1 locality region postal_code]
     end
@@ -71,13 +81,14 @@ module Provider::PropertyValuationConcept
       return false if required_address_fields.any? { |field| address[field].blank? }
       return false if requires_external_id? && external_id.blank?
 
-      country = address[:country].to_s.strip.upcase
+      country = address[:country].to_s.delete(".").squish.upcase
       country.blank? || COUNTRY_ALIASES.fetch(supported_country, [ supported_country ]).include?(country)
     end
   end
 
-  # `external_id:` is only passed to providers that `requires_external_id?`.
-  def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil, external_id: nil)
+  # `external_id:` is only passed to providers that `requires_external_id?`,
+  # and `square_footage:` only to providers that `accepts_square_footage?`.
+  def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil, external_id: nil, square_footage: nil)
     raise NotImplementedError, "Subclasses must implement #fetch_property_valuation"
   end
 

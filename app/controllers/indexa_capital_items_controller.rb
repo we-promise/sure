@@ -75,7 +75,7 @@ class IndexaCapitalItemsController < ApplicationController
 
     indexa_capital_item = Current.family.indexa_capital_items.first
     unless indexa_capital_item&.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      frame_redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 

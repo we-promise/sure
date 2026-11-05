@@ -10,11 +10,14 @@
 # aliases (`ae`, `a`). The including class must set `@family`.
 module IncomeStatement::ScopedTransactionsQuery
   private
-    # Contributions and loan payments are cash outflows recorded as negative
-    # amounts, so they always classify as expense; other negative amounts
-    # classify as income.
+    # Contributions and loan payments are cash outflows whatever their
+    # sign, so they classify as expense; other negative amounts classify as
+    # income. A family that does not count investing as spending gets its
+    # contributions classified as 'investment' instead, which keeps them out
+    # of income and expense totals while still letting callers sum them.
     def classification_sql(t)
-      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+      contribution = @family.investment_contributions_as_spending? ? "expense" : "investment"
+      "CASE WHEN #{t}.kind = 'investment_contribution' THEN '#{contribution}' WHEN #{t}.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
     end
 
     # Entry amount converted to the family currency at the day's exchange

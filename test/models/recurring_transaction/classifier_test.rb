@@ -23,6 +23,28 @@ class RecurringTransaction::ClassifierTest < ActiveSupport::TestCase
     assert_not result.autopay
   end
 
+  test "explicit autopay wording on a bill overrides the needs-action default" do
+    result = Classifier.classify(name: "XFINITY INTERNET AUTOPAY", entries: entries_of(89.99, 89.99), account: @credit_card)
+
+    assert_equal "bill", result.bill_type
+    assert result.autopay, "the descriptor says autopay, so trust it over the bill_type default"
+  end
+
+  test "autodraft and auto-debit wording also read as autopay" do
+    autodraft = Classifier.classify(name: "WATSON PROPERTY AUTODRAFT", entries: entries_of(537.50, 537.50), account: @depository)
+    assert autodraft.autopay
+
+    auto_debit = Classifier.classify(name: "STATE FARM AUTO-DEBIT PREM", entries: entries_of(140, 140), account: @depository)
+    assert auto_debit.autopay
+  end
+
+  test "spaced auto pay wording stays ambiguous with an automobile payment" do
+    result = Classifier.classify(name: "TOYOTA FINANCIAL AUTO PAY", entries: entries_of(412, 412), account: @depository)
+
+    assert_equal "bill", result.bill_type
+    assert_not result.autopay
+  end
+
   test "ach and billpay descriptors are push payments, not subscriptions" do
     result = Classifier.classify(name: "WATSON PROPERTY WEB PMT", entries: entries_of(537.50, 537.50), account: @depository)
 

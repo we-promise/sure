@@ -44,7 +44,7 @@ class BrexItems::AccountSetupsController < ApplicationController
     end
 
     def render_accounts_update_after_setup
-      @manual_accounts = Account.uncached { Current.family.accounts.visible_manual.order(:name).to_a }
+      @manual_accounts = Account.uncached { Current.family.accounts.visible_manual_for(Current.user).order(:name).to_a }
       @brex_items = Current.family.brex_items.ordered
 
       manual_accounts_stream = if @manual_accounts.any?

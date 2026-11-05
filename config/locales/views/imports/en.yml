@@ -310,6 +310,7 @@ en:
     publish:
       started: "Your import has started in the background."
       max_rows_exceeded: "Your import exceeds the maximum row count of %{max}."
+      guest_new_categories_or_tags: "Guests can't create categories or tags. Map them to existing ones or leave them empty."
     revert:
       started: "Import is reverting in the background."
     cancel:

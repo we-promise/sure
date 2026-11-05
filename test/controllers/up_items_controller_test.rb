@@ -58,4 +58,15 @@ class UpItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to settings_providers_path
   end
+
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    UpItem.any_instance.stubs(:credentials_configured?).returns(false)
+
+    get select_accounts_up_items_url, params: { up_item_id: @up_item.id }, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("up_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
 end

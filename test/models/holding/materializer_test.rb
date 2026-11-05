@@ -267,6 +267,39 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal [ account_provider.id ], today_holdings.pluck(:account_provider_id)
   end
 
+  test "cleans up calculated holdings on earlier provider snapshot dates when the snapshot is in another currency" do
+    [ Date.yesterday, Date.current ].each do |date|
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 1.2)
+    end
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(
+      name: "Brokerage",
+      currency: "USD"
+    )
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    [ Date.yesterday, Date.current ].each do |date|
+      Holding.create!(
+        account: @account,
+        security: @aapl,
+        qty: 10,
+        price: 200,
+        amount: 2000,
+        currency: "EUR",
+        date: date,
+        account_provider: account_provider
+      )
+    end
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    yesterday_holdings = @account.holdings.where(security: @aapl, date: Date.yesterday)
+
+    assert_equal [ "EUR" ], yesterday_holdings.pluck(:currency)
+    assert_equal [ account_provider.id ], yesterday_holdings.pluck(:account_provider_id)
+  end
+
   test "carries forward provider cost_basis to calculated rows past the provider snapshot date" do
     coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
     coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")

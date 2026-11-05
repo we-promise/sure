@@ -17,6 +17,7 @@ module SettingsHelper
     { name: -> { t("settings.settings_nav.statement_vault_label") }, path: :account_statements_path, condition: :admin_user? },
     # Advanced section
     { name: -> { t("settings.settings_nav.ai_prompts_label") }, path: :settings_ai_prompts_path, condition: :admin_user? },
+    { name: -> { t("settings.settings_nav.classifier_label") }, path: :settings_classifier_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.llm_usage_label") }, path: :settings_llm_usage_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.api_key_label") }, path: :settings_api_keys_path, condition: :admin_user? },
     { name: -> { t("settings.settings_nav.self_hosting_label") }, path: :settings_hosting_path, condition: :self_hosted_and_admin? },
@@ -78,6 +79,9 @@ module SettingsHelper
     when "enable_banking"
       return { status: :off } unless @enable_banking_items&.any?
       enable_banking_summary
+    when "truelayer"
+      return { status: :off } unless @truelayer_items&.any?
+      truelayer_summary
     when "coinstats"
       return { status: :off } unless @coinstats_items&.any?
       sync_based_summary(key)
@@ -120,7 +124,7 @@ module SettingsHelper
       sync_based_summary(key)
     when "trade_republic"
       return { status: :off } unless @trade_republic_items&.any?
-      sync_based_summary(key)
+      trade_republic_summary
     when "indexa_capital"
       return { status: :off } unless @indexa_capital_items&.any?
       sync_based_summary(key)
@@ -266,6 +270,52 @@ module SettingsHelper
 
       if expiring
         days = [ ((expiring.session_expires_at - Time.current) / 1.day).ceil, 1 ].max
+        return { status: :warn, meta: t("settings.providers.meta.reconsent_needed", count: days), last_synced_at: last_synced_at }
+      end
+
+      return { status: :warn, meta: t("settings.providers.meta.no_recent_sync"), last_synced_at: last_synced_at } if health[:stale]
+
+      if last_synced_at.present?
+        { status: :ok, meta: t("settings.providers.meta.last_synced", time: concise_time_ago(last_synced_at)), last_synced_at: last_synced_at }
+      else
+        { status: :ok, last_synced_at: nil }
+      end
+    end
+
+    # Like Enable Banking, the row warns before a session ends and once a
+    # connection has to log in again. A Trade Republic login lasts only
+    # 24 hours, so the warning starts two hours before the end. A login
+    # comes first: an ended session no longer syncs, so a failed last sync
+    # would otherwise show until the next login.
+    def trade_republic_summary
+      summary = sync_based_summary("trade_republic")
+
+      if @trade_republic_items.any?(&:needs_login?)
+        return summary.merge(status: :warn, meta: t("settings.providers.meta.login_required"))
+      end
+      return summary if summary[:status] == :err
+
+      expiring = @trade_republic_items
+        .select { |item| item.ready_for_sync? && item.session_expires_at.present? && item.session_expires_at < 2.hours.from_now }
+        .min_by(&:session_expires_at)
+      return summary unless expiring
+
+      summary.merge(status: :warn, meta: trade_republic_session_expiry("settings.providers.meta.login_expires_soon", expiring.session_expires_at))
+    end
+
+    def truelayer_summary
+      health = @provider_sync_health&.dig("truelayer") || {}
+      last_synced_at = health[:last_synced_at]
+
+      return { status: :err, meta: t("settings.providers.meta.sync_error"), last_synced_at: nil } if health[:error]
+
+      connected = @truelayer_items.select(&:connected?)
+      return { status: :ok, last_synced_at: nil } if connected.empty?
+      return { status: :warn, meta: t("settings.providers.meta.reconsent_required"), last_synced_at: last_synced_at } if connected.any?(&:requires_update?)
+
+      expiring = connected.select { |item| item.consent_expiring_soon?(within: 7.days) }.min_by(&:consent_expires_at)
+      if expiring
+        days = [ ((expiring.consent_expires_at - Time.current) / 1.day).ceil, 1 ].max
         return { status: :warn, meta: t("settings.providers.meta.reconsent_needed", count: days), last_synced_at: last_synced_at }
       end
 

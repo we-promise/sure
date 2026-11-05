@@ -33,8 +33,6 @@ tr:
       empty: Hiç kategori bulunamadı
       merge: Kategorileri birleştir
       new: Yeni kategori
-    menu:
-      loading: Yükleniyor...
     merge:
       description: Hedef bir kategori ve bu kategoriyle birleştirilecek kategorileri
         seçin. Eşleşen işlemler ve bütçe satırları hedefe taşınacaktır.

@@ -238,6 +238,28 @@ class UserTest < ActiveSupport::TestCase
     assert_not User.find(user.id).verify_otp?(code), "a freshly loaded user must reject it too"
   end
 
+  test "otp_code_status answers like verify_otp without spending the code" do
+    user = users(:family_member)
+    user.setup_mfa!
+    backup_code = user.enable_mfa!.first
+
+    travel_to Time.zone.parse("2026-10-07 12:00:10") do
+      code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+      assert_equal :accepted, user.otp_code_status(code)
+      assert_equal :accepted, user.otp_code_status(code), "checking must not claim the time step"
+      assert_equal :accepted, user.otp_code_status(backup_code)
+      assert_equal :accepted, user.otp_code_status(backup_code), "checking must not consume the backup code"
+      assert_equal :invalid, user.otp_code_status("000000")
+      assert_equal :invalid, user.otp_code_status(nil)
+
+      assert_equal :accepted, user.verify_otp(code)
+      assert_equal :replayed, user.otp_code_status(code)
+      assert_equal :accepted, user.verify_otp(backup_code)
+      assert_equal :invalid, user.otp_code_status(backup_code)
+    end
+  end
+
   test "verify_otp? accepts the next time step's code after one was used" do
     user = users(:family_member)
     user.setup_mfa!
@@ -1041,6 +1063,28 @@ class UserTest < ActiveSupport::TestCase
     assert_includes user.errors[:password], "can't be blank"
   end
 
+  test "only a super admin manages instance settings when the instance hosts several families" do
+    assert Family.count > 1
+
+    assert users(:sure_support_staff).manages_instance_settings?
+    assert_not users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    assert_not users(:family_admin).manages_instance_settings?
+  end
+
+  test "the admins of the only family on a self-hosted instance manage instance settings" do
+    Family.stubs(:count).returns(1)
+
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    assert users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    assert_not users(:family_admin).manages_instance_settings?
+  end
+
   # First user role assignment tests
   test "role_for_new_family_creator returns super_admin when no users exist" do
     # Delete all users to simulate fresh instance
@@ -1346,5 +1390,40 @@ class UserTest < ActiveSupport::TestCase
     assert api_key.reload.revoked?
     assert token.reload.revoked_at.present?
     assert grant.reload.revoked_at.present?
+  end
+
+  test "update_manual_account_order keeps other groups and only accessible accounts" do
+    @user.update_manual_account_order("credit_card", [ accounts(:credit_card).id ])
+    foreign = families(:empty).accounts.create!(name: "Foreign", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:empty))
+
+    assert @user.update_manual_account_order("depository", [ accounts(:connected).id, foreign.id, accounts(:depository).id, "not-a-uuid" ])
+
+    order = @user.reload.manual_account_order
+    assert_equal [ accounts(:connected).id, accounts(:depository).id ], order["depository"]
+    assert_equal [ accounts(:credit_card).id ], order["credit_card"]
+  end
+
+  test "update_manual_account_order drops family accounts not shared with the user" do
+    unshared = families(:dylan_family).accounts.create!(name: "Unshared", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:family_member))
+
+    assert @user.update_manual_account_order("depository", [ unshared.id, accounts(:depository).id ])
+
+    assert_equal [ accounts(:depository).id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "update_manual_account_order drops accounts from another group" do
+    @user.update_manual_account_order("depository", [ accounts(:credit_card).id, accounts(:depository).id ])
+
+    assert_equal [ accounts(:depository).id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "update_manual_account_order rejects account ids that are not a list" do
+    assert_not @user.update_manual_account_order("depository", { "0" => accounts(:depository).id })
+    assert_equal({}, @user.reload.manual_account_order)
+  end
+
+  test "update_manual_account_order rejects unknown groups" do
+    assert_not @user.update_manual_account_order("transactions", [ accounts(:depository).id ])
+    assert_equal({}, @user.reload.manual_account_order)
   end
 end

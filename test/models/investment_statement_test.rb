@@ -723,6 +723,21 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       "the investment_accounts lookup backing current_holdings should only run once, even for the empty case"
   end
 
+  test "totals cache invalidates when family currency changes" do
+    create_investment_account(balance: 500)
+    period = Period.last_30_days
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    dummy_result = { contributions: 0, withdrawals: 0, dividends: 0, interest: 0, trades_count: 0 }
+    InvestmentStatement::Totals.expects(:new).twice.returns(stub(call: dummy_result))
+
+    statement = InvestmentStatement.new(@family)
+    statement.totals(period: period)
+
+    @family.update!(currency: "EUR")
+    InvestmentStatement.new(@family.reload).totals(period: period)
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(

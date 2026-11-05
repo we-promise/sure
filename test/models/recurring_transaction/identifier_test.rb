@@ -484,6 +484,44 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     end
   end
 
+  test "refreshes claimed series without per-series recurrence rule or account lookups" do
+    account = @family.accounts.first
+    names = Array.new(3) { |index| "Claimed Performance Subscription #{index}" }
+
+    names.each_with_index do |name, index|
+      create_name_pattern_entries(account: account, name: name, amount: 40 + index, day: 5)
+
+      @family.recurring_transactions.create!(
+        account: account,
+        name: name,
+        amount: 40 + index,
+        currency: "USD",
+        expected_day_of_month: 5,
+        last_occurrence_date: 4.months.ago.to_date,
+        next_expected_date: 1.month.from_now.to_date,
+        occurrence_count: 1,
+        status: "active"
+      )
+    end
+
+    queries = nil
+    assert_no_difference -> { @family.recurring_transactions.count } do
+      queries = capture_sql_queries do
+        @identifier.identify_recurring_patterns
+      end
+    end
+
+    # One batched preload is fine; a query per claimed series is the N+1.
+    rule_queries = queries.grep(/\ASELECT .*FROM "recurrence_rules"/)
+    account_queries = queries.grep(/\ASELECT "accounts"\.\* FROM "accounts" WHERE "accounts"\."id"/)
+
+    assert_operator rule_queries.size, :<=, 1, rule_queries.join(" | ")
+    assert_operator account_queries.size, :<=, 1, account_queries.join(" | ")
+    @family.recurring_transactions.where(name: names).each do |recurring|
+      assert_equal 3, recurring.occurrence_count
+    end
+  end
+
   test "updates manual recurring variance without per-recurring entry lookups" do
     account = @family.accounts.first
     names = Array.new(4) { |index| "Manual Performance Subscription #{index}" }
@@ -887,11 +925,190 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
     assert manual.reload.manual?
   end
 
+  # The category is classified once when detection creates a series. Entries
+  # categorised after that must still reach a bill that has none, without
+  # overriding one that is already set.
+  test "a detected series with no category takes its entries' category on a later run" do
+    account = @family.accounts.first
+    blank = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    create_name_pattern_entries(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+
+    assert_nil blank.category_id
+    @identifier.identify_recurring_patterns
+
+    assert_equal categories(:food_and_drink), blank.reload.category
+  end
+
+  test "a detected series keeps the category it already has" do
+    account = @family.accounts.first
+    chosen = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5, category: categories(:one))
+    create_name_pattern_entries(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal 3, chosen.reload.occurrence_count, "detection must have claimed the series"
+    assert_equal categories(:one), chosen.category
+  end
+
+  # The minority category sits at the newest entry of one series and the
+  # oldest of the other, so taking either end instead of the most common
+  # category fails one of them.
+  test "mixed entry categories fill a blank detected series with the most common one" do
+    account = @family.accounts.first
+    newest_minority = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    oldest_minority = create_detected_series(account: account, name: "Pet Cover Plus", amount: 54.73, day: 5)
+    create_name_pattern_entries(
+      account: account, name: "Pet Cover", amount: 54.73, day: 5,
+      entry_categories: [ categories(:food_and_drink), categories(:one), categories(:one) ]
+    )
+    create_name_pattern_entries(
+      account: account, name: "Pet Cover Plus", amount: 54.73, day: 5,
+      entry_categories: [ categories(:one), categories(:one), categories(:food_and_drink) ]
+    )
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal categories(:one), newest_minority.reload.category
+    assert_equal categories(:one), oldest_minority.reload.category
+  end
+
+  # Manual rows are skipped by the claim loop and refreshed by the manual
+  # variance pass instead, so the fill has to happen there too.
+  test "a manual series with no category takes its matched entries' category" do
+    account = @family.accounts.first
+    blank = create_detected_series(account: account, name: "Declared Cover", amount: 54.73, day: 5, manual: true)
+    create_name_pattern_entries(account: account, name: "Declared Cover", amount: 54.73, day: 5)
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal categories(:food_and_drink), blank.reload.category
+  end
+
+  # The minority category sits at the newest entry of one series and the
+  # oldest of the other, so taking either end instead of the most common
+  # category fails one of them.
+  test "mixed entry categories fill a blank manual series with the most common one" do
+    account = @family.accounts.first
+    newest_minority = create_detected_series(account: account, name: "Declared Cover", amount: 54.73, day: 5, manual: true)
+    oldest_minority = create_detected_series(account: account, name: "Declared Cover Plus", amount: 54.73, day: 5, manual: true)
+    create_name_pattern_entries(
+      account: account, name: "Declared Cover", amount: 54.73, day: 5,
+      entry_categories: [ categories(:food_and_drink), categories(:one), categories(:one) ]
+    )
+    create_name_pattern_entries(
+      account: account, name: "Declared Cover Plus", amount: 54.73, day: 5,
+      entry_categories: [ categories(:one), categories(:one), categories(:food_and_drink) ]
+    )
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal categories(:one), newest_minority.reload.category
+    assert_equal categories(:one), oldest_minority.reload.category
+  end
+
+  # No categorised entry means no category to take: the series stays blank and
+  # the run still completes (an empty tally gives max_by nothing, not an error).
+  test "uncategorised entries leave a blank series blank" do
+    account = @family.accounts.first
+    detected = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    manual = create_detected_series(account: account, name: "Declared Cover", amount: 54.73, day: 5, manual: true)
+    create_name_pattern_entries(account: account, name: "Pet Cover", amount: 54.73, day: 5, entry_categories: [ nil ] * 3)
+    create_name_pattern_entries(account: account, name: "Declared Cover", amount: 54.73, day: 5, entry_categories: [ nil ] * 3)
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal 3, detected.reload.occurrence_count, "detection must have claimed the series"
+    assert_equal 3, manual.reload.occurrence_count, "the manual pass must have matched the entries"
+    assert_nil detected.category_id
+    assert_nil manual.category_id
+  end
+
+  test "a manual series keeps the category it already has" do
+    account = @family.accounts.first
+    chosen = create_detected_series(account: account, name: "Declared Cover", amount: 54.73, day: 5, manual: true, category: categories(:one))
+    create_name_pattern_entries(account: account, name: "Declared Cover", amount: 54.73, day: 5)
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal 3, chosen.reload.occurrence_count, "the manual pass must have matched the entries"
+    assert_equal categories(:one), chosen.category
+  end
+
+  # The identifier loads every series up front and writes much later. A
+  # category the user saves in between must survive: the blank check is made
+  # against the row at write time, not against the copy loaded at the start.
+  test "a category chosen while detection runs is not overwritten" do
+    account = @family.accounts.first
+    detected = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    create_name_pattern_entries(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    save_category_after_load(:preload_series_to_refresh, detected, categories(:one))
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal 3, detected.reload.occurrence_count, "detection must have claimed the series"
+    assert_equal categories(:one), detected.category
+  end
+
+  test "a category chosen while the manual pass runs is not overwritten" do
+    account = @family.accounts.first
+    manual = create_detected_series(account: account, name: "Declared Cover", amount: 54.73, day: 5, manual: true)
+    create_name_pattern_entries(account: account, name: "Declared Cover", amount: 54.73, day: 5)
+    save_category_after_load(:matching_entries_by_manual_recurring_id, manual, categories(:one))
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal 3, manual.reload.occurrence_count, "the manual pass must have matched the entries"
+    assert_equal categories(:one), manual.category
+  end
+
+  # A transaction's category_id carries no ownership check (the API passes it
+  # through), and the fill writes with update_all, which skips the series'
+  # category_belongs_to_family validation. Another family's category must not
+  # reach a series through either pass.
+  test "another family's category on the entries is not written to a blank series" do
+    account = @family.accounts.first
+    foreign = families(:empty).categories.create!(name: "Not Ours")
+    detected = create_detected_series(account: account, name: "Pet Cover", amount: 54.73, day: 5)
+    manual = create_detected_series(account: account, name: "Declared Cover", amount: 54.73, day: 5, manual: true)
+    create_name_pattern_entries(account: account, name: "Pet Cover", amount: 54.73, day: 5, entry_categories: [ foreign ] * 3)
+    create_name_pattern_entries(account: account, name: "Declared Cover", amount: 54.73, day: 5, entry_categories: [ foreign ] * 3)
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal 3, detected.reload.occurrence_count, "detection must have claimed the series"
+    assert_equal 3, manual.reload.occurrence_count, "the manual pass must have matched the entries"
+    assert_nil detected.category_id
+    assert_nil manual.category_id
+  end
+
+  test "a manual income series is never given a category" do
+    account = @family.accounts.first
+    paycheck = create_detected_series(account: account, name: "Acme Payroll", amount: -1840, day: 5, manual: true, bill_type: "income")
+    create_name_pattern_entries(account: account, name: "Acme Payroll", amount: -1840, day: 5)
+
+    @identifier.identify_recurring_patterns
+
+    assert_equal 3, paycheck.reload.occurrence_count, "the manual pass must have matched the entries"
+    assert_nil paycheck.category_id
+  end
+
   private
-    def create_name_pattern_entries(account:, name:, amount:, day:)
+    # Simulates a bill edit landing between the identifier's load of the
+    # series and its write: once the named step (which runs after the load)
+    # is reached, the row gets a category behind the loaded copy's back.
+    def save_category_after_load(step, recurring, category)
+      identifier = @identifier
+      original = identifier.method(step)
+      identifier.define_singleton_method(step) do |*args, **kwargs|
+        RecurringTransaction.where(id: recurring.id).update_all(category_id: category.id)
+        original.call(*args, **kwargs)
+      end
+    end
+
+    def create_name_pattern_entries(account:, name:, amount:, day:, entry_categories: [ categories(:food_and_drink) ] * 3)
       [ 0, 1, 2 ].each do |months_ago|
         transaction = Transaction.create!(
-          category: categories(:food_and_drink)
+          category: entry_categories[months_ago]
         )
         account.entries.create!(
           date: months_ago.months.ago.beginning_of_month + (day - 1).days,
@@ -901,6 +1118,23 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
           entryable: transaction
         )
       end
+    end
+
+    def create_detected_series(account:, name:, amount:, day:, manual: false, category: nil, bill_type: "bill")
+      @family.recurring_transactions.create!(
+        account: account,
+        name: name,
+        amount: amount,
+        currency: "USD",
+        expected_day_of_month: day,
+        last_occurrence_date: 2.months.ago.to_date,
+        next_expected_date: 1.month.from_now.to_date,
+        occurrence_count: 1,
+        status: "active",
+        bill_type: bill_type,
+        category: category,
+        manual: manual
+      )
     end
 
     def capture_sql_queries

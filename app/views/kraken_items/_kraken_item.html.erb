@@ -3,74 +3,76 @@
 <%= tag.div id: dom_id(kraken_item) do %>
   <%= render DS::Disclosure.new(variant: :card, open: true) do |disclosure| %>
     <% disclosure.with_summary_content do %>
-      <div class="flex items-center gap-2">
-        <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
 
-        <%= render ProviderLogo.new(provider_key: :kraken) %>
+          <%= render ProviderLogo.new(provider_key: :kraken) %>
 
-        <div class="pl-1 text-sm flex-1">
-          <div class="flex items-center gap-2">
-            <%= tag.p kraken_item.institution_display_name, class: "font-medium text-primary" %>
-            <% if kraken_item.scheduled_for_deletion? %>
-              <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p kraken_item.institution_display_name, class: "font-medium text-primary" %>
+              <% if kraken_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+            <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+
+            <% if kraken_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif kraken_item.requires_update? %>
+              <div class="text-warning flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t(".reconnect") %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if kraken_item.last_synced_at %>
+                  <% if kraken_item.sync_status_summary %>
+                    <%= t(".status_with_summary", timestamp: time_ago_in_words(kraken_item.last_synced_at), summary: kraken_item.sync_status_summary) %>
+                  <% else %>
+                    <%= t(".status", timestamp: time_ago_in_words(kraken_item.last_synced_at)) %>
+                  <% end %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
             <% end %>
           </div>
-          <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
-
-          <% if kraken_item.syncing? %>
-            <div class="text-secondary flex items-center gap-1">
-              <%= icon "loader", size: "sm", class: "animate-spin" %>
-              <%= tag.span t(".syncing") %>
-            </div>
-          <% elsif kraken_item.requires_update? %>
-            <div class="text-warning flex items-center gap-1">
-              <%= icon "alert-triangle", size: "sm", color: "warning" %>
-              <%= tag.span t(".reconnect") %>
-            </div>
-          <% else %>
-            <p class="text-secondary">
-              <% if kraken_item.last_synced_at %>
-                <% if kraken_item.sync_status_summary %>
-                  <%= t(".status_with_summary", timestamp: time_ago_in_words(kraken_item.last_synced_at), summary: kraken_item.sync_status_summary) %>
-                <% else %>
-                  <%= t(".status", timestamp: time_ago_in_words(kraken_item.last_synced_at)) %>
-                <% end %>
-              <% else %>
-                <%= t(".status_never") %>
-              <% end %>
-            </p>
-          <% end %>
         </div>
-      </div>
-    <% end %>
 
-    <% if Current.user&.admin? %>
-      <div class="flex items-center justify-end gap-2 mt-2">
-        <%= icon(
-          "refresh-cw",
-          as_button: true,
-          href: sync_kraken_item_path(kraken_item),
-          disabled: kraken_item.syncing?
-        ) %>
-
-        <%= render DS::Menu.new do |menu| %>
-          <% if unlinked_count.to_i > 0 %>
-            <% menu.with_item(
-              variant: "link",
-              text: t(".import_accounts_menu"),
-              icon: "plus",
-              href: setup_accounts_kraken_item_path(kraken_item),
-              frame: :modal
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <%= icon(
+              "refresh-cw",
+              as_button: true,
+              href: sync_kraken_item_path(kraken_item),
+              disabled: kraken_item.syncing?
             ) %>
-          <% end %>
-          <% menu.with_item(
-            variant: "button",
-            text: t(".delete"),
-            icon: "trash-2",
-            href: kraken_item_path(kraken_item),
-            method: :delete,
-            confirm: CustomConfirm.for_resource_deletion(kraken_item.institution_display_name, high_severity: true)
-          ) %>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% if unlinked_count.to_i > 0 %>
+                <% menu.with_item(
+                  variant: "link",
+                  text: t(".import_accounts_menu"),
+                  icon: "plus",
+                  href: setup_accounts_kraken_item_path(kraken_item),
+                  frame: :modal
+                ) %>
+              <% end %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete"),
+                icon: "trash-2",
+                href: kraken_item_path(kraken_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(kraken_item.institution_display_name, high_severity: true)
+              ) %>
+            <% end %>
+          </div>
         <% end %>
       </div>
     <% end %>

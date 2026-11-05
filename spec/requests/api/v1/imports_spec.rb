@@ -250,6 +250,25 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
+      response '403', 'guest users cannot import family configuration' do
+        schema oneOf: [
+          { '$ref' => '#/components/schemas/ErrorResponse' },
+          { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }
+        ]
+
+        let(:user) do
+          family.users.create!(
+            email: 'api-guest@example.com',
+            password: 'password123',
+            password_confirmation: 'password123',
+            role: 'guest'
+          )
+        end
+        let(:body) { { raw_file_content: "name\nGroceries", type: 'CategoryImport' } }
+
+        run_test!
+      end
+
       response '422', 'validation error or publish rejection' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
