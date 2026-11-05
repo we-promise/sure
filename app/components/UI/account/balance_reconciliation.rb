@@ -38,7 +38,7 @@ class UI::Account::BalanceReconciliation < ApplicationComponent
     def default_items
       items = [
         { label: t_label(:start_balance), value: balance.start_balance_money, tooltip: t_tooltip(:start_balance), style: :start },
-        { label: t_label(:net_cash_flow), value: net_cash_flow, tooltip: t_tooltip(:net_cash_flow), style: :flow }
+        { label: t_label(:net_cash_flow), value: net_balance_flow, tooltip: t_tooltip(:net_cash_flow), style: :flow }
       ]
 
       if has_adjustments?
@@ -134,6 +134,13 @@ class UI::Account::BalanceReconciliation < ApplicationComponent
 
     def net_cash_flow
       balance.cash_inflows_money - balance.cash_outflows_money
+    end
+
+    # Other assets and liabilities carry their transfer legs as non-cash flows. An inflow
+    # (a payment) lowers what a liability owes, so it is shown as a decrease there.
+    def net_balance_flow
+      flow = net_cash_flow + net_non_cash_flow
+      account.liability? ? flow * -1 : flow
     end
 
     def net_non_cash_flow

@@ -248,8 +248,10 @@ class TransfersController < ApplicationController
 
     # Unlinking (reject/destroy) needs write access to one endpoint, plus every
     # account holding a fee transaction, since destroying the transfer deletes
-    # those fees. Returns the account to run the permission check against: the
-    # first one the user cannot write to, or a writable endpoint.
+    # those fees, plus an endpoint whose balance counts confirmed transfers,
+    # since unlinking moves its balance. Returns the account to run the
+    # permission check against: the first one the user cannot write to, or a
+    # writable endpoint.
     def unlink_permission_account
       endpoints = [ @transfer.from_account, @transfer.to_account ].compact
       fee_accounts = Account.where(id: @transfer.fee_transactions.joins(:entry).select("entries.account_id")).to_a
@@ -260,7 +262,8 @@ class TransfersController < ApplicationController
       writable_endpoint = endpoints.find { |account| writable_ids.include?(account.id) }
       return endpoints.first unless writable_endpoint
 
-      fee_accounts.find { |account| !writable_ids.include?(account.id) } || writable_endpoint
+      balance_accounts = @transfer.confirmed? ? endpoints.select(&:balance_counts_transfers?) : []
+      (fee_accounts + balance_accounts).find { |account| !writable_ids.include?(account.id) } || writable_endpoint
     end
 
     def transfer_params

@@ -860,6 +860,12 @@ class Account < ApplicationRecord
     end
   end
 
+  # Other assets and liabilities are valued, but money transferred in or out still moves
+  # their balance (see Balance::BaseCalculator#non_cash_balance_transactions).
+  def balance_counts_transfers?
+    accountable_type.in?(%w[OtherAsset OtherLiability])
+  end
+
   def owned_by?(user)
     user.present? && owner_id == user.id
   end

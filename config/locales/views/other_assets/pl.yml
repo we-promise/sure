@@ -3,11 +3,11 @@ pl:
   other_assets:
     edit:
       balance_tracking_info: Inne aktywa są śledzone poprzez ręczne wyceny za pomocą
-        opcji „Nowe saldo”, a nie transakcje. Przepływy pieniężne nie wpływają na
-        saldo konta.
+        opcji „Nowe saldo”, a nie transakcje. Przelewy z innych kont lub na
+        inne konta nadal zmieniają saldo.
       edit: Edytuj %{account}
     new:
       balance_tracking_info: Inne aktywa są śledzone poprzez ręczne wyceny za pomocą
-        opcji „Nowe saldo”, a nie transakcje. Przepływy pieniężne nie wpływają na
-        saldo konta.
+        opcji „Nowe saldo”, a nie transakcje. Przelewy z innych kont lub na
+        inne konta nadal zmieniają saldo.
       title: Wprowadź dane aktywa

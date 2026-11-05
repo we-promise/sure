@@ -3,11 +3,11 @@ fr:
   other_assets:
     edit:
       balance_tracking_info: Les autres actifs sont suivis via des valorisations manuelles
-        à l'aide de 'Nouveau solde', et non via des transactions. Les flux de trésorerie
-        n'affecteront pas le solde du compte.
+        à l'aide de 'Nouveau solde', et non via des transactions. Les virements depuis ou vers
+        vos autres comptes modifient tout de même le solde.
       edit: Modifier %{account}
     new:
       balance_tracking_info: Les autres actifs sont suivis via des valorisations manuelles
-        à l'aide de 'Nouveau solde', et non via des transactions. Les flux de trésorerie
-        n'affecteront pas le solde du compte.
+        à l'aide de 'Nouveau solde', et non via des transactions. Les virements depuis ou vers
+        vos autres comptes modifient tout de même le solde.
       title: Saisir les détails de l'actif

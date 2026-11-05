@@ -20,6 +20,10 @@ class Transfer < ApplicationRecord
   # (or its entry) is deleted, so the surviving leg never keeps a transfer kind
   # without a transfer.
   before_destroy :release_transactions
+  # Confirming or removing a confirmed transfer moves the balance of accounts
+  # that count transfers. Runs after commit, so callers that confirm inside
+  # their own transaction never lock an account row while holding theirs.
+  after_commit :sync_transfer_counting_accounts_later, if: :moved_transfer_counting_balances?
 
   class << self
     # The outflow leg's kind for a transfer into this account. Transfer::Creator,
@@ -213,6 +217,20 @@ class Transfer < ApplicationRecord
     inflow_transaction&.entry&.sync_account_later
     outflow_transaction&.entry&.sync_account_later
     fee_transactions.each { |t| t.entry&.sync_account_later }
+  end
+
+  def moved_transfer_counting_balances?
+    confirmed? && (destroyed? || saved_change_to_status?)
+  end
+
+  # Other accounts keep their balance when a transfer is confirmed or removed.
+  def sync_transfer_counting_accounts_later
+    [ inflow_transaction, outflow_transaction ].each do |transaction|
+      entry = transaction&.entry
+      next unless entry&.account&.balance_counts_transfers? && Entry.exists?(entry.id)
+
+      entry.sync_account_later
+    end
   end
 
   def to_account

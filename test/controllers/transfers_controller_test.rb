@@ -762,6 +762,27 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "cannot unlink a confirmed transfer from one side when the other side's balance counts transfers" do
+    other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: other_liability, status: "confirmed")
+
+    assert_no_difference -> { Transfer.count } do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+      delete transfer_url(transfer)
+    end
+
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "can reject a pending match from one side when the other side's balance counts transfers" do
+    other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: other_liability)
+
+    assert_difference -> { Transfer.count }, -1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+  end
+
   test "cannot unlink a match from one side when a fee sits in the other account" do
     transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
     writable_fee = attach_fee(transfer, account: accounts(:depository))
