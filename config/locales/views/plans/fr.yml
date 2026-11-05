@@ -23,6 +23,9 @@ fr:
       behind_count:
         one: 1 en retard
         other: "%{count} en retard"
+      currency_warning:
+        one: 1 objectif exclut les soldes en %{currencies} (pas encore de taux de change).
+        other: "%{count} objectifs excluent les soldes en %{currencies} (pas encore de taux de change)."
       new_goal: Nouvel objectif
       of_targets: sur %{total} tous objectifs confondus
       pending_count:

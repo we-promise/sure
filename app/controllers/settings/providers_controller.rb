@@ -2,6 +2,7 @@ class Settings::ProvidersController < ApplicationController
   layout -> { turbo_frame_request? ? "turbo_rails/frame" : "settings" }
 
   before_action :ensure_admin, only: [ :show, :update, :sync_all, :sync, :connect_form ]
+  before_action :ensure_instance_settings_manager, only: :update
   before_action :set_encryption_warning_context, only: [ :show, :connect_form ]
 
   def show
@@ -125,6 +126,10 @@ class Settings::ProvidersController < ApplicationController
     Provider::Factory.ensure_adapters_loaded
     config = Provider::ConfigurationRegistry.all.find { |c| c.provider_key.to_s == provider_key }
     if config
+      unless Current.user.manages_instance_settings?
+        return redirect_to settings_providers_path, alert: t("settings.providers.not_authorized")
+      end
+
       @panel_title           = Provider::Metadata.for(provider_key)[:name] || provider_key.titleize
       @provider_configuration = config
       return render :connect_form
@@ -154,6 +159,14 @@ class Settings::ProvidersController < ApplicationController
       return if Current.user.admin?
 
       redirect_to root_path, alert: t("settings.providers.not_authorized")
+    end
+
+    # Registry-driven configurations (e.g. Plaid) are stored in the global
+    # Setting and apply to every family on the instance.
+    def ensure_instance_settings_manager
+      return if Current.user.manages_instance_settings?
+
+      redirect_to settings_providers_path, alert: t("settings.providers.not_authorized")
     end
 
     def set_encryption_warning_context
@@ -198,6 +211,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
       { key: "enable_banking", title: "Enable Banking",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
+      { key: "truelayer",      title: "TrueLayer",       turbo_id: "truelayer",      partial: "truelayer_panel" },
       { key: "coinstats",      title: "CoinStats",       turbo_id: "coinstats",      partial: "coinstats_panel" },
       { key: "wise",           title: "Wise",            turbo_id: "wise",           partial: "wise_panel" },
       { key: "mercury",        title: "Mercury",         turbo_id: "mercury",        partial: "mercury_panel" },
@@ -229,6 +243,7 @@ class Settings::ProvidersController < ApplicationController
       "lunchflow"      => "LunchflowItem",
       "redbark"        => "RedbarkItem",
       "enable_banking" => "EnableBankingItem",
+      "truelayer"      => "TruelayerItem",
       "coinstats"      => "CoinstatsItem",
       "wise"           => "WiseItem",
       "mercury"        => "MercuryItem",
@@ -265,6 +280,8 @@ class Settings::ProvidersController < ApplicationController
         @redbark_items = Current.family.redbark_items.ordered
       when "enable_banking"
         @enable_banking_items = Current.family.enable_banking_items.ordered
+      when "truelayer"
+        @truelayer_items = Current.family.truelayer_items.active.ordered
       when "coinstats"
         @coinstats_items = Current.family.coinstats_items.ordered
       when "wise"
@@ -302,11 +319,13 @@ class Settings::ProvidersController < ApplicationController
 
     # Prepares instance vars needed by the show view and partials
     def prepare_show_context
-      # Load all provider configurations (exclude family-scoped panels, which have their own UI below)
+      # Load all provider configurations (exclude family-scoped panels, which have their own UI below).
+      # They edit instance-wide credentials, so only those who may change them see them.
       Provider::Factory.ensure_adapters_loaded
       @provider_configurations = Provider::ConfigurationRegistry.all.reject do |config|
         FAMILY_PANEL_KEYS.any? { |key| config.provider_key.to_s.casecmp(key).zero? }
       end
+      @provider_configurations = [] unless Current.user.manages_instance_settings?
 
       @akahu_items = Current.family.akahu_items.active.ordered
       @up_items = Current.family.up_items.active.ordered
@@ -316,6 +335,7 @@ class Settings::ProvidersController < ApplicationController
       @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
       @redbark_items = Current.family.redbark_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
       @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
+      @truelayer_items = Current.family.truelayer_items.active.ordered
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
@@ -369,6 +389,7 @@ class Settings::ProvidersController < ApplicationController
         "lunchflow"      => @lunchflow_items,
         "redbark"        => @redbark_items,
         "enable_banking" => @enable_banking_items,
+        "truelayer"      => @truelayer_items,
         "coinstats"      => @coinstats_items,
         "wise"           => @wise_items,
         "mercury"        => @mercury_items,

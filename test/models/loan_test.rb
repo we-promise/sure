@@ -228,6 +228,125 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal 80_000, account.loan.reload.original_balance.amount
   end
 
+  # The dated-rate rule every provider that reports a variable rate applies.
+  # The loan answers what should be written; the provider's writer writes it.
+  test "variable_rate_update_for sets the base rate on a first sighting" do
+    loan = Loan.new(rate_type: "variable", interest_rate: nil)
+
+    assert_equal({ interest_rate: BigDecimal("5.2") },
+                 loan.variable_rate_update_for(5.2, as_of: Date.new(2026, 1, 15)))
+  end
+
+  test "variable_rate_update_for dates a moved rate to as_of, not today" do
+    loan = Loan.new(rate_type: "variable", interest_rate: 4.5)
+
+    update = loan.variable_rate_update_for(5.2, as_of: Date.new(2026, 1, 15))
+
+    assert_equal({ "2026-01-15" => "5.2" }, update[:variable_rate_schedule])
+    assert_not update.key?(:interest_rate), "the base rate must not move"
+  end
+
+  test "variable_rate_update_for keeps the rows already on the schedule" do
+    loan = Loan.new(rate_type: "variable", interest_rate: 4.5,
+                    variable_rate_schedule: { "2025-06-01" => "4.8" })
+
+    update = loan.variable_rate_update_for(5.2, as_of: Date.new(2026, 1, 15))
+
+    assert_equal({ "2025-06-01" => "4.8", "2026-01-15" => "5.2" }, update[:variable_rate_schedule])
+  end
+
+  test "variable_rate_update_for records nothing when the rate in force is unchanged" do
+    loan = Loan.new(rate_type: "variable", interest_rate: 4.5,
+                    variable_rate_schedule: { "2025-06-01" => "5.125" })
+
+    # A four-place reading of the three-place stored rate is not a change.
+    assert_nil loan.variable_rate_update_for(BigDecimal("5.1249"), as_of: Date.new(2026, 1, 15))
+  end
+
+  test "variable_rate_update_for records nothing when the as_of row already holds the rate" do
+    loan = Loan.new(rate_type: "variable", interest_rate: 4.5,
+                    variable_rate_schedule: { "2026-01-15" => "5.2" })
+
+    assert_nil loan.variable_rate_update_for(5.2, as_of: Date.new(2026, 1, 15))
+  end
+
+  # A provider's own word for a moving rate ("arm") is variable, as
+  # Loan#variable_rate_type? reads it.
+  test "variable_rate_update_for treats a provider's rate type as variable" do
+    loan = Loan.new(rate_type: "arm", interest_rate: 4.5)
+
+    assert_equal({ "2026-01-15" => "5.2" },
+                 loan.variable_rate_update_for(5.2, as_of: Date.new(2026, 1, 15))[:variable_rate_schedule])
+  end
+
+  test "variable_rate_update_for leaves a fixed loan to its caller" do
+    loan = Loan.new(rate_type: "fixed", interest_rate: 4.5)
+
+    assert_nil loan.variable_rate_update_for(5.2, as_of: Date.new(2026, 1, 15))
+  end
+
+  # The form rejects a rate outside 0..MAX_INTEREST_RATE, and nothing in the
+  # model checks a schedule written any other way, so the rule every provider
+  # shares carries the same bound.
+  test "variable_rate_update_for records nothing for a rate outside the form's bounds" do
+    as_of = Date.new(2026, 1, 15)
+    moved = Loan.new(rate_type: "variable", interest_rate: 4.5)
+    first = Loan.new(rate_type: "variable", interest_rate: nil)
+
+    [ -0.001, Loan::MAX_INTEREST_RATE + 0.001, BigDecimal("Infinity"), BigDecimal("NaN") ].each do |rate|
+      assert_nil moved.variable_rate_update_for(rate, as_of: as_of), "#{rate} was dated as a change"
+      assert_nil first.variable_rate_update_for(rate, as_of: as_of), "#{rate} was set as the base rate"
+    end
+  end
+
+  # The bound is checked before the three-place rounding, which would
+  # otherwise carry a reading just outside it onto 0 or 100.
+  test "variable_rate_update_for checks the bound before rounding" do
+    as_of = Date.new(2026, 1, 15)
+    moved = Loan.new(rate_type: "variable", interest_rate: 4.5)
+    first = Loan.new(rate_type: "variable", interest_rate: nil)
+
+    [ BigDecimal("-0.0004"), BigDecimal("100.0004") ].each do |rate|
+      assert_nil moved.variable_rate_update_for(rate, as_of: as_of), "#{rate.to_s("F")} was dated as a change"
+      assert_nil first.variable_rate_update_for(rate, as_of: as_of), "#{rate.to_s("F")} was set as the base rate"
+    end
+  end
+
+  # A reading inside the bound that rounds onto it is still a rate.
+  test "variable_rate_update_for rounds an in-bound reading after checking it" do
+    as_of = Date.new(2026, 1, 15)
+
+    assert_equal({ "2026-01-15" => "100.0" },
+                 Loan.new(rate_type: "variable", interest_rate: 4.5)
+                     .variable_rate_update_for(BigDecimal("99.9996"), as_of: as_of)[:variable_rate_schedule])
+    assert_equal({ interest_rate: BigDecimal("100") },
+                 Loan.new(rate_type: "variable", interest_rate: nil)
+                     .variable_rate_update_for(BigDecimal("99.9996"), as_of: as_of))
+  end
+
+  # A provider's rate is external input. One that is not a number is ignored
+  # like one out of bounds, rather than raising and costing the sync the
+  # other terms it reported.
+  test "variable_rate_update_for records nothing for a rate that is not a number" do
+    as_of = Date.new(2026, 1, 15)
+    moved = Loan.new(rate_type: "variable", interest_rate: 4.5)
+    first = Loan.new(rate_type: "variable", interest_rate: nil)
+
+    [ "n/a", "", "5.2%", true ].each do |rate|
+      assert_nil moved.variable_rate_update_for(rate, as_of: as_of), "#{rate.inspect} was dated as a change"
+      assert_nil first.variable_rate_update_for(rate, as_of: as_of), "#{rate.inspect} was set as the base rate"
+    end
+  end
+
+  test "variable_rate_update_for accepts both ends of the form's bounds" do
+    as_of = Date.new(2026, 1, 15)
+    loan = Loan.new(rate_type: "variable", interest_rate: 4.5)
+
+    assert_equal({ "2026-01-15" => "0.0" }, loan.variable_rate_update_for(0, as_of: as_of)[:variable_rate_schedule])
+    assert_equal({ "2026-01-15" => "100.0" },
+                 loan.variable_rate_update_for(Loan::MAX_INTEREST_RATE, as_of: as_of)[:variable_rate_schedule])
+  end
+
   private
     # A loan imported part way through its life: the principal it was written
     # for is recorded, and the only valuation the account carries is the

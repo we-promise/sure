@@ -1,0 +1,28 @@
+---
+id:
+  invitations:
+    accept_choice:
+      create_account: Buat akun baru
+      joined_household: Anda telah bergabung dengan keluarga.
+      message: "%{inviter} telah mengundang Anda untuk bergabung sebagai %{role}."
+      sign_in_existing: Saya sudah memiliki akun
+      title: Bergabung dengan %{family}
+    create:
+      existing_user_added: Pengguna telah ditambahkan ke keluarga Anda.
+      existing_user_has_family_data: Pengguna tersebut sudah memiliki keluarga yang memiliki rekening. Mereka perlu menghapus atau mentransfer rekening tersebut sebelum bergabung dengan keluarga Anda.
+      failure: Tidak dapat mengirim undangan
+      success: Undangan berhasil dikirim
+    destroy:
+      failure: Terjadi masalah saat menghapus undangan.
+      not_authorized: Anda tidak memiliki izin untuk mengelola undangan.
+      success: Undangan berhasil dihapus.
+    new:
+      email_label: Alamat Email
+      email_placeholder: Masukkan alamat email
+      role_admin: Administrator
+      role_guest: Tamu
+      role_label: Peran
+      role_member: Anggota
+      submit: Kirim Undangan
+      subtitle: Kirim undangan untuk bergabung dengan akun %{moniker} Anda di %{product_name}
+      title: Undang Seseorang
