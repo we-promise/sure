@@ -13,6 +13,7 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     stub_margin_result([])
     stub_earn_result([])
     stub_futures_result([])
+    stub_funding_result([])
   end
 
   test "creates a binance_account of type combined" do
@@ -45,6 +46,40 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     assert_in_delta 1000.0, ba.current_balance.to_f, 0.01
   end
 
+  test "tries other USD quote pairs before giving up on a live price" do
+    @provider.stubs(:get_spot_price).with("BTCUSDT").returns(nil)
+    @provider.stubs(:get_spot_price).with("BTCBUSD").returns(nil)
+    @provider.stubs(:get_spot_price).with("BTCFDUSD").returns("48000.0")
+
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+
+    ba = @item.binance_accounts.first
+    assert_in_delta 48000.0, ba.current_balance.to_f, 0.01
+    assert_equal({ "price_usd" => "48000.0", "date" => Date.current.iso8601 }, ba.raw_payload.dig("quotes", "BTC"))
+  end
+
+  test "values an unquoted asset at its newest known price during an outage" do
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    @item.binance_accounts.first.update!(raw_payload: @item.binance_accounts.first.raw_payload.merge(
+      "quotes" => { "BTC" => { "price_usd" => "45000", "date" => (Date.current - 1.day).iso8601 } }
+    ))
+    security = Security.create!(ticker: "CRYPTO:BTC", name: "BTC")
+    security.prices.create!(date: Date.current - 3.days, price: 40000, currency: "USD")
+    @provider.stubs(:get_spot_price).returns(nil)
+
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+
+    ba = @item.binance_accounts.first.reload
+    assert_in_delta 45000.0, ba.current_balance.to_f, 0.01
+    assert_equal (Date.current - 1.day).iso8601, ba.raw_payload.dig("quotes", "BTC", "date"),
+                 "a reused quote must keep the date it was observed on"
+
+    security.prices.create!(date: Date.current, price: 47000, currency: "USD")
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+
+    assert_in_delta 47000.0, @item.binance_accounts.first.reload.current_balance.to_f, 0.01
+  end
+
   test "skips BinanceAccount creation when all sources empty" do
     stub_spot_result([])
     stub_margin_result([])
@@ -66,6 +101,7 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     stub_failed_result("margin")
     stub_failed_result("earn")
     stub_failed_result("futures")
+    stub_failed_result("funding")
 
     assert_raises BinanceItem::Importer::AllRequestsFailed do
       BinanceItem::Importer.new(@item, binance_provider: @provider).import
@@ -127,6 +163,7 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     stub_failed_result("margin")
     stub_failed_result("earn")
     stub_failed_result("futures")
+    stub_failed_result("funding")
 
     BinanceItem::Importer.new(@item, binance_provider: @provider).import
 
@@ -158,7 +195,24 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
     assert ba.raw_payload.key?("futures")
   end
 
+  test "includes funding assets and retains them during a funding outage" do
+    stub_funding_result([ { symbol: "USDT", free: "20", locked: "0", total: "20" } ])
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    assert_equal [ "BTC", "USDT" ], payload_symbols.sort
+    assert_equal 1, @item.binance_accounts.first.institution_metadata.dig("funding", "asset_count")
+
+    stub_failed_result("funding")
+    BinanceItem::Importer.new(@item, binance_provider: @provider).import
+    assert_equal "funding", payload_assets.find { |asset| asset["symbol"] == "USDT" }["source"]
+  end
+
   private
+
+    def stub_funding_result(assets)
+      BinanceItem::FundingImporter.any_instance.stubs(:import).returns(
+        { assets: assets, raw: [], source: "funding" }
+      )
+    end
 
     def payload_assets
       @item.binance_accounts.first.reload.raw_payload["assets"]
@@ -170,7 +224,8 @@ class BinanceItem::ImporterTest < ActiveSupport::TestCase
 
     def stub_failed_result(source)
       klass = { "spot" => BinanceItem::SpotImporter, "margin" => BinanceItem::MarginImporter,
-                "earn" => BinanceItem::EarnImporter, "futures" => BinanceItem::FuturesImporter }.fetch(source)
+                "earn" => BinanceItem::EarnImporter, "futures" => BinanceItem::FuturesImporter,
+                "funding" => BinanceItem::FundingImporter }.fetch(source)
       klass.any_instance.stubs(:import).returns(
         { assets: [], raw: nil, source: source, error: "boom" }
       )
