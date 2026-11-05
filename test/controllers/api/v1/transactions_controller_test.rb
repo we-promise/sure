@@ -256,6 +256,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
     response_data = JSON.parse(response.body)
     assert_equal @transaction.id, response_data["id"]
+    assert_equal @transaction.entry.id, response_data["entry_id"]
     assert response_data.key?("name")
     assert response_data.key?("amount")
     assert_amount_cents_fields(response_data)
