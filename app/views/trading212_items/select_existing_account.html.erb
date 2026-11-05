@@ -19,7 +19,7 @@
               <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
                 <%= radio_button_tag :trading212_account_id, t212_account.id, false %>
                 <div class="flex flex-col">
-                  <span class="text-sm text-primary font-medium"><%= t212_account.name.presence || t212_account.trading212_account_id %></span>
+                  <span class="text-sm text-primary font-medium"><%= t212_account.name.presence || mask_last4(t212_account.trading212_account_id) %></span>
                   <span class="text-xs text-secondary">
                     <%= t212_account.currency %> • <%= t(".balance") %>: <%= number_to_currency((t212_account.current_balance || 0), unit: Money::Currency.new(t212_account.currency.presence || Current.family.currency).symbol) %>
                   </span>

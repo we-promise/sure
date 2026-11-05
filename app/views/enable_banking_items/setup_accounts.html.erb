@@ -73,7 +73,7 @@
                 <h3 class="font-medium text-primary">
                   <%= enable_banking_account.name %>
                   <% if enable_banking_account.iban.present? %>
-                    <span class="text-secondary">• <%= enable_banking_account.iban.last(4) %></span>
+                    <span class="text-secondary">· <%= mask_last4(enable_banking_account.iban) %></span>
                   <% end %>
                 </h3>
                 <div class="text-sm text-secondary space-y-0.5">

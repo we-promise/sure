@@ -9,6 +9,7 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
 
     first_account = parsed[:accounts].first
     assert_equal "U1234567", first_account[:ibkr_account_id]
+    assert_equal "Interactive Brokers (•••4567)", first_account[:name]
     assert_equal "CHF", first_account[:currency]
     assert_equal BigDecimal("1000.50"), first_account[:cash_balance]
     assert_equal BigDecimal("3351.00"), first_account[:current_balance]

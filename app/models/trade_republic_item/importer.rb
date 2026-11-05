@@ -486,7 +486,7 @@ class TradeRepublicItem::Importer
     def build_account_name(account_id, kind:)
       base = I18n.t("trade_republic_items.defaults.name")
       suffix = { "cash" => "Cash", "crypto" => "Crypto" }.fetch(kind, "Portfolio")
-      account_id.present? ? "#{base} #{suffix} (#{account_id})" : "#{base} #{suffix}"
+      account_id.present? ? "#{base} #{suffix} (#{IdentifierMask.last4(account_id)})" : "#{base} #{suffix}"
     end
 
     def record_provider_warnings(warnings)

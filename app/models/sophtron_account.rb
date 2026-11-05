@@ -192,10 +192,8 @@ class SophtronAccount < ApplicationRecord
       nil
     end
 
+    # Keeps Sophtron's stored "****1234" format.
     def mask_account_number(account_number)
-      return nil if account_number.blank?
-
-      last_four = account_number.to_s.gsub(/\s+/, "").last(4)
-      last_four.present? ? "****#{last_four}" : nil
+      IdentifierMask.last4(account_number, prefix: "****", strip_whitespace: true)
     end
 end

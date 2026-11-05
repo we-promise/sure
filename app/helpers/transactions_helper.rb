@@ -175,7 +175,7 @@ module TransactionsHelper
     tx = obj.respond_to?(:transaction) ? obj.transaction : obj
     return nil unless tx.respond_to?(:extra) && tx.extra.present?
 
-    extra = tx.extra
+    extra = IdentifierMask.mask_identifiers(tx.extra)
 
     if extra.is_a?(Hash) && extra["simplefin"].present?
       sf = extra["simplefin"]
