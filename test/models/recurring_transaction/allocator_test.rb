@@ -141,6 +141,147 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert @occurrence.reload.partially_paid?
   end
 
+  test "a single payment inside the tolerance band is recorded at its real amount" do
+    # The bill is 2000 and the charge is 2080 (4%, inside the 7.5% band).
+    allocation = @allocator.allocate!(entry: entry_for(2080))
+
+    assert_equal 2080, allocation.allocated_amount
+    assert_equal 2080, @occurrence.reload.confirmed_allocated
+    assert @occurrence.paid?
+    assert_not @occurrence.overpaid?, "a payment inside the band is the bill, not an overpayment"
+  end
+
+  test "a single payment outside the band is still capped at the estimate" do
+    # 2600 is 30% over, beyond the 25% limit a manual link can teach.
+    allocation = @allocator.allocate!(entry: entry_for(2600))
+
+    assert_equal 2000, allocation.allocated_amount
+  end
+
+  test "a learned tolerance widens the band the allocator uses" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => 10 })
+
+    allocation = @allocator.allocate!(entry: entry_for(2180))
+
+    assert_equal 2180, allocation.allocated_amount, "9% over is inside the learned 10% band"
+  end
+
+  test "a null learned tolerance hint reads as no widening" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => nil })
+
+    allocation = @allocator.allocate!(entry: entry_for(2080))
+
+    assert_equal 2080, allocation.allocated_amount
+    assert @occurrence.reload.paid?
+  end
+
+  test "a single below-estimate payment inside the band is recorded at its real amount" do
+    # 1900 is 5% under the 2000 bill, inside the 7.5% band.
+    allocation = @allocator.allocate!(entry: entry_for(1900))
+
+    assert_equal 1900, allocation.allocated_amount
+    assert @occurrence.reload.paid?
+  end
+
+  test "a payment just past the band is recorded in full on the first manual link" do
+    # 2151 is 7.55% over 2000, just outside the 7.5% default. The manual link
+    # teaches a band (7.6%) that covers it, and the whole payment is recorded.
+    allocation = @allocator.allocate!(entry: entry_for(2151))
+
+    assert_equal 2151, allocation.allocated_amount
+    assert_equal 2151, @occurrence.reload.confirmed_allocated
+    assert_equal 7.6, @rent.reload.matcher_hints["learned_tolerance_pct"].to_f
+    assert @occurrence.paid?
+    assert_not @occurrence.overpaid?
+  end
+
+  test "a payment 7.51% over the bill stores the ceiling of the deviation" do
+    # 7.51% rounds to 7.5 at one decimal but must store 7.6 (the ceiling).
+    allocation = @allocator.allocate!(entry: entry_for(BigDecimal("2150.20")))
+
+    assert_equal BigDecimal("2150.20"), allocation.allocated_amount
+    assert_equal 7.6, @rent.reload.matcher_hints["learned_tolerance_pct"].to_f
+  end
+
+  test "a non-numeric learned hint reads as no widening" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => "" })
+
+    allocation = @allocator.allocate!(entry: entry_for(2080))
+
+    assert_equal 2080, allocation.allocated_amount
+  end
+
+  test "a non-finite learned hint reads as no widening" do
+    # "Infinity" would otherwise widen the band to everything. 30% over is
+    # beyond the 25% learnable limit, so the default must still cap it.
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => "Infinity" })
+
+    allocation = @allocator.allocate!(entry: entry_for(2600))
+
+    assert_equal 2000, allocation.allocated_amount
+  end
+
+  test "a non-finite learned hint does not widen the matched-payment band" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => "Infinity" })
+
+    allocation = @allocator.allocate_matched!(
+      entry: entry_for(2300), state: "confirmed", confidence: 1.0, signals: {}
+    )
+
+    assert_equal 2000, allocation.allocated_amount
+  end
+
+  test "an imported learned hint is capped at the learnable maximum" do
+    # Learning never exceeds 25%, but imported hints are not validated. A 100%
+    # hint must not turn the band into everything: 30% over stays capped.
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => 100 })
+
+    allocation = @allocator.allocate!(entry: entry_for(2600))
+
+    assert_equal 2000, allocation.allocated_amount
+  end
+
+  test "the first manual link of a payment outside the default band records the actual amount" do
+    # The Codex case: a 40.00 bill, a 46.80 payment (17% over). The first link
+    # teaches a 17% band and records 46.80, not the 40.00 estimate.
+    occurrence = usd_occurrence(expected: 40)
+    allocation = Allocator.new(occurrence).allocate!(entry: entry_for(46.80))
+
+    assert_equal 46.80, allocation.allocated_amount
+    assert_equal 46.80, occurrence.reload.confirmed_allocated
+    assert occurrence.paid?
+    assert_not occurrence.overpaid?
+  end
+
+  test "a manual partial payment outside the band teaches nothing and stays partial" do
+    allocation = @allocator.allocate!(entry: entry_for(1500))
+
+    assert_equal 1500, allocation.allocated_amount
+    assert @occurrence.reload.partially_paid?
+    assert_nil @rent.reload.matcher_hints["learned_tolerance_pct"]
+  end
+
+  test "an explicit amount on a manual link is never promoted to the entry amount" do
+    occurrence = usd_occurrence(expected: 40)
+    allocation = Allocator.new(occurrence).allocate!(entry: entry_for(46.80), amount: 40)
+
+    assert_equal 40, allocation.allocated_amount
+  end
+
+  test "a partial payment is never recorded as the whole bill" do
+    allocation = @allocator.allocate!(entry: entry_for(1500))
+
+    assert_equal 1500, allocation.allocated_amount
+    assert @occurrence.reload.partially_paid?
+  end
+
+  test "a second payment on an occurrence is capped at what remains, not the band" do
+    @allocator.allocate!(entry: entry_for(1900))
+    allocation = @allocator.allocate!(entry: entry_for(500))
+
+    assert_equal 100, allocation.allocated_amount
+  end
+
   test "overpayment closes and flags" do
     # The default allocation takes only what the occurrence needs, so an
     # overpay has to be explicit.

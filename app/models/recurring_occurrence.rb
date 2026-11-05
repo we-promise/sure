@@ -94,8 +94,10 @@ class RecurringOccurrence < ApplicationRecord
     scheduled? && confirmed_allocated.positive? && confirmed_allocated < resolved_expected_amount
   end
 
+  # Overpaid means beyond the tolerance band the matcher uses. A payment inside
+  # the band is the bill's real amount, not an overpayment.
   def overpaid?
-    confirmed_allocated > resolved_expected_amount + CLOSE_EPSILON
+    confirmed_allocated > resolved_expected_amount + overpaid_threshold
   end
 
   # Presentation state for open occurrences: upcoming until the notify
@@ -160,6 +162,11 @@ class RecurringOccurrence < ApplicationRecord
   end
 
   private
+    def overpaid_threshold
+      band = resolved_expected_amount * (recurring_transaction.effective_amount_tolerance_pct / BigDecimal("100"))
+      [ band, CLOSE_EPSILON ].max
+    end
+
     def notify_days
       recurring_transaction.notify_days_before || DEFAULT_NOTIFY_DAYS
     end

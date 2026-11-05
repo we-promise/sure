@@ -85,6 +85,7 @@ class RecurringTransaction
           )
 
           learn_from_manual_attach!(allocation) if entry
+          allocation = promote_settlement!(allocation) if entry && amount.blank?
           refresh_close_state!
           allocation
         end
@@ -224,7 +225,7 @@ class RecurringTransaction
         total = confirmed.sum(&:allocated_amount)
 
         if confirmed.size == 1
-          tolerance = expected * (occurrence.recurring_transaction.amount_tolerance_pct / BigDecimal("100"))
+          tolerance = expected * (occurrence.recurring_transaction.effective_amount_tolerance_pct / BigDecimal("100"))
           return true if (confirmed.first.allocated_amount - expected).abs <= tolerance
         end
 
@@ -251,7 +252,12 @@ class RecurringTransaction
             # allocates nothing, never the occurrence's outstanding balance.
             capacity = entry_capacity(entry, entry_total)
             remaining = occurrence.remaining_amount
-            remaining.positive? ? [ capacity, remaining ].min : capacity
+
+            if settles_bill?(entry, entry_total)
+              capacity
+            else
+              remaining.positive? ? [ capacity, remaining ].min : capacity
+            end
           end
 
           [ allocated, allocated, entry.currency ]
@@ -282,6 +288,45 @@ class RecurringTransaction
                                            from: entry.currency, to: occurrence.currency)
           end
         end
+      end
+
+      # Actual-replaces-estimate: an entry that is the bill itself is recorded at
+      # its real amount instead of being capped at the estimate. It qualifies
+      # only when nothing has been paid against this occurrence or this entry
+      # yet, and its amount sits inside the same tolerance band the matcher uses.
+      # Partial payments and accumulations keep the capped behaviour.
+      def settles_bill?(entry, entry_total)
+        return false if occurrence.allocations.confirmed.exists?
+        return false if RecurringAllocation.where(entry: entry).exists?
+
+        within_settlement_band?(entry_total)
+      end
+
+      def within_settlement_band?(entry_total)
+        expected = occurrence.resolved_expected_amount
+        return false unless expected.positive?
+
+        tolerance = expected * (occurrence.recurring_transaction.effective_amount_tolerance_pct / BigDecimal("100"))
+        (entry_total - expected).abs <= tolerance
+      end
+
+      # A manual link can teach the band that covers it (learn_from_manual_attach!),
+      # but only after its own allocation was capped. When the band it just taught
+      # now covers this payment, and it is the only settlement of the bill and the
+      # only use of the entry, record the whole entry so the history shows what
+      # was actually paid. Explicit amounts are never changed.
+      def promote_settlement!(allocation)
+        entry = allocation.entry
+        return allocation unless entry.currency == occurrence.currency
+        return allocation unless occurrence.allocations.confirmed.count == 1
+        return allocation unless RecurringAllocation.where(entry: entry).count == 1
+
+        entry_total = entry.amount.abs
+        return allocation if allocation.allocated_amount == entry_total
+        return allocation unless within_settlement_band?(entry_total)
+
+        allocation.update!(allocated_amount: entry_total, source_amount: entry_total)
+        allocation
       end
 
       # True once any allocation on this entry lacks a source amount, which
@@ -327,12 +372,15 @@ class RecurringTransaction
         expected = occurrence.resolved_expected_amount
         if expected.positive? && occurrence.allocations.confirmed.count == 1 && close_worthy?
           deviation_pct = (entry.amount.abs - expected).abs / expected * 100
-          current = BigDecimal((hints["learned_tolerance_pct"] || 0).to_s)
+          current = BigDecimal(hints["learned_tolerance_pct"].to_s, exception: false)
+          current = BigDecimal("0") unless current&.finite?
 
           if deviation_pct > series.amount_tolerance_pct &&
              deviation_pct > current &&
              deviation_pct <= Matcher::MAX_LEARNED_TOLERANCE_PCT
-            hints["learned_tolerance_pct"] = deviation_pct.round(1).to_f
+            # Round up: a deviation of 7.55% stored as 7.5% would leave the
+            # very payment that taught it outside its own band.
+            hints["learned_tolerance_pct"] = ((deviation_pct * 10).ceil / BigDecimal(10)).to_f
           end
         end
 
