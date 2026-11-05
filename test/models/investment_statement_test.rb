@@ -876,8 +876,10 @@ class InvestmentStatementTest < ActiveSupport::TestCase
   test "a security held in two currencies in one account keeps a day change per currency" do
     account = create_investment_account(balance: 10_000)
     security = Security.create!(ticker: "DUAL", name: "Dual listed")
-    { "USD" => [ 100, 130 ], "CAD" => [ 200, 210 ] }.each do |currency, (before, now)|
-      Holding.create!(account: account, security: security, date: 1.day.ago.to_date, qty: 1, price: before, amount: before, currency: currency)
+    # The USD snapshot is older than the CAD one, so a lookup that ignored
+    # currency would hand the USD row the newer CAD snapshot.
+    { "USD" => [ 100, 130, 2 ], "CAD" => [ 200, 210, 1 ] }.each do |currency, (before, now, days_ago)|
+      Holding.create!(account: account, security: security, date: days_ago.days.ago.to_date, qty: 1, price: before, amount: before, currency: currency)
       Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: now, amount: now, currency: currency)
     end
     current = Holding.where(account: account, date: Date.current).order(:currency).to_a
