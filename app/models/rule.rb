@@ -195,14 +195,25 @@ class Rule < ApplicationRecord
 
     rule_ids = family.rules.select(:id)
     conditions = Rule::Condition.where(condition_type: "transaction_merchant").where("LOWER(rule_conditions.value) IN (?)", from_ids)
-    conditions
+    rewritten = conditions
       .where(rule_id: rule_ids)
       .or(conditions.where(parent_id: Rule::Condition.where(rule_id: rule_ids).select(:id)))
-      .update_all(value: to.to_s, updated_at: Time.current)
+    rewritten_rule_ids = rewritten.where.not(rule_id: nil).pluck(:rule_id) |
+      Rule::Condition.where(id: rewritten.where.not(parent_id: nil).select(:parent_id)).pluck(:rule_id)
+    rewritten.update_all(value: to.to_s, updated_at: Time.current)
 
     Rule::Action.where(rule_id: rule_ids, action_type: "set_transaction_merchant")
       .where("LOWER(rule_actions.value) IN (?)", from_ids)
       .update_all(value: to.to_s, updated_at: Time.current)
+
+    # update_all skips the callback that re-takes an email rule's baseline when
+    # its conditions change. Without it, a merge would email the target
+    # merchant's past transactions as new matches.
+    family.rules.where(id: rewritten_rule_ids).find_each(&:reseed_notification_baseline!)
+  end
+
+  def reseed_notification_baseline!
+    seed_notification_baseline
   end
 
   # Excludes transaction ids with one array parameter. where.not(id: ids) sends

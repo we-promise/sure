@@ -36,6 +36,20 @@ class Merchant::MergerTest < ActiveSupport::TestCase
     assert_equal @target.id, rule.actions.first.value
   end
 
+  test "merge! re-takes the notification baseline of an email rule matching the source merchant" do
+    target_entry = create_transaction(merchant: @target)
+    rule = @family.rules.build(resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_merchant", operator: "=", value: @source.id)
+    rule.actions.build(action_type: "send_email_notification")
+    rule.save!
+    assert_not_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), target_entry.entryable_id
+
+    Merchant::Merger.new(family: @family, target_merchant: @target, source_merchants: [ @source ]).merge!
+
+    assert_includes NotificationDelivery.where(rule: rule).pluck(:transaction_id), target_entry.entryable_id,
+      "the target merchant's past transactions must not be emailed as new matches"
+  end
+
   test "merge! does not touch entries of unrelated merchants" do
     other = create_transaction(merchant: @target)
     assert_not other.user_modified?

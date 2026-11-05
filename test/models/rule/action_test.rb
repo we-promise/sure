@@ -290,6 +290,25 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal I18n.t("rule.actions.set_transaction_merchant.unavailable"), action.value_display
   end
 
+  test "set_transaction_merchant rejects a merchant the user picks but can't access, and keeps a saved one" do
+    hidden = ProviderMerchant.create!(name: "Hidden provider merchant", source: "plaid")
+    @txn1.update!(merchant: hidden)
+    Current.stubs(:user).returns(users(:family_member))
+    assert_not @transaction_rule.family.assignable_merchants_for(users(:family_member)).exists?(id: hidden.id), "precondition"
+
+    action = @transaction_rule.actions.build(action_type: "set_transaction_merchant", value: hidden.id)
+    assert_not action.valid?
+    assert action.errors[:value].any?
+
+    action.value = @whole_foods_merchant.id
+    assert action.valid?
+
+    Current.stubs(:user).returns(nil)
+    saved = @transaction_rule.actions.create!(action_type: "set_transaction_merchant", value: hidden.id)
+    Current.stubs(:user).returns(users(:family_member))
+    assert saved.reload.valid?, "a merchant another member saved stays valid while unchanged"
+  end
+
   test "set_transaction_merchant marks an unknown saved id like another family's merchant" do
     unknown = SecureRandom.uuid
     action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant", value: unknown)

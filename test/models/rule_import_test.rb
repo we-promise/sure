@@ -42,6 +42,26 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal 1, auto_rule.actions.count
   end
 
+  test "reuses a provider merchant on the family's transactions instead of creating a family merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Coffee", source: "plaid")
+    account = @family.accounts.first
+    account.entries.create!(name: "Coffee", date: Date.current, amount: 4, currency: "USD", entryable: Transaction.new(merchant: provider_merchant))
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Coffee","transaction",true,,"[{\"condition_type\":\"transaction_merchant\",\"operator\":\"=\",\"value\":\"Synced Coffee\"}]","[{\"action_type\":\"set_transaction_merchant\",\"value\":\"Synced Coffee\"}]"
+    CSV
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_no_difference -> { @family.merchants.count } do
+      import.send(:import!)
+    end
+
+    rule = Rule.find_by!(family: @family, name: "Coffee")
+    assert_equal provider_merchant.id, rule.conditions.first.value
+    assert_equal provider_merchant.id, rule.actions.first.value
+  end
+
   test "imports rule conditions correctly" do
     import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
     import.generate_rows_from_csv

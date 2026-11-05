@@ -362,7 +362,12 @@ class RuleImport < Import
     end
 
     def merchants_by_name
-      @merchants_by_name ||= family.merchants.index_by(&:name)
+      # An exported rule may name a provider merchant (see
+      # Family::DataExporter); reuse it while it is still on the family's
+      # transactions, so the rule keeps matching them. The family's own
+      # merchant wins on a name clash.
+      @merchants_by_name ||= ProviderMerchant.where(id: family.transactions.select(:merchant_id)).index_by(&:name)
+        .merge(family.merchants.index_by(&:name))
     end
 
     def tags_by_name
