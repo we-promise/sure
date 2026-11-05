@@ -4,7 +4,7 @@ class DataCleanerJobTest < ActiveSupport::TestCase
   test "clears last_psu_ip on Enable Banking items with an expired session" do
     expired = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Expired", country_code: "DE",
-      application_id: "app", client_certificate: "cert",
+      application_id: "app", client_certificate: "cert", sync_start_date: 3.months.ago.to_date,
       last_psu_ip: "1.2.3.4", session_id: "sess", session_expires_at: 1.day.ago
     )
 
@@ -16,7 +16,7 @@ class DataCleanerJobTest < ActiveSupport::TestCase
   test "keeps last_psu_ip on Enable Banking items with a valid session" do
     active = EnableBankingItem.create!(
       family: families(:dylan_family), name: "Active", country_code: "DE",
-      application_id: "app", client_certificate: "cert",
+      application_id: "app", client_certificate: "cert", sync_start_date: 3.months.ago.to_date,
       last_psu_ip: "1.2.3.4", session_id: "sess", session_expires_at: 1.day.from_now
     )
 
