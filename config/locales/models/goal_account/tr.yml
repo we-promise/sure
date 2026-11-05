@@ -6,5 +6,4 @@ tr:
         goal_account:
           attributes:
             base:
-              account_already_fully_earmarked: Bu hesap zaten tamamen “%{goal_name}”
-                için ayrılmış. Bölmek için bir tutar girin.
+              account_already_fully_earmarked: Bu hesap zaten tamamen “%{goal_name}” için ayrılmış. Bölmek için bir tutar girin.

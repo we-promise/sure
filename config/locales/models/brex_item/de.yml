@@ -11,5 +11,4 @@ de:
         brex_item:
           attributes:
             base_url:
-              official_hosts_only: muss leer sein, https://api.brex.com oder https://api-staging.brex.com
-                lauten
+              official_hosts_only: muss leer sein, https://api.brex.com oder https://api-staging.brex.com lauten

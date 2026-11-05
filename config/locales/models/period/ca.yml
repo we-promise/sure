@@ -18,9 +18,9 @@ ca:
       label: Any en curs
       label_short: YTD
     custom:
-      comparison_label: "%{start_date} a %{end_date}"
       label: Període personalitzat
       label_short: Personalitzat
+      comparison_label: '%{start_date} a %{end_date}'
     last_10_years:
       comparison_label: vs. fa 10 anys
       label: Últims 10 anys
@@ -53,4 +53,4 @@ ca:
       comparison_label: vs. mes anterior
       label: Mes anterior
       label_short: MA
-    range: "%{start_date} – %{end_date}"
+    range: '%{start_date} – %{end_date}'

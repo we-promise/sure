@@ -15,16 +15,16 @@ pt-BR:
     new:
       invitation_message: "%{inviter} convidou você para se juntar como %{role}"
       join_family_title: Juntar-se a %{family}
-      password_placeholder: Digite sua senha
-      password_requirements:
-        case: Letras maiúsculas e minúsculas
-        length: Mínimo 8 caracteres
-        number: Um número (0-9)
-        special: 'Um caractere especial (!, @, #, $, %, etc)'
       role_admin: administrador
       role_member: membro
       submit: Criar conta
       title: Criar sua conta
-      welcome_body: Para começar, você deve se inscrever para uma nova conta. Então
-        você poderá configurar configurações adicionais dentro do aplicativo.
+      welcome_body: Para começar, você deve se inscrever para uma nova conta. Então você
+        poderá configurar configurações adicionais dentro do aplicativo.
       welcome_title: Bem-vindo ao Self Hosted %{product_name}!
+      password_placeholder: Digite sua senha
+      password_requirements:
+        length: Mínimo 8 caracteres
+        case: Letras maiúsculas e minúsculas
+        number: Um número (0-9)
+        special: "Um caractere especial (!, @, #, $, %, etc)"

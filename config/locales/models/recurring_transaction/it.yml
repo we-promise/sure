@@ -4,4 +4,4 @@ it:
     errors:
       models:
         recurring_transaction:
-          merchant_or_name_required: È necessario indicare l'esercente o il nome
+          merchant_or_name_required: "È necessario indicare l'esercente o il nome"

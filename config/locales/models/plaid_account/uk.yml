@@ -4,4 +4,4 @@ uk:
     errors:
       models:
         plaid_account:
-          no_balance: Рахунок Plaid повинен мати або поточний, або доступний баланс
+          no_balance: "Рахунок Plaid повинен мати або поточний, або доступний баланс"

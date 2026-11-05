@@ -54,13 +54,6 @@ ru:
       step_3: Нажмите "Обновить", чтобы восстановить доступ
       title: Обновить подключение SimpleFIN
       update: Обновить
-    institution_summary:
-      count:
-        few: "%{count} учреждения"
-        many: "%{count} учреждений"
-        one: "%{count} учреждение"
-        other: "%{count} учреждения"
-      none: Подключённых учреждений нет
     link_existing_account:
       errors:
         different_provider: Этот счёт связан с другим провайдером. Сначала отвяжите
@@ -74,9 +67,6 @@ ru:
       setup_token: Токен настройки
       setup_token_placeholder: вставьте ваш токен настройки SimpleFIN
       title: Подключить SimpleFIN
-    rate_limited:
-      daily_refresh: Вы достигли дневного лимита обновлений SimpleFIN. Повторите попытку
-        после обновления данных в SimpleFIN Bridge (до 24 часов).
     reconciled_status:
       message:
         few: "%{count} дублирующиеся ожидающие операции сверены"
@@ -203,23 +193,6 @@ ru:
         many: "%{count} ожидающих операций старше %{days} дней"
         one: "%{count} ожидающая операция старше %{days} дней"
         other: "%{count} ожидающие операции старше %{days} дней"
-    stale_sync:
-      last_successful: Последняя успешная синхронизация была %{count} дн. назад. Возможно,
-        подключение SimpleFIN требует внимания.
-      no_transactions: Новых операций нет уже %{count} дн. Проверьте панель SimpleFIN
-        и убедитесь, что подключения к банкам активны.
-    sync_status:
-      no_accounts: Счета не найдены
-      partial_setup:
-        few: "%{linked} синхронизировано, %{unlinked} требуют настройки"
-        many: "%{linked} синхронизировано, %{unlinked} требуют настройки"
-        one: "%{linked} синхронизировано, %{unlinked} требует настройки"
-        other: "%{linked} синхронизировано, %{unlinked} требуют настройки"
-      synced:
-        few: "%{count} счёта синхронизированы"
-        many: "%{count} счетов синхронизировано"
-        one: "%{count} счёт синхронизирован"
-        other: "%{count} счёта синхронизированы"
     update:
       errors:
         blank_token: Пожалуйста, введите токен настройки SimpleFIN.
@@ -230,3 +203,27 @@ ru:
         unexpected: Произошла непредвиденная ошибка. Пожалуйста, попробуйте снова.
         update_failed: 'Не удалось обновить подключение: %{message}'
       success: Подключение SimpleFIN успешно обновлено! Ваши счета переподключаются.
+    sync_status:
+      no_accounts: Счета не найдены
+      synced:
+        one: '%{count} счёт синхронизирован'
+        few: '%{count} счёта синхронизированы'
+        many: '%{count} счетов синхронизировано'
+        other: '%{count} счёта синхронизированы'
+      partial_setup:
+        one: '%{linked} синхронизировано, %{unlinked} требует настройки'
+        few: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+        many: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+        other: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+    institution_summary:
+      none: Подключённых учреждений нет
+      count:
+        one: '%{count} учреждение'
+        few: '%{count} учреждения'
+        many: '%{count} учреждений'
+        other: '%{count} учреждения'
+    rate_limited:
+      daily_refresh: Вы достигли дневного лимита обновлений SimpleFIN. Повторите попытку после обновления данных в SimpleFIN Bridge (до 24 часов).
+    stale_sync:
+      last_successful: Последняя успешная синхронизация была %{count} дн. назад. Возможно, подключение SimpleFIN требует внимания.
+      no_transactions: Новых операций нет уже %{count} дн. Проверьте панель SimpleFIN и убедитесь, что подключения к банкам активны.

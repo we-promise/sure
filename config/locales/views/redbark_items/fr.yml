@@ -6,8 +6,7 @@ fr:
       creation_failed: 'Impossible de créer les comptes : %{error}'
       creation_failed_generic: Impossible de créer les comptes.
       no_accounts: Aucun compte à configurer.
-      setup_failed: 'Impossible de créer %{count} compte(s). Rien d''autre n''a été
-        modifié : corrigez le problème et réessayez.'
+      setup_failed: 'Impossible de créer %{count} compte(s). Rien d''autre n''a été modifié : corrigez le problème et réessayez.'
       success: "%{count} compte(s) créé(s) avec succès."
     create:
       success: Connexion Redbark créée avec succès
@@ -31,8 +30,7 @@ fr:
       api_error: 'Erreur d''API : %{message}'
       invalid_account_name: Impossible de lier un compte dont le nom est vide
       missing_parameters: Paramètres requis manquants
-      no_api_key: Clé d'API Redbark introuvable. Configurez-la dans les paramètres
-        des fournisseurs.
+      no_api_key: Clé d'API Redbark introuvable. Configurez-la dans les paramètres des fournisseurs.
       provider_account_already_linked: Ce compte Redbark est déjà lié à un autre compte
       provider_account_not_found: Compte Redbark introuvable
       success: "%{account_name} lié à Redbark avec succès"
@@ -50,8 +48,7 @@ fr:
       save_button: Enregistrer la configuration
       step_1: Créez une clé d'API sur app.redbark.com, dans les paramètres
       step_2: Saisissez votre clé d'API ci-dessous et cliquez sur Enregistrer
-      step_3: Une fois la connexion établie, ouvrez l'onglet Comptes pour configurer
-        de nouveaux comptes
+      step_3: Une fois la connexion établie, ouvrez l'onglet Comptes pour configurer de nouveaux comptes
       update_button: Mettre à jour la configuration
     redbark_item:
       accounts_need_setup: Des comptes sont à configurer
@@ -66,8 +63,7 @@ fr:
       provider_name: Redbark
       requires_update: La connexion doit être mise à jour
       setup_action: Configurer de nouveaux comptes
-      setup_description: "%{linked} sur %{total} comptes liés. Choisissez le type
-        de vos comptes Redbark nouvellement importés."
+      setup_description: "%{linked} sur %{total} comptes liés. Choisissez le type de vos comptes Redbark nouvellement importés."
       setup_needed: De nouveaux comptes sont prêts à être configurés
       status: Synchronisé il y a %{timestamp}
       status_never: Jamais synchronisé
@@ -80,17 +76,12 @@ fr:
       accounts_selected: comptes sélectionnés
       api_error: 'Erreur d''API : %{message}'
       cancel: Annuler
-      configure_name_in_provider: 'Importation impossible : renseignez le nom du compte
-        dans Redbark'
-      description: Sélectionnez les comptes que vous souhaitez lier à votre compte
-        %{product_name}.
+      configure_name_in_provider: 'Importation impossible : renseignez le nom du compte dans Redbark'
+      description: Sélectionnez les comptes que vous souhaitez lier à votre compte %{product_name}.
       link_accounts: Lier les comptes sélectionnés
-      no_accounts_found: Aucun compte trouvé. Vérifiez la configuration de votre clé
-        d'API.
-      no_api_key: La clé d'API Redbark n'est pas configurée. Configurez-la dans les
-        paramètres.
-      no_credentials_configured: Configurez d'abord vos identifiants Redbark dans
-        les paramètres des fournisseurs.
+      no_accounts_found: Aucun compte trouvé. Vérifiez la configuration de votre clé d'API.
+      no_api_key: La clé d'API Redbark n'est pas configurée. Configurez-la dans les paramètres.
+      no_credentials_configured: Configurez d'abord vos identifiants Redbark dans les paramètres des fournisseurs.
       no_name_placeholder: "(sans nom)"
       title: Sélectionner des comptes Redbark
     select_existing_account:
@@ -100,23 +91,18 @@ fr:
       balance_label: 'Solde :'
       cancel: Annuler
       cancel_button: Annuler
-      configure_name_in_provider: 'Importation impossible : renseignez le nom du compte
-        dans Redbark'
+      configure_name_in_provider: 'Importation impossible : renseignez le nom du compte dans Redbark'
       connect_hint: Connectez un compte Redbark pour activer la synchronisation automatique.
-      description: Sélectionnez un compte Redbark à lier à ce compte. Les transactions
-        seront synchronisées et dédoublonnées automatiquement.
+      description: Sélectionnez un compte Redbark à lier à ce compte. Les transactions seront synchronisées et dédoublonnées automatiquement.
       header: Lier à Redbark
       link_account: Lier le compte
       link_button: Lier ce compte
       linking_to: 'Liaison avec :'
       no_account_specified: Aucun compte indiqué
       no_accounts: Aucun compte Redbark non lié n'a été trouvé.
-      no_accounts_found: Aucun compte Redbark trouvé. Vérifiez la configuration de
-        votre clé d'API.
-      no_api_key: La clé d'API Redbark n'est pas configurée. Configurez-la dans les
-        paramètres.
-      no_credentials_configured: Configurez d'abord vos identifiants Redbark dans
-        les paramètres des fournisseurs.
+      no_accounts_found: Aucun compte Redbark trouvé. Vérifiez la configuration de votre clé d'API.
+      no_api_key: La clé d'API Redbark n'est pas configurée. Configurez-la dans les paramètres.
+      no_credentials_configured: Configurez d'abord vos identifiants Redbark dans les paramètres des fournisseurs.
       no_name_placeholder: "(sans nom)"
       settings_link: Ouvrir les paramètres des fournisseurs
       subtitle: Choisissez un compte Redbark
@@ -144,12 +130,10 @@ fr:
       fetch_failed: Impossible de récupérer les comptes
       historical_data_range: 'Période de l''historique :'
       import_selected: Importer les comptes sélectionnés
-      instructions: Sélectionnez les comptes que vous souhaitez importer depuis Redbark.
-        Vous pouvez en choisir plusieurs.
+      instructions: Sélectionnez les comptes que vous souhaitez importer depuis Redbark. Vous pouvez en choisir plusieurs.
       no_accounts: Aucun compte non lié n'a été trouvé pour cette connexion Redbark.
       no_accounts_to_setup: Aucun compte à configurer
-      no_api_key: La clé d'API Redbark n'est pas configurée. Vérifiez les paramètres
-        de votre connexion.
+      no_api_key: La clé d'API Redbark n'est pas configurée. Vérifiez les paramètres de votre connexion.
       select_all: Tout sélectionner
       subtitle: Choisissez le bon type pour les comptes importés
       subtype_labels:
@@ -158,10 +142,8 @@ fr:
         loan: 'Type d''emprunt :'
         other_asset: Autre actif
       subtype_messages:
-        credit_card: Les cartes de crédit seront automatiquement configurées comme
-          comptes de carte de crédit.
-        other_asset: Aucune option supplémentaire n'est nécessaire pour les autres
-          actifs.
+        credit_card: Les cartes de crédit seront automatiquement configurées comme comptes de carte de crédit.
+        other_asset: Aucune option supplémentaire n'est nécessaire pour les autres actifs.
       subtypes:
         depository:
           cd: Compte à terme
@@ -174,14 +156,12 @@ fr:
           mortgage: Prêt immobilier
           other: Autre emprunt
           student: Prêt étudiant
-      sync_start_date_help: Choisissez jusqu'où remonter dans l'historique des transactions
-        à synchroniser.
+      sync_start_date_help: Choisissez jusqu'où remonter dans l'historique des transactions à synchroniser.
       sync_start_date_label: 'Synchroniser les transactions à partir du :'
       title: Configurer vos comptes Redbark
     setup_required:
       go_to_provider_settings: Ouvrir les paramètres des fournisseurs
-      not_configured_description: Ajoutez votre clé d'API Redbark dans les paramètres
-        des fournisseurs, puis revenez ici pour lier des comptes.
+      not_configured_description: Ajoutez votre clé d'API Redbark dans les paramètres des fournisseurs, puis revenez ici pour lier des comptes.
       not_configured_title: Redbark n'est pas encore connecté
       title: Connectez d'abord Redbark
     sync:

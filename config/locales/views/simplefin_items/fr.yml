@@ -67,8 +67,7 @@ fr:
       setup_token_placeholder: collez votre jeton de configuration SimpleFIN
       title: Connecter SimpleFIN
     rate_limited:
-      daily_refresh: Vous avez atteint la limite quotidienne d'actualisation de SimpleFIN.
-        Réessayez après l'actualisation de la passerelle (jusqu'à 24 heures).
+      daily_refresh: Vous avez atteint la limite quotidienne d'actualisation de SimpleFIN. Réessayez après l'actualisation de la passerelle (jusqu'à 24 heures).
     reconciled_status:
       message:
         one: "%{count} transaction en attente en doublon réconciliée"
@@ -189,10 +188,8 @@ fr:
         one: "%{count} transaction en attente depuis plus de %{days} jours"
         other: "%{count} transactions en attente depuis plus de %{days} jours"
     stale_sync:
-      last_successful: La dernière synchronisation réussie remonte à %{count} jours.
-        Votre connexion SimpleFIN requiert peut-être votre attention.
-      no_transactions: Aucune nouvelle transaction depuis %{count} jours. Vérifiez
-        dans votre tableau de bord SimpleFIN que vos connexions bancaires sont actives.
+      last_successful: La dernière synchronisation réussie remonte à %{count} jours. Votre connexion SimpleFIN requiert peut-être votre attention.
+      no_transactions: Aucune nouvelle transaction depuis %{count} jours. Vérifiez dans votre tableau de bord SimpleFIN que vos connexions bancaires sont actives.
     sync_status:
       no_accounts: Aucun compte trouvé
       partial_setup:
@@ -203,8 +200,12 @@ fr:
         other: "%{count} comptes synchronisés"
     update:
       errors:
+        blank_token: Veuillez entrer un jeton de configuration SimpleFIN.
         invalid_token: Jeton de configuration invalide. Veuillez vérifier que vous
           avez copié le jeton complet depuis SimpleFIN Bridge.
         token_compromised: Le jeton de configuration est peut-être compromis, expiré
           ou déjà utilisé. Veuillez en créer un nouveau.
         unexpected: Une erreur inattendue s'est produite. Veuillez réessayer.
+        update_failed: 'Échec de la mise à jour de la connexion : %{message}'
+      success: Connexion SimpleFIN mise à jour avec succès ! Vos comptes sont en cours
+        de reconnexion.

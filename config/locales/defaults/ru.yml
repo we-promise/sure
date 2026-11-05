@@ -44,7 +44,7 @@ ru:
       month_year: "%B %Y"
       short: "%-d %b"
       short_month_year: "%b %Y"
-      short_with_year: "%-d %b %Y"
+      short_with_year: '%-d %b %Y'
     month_names:
     -
     - января
@@ -196,10 +196,6 @@ ru:
       create: Создать %{model}
       submit: Сохранить %{model}
       update: Сохранить %{model}
-  mcp:
-    errors:
-      invalid_session_id: Недействительный идентификатор сеанса MCP
-      unsupported_protocol_version: 'Неподдерживаемая версия протокола MCP: %{version}'
   number:
     currency:
       format:
@@ -268,13 +264,6 @@ ru:
     precision:
       format:
         delimiter: ''
-  oauth:
-    registration:
-      invalid_client_name: client_name не должно содержать управляющие символы направления
-        текста
-      invalid_redirect_uris: redirect_uris должны использовать HTTPS, HTTP для loopback-адреса
-        или URI-схему нативного приложения
-      reserved_client_name: client_name зарезервировано для собственных приложений
   support:
     array:
       last_word_connector: " и "
@@ -287,3 +276,12 @@ ru:
       long: "%d %B %Y, %H:%M"
       short: "%d %b, %H:%M"
     pm: вечера
+  mcp:
+    errors:
+      invalid_session_id: Недействительный идентификатор сеанса MCP
+      unsupported_protocol_version: 'Неподдерживаемая версия протокола MCP: %{version}'
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris должны использовать HTTPS, HTTP для loopback-адреса или URI-схему нативного приложения
+      invalid_client_name: client_name не должно содержать управляющие символы направления текста
+      reserved_client_name: client_name зарезервировано для собственных приложений

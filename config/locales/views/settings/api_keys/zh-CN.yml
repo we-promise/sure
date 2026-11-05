@@ -1,48 +1,16 @@
 ---
 zh-CN:
   settings:
+    api_keys_controller:
+      success: 您的 API 密钥已成功创建
+      revoked_successfully: API 密钥已成功撤销
+      revoke_failed: 撤销 API 密钥失败
     api_keys:
       create:
         success: 您的 API 密钥已成功创建
       destroy:
-        revoke_failed: 撤销 API 密钥失败
         revoked_successfully: API 密钥已成功撤销
-      index:
-        empty_description: 创建 API 密钥以通过程序访问您的数据。
-        empty_heading: 暂无 API 密钥
-        new_key: 新建 API 密钥
-        revoke_confirmation: 确定要撤销“%{name}”吗？这将立即停用任何使用此密钥的应用程序。
-        revoke_key: 撤销
-        subtitle: 管理用于程序化访问数据的 API 密钥。
-        title: API 密钥
-      key_reveal:
-        copied: 已复制！
-      new:
-        cancel: 取消
-        create_key: 创建 API 密钥
-        create_new_api_key: 创建新 API 密钥
-        description: 为您的新 API 密钥配置描述性名称和相应权限。
-        name_help: 选择一个描述性名称，以帮助您识别此密钥的用途。
-        name_help_text: 选择一个描述性名称，以便稍后识别此密钥。
-        name_label: API 密钥名称
-        name_placeholder: 例如：My Budget App, Portfolio Tracker
-        permissions_help: 选择此 API 密钥应具有的权限：
-        permissions_label: 权限
-        save_api_key: 保存 API 密钥
-        scope_details:
-          read_accounts: 查看账户信息、余额和账户级数据
-          read_balances: 查看历史余额数据和账户价值趋势
-          read_transactions: 查看交易数据、分类和交易详情
-          write_transactions: 创建和更新交易记录（即将推出）
-        scope_read_only: 只读
-        scope_read_only_description: 查看您的账户、交易和余额
-        scope_read_write: 读写
-        scope_read_write_description: 查看您的数据并创建新交易
-        security_warning: 您的 API 密钥在创建后只会显示一次。请安全保存，切勿公开共享。如果丢失，您需要创建新的密钥。
-        security_warning_body: 您的 API 密钥在创建后只会显示一次。请务必复制并安全保存。任何持有此密钥的人都可以根据您选择的权限访问您的数据。
-        security_warning_title: 安全警告
-        subtitle: 生成新的 API 密钥以通过程序访问您的 Sure 数据。
-        title: 创建 API 密钥
+        revoke_failed: 撤销 API 密钥失败
       shared:
         active: 已启用
         created_ago: 创建于 %{time}前
@@ -50,29 +18,60 @@ zh-CN:
         never_used: 从未使用
         scope_read_only: 只读
         scope_read_write: 读写
+      index:
+        title: API 密钥
+        subtitle: 管理用于程序化访问数据的 API 密钥。
+        new_key: 新建 API 密钥
+        empty_heading: 暂无 API 密钥
+        empty_description: 创建 API 密钥以通过程序访问您的数据。
+        revoke_key: 撤销
+        revoke_confirmation: 确定要撤销“%{name}”吗？这将立即停用任何使用此密钥的应用程序。
+      key_reveal:
+        copied: 已复制！
       show:
-        current_api_key:
-          back_to_keys: 返回 API 密钥
-          copy_api_key: 复制 API 密钥
-          copy_store_securely: 请复制并安全保存此密钥。您需要使用它来验证 API 请求。
-          permissions: 权限
-          revoke_confirmation: 确定要撤销此 API 密钥吗？此操作无法撤销，并将立即停用所有使用此密钥的应用程序。
-          revoke_key: 撤销密钥
-          title: 您的 API 密钥
-          usage_instructions: 向 %{product_name} API 发起请求时，请在 X-Api-Key 请求头中包含您的 API
-            密钥：
-          usage_instructions_title: 如何使用您的 API 密钥
-        newly_created:
-          continue: 继续前往 API 密钥设置
-          copy_api_key: 复制 API 密钥
-          copy_store_securely: 请复制并安全保存此密钥。您需要使用它来验证 API 请求。
-          heading: API 密钥创建成功！
-          how_to_use: 如何使用您的 API 密钥
-          key_ready: 您的新 API 密钥“%{name}”已创建并可以使用。
-          page_title: API 密钥创建成功
-          your_api_key: 您的 API 密钥
         title: API 密钥管理
-    api_keys_controller:
-      revoke_failed: 撤销 API 密钥失败
-      revoked_successfully: API 密钥已成功撤销
-      success: 您的 API 密钥已成功创建
+        newly_created:
+          page_title: API 密钥创建成功
+          heading: API 密钥创建成功！
+          key_ready: 您的新 API 密钥“%{name}”已创建并可以使用。
+          your_api_key: 您的 API 密钥
+          copy_store_securely: 请复制并安全保存此密钥。您需要使用它来验证 API 请求。
+          copy_api_key: 复制 API 密钥
+          how_to_use: 如何使用您的 API 密钥
+          continue: 继续前往 API 密钥设置
+        current_api_key:
+          title: 您的 API 密钥
+          permissions: 权限
+          copy_api_key: 复制 API 密钥
+          copy_store_securely: 请复制并安全保存此密钥。您需要使用它来验证 API 请求。
+          usage_instructions_title: 如何使用您的 API 密钥
+          usage_instructions: 向 %{product_name} API 发起请求时，请在 X-Api-Key 请求头中包含您的 API 密钥：
+          back_to_keys: 返回 API 密钥
+          revoke_key: 撤销密钥
+          revoke_confirmation: 确定要撤销此 API 密钥吗？此操作无法撤销，并将立即停用所有使用此密钥的应用程序。
+      new:
+        title: 创建 API 密钥
+        create_new_api_key: 创建新 API 密钥
+        subtitle: 生成新的 API 密钥以通过程序访问您的 Sure 数据。
+        description: 为您的新 API 密钥配置描述性名称和相应权限。
+        name_label: API 密钥名称
+        name_placeholder: "例如：My Budget App, Portfolio Tracker"
+        name_help_text: 选择一个描述性名称，以便稍后识别此密钥。
+        name_help: 选择一个描述性名称，以帮助您识别此密钥的用途。
+        permissions_label: 权限
+        permissions_help: "选择此 API 密钥应具有的权限："
+        scope_read_only: 只读
+        scope_read_only_description: 查看您的账户、交易和余额
+        scope_read_write: 读写
+        scope_read_write_description: 查看您的数据并创建新交易
+        scope_details:
+          read_accounts: 查看账户信息、余额和账户级数据
+          read_transactions: 查看交易数据、分类和交易详情
+          read_balances: 查看历史余额数据和账户价值趋势
+          write_transactions: 创建和更新交易记录（即将推出）
+        security_warning_title: 安全警告
+        security_warning_body: 您的 API 密钥在创建后只会显示一次。请务必复制并安全保存。任何持有此密钥的人都可以根据您选择的权限访问您的数据。
+        security_warning: 您的 API 密钥在创建后只会显示一次。请安全保存，切勿公开共享。如果丢失，您需要创建新的密钥。
+        create_key: 创建 API 密钥
+        cancel: 取消
+        save_api_key: 保存 API 密钥

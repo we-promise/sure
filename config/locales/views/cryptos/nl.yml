@@ -4,19 +4,17 @@ nl:
     edit:
       edit: "%{account} bewerken"
     form:
-      subtype_label: Accounttype
-      subtype_none: Geen
-      subtype_prompt: Selecteer accounttype
-      tax_treatment_hint: De meeste cryptovaluta worden aangehouden op belastbare
-        accounts. Selecteer een andere optie als ze op een fiscaal voordelig account
-        worden aangehouden.
-      tax_treatment_label: Fiscale behandeling
+      subtype_label: "Accounttype"
+      subtype_prompt: "Selecteer accounttype"
+      subtype_none: "Geen"
+      tax_treatment_label: "Fiscale behandeling"
+      tax_treatment_hint: "De meeste cryptovaluta worden aangehouden op belastbare accounts. Selecteer een andere optie als ze op een fiscaal voordelig account worden aangehouden."
     new:
-      title: Saldo invoeren
+      title: "Saldo invoeren"
     subtypes:
-      exchange:
-        long: Cryptobeurs
-        short: Beurs
       wallet:
-        long: Cryptowallet
-        short: Wallet
+        short: "Wallet"
+        long: "Cryptowallet"
+      exchange:
+        short: "Beurs"
+        long: "Cryptobeurs"

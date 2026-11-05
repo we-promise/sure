@@ -1,5 +1,4 @@
 ---
 ca:
   preview:
-    not_enabled: Aquesta funció és experimental. Activa les funcions experimentals
-      a Configuració → Preferències per provar-la.
+    not_enabled: Aquesta funció és experimental. Activa les funcions experimentals a Configuració → Preferències per provar-la.

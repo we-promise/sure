@@ -11,10 +11,8 @@ de:
   akahu_item:
     errors:
       account_processing_failed: Das Akahu-Konto ließ sich nicht abgleichen
-      account_sync_schedule_failed: Der Abgleich des Akahu-Kontos ließ sich nicht
-        einplanen
-      pending_transactions_failed: Die offenen Akahu-Transaktionen ließen sich nicht
-        abrufen
+      account_sync_schedule_failed: Der Abgleich des Akahu-Kontos ließ sich nicht einplanen
+      pending_transactions_failed: Die offenen Akahu-Transaktionen ließen sich nicht abrufen
       sync_failed: Die Akahu-Verbindung ließ sich nicht abgleichen
       transactions_failed: Die Akahu-Transaktionen ließen sich nicht abrufen
     institution_summary:
@@ -34,8 +32,7 @@ de:
       delete: Löschen
       deletion_in_progress: Wird gelöscht
       error: Fehler
-      no_accounts_description: Ruf die Akahu-Konten ab und wähl aus, welche verknüpft
-        werden sollen.
+      no_accounts_description: Ruf die Akahu-Konten ab und wähl aus, welche verknüpft werden sollen.
       no_accounts_title: Noch keine Konten importiert
       setup_action: Konten einrichten
       setup_description: "%{linked} von %{total} Konten verknüpft."
@@ -58,8 +55,7 @@ de:
     link_accounts:
       link_failed: Es wurden keine Konten verknüpft.
       no_accounts_selected: Wähl mindestens ein Konto.
-      no_credentials_configured: Richte Akahu zuerst in den Anbietereinstellungen
-        ein.
+      no_credentials_configured: Richte Akahu zuerst in den Anbietereinstellungen ein.
       success:
         one: 1 Akahu-Konto verknüpft.
         other: "%{count} Akahu-Konten verknüpft."
@@ -90,8 +86,7 @@ de:
       description: Wähl die Akahu-Konten, die du hinzufügen willst.
       link_accounts: Konten verknüpfen
       no_accounts_found: Es wurden keine unverknüpften Akahu-Konten gefunden.
-      no_credentials_configured: Richte Akahu zuerst in den Anbietereinstellungen
-        ein.
+      no_credentials_configured: Richte Akahu zuerst in den Anbietereinstellungen ein.
       title: Akahu-Konten verknüpfen
     select_existing_account:
       account_already_linked: Dieses Konto ist bereits mit einem Anbieter verknüpft.
@@ -99,8 +94,7 @@ de:
       description: Wähl ein unverknüpftes Akahu-Konto für dieses Konto.
       link_account: Konto verknüpfen
       no_accounts_found: Es wurden keine unverknüpften Akahu-Konten gefunden.
-      no_credentials_configured: Richte Akahu zuerst in den Anbietereinstellungen
-        ein.
+      no_credentials_configured: Richte Akahu zuerst in den Anbietereinstellungen ein.
       title: Akahu-Konto mit %{account_name} verknüpfen
     setup_accounts:
       account_type_label: Kontoart

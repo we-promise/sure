@@ -2,7 +2,7 @@
 hu:
   depositories:
     edit:
-      edit: "%{account} szerkesztése"
+      edit: '%{account} szerkesztése'
     form:
       none: Nincs
       subtype_prompt: Válassz számlatípust

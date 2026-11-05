@@ -2,28 +2,28 @@
 vi:
   models:
     category:
+      uncategorized: Chưa phân loại
+      other_investments: Đầu tư khác
+      investment_contributions: Đóng góp đầu tư
       defaults:
-        entertainment: Giải trí
-        fees: Phí
-        food_and_drink: Ăn uống
-        gifts_and_donations: Quà tặng & Từ thiện
-        groceries: Thực phẩm
-        healthcare: Chăm sóc sức khỏe
-        home_improvement: Cải thiện nhà ở
         income: Thu nhập
-        insurance: Bảo hiểm
-        loan_payments: Thanh toán khoản vay
-        mortgage_rent: Thế chấp / Thuê nhà
-        personal_care: Chăm sóc cá nhân
-        savings_and_investments: Tiết kiệm & Đầu tư
-        services: Dịch vụ
+        food_and_drink: Ăn uống
+        groceries: Thực phẩm
         shopping: Mua sắm
-        sports_and_fitness: Thể thao & Thể hình
-        subscriptions: Đăng ký dịch vụ
-        taxes: Thuế
         transportation: Giao thông
         travel: Du lịch
+        entertainment: Giải trí
+        healthcare: Chăm sóc sức khỏe
+        personal_care: Chăm sóc cá nhân
+        home_improvement: Cải thiện nhà ở
+        mortgage_rent: Thế chấp / Thuê nhà
         utilities: Tiện ích
-      investment_contributions: Đóng góp đầu tư
-      other_investments: Đầu tư khác
-      uncategorized: Chưa phân loại
+        subscriptions: Đăng ký dịch vụ
+        insurance: Bảo hiểm
+        sports_and_fitness: Thể thao & Thể hình
+        gifts_and_donations: Quà tặng & Từ thiện
+        taxes: Thuế
+        loan_payments: Thanh toán khoản vay
+        services: Dịch vụ
+        fees: Phí
+        savings_and_investments: Tiết kiệm & Đầu tư

@@ -11,5 +11,4 @@ es:
         brex_item:
           attributes:
             base_url:
-              official_hosts_only: debe estar en blanco, ser https://api.brex.com
-                o https://api-staging.brex.com
+              official_hosts_only: debe estar en blanco, ser https://api.brex.com o https://api-staging.brex.com

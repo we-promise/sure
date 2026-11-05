@@ -1,27 +1,24 @@
 ---
 id:
   subscriptions:
-    create:
-      trial_already_used: Anda sudah memulai atau menyelesaikan masa uji coba. Silakan
-        tingkatkan untuk melanjutkan.
-      welcome: Selamat datang di Sure!
     self_hosted_alert: "%{product_name} tidak tersedia dalam mode self-hosted."
-    success:
-      contribution_failed: Terjadi kesalahan saat memproses kontribusi Anda. Silakan
-        coba lagi.
-      welcome_with_contribution: Selamat datang di Sure!  Kontribusi Anda sangat dihargai.
     upgrade:
-      account_settings: Pengaturan Akun
       already_contributing: Anda sudah berkontribusi. Terima kasih!
+      page_title: Tingkatkan
+      account_settings: Pengaturan Akun
+      sign_out: Keluar
       contribute_and_support_sure: Berkontribusi dan dukung Sure
       cta: Terus dukung pengembangan basis kode ini!
       header:
         support: Dukung
         sure: Sure
         today: hari ini
-      page_title: Tingkatkan
-      redirect_to_stripe: Pada langkah berikutnya, Anda akan dialihkan ke Stripe yang
-        menangani kartu kredit untuk kami.
-      sign_out: Keluar
-      trial_over: Masa uji coba Anda telah berakhir
+      redirect_to_stripe: Pada langkah berikutnya, Anda akan dialihkan ke Stripe yang menangani kartu kredit untuk kami.
       trialing: Data Anda akan dihapus dalam %{days} hari
+      trial_over: Masa uji coba Anda telah berakhir
+    create:
+      welcome: Selamat datang di Sure!
+      trial_already_used: Anda sudah memulai atau menyelesaikan masa uji coba. Silakan tingkatkan untuk melanjutkan.
+    success:
+      welcome_with_contribution: "Selamat datang di Sure!  Kontribusi Anda sangat dihargai."
+      contribution_failed: Terjadi kesalahan saat memproses kontribusi Anda. Silakan coba lagi.

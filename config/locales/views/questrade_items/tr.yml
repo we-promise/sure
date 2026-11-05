@@ -54,10 +54,6 @@ tr:
       loading_message: Questrade hesapları yükleniyor...
       loading_title: Yükleniyor
     panel:
-      disconnect: Bağlantıyı kes
-      disconnect_confirm: Questrade bağlantısı kesilsin mi? Bu işlem bağlantıyı kaldırır
-        ve senkronize edilen hesapların sağlayıcı bağlantısını keser.
-      eyebrow: Kurulum · yalnızca masaüstü
       field_descriptions: 'Alan açıklamaları:'
       fields:
         api_server:
@@ -70,7 +66,6 @@ tr:
           label: Yenileme Anahtarı
           placeholder_new: Yenileme anahtarını buraya yapıştırın
           placeholder_update: Güncellemek için yeni yenileme anahtarı girin
-      help_text: Questrade API belgeleri
       optional: "(İsteğe bağlı)"
       optional_with_default: "(isteğe bağlı, varsayılan: %{default_value})"
       required: "(zorunlu)"
@@ -84,21 +79,22 @@ tr:
       step_2: Kimlik bilgilerinizi aşağıya girin ve Kaydet düğmesine tıklayın
       step_3: Başarılı bir bağlantıdan sonra yeni hesapları kurmak için Hesaplar sekmesine
         gidin
-      steps:
-        s1_html: Bir masaüstü tarayıcıda <a href="https://my.questrade.com" target="_blank"
-          rel="noopener noreferrer" class="text-primary font-medium underline">Questrade
-          portalına</a> giriş yapın. API ayarları mobil uygulamada bulunmaz.
-        s2: Settings bölümünü açın ve General settings altında IQ API settings'i düzenleyin.
-        s3_html: API erişimi penceresinde <strong>My applications</strong> altındaki
-          <strong>Manage</strong> seçeneğine tıklayın.
-        s4: Ad ve açıklama vererek kişisel bir uygulama kaydedin, ardından kaydedin.
-        s5: Yeni bir cihaz ekleyin ve bir token oluşturun.
-        s6: Oluşturulan token'ı aşağıya yapıştırın ve kaydedin.
       token_refresh_hint: Questrade anahtarları hesaplarınız her senkronize edildiğinde
         otomatik olarak yenilenir. Bir bağlantı 7 günden fazla kullanılmadıysa ve
         eskidiyse, bağlantıyı kesmeden yeniden devreye almak için buraya yeni bir
         anahtar yapıştırın.
       update_button: Yapılandırmayı Güncelle
+      eyebrow: Kurulum · yalnızca masaüstü
+      help_text: Questrade API belgeleri
+      disconnect: Bağlantıyı kes
+      disconnect_confirm: Questrade bağlantısı kesilsin mi? Bu işlem bağlantıyı kaldırır ve senkronize edilen hesapların sağlayıcı bağlantısını keser.
+      steps:
+        s1_html: Bir masaüstü tarayıcıda <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">Questrade portalına</a> giriş yapın. API ayarları mobil uygulamada bulunmaz.
+        s2: Settings bölümünü açın ve General settings altında IQ API settings'i düzenleyin.
+        s3_html: API erişimi penceresinde <strong>My applications</strong> altındaki <strong>Manage</strong> seçeneğine tıklayın.
+        s4: Ad ve açıklama vererek kişisel bir uygulama kaydedin, ardından kaydedin.
+        s5: Yeni bir cihaz ekleyin ve bir token oluşturun.
+        s6: Oluşturulan token'ı aşağıya yapıştırın ve kaydedin.
     preload_accounts:
       no_credentials_configured: Lütfen önce Questrade kimlik bilgilerinizi Sağlayıcı
         Ayarları'nda yapılandırın.
@@ -146,9 +142,6 @@ tr:
       all_accounts_already_linked: Tüm Questrade hesapları zaten bağlı
       api_error: 'API hatası: %{message}'
       balance_label: 'Bakiye:'
-      buttons:
-        cancel: İptal
-        link: Bağla
       cancel: İptal
       cancel_button: İptal
       configure_name_in_provider: İçe aktarılamıyor - lütfen Questrade'de hesap adını
@@ -157,11 +150,9 @@ tr:
         bağlayın.
       description: Bu hesaba bağlamak için bir Questrade hesabı seçin. İşlemler otomatik
         olarak senkronize edilir ve tekilleştirilir.
-      dialog_title: Bir Questrade hesabına bağla
       header: Questrade ile bağla
       link_account: Hesabı bağla
       link_button: Bu hesabı bağla
-      linking_label: Bağlanan
       linking_to: 'Bağlanıyor:'
       no_account_specified: Hesap belirtilmedi
       no_accounts: Bağlı olmayan Questrade hesabı bulunamadı.
@@ -171,11 +162,16 @@ tr:
       no_credentials_configured: Lütfen önce Questrade kimlik bilgilerinizi Sağlayıcı
         Ayarları'nda yapılandırın.
       no_name_placeholder: "(Adsız)"
-      none_available: Bağlanmamış Questrade hesabı yok.
-      page_title: Bir Questrade hesabı bağla
       settings_link: Sağlayıcı Ayarlarına Git
       subtitle: Bir Questrade hesabı seçin
       title: "%{account_name} hesabını Questrade ile bağla"
+      page_title: Bir Questrade hesabı bağla
+      dialog_title: Bir Questrade hesabına bağla
+      linking_label: Bağlanan
+      none_available: Bağlanmamış Questrade hesabı yok.
+      buttons:
+        cancel: İptal
+        link: Bağla
     setup_accounts:
       account_type_label: 'Hesap Türü:'
       account_types:
@@ -190,22 +186,15 @@ tr:
         one: "%{count} hesap kullanılabilir"
         other: "%{count} hesap kullanılabilir"
       all_accounts_linked: Tüm Questrade hesaplarınız zaten kuruldu.
-      all_linked: Tüm Questrade hesapları zaten bağlı.
       api_error: 'API hatası: %{message}'
       balance: Bakiye
-      buttons:
-        cancel: İptal
-        create: Hesapları oluştur
-        done: Bitti
       cancel: İptal
       choose_account_type: 'Her Questrade hesabı için doğru hesap türünü seçin:'
       create_accounts: Hesapları Oluştur
       creating: Hesaplar oluşturuluyor...
       creating_accounts: Hesaplar Oluşturuluyor...
-      dialog_title: Questrade hesaplarınızı kurun
       fetch_failed: Hesaplar Getirilemedi
       historical_data_range: 'Geçmiş Veri Aralığı:'
-      import_as: Şu olarak içe aktar
       import_selected: Seçili hesapları içe aktar
       instructions: Questrade'den içe aktarmak istediğiniz hesapları seçin. Birden
         fazla hesap seçebilirsiniz.
@@ -213,7 +202,6 @@ tr:
       no_accounts_to_setup: Kurulacak Hesap Yok
       no_api_key: Questrade API anahtarı yapılandırılmamış. Lütfen bağlantı ayarlarınızı
         kontrol edin.
-      page_title: Questrade hesaplarını kur
       select_all: Tümünü seç
       subtitle: İçe aktarılan hesaplarınız için doğru hesap türlerini seçin
       subtype_labels:
@@ -258,9 +246,17 @@ tr:
         istediğinizi seçin.
       sync_start_date_label: 'İşlemleri şu tarihten itibaren senkronize et:'
       title: Questrade Hesaplarınızı Kurun
+      page_title: Questrade hesaplarını kur
+      dialog_title: Questrade hesaplarınızı kurun
+      all_linked: Tüm Questrade hesapları zaten bağlı.
+      import_as: Şu olarak içe aktar
+      buttons:
+        cancel: İptal
+        create: Hesapları oluştur
+        done: Bitti
       types:
-        depository: Nakit / Mevduat
         investment: Yatırım
+        depository: Nakit / Mevduat
         skip: Bu hesabı atla
     setup_required:
       go_to_provider_settings: Sağlayıcı ayarlarına git

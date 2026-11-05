@@ -18,8 +18,8 @@ ca:
       title: Activa els xats d'IA
       unavailable_description_html: Per utilitzar l'assistent d'IA, has d'establir
         la variable d'entorn <code class="bg-surface-inset px-1 py-0.5 rounded font-mono
-        text-xs">OPENAI_ACCESS_TOKEN</code> o configurar-la a la configuració de self
-        hosting de la teva instància.
+        text-xs">OPENAI_ACCESS_TOKEN</code> o configurar-la a la configuració de self hosting
+        de la teva instància.
     ai_greeting:
       commands_hint_html: Pots utilitzar <span class="bg-container border border-secondary
         px-1.5 py-0.5 rounded font-mono text-xs">/</span> per accedir a les ordres
@@ -38,10 +38,7 @@ ca:
       delete_chat: Elimina el xat
       edit_chat_title: Edita el títol del xat
       start_new_chat: Inicia un xat nou
-    demo_banner_message: "Tokens gratuïts per a LLM cortesia de Vercel AI Gateway.
-      Els resultats poden variar perquè canviem sovint els pesos dels models per fer
-      proves. Consulta la documentació de Vercel per saber on van les teves converses!
-      🤖"
+    demo_banner_message: "Tokens gratuïts per a LLM cortesia de Vercel AI Gateway. Els resultats poden variar perquè canviem sovint els pesos dels models per fer proves. Consulta la documentació de Vercel per saber on van les teves converses! 🤖"
     demo_banner_title: Mode demostració actiu
     destroy:
       notice: Xat eliminat correctament
@@ -50,11 +47,9 @@ ca:
     index:
       chats: Xats
       new_chat: Nou xat
-    new:
-      default_title: Xat nou %{timestamp}
     thinking: Pensant...
     update:
       success: Xat actualitzat
-    worker_unhealthy_warning: 'Ara mateix pot ser que les respostes de la IA no arribin:
-      el procés en segon pla sembla aturat o saturat. Comprova que el teu worker de
-      Sidekiq s''estigui executant.'
+    worker_unhealthy_warning: 'Ara mateix pot ser que les respostes de la IA no arribin: el procés en segon pla sembla aturat o saturat. Comprova que el teu worker de Sidekiq s''estigui executant.'
+    new:
+      default_title: Xat nou %{timestamp}

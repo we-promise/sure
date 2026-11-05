@@ -15,14 +15,14 @@ ca:
     edit:
       edit: Edita la categoria
     form:
-      auto_adjust: ajusta'l automàticament.
+      trigger_label: Tria color i icona
       color: Color
       icon: Icona
       name_label: Nom
       parent_category_label: Categoria pare (opcional)
       placeholder: Nom de la categoria
+      auto_adjust: ajusta'l automàticament.
       poor_contrast: Contrast insuficient; tria un color més fosc o
-      trigger_label: Tria color i icona
       unassigned: "(sense assignar)"
     index:
       bootstrap: Utilitza les predeterminades (recomanat)
@@ -31,37 +31,32 @@ ca:
       categories_incomes: Categories d'ingressos
       delete_all: Elimina-les totes
       empty: No s'han trobat categories
-      merge: Fusiona categories
       new: Nova categoria
-    merge:
-      description: Selecciona una categoria de destinació i les categories que s'hi
-        fusionaran. Les transaccions i les línies de pressupost corresponents es mouran
-        a la destinació.
-      select_target: Selecciona la categoria de destinació...
-      sources_hint: Les categories seleccionades s'eliminaran després que les seves
-        transaccions i línies de pressupost es moguin a la destinació. No seleccionis
-        la destinació com a origen.
-      sources_label: Categories a fusionar
-      submit: Fusiona les seleccionades
-      target_label: Fusiona a (destinació)
-      title: Fusiona categories
+      merge: Fusiona categories
     new:
       new_category: Nova categoria
-    perform_merge:
-      invalid_categories: S'han seleccionat categories no vàlides
-      no_categories_selected: No s'ha seleccionat cap categoria per fusionar
-      success:
-        one: S'ha fusionat %{count} categoria correctament
-        other: S'han fusionat %{count} categories correctament
-      target_not_found: No s'ha trobat la categoria de destinació
-      target_selected_as_source: Tria categories diferents per a la destinació i els
-        orígens.
     update:
       success: Categoria actualitzada correctament
     virtual:
       payment: Pagament
       trade: Operació
       transfer: Transferència
+    merge:
+      title: Fusiona categories
+      description: Selecciona una categoria de destinació i les categories que s'hi fusionaran. Les transaccions i les línies de pressupost corresponents es mouran a la destinació.
+      target_label: Fusiona a (destinació)
+      select_target: Selecciona la categoria de destinació...
+      sources_label: Categories a fusionar
+      sources_hint: Les categories seleccionades s'eliminaran després que les seves transaccions i línies de pressupost es moguin a la destinació. No seleccionis la destinació com a origen.
+      submit: Fusiona les seleccionades
+    perform_merge:
+      success:
+        one: S'ha fusionat %{count} categoria correctament
+        other: S'han fusionat %{count} categories correctament
+      no_categories_selected: No s'ha seleccionat cap categoria per fusionar
+      target_not_found: No s'ha trobat la categoria de destinació
+      invalid_categories: S'han seleccionat categories no vàlides
+      target_selected_as_source: Tria categories diferents per a la destinació i els orígens.
   category:
     dropdowns:
       show:

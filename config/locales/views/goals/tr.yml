@@ -13,30 +13,6 @@ tr:
     complete:
       invalid_transition: Hedef mevcut durumundan tamamlanamaz.
       success: Hedef tamamlandı olarak işaretlendi.
-    consume:
-      account_label: Hangi hesaptan?
-      amount_hint: Bu hedefi şu anda %{saved} destekliyor.
-      amount_label: Ne kadar kullandınız?
-      cancel: İptal
-      earmark_note: Kaydettiğiniz tutar artık bu hedef için ayrılmış sayılmaz; böylece
-        o hesaptaki diğer hedefleriniz paylarını geri alır.
-      errors:
-        account_not_linked: Bu hesap bu hedefi finanse etmiyor.
-        account_required: Bu hedef birden fazla hesaptan finanse ediliyor; paranın
-          hangisinden çıktığını belirtin.
-        exceeds_earmark: Bu, hedef için bu hesapta ayrılan tutardan fazla.
-        exceeds_target: Bu, hedefin biriktirmeyi amaçladığı tutarın tamamından fazla.
-        maintained: Bir rezerv harcanmaz; azalır ve yeniden doldurulur. Eksik tutarı
-          zaten hedefte görünüyor.
-        no_linked_account: Bu hedefin kaynak hesabı kalmadı.
-        non_positive: Sıfırdan büyük bir tutar girin.
-        not_active: Bu hedef artık aktif değil, bu nedenle ona karşı bir şey kaydedilemez.
-        transaction_already_claimed: Bu para çıkışı zaten atanmış.
-        transaction_not_found: Bu para çıkışı artık atanamıyor.
-      submit: Kaydet
-      subtitle: "%{goal}"
-      success: "%{amount} kullanıldı olarak kaydedildi."
-      title: Harcama kaydet
     create:
       success: Hedef oluşturuldu.
     destroy:
@@ -57,13 +33,6 @@ tr:
       not_found: Bu hedef bulunamadı. Silinmiş olabilir.
     form:
       create: Hedef oluştur
-      earmark:
-        headroom: Bu hesapta ayrılabilecek {left} kaldı.
-        prorata: Bu hesaptaki hedefleriniz {balance} bakiyeye karşılık toplam {total}
-          tutarında — orantılı olarak ilerleyecekler.
-        whole_balance: Bu hesap, diğer ayrılan tutarlardan sonra kalan bakiyenin tamamıyla
-          bu hedefi finanse edecek.
-        whole_balance_alone: Bu hedef, bu hesabın tüm bakiyesini kullanacak.
       errors:
         accounts_required: En az bir kaynak hesap seçin.
         amount_required: Sıfırdan büyük bir hedef belirleyin.
@@ -80,23 +49,14 @@ tr:
         notes: Notlar (isteğe bağlı)
         notes_placeholder: Gelecekteki siz için bir hatırlatma…
         target_amount: Hedef tutar
-        target_balance: Hedef bakiye
-        target_balance_hint: Yukarıdaki ay sayısı ve medyan aylık harcamanızdan hesaplanır.
-          Her ay güncellenir.
-        target_balance_pending: Kaydettiğinizde hesaplanır
         target_date: Hedef tarihi
+        whole_balance: "Boş: tüm bakiye"
         target_mode: Hedef bakiye nasıl belirlenir
         target_months: Kaç aylık gider
-        target_months_hint: Her ayın 1'inde medyan aylık harcamanıza göre yeniden
-          hesaplanır.
-        whole_balance: 'Boş: tüm bakiye'
-      kinds:
-        maintained:
-          hint: Acil durum fonu gibi korunacak bir bakiye. Hiç kapatılmaz.
-          label: Korunacak rezerv
-        one_off:
-          hint: Bir şey için biriktirin, parayı harcadığınızda hedefi kapatın.
-          label: Tek seferlik hedef
+        target_months_hint: Her ayın 1'inde medyan aylık harcamanıza göre yeniden hesaplanır.
+        target_balance: Hedef bakiye
+        target_balance_pending: Kaydettiğinizde hesaplanır
+        target_balance_hint: Yukarıdaki ay sayısı ve medyan aylık harcamanızdan hesaplanır. Her ay güncellenir.
       save: Değişiklikleri kaydet
       subtypes:
         cd: Vadeli mevduat
@@ -111,6 +71,18 @@ tr:
       target_modes:
         fixed: Sabit bir tutar
         months_of_expenses: Belirli sayıda aylık gider
+      kinds:
+        one_off:
+          hint: Bir şey için biriktirin, parayı harcadığınızda hedefi kapatın.
+          label: Tek seferlik hedef
+        maintained:
+          hint: Acil durum fonu gibi korunacak bir bakiye. Hiç kapatılmaz.
+          label: Korunacak rezerv
+      earmark:
+        headroom: Bu hesapta ayrılabilecek {left} kaldı.
+        prorata: Bu hesaptaki hedefleriniz {balance} bakiyeye karşılık toplam {total} tutarında — orantılı olarak ilerleyecekler.
+        whole_balance: Bu hesap, diğer ayrılan tutarlardan sonra kalan bakiyenin tamamıyla bu hedefi finanse edecek.
+        whole_balance_alone: Bu hedef, bu hesabın tüm bakiyesini kullanacak.
     goal_card:
       accounts:
         one: "%{count} hesap"
@@ -123,16 +95,13 @@ tr:
       footer_archived: Arşivlendi
       footer_catch_up: Yakalamak için ayda %{amount} biriktirin
       footer_last_days:
-        one: Son taahhüt %{count} gün önce eşleşti
+        one: "Son taahhüt %{count} gün önce eşleşti"
         other: Son taahhüt %{count} gün önce eşleşti
       footer_last_today: Son taahhüt bugün eşleşti
       footer_no_deadline: Süresiz
       footer_no_pledges: Henüz eşleşen taahhüt yok
       footer_paused: Duraklatıldı
       footer_reached: Hedefe ulaşıldı
-      footer_reserve_intact: Rezerv tam
-      footer_reserve_short: Tamamlamak için %{amount} gerekli
-      including_used: Kullanılan %{amount} dahil
       left: kaldı
       n_accounts: "%{first} +%{count}"
       no_accounts: Bağlı hesap yok
@@ -144,6 +113,9 @@ tr:
         one: "%{count} bekleyen"
         other: "%{count} bekleyen"
       pending_pledge: Bekleyen taahhüt
+      including_used: Kullanılan %{amount} dahil
+      footer_reserve_intact: Rezerv tam
+      footer_reserve_short: Tamamlamak için %{amount} gerekli
     index:
       archived_section:
         heading: Arşivlenmiş
@@ -154,7 +126,6 @@ tr:
         no_target_date: Süresiz
         on_track: Yolunda
         paused: Duraklatıldı
-      chips_aria: Hedefleri duruma göre filtrele
       empty_filtered: Eşleşen hedef yok.
       goals_section:
         heading: Hedefler
@@ -203,6 +174,7 @@ tr:
         show_all: Tümünü göster
       subtitle: Önemli olan şey için biriktirin.
       title: Hedefler
+      chips_aria: Hedefleri duruma göre filtrele
     new:
       heading: Yeni hedef
       subtitle: Belirli bir şey için biriktirin.
@@ -229,21 +201,21 @@ tr:
         archive_cta: Hedefi arşivle
         body: Hedef %{target} üzerinden %{saved} olarak kapatıldı. Kayıt olarak tutun
           veya şimdi arşivleyin.
-        body_reached: "%{target} hedefinin %{saved} kadarıyla hedefinize ulaştınız.
-          Hedef henüz kapatılmadı — para hâlâ onun için ayrılmış durumda."
-        body_reserve: 'Rezerviniz hedef bakiyesinde: %{target} hedefinin %{saved}
-          kadarı. Yapmanız gereken bir şey yok — tutar ayrılmış olarak kalır.'
-        close_cta: Bu hedefi kapat
-        close_hint: Kapatmak, ayrılan parayı aynı hesaptaki diğer hedefleriniz için
-          serbest bırakır. Bunu parayı gerçekten harcadıktan sonra yapın.
-        frozen: "%{date} tarihinde ulaşıldı · %{amount}"
         heading: Hedefe ulaşıldı. Tebrikler.
         heading_reserve: Rezerv tam
+        body_reserve: 'Rezerviniz hedef bakiyesinde: %{target} hedefinin %{saved} kadarı. Yapmanız gereken bir şey yok — tutar ayrılmış olarak kalır.'
+        body_reached: '%{target} hedefinin %{saved} kadarıyla hedefinize ulaştınız. Hedef henüz kapatılmadı — para hâlâ onun için ayrılmış durumda.'
+        close_cta: Bu hedefi kapat
+        close_hint: Kapatmak, ayrılan parayı aynı hesaptaki diğer hedefleriniz için serbest bırakır. Bunu parayı gerçekten harcadıktan sonra yapın.
+        frozen: '%{date} tarihinde ulaşıldı · %{amount}'
       complete: Tamamlandı olarak işaretle
       confirm_archive_body: Arşivlenen hedefler ana listeden kaybolur. Daha sonra
         geri yükleyebilirsiniz.
       confirm_archive_cta: Arşivle
       confirm_archive_title: Bu hedef arşivlensin mi?
+      confirm_delete_title: "Bu hedef silinsin mi?"
+      confirm_delete_body: "%{name} ve taahhüt geçmişi kalıcı olarak silinir. Bağlı hesaplarınız, bakiyeleriniz ve işlemleriniz etkilenmez. Kayıt olarak saklamak için bunun yerine arşivleyin."
+      confirm_delete_cta: "Hedefi sil"
       confirm_complete_body: Devam Eden listesinden çıkar. Daha sonra yine de arşivleyebilir
         veya geri yükleyebilirsiniz.
       confirm_complete_body_short: "%{progress}%'desiniz, %{target} hedefinin %{saved}
@@ -251,12 +223,6 @@ tr:
         yerine başarınız olarak kaydeder. Devam edin ya da bunu kapatıp hedefi ayarlayın."
       confirm_complete_cta: Tamamlandı olarak işaretle
       confirm_complete_title: Bu hedef tamamlandı olarak işaretlensin mi?
-      confirm_delete_body: "%{name} ve taahhüt geçmişi kalıcı olarak silinir. Bağlı
-        hesaplarınız, bakiyeleriniz ve işlemleriniz etkilenmez. Kayıt olarak saklamak
-        için bunun yerine arşivleyin."
-      confirm_delete_cta: Hedefi sil
-      confirm_delete_title: Bu hedef silinsin mi?
-      consume: Bu paranın bir kısmını kullandım
       delete: Sil
       edit: Düzenle
       empty:
@@ -302,7 +268,7 @@ tr:
         extend: 7 gün uzat
         pledged_at: "%{time_ago} önce taahhüt edildi"
         title:
-          one: 'Bekliyor: %{account} hesabına %{amount} · %{count} gün kaldı'
+          one: "Bekliyor: %{account} hesabına %{amount} · %{count} gün kaldı"
           other: 'Bekliyor: %{account} hesabına %{amount} · %{count} gün kaldı'
           zero: 'Bekliyor: %{account} hesabına %{amount} · bugün sona eriyor'
       pledge_just_saved: Ayırdığınız parayı kaydedin
@@ -321,38 +287,35 @@ tr:
         on_track_html: Mevcut hızınızla bu hedefe yaklaşık <strong class="text-primary
           whitespace-nowrap">%{date}</strong> tarihinde ulaşacaksınız.
         reached: Hedefe ulaştınız. Öngörüye gerek yok.
-        reserve: Rezerv bir hedef bakiyesini korur, bu nedenle öngörülecek bir bitiş
-          çizgisi yoktur.
         today_marker: Bugün
         tooltip_projected: 'Öngörülen: %{amount}'
         tooltip_saved: 'Biriktirilen: %{amount}'
         tooltip_target_relation: "%{target} hedefinin %{percent}%'i"
+        reserve: Rezerv bir hedef bakiyesini korur, bu nedenle öngörülecek bir bitiş çizgisi yoktur.
       record_pledge_cta: Taahhüt kaydet
       reopen: Hedefi yeniden aç
-      reserve_shortfall:
-        body: "%{target} hedefinin %{saved} kadarını tutuyorsunuz. Hedef bakiyesine
-          geri getirmek için %{missing} ekleyin."
-        heading: Rezerv hedef bakiyesinin altında
       resume: Devam ettir
       ring:
-        aria_label: Hedef %{percent}% tamamlandı. %{target} hedefinin %{amount} kadarı
-          biriktirildi.
-        aria_label_with_used: Hedef %{percent}% tamamlandı. Kullanılan %{used} dahil,
-          %{target} hedefinin %{amount} kadarı.
-        including_used: Kullanılan %{amount} dahil
+        aria_label: "Hedef %{percent}% tamamlandı. %{target} hedefinin %{amount} kadarı
+          biriktirildi."
         market_value: Piyasa değeri %{amount}
         of: "%{target} içinden"
         of_target: hedeften
         saved: Biriktirilen
         to_go: "%{amount} kaldı"
+        including_used: Kullanılan %{amount} dahil
+        aria_label_with_used: Hedef %{percent}% tamamlandı. Kullanılan %{used} dahil, %{target} hedefinin %{amount} kadarı.
       status_callout:
         behind: yakalamak için ayda %{amount} daha fazla biriktirin
         behind_covered: bekleyen taahhütler farkı kapatıyor
-        depleted: hedef bakiyesinin %{amount} altında — rezervi eski seviyesine getirmek
-          için tamamlayın
         no_target_date: bitiş çizgisini öngörmek için bir hedef tarihi belirleyin
         on_track: hedefe yaklaşık %{date} tarihinde ulaşır
+        depleted: hedef bakiyesinin %{amount} altında — rezervi eski seviyesine getirmek için tamamlayın
       unarchive: Geri yükle
+      consume: Bu paranın bir kısmını kullandım
+      reserve_shortfall:
+        heading: Rezerv hedef bakiyesinin altında
+        body: '%{target} hedefinin %{saved} kadarını tutuyorsunuz. Hedef bakiyesine geri getirmek için %{missing} ekleyin.'
     states:
       active: Aktif
       archived: Arşivlendi
@@ -362,19 +325,39 @@ tr:
       archived: Arşivlendi
       behind: Geride
       completed: Tamamlandı
-      depleted: Tamamlanması gerekiyor
-      funded: Rezerv tam
       no_target_date: Süresiz
       on_track: Yolunda
       paused: Duraklatıldı
       reached: Ulaşıldı
+      funded: Rezerv tam
+      depleted: Tamamlanması gerekiyor
     unarchive:
       invalid_transition: Hedef mevcut durumundan geri yüklenemez.
       success: Hedef geri yüklendi.
-    unattributed_outflows:
-      attribute: Bu harcamaydı
-      body: Bunun bir kısmı %{goal} için harcandıysa belirtin; böylece bu tutar hedefe
-        karşı sayılmaz.
-      heading: Bu hesaplardan para çıktı
     update:
       success: Hedef güncellendi.
+    consume:
+      title: Harcama kaydet
+      subtitle: '%{goal}'
+      amount_label: Ne kadar kullandınız?
+      amount_hint: Bu hedefi şu anda %{saved} destekliyor.
+      account_label: Hangi hesaptan?
+      earmark_note: Kaydettiğiniz tutar artık bu hedef için ayrılmış sayılmaz; böylece o hesaptaki diğer hedefleriniz paylarını geri alır.
+      cancel: İptal
+      submit: Kaydet
+      success: '%{amount} kullanıldı olarak kaydedildi.'
+      errors:
+        non_positive: Sıfırdan büyük bir tutar girin.
+        maintained: Bir rezerv harcanmaz; azalır ve yeniden doldurulur. Eksik tutarı zaten hedefte görünüyor.
+        exceeds_target: Bu, hedefin biriktirmeyi amaçladığı tutarın tamamından fazla.
+        account_required: Bu hedef birden fazla hesaptan finanse ediliyor; paranın hangisinden çıktığını belirtin.
+        account_not_linked: Bu hesap bu hedefi finanse etmiyor.
+        not_active: Bu hedef artık aktif değil, bu nedenle ona karşı bir şey kaydedilemez.
+        exceeds_earmark: Bu, hedef için bu hesapta ayrılan tutardan fazla.
+        transaction_already_claimed: Bu para çıkışı zaten atanmış.
+        transaction_not_found: Bu para çıkışı artık atanamıyor.
+        no_linked_account: Bu hedefin kaynak hesabı kalmadı.
+    unattributed_outflows:
+      heading: Bu hesaplardan para çıktı
+      body: Bunun bir kısmı %{goal} için harcandıysa belirtin; böylece bu tutar hedefe karşı sayılmaz.
+      attribute: Bu harcamaydı

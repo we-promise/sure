@@ -20,14 +20,13 @@ fr:
         mfa_title: Authentification à deux facteurs
         webauthn_add: Ajouter un mot de passe ou une clé de sécurité
         webauthn_added: "%{date} ajouté"
-        webauthn_code_label: Code d'authentification ou de sauvegarde
-        webauthn_code_placeholder: Code actuel de l'authentificateur ou code de sauvegarde
-          inutilisé
         webauthn_description: Utilisez un mot de passe, Touch ID, Windows Hello ou
           une clé de sécurité matérielle comme deuxième facteur lors de la connexion.
         webauthn_empty: Aucun mot de passe ou clé de sécurité n'est encore enregistré.
         webauthn_last_used: Dernière utilisation il y a %{time_ago}
         webauthn_name_label: Nom de la clé
+        webauthn_code_label: "Code d'authentification ou de sauvegarde"
+        webauthn_code_placeholder: "Code actuel de l'authentificateur ou code de sauvegarde inutilisé"
         webauthn_name_placeholder: MacBook Touch ID, YubiKey, etc.
         webauthn_remove: Supprimer
         webauthn_remove_confirm: Êtes-vous sûr de vouloir supprimer ce mot de passe
@@ -39,14 +38,12 @@ fr:
         webauthn_unsupported: Ce navigateur ne prend pas en charge les mots de passe
           ou les clés de sécurité.
   webauthn_credentials:
-    code_already_used: Ce code a déjà été utilisé. Attendez le prochain code de votre
-      application d'authentification.
+    code_already_used: "Ce code a déjà été utilisé. Attendez le prochain code de votre application d'authentification."
+    invalid_code: "Ce code n'est pas valide. Saisissez un code actuel de votre application d'authentification ou un code de sauvegarde inutilisé."
+    rate_limited: "Trop de tentatives. Veuillez patienter une minute puis réessayer."
     default_name: Clé de sécurité
     failure: Impossible d'enregistrer ce mot de passe ou cette clé de sécurité. Veuillez
       réessayer.
-    invalid_code: Ce code n'est pas valide. Saisissez un code actuel de votre application
-      d'authentification ou un code de sauvegarde inutilisé.
     mfa_required: Activez l'authentification à deux facteurs avant d'ajouter un mot
       de passe ou une clé de sécurité.
-    rate_limited: Trop de tentatives. Veuillez patienter une minute puis réessayer.
     success: Clé d'accès ou clé de sécurité supprimée.

@@ -4,45 +4,40 @@ it:
     access_denied: Accesso negato
     create:
       success: Esportazione avviata. Potrai scaricarla a breve.
-    delete_confirmation: Sei sicuro di voler eliminare questa esportazione? Questa
-      azione non può essere annullata.
-    delete_failed_confirmation: Sei sicuro di voler eliminare questa esportazione
-      fallita?
+    delete_confirmation: Sei sicuro di voler eliminare questa esportazione? Questa azione non può essere annullata.
+    delete_failed_confirmation: Sei sicuro di voler eliminare questa esportazione fallita?
     destroy:
       success: Esportazione eliminata con successo
     export_not_ready: Esportazione non pronta per il download
     exporting: Esportazione in corso...
-    index:
-      new: Nuova esportazione
-      title: Esportazioni
     new:
-      accounts_and_balances: Tutti i conti e i saldi
-      cancel: Annulla
-      categories_tags_rules: Categorie, etichette e regole
-      dialog_subtitle: Scarica tutti i tuoi dati finanziari
       dialog_title: Esporta i tuoi dati
-      export_data: Esporta dati
-      investment_trades: Movimenti di investimento
-      note_description: Questa esportazione include tutti i tuoi dati, ma solo alcuni
-        possono essere reimportati tramite la funzione di importazione CSV. Supportiamo
-        l'importazione di conti, transazioni (con categoria ed etichette) e movimenti.
-        Altri dati del conto non possono essere importati e sono solo per i tuoi archivi.
-      note_label: Nota
+      dialog_subtitle: Scarica tutti i tuoi dati finanziari
+      whats_included: "Cosa è incluso:"
+      accounts_and_balances: Tutti i conti e i saldi
       transaction_history: Cronologia transazioni
-      whats_included: 'Cosa è incluso:'
+      investment_trades: Movimenti di investimento
+      categories_tags_rules: Categorie, etichette e regole
+      note_label: Nota
+      note_description: Questa esportazione include tutti i tuoi dati, ma solo alcuni possono essere reimportati tramite la funzione di importazione CSV. Supportiamo l'importazione di conti, transazioni (con categoria ed etichette) e movimenti. Altri dati del conto non possono essere importati e sono solo per i tuoi archivi.
+      cancel: Annulla
+      export_data: Esporta dati
+    index:
+      title: Esportazioni
+      new: Nuova esportazione
     table:
-      empty: Nessuna esportazione ancora.
+      title: Esportazioni
       header:
-        actions: Azioni
         date: Data
         filename: Nome file
         status: Stato
+        actions: Azioni
       row:
+        status:
+          in_progress: In corso
+          complete: Completata
+          failed: Fallita
         actions:
           delete: Elimina
           download: Scarica
-        status:
-          complete: Completata
-          failed: Fallita
-          in_progress: In corso
-      title: Esportazioni
+      empty: Nessuna esportazione ancora.

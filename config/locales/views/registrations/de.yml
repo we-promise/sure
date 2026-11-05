@@ -16,17 +16,16 @@ de:
     new:
       invitation_message: "%{inviter} hat dich eingeladen als %{role} beizutreten"
       join_family_title: "%{family} %{moniker} beitreten"
-      password_placeholder: Passwort eingeben
-      password_requirements:
-        case: Groß- und Kleinbuchstaben
-        length: Mindestens 8 Zeichen
-        number: Eine Zahl (0-9)
-        special: 'Ein Sonderzeichen (!, @, #, $, %, etc)'
       role_admin: Administrator
       role_guest: Gast
       role_member: Mitglied
       submit: Konto erstellen
       title: Erstelle dein Konto
-      welcome_body: Um zu beginnen musst du ein neues Konto erstellen Danach kannst
-        du zusätzliche Einstellungen in der App konfigurieren
+      welcome_body: Um zu beginnen musst du ein neues Konto erstellen Danach kannst du zusätzliche Einstellungen in der App konfigurieren
       welcome_title: Willkommen bei Self Hosted %{product_name}
+      password_placeholder: Passwort eingeben
+      password_requirements:
+        length: Mindestens 8 Zeichen
+        case: Groß- und Kleinbuchstaben
+        number: Eine Zahl (0-9)
+        special: "Ein Sonderzeichen (!, @, #, $, %, etc)"

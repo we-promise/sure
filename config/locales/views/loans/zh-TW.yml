@@ -4,15 +4,15 @@ zh-TW:
     edit:
       edit: 編輯 %{account}
     form:
-      initial_balance: 原始貸款餘額
       interest_rate: 利率
       interest_rate_placeholder: '5.25'
-      none: 無
+      initial_balance: 原始貸款餘額
       rate_type: 利率類型
-      subtype_none: 無
-      subtype_prompt: 選擇貸款類型
       term_months: 貸款期限（月）
       term_months_placeholder: '360'
+      none: 無
+      subtype_prompt: 選擇貸款類型
+      subtype_none: 無
     new:
       title: 輸入貸款詳情
     overview:
@@ -26,7 +26,6 @@ zh-TW:
       unknown: 未知
     tabs:
       overview:
-        edit_loan_details: 編輯貸款詳細資料
         interest_rate: 利率
         monthly_payment: 每月還款額
         not_applicable: 不適用
@@ -35,3 +34,4 @@ zh-TW:
         term: 貸款期限
         type: 類型
         unknown: 未知
+        edit_loan_details: 編輯貸款詳細資料

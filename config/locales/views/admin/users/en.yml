@@ -1,139 +1,118 @@
 ---
 en:
   admin:
+    users:
+      index:
+        title: "User Management"
+        description: "Manage user roles, family/group membership, and account removal for your instance. Super admins can access SSO provider settings and user management."
+        section_title: "Families / Groups"
+        you: "(You)"
+        trial_ends_at: "Trial ends"
+        not_available: "n/a"
+        no_users: "No users found."
+        unnamed_family: "Unnamed Family/Group"
+        no_subscription: "No subscription"
+        family_summary: "%{members} members · %{accounts} accounts · %{transactions} transactions"
+        filters:
+          role: "Role"
+          role_all: "All roles"
+          trial_status: "Trial status"
+          trial_all: "All"
+          trial_expiring_soon: "Expiring in 7 days"
+          trial_trialing: "On trial"
+          submit: "Filter"
+        table:
+          user: "User"
+          trial_ends_at: "Trial ends"
+          family_accounts: "Family accounts"
+          family_transactions: "Family transactions"
+          last_login: "Last login"
+          session_count: "Session count"
+          never: "Never"
+          role: "Role"
+          family: "Family / Group"
+          keep_current_family: "Keep current family/group"
+          create_new_family_option: "+ Create new family/group"
+          new_family_name: "New family/group name"
+          new_family_name_placeholder: "Enter a name to create a new family/group"
+          new_family_moniker: "New family/group type"
+          set_password: "Set new password"
+          password_placeholder: "Leave blank to keep current"
+          actions: "Actions"
+        family_monikers:
+          family: "Family"
+          group: "Group"
+        actions:
+          manage_user: "Manage user"
+          update: "Update user"
+          delete_user: "Delete user"
+          self_edit_warning: "Changing your own role will modify your administrative privileges."
+          self_update_confirm: "Are you sure you want to update your own account role or family?"
+          last_super_admin_role_locked: "Role change is blocked because you are the last super admin in the system."
+        delete_confirm: "Are you sure you want to delete this user? This action cannot be undone."
+        delete_confirm_last_user: "Are you sure you want to delete this user? This is the last user in their family/group, so deleting them will also delete the entire family/group and all associated data. This action cannot be undone."
+        remove: "Delete User"
+        role_descriptions_title: "Role Descriptions"
+        removed_sso_identities:
+          title: "Removed SSO identities"
+          description: "These identities cannot create or reconnect an account. Allow an identity again only when the removal was accidental."
+          allow_again: "Allow again"
+          confirm: "Allow %{email} to sign in or create an account through SSO again?"
+        roles:
+          guest: "Guest"
+          member: "Member"
+          admin: "Admin"
+          super_admin: "Super Admin"
+        auth_types:
+          sso: "SSO"
+          local: "Local"
+          local_and_sso: "Local + SSO"
+          sso_provider_tooltip: "SSO Provider: %{providers}"
+        role_descriptions:
+          guest: "Assistant-first experience with intentionally restricted permissions for intro workflows."
+          member: "Basic user access. Can manage their own accounts, transactions, and settings."
+          admin: "Family administrator. Can access advanced settings like API keys, imports, and AI prompts."
+          super_admin: "Instance administrator. Can manage SSO providers, user roles, and impersonate users for support."
+        invitations:
+          pending_label: "Invited (pending)"
+          expires: "Expires %{date}"
+          delete: "Delete"
+          delete_all: "Delete All"
+        unused_families:
+          title: "Unused families / groups"
+          family_id: "Family ID: %{id}"
+          delete: "Delete unused family"
+          delete_confirm: "Are you sure you want to delete this unused family/group? This action cannot be undone."
+          empty: "No unused families/groups found."
+      update:
+        success_role: "User role updated successfully."
+        success_password: "User password updated successfully."
+        success_role_and_password: "User role and password updated successfully."
+        success_family: "User family/group membership updated successfully."
+        failure: "Failed to update user details (role or family/group membership)."
+        family_required: "Select an existing family/group or enter a name for a new one."
+        password_and_family_conflict: "Password and family/group membership cannot be updated at the same time."
+        password_disabled: "Setting a password is disabled because users can only sign in with SSO."
+        password_too_short: "Password must be at least 8 characters long."
+        password_missing_case: "Password must include both uppercase and lowercase letters."
+        password_missing_number: "Password must include at least one number."
+        password_missing_special: "Password must include at least one special character."
+        last_super_admin_error: "Cannot demote the last super admin in the system."
+      destroy:
+        success: "User access revoked and permanent deletion scheduled."
+        failure: "Failed to remove user."
+        cannot_remove_self: "You cannot remove your own account from here."
+        cannot_remove_last_super_admin: "You cannot remove the last active super admin."
+        confirmation_mismatch: "The email address did not match. The user was not removed."
+      deletion:
+        title: "Permanently remove user"
+        warning: "This immediately revokes access and schedules permanent deletion of the user and their data. This cannot be undone."
+        instruction: "Type %{email} to confirm."
+        email_label: "User email"
+        cancel: "Cancel"
+        submit: "Permanently remove user"
     families:
       destroy:
-        family_has_active_subscription: Family/group has an active subscription and
-          cannot be deleted until the subscription is cancelled.
-        family_has_users: Family/group still has users and cannot be deleted.
-        success: Family/group deleted successfully.
-    users:
-      deletion:
-        cancel: Cancel
-        email_label: User email
-        instruction: Type %{email} to confirm.
-        submit: Permanently remove user
-        title: Permanently remove user
-        warning: This immediately revokes access and schedules permanent deletion
-          of the user and their data. This cannot be undone.
-      destroy:
-        cannot_remove_last_super_admin: You cannot remove the last active super admin.
-        cannot_remove_self: You cannot remove your own account from here.
-        confirmation_mismatch: The email address did not match. The user was not removed.
-        failure: Failed to remove user.
-        success: User access revoked and permanent deletion scheduled.
-      index:
-        actions:
-          delete_user: Delete user
-          last_super_admin_role_locked: Role change is blocked because you are the
-            last super admin in the system.
-          manage_user: Manage user
-          self_edit_warning: Changing your own role will modify your administrative
-            privileges.
-          self_update_confirm: Are you sure you want to update your own account role
-            or family?
-          update: Update user
-        auth_types:
-          local: Local
-          local_and_sso: Local + SSO
-          sso: SSO
-          sso_provider_tooltip: 'SSO Provider: %{providers}'
-        delete_confirm: Are you sure you want to delete this user? This action cannot
-          be undone.
-        delete_confirm_last_user: Are you sure you want to delete this user? This
-          is the last user in their family/group, so deleting them will also delete
-          the entire family/group and all associated data. This action cannot be undone.
-        description: Manage user roles, family/group membership, and account removal
-          for your instance. Super admins can access SSO provider settings and user
-          management.
-        family_monikers:
-          family: Family
-          group: Group
-        family_summary: "%{members} members · %{accounts} accounts · %{transactions}
-          transactions"
-        filters:
-          role: Role
-          role_all: All roles
-          submit: Filter
-          trial_all: All
-          trial_expiring_soon: Expiring in 7 days
-          trial_status: Trial status
-          trial_trialing: On trial
-        invitations:
-          delete: Delete
-          delete_all: Delete All
-          expires: Expires %{date}
-          pending_label: Invited (pending)
-        no_subscription: No subscription
-        no_users: No users found.
-        not_available: n/a
-        remove: Delete User
-        removed_sso_identities:
-          allow_again: Allow again
-          confirm: Allow %{email} to sign in or create an account through SSO again?
-          description: These identities cannot create or reconnect an account. Allow
-            an identity again only when the removal was accidental.
-          title: Removed SSO identities
-        role_descriptions:
-          admin: Family administrator. Can access advanced settings like API keys,
-            imports, and AI prompts.
-          guest: Assistant-first experience with intentionally restricted permissions
-            for intro workflows.
-          member: Basic user access. Can manage their own accounts, transactions,
-            and settings.
-          super_admin: Instance administrator. Can manage SSO providers, user roles,
-            and impersonate users for support.
-        role_descriptions_title: Role Descriptions
-        roles:
-          admin: Admin
-          guest: Guest
-          member: Member
-          super_admin: Super Admin
-        section_title: Families / Groups
-        table:
-          actions: Actions
-          create_new_family_option: "+ Create new family/group"
-          family: Family / Group
-          family_accounts: Family accounts
-          family_transactions: Family transactions
-          keep_current_family: Keep current family/group
-          last_login: Last login
-          never: Never
-          new_family_moniker: New family/group type
-          new_family_name: New family/group name
-          new_family_name_placeholder: Enter a name to create a new family/group
-          password_placeholder: Leave blank to keep current
-          role: Role
-          session_count: Session count
-          set_password: Set new password
-          trial_ends_at: Trial ends
-          user: User
-        title: User Management
-        trial_ends_at: Trial ends
-        unnamed_family: Unnamed Family/Group
-        unused_families:
-          delete: Delete unused family
-          delete_confirm: Are you sure you want to delete this unused family/group?
-            This action cannot be undone.
-          empty: No unused families/groups found.
-          family_id: 'Family ID: %{id}'
-          title: Unused families / groups
-        you: "(You)"
-      update:
-        failure: Failed to update user details (role or family/group membership).
-        family_required: Select an existing family/group or enter a name for a new
-          one.
-        last_super_admin_error: Cannot demote the last super admin in the system.
-        password_and_family_conflict: Password and family/group membership cannot
-          be updated at the same time.
-        password_disabled: Setting a password is disabled because users can only sign
-          in with SSO.
-        password_missing_case: Password must include both uppercase and lowercase
-          letters.
-        password_missing_number: Password must include at least one number.
-        password_missing_special: Password must include at least one special character.
-        password_too_short: Password must be at least 8 characters long.
-        success_family: User family/group membership updated successfully.
-        success_password: User password updated successfully.
-        success_role: User role updated successfully.
-        success_role_and_password: User role and password updated successfully.
+        family_has_active_subscription: "Family/group has an active subscription and cannot be deleted until the subscription is cancelled."
+        family_has_users: "Family/group still has users and cannot be deleted."
+        success: "Family/group deleted successfully."

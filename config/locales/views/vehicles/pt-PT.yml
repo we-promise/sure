@@ -9,12 +9,12 @@ pt-PT:
       mileage: Quilometragem
       mileage_placeholder: '15000'
       mileage_unit: Unidade
-      mileage_unit_kilometers: Quilómetros
-      mileage_unit_miles: Milhas
       model: Modelo
       model_placeholder: Camry
       year: Ano
       year_placeholder: '2023'
+      mileage_unit_kilometers: Quilómetros
+      mileage_unit_miles: Milhas
     new:
       title: Introduzir detalhes do veículo
     overview:
@@ -28,10 +28,10 @@ pt-PT:
     tabs:
       overview:
         current_price: Preço atual
-        edit_account_details: Editar detalhes da conta
         make_model: Marca e modelo
         mileage: Quilometragem
         purchase_price: Preço de compra
         trend: Tendência
         unknown: Desconhecido
         year: Ano
+        edit_account_details: "Editar detalhes da conta"

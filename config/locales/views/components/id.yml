@@ -1,10 +1,9 @@
 ---
 id:
   UI:
+    period_picker:
+      aria_label: "Periode waktu: %{period}"
     account:
-      activity_date:
-        balance_tooltip: Saldo akhir hari, setelah seluruh transaksi dan penyesuaian
-        no_balance_data: Tidak ada data saldo untuk tanggal ini
       activity_feed:
         toggle_selection_checkboxes: Alihkan pilihan
       balance_reconciliation:
@@ -34,10 +33,8 @@ id:
           adjustments: Rekonsiliasi manual atau penyesuaian lainnya
           adjustments_asset: Penyesuaian nilai manual atau penilaian aset
           buys: Pembelian kripto pada hari tersebut
-          change_in_brokerage_cash: Perubahan bersih kas dari setoran, penarikan,
-            dan perdagangan efek
-          change_in_holdings_market: Perubahan nilai kepemilikan akibat pergerakan
-            harga pasar
+          change_in_brokerage_cash: Perubahan bersih kas dari setoran, penarikan, dan perdagangan efek
+          change_in_holdings_market: Perubahan nilai kepemilikan akibat pergerakan harga pasar
           change_in_holdings_trades: Dampak terhadap kepemilikan dari jual beli efek
           charges: Biaya baru yang terjadi pada hari tersebut
           end_balance: Saldo yang dihitung setelah seluruh transaksi
@@ -65,37 +62,28 @@ id:
       chart:
         loan:
           actual: Saldo tercatat
-          aria_actual_history_starts: Riwayat saldo tercatat dimulai sejak %{date}.
-          aria_description: Grafik saldo pinjaman. Saldo tercatat %{current_balance}.
-            Perkiraan tanggal pelunasan terjadwal %{scheduled_payoff_date}. Proyeksi
-            pelunasan dari saldo hari ini %{projected_payoff_date}.
-          aria_interest_share: Sepanjang pembayaran tahun pertama sekitar %{first}%
-            dari jumlah yang dibayarkan adalah bunga; sepanjang tahun terakhir, sekitar
-            %{last}%.
-          aria_interest_share_overall: Di seluruh pembayaran sekitar %{share}% dari
-            jumlah yang dibayarkan adalah bunga.
+          scheduled: Jadwal awal
+          projected: Proyeksi dari hari ini
+          today: Hari ini
           interactive_chart: grafik interaktif
-          interest_saved: Bunga yang dihemat
+          no_payoff: tidak lunas dengan pembayaran saat ini
+          aria_description: Grafik saldo pinjaman. Saldo tercatat %{current_balance}. Perkiraan tanggal pelunasan terjadwal %{scheduled_payoff_date}. Proyeksi pelunasan dari saldo hari ini %{projected_payoff_date}.
+          aria_actual_history_starts: Riwayat saldo tercatat dimulai sejak %{date}.
+          aria_interest_share: Sepanjang pembayaran tahun pertama sekitar %{first}% dari jumlah yang dibayarkan adalah bunga; sepanjang tahun terakhir, sekitar %{last}%.
+          aria_interest_share_overall: Di seluruh pembayaran sekitar %{share}% dari jumlah yang dibayarkan adalah bunga.
           interest_share: Porsi bunga
-          legend: Rangkaian grafik
+          principal_share: Porsi pokok
+          projected_payoff: Proyeksi pelunasan
           months_saved:
             one: "%{count} bulan lebih cepat dari jadwal"
             other: "%{count} bulan lebih cepat dari jadwal"
-          no_payoff: tidak lunas dengan pembayaran saat ini
-          not_converged: Dengan pembayaran saat ini saldo tidak akan lunas pada jatuh
-            tempo awal; sisa %{balloon} masih terutang.
           on_schedule: Sesuai jadwal
-          principal_share: Porsi pokok
-          projected: Proyeksi dari hari ini
-          projected_payoff: Proyeksi pelunasan
-          projection_basis: Membandingkan saldo tercatat hari ini dengan saldo terjadwal
-            pada hari yang sama. Pembayaran yang dibukukan sebelum tanggal jadwal
-            terbaca lebih cepat hingga tanggal tersebut; pembayaran setelahnya terbaca
-            tertinggal.
-          scheduled: Jadwal awal
+          interest_saved: Bunga yang dihemat
+          not_converged: Dengan pembayaran saat ini saldo tidak akan lunas pada jatuh tempo awal; sisa %{balloon} masih terutang.
+          projection_basis: Membandingkan saldo tercatat hari ini dengan saldo terjadwal pada hari yang sama. Pembayaran yang dibukukan sebelum tanggal jadwal terbaca lebih cepat hingga tanggal tersebut; pembayaran setelahnya terbaca tertinggal.
+          legend: Rangkaian grafik
           since_start: sejak pinjaman dimulai
-          today: Hari ini
-        no_data_available: Tidak ada data tersedia
+        no_data_available: "Tidak ada data tersedia"
         title:
           balance: Saldo
           cash_value: Nilai kas
@@ -113,92 +101,93 @@ id:
           holdings: Kepemilikan
           total_value: Total nilai
         vs_available_history: vs. riwayat yang tersedia
-    period_picker:
-      aria_label: 'Periode waktu: %{period}'
+      activity_date:
+        balance_tooltip: "Saldo akhir hari, setelah seluruh transaksi dan penyesuaian"
+        no_balance_data: "Tidak ada data saldo untuk tanggal ini"
   ds:
     alert:
       variants:
-        destructive: Kesalahan
-        error: Kesalahan
         info: Info
         success: Berhasil
         warning: Peringatan
-    dialog:
-      close: Tutup
-    icon_picker:
-      no_matching_icons: Tidak ada ikon yang cocok
-      search_placeholder: Cari ikon...
-    link:
-      opens_in_new_tab: "(buka di tab baru)"
+        error: Kesalahan
+        destructive: Kesalahan
     pill:
       aria_label: "%{label}"
       default_label: Pratinjau
+    dialog:
+      close: Tutup
     popover:
       avatar_default_label: Buka menu
     tooltip:
       trigger_label: Info selengkapnya
+    link:
+      opens_in_new_tab: (buka di tab baru)
+    icon_picker:
+      no_matching_icons: Tidak ada ikon yang cocok
+      search_placeholder: Cari ikon...
   provider_sync_summary:
+    title: Ringkasan sinkronisasi
+    last_sync: "Sinkronisasi terakhir: %{time_ago} lalu"
     accounts:
-      institutions: 'Institusi: %{count}'
-      linked: 'Terhubung: %{count}'
       title: Rekening
-      total: 'Total: %{count}'
-      unlinked: 'Belum terhubung: %{count}'
+      total: "Total: %{count}"
+      linked: "Terhubung: %{count}"
+      unlinked: "Belum terhubung: %{count}"
+      institutions: "Institusi: %{count}"
+    transactions:
+      title: Transaksi
+      seen: "Terdeteksi: %{count}"
+      imported: "Diimpor: %{count}"
+      updated: "Diperbarui: %{count}"
+      skipped: "Dilewati: %{count}"
+      fetching: "Mengambil data dari broker..."
+      protected:
+        one: "%{count} entri dilindungi (tidak ditimpa)"
+        other: "%{count} entri dilindungi (tidak ditimpa)"
+      view_protected: Lihat entri yang dilindungi
+    skip_reasons:
+      excluded: Dikecualikan
+      user_modified: Diubah oleh pengguna
+      import_locked: Impor CSV
+      protected: Dilindungi
+    holdings:
+      title: Kepemilikan
+      found: "Ditemukan: %{count}"
+      processed: "Diproses: %{count}"
+    trades:
+      title: Transaksi efek
+      imported: "Diimpor: %{count}"
+      skipped: "Dilewati: %{count}"
+      fetching: "Mengambil aktivitas dari broker..."
     health:
-      data_warnings: 'Peringatan data: %{count}'
-      duplicate_suggestions:
-        one: "%{count} kemungkinan duplikat perlu ditinjau"
-        other: "%{count} kemungkinan duplikat perlu ditinjau"
-      errors: 'Kesalahan: %{count}'
-      notices: 'Pemberitahuan: %{count}'
+      title: Kesehatan
+      view_error_details: Lihat detail kesalahan
+      rate_limited: "Terakhir mengalami pembatasan laju: %{time_ago}"
+      recently: baru-baru ini
+      errors: "Kesalahan: %{count}"
       pending_reconciled:
         one: "%{count} transaksi tertunda duplikat telah direkonsiliasi"
         other: "%{count} transaksi tertunda duplikat telah direkonsiliasi"
-      rate_limited: 'Terakhir mengalami pembatasan laju: %{time_ago}'
-      recently: baru-baru ini
+      view_reconciled: Lihat transaksi yang telah direkonsiliasi
+      duplicate_suggestions:
+        one: "%{count} kemungkinan duplikat perlu ditinjau"
+        other: "%{count} kemungkinan duplikat perlu ditinjau"
+      view_duplicate_suggestions: Lihat saran duplikat
       stale_pending:
         one: "%{count} transaksi tertunda yang usang (dikecualikan dari anggaran)"
         other: "%{count} transaksi tertunda yang usang (dikecualikan dari anggaran)"
+      view_stale_pending: Lihat rekening yang terdampak
       stale_pending_count:
         one: "%{count} transaksi"
         other: "%{count} transaksi"
       stale_unmatched:
         one: "%{count} transaksi tertunda perlu ditinjau manual"
         other: "%{count} transaksi tertunda perlu ditinjau manual"
+      view_stale_unmatched: Lihat transaksi yang perlu ditinjau
       stale_unmatched_count:
         one: "%{count} transaksi"
         other: "%{count} transaksi"
-      title: Kesehatan
+      data_warnings: "Peringatan data: %{count}"
+      notices: "Pemberitahuan: %{count}"
       view_data_quality: Lihat rincian kualitas data
-      view_duplicate_suggestions: Lihat saran duplikat
-      view_error_details: Lihat detail kesalahan
-      view_reconciled: Lihat transaksi yang telah direkonsiliasi
-      view_stale_pending: Lihat rekening yang terdampak
-      view_stale_unmatched: Lihat transaksi yang perlu ditinjau
-    holdings:
-      found: 'Ditemukan: %{count}'
-      processed: 'Diproses: %{count}'
-      title: Kepemilikan
-    last_sync: 'Sinkronisasi terakhir: %{time_ago} lalu'
-    skip_reasons:
-      excluded: Dikecualikan
-      import_locked: Impor CSV
-      protected: Dilindungi
-      user_modified: Diubah oleh pengguna
-    title: Ringkasan sinkronisasi
-    trades:
-      fetching: Mengambil aktivitas dari broker...
-      imported: 'Diimpor: %{count}'
-      skipped: 'Dilewati: %{count}'
-      title: Transaksi efek
-    transactions:
-      fetching: Mengambil data dari broker...
-      imported: 'Diimpor: %{count}'
-      protected:
-        one: "%{count} entri dilindungi (tidak ditimpa)"
-        other: "%{count} entri dilindungi (tidak ditimpa)"
-      seen: 'Terdeteksi: %{count}'
-      skipped: 'Dilewati: %{count}'
-      title: Transaksi
-      updated: 'Diperbarui: %{count}'
-      view_protected: Lihat entri yang dilindungi

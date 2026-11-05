@@ -1,36 +1,32 @@
 ---
 de:
   auto_matches:
-    bulk_actions:
-      confirm_selected: Auswahl bestätigen
-      reject_selected: Auswahl ablehnen
-      select_all: Alle auswählen
-      selected_label: ausgewählt
+    title: Automatischer Abgleich
+    settings:
+      enable_label: Automatischen Abgleich aktivieren
+      enable_description: Erkennt und schlägt bei jeder Synchronisierung automatisch Überweisungsabgleiche zwischen Konten vor. Vorschläge werden erst angewendet, nachdem du sie unten bestätigt hast.
+      admin_only: Nur Admins können diese Einstellung ändern.
+    update_settings:
+      settings_updated: Einstellungen für den automatischen Abgleich aktualisiert
     bulk_update:
+      invalid_selection: Wähle mindestens einen Vorschlag zum Bestätigen oder Ablehnen aus
       bulk_confirmed:
         one: 1 Überweisung bestätigt
         other: "%{count} Überweisungen bestätigt"
       bulk_rejected:
         one: 1 Überweisung abgelehnt
         other: "%{count} Überweisungen abgelehnt"
-      invalid_selection: Wähle mindestens einen Vorschlag zum Bestätigen oder Ablehnen
-        aus
     empty:
-      description: Wenn eine Synchronisierung eine wahrscheinliche Überweisung zwischen
-        zwei deiner Konten erkennt, erscheint sie hier zur Überprüfung.
       title: Keine ausstehenden Vorschläge für den automatischen Abgleich
-    settings:
-      admin_only: Nur Admins können diese Einstellung ändern.
-      enable_description: Erkennt und schlägt bei jeder Synchronisierung automatisch
-        Überweisungsabgleiche zwischen Konten vor. Vorschläge werden erst angewendet,
-        nachdem du sie unten bestätigt hast.
-      enable_label: Automatischen Abgleich aktivieren
+      description: Wenn eine Synchronisierung eine wahrscheinliche Überweisung zwischen zwei deiner Konten erkennt, erscheint sie hier zur Überprüfung.
     table:
-      actions: Aktionen
-      date: Datum
       from: Von
-      separator: "·"
       to: An
-    title: Automatischer Abgleich
-    update_settings:
-      settings_updated: Einstellungen für den automatischen Abgleich aktualisiert
+      date: Datum
+      actions: Aktionen
+      separator: "·"
+    bulk_actions:
+      selected_label: ausgewählt
+      confirm_selected: Auswahl bestätigen
+      reject_selected: Auswahl ablehnen
+      select_all: Alle auswählen

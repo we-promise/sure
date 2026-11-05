@@ -9,5 +9,4 @@ ru:
         wise_item:
           attributes:
             sca_private_key:
-              encryption_unavailable: 'невозможно сохранить: шифрование Active Record
-                не настроено в этой установке'
+              encryption_unavailable: 'невозможно сохранить: шифрование Active Record не настроено в этой установке'

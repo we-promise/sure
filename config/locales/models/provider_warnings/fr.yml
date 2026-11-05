@@ -10,7 +10,5 @@ fr:
       other: 'Import Lunchflow : la mise à jour de %{count} comptes a échoué'
     lunchflow_import_error: 'Import Lunchflow : %{error}'
     lunchflow_transactions_failed:
-      one: 'Import Lunchflow : la récupération des transactions a échoué pour %{count}
-        compte'
-      other: 'Import Lunchflow : la récupération des transactions a échoué pour %{count}
-        comptes'
+      one: 'Import Lunchflow : la récupération des transactions a échoué pour %{count} compte'
+      other: 'Import Lunchflow : la récupération des transactions a échoué pour %{count} comptes'

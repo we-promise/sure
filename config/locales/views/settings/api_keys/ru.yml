@@ -42,13 +42,11 @@ ru:
         empty_description: Создайте API-ключ для программного доступа к вашим данным.
         empty_heading: Пока нет API-ключей
         new_key: Новый API-ключ
-        revoke_confirmation: Вы уверены, что хотите отозвать %{name}? Это сразу отключит
+        revoke_confirmation: Вы уверены, что хотите отозвать %{name}? Это сразу отключит 
           все приложения, использующие этот ключ.
         revoke_key: Отозвать
         subtitle: Управляйте API-ключами для программного доступа к данным.
-        title: API-ключи
-      key_reveal:
-        copied: Скопировано!
+        title: API-ключи        
       new:
         cancel: Отмена
         create_key: Создать API-ключ
@@ -148,6 +146,8 @@ ru:
           title: API-ключ
           what_you_can_do: 'Что вы можете делать с API:'
         title: Управление API-ключами
+      key_reveal:
+        copied: Скопировано!
     api_keys_controller:
       revoke_failed: Не удалось отозвать API-ключ
       revoked_successfully: API-ключ успешно отозван

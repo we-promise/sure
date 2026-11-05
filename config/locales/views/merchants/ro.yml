@@ -12,22 +12,21 @@ ro:
       name_placeholder: Nume comerciant
     index:
       empty: Niciun comerciant încă
-      family_empty: Încă nu există comercianți ai familiei
-      family_title: Comercianți ai familiei
       new: Comerciant nou
-      provider_empty: Niciun comerciant furnizor asociat încă acestei familii
-      provider_read_only: Comercianții furnizor sunt sincronizați din instituțiile
-        tale conectate. Nu pot fi editați aici.
-      provider_title: Comercianți furnizor
-      table:
-        actions: Acțiuni
-        merchant: Comerciant
-        source: Sursă
       title: Comercianți
+      family_title: Comercianți ai familiei
+      family_empty: Încă nu există comercianți ai familiei
+      provider_title: Comercianți furnizor
+      provider_empty: Niciun comerciant furnizor asociat încă acestei familii
+      provider_read_only: Comercianții furnizor sunt sincronizați din instituțiile tale conectate. Nu pot fi editați aici.
+      table:
+        merchant: Comerciant
+        actions: Acțiuni
+        source: Sursă
     merchant:
       confirm_accept: Șterge comerciantul
-      confirm_body: Ești sigur că vrei să ștergi acest comerciant? Eliminarea acestui
-        comerciant va deconecta toate tranzacțiile asociate și poate afecta raportarea.
+      confirm_body: Ești sigur că vrei să ștergi acest comerciant? Eliminarea acestui comerciant
+        va deconecta toate tranzacțiile asociate și poate afecta raportarea.
       confirm_title: Ștergi comerciantul?
       delete: Șterge comerciantul
       edit: Editează comerciantul

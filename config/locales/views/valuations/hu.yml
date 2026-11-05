@@ -2,28 +2,30 @@
 hu:
   valuations:
     confirmation_contents:
-      account_balance: számlaegyenleg
-      asset_value: vagyonérték
-      balance: egyenleg
-      brokerage_cash: Brókeri készpénz
-      change: változás
-      credit_card_balance: hitelkártya-egyenleg
-      crypto_balance: kriptoegyenleg
-      holdings_value: Portfólió értéke
-      liability_balance: kötelezettségegyenleg
-      loan_balance: hitelegyenleg
-      'on': 'ezen:'
-      property_value: ingatlan értéke
-      recalculate_notice: Minden jövőbeli tranzakció és egyenleg újraszámításra kerül
-        ezen %{change_or_update} alapján.
-      this_will: Ez %{action_verb} a számlaértéket
-      to: 'erre:'
-      to_colon: 'erre:'
+      this_will: "Ez %{action_verb} a számlaértéket"
+      to_colon: "erre:"
       total_account_value: Számla teljes értéke
-      update: frissítés
+      holdings_value: Portfólió értéke
+      brokerage_cash: Brókeri készpénz
+      account_balance: számlaegyenleg
+      credit_card_balance: hitelkártya-egyenleg
+      loan_balance: hitelegyenleg
+      property_value: ingatlan értéke
       vehicle_value: jármű értéke
+      crypto_balance: kriptoegyenleg
+      asset_value: vagyonérték
+      liability_balance: kötelezettségegyenleg
+      balance: egyenleg
+      "on": "ezen:"
+      to: "erre:"
+      recalculate_notice: "Minden jövőbeli tranzakció és egyenleg újraszámításra kerül ezen %{change_or_update} alapján."
+      change: változás
+      update: frissítés
     create:
       account_updated: Számla frissítve
+    update:
+      account_updated: Számla frissítve
+      entry_updated: Bejegyzés frissítve
     errors:
       amount_required: Az összeg megadása kötelező
     form:
@@ -52,10 +54,7 @@ hu:
       name_placeholder: Add meg a bejegyzés nevét
       note_label: Megjegyzések
       note_placeholder: Adj meg további részleteket erről a bejegyzésről
-      opening_balance: Nyitóegyenleg
       overview: Áttekintés
       settings: Beállítások
+      opening_balance: "Nyitóegyenleg"
       update_value: Érték frissítése
-    update:
-      account_updated: Számla frissítve
-      entry_updated: Bejegyzés frissítve

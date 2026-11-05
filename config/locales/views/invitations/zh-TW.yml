@@ -4,7 +4,7 @@ zh-TW:
     accept_choice:
       create_account: 建立新帳號
       joined_household: 您已加入這個家庭。
-      message: "%{inviter} 邀請您以%{role}的身分加入。"
+      message: '%{inviter} 邀請您以%{role}的身分加入。'
       sign_in_existing: 我已經有帳號了
       title: 加入 %{family}
     create:

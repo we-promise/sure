@@ -1,167 +1,163 @@
 ---
 zh-CN:
   wise_items:
-    activities:
-      asset_fee: Wise Assets 费用
-      default_name: Wise 活动
-      interest: Wise 利息
-      jar_deposit: 转入 Jar 储蓄罐
-      jar_withdrawal: 从 Jar 储蓄罐转出
-      transfer_from_jar: 从 %{jar} 转出
-      transfer_to_jar: 转入 %{jar}
-    complete_account_setup:
-      failed: 创建账户失败。请重试。
-      not_found: 未找到 Wise 余额。
-      success: 账户创建并关联成功。
-    create:
-      connection_failed: 无法连接到 Wise。请稍后重试。
-      invalid_token: API 令牌无效。请检查后重试。
-      no_profiles_found: 未找到任何 Wise 用户档案。请检查您的 API 令牌。
-    destroy:
-      success: 已移除 Wise 连接
+    profile_types:
+      personal: 个人
+      business: 企业
     entries:
       default_name: Wise 交易
       fee_name: Wise 手续费
-    generate_sca_keypair:
-      failed: 生成新的 SCA 密钥对失败。请重试。
-      success: 已生成新的 SCA 密钥对。向 Wise 注册公钥以完成启用。
-    link_accounts:
-      failed: 关联 Wise 余额失败。请重试。
-      not_found: 未找到 Wise 余额。
-      success: 已成功将 Wise 余额关联至账户。
-    link_existing_account:
-      failed: 关联账户失败。请重试。
-      not_found: 未找到账户或 Wise 余额。
-      success: 已成功将 %{account_name} 与 Wise 关联
-    link_profiles:
-      already_connected: 所有选中的用户档案均已连接。
-      no_profiles_selected: 请至少选择一个用户档案。
-      session_expired: 会话已过期。请尝试重新连接。
-      success:
-        one: 已成功连接 %{count} 个 Wise 用户档案
-        other: 已成功连接 %{count} 个 Wise 用户档案
-    profile_types:
-      business: 企业
-      personal: 个人
-    provider_connection:
-      default_description: 连接您的 Wise 多币种账户
-      default_name: Wise
-      description: 使用 %{name} 连接
-      name: Wise — %{name}
-    provider_panel:
-      add_connection: 添加 Wise 连接
-      connect: 连接 Wise
-      connection_name_label: 连接名称
-      connection_name_placeholder: Wise 个人
-      disconnect: 断开连接
-      disconnect_confirm: 确定要断开 %{name} 吗？这将删除所有已同步的账户数据。
-      disconnect_label: 断开 %{name}
-      encryption_warning:
-        message: 在生产环境中添加 Wise 令牌之前，请配置 Active Record 加密密钥。未经加密，令牌将以明文存储。
-        title: 未配置数据库加密
-      import_all_history_help: 获取所有历史 Wise 对账单，而不仅限于最近一年。
-      import_all_history_label: 导入完整交易历史
-      instructions:
-        copy_token_html: 复制令牌并粘贴在下方。Sure 仅使用它来同步您的余额和交易。
-        create_token: 创建一个具有只读访问权限的新个人 API 令牌
-        open_tokens: 前往 Settings → Connect and manage apps → Developer tools → API
-          tokens
-        sign_in_html: 访问 %{link} 并登录您的账户
-      keep_token_placeholder: 留空以保留当前令牌
-      sandbox_note_html: 测试时请使用<strong>沙盒 (sandbox)</strong> 基础 URL（<code>https://api.wise-sandbox.com</code>）。在您的环境中设置
-        <code>WISE_BASE_URL</code>。
-      sca:
-        copied: 已复制！
-        copy: 复制
-        description: Wise 需要签名的单次令牌质询以读取完整交易对账单（包括收款）。请在此处生成密钥对并向 Wise 注册公钥以启用此功能。
-        generate: 生成密钥对
-        public_key_label: 公钥 (PEM)
-        regenerate: 重新生成密钥对
-        regenerate_confirm: 这将生成新的密钥对。在您于 Wise 账户中自行删除之前，Wise 将继续接受先前的公钥 — Sure 无法远程吊销它。您需要先向
-          Wise 注册新公钥，对账单才能恢复同步。是否继续？
-        registered_help_html: 向 Wise 注册此公钥：Settings → Connect and manage apps → Developer
-          tools → Public keys → Add public key。
-        title: 强客户身份认证 (SCA)
-      setup_accounts: 设置账户
-      sync: 同步
-      sync_start_date_help: 将从此日期起导入 Wise 对账单。保留默认设置可导入最多一年的历史记录。
-      sync_start_date_label: 导入交易的起始日期
-      token_label: API 令牌
-      token_placeholder: 粘贴您的 Wise 个人 API 令牌
-      update_connection: 更新连接
-    select_accounts:
-      cancel: 取消
-      description: 选择您要关联至 %{product_name} 账户的 Wise 币种余额。
-      link_account: 关联余额
-      no_accounts_found: 所有 Wise 余额均已关联至 Sure 账户。
-      no_connection: 未找到 Wise 连接。请先在提供商设置中连接 Wise。
-      title: 选择 Wise 余额
-    select_existing_account:
-      cancel: 取消
-      description: 选择要与此账户关联的 Wise 币种余额。交易将自动同步。
-      link_account: 关联余额
-      no_accounts_found: 未找到未关联的 Wise 余额。
-      title: 将 %{account_name} 与 Wise 关联
-    select_profiles:
-      already_connected_label: 已连接
-      cancel: 取消
-      connect: 连接选中的用户档案
-      description: 您的 Wise 账户有多个用户档案。请选择您想与 Sure 同步的档案。
-      session_expired: 会话已过期。请尝试重新连接。
-      subtitle: 选择要连接的用户档案
-      title: 选择 Wise 用户档案
-      unnamed_profile: "(未命名用户档案)"
-    setup_accounts:
-      all_accounts_linked: 您的所有 Wise 币种余额均已关联至 Sure 账户。
-      create_account: 创建账户
-      description: 为您想要追踪的每个 Wise 币种余额创建一个 Sure 账户。每种货币将作为独立的账户。
-      done: 完成
-      no_accounts_to_setup: 所有账户均已设置完毕
-      subtitle: 关联您的 Wise 币种余额
-      title: 设置 Wise 账户
-    sync:
-      success: 已开始同步
+    activities:
+      jar_deposit: 转入 Jar 储蓄罐
+      jar_withdrawal: 从 Jar 储蓄罐转出
+      transfer_to_jar: 转入 %{jar}
+      transfer_from_jar: 从 %{jar} 转出
+      interest: Wise 利息
+      asset_fee: Wise Assets 费用
+      default_name: Wise 活动
     sync_status:
+      no_accounts: 未找到账户
       all_synced:
         one: 已同步 %{count} 个账户
         other: 已同步 %{count} 个账户
-      no_accounts: 未找到账户
       partial_setup: 已同步 %{synced} 个，%{pending} 个需要设置
+    create:
+      no_profiles_found: 未找到任何 Wise 用户档案。请检查您的 API 令牌。
+      invalid_token: API 令牌无效。请检查后重试。
+      connection_failed: 无法连接到 Wise。请稍后重试。
+    destroy:
+      success: 已移除 Wise 连接
+    update:
+      success: 已更新 Wise 连接
+    sync:
+      success: 已开始同步
     syncer:
+      importing_accounts: 正在从 Wise 导入账户...
+      checking_account_configuration: 正在检查账户配置...
+      accounts_need_setup:
+        one: 有 %{count} 个账户需要设置...
+        other: 有 %{count} 个账户需要设置...
+      processing_transactions: 正在处理交易...
+      calculating_balances: 正在计算余额...
+      credentials_invalid: Wise API 令牌无效或权限不足
+      failed: 同步失败。请重试或联系支持人员。
+      import_failed: Wise 导入失败。
+      accounts_failed:
+        one: 有 %{count} 个余额导入失败。
+        other: 有 %{count} 个余额导入失败。
+      transactions_failed:
+        one: 有 %{count} 个余额的交易导入失败。
+        other: 有 %{count} 个余额的交易导入失败。
       account_processing_failed:
         one: 有 %{count} 个 Wise 账户在处理时失败。
         other: 有 %{count} 个 Wise 账户在处理时失败。
       account_sync_failed:
         one: 无法计划 %{count} 个 Wise 账户的同步。
         other: 无法计划 %{count} 个 Wise 账户的同步。
-      accounts_failed:
-        one: 有 %{count} 个余额导入失败。
-        other: 有 %{count} 个余额导入失败。
-      accounts_need_setup:
-        one: 有 %{count} 个账户需要设置...
-        other: 有 %{count} 个账户需要设置...
-      calculating_balances: 正在计算余额...
-      checking_account_configuration: 正在检查账户配置...
-      credentials_invalid: Wise API 令牌无效或权限不足
-      failed: 同步失败。请重试或联系支持人员。
-      import_failed: Wise 导入失败。
-      importing_accounts: 正在从 Wise 导入账户...
-      processing_transactions: 正在处理交易...
-      transactions_failed:
-        one: 有 %{count} 个余额的交易导入失败。
-        other: 有 %{count} 个余额的交易导入失败。
-    update:
-      success: 已更新 Wise 连接
+    provider_panel:
+      add_connection: 添加 Wise 连接
+      token_label: API 令牌
+      token_placeholder: 粘贴您的 Wise 个人 API 令牌
+      keep_token_placeholder: 留空以保留当前令牌
+      connection_name_label: 连接名称
+      connection_name_placeholder: Wise 个人
+      sync_start_date_label: 导入交易的起始日期
+      sync_start_date_help: 将从此日期起导入 Wise 对账单。保留默认设置可导入最多一年的历史记录。
+      import_all_history_label: 导入完整交易历史
+      import_all_history_help: 获取所有历史 Wise 对账单，而不仅限于最近一年。
+      connect: 连接 Wise
+      update_connection: 更新连接
+      setup_accounts: 设置账户
+      sync: 同步
+      disconnect: 断开连接
+      disconnect_label: 断开 %{name}
+      disconnect_confirm: 确定要断开 %{name} 吗？这将删除所有已同步的账户数据。
+      sandbox_note_html: 测试时请使用<strong>沙盒 (sandbox)</strong> 基础 URL（<code>https://api.wise-sandbox.com</code>）。在您的环境中设置 <code>WISE_BASE_URL</code>。
+      encryption_warning:
+        title: 未配置数据库加密
+        message: 在生产环境中添加 Wise 令牌之前，请配置 Active Record 加密密钥。未经加密，令牌将以明文存储。
+      instructions:
+        sign_in_html: 访问 %{link} 并登录您的账户
+        open_tokens: 前往 Settings → Connect and manage apps → Developer tools → API tokens
+        create_token: 创建一个具有只读访问权限的新个人 API 令牌
+        copy_token_html: 复制令牌并粘贴在下方。Sure 仅使用它来同步您的余额和交易。
+      sca:
+        title: 强客户身份认证 (SCA)
+        description: Wise 需要签名的单次令牌质询以读取完整交易对账单（包括收款）。请在此处生成密钥对并向 Wise 注册公钥以启用此功能。
+        public_key_label: 公钥 (PEM)
+        registered_help_html: 向 Wise 注册此公钥：Settings → Connect and manage apps → Developer tools → Public keys → Add public key。
+        copy: 复制
+        copied: 已复制！
+        generate: 生成密钥对
+        regenerate: 重新生成密钥对
+        regenerate_confirm: 这将生成新的密钥对。在您于 Wise 账户中自行删除之前，Wise 将继续接受先前的公钥 — Sure 无法远程吊销它。您需要先向 Wise 注册新公钥，对账单才能恢复同步。是否继续？
+    provider_connection:
+      default_name: Wise
+      default_description: 连接您的 Wise 多币种账户
+      name: Wise — %{name}
+      description: 使用 %{name} 连接
+    link_profiles:
+      session_expired: 会话已过期。请尝试重新连接。
+      no_profiles_selected: 请至少选择一个用户档案。
+      already_connected: 所有选中的用户档案均已连接。
+      success:
+        one: 已成功连接 %{count} 个 Wise 用户档案
+        other: 已成功连接 %{count} 个 Wise 用户档案
+    select_profiles:
+      session_expired: 会话已过期。请尝试重新连接。
+      title: 选择 Wise 用户档案
+      subtitle: 选择要连接的用户档案
+      description: 您的 Wise 账户有多个用户档案。请选择您想与 Sure 同步的档案。
+      unnamed_profile: (未命名用户档案)
+      already_connected_label: 已连接
+      connect: 连接选中的用户档案
+      cancel: 取消
     wise_item:
-      delete: 断开连接
       deletion_in_progress: 正在删除...
+      syncing: 正在同步...
       error: 同步错误
-      no_accounts_description: 运行同步以发现您的 Wise 余额，然后将其关联至 Sure 账户。
-      no_accounts_title: 尚未关联任何账户
-      setup_action: 设置账户
-      setup_description: 已关联 %{linked} / %{total} 个账户。为您的 Wise 币种余额创建 Sure 账户。
-      setup_needed: 新账户已准备好设置
       status: 已于 %{timestamp}前同步
       status_never: 从未同步
       status_with_summary: 上次同步于 %{timestamp}前 — %{summary}
-      syncing: 正在同步...
+      delete: 断开连接
+      setup_needed: 新账户已准备好设置
+      setup_description: 已关联 %{linked} / %{total} 个账户。为您的 Wise 币种余额创建 Sure 账户。
+      setup_action: 设置账户
+      no_accounts_title: 尚未关联任何账户
+      no_accounts_description: 运行同步以发现您的 Wise 余额，然后将其关联至 Sure 账户。
+    setup_accounts:
+      title: 设置 Wise 账户
+      subtitle: 关联您的 Wise 币种余额
+      description: 为您想要追踪的每个 Wise 币种余额创建一个 Sure 账户。每种货币将作为独立的账户。
+      no_accounts_to_setup: 所有账户均已设置完毕
+      all_accounts_linked: 您的所有 Wise 币种余额均已关联至 Sure 账户。
+      create_account: 创建账户
+      done: 完成
+    select_accounts:
+      title: 选择 Wise 余额
+      description: 选择您要关联至 %{product_name} 账户的 Wise 币种余额。
+      no_accounts_found: 所有 Wise 余额均已关联至 Sure 账户。
+      no_connection: 未找到 Wise 连接。请先在提供商设置中连接 Wise。
+      link_account: 关联余额
+      cancel: 取消
+    select_existing_account:
+      title: 将 %{account_name} 与 Wise 关联
+      description: 选择要与此账户关联的 Wise 币种余额。交易将自动同步。
+      no_accounts_found: 未找到未关联的 Wise 余额。
+      link_account: 关联余额
+      cancel: 取消
+    link_accounts:
+      not_found: 未找到 Wise 余额。
+      success: 已成功将 Wise 余额关联至账户。
+      failed: 关联 Wise 余额失败。请重试。
+    link_existing_account:
+      not_found: 未找到账户或 Wise 余额。
+      success: 已成功将 %{account_name} 与 Wise 关联
+      failed: 关联账户失败。请重试。
+    complete_account_setup:
+      not_found: 未找到 Wise 余额。
+      success: 账户创建并关联成功。
+      failed: 创建账户失败。请重试。
+    generate_sca_keypair:
+      success: 已生成新的 SCA 密钥对。向 Wise 注册公钥以完成启用。
+      failed: 生成新的 SCA 密钥对失败。请重试。

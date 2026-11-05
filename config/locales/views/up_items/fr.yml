@@ -6,16 +6,14 @@ fr:
         default_name: Connexion Up
   providers:
     up:
-      description: Connectez des comptes bancaires australiens Up via un jeton d'accès
-        personnel
+      description: Connectez des comptes bancaires australiens Up via un jeton d'accès personnel
       name: Up
   up_account:
     fallback: Compte Up
   up_item:
     errors:
       account_processing_failed: Impossible de synchroniser le compte Up
-      account_sync_schedule_failed: Impossible de planifier la synchronisation du
-        compte Up
+      account_sync_schedule_failed: Impossible de planifier la synchronisation du compte Up
       sync_failed: Impossible de synchroniser la connexion Up
       transactions_failed: Impossible de récupérer les transactions Up
     institution_summary:
@@ -95,8 +93,7 @@ fr:
       api_error: Impossible de récupérer les comptes Up.
       cancel: Annuler
       choose_account_type: Choisissez un type de compte
-      choose_account_type_description: Ignorez les comptes que vous ne souhaitez pas
-        suivre.
+      choose_account_type_description: Ignorez les comptes que vous ne souhaitez pas suivre.
       create_accounts: Créer les comptes
       fetch_failed: Impossible de récupérer les comptes
       no_accounts_to_setup: Aucun compte à configurer

@@ -9,5 +9,4 @@ en:
         wise_item:
           attributes:
             sca_private_key:
-              encryption_unavailable: cannot be stored because Active Record encryption
-                is not configured on this install
+              encryption_unavailable: cannot be stored because Active Record encryption is not configured on this install

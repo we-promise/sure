@@ -2,12 +2,8 @@
 nl:
   other_assets:
     edit:
-      balance_tracking_info: Overige bezittingen worden gevolgd via handmatige waarderingen
-        met 'Nieuwe balans', niet via transacties. Cashflow heeft geen invloed op
-        het accountsaldo.
       edit: "%{account} bewerken"
+      balance_tracking_info: "Overige bezittingen worden gevolgd via handmatige waarderingen met 'Nieuwe balans', niet via transacties. Cashflow heeft geen invloed op het accountsaldo."
     new:
-      balance_tracking_info: Overige bezittingen worden gevolgd via handmatige waarderingen
-        met 'Nieuwe balans', niet via transacties. Cashflow heeft geen invloed op
-        het accountsaldo.
       title: Voer details van bezitting in
+      balance_tracking_info: "Overige bezittingen worden gevolgd via handmatige waarderingen met 'Nieuwe balans', niet via transacties. Cashflow heeft geen invloed op het accountsaldo."

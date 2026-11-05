@@ -4,5 +4,5 @@ nl:
     errors:
       models:
         merchant_import:
-          duplicate_columns: 'Dubbele kolomnamen na normalisatie: %{columns}'
-          missing_columns: 'Verplichte kolommen ontbreken: %{columns}'
+          missing_columns: "Verplichte kolommen ontbreken: %{columns}"
+          duplicate_columns: "Dubbele kolomnamen na normalisatie: %{columns}"

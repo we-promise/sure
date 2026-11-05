@@ -76,17 +76,17 @@ ca:
       status: Sincronitzat fa %{timestamp}
       status_never: Mai sincronitzat
       status_with_summary: Darrera sincronització fa %{timestamp} • %{summary}
-      sync_status:
-        no_accounts: No s'han trobat comptes
-        partial_setup:
-          one: "%{linked} sincronitzats, %{unlinked} per configurar"
-          other: "%{linked} sincronitzats, %{unlinked} per configurar"
-        synced:
-          one: "%{count} compte sincronitzat"
-          other: "%{count} comptes sincronitzats"
       syncing: Sincronitzant...
       total: Total
       unlinked: Sense enllaç
+      sync_status:
+        no_accounts: No s'han trobat comptes
+        synced:
+          one: '%{count} compte sincronitzat'
+          other: '%{count} comptes sincronitzats'
+        partial_setup:
+          one: '%{linked} sincronitzats, %{unlinked} per configurar'
+          other: '%{linked} sincronitzats, %{unlinked} per configurar'
     select_accounts:
       accounts_selected: comptes seleccionats
       api_error: 'Error de l''API: %{message}'
@@ -144,7 +144,6 @@ ca:
       no_accounts_to_setup: No hi ha comptes per configurar
       no_api_key: La clau API de Lunch Flow no està configurada. Revisa la configuració
         de la connexió.
-      page_title: Configura els comptes de Lunch Flow
       subtitle: Tria els tipus de compte correctes per als teus comptes importats
       subtype_labels:
         credit_card: ''
@@ -186,6 +185,7 @@ ca:
         Hi ha un màxim de 3 anys d'historial disponible.
       sync_start_date_label: 'Comença a sincronitzar transaccions des de:'
       title: Configura els teus comptes de Lunch Flow
+      page_title: Configura els comptes de Lunch Flow
     setup_required:
       api_key_description: Abans d'enllaçar comptes Lunch Flow, has de configurar
         la teva clau API de Lunch Flow.
@@ -197,11 +197,11 @@ ca:
       setup_step_4: Torna aquí per enllaçar els teus comptes
       setup_steps_title: 'Passos de configuració:'
       title: Cal configurar Lunch Flow
-    subtype_select:
-      placeholder:
-        subtype: Selecciona el subtipus
-        type: Selecciona el tipus
     sync:
       success: Sincronització iniciada
     update:
       success: La connexió amb Lunch Flow s'ha actualitzat
+    subtype_select:
+      placeholder:
+        subtype: Selecciona el subtipus
+        type: Selecciona el tipus

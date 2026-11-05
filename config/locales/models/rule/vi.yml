@@ -4,6 +4,6 @@ vi:
     errors:
       models:
         rule:
-          duplicate_actions: Quy tắc không được có các hành động trùng lặp %{types}
-          min_actions: phải có ít nhất một hành động
-          nested_conditions: Điều kiện phức hợp không thể lồng nhau
+          min_actions: "phải có ít nhất một hành động"
+          duplicate_actions: "Quy tắc không được có các hành động trùng lặp %{types}"
+          nested_conditions: "Điều kiện phức hợp không thể lồng nhau"

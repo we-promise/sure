@@ -1,103 +1,98 @@
 ---
 es:
-  budget_categories:
-    allocation_progress:
-      budget_exceeded_html: Presupuesto superado en <span class="text-red-500 privacy-sensitive">%{amount}</span>
-      left_to_allocate: por asignar
-      over_set: "> 100 % asignado"
-      percent_set: "%{percent} asignado"
-    budget_category_form:
-      monthly_average: "%{amount}/mes de media"
-      shared_placeholder: Compartido
-      shared_title: Deja vacío para compartir el presupuesto de la categoría padre
-    confirm_button:
-      confirm: Confirmar
-    index:
-      description: Ajusta los presupuestos por categoría para fijar límites de gasto.
-        Los fondos sin asignar se marcarán automáticamente como sin categoría.
-      title: Edita los presupuestos por categoría
-    no_categories:
-      new_category: Nueva categoría
-      no_categories_message: Todavía no has creado ni asignado ninguna categoría de
-        gasto a tus transacciones.
-      oops: "¡Vaya!"
-      use_defaults: Usar las predeterminadas (recomendado)
-    show:
-      budgeted: Presupuestado
-      category: Categoría
-      left: restante
-      monthly_average_spending: Gasto medio mensual
-      monthly_median_spending: Gasto mediano mensual
-      no_transactions: No se han encontrado transacciones en este periodo presupuestario.
-      overspent: excedido
-      overview: Resumen
-      recent_transactions: Transacciones recientes
-      spending: Gasto de %{date}
-      status: Estado
-      view_all_transactions: Ver todas las transacciones de la categoría
   budgets:
-    actuals_summary:
-      expenses: Gastos
-      income: Ingresos
     budget_donut:
+      spent: Gastado
       new_budget: Nuevo presupuesto
       of_budget: de %{amount}
-      spent: Gastado
       unused: Sin usar
     budget_header:
       today: Hoy
     budget_nav:
       categories: Categorías
       setup: Configuración
-    budgeted_summary:
-      budgeted: Presupuestado
-      earned: "%{amount} ganado"
-      expected_income: Ingresos previstos
-      left: "%{amount} restante"
-      over: "%{amount} de más"
-      spent: "%{amount} gastado"
-    copy_previous:
-      already_initialized: Este presupuesto ya se ha configurado
-      no_source: No se ha encontrado ningún presupuesto anterior del que copiar
-      success: Presupuesto copiado de %{source_name}
-    copy_previous_prompt:
-      copy_button: Copiar de %{source_name}
-      description: Puedes copiar tu presupuesto de %{source_name} o empezar de cero.
-      fresh_button: Empezar de cero
-      title: Configura tu presupuesto
-    edit:
-      autosuggest_description: Se basará en el historial de transacciones. La IA puede
-        cometer errores, verifica antes de continuar.
-      autosuggest_title: Sugerir automáticamente presupuesto de ingresos y gastos
-      budgeted_spending: Gasto presupuestado
-      continue: Continuar
-      expected_income: Ingresos previstos
-      setup_description: Introduce a continuación tus ingresos mensuales y el gasto
-        previsto para configurar tu presupuesto.
-      setup_title: Configura tu presupuesto
-    name:
-      custom_range: "%{start} - %{end_date}"
-      month_year: "%{month}"
     over_allocation_warning:
+      over_allocated_message: Has asignado más de lo que permite tu presupuesto. Corrige tus asignaciones.
       fix_allocations: Corregir asignaciones
-      over_allocated_message: Has asignado más de lo que permite tu presupuesto. Corrige
-        tus asignaciones.
+    actuals_summary:
+      income: Ingresos
+      expenses: Gastos
+    budgeted_summary:
+      expected_income: Ingresos previstos
+      budgeted: Presupuestado
+      earned: '%{amount} ganado'
+      over: '%{amount} de más'
+      left: '%{amount} restante'
+      spent: '%{amount} gastado'
+    edit:
+      setup_title: Configura tu presupuesto
+      setup_description: Introduce a continuación tus ingresos mensuales y el gasto previsto para configurar tu presupuesto.
+      budgeted_spending: Gasto presupuestado
+      expected_income: Ingresos previstos
+      autosuggest_title: Sugerir automáticamente presupuesto de ingresos y gastos
+      autosuggest_description: Se basará en el historial de transacciones. La IA puede cometer errores, verifica antes de continuar.
+      continue: Continuar
+    name:
+      custom_range: '%{start} - %{end_date}'
+      month_year: '%{month}'
     show:
       categories:
         amount: Importe
         edit: Editar
         title: Categorías
-      filter:
-        all: Todas
-        aria_label: Filtrar categorías del presupuesto
-        on_track: En camino
-        over_budget: Sobre presupuesto
       on_track_categories:
         short_title: En camino
         title: En camino
       over_budget_categories:
         short_title: Sobre presupuesto
         title: Sobre presupuesto
+      filter:
+        all: Todas
+        aria_label: Filtrar categorías del presupuesto
+        on_track: En camino
+        over_budget: Sobre presupuesto
       tabs:
         actual: Real
         budgeted: Presupuestado
+    copy_previous_prompt:
+      title: Configura tu presupuesto
+      description: Puedes copiar tu presupuesto de %{source_name} o empezar de cero.
+      copy_button: Copiar de %{source_name}
+      fresh_button: Empezar de cero
+    copy_previous:
+      success: Presupuesto copiado de %{source_name}
+      no_source: No se ha encontrado ningún presupuesto anterior del que copiar
+      already_initialized: Este presupuesto ya se ha configurado
+  budget_categories:
+    allocation_progress:
+      budget_exceeded_html: Presupuesto superado en <span class="text-red-500 privacy-sensitive">%{amount}</span>
+      left_to_allocate: por asignar
+      over_set: '> 100 % asignado'
+      percent_set: '%{percent} asignado'
+    budget_category_form:
+      monthly_average: '%{amount}/mes de media'
+      shared_placeholder: Compartido
+      shared_title: Deja vacío para compartir el presupuesto de la categoría padre
+    confirm_button:
+      confirm: Confirmar
+    no_categories:
+      oops: ¡Vaya!
+      no_categories_message: Todavía no has creado ni asignado ninguna categoría de gasto a tus transacciones.
+      use_defaults: Usar las predeterminadas (recomendado)
+      new_category: Nueva categoría
+    index:
+      title: Edita los presupuestos por categoría
+      description: Ajusta los presupuestos por categoría para fijar límites de gasto. Los fondos sin asignar se marcarán automáticamente como sin categoría.
+    show:
+      category: Categoría
+      overview: Resumen
+      spending: Gasto de %{date}
+      status: Estado
+      overspent: excedido
+      left: restante
+      budgeted: Presupuestado
+      monthly_average_spending: Gasto medio mensual
+      monthly_median_spending: Gasto mediano mensual
+      recent_transactions: Transacciones recientes
+      view_all_transactions: Ver todas las transacciones de la categoría
+      no_transactions: No se han encontrado transacciones en este periodo presupuestario.

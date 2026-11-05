@@ -1,13 +1,10 @@
 ---
 nb:
+  views:
+    settings:
+      payments:
+        renewal: "Bidraget ditt fortsetter den %{date}."
   settings:
-    appearances:
-      show:
-        disable_modal_click_outside_description: Forhindrer at modaler lukkes ved
-          klikk utenfor. Nyttig for å unngå å miste ulagrede endringer ved et uhell.
-        disable_modal_click_outside_title: Hold modaler åpne ved klikk utenfor
-        modals_subtitle: Tilpass oppførselen til modaler
-        modals_title: Modaler
     encryption_migration_guide: Veiledning for oppsett av kryptering og migrering
     payments:
       show:
@@ -19,9 +16,9 @@ nb:
         country: Land
         currency: Valuta
         date_format: Datoformat
-        default_period: Standardperiode
         general_subtitle: Konfigurer preferansene dine
         general_title: Generelt
+        default_period: Standardperiode
         language: Språk
         language_auto: Nettleserens språk
         page_title: Preferanser
@@ -31,6 +28,12 @@ nb:
         theme_system: System
         theme_title: Tema
         timezone: Tidssone
+    appearances:
+      show:
+        modals_title: Modaler
+        modals_subtitle: Tilpass oppførselen til modaler
+        disable_modal_click_outside_title: Hold modaler åpne ved klikk utenfor
+        disable_modal_click_outside_description: Forhindrer at modaler lukkes ved klikk utenfor. Nyttig for å unngå å miste ulagrede endringer ved et uhell.
     profiles:
       destroy:
         cannot_remove_self: Du kan ikke fjerne deg selv fra din egen konto.
@@ -39,29 +42,28 @@ nb:
         not_authorized: Du er ikke autorisert til å fjerne medlemmer.
       show:
         confirm_delete:
-          body: Er du sikker på at du vil permanent slette kontoen din? Denne handlingen
-            er irreversibel.
+          body: Er du sikker på at du vil permanent slette kontoen din? Denne handlingen er irreversibel.
           title: Slett konto?
+        confirm_reset:
+          body: Er du sikker på at du vil tilbakestille kontoen din? Dette vil slette alle kontoene dine, kategorier, forhandlere, tagger og andre data. Denne handlingen kan ikke angres.
+          title: Tilbakestill konto?
+        confirm_reset_with_sample_data:
+          body: Are you sure you want to reset your account and load sample data? This will delete your existing data and replace it with demo data so you can explore Sure safely.
+          title: Reset account and load sample data?
         confirm_remove_invitation:
           body: Er du sikker på at du vil fjerne invitasjonen for %{email}?
           title: Fjern invitasjon
         confirm_remove_member:
           body: Er du sikker på at du vil fjerne %{name} fra kontoen din?
           title: Fjern medlem
-        confirm_reset:
-          body: Er du sikker på at du vil tilbakestille kontoen din? Dette vil slette
-            alle kontoene dine, kategorier, forhandlere, tagger og andre data. Denne
-            handlingen kan ikke angres.
-          title: Tilbakestill konto?
-        confirm_reset_with_sample_data:
-          body: Are you sure you want to reset your account and load sample data?
-            This will delete your existing data and replace it with demo data so you
-            can explore Sure safely.
-          title: Reset account and load sample data?
         danger_zone_title: Fareområde
         delete_account: Slett konto
         delete_account_warning: Sletting av kontoen din vil permanent fjerne alle
           dataene dine og kan ikke angres.
+        reset_account: Tilbakestill konto
+        reset_account_warning: Tilbakestilling av kontoen din vil slette alle kontoene dine, kategorier, forhandlere, tagger og andre data, men beholde brukerkontoen din intakt.
+        reset_account_with_sample_data: Reset account and load sample data
+        reset_account_with_sample_data_warning: Resetting your account will delete all your existing data and then load fresh sample data so you can explore Sure with a pre-filled environment.
         email: E-post
         first_name: Fornavn
         household_form_input_placeholder: Angi husholdningsnavn
@@ -78,31 +80,23 @@ nb:
         profile_title: Profil
         remove_invitation: Fjern invitasjon
         remove_member: Fjern medlem
-        reset_account: Tilbakestill konto
-        reset_account_warning: Tilbakestilling av kontoen din vil slette alle kontoene
-          dine, kategorier, forhandlere, tagger og andre data, men beholde brukerkontoen
-          din intakt.
-        reset_account_with_sample_data: Reset account and load sample data
-        reset_account_with_sample_data_warning: Resetting your account will delete
-          all your existing data and then load fresh sample data so you can explore
-          Sure with a pre-filled environment.
         save: Lagre
     securities:
       show:
         page_title: Sikkerhet
     settings_nav:
       accounts_label: Kontoer
-      advanced_section_title: Avansert
       api_key_label: API-nøkkel
+      advanced_section_title: Avansert
+      payment_label: Betaling
       categories_label: Kategorier
-      exports_label: Eksporter
       feedback_label: Tilbakemelding
       general_section_title: Generelt
       imports_label: Importer
+      exports_label: Eksporter
       logout: Logg ut
       merchants_label: Forhandlere
       other_section_title: Mer
-      payment_label: Betaling
       preferences_label: Preferanser
       profile_label: Konto
       rules_label: Regler
@@ -116,10 +110,6 @@ nb:
       previous: Tilbake
     user_avatar_field:
       accepted_formats: JPG eller PNG. 5MB maks.
-      change: Endre bilde
       choose: Last opp bilde
-      choose_label: "(valgfritt)"
-  views:
-    settings:
-      payments:
-        renewal: Bidraget ditt fortsetter den %{date}.
+      choose_label: (valgfritt)
+      change: Endre bilde

@@ -5,9 +5,9 @@ tr:
       brokerage_cash: Aracı kurum nakiti
     cost_basis_cell:
       cancel: İptal
+      per_share_label: "Hisse başına"
       overwrite_confirm_body: Bu işlem, mevcut %{current} maliyet bazını değiştirecektir.
       overwrite_confirm_title: Maliyet bazının üzerine yazılsın mı?
-      per_share_label: Hisse başına
       save: Kaydet
       set: Ayarla
       set_cost_basis_header: "%{ticker} için maliyet bazını ayarla"
@@ -29,14 +29,14 @@ tr:
       shares: "%{qty} adet hisse"
       unknown: "--"
     index:
+      positions:
+        one: "%{count} pozisyon"
+        other: "%{count} pozisyon"
       average_cost: Ortalama maliyet
       holdings: Varlıklar
       name: İsim
       new_holding: Yeni işlem
       no_holdings: Gösterilecek varlık yok.
-      positions:
-        one: "%{count} pozisyon"
-        other: "%{count} pozisyon"
       return: Toplam getiri
       weight: Ağırlık
     missing_price_tooltip:

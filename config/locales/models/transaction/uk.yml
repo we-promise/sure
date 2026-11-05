@@ -6,6 +6,6 @@ uk:
         transaction:
           attributes:
             attachments:
-              invalid_format: файл %{index} має непідтримуваний формат (%{file_format})
-              too_large: файл %{index} завеликий (максимум %{max_mb}MB)
-              too_many: не може перевищувати %{max} файлів на транзакцію
+              too_many: "не може перевищувати %{max} файлів на транзакцію"
+              too_large: "файл %{index} завеликий (максимум %{max_mb}MB)"
+              invalid_format: "файл %{index} має непідтримуваний формат (%{file_format})"

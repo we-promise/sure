@@ -4,6 +4,6 @@ it:
     errors:
       models:
         rule_import:
-          invalid_json: 'JSON non valido nelle condizioni o nelle azioni: %{message}'
-          min_actions: La regola deve avere almeno un'azione
-          unsupported_resource_type: 'Tipo di risorsa non supportato: %{resource_type}'
+          unsupported_resource_type: "Tipo di risorsa non supportato: %{resource_type}"
+          invalid_json: "JSON non valido nelle condizioni o nelle azioni: %{message}"
+          min_actions: "La regola deve avere almeno un'azione"

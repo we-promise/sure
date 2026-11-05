@@ -1,27 +1,24 @@
 ---
 nl:
   subscriptions:
-    create:
-      trial_already_used: U heeft al een proefperiode gestart of afgerond. Upgrade
-        om door te gaan.
-      welcome: Welkom bij Sure!
     self_hosted_alert: "%{product_name} is niet beschikbaar in zelfgehoste modus."
-    success:
-      contribution_failed: Er ging iets mis bij het verwerken van uw bijdrage. Probeer
-        het opnieuw.
-      welcome_with_contribution: Welkom bij Sure! We waarderen uw bijdrage.
     upgrade:
-      account_settings: Accountinstellingen
-      already_contributing: U draagt al bij. Hartelijk dank!
-      contribute_and_support_sure: Bijdragen en Sure ondersteunen
-      cta: Blijf de ontwikkeling van deze codebase ondersteunen!
+      already_contributing: "U draagt al bij. Hartelijk dank!"
+      page_title: "Upgraden"
+      account_settings: "Accountinstellingen"
+      sign_out: "Uitloggen"
+      contribute_and_support_sure: "Bijdragen en Sure ondersteunen"
+      cta: "Blijf de ontwikkeling van deze codebase ondersteunen!"
       header:
-        support: Ondersteunen
-        sure: Sure
-        today: vandaag
-      page_title: Upgraden
-      redirect_to_stripe: In de volgende stap wordt u doorgestuurd naar Stripe, dat
-        creditcards voor ons verwerkt.
-      sign_out: Uitloggen
-      trial_over: Uw proefperiode is voorbij
-      trialing: Uw gegevens worden over %{days} dagen verwijderd
+        support: "Ondersteunen"
+        sure: "Sure"
+        today: "vandaag"
+      redirect_to_stripe: "In de volgende stap wordt u doorgestuurd naar Stripe, dat creditcards voor ons verwerkt."
+      trialing: "Uw gegevens worden over %{days} dagen verwijderd"
+      trial_over: "Uw proefperiode is voorbij"
+    create:
+      welcome: "Welkom bij Sure!"
+      trial_already_used: "U heeft al een proefperiode gestart of afgerond. Upgrade om door te gaan."
+    success:
+      welcome_with_contribution: "Welkom bij Sure! We waarderen uw bijdrage."
+      contribution_failed: "Er ging iets mis bij het verwerken van uw bijdrage. Probeer het opnieuw."

@@ -16,13 +16,13 @@ ru:
       edit: Редактировать категорию
     form:
       auto_adjust: авто-настройка.
+      trigger_label: Выбрать цвет и иконку
       color: Цвет
       icon: Иконка
       name_label: Название
       parent_category_label: Родительская категория (необязательно)
       placeholder: Название категории
       poor_contrast: Плохой контраст, выберите более тёмный цвет или
-      trigger_label: Выбрать цвет и иконку
       unassigned: "(не назначено)"
     index:
       bootstrap: Использовать стандартные (рекомендуется)

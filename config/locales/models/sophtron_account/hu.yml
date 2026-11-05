@@ -4,5 +4,4 @@ hu:
     errors:
       models:
         sophtron_account:
-          no_balance: A Sophtron-számlának rendelkeznie kell aktuális vagy elérhető
-            egyenleggel
+          no_balance: "A Sophtron-számlának rendelkeznie kell aktuális vagy elérhető egyenleggel"

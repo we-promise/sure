@@ -32,9 +32,6 @@ ca:
       brokerage:
         long: Compte de broker
         short: Broker
-      cash_management:
-        long: Compte de gestió d'efectiu
-        short: CMA
       corporate_bond:
         long: Bo corporatiu
         short: Bo corporatiu
@@ -185,6 +182,9 @@ ca:
       workplace_pension_uk:
         long: Pensió laboral
         short: Pensió
+      cash_management:
+        short: CMA
+        long: Compte de gestió d'efectiu
     value_tooltip:
       cash: Efectiu
       holdings: Posicions

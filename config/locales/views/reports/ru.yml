@@ -30,7 +30,7 @@ ru:
       step3: Скопируйте API-ключ
       step4: 'Добавьте его в этот URL как: &api_key=YOUR_KEY'
       then_use: Затем используйте полный URL с =IMPORTDATA() в Google Sheets.
-      title_no_key: Требуется API-ключ
+      title_no_key: "Требуется API-ключ"
     index:
       date_range:
         from: С
@@ -67,8 +67,7 @@ ru:
     investment_flows:
       contributions: Пополнения
       contributions_description: Средства, добавленные в инвестиции
-      description: 'Отслеживайте движение средств на ваших инвестиционных счетах:
-        пополнения и выводы.'
+      description: "Отслеживайте движение средств на ваших инвестиционных счетах: пополнения и выводы."
       net_flow: Чистый поток
       net_flow_description: Общее чистое изменение
       title: Инвестиционные потоки

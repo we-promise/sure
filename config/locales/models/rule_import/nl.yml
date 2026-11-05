@@ -4,6 +4,6 @@ nl:
     errors:
       models:
         rule_import:
-          invalid_json: 'Ongeldige JSON in voorwaarden of acties: %{message}'
-          min_actions: Regel moet minstens één actie hebben
-          unsupported_resource_type: 'Niet-ondersteund resourcetype: %{resource_type}'
+          unsupported_resource_type: "Niet-ondersteund resourcetype: %{resource_type}"
+          invalid_json: "Ongeldige JSON in voorwaarden of acties: %{message}"
+          min_actions: "Regel moet minstens één actie hebben"

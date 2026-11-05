@@ -1,101 +1,92 @@
 ---
 es:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Conecta un informe del Flex Web Service de Interactive Brokers
+      institution_name: Interactive Brokers
   ibkr_items:
-    complete_account_setup:
-      none_created: No se ha creado ninguna cuenta.
-      none_selected: No se ha seleccionado ninguna cuenta.
-      success:
-        one: Se ha creado %{count} cuenta de Interactive Brokers correctamente.
-        other: Se han creado %{count} cuentas de Interactive Brokers correctamente.
-    create:
-      success: Interactive Brokers configurado correctamente.
     defaults:
       name: Interactive Brokers
-    destroy:
-      success: Conexión de Interactive Brokers programada para su eliminación.
     ibkr_item:
-      accounts_need_setup: Las cuentas necesitan configuración
-      accounts_need_setup_description: Algunas cuentas de IBKR deben vincularse a
-        cuentas de Sure.
-      delete: Eliminar
       deletion_in_progress: Eliminación en curso
-      error: Error
       flex_web_service: Flex Web Service
-      never_synced: Nunca sincronizado.
-      no_accounts_discovered: Aún no se han detectado cuentas de IBKR.
-      no_accounts_discovered_description: Ejecuta una sincronización después de configurar
-        tu consulta Flex para detectar cuentas.
-      requires_update: Las credenciales requieren atención
-      setup_accounts: Configurar cuentas
-      synced: Sincronizado hace %{time}. %{summary}.
       syncing: Sincronizando
-    link_existing_account:
-      already_linked: Esta cuenta de Interactive Brokers ya está vinculada.
-      failed: No se pudo vincular la cuenta de Interactive Brokers.
-      not_found: No se ha encontrado la cuenta o la configuración de Interactive Brokers.
-      only_manual_investment: Solo las cuentas de inversión manuales pueden vincularse
-        a Interactive Brokers.
-      success: Vinculado correctamente a la cuenta de Interactive Brokers.
-    select_accounts:
-      not_configured: Interactive Brokers no está configurado.
-    select_existing_account:
-      balance: Saldo
-      cancel: Cancelar
-      link: Vincular
-      no_accounts_available: Aún no hay cuentas de Interactive Brokers sin vincular
-        disponibles.
-      run_sync_hint: Ejecuta una sincronización desde Ajustes > Proveedores después
-        de actualizar tu consulta Flex.
-      title: Vincular cuenta de Interactive Brokers
-      wait_for_sync: Espera a que termine la sincronización de detección de cuentas.
+      requires_update: Las credenciales requieren atención
+      error: Error
+      synced: Sincronizado hace %{time}. %{summary}.
+      never_synced: Nunca sincronizado.
+      setup_accounts: Configurar cuentas
+      delete: Eliminar
+      accounts_need_setup: Las cuentas necesitan configuración
+      accounts_need_setup_description: Algunas cuentas de IBKR deben vincularse a cuentas de Sure.
+      no_accounts_discovered: Aún no se han detectado cuentas de IBKR.
+      no_accounts_discovered_description: Ejecuta una sincronización después de configurar tu consulta Flex para detectar cuentas.
     setup_accounts:
-      available_accounts:
-        account_id: 'ID de cuenta: %{account_id}'
-        account_summary: "%{account_type} • Saldo: %{balance}"
-        account_type_investment: Inversión
-        title: Cuentas disponibles
-      buttons:
-        back_to_settings: Volver a Ajustes
-        cancel: Cancelar
-        create_selected_accounts: Crear cuentas seleccionadas
-        done: Hecho
-        link: Vincular
-        refresh: Actualizar
+      page_title: Configurar cuentas de Interactive Brokers
       dialog_title: Configura tus cuentas de Interactive Brokers
+      subtitle: Selecciona qué cuentas de bróker de IBKR quieres vincular.
       info_box:
+        title: Importación mediante consulta Flex de IBKR
         items:
           item_1: Posiciones con precios y cantidades actuales
           item_2: Coste base por posición
           item_3: Operaciones, dividendos, comisiones y depósitos o retiradas de efectivo
-        title: Importación mediante consulta Flex de IBKR
-        warning: La actividad histórica se limita al periodo del informe de la consulta
-          Flex
+        warning: La actividad histórica se limita al periodo del informe de la consulta Flex
+      status:
+        fetching_accounts: Obteniendo cuentas de Interactive Brokers...
+        no_accounts_found_title: No se han encontrado cuentas.
+        no_accounts_found_description: Sure no pudo encontrar ninguna cuenta de IBKR en el último informe Flex.
+      available_accounts:
+        title: Cuentas disponibles
+        account_type_investment: Inversión
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "ID de cuenta: %{account_id}"
       link_existing:
-        description: O vincula una cuenta de IBKR detectada a una cuenta de inversión
-          manual existente.
+        description: O vincula una cuenta de IBKR detectada a una cuenta de inversión manual existente.
         manual_account_option: "%{name} (%{balance})"
         select_prompt: Selecciona una cuenta...
       linked_accounts:
-        linked_to_html: 'Vinculada a: %{account}'
         title: Ya vinculadas
-      page_title: Configurar cuentas de Interactive Brokers
-      status:
-        fetching_accounts: Obteniendo cuentas de Interactive Brokers...
-        no_accounts_found_description: Sure no pudo encontrar ninguna cuenta de IBKR
-          en el último informe Flex.
-        no_accounts_found_title: No se han encontrado cuentas.
-      subtitle: Selecciona qué cuentas de bróker de IBKR quieres vincular.
+        linked_to_html: "Vinculada a: %{account}"
+      buttons:
+        refresh: Actualizar
+        cancel: Cancelar
+        back_to_settings: Volver a Ajustes
+        create_selected_accounts: Crear cuentas seleccionadas
+        link: Vincular
+        done: Hecho
     sync_status:
+      no_accounts: Aún no se han detectado cuentas de IBKR
       all_linked:
         one: 1 cuenta vinculada
         other: "%{count} cuentas vinculadas"
-      no_accounts: Aún no se han detectado cuentas de IBKR
       partial: "%{linked} vinculadas, %{unlinked} necesitan configuración"
+    select_existing_account:
+      title: Vincular cuenta de Interactive Brokers
+      no_accounts_available: Aún no hay cuentas de Interactive Brokers sin vincular disponibles.
+      run_sync_hint: "Ejecuta una sincronización desde Ajustes > Proveedores después de actualizar tu consulta Flex."
+      wait_for_sync: Espera a que termine la sincronización de detección de cuentas.
+      balance: Saldo
+      link: Vincular
+      cancel: Cancelar
+    create:
+      success: Interactive Brokers configurado correctamente.
     update:
       success: Configuración de Interactive Brokers actualizada correctamente.
-  providers:
-    ibkr:
-      connection_description: Conecta un informe del Flex Web Service de Interactive
-        Brokers
-      institution_name: Interactive Brokers
-      name: Interactive Brokers
+    destroy:
+      success: Conexión de Interactive Brokers programada para su eliminación.
+    select_accounts:
+      not_configured: Interactive Brokers no está configurado.
+    link_existing_account:
+      not_found: No se ha encontrado la cuenta o la configuración de Interactive Brokers.
+      only_manual_investment: Solo las cuentas de inversión manuales pueden vincularse a Interactive Brokers.
+      already_linked: Esta cuenta de Interactive Brokers ya está vinculada.
+      success: Vinculado correctamente a la cuenta de Interactive Brokers.
+      failed: No se pudo vincular la cuenta de Interactive Brokers.
+    complete_account_setup:
+      success:
+        one: Se ha creado %{count} cuenta de Interactive Brokers correctamente.
+        other: Se han creado %{count} cuentas de Interactive Brokers correctamente.
+      none_selected: No se ha seleccionado ninguna cuenta.
+      none_created: No se ha creado ninguna cuenta.

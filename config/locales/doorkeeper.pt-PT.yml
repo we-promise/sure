@@ -1,169 +1,158 @@
----
 pt-PT:
   activerecord:
     attributes:
       doorkeeper/application:
-        name: Nome
-        redirect_uri: URI de Redirecionamento
+        name: 'Nome'
+        redirect_uri: 'URI de Redirecionamento'
     errors:
       models:
         doorkeeper/application:
           attributes:
             redirect_uri:
-              forbidden_uri: é proibido pelo servidor.
-              fragment_present: não pode conter um fragmento.
-              invalid_uri: deve ser um URI válido.
-              relative_uri: deve ser um URI absoluto.
-              secured_uri: deve ser um URI HTTPS/SSL.
-              unspecified_scheme: deve especificar um esquema.
+              fragment_present: 'não pode conter um fragmento.'
+              invalid_uri: 'deve ser um URI válido.'
+              unspecified_scheme: 'deve especificar um esquema.'
+              relative_uri: 'deve ser um URI absoluto.'
+              secured_uri: 'deve ser um URI HTTPS/SSL.'
+              forbidden_uri: 'é proibido pelo servidor.'
             scopes:
-              not_match_configured: não corresponde às configurações do servidor.
+              not_match_configured: "não corresponde às configurações do servidor."
+
   doorkeeper:
     applications:
-      buttons:
-        authorize: Autorizar
-        cancel: Cancelar
-        destroy: Eliminar
-        edit: Editar
-        submit: Submeter
       confirmations:
-        destroy: Tem a certeza?
-      edit:
-        title: Editar aplicação
+        destroy: 'Tem a certeza?'
+      buttons:
+        edit: 'Editar'
+        destroy: 'Eliminar'
+        submit: 'Submeter'
+        cancel: 'Cancelar'
+        authorize: 'Autorizar'
       form:
-        error: Ups! Verifique o formulário em caso de possíveis erros.
+        error: 'Ups! Verifique o formulário em caso de possíveis erros.'
       help:
-        blank_redirect_uri: Deixe em branco se configurou o seu serviço para utilizar
-          Client Credentials, Resource Owner Password Credentials ou qualquer outro
-          tipo de concessão que não exija um URI de redirecionamento.
-        confidential: A aplicação será utilizada em situações em que o segredo do
-          cliente possa ser mantido confidencial. As aplicações móveis nativas e as
-          Single Page Apps são consideradas não confidenciais.
-        redirect_uri: Utilize uma linha por URI
-        scopes: Separe os âmbitos com espaços. Deixe em branco para utilizar os âmbitos
-          predefinidos.
+        confidential: 'A aplicação será utilizada em situações em que o segredo do cliente possa ser mantido confidencial. As aplicações móveis nativas e as Single Page Apps são consideradas não confidenciais.'
+        redirect_uri: 'Utilize uma linha por URI'
+        blank_redirect_uri: "Deixe em branco se configurou o seu serviço para utilizar Client Credentials, Resource Owner Password Credentials ou qualquer outro tipo de concessão que não exija um URI de redirecionamento."
+        scopes: 'Separe os âmbitos com espaços. Deixe em branco para utilizar os âmbitos predefinidos.'
+      edit:
+        title: 'Editar aplicação'
       index:
-        actions: Ações
-        callback_url: URL de Callback
-        confidential: Confidencial?
+        title: 'As suas aplicações'
+        new: 'Nova Aplicação'
+        name: 'Nome'
+        callback_url: 'URL de Callback'
+        confidential: 'Confidencial?'
+        actions: 'Ações'
         confidentiality:
-          'no': Não
-          'yes': Sim
-        name: Nome
-        new: Nova Aplicação
-        title: As suas aplicações
+          'yes': 'Sim'
+          'no': 'Não'
       new:
-        title: Nova Aplicação
+        title: 'Nova Aplicação'
       show:
-        actions: Ações
-        application_id: UID
-        callback_urls: URLs de Callback
-        confidential: Confidencial
-        not_defined: Não definido
-        scopes: Âmbitos
-        secret: Segredo
-        secret_hashed: Segredo com hash
         title: 'Aplicação: %{name}'
+        application_id: 'UID'
+        secret: 'Segredo'
+        secret_hashed: 'Segredo com hash'
+        scopes: 'Âmbitos'
+        confidential: 'Confidencial'
+        callback_urls: 'URLs de Callback'
+        actions: 'Ações'
+        not_defined: 'Não definido'
+
     authorizations:
       buttons:
-        authorize: Autorizar
-        deny: Negar
+        authorize: 'Autorizar'
+        deny: 'Negar'
       error:
-        go_back: Voltar
-        title: Ocorreu um erro
-      form_post:
-        title: Submeter este formulário
+        title: 'Ocorreu um erro'
+        go_back: 'Voltar'
       new:
-        able_to: Esta aplicação poderá
-        prompt: Autorizar %{client_name} a utilizar a sua conta?
-        title: Autorização necessária
+        title: 'Autorização necessária'
+        prompt: 'Autorizar %{client_name} a utilizar a sua conta?'
+        able_to: 'Esta aplicação poderá'
       show:
+        title: 'Código de autorização'
         authorization_code_label: 'Código de autorização:'
-        copy_instructions: Copie este código e cole-o na aplicação.
-        title: Código de autorização
+        copy_instructions: 'Copie este código e cole-o na aplicação.'
+      form_post:
+        title: 'Submeter este formulário'
+
     authorized_applications:
-      buttons:
-        revoke: Revogar
       confirmations:
-        revoke: Tem a certeza?
+        revoke: 'Tem a certeza?'
+      buttons:
+        revoke: 'Revogar'
       index:
-        application: Aplicação
-        created_at: Criada em
-        date_format: "%Y-%m-%d %H:%M:%S"
-        title: As suas aplicações autorizadas
+        title: 'As suas aplicações autorizadas'
+        application: 'Aplicação'
+        created_at: 'Criada em'
+        date_format: '%Y-%m-%d %H:%M:%S'
+
+    pre_authorization:
+      status: 'Pré-autorização'
+
     errors:
       messages:
-        access_denied: O proprietário do recurso ou o servidor de autorização negou
-          o pedido.
-        admin_authenticator_not_configured: O acesso ao painel de administração é
-          proibido porque o Doorkeeper.configure.admin_authenticator não está configurado.
-        credential_flow_not_configured: O fluxo Resource Owner Password Credentials
-          falhou porque o Doorkeeper.configure.resource_owner_from_credentials não
-          está configurado.
-        forbidden_token:
-          missing_scope: O acesso a este recurso exige o âmbito "%{oauth_scopes}".
-        invalid_client: A autenticação do cliente falhou devido a um cliente desconhecido,
-          à ausência de autenticação do cliente ou a um método de autenticação não
-          suportado.
-        invalid_code_challenge_method:
-          one: O code_challenge_method tem de ser %{challenge_methods}.
-          other: O code_challenge_method tem de ser um de %{challenge_methods}.
-          zero: O servidor de autorização não suporta PKCE porque não existem valores
-            code_challenge_method aceites.
-        invalid_grant: A concessão de autorização fornecida é inválida, expirou, foi
-          revogada, não corresponde ao URI de redirecionamento utilizado no pedido
-          de autorização ou foi emitida para outro cliente.
-        invalid_redirect_uri: O URI de redirecionamento pedido está malformado ou
-          não corresponde ao URI de redirecionamento do cliente.
+        # Common error messages
         invalid_request:
-          invalid_code_challenge: É necessário um code challenge.
+          unknown: 'O pedido está em falta de um parâmetro obrigatório, inclui um valor de parâmetro não suportado ou está, de outro modo, malformado.'
           missing_param: 'Parâmetro obrigatório em falta: %{value}.'
-          request_not_authorized: O pedido precisa de ser autorizado. O parâmetro
-            obrigatório para autorizar o pedido está em falta ou é inválido.
-          unknown: O pedido está em falta de um parâmetro obrigatório, inclui um valor
-            de parâmetro não suportado ou está, de outro modo, malformado.
-        invalid_scope: O âmbito pedido é inválido, desconhecido ou malformado.
+          request_not_authorized: 'O pedido precisa de ser autorizado. O parâmetro obrigatório para autorizar o pedido está em falta ou é inválido.'
+          invalid_code_challenge: 'É necessário um code challenge.'
+        invalid_redirect_uri: "O URI de redirecionamento pedido está malformado ou não corresponde ao URI de redirecionamento do cliente."
+        unauthorized_client: 'O cliente não está autorizado a realizar este pedido com este método.'
+        access_denied: 'O proprietário do recurso ou o servidor de autorização negou o pedido.'
+        invalid_scope: 'O âmbito pedido é inválido, desconhecido ou malformado.'
+        invalid_code_challenge_method:
+          zero: 'O servidor de autorização não suporta PKCE porque não existem valores code_challenge_method aceites.'
+          one: 'O code_challenge_method tem de ser %{challenge_methods}.'
+          other: 'O code_challenge_method tem de ser um de %{challenge_methods}.'
+        server_error: 'O servidor de autorização encontrou uma condição inesperada que o impediu de cumprir o pedido.'
+        temporarily_unavailable: 'O servidor de autorização está atualmente impossibilitado de processar o pedido devido a uma sobrecarga temporária ou a manutenção do servidor.'
+
+        # Configuration error messages
+        credential_flow_not_configured: 'O fluxo Resource Owner Password Credentials falhou porque o Doorkeeper.configure.resource_owner_from_credentials não está configurado.'
+        resource_owner_authenticator_not_configured: 'A pesquisa de Resource Owner falhou porque o Doorkeeper.configure.resource_owner_authenticator não está configurado.'
+        admin_authenticator_not_configured: 'O acesso ao painel de administração é proibido porque o Doorkeeper.configure.admin_authenticator não está configurado.'
+
+        # Access grant errors
+        unsupported_response_type: 'O servidor de autorização não suporta este tipo de resposta.'
+        unsupported_response_mode: 'O servidor de autorização não suporta este modo de resposta.'
+
+        # Access token errors
+        invalid_client: 'A autenticação do cliente falhou devido a um cliente desconhecido, à ausência de autenticação do cliente ou a um método de autenticação não suportado.'
+        invalid_grant: 'A concessão de autorização fornecida é inválida, expirou, foi revogada, não corresponde ao URI de redirecionamento utilizado no pedido de autorização ou foi emitida para outro cliente.'
+        unsupported_grant_type: 'O tipo de concessão de autorização não é suportado pelo servidor de autorização.'
+
         invalid_token:
-          expired: O token de acesso expirou
-          revoked: O token de acesso foi revogado
-          unknown: O token de acesso é inválido
-        resource_owner_authenticator_not_configured: A pesquisa de Resource Owner
-          falhou porque o Doorkeeper.configure.resource_owner_authenticator não está
-          configurado.
+          revoked: "O token de acesso foi revogado"
+          expired: "O token de acesso expirou"
+          unknown: "O token de acesso é inválido"
         revoke:
-          unauthorized: Não está autorizado a revogar este token
-        server_error: O servidor de autorização encontrou uma condição inesperada
-          que o impediu de cumprir o pedido.
-        temporarily_unavailable: O servidor de autorização está atualmente impossibilitado
-          de processar o pedido devido a uma sobrecarga temporária ou a manutenção
-          do servidor.
-        unauthorized_client: O cliente não está autorizado a realizar este pedido
-          com este método.
-        unsupported_grant_type: O tipo de concessão de autorização não é suportado
-          pelo servidor de autorização.
-        unsupported_response_mode: O servidor de autorização não suporta este modo
-          de resposta.
-        unsupported_response_type: O servidor de autorização não suporta este tipo
-          de resposta.
+          unauthorized: "Não está autorizado a revogar este token"
+
+        forbidden_token:
+          missing_scope: 'O acesso a este recurso exige o âmbito "%{oauth_scopes}".'
+
     flash:
       applications:
         create:
-          notice: Aplicação criada.
+          notice: 'Aplicação criada.'
         destroy:
-          notice: Aplicação eliminada.
+          notice: 'Aplicação eliminada.'
         update:
-          notice: Aplicação atualizada.
+          notice: 'Aplicação atualizada.'
       authorized_applications:
         destroy:
-          notice: Aplicação revogada.
+          notice: 'Aplicação revogada.'
+
     layouts:
       admin:
+        title: 'Doorkeeper'
         nav:
-          applications: Aplicações
-          home: Início
-          oauth2_provider: Serviço OAuth2
-        title: Doorkeeper
+          oauth2_provider: 'Serviço OAuth2'
+          applications: 'Aplicações'
+          home: 'Início'
       application:
-        title: Necessária autorização OAuth
-    pre_authorization:
-      status: Pré-autorização
+        title: 'Necessária autorização OAuth'

@@ -2,22 +2,20 @@
 hu:
   pending_duplicate_merges:
     create:
-      invalid_transaction: Érvénytelen tranzakció van kijelölve az összevonáshoz
-      merge_failed: Nem sikerült összevonni a tranzakciókat
-      merge_success: A függőben lévő tranzakció összevonva a könyvelt tranzakcióval
       no_posted_selected: Kérlek válassz egy könyvelt tranzakciót az összevonáshoz
-    new:
-      next: Következő 10 →
-      no_candidates: Ezen a számlán nem találhatók könyvelt tranzakciók.
-      pending_transaction: Függőben lévő tranzakció
-      previous: "← Előző 10"
-      select_posted: Válaszd ki az összevonandó könyvelt tranzakciót
-      showing_range: "%{start} – %{end} megjelenítve"
-      submit_button: Tranzakciók összevonása
-      title: Összevonás könyvelt tranzakcióval
-      warning_description: Ezzel manuálisan vonhatsz össze egy függőben lévő tranzakciót
-        annak könyvelt változatával. A függőben lévő tranzakció törlődik, és csak
-        a könyvelt marad meg.
-      warning_title: Manuális duplikáció-összevonás
+      invalid_transaction: Érvénytelen tranzakció van kijelölve az összevonáshoz
+      merge_success: A függőben lévő tranzakció összevonva a könyvelt tranzakcióval
+      merge_failed: Nem sikerült összevonni a tranzakciókat
     set_transaction:
       pending_only: Ez a funkció csak függőben lévő tranzakciókhoz érhető el
+    new:
+      title: Összevonás könyvelt tranzakcióval
+      warning_title: Manuális duplikáció-összevonás
+      warning_description: Ezzel manuálisan vonhatsz össze egy függőben lévő tranzakciót annak könyvelt változatával. A függőben lévő tranzakció törlődik, és csak a könyvelt marad meg.
+      pending_transaction: Függőben lévő tranzakció
+      select_posted: Válaszd ki az összevonandó könyvelt tranzakciót
+      showing_range: "%{start} – %{end} megjelenítve"
+      previous: "← Előző 10"
+      next: "Következő 10 →"
+      no_candidates: Ezen a számlán nem találhatók könyvelt tranzakciók.
+      submit_button: Tranzakciók összevonása

@@ -6,5 +6,4 @@ zh-TW:
         entry:
           attributes:
             base:
-              invalid_sell_quantity: 無法賣出 %{sell_qty} 股 %{ticker}，因為您目前僅持有 %{current_qty}
-                股
+              invalid_sell_quantity: 無法賣出 %{sell_qty} 股 %{ticker}，因為您目前僅持有 %{current_qty} 股

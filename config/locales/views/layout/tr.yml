@@ -5,20 +5,20 @@ tr:
       insights: İçgörüler
       nav:
         assistant: Asistan
-        bills: Faturalar
         budgets: Bütçeler
         goals: Hedefler
         home: Ana Sayfa
-        plan: Plan
         reports: Raporlar
         transactions: İşlemler
+        bills: Faturalar
+        plan: Plan
       privacy_mode: Gizlilik modunu değiştir
-      release_highlight:
-        done: Anladım
-        title: Yenilikler
       resize_left_sidebar: Hesaplar kenar çubuğunu yeniden boyutlandır
       resize_right_sidebar: Asistan kenar çubuğunu yeniden boyutlandır
       skip_to_main: Ana içeriğe atla
+      release_highlight:
+        title: Yenilikler
+        done: Anladım
     auth:
       existing_account: Zaten bir hesabınız var mı?
       no_account: "%{product_name}'ye yeni misiniz?"

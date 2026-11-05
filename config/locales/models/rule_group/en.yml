@@ -1,10 +1,10 @@
 ---
 en:
   activerecord:
-    attributes:
-      rule_group:
-        name: Name
     models:
       rule_group:
-        one: Group
-        other: Groups
+        one: "Group"
+        other: "Groups"
+    attributes:
+      rule_group:
+        name: "Name"

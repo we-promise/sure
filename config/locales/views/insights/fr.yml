@@ -1,6 +1,9 @@
 ---
 fr:
   insights:
+    notification:
+      title: Nouvelle analyse financière
+      body: Ouvrez Sure pour consulter votre dernière analyse par IA.
     actions:
       budget: Voir le budget
       cash_flow_warning: Vérifier les transactions récurrentes
@@ -13,22 +16,11 @@ fr:
     card:
       acknowledge: Compris
       acknowledge_title: Masquer jusqu'à ce que les chiffres changent
-      acknowledged: Analyse ignorée
+      acknowledged: "Analyse ignorée"
       dig_in: Approfondir avec l'IA
       dismiss: Ignorer
       dismissed: Analyse ignorée
       new: Nouveau
-    dig_in:
-      prompt: |-
-        Aide-moi à approfondir cette analyse.
-
-        Analyse : %{title}
-        Ce que Sure a trouvé : %{body}
-        Période : %{period}
-        Chiffres :
-        %{facts}
-
-        Qu'est-ce qui l'explique, et y a-t-il quelque chose que je devrais faire ?
     feed:
       acknowledge_aria: 'Compris : %{title}'
       header: Dernières
@@ -62,9 +54,6 @@ fr:
       next_n_days:
         one: Jour suivant
         other: "%{count} prochains jours"
-    notification:
-      body: Ouvrez Sure pour consulter votre dernière analyse par IA.
-      title: Nouvelle analyse financière
     refresh:
       checking: Vérification…
       queued: Nous générons de nouvelles analyses. Revenez dans une minute.
@@ -72,10 +61,11 @@ fr:
       budget_at_risk:
         near: "%{categories} approchent de leurs limites ce mois-ci. Vous avez utilisé
           %{budget_spent_pct}% de votre budget total jusqu'à présent."
-        over: "%{categories} ont dépassé le budget ce mois-ci. Vous avez utilisé %{budget_spent_pct}%
-          de votre budget total jusqu'à présent."
+        over: "%{categories} ont dépassé le budget ce mois-ci. Vous avez utilisé
+          %{budget_spent_pct}% de votre budget total jusqu'à présent."
       budget_on_track: Vous avez dépensé %{spent} sur votre budget de %{budgeted}
         (%{budget_spent_pct}%) et tout reste dans les limites.
+      maintained_goal_depleted: "%{goal} détient %{saved} sur les %{target} qu'elle doit conserver. Il manque %{missing}."
       cash_flow_warning:
         low: D'après vos prochaines transactions récurrentes et vos dépenses habituelles,
           votre solde de trésorerie pourrait descendre à %{projected_low} vers le
@@ -85,29 +75,27 @@ fr:
           vers le %{projected_low_date}.
       idle_cash: "%{account} détient %{balance} sans aucune activité depuis %{idle_days}
         jours."
-      maintained_goal_depleted: "%{goal} détient %{saved} sur les %{target} qu'elle
-        doit conserver. Il manque %{missing}."
       net_worth_milestone: Votre patrimoine net a franchi %{milestone} et s'élève
         désormais à %{net_worth}.
       savings_rate_change:
         down: Vous avez épargné %{current_rate}% de vos revenus en %{month}, soit
           %{change_pp} points de pourcentage de moins que %{previous_rate}% le mois
           précédent.
-        down_negative: 'Vous avez dépensé plus que vous n''avez gagné en %{month}
-          : votre taux d''épargne est tombé à %{current_rate}%, contre %{previous_rate}%
-          le mois précédent.'
+        down_negative: "Vous avez dépensé plus que vous n'avez gagné en %{month}
+          : votre taux d'épargne est tombé à %{current_rate}%, contre %{previous_rate}%
+          le mois précédent."
         up: Vous avez épargné %{current_rate}% de vos revenus en %{month}, soit %{change_pp}
           points de pourcentage de plus que %{previous_rate}% le mois précédent.
       spending_anomaly:
-        above: Vous êtes en voie de dépenser %{projected_spend} pour %{category} ce
-          mois-ci, soit environ %{deviation_pct}% de plus que votre moyenne mensuelle
+        above: Vous êtes en voie de dépenser %{projected_spend} pour %{category}
+          ce mois-ci, soit environ %{deviation_pct}% de plus que votre moyenne mensuelle
           récente de %{baseline_spend}.
-        below: Vous êtes en voie de dépenser %{projected_spend} pour %{category} ce
-          mois-ci, soit environ %{deviation_pct}% de moins que votre moyenne mensuelle
+        below: Vous êtes en voie de dépenser %{projected_spend} pour %{category}
+          ce mois-ci, soit environ %{deviation_pct}% de moins que votre moyenne mensuelle
           récente de %{baseline_spend}.
-      subscription_audit: "%{name} (%{amount}) n'est pas réapparu depuis la date prévue
-        du %{expected_on}. Il est possible que l'abonnement ait été annulé ou que
-        le prélèvement ait changé de date."
+      subscription_audit: "%{name} (%{amount}) n'est pas réapparu depuis la date
+        prévue du %{expected_on}. Il est possible que l'abonnement ait été annulé
+        ou que le prélèvement ait changé de date."
     titles:
       budget_at_risk:
         one: Une catégorie de votre budget nécessite votre attention
@@ -116,9 +104,9 @@ fr:
       cash_flow_warning:
         low: Votre solde de trésorerie pourrait devenir faible
         negative: Votre solde de trésorerie pourrait devenir négatif
-      idle_cash: Liquidités inactives sur %{account}
       maintained_goal_depleted: "%{goal} est passée sous son niveau"
-      net_worth_milestone: 'Étape de patrimoine net : %{milestone}'
+      idle_cash: Liquidités inactives sur %{account}
+      net_worth_milestone: "Étape de patrimoine net : %{milestone}"
       savings_rate_change:
         down: Votre taux d'épargne a baissé en %{month}
         up: Votre taux d'épargne s'est amélioré en %{month}
@@ -136,3 +124,14 @@ fr:
       savings_rate_change: Taux d'épargne
       spending_anomaly: Dépenses
       subscription_audit: Abonnements
+    dig_in:
+      prompt: |-
+        Aide-moi à approfondir cette analyse.
+    
+        Analyse : %{title}
+        Ce que Sure a trouvé : %{body}
+        Période : %{period}
+        Chiffres :
+        %{facts}
+    
+        Qu'est-ce qui l'explique, et y a-t-il quelque chose que je devrais faire ?

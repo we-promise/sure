@@ -3,11 +3,10 @@ nl:
   activerecord:
     attributes:
       wise_item:
-        sca_private_key: Privésleutel voor SCA
+        sca_private_key: "Privésleutel voor SCA"
     errors:
       models:
         wise_item:
           attributes:
             sca_private_key:
-              encryption_unavailable: kan niet worden opgeslagen omdat Active Record-versleuteling
-                niet is geconfigureerd op deze installatie
+              encryption_unavailable: "kan niet worden opgeslagen omdat Active Record-versleuteling niet is geconfigureerd op deze installatie"

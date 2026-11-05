@@ -6,6 +6,6 @@ en:
         transaction:
           attributes:
             attachments:
-              invalid_format: file %{index} has unsupported format (%{file_format})
-              too_large: file %{index} is too large (maximum %{max_mb}MB)
-              too_many: cannot exceed %{max} files per transaction
+              too_many: "cannot exceed %{max} files per transaction"
+              too_large: "file %{index} is too large (maximum %{max_mb}MB)"
+              invalid_format: "file %{index} has unsupported format (%{file_format})"

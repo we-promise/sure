@@ -27,39 +27,28 @@ fr:
       data_not_available: Données non disponibles pour la période sélectionnée
     confirm_unlink:
       confirm_button: Confirmer et délier
-      description_html: Vous êtes sur le point de délier <strong>%{account_name}</strong>
-        de <strong>%{provider_name}</strong>. Cela le convertira en compte manuel.
+      description_html: Vous êtes sur le point de délier <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Cela le convertira en compte manuel.
       title: Délier le compte du fournisseur ?
-      warning_can_delete: Après la déliaison, vous pourrez supprimer le compte si
-        nécessaire
-      warning_manual_updates: Vous devrez ajouter des transactions et mettre à jour
-        les soldes manuellement
-      warning_no_sync: Le compte ne se synchronisera plus automatiquement avec votre
-        fournisseur
+      warning_can_delete: Après la déliaison, vous pourrez supprimer le compte si nécessaire
+      warning_manual_updates: Vous devrez ajouter des transactions et mettre à jour les soldes manuellement
+      warning_no_sync: Le compte ne se synchronisera plus automatiquement avec votre fournisseur
       warning_title: Ce que cela signifie
-      warning_transactions_kept: Toutes les transactions et soldes existants seront
-        conservés
-      warning_wallet_connection: Tous les comptes de cette connexion Apple Wallet
-        seront dissociés. Leurs transactions et soldes seront conservés. Vous pourrez
-        vous reconnecter depuis l'app iOS Sure en configurant à nouveau Wallet.
+      warning_transactions_kept: Toutes les transactions et soldes existants seront conservés
+      warning_wallet_connection: Tous les comptes de cette connexion Apple Wallet seront dissociés. Leurs transactions et soldes seront conservés. Vous pourrez vous reconnecter depuis l'app iOS Sure en configurant à nouveau Wallet.
     create:
       success: Compte %{type} créé
     destroy:
-      cannot_delete_linked: Impossible de supprimer un compte lié. Veuillez d'abord
-        le délier.
+      cannot_delete_linked: Impossible de supprimer un compte lié. Veuillez d'abord le délier.
       failed: La suppression de la ressource a échoué. Veuillez réessayer plus tard.
       success: Le compte %{type} a été préparé à la suppression
     empty:
-      empty_message: Ajoutez un compte via une connexion, une importation ou en entrant
-        manuellement.
+      empty_message: Ajoutez un compte via une connexion, une importation ou en entrant manuellement.
       new_account: Nouveau compte
       no_accounts: Aucun compte pour l'instant
     form:
       additional_details: Détails supplémentaires
       balance: 'Solde à la date :'
-      enable_category_matcher_hint: Lorsque cette option est activée, la catégorie
-        suggérée par le fournisseur est appliquée aux transactions importées. Désactivez-la
-        pour laisser les nouvelles transactions sans catégorie.
+      enable_category_matcher_hint: Lorsque cette option est activée, la catégorie suggérée par le fournisseur est appliquée aux transactions importées. Désactivez-la pour laisser les nouvelles transactions sans catégorie.
       enable_category_matcher_label: Activer l'attribution automatique de catégorie
       exclude_from_reports: Exclure de tous les rapports
       institution_domain_label: Domaine de l'institution
@@ -69,15 +58,13 @@ fr:
       name_label: Nom du compte
       name_placeholder: Nom de compte d'exemple
       notes_label: Notes
-      notes_placeholder: Stockez des informations supplémentaires comme les numéros
-        de compte, codes de tri, IBAN, numéros de routage, etc.
+      notes_placeholder: Stockez des informations supplémentaires comme les numéros de compte, codes de tri, IBAN, numéros de routage, etc.
       opening_balance_date_label: Date du solde d'ouverture
     index:
       accounts: Comptes
       cancel_sync: Annuler la synchronisation
       financekit_accounts:
-        description: Gérez les connexions Apple Wallet et leur synchronisation dans
-          l'app iOS Sure.
+        description: Gérez les connexions Apple Wallet et leur synchronisation dans l'app iOS Sure.
         title: Apple Wallet
       manual_accounts:
         other_accounts: Autres comptes
@@ -102,13 +89,11 @@ fr:
     not_authorized: Vous n'avez pas la permission de gérer ce compte
     select_provider:
       already_linked: Le compte est déjà lié à un fournisseur
-      description: Choisissez le fournisseur que vous souhaitez utiliser pour lier
-        %{account_name}
+      description: Choisissez le fournisseur que vous souhaitez utiliser pour lier %{account_name}
       no_providers: Aucun fournisseur n'est actuellement configuré
       title: Sélectionner un fournisseur à lier
     set_default:
-      depository_only: Seuls les comptes de liquidités et de carte de crédit peuvent
-        être définis par défaut.
+      depository_only: Seuls les comptes de liquidités et de carte de crédit peuvent être définis par défaut.
     show:
       activity:
         amount: Montant
@@ -136,18 +121,10 @@ fr:
         owed: Montant dû
       header:
         complete_setup: Configuration complète
-      limited_fx_history_warning: L'historique des taux de change n'est disponible
-        qu'à partir du %{date}. Les transactions antérieures à cette date utilisent
-        des conversions de devises approximatives — cela peut se produire lorsque
-        le fournisseur FX n'offre qu'une fenêtre historique limitée.
+      limited_fx_history_warning: L'historique des taux de change n'est disponible qu'à partir du %{date}. Les transactions antérieures à cette date utilisent des conversions de devises approximatives — cela peut se produire lorsque le fournisseur FX n'offre qu'une fenêtre historique limitée.
       menu:
         confirm_accept: Supprimer "%{name}"
-        confirm_body_html: "<p>En supprimant ce compte, vous effacerez son historique
-          de valeur, affectant divers aspects de votre solde global. Cette action
-          aura un impact direct sur vos calculs de valeur nette et les graphiques
-          des comptes.</p><br /> <p>Après la suppression, il n'y a aucun moyen de
-          restaurer l'information du compte car vous aurez besoin d'en ajouter un
-          nouveau.</p>"
+        confirm_body_html: "<p>En supprimant ce compte, vous effacerez son historique de valeur, affectant divers aspects de votre solde global. Cette action aura un impact direct sur vos calculs de valeur nette et les graphiques des comptes.</p><br /> <p>Après la suppression, il n'y a aucun moyen de restaurer l'information du compte car vous aurez besoin d'en ajouter un nouveau.</p>"
         confirm_title: Supprimer le compte ?
         delete_account: Supprimer le compte
         edit: Modifier
@@ -170,16 +147,13 @@ fr:
       configure_providers: Configurez vos fournisseurs ici.
       expand_all: Tout déplier
       missing_data: Données historiques manquantes
-      missing_data_description: "%{product} utilise des fournisseurs tiers pour récupérer
-        l'historique des taux de change, des cours des titres, etc. Ces données sont
-        nécessaires au calcul précis des soldes historiques des comptes."
+      missing_data_description: "%{product} utilise des fournisseurs tiers pour récupérer l'historique des taux de change, des cours des titres, etc. Ces données sont nécessaires au calcul précis des soldes historiques des comptes."
       new_account: Nouveau compte
       new_account_group: Nouveau %{account_group}
       new_asset: Nouvel actif
       new_debt: Nouvelle dette
       reorder_account: Déplacer %{account}
-      reorder_hint: Faites glisser pour réorganiser. Au clavier, appuyez sur Entrée,
-        puis utilisez les flèches.
+      reorder_hint: Faites glisser pour réorganiser. Au clavier, appuyez sur Entrée, puis utilisez les flèches.
       sort_mode:
         done: Terminé
         hint: Faites glisser les comptes par leur poignée pour les réorganiser.
@@ -238,5 +212,4 @@ fr:
   email_confirmations:
     new:
       invalid_token: Lien de confirmation invalide ou expiré.
-      success_login: Votre email a été confirmé. Veuillez vous identifier avec votre
-        nouvelle adresse email.
+      success_login: Votre email a été confirmé. Veuillez vous identifier avec votre nouvelle adresse email.

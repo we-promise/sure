@@ -14,9 +14,6 @@ tr:
       state_region_label: Eyalet/Bölge
       state_region_placeholder: CA
       title: Mülk bilgilerini manuel girin
-    avm_providers:
-      realie: Realie
-      rentcast: RentCast
     balances:
       market_value_label: Tahmini piyasa değeri
       market_value_tooltip: Mülkünüzün tahmini piyasa değeri. Bu rakam genellikle
@@ -46,28 +43,19 @@ tr:
       subtype_prompt: Mülk türü seçin
       year_built: İnşa yılı
       year_built_placeholder: '2000'
-    form_tabs:
-      address: Adres
-      overview: Genel Bakış
-      value: Değer
     new:
-      avm_description: Mülk için bir ad ve adresini girin. %{provider} mülk ayrıntılarını
-        ve tahmini piyasa değerini sizin için bulacak.
-      avm_option: "%{provider} ile ekle"
-      avm_preview_back: Geri
-      avm_preview_confirm: Mülkü ekle
-      avm_preview_description: "%{provider} şunları buldu. Mülkü eklemeden önce ayrıntıları
-        gözden geçirin — henüz hiçbir şey oluşturulmadı."
-      avm_preview_no_record: "%{provider} bu adreste bir mülk kaydı bulamadı; bu nedenle
-        gösterilen değer çevre bölgeye dayalı bir tahmindir. Devam etmeden önce adresi
-        kontrol edin."
-      avm_preview_title: Mülk ayrıntılarını onaylayın
-      avm_submit: Mülkü sorgula
-      avm_title: Mülkü %{provider} ile ekle
-      avm_us_only: "%{provider} yalnızca Amerika Birleşik Devletleri'nde bulunan mülkleri
-        destekler."
       next: İleri
       title: Mülk bilgilerini girin
+      avm_option: '%{provider} ile ekle'
+      avm_title: Mülkü %{provider} ile ekle
+      avm_description: Mülk için bir ad ve adresini girin. %{provider} mülk ayrıntılarını ve tahmini piyasa değerini sizin için bulacak.
+      avm_us_only: '%{provider} yalnızca Amerika Birleşik Devletleri''nde bulunan mülkleri destekler.'
+      avm_submit: Mülkü sorgula
+      avm_preview_title: Mülk ayrıntılarını onaylayın
+      avm_preview_description: '%{provider} şunları buldu. Mülkü eklemeden önce ayrıntıları gözden geçirin — henüz hiçbir şey oluşturulmadı.'
+      avm_preview_no_record: '%{provider} bu adreste bir mülk kaydı bulamadı; bu nedenle gösterilen değer çevre bölgeye dayalı bir tahmindir. Devam etmeden önce adresi kontrol edin.'
+      avm_preview_back: Geri
+      avm_preview_confirm: Mülkü ekle
     overview:
       living_area: Yaşam Alanı
       market_value: Piyasa Değeri
@@ -112,3 +100,10 @@ tr:
         trend: Eğilim
         unknown: Bilinmiyor
         year_built: İnşa Yılı
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    form_tabs:
+      address: Adres
+      overview: Genel Bakış
+      value: Değer

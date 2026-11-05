@@ -2,30 +2,30 @@
 nl:
   tags:
     create:
-      created: Tag gemaakt
-      error: 'Fout bij het maken van tag: %{error}'
+      created: "Tag gemaakt"
+      error: "Fout bij het maken van tag: %{error}"
     destroy:
-      deleted: Tag verwijderd
+      deleted: "Tag verwijderd"
     destroy_all:
-      all_deleted: Alle tags verwijderd
+      all_deleted: "Alle tags verwijderd"
     edit:
-      edit: Tag bewerken
+      edit: "Tag bewerken"
     form:
-      placeholder: Naam van tag
+      placeholder: "Naam van tag"
     index:
-      delete_all: Alles verwijderen
-      empty: Nog geen tags
-      new: Nieuwe tag
-      tags: Tags
+      empty: "Nog geen tags"
+      new: "Nieuwe tag"
+      tags: "Tags"
+      delete_all: "Alles verwijderen"
     menu:
-      label: Tags bewerken
+      label: "Tags bewerken"
     new:
-      new: Nieuwe tag
+      new: "Nieuwe tag"
     summary:
-      add: Tags toevoegen
-      title: 'Tags: %{names}'
+      add: "Tags toevoegen"
+      title: "Tags: %{names}"
     tag:
-      delete: Verwijderen
-      edit: Bewerken
+      delete: "Verwijderen"
+      edit: "Bewerken"
     update:
-      updated: Tag bijgewerkt
+      updated: "Tag bijgewerkt"

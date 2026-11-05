@@ -19,8 +19,7 @@ fr:
   monobank_item:
     errors:
       account_processing_failed: Impossible de synchroniser le compte Monobank
-      account_sync_schedule_failed: Impossible de planifier la synchronisation du
-        compte Monobank
+      account_sync_schedule_failed: Impossible de planifier la synchronisation du compte Monobank
       sync_failed: Impossible de synchroniser la connexion Monobank
       transactions_failed: Impossible de récupérer le relevé Monobank
     institution_summary:
@@ -60,8 +59,7 @@ fr:
     link_accounts:
       link_failed: Aucun compte n'a été lié.
       no_accounts_selected: Sélectionnez au moins un compte.
-      no_credentials_configured: Configurez d'abord Monobank dans les paramètres des
-        fournisseurs.
+      no_credentials_configured: Configurez d'abord Monobank dans les paramètres des fournisseurs.
       success:
         one: 1 compte Monobank lié.
         other: "%{count} comptes Monobank liés."
@@ -75,8 +73,7 @@ fr:
       delete: Supprimer
       deletion_in_progress: Suppression en cours
       error: Erreur
-      no_accounts_description: Récupérez les comptes Monobank et choisissez ceux à
-        lier.
+      no_accounts_description: Récupérez les comptes Monobank et choisissez ceux à lier.
       no_accounts_title: Aucun compte importé pour l'instant
       setup_action: Configurer les comptes
       setup_description: "%{linked} comptes liés sur %{total}."
@@ -94,9 +91,7 @@ fr:
       disconnect: Déconnecter
       disconnect_confirm: Voulez-vous vraiment déconnecter %{name} ?
       keep_access_token_placeholder: Laissez vide pour conserver le jeton existant
-      rate_limit_notice: 'Monobank n''autorise qu''une requête par minute : chaque
-        synchronisation récupère donc quelques comptes à la fois, et l''historique
-        plus ancien arrive au fil de plusieurs synchronisations.'
+      rate_limit_notice: 'Monobank n''autorise qu''une requête par minute : chaque synchronisation récupère donc quelques comptes à la fois, et l''historique plus ancien arrive au fil de plusieurs synchronisations.'
       setup_accounts: Configurer les comptes
       sync: Synchroniser
       syncing: Synchronisation...
@@ -106,8 +101,7 @@ fr:
       description: Choisissez les cartes ou cagnottes Monobank à ajouter.
       link_accounts: Lier les comptes
       no_accounts_found: Aucun compte Monobank non lié n'a été trouvé.
-      no_credentials_configured: Configurez d'abord Monobank dans les paramètres des
-        fournisseurs.
+      no_credentials_configured: Configurez d'abord Monobank dans les paramètres des fournisseurs.
       title: Lier des comptes Monobank
     select_existing_account:
       account_already_linked: Ce compte est déjà lié à un fournisseur.
@@ -115,8 +109,7 @@ fr:
       description: Choisissez un compte Monobank non lié pour le connecter à ce compte.
       link_account: Lier le compte
       no_accounts_found: Aucun compte Monobank non lié n'a été trouvé.
-      no_credentials_configured: Configurez d'abord Monobank dans les paramètres des
-        fournisseurs.
+      no_credentials_configured: Configurez d'abord Monobank dans les paramètres des fournisseurs.
       title: Lier le compte Monobank à %{account_name}
     setup_accounts:
       account_type_label: Type de compte
@@ -124,22 +117,18 @@ fr:
         depository: Trésorerie
         skip: Ignorer
       all_accounts_linked: Tous les comptes Monobank sont déjà liés.
-      api_error: 'Impossible d''actualiser les comptes depuis Monobank : les comptes
-        enregistrés lors de la dernière synchronisation sont affichés à la place.'
+      api_error: 'Impossible d''actualiser les comptes depuis Monobank : les comptes enregistrés lors de la dernière synchronisation sont affichés à la place.'
       cancel: Annuler
       choose_account_type: Choisissez un type de compte
-      choose_account_type_description: Ignorez les comptes que vous ne souhaitez pas
-        suivre.
+      choose_account_type_description: Ignorez les comptes que vous ne souhaitez pas suivre.
       create_accounts: Créer les comptes
       no_accounts_to_setup: Aucun compte à configurer
       no_credentials: Configurez d'abord les identifiants Monobank.
-      subtitle: Choisissez comment chaque carte ou cagnotte Monobank doit apparaître
-        dans Sure.
+      subtitle: Choisissez comment chaque carte ou cagnotte Monobank doit apparaître dans Sure.
       title: Lier les comptes Monobank
     update:
       success: Connexion Monobank mise à jour.
   providers:
     monobank:
-      description: Connectez des cartes et cagnottes Monobank (Ukraine) avec un jeton
-        d'API personnel
+      description: Connectez des cartes et cagnottes Monobank (Ukraine) avec un jeton d'API personnel
       name: Monobank

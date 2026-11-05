@@ -1,55 +1,44 @@
 ---
 vi:
+  chats:
+    demo_banner_title: "Chế độ Demo đang hoạt động"
+    demo_banner_message: "Token LLM miễn phí do Vercel AI Gateway cung cấp. Kết quả có thể thay đổi vì chúng tôi thường xuyên thay đổi trọng số mô hình để thử nghiệm. Hãy tham khảo tài liệu của Vercel để biết các cuộc trò chuyện của bạn được gửi đến đâu! 🤖"
+    thinking: "Đang xử lý ..."
+    ai_greeting:
+      greeting: "Xin chào %{name}! Tôi là một AI/mô hình ngôn ngữ lớn có thể hỗ trợ bạn về tài chính. Tôi có quyền truy cập internet và dữ liệu tài khoản của bạn."
+      there: "bạn"
+      commands_hint_html: "Bạn có thể sử dụng <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> để truy cập các lệnh"
+      questions_intro: "Dưới đây là một số câu hỏi bạn có thể đặt:"
+      evaluate_portfolio: "Đánh giá danh mục đầu tư"
+      spending_insights: "Xem thông tin chi tiêu"
+      unusual_patterns: "Tìm các giao dịch bất thường"
+    chat:
+      edit_chat_title: "Chỉnh sửa tiêu đề cuộc trò chuyện"
+      delete_chat: "Xóa cuộc trò chuyện"
+    chat_nav:
+      all_chats: "Tất cả cuộc trò chuyện"
+      start_new_chat: "Bắt đầu cuộc trò chuyện mới"
+      edit_chat_title: "Chỉnh sửa tiêu đề cuộc trò chuyện"
+      delete_chat: "Xóa cuộc trò chuyện"
+    error:
+      retry: "Thử lại"
+    destroy:
+      notice: "Cuộc trò chuyện đã được xóa thành công"
+    index:
+      chats: "Cuộc trò chuyện"
+      new_chat: "Cuộc trò chuyện mới"
+    update:
+      success: "Cuộc trò chuyện đã được cập nhật"
+    ai_consent:
+      title: "Bật tính năng Trò chuyện AI"
+      available_description: "Trò chuyện AI có thể trả lời các câu hỏi tài chính và cung cấp thông tin dựa trên dữ liệu của bạn. Để sử dụng tính năng này, bạn cần bật nó một cách rõ ràng."
+      unavailable_description_html: "Để sử dụng trợ lý AI, bạn cần đặt biến môi trường <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> hoặc cấu hình nó trong phần Cài đặt Self-Hosting của phiên bản của bạn."
+      enable_button: "Bật Trò chuyện AI"
+      disable_note: "Tắt bất kỳ lúc nào. Tất cả dữ liệu gửi đến các nhà cung cấp LLM của chúng tôi đều được ẩn danh hóa."
   assistant_messages:
     assistant_message:
-      assistant_reasoning: Lý luận của trợ lý
+      assistant_reasoning: "Lý luận của trợ lý"
     tool_calls:
-      arguments: 'Đối số:'
-      function: 'Hàm:'
-      tool_calls: Lệnh gọi công cụ
-  chats:
-    ai_consent:
-      available_description: Trò chuyện AI có thể trả lời các câu hỏi tài chính và
-        cung cấp thông tin dựa trên dữ liệu của bạn. Để sử dụng tính năng này, bạn
-        cần bật nó một cách rõ ràng.
-      disable_note: Tắt bất kỳ lúc nào. Tất cả dữ liệu gửi đến các nhà cung cấp LLM
-        của chúng tôi đều được ẩn danh hóa.
-      enable_button: Bật Trò chuyện AI
-      title: Bật tính năng Trò chuyện AI
-      unavailable_description_html: Để sử dụng trợ lý AI, bạn cần đặt biến môi trường
-        <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code>
-        hoặc cấu hình nó trong phần Cài đặt Self-Hosting của phiên bản của bạn.
-    ai_greeting:
-      commands_hint_html: Bạn có thể sử dụng <span class="bg-container border border-secondary
-        px-1.5 py-0.5 rounded font-mono text-xs">/</span> để truy cập các lệnh
-      evaluate_portfolio: Đánh giá danh mục đầu tư
-      greeting: Xin chào %{name}! Tôi là một AI/mô hình ngôn ngữ lớn có thể hỗ trợ
-        bạn về tài chính. Tôi có quyền truy cập internet và dữ liệu tài khoản của
-        bạn.
-      questions_intro: 'Dưới đây là một số câu hỏi bạn có thể đặt:'
-      spending_insights: Xem thông tin chi tiêu
-      there: bạn
-      unusual_patterns: Tìm các giao dịch bất thường
-    chat:
-      delete_chat: Xóa cuộc trò chuyện
-      edit_chat_title: Chỉnh sửa tiêu đề cuộc trò chuyện
-    chat_nav:
-      all_chats: Tất cả cuộc trò chuyện
-      delete_chat: Xóa cuộc trò chuyện
-      edit_chat_title: Chỉnh sửa tiêu đề cuộc trò chuyện
-      start_new_chat: Bắt đầu cuộc trò chuyện mới
-    demo_banner_message: "Token LLM miễn phí do Vercel AI Gateway cung cấp. Kết quả
-      có thể thay đổi vì chúng tôi thường xuyên thay đổi trọng số mô hình để thử nghiệm.
-      Hãy tham khảo tài liệu của Vercel để biết các cuộc trò chuyện của bạn được gửi
-      đến đâu! 🤖"
-    demo_banner_title: Chế độ Demo đang hoạt động
-    destroy:
-      notice: Cuộc trò chuyện đã được xóa thành công
-    error:
-      retry: Thử lại
-    index:
-      chats: Cuộc trò chuyện
-      new_chat: Cuộc trò chuyện mới
-    thinking: Đang xử lý ...
-    update:
-      success: Cuộc trò chuyện đã được cập nhật
+      tool_calls: "Lệnh gọi công cụ"
+      function: "Hàm:"
+      arguments: "Đối số:"

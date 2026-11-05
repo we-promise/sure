@@ -1,35 +1,32 @@
 ---
 en:
   auto_matches:
-    bulk_actions:
-      confirm_selected: Confirm selected
-      reject_selected: Reject selected
-      select_all: Select all
-      selected_label: selected
+    title: Auto Matches
+    settings:
+      enable_label: Enable Auto Match
+      enable_description: Automatically detect and suggest transfer matches between accounts on every sync. Suggestions are not applied until you confirm them below.
+      admin_only: Only admins can change this setting.
+    update_settings:
+      settings_updated: Auto match settings updated
     bulk_update:
+      invalid_selection: Select at least one suggestion to confirm or reject
       bulk_confirmed:
         one: Confirmed 1 transfer
         other: Confirmed %{count} transfers
       bulk_rejected:
         one: Rejected 1 transfer
         other: Rejected %{count} transfers
-      invalid_selection: Select at least one suggestion to confirm or reject
     empty:
-      description: When a sync detects a likely transfer between two of your accounts,
-        it will show up here for review.
       title: No pending auto-match suggestions
-    settings:
-      admin_only: Only admins can change this setting.
-      enable_description: Automatically detect and suggest transfer matches between
-        accounts on every sync. Suggestions are not applied until you confirm them
-        below.
-      enable_label: Enable Auto Match
+      description: When a sync detects a likely transfer between two of your accounts, it will show up here for review.
     table:
-      actions: Actions
-      date: Date
       from: From
-      separator: "·"
       to: To
-    title: Auto Matches
-    update_settings:
-      settings_updated: Auto match settings updated
+      date: Date
+      actions: Actions
+      separator: "·"
+    bulk_actions:
+      selected_label: selected
+      confirm_selected: Confirm selected
+      reject_selected: Reject selected
+      select_all: Select all

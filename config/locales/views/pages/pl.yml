@@ -4,6 +4,11 @@ pl:
     changelog:
       title: Co nowego
     dashboard:
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Przepływ gotówki"
+          surplus: "Nadwyżka"
+          deficit: "Deficyt"
       balance_sheet:
         add_accounts: Dodaj konta %{name}, aby zobaczyć pełny podział
         add_asset_accounts: Dodaj konta aktywów, aby zobaczyć pełny podział
@@ -39,11 +44,6 @@ pl:
           other: "%{count} miesiąca"
         title: Obligacje
         total_return: Łączny zwrot
-      cashflow_preview:
-        node_labels:
-          cash_flow: Przepływ gotówki
-          deficit: Deficyt
-          surplus: Nadwyżka
       cashflow_sankey:
         add_transaction: Dodaj transakcję
         no_data_description: Dodaj transakcje, aby wyświetlić dane o przepływach pieniężnych,

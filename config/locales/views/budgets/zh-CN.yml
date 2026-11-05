@@ -1,15 +1,89 @@
 ---
 zh-CN:
+  budgets:
+    switcher:
+      aria_label: 切换预算
+      household: 家庭
+    budget_donut:
+      spent: 已花费
+      new_budget: 新预算
+      of_budget: 占 %{amount}
+      unused: 未使用
+    budget_header:
+      today: 今天
+    budget_nav:
+      categories: 分类
+      setup: 设置
+    over_allocation_warning:
+      over_allocated_message: 您的预算分配超出了上限。请修正您的分配。
+      fix_allocations: 修正分配
+    actuals_summary:
+      income: 收入
+      expenses: 支出
+    budgeted_summary:
+      expected_income: 预期收入
+      budgeted: 预算
+      earned: 已赚 %{amount}
+      over: 超出 %{amount}
+      left: 剩余 %{amount}
+      spent: 已花 %{amount}
+    edit:
+      setup_title: 设置您的预算
+      setup_description: 在下方输入您的月收入和计划支出以设置预算。
+      budgeted_spending: 预算支出
+      expected_income: 预期收入
+      autosuggest_title: 自动建议收入与支出预算
+      autosuggest_description: 这将基于交易历史。AI 可能出错，请在继续前核对。
+      continue: 继续
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    available_cash:
+      heading: 手头现金
+      subtitle: 独立于上述计划之外，不属于计划的一部分。
+      available: 现金可用额
+      earmarked: 已专款划拨给目标
+      free: 真正可用额
+      goals_link: 查看目标
+      currency_warning: "%{currencies} 余额未包含在内，因为尚未提供转换为 %{currency} 的汇率。"
+    show:
+      categories:
+        amount: 金额
+        edit: 编辑
+        title: 分类
+      on_track_categories:
+        short_title: 正常
+        title: 正常
+      over_budget_categories:
+        short_title: 超支
+        title: 超支
+      filter:
+        all: 全部
+        on_track: 正常
+        over_budget: 超支
+        aria_label: 筛选预算分类
+      tabs:
+        actual: 实际
+        budgeted: 预算
+    copy_previous_prompt:
+      title: 设置您的预算
+      description: 您可以复制 %{source_name} 的预算，或从头开始。
+      copy_button: 复制 %{source_name}
+      fresh_button: 从头开始
+    copy_previous:
+      success: 已从 %{source_name} 复制预算
+      no_source: 未找到可复制的上一个预算
+      already_initialized: 此预算已设置过
   budget_categories:
-    allocation_progress:
-      budget_exceeded_html: 预算超出 <span class="text-red-500 privacy-sensitive">%{amount}</span>
-      left_to_allocate: 待分配
-      over_set: 超过 100%
-      percent_set: 已设置 %{percent}
     bills_reserved: "%{amount} 已被账单预留"
     bills_reserved_unconvertible:
       one: 1 笔账单未预留，无可用汇率
       other: "%{count} 笔账单未预留，无可用汇率"
+    allocation_progress:
+      budget_exceeded_html: '预算超出 <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      left_to_allocate: 待分配
+      over_set: 超过 100%
+      percent_set: 已设置 %{percent}
     budget_category:
       rolled_over: "+%{amount} 已结转"
     budget_category_form:
@@ -20,15 +94,17 @@ zh-CN:
       shared_title: 留空以共享父级预算
     confirm_button:
       confirm: 确认
-    index:
-      description: 调整分类预算以设置支出限额。未分配资金将自动归入未分类。
-      title: 编辑您的分类预算
     move:
-      amount_label: 金额
-      available: "%{amount} 可用"
       button_title: 从该分类调拨资金
       cancel: 取消
       dialog_title: 调拨资金
+      no_destination: 这是当前唯一可以调拨资金的信封——分类不能与其父级或子级分类相互调拨。
+      submit: 调拨
+      amount_label: 金额
+      available: "%{amount} 可用"
+      from_label: 调出
+      to_label: 调入
+      success: 资金已调拨。
       errors:
         different_budgets: 两个分类必须属于同一个预算。
         insufficient_funds: 超过了该分类已分配的金额。
@@ -36,101 +112,25 @@ zh-CN:
         parent_child: 无法在分类与其子分类之间调拨资金——请直接调整子分类。
         same_category: 请选择不同的分类以调入资金。
         uncategorized: 未分类不是真正的信封，资金无法调入或调出。
-      from_label: 调出
-      no_destination: 这是当前唯一可以调拨资金的信封——分类不能与其父级或子级分类相互调拨。
-      submit: 调拨
-      success: 资金已调拨。
-      to_label: 调入
     no_categories:
-      new_category: 新分类
-      no_categories_message: 您还没有为交易创建或分配任何支出分类。
       oops: 哎呀！
+      no_categories_message: 您还没有为交易创建或分配任何支出分类。
       use_defaults: 使用默认值（推荐）
+      new_category: 新分类
+    index:
+      title: 编辑您的分类预算
+      description: 调整分类预算以设置支出限额。未分配资金将自动归入未分类。
     show:
-      budgeted: 预算
       category: 分类
-      left: 剩余
-      monthly_average_spending: 月均支出
-      monthly_median_spending: 月度中位支出
-      no_transactions: 此预算周期内未找到交易。
-      overspent: 超支
       overview: 概览
-      recent_transactions: 最近交易
-      rolled_over: 已结转
       spending: "%{date} 支出"
       status: 状态
-      view_all_transactions: 查看该分类的全部交易
-  budgets:
-    actuals_summary:
-      expenses: 支出
-      income: 收入
-    available_cash:
-      available: 现金可用额
-      currency_warning: "%{currencies} 余额未包含在内，因为尚未提供转换为 %{currency} 的汇率。"
-      earmarked: 已专款划拨给目标
-      free: 真正可用额
-      goals_link: 查看目标
-      heading: 手头现金
-      subtitle: 独立于上述计划之外，不属于计划的一部分。
-    budget_donut:
-      new_budget: 新预算
-      of_budget: 占 %{amount}
-      spent: 已花费
-      unused: 未使用
-    budget_header:
-      today: 今天
-    budget_nav:
-      categories: 分类
-      setup: 设置
-    budgeted_summary:
+      overspent: 超支
+      left: 剩余
       budgeted: 预算
-      earned: 已赚 %{amount}
-      expected_income: 预期收入
-      left: 剩余 %{amount}
-      over: 超出 %{amount}
-      spent: 已花 %{amount}
-    copy_previous:
-      already_initialized: 此预算已设置过
-      no_source: 未找到可复制的上一个预算
-      success: 已从 %{source_name} 复制预算
-    copy_previous_prompt:
-      copy_button: 复制 %{source_name}
-      description: 您可以复制 %{source_name} 的预算，或从头开始。
-      fresh_button: 从头开始
-      title: 设置您的预算
-    edit:
-      autosuggest_description: 这将基于交易历史。AI 可能出错，请在继续前核对。
-      autosuggest_title: 自动建议收入与支出预算
-      budgeted_spending: 预算支出
-      continue: 继续
-      expected_income: 预期收入
-      setup_description: 在下方输入您的月收入和计划支出以设置预算。
-      setup_title: 设置您的预算
-    name:
-      custom_range: "%{start} - %{end_date}"
-      month_year: "%{month}"
-    over_allocation_warning:
-      fix_allocations: 修正分配
-      over_allocated_message: 您的预算分配超出了上限。请修正您的分配。
-    show:
-      categories:
-        amount: 金额
-        edit: 编辑
-        title: 分类
-      filter:
-        all: 全部
-        aria_label: 筛选预算分类
-        on_track: 正常
-        over_budget: 超支
-      on_track_categories:
-        short_title: 正常
-        title: 正常
-      over_budget_categories:
-        short_title: 超支
-        title: 超支
-      tabs:
-        actual: 实际
-        budgeted: 预算
-    switcher:
-      aria_label: 切换预算
-      household: 家庭
+      rolled_over: 已结转
+      monthly_average_spending: 月均支出
+      monthly_median_spending: 月度中位支出
+      recent_transactions: 最近交易
+      view_all_transactions: 查看该分类的全部交易
+      no_transactions: 此预算周期内未找到交易。

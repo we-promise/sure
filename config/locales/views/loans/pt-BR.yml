@@ -4,9 +4,9 @@ pt-BR:
     edit:
       edit: Editar %{account}
     form:
-      initial_balance: Saldo original do empréstimo
       interest_rate: Taxa de juros
       interest_rate_placeholder: '5,25'
+      initial_balance: Saldo original do empréstimo
       rate_type: Tipo de taxa
       term_months: Prazo (meses)
       term_months_placeholder: '360'

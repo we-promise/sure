@@ -2,10 +2,8 @@
 id:
   other_assets:
     edit:
-      balance_tracking_info: Aset Lainnya dilacak melalui penilaian manual menggunakan
-        'Saldo Baru', bukan transaksi. Arus kas tidak akan memengaruhi saldo akun.
       edit: Edit %{account}
+      balance_tracking_info: "Aset Lainnya dilacak melalui penilaian manual menggunakan 'Saldo Baru', bukan transaksi. Arus kas tidak akan memengaruhi saldo akun."
     new:
-      balance_tracking_info: Aset Lainnya dilacak melalui penilaian manual menggunakan
-        'Saldo Baru', bukan transaksi. Arus kas tidak akan memengaruhi saldo akun.
       title: Masukkan detail aset
+      balance_tracking_info: "Aset Lainnya dilacak melalui penilaian manual menggunakan 'Saldo Baru', bukan transaksi. Arus kas tidak akan memengaruhi saldo akun."

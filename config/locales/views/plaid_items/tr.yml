@@ -14,7 +14,6 @@ tr:
       invalid_account: Geçersiz Plaid hesabı seçildi
       success: Hesap başarıyla Plaid'e bağlandı
     plaid_item:
-      add_accounts: Hesap ekle
       add_new: Yeni bağlantı ekle
       confirm_accept: Kurumu sil
       confirm_body: Bu işlem, bu gruptaki tüm hesapları ve ilişkili tüm verileri kalıcı
@@ -28,12 +27,13 @@ tr:
       error: Veriler senkronize edilirken bir hata oluştu
       no_accounts_description: Bu finansal kurumdan herhangi bir hesap yüklenemedi.
       no_accounts_title: Hesap bulunamadı
-      provider_name: Plaid
       requires_update: Yeniden kimlik doğrulama gerekli
       status: Son senkronizasyon %{timestamp} önce
       status_never: Veri senkronizasyonu gerekli
       syncing: Senkronize ediliyor...
       update: Bağlantıyı güncelle
+      add_accounts: Hesap ekle
+      provider_name: Plaid
     select_existing_account:
       cancel: İptal
       description: Mevcut hesabınıza bağlamak için bir Plaid hesabı seçin

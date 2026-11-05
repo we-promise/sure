@@ -1,12 +1,6 @@
 ---
 ru:
   trades:
-    api_errors:
-      activity_label_must_match_type: investment_activity_label должен быть %{label},
-        если type равен %{type}
-      invalid_activity_label: Недопустимая метка инвестиционной операции
-      invalid_type: Недопустимый тип
-      supported_types: 'type должен быть одним из: %{types}'
     form:
       account: Счёт для перевода (необязательно)
       account_prompt: Поиск счёта
@@ -19,7 +13,7 @@ ru:
       qty: Количество
       submit: Добавить операцию
       ticker_placeholder: AAPL
-      trade_requires_security: Для операций покупки и продажи требуется указать инструмент
+      trade_requires_security: Для операций покупки и продажи требуется указать инструмент 
         (тикер)
       type: Тип
       type_buy: Покупка
@@ -30,22 +24,22 @@ ru:
       type_withdrawal: Снятие
     header:
       buy: Покупка
-      contribution: Пополнение
       current_market_price_label: Текущая рыночная цена
       dividend: Дивиденды
-      exchange: Обмен
-      fee: Комиссия
       interest: Проценты
-      other: Прочее
       overview: Обзор
       purchase_price_label: Цена покупки
       purchase_qty_label: Количество покупки
-      reinvestment: Реинвестирование
       sell: Продажа
-      sweep_in: Автоперевод (зачисление)
-      sweep_out: Автоперевод (списание)
       symbol_label: Символ
       total_return_label: Нереализованная прибыль/убыток
+      contribution: Пополнение
+      exchange: Обмен
+      fee: Комиссия
+      other: Прочее
+      reinvestment: Реинвестирование
+      sweep_in: Автоперевод (зачисление)
+      sweep_out: Автоперевод (списание)
       transfer: Перевод
       withdrawal: Вывод средств
     new:
@@ -73,3 +67,8 @@ ru:
       sell: Продажа
       settings: Настройки
       type_label: Тип
+    api_errors:
+      activity_label_must_match_type: investment_activity_label должен быть %{label}, если type равен %{type}
+      invalid_activity_label: Недопустимая метка инвестиционной операции
+      invalid_type: Недопустимый тип
+      supported_types: 'type должен быть одним из: %{types}'

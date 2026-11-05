@@ -13,10 +13,10 @@ vi:
     form:
       placeholder: Tên nhãn
     index:
-      delete_all: Xóa tất cả
       empty: Chưa có nhãn nào
       new: Nhãn mới
       tags: Nhãn
+      delete_all: Xóa tất cả
     new:
       new: Nhãn mới
     tag:

@@ -4,5 +4,5 @@ vi:
     errors:
       models:
         category_import:
-          missing_columns: 'Thiếu các cột bắt buộc: %{columns}'
-          own_parent: Danh mục '%{name}' không thể là danh mục cha của chính nó
+          own_parent: "Danh mục '%{name}' không thể là danh mục cha của chính nó"
+          missing_columns: "Thiếu các cột bắt buộc: %{columns}"

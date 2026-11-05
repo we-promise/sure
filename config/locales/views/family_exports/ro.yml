@@ -4,29 +4,28 @@ ro:
     access_denied: Acces interzis
     create:
       success: Export început. Veți putea să-l descărcați în curând.
-    delete_confirmation: Sigur doriți să ștergeți acest export? Această acțiune nu
-      poate fi anulată.
+    delete_confirmation: Sigur doriți să ștergeți acest export? Această acțiune nu poate fi anulată.
     delete_failed_confirmation: Sigur doriți să ștergeți acest export eșuat?
     destroy:
       success: Export șters cu succes
     export_not_ready: Exportul nu este gata pentru descărcare
     exporting: Se exportă...
     index:
-      new: Export nou
       title: Exporturi
+      new: Export nou
     table:
-      empty: Nu există încă exporturi.
+      title: Exporturi
       header:
-        actions: Acțiuni
         date: Data
         filename: Nume de fișier
         status: Stare
+        actions: Acțiuni
       row:
+        status:
+          in_progress: În curs de desfășurare
+          complete: Finalizat
+          failed: Eșuat
         actions:
           delete: Șterge
           download: Descărcare
-        status:
-          complete: Finalizat
-          failed: Eșuat
-          in_progress: În curs de desfășurare
-      title: Exporturi
+      empty: Nu există încă exporturi.

@@ -9,12 +9,12 @@ de:
       mileage: Kilometerstand
       mileage_placeholder: '15000'
       mileage_unit: Einheit
-      mileage_unit_kilometers: Kilometer
-      mileage_unit_miles: Meilen
       model: Modell
       model_placeholder: Camry
       year: Baujahr
       year_placeholder: '2023'
+      mileage_unit_kilometers: Kilometer
+      mileage_unit_miles: Meilen
     new:
       title: Fahrzeugdetails eingeben
     overview:

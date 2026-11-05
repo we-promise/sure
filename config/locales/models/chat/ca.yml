@@ -5,9 +5,8 @@ ca:
       default: No s'ha pogut generar una resposta. Torna-ho a provar.
       misconfigured: El proveïdor d'IA no està configurat correctament. Contacta amb
         el teu administrador.
-      no_response: L'assistent no ha respost. Pot ser que el procés en segon pla estigui
-        aturat o que la IA no estigui configurada del tot. Torna-ho a provar.
       rate_limited: El proveïdor d'IA té un límit de peticions ara mateix. Torna-ho
         a provar d'aquí a uns minuts.
       temporarily_unavailable: El proveïdor d'IA no està disponible temporalment.
         Torna-ho a provar d'aquí a uns minuts.
+      no_response: L'assistent no ha respost. Pot ser que el procés en segon pla estigui aturat o que la IA no estigui configurada del tot. Torna-ho a provar.

@@ -16,7 +16,6 @@ ru:
     budgets: Бюджеты
     categories: Категории
     categorize: Категоризация
-    changelog: Что нового
     chats: Чаты
     coinbase_items: Coinbase
     coinstats_items: CoinStats
@@ -30,7 +29,6 @@ ru:
     exports: Экспорт
     family_exports: Экспорт
     family_merchants: Продавцы
-    feedback: Обратная связь
     guides: Руководства
     holdings: Активы
     home: Главная
@@ -53,7 +51,6 @@ ru:
     mercury_items: Mercury
     messages: Сообщения
     mfa: Двухфакторная аутентификация
-    monobank_items: Monobank
     oidc_accounts: Учетные записи SSO
     onboardings: Онбординг
     other_assets: Прочие активы
@@ -61,18 +58,16 @@ ru:
     payments: Оплата
     pending_duplicate_merges: Обзор дубликатов
     plaid_items: Plaid
-    plan: Планирование
     preferences: Предпочтения
     profile: Информация профиля
     profiles: Информация профиля
     properties: Недвижимость
     providers: Провайдеры
     recurring_transactions: Регулярные операции
-    redbark_items: Redbark
     registrations: Регистрация
     reports: Отчёты
     rules: Правила
-    securities: Ценные бумаги
+    securities: "Ценные бумаги"
     security: Безопасность
     self_hosting: Самостоятельный хостинг
     sessions: Вход
@@ -83,7 +78,6 @@ ru:
     sso_identities: Подключения SSO
     sso_providers: Провайдеры SSO
     subscriptions: Подписка
-    system_health: Состояние системы
     tags: Теги
     trades: Сделки
     transactions: Операции
@@ -92,3 +86,9 @@ ru:
     users: Пользователи
     valuations: Оценки
     vehicles: Транспортные средства
+    changelog: Что нового
+    feedback: Обратная связь
+    monobank_items: Monobank
+    plan: Планирование
+    redbark_items: Redbark
+    system_health: Состояние системы

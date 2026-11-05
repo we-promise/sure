@@ -9,11 +9,8 @@ de:
     new:
       account_label: Auf Konto
       amount_label: Betrag
-      helper_manual: Sure erfasst das beim nächsten Mal, wenn du den Saldo selbst
-        anpasst, und bestätigt den Beitrag.
-      helper_transfer: Sure sucht nach einer passenden Einzahlung auf deinem verknüpften
-        Konto. Die Zusage bleibt 7 Tage offen und bestätigt sich automatisch, sobald
-        Sure sie findet.
+      helper_manual: Sure erfasst das beim nächsten Mal, wenn du den Saldo selbst anpasst, und bestätigt den Beitrag.
+      helper_transfer: Sure sucht nach einer passenden Einzahlung auf deinem verknüpften Konto. Die Zusage bleibt 7 Tage offen und bestätigt sich automatisch, sobald Sure sie findet.
       preview_nonzero: Erreicht {percent} %, also {newTotal} von {target}.
       preview_reached: Erreicht dein Ziel von {target}. Geschafft.
       preview_zero: Derzeit {current} von {target} gespart.

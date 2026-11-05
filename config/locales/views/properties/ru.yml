@@ -14,9 +14,6 @@ ru:
       state_region_label: Область/Регион
       state_region_placeholder: МО
       title: Ввести данные вручную
-    avm_providers:
-      realie: Realie
-      rentcast: RentCast
     balances:
       market_value_label: Оценочная рыночная стоимость
       market_value_tooltip: Оценочная рыночная стоимость вашей недвижимости. Это число
@@ -46,27 +43,19 @@ ru:
       subtype_prompt: Выберите тип недвижимости
       year_built: Год постройки
       year_built_placeholder: '2000'
-    form_tabs:
-      address: Адрес
-      overview: Обзор
-      value: Стоимость
     new:
-      avm_description: Введите название объекта и его адрес. %{provider} найдёт сведения
-        об объекте и его оценочную рыночную стоимость.
-      avm_option: Добавить через %{provider}
-      avm_preview_back: Назад
-      avm_preview_confirm: Добавить недвижимость
-      avm_preview_description: Вот что нашёл %{provider}. Проверьте данные перед добавлением
-        объекта — пока ничего не создано.
-      avm_preview_no_record: "%{provider} не нашёл записи об объекте по этому адресу,
-        поэтому показанная стоимость — оценка по окружающему району. Перепроверьте
-        адрес, прежде чем продолжить."
-      avm_preview_title: Проверьте данные объекта
-      avm_submit: Найти объект
-      avm_title: Добавить недвижимость через %{provider}
-      avm_us_only: "%{provider} поддерживает только объекты недвижимости в США."
       next: Далее
       title: Ввести данные вручную
+      avm_option: Добавить через %{provider}
+      avm_title: Добавить недвижимость через %{provider}
+      avm_description: Введите название объекта и его адрес. %{provider} найдёт сведения об объекте и его оценочную рыночную стоимость.
+      avm_us_only: '%{provider} поддерживает только объекты недвижимости в США.'
+      avm_submit: Найти объект
+      avm_preview_title: Проверьте данные объекта
+      avm_preview_description: Вот что нашёл %{provider}. Проверьте данные перед добавлением объекта — пока ничего не создано.
+      avm_preview_no_record: '%{provider} не нашёл записи об объекте по этому адресу, поэтому показанная стоимость — оценка по окружающему району. Перепроверьте адрес, прежде чем продолжить.'
+      avm_preview_back: Назад
+      avm_preview_confirm: Добавить недвижимость
     overview:
       living_area: Жилая площадь
       market_value: Рыночная стоимость
@@ -111,3 +100,10 @@ ru:
         trend: Тренд
         unknown: Неизвестно
         year_built: Год постройки
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+    form_tabs:
+      address: Адрес
+      overview: Обзор
+      value: Стоимость

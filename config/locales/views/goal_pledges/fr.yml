@@ -9,11 +9,8 @@ fr:
     new:
       account_label: Sur le compte
       amount_label: Montant
-      helper_manual: Sure enregistrera cela lors de votre prochaine modification manuelle
-        de solde et confirmera la contribution.
-      helper_transfer: Sure recherchera un dépôt correspondant sur votre compte lié.
-        La promesse reste en attente pendant 7 jours, puis se confirme automatiquement
-        dès que Sure le détecte.
+      helper_manual: Sure enregistrera cela lors de votre prochaine modification manuelle de solde et confirmera la contribution.
+      helper_transfer: Sure recherchera un dépôt correspondant sur votre compte lié. La promesse reste en attente pendant 7 jours, puis se confirme automatiquement dès que Sure le détecte.
       preview_nonzero: Atteindra {percent}%, {newTotal} sur {target}.
       preview_reached: Atteint votre objectif de {target}. Objectif atteint !
       preview_zero: Actuellement {current} sur {target} enregistrés.

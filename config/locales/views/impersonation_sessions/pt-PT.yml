@@ -14,12 +14,12 @@ pt-PT:
     reject:
       success: Pedido rejeitado
     super_admin_bar:
-      impersonating: A Representar
-      jobs: Trabalhos
-      join: Entrar
-      join_a_session: Iniciar uma sessão
-      leave: Sair
-      request_impersonation: Pedir Representação
       super_admin: Super Administrador
+      jobs: Trabalhos
+      impersonating: A Representar
+      leave: Sair
       terminate: Terminar
+      join_a_session: Iniciar uma sessão
+      join: Entrar
       uuid_placeholder: UUID
+      request_impersonation: Pedir Representação

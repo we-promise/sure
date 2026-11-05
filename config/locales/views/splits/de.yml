@@ -1,54 +1,50 @@
 ---
 de:
   splits:
-    child:
-      description: Dieser Eintrag ist Teil einer aufgeteilten Transaktion.
-      edit_split: Aufteilung bearbeiten
-      title: Teil einer Aufteilung
-      unsplit: Aufteilung aufheben
-    create:
-      not_splittable: Diese Transaktion kann nicht aufgeteilt werden.
-      success: Transaktion erfolgreich aufgeteilt
-    destroy:
-      success: Aufteilung der Transaktion erfolgreich aufgehoben
-    edit:
-      description: Bearbeite die aufgeteilten Einträge dieser Transaktion.
-      not_split: Diese Transaktion ist nicht aufgeteilt.
-      submit: Aufteilung aktualisieren
-      title: Aufteilung bearbeiten
     new:
-      add_row: Aufteilung hinzufügen
-      amount_label: Betrag
-      amounts_must_match: Die Teilbeträge müssen dem ursprünglichen Transaktionsbetrag
-        entsprechen.
+      title: Transaktion aufteilen
+      description: Teil diese Transaktion in mehrere Einträge mit eigenen Kategorien und Beträgen auf.
+      submit: Transaktion aufteilen
       cancel: Abbrechen
-      category_label: Kategorie
-      description: Teil diese Transaktion in mehrere Einträge mit eigenen Kategorien
-        und Beträgen auf.
-      merchant_label: Händler
+      add_row: Aufteilung hinzufügen
+      remove_row: Entfernen
+      remaining: Verbleibend
+      amounts_must_match: Die Teilbeträge müssen dem ursprünglichen Transaktionsbetrag entsprechen.
       name_label: Name
       name_placeholder: Name der Aufteilung
-      no_merchant: "(Händler der Hauptbuchung)"
-      original_amount: Betrag
-      original_date: 'Datum:'
-      original_name: 'Name:'
-      remaining: Verbleibend
-      remove_row: Entfernen
-      split_number: 'Aufteilung #%{number}'
-      submit: Transaktion aufteilen
-      tags_label: Tags
-      title: Transaktion aufteilen
+      amount_label: Betrag
+      category_label: Kategorie
       uncategorized: "(nicht kategorisiert)"
+      merchant_label: Händler
+      no_merchant: "(Händler der Hauptbuchung)"
+      tags_label: Tags
+      original_name: "Name:"
+      original_date: "Datum:"
+      original_amount: "Betrag"
+      split_number: "Aufteilung #%{number}"
+    create:
+      success: Transaktion erfolgreich aufgeteilt
+      not_splittable: Diese Transaktion kann nicht aufgeteilt werden.
+    destroy:
+      success: Aufteilung der Transaktion erfolgreich aufgehoben
     show:
-      button: Aufteilen
-      button_description: Teil diese Transaktion in mehrere Einträge mit eigenen Kategorien
-        und Beträgen auf.
-      button_title: Transaktion aufteilen
-      description: Diese Transaktion wurde in die folgenden Einträge aufgeteilt.
       title: Aufgeteilte Einträge
-      unsplit_button: Aufteilung aufheben
-      unsplit_confirm: Dadurch werden alle aufgeteilten Einträge entfernt und die
-        ursprüngliche Transaktion wiederhergestellt.
+      description: Diese Transaktion wurde in die folgenden Einträge aufgeteilt.
+      button_title: Transaktion aufteilen
+      button_description: Teil diese Transaktion in mehrere Einträge mit eigenen Kategorien und Beträgen auf.
+      button: Aufteilen
       unsplit_title: Aufteilung aufheben
+      unsplit_button: Aufteilung aufheben
+      unsplit_confirm: Dadurch werden alle aufgeteilten Einträge entfernt und die ursprüngliche Transaktion wiederhergestellt.
+    edit:
+      title: Aufteilung bearbeiten
+      description: Bearbeite die aufgeteilten Einträge dieser Transaktion.
+      submit: Aufteilung aktualisieren
+      not_split: Diese Transaktion ist nicht aufgeteilt.
     update:
       success: Aufteilung erfolgreich aktualisiert
+    child:
+      title: Teil einer Aufteilung
+      description: Dieser Eintrag ist Teil einer aufgeteilten Transaktion.
+      edit_split: Aufteilung bearbeiten
+      unsplit: Aufteilung aufheben

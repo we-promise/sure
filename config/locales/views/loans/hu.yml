@@ -2,17 +2,17 @@
 hu:
   loans:
     edit:
-      edit: "%{account} szerkesztése"
+      edit: '%{account} szerkesztése'
     form:
-      initial_balance: Eredeti hitelösszeg
       interest_rate: Kamatláb
       interest_rate_placeholder: '5.25'
-      none: Nincs
+      initial_balance: Eredeti hitelösszeg
       rate_type: Kamat típusa
-      subtype_none: Nincs
-      subtype_prompt: Válassz hiteltípust
       term_months: Futamidő (hónap)
       term_months_placeholder: '360'
+      none: Nincs
+      subtype_prompt: Válassz hiteltípust
+      subtype_none: Nincs
     new:
       title: Add meg a hitel adatait
     overview:
@@ -26,7 +26,6 @@ hu:
       unknown: Ismeretlen
     tabs:
       overview:
-        edit_loan_details: Hitel adatainak szerkesztése
         interest_rate: Kamatláb
         monthly_payment: Havi törlesztőrészlet
         not_applicable: N/A
@@ -35,3 +34,4 @@ hu:
         term: Futamidő
         type: Típus
         unknown: Ismeretlen
+        edit_loan_details: "Hitel adatainak szerkesztése"

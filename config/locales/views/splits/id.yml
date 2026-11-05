@@ -1,53 +1,50 @@
 ---
 id:
   splits:
-    child:
-      description: Entri ini merupakan bagian dari transaksi yang dibagi.
-      edit_split: Edit Pembagian
-      title: Bagian dari Pembagian
-      unsplit: Batalkan Pembagian
-    create:
-      not_splittable: Transaksi ini tidak dapat dibagi.
-      success: Transaksi berhasil dibagi
-    destroy:
-      success: Pembagian transaksi berhasil dibatalkan
-    edit:
-      description: Ubah entri pembagian untuk transaksi ini.
-      not_split: Transaksi ini tidak dibagi.
-      submit: Perbarui Pembagian
-      title: Edit Pembagian
     new:
-      add_row: Tambah pembagian
-      amount_label: Jumlah
-      amounts_must_match: Jumlah pembagian harus sama dengan jumlah transaksi asli.
+      title: Bagi Transaksi
+      description: Bagi transaksi ini menjadi beberapa entri dengan kategori dan jumlah berbeda.
+      submit: Bagi Transaksi
       cancel: Batal
-      category_label: Kategori
-      description: Bagi transaksi ini menjadi beberapa entri dengan kategori dan jumlah
-        berbeda.
-      merchant_label: Merchant
+      add_row: Tambah pembagian
+      remove_row: Hapus
+      remaining: Sisa
+      amounts_must_match: Jumlah pembagian harus sama dengan jumlah transaksi asli.
       name_label: Nama
       name_placeholder: Nama pembagian
-      no_merchant: "(merchant transaksi)"
-      original_amount: Jumlah
-      original_date: 'Tanggal:'
-      original_name: 'Nama:'
-      remaining: Sisa
-      remove_row: Hapus
-      split_number: 'Pembagian #%{number}'
-      submit: Bagi Transaksi
-      tags_label: Tag
-      title: Bagi Transaksi
+      amount_label: Jumlah
+      category_label: Kategori
       uncategorized: "(tanpa kategori)"
+      merchant_label: Merchant
+      no_merchant: "(merchant transaksi)"
+      tags_label: Tag
+      original_name: "Nama:"
+      original_date: "Tanggal:"
+      original_amount: "Jumlah"
+      split_number: "Pembagian #%{number}"
+    create:
+      success: Transaksi berhasil dibagi
+      not_splittable: Transaksi ini tidak dapat dibagi.
+    destroy:
+      success: Pembagian transaksi berhasil dibatalkan
     show:
-      button: Bagi
-      button_description: Bagi transaksi ini menjadi beberapa entri dengan kategori
-        dan jumlah berbeda.
-      button_title: Bagi Transaksi
-      description: Transaksi ini telah dibagi menjadi entri-entri berikut.
       title: Entri Pembagian
-      unsplit_button: Batalkan Pembagian
-      unsplit_confirm: Ini akan menghapus semua entri pembagian dan memulihkan transaksi
-        asli.
+      description: Transaksi ini telah dibagi menjadi entri-entri berikut.
+      button_title: Bagi Transaksi
+      button_description: Bagi transaksi ini menjadi beberapa entri dengan kategori dan jumlah berbeda.
+      button: Bagi
       unsplit_title: Batalkan Pembagian Transaksi
+      unsplit_button: Batalkan Pembagian
+      unsplit_confirm: Ini akan menghapus semua entri pembagian dan memulihkan transaksi asli.
+    edit:
+      title: Edit Pembagian
+      description: Ubah entri pembagian untuk transaksi ini.
+      submit: Perbarui Pembagian
+      not_split: Transaksi ini tidak dibagi.
     update:
       success: Pembagian berhasil diperbarui
+    child:
+      title: Bagian dari Pembagian
+      description: Entri ini merupakan bagian dari transaksi yang dibagi.
+      edit_split: Edit Pembagian
+      unsplit: Batalkan Pembagian

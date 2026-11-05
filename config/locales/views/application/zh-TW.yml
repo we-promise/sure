@@ -7,4 +7,4 @@ zh-TW:
         format: "%u%n"
         precision: 2
         separator: "."
-        unit: NT$
+        unit: "NT$"

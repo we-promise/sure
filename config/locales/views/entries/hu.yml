@@ -6,21 +6,18 @@ hu:
     destroy:
       success: Bejegyzés törölve
     empty:
-      description: Próbálj meg bejegyzést hozzáadni, szűrőket módosítani vagy finomítani
-        a kereséseden
+      description: Próbálj meg bejegyzést hozzáadni, szűrőket módosítani vagy finomítani a kereséseden
       title: Nem található bejegyzés
     loading:
       loading: Bejegyzések betöltése...
-    protection:
-      description: A bejegyzésen végzett módosításaidat nem írja felül a szolgáltató
-        szinkronizálása.
-      locked_fields_label: 'Zárolt mezők:'
-      title: Szinkronizálástól védve
-      tooltip: Szinkronizálástól védve
-      unlock_button: Szinkronizálás engedélyezése a frissítéshez
-      unlock_confirm: Engedélyezed a szinkronizálásnak, hogy frissítse ezt a bejegyzést?
-        A módosításaid felülíródhatnak a következő szinkronizáláskor.
-    unlock:
-      success: Bejegyzés feloldva. A következő szinkronizálásnál frissülhet.
     update:
       success: Bejegyzés frissítve
+    unlock:
+      success: Bejegyzés feloldva. A következő szinkronizálásnál frissülhet.
+    protection:
+      tooltip: Szinkronizálástól védve
+      title: Szinkronizálástól védve
+      description: A bejegyzésen végzett módosításaidat nem írja felül a szolgáltató szinkronizálása.
+      locked_fields_label: "Zárolt mezők:"
+      unlock_button: Szinkronizálás engedélyezése a frissítéshez
+      unlock_confirm: Engedélyezed a szinkronizálásnak, hogy frissítse ezt a bejegyzést? A módosításaid felülíródhatnak a következő szinkronizáláskor.

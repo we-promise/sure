@@ -1,5 +1,4 @@
 ---
 nl:
   passkey_sessions:
-    invalid_credential: Kan niet inloggen met die passkey. Probeer het opnieuw of
-      gebruik uw wachtwoord.
+    invalid_credential: "Kan niet inloggen met die passkey. Probeer het opnieuw of gebruik uw wachtwoord."

@@ -140,8 +140,8 @@ ca:
       keep_token_placeholder: Deixa-ho en blanc per mantenir el token actual
       sandbox_note_html: Utilitza una connexió amb nom separada per a cada empresa/token
         API de Brex que vulguis sincronitzar. Deixa l'URL base en blanc per a producció.
-        El staging està limitat a les proves aprovades per Brex i no funciona amb
-        tokens de clients.
+        El staging està limitat a les proves aprovades per Brex i no funciona amb tokens
+        de clients.
       setup_accounts: Configura comptes
       sync: Sincronitza
       token_label: Token

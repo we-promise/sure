@@ -2,8 +2,7 @@
 ro:
   plaid_items:
     create:
-      success: Contul a fost conectat cu succes. Te rugăm să aștepți sincronizarea
-        conturilor.
+      success: Contul a fost conectat cu succes. Te rugăm să aștepți sincronizarea conturilor.
     destroy:
       success: Conturile sunt programate pentru ștergere.
     plaid_item:
@@ -14,8 +13,7 @@ ro:
       confirm_title: Ștergi instituția?
       connection_lost: Conexiune pierdută
       connection_lost_description: Această conexiune nu mai este validă. Va trebui
-        să ștergi această conexiune și să o adaugi din nou pentru a continua sincronizarea
-        datelor.
+        să ștergi această conexiune și să o adaugi din nou pentru a continua sincronizarea datelor.
       delete: Șterge
       error: A apărut o eroare la sincronizarea datelor
       no_accounts_description: Nu am putut încărca niciun cont de la această instituție

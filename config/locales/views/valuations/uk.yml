@@ -1,37 +1,32 @@
----
 uk:
   valuations:
-    confirm_create:
-      confirm: Підтвердити
-      title: Підтвердьте новий баланс
-    confirm_update:
-      title: Оновити баланс
-      update: Оновити
     confirmation_contents:
+      this_will: "Це %{action_verb} вартість рахунку на"
+      to_colon: "до:"
+      total_account_value: Загальна вартість рахунку
+      holdings_value: Вартість активів
+      brokerage_cash: Вільні кошти на брокерському рахунку
       account_balance: баланс рахунку
+      credit_card_balance: баланс кредитної картки
+      loan_balance: баланс позики
+      property_value: вартість нерухомості
+      vehicle_value: вартість транспортного засобу
+      crypto_balance: криптовалютний баланс
+      asset_value: вартість активу
+      liability_balance: баланс зобов'язань
+      balance: баланс
+      "on": "на"
+      to: "до"
+      recalculate_notice: "Усі майбутні транзакції та баланси будуть перераховані на основі цієї %{change_or_update}."
+      change: зміни
+      update: оновлення
       action_set: встановить
       action_update: оновить
-      asset_value: вартість активу
-      balance: баланс
-      brokerage_cash: Вільні кошти на брокерському рахунку
-      change: зміни
-      credit_card_balance: баланс кредитної картки
-      crypto_balance: криптовалютний баланс
-      holdings_value: Вартість активів
-      liability_balance: баланс зобов'язань
-      loan_balance: баланс позики
-      'on': на
-      property_value: вартість нерухомості
-      recalculate_notice: Усі майбутні транзакції та баланси будуть перераховані на
-        основі цієї %{change_or_update}.
-      this_will: Це %{action_verb} вартість рахунку на
-      to: до
-      to_colon: 'до:'
-      total_account_value: Загальна вартість рахунку
-      update: оновлення
-      vehicle_value: вартість транспортного засобу
     create:
       account_updated: Рахунок оновлено
+    update:
+      account_updated: Рахунок оновлено
+      entry_updated: Запис оновлено
     errors:
       amount_required: Сума є обов'язковою
     form:
@@ -60,10 +55,13 @@ uk:
       name_placeholder: Введіть назву для цього запису
       note_label: Нотатки
       note_placeholder: Додайте будь-які додаткові відомості про цей запис
-      opening_balance: Початковий баланс
       overview: Огляд
       settings: Налаштування
+      opening_balance: "Початковий баланс"
       update_value: Оновити вартість
-    update:
-      account_updated: Рахунок оновлено
-      entry_updated: Запис оновлено
+    confirm_create:
+      confirm: Підтвердити
+      title: Підтвердьте новий баланс
+    confirm_update:
+      title: Оновити баланс
+      update: Оновити

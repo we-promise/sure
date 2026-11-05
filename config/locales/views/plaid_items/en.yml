@@ -2,8 +2,8 @@
 en:
   plaid_items:
     auto_link_opener:
-      create_failed: We couldn't confirm this connection was added. Reload the page
-        to check before trying again.
+      create_failed: We couldn't confirm this connection was added. Reload the page to
+        check before trying again.
     create:
       already_connected: You already have a connection for this institution, so this
         one wasn't added.
@@ -18,9 +18,9 @@ en:
       close: Close
       confirm: Confirm this connection
       connected_by: Connected by %{name}
-      eu_no_add_accounts: Plaid doesn't support adding accounts to an existing EU
-        connection. To change which accounts are connected, remove this one and add
-        it again.
+      eu_no_add_accounts: Plaid doesn't support adding accounts to an existing
+        EU connection. To change which accounts are connected, remove this one and
+        add it again.
       linked_on: Linked %{date}
       manage_connection: Go to accounts
       mask: "****%{mask}"
@@ -29,25 +29,24 @@ en:
         all_connected:
           one: The account you tried to add is already connected, so adding it again
             would only create a duplicate.
-          other: The %{count} accounts you tried to add are all already connected,
-            so adding them again would only create duplicates.
+          other: The %{count} accounts you tried to add are all already connected, so
+            adding them again would only create duplicates.
         different_login: To connect a different %{institution} login, choose New account
           again, and sign in with that login through Plaid.
         more_accounts: To add more accounts to this connection, close this and choose
           Add accounts on the %{institution} connection.
-        none_connected: None of the accounts you tried to add are connected yet, so
-          this is likely a different login. Adding it only counts as another Plaid
-          connection.
         others_connected:
           one: Sure already has this account through %{name}'s connection, so adding
             yours would only create a duplicate.
-          other: Sure already has these accounts through %{name}'s connection, so
-            adding yours would only create duplicates.
+          other: Sure already has these accounts through %{name}'s connection, so adding
+            yours would only create duplicates.
         others_connected_several:
           one: Sure already has this account through other members' connections, so
             adding yours would only create a duplicate.
-          other: Sure already has these accounts through other members' connections,
-            so adding yours would only create duplicates.
+          other: Sure already has these accounts through other members' connections, so
+            adding yours would only create duplicates.
+        none_connected: None of the accounts you tried to add are connected yet, so this
+          is likely a different login. Adding it only counts as another Plaid connection.
         some_connected:
           connected:
             one: The other one is already connected, so adding this connection would
@@ -55,15 +54,15 @@ en:
             other: The other %{count} are already connected, so adding this connection
               would duplicate them and count as another Plaid connection.
           unconnected:
-            one: 'One account you tried to add isn''t connected yet:'
+            one: "One account you tried to add isn't connected yet:"
             other: "%{count} accounts you tried to add aren't connected yet:"
         unknown:
           one: These accounts can't be checked against your existing connection. If
-            they're the same accounts, adding this connection would duplicate them
-            and count as another Plaid connection.
-          other: These accounts can't be checked against your existing connections.
-            If they're the same accounts, adding this connection would duplicate them
-            and count as another Plaid connection.
+            they're the same accounts, adding this connection would duplicate them and
+            count as another Plaid connection.
+          other: These accounts can't be checked against your existing connections. If
+            they're the same accounts, adding this connection would duplicate them and
+            count as another Plaid connection.
       title:
         one: You already have a connection for this institution
         other: You already have %{count} connections for this institution
@@ -75,11 +74,7 @@ en:
     errors:
       link_token_generic: We couldn't open Plaid right now. Please try again, and
         if the problem persists check the server logs for details.
-      link_token_with_message: 'Plaid couldn''t open the connection: %{message}'
-    link_existing_account:
-      already_linked: This Plaid account is already linked
-      invalid_account: Invalid Plaid account selected
-      success: Account successfully linked to Plaid
+      link_token_with_message: "Plaid couldn't open the connection: %{message}"
     plaid_item:
       add_accounts: Add accounts
       add_new: Add new connection
@@ -91,7 +86,7 @@ en:
       connection_lost_description: This connection is no longer valid. You'll need
         to delete this connection and add it again to continue syncing data.
       delete: Delete
-      deletion_in_progress: "(deletion in progress...)"
+      deletion_in_progress: (deletion in progress...)
       error: Error occurred while syncing data
       no_accounts_description: We could not load any accounts from this financial
         institution.
@@ -103,9 +98,12 @@ en:
       syncing: Syncing...
       update: Update
     select_existing_account:
-      cancel: Cancel
+      no_available_accounts: No available Plaid accounts to link. Please connect a new Plaid account first.
+      title: "Link %{account_name} to Plaid"
       description: Select a Plaid account to link to your existing account
+      cancel: Cancel
       link_account: Link account
-      no_available_accounts: No available Plaid accounts to link. Please connect a
-        new Plaid account first.
-      title: Link %{account_name} to Plaid
+    link_existing_account:
+      invalid_account: Invalid Plaid account selected
+      already_linked: This Plaid account is already linked
+      success: Account successfully linked to Plaid

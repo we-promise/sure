@@ -4,4 +4,4 @@ hu:
     errors:
       models:
         plaid_account:
-          no_balance: A Plaid-számlának rendelkeznie kell aktuális vagy elérhető egyenleggel
+          no_balance: "A Plaid-számlának rendelkeznie kell aktuális vagy elérhető egyenleggel"

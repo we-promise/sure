@@ -12,23 +12,21 @@ nb:
       name_placeholder: Forhandlernavn
     index:
       empty: Ingen forhandlere ennå
-      family_empty: Ingen familieforhandlere ennå
-      family_title: Familieforhandlere
       new: Ny forhandler
-      provider_empty: Ingen leverandørforhandlere er koblet til denne familien ennå
-      provider_read_only: Leverandørforhandlere synkroniseres fra dine tilkoblede
-        institusjoner. De kan ikke redigeres her.
-      provider_title: Leverandørforhandlere
-      table:
-        actions: Handlinger
-        merchant: Forhandler
-        source: Kilde
       title: Forhandlere
+      family_title: Familieforhandlere
+      family_empty: Ingen familieforhandlere ennå
+      provider_title: Leverandørforhandlere
+      provider_empty: Ingen leverandørforhandlere er koblet til denne familien ennå
+      provider_read_only: Leverandørforhandlere synkroniseres fra dine tilkoblede institusjoner. De kan ikke redigeres her.
+      table:
+        merchant: Forhandler
+        actions: Handlinger
+        source: Kilde
     merchant:
       confirm_accept: Slett forhandler
-      confirm_body: Er du sikker på at du vil slette denne forhandleren? Fjerning
-        av denne forhandleren vil fjerne koblingen til alle tilknyttede transaksjoner
-        og kan påvirke rapporteringen din.
+      confirm_body: Er du sikker på at du vil slette denne forhandleren? Fjerning av denne forhandleren
+        vil fjerne koblingen til alle tilknyttede transaksjoner og kan påvirke rapporteringen din.
       confirm_title: Slett forhandler?
       delete: Slett forhandler
       edit: Rediger forhandler

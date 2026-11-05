@@ -2,6 +2,5 @@
 nl:
   syncs:
     cancel:
-      cancelled: Synchronisatie geannuleerd. Wat al gesynchroniseerd was, blijft behouden;
-        werk in de wachtrij is gestopt.
-      not_cancellable: Deze synchronisatie is al voltooid.
+      cancelled: "Synchronisatie geannuleerd. Wat al gesynchroniseerd was, blijft behouden; werk in de wachtrij is gestopt."
+      not_cancellable: "Deze synchronisatie is al voltooid."

@@ -57,8 +57,6 @@ tr:
         revoke_key: İptal Et
         subtitle: Verilerinize programatik erişim için API anahtarlarını yönetin.
         title: API Anahtarları
-      key_reveal:
-        copied: Kopyalandı!
       new:
         cancel: İptal
         create_key: API Anahtarı Oluştur
@@ -98,7 +96,8 @@ tr:
         title: API Anahtarı Oluştur
       no_api_key:
         create_api_key: API Anahtarı Oluştur
-        description: Verilerinize güvenli bir API anahtarıyla programatik erişim sağlayın.
+        description: Verilerinize güvenli bir API anahtarıyla programatik erişim
+          sağlayın.
         feature_1: Hesap verilerinize programatik olarak erişin
         feature_2: Özel entegrasyonlar ve uygulamalar oluşturun
         feature_3: Veri çekme ve analizini otomatikleştirin
@@ -140,6 +139,8 @@ tr:
           page_title: API Anahtarı Başarıyla Oluşturuldu
           your_api_key: API Anahtarınız
         title: API Anahtarı Yönetimi
+      key_reveal:
+        copied: Kopyalandı!
     api_keys_controller:
       revoke_failed: API anahtarı iptal edilemedi
       revoked_successfully: API anahtarı başarıyla iptal edildi

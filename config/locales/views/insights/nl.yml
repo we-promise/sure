@@ -1,129 +1,105 @@
 ---
 nl:
   insights:
-    actions:
-      budget: Budget bekijken
-      cash_flow_warning: Terugkerende transacties bekijken
-      idle_cash: Naar account
-      maintained_goal_depleted: Reserve bekijken
-      net_worth_milestone: Rapport netto vermogen bekijken
-      savings_rate_change: Transacties van die maand bekijken
-      spending_anomaly: Transacties in %{category} bekijken
-      subscription_audit: Terugkerende transacties bekijken
+    notification:
+      title: "Nieuw financieel inzicht"
+      body: "Open Sure om uw nieuwste AI-inzicht te bekijken."
+    index:
+      title: "Inzichten"
+      subtitle: "Wat er speelt in uw financiën, elke nacht vernieuwd."
+      refresh: "Controleren op nieuwe inzichten"
+      empty:
+        title: "Nog geen inzichten"
+        description: "Inzichten verschijnen hier zodra er voldoende activiteit op uw accounts is. Ze worden elke nacht automatisch vernieuwd."
+    refresh:
+      queued: "We genereren nieuwe inzichten. Kijk over een minuut nog eens."
+      checking: "Controleren…"
     card:
-      acknowledge: Begrepen
-      acknowledge_title: Verbergen totdat de cijfers veranderen
-      acknowledged: Inzicht verborgen
-      dig_in: Verder uitzoeken met AI
-      new: Nieuw
+      acknowledged: "Inzicht verborgen"
+      acknowledge: "Begrepen"
+      acknowledge_title: "Verbergen totdat de cijfers veranderen"
+      new: "Nieuw"
+      dig_in: "Verder uitzoeken met AI"
     dig_in:
-      prompt: |-
-        Help me dit inzicht verder uit te zoeken.
-
-        Inzicht: %{title}
-        Wat Sure vond: %{body}
-        Periode: %{period}
-        Cijfers:
-        %{facts}
-
-        Wat zit erachter, en moet ik iets doen?
+      prompt: "Help me dit inzicht verder uit te zoeken.\n\nInzicht: %{title}\nWat Sure vond: %{body}\nPeriode: %{period}\nCijfers:\n%{facts}\n\nWat zit erachter, en moet ik iets doen?"
     feed:
-      acknowledge_aria: 'Begrepen: %{title}'
-      header: Nieuwste
-      header_new: Nieuw
-      view_all: Alle inzichten bekijken
+      view_all: "Alle inzichten bekijken"
+      header: "Nieuwste"
+      header_new: "Nieuw"
+      acknowledge_aria: "Begrepen: %{title}"
+    types:
+      spending_anomaly: "Uitgaven"
+      cash_flow_warning: "Cashflow"
+      net_worth_milestone: "Netto vermogen"
+      subscription_audit: "Abonnementen"
+      savings_rate_change: "Spaarpercentage"
+      idle_cash: "Ongebruikt geld"
+      budget_at_risk: "Budget"
+      budget_on_track: "Budget"
+      maintained_goal_depleted: "Reserve"
+    meta:
+      next_n_days:
+        one: "Volgende dag"
+        other: "Volgende %{count} dagen"
+      last_n_days:
+        one: "Afgelopen dag"
+        other: "Afgelopen %{count} dagen"
+      date_range: "%{from} t/m %{to}"
     figures:
+      vs_previous: "t.o.v. vorige maand"
+      today: "vandaag"
+      on_pace: "verwacht"
+      of_budget: "van budget"
+      need_attention: "vragen aandacht"
       days_overdue:
         one: "%{count} dag te laat"
         other: "%{count} dagen te laat"
       idle_days:
         one: "%{count} dag inactief"
         other: "%{count} dagen inactief"
-      need_attention: vragen aandacht
-      of_budget: van budget
-      on_pace: verwacht
-      today: vandaag
-      vs_previous: t.o.v. vorige maand
-    index:
-      empty:
-        description: Inzichten verschijnen hier zodra er voldoende activiteit op uw
-          accounts is. Ze worden elke nacht automatisch vernieuwd.
-        title: Nog geen inzichten
-      refresh: Controleren op nieuwe inzichten
-      subtitle: Wat er speelt in uw financiën, elke nacht vernieuwd.
-      title: Inzichten
-    meta:
-      date_range: "%{from} t/m %{to}"
-      last_n_days:
-        one: Afgelopen dag
-        other: Afgelopen %{count} dagen
-      next_n_days:
-        one: Volgende dag
-        other: Volgende %{count} dagen
-    notification:
-      body: Open Sure om uw nieuwste AI-inzicht te bekijken.
-      title: Nieuw financieel inzicht
-    refresh:
-      checking: Controleren…
-      queued: We genereren nieuwe inzichten. Kijk over een minuut nog eens.
-    templates:
-      budget_at_risk:
-        near: "%{categories} zitten deze maand dicht bij hun limiet. U heeft tot nu
-          toe %{budget_spent_pct}% van uw totale budget gebruikt."
-        over: "%{categories} gingen deze maand over het budget. U heeft tot nu toe
-          %{budget_spent_pct}% van uw totale budget gebruikt."
-      budget_on_track: U heeft %{spent} van uw budget van %{budgeted} uitgegeven (%{budget_spent_pct}%)
-        en alles blijft binnen de limiet.
-      cash_flow_warning:
-        low: Op basis van uw komende terugkerende transacties en gebruikelijke uitgaven
-          kan uw saldo rond %{projected_low_date} dalen tot %{projected_low}.
-        negative: Op basis van uw komende terugkerende transacties en gebruikelijke
-          uitgaven kan uw saldo rond %{projected_low_date} zakken tot %{projected_low}.
-      idle_cash: "%{account} bevat %{balance} zonder activiteit in de afgelopen %{idle_days}
-        dagen."
-      maintained_goal_depleted: "%{goal} bevat %{saved} van de %{target} die het moet
-        aanhouden. Er ontbreekt %{missing}."
-      net_worth_milestone: Uw netto vermogen is de grens van %{milestone} gepasseerd
-        en staat nu op %{net_worth}.
-      savings_rate_change:
-        down: U heeft in %{month} %{current_rate}% van uw inkomsten gespaard, %{change_pp}
-          procentpunt minder dan de %{previous_rate}% van de maand ervoor.
-        down_negative: 'U heeft in %{month} meer uitgegeven dan verdiend: uw spaarpercentage
-          daalde naar %{current_rate}%, van %{previous_rate}% de maand ervoor.'
-        up: U heeft in %{month} %{current_rate}% van uw inkomsten gespaard, %{change_pp}
-          procentpunt meer dan de %{previous_rate}% van de maand ervoor.
-      spending_anomaly:
-        above: In dit tempo geeft u deze maand %{projected_spend} uit aan %{category},
-          ongeveer %{deviation_pct}% meer dan uw recente maandgemiddelde van %{baseline_spend}.
-        below: In dit tempo geeft u deze maand %{projected_spend} uit aan %{category},
-          ongeveer %{deviation_pct}% minder dan uw recente maandgemiddelde van %{baseline_spend}.
-      subscription_audit: "%{name} (%{amount}) is niet meer verschenen sinds de verwachte
-        datum %{expected_on}. Mogelijk is het opgezegd, of is de afschrijving verschoven."
+    actions:
+      spending_anomaly: "Transacties in %{category} bekijken"
+      cash_flow_warning: "Terugkerende transacties bekijken"
+      net_worth_milestone: "Rapport netto vermogen bekijken"
+      subscription_audit: "Terugkerende transacties bekijken"
+      savings_rate_change: "Transacties van die maand bekijken"
+      idle_cash: "Naar account"
+      budget: "Budget bekijken"
+      maintained_goal_depleted: "Reserve bekijken"
     titles:
-      budget_at_risk:
-        one: Eén categorie in uw budget vraagt aandacht
-        other: "%{count} categorieën in uw budget vragen aandacht"
-      budget_on_track: Uw budget is op schema
-      cash_flow_warning:
-        low: Uw saldo kan laag worden
-        negative: Uw saldo kan negatief worden
-      idle_cash: Ongebruikt geld op %{account}
-      maintained_goal_depleted: "%{goal} is onder het streefniveau gezakt"
-      net_worth_milestone: 'Mijlpaal netto vermogen: %{milestone}'
-      savings_rate_change:
-        down: Uw spaarpercentage is gedaald in %{month}
-        up: Uw spaarpercentage is gestegen in %{month}
       spending_anomaly:
-        above: Uitgaven aan %{category} nemen toe
-        below: Uitgaven aan %{category} nemen af
-      subscription_audit: Is %{name} nog actief?
-    types:
-      budget_at_risk: Budget
-      budget_on_track: Budget
-      cash_flow_warning: Cashflow
-      idle_cash: Ongebruikt geld
-      maintained_goal_depleted: Reserve
-      net_worth_milestone: Netto vermogen
-      savings_rate_change: Spaarpercentage
-      spending_anomaly: Uitgaven
-      subscription_audit: Abonnementen
+        above: "Uitgaven aan %{category} nemen toe"
+        below: "Uitgaven aan %{category} nemen af"
+      cash_flow_warning:
+        low: "Uw saldo kan laag worden"
+        negative: "Uw saldo kan negatief worden"
+      net_worth_milestone: "Mijlpaal netto vermogen: %{milestone}"
+      maintained_goal_depleted: "%{goal} is onder het streefniveau gezakt"
+      subscription_audit: "Is %{name} nog actief?"
+      savings_rate_change:
+        up: "Uw spaarpercentage is gestegen in %{month}"
+        down: "Uw spaarpercentage is gedaald in %{month}"
+      idle_cash: "Ongebruikt geld op %{account}"
+      budget_at_risk:
+        one: "Eén categorie in uw budget vraagt aandacht"
+        other: "%{count} categorieën in uw budget vragen aandacht"
+      budget_on_track: "Uw budget is op schema"
+    templates:
+      spending_anomaly:
+        above: "In dit tempo geeft u deze maand %{projected_spend} uit aan %{category}, ongeveer %{deviation_pct}% meer dan uw recente maandgemiddelde van %{baseline_spend}."
+        below: "In dit tempo geeft u deze maand %{projected_spend} uit aan %{category}, ongeveer %{deviation_pct}% minder dan uw recente maandgemiddelde van %{baseline_spend}."
+      cash_flow_warning:
+        low: "Op basis van uw komende terugkerende transacties en gebruikelijke uitgaven kan uw saldo rond %{projected_low_date} dalen tot %{projected_low}."
+        negative: "Op basis van uw komende terugkerende transacties en gebruikelijke uitgaven kan uw saldo rond %{projected_low_date} zakken tot %{projected_low}."
+      net_worth_milestone: "Uw netto vermogen is de grens van %{milestone} gepasseerd en staat nu op %{net_worth}."
+      maintained_goal_depleted: "%{goal} bevat %{saved} van de %{target} die het moet aanhouden. Er ontbreekt %{missing}."
+      subscription_audit: "%{name} (%{amount}) is niet meer verschenen sinds de verwachte datum %{expected_on}. Mogelijk is het opgezegd, of is de afschrijving verschoven."
+      savings_rate_change:
+        up: "U heeft in %{month} %{current_rate}% van uw inkomsten gespaard, %{change_pp} procentpunt meer dan de %{previous_rate}% van de maand ervoor."
+        down: "U heeft in %{month} %{current_rate}% van uw inkomsten gespaard, %{change_pp} procentpunt minder dan de %{previous_rate}% van de maand ervoor."
+        down_negative: "U heeft in %{month} meer uitgegeven dan verdiend: uw spaarpercentage daalde naar %{current_rate}%, van %{previous_rate}% de maand ervoor."
+      idle_cash: "%{account} bevat %{balance} zonder activiteit in de afgelopen %{idle_days} dagen."
+      budget_at_risk:
+        over: "%{categories} gingen deze maand over het budget. U heeft tot nu toe %{budget_spent_pct}% van uw totale budget gebruikt."
+        near: "%{categories} zitten deze maand dicht bij hun limiet. U heeft tot nu toe %{budget_spent_pct}% van uw totale budget gebruikt."
+      budget_on_track: "U heeft %{spent} van uw budget van %{budgeted} uitgegeven (%{budget_spent_pct}%) en alles blijft binnen de limiet."

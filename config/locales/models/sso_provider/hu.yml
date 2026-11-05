@@ -6,10 +6,7 @@ hu:
         sso_provider:
           attributes:
             settings:
-              metadata_url_invalid: Az IdP metaadat URL-nek érvényes URL-nek kell
-                lennie
-              saml_cert_required: Ha nem metaadat URL-t használsz, kötelező megadni
-                az IdP tanúsítványt vagy a tanúsítvány ujjlenyomatát
-              saml_url_required: SAML-szolgáltatókhoz kötelező megadni az IdP metaadat
-                URL-jét vagy az IdP SSO URL-jét
-              sso_url_invalid: Az IdP SSO URL-nek érvényes URL-nek kell lennie
+              saml_url_required: "SAML-szolgáltatókhoz kötelező megadni az IdP metaadat URL-jét vagy az IdP SSO URL-jét"
+              saml_cert_required: "Ha nem metaadat URL-t használsz, kötelező megadni az IdP tanúsítványt vagy a tanúsítvány ujjlenyomatát"
+              metadata_url_invalid: "Az IdP metaadat URL-nek érvényes URL-nek kell lennie"
+              sso_url_invalid: "Az IdP SSO URL-nek érvényes URL-nek kell lennie"

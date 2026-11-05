@@ -26,10 +26,10 @@ vi:
     tabs:
       overview:
         current_price: Giá hiện tại
-        edit_account_details: Chỉnh sửa thông tin tài khoản
         make_model: Hãng & Mẫu xe
         mileage: Số dặm
         purchase_price: Giá mua
         trend: Xu hướng
         unknown: Không xác định
         year: Năm sản xuất
+        edit_account_details: "Chỉnh sửa thông tin tài khoản"

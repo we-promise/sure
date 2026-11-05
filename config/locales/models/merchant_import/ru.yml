@@ -4,6 +4,5 @@ ru:
     errors:
       models:
         merchant_import:
-          duplicate_columns: 'Повторяющиеся названия столбцов после нормализации:
-            %{columns}'
+          duplicate_columns: 'Повторяющиеся названия столбцов после нормализации: %{columns}'
           missing_columns: 'Отсутствуют обязательные столбцы: %{columns}'

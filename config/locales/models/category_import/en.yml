@@ -4,5 +4,5 @@ en:
     errors:
       models:
         category_import:
-          missing_columns: 'Missing required columns: %{columns}'
-          own_parent: Category '%{name}' cannot be its own parent
+          own_parent: "Category '%{name}' cannot be its own parent"
+          missing_columns: "Missing required columns: %{columns}"

@@ -1,16 +1,8 @@
 ---
 ca:
   valuations:
-    confirm_create:
-      confirm: Confirma
-      title: Confirma el nou saldo
-    confirm_update:
-      title: Actualitza el saldo
-      update: Actualitza
     confirmation_contents:
       account_balance: saldo del compte
-      action_set: establirà
-      action_update: actualitzarà
       asset_value: valor de l'actiu
       balance: saldo
       brokerage_cash: Efectiu del compte de valors
@@ -30,6 +22,8 @@ ca:
       total_account_value: Valor total del compte
       update: ajust
       vehicle_value: valor del vehicle
+      action_set: establirà
+      action_update: actualitzarà
     create:
       account_updated: Compte actualitzat
     errors:
@@ -69,3 +63,9 @@ ca:
     update:
       account_updated: Compte actualitzat
       entry_updated: Entrada actualitzada
+    confirm_create:
+      confirm: Confirma
+      title: Confirma el nou saldo
+    confirm_update:
+      title: Actualitza el saldo
+      update: Actualitza

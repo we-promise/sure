@@ -3,6 +3,10 @@ en:
   categories:
     bootstrap:
       success: Default categories created successfully
+    locked: Categories are locked. Unlock them to add a new category.
+    toggle_lock:
+      locked: Categories locked
+      unlocked: Categories unlocked
     category:
       delete: Delete category
       edit: Edit category
@@ -10,20 +14,20 @@ en:
       success: Category created successfully
     destroy:
       success: Category deleted successfully
-    destroy_all:
-      success: All categories deleted
     edit:
       edit: Edit category
     form:
-      auto_adjust: auto-adjust.
+      placeholder: Category name
+      name_label: Name
+      unassigned: "(unassigned)"
+      parent_category_label: "Parent category (optional)"
+      trigger_label: Choose color and icon
       color: Color
       icon: Icon
-      name_label: Name
-      parent_category_label: Parent category (optional)
-      placeholder: Category name
-      poor_contrast: Poor contrast, choose a darker color or
-      trigger_label: Choose color and icon
-      unassigned: "(unassigned)"
+      auto_adjust: auto-adjust.
+      poor_contrast: "Poor contrast, choose a darker color or"
+    destroy_all:
+      success: All categories deleted
     index:
       bootstrap: Use defaults (recommended)
       categories: Categories
@@ -32,47 +36,40 @@ en:
       delete_all: Delete all
       empty: No categories found
       lock_categories: Lock category creation
-      locked_message: Category creation is locked. Imports and bank syncs can still
-        add categories.
+      locked_message: Category creation is locked. Imports and bank syncs can still add categories.
       merge: Merge categories
       new: New category
       unlock_categories: Unlock category creation
-    locked: Categories are locked. Unlock them to add a new category.
     merge:
-      description: Select a target category and the categories to merge into it. Matching
-        transactions and budget lines will move to the target.
-      select_target: Select target category...
-      sources_hint: Selected categories will be deleted after their transactions and
-        budget lines move to the target. Do not select the target as a source.
-      sources_label: Categories to merge
-      submit: Merge selected
-      target_label: Merge into (target)
       title: Merge categories
+      description: Select a target category and the categories to merge into it. Matching transactions and budget lines will move to the target.
+      target_label: Merge into (target)
+      select_target: Select target category...
+      sources_label: Categories to merge
+      sources_hint: Selected categories will be deleted after their transactions and budget lines move to the target. Do not select the target as a source.
+      submit: Merge selected
     new:
       new_category: New category
     perform_merge:
-      invalid_categories: Invalid categories selected
-      no_categories_selected: No categories selected to merge
       success:
         one: Successfully merged %{count} category
         other: Successfully merged %{count} categories
+      no_categories_selected: No categories selected to merge
       target_not_found: Target category not found
+      invalid_categories: Invalid categories selected
       target_selected_as_source: Choose different categories for the target and sources.
-    toggle_lock:
-      locked: Categories locked
-      unlocked: Categories unlocked
     update:
       success: Category updated successfully
     virtual:
+      transfer: Transfer
       payment: Payment
       trade: Trade
-      transfer: Transfer
   category:
     dropdowns:
       show:
         bootstrap: Generate default categories
         empty: No categories found
-        expense: expense
-        income: income
-        match_transfer: Match transfer/payment
-        one_time: One-time %{type}
+        match_transfer: "Match transfer/payment"
+        one_time: "One-time %{type}"
+        income: "income"
+        expense: "expense"

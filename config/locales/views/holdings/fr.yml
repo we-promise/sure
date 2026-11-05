@@ -5,9 +5,9 @@ fr:
       brokerage_cash: Liquidités de courtage
     cost_basis_cell:
       cancel: Annuler
+      per_share_label: "Par action"
       overwrite_confirm_body: Cela remplacera le coût de revient actuel de %{current}.
       overwrite_confirm_title: Écraser le coût de revient ?
-      per_share_label: Par action
       save: Enregistrer
       set: Définir
       set_cost_basis_header: Définir le coût de revient pour %{ticker}
@@ -29,14 +29,14 @@ fr:
       shares: "%{qty} actions"
       unknown: "--"
     index:
+      positions:
+        one: "%{count} position"
+        other: "%{count} positions"
       average_cost: Coût moyen
       holdings: Holdings
       name: Nom
       new_holding: Nouvelle activité
       no_holdings: Aucun holding à afficher.
-      positions:
-        one: "%{count} position"
-        other: "%{count} positions"
       return: Rendement total
       weight: Poids
     missing_price_tooltip:

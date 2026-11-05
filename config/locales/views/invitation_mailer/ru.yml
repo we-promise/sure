@@ -3,7 +3,6 @@ ru:
   invitation_mailer:
     invite_email:
       accept_button: Принять приглашение
-      body: "%{inviter} приглашает вас присоединиться к «%{family}» (%{moniker}) в
-        %{product_name}!"
+      body: '%{inviter} приглашает вас присоединиться к «%{family}» (%{moniker}) в %{product_name}!'
       expiry_notice: Приглашение действительно ещё %{days} дн.
       greeting: Добро пожаловать в %{product_name}!

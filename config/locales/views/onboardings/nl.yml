@@ -1,69 +1,66 @@
 ---
 nl:
   onboardings:
-    goals:
-      ai_insights: AI laten helpen om mijn financiën te begrijpen
-      budgeting: Financiële plannen en budgetten beheren
-      cashflow: Cashflow en uitgaven begrijpen
-      investments: Beleggingen volgen
-      optimization: Rekeningen analyseren en optimaliseren
-      partner: Financiën samen met een partner beheren
-      reduce_stress: Financiële stress of angst verminderen
-      submit: Volgende
-      subtitle: Selecteer een of meer doelen die u hebt met %{product_name} als uw
-        persoonlijke financiële tool.
-      title: Wat brengt u hier?
-      unified_accounts: Al mijn rekeningen op één plek zien
     header:
-      goals: Doelen
-      preferences: Voorkeuren
-      setup: Instellen
-      sign_out: Uitloggen
-      start: Start
+      sign_out: "Uitloggen"
+      setup: "Instellen"
+      preferences: "Voorkeuren"
+      goals: "Doelen"
+      start: "Start"
     logout:
-      sign_out: Uitloggen
-    preferences:
-      color_theme: Kleurthema
-      currency: Valuta
-      date_format: Datumformaat
-      example: Voorbeeldaccount
-      locale: Taal
-      preview: Voorbeeld van hoe gegevens worden weergegeven op basis van voorkeuren.
-      submit: Voltooien
-      subtitle: Laten we uw voorkeuren configureren.
-      theme_dark: Donker
-      theme_light: Licht
-      theme_system: Systeem
-      title: Configureer uw voorkeuren
+      sign_out: "Uitloggen"
     show:
-      country: Land
-      first_name: Voornaam
-      first_name_placeholder: Voornaam
-      group_name: Groepsnaam
-      group_name_placeholder: Groepsnaam
-      household_name: Huishoudnaam
-      household_name_placeholder: Huishoudnaam
-      last_name: Achternaam
-      last_name_placeholder: Achternaam
-      moniker_family: Gezinsleden (alleen uzelf of met partner, tieners, enz.)
-      moniker_group: Groep mensen (bedrijf, club, vereniging of een ander type)
-      moniker_prompt: Gaat %{product_name} gebruiken met ...
-      submit: Doorgaan
-      subtitle: Laten we eerst uw profiel voltooien.
-      title: Laten we uw account instellen
+      title: "Laten we uw account instellen"
+      subtitle: "Laten we eerst uw profiel voltooien."
+      first_name: "Voornaam"
+      first_name_placeholder: "Voornaam"
+      last_name: "Achternaam"
+      last_name_placeholder: "Achternaam"
+      group_name: "Groepsnaam"
+      group_name_placeholder: "Groepsnaam"
+      household_name: "Huishoudnaam"
+      household_name_placeholder: "Huishoudnaam"
+      moniker_prompt: "Gaat %{product_name} gebruiken met ..."
+      moniker_family: "Gezinsleden (alleen uzelf of met partner, tieners, enz.)"
+      moniker_group: "Groep mensen (bedrijf, club, vereniging of een ander type)"
+      country: "Land"
+      submit: "Doorgaan"
+    preferences:
+      title: "Configureer uw voorkeuren"
+      subtitle: "Laten we uw voorkeuren configureren."
+      example: "Voorbeeldaccount"
+      preview: "Voorbeeld van hoe gegevens worden weergegeven op basis van voorkeuren."
+      color_theme: "Kleurthema"
+      theme_system: "Systeem"
+      theme_light: "Licht"
+      theme_dark: "Donker"
+      locale: "Taal"
+      currency: "Valuta"
+      date_format: "Datumformaat"
+      submit: "Voltooien"
+    goals:
+      title: "Wat brengt u hier?"
+      subtitle: "Selecteer een of meer doelen die u hebt met %{product_name} als uw persoonlijke financiële tool."
+      unified_accounts: "Al mijn rekeningen op één plek zien"
+      cashflow: "Cashflow en uitgaven begrijpen"
+      budgeting: "Financiële plannen en budgetten beheren"
+      partner: "Financiën samen met een partner beheren"
+      investments: "Beleggingen volgen"
+      ai_insights: "AI laten helpen om mijn financiën te begrijpen"
+      optimization: "Rekeningen analyseren en optimaliseren"
+      reduce_stress: "Financiële stress of angst verminderen"
+      submit: "Volgende"
     trial:
-      continue_trial: Proefperiode voortzetten
-      data_deletion: Gegevens worden daarna verwijderd
-      description_html: Vanaf vandaag kunt u het product uitgebreid testen.<br/>Als
-        het product u bevalt, host het zelf of draag bij om het hier te blijven gebruiken.
-      how_it_works: Hoe het werkt
-      in_40_days: Over 40 dagen (%{date})
-      in_40_days_description: We sturen u een herinnering om uw gegevens te exporteren.
-      in_45_days: Over 45 dagen (%{date})
-      in_45_days_description: We verwijderen uw gegevens — draag bij om Sure hier
-        te blijven gebruiken!
-      title: Probeer Sure 45 dagen
-      today: Vandaag
-      today_description: U krijgt 45 dagen gratis toegang tot Sure op onze AWS.
-      try_button: Probeer Sure 45 dagen
-      upgrade: Upgraden
+      title: "Probeer Sure 45 dagen"
+      data_deletion: "Gegevens worden daarna verwijderd"
+      description_html: "Vanaf vandaag kunt u het product uitgebreid testen.<br/>Als het product u bevalt, host het zelf of draag bij om het hier te blijven gebruiken."
+      try_button: "Probeer Sure 45 dagen"
+      continue_trial: "Proefperiode voortzetten"
+      upgrade: "Upgraden"
+      how_it_works: "Hoe het werkt"
+      today: "Vandaag"
+      today_description: "U krijgt 45 dagen gratis toegang tot Sure op onze AWS."
+      in_40_days: "Over 40 dagen (%{date})"
+      in_40_days_description: "We sturen u een herinnering om uw gegevens te exporteren."
+      in_45_days: "Over 45 dagen (%{date})"
+      in_45_days_description: "We verwijderen uw gegevens — draag bij om Sure hier te blijven gebruiken!"

@@ -15,7 +15,7 @@ pt-BR:
       locality_placeholder: São Paulo
       none: Nenhum
       postal_code: CEP
-      postal_code_placeholder: 01234-567
+      postal_code_placeholder: '01234-567'
       region: Estado
       region_placeholder: SP
       subtype_prompt: Selecionar tipo de propriedade

@@ -40,13 +40,12 @@ ca:
       syncing: Sincronitzant...
       update_credentials: Actualitza les credencials
     complete_account_setup:
-      invalid_sync_start_date: La data d'inici de la sincronització ha de ser una
-        data vàlida del passat.
       no_accounts: No hi ha comptes per importar
       none_selected: No s'ha seleccionat cap compte
       success:
         one: S'ha importat %{count} compte
         other: S'han importat %{count} comptes
+      invalid_sync_start_date: La data d'inici de la sincronització ha de ser una data vàlida del passat.
     create:
       default_name: Binance
       success: S'ha connectat correctament a Binance! El teu compte s'està sincronitzant.

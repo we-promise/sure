@@ -2,74 +2,71 @@
 nl:
   trades:
     api_errors:
-      activity_label_must_match_type: investment_activity_label moet %{label} zijn
-        wanneer type %{type} is
-      invalid_activity_label: Ongeldig label voor beleggingsactiviteit
-      invalid_type: Ongeldig type
-      supported_types: 'type moet een van de volgende zijn: %{types}'
+      activity_label_must_match_type: "investment_activity_label moet %{label} zijn wanneer type %{type} is"
+      invalid_activity_label: "Ongeldig label voor beleggingsactiviteit"
+      invalid_type: "Ongeldig type"
+      supported_types: "type moet een van de volgende zijn: %{types}"
     form:
-      account: Overboekingsaccount (optioneel)
-      account_prompt: Account zoeken
-      amount: Bedrag
-      dividend_requires_security: Een effect is verplicht voor dividenden
-      fee: Transactiekosten
-      holding: Ticker symbool
-      holding_optional: Tickersymbool (optioneel)
-      price: Prijs per aandeel
-      qty: Hoeveelheid
-      submit: Transactie toevoegen
-      ticker_placeholder: AAPL
-      trade_requires_security: Een effect (ticker) is verplicht voor aan- en verkopen
-      type: Type
-      type_buy: Kopen
-      type_deposit: Storting
-      type_dividend: Dividend
-      type_interest: Rente
-      type_sell: Verkopen
-      type_withdrawal: Opname
+      account: "Overboekingsaccount (optioneel)"
+      account_prompt: "Account zoeken"
+      amount: "Bedrag"
+      fee: "Transactiekosten"
+      holding: "Ticker symbool"
+      holding_optional: "Tickersymbool (optioneel)"
+      price: "Prijs per aandeel"
+      qty: "Hoeveelheid"
+      submit: "Transactie toevoegen"
+      ticker_placeholder: "AAPL"
+      type: "Type"
+      type_buy: "Kopen"
+      type_sell: "Verkopen"
+      type_deposit: "Storting"
+      type_withdrawal: "Opname"
+      type_dividend: "Dividend"
+      type_interest: "Rente"
+      dividend_requires_security: "Een effect is verplicht voor dividenden"
+      trade_requires_security: "Een effect (ticker) is verplicht voor aan- en verkopen"
     header:
-      buy: Kopen
-      contribution: Storting
-      current_market_price_label: Huidige Marktprijs
-      dividend: Dividend
-      exchange: Wissel
-      fee: Kosten
-      interest: Rente
-      other: Overig
-      overview: Overzicht
-      purchase_price_label: Aankoopprijs
-      purchase_qty_label: Aankoophoeveelheid
-      reinvestment: Herbelegging
-      sell: Verkopen
-      sweep_in: Sweep in
-      sweep_out: Sweep uit
-      symbol_label: Symbool
-      total_return_label: Ongerealiseerde winst/verlies
-      transfer: Overboeking
-      withdrawal: Opname
+      buy: "Kopen"
+      sell: "Verkopen"
+      dividend: "Dividend"
+      interest: "Rente"
+      contribution: "Storting"
+      exchange: "Wissel"
+      fee: "Kosten"
+      other: "Overig"
+      reinvestment: "Herbelegging"
+      sweep_in: "Sweep in"
+      sweep_out: "Sweep uit"
+      transfer: "Overboeking"
+      withdrawal: "Opname"
+      current_market_price_label: "Huidige Marktprijs"
+      overview: "Overzicht"
+      purchase_price_label: "Aankoopprijs"
+      purchase_qty_label: "Aankoophoeveelheid"
+      symbol_label: "Symbool"
+      total_return_label: "Ongerealiseerde winst/verlies"
     new:
-      title: Nieuwe transactie
+      title: "Nieuwe transactie"
     show:
-      additional: Aanvullend
-      amount_label: Bedrag
-      buy: Kopen
-      category_label: Categorie
-      cost_per_share_label: Kosten per Aandeel
-      date_label: Datum
-      delete: Verwijderen
-      delete_subtitle: Deze actie kan niet ongedaan worden gemaakt
-      delete_title: Transactie verwijderen
-      details: Details
-      exclude_subtitle: Deze transactie wordt niet meegenomen in rapporten en berekeningen
-      exclude_title: Uitsluiten van analyses
-      fee_label: Transactiekosten
-      no_category: Geen categorie
-      note_label: Notitie
-      note_placeholder: Voeg hier eventuele aanvullende notities toe...
-      provider_disabled_warning: Koersupdates gepauzeerd — provider %{provider} is
-        uitgeschakeld. Schakel deze weer in via Instellingen of koppel de positie
-        aan een andere provider.
-      quantity_label: Hoeveelheid
-      sell: Verkopen
-      settings: Instellingen
-      type_label: Type
+      additional: "Aanvullend"
+      amount_label: "Bedrag"
+      buy: "Kopen"
+      category_label: "Categorie"
+      cost_per_share_label: "Kosten per Aandeel"
+      date_label: "Datum"
+      delete: "Verwijderen"
+      fee_label: "Transactiekosten"
+      delete_subtitle: "Deze actie kan niet ongedaan worden gemaakt"
+      delete_title: "Transactie verwijderen"
+      details: "Details"
+      provider_disabled_warning: "Koersupdates gepauzeerd — provider %{provider} is uitgeschakeld. Schakel deze weer in via Instellingen of koppel de positie aan een andere provider."
+      exclude_subtitle: "Deze transactie wordt niet meegenomen in rapporten en berekeningen"
+      exclude_title: "Uitsluiten van analyses"
+      no_category: "Geen categorie"
+      note_label: "Notitie"
+      note_placeholder: "Voeg hier eventuele aanvullende notities toe..."
+      quantity_label: "Hoeveelheid"
+      sell: "Verkopen"
+      settings: "Instellingen"
+      type_label: "Type"

@@ -4,5 +4,4 @@ de:
     errors:
       models:
         indexa_capital_item:
-          credentials_required: Es ist entweder die Umgebungsvariable INDEXA_API_TOKEN
-            oder die Kombination aus Benutzername, Ausweisnummer und Passwort nötig
+          credentials_required: Es ist entweder die Umgebungsvariable INDEXA_API_TOKEN oder die Kombination aus Benutzername, Ausweisnummer und Passwort nötig

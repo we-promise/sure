@@ -1,225 +1,204 @@
----
 en:
-  providers:
-    snaptrade:
-      accounts_count:
-        one: "%{count} account"
-        other: "%{count} accounts"
-      connect_button: Connect Brokerage
-      connected_brokerages: 'Connected:'
-      connection_description: Connect to your brokerage via SnapTrade (25+ brokers
-        supported)
-      connections_error: 'Failed to load connections: %{message}'
-      delete_connection: Delete
-      delete_connection_body: This will permanently remove the %{brokerage} connection
-        from SnapTrade. All accounts from this brokerage will be unlinked. You'll
-        need to reconnect to sync these accounts again.
-      delete_connection_confirm: Delete Connection
-      delete_connection_title: Delete Brokerage Connection?
-      description: SnapTrade connects to 25+ major brokerages (Fidelity, Vanguard,
-        Schwab, Robinhood, etc.) and provides full trade history with activity labels
-        and cost basis.
-      free_tier_warning: SnapTrade's free tier covers 20 brokerage connections.
-      loading_connections: Loading connections...
-      manage_at_snaptrade: Manage connections at SnapTrade
-      manage_connections: Manage Connections
-      name: SnapTrade
-      needs_linking: needs linking
-      needs_setup:
-        one: "%{count} needs setup"
-        other: "%{count} need setup"
-      no_connections: No brokerage connections found.
-      oauth_connect_button: Connect with SnapTrade
-      oauth_device_button: Use a device code
-      oauth_reauthorize_button: Reauthorize
-      oauth_setup_step_1_html: Register an OAuth app at <a href="https://dashboard.snaptrade.com"
-        target="_blank" rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>
-      oauth_setup_step_2_html: 'For the browser flow only: add this app''s callback
-        URL (<code>%{callback_url}</code>) as a registered redirect URI'
-      oauth_setup_step_3: Set SNAPTRADE_OAUTH_CLIENT_ID in your environment and restart.
-        That alone enables the device code flow; add SNAPTRADE_OAUTH_CLIENT_SECRET
-        for the browser flow too
-      oauth_status_authorized: Authorized with SnapTrade.
-      oauth_status_ready: Authorize Sure to read your SnapTrade account data.
-      oauth_status_ready_device: Authorize Sure with a device code to read your SnapTrade
-        account data.
-      oauth_title: SnapTrade OAuth
-      orphaned_connection: Orphaned connection (not synced locally)
-      setup_accounts_button: Setup Accounts
-      status_connected:
-        one: "%{count} account from SnapTrade"
-        other: "%{count} accounts from SnapTrade"
-      status_ready: Ready to connect brokerages
-  snaptrade_item:
-    brokerage_summary:
-      count:
-        one: "%{count} brokerage"
-        other: "%{count} brokerages"
-      none: No brokerages connected
-    institution_summary:
-      count:
-        one: "%{count} institution"
-        other: "%{count} institutions"
-      none: No institutions connected
-    sync_status:
-      no_accounts: No accounts found
-      synced:
-        one: "%{count} account synced"
-        other: "%{count} accounts synced"
-      synced_with_setup: "%{linked} synced, %{unlinked} need setup"
-    syncer:
-      activities_fetching_async: Activities are being fetched in the background. This
-        may take up to a minute for fresh brokerage connections.
-      calculating: Calculating balances...
-      checking_config: Checking account configuration...
-      discovering: Discovering accounts...
-      importing: Importing accounts from SnapTrade...
-      needs_setup: "%{count} accounts need setup..."
-      processing: Processing holdings and activities...
   snaptrade_items:
-    callback:
-      no_item: SnapTrade configuration not found.
-      success: Brokerage connected! Please select which accounts to link.
-    complete_account_setup:
-      link_failed: 'Failed to link accounts: %{errors}'
-      no_accounts: No accounts were selected for linking.
-      partial_success:
-        one: Linked %{count} account. %{failed_count} failed to link.
-        other: Linked %{count} accounts. %{failed_count} failed to link.
-      success:
-        one: Successfully linked %{count} account.
-        other: Successfully linked %{count} accounts.
-    complete_oauth_device_flow:
-      access_denied: SnapTrade authorization was declined.
-      authorization_pending: SnapTrade hasn't seen your confirmation yet. Approve
-        the code in SnapTrade, then try again.
-      device_code_required: No SnapTrade device authorization is in progress for this
-        connection. Start it again to get a new code.
-      expired: This device code expired. Start the authorization again.
-      failed: Unable to complete SnapTrade device authorization. Please try again.
-      success: SnapTrade authorization complete.
-    connect:
-      connection_failed: 'Failed to connect to SnapTrade: %{message}'
-      decryption_failed: Unable to read SnapTrade credentials. Please delete and recreate
-        this connection.
-    connections:
-      unknown_brokerage: Unknown Brokerage
-    default_name: SnapTrade Connection
-    delete_connection:
-      api_deletion_failed: Could not delete connection from SnapTrade - this item
-        is not authorized. The connection may still exist in your SnapTrade account.
-      failed: 'Failed to delete connection: %{message}'
-      missing_authorization_id: Missing authorization ID
-      success: Connection deleted successfully. One slot freed up.
+    default_name: "SnapTrade Connection"
     destroy:
-      success: Scheduled SnapTrade connection for deletion.
-    link_existing_account:
-      failed: 'Failed to link account: %{message}'
-      not_found: Account not found.
-      success: Successfully linked to SnapTrade account.
-    oauth_authorize:
-      not_configured: The SnapTrade browser authorization needs SNAPTRADE_OAUTH_CLIENT_SECRET
-        as well as SNAPTRADE_OAUTH_CLIENT_ID. Set it and restart, or authorize with
-        a device code instead.
-    oauth_callback:
-      access_denied: SnapTrade authorization was cancelled.
-      failed: Unable to complete SnapTrade authorization. Please try again.
-      state_mismatch: SnapTrade authorization failed a security check. Please try
-        again.
-      success: SnapTrade authorization complete.
-    oauth_device_flow:
-      cancel_button: Cancel
-      code_label: Device code
-      complete_button: I've authorized SnapTrade
-      instructions: Open SnapTrade, confirm this device code, then come back here
-        to finish.
-      missing_client_id: SnapTrade OAuth is not configured. Add SNAPTRADE_OAUTH_CLIENT_ID
-        to .env.local, restart the app, then try again.
-      open_snaptrade: Open SnapTrade
-      start_button: Start authorization
-      subtitle: Authorize Sure for SnapTrade with a device code.
-      title: Connect SnapTrade
+      success: "Scheduled SnapTrade connection for deletion."
+    connect:
+      decryption_failed: "Unable to read SnapTrade credentials. Please delete and recreate this connection."
+      connection_failed: "Failed to connect to SnapTrade: %{message}"
+    callback:
+      success: "Brokerage connected! Please select which accounts to link."
+      no_item: "SnapTrade configuration not found."
+    complete_account_setup:
+      success:
+        one: "Successfully linked %{count} account."
+        other: "Successfully linked %{count} accounts."
+      partial_success:
+        one: "Linked %{count} account. %{failed_count} failed to link."
+        other: "Linked %{count} accounts. %{failed_count} failed to link."
+      link_failed: "Failed to link accounts: %{errors}"
+      no_accounts: "No accounts were selected for linking."
     preload_accounts:
-      not_configured: SnapTrade is not configured.
+      not_configured: "SnapTrade is not configured."
     select_accounts:
-      not_configured: SnapTrade is not configured.
+      not_configured: "SnapTrade is not configured."
+    oauth_authorize:
+      not_configured: "The SnapTrade browser authorization needs SNAPTRADE_OAUTH_CLIENT_SECRET as well as SNAPTRADE_OAUTH_CLIENT_ID. Set it and restart, or authorize with a device code instead."
+    oauth_callback:
+      success: "SnapTrade authorization complete."
+      access_denied: "SnapTrade authorization was cancelled."
+      state_mismatch: "SnapTrade authorization failed a security check. Please try again."
+      failed: "Unable to complete SnapTrade authorization. Please try again."
+    oauth_device_flow:
+      title: "Connect SnapTrade"
+      subtitle: "Authorize Sure for SnapTrade with a device code."
+      instructions: "Open SnapTrade, confirm this device code, then come back here to finish."
+      code_label: "Device code"
+      open_snaptrade: "Open SnapTrade"
+      start_button: "Start authorization"
+      complete_button: "I've authorized SnapTrade"
+      cancel_button: "Cancel"
+      missing_client_id: "SnapTrade OAuth is not configured. Add SNAPTRADE_OAUTH_CLIENT_ID to .env.local, restart the app, then try again."
+    start_oauth_device_flow:
+      failed: "Unable to start SnapTrade device authorization. Please try again."
+    complete_oauth_device_flow:
+      success: "SnapTrade authorization complete."
+      device_code_required: "No SnapTrade device authorization is in progress for this connection. Start it again to get a new code."
+      authorization_pending: "SnapTrade hasn't seen your confirmation yet. Approve the code in SnapTrade, then try again."
+      expired: "This device code expired. Start the authorization again."
+      access_denied: "SnapTrade authorization was declined."
+      failed: "Unable to complete SnapTrade device authorization. Please try again."
     select_existing_account:
-      balance_label: 'Balance:'
-      cancel_button: Cancel
-      connect_hint: You may need to connect a brokerage first.
-      header: Link Existing Account
-      link_button: Link
-      linking_to: 'Linking to account:'
-      no_accounts: No unlinked SnapTrade accounts available.
-      not_found: Account or SnapTrade configuration not found.
-      settings_link: Go to Provider Settings
-      subtitle: Select a SnapTrade account to link to
-      title: Link to SnapTrade Account
+      not_found: "Account or SnapTrade configuration not found."
+      title: "Link to SnapTrade Account"
+      header: "Link Existing Account"
+      subtitle: "Select a SnapTrade account to link to"
+      no_accounts: "No unlinked SnapTrade accounts available."
+      connect_hint: "You may need to connect a brokerage first."
+      settings_link: "Go to Provider Settings"
+      linking_to: "Linking to account:"
+      balance_label: "Balance:"
+      link_button: "Link"
+      cancel_button: "Cancel"
+    link_existing_account:
+      success: "Successfully linked to SnapTrade account."
+      failed: "Failed to link account: %{message}"
+      not_found: "Account not found."
+    connections:
+      unknown_brokerage: "Unknown Brokerage"
+    delete_connection:
+      success: "Connection deleted successfully. One slot freed up."
+      failed: "Failed to delete connection: %{message}"
+      missing_authorization_id: "Missing authorization ID"
+      api_deletion_failed: "Could not delete connection from SnapTrade - this item is not authorized. The connection may still exist in your SnapTrade account."
     setup_accounts:
-      account_number: 'Account:'
-      account_type_label: Account type
+      title: "Set Up SnapTrade Accounts"
+      header: "Set Up Your SnapTrade Accounts"
+      subtitle: "Select which brokerage accounts to link"
+      syncing: "Fetching your accounts..."
+      loading: "Fetching accounts from SnapTrade..."
+      loading_hint: "Click Refresh to check for accounts."
+      refresh: "Refresh"
+      info_title: "SnapTrade Investment Data"
+      info_holdings: "Holdings with current prices and quantities"
+      info_cost_basis: "Cost basis per position (when available)"
+      info_activities: "Trade history with activity labels (Buy, Sell, Dividend, etc.)"
+      info_history: "Up to 3 years of transaction history"
+      free_tier_note: "SnapTrade free tier allows 20 brokerage connections."
+      no_accounts_title: "No Accounts Found"
+      no_accounts_message: "No brokerage accounts were found. This can happen if you cancelled the connection or if your brokerage isn't supported."
+      try_again: "Connect Brokerage"
+      back_to_settings: "Back to Settings"
+      available_accounts: "Available Accounts"
+      balance_label: "Balance:"
+      account_number: "Account:"
+      account_type_label: "Account type"
       account_types:
-        credit_card: Credit Card
-        crypto: Crypto Account
-        depository: Checking or Savings Account
-        investment: Investment Account
-        loan: Loan or Line of Credit
-        other_asset: Other Asset
-      available_accounts: Available Accounts
-      back_to_settings: Back to Settings
-      balance_label: 'Balance:'
-      cancel_button: Cancel
-      create_button: Create Selected Accounts
-      creating: Creating Accounts...
-      done_button: Done
-      free_tier_note: SnapTrade free tier allows 20 brokerage connections.
-      header: Set Up Your SnapTrade Accounts
-      info_activities: Trade history with activity labels (Buy, Sell, Dividend, etc.)
-      info_cost_basis: Cost basis per position (when available)
-      info_history: Up to 3 years of transaction history
-      info_holdings: Holdings with current prices and quantities
-      info_title: SnapTrade Investment Data
-      link_button: Link
-      linked_accounts: Already Linked
-      linked_to: 'Linked to:'
-      loading: Fetching accounts from SnapTrade...
-      loading_hint: Click Refresh to check for accounts.
-      no_accounts_message: No brokerage accounts were found. This can happen if you
-        cancelled the connection or if your brokerage isn't supported.
-      no_accounts_title: No Accounts Found
-      or_link_existing: 'Or link to an existing account instead of creating a new
-        one:'
-      refresh: Refresh
-      select_account: Select an account...
-      subtitle: Select which brokerage accounts to link
-      sync_start_date_help: Leave blank for all available history
-      sync_start_date_label: 'Import transactions from:'
-      syncing: Fetching your accounts...
-      title: Set Up SnapTrade Accounts
-      try_again: Connect Brokerage
+        depository: "Checking or Savings Account"
+        credit_card: "Credit Card"
+        investment: "Investment Account"
+        crypto: "Crypto Account"
+        loan: "Loan or Line of Credit"
+        other_asset: "Other Asset"
+      sync_start_date_label: "Import transactions from:"
+      sync_start_date_help: "Leave blank for all available history"
+      create_button: "Create Selected Accounts"
+      cancel_button: "Cancel"
+      creating: "Creating Accounts..."
+      done_button: "Done"
+      or_link_existing: "Or link to an existing account instead of creating a new one:"
+      select_account: "Select an account..."
+      link_button: "Link"
+      linked_accounts: "Already Linked"
+      linked_to: "Linked to:"
     snaptrade_item:
       accounts_need_setup:
         one: "%{count} account needs setup"
         other: "%{count} accounts need setup"
-      add_another_brokerage: Connect another brokerage
-      connect_brokerage: Connect Brokerage
-      delete: Delete
-      deletion_in_progress: Deletion in progress...
-      error: Sync error
-      manage_connections: Manage Connections
+      deletion_in_progress: "Deletion in progress..."
+      syncing: "Syncing..."
+      requires_update: "Connection needs update"
+      error: "Sync error"
+      status: "Last synced %{timestamp} ago - %{summary}"
+      status_never: "Never synced"
+      reconnect: "Reconnect"
+      connect_brokerage: "Connect Brokerage"
+      add_another_brokerage: "Connect another brokerage"
+      delete: "Delete"
+      setup_needed: "Accounts need setup"
+      setup_description: "Some accounts from SnapTrade need to be linked to Sure accounts."
+      setup_action: "Setup Accounts"
+      setup_accounts_menu: "Set Up Accounts"
+      manage_connections: "Manage Connections"
       more_accounts_available:
         one: "%{count} more account available to set up"
         other: "%{count} more accounts available to set up"
-      no_accounts_description: Connect a brokerage to import your investment accounts.
-      no_accounts_title: No accounts discovered
-      reconnect: Reconnect
-      requires_update: Connection needs update
-      setup_accounts_menu: Set Up Accounts
-      setup_action: Setup Accounts
-      setup_description: Some accounts from SnapTrade need to be linked to Sure accounts.
-      setup_needed: Accounts need setup
-      status: Last synced %{timestamp} ago - %{summary}
-      status_never: Never synced
-      syncing: Syncing...
-    start_oauth_device_flow:
-      failed: Unable to start SnapTrade device authorization. Please try again.
+      no_accounts_title: "No accounts discovered"
+      no_accounts_description: "Connect a brokerage to import your investment accounts."
+
+  providers:
+    snaptrade:
+      name: "SnapTrade"
+      connection_description: "Connect to your brokerage via SnapTrade (25+ brokers supported)"
+      description: "SnapTrade connects to 25+ major brokerages (Fidelity, Vanguard, Schwab, Robinhood, etc.) and provides full trade history with activity labels and cost basis."
+      oauth_setup_step_1_html: "Register an OAuth app at <a href=\"https://dashboard.snaptrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">dashboard.snaptrade.com</a>"
+      oauth_setup_step_2_html: "For the browser flow only: add this app's callback URL (<code>%{callback_url}</code>) as a registered redirect URI"
+      oauth_setup_step_3: "Set SNAPTRADE_OAUTH_CLIENT_ID in your environment and restart. That alone enables the device code flow; add SNAPTRADE_OAUTH_CLIENT_SECRET for the browser flow too"
+      free_tier_warning: "SnapTrade's free tier covers 20 brokerage connections."
+      oauth_title: "SnapTrade OAuth"
+      oauth_status_ready: "Authorize Sure to read your SnapTrade account data."
+      oauth_status_ready_device: "Authorize Sure with a device code to read your SnapTrade account data."
+      oauth_status_authorized: "Authorized with SnapTrade."
+      oauth_connect_button: "Connect with SnapTrade"
+      oauth_device_button: "Use a device code"
+      oauth_reauthorize_button: "Reauthorize"
+      status_connected:
+        one: "%{count} account from SnapTrade"
+        other: "%{count} accounts from SnapTrade"
+      needs_setup:
+        one: "%{count} needs setup"
+        other: "%{count} need setup"
+      status_ready: "Ready to connect brokerages"
+      setup_accounts_button: "Setup Accounts"
+      connect_button: "Connect Brokerage"
+      connected_brokerages: "Connected:"
+      manage_connections: "Manage Connections"
+      loading_connections: "Loading connections..."
+      connections_error: "Failed to load connections: %{message}"
+      accounts_count:
+        one: "%{count} account"
+        other: "%{count} accounts"
+      orphaned_connection: "Orphaned connection (not synced locally)"
+      needs_linking: "needs linking"
+      no_connections: "No brokerage connections found."
+      delete_connection: "Delete"
+      delete_connection_title: "Delete Brokerage Connection?"
+      delete_connection_body: "This will permanently remove the %{brokerage} connection from SnapTrade. All accounts from this brokerage will be unlinked. You'll need to reconnect to sync these accounts again."
+      delete_connection_confirm: "Delete Connection"
+      manage_at_snaptrade: "Manage connections at SnapTrade"
+
+  snaptrade_item:
+    sync_status:
+      no_accounts: "No accounts found"
+      synced:
+        one: "%{count} account synced"
+        other: "%{count} accounts synced"
+      synced_with_setup: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: "No institutions connected"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+    brokerage_summary:
+      none: "No brokerages connected"
+      count:
+        one: "%{count} brokerage"
+        other: "%{count} brokerages"
+    syncer:
+      discovering: "Discovering accounts..."
+      importing: "Importing accounts from SnapTrade..."
+      processing: "Processing holdings and activities..."
+      calculating: "Calculating balances..."
+      checking_config: "Checking account configuration..."
+      needs_setup: "%{count} accounts need setup..."
+      activities_fetching_async: "Activities are being fetched in the background. This may take up to a minute for fresh brokerage connections."

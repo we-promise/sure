@@ -14,12 +14,12 @@ vi:
     reject:
       success: Yêu cầu đã bị từ chối
     super_admin_bar:
-      impersonating: Đang mạo danh
-      jobs: Công việc
-      join: Tham gia
-      join_a_session: Tham gia phiên
-      leave: Rời
-      request_impersonation: Yêu cầu mạo danh
       super_admin: Quản trị viên cấp cao
+      jobs: Công việc
+      impersonating: Đang mạo danh
+      leave: Rời
       terminate: Kết thúc
+      join_a_session: Tham gia phiên
+      join: Tham gia
       uuid_placeholder: UUID
+      request_impersonation: Yêu cầu mạo danh

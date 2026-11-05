@@ -1,4 +1,3 @@
----
 ro:
   activerecord:
     attributes:
@@ -15,9 +14,6 @@ ro:
         user:
           attributes:
             base:
-              cannot_deactivate_admin_with_other_users: Administratorul nu poate șterge
-                contul cât timp există alți utilizatori. Te rugăm să ștergi toți membrii
-                mai întâi.
+              cannot_deactivate_admin_with_other_users: Administratorul nu poate șterge contul cât timp există alți utilizatori. Te rugăm să ștergi toți membrii mai întâi.
             profile_image:
-              invalid_file_size: dimensiunea fișierului trebuie să fie mai mică de
-                %{max_megabytes}MB
+              invalid_file_size: dimensiunea fișierului trebuie să fie mai mică de %{max_megabytes}MB

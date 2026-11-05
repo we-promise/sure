@@ -16,13 +16,13 @@ fr:
       edit: Éditer la catégorie
     form:
       auto_adjust: réglage automatique.
+      trigger_label: Choisir la couleur et l'icône
       color: Couleur
       icon: Icône
       name_label: Nom
       parent_category_label: Catégorie parent (facultatif)
       placeholder: Nom de la catégorie
       poor_contrast: Mauvais contraste, choisissez une couleur plus foncée ou
-      trigger_label: Choisir la couleur et l'icône
       unassigned: "(non attribué)"
     index:
       bootstrap: Utiliser les valeurs par défaut (recommandé)
@@ -32,21 +32,15 @@ fr:
       delete_all: Supprimer tout
       empty: Aucune catégorie trouvée
       lock_categories: Verrouiller la création de catégories
-      locked_message: La création de catégories est verrouillée. Les imports et les
-        synchronisations bancaires peuvent toujours ajouter des catégories.
+      locked_message: La création de catégories est verrouillée. Les imports et les synchronisations bancaires peuvent toujours ajouter des catégories.
       merge: Fusionner les catégories
       new: Nouvelle catégorie
       unlock_categories: Déverrouiller la création de catégories
-    locked: Les catégories sont verrouillées. Déverrouillez-les pour ajouter une nouvelle
-      catégorie.
+    locked: Les catégories sont verrouillées. Déverrouillez-les pour ajouter une nouvelle catégorie.
     merge:
-      description: Sélectionnez une catégorie cible et les catégories à y fusionner.
-        Les transactions et lignes budgétaires correspondantes seront déplacées vers
-        la cible.
+      description: Sélectionnez une catégorie cible et les catégories à y fusionner. Les transactions et lignes budgétaires correspondantes seront déplacées vers la cible.
       select_target: Sélectionner la catégorie cible...
-      sources_hint: Les catégories sélectionnées seront supprimées une fois leurs
-        transactions et lignes budgétaires déplacées vers la cible. Ne sélectionnez
-        pas la cible comme source.
+      sources_hint: Les catégories sélectionnées seront supprimées une fois leurs transactions et lignes budgétaires déplacées vers la cible. Ne sélectionnez pas la cible comme source.
       sources_label: Catégories à fusionner
       submit: Fusionner la sélection
       target_label: Fusionner dans (cible)
@@ -60,8 +54,7 @@ fr:
         one: Catégorie fusionnée avec succès
         other: "%{count} catégories fusionnées avec succès"
       target_not_found: Catégorie cible non trouvée
-      target_selected_as_source: Choisissez des catégories différentes pour la cible
-        et les sources.
+      target_selected_as_source: Choisissez des catégories différentes pour la cible et les sources.
     toggle_lock:
       locked: Catégories verrouillées
       unlocked: Catégories déverrouillées

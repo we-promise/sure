@@ -3,47 +3,34 @@ id:
   activerecord:
     attributes:
       goal:
-        color: Warna
-        currency: Mata uang
-        linked_accounts: Rekening terhubung
         name: Nama
+        target_amount: Jumlah target
+        currency: Mata uang
+        target_date: Tanggal target
+        color: Warna
         notes: Catatan
         state: Status
-        target_amount: Jumlah target
-        target_date: Tanggal target
+        linked_accounts: Rekening terhubung
     errors:
       models:
         goal:
           attributes:
             base:
-              at_least_one_linked_account_required: Pilih setidaknya satu rekening
-                untuk mendanai target ini.
-              missing_exchange_rate: Nilai tukar belum tersedia untuk salah satu rekening
-                target ini, sehingga tidak dapat diselesaikan.
-              whole_account_conflict_on_restore: 'Tidak dapat memulihkan target ini:
-                “%{account_name}” sekarang sudah dialokasikan sepenuhnya untuk “%{goal_name}”.
-                Masukkan jumlah pada salah satunya terlebih dahulu.'
-            currency:
-              locked_after_linked: Tidak dapat mengubah mata uang setelah target dihubungkan
-                ke rekening.
-            kind:
-              locked_once_consumed: Target ini sudah mencatat uang sebagai pengeluaran,
-                sehingga tidak dapat diubah menjadi dana cadangan.
-              locked_while_released: Buka kembali target ini sebelum mengubahnya menjadi
-                dana cadangan.
-            linked_accounts:
-              must_be_fundable: Semua rekening terhubung harus berupa rekening kas,
-                investasi, atau kripto.
-              must_belong_to_family: Rekening terhubung harus milik keluarga yang
-                sama dengan target.
-            target_amount:
-              below_consumed: Tidak dapat menetapkan target di bawah jumlah yang telah
-                dicatat sebagai pengeluaran oleh target ini.
+              missing_exchange_rate: Nilai tukar belum tersedia untuk salah satu rekening target ini, sehingga tidak dapat diselesaikan.
+              at_least_one_linked_account_required: Pilih setidaknya satu rekening untuk mendanai target ini.
+              whole_account_conflict_on_restore: "Tidak dapat memulihkan target ini: “%{account_name}” sekarang sudah dialokasikan sepenuhnya untuk “%{goal_name}”. Masukkan jumlah pada salah satunya terlebih dahulu."
             target_mode:
-              months_requires_maintained: Hanya dana cadangan yang Anda pelihara yang
-                dapat memiliki target dalam hitungan bulan pengeluaran.
+              months_requires_maintained: Hanya dana cadangan yang Anda pelihara yang dapat memiliki target dalam hitungan bulan pengeluaran.
             target_months:
-              blank: Tentukan berapa bulan pengeluaran yang harus dicakup oleh dana
-                cadangan ini.
-              only_with_months_mode: Hitungan bulan pengeluaran hanya berlaku jika
-                target diatur dengan mode tersebut.
+              blank: Tentukan berapa bulan pengeluaran yang harus dicakup oleh dana cadangan ini.
+              only_with_months_mode: Hitungan bulan pengeluaran hanya berlaku jika target diatur dengan mode tersebut.
+            linked_accounts:
+              must_be_fundable: Semua rekening terhubung harus berupa rekening kas, investasi, atau kripto.
+              must_belong_to_family: Rekening terhubung harus milik keluarga yang sama dengan target.
+            kind:
+              locked_while_released: Buka kembali target ini sebelum mengubahnya menjadi dana cadangan.
+              locked_once_consumed: Target ini sudah mencatat uang sebagai pengeluaran, sehingga tidak dapat diubah menjadi dana cadangan.
+            target_amount:
+              below_consumed: Tidak dapat menetapkan target di bawah jumlah yang telah dicatat sebagai pengeluaran oleh target ini.
+            currency:
+              locked_after_linked: Tidak dapat mengubah mata uang setelah target dihubungkan ke rekening.

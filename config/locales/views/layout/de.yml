@@ -2,19 +2,19 @@
 de:
   layouts:
     application:
-      insights: Insights
+      privacy_mode: Datenschutzmodus umschalten
+      skip_to_main: Zum Hauptinhalt springen
       nav:
         assistant: Assistent
         budgets: Budgets
-        goals: Ziele
         home: Startseite
         plan: Plan
         reports: Berichte
         transactions: Transaktionen
-      privacy_mode: Datenschutzmodus umschalten
+        goals: Ziele
+      insights: Insights
       resize_left_sidebar: Breite der Kontenleiste ändern
       resize_right_sidebar: Breite der Assistenzleiste ändern
-      skip_to_main: Zum Hauptinhalt springen
     auth:
       existing_account: Du hast bereits ein Konto?
       no_account: Neu bei %{product_name}?
@@ -22,18 +22,16 @@ de:
       sign_up: Konto erstellen
       your_account: Dein Konto
     shared:
+      footer:
+        privacy_policy: Datenschutzrichtlinie
+        terms_of_service: Nutzungsbedingungen
       confirm_dialog:
         are_you_sure: Bist du sicher?
         cannot_be_undone: Das lässt sich nicht rückgängig machen.
         confirm: Bestätigen
-      footer:
-        privacy_policy: Datenschutzrichtlinie
-        terms_of_service: Nutzungsbedingungen
       notification_tray:
-        order_save_failed: Ob die neue Reihenfolge gespeichert wurde, ließ sich nicht
-          bestätigen. Prüfe deine Verbindung und lade die Seite neu, um die gespeicherte
-          Reihenfolge zu sehen.
+        order_save_failed: Ob die neue Reihenfolge gespeichert wurde, ließ sich nicht bestätigen. Prüfe deine Verbindung und lade die Seite neu, um die gespeicherte Reihenfolge zu sehen.
     trial:
-      contribute: Beitragen
-      data_deleted_in_days: Daten werden in %{days} Tagen gelöscht
       open_demo: Offene Demo
+      data_deleted_in_days: Daten werden in %{days} Tagen gelöscht
+      contribute: Beitragen

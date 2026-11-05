@@ -13,10 +13,10 @@ pt-PT:
     form:
       placeholder: Designação da etiqueta
     index:
-      delete_all: Eliminar todas
       empty: Ainda não existem etiquetas
       new: Nova etiqueta
       tags: Etiquetas
+      delete_all: Eliminar todas
     new:
       new: Nova etiqueta
     tag:

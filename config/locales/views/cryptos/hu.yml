@@ -2,20 +2,19 @@
 hu:
   cryptos:
     edit:
-      edit: "%{account} szerkesztése"
+      edit: '%{account} szerkesztése'
     form:
       subtype_label: Számlatípus
-      subtype_none: Nincs
       subtype_prompt: Válassz számlatípust
-      tax_treatment_hint: A legtöbb kriptovalutát adóköteles számlán tartják. Válassz
-        másik lehetőséget, ha adókedvezményes számlán van.
+      subtype_none: Nincs
       tax_treatment_label: Adózási besorolás
+      tax_treatment_hint: A legtöbb kriptovalutát adóköteles számlán tartják. Válassz másik lehetőséget, ha adókedvezményes számlán van.
     new:
       title: Add meg a számlaegyenleget
     subtypes:
-      exchange:
-        long: Kriptotőzsde
-        short: Tőzsde
       wallet:
-        long: Kriptotárca
         short: Tárca
+        long: Kriptotárca
+      exchange:
+        short: Tőzsde
+        long: Kriptotőzsde

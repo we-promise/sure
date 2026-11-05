@@ -1,43 +1,42 @@
 ---
 zh-TW:
   oidc_accounts:
-    create_link:
-      no_pending_oidc: 找不到待處理的 OIDC 驗證
-    create_user:
-      account_created: 歡迎！您的帳號已建立完成。
-      account_creation_disabled: SSO 帳號建立功能已停用，請聯絡管理員。
-      no_pending_oidc: 找不到待處理的 OIDC 驗證
     link:
-      account_creation_disabled: 透過單一登入建立帳號已停用。請聯絡管理員為您建立帳號。
-      cancel: 取消
-      create_description_html: 找不到使用電子郵件 <strong>%{email}</strong> 的帳號。點擊下方使用您的 %{provider}
-        身分建立新帳號。
-      create_heading: 建立新帳號
+      no_pending_oidc: 找不到待處理的 OIDC 驗證
+      title_link: 連結 OIDC 帳號
+      title_create: 建立帳號
+      verify_heading: 驗證您的身分
+      verify_description_html: 若要連結您的 %{provider} 帳號%{email_suffix}，請輸入密碼驗證您的身分。
+      email_suffix_html: （<strong>%{email}</strong>）
       email_label: 電子郵件
       email_placeholder: 請輸入您的電子郵件
-      email_suffix_html: "（<strong>%{email}</strong>）"
-      info_email: 電子郵件：
-      info_name: 姓名：
-      no_pending_oidc: 找不到待處理的 OIDC 驗證
       password_label: 密碼
       password_placeholder: 輸入您的密碼
-      submit_accept_invitation: 接受邀請
-      submit_create: 建立帳號
-      submit_link: 連結帳號
-      title_create: 建立帳號
-      title_link: 連結 OIDC 帳號
-      verify_description_html: 若要連結您的 %{provider} 帳號%{email_suffix}，請輸入密碼驗證您的身分。
-      verify_heading: 驗證您的身分
       verify_hint: 這可確保只有您本人能夠將外部帳號連結到您的個人檔案。
-    new_user:
+      submit_link: 連結帳號
+      create_heading: 建立新帳號
+      create_description_html: 找不到使用電子郵件 <strong>%{email}</strong> 的帳號。點擊下方使用您的 %{provider} 身分建立新帳號。
+      info_email: 電子郵件：
+      info_name: 姓名：
+      submit_create: 建立帳號
+      submit_accept_invitation: 接受邀請
+      account_creation_disabled: 透過單一登入建立帳號已停用。請聯絡管理員為您建立帳號。
       cancel: 取消
+    create_link:
+      no_pending_oidc: 找不到待處理的 OIDC 驗證
+    new_user:
+      no_pending_oidc: 找不到待處理的 OIDC 驗證
+      title: 完成帳號設定
+      heading: 建立您的帳號
       description: 請確認以下資訊，我們就用您的 %{provider} 身分為您建立帳號。
       email_label: 電子郵件（來自 SSO 供應商）
       first_name_label: 名字
       first_name_placeholder: 請輸入您的名字
-      heading: 建立您的帳號
       last_name_label: 姓氏
       last_name_placeholder: 請輸入您的姓氏
-      no_pending_oidc: 找不到待處理的 OIDC 驗證
       submit: 建立帳號
-      title: 完成帳號設定
+      cancel: 取消
+    create_user:
+      no_pending_oidc: 找不到待處理的 OIDC 驗證
+      account_creation_disabled: SSO 帳號建立功能已停用，請聯絡管理員。
+      account_created: 歡迎！您的帳號已建立完成。

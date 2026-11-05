@@ -5,9 +5,9 @@ ca:
       brokerage_cash: Efectiu del broker
     cost_basis_cell:
       cancel: Cancel·la
+      per_share_label: "Per acció"
       overwrite_confirm_body: Això reemplaçarà el cost base actual de %{current}.
       overwrite_confirm_title: Reemplaça el cost base?
-      per_share_label: Per acció
       save: Desa
       set: Estableix
       set_cost_basis_header: Estableix el cost base per a %{ticker}
@@ -29,14 +29,14 @@ ca:
       shares: "%{qty} accions"
       unknown: "--"
     index:
+      positions:
+        one: "%{count} posició"
+        other: "%{count} posicions"
       average_cost: Cost mitjà
       holdings: Posicions
       name: Nom
       new_holding: Nova activitat
       no_holdings: No hi ha posicions per mostrar.
-      positions:
-        one: "%{count} posició"
-        other: "%{count} posicions"
       return: Rendiment total
       weight: Pes
     missing_price_tooltip:

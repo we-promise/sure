@@ -2,7 +2,7 @@
 hu:
   vehicles:
     edit:
-      edit: "%{account} szerkesztése"
+      edit: '%{account} szerkesztése'
     form:
       make: Márka
       make_placeholder: BMW
@@ -26,10 +26,10 @@ hu:
     tabs:
       overview:
         current_price: Jelenlegi ár
-        edit_account_details: Számlaadatok szerkesztése
         make_model: Márka és modell
         mileage: Kilométeróra-állás
         purchase_price: Vételár
         trend: Tendencia
         unknown: Ismeretlen
         year: Évjárat
+        edit_account_details: "Számlaadatok szerkesztése"

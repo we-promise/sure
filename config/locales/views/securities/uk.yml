@@ -5,12 +5,12 @@ uk:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
     providers:
-      alpha_vantage: Alpha Vantage
-      binance_public: Binance
-      eodhd: EODHD
+      twelve_data: "Twelve Data"
+      yahoo_finance: "Yahoo Finance"
+      tiingo: "Tiingo"
+      eodhd: "EODHD"
+      alpha_vantage: "Alpha Vantage"
+      mfapi: "MFAPI.in"
+      binance_public: "Binance"
+      moex_public: "MOEX"
       mansa: Mansa
-      mfapi: MFAPI.in
-      moex_public: MOEX
-      tiingo: Tiingo
-      twelve_data: Twelve Data
-      yahoo_finance: Yahoo Finance

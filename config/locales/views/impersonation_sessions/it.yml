@@ -14,12 +14,12 @@ it:
     reject:
       success: Richiesta rifiutata
     super_admin_bar:
-      impersonating: Impersonando
-      jobs: Processi
-      join: Unisciti
-      join_a_session: Unisciti a una sessione
-      leave: Abbandona
-      request_impersonation: Richiedi impersonazione
       super_admin: Super Amministratore
+      jobs: Processi
+      impersonating: Impersonando
+      leave: Abbandona
       terminate: Termina
+      join_a_session: Unisciti a una sessione
+      join: Unisciti
       uuid_placeholder: UUID
+      request_impersonation: Richiedi impersonazione

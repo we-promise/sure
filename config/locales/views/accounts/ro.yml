@@ -7,9 +7,9 @@ ro:
     chart:
       data_not_available: Date indisponibile pentru perioada selectată
     create:
-      success: Cont %{type} creat
+      success: "Cont %{type} creat"
     destroy:
-      success: Cont %{type} programat pentru ștergere
+      success: "Cont %{type} programat pentru ștergere"
     empty:
       empty_message: Adaugă un cont fie prin conexiune, import sau introducere manuală.
       new_account: Cont nou
@@ -29,7 +29,7 @@ ro:
       method_selector:
         connected_entry: Conectează cont
         connected_entry_eu: Conectează cont UE
-        link_with_provider: Conectează cu %{provider}
+        link_with_provider: "Conectează cu %{provider}"
         lunchflow_entry: Conectează cont Lunch Flow
         manual_entry: Introdu soldul contului
         title: Cum dorești să adaugi?
@@ -53,44 +53,37 @@ ro:
         owed: Sumă datorată
       menu:
         confirm_accept: Șterge "%{name}"
-        confirm_body_html: "<p>Prin ștergerea acestui cont, vei șterge istoricul valorii
-          sale, afectând diverse aspecte ale contului tău general. Această acțiune
-          va avea un impact direct asupra calculelor averii nete și a graficelor contului.</p><br
-          /> <p>După ștergere, nu vei mai putea restaura informațiile contului, deoarece
-          va trebui să îl adaugi ca un cont nou.</p>"
+        confirm_body_html: "<p>Prin ștergerea acestui cont, vei șterge istoricul valorii sale, afectând diverse aspecte ale contului tău general. Această acțiune va avea un impact direct asupra calculelor averii nete și a graficelor contului.</p><br /> <p>După ștergere, nu vei mai putea restaura informațiile contului, deoarece va trebui să îl adaugi ca un cont nou.</p>"
         confirm_title: Ștergi contul?
         edit: Editează
         import: Importă tranzacții
         manage: Gestionează conturi
+    update:
+      success: "Cont %{type} actualizat"
     sidebar:
-      configure_providers: Configurează furnizorii aici.
       missing_data: Lipsesc date istorice
-      missing_data_description: "%{product} folosește furnizori terți pentru a prelua
-        cursurile de schimb istorice, prețurile titlurilor de valoare și multe altele.
-        Aceste date sunt necesare pentru a calcula soldurile istorice corecte ale
-        conturilor."
-      new_account: Cont nou
-      new_account_group: "%{account_group} nou"
-      new_asset: Activ nou
-      new_debt: Datorie nouă
+      missing_data_description: "%{product} folosește furnizori terți pentru a prelua cursurile de schimb istorice, prețurile titlurilor de valoare și multe altele. Aceste date sunt necesare pentru a calcula soldurile istorice corecte ale conturilor."
+      configure_providers: Configurează furnizorii aici.
       tabs:
         all: Toate
         assets: Active
         debts: Datorii
+      new_asset: Activ nou
+      new_debt: Datorie nouă
+      new_account: Cont nou
+      new_account_group: "%{account_group} nou"
     types:
-      credit_card: Card de credit
-      crypto: Crypto
       depository: Numerar
       investment: Investiții
-      loan: Împrumut
-      other_asset: Alt activ
-      other_liability: Altă datorie
+      crypto: Crypto
       property: Proprietate
       vehicle: Vehicul
-    update:
-      success: Cont %{type} actualizat
+      other_asset: Alt activ
+      credit_card: Card de credit
+      loan: Împrumut
+      other_liability: Altă datorie
+
   email_confirmations:
     new:
       invalid_token: Link de confirmare invalid sau expirat.
-      success_login: Adresa ta de e-mail a fost confirmată. Te rugăm să te autentifici
-        cu noua ta adresă de e-mail.
+      success_login: Adresa ta de e-mail a fost confirmată. Te rugăm să te autentifici cu noua ta adresă de e-mail.

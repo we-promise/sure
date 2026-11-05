@@ -1,49 +1,42 @@
 ---
 de:
   oidc_accounts:
+    link:
+      title_link: OIDC-Konto verknüpfen
+      title_create: Konto erstellen
+      verify_heading: Identität bestätigen
+      verify_description_html: Um dein %{provider}-Konto%{email_suffix} zu verknüpfen, bestätige deine Identität mit deinem Passwort.
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      email_label: E-Mail
+      email_placeholder: E-Mail-Adresse eingeben
+      password_label: Passwort
+      password_placeholder: Passwort eingeben
+      verify_hint: So ist sichergestellt, dass nur du externe Konten mit deinem Profil verknüpfen kannst.
+      submit_link: Konto verknüpfen
+      create_heading: Neues Konto erstellen
+      create_description_html: Kein Konto mit der E-Mail <strong>%{email}</strong> gefunden. Klick unten, um ein neues Konto mit deiner %{provider}-Identität zu erstellen.
+      info_email: "E-Mail:"
+      info_name: "Name:"
+      submit_create: Konto erstellen
+      account_creation_disabled: Die Kontoerstellung über Single Sign-on ist deaktiviert. Wende dich an einen Administrator.
+      cancel: Abbrechen
+      no_pending_oidc: Keine offene OIDC-Anmeldung gefunden
+      submit_accept_invitation: Einladung annehmen
+    new_user:
+      title: Konto vervollständigen
+      heading: Konto erstellen
+      description: Bestätige deine Daten, um die Kontoerstellung mit deiner %{provider}-Identität abzuschließen.
+      email_label: E-Mail (vom SSO-Anbieter)
+      first_name_label: Vorname
+      first_name_placeholder: Vorname eingeben
+      last_name_label: Nachname
+      last_name_placeholder: Nachname eingeben
+      submit: Konto erstellen
+      cancel: Abbrechen
+      no_pending_oidc: Keine offene OIDC-Anmeldung gefunden
     create_link:
       no_pending_oidc: Keine offene OIDC-Anmeldung gefunden
     create_user:
       account_created: Willkommen! Dein Konto ist angelegt.
-      account_creation_disabled: Die Kontoerstellung über SSO ist deaktiviert. Wende
-        dich an einen Administrator.
+      account_creation_disabled: Die Kontoerstellung über SSO ist deaktiviert. Wende dich an einen Administrator.
       no_pending_oidc: Keine offene OIDC-Anmeldung gefunden
-    link:
-      account_creation_disabled: Die Kontoerstellung über Single Sign-on ist deaktiviert.
-        Wende dich an einen Administrator.
-      cancel: Abbrechen
-      create_description_html: Kein Konto mit der E-Mail <strong>%{email}</strong>
-        gefunden. Klick unten, um ein neues Konto mit deiner %{provider}-Identität
-        zu erstellen.
-      create_heading: Neues Konto erstellen
-      email_label: E-Mail
-      email_placeholder: E-Mail-Adresse eingeben
-      email_suffix_html: " (<strong>%{email}</strong>)"
-      info_email: 'E-Mail:'
-      info_name: 'Name:'
-      no_pending_oidc: Keine offene OIDC-Anmeldung gefunden
-      password_label: Passwort
-      password_placeholder: Passwort eingeben
-      submit_accept_invitation: Einladung annehmen
-      submit_create: Konto erstellen
-      submit_link: Konto verknüpfen
-      title_create: Konto erstellen
-      title_link: OIDC-Konto verknüpfen
-      verify_description_html: Um dein %{provider}-Konto%{email_suffix} zu verknüpfen,
-        bestätige deine Identität mit deinem Passwort.
-      verify_heading: Identität bestätigen
-      verify_hint: So ist sichergestellt, dass nur du externe Konten mit deinem Profil
-        verknüpfen kannst.
-    new_user:
-      cancel: Abbrechen
-      description: Bestätige deine Daten, um die Kontoerstellung mit deiner %{provider}-Identität
-        abzuschließen.
-      email_label: E-Mail (vom SSO-Anbieter)
-      first_name_label: Vorname
-      first_name_placeholder: Vorname eingeben
-      heading: Konto erstellen
-      last_name_label: Nachname
-      last_name_placeholder: Nachname eingeben
-      no_pending_oidc: Keine offene OIDC-Anmeldung gefunden
-      submit: Konto erstellen
-      title: Konto vervollständigen

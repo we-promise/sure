@@ -1,4 +1,3 @@
----
 ro:
   activerecord:
     errors:
@@ -6,5 +5,4 @@ ro:
         entry:
           attributes:
             base:
-              invalid_sell_quantity: nu poți vinde %{sell_qty} acțiuni %{ticker} deoarece
-                deții doar %{current_qty} acțiuni
+              invalid_sell_quantity: "nu poți vinde %{sell_qty} acțiuni %{ticker} deoarece deții doar %{current_qty} acțiuni"

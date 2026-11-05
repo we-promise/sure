@@ -4,15 +4,15 @@ vi:
     edit:
       edit: Chỉnh sửa %{account}
     form:
-      initial_balance: Số dư khoản vay ban đầu
       interest_rate: Lãi suất
       interest_rate_placeholder: '5.25'
-      none: Không có
+      initial_balance: Số dư khoản vay ban đầu
       rate_type: Loại lãi suất
-      subtype_none: Không có
-      subtype_prompt: Chọn loại khoản vay
       term_months: Kỳ hạn (tháng)
       term_months_placeholder: '360'
+      none: Không có
+      subtype_prompt: Chọn loại khoản vay
+      subtype_none: Không có
     new:
       title: Nhập thông tin khoản vay
     overview:
@@ -26,7 +26,6 @@ vi:
       unknown: Không xác định
     tabs:
       overview:
-        edit_loan_details: Chỉnh sửa thông tin khoản vay
         interest_rate: Lãi suất
         monthly_payment: Thanh toán hàng tháng
         not_applicable: N/A
@@ -35,3 +34,4 @@ vi:
         term: Kỳ hạn
         type: Loại
         unknown: Không xác định
+        edit_loan_details: "Chỉnh sửa thông tin khoản vay"

@@ -1,6 +1,7 @@
 ---
 pl:
   settings:
+    encryption_migration_guide: Przewodnik po konfiguracji szyfrowania i migracji
     ai_prompts:
       prompt_field:
         format_risk: 'Twoje polecenie dla %{provider} usunęło przykład {"%{key}":
@@ -47,12 +48,6 @@ pl:
         success: Polecenia AI zaktualizowane
     appearances:
       show:
-        auto_generate_transaction_names_description: Jeśli nazwa ręcznie wprowadzonej
-          transakcji pozostanie pusta, zostanie uzupełniona na podstawie wybranej
-          kategorii i kontrahenta (np. „Rozrywka - Netflix”). Nazwa jest nadal wymagana,
-          jeśli nie wybrano żadnego z nich. Dotyczy całego gospodarstwa domowego i
-          tylko nowych transakcji.
-        auto_generate_transaction_names_title: Automatycznie generuj nazwy transakcji
         dashboard_subtitle: Dostosuj sposób wyświetlania pulpitu
         dashboard_title: Pulpit
         dashboard_two_column_description: Wyświetlaj widżety pulpitu w dwóch kolumnach
@@ -71,6 +66,8 @@ pl:
           nadrzędną na liście transakcji. Gdy opcja jest wyłączona, pozycje podrzędne
           pojawiają się jako osobne wiersze.
         split_grouped_title: Grupuj podzielone transakcje
+        auto_generate_transaction_names_title: "Automatycznie generuj nazwy transakcji"
+        auto_generate_transaction_names_description: "Jeśli nazwa ręcznie wprowadzonej transakcji pozostanie pusta, zostanie uzupełniona na podstawie wybranej kategorii i kontrahenta (np. „Rozrywka - Netflix”). Nazwa jest nadal wymagana, jeśli nie wybrano żadnego z nich. Dotyczy całego gospodarstwa domowego i tylko nowych transakcji."
         theme_dark: Ciemny
         theme_light: Jasny
         theme_subtitle: Wybierz preferowany motyw aplikacji
@@ -169,7 +166,6 @@ pl:
           time: Czas
           view_metadata: Podgląd
         title: Dziennik zdarzeń debugowania
-    encryption_migration_guide: Przewodnik po konfiguracji szyfrowania i migracji
     llm_usages:
       show:
         avg_cost_per_request: Śr. koszt/zapytanie
@@ -183,8 +179,7 @@ pl:
         completion: odpowiedź
         cost_by_model: Koszt wg modelu
         cost_by_operation: Koszt wg operacji
-        cost_estimates_description: Koszty są szacowane na podstawie opublikowanych
-          cenników dostawców, ostatnio zweryfikowanych %{date}. Rzeczywiste koszty
+        cost_estimates_description: Koszty są szacowane na podstawie opublikowanych cenników dostawców, ostatnio zweryfikowanych %{date}. Rzeczywiste koszty
           mogą się różnić. Ceny podane są za 1 milion tokenów i zależą od modelu.
           Modele niestandardowe lub hostowane samodzielnie pokazują "N/D" i nie są
           wliczane do sum kosztów.
@@ -443,6 +438,7 @@ pl:
         application_id_placeholder_update: Wpisz nowe ID, aby zaktualizować
         callback_url_instruction: Dla URL callback użyj %{callback_url}.
         client_certificate_label: Certyfikat klienta (z kluczem prywatnym)
+        keep_client_certificate_hint: "Pozostaw puste, aby zachować bieżący certyfikat"
         config_locked_message: Rozłącz wszystkie połączone banki, zanim zmienisz te
           dane uwierzytelniające.
         config_locked_title: Konfiguracja zablokowana
@@ -452,7 +448,6 @@ pl:
         connection: Połączenie
         connection_error: Błąd połączenia
         country_label: Kraj
-        keep_client_certificate_hint: Pozostaw puste, aby zachować bieżący certyfikat
         ready_to_link: Gotowe do połączenia kont
         reconnect: Połącz ponownie
         remove: Usuń
@@ -597,8 +592,6 @@ pl:
         beta: Beta
       meta:
         last_synced: Zsynchronizowano %{time} temu
-        login_expires_soon: Logowanie wygasa za %{time} (%{at})
-        login_required: Wymagane logowanie
         no_recent_sync: Zaległa synchronizacja
         reconsent_needed:
           few: Wymagana ponowna zgoda za %{count} dni
@@ -606,6 +599,8 @@ pl:
           one: Wymagana ponowna zgoda za 1 dzień
           other: Wymagana ponowna zgoda za %{count} dni
         reconsent_required: Wymagana ponowna zgoda
+        login_required: "Wymagane logowanie"
+        login_expires_soon: "Logowanie wygasa za %{time} (%{at})"
         sync_error: Błąd synchronizacji
       monobank_panel:
         step_1_html: Przejdź do %{link}, zaloguj się aplikacją Monobank i wygeneruj
@@ -701,8 +696,8 @@ pl:
         mercury: Synchronizuj automatycznie swoje firmowe konta bankowe Mercury.
         monobank: Synchronizuj ukraińskie karty i skarbonki Monobank za pomocą osobistego
           tokenu API.
-        onchain_wallet: Śledź portfele Bitcoin, EVM, Solana, Cosmos i Polkadot z samodzielną
-          kontrolą kluczy na podstawie ich publicznych adresów.
+        onchain_wallet: Śledź portfele Bitcoin, EVM, Solana, Cosmos i Polkadot z samodzielną kontrolą
+          kluczy na podstawie ich publicznych adresów.
         plaid: Połącz tysiące amerykańskich instytucji finansowych przez Plaid.
         plaid_eu: Połącz europejskie instytucje finansowe przez Plaid (PSD2 / otwarta
           bankowość).
@@ -726,7 +721,6 @@ pl:
           one: Wykryto 1 konto Trade Republic.
           other: Wykryto %{count} kont Trade Republic.
         accounts_tab: Konta
-        add_account: Dodaj kolejne połączenie
         approval_pending: Logowanie rozpoczęte. Zatwierdź je w aplikacji Trade Republic
           — Sure sprawdza to automatycznie.
         authenticator_code_label: Kod z aplikacji uwierzytelniającej (jeśli wymagany)
@@ -747,14 +741,13 @@ pl:
         disconnect: Odłącz Trade Republic
         disconnect_confirm: Odłączyć Trade Republic? Twoje zsynchronizowane konta
           staną się kontami ręcznymi.
-        disconnect_confirm_with_identifier: Odłączyć połączenie Trade Republic kończące
-          się na %{last4}? Twoje zsynchronizowane konta staną się kontami ręcznymi.
+        disconnect_confirm_with_identifier: "Odłączyć połączenie Trade Republic kończące się na %{last4}? Twoje zsynchronizowane konta staną się kontami ręcznymi."
+        identifier_phone: Telefon
+        identifier_account: Konto
         encryption_warning:
           message: Danych logowania i sesji Trade Republic nie można bezpiecznie przechowywać,
             dopóki nie skonfigurowano Active Record Encryption.
           title: Szyfrowanie nie jest skonfigurowane
-        identifier_account: Konto
-        identifier_phone: Telefon
         login_expired: Żądanie zatwierdzenia wygasło.
         not_configured: Nie skonfigurowano.
         phone_number_label: Numer telefonu
@@ -769,26 +762,26 @@ pl:
         qr_back_to_credentials: Wróć do numeru telefonu i PIN-u lub hasła
         qr_cancel: Anuluj logowanie kodem QR
         qr_error: Nie udało się rozpocząć logowania kodem QR. Spróbuj ponownie.
-        qr_instruction: Zeskanuj kod QR aparatem telefonu, a następnie zatwierdź logowanie
-          w aplikacji Trade Republic.
+        requires_update: "Zaloguj się ponownie, aby wznowić synchronizację."
+        session_expires_in: "Logowanie wygasa za %{time} (%{at})."
+        qr_instruction: Zeskanuj kod QR aparatem telefonu, a następnie zatwierdź logowanie w aplikacji Trade Republic.
         qr_loading: Przygotowywanie kodu QR…
         qr_login: Zaloguj się kodem QR
         qr_success: Logowanie zatwierdzone. Sure odświeża stronę dostawcy.
-        requires_update: Zaloguj się ponownie, aby wznowić synchronizację.
         restart_login: Rozpocznij logowanie ponownie
+        add_account: "Dodaj kolejne połączenie"
         save_configuration: Zapisz i rozpocznij logowanie
-        session_expires_in: Logowanie wygasa za %{time} (%{at}).
         setup_accounts: Skonfiguruj konta
         status_configured_prefix: Połączono. Przejdź do zakładki
         status_configured_suffix: ", aby zarządzać wykrytymi kontami."
         steps:
-          step_1: Wpisz numer telefonu i PIN lub hasło używane w aplikacji Trade Republic,
-            a następnie zapisz.
+          step_1: Wpisz numer telefonu i PIN lub hasło używane w aplikacji Trade Republic, a
+            następnie zapisz.
           step_2: Gdy zostaniesz o to poproszony, wpisz kod z aplikacji uwierzytelniającej.
           step_3: Gdy zostaniesz o to poproszony, zatwierdź logowanie w aplikacji
             Trade Republic.
         sync: Synchronizuj
-        syncing: Synchronizowanie...
+        syncing: "Synchronizowanie..."
         update_configuration: Zaktualizuj konfigurację
       trading212_panel:
         accounts_tab: Konta
@@ -860,10 +853,10 @@ pl:
       accounts_label: Konta
       advanced_section_title: Zaawansowane
       ai_prompts_label: Prompty AI
+      auto_matches_label: Automatyczne dopasowywanie
       api_key_label: Klucz API
       api_keys_label: Klucz API
       appearance_label: Wygląd
-      auto_matches_label: Automatyczne dopasowywanie
       background_jobs_label: Zadania w tle
       bank_sync_label: Synchronizacja banku
       categories_label: Kategorie

@@ -2,238 +2,44 @@
 de:
   settings:
     hostings:
-      alpha_vantage_settings:
-        description: Trag den API-Key von Alpha Vantage ein. Unterstützt europäische
-          ETFs an der London Stock Exchange, an XETRA und an weiteren Börsen.
-        env_configured_message: Über die Umgebungsvariable ALPHA_VANTAGE_API_KEY eingerichtet.
-        label: API-Key
-        no_health_check_note: Wegen des strengen Abruflimits gibt es für diesen Anbieter
-          keine Verbindungsprüfung.
-        placeholder: Alpha-Vantage-API-Key hier eintragen
-        rate_limit_warning: Der kostenlose Tarif von Alpha Vantage erlaubt 25 Abrufe
-          pro Tag. Am besten ergänzend für europäische ETFs nutzen, die andere Anbieter
-          nicht führen.
-        show_details: "(Details anzeigen)"
-        step_1_html: Öffne <a href="https://www.alphavantage.co/support/#api-key"
-          target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a>
-          und hol dir deinen kostenlosen API-Key.
-        step_2: Kopier den API-Key und füg ihn unten ein.
-        title: Alpha Vantage
-      anthropic_settings:
-        access_token_label: API-Key
-        access_token_placeholder: Anthropic-API-Key eintragen
-        base_url_label: Basis-URL (optional)
-        base_url_placeholder: https://api.anthropic.com (Standard)
-        description: Trag deinen Anthropic-API-Key ein. Die Basis-URL kannst du wahlweise
-          auf AWS Bedrock oder GCP Vertex zeigen lassen.
-        env_configured_message: Über Umgebungsvariablen eingerichtet.
-        model_help: Wird für Chat und PDF-Verarbeitung genutzt. Stapelverarbeitungen
-          wie Kategorisierung und Händlererkennung nutzen aus Kostengründen standardmäßig
-          Haiku.
-        model_label: Standardmodell (optional)
-        model_placeholder: claude-sonnet-4-6 (Standard)
-        title: Anthropic (Claude)
-      assistant_settings:
-        agent_id_help: Leitet an einen bestimmten Agenten weiter, wenn der Anbieter
-          mehrere betreibt. Leer lassen für den Standard.
-        agent_id_label: Agenten-ID (optional)
-        agent_id_placeholder: main (Standard)
-        confirm_disconnect:
-          body: Damit werden die gespeicherte URL, der Token und die Agenten-ID entfernt
-            und der integrierte Assistent aktiviert. Du kannst später mit neuen Zugangsdaten
-            wieder verbinden.
-          title: Externen Assistenten trennen?
-        description: Leg fest, wie der Chat-Assistent antwortet. „Integriert“ nutzt
-          deinen eingerichteten LLM-Anbieter direkt. „Extern“ gibt an einen entfernten
-          KI-Agenten ab, der über MCP auf die Finanzfunktionen von Sure zugreifen
-          kann.
-        disconnect_button: Trennen
-        disconnect_description: Entfernt die Verbindung zum externen Assistenten und
-          schaltet zurück auf den integrierten.
-        disconnect_title: Externe Verbindung
-        env_configured_external: Über Umgebungsvariablen eingerichtet.
-        env_notice: Die Art des Assistenten ist über die Umgebungsvariable ASSISTANT_TYPE
-          auf „%{type}“ festgelegt.
-        external_configured: Eingerichtet
-        external_not_configured: Nicht eingerichtet. Trag URL und Token unten ein
-          oder setz EXTERNAL_ASSISTANT_URL und EXTERNAL_ASSISTANT_TOKEN.
-        external_status: Endpunkt des externen Assistenten
-        title: KI-Assistent
-        token_help: Der Token deines externen Agenten. Er wird bei jeder Anfrage als
-          Bearer-Token mitgeschickt.
-        token_label: API-Token
-        token_placeholder: Token deines Agenten-Anbieters eintragen
-        type_builtin: Integriert (direktes LLM)
-        type_external: Extern (entfernter Agent)
-        type_label: Art des Assistenten
-        url_help: Die vollständige URL zum API-Endpunkt deines Agenten. Die bekommst
-          du von deinem Anbieter.
-        url_label: Endpunkt-URL
-        url_placeholder: https://dein-agent-host/v1/chat
-      brand_fetch_settings:
-        description: Gib die von Brandfetch bereitgestellte Client-ID ein.
-        env_configured_message: Deine Brandfetch-Client-ID ist über die Umgebungsvariable
-          BRAND_FETCH_CLIENT_ID eingerichtet.
-        high_res_description: Wenn aktiviert, werden Logos in 120x120 statt 40x40
-          abgerufen. Das liefert schärfere Bilder auf hochauflösenden Displays.
-        high_res_label: Hochauflösende Logos aktivieren
-        label: Client-ID
-        placeholder: Gib hier deine Client-ID ein
-        setup_step_1_html: Öffne <a href="https://brandfetch.com/developers" target="_blank"
-          rel="noopener noreferrer" class="underline">brandfetch.com</a> und leg dir
-          ein kostenloses Entwicklerkonto an.
-        setup_step_2_html: Geh auf die Seite <a href="https://developers.brandfetch.com/dashboard/logo-api"
-          target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
-        setup_step_3: Klick auf das Auge-Symbol unter „Your Client ID“, um die ID
-          sichtbar zu machen, und füg sie unten ein.
-        show_details: "(Details anzeigen)"
-        title: Brandfetch Einstellungen
-      clear_cache:
-        cache_cleared: Daten-Cache wurde geleert. Dies kann einige Augenblicke dauern.
-      disconnect_external_assistant:
-        external_assistant_disconnected: Externer Assistent getrennt
-      ensure_admin:
-        not_authorized: Dazu bist du nicht berechtigt
-      ensure_super_admin_for_onboarding:
-        not_authorized: Dazu bist du nicht berechtigt
-      eodhd_settings:
-        description: Trag den API-Token von EODHD ein. Unterstützt europäische ETFs
-          an der LSE, an XETRA und an weiteren Börsen.
-        env_configured_message: Über die Umgebungsvariable EODHD_API_KEY eingerichtet.
-        label: API-Token
-        placeholder: EODHD-API-Token hier eintragen
-        rate_limit_warning: Der kostenlose EODHD-Tarif erlaubt 20 Abrufe pro Tag.
-          Am besten ergänzend für europäische ETFs nutzen, die andere Anbieter nicht
-          führen.
-        show_details: "(Details anzeigen)"
-        step_1_html: Öffne <a href="https://eodhd.com/register" target="_blank" rel="noopener
-          noreferrer" class="underline">eodhd.com</a> und leg dir ein kostenloses
-          Konto an.
-        step_2_html: Deinen API-Token findest du im <a href="https://eodhd.com/cp/dashboard"
-          target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a>.
-        step_3: Kopier deinen API-Token und füg ihn unten ein.
-        title: EODHD
       invite_code_settings:
-        default_family_description: Neue Nutzer landen nur dann in dieser Familie
-          oder Gruppe, wenn sie keine Einladung haben.
-        default_family_none: Keine (neue Familie anlegen)
-        default_family_title: Standardfamilie für neue Nutzer
-        description: Lege fest, wie sich neue Benutzer für deine %{product}-Instanz
-          registrieren können.
-        email_confirmation_description: Wenn aktiviert, müssen Benutzer ihre E-Mail-Adresse
-          bestätigen, wenn sie diese ändern.
+        description: Lege fest, wie sich neue Benutzer für deine %{product}-Instanz registrieren können.
+        email_confirmation_description: Wenn aktiviert, müssen Benutzer ihre E-Mail-Adresse bestätigen, wenn sie diese ändern.
         email_confirmation_title: E-Mail-Bestätigung erforderlich
         generate_tokens: Neue Codes generieren
         generated_tokens: Generierte Codes
+        title: Onboarding
         states:
+          open: Offen
           closed: Geschlossen
           invite_only: Nur mit Einladung
-          open: Offen
-        title: Onboarding
-      llm_provider_selector:
-        data_retention: Eingaben über die API werden standardmäßig nicht zum Training
-          genutzt; die gehosteten APIs der Anbieter speichern sie rund 30 Tage aus
-          Sicherheitsgründen. Für eigene oder selbst gehostete Endpunkte gilt deine
-          eigene Regelung.
-        data_retention_heading: Umgang mit Daten
-        description: Wähl, welches LLM den KI-Chat antreibt. Stapelverarbeitungen
-          – Kategorisierung, Händlererkennung und PDF-Verarbeitung – laufen derzeit
-          immer über OpenAI.
-        env_configured_message: Über die Umgebungsvariable LLM_PROVIDER eingerichtet.
-        max_items_per_call_help: 'Obergrenze für Stapel bei automatischer Kategorisierung
-          und Händlererkennung. Standard: 25. Bei OpenAI-kompatiblen Anbietern werden
-          größere Stapel automatisch so zerlegt, dass sie ins Kontextfenster passen.'
-        max_items_per_call_label: Maximale Einträge pro Stapel (optional)
-        not_configured_hint: Trag unten einen API-Key für %{provider} ein, um ihn
-          zu aktivieren.
-        provider_anthropic: Anthropic (Claude)
-        provider_help: Ein Wechsel greift beim nächsten Chat. Die Zugangsdaten des
-          aktiven Anbieters trägst du unten ein.
-        provider_label: Aktiver LLM-Anbieter
-        provider_openai: OpenAI
-        title: KI-Anbieter
-      not_authorized: Du bist nicht berechtigt, diese Aktion auszuführen.
-      openai_settings:
-        access_token_label: Zugriffstoken
-        access_token_placeholder: Gib hier dein Zugriffstoken ein
-        ai_health_probe_timeout_help: 'Standard: 5. Gilt nur für die KI-Live-Prüfungen
-          unter Einstellungen → Systemstatus, nie für echte KI-Aufrufe. Erhöhe den
-          Wert, wenn die PDF-Prüfungen mit einem Cloud-Modell ein Zeitlimit melden.
-          AI_HEALTH_PROBE_TIMEOUT überschreibt dieses Feld.'
-        ai_health_probe_timeout_label: Zeitlimit für Systemstatus-Prüfungen in Sekunden
-          (optional)
-        ai_response_timeout_help: 'Standard: 90. Gilt nur für das Zeitlimit der gesamten
-          Chat-Runde. Setz den Wert daher als Summe an: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS)
-          × Anfragezeitlimit, plus Ausführungszeit der Tools und Wartezeit in der
-          Warteschlange. AI_RESPONSE_TIMEOUT überschreibt dieses Feld.'
-        ai_response_timeout_label: Antwortzeitlimit in Sekunden (optional)
-        budget_description: 'Gilt für alle OpenAI-kompatiblen Aufrufe: Chat, automatische
-          Kategorisierung, Händlererkennung und PDF-Verarbeitung. Die Vorgaben sind
-          auf kleine lokale Modelle ausgelegt. Für Cloud-Modelle mit größerem Kontextfenster
-          kannst du sie anheben.'
-        budget_heading: Token-Budget
-        context_window_help: 'Gesamtzahl der Tokens, die das Modell annimmt. Standard:
-          2048 – für OpenAI in der Cloud oder lokale Modelle mit großem Kontext auf
-          8192 oder mehr anheben.'
-        context_window_label: Kontextfenster (optional)
-        description: Gib dein Zugriffstoken ein und konfiguriere optional einen benutzerdefinierten,
-          OpenAI-kompatiblen Anbieter.
-        env_configured_message: Erfolgreich über Umgebungsvariablen konfiguriert.
-        json_mode_auto: Auto (empfohlen)
-        json_mode_help: Der strenge Modus funktioniert am besten mit Denk-Modellen
-          (qwen-thinking, deepseek-reasoner). Der Modus Keiner funktioniert am besten
-          mit Standard-Modellen (llama, mistral, gpt-oss).
-        json_mode_json_object: JSON-Objekt
-        json_mode_label: JSON-Modus
-        json_mode_none: Keiner (am besten für Standard-Modelle)
-        json_mode_strict: Streng (am besten für Denk-Modelle)
-        max_response_tokens_help: 'Tokens, die für die Antwort des Modells reserviert
-          sind. Standard: 512. Niedriger ansetzen, um Platz für längere Verläufe zu
-          schaffen.'
-        max_response_tokens_label: Maximale Antwort-Tokens (optional)
-        model_function_calling_help: Der KI-Assistent liest deine Daten mithilfe von
-          Funktionsaufrufen. Wähl daher ein Modell, das laut Dokumentation deines
-          Anbieters Tools beziehungsweise Function Calling unterstützt. Ohne diese
-          Unterstützung schlägt der Chat mit einer wenig aussagekräftigen Fehlermeldung
-          des Anbieters fehl.
-        model_function_calling_link: Konfiguriertes Modell prüfen
-        model_label: Modell (optional)
-        model_placeholder: gpt-4.1 (Standard)
-        model_required_help: 'Erforderlich, wenn du eine API-Basis-URL festlegst:
-          Gib den Modellnamen ein, den dein Server verwendet, etwa llama3.1 für Ollama.'
-        openai_request_timeout_help: 'Standard: 60. Gilt für jede OpenAI-kompatible
-          HTTP-Anfrage, einschließlich automatischer Kategorisierung, Händlererkennung,
-          Chat, PDF-Verarbeitung und Vektorspeicher-Aufrufen. OPENAI_REQUEST_TIMEOUT
-          überschreibt dieses Feld.'
-        openai_request_timeout_label: Anfragezeitlimit in Sekunden (optional)
-        timeout_description: Legt fest, wie lange Aufrufe OpenAI-kompatibler Modelle
-          laufen dürfen, bevor Sure sie abbricht. Erhöhe diese Werte, wenn du ein
-          lokales Modell auf langsamer Hardware betreibst.
-        timeout_heading: Zeitlimits
-        title: OpenAI
-        uri_base_label: API-Basis-URL (optional)
-        uri_base_local_help: Für ein Modell auf deinem eigenen Rechner gib dessen
-          OpenAI-kompatiblen Endpunkt ein, zum Beispiel Ollama unter http://localhost:11434/v1,
-          oder http://ollama:11434/v1, wenn Sure und Ollama als Docker-Compose-Dienste
-          laufen.
-        uri_base_placeholder: https://api.openai.com/v1 (Standard)
+        default_family_description: Neue Nutzer landen nur dann in dieser Familie oder Gruppe, wenn sie keine Einladung haben.
+        default_family_none: Keine (neue Familie anlegen)
+        default_family_title: Standardfamilie für neue Nutzer
+      show:
+        general: Allgemeine Einstellungen
+        financial_data_providers: Finanzdatenanbieter
+        sync_settings: Synchronisierungseinstellungen
+        invites: Einladungscodes
+        title: Self-Hosting
+        danger_zone: Gefahrenbereich
+        instance_settings_restricted: Anbieter-Zugangsdaten, die gemeinsame KI-Verbindung und Synchronisierungseinstellungen gelten für alle Familien dieser Instanz und können daher nur von einem Super-Admin geändert werden. Welchen Assistenten deine Familie nutzt, wird weiterhin pro Familie festgelegt. Wer Zugriff auf den Server hat, kann einen Benutzer zum Super-Admin machen; den Befehl nennt die Docker-Self-Hosting-Anleitung in ihren Upgrade-Hinweisen.
+        clear_cache: Daten-Cache leeren
+        clear_cache_warning: Das Leeren des Daten-Caches entfernt alle Wechselkurse, Wertpapierpreise, Kontostände und andere zwischengespeicherte Daten. Dies löscht keine Konten, Transaktionen, Kategorien oder andere benutzereigenen Daten.
+        confirm_clear_cache:
+          title: Daten-Cache leeren?
+          body: Bist du sicher, dass du den Daten-Cache leeren möchtest? Dadurch werden alle Wechselkurse, Wertpapierpreise, Kontostände und andere Daten entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
+        ai_assistant: KI-Assistent
+        property_valuation_providers: Anbieter für Immobilienbewertung
       provider_selection:
-        binance_public_hint: kostenlos, ohne API-Key – nur Krypto (BTC, ETH usw.)
-        description: Wähle, welcher Dienst für Wechselkurse und Wertpapierpreise verwendet
-          werden soll. Yahoo Finance ist kostenlos und benötigt keinen API-Schlüssel.
-          Twelve Data erfordert einen kostenlosen API-Schlüssel, bietet aber möglicherweise
-          eine bessere Datenabdeckung.
-        env_configured_message: Die Anbieterauswahl ist deaktiviert, weil Umgebungsvariablen
-          (EXCHANGE_RATE_PROVIDER oder SECURITIES_PROVIDER) gesetzt sind. Um die Auswahl
-          hier zu aktivieren, entferne diese Umgebungsvariablen aus deiner Konfiguration.
-        exchange_rate_description: Wähl einen Anbieter, über den Wechselkurse geholt
-          werden.
+        title: Anbieterauswahl
+        description: Wähle, welcher Dienst für Wechselkurse und Wertpapierpreise verwendet werden soll. Yahoo Finance ist kostenlos und benötigt keinen API-Schlüssel. Twelve Data erfordert einen kostenlosen API-Schlüssel, bietet aber möglicherweise eine bessere Datenabdeckung.
         exchange_rate_provider_label: Wechselkursanbieter
-        exchange_rate_title: Anbieter für Wechselkurse
-        mfapi_hint: kostenlos, ohne API-Key – nur indische Fonds
-        moex_public_hint: kostenlos, ohne API-Key – russische Aktien, Fonds und Anleihen
-          (MOEX), inkl. RUB-Kurs
+        securities_provider_label: Wertpapiere (Aktienkurse) Anbieter
+        env_configured_message: Die Anbieterauswahl ist deaktiviert, weil Umgebungsvariablen (EXCHANGE_RATE_PROVIDER oder SECURITIES_PROVIDER) gesetzt sind. Um die Auswahl hier zu aktivieren, entferne diese Umgebungsvariablen aus deiner Konfiguration.
         providers:
+          twelve_data: Twelve Data
+          yahoo_finance: Yahoo Finance
           alpha_vantage: Alpha Vantage
           binance_public: Binance
           eodhd: EODHD
@@ -242,174 +48,232 @@ de:
           moex_public: MOEX
           tiingo: Tiingo
           tinkoff_invest: T-Invest (T-Bank)
-          twelve_data: Twelve Data
-          yahoo_finance: Yahoo Finance
+        binance_public_hint: kostenlos, ohne API-Key – nur Krypto (BTC, ETH usw.)
+        exchange_rate_description: Wähl einen Anbieter, über den Wechselkurse geholt werden.
+        exchange_rate_title: Anbieter für Wechselkurse
+        mfapi_hint: kostenlos, ohne API-Key – nur indische Fonds
+        moex_public_hint: kostenlos, ohne API-Key – russische Aktien, Fonds und Anleihen (MOEX), inkl. RUB-Kurs
         requires_api_key: braucht API-Key
         requires_api_key_alpha_vantage: braucht API-Key, max. 25 Abrufe/Tag
         requires_api_key_eodhd: braucht API-Key, max. 20 Abrufe/Tag
-        securities_description: Aktivier einen oder mehrere Anbieter für Kurse von
-          Aktien, ETFs und Fonds. Bei einer Suche werden alle aktiven Anbieter abgefragt
-          und die Ergebnisse zusammengeführt.
-        securities_provider_label: Wertpapiere (Aktienkurse) Anbieter
+        securities_description: Aktivier einen oder mehrere Anbieter für Kurse von Aktien, ETFs und Fonds. Bei einer Suche werden alle aktiven Anbieter abgefragt und die Ergebnisse zusammengeführt.
         securities_title: Anbieter für Wertpapierkurse
-        tinkoff_invest_hint: braucht Token mit Lesezugriff – Kurse russischer Aktien,
-          Fonds und Anleihen samt Logos
-        title: Anbieterauswahl
+        tinkoff_invest_hint: braucht Token mit Lesezugriff – Kurse russischer Aktien, Fonds und Anleihen samt Logos
         twelve_data_hint: braucht API-Key, 800 Credits/Tag
         yahoo_finance_hint: kostenlos, ohne API-Key
+      brand_fetch_settings:
+        description: Gib die von Brandfetch bereitgestellte Client-ID ein.
+        label: Client-ID
+        placeholder: Gib hier deine Client-ID ein
+        title: Brandfetch Einstellungen
+        high_res_label: Hochauflösende Logos aktivieren
+        high_res_description: Wenn aktiviert, werden Logos in 120x120 statt 40x40 abgerufen. Das liefert schärfere Bilder auf hochauflösenden Displays.
+        env_configured_message: Deine Brandfetch-Client-ID ist über die Umgebungsvariable BRAND_FETCH_CLIENT_ID eingerichtet.
+        setup_step_1_html: Öffne <a href="https://brandfetch.com/developers" target="_blank" rel="noopener noreferrer" class="underline">brandfetch.com</a> und leg dir ein kostenloses Entwicklerkonto an.
+        setup_step_2_html: Geh auf die Seite <a href="https://developers.brandfetch.com/dashboard/logo-api" target="_blank" rel="noopener noreferrer" class="underline">Logo API</a>.
+        setup_step_3: Klick auf das Auge-Symbol unter „Your Client ID“, um die ID sichtbar zu machen, und füg sie unten ein.
+        show_details: "(Details anzeigen)"
+      openai_settings:
+        description: Gib dein Zugriffstoken ein und konfiguriere optional einen benutzerdefinierten, OpenAI-kompatiblen Anbieter.
+        env_configured_message: Erfolgreich über Umgebungsvariablen konfiguriert.
+        access_token_label: Zugriffstoken
+        access_token_placeholder: Gib hier dein Zugriffstoken ein
+        uri_base_label: API-Basis-URL (optional)
+        uri_base_placeholder: "https://api.openai.com/v1 (Standard)"
+        uri_base_local_help: "Für ein Modell auf deinem eigenen Rechner gib dessen OpenAI-kompatiblen Endpunkt ein, zum Beispiel Ollama unter http://localhost:11434/v1, oder http://ollama:11434/v1, wenn Sure und Ollama als Docker-Compose-Dienste laufen."
+        model_label: Modell (optional)
+        model_placeholder: "gpt-4.1 (Standard)"
+        model_required_help: "Erforderlich, wenn du eine API-Basis-URL festlegst: Gib den Modellnamen ein, den dein Server verwendet, etwa llama3.1 für Ollama."
+        model_function_calling_help: Der KI-Assistent liest deine Daten mithilfe von Funktionsaufrufen. Wähl daher ein Modell, das laut Dokumentation deines Anbieters Tools beziehungsweise Function Calling unterstützt. Ohne diese Unterstützung schlägt der Chat mit einer wenig aussagekräftigen Fehlermeldung des Anbieters fehl.
+        model_function_calling_link: Konfiguriertes Modell prüfen
+        json_mode_label: JSON-Modus
+        json_mode_auto: Auto (empfohlen)
+        json_mode_strict: Streng (am besten für Denk-Modelle)
+        json_mode_none: Keiner (am besten für Standard-Modelle)
+        json_mode_json_object: JSON-Objekt
+        json_mode_help: "Der strenge Modus funktioniert am besten mit Denk-Modellen (qwen-thinking, deepseek-reasoner). Der Modus Keiner funktioniert am besten mit Standard-Modellen (llama, mistral, gpt-oss)."
+        title: OpenAI
+        budget_description: 'Gilt für alle OpenAI-kompatiblen Aufrufe: Chat, automatische Kategorisierung, Händlererkennung und PDF-Verarbeitung. Die Vorgaben sind auf kleine lokale Modelle ausgelegt. Für Cloud-Modelle mit größerem Kontextfenster kannst du sie anheben.'
+        budget_heading: Token-Budget
+        context_window_help: 'Gesamtzahl der Tokens, die das Modell annimmt. Standard: 2048 – für OpenAI in der Cloud oder lokale Modelle mit großem Kontext auf 8192 oder mehr anheben.'
+        context_window_label: Kontextfenster (optional)
+        max_response_tokens_help: 'Tokens, die für die Antwort des Modells reserviert sind. Standard: 512. Niedriger ansetzen, um Platz für längere Verläufe zu schaffen.'
+        max_response_tokens_label: Maximale Antwort-Tokens (optional)
+        timeout_heading: Zeitlimits
+        timeout_description: Legt fest, wie lange Aufrufe OpenAI-kompatibler Modelle laufen dürfen, bevor Sure sie abbricht. Erhöhe diese Werte, wenn du ein lokales Modell auf langsamer Hardware betreibst.
+        openai_request_timeout_label: Anfragezeitlimit in Sekunden (optional)
+        openai_request_timeout_help: 'Standard: 60. Gilt für jede OpenAI-kompatible HTTP-Anfrage, einschließlich automatischer Kategorisierung, Händlererkennung, Chat, PDF-Verarbeitung und Vektorspeicher-Aufrufen. OPENAI_REQUEST_TIMEOUT überschreibt dieses Feld.'
+        ai_response_timeout_label: Antwortzeitlimit in Sekunden (optional)
+        ai_response_timeout_help: 'Standard: 90. Gilt nur für das Zeitlimit der gesamten Chat-Runde. Setz den Wert daher als Summe an: (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × Anfragezeitlimit, plus Ausführungszeit der Tools und Wartezeit in der Warteschlange. AI_RESPONSE_TIMEOUT überschreibt dieses Feld.'
+        ai_health_probe_timeout_label: Zeitlimit für Systemstatus-Prüfungen in Sekunden (optional)
+        ai_health_probe_timeout_help: 'Standard: 5. Gilt nur für die KI-Live-Prüfungen unter Einstellungen → Systemstatus, nie für echte KI-Aufrufe. Erhöhe den Wert, wenn die PDF-Prüfungen mit einem Cloud-Modell ein Zeitlimit melden. AI_HEALTH_PROBE_TIMEOUT überschreibt dieses Feld.'
+      yahoo_finance_settings:
+        title: Yahoo Finance
+        description: Yahoo Finance bietet kostenlosen Zugriff auf Aktienkurse, Wechselkurse und Finanzdaten – ganz ohne API-Schlüssel.
+        status_active: Yahoo Finance ist aktiv und funktionsfähig
+        status_inactive: Verbindung zu Yahoo Finance fehlgeschlagen
+        connection_failed: Verbindung zu Yahoo Finance konnte nicht hergestellt werden
+        troubleshooting: Überprüfe deine Internetverbindung und Firewall-Einstellungen. Yahoo Finance könnte vorübergehend nicht verfügbar sein.
+        rate_limited_message: Du musst nichts tun. Sure verzichtet 30 Minuten lang auf weitere Prüfungen. Kurse und Wechselkurse laufen davon unabhängig weiter.
+        rate_limited_title: Anfragelimit bei Yahoo Finance erreicht.
+        status_healthy: Yahoo Finance ist aktiv und funktioniert.
+        status_rate_limited: Yahoo Finance drosselt die Anfragen gerade.
+        status_unavailable: Yahoo Finance ist derzeit nicht erreichbar.
+        status_unknown: Der Status von Yahoo Finance wird gerade geprüft.
+        unavailable_message: Yahoo Finance war nicht erreichbar oder hat unerwartet geantwortet. Prüf deine Internetverbindung und versuch es später noch einmal.
+        unavailable_title: Yahoo Finance ließ sich nicht prüfen.
+      twelve_data_settings:
+        api_calls_used: "%{used} / %{limit} API-Aufrufe heute genutzt (%{percentage})"
+        description: Gib den von Twelve Data bereitgestellten API-Schlüssel ein.
+        env_configured_message: Erfolgreich über die Umgebungsvariable TWELVE_DATA_API_KEY konfiguriert.
+        label: API-Schlüssel
+        placeholder: Gib hier deinen API-Schlüssel ein
+        plan: "%{plan}-Tarif"
+        plan_upgrade_warning_title: Einige Ticker erfordern einen kostenpflichtigen Tarif
+        plan_upgrade_warning_description: Die folgenden Ticker in deinem Portfolio können mit deinem aktuellen Twelve-Data-Tarif keine Kurse synchronisieren.
+        requires_plan: erfordert %{plan}-Tarif
+        view_pricing: Twelve-Data-Preise anzeigen
+        title: Twelve Data
+        show_details: "(Details anzeigen)"
+        step_1_html: Öffne <a href="https://twelvedata.com/register" target="_blank" rel="noopener noreferrer" class="underline">twelvedata.com</a> und leg dir ein kostenloses Entwicklerkonto an.
+        step_2_html: Geh auf die Seite <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.
+        step_3: Lass deinen Secret Key anzeigen und füg ihn unten ein.
+      update:
+        failure: Ungültiger Einstellungswert
+        success: Einstellungen aktualisiert
+        invalid_onboarding_state: Ungültiger Onboarding-Status
+        invalid_sync_time: Ungültiges Synchronisierungszeitformat. Bitte verwende das Format HH:MM (z. B. 02:30).
+        scheduler_sync_failed: Gespeichert, aber der Sync-Zeitplan ließ sich nicht aktualisieren. Versuch es erneut oder sieh in den Server-Logs nach.
+        anthropic_model_required_for_base_url: Wenn du eine eigene Basis-URL setzt, musst du auch ein Anthropic-Modell angeben.
+        invalid_anthropic_base_url: Die Anthropic-Basis-URL muss eine http(s)-Adresse sein.
+        invalid_llm_budget: "%{field} muss eine ganze Zahl ≥ %{minimum} sein."
+      clear_cache:
+        cache_cleared: Daten-Cache wurde geleert. Dies kann einige Augenblicke dauern.
+      not_authorized: Du bist nicht berechtigt, diese Aktion auszuführen.
+      sync_settings:
+        auto_sync_label: Automatische Synchronisierung aktivieren
+        auto_sync_description: Wenn aktiviert, werden alle Konten täglich zur angegebenen Zeit automatisch synchronisiert.
+        auto_sync_time_label: Synchronisierungszeit (HH:MM)
+        auto_sync_time_description: Lege die Tageszeit fest, zu der die automatische Synchronisierung erfolgen soll.
+        market_data_sync_label: Täglichen Kursdatenimport aktivieren
+        market_data_sync_description: Wenn aktiviert, werden Wertpapierkurse einmal täglich (Montag bis Freitag) zur angegebenen Zeit automatisch importiert.
+        market_data_sync_time_label: Zeit für den Kursdatenimport (HH:MM)
+        market_data_sync_time_description: Lege die Tageszeit fest, zu der der tägliche Kursimport laufen soll, z. B. kurz nach Handelsschluss deiner wichtigsten Börse.
+        include_pending_label: Ausstehende Transaktionen einbeziehen
+        include_pending_description: Wenn aktiviert, werden ausstehende (noch nicht gebuchte) Transaktionen importiert und bei Buchung automatisch abgeglichen. Deaktivieren, wenn deine Bank unzuverlässige Ausstehend-Daten liefert.
+        env_configured_message: Diese Einstellung ist deaktiviert, weil eine Anbieter-Umgebungsvariable (SIMPLEFIN_INCLUDE_PENDING oder PLAID_INCLUDE_PENDING) gesetzt ist. Entferne sie, um diese Einstellung zu aktivieren.
+      alpha_vantage_settings:
+        description: Trag den API-Key von Alpha Vantage ein. Unterstützt europäische ETFs an der London Stock Exchange, an XETRA und an weiteren Börsen.
+        env_configured_message: Über die Umgebungsvariable ALPHA_VANTAGE_API_KEY eingerichtet.
+        label: API-Key
+        no_health_check_note: Wegen des strengen Abruflimits gibt es für diesen Anbieter keine Verbindungsprüfung.
+        placeholder: Alpha-Vantage-API-Key hier eintragen
+        rate_limit_warning: Der kostenlose Tarif von Alpha Vantage erlaubt 25 Abrufe pro Tag. Am besten ergänzend für europäische ETFs nutzen, die andere Anbieter nicht führen.
+        show_details: "(Details anzeigen)"
+        step_1_html: Öffne <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer" class="underline">alphavantage.co</a> und hol dir deinen kostenlosen API-Key.
+        step_2: Kopier den API-Key und füg ihn unten ein.
+        title: Alpha Vantage
+      anthropic_settings:
+        access_token_label: API-Key
+        access_token_placeholder: Anthropic-API-Key eintragen
+        base_url_label: Basis-URL (optional)
+        base_url_placeholder: https://api.anthropic.com (Standard)
+        description: Trag deinen Anthropic-API-Key ein. Die Basis-URL kannst du wahlweise auf AWS Bedrock oder GCP Vertex zeigen lassen.
+        env_configured_message: Über Umgebungsvariablen eingerichtet.
+        model_help: Wird für Chat und PDF-Verarbeitung genutzt. Stapelverarbeitungen wie Kategorisierung und Händlererkennung nutzen aus Kostengründen standardmäßig Haiku.
+        model_label: Standardmodell (optional)
+        model_placeholder: claude-sonnet-4-6 (Standard)
+        title: Anthropic (Claude)
+      assistant_settings:
+        agent_id_help: Leitet an einen bestimmten Agenten weiter, wenn der Anbieter mehrere betreibt. Leer lassen für den Standard.
+        agent_id_label: Agenten-ID (optional)
+        agent_id_placeholder: main (Standard)
+        confirm_disconnect:
+          body: Damit werden die gespeicherte URL, der Token und die Agenten-ID entfernt und der integrierte Assistent aktiviert. Du kannst später mit neuen Zugangsdaten wieder verbinden.
+          title: Externen Assistenten trennen?
+        description: Leg fest, wie der Chat-Assistent antwortet. „Integriert“ nutzt deinen eingerichteten LLM-Anbieter direkt. „Extern“ gibt an einen entfernten KI-Agenten ab, der über MCP auf die Finanzfunktionen von Sure zugreifen kann.
+        disconnect_button: Trennen
+        disconnect_description: Entfernt die Verbindung zum externen Assistenten und schaltet zurück auf den integrierten.
+        disconnect_title: Externe Verbindung
+        env_configured_external: Über Umgebungsvariablen eingerichtet.
+        env_notice: Die Art des Assistenten ist über die Umgebungsvariable ASSISTANT_TYPE auf „%{type}“ festgelegt.
+        external_configured: Eingerichtet
+        external_not_configured: Nicht eingerichtet. Trag URL und Token unten ein oder setz EXTERNAL_ASSISTANT_URL und EXTERNAL_ASSISTANT_TOKEN.
+        external_status: Endpunkt des externen Assistenten
+        title: KI-Assistent
+        token_help: Der Token deines externen Agenten. Er wird bei jeder Anfrage als Bearer-Token mitgeschickt.
+        token_label: API-Token
+        token_placeholder: Token deines Agenten-Anbieters eintragen
+        type_builtin: Integriert (direktes LLM)
+        type_external: Extern (entfernter Agent)
+        type_label: Art des Assistenten
+        url_help: Die vollständige URL zum API-Endpunkt deines Agenten. Die bekommst du von deinem Anbieter.
+        url_label: Endpunkt-URL
+        url_placeholder: https://dein-agent-host/v1/chat
+      disconnect_external_assistant:
+        external_assistant_disconnected: Externer Assistent getrennt
+      ensure_admin:
+        not_authorized: Dazu bist du nicht berechtigt
+      ensure_super_admin_for_onboarding:
+        not_authorized: Dazu bist du nicht berechtigt
+      eodhd_settings:
+        description: Trag den API-Token von EODHD ein. Unterstützt europäische ETFs an der LSE, an XETRA und an weiteren Börsen.
+        env_configured_message: Über die Umgebungsvariable EODHD_API_KEY eingerichtet.
+        label: API-Token
+        placeholder: EODHD-API-Token hier eintragen
+        rate_limit_warning: Der kostenlose EODHD-Tarif erlaubt 20 Abrufe pro Tag. Am besten ergänzend für europäische ETFs nutzen, die andere Anbieter nicht führen.
+        show_details: "(Details anzeigen)"
+        step_1_html: Öffne <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> und leg dir ein kostenloses Konto an.
+        step_2_html: Deinen API-Token findest du im <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a>.
+        step_3: Kopier deinen API-Token und füg ihn unten ein.
+        title: EODHD
+      llm_provider_selector:
+        data_retention: Eingaben über die API werden standardmäßig nicht zum Training genutzt; die gehosteten APIs der Anbieter speichern sie rund 30 Tage aus Sicherheitsgründen. Für eigene oder selbst gehostete Endpunkte gilt deine eigene Regelung.
+        data_retention_heading: Umgang mit Daten
+        description: Wähl, welches LLM den KI-Chat antreibt. Stapelverarbeitungen – Kategorisierung, Händlererkennung und PDF-Verarbeitung – laufen derzeit immer über OpenAI.
+        env_configured_message: Über die Umgebungsvariable LLM_PROVIDER eingerichtet.
+        not_configured_hint: Trag unten einen API-Key für %{provider} ein, um ihn zu aktivieren.
+        provider_anthropic: Anthropic (Claude)
+        provider_help: Ein Wechsel greift beim nächsten Chat. Die Zugangsdaten des aktiven Anbieters trägst du unten ein.
+        provider_label: Aktiver LLM-Anbieter
+        provider_openai: OpenAI
+        title: KI-Anbieter
+        max_items_per_call_help: "Obergrenze für Stapel bei automatischer Kategorisierung und Händlererkennung. Standard: 25. Bei OpenAI-kompatiblen Anbietern werden größere Stapel automatisch so zerlegt, dass sie ins Kontextfenster passen."
+        max_items_per_call_label: Maximale Einträge pro Stapel (optional)
       realie_settings:
-        description: Trag deinen Realie-API-Key ein, um beim Anlegen einer Immobilie
-          US-Objektdaten und Wertschätzungen abzurufen. Der kostenlose Tarif erlaubt
-          25 Anfragen pro Monat, geteilt zwischen Objektsuchen und täglichen Wertaktualisierungen.
-          In einem Bezahltarif hebst du die Grenze über die Umgebungsvariable REALIE_MAX_REQUESTS_PER_MONTH
-          an.
+        description: Trag deinen Realie-API-Key ein, um beim Anlegen einer Immobilie US-Objektdaten und Wertschätzungen abzurufen. Der kostenlose Tarif erlaubt 25 Anfragen pro Monat, geteilt zwischen Objektsuchen und täglichen Wertaktualisierungen. In einem Bezahltarif hebst du die Grenze über die Umgebungsvariable REALIE_MAX_REQUESTS_PER_MONTH an.
         env_configured_message: Über die Umgebungsvariable REALIE_API_KEY eingerichtet.
         label: API-Key
         placeholder: Realie-API-Key hier eintragen
         title: Realie
         usage: "%{used} von %{limit} Anfragen diesen Monat genutzt"
       rentcast_settings:
-        description: Trag deinen RentCast-API-Key ein, um beim Anlegen einer Immobilie
-          US-Objektdaten und Wertschätzungen abzurufen. Der kostenlose Tarif erlaubt
-          50 Anfragen pro Monat, geteilt zwischen Objektsuchen und täglichen Wertaktualisierungen.
-          In einem Bezahltarif hebst du die Grenze über die Umgebungsvariable RENTCAST_MAX_REQUESTS_PER_MONTH
-          an.
+        description: Trag deinen RentCast-API-Key ein, um beim Anlegen einer Immobilie US-Objektdaten und Wertschätzungen abzurufen. Der kostenlose Tarif erlaubt 50 Anfragen pro Monat, geteilt zwischen Objektsuchen und täglichen Wertaktualisierungen. In einem Bezahltarif hebst du die Grenze über die Umgebungsvariable RENTCAST_MAX_REQUESTS_PER_MONTH an.
         env_configured_message: Über die Umgebungsvariable RENTCAST_API_KEY eingerichtet.
         label: API-Key
         placeholder: RentCast-API-Key hier eintragen
         title: RentCast
         usage: "%{used} von %{limit} Anfragen diesen Monat genutzt"
-      show:
-        ai_assistant: KI-Assistent
-        clear_cache: Daten-Cache leeren
-        clear_cache_warning: Das Leeren des Daten-Caches entfernt alle Wechselkurse,
-          Wertpapierpreise, Kontostände und andere zwischengespeicherte Daten. Dies
-          löscht keine Konten, Transaktionen, Kategorien oder andere benutzereigenen
-          Daten.
-        confirm_clear_cache:
-          body: Bist du sicher, dass du den Daten-Cache leeren möchtest? Dadurch werden
-            alle Wechselkurse, Wertpapierpreise, Kontostände und andere Daten entfernt.
-            Diese Aktion kann nicht rückgängig gemacht werden.
-          title: Daten-Cache leeren?
-        danger_zone: Gefahrenbereich
-        financial_data_providers: Finanzdatenanbieter
-        general: Allgemeine Einstellungen
-        instance_settings_restricted: Anbieter-Zugangsdaten, die gemeinsame KI-Verbindung
-          und Synchronisierungseinstellungen gelten für alle Familien dieser Instanz
-          und können daher nur von einem Super-Admin geändert werden. Welchen Assistenten
-          deine Familie nutzt, wird weiterhin pro Familie festgelegt. Wer Zugriff
-          auf den Server hat, kann einen Benutzer zum Super-Admin machen; den Befehl
-          nennt die Docker-Self-Hosting-Anleitung in ihren Upgrade-Hinweisen.
-        invites: Einladungscodes
-        property_valuation_providers: Anbieter für Immobilienbewertung
-        sync_settings: Synchronisierungseinstellungen
-        title: Self-Hosting
       sync_auto_sync_scheduler!:
-        scheduler_sync_failed: Gespeichert, aber der Sync-Zeitplan ließ sich nicht
-          aktualisieren. Versuch es erneut oder sieh in den Server-Logs nach.
-      sync_settings:
-        auto_sync_description: Wenn aktiviert, werden alle Konten täglich zur angegebenen
-          Zeit automatisch synchronisiert.
-        auto_sync_label: Automatische Synchronisierung aktivieren
-        auto_sync_time_description: Lege die Tageszeit fest, zu der die automatische
-          Synchronisierung erfolgen soll.
-        auto_sync_time_label: Synchronisierungszeit (HH:MM)
-        env_configured_message: Diese Einstellung ist deaktiviert, weil eine Anbieter-Umgebungsvariable
-          (SIMPLEFIN_INCLUDE_PENDING oder PLAID_INCLUDE_PENDING) gesetzt ist. Entferne
-          sie, um diese Einstellung zu aktivieren.
-        include_pending_description: Wenn aktiviert, werden ausstehende (noch nicht
-          gebuchte) Transaktionen importiert und bei Buchung automatisch abgeglichen.
-          Deaktivieren, wenn deine Bank unzuverlässige Ausstehend-Daten liefert.
-        include_pending_label: Ausstehende Transaktionen einbeziehen
-        market_data_sync_description: Wenn aktiviert, werden Wertpapierkurse einmal
-          täglich (Montag bis Freitag) zur angegebenen Zeit automatisch importiert.
-        market_data_sync_label: Täglichen Kursdatenimport aktivieren
-        market_data_sync_time_description: Lege die Tageszeit fest, zu der der tägliche
-          Kursimport laufen soll, z. B. kurz nach Handelsschluss deiner wichtigsten
-          Börse.
-        market_data_sync_time_label: Zeit für den Kursdatenimport (HH:MM)
+        scheduler_sync_failed: Gespeichert, aber der Sync-Zeitplan ließ sich nicht aktualisieren. Versuch es erneut oder sieh in den Server-Logs nach.
       tiingo_settings:
-        description: Trag den API-Token von Tiingo ein. Der kostenlose Tarif erlaubt
-          50 verschiedene Symbole pro Stunde mit über 30 Jahren Historie.
+        description: Trag den API-Token von Tiingo ein. Der kostenlose Tarif erlaubt 50 verschiedene Symbole pro Stunde mit über 30 Jahren Historie.
         env_configured_message: Über die Umgebungsvariable TIINGO_API_KEY eingerichtet.
         label: API-Token
         placeholder: Tiingo-API-Token hier eintragen
         show_details: "(Details anzeigen)"
-        step_1_html: Öffne <a href="https://www.tiingo.com" target="_blank" rel="noopener
-          noreferrer" class="underline">tiingo.com</a> und leg dir ein kostenloses
-          Konto an.
-        step_2_html: Geh auf die Seite <a href="https://www.tiingo.com/account/api/token"
-          target="_blank" rel="noopener noreferrer" class="underline">API Token</a>.
+        step_1_html: Öffne <a href="https://www.tiingo.com" target="_blank" rel="noopener noreferrer" class="underline">tiingo.com</a> und leg dir ein kostenloses Konto an.
+        step_2_html: Geh auf die Seite <a href="https://www.tiingo.com/account/api/token" target="_blank" rel="noopener noreferrer" class="underline">API Token</a>.
         step_3: Kopier deinen API-Token und füg ihn unten ein.
         title: Tiingo
       tinkoff_invest_settings:
-        description: Trag einen T-Invest-API-Token mit Lesezugriff ein. Er holt Logos
-          zu Wertpapieren – auch für Fonds und Anleihen, deren Kurse von MOEX kommen
-          – und, wenn oben aktiviert, Kurse russischer Papiere.
-        env_configured_message: Über die Umgebungsvariable TINKOFF_INVEST_API_KEY
-          eingerichtet.
+        description: Trag einen T-Invest-API-Token mit Lesezugriff ein. Er holt Logos zu Wertpapieren – auch für Fonds und Anleihen, deren Kurse von MOEX kommen – und, wenn oben aktiviert, Kurse russischer Papiere.
+        env_configured_message: Über die Umgebungsvariable TINKOFF_INVEST_API_KEY eingerichtet.
         label: API-Token
-        moex_only_notice: Oben nicht für Kursdaten aktiviert – sobald ein Token eingerichtet
-          ist, ruft T-Invest unabhängig vom obigen Kontrollkästchen Logos für alle
-          deine Wertpapiere ab.
+        moex_only_notice: Oben nicht für Kursdaten aktiviert – sobald ein Token eingerichtet ist, ruft T-Invest unabhängig vom obigen Kontrollkästchen Logos für alle deine Wertpapiere ab.
         placeholder: T-Invest-API-Token hier eintragen
         show_details: "(Details anzeigen)"
-        step_1: Öffne bei T-Bank den Bereich Investments, dann Einstellungen, dann
-          API-Tokens (setzt ein eröffnetes Depot bei T-Bank voraus).
+        step_1: Öffne bei T-Bank den Bereich Investments, dann Einstellungen, dann API-Tokens (setzt ein eröffnetes Depot bei T-Bank voraus).
         step_2: Leg einen Token mit reinem Lesezugriff an.
         step_3: Kopier den Token und füg ihn unten ein.
         title: T-Invest (T-Bank)
-      twelve_data_settings:
-        api_calls_used: "%{used} / %{limit} API-Aufrufe heute genutzt (%{percentage})"
-        description: Gib den von Twelve Data bereitgestellten API-Schlüssel ein.
-        env_configured_message: Erfolgreich über die Umgebungsvariable TWELVE_DATA_API_KEY
-          konfiguriert.
-        label: API-Schlüssel
-        placeholder: Gib hier deinen API-Schlüssel ein
-        plan: "%{plan}-Tarif"
-        plan_upgrade_warning_description: Die folgenden Ticker in deinem Portfolio
-          können mit deinem aktuellen Twelve-Data-Tarif keine Kurse synchronisieren.
-        plan_upgrade_warning_title: Einige Ticker erfordern einen kostenpflichtigen
-          Tarif
-        requires_plan: erfordert %{plan}-Tarif
-        show_details: "(Details anzeigen)"
-        step_1_html: Öffne <a href="https://twelvedata.com/register" target="_blank"
-          rel="noopener noreferrer" class="underline">twelvedata.com</a> und leg dir
-          ein kostenloses Entwicklerkonto an.
-        step_2_html: Geh auf die Seite <a href="https://twelvedata.com/account/api-keys"
-          target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.
-        step_3: Lass deinen Secret Key anzeigen und füg ihn unten ein.
-        title: Twelve Data
-        view_pricing: Twelve-Data-Preise anzeigen
-      update:
-        anthropic_model_required_for_base_url: Wenn du eine eigene Basis-URL setzt,
-          musst du auch ein Anthropic-Modell angeben.
-        failure: Ungültiger Einstellungswert
-        invalid_anthropic_base_url: Die Anthropic-Basis-URL muss eine http(s)-Adresse
-          sein.
-        invalid_llm_budget: "%{field} muss eine ganze Zahl ≥ %{minimum} sein."
-        invalid_onboarding_state: Ungültiger Onboarding-Status
-        invalid_sync_time: Ungültiges Synchronisierungszeitformat. Bitte verwende
-          das Format HH:MM (z. B. 02:30).
-        scheduler_sync_failed: Gespeichert, aber der Sync-Zeitplan ließ sich nicht
-          aktualisieren. Versuch es erneut oder sieh in den Server-Logs nach.
-        success: Einstellungen aktualisiert
-      yahoo_finance_settings:
-        connection_failed: Verbindung zu Yahoo Finance konnte nicht hergestellt werden
-        description: Yahoo Finance bietet kostenlosen Zugriff auf Aktienkurse, Wechselkurse
-          und Finanzdaten – ganz ohne API-Schlüssel.
-        rate_limited_message: Du musst nichts tun. Sure verzichtet 30 Minuten lang
-          auf weitere Prüfungen. Kurse und Wechselkurse laufen davon unabhängig weiter.
-        rate_limited_title: Anfragelimit bei Yahoo Finance erreicht.
-        status_active: Yahoo Finance ist aktiv und funktionsfähig
-        status_healthy: Yahoo Finance ist aktiv und funktioniert.
-        status_inactive: Verbindung zu Yahoo Finance fehlgeschlagen
-        status_rate_limited: Yahoo Finance drosselt die Anfragen gerade.
-        status_unavailable: Yahoo Finance ist derzeit nicht erreichbar.
-        status_unknown: Der Status von Yahoo Finance wird gerade geprüft.
-        title: Yahoo Finance
-        troubleshooting: Überprüfe deine Internetverbindung und Firewall-Einstellungen.
-          Yahoo Finance könnte vorübergehend nicht verfügbar sein.
-        unavailable_message: Yahoo Finance war nicht erreichbar oder hat unerwartet
-          geantwortet. Prüf deine Internetverbindung und versuch es später noch einmal.
-        unavailable_title: Yahoo Finance ließ sich nicht prüfen.

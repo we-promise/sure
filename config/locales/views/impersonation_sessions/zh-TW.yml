@@ -14,12 +14,12 @@ zh-TW:
     reject:
       success: 請求已拒絕
     super_admin_bar:
-      impersonating: 模擬登入中
-      jobs: 背景工作
-      join: 加入
-      join_a_session: 加入工作階段
-      leave: 離開
-      request_impersonation: 申請模擬登入
       super_admin: 超級管理員
+      jobs: 背景工作
+      impersonating: 模擬登入中
+      leave: 離開
       terminate: 終止
+      join_a_session: 加入工作階段
+      join: 加入
       uuid_placeholder: UUID
+      request_impersonation: 申請模擬登入

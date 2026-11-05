@@ -5,7 +5,6 @@ zh-TW:
       account: 轉帳帳戶（選填）
       account_prompt: 搜尋帳戶
       amount: 金額
-      dividend_requires_security: 股息必須指定證券
       fee: 交易手續費
       holding: 股票代號
       holding_optional: 股票代號（選填）
@@ -13,23 +12,24 @@ zh-TW:
       qty: 數量
       submit: 新增交易
       ticker_placeholder: AAPL
-      trade_requires_security: 買入與賣出交易必須指定證券（代碼）
       type: 類型
       type_buy: 買入
+      type_sell: 賣出
       type_deposit: 存入
+      type_withdrawal: 提領
       type_dividend: 股息
       type_interest: 利息
-      type_sell: 賣出
-      type_withdrawal: 提領
+      dividend_requires_security: 股息必須指定證券
+      trade_requires_security: 買入與賣出交易必須指定證券（代碼）
     header:
       buy: 買入
-      current_market_price_label: 目前市價
+      sell: 賣出
       dividend: 股息
       interest: 利息
+      current_market_price_label: 目前市價
       overview: 概覽
       purchase_price_label: 買入價格
       purchase_qty_label: 買入數量
-      sell: 賣出
       symbol_label: 代碼
       total_return_label: 未實現損益
     new:
@@ -42,16 +42,16 @@ zh-TW:
       cost_per_share_label: 每股成本
       date_label: 日期
       delete: 刪除
+      fee_label: 交易手續費
       delete_subtitle: 此操作將無法復原
       delete_title: 刪除交易紀錄
       details: 詳情
+      provider_disabled_warning: 價格更新已暫停 - %{provider} 供應商已停用。請到設定中重新啟用它，或把這筆持股重新對應到其他供應商。
       exclude_subtitle: 此筆交易將不計入報表與分析計算
       exclude_title: 從分析中排除
-      fee_label: 交易手續費
       no_category: 未分類
       note_label: 備註
       note_placeholder: 在此新增額外備註...
-      provider_disabled_warning: 價格更新已暫停 - %{provider} 供應商已停用。請到設定中重新啟用它，或把這筆持股重新對應到其他供應商。
       quantity_label: 數量
       sell: 賣出
       settings: 設定

@@ -3,55 +3,49 @@ pt-BR:
   admin:
     users:
       index:
-        description: Gerencie as funções de usuário da sua instância. Os superadministradores
-          podem acessar as configurações do provedor SSO e o gerenciamento de usuários.
-        family_summary: "%{members} membros · %{accounts} contas · %{transactions}
-          transações"
-        filters:
-          role: Cargo
-          role_all: Todas as funções
-          submit: Filtro
-          trial_all: Todos
-          trial_expiring_soon: Expira em 7 dias
-          trial_status: Status do teste
-          trial_trialing: Em teste
-        invitations:
-          delete: Excluir
-          delete_all: Excluir todos
-          expires: Expira em %{date}
-          pending_label: Convidado (pendente)
-        no_subscription: Sem assinatura
-        no_users: Nenhum usuário encontrado.
-        not_available: n/a
-        role_descriptions:
-          admin: Administrador familiar. Pode acessar configurações avançadas como
-            chaves de API, importações e avisos de IA.
-          guest: Experiência com foco no assistente, com permissões intencionalmente
-            restritas para fluxos de trabalho introdutórios.
-          member: Acesso básico de usuário. Pode gerenciar suas próprias contas, transações
-            e configurações.
-          super_admin: Administrador de instância. Pode gerenciar provedores de SSO,
-            funções de usuário e representar usuários para suporte.
-        role_descriptions_title: Descrições de Cargos
-        roles:
-          admin: Admin
-          guest: Convidado
-          member: Membro
-          super_admin: Super Admin
-        section_title: Famílias / Grupos
-        table:
-          family_accounts: Contas familiares
-          family_transactions: Transações familiares
-          last_login: Último login
-          never: Nunca
-          role: Cargo
-          session_count: Contagem de sessões
-          trial_ends_at: Fim do teste
-          user: Usuário
-        title: Gestão de Usuários
-        trial_ends_at: Fim do teste
-        unnamed_family: Família/Grupo sem nome
+        title: "Gestão de Usuários"
+        description: "Gerencie as funções de usuário da sua instância. Os superadministradores podem acessar as configurações do provedor SSO e o gerenciamento de usuários."
+        section_title: "Famílias / Grupos"
         you: "(Você)"
+        trial_ends_at: "Fim do teste"
+        not_available: "n/a"
+        no_users: "Nenhum usuário encontrado."
+        unnamed_family: "Família/Grupo sem nome"
+        no_subscription: "Sem assinatura"
+        family_summary: "%{members} membros · %{accounts} contas · %{transactions} transações"
+        filters:
+          role: "Cargo"
+          role_all: "Todas as funções"
+          trial_status: "Status do teste"
+          trial_all: "Todos"
+          trial_expiring_soon: "Expira em 7 dias"
+          trial_trialing: "Em teste"
+          submit: "Filtro"
+        table:
+          user: "Usuário"
+          trial_ends_at: "Fim do teste"
+          family_accounts: "Contas familiares"
+          family_transactions: "Transações familiares"
+          last_login: "Último login"
+          session_count: "Contagem de sessões"
+          never: "Nunca"
+          role: "Cargo"
+        role_descriptions_title: "Descrições de Cargos"
+        roles:
+          guest: "Convidado"
+          member: "Membro"
+          admin: "Admin"
+          super_admin: "Super Admin"
+        role_descriptions:
+          guest: "Experiência com foco no assistente, com permissões intencionalmente restritas para fluxos de trabalho introdutórios."
+          member: "Acesso básico de usuário. Pode gerenciar suas próprias contas, transações e configurações."
+          admin: "Administrador familiar. Pode acessar configurações avançadas como chaves de API, importações e avisos de IA."
+          super_admin: "Administrador de instância. Pode gerenciar provedores de SSO, funções de usuário e representar usuários para suporte."
+        invitations:
+          pending_label: "Convidado (pendente)"
+          expires: "Expira em %{date}"
+          delete: "Excluir"
+          delete_all: "Excluir todos"
       update:
-        failure: Falha ao atualizar a função do usuário.
-        success: Função de usuário atualizada com sucesso.
+        success: "Função de usuário atualizada com sucesso."
+        failure: "Falha ao atualizar a função do usuário."

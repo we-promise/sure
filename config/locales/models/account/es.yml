@@ -18,8 +18,8 @@ es:
       account:
         balance: Saldo
         currency: Moneda
-        family: "%{moniker}"
-        family_id: "%{moniker}"
+        family: '%{moniker}'
+        family_id: '%{moniker}'
         name: Nombre
         subtype: Subtipo
     models:

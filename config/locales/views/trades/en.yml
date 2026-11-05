@@ -2,16 +2,14 @@
 en:
   trades:
     api_errors:
-      activity_label_must_match_type: investment_activity_label must be %{label} when
-        type is %{type}
+      activity_label_must_match_type: "investment_activity_label must be %{label} when type is %{type}"
       invalid_activity_label: Invalid investment activity label
       invalid_type: Invalid type
-      supported_types: 'type must be one of: %{types}'
+      supported_types: "type must be one of: %{types}"
     form:
       account: Transfer account (optional)
       account_prompt: Search account
       amount: Amount
-      dividend_requires_security: Security is required for dividends
       fee: Transaction fee
       holding: Ticker symbol
       holding_optional: Ticker symbol (optional)
@@ -19,34 +17,35 @@ en:
       qty: Quantity
       submit: Add transaction
       ticker_placeholder: AAPL
-      trade_requires_security: A security (ticker) is required for buy and sell trades
       type: Type
       type_buy: Buy
+      type_sell: Sell
       type_deposit: Deposit
+      type_withdrawal: Withdrawal
       type_dividend: Dividend
       type_interest: Interest
-      type_sell: Sell
-      type_withdrawal: Withdrawal
+      dividend_requires_security: Security is required for dividends
+      trade_requires_security: A security (ticker) is required for buy and sell trades
     header:
       buy: Buy
-      contribution: Contribution
-      current_market_price_label: Current Market Price
+      sell: Sell
       dividend: Dividend
+      interest: Interest
+      contribution: Contribution
       exchange: Exchange
       fee: Fee
-      interest: Interest
       other: Other
+      reinvestment: Reinvestment
+      sweep_in: Sweep in
+      sweep_out: Sweep out
+      transfer: Transfer
+      withdrawal: Withdrawal
+      current_market_price_label: Current Market Price
       overview: Overview
       purchase_price_label: Purchase Price
       purchase_qty_label: Purchase Quantity
-      reinvestment: Reinvestment
-      sell: Sell
-      sweep_in: Sweep in
-      sweep_out: Sweep out
       symbol_label: Symbol
       total_return_label: Unrealized gain/loss
-      transfer: Transfer
-      withdrawal: Withdrawal
     new:
       title: New transaction
     show:
@@ -57,17 +56,16 @@ en:
       cost_per_share_label: Cost per Share
       date_label: Date
       delete: Delete
+      fee_label: Transaction fee
       delete_subtitle: This action cannot be undone
       delete_title: Delete Trade
       details: Details
+      provider_disabled_warning: "Price updates paused — %{provider} provider is disabled. Re-enable it in Settings or remap the holding to another provider."
       exclude_subtitle: This trade will not be included in reports and calculations
       exclude_title: Exclude from analytics
-      fee_label: Transaction fee
       no_category: No category
       note_label: Note
       note_placeholder: Add any additional notes here...
-      provider_disabled_warning: Price updates paused — %{provider} provider is disabled.
-        Re-enable it in Settings or remap the holding to another provider.
       quantity_label: Quantity
       sell: Sell
       settings: Settings

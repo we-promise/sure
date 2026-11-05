@@ -2,22 +2,20 @@
 en:
   pending_duplicate_merges:
     create:
-      invalid_transaction: Invalid transaction selected for merge
-      merge_failed: Could not merge transactions
-      merge_success: Pending transaction merged with posted transaction
       no_posted_selected: Please select a posted transaction to merge with
-    new:
-      next: Next 10 →
-      no_candidates: No posted transactions found in this account.
-      pending_transaction: Pending Transaction
-      previous: "← Previous 10"
-      select_posted: Select Posted Transaction to Merge With
-      showing_range: Showing %{start} - %{end}
-      submit_button: Merge Transactions
-      title: Merge with Posted Transaction
-      warning_description: Use this to manually merge a pending transaction with its
-        posted version. This will delete the pending transaction and keep only the
-        posted one.
-      warning_title: Manual Duplicate Merging
+      invalid_transaction: Invalid transaction selected for merge
+      merge_success: Pending transaction merged with posted transaction
+      merge_failed: Could not merge transactions
     set_transaction:
       pending_only: This feature is only available for pending transactions
+    new:
+      title: Merge with Posted Transaction
+      warning_title: Manual Duplicate Merging
+      warning_description: Use this to manually merge a pending transaction with its posted version. This will delete the pending transaction and keep only the posted one.
+      pending_transaction: Pending Transaction
+      select_posted: Select Posted Transaction to Merge With
+      showing_range: "Showing %{start} - %{end}"
+      previous: "← Previous 10"
+      next: "Next 10 →"
+      no_candidates: No posted transactions found in this account.
+      submit_button: Merge Transactions

@@ -2,10 +2,9 @@
 vi:
   account_statements:
     account_tab:
-      coverage_description: Các tháng lịch sử được hỗ trợ bởi sao kê đã tải lên và
-        kiểm tra số dư.
-      coverage_range: "%{start} - %{end}"
       coverage_title: Phạm vi sao kê
+      coverage_description: Các tháng lịch sử được hỗ trợ bởi sao kê đã tải lên và kiểm tra số dư.
+      coverage_range: "%{start} - %{end}"
       empty: Chưa có sao kê nào được liên kết với tài khoản này.
       open_inbox: Hộp thư đến
       statements_title: Sao kê
@@ -24,8 +23,7 @@ vi:
       duplicates:
         one: 1 sao kê trùng lặp đã bị bỏ qua.
         other: "%{count} sao kê trùng lặp đã bị bỏ qua."
-      invalid_file_type: Tải lên sao kê dạng PDF, CSV hoặc XLSX dưới giới hạn kích
-        thước.
+      invalid_file_type: Tải lên sao kê dạng PDF, CSV hoặc XLSX dưới giới hạn kích thước.
       no_files: Chọn ít nhất một tệp sao kê.
       success:
         one: 1 sao kê đã được tải lên.
@@ -38,11 +36,10 @@ vi:
       files_hint: PDF, CSV hoặc XLSX. Tối đa %{max_size}MB mỗi tệp.
       files_label: Tệp sao kê
       inbox_upload: Tải lên
-      period_hint: Sure đọc kỳ sao kê từ tệp PDF nếu tệp có ghi kỳ, hoặc từ ngày trong
-        tên tệp (ví dụ 2026-04). Bạn cũng có thể đặt kỳ trên sao kê.
+      period_hint: "Sure đọc kỳ sao kê từ tệp PDF nếu tệp có ghi kỳ, hoặc từ ngày trong tên tệp (ví dụ 2026-04). Bạn cũng có thể đặt kỳ trên sao kê."
     index:
       account_label: Tài khoản
-      confidence: Khớp %{confidence}
+      confidence: "Khớp %{confidence}"
       empty_linked: Chưa có sao kê nào được liên kết.
       empty_unmatched: Hộp thư sao kê đang trống.
       leave_unmatched: Để không khớp
@@ -51,8 +48,7 @@ vi:
       storage_used: Dung lượng đã sử dụng
       title: Kho lưu trữ sao kê
       unmatched_title: Hộp thư chưa khớp
-      upload_description: Tải lên sao kê vào hộp thư, hoặc chọn tài khoản để liên
-        kết ngay.
+      upload_description: Tải lên sao kê vào hộp thư, hoặc chọn tài khoản để liên kết ngay.
       upload_title: Tải lên sao kê
     link:
       no_account: Chọn một tài khoản trước khi liên kết sao kê này.
@@ -81,25 +77,24 @@ vi:
       download: Tải xuống
       institution_name_hint: Gợi ý tổ chức
       ledger_amount: Sổ cái Sure
-      link_suggestion: Gợi ý liên kết
       linked_to: Đã liên kết với %{account}.
       linking_title: Liên kết tài khoản
+      link_suggestion: Gợi ý liên kết
       metadata_title: Siêu dữ liệu sao kê
       no_suggestion: Chưa có gợi ý tài khoản nào.
       opening_balance: Số dư đầu kỳ
       period_end_on: Kết thúc kỳ
       period_start_on: Bắt đầu kỳ
       reconciliation_title: Đối soát
-      reconciliation_unavailable: Thêm kỳ sao kê và số dư đầu hoặc cuối kỳ, sau đó
-        đảm bảo Sure có lịch sử số dư cho các ngày đó.
+      reconciliation_unavailable: Thêm kỳ sao kê và số dư đầu hoặc cuối kỳ, sau đó đảm bảo Sure có lịch sử số dư cho các ngày đó.
       reject: Từ chối
       save: Lưu sao kê
       statement_amount: Sao kê
       suggested_account: Tài khoản được gợi ý là %{account} (độ tin cậy %{confidence}).
       title: Sao kê
-      unknown_value: Không xác định
       unlink: Hủy liên kết
       unmatched_account: Hộp thư chưa khớp
+      unknown_value: Không xác định
     status:
       linked: Đã liên kết
       rejected: Đã từ chối

@@ -1,65 +1,55 @@
 ---
 de:
-  concerns:
-    self_hostable:
-      redis_configured: Redis ist jetzt richtig eingerichtet! Du kannst deine Sure-Installation
-        nun einrichten.
   shared:
-    cancel: Abbrechen
     confirm_modal:
       accept: Bestätigen
       body_html: "<p>Diese Entscheidung kann nicht rückgängig gemacht werden</p>"
       cancel: Abbrechen
       title: Bist du sicher
-    custom_confirm:
-      default_body: Das lässt sich nicht rückgängig machen.
-      default_btn_text: Bestätigen
-      default_title: Bist du sicher?
-    dot_separator: "·"
+    money_field:
+      label: Betrag
     exchange_rate_tabs:
       calculate_rate_tab: FX-Kurs berechnen
       convert_tab: Mit FX-Kurs konvertieren
       destination_amount: Zielbetrag
       exchange_rate: Wechselkurs
       exchange_rate_help: Wähl, wie du den Betrag eingeben willst.
+    syncing_notice:
+      syncing: Kontodaten werden synchronisiert...
+    trend_change:
+      no_change: keine Änderung
+    cancel: Abbrechen
+    custom_confirm:
+      default_body: Das lässt sich nicht rückgängig machen.
+      default_btn_text: Bestätigen
+      default_title: Bist du sicher?
     family_moniker:
       group_plural: Gruppen
       group_singular: Gruppe
       plural: Familien
       singular: Familie
-    money_field:
-      label: Betrag
     preview: Vorschau
+    dot_separator: "·"
     require_admin: Das dürfen nur Admins
     require_non_guest: Gäste können diese Aktion nicht ausführen
-    sidekiq_health_banner:
-      body: Hintergrundaufgaben werden nicht verarbeitet. Daher sind Kontostände,
-        Nettovermögen und Kontosynchronisierungen möglicherweise nicht aktuell oder
-        fehlen.
-      cta: Systemstatus anzeigen
-      reasons:
-        ai_queues_not_polled: Kein Worker verarbeitet die KI-Warteschlangen (Chat,
-          Händlererkennung, Kategorisierung). Prüfe, ob der Worker config/sidekiq.yml
-          lädt.
-        no_worker_processes: Es ist kein Sidekiq-Worker verbunden. Starte den Worker-Container
-          oder die systemd-Unit.
-        queue_backed_up: Die älteste Hintergrundaufgabe in der Warteschlange wartet
-          bereits länger als vorgesehen. Der Worker läuft, kommt aber mit der Verarbeitung
-          nicht hinterher.
-        redis_unreachable: Die App kann Redis nicht erreichen. Prüfe deine REDIS_URL
-          und ob Redis läuft.
-        stale_heartbeat: Der Sidekiq-Worker hat seit einiger Zeit kein Lebenszeichen
-          gesendet. Möglicherweise hängt er oder ist abgestürzt.
-      title: Einige Daten sind möglicherweise nicht aktuell
     sync_toast:
       message: Neue Daten verfügbar
       refresh: Aktualisieren
-    syncing_notice:
-      syncing: Kontodaten werden synchronisiert...
     transaction_tabs:
       aria: Transaktionstyp
       expense: Ausgabe
       income: Einnahme
       transfer: Überweisung
-    trend_change:
-      no_change: keine Änderung
+    sidekiq_health_banner:
+      title: Einige Daten sind möglicherweise nicht aktuell
+      body: "Hintergrundaufgaben werden nicht verarbeitet. Daher sind Kontostände, Nettovermögen und Kontosynchronisierungen möglicherweise nicht aktuell oder fehlen."
+      cta: Systemstatus anzeigen
+      reasons:
+        redis_unreachable: "Die App kann Redis nicht erreichen. Prüfe deine REDIS_URL und ob Redis läuft."
+        no_worker_processes: "Es ist kein Sidekiq-Worker verbunden. Starte den Worker-Container oder die systemd-Unit."
+        stale_heartbeat: "Der Sidekiq-Worker hat seit einiger Zeit kein Lebenszeichen gesendet. Möglicherweise hängt er oder ist abgestürzt."
+        ai_queues_not_polled: "Kein Worker verarbeitet die KI-Warteschlangen (Chat, Händlererkennung, Kategorisierung). Prüfe, ob der Worker config/sidekiq.yml lädt."
+        queue_backed_up: "Die älteste Hintergrundaufgabe in der Warteschlange wartet bereits länger als vorgesehen. Der Worker läuft, kommt aber mit der Verarbeitung nicht hinterher."
+  concerns:
+    self_hostable:
+      redis_configured: Redis ist jetzt richtig eingerichtet! Du kannst deine Sure-Installation nun einrichten.

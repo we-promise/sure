@@ -32,9 +32,6 @@ tr:
       brokerage:
         long: Aracılık Hesabı
         short: Aracılık
-      cash_management:
-        long: Nakit Yönetim Hesabı
-        short: CMA
       corporate_bond:
         long: Kurumsal Tahvil
         short: Kurumsal Tahvil
@@ -185,6 +182,9 @@ tr:
       workplace_pension_uk:
         long: İşyeri Emeklilik Planı
         short: Emeklilik
+      cash_management:
+        short: CMA
+        long: Nakit Yönetim Hesabı
     value_tooltip:
       cash: Nakit
       holdings: Varlıklar

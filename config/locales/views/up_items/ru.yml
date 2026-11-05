@@ -6,8 +6,7 @@ ru:
         default_name: Подключение Up
   providers:
     up:
-      description: Подключайте счета австралийского банка Up с помощью персонального
-        токена доступа
+      description: Подключайте счета австралийского банка Up с помощью персонального токена доступа
       name: Up
   up_account:
     fallback: Счёт Up
@@ -19,18 +18,18 @@ ru:
       transactions_failed: Не удалось получить операции Up
     institution_summary:
       count:
-        few: "%{count} учреждения"
-        many: "%{count} учреждений"
-        one: "%{count} учреждение"
-        other: "%{count} учреждения"
+        one: '%{count} учреждение'
+        other: '%{count} учреждения'
+        few: '%{count} учреждения'
+        many: '%{count} учреждений'
       none: Нет подключённых учреждений
       one: 1 учреждение
     sync_status:
       all_synced:
-        few: "%{count} счёта синхронизировано"
-        many: "%{count} счетов синхронизировано"
-        one: "%{count} счёт синхронизирован"
-        other: "%{count} счёта синхронизировано"
+        one: '%{count} счёт синхронизирован'
+        other: '%{count} счёта синхронизировано'
+        few: '%{count} счёта синхронизировано'
+        many: '%{count} счетов синхронизировано'
       no_accounts: Счета не найдены
       partial: 'Синхронизировано: %{linked}, требуют настройки: %{unlinked}'
   up_items:
@@ -39,10 +38,10 @@ ru:
       creation_failed: Не удалось создать счета Up.
       no_accounts: Не выбрано ни одного счёта Up.
       success:
-        few: Создано %{count} счёта Up.
-        many: Создано %{count} счетов Up.
         one: Создан %{count} счёт Up.
         other: Создано %{count} счёта Up.
+        few: Создано %{count} счёта Up.
+        many: Создано %{count} счетов Up.
     create:
       success: Подключение Up сохранено.
     destroy:
@@ -53,10 +52,10 @@ ru:
       no_accounts_selected: Выберите хотя бы один счёт.
       no_credentials_configured: Сначала настройте Up в настройках провайдеров.
       success:
-        few: Связано %{count} счёта Up.
-        many: Связано %{count} счетов Up.
         one: Связан %{count} счёт Up.
         other: Связано %{count} счёта Up.
+        few: Связано %{count} счёта Up.
+        many: Связано %{count} счетов Up.
       unsupported_account_type: Up не поддерживает этот тип счёта.
     link_existing_account:
       account_already_linked: Этот счёт уже связан с провайдером.

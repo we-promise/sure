@@ -16,7 +16,6 @@ tr:
     budgets: Bütçeler
     categories: Kategoriler
     categorize: Kategorize et
-    changelog: Yenilikler
     chats: Sohbetler
     coinbase_items: Coinbase
     coinstats_items: CoinStats
@@ -30,7 +29,6 @@ tr:
     exports: Dışa Aktarmalar
     family_exports: Dışa Aktarmalar
     family_merchants: Satıcılar
-    feedback: Geri bildirim
     guides: Kılavuzlar
     holdings: Varlıklar
     home: Ana Sayfa
@@ -53,7 +51,6 @@ tr:
     mercury_items: Mercury
     messages: Mesajlar
     mfa: İki faktörlü kimlik doğrulama
-    monobank_items: Monobank
     oidc_accounts: SSO hesapları
     onboardings: Kurulum
     other_assets: Diğer varlıklar
@@ -61,18 +58,16 @@ tr:
     payments: Ödemeler
     pending_duplicate_merges: Kopya inceleme
     plaid_items: Plaid
-    plan: Plan
     preferences: Tercihler
     profile: Profil Bilgisi
     profiles: Profil Bilgisi
     properties: Mülkler
     providers: Sağlayıcılar
     recurring_transactions: Yinelenen
-    redbark_items: Redbark
     registrations: Hesap oluştur
     reports: Raporlar
     rules: Kurallar
-    securities: Menkul Kıymetler
+    securities: "Menkul Kıymetler"
     security: Güvenlik
     self_hosting: Kendi Barındırma
     sessions: Giriş yap
@@ -83,7 +78,6 @@ tr:
     sso_identities: SSO bağlantıları
     sso_providers: SSO sağlayıcıları
     subscriptions: Abonelik
-    system_health: Sistem Durumu
     tags: Etiketler
     trades: Alım Satımlar
     transactions: İşlemler
@@ -92,3 +86,9 @@ tr:
     users: Kullanıcılar
     valuations: Değerlemeler
     vehicles: Araçlar
+    changelog: Yenilikler
+    feedback: Geri bildirim
+    monobank_items: Monobank
+    plan: Plan
+    redbark_items: Redbark
+    system_health: Sistem Durumu

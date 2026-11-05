@@ -1,9 +1,9 @@
 ---
 id:
   messages:
-    chat_form:
-      coming_soon: Segera hadir
-      disclaimer: Respons AI hanya bersifat informatif. Bukan nasihat keuangan!
-      placeholder: Tanyakan apa saja ...
     create:
       chat_not_found: Obrolan ini sudah tidak tersedia.
+    chat_form:
+      placeholder: "Tanyakan apa saja ..."
+      disclaimer: "Respons AI hanya bersifat informatif. Bukan nasihat keuangan!"
+      coming_soon: Segera hadir

@@ -4,5 +4,5 @@ pt-PT:
     errors:
       models:
         category_import:
-          missing_columns: 'Colunas obrigatórias em falta: %{columns}'
-          own_parent: A categoria '%{name}' não pode ser a sua própria categoria-mãe
+          own_parent: "A categoria '%{name}' não pode ser a sua própria categoria-mãe"
+          missing_columns: "Colunas obrigatórias em falta: %{columns}"

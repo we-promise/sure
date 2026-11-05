@@ -1,79 +1,78 @@
 ---
 ru:
   redbark_items:
-    complete_account_setup:
-      all_skipped: Все счета были пропущены. Счета не были созданы.
-      creation_failed: 'Не удалось создать счета: %{error}'
-      creation_failed_generic: Не удалось создать счета.
-      no_accounts: Нет счетов для настройки.
-      setup_failed: 'Не удалось создать счетов: %{count}. Больше ничего не изменено
-        — устраните проблему и попробуйте снова.'
-      success: 'Успешно создано счетов: %{count}.'
-    create:
-      success: Подключение Redbark успешно создано
     default_name: Подключение Redbark
-    destroy:
-      success: Подключение Redbark удалено
-      unlink_failed:
-        few: Не удалось отвязать %{count} счёта. Пожалуйста, попробуйте снова.
-        many: Не удалось отвязать %{count} счетов. Пожалуйста, попробуйте снова.
-        one: Не удалось отвязать %{count} счёт. Пожалуйста, попробуйте снова.
-        other: Не удалось отвязать %{count} счёта. Пожалуйста, попробуйте снова.
+    sync_status:
+      no_accounts: Счета не найдены
+      synced:
+        one: Синхронизирован %{count} счёт
+        few: Синхронизированы %{count} счёта
+        many: Синхронизировано %{count} счетов
+        other: Синхронизировано %{count} счёта
+      synced_with_setup: 'Синхронизировано: %{linked}, требуют настройки: %{unlinked}'
+    institution_summary:
+      none: Нет подключённых учреждений
+      count:
+        one: '%{count} учреждение'
+        few: '%{count} учреждения'
+        many: '%{count} учреждений'
+        other: '%{count} учреждения'
     errors:
       provider_not_configured: Провайдер Redbark не настроен
-    index:
-      title: Подключения Redbark
-    institution_summary:
-      count:
-        few: "%{count} учреждения"
-        many: "%{count} учреждений"
-        one: "%{count} учреждение"
-        other: "%{count} учреждения"
-      none: Нет подключённых учреждений
-    link_existing_account:
-      account_already_linked: Этот счёт уже привязан к провайдеру
-      api_error: 'Ошибка API: %{message}'
-      invalid_account_name: Невозможно привязать счёт с пустым именем
-      missing_parameters: Отсутствуют обязательные параметры
-      no_api_key: API-ключ Redbark не найден. Пожалуйста, настройте его в Настройках
-        провайдера.
-      provider_account_already_linked: Этот счёт Redbark уже привязан к другому счёту
-      provider_account_not_found: Счёт Redbark не найден
-      success: Счёт %{account_name} успешно привязан к Redbark
-    loading:
-      loading_message: Загрузка счетов Redbark...
-      loading_title: Загрузка
+    sync:
+      status:
+        importing: Импорт счетов из Redbark...
+        processing: Обработка операций...
+        calculating: Расчёт балансов...
+        importing_data: Импорт данных счёта...
+        checking_setup: Проверка конфигурации счёта...
+        needs_setup: 'Счетов, требующих настройки: %{count}...'
+      success: Синхронизация начата
     panel:
+      step_1: Создайте API-ключ на app.redbark.com в разделе Settings
+      step_2: Введите API-ключ ниже и нажмите «Сохранить»
+      step_3: После успешного подключения перейдите на вкладку «Счета», чтобы настроить новые счета
+      optional: (Необязательно)
+      optional_with_default: (необязательно, по умолчанию %{default_value})
+      save_button: Сохранить конфигурацию
+      update_button: Обновить конфигурацию
       fields:
         api_key:
           label: API-ключ
           placeholder_new: rbk_live_...
           placeholder_update: Введите новый API-ключ для обновления
-      optional: "(Необязательно)"
-      optional_with_default: "(необязательно, по умолчанию %{default_value})"
-      save_button: Сохранить конфигурацию
-      step_1: Создайте API-ключ на app.redbark.com в разделе Settings
-      step_2: Введите API-ключ ниже и нажмите «Сохранить»
-      step_3: После успешного подключения перейдите на вкладку «Счета», чтобы настроить
-        новые счета
-      update_button: Обновить конфигурацию
+    create:
+      success: Подключение Redbark успешно создано
+    update:
+      success: Подключение Redbark обновлено
+    destroy:
+      success: Подключение Redbark удалено
+      unlink_failed:
+        one: Не удалось отвязать %{count} счёт. Пожалуйста, попробуйте снова.
+        few: Не удалось отвязать %{count} счёта. Пожалуйста, попробуйте снова.
+        many: Не удалось отвязать %{count} счетов. Пожалуйста, попробуйте снова.
+        other: Не удалось отвязать %{count} счёта. Пожалуйста, попробуйте снова.
+    index:
+      title: Подключения Redbark
+    loading:
+      loading_message: Загрузка счетов Redbark...
+      loading_title: Загрузка
     redbark_item:
       accounts_need_setup: Счета требуют настройки
       delete: Удалить подключение
       deletion_in_progress: удаление в процессе...
       error: Ошибка
       more_accounts_available:
+        one: Доступен ещё %{count} счёт
         few: Доступно ещё %{count} счёта
         many: Доступно ещё %{count} счетов
-        one: Доступен ещё %{count} счёт
         other: Доступно ещё %{count} счёта
       no_accounts_description: У этого подключения пока нет привязанных счетов.
       no_accounts_title: Нет счетов
       provider_name: Redbark
       requires_update: Подключение требует обновления
       setup_action: Настроить новые счета
-      setup_description: 'Привязано счетов: %{linked} из %{total}. Выберите типы для
-        новых импортированных счетов Redbark.'
+      setup_description: 'Привязано счетов: %{linked} из %{total}. Выберите типы для новых импортированных счетов Redbark.'
       setup_needed: Новые счета готовы к настройке
       status: Синхронизировано %{timestamp} назад
       status_never: Ещё не синхронизировалось
@@ -86,15 +85,13 @@ ru:
       accounts_selected: выбрано счетов
       api_error: 'Ошибка API: %{message}'
       cancel: Отмена
-      configure_name_in_provider: Невозможно импортировать — укажите название счёта
-        в Redbark
+      configure_name_in_provider: Невозможно импортировать — укажите название счёта в Redbark
       description: Выберите счета, которые хотите привязать к вашему аккаунту %{product_name}.
       link_accounts: Привязать выбранные счета
       no_accounts_found: Счета не найдены. Пожалуйста, проверьте настройки API-ключа.
       no_api_key: API-ключ Redbark не настроен. Пожалуйста, настройте его в Настройках.
-      no_credentials_configured: Пожалуйста, сначала настройте учётные данные Redbark
-        в Настройках провайдера.
-      no_name_placeholder: "(Без имени)"
+      no_credentials_configured: Пожалуйста, сначала настройте учётные данные Redbark в Настройках провайдера.
+      no_name_placeholder: (Без имени)
       title: Выберите счета Redbark
     select_existing_account:
       account_already_linked: Этот счёт уже привязан к провайдеру
@@ -103,104 +100,94 @@ ru:
       balance_label: 'Баланс:'
       cancel: Отмена
       cancel_button: Отмена
-      configure_name_in_provider: Невозможно импортировать — укажите название счёта
-        в Redbark
+      configure_name_in_provider: Невозможно импортировать — укажите название счёта в Redbark
       connect_hint: Подключите счёт Redbark, чтобы включить автоматическую синхронизацию.
-      description: Выберите счёт Redbark для привязки к этому счёту. Операции будут
-        синхронизироваться, а дубликаты удаляться автоматически.
+      description: Выберите счёт Redbark для привязки к этому счёту. Операции будут синхронизироваться, а дубликаты удаляться автоматически.
       header: Привязать к Redbark
       link_account: Привязать счёт
       link_button: Привязать этот счёт
       linking_to: 'Привязка к:'
       no_account_specified: Счёт не указан
       no_accounts: Не найдено непривязанных счетов Redbark.
-      no_accounts_found: Счета Redbark не найдены. Пожалуйста, проверьте настройки
-        API-ключа.
+      no_accounts_found: Счета Redbark не найдены. Пожалуйста, проверьте настройки API-ключа.
       no_api_key: API-ключ Redbark не настроен. Пожалуйста, настройте его в Настройках.
-      no_credentials_configured: Пожалуйста, сначала настройте учётные данные Redbark
-        в Настройках провайдера.
-      no_name_placeholder: "(Без имени)"
+      no_credentials_configured: Пожалуйста, сначала настройте учётные данные Redbark в Настройках провайдера.
+      no_name_placeholder: (Без имени)
       settings_link: Перейти в Настройки провайдера
       subtitle: Выберите счёт Redbark
       title: Привязать %{account_name} к Redbark
+    link_existing_account:
+      account_already_linked: Этот счёт уже привязан к провайдеру
+      api_error: 'Ошибка API: %{message}'
+      invalid_account_name: Невозможно привязать счёт с пустым именем
+      provider_account_already_linked: Этот счёт Redbark уже привязан к другому счёту
+      provider_account_not_found: Счёт Redbark не найден
+      missing_parameters: Отсутствуют обязательные параметры
+      no_api_key: API-ключ Redbark не найден. Пожалуйста, настройте его в Настройках провайдера.
+      success: Счёт %{account_name} успешно привязан к Redbark
     setup_accounts:
       account_type_label: 'Тип счёта:'
-      account_types:
-        credit_card: Кредитная карта
-        depository: Текущий или сберегательный счёт
-        loan: Кредит или ипотека
-        other_asset: Другой актив
-        skip: Пропустить этот счёт
       accounts_count:
+        one: Доступен %{count} счёт
         few: Доступно %{count} счёта
         many: Доступно %{count} счетов
-        one: Доступен %{count} счёт
         other: Доступно %{count} счёта
       all_accounts_linked: Все ваши счета Redbark уже настроены.
       api_error: 'Ошибка API: %{message}'
-      balance: Баланс
-      cancel: Отмена
-      choose_account_type: 'Выберите правильный тип счёта для каждого счёта Redbark:'
-      create_accounts: Создать счета
       creating: Создание счетов...
-      creating_accounts: Создание счетов...
-      done: Готово
       fetch_failed: Не удалось получить счета
-      historical_data_range: 'Период исторических данных:'
       import_selected: Импортировать выбранные счета
-      instructions: Выберите счета, которые хотите импортировать из Redbark. Можно
-        выбрать несколько счетов.
+      instructions: Выберите счета, которые хотите импортировать из Redbark. Можно выбрать несколько счетов.
       no_accounts: В этом подключении Redbark не найдено непривязанных счетов.
       no_accounts_to_setup: Нет счетов для настройки
       no_api_key: API-ключ Redbark не настроен. Пожалуйста, проверьте настройки подключения.
       select_all: Выбрать все
-      subtitle: Выберите правильные типы для импортированных счетов
+      account_types:
+        skip: Пропустить этот счёт
+        depository: Текущий или сберегательный счёт
+        credit_card: Кредитная карта
+        loan: Кредит или ипотека
+        other_asset: Другой актив
       subtype_labels:
-        credit_card: ''
         depository: 'Подтип счёта:'
+        credit_card: ''
         loan: 'Тип кредита:'
         other_asset: ''
       subtype_messages:
-        credit_card: Кредитные карты будут автоматически настроены как счета кредитных
-          карт.
+        credit_card: Кредитные карты будут автоматически настроены как счета кредитных карт.
         other_asset: Для других активов дополнительные параметры не требуются.
       subtypes:
         depository:
-          cd: Срочный вклад
           checking: Текущий
-          hsa: Счёт медицинских сбережений (HSA)
-          money_market: Счёт денежного рынка
           savings: Сберегательный
+          hsa: Счёт медицинских сбережений (HSA)
+          cd: Срочный вклад
+          money_market: Счёт денежного рынка
         loan:
-          auto: Автокредит
           mortgage: Ипотека
-          other: Другой кредит
           student: Студенческий кредит
+          auto: Автокредит
+          other: Другой кредит
+      balance: Баланс
+      cancel: Отмена
+      done: Готово
+      choose_account_type: 'Выберите правильный тип счёта для каждого счёта Redbark:'
+      create_accounts: Создать счета
+      creating_accounts: Создание счетов...
+      historical_data_range: 'Период исторических данных:'
+      subtitle: Выберите правильные типы для импортированных счетов
       sync_start_date_help: Выберите, за какой период синхронизировать историю операций.
       sync_start_date_label: 'Синхронизировать операции начиная с:'
       title: Настройте ваши счета Redbark
     setup_required:
-      go_to_provider_settings: Перейти в настройки провайдеров
-      not_configured_description: Добавьте API-ключ Redbark в настройках провайдеров,
-        затем вернитесь сюда, чтобы привязать счета.
-      not_configured_title: Redbark ещё не подключён
       title: Сначала подключите Redbark
-    sync:
-      status:
-        calculating: Расчёт балансов...
-        checking_setup: Проверка конфигурации счёта...
-        importing: Импорт счетов из Redbark...
-        importing_data: Импорт данных счёта...
-        needs_setup: 'Счетов, требующих настройки: %{count}...'
-        processing: Обработка операций...
-      success: Синхронизация начата
-    sync_status:
-      no_accounts: Счета не найдены
-      synced:
-        few: Синхронизированы %{count} счёта
-        many: Синхронизировано %{count} счетов
-        one: Синхронизирован %{count} счёт
-        other: Синхронизировано %{count} счёта
-      synced_with_setup: 'Синхронизировано: %{linked}, требуют настройки: %{unlinked}'
-    update:
-      success: Подключение Redbark обновлено
+      not_configured_title: Redbark ещё не подключён
+      not_configured_description: Добавьте API-ключ Redbark в настройках провайдеров, затем вернитесь сюда, чтобы привязать счета.
+      go_to_provider_settings: Перейти в настройки провайдеров
+    complete_account_setup:
+      all_skipped: Все счета были пропущены. Счета не были созданы.
+      creation_failed: 'Не удалось создать счета: %{error}'
+      creation_failed_generic: Не удалось создать счета.
+      setup_failed: 'Не удалось создать счетов: %{count}. Больше ничего не изменено — устраните проблему и попробуйте снова.'
+      no_accounts: Нет счетов для настройки.
+      success: 'Успешно создано счетов: %{count}.'

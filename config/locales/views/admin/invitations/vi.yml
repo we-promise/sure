@@ -3,6 +3,6 @@ vi:
   admin:
     invitations:
       destroy:
-        success: Lời mời đã được xóa.
+        success: "Lời mời đã được xóa."
       destroy_all:
-        success: Tất cả lời mời của gia đình này đã được xóa.
+        success: "Tất cả lời mời của gia đình này đã được xóa."

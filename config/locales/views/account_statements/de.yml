@@ -2,10 +2,9 @@
 de:
   account_statements:
     account_tab:
-      coverage_description: Historische Monate, die durch hochgeladene Kontoauszüge
-        und Saldoprüfungen belegt sind.
-      coverage_range: "%{start} - %{end}"
       coverage_title: Kontoauszug-Abdeckung
+      coverage_description: Historische Monate, die durch hochgeladene Kontoauszüge und Saldoprüfungen belegt sind.
+      coverage_range: "%{start} - %{end}"
       empty: Diesem Konto sind noch keine Kontoauszüge zugeordnet.
       open_inbox: Posteingang
       statements_title: Kontoauszüge
@@ -24,8 +23,7 @@ de:
       duplicates:
         one: 1 doppelter Kontoauszug wurde übersprungen.
         other: "%{count} doppelte Kontoauszüge wurden übersprungen."
-      invalid_file_type: Lad einen Kontoauszug als PDF, CSV oder XLSX innerhalb der
-        Größenbeschränkung hoch.
+      invalid_file_type: Lad einen Kontoauszug als PDF, CSV oder XLSX innerhalb der Größenbeschränkung hoch.
       no_files: Wähl mindestens eine Kontoauszugsdatei aus.
       success:
         one: 1 Kontoauszug hochgeladen.
@@ -38,9 +36,7 @@ de:
       files_hint: PDF, CSV oder XLSX. Max. %{max_size} MB pro Datei.
       files_label: Kontoauszugsdateien
       inbox_upload: Hochladen
-      period_hint: Sure liest den Zeitraum aus dem PDF, wenn er dort angegeben ist,
-        oder aus einem Datum im Dateinamen (z. B. 2026-04). Du kannst ihn auch am
-        Auszug festlegen.
+      period_hint: "Sure liest den Zeitraum aus dem PDF, wenn er dort angegeben ist, oder aus einem Datum im Dateinamen (z. B. 2026-04). Du kannst ihn auch am Auszug festlegen."
     index:
       account_label: Konto
       confidence: "%{confidence} Übereinstimmung"
@@ -52,8 +48,7 @@ de:
       storage_used: Belegter Speicher
       title: Kontoauszug-Tresor
       unmatched_title: Nicht zugeordneter Posteingang
-      upload_description: Lad Kontoauszüge in den Posteingang hoch oder wähl ein Konto
-        zur sofortigen Verknüpfung.
+      upload_description: Lad Kontoauszüge in den Posteingang hoch oder wähl ein Konto zur sofortigen Verknüpfung.
       upload_title: Kontoauszüge hochladen
     link:
       no_account: Wähl ein Konto aus, bevor du diesen Kontoauszug verknüpfst.
@@ -82,26 +77,24 @@ de:
       download: Herunterladen
       institution_name_hint: Hinweis zum Institut
       ledger_amount: Sure-Buchung
-      link_suggestion: Verknüpfungsvorschlag
       linked_to: Verknüpft mit %{account}.
       linking_title: Kontoverknüpfung
+      link_suggestion: Verknüpfungsvorschlag
       metadata_title: Kontoauszug-Metadaten
       no_suggestion: Noch kein Kontovorschlag.
       opening_balance: Anfangssaldo
       period_end_on: Ende des Zeitraums
       period_start_on: Beginn des Zeitraums
       reconciliation_title: Abgleich
-      reconciliation_unavailable: Füg einen Kontoauszugszeitraum und einen Anfangs-
-        oder Schlusssaldo hinzu und stell sicher, dass Sure für diese Daten einen
-        Saldoverlauf hat.
+      reconciliation_unavailable: Füg einen Kontoauszugszeitraum und einen Anfangs- oder Schlusssaldo hinzu und stell sicher, dass Sure für diese Daten einen Saldoverlauf hat.
       reject: Ablehnen
       save: Kontoauszug speichern
       statement_amount: Kontoauszug
       suggested_account: Vorgeschlagenes Konto ist %{account} (%{confidence} Konfidenz).
       title: Kontoauszug
-      unknown_value: Unbekannt
       unlink: Verknüpfung aufheben
       unmatched_account: Nicht zugeordneter Posteingang
+      unknown_value: Unbekannt
     status:
       linked: Verknüpft
       rejected: Abgelehnt

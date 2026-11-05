@@ -1,124 +1,111 @@
 ---
 es:
-  rule:
-    conditions:
-      condition_group:
-        add_condition: Añadir condición
-        all: todas
-        and_prefix: "y"
-        any: alguna
-        match: cumplir
-        of_the_following_conditions: de las siguientes condiciones
   rules:
-    actions:
-      value_placeholder: Introduce un valor
-    apply_all:
-      ai_cost_message: Esto utilizará IA para categorizar hasta %{transactions} transacciones.
-      ai_cost_title: Estimación de costes de IA
-      button: Aplicar todas
-      confirm_button: Confirmar y aplicar todas
-      confirm_message: Estás a punto de aplicar %{count} reglas que afectan a %{transactions}
-        transacciones únicas. Por favor, confirma si deseas continuar.
-      confirm_title: Aplicar todas las reglas
-      cost_unavailable_model: Estimación de costes no disponible para el modelo "%{model}".
-      cost_unavailable_no_provider: Estimación de costes no disponible (no hay proveedor
-        de LLM configurado).
-      cost_warning: Puedes incurrir en costes, consulta con el proveedor del modelo
-        los precios más actualizados.
-      estimated_cost: 'Coste estimado: ~$%{cost}'
-      success: Todas las reglas han sido puestas en cola para su ejecución
-      view_usage: Ver historial de uso
-    clear_ai_cache:
-      button: Restablecer caché de IA
-      confirm_body: "¿Estás seguro de que deseas restablecer la caché de IA? Esto
-        permitirá que las reglas de IA vuelvan a procesar todas las transacciones.
-        Esto puede incurrir en costes adicionales de API."
-      confirm_button: Restablecer caché
-      confirm_title: "¿Restablecer caché de IA?"
-      success: Se está limpiando la caché de IA. Esto puede tardar unos momentos.
-    condition_filters:
-      transaction_type:
-        equal_to: Igual a
-        expense: Gasto
-        income: Ingreso
-        transfer: Transferencia
+    no_action: Sin acción
+    no_condition: Sin condición
+    rule:
+      edit: Editar
+      re_apply_rule: Volver a aplicar la regla
+      delete: Eliminar
+      then: ENTONCES
+      and_more_conditions:
+        one: y 1 condición más
+        other: y %{count} condiciones más
+      and_more_actions:
+        one: y 1 acción más
+        other: y %{count} acciones más
+      action_label_to: '%{label} a %{value}'
+      all_past_and_future: Todas las %{resource} pasadas y futuras
+      on_or_after: '%{resource} a partir del %{date}'
+    form:
+      rule_name_label: Nombre de la regla (opcional)
+      rule_name_placeholder: Introduce un nombre para esta regla
+      add_condition: Añadir condición
+      add_condition_group: Añadir grupo de condiciones
+      add_action: Añadir acción
+      all_past_and_future: Todas las %{resource} pasadas y futuras
+      starting_from: A partir de
+      then: ENTONCES
+    index:
+      page_title: Reglas
+      delete_all_rules: Eliminar todas las reglas
+      new_rule: Nueva regla
+      ai_cost_warning: Las acciones de reglas con IA tienen un coste. Filtra de la forma más precisa posible para evitar costes innecesarios.
+      rules_heading: Reglas
+      no_rules_title: Todavía no hay reglas
+      no_rules_description: Configura reglas para ejecutar acciones sobre tus transacciones y otros datos en cada sincronización de cuentas.
     confirm:
-      ai_cost_no_estimate_html: Se usará IA para categorizar %{count} transacción(es).
-      ai_cost_title: Estimación de coste de IA
-      ai_cost_with_estimate_html: 'Se usará IA para categorizar %{count} transacción(es).
-        Coste estimado: <span class="font-semibold">~%{cost} $</span>'
-      apply_notice_html: Estás a punto de aplicar esta regla a <span class="text-primary
-        font-medium">%{count} %{resource}</span> que cumplen los criterios especificados.
-        Confirma si quieres continuar con este cambio.
-      confirm_changes: Confirmar cambios
-      cost_unavailable_model: Estimación de coste no disponible para el modelo «%{model}».
-      cost_unavailable_no_provider: Estimación de coste no disponible (no hay ningún
-        proveedor de LLM configurado).
-      cost_warning: Puedes incurrir en costes; consulta con el proveedor del modelo
-        los precios más actualizados.
       title: Confirmar cambios
       title_with_name: Confirmar cambios en «%{name}»
+      apply_notice_html: Estás a punto de aplicar esta regla a <span class="text-primary font-medium">%{count} %{resource}</span> que cumplen los criterios especificados. Confirma si quieres continuar con este cambio.
+      ai_cost_title: Estimación de coste de IA
+      ai_cost_with_estimate_html: 'Se usará IA para categorizar %{count} transacción(es). Coste estimado: <span class="font-semibold">~%{cost} $</span>'
+      ai_cost_no_estimate_html: Se usará IA para categorizar %{count} transacción(es).
+      cost_unavailable_model: Estimación de coste no disponible para el modelo «%{model}».
+      cost_unavailable_no_provider: Estimación de coste no disponible (no hay ningún proveedor de LLM configurado).
+      cost_warning: Puedes incurrir en costes; consulta con el proveedor del modelo los precios más actualizados.
       view_usage_history: Ver historial de uso
+      confirm_changes: Confirmar cambios
+    actions:
+      value_placeholder: Introduce un valor
+    update:
+      success: Regla actualizada
     destroy:
       success: Regla eliminada
     destroy_all:
       success: Todas las reglas eliminadas
-    form:
-      add_action: Añadir acción
-      add_condition: Añadir condición
-      add_condition_group: Añadir grupo de condiciones
-      all_past_and_future: Todas las %{resource} pasadas y futuras
-      rule_name_label: Nombre de la regla (opcional)
-      rule_name_placeholder: Introduce un nombre para esta regla
-      starting_from: A partir de
-      then: ENTONCES
-    index:
-      ai_cost_warning: Las acciones de reglas con IA tienen un coste. Filtra de la
-        forma más precisa posible para evitar costes innecesarios.
-      delete_all_rules: Eliminar todas las reglas
-      new_rule: Nueva regla
-      no_rules_description: Configura reglas para ejecutar acciones sobre tus transacciones
-        y otros datos en cada sincronización de cuentas.
-      no_rules_title: Todavía no hay reglas
-      page_title: Reglas
-      rules_heading: Reglas
-    no_action: Sin acción
-    no_condition: Sin condición
+    apply_all:
+      button: Aplicar todas
+      confirm_title: Aplicar todas las reglas
+      confirm_message: Estás a punto de aplicar %{count} reglas que afectan a %{transactions} transacciones únicas. Por favor, confirma si deseas continuar.
+      confirm_button: Confirmar y aplicar todas
+      success: Todas las reglas han sido puestas en cola para su ejecución
+      ai_cost_title: Estimación de costes de IA
+      ai_cost_message: Esto utilizará IA para categorizar hasta %{transactions} transacciones.
+      estimated_cost: 'Coste estimado: ~$%{cost}'
+      cost_unavailable_model: Estimación de costes no disponible para el modelo "%{model}".
+      cost_unavailable_no_provider: Estimación de costes no disponible (no hay proveedor de LLM configurado).
+      cost_warning: Puedes incurrir en costes, consulta con el proveedor del modelo los precios más actualizados.
+      view_usage: Ver historial de uso
     recent_runs:
+      title: Ejecuciones Recientes
+      description: Ver el historial de ejecución de tus reglas incluyendo el estado de éxito/fallo y los conteos de transacciones.
+      unnamed_rule: Regla Sin Nombre
       columns:
         date_time: Fecha/Hora
         execution_type: Tipo
-        rule_name: Nombre de Regla
         status: Estado
+        rule_name: Nombre de Regla
         transactions_counts:
-          blocked: Bloqueadas
-          modified: Modificadas
-          processed: Procesadas
           queued: En Cola
-      description: Ver el historial de ejecución de tus reglas incluyendo el estado
-        de éxito/fallo y los conteos de transacciones.
+          processed: Procesadas
+          modified: Modificadas
+          blocked: Bloqueadas
       execution_types:
         manual: Manual
         scheduled: Programada
       statuses:
-        failed: Fallido
         pending: Pendiente
         success: Éxito
-      title: Ejecuciones Recientes
-      unnamed_rule: Regla Sin Nombre
-    rule:
-      action_label_to: "%{label} a %{value}"
-      all_past_and_future: Todas las %{resource} pasadas y futuras
-      and_more_actions:
-        one: y 1 acción más
-        other: y %{count} acciones más
-      and_more_conditions:
-        one: y 1 condición más
-        other: y %{count} condiciones más
-      delete: Eliminar
-      edit: Editar
-      on_or_after: "%{resource} a partir del %{date}"
-      re_apply_rule: Volver a aplicar la regla
-      then: ENTONCES
-    update:
-      success: Regla actualizada
+        failed: Fallido
+    clear_ai_cache:
+      button: Restablecer caché de IA
+      confirm_title: ¿Restablecer caché de IA?
+      confirm_body: ¿Estás seguro de que deseas restablecer la caché de IA? Esto permitirá que las reglas de IA vuelvan a procesar todas las transacciones. Esto puede incurrir en costes adicionales de API.
+      confirm_button: Restablecer caché
+      success: Se está limpiando la caché de IA. Esto puede tardar unos momentos.
+    condition_filters:
+      transaction_type:
+        income: Ingreso
+        expense: Gasto
+        transfer: Transferencia
+        equal_to: Igual a
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: y
+        match: cumplir
+        all: todas
+        any: alguna
+        of_the_following_conditions: de las siguientes condiciones
+        add_condition: Añadir condición

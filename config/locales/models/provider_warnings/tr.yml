@@ -8,7 +8,7 @@ tr:
     lunchflow_accounts_failed:
       one: 'Lunchflow içe aktarma: %{count} hesap güncellenemedi'
       other: 'Lunchflow içe aktarma: %{count} hesap güncellenemedi'
-    lunchflow_import_error: 'Lunchflow içe aktarma: %{error}'
     lunchflow_transactions_failed:
       one: 'Lunchflow içe aktarma: %{count} hesabın işlemleri alınamadı'
       other: 'Lunchflow içe aktarma: %{count} hesabın işlemleri alınamadı'
+    lunchflow_import_error: 'Lunchflow içe aktarma: %{error}'

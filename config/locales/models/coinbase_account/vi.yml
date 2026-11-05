@@ -2,4 +2,4 @@
 vi:
   coinbase:
     processor:
-      paid_via: Thanh toán qua %{method}
+      paid_via: "Thanh toán qua %{method}"

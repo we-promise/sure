@@ -1,56 +1,45 @@
 ---
 it:
+  chats:
+    demo_banner_title: "Modalità Demo Attiva"
+    demo_banner_message: "Token LLM gratuiti offerti da Vercel AI Gateway. I risultati possono variare perché cambiamo spesso i pesi dei modelli per effettuare test. Consulta la documentazione di Vercel per sapere dove vanno le tue conversazioni! 🤖"
+    thinking: "Sto elaborando ..."
+    worker_unhealthy_warning: "Le risposte dell'IA potrebbero non arrivare in questo momento — il worker in background sembra non essere attivo o essere in ritardo. Verifica che il tuo worker Sidekiq sia in esecuzione."
+    ai_greeting:
+      greeting: "Ciao %{name}! Sono un assistente IA che può aiutarti con le tue finanze. Ho accesso al web e ai dati del tuo conto."
+      there: "lì"
+      commands_hint_html: "Puoi usare <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> per accedere ai comandi"
+      questions_intro: "Ecco alcune domande che puoi fare:"
+      evaluate_portfolio: "Valuta il portafoglio investimenti"
+      spending_insights: "Mostra analisi delle spese"
+      unusual_patterns: "Trova schemi insoliti"
+    chat:
+      edit_chat_title: "Modifica titolo chat"
+      delete_chat: "Elimina chat"
+    chat_nav:
+      all_chats: "Tutte le chat"
+      start_new_chat: "Inizia nuova chat"
+      edit_chat_title: "Modifica titolo chat"
+      delete_chat: "Elimina chat"
+    error:
+      retry: "Riprova"
+    destroy:
+      notice: "Chat eliminata con successo"
+    index:
+      chats: "Chat"
+      new_chat: "Nuova chat"
+    update:
+      success: "Chat aggiornata"
+    ai_consent:
+      title: "Abilita chat IA"
+      available_description: "La chat IA può rispondere a domande finanziarie e fornire analisi basate sui tuoi dati. Per usare questa funzione devi abilitarla esplicitamente."
+      unavailable_description_html: "Per usare l'assistente IA, devi impostare la variabile d'ambiente <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> o configurarla nelle impostazioni di self-hosting della tua istanza."
+      enable_button: "Abilita chat IA"
+      disable_note: "Disabilita in qualsiasi momento. Tutti i dati inviati ai provider LLM sono anonimizzati."
   assistant_messages:
     assistant_message:
-      assistant_reasoning: Ragionamento assistente
+      assistant_reasoning: "Ragionamento assistente"
     tool_calls:
-      arguments: 'Argomenti:'
-      function: 'Funzione:'
-      tool_calls: Chiamate strumenti
-  chats:
-    ai_consent:
-      available_description: La chat IA può rispondere a domande finanziarie e fornire
-        analisi basate sui tuoi dati. Per usare questa funzione devi abilitarla esplicitamente.
-      disable_note: Disabilita in qualsiasi momento. Tutti i dati inviati ai provider
-        LLM sono anonimizzati.
-      enable_button: Abilita chat IA
-      title: Abilita chat IA
-      unavailable_description_html: Per usare l'assistente IA, devi impostare la variabile
-        d'ambiente <code class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code>
-        o configurarla nelle impostazioni di self-hosting della tua istanza.
-    ai_greeting:
-      commands_hint_html: Puoi usare <span class="bg-container border border-secondary
-        px-1.5 py-0.5 rounded font-mono text-xs">/</span> per accedere ai comandi
-      evaluate_portfolio: Valuta il portafoglio investimenti
-      greeting: Ciao %{name}! Sono un assistente IA che può aiutarti con le tue finanze.
-        Ho accesso al web e ai dati del tuo conto.
-      questions_intro: 'Ecco alcune domande che puoi fare:'
-      spending_insights: Mostra analisi delle spese
-      there: lì
-      unusual_patterns: Trova schemi insoliti
-    chat:
-      delete_chat: Elimina chat
-      edit_chat_title: Modifica titolo chat
-    chat_nav:
-      all_chats: Tutte le chat
-      delete_chat: Elimina chat
-      edit_chat_title: Modifica titolo chat
-      start_new_chat: Inizia nuova chat
-    demo_banner_message: "Token LLM gratuiti offerti da Vercel AI Gateway. I risultati
-      possono variare perché cambiamo spesso i pesi dei modelli per effettuare test.
-      Consulta la documentazione di Vercel per sapere dove vanno le tue conversazioni!
-      🤖"
-    demo_banner_title: Modalità Demo Attiva
-    destroy:
-      notice: Chat eliminata con successo
-    error:
-      retry: Riprova
-    index:
-      chats: Chat
-      new_chat: Nuova chat
-    thinking: Sto elaborando ...
-    update:
-      success: Chat aggiornata
-    worker_unhealthy_warning: Le risposte dell'IA potrebbero non arrivare in questo
-      momento — il worker in background sembra non essere attivo o essere in ritardo.
-      Verifica che il tuo worker Sidekiq sia in esecuzione.
+      tool_calls: "Chiamate strumenti"
+      function: "Funzione:"
+      arguments: "Argomenti:"

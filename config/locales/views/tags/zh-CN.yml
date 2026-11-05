@@ -6,17 +6,15 @@ zh-CN:
       error: 创建标签失败：%{error}
     destroy:
       deleted: 标签已删除
-    destroy_all:
-      all_deleted: 所有标签已删除
     edit:
       edit: 编辑标签
     form:
       placeholder: 标签名称
     index:
-      delete_all: 删除全部
       empty: 暂无标签
       new: 新建标签
       tags: 标签管理
+      delete_all: 删除全部
     menu:
       label: 编辑标签
       loading: 正在加载标签...
@@ -24,9 +22,11 @@ zh-CN:
       new: 新建标签
     summary:
       add: 添加标签
-      title: 标签：%{names}
+      title: "标签：%{names}"
     tag:
       delete: 删除
       edit: 编辑
     update:
       updated: 标签已更新
+    destroy_all:
+      all_deleted: 所有标签已删除

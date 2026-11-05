@@ -4,4 +4,4 @@ vi:
     errors:
       models:
         plaid_account:
-          no_balance: Tài khoản Plaid phải có số dư hiện tại hoặc số dư khả dụng
+          no_balance: "Tài khoản Plaid phải có số dư hiện tại hoặc số dư khả dụng"

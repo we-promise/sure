@@ -15,5 +15,5 @@ tr:
     institution_name: Gözetimsiz cüzdanlar
   onchain_wallet_item:
     movement:
-      received: "%{quantity} %{symbol} alındı"
-      sent: "%{quantity} %{symbol} gönderildi"
+      received: '%{quantity} %{symbol} alındı'
+      sent: '%{quantity} %{symbol} gönderildi'

@@ -10,19 +10,19 @@ hu:
       success: Kategória sikeresen létrehozva
     destroy:
       success: Kategória sikeresen törölve
-    destroy_all:
-      success: Összes kategória törölve
     edit:
       edit: Kategória szerkesztése
     form:
+      placeholder: Kategória neve
+      name_label: Név
+      unassigned: "(nincs hozzárendelve)"
+      parent_category_label: "Szülőkategória (nem kötelező)"
+      trigger_label: Szín és ikon választása
       color: Szín
       icon: Ikon
-      name_label: Név
-      parent_category_label: Szülőkategória (nem kötelező)
-      placeholder: Kategória neve
-      poor_contrast: Gyenge kontraszt, válassz sötétebb színt vagy
-      trigger_label: Szín és ikon választása
-      unassigned: "(nincs hozzárendelve)"
+      poor_contrast: "Gyenge kontraszt, válassz sötétebb színt vagy"
+    destroy_all:
+      success: Összes kategória törölve
     index:
       bootstrap: Alapértelmezések használata (ajánlott)
       categories: Kategóriák
@@ -36,15 +36,15 @@ hu:
     update:
       success: Kategória sikeresen frissítve
     virtual:
+      transfer: Átutalás
       payment: Fizetés
       trade: Ügylet
-      transfer: Átutalás
   category:
     dropdowns:
       show:
         bootstrap: Alapértelmezett kategóriák létrehozása
         empty: Nem található kategória
-        expense: kiadás
-        income: bevétel
-        match_transfer: Átutalás/fizetés párosítása
-        one_time: Egyszeri %{type}
+        match_transfer: "Átutalás/fizetés párosítása"
+        one_time: "Egyszeri %{type}"
+        income: "bevétel"
+        expense: "kiadás"

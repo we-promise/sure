@@ -1,125 +1,111 @@
 ---
 hu:
-  rule:
-    conditions:
-      condition_group:
-        add_condition: Feltétel hozzáadása
-        all: összes
-        and_prefix: és
-        any: bármelyik
-        match: egyezik
-        of_the_following_conditions: a következő feltételek közül
   rules:
+    no_action: Nincs művelet
+    no_condition: Nincs feltétel
+    rule:
+      edit: Szerkesztés
+      re_apply_rule: Szabály újraalkalmazása
+      delete: Törlés
+      then: AKKOR
+      and_more_conditions:
+        one: és 1 további feltétel
+        other: és %{count} további feltétel
+      and_more_actions:
+        one: és 1 további művelet
+        other: és %{count} további művelet
+      action_label_to: "%{label} erre: %{value}"
+      all_past_and_future: Összes korábbi és jövőbeli %{resource}
+      on_or_after: "%{resource} %{date} napon vagy azt követően"
+    form:
+      rule_name_label: Szabály neve (nem kötelező)
+      rule_name_placeholder: Add meg a szabály nevét
+      add_condition: Feltétel hozzáadása
+      add_condition_group: Feltételcsoport hozzáadása
+      add_action: Művelet hozzáadása
+      all_past_and_future: Összes korábbi és jövőbeli %{resource}
+      starting_from: Kezdve
+      then: AKKOR
+    index:
+      page_title: Szabályok
+      delete_all_rules: Összes szabály törlése
+      new_rule: Új szabály
+      ai_cost_warning: Az AI-t igénybe vevő szabályakciók pénzbe kerülnek. Szűrj minél szűkebbre a felesleges költségek elkerülése érdekében.
+      rules_heading: Szabályok
+      no_rules_title: Még nincsenek szabályok
+      no_rules_description: Állíts be szabályokat, amelyek minden fiókszinkronizáláskor automatikusan elvégzik a megadott műveleteket a tranzakciókon és egyéb adatokon.
+    confirm:
+      title: Változtatások megerősítése
+      title_with_name: "Változtatások megerősítése: \"%{name}\""
+      apply_notice_html: "Ezzel a szabályt <span class=\"text-primary font-medium\">%{count} %{resource}</span> elemre alkalmazod, amelyek megfelelnek a feltételeknek. Kérjük, erősítsd meg, ha folytatni szeretnéd."
+      ai_cost_title: AI-költség becslése
+      ai_cost_with_estimate_html: "Ez AI segítségével kategorizál %{count} tranzakciót. Becsült költség: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate_html: "Ez AI segítségével kategorizál %{count} tranzakciót."
+      cost_unavailable_model: "A(z) \"%{model}\" modellhez nem érhető el költségbecslés."
+      cost_unavailable_no_provider: A költségbecslés nem érhető el (nincs LLM-szolgáltató beállítva).
+      cost_warning: Költségek merülhetnek fel – a legfrissebb árakért ellenőrizd a modellszolgáltatónál.
+      view_usage_history: Felhasználási előzmények megtekintése
+      confirm_changes: Változtatások megerősítése
     actions:
       value_placeholder: Adj meg egy értéket
     apply_all:
-      ai_cost_message: Ez AI segítségével kategorizál legfeljebb %{transactions} tranzakciót.
-      ai_cost_title: AI-költség becslése
       button: Összes alkalmazása
-      confirm_button: Megerősítés és összes alkalmazása
-      confirm_message: Ezzel %{count} szabályt alkalmazol, amelyek %{transactions}
-        egyedi tranzakciót érintenek. Kérjük, erősítsd meg, ha folytatni szeretnéd.
       confirm_title: Összes szabály alkalmazása
-      cost_unavailable_model: A(z) „%{model}" modellhez nem érhető el költségbecslés.
-      cost_unavailable_no_provider: A költségbecslés nem érhető el (nincs LLM-szolgáltató
-        beállítva).
-      cost_warning: Költségek merülhetnek fel – a legfrissebb árakért ellenőrizd a
-        modellszolgáltatónál.
-      estimated_cost: 'Becsült költség: ~$%{cost}'
+      confirm_message: Ezzel %{count} szabályt alkalmazol, amelyek %{transactions} egyedi tranzakciót érintenek. Kérjük, erősítsd meg, ha folytatni szeretnéd.
+      confirm_button: Megerősítés és összes alkalmazása
       success: Minden szabály végrehajtásra van ütemezve
-      view_usage: Felhasználási előzmények megtekintése
-    clear_ai_cache:
-      button: AI-gyorsítótár visszaállítása
-      confirm_body: Biztosan visszaállítod az AI-gyorsítótárat? Ez lehetővé teszi
-        az AI-szabályok számára az összes tranzakció újrafeldolgozását. Ez további
-        API-költségeket okozhat.
-      confirm_button: Gyorsítótár visszaállítása
-      confirm_title: Visszaállítod az AI-gyorsítótárat?
-      success: Az AI-gyorsítótár törlése folyamatban van. Ez néhány percet igénybe
-        vehet.
-    condition_filters:
-      transaction_type:
-        equal_to: Egyenlő
-        expense: Kiadás
-        income: Bevétel
-        transfer: Átutalás
-    confirm:
-      ai_cost_no_estimate_html: Ez AI segítségével kategorizál %{count} tranzakciót.
       ai_cost_title: AI-költség becslése
-      ai_cost_with_estimate_html: 'Ez AI segítségével kategorizál %{count} tranzakciót.
-        Becsült költség: <span class="font-semibold">~$%{cost}</span>'
-      apply_notice_html: Ezzel a szabályt <span class="text-primary font-medium">%{count}
-        %{resource}</span> elemre alkalmazod, amelyek megfelelnek a feltételeknek.
-        Kérjük, erősítsd meg, ha folytatni szeretnéd.
-      confirm_changes: Változtatások megerősítése
-      cost_unavailable_model: A(z) "%{model}" modellhez nem érhető el költségbecslés.
-      cost_unavailable_no_provider: A költségbecslés nem érhető el (nincs LLM-szolgáltató
-        beállítva).
-      cost_warning: Költségek merülhetnek fel – a legfrissebb árakért ellenőrizd a
-        modellszolgáltatónál.
-      title: Változtatások megerősítése
-      title_with_name: 'Változtatások megerősítése: "%{name}"'
-      view_usage_history: Felhasználási előzmények megtekintése
+      ai_cost_message: Ez AI segítségével kategorizál legfeljebb %{transactions} tranzakciót.
+      estimated_cost: "Becsült költség: ~$%{cost}"
+      cost_unavailable_model: A(z) „%{model}" modellhez nem érhető el költségbecslés.
+      cost_unavailable_no_provider: A költségbecslés nem érhető el (nincs LLM-szolgáltató beállítva).
+      cost_warning: Költségek merülhetnek fel – a legfrissebb árakért ellenőrizd a modellszolgáltatónál.
+      view_usage: Felhasználási előzmények megtekintése
+    update:
+      success: Szabály frissítve
     destroy:
       success: Szabály törölve
     destroy_all:
       success: Összes szabály törölve
-    form:
-      add_action: Művelet hozzáadása
-      add_condition: Feltétel hozzáadása
-      add_condition_group: Feltételcsoport hozzáadása
-      all_past_and_future: Összes korábbi és jövőbeli %{resource}
-      rule_name_label: Szabály neve (nem kötelező)
-      rule_name_placeholder: Add meg a szabály nevét
-      starting_from: Kezdve
-      then: AKKOR
-    index:
-      ai_cost_warning: Az AI-t igénybe vevő szabályakciók pénzbe kerülnek. Szűrj minél
-        szűkebbre a felesleges költségek elkerülése érdekében.
-      delete_all_rules: Összes szabály törlése
-      new_rule: Új szabály
-      no_rules_description: Állíts be szabályokat, amelyek minden fiókszinkronizáláskor
-        automatikusan elvégzik a megadott műveleteket a tranzakciókon és egyéb adatokon.
-      no_rules_title: Még nincsenek szabályok
-      page_title: Szabályok
-      rules_heading: Szabályok
-    no_action: Nincs művelet
-    no_condition: Nincs feltétel
     recent_runs:
+      title: Legutóbbi futtatások
+      description: Tekintsd meg a szabályok végrehajtási előzményeit, beleértve a sikeres/sikertelen állapotot és a tranzakciók számát.
+      unnamed_rule: Névtelen szabály
       columns:
         date_time: Dátum/Idő
         execution_type: Típus
-        rule_name: Szabály neve
         status: Állapot
+        rule_name: Szabály neve
         transactions_counts:
-          blocked: Blokkolt
-          modified: Módosított
-          processed: Feldolgozott
           queued: Sorban álló
-      description: Tekintsd meg a szabályok végrehajtási előzményeit, beleértve a
-        sikeres/sikertelen állapotot és a tranzakciók számát.
+          processed: Feldolgozott
+          modified: Módosított
+          blocked: Blokkolt
       execution_types:
         manual: Manuális
         scheduled: Ütemezett
       statuses:
-        failed: Sikertelen
         pending: Függőben lévő
         success: Sikeres
-      title: Legutóbbi futtatások
-      unnamed_rule: Névtelen szabály
-    rule:
-      action_label_to: "%{label} erre: %{value}"
-      all_past_and_future: Összes korábbi és jövőbeli %{resource}
-      and_more_actions:
-        one: és 1 további művelet
-        other: és %{count} további művelet
-      and_more_conditions:
-        one: és 1 további feltétel
-        other: és %{count} további feltétel
-      delete: Törlés
-      edit: Szerkesztés
-      on_or_after: "%{resource} %{date} napon vagy azt követően"
-      re_apply_rule: Szabály újraalkalmazása
-      then: AKKOR
-    update:
-      success: Szabály frissítve
+        failed: Sikertelen
+    clear_ai_cache:
+      button: AI-gyorsítótár visszaállítása
+      confirm_title: Visszaállítod az AI-gyorsítótárat?
+      confirm_body: Biztosan visszaállítod az AI-gyorsítótárat? Ez lehetővé teszi az AI-szabályok számára az összes tranzakció újrafeldolgozását. Ez további API-költségeket okozhat.
+      confirm_button: Gyorsítótár visszaállítása
+      success: Az AI-gyorsítótár törlése folyamatban van. Ez néhány percet igénybe vehet.
+    condition_filters:
+      transaction_type:
+        income: Bevétel
+        expense: Kiadás
+        transfer: Átutalás
+        equal_to: Egyenlő
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: és
+        match: egyezik
+        all: összes
+        any: bármelyik
+        of_the_following_conditions: a következő feltételek közül
+        add_condition: Feltétel hozzáadása

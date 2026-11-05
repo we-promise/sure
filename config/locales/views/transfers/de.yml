@@ -2,52 +2,49 @@
 de:
   transfers:
     create:
-      date_invalid: ist ungültig
-      exchange_rate_unavailable: Kein Wechselkurs für die gewählten Währungen und
-        das Datum verfügbar
-      stale_form: Dieses Formular wurde bereits mit anderen Angaben übermittelt. Bitte
-        lade die Seite neu und versuche es erneut.
       success: Überweisung erstellt
+      exchange_rate_unavailable: Kein Wechselkurs für die gewählten Währungen und das
+        Datum verfügbar
+      date_invalid: ist ungültig
+      stale_form: Dieses Formular wurde bereits mit anderen Angaben übermittelt. Bitte lade die Seite neu und versuche es erneut.
     destroy:
       success: Überweisung entfernt
     form:
       amount: Betrag
-      bank_charges: Bankgebühren
       date: Datum
-      destination_amount: Betrag beim Empfänger
-      destination_amount_display: 'Betrag beim Empfänger: %{amount}'
-      exchange_rate_display: 'Wechselkurs: %{rate}'
       expense: Ausgabe
       from: Von
       income: Einnahme
-      incoming_fee: Gebühr für den Eingang
-      outgoing_fee: Gebühr für den Ausgang
       select_account: Konto auswählen
-      source_amount: Betrag beim Absender
       submit: Überweisung erstellen
       to: An
       transfer: Überweisung
+      bank_charges: Bankgebühren
+      destination_amount: Betrag beim Empfänger
+      destination_amount_display: 'Betrag beim Empfänger: %{amount}'
+      exchange_rate_display: 'Wechselkurs: %{rate}'
+      incoming_fee: Gebühr für den Eingang
+      outgoing_fee: Gebühr für den Ausgang
+      source_amount: Betrag beim Absender
     new:
       title: Neue Überweisung
     show:
-      bank_charges: Bankgebühren
-      category: Kategorie
-      date: Datum
       delete: Überweisung entfernen
-      delete_subtitle: Dadurch wird die Überweisung entfernt. Die zugrunde liegenden
-        Transaktionen bleiben erhalten.
+      delete_subtitle: Dadurch wird die Überweisung entfernt. Die zugrunde liegenden Transaktionen bleiben erhalten.
       delete_title: Überweisung entfernen?
-      destination_fee: Gebühr Empfänger
       details: Details
-      from: Von
-      mark_recurring: Als wiederkehrend markieren
-      mark_recurring_subtitle: Erfasse diese Überweisung als wiederkehrend, damit
-        sie in der Vorschau und auf der Seite für wiederkehrende Buchungen auftaucht.
-      mark_recurring_title: Überweisung als wiederkehrend markieren
       note_label: Notizen
       note_placeholder: Füge dieser Überweisung eine Notiz hinzu …
       overview: Übersicht
       settings: Einstellungen
+      bank_charges: Bankgebühren
+      category: Kategorie
+      date: Datum
+      destination_fee: Gebühr Empfänger
+      from: Von
+      mark_recurring: Als wiederkehrend markieren
+      mark_recurring_subtitle: Erfasse diese Überweisung als wiederkehrend, damit sie in der Vorschau und auf der Seite für wiederkehrende Buchungen auftaucht.
+      mark_recurring_title: Überweisung als wiederkehrend markieren
       source_fee: Gebühr Absender
       to: Nach
       total: Gesamt

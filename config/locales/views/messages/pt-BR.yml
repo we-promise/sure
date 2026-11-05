@@ -2,6 +2,5 @@
 pt-BR:
   messages:
     chat_form:
-      disclaimer: As respostas da IA são apenas informativas. Não constituem aconselhamento
-        financeiro!
-      placeholder: Pergunte qualquer coisa ...
+      placeholder: "Pergunte qualquer coisa ..."
+      disclaimer: "As respostas da IA são apenas informativas. Não constituem aconselhamento financeiro!"

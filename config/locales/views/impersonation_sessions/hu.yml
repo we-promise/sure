@@ -14,12 +14,12 @@ hu:
     reject:
       success: Kérés elutasítva
     super_admin_bar:
-      impersonating: Megszemélyesítés
-      jobs: Feladatok
-      join: Csatlakozás
-      join_a_session: Csatlakozás munkamenethez
-      leave: Kilépés
-      request_impersonation: Megszemélyesítés kérése
       super_admin: Super Admin
+      jobs: Feladatok
+      impersonating: Megszemélyesítés
+      leave: Kilépés
       terminate: Befejezés
+      join_a_session: Csatlakozás munkamenethez
+      join: Csatlakozás
       uuid_placeholder: UUID
+      request_impersonation: Megszemélyesítés kérése

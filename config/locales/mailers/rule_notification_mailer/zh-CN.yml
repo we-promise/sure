@@ -2,15 +2,15 @@
 zh-CN:
   rule_notification_mailer:
     digest:
-      account: 账户
-      amount: 金额
-      cta: 查看交易
-      date: 日期
+      subject:
+        one: "%{product_name} 上有 1 笔新交易匹配了您的规则"
+        other: "%{product_name} 上有 %{count} 笔新交易匹配了您的规则"
       heading:
         one: 有 1 笔新交易匹配了您的规则
         other: 有 %{count} 笔新交易匹配了您的规则
       intro: 以下交易匹配了规则 "%{rule}"：
+      date: 日期
       name: 名称
-      subject:
-        one: "%{product_name} 上有 1 笔新交易匹配了您的规则"
-        other: "%{product_name} 上有 %{count} 笔新交易匹配了您的规则"
+      account: 账户
+      amount: 金额
+      cta: 查看交易

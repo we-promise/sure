@@ -10,7 +10,7 @@ nb:
       area_placeholder: '35'
       area_unit: Måleenhet
       country: Land
-      country_placeholder: false
+      country_placeholder: NO
       locality: By
       locality_placeholder: Oslo
       none: Ingen

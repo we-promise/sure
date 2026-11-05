@@ -3,6 +3,6 @@ hu:
   admin:
     invitations:
       destroy:
-        success: Meghívó törölve.
+        success: "Meghívó törölve."
       destroy_all:
-        success: A család összes meghívója törölve.
+        success: "A család összes meghívója törölve."

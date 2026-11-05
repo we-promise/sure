@@ -48,11 +48,6 @@ ca:
       step_3: Fes clic a "Actualitza" per restaurar l'accés
       title: Actualitza la connexió SimpleFIN
       update: Actualitza
-    institution_summary:
-      count:
-        one: "%{count} entitat"
-        other: "%{count} entitats"
-      none: No hi ha entitats connectades
     link_existing_account:
       errors:
         different_provider: Aquest compte està enllaçat a un altre proveïdor. Desenllaça'l
@@ -66,9 +61,6 @@ ca:
       setup_token: Token de configuració
       setup_token_placeholder: enganxa el teu token de configuració SimpleFIN
       title: Connecta SimpleFIN
-    rate_limited:
-      daily_refresh: Has arribat al límit diari d'actualitzacions de SimpleFIN. Torna-ho
-        a provar quan SimpleFIN Bridge s'actualitzi (fins a 24 hores).
     reconciled_status:
       message:
         one: "%{count} transacció pendent duplicada conciliada"
@@ -121,7 +113,7 @@ ca:
         likely_closed: Sense activitat recent i saldo zero — pot ser una targeta tancada
           o substituïda
         recent:
-          one: "%{count} transacció • darrera %{when}"
+          one: '%{count} transacció • darrera %{when}'
           other: "%{count} transaccions • darrera %{when}"
         today: avui
         yesterday: ahir
@@ -188,19 +180,6 @@ ca:
       message:
         one: "%{count} transacció pendent anterior a %{days} dies"
         other: "%{count} transaccions pendents anteriors a %{days} dies"
-    stale_sync:
-      last_successful: La darrera sincronització correcta va ser fa %{count} dies.
-        Pot ser que la teva connexió de SimpleFIN necessiti atenció.
-      no_transactions: No hi ha transaccions noves des de fa %{count} dies. Comprova
-        al tauler de SimpleFIN que les connexions bancàries estiguin actives.
-    sync_status:
-      no_accounts: No s'han trobat comptes
-      partial_setup:
-        one: "%{linked} sincronitzat, %{unlinked} pendents de configurar"
-        other: "%{linked} sincronitzats, %{unlinked} pendents de configurar"
-      synced:
-        one: "%{count} compte sincronitzat"
-        other: "%{count} comptes sincronitzats"
     update:
       errors:
         blank_token: Introdueix un token de configuració SimpleFIN.
@@ -212,3 +191,21 @@ ca:
         update_failed: 'No s''ha pogut actualitzar la connexió: %{message}'
       success: Connexió SimpleFIN actualitzada correctament! Els teus comptes s'estan
         tornant a connectar.
+    sync_status:
+      no_accounts: No s'han trobat comptes
+      synced:
+        one: '%{count} compte sincronitzat'
+        other: '%{count} comptes sincronitzats'
+      partial_setup:
+        one: '%{linked} sincronitzat, %{unlinked} pendents de configurar'
+        other: '%{linked} sincronitzats, %{unlinked} pendents de configurar'
+    institution_summary:
+      none: No hi ha entitats connectades
+      count:
+        one: '%{count} entitat'
+        other: '%{count} entitats'
+    rate_limited:
+      daily_refresh: Has arribat al límit diari d'actualitzacions de SimpleFIN. Torna-ho a provar quan SimpleFIN Bridge s'actualitzi (fins a 24 hores).
+    stale_sync:
+      last_successful: La darrera sincronització correcta va ser fa %{count} dies. Pot ser que la teva connexió de SimpleFIN necessiti atenció.
+      no_transactions: No hi ha transaccions noves des de fa %{count} dies. Comprova al tauler de SimpleFIN que les connexions bancàries estiguin actives.

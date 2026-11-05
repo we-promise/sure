@@ -9,14 +9,14 @@ nb:
       per_share: per aksje
       shares: "%{qty} aksjer"
     index:
+      positions:
+        one: "%{count} posisjon"
+        other: "%{count} posisjoner"
       average_cost: Gjennomsnittlig kostnad
       holdings: Beholdninger
       name: Navn
       new_holding: Ny transaksjon
       no_holdings: Ingen beholdninger å vise.
-      positions:
-        one: "%{count} posisjon"
-        other: "%{count} posisjoner"
       return: Total avkastning
       weight: Vekt
     missing_price_tooltip:
@@ -35,6 +35,6 @@ nb:
       portfolio_weight_label: Porteføljevekt
       settings: Innstillinger
       ticker_label: Ticker
-      total_return_label: Total avkastning
       trade_history_entry: "%{qty} aksjer av %{security} til %{price}"
+      total_return_label: Total avkastning
       unknown: Ukjent

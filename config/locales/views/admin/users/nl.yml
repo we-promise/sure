@@ -1,147 +1,119 @@
 ---
 nl:
   admin:
+    users:
+      index:
+        title: "Gebruikersbeheer"
+        description: "Beheer gebruikersrollen voor uw instantie. Superbeheerders hebben toegang tot SSO-providerinstellingen en gebruikersbeheer."
+        section_title: "Gebruikers"
+        you: "(U)"
+        trial_ends_at: "Proefperiode eindigt"
+        not_available: "n/a"
+        no_users: "Geen gebruikers gevonden."
+        unnamed_family: "Naamloos huishouden/groep"
+        no_subscription: "Geen abonnement"
+        family_summary: "%{members} leden · %{accounts} accounts · %{transactions} transacties"
+        filters:
+          role: "Rol"
+          role_all: "Alle rollen"
+          trial_status: "Status proefperiode"
+          trial_all: "Alles"
+          trial_expiring_soon: "Verloopt binnen 7 dagen"
+          trial_trialing: "In proefperiode"
+          submit: "Filteren"
+        table:
+          user: "Gebruiker"
+          trial_ends_at: "Proefperiode eindigt"
+          family_accounts: "Accounts van huishouden"
+          family_transactions: "Transacties van huishouden"
+          last_login: "Laatste login"
+          session_count: "Aantal sessies"
+          never: "Nooit"
+          role: "Rol"
+          family: "Huishouden/groep"
+          keep_current_family: "Huidig huishouden/groep behouden"
+          create_new_family_option: "+ Nieuw huishouden/groep aanmaken"
+          new_family_name: "Naam nieuw huishouden/groep"
+          new_family_name_placeholder: "Voer een naam in om een nieuw huishouden/groep aan te maken"
+          new_family_moniker: "Type nieuw huishouden/groep"
+          set_password: "Nieuw wachtwoord instellen"
+          password_placeholder: "Laat leeg om het huidige te behouden"
+          actions: "Acties"
+        family_monikers:
+          family: "Huishouden"
+          group: "Groep"
+        actions:
+          manage_user: "Gebruiker beheren"
+          update: "Gebruiker bijwerken"
+          delete_user: "Gebruiker verwijderen"
+          self_edit_warning: "Als u uw eigen rol wijzigt, veranderen uw beheerdersrechten."
+          self_update_confirm: "Weet u zeker dat u de rol of het huishouden van uw eigen account wilt bijwerken?"
+          last_super_admin_role_locked: "Rolwijziging is geblokkeerd omdat u de laatste superbeheerder in het systeem bent."
+        delete_confirm: "Weet u zeker dat u deze gebruiker wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+        delete_confirm_last_user: "Weet u zeker dat u deze gebruiker wilt verwijderen? Dit is de laatste gebruiker in het huishouden/de groep, dus hiermee worden ook het volledige huishouden/de groep en alle bijbehorende gegevens verwijderd. Deze actie kan niet ongedaan worden gemaakt."
+        remove: "Gebruiker verwijderen"
+        role_descriptions_title: "Rolbeschrijvingen"
+        removed_sso_identities:
+          title: "Verwijderde SSO-identiteiten"
+          description: "Deze identiteiten kunnen geen account aanmaken of opnieuw koppelen. Sta een identiteit alleen opnieuw toe als de verwijdering per ongeluk was."
+          allow_again: "Opnieuw toestaan"
+          confirm: "%{email} opnieuw toestaan om via SSO in te loggen of een account aan te maken?"
+        roles:
+          guest: "Gast"
+          member: "Lid"
+          admin: "Beheerder"
+          super_admin: "Superbeheerder"
+        auth_types:
+          sso: "SSO"
+          local: "Lokaal"
+          local_and_sso: "Lokaal + SSO"
+          sso_provider_tooltip: "SSO-provider: %{providers}"
+        role_descriptions:
+          guest: "Ervaring met de assistent voorop, met bewust beperkte rechten voor introductieworkflows."
+          member: "Basisgebruikersrechten. Kan eigen accounts, transacties en instellingen beheren."
+          admin: "Familiebeheerder. Kan geavanceerde instellingen zoals API-sleutels, importen en AI-prompts beheren."
+          super_admin: "Instancebeheerder. Kan SSO-providers, gebruikersrollen beheren en gebruikers imiteren voor ondersteuning."
+        invitations:
+          pending_label: "Uitgenodigd (in behandeling)"
+          expires: "Verloopt %{date}"
+          delete: "Verwijderen"
+          delete_all: "Alles verwijderen"
+        unused_families:
+          title: "Ongebruikte huishoudens/groepen"
+          family_id: "Huishouden-ID: %{id}"
+          delete: "Ongebruikt huishouden verwijderen"
+          delete_confirm: "Weet u zeker dat u dit ongebruikte huishouden/deze groep wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+          empty: "Geen ongebruikte huishoudens/groepen gevonden."
+      update:
+        success_role: "Gebruikersrol succesvol bijgewerkt."
+        success_password: "Wachtwoord van gebruiker succesvol bijgewerkt."
+        success_role_and_password: "Gebruikersrol en wachtwoord succesvol bijgewerkt."
+        success_family: "Lidmaatschap van huishouden/groep succesvol bijgewerkt."
+        failure: "Gebruikersrol bijwerken mislukt."
+        family_required: "Selecteer een bestaand huishouden/groep of voer een naam in voor een nieuw huishouden/groep."
+        password_and_family_conflict: "Wachtwoord en lidmaatschap van huishouden/groep kunnen niet tegelijk worden bijgewerkt."
+        password_disabled: "Een wachtwoord instellen is uitgeschakeld omdat gebruikers alleen via SSO kunnen inloggen."
+        password_too_short: "Wachtwoord moet minimaal 8 tekens lang zijn."
+        password_missing_case: "Wachtwoord moet zowel hoofdletters als kleine letters bevatten."
+        password_missing_number: "Wachtwoord moet ten minste één cijfer bevatten."
+        password_missing_special: "Wachtwoord moet ten minste één speciaal teken bevatten."
+        last_super_admin_error: "Kan de laatste superbeheerder in het systeem niet degraderen."
+        success: "Gebruikersrol succesvol bijgewerkt."
+      destroy:
+        success: "Toegang van gebruiker ingetrokken en definitieve verwijdering ingepland."
+        failure: "Gebruiker verwijderen mislukt."
+        cannot_remove_self: "U kunt uw eigen account hier niet verwijderen."
+        cannot_remove_last_super_admin: "U kunt de laatste actieve superbeheerder niet verwijderen."
+        confirmation_mismatch: "Het e-mailadres kwam niet overeen. De gebruiker is niet verwijderd."
+      deletion:
+        title: "Gebruiker definitief verwijderen"
+        warning: "Hiermee wordt de toegang direct ingetrokken en wordt de definitieve verwijdering van de gebruiker en diens gegevens ingepland. Dit kan niet ongedaan worden gemaakt."
+        instruction: "Typ %{email} om te bevestigen."
+        email_label: "E-mailadres gebruiker"
+        cancel: "Annuleren"
+        submit: "Gebruiker definitief verwijderen"
     families:
       destroy:
-        family_has_active_subscription: Huishouden/groep heeft een actief abonnement
-          en kan pas worden verwijderd nadat het abonnement is opgezegd.
-        family_has_users: Huishouden/groep heeft nog gebruikers en kan niet worden
-          verwijderd.
-        success: Huishouden/groep succesvol verwijderd.
-    users:
-      deletion:
-        cancel: Annuleren
-        email_label: E-mailadres gebruiker
-        instruction: Typ %{email} om te bevestigen.
-        submit: Gebruiker definitief verwijderen
-        title: Gebruiker definitief verwijderen
-        warning: Hiermee wordt de toegang direct ingetrokken en wordt de definitieve
-          verwijdering van de gebruiker en diens gegevens ingepland. Dit kan niet
-          ongedaan worden gemaakt.
-      destroy:
-        cannot_remove_last_super_admin: U kunt de laatste actieve superbeheerder niet
-          verwijderen.
-        cannot_remove_self: U kunt uw eigen account hier niet verwijderen.
-        confirmation_mismatch: Het e-mailadres kwam niet overeen. De gebruiker is
-          niet verwijderd.
-        failure: Gebruiker verwijderen mislukt.
-        success: Toegang van gebruiker ingetrokken en definitieve verwijdering ingepland.
-      index:
-        actions:
-          delete_user: Gebruiker verwijderen
-          last_super_admin_role_locked: Rolwijziging is geblokkeerd omdat u de laatste
-            superbeheerder in het systeem bent.
-          manage_user: Gebruiker beheren
-          self_edit_warning: Als u uw eigen rol wijzigt, veranderen uw beheerdersrechten.
-          self_update_confirm: Weet u zeker dat u de rol of het huishouden van uw
-            eigen account wilt bijwerken?
-          update: Gebruiker bijwerken
-        auth_types:
-          local: Lokaal
-          local_and_sso: Lokaal + SSO
-          sso: SSO
-          sso_provider_tooltip: 'SSO-provider: %{providers}'
-        delete_confirm: Weet u zeker dat u deze gebruiker wilt verwijderen? Deze actie
-          kan niet ongedaan worden gemaakt.
-        delete_confirm_last_user: Weet u zeker dat u deze gebruiker wilt verwijderen?
-          Dit is de laatste gebruiker in het huishouden/de groep, dus hiermee worden
-          ook het volledige huishouden/de groep en alle bijbehorende gegevens verwijderd.
-          Deze actie kan niet ongedaan worden gemaakt.
-        description: Beheer gebruikersrollen voor uw instantie. Superbeheerders hebben
-          toegang tot SSO-providerinstellingen en gebruikersbeheer.
-        family_monikers:
-          family: Huishouden
-          group: Groep
-        family_summary: "%{members} leden · %{accounts} accounts · %{transactions}
-          transacties"
-        filters:
-          role: Rol
-          role_all: Alle rollen
-          submit: Filteren
-          trial_all: Alles
-          trial_expiring_soon: Verloopt binnen 7 dagen
-          trial_status: Status proefperiode
-          trial_trialing: In proefperiode
-        invitations:
-          delete: Verwijderen
-          delete_all: Alles verwijderen
-          expires: Verloopt %{date}
-          pending_label: Uitgenodigd (in behandeling)
-        no_subscription: Geen abonnement
-        no_users: Geen gebruikers gevonden.
-        not_available: n/a
-        remove: Gebruiker verwijderen
-        removed_sso_identities:
-          allow_again: Opnieuw toestaan
-          confirm: "%{email} opnieuw toestaan om via SSO in te loggen of een account
-            aan te maken?"
-          description: Deze identiteiten kunnen geen account aanmaken of opnieuw koppelen.
-            Sta een identiteit alleen opnieuw toe als de verwijdering per ongeluk
-            was.
-          title: Verwijderde SSO-identiteiten
-        role_descriptions:
-          admin: Familiebeheerder. Kan geavanceerde instellingen zoals API-sleutels,
-            importen en AI-prompts beheren.
-          guest: Ervaring met de assistent voorop, met bewust beperkte rechten voor
-            introductieworkflows.
-          member: Basisgebruikersrechten. Kan eigen accounts, transacties en instellingen
-            beheren.
-          super_admin: Instancebeheerder. Kan SSO-providers, gebruikersrollen beheren
-            en gebruikers imiteren voor ondersteuning.
-        role_descriptions_title: Rolbeschrijvingen
-        roles:
-          admin: Beheerder
-          guest: Gast
-          member: Lid
-          super_admin: Superbeheerder
-        section_title: Gebruikers
-        table:
-          actions: Acties
-          create_new_family_option: "+ Nieuw huishouden/groep aanmaken"
-          family: Huishouden/groep
-          family_accounts: Accounts van huishouden
-          family_transactions: Transacties van huishouden
-          keep_current_family: Huidig huishouden/groep behouden
-          last_login: Laatste login
-          never: Nooit
-          new_family_moniker: Type nieuw huishouden/groep
-          new_family_name: Naam nieuw huishouden/groep
-          new_family_name_placeholder: Voer een naam in om een nieuw huishouden/groep
-            aan te maken
-          password_placeholder: Laat leeg om het huidige te behouden
-          role: Rol
-          session_count: Aantal sessies
-          set_password: Nieuw wachtwoord instellen
-          trial_ends_at: Proefperiode eindigt
-          user: Gebruiker
-        title: Gebruikersbeheer
-        trial_ends_at: Proefperiode eindigt
-        unnamed_family: Naamloos huishouden/groep
-        unused_families:
-          delete: Ongebruikt huishouden verwijderen
-          delete_confirm: Weet u zeker dat u dit ongebruikte huishouden/deze groep
-            wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
-          empty: Geen ongebruikte huishoudens/groepen gevonden.
-          family_id: 'Huishouden-ID: %{id}'
-          title: Ongebruikte huishoudens/groepen
-        you: "(U)"
-      update:
-        failure: Gebruikersrol bijwerken mislukt.
-        family_required: Selecteer een bestaand huishouden/groep of voer een naam
-          in voor een nieuw huishouden/groep.
-        last_super_admin_error: Kan de laatste superbeheerder in het systeem niet
-          degraderen.
-        password_and_family_conflict: Wachtwoord en lidmaatschap van huishouden/groep
-          kunnen niet tegelijk worden bijgewerkt.
-        password_disabled: Een wachtwoord instellen is uitgeschakeld omdat gebruikers
-          alleen via SSO kunnen inloggen.
-        password_missing_case: Wachtwoord moet zowel hoofdletters als kleine letters
-          bevatten.
-        password_missing_number: Wachtwoord moet ten minste één cijfer bevatten.
-        password_missing_special: Wachtwoord moet ten minste één speciaal teken bevatten.
-        password_too_short: Wachtwoord moet minimaal 8 tekens lang zijn.
-        success: Gebruikersrol succesvol bijgewerkt.
-        success_family: Lidmaatschap van huishouden/groep succesvol bijgewerkt.
-        success_password: Wachtwoord van gebruiker succesvol bijgewerkt.
-        success_role: Gebruikersrol succesvol bijgewerkt.
-        success_role_and_password: Gebruikersrol en wachtwoord succesvol bijgewerkt.
+        family_has_active_subscription: "Huishouden/groep heeft een actief abonnement en kan pas worden verwijderd nadat het abonnement is opgezegd."
+        family_has_users: "Huishouden/groep heeft nog gebruikers en kan niet worden verwijderd."
+        success: "Huishouden/groep succesvol verwijderd."

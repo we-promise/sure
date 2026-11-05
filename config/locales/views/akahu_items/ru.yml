@@ -17,18 +17,18 @@ ru:
       transactions_failed: Не удалось получить операции Akahu
     institution_summary:
       count:
-        few: "%{count} учреждения"
-        many: "%{count} учреждений"
-        one: "%{count} учреждение"
-        other: "%{count} учреждения"
+        one: '%{count} учреждение'
+        other: '%{count} учреждения'
+        few: '%{count} учреждения'
+        many: '%{count} учреждений'
       none: Нет подключённых учреждений
       one: 1 учреждение
     sync_status:
       all_synced:
-        few: "%{count} счёта синхронизировано"
-        many: "%{count} счетов синхронизировано"
-        one: "%{count} счёт синхронизирован"
-        other: "%{count} счёта синхронизировано"
+        one: '%{count} счёт синхронизирован'
+        other: '%{count} счёта синхронизировано'
+        few: '%{count} счёта синхронизировано'
+        many: '%{count} счетов синхронизировано'
       no_accounts: Счета не найдены
       partial: 'Синхронизировано: %{linked}, требуют настройки: %{unlinked}'
   akahu_items:
@@ -49,10 +49,10 @@ ru:
       creation_failed: Не удалось создать счета Akahu.
       no_accounts: Не выбрано ни одного счёта Akahu.
       success:
-        few: Создано %{count} счёта Akahu.
-        many: Создано %{count} счетов Akahu.
         one: Создан %{count} счёт Akahu.
         other: Создано %{count} счёта Akahu.
+        few: Создано %{count} счёта Akahu.
+        many: Создано %{count} счетов Akahu.
     create:
       success: Подключение Akahu сохранено.
     destroy:
@@ -63,10 +63,10 @@ ru:
       no_accounts_selected: Выберите хотя бы один счёт.
       no_credentials_configured: Сначала настройте Akahu в настройках провайдеров.
       success:
-        few: Связано %{count} счёта Akahu.
-        many: Связано %{count} счетов Akahu.
         one: Связан %{count} счёт Akahu.
         other: Связано %{count} счёта Akahu.
+        few: Связано %{count} счёта Akahu.
+        many: Связано %{count} счетов Akahu.
       unsupported_account_type: Akahu не поддерживает этот тип счёта.
     link_existing_account:
       account_already_linked: Этот счёт уже связан с провайдером.
@@ -82,8 +82,7 @@ ru:
       disconnect: Отключить
       disconnect_confirm: Вы уверены, что хотите отключить %{name}?
       keep_app_token_placeholder: Оставьте пустым, чтобы сохранить текущий токен приложения
-      keep_user_token_placeholder: Оставьте пустым, чтобы сохранить текущий токен
-        пользователя
+      keep_user_token_placeholder: Оставьте пустым, чтобы сохранить текущий токен пользователя
       setup_accounts: Настроить счета
       sync: Синхронизировать
       syncing: Синхронизация...

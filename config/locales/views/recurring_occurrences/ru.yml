@@ -2,53 +2,52 @@
 ru:
   recurring_occurrences:
     history_status:
-      missed: Не оплачен
       paid: Оплачен
-      scheduled: Ожидает оплаты
       skipped: Пропущен
-    mark_paid:
-      success: Платёж отмечен как оплаченный
-    override_amount:
-      success: Ожидаемая сумма обновлена
-    reopen:
-      success: Платёж снова открыт
+      missed: Не оплачен
+      scheduled: Ожидает оплаты
     show:
-      add_heading: Добавить ещё одну оплату
-      cant_find: Не можете найти операцию?
       due_on: Срок оплаты — %{date}
-      find_heading: Найти оплату
-      link_payment: Привязать оплату
-      manual_amount_label: Сумма
-      manual_date_label: Дата
-      manual_explainer: Запишите оплату, которая точно была, если ни одна операция
-        здесь ей не соответствует.
-      manual_payment: Оплата вручную
-      mark_paid: Отметить как оплаченный
-      mark_paid_hint: Закрывает остаток без записи операции.
-      missed: Отмечен как неоплаченный
-      no_candidates: Нет подходящих операций поблизости по дате для привязки.
-      no_ranked_candidates: Пока ничего не похоже на оплату этого платежа.
-      no_search_results: По запросу %{query} ничего не найдено.
-      not_this_one: Не эта
-      other_matches: Другие вероятные совпадения
-      overpaid: больше ожидаемого
-      paid_headline: Оплачено %{amount}
       paid_of: Оплачено %{paid} из %{expected}
-      payments: Оплаты
-      record_payment: Записать оплату
+      paid_headline: Оплачено %{amount}
       remaining: Осталось %{amount}
-      reopen: Открыть снова
+      settled: Оплачен полностью
+      overpaid: больше ожидаемого
+      skipped: Пропущен
+      missed: Отмечен как неоплаченный
+      payments: Оплаты
+      manual_payment: Оплата вручную
+      unlink: Отвязать
       review_heading: Проверьте оплату
+      find_heading: Найти оплату
+      add_heading: Добавить ещё одну оплату
+      other_matches: Другие вероятные совпадения
+      no_ranked_candidates: Пока ничего не похоже на оплату этого платежа.
       search_all: Искать среди всех операций
       search_placeholder: Поиск операций
-      settled: Оплачен полностью
+      no_candidates: Нет подходящих операций поблизости по дате для привязки.
+      no_search_results: По запросу %{query} ничего не найдено.
+      link_payment: Привязать оплату
+      not_this_one: Не эта
+      cant_find: Не можете найти операцию?
+      manual_explainer: Запишите оплату, которая точно была, если ни одна операция здесь ей не соответствует.
+      manual_amount_label: Сумма
+      manual_date_label: Дата
+      record_payment: Записать оплату
+      mark_paid: Отметить как оплаченный
+      mark_paid_hint: Закрывает остаток без записи операции.
       skip: Пропустить
-      skipped: Пропущен
       snooze_week: Отложить на неделю
-      unlink: Отвязать
+      reopen: Открыть снова
       view_bill: Открыть платёж
+    mark_paid:
+      success: Платёж отмечен как оплаченный
     skip:
       success: Платёж пропущен
+    reopen:
+      success: Платёж снова открыт
     snooze:
-      invalid_date: Не удалось распознать эту дату
       success: Отложено до %{date}
+      invalid_date: Не удалось распознать эту дату
+    override_amount:
+      success: Ожидаемая сумма обновлена

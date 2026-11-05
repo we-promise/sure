@@ -82,8 +82,8 @@ fr:
       page_title: Configurer des comptes Interactive Brokers
       status:
         fetching_accounts: Récupération de comptes auprès d'Interactive Brokers...
-        no_accounts_found_description: Sure n'a trouvé aucun compte IBKR dans le dernier
-          rapport Flex.
+        no_accounts_found_description: Sure n'a trouvé aucun compte IBKR
+          dans le dernier rapport Flex.
         no_accounts_found_title: Aucun compte trouvé.
       subtitle: Sélectionnez les comptes de courtage IBKR à lier.
     sync_status:

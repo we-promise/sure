@@ -3,12 +3,12 @@ zh-TW:
   activerecord:
     attributes:
       goal_pledge:
-        account: 帳戶
         amount: 金額
         currency: 幣別
-        expires_at: 到期時間
+        account: 帳戶
         kind: 種類
         status: 狀態
+        expires_at: 到期時間
     errors:
       models:
         goal_pledge:

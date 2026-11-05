@@ -4,30 +4,28 @@ nb:
     access_denied: Tilgang nektet
     create:
       success: Eksport startet. Du vil kunne laste den ned snart.
-    delete_confirmation: Er du sikker på at du vil slette denne eksporten? Denne handlingen
-      kan ikke angres.
-    delete_failed_confirmation: Er du sikker på at du vil slette denne mislykkede
-      eksporten?
+    delete_confirmation: Er du sikker på at du vil slette denne eksporten? Denne handlingen kan ikke angres.
+    delete_failed_confirmation: Er du sikker på at du vil slette denne mislykkede eksporten?
     destroy:
       success: Eksport slettet
     export_not_ready: Eksport ikke klar for nedlasting
     exporting: Eksporterer...
     index:
-      new: Ny Eksport
       title: Eksporter
+      new: Ny Eksport
     table:
-      empty: Ingen eksporter ennå.
+      title: Eksporter
       header:
-        actions: Handlinger
         date: Dato
         filename: Filnavn
         status: Status
+        actions: Handlinger
       row:
+        status:
+          in_progress: Pågår
+          complete: Fullført
+          failed: Mislykket
         actions:
           delete: Slett
           download: Laste ned
-        status:
-          complete: Fullført
-          failed: Mislykket
-          in_progress: Pågår
-      title: Eksporter
+      empty: Ingen eksporter ennå.

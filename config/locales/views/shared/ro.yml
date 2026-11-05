@@ -1,26 +1,26 @@
 ---
 ro:
   shared:
+    dot_separator: "·"
     confirm_modal:
       accept: Confirmă
       body_html: "<p>Nu vei putea anula această decizie</p>"
       cancel: Anulează
       title: Ești sigur?
-    dot_separator: "·"
+    money_field:
+      label: Sumă
     exchange_rate_tabs:
       calculate_rate_tab: Calculați rata FX
       convert_tab: Convertire cu rata FX
       destination_amount: Suma de destinație
       exchange_rate: Rata de schimb
       exchange_rate_help: Alege cum dorești să introduci suma.
+    syncing_notice:
+      syncing: Se sincronizează datele conturilor...
     family_moniker:
       group_plural: Grupuri
       group_singular: Grup
       plural: Familii
       singular: Familie
-    money_field:
-      label: Sumă
-    syncing_notice:
-      syncing: Se sincronizează datele conturilor...
     trend_change:
-      no_change: fără schimbare
+      no_change: "fără schimbare"

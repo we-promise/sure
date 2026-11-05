@@ -46,15 +46,10 @@ tr:
       step_3: Erişimi geri yüklemek için "Güncelle"ye tıklayın
       title: SimpleFIN Bağlantısını Güncelle
       update: Güncelle
-    institution_summary:
-      count:
-        one: "%{count} kurum"
-        other: "%{count} kurum"
-      none: Bağlı kurum yok
     link_existing_account:
       errors:
-        different_provider: Bu hesap başka bir sağlayıcıya bağlı. Önce o sağlayıcıyla
-          bağlantısını kesin, ardından SimpleFIN'a bağlayın.
+        different_provider: Bu hesap başka bir sağlayıcıya bağlı. Önce o sağlayıcıyla bağlantısını
+          kesin, ardından SimpleFIN'a bağlayın.
         invalid_simplefin_account: Geçersiz SimpleFIN hesabı seçildi
         only_manual: Yalnızca manuel hesaplar bağlanabilir
       success: Hesap SimpleFIN'a başarıyla bağlandı
@@ -64,9 +59,6 @@ tr:
       setup_token: Kurulum anahtarı
       setup_token_placeholder: SimpleFIN kurulum anahtarınızı yapıştırın
       title: SimpleFIN'a Bağlan
-    rate_limited:
-      daily_refresh: SimpleFIN'in günlük yenileme sınırına ulaştınız. Lütfen köprü
-        yenilendikten sonra tekrar deneyin (24 saate kadar sürebilir).
     reconciled_status:
       message:
         one: "%{count} mükerrer bekleyen işlem uzlaştırıldı"
@@ -84,8 +76,6 @@ tr:
     select_existing_account:
       all_accounts_already_linked: Tüm SimpleFIN hesapları zaten bağlı görünüyor.
       cancel: İptal
-      check_provider_health: SimpleFIN bağlantınızın sorunsuz çalıştığını Ayarlar
-        → Sağlayıcılar bölümünden kontrol edin.
       currently_linked_to: 'Şu anda bağlı: %{account_name}'
       description: Mevcut hesabınıza bağlamak için bir SimpleFIN hesabı seçin
       link_account: Hesabı bağla
@@ -95,6 +85,7 @@ tr:
         kesin.
       wait_for_sync: Henüz bağladıysanız veya senkronize ettiyseniz, senkronizasyon
         tamamlandıktan sonra tekrar deneyin.
+      check_provider_health: SimpleFIN bağlantınızın sorunsuz çalıştığını Ayarlar → Sağlayıcılar bölümünden kontrol edin.
     setup_accounts:
       account_card:
         balance: Bakiye
@@ -183,19 +174,6 @@ tr:
       message:
         one: "%{count} bekleyen işlem %{days} günden daha eski"
         other: "%{count} bekleyen işlem %{days} günden daha eski"
-    stale_sync:
-      last_successful: Son başarılı senkronizasyon %{count} gün önceydi. SimpleFIN
-        bağlantınızla ilgilenmeniz gerekebilir.
-      no_transactions: "%{count} gündür yeni işlem yok. Banka bağlantılarınızın etkin
-        olduğundan emin olmak için SimpleFIN panelinizi kontrol edin."
-    sync_status:
-      no_accounts: Hesap bulunamadı
-      partial_setup:
-        one: "%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor"
-        other: "%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor"
-      synced:
-        one: "%{count} hesap senkronize edildi"
-        other: "%{count} hesap senkronize edildi"
     update:
       errors:
         invalid_token: Geçersiz kurulum anahtarı. Lütfen anahtarı SimpleFIN Bridge'den
@@ -203,3 +181,21 @@ tr:
         token_compromised: Kurulum anahtarı tehlikeye girmiş, süresi dolmuş veya zaten
           kullanılmış olabilir. Lütfen yeni bir tane oluşturun.
         unexpected: Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.
+    sync_status:
+      no_accounts: Hesap bulunamadı
+      synced:
+        one: '%{count} hesap senkronize edildi'
+        other: '%{count} hesap senkronize edildi'
+      partial_setup:
+        one: '%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor'
+        other: '%{linked} senkronize edildi, %{unlinked} kurulum gerektiriyor'
+    institution_summary:
+      none: Bağlı kurum yok
+      count:
+        one: '%{count} kurum'
+        other: '%{count} kurum'
+    rate_limited:
+      daily_refresh: SimpleFIN'in günlük yenileme sınırına ulaştınız. Lütfen köprü yenilendikten sonra tekrar deneyin (24 saate kadar sürebilir).
+    stale_sync:
+      last_successful: Son başarılı senkronizasyon %{count} gün önceydi. SimpleFIN bağlantınızla ilgilenmeniz gerekebilir.
+      no_transactions: '%{count} gündür yeni işlem yok. Banka bağlantılarınızın etkin olduğundan emin olmak için SimpleFIN panelinizi kontrol edin.'

@@ -11,5 +11,4 @@ hu:
         brex_item:
           attributes:
             base_url:
-              official_hosts_only: üres kell legyen, vagy https://api.brex.com, vagy
-                https://api-staging.brex.com
+              official_hosts_only: üres kell legyen, vagy https://api.brex.com, vagy https://api-staging.brex.com

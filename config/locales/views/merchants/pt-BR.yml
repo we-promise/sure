@@ -16,9 +16,8 @@ pt-BR:
       title: Comerciantes
     merchant:
       confirm_accept: Excluir comerciante
-      confirm_body: Tem certeza de que deseja excluir este comerciante? Remover este
-        comerciante desvinculará todas as transações associadas e pode afetar seus
-        relatórios.
+      confirm_body: Tem certeza de que deseja excluir este comerciante? Remover este comerciante
+        desvinculará todas as transações associadas e pode afetar seus relatórios.
       confirm_title: Excluir comerciante?
       delete: Excluir comerciante
       edit: Editar comerciante

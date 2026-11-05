@@ -3,5 +3,4 @@ nl:
   admin:
     sso_identity_blocks:
       destroy:
-        success: De SSO-identiteit kan zich weer aanmelden of opnieuw een account
-          aanmaken.
+        success: "De SSO-identiteit kan zich weer aanmelden of opnieuw een account aanmaken."

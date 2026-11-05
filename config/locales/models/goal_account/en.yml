@@ -6,5 +6,4 @@ en:
         goal_account:
           attributes:
             base:
-              account_already_fully_earmarked: This account is already fully earmarked
-                for “%{goal_name}”. Enter an amount to split it.
+              account_already_fully_earmarked: This account is already fully earmarked for “%{goal_name}”. Enter an amount to split it.

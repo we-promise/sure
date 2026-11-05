@@ -15,5 +15,5 @@ en:
     institution_name: Self-custody wallets
   onchain_wallet_item:
     movement:
-      received: Received %{quantity} %{symbol}
-      sent: Sent %{quantity} %{symbol}
+      received: "Received %{quantity} %{symbol}"
+      sent: "Sent %{quantity} %{symbol}"

@@ -10,8 +10,8 @@ ru:
         success: Поставщик SSO успешно удалён.
       edit:
         description: Обновите конфигурацию для %{label}
-        provider_configuration: Конфигурация поставщика
         title: Редактировать поставщика SSO
+        provider_configuration: Конфигурация поставщика
       form:
         admin_groups: Группы администраторов
         advanced_title: Расширенные настройки OIDC
@@ -151,8 +151,8 @@ ru:
         title: Поставщики SSO
       new:
         description: Настройте нового поставщика аутентификации единого входа
-        provider_configuration: Конфигурация поставщика
         title: Добавить поставщика SSO
+        provider_configuration: Конфигурация поставщика
       toggle:
         confirm_disable: Вы уверены, что хотите отключить этого поставщика?
         confirm_enable: Вы уверены, что хотите включить этого поставщика?

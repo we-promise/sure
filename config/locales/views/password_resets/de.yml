@@ -1,18 +1,15 @@
 ---
 de:
   password_resets:
-    disabled: Passwort-Zurücksetzen über Sure ist deaktiviert. Bitte setz dein Passwort
-      über deinen Identitätsanbieter zurück.
+    disabled: Passwort-Zurücksetzen über Sure ist deaktiviert. Bitte setz dein Passwort über deinen Identitätsanbieter zurück.
+    sso_only_user: Dein Konto nutzt SSO zur Anmeldung. Wende dich an deine Administration, wenn du Hilfe brauchst.
     edit:
       title: Passwort zurücksetzen
     new:
-      back: Zurück
-      requested: Bitte überprüfe deine E-Mails auf einen Link zum Zurücksetzen deines
-        Passworts.
+      requested: Bitte überprüfe deine E-Mails auf einen Link zum Zurücksetzen deines Passworts.
       submit: Passwort zurücksetzen
       title: Passwort zurücksetzen
-    sso_only_user: Dein Konto nutzt SSO zur Anmeldung. Wende dich an deine Administration,
-      wenn du Hilfe brauchst.
+      back: Zurück
     update:
       invalid_token: Ungültiger Token.
       success: Dein Passwort wurde zurückgesetzt.

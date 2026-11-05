@@ -1,16 +1,8 @@
 ---
 tr:
   valuations:
-    confirm_create:
-      confirm: Onayla
-      title: Yeni bakiyeyi onayla
-    confirm_update:
-      title: Bakiyeyi güncelle
-      update: Güncelle
     confirmation_contents:
       account_balance: hesap bakiyesi
-      action_set: ayarlama
-      action_update: güncelleme
       asset_value: varlık değeri
       balance: bakiye
       brokerage_cash: Aracı kurum nakdi
@@ -30,6 +22,8 @@ tr:
       total_account_value: Toplam hesap değeri
       update: güncelleme
       vehicle_value: araç değeri
+      action_set: ayarlama
+      action_update: güncelleme
     create:
       account_updated: Hesap güncellendi
     errors:
@@ -69,3 +63,9 @@ tr:
     update:
       account_updated: Hesap güncellendi
       entry_updated: Kayıt güncellendi
+    confirm_create:
+      confirm: Onayla
+      title: Yeni bakiyeyi onayla
+    confirm_update:
+      title: Bakiyeyi güncelle
+      update: Güncelle

@@ -1,10 +1,9 @@
 ---
 en:
   UI:
+    period_picker:
+      aria_label: "Time period: %{period}"
     account:
-      activity_date:
-        balance_tooltip: The end of day balance, after all transactions and adjustments
-        no_balance_data: No balance data available for this date
       activity_feed:
         toggle_selection_checkboxes: Toggle selection
       balance_reconciliation:
@@ -34,8 +33,7 @@ en:
           adjustments: Manual reconciliations or other adjustments
           adjustments_asset: Manual value adjustments or appraisals
           buys: Crypto purchases during the day
-          change_in_brokerage_cash: Net change in cash from deposits, withdrawals,
-            and trades
+          change_in_brokerage_cash: Net change in cash from deposits, withdrawals, and trades
           change_in_holdings_market: Change in holdings value from market price movements
           change_in_holdings_trades: Impact on holdings from buying and selling securities
           charges: New charges made during the day
@@ -57,48 +55,38 @@ en:
           sells: Crypto sales during the day
           start_balance: The account balance at the beginning of this day
           start_balance_credit: The balance owed at the beginning of this day
-          start_balance_crypto: The crypto holdings value at the beginning of this
-            day
-          start_balance_investment: The total portfolio value at the beginning of
-            this day
+          start_balance_crypto: The crypto holdings value at the beginning of this day
+          start_balance_investment: The total portfolio value at the beginning of this day
           start_principal: The principal balance at the beginning of this day
           start_value: The asset value at the beginning of this day
       chart:
         loan:
           actual: Recorded balance
-          aria_actual_history_starts: Recorded balance history begins %{date}.
-          aria_composition: The tooltip on each scheduled payment splits it into %{principal}
-            and %{interest}.
-          aria_description: Loan balance chart. Recorded balance %{current_balance}.
-            Original scheduled payoff %{scheduled_payoff_date}. Projected payoff from
-            today's balance %{projected_payoff_date}.
-          aria_extra_payoff: Projected payoff with the extra repayment %{date}.
-          aria_interest_share: Across the first year's repayments about %{first}%
-            of the amount paid is interest; across the final year's, about %{last}%.
-          aria_interest_share_overall: Across all the repayments about %{share}% of
-            the amount paid is interest.
-          extra: With extra repayment
+          scheduled: Original schedule
+          projected: Projected from today
+          today: Today
           interactive_chart: interactive chart
-          interest_saved: Interest saved
+          no_payoff: not on the current repayment
+          aria_description: Loan balance chart. Recorded balance %{current_balance}. Original scheduled payoff %{scheduled_payoff_date}. Projected payoff from today's balance %{projected_payoff_date}.
+          aria_extra_payoff: Projected payoff with the extra repayment %{date}.
+          extra: With extra repayment
+          aria_actual_history_starts: Recorded balance history begins %{date}.
+          aria_interest_share: Across the first year's repayments about %{first}% of the amount paid is interest; across the final year's, about %{last}%.
+          aria_interest_share_overall: Across all the repayments about %{share}% of the amount paid is interest.
+          aria_composition: The tooltip on each scheduled payment splits it into %{principal} and %{interest}.
           interest_share: Interest share
-          legend: Chart series
+          principal_share: Principal share
+          projected_payoff: Projected payoff
           months_saved:
             one: "%{count} month sooner than scheduled"
             other: "%{count} months sooner than scheduled"
-          no_payoff: not on the current repayment
-          not_converged: On the current repayment this balance is not paid off by
-            the original maturity; %{balloon} would still be owed.
           on_schedule: On schedule
-          principal_share: Principal share
-          projected: Projected from today
-          projected_payoff: Projected payoff
-          projection_basis: Compares today's recorded balance with the schedule's
-            balance on the same day. A payment posted before its scheduled date reads
-            as ahead until that date; one posted after reads as behind.
-          scheduled: Original schedule
+          interest_saved: Interest saved
+          not_converged: On the current repayment this balance is not paid off by the original maturity; %{balloon} would still be owed.
+          projection_basis: Compares today's recorded balance with the schedule's balance on the same day. A payment posted before its scheduled date reads as ahead until that date; one posted after reads as behind.
+          legend: Chart series
           since_start: since the loan started
-          today: Today
-        no_data_available: No data available
+        no_data_available: "No data available"
         title:
           balance: Balance
           cash_value: Cash value
@@ -116,92 +104,93 @@ en:
           holdings: Holdings
           total_value: Total value
         vs_available_history: vs. available history
-    period_picker:
-      aria_label: 'Time period: %{period}'
+      activity_date:
+        balance_tooltip: "The end of day balance, after all transactions and adjustments"
+        no_balance_data: "No balance data available for this date"
   ds:
     alert:
       variants:
-        destructive: Error
-        error: Error
         info: Info
         success: Success
         warning: Warning
-    dialog:
-      close: Close
-    icon_picker:
-      no_matching_icons: No matching icons
-      search_placeholder: Search icons...
-    link:
-      opens_in_new_tab: "(opens in new tab)"
+        error: Error
+        destructive: Error
     pill:
       aria_label: "%{label}"
       default_label: Preview
+    dialog:
+      close: Close
     popover:
       avatar_default_label: Open menu
     tooltip:
       trigger_label: More info
+    link:
+      opens_in_new_tab: (opens in new tab)
+    icon_picker:
+      no_matching_icons: No matching icons
+      search_placeholder: Search icons...
   provider_sync_summary:
+    title: Sync summary
+    last_sync: "Last sync: %{time_ago} ago"
     accounts:
-      institutions: 'Institutions: %{count}'
-      linked: 'Linked: %{count}'
       title: Accounts
-      total: 'Total: %{count}'
-      unlinked: 'Unlinked: %{count}'
+      total: "Total: %{count}"
+      linked: "Linked: %{count}"
+      unlinked: "Unlinked: %{count}"
+      institutions: "Institutions: %{count}"
+    transactions:
+      title: Transactions
+      seen: "Seen: %{count}"
+      imported: "Imported: %{count}"
+      updated: "Updated: %{count}"
+      skipped: "Skipped: %{count}"
+      fetching: "Fetching from brokerage..."
+      protected:
+        one: "%{count} entry protected (not overwritten)"
+        other: "%{count} entries protected (not overwritten)"
+      view_protected: View protected entries
+    skip_reasons:
+      excluded: Excluded
+      user_modified: User modified
+      import_locked: CSV import
+      protected: Protected
+    holdings:
+      title: Holdings
+      found: "Found: %{count}"
+      processed: "Processed: %{count}"
+    trades:
+      title: Trades
+      imported: "Imported: %{count}"
+      skipped: "Skipped: %{count}"
+      fetching: "Fetching activities from brokerage..."
     health:
-      data_warnings: 'Data warnings: %{count}'
-      duplicate_suggestions:
-        one: "%{count} possible duplicate needs review"
-        other: "%{count} possible duplicates need review"
-      errors: 'Errors: %{count}'
-      notices: 'Notices: %{count}'
+      title: Health
+      view_error_details: View error details
+      rate_limited: "Rate limited %{time_ago}"
+      recently: recently
+      errors: "Errors: %{count}"
       pending_reconciled:
         one: "%{count} duplicate pending transaction reconciled"
         other: "%{count} duplicate pending transactions reconciled"
-      rate_limited: Rate limited %{time_ago}
-      recently: recently
+      view_reconciled: View reconciled transactions
+      duplicate_suggestions:
+        one: "%{count} possible duplicate needs review"
+        other: "%{count} possible duplicates need review"
+      view_duplicate_suggestions: View suggested duplicates
       stale_pending:
         one: "%{count} stale pending transaction (excluded from budgets)"
         other: "%{count} stale pending transactions (excluded from budgets)"
+      view_stale_pending: View affected accounts
       stale_pending_count:
         one: "%{count} transaction"
         other: "%{count} transactions"
       stale_unmatched:
         one: "%{count} pending transaction needs manual review"
         other: "%{count} pending transactions need manual review"
+      view_stale_unmatched: View transactions needing review
       stale_unmatched_count:
         one: "%{count} transaction"
         other: "%{count} transactions"
-      title: Health
+      data_warnings: "Data warnings: %{count}"
+      notices: "Notices: %{count}"
       view_data_quality: View data quality details
-      view_duplicate_suggestions: View suggested duplicates
-      view_error_details: View error details
-      view_reconciled: View reconciled transactions
-      view_stale_pending: View affected accounts
-      view_stale_unmatched: View transactions needing review
-    holdings:
-      found: 'Found: %{count}'
-      processed: 'Processed: %{count}'
-      title: Holdings
-    last_sync: 'Last sync: %{time_ago} ago'
-    skip_reasons:
-      excluded: Excluded
-      import_locked: CSV import
-      protected: Protected
-      user_modified: User modified
-    title: Sync summary
-    trades:
-      fetching: Fetching activities from brokerage...
-      imported: 'Imported: %{count}'
-      skipped: 'Skipped: %{count}'
-      title: Trades
-    transactions:
-      fetching: Fetching from brokerage...
-      imported: 'Imported: %{count}'
-      protected:
-        one: "%{count} entry protected (not overwritten)"
-        other: "%{count} entries protected (not overwritten)"
-      seen: 'Seen: %{count}'
-      skipped: 'Skipped: %{count}'
-      title: Transactions
-      updated: 'Updated: %{count}'
-      view_protected: View protected entries

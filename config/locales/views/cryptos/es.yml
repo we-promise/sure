@@ -5,18 +5,16 @@ es:
       edit: Editar %{account}
     form:
       subtype_label: Tipo de cuenta
-      subtype_none: No especificado
       subtype_prompt: Seleccionar tipo...
-      tax_treatment_hint: La mayoría de las criptomonedas se mantienen en cuentas
-        sujetas a impuestos. Selecciona una opción diferente si se mantienen en una
-        cuenta con ventajas fiscales.
+      subtype_none: No especificado
       tax_treatment_label: Tratamiento fiscal
+      tax_treatment_hint: La mayoría de las criptomonedas se mantienen en cuentas sujetas a impuestos. Selecciona una opción diferente si se mantienen en una cuenta con ventajas fiscales.
     new:
       title: Introducir saldo de la cuenta
     subtypes:
-      exchange:
-        long: Exchange de criptomonedas
-        short: Exchange
       wallet:
-        long: Cartera de criptomonedas
         short: Cartera
+        long: Cartera de criptomonedas
+      exchange:
+        short: Exchange
+        long: Exchange de criptomonedas

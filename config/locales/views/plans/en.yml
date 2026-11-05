@@ -1,41 +1,39 @@
 ---
 en:
   plans:
+    show:
+      title: Plan
+      subtitle: Decide where your money goes — what you spend, and what you save.
     budget_card:
+      title: This month
+      edit_budget: Edit budget
+      of_total: of %{total}
       days_left:
         one: 1 day left
         other: "%{count} days left"
-      edit_budget: Edit budget
-      empty_body: Set a monthly spending target and per-category limits to see how
-        this month is tracking.
-      of_total: of %{total}
       percent_used: "%{percent}% used"
-      set_up: Set up this month's budget
-      title: This month
       top_categories: Top categories
       view_budget: View full budget
+      empty_body: Set a monthly spending target and per-category limits to see how this month is tracking.
+      set_up: Set up this month's budget
     goals_card:
+      title: Your goals
+      currency_warning:
+        one: "1 goal leaves out %{currencies} balances (no exchange rate yet)."
+        other: "%{count} goals leave out %{currencies} balances (no exchange rate yet)."
+      new_goal: New goal
       active_count:
         one: 1 active
         other: "%{count} active"
-      active_goals: Active goals
-      all_goals: All goals
-      all_on_pace: Everything on pace
+      of_targets: of %{total} across goals
       behind_count:
         one: 1 behind pace
         other: "%{count} behind pace"
-      currency_warning:
-        one: 1 goal leaves out %{currencies} balances (no exchange rate yet).
-        other: "%{count} goals leave out %{currencies} balances (no exchange rate
-          yet)."
-      new_goal: New goal
-      of_targets: of %{total} across goals
       pending_count:
         one: 1 pending pledge
         other: "%{count} pending pledges"
+      all_on_pace: Everything on pace
+      active_goals: Active goals
       pending_marker: pending
       runway: "%{months} mo runway · %{pace}/mo"
-      title: Your goals
-    show:
-      subtitle: Decide where your money goes — what you spend, and what you save.
-      title: Plan
+      all_goals: All goals

@@ -1,85 +1,80 @@
 ---
 en:
-  binance_item:
-    syncer:
-      accounts_need_setup:
-        one: "%{count} account needs setup"
-        other: "%{count} accounts need setup"
-      calculating_balances: Calculating balances...
-      checking_configuration: Checking account configuration...
-      checking_credentials: Checking credentials...
-      credentials_invalid: Invalid API credentials. Please check your API key and
-        secret.
-      importing_accounts: Importing accounts from Binance...
-      processing_accounts: Processing account data...
   binance_items:
-    binance_item:
-      delete: Delete
-      deletion_in_progress: Deleting...
-      import_accounts_menu: Import Account
-      no_accounts_message: Your Binance portfolio will appear here after syncing.
-      no_accounts_title: No accounts found
-      provider_name: Binance
-      reconnect: Credentials need updating
-      setup_action: Import Account
-      setup_description: Select which Binance portfolios you want to track.
-      setup_needed: Account ready to import
-      stale_rate_warning: Balance is approximate — the exact exchange rate for %{date}
-        was unavailable. Will update on next sync.
-      status: Last synced %{timestamp} ago
-      status_never: Never synced
-      status_with_summary: Last synced %{timestamp} ago - %{summary}
-      sync_status:
-        all_synced:
-          one: "%{count} account synced"
-          other: "%{count} accounts synced"
-        no_accounts: No accounts found
-        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
-      syncing: Syncing...
-      update_credentials: Update credentials
-    complete_account_setup:
-      invalid_sync_start_date: Sync start date must be a valid date in the past.
-      no_accounts: No accounts to import
-      none_selected: No accounts selected
-      success:
-        one: Imported %{count} account
-        other: Imported %{count} accounts
     create:
       default_name: Binance
       success: Successfully connected to Binance! Your account is being synced.
+    update:
+      success: Successfully updated Binance configuration.
     destroy:
       success: Scheduled Binance connection for deletion.
-    link_existing_account:
-      errors:
-        invalid_binance_account: Invalid Binance account
-        only_manual: Only manual accounts can be linked to Binance
-      success: Successfully linked to Binance account
     select_accounts:
-      connection_unavailable: That Binance connection isn't available. Choose one
-        in Provider Settings.
-      no_credentials_configured: Connect Binance in Provider Settings before adding
-        its accounts.
+      connection_unavailable: That Binance connection isn't available. Choose one in Provider Settings.
+      no_credentials_configured: Connect Binance in Provider Settings before adding its accounts.
       select_connection: Choose a Binance connection in Provider Settings.
-    select_existing_account:
-      cancel: Cancel
-      check_provider_health: Check that your Binance API credentials are valid
-      currently_linked_to: 'Currently linked to: %{account_name}'
-      link: Link
-      no_accounts_found: No Binance accounts found.
-      title: Link Binance Account
-      wait_for_sync: Wait for Binance to finish syncing
     setup_accounts:
+      title: Import Binance Account
+      subtitle: Select which portfolios to track
+      instructions: Select the Binance portfolios you want to import. Only portfolios with balances are shown.
+      no_accounts: All accounts have been imported.
       accounts_count:
         one: "%{count} account available"
         other: "%{count} accounts available"
+      select_all: Select all
+      import_selected: Import Selected
       cancel: Cancel
       creating: Importing...
-      import_selected: Import Selected
-      instructions: Select the Binance portfolios you want to import. Only portfolios
-        with balances are shown.
-      no_accounts: All accounts have been imported.
-      select_all: Select all
-      subtitle: Select which portfolios to track
-      title: Import Binance Account
-    update:
-      success: Successfully updated Binance configuration.
+    complete_account_setup:
+      invalid_sync_start_date: Sync start date must be a valid date in the past.
+      success:
+        one: "Imported %{count} account"
+        other: "Imported %{count} accounts"
+      none_selected: No accounts selected
+      no_accounts: No accounts to import
+    binance_item:
+      provider_name: Binance
+      syncing: Syncing...
+      reconnect: Credentials need updating
+      deletion_in_progress: Deleting...
+      sync_status:
+        no_accounts: No accounts found
+        all_synced:
+          one: "%{count} account synced"
+          other: "%{count} accounts synced"
+        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
+      status: "Last synced %{timestamp} ago"
+      status_with_summary: "Last synced %{timestamp} ago - %{summary}"
+      status_never: Never synced
+      update_credentials: Update credentials
+      delete: Delete
+      no_accounts_title: No accounts found
+      no_accounts_message: Your Binance portfolio will appear here after syncing.
+      setup_needed: Account ready to import
+      setup_description: Select which Binance portfolios you want to track.
+      setup_action: Import Account
+      import_accounts_menu: Import Account
+      stale_rate_warning: "Balance is approximate — the exact exchange rate for %{date} was unavailable. Will update on next sync."
+    select_existing_account:
+      title: Link Binance Account
+      no_accounts_found: No Binance accounts found.
+      wait_for_sync: Wait for Binance to finish syncing
+      check_provider_health: Check that your Binance API credentials are valid
+      currently_linked_to: "Currently linked to: %{account_name}"
+      link: Link
+      cancel: Cancel
+    link_existing_account:
+      success: Successfully linked to Binance account
+      errors:
+        only_manual: Only manual accounts can be linked to Binance
+        invalid_binance_account: Invalid Binance account
+  binance_item:
+    syncer:
+      checking_credentials: Checking credentials...
+      credentials_invalid: Invalid API credentials. Please check your API key and secret.
+      importing_accounts: Importing accounts from Binance...
+      checking_configuration: Checking account configuration...
+      accounts_need_setup:
+        one: "%{count} account needs setup"
+        other: "%{count} accounts need setup"
+      processing_accounts: Processing account data...
+      calculating_balances: Calculating balances...

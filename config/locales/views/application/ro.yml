@@ -7,4 +7,4 @@ ro:
         format: "%u %n"
         precision: 2
         separator: ","
-        unit: RON
+        unit: "RON"

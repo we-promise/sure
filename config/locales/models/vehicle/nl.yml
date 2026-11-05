@@ -2,13 +2,13 @@
 nl:
   activerecord:
     attributes:
-      account/accountable:
-        purchase_date: Aankoopdatum
+      "account/accountable":
+        purchase_date: "Aankoopdatum"
       vehicle:
-        purchase_date: Aankoopdatum
+        purchase_date: "Aankoopdatum"
     errors:
       models:
         vehicle:
           attributes:
             purchase_date:
-              must_precede_entries: moet vóór de oudste boeking van het account liggen
+              must_precede_entries: "moet vóór de oudste boeking van het account liggen"

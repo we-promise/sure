@@ -4,5 +4,4 @@ it:
     errors:
       models:
         indexa_capital_item:
-          credentials_required: È necessaria la variabile d'ambiente INDEXA_API_TOKEN
-            o le credenziali username/documento/password
+          credentials_required: "È necessaria la variabile d'ambiente INDEXA_API_TOKEN o le credenziali username/documento/password"

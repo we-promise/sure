@@ -22,8 +22,8 @@ tr:
       parent_category_label: Üst kategori (isteğe bağlı)
       placeholder: Kategori adı
       poor_contrast: Zayıf kontrast, daha koyu bir renk seçin veya
-      trigger_label: Renk ve simge seçin
       unassigned: "(atanmamış)"
+      trigger_label: Renk ve simge seçin
     index:
       bootstrap: Varsayılanları kullan (önerilir)
       categories: Kategoriler

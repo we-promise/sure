@@ -4,5 +4,4 @@ de:
     errors:
       models:
         api_key:
-          cannot_destroy_demo_key: Der API-Key für die Demo-Überwachung lässt sich
-            nicht löschen
+          cannot_destroy_demo_key: Der API-Key für die Demo-Überwachung lässt sich nicht löschen

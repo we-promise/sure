@@ -4,11 +4,10 @@ nb:
     edit:
       title: Tilbakestill passord
     new:
-      back: Tilbake
-      requested: Vennligst sjekk e-posten din for en lenke til å tilbakestille passordet
-        ditt.
+      requested: Vennligst sjekk e-posten din for en lenke til å tilbakestille passordet ditt.
       submit: Tilbakestill passord
       title: Tilbakestill passord
+      back: Tilbake
     update:
       invalid_token: Ugyldig token.
       success: Passordet ditt er tilbakestilt.

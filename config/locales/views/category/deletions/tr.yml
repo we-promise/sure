@@ -8,8 +8,8 @@ tr:
         category: Kategori
         delete_and_leave_uncategorized: "%{category_name} kategorisini silin ve kategorisiz
           bırakın"
-        delete_and_recategorize: "%{category_name} kategorisini silin ve yeni bir
-          kategori atayın"
+        delete_and_recategorize: "%{category_name} kategorisini silin ve yeni bir kategori
+          atayın"
         delete_category: Kategori silinsin mi?
         explanation: Bu kategoriyi sildiğinizde, "%{category_name}" kategorisine sahip
           tüm işlemler kategorisiz kalacak. Onları kategorisiz bırakmak yerine aşağıdan

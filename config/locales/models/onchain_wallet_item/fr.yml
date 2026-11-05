@@ -15,5 +15,5 @@ fr:
     institution_name: Portefeuilles en autoconservation
   onchain_wallet_item:
     movement:
-      received: Réception de %{quantity} %{symbol}
-      sent: Envoi de %{quantity} %{symbol}
+      received: "Réception de %{quantity} %{symbol}"
+      sent: "Envoi de %{quantity} %{symbol}"

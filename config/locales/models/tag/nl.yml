@@ -2,4 +2,4 @@
 nl:
   models:
     tag:
-      untagged: Zonder tag
+      untagged: "Zonder tag"

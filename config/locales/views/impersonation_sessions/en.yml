@@ -14,12 +14,12 @@ en:
     reject:
       success: Request rejected
     super_admin_bar:
-      impersonating: Impersonating
-      jobs: Jobs
-      join: Join
-      join_a_session: Join a session
-      leave: Leave
-      request_impersonation: Request Impersonation
       super_admin: Super Admin
+      jobs: Jobs
+      impersonating: Impersonating
+      leave: Leave
       terminate: Terminate
+      join_a_session: Join a session
+      join: Join
       uuid_placeholder: UUID
+      request_impersonation: Request Impersonation

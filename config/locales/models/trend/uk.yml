@@ -6,10 +6,8 @@ uk:
         trend:
           attributes:
             current:
-              must_be_of_the_same_type_as_previous: має бути того ж типу, що й попередній
-              must_be_of_type_money_numeric_or_nil: має бути типу Money, Numeric або
-                nil
+              must_be_of_the_same_type_as_previous: "має бути того ж типу, що й попередній"
+              must_be_of_type_money_numeric_or_nil: "має бути типу Money, Numeric або nil"
             previous:
-              must_be_of_the_same_type_as_current: має бути того ж типу, що й поточний
-              must_be_of_type_money_numeric_or_nil: має бути типу Money, Numeric або
-                nil
+              must_be_of_the_same_type_as_current: "має бути того ж типу, що й поточний"
+              must_be_of_type_money_numeric_or_nil: "має бути типу Money, Numeric або nil"

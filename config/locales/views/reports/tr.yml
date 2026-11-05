@@ -31,7 +31,7 @@ tr:
       step3: API anahtarını kopyalayın
       step4: 'Bu URL''ye şu şekilde ekleyin: &api_key=ANAHTARINIZ'
       then_use: Ardından Google E-Tablolar'da =IMPORTDATA() ile tam URL'yi kullanın.
-      title_no_key: API Anahtarı Gerekli
+      title_no_key: "API Anahtarı Gerekli"
     index:
       date_range:
         from: Başlangıç
@@ -149,10 +149,10 @@ tr:
         expenses: Giderler
         income: Gelir
         net_savings: Net Tasarruf
-        of_income: gelirin yüzde %{percent}'i
+        of_income: "gelirin yüzde %{percent}'i"
         title: Özet
         used: kullanıldı
-        vs_prior: öncekine göre %{percent}%
+        vs_prior: "öncekine göre %{percent}%"
       title: Finansal Rapor
       trends:
         average: Ortalama
@@ -224,10 +224,10 @@ tr:
       current: güncel
       expenses: Giderler
       income: Gelir
-      insight_higher_weekday: Hafta içi işlem başına hafta sonundan %{percent}% daha
-        fazla harcıyorsunuz
-      insight_higher_weekend: Hafta sonu işlem başına hafta içinden %{percent}% daha
-        fazla harcıyorsunuz
+      insight_higher_weekday: "Hafta içi işlem başına hafta sonundan %{percent}% daha
+        fazla harcıyorsunuz"
+      insight_higher_weekend: "Hafta sonu işlem başına hafta içinden %{percent}% daha
+        fazla harcıyorsunuz"
       insight_similar: İşlem başına harcamanız hafta içi ve hafta sonu benzer
       insight_title: İçgörü
       month: Ay

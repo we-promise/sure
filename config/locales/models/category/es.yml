@@ -2,28 +2,28 @@
 es:
   models:
     category:
+      uncategorized: Sin clasificar
+      other_investments: Otras inversiones
+      investment_contributions: Aportaciones a inversiones
       defaults:
-        entertainment: Ocio
-        fees: Comisiones
-        food_and_drink: Comida y bebida
-        gifts_and_donations: Regalos y donaciones
-        groceries: Supermercado
-        healthcare: Salud
-        home_improvement: Mejoras del hogar
         income: Ingresos
-        insurance: Seguros
-        loan_payments: Pagos de préstamos
-        mortgage_rent: Hipoteca / Alquiler
-        personal_care: Cuidado personal
-        savings_and_investments: Ahorro e inversiones
-        services: Servicios
+        food_and_drink: Comida y bebida
+        groceries: Supermercado
         shopping: Compras
-        sports_and_fitness: Deporte y fitness
-        subscriptions: Suscripciones
-        taxes: Impuestos
         transportation: Transporte
         travel: Viajes
+        entertainment: Ocio
+        healthcare: Salud
+        personal_care: Cuidado personal
+        home_improvement: Mejoras del hogar
+        mortgage_rent: Hipoteca / Alquiler
         utilities: Suministros
-      investment_contributions: Aportaciones a inversiones
-      other_investments: Otras inversiones
-      uncategorized: Sin clasificar
+        subscriptions: Suscripciones
+        insurance: Seguros
+        sports_and_fitness: Deporte y fitness
+        gifts_and_donations: Regalos y donaciones
+        taxes: Impuestos
+        loan_payments: Pagos de préstamos
+        services: Servicios
+        fees: Comisiones
+        savings_and_investments: Ahorro e inversiones

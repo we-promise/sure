@@ -1,5 +1,21 @@
 ---
 en:
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
+    common:
+      close: "Close"
+  global:
+    expand: "Expand"
+  mcp:
+    errors:
+      invalid_session_id: "Invalid MCP session id"
+      unsupported_protocol_version: "Unsupported MCP protocol version: %{version}"
+  oauth:
+    registration:
+      invalid_redirect_uris: "redirect_uris must use https, loopback http, or a native app URI scheme"
+      invalid_client_name: "client_name must not contain bidirectional control characters"
+      reserved_client_name: "client_name is reserved for first-party apps"
   activerecord:
     errors:
       messages:
@@ -41,8 +57,8 @@ en:
     formats:
       default: "%Y-%m-%d"
       long: "%B %d, %Y"
-      month_year: "%B %Y"
       short: "%b %d"
+      month_year: "%B %Y"
       short_month_year: "%b %Y"
       short_with_year: "%b %d, %Y"
     month_names:
@@ -109,11 +125,6 @@ en:
       month: Month
       second: Second
       year: Year
-  defaults:
-    brand_name: "%{brand_name}"
-    common:
-      close: Close
-    product_name: "%{product_name}"
   errors:
     format: "%{attribute} %{message}"
     messages:
@@ -153,21 +164,15 @@ en:
       header:
         one: "%{count} error prohibited this %{model} from being saved"
         other: "%{count} errors prohibited this %{model} from being saved"
-  global:
-    expand: Expand
   helpers:
     select:
-      default_label: Select...
       prompt: Please select
-      search_placeholder: Search
+      search_placeholder: "Search"
+      default_label: "Select..."
     submit:
       create: Create %{model}
       submit: Save %{model}
       update: Update %{model}
-  mcp:
-    errors:
-      invalid_session_id: Invalid MCP session id
-      unsupported_protocol_version: 'Unsupported MCP protocol version: %{version}'
   number:
     currency:
       format:
@@ -218,12 +223,6 @@ en:
     precision:
       format:
         delimiter: ''
-  oauth:
-    registration:
-      invalid_client_name: client_name must not contain bidirectional control characters
-      invalid_redirect_uris: redirect_uris must use https, loopback http, or a native
-        app URI scheme
-      reserved_client_name: client_name is reserved for first-party apps
   support:
     array:
       last_word_connector: ", and "

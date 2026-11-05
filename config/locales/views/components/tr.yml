@@ -77,9 +77,9 @@ tr:
           total_gains: Toplam kazanç
         views:
           cash: Nakit
-          gains: Kazanç / ROI
           holdings: Varlıklar
           total_value: Toplam değer
+          gains: Kazanç / ROI
         vs_available_history: mevcut geçmişe göre
     period_picker:
       aria_label: 'Zaman aralığı: %{period}'
@@ -93,9 +93,6 @@ tr:
         warning: Uyarı
     dialog:
       close: Kapat
-    icon_picker:
-      no_matching_icons: Eşleşen simge yok
-      search_placeholder: Simge ara...
     link:
       opens_in_new_tab: "(yeni sekmede açılır)"
     pill:
@@ -105,6 +102,9 @@ tr:
       avatar_default_label: Menüyü aç
     tooltip:
       trigger_label: Daha fazla bilgi
+    icon_picker:
+      no_matching_icons: Eşleşen simge yok
+      search_placeholder: Simge ara...
   provider_sync_summary:
     accounts:
       institutions: 'Kurumlar: %{count}'

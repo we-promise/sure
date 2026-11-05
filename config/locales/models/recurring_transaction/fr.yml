@@ -13,11 +13,9 @@ fr:
               required_for_transfer: doit être renseigné sur un virement récurrent
               wrong_family: doit appartenir à cette famille
             anchor_date:
-              required_for_intervals: est obligatoire lorsqu'une règle se répète toutes
-                les 2 périodes ou plus
+              required_for_intervals: est obligatoire lorsqu'une règle se répète toutes les 2 périodes ou plus
             bill_type:
-              transfer_shape_mismatch: ne peut valoir « virement » que si un compte
-                de destination est défini
+              transfer_shape_mismatch: ne peut valoir « virement » que si un compte de destination est défini
             destination_account:
               family_mismatch: doit appartenir à la même famille que le compte source
               same_as_source: ne peut pas être identique au compte source
@@ -30,14 +28,8 @@ fr:
   recurring_transactions:
     allocator:
       already_allocated: cette transaction est déjà affectée à cette facture
-      entry_exhausted: le montant de cette transaction est déjà entièrement affecté
-        à d'autres échéances
+      entry_exhausted: le montant de cette transaction est déjà entièrement affecté à d'autres échéances
       exceeds_remaining: "%{amount} dépasse les %{remaining} restants sur ce cycle"
-      missing_rate: aucun taux de change de %{from} vers %{to} ; saisissez un montant
-        explicitement
-      over_allocated: affecter %{amount} dépasse les %{capacity} %{currency} restants
-        sur la transaction
-      unmeasurable: 'cette transaction porte une affectation qui ne peut pas être
-        convertie en %{currency} : il est donc impossible de mesurer ce qu''il en
-        reste. Ajoutez un taux de change pour le %{date} ou supprimez d''abord le
-        paiement existant'
+      missing_rate: aucun taux de change de %{from} vers %{to} ; saisissez un montant explicitement
+      over_allocated: affecter %{amount} dépasse les %{capacity} %{currency} restants sur la transaction
+      unmeasurable: "cette transaction porte une affectation qui ne peut pas être convertie en %{currency} : il est donc impossible de mesurer ce qu'il en reste. Ajoutez un taux de change pour le %{date} ou supprimez d'abord le paiement existant"

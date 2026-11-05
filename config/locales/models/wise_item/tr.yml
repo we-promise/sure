@@ -9,5 +9,4 @@ tr:
         wise_item:
           attributes:
             sca_private_key:
-              encryption_unavailable: bu kurulumda Active Record şifrelemesi yapılandırılmadığı
-                için saklanamıyor
+              encryption_unavailable: bu kurulumda Active Record şifrelemesi yapılandırılmadığı için saklanamıyor

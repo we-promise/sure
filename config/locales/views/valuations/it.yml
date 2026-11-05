@@ -2,28 +2,30 @@
 it:
   valuations:
     confirmation_contents:
-      account_balance: saldo del conto
-      asset_value: valore dell'asset
-      balance: saldo
-      brokerage_cash: Liquidità di conto
-      change: modifica
-      credit_card_balance: saldo della carta di credito
-      crypto_balance: saldo crypto
-      holdings_value: Valore posizioni
-      liability_balance: saldo della passività
-      loan_balance: saldo del prestito
-      'on': il
-      property_value: valore dell'immobile
-      recalculate_notice: Tutte le transazioni e i saldi futuri verranno ricalcolati
-        sulla base di questa %{change_or_update}.
-      this_will: Questo %{action_verb} il valore del conto
-      to: a
-      to_colon: 'a:'
+      this_will: "Questo %{action_verb} il valore del conto"
+      to_colon: "a:"
       total_account_value: Valore totale del conto
-      update: aggiornamento
+      holdings_value: Valore posizioni
+      brokerage_cash: Liquidità di conto
+      account_balance: saldo del conto
+      credit_card_balance: saldo della carta di credito
+      loan_balance: saldo del prestito
+      property_value: valore dell'immobile
       vehicle_value: valore del veicolo
+      crypto_balance: saldo crypto
+      asset_value: valore dell'asset
+      liability_balance: saldo della passività
+      balance: saldo
+      "on": "il"
+      to: "a"
+      recalculate_notice: "Tutte le transazioni e i saldi futuri verranno ricalcolati sulla base di questa %{change_or_update}."
+      change: modifica
+      update: aggiornamento
     create:
       account_updated: Conto aggiornato
+    update:
+      account_updated: Conto aggiornato
+      entry_updated: Voce aggiornata
     errors:
       amount_required: L'importo è obbligatorio
     form:
@@ -52,10 +54,7 @@ it:
       name_placeholder: Inserisci un nome per questa voce
       note_label: Note
       note_placeholder: Aggiungi eventuali dettagli aggiuntivi su questa voce
-      opening_balance: Saldo iniziale
       overview: Panoramica
       settings: Impostazioni
+      opening_balance: "Saldo iniziale"
       update_value: Aggiorna valore
-    update:
-      account_updated: Conto aggiornato
-      entry_updated: Voce aggiornata

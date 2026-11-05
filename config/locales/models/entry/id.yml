@@ -6,5 +6,5 @@ id:
         entry:
           attributes:
             base:
-              invalid_sell_quantity: tidak dapat menjual %{sell_qty} lembar %{ticker}
-                karena Anda hanya memiliki %{current_qty} lembar
+              invalid_sell_quantity: tidak dapat menjual %{sell_qty} lembar %{ticker} karena
+                Anda hanya memiliki %{current_qty} lembar

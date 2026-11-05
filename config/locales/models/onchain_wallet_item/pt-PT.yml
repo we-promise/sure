@@ -15,5 +15,5 @@ pt-PT:
     institution_name: Carteiras de autocustódia
   onchain_wallet_item:
     movement:
-      received: Recebidos %{quantity} %{symbol}
-      sent: Enviados %{quantity} %{symbol}
+      received: "Recebidos %{quantity} %{symbol}"
+      sent: "Enviados %{quantity} %{symbol}"

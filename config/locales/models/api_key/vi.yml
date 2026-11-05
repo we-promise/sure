@@ -4,4 +4,4 @@ vi:
     errors:
       models:
         api_key:
-          cannot_destroy_demo_key: Không thể xóa khóa API theo dõi demo
+          cannot_destroy_demo_key: "Không thể xóa khóa API theo dõi demo"

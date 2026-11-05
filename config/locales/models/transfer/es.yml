@@ -6,21 +6,16 @@ es:
         transfer:
           attributes:
             base:
-              inflow_cannot_be_in_multiple_transfers: La transacción de entrada no
-                puede formar parte de múltiples transferencias
-              must_be_from_different_accounts: La transferencia debe ser entre cuentas
-                distintas
+              inflow_cannot_be_in_multiple_transfers: La transacción de entrada no puede formar parte de múltiples transferencias
+              must_be_from_different_accounts: La transferencia debe ser entre cuentas distintas
               must_be_from_same_family: La transferencia debe ser de la misma familia
-              must_be_within_date_range: Las fechas de las transacciones de la transferencia
-                deben estar dentro de un rango de 4 días
-              must_have_opposite_amounts: Las transacciones de la transferencia deben
-                tener importes opuestos
+              must_be_within_date_range: Las fechas de las transacciones de la transferencia deben estar dentro de un rango de 4 días
+              must_have_opposite_amounts: Las transacciones de la transferencia deben tener importes opuestos
               must_have_single_currency: La transferencia debe tener una única moneda
-              outflow_cannot_be_in_multiple_transfers: La transacción de salida no
-                puede formar parte de múltiples transferencias
+              outflow_cannot_be_in_multiple_transfers: La transacción de salida no puede formar parte de múltiples transferencias
           different_accounts: Debe ser entre cuentas distintas
-          opposite_amounts: Debe tener importes opuestos
           same_family: Debe ser de la misma familia
+          opposite_amounts: Debe tener importes opuestos
           within_days: Debe estar dentro de un plazo de %{count} días
   transfer:
     name: Transferencia a %{to_account}

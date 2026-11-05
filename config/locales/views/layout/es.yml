@@ -2,31 +2,31 @@
 es:
   layouts:
     application:
-      nav:
-        assistant: Asistente
-        budgets: Presupuestos
-        goals: Objetivos
-        home: Inicio
-        reports: Informes
-        transactions: Transacciones
       privacy_mode: Alternar modo de privacidad
       resize_left_sidebar: Redimensionar la barra lateral de cuentas
       resize_right_sidebar: Redimensionar la barra lateral del asistente
       skip_to_main: Saltar al contenido principal
+      nav:
+        assistant: Asistente
+        budgets: Presupuestos
+        home: Inicio
+        reports: Informes
+        goals: Objetivos
+        transactions: Transacciones
     auth:
-      existing_account: "¿Ya tienes una cuenta?"
-      no_account: "¿Nuevo en %{product_name}?"
+      existing_account: ¿Ya tienes una cuenta?
+      no_account: ¿Nuevo en %{product_name}?
       sign_in: Iniciar sesión
       sign_up: Crear cuenta
     shared:
-      confirm_dialog:
-        are_you_sure: "¿Estás seguro?"
-        cannot_be_undone: Esta acción no se puede deshacer.
-        confirm: Confirmar
       footer:
         privacy_policy: Política de privacidad
         terms_of_service: Términos de servicio
+      confirm_dialog:
+        are_you_sure: ¿Estás seguro?
+        cannot_be_undone: Esta acción no se puede deshacer.
+        confirm: Confirmar
     trial:
-      contribute: Contribuir
-      data_deleted_in_days: Los datos se eliminarán en %{days} días
       open_demo: Demo pública
+      data_deleted_in_days: Los datos se eliminarán en %{days} días
+      contribute: Contribuir

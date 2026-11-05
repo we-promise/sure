@@ -12,7 +12,7 @@ vi:
     errors:
       models:
         import:
+          duplicate_headers: "Tiêu đề CSV chuẩn hóa thành các cột trùng lặp: %{columns}"
           attributes:
             raw_file_str:
               invalid_csv_format: không phải định dạng CSV hợp lệ
-          duplicate_headers: 'Tiêu đề CSV chuẩn hóa thành các cột trùng lặp: %{columns}'

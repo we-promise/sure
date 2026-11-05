@@ -1,13 +1,28 @@
 ---
 id:
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
+    common:
+      close: "Tutup"
+  global:
+    expand: "Perluas"
+  mcp:
+    errors:
+      invalid_session_id: "ID sesi MCP tidak valid"
+      unsupported_protocol_version: "Versi protokol MCP tidak didukung: %{version}"
+  oauth:
+    registration:
+      invalid_redirect_uris: "redirect_uris harus menggunakan https, loopback http, atau skema URI aplikasi bawaan"
+      invalid_client_name: "client_name tidak boleh berisi karakter kontrol dua arah"
+      reserved_client_name: "client_name dicadangkan untuk aplikasi pihak pertama"
   activerecord:
     errors:
       messages:
         record_invalid: 'Validasi gagal: %{errors}'
         restrict_dependent_destroy:
           has_many: Tidak bisa menghapus record karena terdapat %{record} yang bergantung
-          has_one: Tidak bisa menghapus record karena terdapat satu %{record} yang
-            bergantung
+          has_one: Tidak bisa menghapus record karena terdapat satu %{record} yang bergantung
   date:
     abbr_day_names:
     - Min
@@ -42,8 +57,8 @@ id:
     formats:
       default: "%d %B %Y"
       long: "%A, %d %B %Y"
-      month_year: "%B %Y"
       short: "%d.%m.%Y"
+      month_year: "%B %Y"
       short_month_year: "%b %Y"
       short_with_year: "%d %b %Y"
     month_names:
@@ -112,11 +127,6 @@ id:
       month: Bulan
       second: Detik
       year: Tahun
-  defaults:
-    brand_name: "%{brand_name}"
-    common:
-      close: Tutup
-    product_name: "%{product_name}"
   errors:
     format: "%{attribute} %{message}"
     messages:
@@ -129,7 +139,7 @@ id:
       exclusion: sudah digunakan
       greater_than: harus lebih besar dari %{count}
       greater_than_or_equal_to: harus sama atau lebih besar dari %{count}
-      in: harus berada di antara %{count}
+      in: "harus berada di antara %{count}"
       inclusion: tidak termasuk
       invalid: tidak valid
       less_than: harus lebih kecil dari %{count}
@@ -156,26 +166,25 @@ id:
       header:
         one: "%{count} kesalahan mengakibatkan %{model} ini tidak bisa disimpan"
         other: "%{count} kesalahan mengakibatkan %{model} ini tidak bisa disimpan"
-  global:
-    expand: Perluas
   helpers:
     select:
-      default_label: Pilih...
       prompt: Silakan pilih
-      search_placeholder: Cari
+      search_placeholder: "Cari"
+      default_label: "Pilih..."
     submit:
       create: Buat %{model}
       submit: Simpan %{model}
       update: Perbarui %{model}
-  mcp:
-    errors:
-      invalid_session_id: ID sesi MCP tidak valid
-      unsupported_protocol_version: 'Versi protokol MCP tidak didukung: %{version}'
   number:
     currency:
       format:
+        delimiter: "."
+        format: "%u%n"
+        precision: 2
+        separator: ","
         significant: false
         strip_insignificant_zeros: false
+        unit: Rp
     format:
       delimiter: "."
       precision: 3
@@ -221,12 +230,6 @@ id:
     precision:
       format:
         delimiter: ''
-  oauth:
-    registration:
-      invalid_client_name: client_name tidak boleh berisi karakter kontrol dua arah
-      invalid_redirect_uris: redirect_uris harus menggunakan https, loopback http,
-        atau skema URI aplikasi bawaan
-      reserved_client_name: client_name dicadangkan untuk aplikasi pihak pertama
   support:
     array:
       last_word_connector: ", dan "

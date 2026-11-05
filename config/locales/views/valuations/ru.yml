@@ -1,16 +1,8 @@
 ---
 ru:
   valuations:
-    confirm_create:
-      confirm: Подтвердить
-      title: Подтвердите новый баланс
-    confirm_update:
-      title: Обновить баланс
-      update: Обновить
     confirmation_contents:
       account_balance: баланс счёта
-      action_set: установить
-      action_update: обновить
       asset_value: стоимость актива
       balance: баланс
       brokerage_cash: Денежные средства на брокерском счёте
@@ -30,6 +22,8 @@ ru:
       total_account_value: Общая стоимость счёта
       update: обновления
       vehicle_value: стоимость транспортного средства
+      action_set: установить
+      action_update: обновить
     create:
       account_updated: Счёт обновлён
     errors:
@@ -69,3 +63,9 @@ ru:
     update:
       account_updated: Счёт обновлён
       entry_updated: Запись обновлена
+    confirm_create:
+      confirm: Подтвердить
+      title: Подтвердите новый баланс
+    confirm_update:
+      title: Обновить баланс
+      update: Обновить

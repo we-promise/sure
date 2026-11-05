@@ -3,6 +3,12 @@ tr:
   settings:
     securities:
       show:
+        disable_mfa: 2FA'yı Devre Dışı Bırak
+        disable_mfa_confirm: İki faktörlü kimlik doğrulamayı devre dışı bırakmak istediğinizden
+          emin misiniz? Bu işlem hesabınızı daha az güvenli hale getirecektir.
+        enable_mfa: 2FA'yı Etkinleştir
+        mfa_description: Giriş yaparken kimlik doğrulama uygulamanızdan bir kod
+          isteyerek hesabınıza ekstra bir güvenlik katmanı ekleyin
         mfa_disabled_description: Hesabınıza ekstra bir güvenlik katmanı eklemek için
           2FA'yı etkinleştirin.
         mfa_disabled_status_html: İki faktörlü kimlik doğrulama <span class="font-medium
@@ -10,16 +16,16 @@ tr:
         mfa_enabled_description: Hesabınız ek bir güvenlik katmanıyla korunmaktadır.
         mfa_enabled_status_html: İki faktörlü kimlik doğrulama <span class="font-medium
           text-green-600">etkin</span>
+        mfa_title: İki Faktörlü Kimlik Doğrulama
         webauthn_add: Geçiş anahtarı veya güvenlik anahtarı ekle
         webauthn_added: "%{date} tarihinde eklendi"
-        webauthn_code_label: Doğrulayıcı veya yedek kod
-        webauthn_code_placeholder: Güncel doğrulayıcı kodu veya kullanılmamış bir
-          yedek kod
         webauthn_description: Giriş yaparken ikinci faktör olarak bir geçiş anahtarı,
           Touch ID, Windows Hello veya donanım güvenlik anahtarı kullanın.
         webauthn_empty: Henüz kayıtlı geçiş anahtarı veya güvenlik anahtarı yok.
         webauthn_last_used: Son kullanım %{time_ago} önce
         webauthn_name_label: Anahtar adı
+        webauthn_code_label: "Doğrulayıcı veya yedek kod"
+        webauthn_code_placeholder: "Güncel doğrulayıcı kodu veya kullanılmamış bir yedek kod"
         webauthn_name_placeholder: MacBook Touch ID, YubiKey vb.
         webauthn_remove: Kaldır
         webauthn_remove_confirm: Bu geçiş anahtarını veya güvenlik anahtarını kaldırmak
@@ -30,14 +36,12 @@ tr:
         webauthn_unsupported: Bu tarayıcı geçiş anahtarlarını veya güvenlik anahtarlarını
           desteklemiyor.
   webauthn_credentials:
-    code_already_used: Bu kod zaten kullanıldı. Doğrulayıcı uygulamanızdaki bir sonraki
-      kodu bekleyin.
+    code_already_used: "Bu kod zaten kullanıldı. Doğrulayıcı uygulamanızdaki bir sonraki kodu bekleyin."
+    invalid_code: "Bu kod geçersiz. Doğrulayıcı uygulamanızdan güncel bir kod veya kullanılmamış bir yedek kod girin."
+    rate_limited: "Çok fazla deneme. Bir dakika bekleyip tekrar deneyin."
     default_name: Güvenlik anahtarı
     failure: Bu geçiş anahtarı veya güvenlik anahtarı kaydedilemedi. Lütfen tekrar
       deneyin.
-    invalid_code: Bu kod geçersiz. Doğrulayıcı uygulamanızdan güncel bir kod veya
-      kullanılmamış bir yedek kod girin.
     mfa_required: Geçiş anahtarı veya güvenlik anahtarı eklemeden önce iki faktörlü
       kimlik doğrulamayı etkinleştirin.
-    rate_limited: Çok fazla deneme. Bir dakika bekleyip tekrar deneyin.
     success: Geçiş anahtarı veya güvenlik anahtarı kaldırıldı.

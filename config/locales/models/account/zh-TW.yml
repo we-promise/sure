@@ -18,8 +18,8 @@ zh-TW:
       account:
         balance: 餘額
         currency: 幣別
-        family: "%{moniker}"
-        family_id: "%{moniker}"
+        family: '%{moniker}'
+        family_id: '%{moniker}'
         name: 名稱
         subtype: 次類型
     models:

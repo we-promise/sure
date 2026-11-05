@@ -7,4 +7,4 @@ pt-BR:
         format: "%u %n"
         precision: 2
         separator: ","
-        unit: R$
+        unit: "R$"

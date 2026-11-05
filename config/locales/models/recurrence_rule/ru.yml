@@ -3,33 +3,33 @@ ru:
   activerecord:
     attributes:
       recurrence_rule:
-        day_of_month: День месяца
         frequency: Периодичность
         interval: Интервал
-        month_of_year: Месяц
+        day_of_month: День месяца
         weekday: День недели
         weekday_ordinal: Неделя месяца
+        month_of_year: Месяц
       recurring_transaction/recurrence_rules:
         base: 'Правило повторения:'
-        day_of_month: День месяца
         frequency: Периодичность
         interval: Интервал
-        month_of_year: Месяц
+        day_of_month: День месяца
         weekday: День недели
         weekday_ordinal: Неделя месяца
+        month_of_year: Месяц
     errors:
       models:
         recurrence_rule:
+          day_spec_required: 'Выберите что-то одно: день месяца или день недели'
           attributes:
-            day_of_month:
-              not_allowed_for_weekly: не применяется к еженедельному правилу
-            month_of_year:
-              not_allowed: применяется только к ежегодному правилу
-              required_for_yearly: обязателен для ежегодного правила
             weekday:
               required_for_weekly: обязателен для еженедельного правила
             weekday_ordinal:
               not_allowed_for_weekly: не применяется к еженедельному правилу
-              not_allowed_without_weekday: применяется, только если указан день недели
               required_with_weekday: обязательна, если указан день недели
-          day_spec_required: 'Выберите что-то одно: день месяца или день недели'
+              not_allowed_without_weekday: применяется, только если указан день недели
+            day_of_month:
+              not_allowed_for_weekly: не применяется к еженедельному правилу
+            month_of_year:
+              required_for_yearly: обязателен для ежегодного правила
+              not_allowed: применяется только к ежегодному правилу

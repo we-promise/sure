@@ -2,30 +2,28 @@
 de:
   account_sharings:
     show:
-      exclude_from_finances: Von meinen Budgets & Berichten ausschließen
-      finance_toggle_description: Dieses Konto in deinem Nettovermögen, Budgets und
-        Berichten berücksichtigen
-      include_in_finances: In meine Budgets & Berichte einbeziehen
+      title: Kontofreigabe
+      subtitle: Leg fest, wer dieses Konto sehen und damit interagieren kann
       member: Mitglied
-      no_members: Keine weiteren Mitglieder in deinem %{moniker} zum Teilen
-      owner_label: 'Eigentümer: %{name}'
       permission: Berechtigung
+      shared: Freigegeben
+      no_members: Keine weiteren Mitglieder in deinem %{moniker} zum Teilen
       permissions:
         full_control: Volle Kontrolle
         full_control_description: Kann Transaktionen ansehen, bearbeiten und verwalten
+        read_write: Kann kommentieren
+        read_write_description: Kann kategorisieren, mit Tags versehen und Notizen hinzufügen
         read_only: Nur ansehen
         read_only_description: Kann nur Kontodaten ansehen
-        read_write: Kann kommentieren
-        read_write_description: Kann kategorisieren, mit Tags versehen und Notizen
-          hinzufügen
       save: Freigabeeinstellungen speichern
-      shared: Freigegeben
+      owner_label: "Eigentümer: %{name}"
       shared_with_count:
         one: Mit 1 Mitglied geteilt
-        other: Mit %{count} Mitgliedern geteilt
-      subtitle: Leg fest, wer dieses Konto sehen und damit interagieren kann
-      title: Kontofreigabe
+        other: "Mit %{count} Mitgliedern geteilt"
+      include_in_finances: In meine Budgets & Berichte einbeziehen
+      exclude_from_finances: Von meinen Budgets & Berichten ausschließen
+      finance_toggle_description: Dieses Konto in deinem Nettovermögen, Budgets und Berichten berücksichtigen
     update:
-      finance_toggle_success: Einstellung zur Finanzberücksichtigung aktualisiert
-      not_owner: Nur der Kontoeigentümer kann die Freigabe verwalten
       success: Freigabeeinstellungen aktualisiert
+      not_owner: Nur der Kontoeigentümer kann die Freigabe verwalten
+      finance_toggle_success: Einstellung zur Finanzberücksichtigung aktualisiert

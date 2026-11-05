@@ -2,9 +2,9 @@
 ru:
   messages:
     chat_form:
-      coming_soon: Скоро
       disclaimer: Ответы ИИ носят исключительно информационный характер. Это не финансовая
         консультация!
       placeholder: Спросите что угодно ...
+      coming_soon: Скоро
     create:
       chat_not_found: Этот чат больше недоступен.

@@ -2,28 +2,28 @@
 hu:
   models:
     category:
+      uncategorized: Kategorizálatlan
+      other_investments: Egyéb befektetések
+      investment_contributions: Befektetési befizetések
       defaults:
-        entertainment: Szórakozás
-        fees: Díjak
-        food_and_drink: Étel és ital
-        gifts_and_donations: Ajándékok és adományok
-        groceries: Élelmiszer
-        healthcare: Egészségügy
-        home_improvement: Lakásfelújítás
         income: Bevétel
-        insurance: Biztosítás
-        loan_payments: Hitelrészletek
-        mortgage_rent: Jelzálog / Bérleti díj
-        personal_care: Személyes gondozás
-        savings_and_investments: Megtakarítások és befektetések
-        services: Szolgáltatások
+        food_and_drink: Étel és ital
+        groceries: Élelmiszer
         shopping: Vásárlás
-        sports_and_fitness: Sport és fitnesz
-        subscriptions: Előfizetések
-        taxes: Adók
         transportation: Közlekedés
         travel: Utazás
+        entertainment: Szórakozás
+        healthcare: Egészségügy
+        personal_care: Személyes gondozás
+        home_improvement: Lakásfelújítás
+        mortgage_rent: Jelzálog / Bérleti díj
         utilities: Rezsi
-      investment_contributions: Befektetési befizetések
-      other_investments: Egyéb befektetések
-      uncategorized: Kategorizálatlan
+        subscriptions: Előfizetések
+        insurance: Biztosítás
+        sports_and_fitness: Sport és fitnesz
+        gifts_and_donations: Ajándékok és adományok
+        taxes: Adók
+        loan_payments: Hitelrészletek
+        services: Szolgáltatások
+        fees: Díjak
+        savings_and_investments: Megtakarítások és befektetések

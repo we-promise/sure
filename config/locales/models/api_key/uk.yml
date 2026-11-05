@@ -4,4 +4,4 @@ uk:
     errors:
       models:
         api_key:
-          cannot_destroy_demo_key: Неможливо знищити демонстраційний ключ API моніторингу
+          cannot_destroy_demo_key: "Неможливо знищити демонстраційний ключ API моніторингу"

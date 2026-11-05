@@ -32,22 +32,15 @@ ca:
           duplicats.
       family_empty: Encara no hi ha comerços de %{moniker}
       family_title: Els teus comerços
-      import: Importa comerços
       merge: Fusiona comerços
       new: Nou comerç
-      no_family_merchants_found: No s'ha trobat cap comerç de la família que coincideixi
-      no_provider_merchants_found: No s'ha trobat cap comerç del proveïdor que coincideixi
-      per_page: per pàgina
-      provider_empty: Encara no hi ha comerços del proveïdor vinculats a aquest compte
-        de %{moniker}
+      provider_empty: Encara no hi ha comerços del proveïdor vinculats a aquest compte de %{moniker}
       provider_info: Aquests comerços es van detectar automàticament mitjançant les
         teves connexions bancàries o l'IA. Pots editar-los per crear-ne una còpia
         pròpia, o eliminar-los per desvincular-los de les teves transaccions.
       provider_read_only: Els comerços del proveïdor se sincronitzen des de les teves
         entitats connectades. No es poden editar aquí.
       provider_title: Comerços del proveïdor
-      search_family_merchants: Cerca comerços de la família...
-      search_provider_merchants: Cerca comerços del proveïdor...
       table:
         actions: Accions
         merchant: Comerç
@@ -57,6 +50,12 @@ ca:
         Desapareixeran d'aquesta llista al cap de 30 dies si no s'assignen novament
         a una transacció.
       unlinked_title: Desvinculats recentment
+      import: Importa comerços
+      search_family_merchants: Cerca comerços de la família...
+      search_provider_merchants: Cerca comerços del proveïdor...
+      no_family_merchants_found: No s'ha trobat cap comerç de la família que coincideixi
+      no_provider_merchants_found: No s'ha trobat cap comerç del proveïdor que coincideixi
+      per_page: per pàgina
     merchant:
       confirm_accept: Elimina el comerç
       confirm_body: Segur que vols eliminar aquest comerç? Si l'elimines, es desvincularan
@@ -67,15 +66,15 @@ ca:
     merge:
       description: Selecciona un comerç de destinació i els comerços que hi vols fusionar.
         Totes les transaccions dels comerços fusionats es reassignaran a la destinació.
-      no_merchants_found: No s'ha trobat cap comerç que coincideixi
       select_target: Selecciona el comerç de destinació...
       sources_hint: Els comerços seleccionats es fusionaran amb el de destinació.
         Els comerços de la família s'eliminaran, els del proveïdor es desvincularan.
       sources_label: Comerços per fusionar
-      sources_search_placeholder: Cerca comerços...
       submit: Fusiona els seleccionats
       target_label: Fusiona amb (destinació)
       title: Fusiona comerços
+      sources_search_placeholder: Cerca comerços...
+      no_merchants_found: No s'ha trobat cap comerç que coincideixi
     new:
       title: Nou comerç
     perform_merge:

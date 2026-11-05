@@ -28,10 +28,10 @@ zh-CN:
     tabs:
       overview:
         current_price: 当前价格
-        edit_account_details: 编辑账户详情
         make_model: 品牌型号
         mileage: 里程
         purchase_price: 买入价
         trend: 走势
         unknown: 未知
         year: 年份
+        edit_account_details: 编辑账户详情

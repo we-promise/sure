@@ -28,10 +28,10 @@ es:
     tabs:
       overview:
         current_price: Precio actual
-        edit_account_details: Editar detalles de la cuenta
         make_model: Marca y modelo
         mileage: Kilometraje
         purchase_price: Precio de compra
         trend: Tendencia
         unknown: Desconocido
         year: Año
+        edit_account_details: Editar detalles de la cuenta

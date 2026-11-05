@@ -1,5 +1,8 @@
 ---
 id:
+  models:
+    merchant:
+      no_merchant: Tanpa merchant
   activerecord:
     errors:
       models:
@@ -8,6 +11,3 @@ id:
             logo:
               invalid_content_type: harus berupa gambar JPEG, PNG, atau WebP
               invalid_file_size: ukuran file harus kurang dari %{max_megabytes}MB
-  models:
-    merchant:
-      no_merchant: Tanpa merchant

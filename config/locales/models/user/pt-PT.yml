@@ -15,10 +15,9 @@ pt-PT:
         user:
           attributes:
             base:
-              cannot_deactivate_admin_with_other_users: O administrador não pode eliminar
-                a conta enquanto existirem outros utilizadores. Elimine primeiro todos
-                os membros.
-              cannot_remove_last_super_admin: Não é possível remover o último super
-                administrador ativo. Promova primeiro outro utilizador a super administrador.
+              cannot_deactivate_admin_with_other_users: O administrador não pode eliminar a conta
+                enquanto existirem outros utilizadores. Elimine primeiro todos os membros.
+              cannot_remove_last_super_admin: Não é possível remover o último super administrador
+                ativo. Promova primeiro outro utilizador a super administrador.
             profile_image:
               invalid_file_size: o tamanho do ficheiro deve ser inferior a %{max_megabytes}MB

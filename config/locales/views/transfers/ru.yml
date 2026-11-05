@@ -2,16 +2,14 @@
 ru:
   transfers:
     create:
-      date_invalid: указана неверно
-      exchange_rate_unavailable: Курс для выбранных валют и даты недоступен
-      stale_form: Эта форма уже была отправлена с другими данными. Обновите страницу
-        и повторите попытку.
       success: Перевод создан
+      exchange_rate_unavailable: Курс для выбранных валют и даты недоступен
+      date_invalid: указана неверно
+      stale_form: Эта форма уже была отправлена с другими данными. Обновите страницу и повторите попытку.
     destroy:
       success: Перевод удалён
     form:
       amount: Сумма
-      bank_charges: Банковские комиссии
       date: Дата
       destination_amount: Сумма на счёт назначения
       destination_amount_display: 'Сумма на счёт назначения: %{amount}'
@@ -19,29 +17,28 @@ ru:
       expense: Расход
       from: Откуда
       income: Доход
-      incoming_fee: Комиссия за входящий перевод
-      outgoing_fee: Комиссия за исходящий перевод
       select_account: Выберите счёт
       source_amount: Сумма со счёта отправления
       submit: Создать перевод
       to: Куда
       transfer: Перевод
+      bank_charges: Банковские комиссии
+      outgoing_fee: Комиссия за исходящий перевод
+      incoming_fee: Комиссия за входящий перевод
     new:
       title: Новый перевод
     show:
       amount: Сумма
-      bank_charges: Банковские комиссии
       category: Категория
       date: Дата
       delete: Удалить перевод
       delete_subtitle: Это удалит перевод. Это не удалит связанные операции.
       delete_title: Удалить перевод?
-      destination_fee: Комиссия на стороне получателя
       details: Подробности
       from: Откуда
       investment_contribution_subtitle: Учитывать этот перевод как расход в бюджете
-        и отчётах. Выключите, если брокерский или крипто-счёт служит только для конвертации
-        денег в другую валюту.
+        и отчётах. Выключите, если брокерский или крипто-счёт служит только для
+        конвертации денег в другую валюту.
       investment_contribution_title: Инвестиционный взнос
       mark_recurring: Отметить как регулярный
       mark_recurring_subtitle: Отслеживайте этот перевод как регулярный в ленте и
@@ -51,10 +48,12 @@ ru:
       note_placeholder: Добавьте заметку к этому переводу
       overview: Обзор
       settings: Настройки
-      source_fee: Комиссия на стороне отправителя
       to: Куда
-      total: Итого
-      transfer_amount: Сумма перевода
       uncategorized: Без категории
+      transfer_amount: Сумма перевода
+      total: Итого
+      bank_charges: Банковские комиссии
+      source_fee: Комиссия на стороне отправителя
+      destination_fee: Комиссия на стороне получателя
     update:
       success: Перевод обновлён

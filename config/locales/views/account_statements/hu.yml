@@ -2,10 +2,9 @@
 hu:
   account_statements:
     account_tab:
-      coverage_description: Feltöltött kimutatásokkal és egyenlegellenőrzésekkel lefedett
-        korábbi hónapok.
-      coverage_range: "%{start} - %{end}"
       coverage_title: Kimutatás lefedettség
+      coverage_description: Feltöltött kimutatásokkal és egyenlegellenőrzésekkel lefedett korábbi hónapok.
+      coverage_range: "%{start} - %{end}"
       empty: Még nincs ehhez a számlához kapcsolt kimutatás.
       open_inbox: Beérkező
       statements_title: Kimutatások
@@ -37,8 +36,7 @@ hu:
       files_hint: PDF, CSV vagy XLSX. Maximum %{max_size} MB fájlonként.
       files_label: Kimutatásfájlok
       inbox_upload: Feltöltés
-      period_hint: A Sure az időszakot a PDF-ből olvassa ki, ha szerepel benne, vagy
-        a fájlnévben lévő dátumból (pl. 2026-04). A kivonaton kézzel is megadhatod.
+      period_hint: "A Sure az időszakot a PDF-ből olvassa ki, ha szerepel benne, vagy a fájlnévben lévő dátumból (pl. 2026-04). A kivonaton kézzel is megadhatod."
     index:
       account_label: Számla
       confidence: "%{confidence} egyezés"
@@ -50,12 +48,11 @@ hu:
       storage_used: Felhasznált tárhely
       title: Kimutatástár
       unmatched_title: Párosítatlan beérkező
-      upload_description: Töltsd fel a kimutatásokat a beérkezőbe, vagy válassz számlát
-        az azonnali összekapcsoláshoz.
+      upload_description: Töltsd fel a kimutatásokat a beérkezőbe, vagy válassz számlát az azonnali összekapcsoláshoz.
       upload_title: Kimutatások feltöltése
     link:
       no_account: Válassz számlát, mielőtt összekapcsolod ezt a kimutatást.
-      success: 'Kimutatás összekapcsolva ezzel a számlával: %{account}.'
+      success: "Kimutatás összekapcsolva ezzel a számlával: %{account}."
     period:
       unknown: Az időszak ismeretlen
     reconciliation:
@@ -80,26 +77,24 @@ hu:
       download: Letöltés
       institution_name_hint: Intézménynév-tipp
       ledger_amount: Sure főkönyv
-      link_suggestion: Kapcsolati javaslat
-      linked_to: 'Összekapcsolva ezzel a számlával: %{account}.'
+      linked_to: "Összekapcsolva ezzel a számlával: %{account}."
       linking_title: Számlakapcsolat
+      link_suggestion: Kapcsolati javaslat
       metadata_title: Kimutatás metaadatok
       no_suggestion: Még nincs számlajavaslat.
       opening_balance: Nyitóegyenleg
       period_end_on: Időszak vége
       period_start_on: Időszak kezdete
       reconciliation_title: Egyeztetés
-      reconciliation_unavailable: Adj meg egy kimutatási időszakot és nyitó- vagy
-        záróegyenleget, majd győződj meg arról, hogy a Sure rendelkezik egyenlegelőzményekkel
-        ezekre a dátumokra.
+      reconciliation_unavailable: Adj meg egy kimutatási időszakot és nyitó- vagy záróegyenleget, majd győződj meg arról, hogy a Sure rendelkezik egyenlegelőzményekkel ezekre a dátumokra.
       reject: Elutasítás
       save: Kimutatás mentése
       statement_amount: Kimutatás
       suggested_account: A javasolt számla %{account} (%{confidence} bizonyossággal).
       title: Kimutatás
-      unknown_value: Ismeretlen
       unlink: Szétkapcsolás
       unmatched_account: Párosítatlan beérkező
+      unknown_value: Ismeretlen
     status:
       linked: Összekapcsolt
       rejected: Elutasított

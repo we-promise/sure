@@ -4,5 +4,5 @@ it:
     errors:
       models:
         merchant_import:
-          duplicate_columns: 'Nomi colonne duplicati dopo la normalizzazione: %{columns}'
-          missing_columns: 'Colonne obbligatorie mancanti: %{columns}'
+          missing_columns: "Colonne obbligatorie mancanti: %{columns}"
+          duplicate_columns: "Nomi colonne duplicati dopo la normalizzazione: %{columns}"

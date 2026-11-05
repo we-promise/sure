@@ -1,13 +1,13 @@
 ---
 nl:
+  models:
+    merchant:
+      no_merchant: "Geen handelaar"
   activerecord:
     errors:
       models:
         family_merchant:
           attributes:
             logo:
-              invalid_content_type: moet een JPEG-, PNG- of WebP-afbeelding zijn
-              invalid_file_size: bestandsgrootte moet kleiner zijn dan %{max_megabytes}MB
-  models:
-    merchant:
-      no_merchant: Geen handelaar
+              invalid_content_type: "moet een JPEG-, PNG- of WebP-afbeelding zijn"
+              invalid_file_size: "bestandsgrootte moet kleiner zijn dan %{max_megabytes}MB"

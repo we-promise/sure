@@ -1,199 +1,178 @@
 ---
 en:
   simplefin_items:
-    complete_account_setup:
-      all_skipped: All accounts were skipped. No accounts were created.
-      no_accounts: No accounts to set up.
-      stale_accounts_errors:
-        one: "%{count} stale account action failed. Check logs for details."
-        other: "%{count} stale account actions failed. Check logs for details."
-      stale_accounts_processed: 'Stale accounts: %{deleted} deleted, %{moved} moved.'
-      success:
-        one: Successfully created %{count} SimpleFIN account! Your transactions and
-          holdings are being imported in the background.
-        other: Successfully created %{count} SimpleFIN accounts! Your transactions
-          and holdings are being imported in the background.
-    create:
-      errors:
-        blank_token: Please enter a SimpleFIN setup token.
-        create_failed: 'Failed to connect: %{message}'
-        invalid_token: Invalid setup token. Please check that you copied the complete
-          token from SimpleFIN Bridge.
-        token_compromised: The setup token may be compromised, expired, or already
-          used. Please create a new one.
-        unexpected: An unexpected error occurred. Please try again.
-      success: SimpleFIN connection added successfully! Your accounts will appear
-        shortly as they sync in the background.
-    destroy:
-      success: SimpleFIN connection will be removed
-    dismiss_replacement_suggestion:
-      dismissed: Replacement suggestion dismissed
-    edit:
-      cancel: Cancel
-      connection_needs_update: 'Your SimpleFIN connection needs to be updated:'
-      header_subtitle: Get a new setup token to reconnect your SimpleFIN account
-      setup_token:
-        help_text: The token should be a long string starting with letters and numbers
-        label: 'SimpleFIN Setup Token:'
-        placeholder: Paste your SimpleFIN setup token here...
-      step_1_html: Visit <a href="https://bridge.simplefin.org/simplefin/create" target="_blank"
-        rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN
-        Bridge</a> to create a new setup token
-      step_2: Copy the token and paste it below
-      step_3: Click "Update" to restore access
-      title: Update SimpleFIN Connection
-      update: Update
-    institution_summary:
-      count:
-        one: "%{count} institution"
-        other: "%{count} institutions"
-      none: No institutions connected
-    link_existing_account:
-      errors:
-        different_provider: This account is linked to a different provider. Unlink
-          it from that provider first, then link to SimpleFIN.
-        invalid_simplefin_account: Invalid SimpleFIN account selected
-        only_manual: Only manual accounts can be linked
-      success: Account successfully linked to SimpleFIN
     new:
-      cancel: Cancel
-      connect: Connect
+      title: Connect SimpleFIN
       setup_token: Setup token
       setup_token_placeholder: paste your SimpleFIN setup token
-      title: Connect SimpleFIN
-    rate_limited:
-      daily_refresh: You've hit SimpleFIN's daily refresh limit. Please try again
-        after the bridge refreshes (up to 24 hours).
-    reconciled_status:
-      message:
-        one: "%{count} duplicate pending transaction reconciled"
-        other: "%{count} duplicate pending transactions reconciled"
-    replacement_prompt:
-      confirm_body: "“%{account_name}” will be linked to “%{new_name}”. Your transaction
-        history stays; future transactions come from the new card."
-      confirm_title: Relink to the new card?
-      description: "“%{account_name}” is linked to “%{old_name}”, which has had no
-        recent activity and a zero balance. A new card, “%{new_name}”, is now active
-        at the same institution. Relink to keep your history intact."
-      dismiss_aria: Dismiss replacement suggestion
-      relink: Relink to new card
-      title: Your %{institution} card may have been replaced
-    select_existing_account:
-      all_accounts_already_linked: All SimpleFIN accounts appear to be linked already.
+      connect: Connect
       cancel: Cancel
-      check_provider_health: Check that your SimpleFIN connection is healthy under
-        Settings → Providers.
-      currently_linked_to: 'Currently linked to: %{account_name}'
-      description: Select a SimpleFIN account to link to your existing account
-      link_account: Link account
-      no_accounts_found: No SimpleFIN accounts found for this %{moniker}.
-      title: Link %{account_name} to SimpleFIN
-      unlink_to_move: To move a link, first unlink it from the account’s actions menu.
-      wait_for_sync: If you just connected or synced, try again after the sync completes.
+    create:
+      success: SimpleFIN connection added successfully! Your accounts will appear shortly as they sync in the background.
+      errors:
+        blank_token: Please enter a SimpleFIN setup token.
+        invalid_token: Invalid setup token. Please check that you copied the complete token from SimpleFIN Bridge.
+        token_compromised: The setup token may be compromised, expired, or already used. Please create a new one.
+        create_failed: "Failed to connect: %{message}"
+        unexpected: An unexpected error occurred. Please try again.
+    destroy:
+      success: SimpleFIN connection will be removed
+    update:
+      success: SimpleFIN connection updated successfully! Your accounts are being reconnected.
+      errors:
+        blank_token: Please enter a SimpleFIN setup token.
+        invalid_token: Invalid setup token. Please check that you copied the complete token from SimpleFIN Bridge.
+        token_compromised: The setup token may be compromised, expired, or already used. Please create a new one.
+        update_failed: "Failed to update connection: %{message}"
+        unexpected: An unexpected error occurred. Please try again.
+    edit:
+      setup_token:
+        label: "SimpleFIN Setup Token:"
+        placeholder: "Paste your SimpleFIN setup token here..."
+        help_text: "The token should be a long string starting with letters and numbers"
+      title: Update SimpleFIN Connection
+      header_subtitle: Get a new setup token to reconnect your SimpleFIN account
+      connection_needs_update: "Your SimpleFIN connection needs to be updated:"
+      step_1_html: "Visit <a href=\"https://bridge.simplefin.org/simplefin/create\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-link hover:text-link underline\">SimpleFIN Bridge</a> to create a new setup token"
+      step_2: Copy the token and paste it below
+      step_3: "Click \"Update\" to restore access"
+      update: Update
+      cancel: Cancel
     setup_accounts:
-      account_card:
-        balance: Balance
+      title: Set Up Your SimpleFIN Accounts
+      header_subtitle: Choose the correct account types for your imported accounts
+      choose_account_type: "Choose the correct account type for each SimpleFIN account:"
       account_type_checking_savings: Checking or Savings
       account_type_checking_savings_desc: Regular bank accounts
       account_type_credit_card: Credit Card
       account_type_credit_card_desc: Credit card accounts
       account_type_investment: Investment
-      account_type_investment_desc: Brokerage, 401(k), IRA accounts
-      account_type_label: 'Account Type:'
+      account_type_investment_desc: "Brokerage, 401(k), IRA accounts"
       account_type_loan: Loan or Mortgage
       account_type_loan_desc: Debt accounts
       account_type_other_asset: Other Asset
       account_type_other_asset_desc: Everything else
-      activity:
-        days_ago:
-          one: 1 day ago
-          other: "%{count} days ago"
-        dormant: No activity in %{days} days
-        empty: No transactions imported yet
-        likely_closed: No recent activity and zero balance — this may be a closed
-          or replaced card
-        recent:
-          one: 1 transaction • latest %{when}
-          other: "%{count} transactions • latest %{when}"
-        today: today
-        yesterday: yesterday
-      cancel: Cancel
-      choose_account_type: 'Choose the correct account type for each SimpleFIN account:'
+      transaction_history_title: "Transaction History:"
+      transaction_history_description_html: "SimpleFIN typically provides <strong>60-90 days</strong> of transaction history, depending on your bank. After initial setup, new transactions will sync automatically going forward. Historical data availability varies by institution and account type."
+      account_type_label: "Account Type:"
       create_accounts: Create Accounts
       creating_accounts: Creating Accounts...
-      header_subtitle: Choose the correct account types for your imported accounts
+      cancel: Cancel
+      account_card:
+        balance: "Balance"
+      activity:
+        recent:
+          one: "1 transaction • latest %{when}"
+          other: "%{count} transactions • latest %{when}"
+        dormant: "No activity in %{days} days"
+        empty: "No transactions imported yet"
+        likely_closed: "No recent activity and zero balance — this may be a closed or replaced card"
+        today: "today"
+        yesterday: "yesterday"
+        days_ago:
+          one: "1 day ago"
+          other: "%{count} days ago"
       stale_accounts:
-        action_delete: Delete account and all transactions
-        action_move: 'Move transactions to:'
-        action_prompt: What would you like to do?
-        action_skip: Skip for now
-        description: These accounts exist in your database but are no longer provided
-          by SimpleFIN. This can happen when account configurations change upstream.
-        title: Accounts No Longer in SimpleFIN
+        title: "Accounts No Longer in SimpleFIN"
+        description: "These accounts exist in your database but are no longer provided by SimpleFIN. This can happen when account configurations change upstream."
+        action_prompt: "What would you like to do?"
+        action_delete: "Delete account and all transactions"
+        action_move: "Move transactions to:"
+        action_skip: "Skip for now"
         transaction_count:
           one: "%{count} transaction"
           other: "%{count} transactions"
-      title: Set Up Your SimpleFIN Accounts
-      transaction_history_description_html: SimpleFIN typically provides <strong>60-90
-        days</strong> of transaction history, depending on your bank. After initial
-        setup, new transactions will sync automatically going forward. Historical
-        data availability varies by institution and account type.
-      transaction_history_title: 'Transaction History:'
+    complete_account_setup:
+      all_skipped: "All accounts were skipped. No accounts were created."
+      no_accounts: "No accounts to set up."
+      success:
+        one: "Successfully created %{count} SimpleFIN account! Your transactions and holdings are being imported in the background."
+        other: "Successfully created %{count} SimpleFIN accounts! Your transactions and holdings are being imported in the background."
+      stale_accounts_processed: "Stale accounts: %{deleted} deleted, %{moved} moved."
+      stale_accounts_errors:
+        one: "%{count} stale account action failed. Check logs for details."
+        other: "%{count} stale account actions failed. Check logs for details."
+    sync_status:
+      no_accounts: No accounts found
+      synced:
+        one: "%{count} account synced"
+        other: "%{count} accounts synced"
+      partial_setup:
+        one: "%{linked} synced, %{unlinked} need setup"
+        other: "%{linked} synced, %{unlinked} need setup"
+    institution_summary:
+      none: No institutions connected
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutions"
+    rate_limited:
+      daily_refresh: "You've hit SimpleFIN's daily refresh limit. Please try again after the bridge refreshes (up to 24 hours)."
+    stale_sync:
+      last_successful: "Last successful sync was %{count} days ago. Your SimpleFIN connection may need attention."
+      no_transactions: "No new transactions in %{count} days. Check your SimpleFIN dashboard to ensure your bank connections are active."
     simplefin_item:
-      accounts_skipped_label: 'Skipped: %{count}'
-      accounts_skipped_tooltip: Some accounts were skipped due to errors during sync
       add_new: Add new connection
       confirm_accept: Delete connection
-      confirm_body: This will permanently delete all the accounts in this group and
-        all associated data.
+      confirm_body: This will permanently delete all the accounts in this group and all associated data.
       confirm_title: Delete SimpleFIN connection?
       delete: Delete
       deletion_in_progress: "(deletion in progress...)"
-      duplicate_accounts_skipped: Some accounts were skipped as duplicates — use 'Link
-        existing accounts' to merge.
       error: Error occurred while syncing data
+      no_accounts_description: This connection doesn't have any synchronized accounts yet.
+      no_accounts_title: No accounts found
+      requires_update: Reconnect
+      setup_needed: New accounts ready to set up
+      setup_description: Choose account types for your newly imported SimpleFIN accounts.
+      setup_action: Set Up New Accounts
+      setup_accounts_menu: Set Up Accounts
       more_accounts_available:
         one: "%{count} more account available to set up"
         other: "%{count} more accounts available to set up"
-      no_accounts_description: This connection doesn't have any synchronized accounts
-        yet.
-      no_accounts_title: No accounts found
-      rate_limited_ago: Rate limited (%{time} ago)
-      rate_limited_recently: Rate limited recently
-      reconciled_details_note: "(see sync summary for details)"
-      requires_update: Reconnect
-      setup_accounts_menu: Set Up Accounts
-      setup_action: Set Up New Accounts
-      setup_description: Choose account types for your newly imported SimpleFIN accounts.
-      setup_needed: New accounts ready to set up
-      stale_pending_accounts: 'in: %{accounts}'
-      stale_pending_note: "(excluded from budgets)"
+      accounts_skipped_tooltip: "Some accounts were skipped due to errors during sync"
+      accounts_skipped_label: "Skipped: %{count}"
+      rate_limited_ago: "Rate limited (%{time} ago)"
+      rate_limited_recently: "Rate limited recently"
       status: Last synced %{timestamp} ago
       status_never: Never synced
-      status_with_summary: Last synced %{timestamp} ago • %{summary}
+      status_with_summary: "Last synced %{timestamp} ago • %{summary}"
       syncing: Syncing...
       update: Update
+      stale_pending_note: "(excluded from budgets)"
+      stale_pending_accounts: "in: %{accounts}"
+      reconciled_details_note: "(see sync summary for details)"
+      duplicate_accounts_skipped: "Some accounts were skipped as duplicates — use 'Link existing accounts' to merge."
+    select_existing_account:
+      title: "Link %{account_name} to SimpleFIN"
+      description: Select a SimpleFIN account to link to your existing account
+      cancel: Cancel
+      link_account: Link account
+      no_accounts_found: "No SimpleFIN accounts found for this %{moniker}."
+      wait_for_sync: If you just connected or synced, try again after the sync completes.
+      check_provider_health: Check that your SimpleFIN connection is healthy under Settings → Providers.
+      unlink_to_move: To move a link, first unlink it from the account’s actions menu.
+      all_accounts_already_linked: All SimpleFIN accounts appear to be linked already.
+      currently_linked_to: "Currently linked to: %{account_name}"
+
+    link_existing_account:
+      success: Account successfully linked to SimpleFIN
+      errors:
+        only_manual: Only manual accounts can be linked
+        different_provider: This account is linked to a different provider. Unlink it from that provider first, then link to SimpleFIN.
+        invalid_simplefin_account: Invalid SimpleFIN account selected
+    dismiss_replacement_suggestion:
+      dismissed: Replacement suggestion dismissed
+    replacement_prompt:
+      title: "Your %{institution} card may have been replaced"
+      description: "“%{account_name}” is linked to “%{old_name}”, which has had no recent activity and a zero balance. A new card, “%{new_name}”, is now active at the same institution. Relink to keep your history intact."
+      relink: Relink to new card
+      confirm_title: Relink to the new card?
+      confirm_body: "“%{account_name}” will be linked to “%{new_name}”. Your transaction history stays; future transactions come from the new card."
+      dismiss_aria: Dismiss replacement suggestion
+    reconciled_status:
+      message:
+        one: "%{count} duplicate pending transaction reconciled"
+        other: "%{count} duplicate pending transactions reconciled"
     stale_pending_status:
       message:
         one: "%{count} pending transaction older than %{days} days"
         other: "%{count} pending transactions older than %{days} days"
-    stale_sync:
-      last_successful: Last successful sync was %{count} days ago. Your SimpleFIN
-        connection may need attention.
-      no_transactions: No new transactions in %{count} days. Check your SimpleFIN
-        dashboard to ensure your bank connections are active.
-    sync_status:
-      no_accounts: No accounts found
-      partial_setup:
-        one: "%{linked} synced, %{unlinked} need setup"
-        other: "%{linked} synced, %{unlinked} need setup"
-      synced:
-        one: "%{count} account synced"
-        other: "%{count} accounts synced"
-    update:
-      errors:
-        invalid_token: Invalid setup token. Please check that you copied the complete
-          token from SimpleFIN Bridge.
-        token_compromised: The setup token may be compromised, expired, or already
-          used. Please create a new one.
-        unexpected: An unexpected error occurred. Please try again.

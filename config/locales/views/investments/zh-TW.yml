@@ -11,177 +11,177 @@ zh-TW:
     show:
       chart_title: 總價值
     subtypes:
-      401k:
-        long: 401(k)
-        short: 401(k)
-      403b:
-        long: 403(b)
-        short: 403(b)
-      457b:
-        long: 457(b)
-        short: 457(b)
-      529_plan:
-        long: 529 教育儲蓄計畫
-        short: 529 Plan
-      angel:
-        long: 天使投資
-        short: 天使
-      apy:
-        long: Atal Pension Yojana (APY)
-        short: APY
       brokerage:
-        long: 證券帳戶
         short: 證券帳戶
-      corporate_bond:
-        long: 公司債
-        short: 公司債
-      fd:
-        long: 定期存款 (FD)
-        short: FD
-      g_sec:
-        long: 政府公債 (G-Secs)
-        short: G-Sec
-      gold:
-        long: 黃金（實體或數位）
-        short: 黃金
-      gold_etf:
-        long: 黃金 ETF
-        short: 黃金 ETF
-      gold_mf:
-        long: 黃金共同基金
-        short: 黃金基金
-      hsa:
-        long: 健康儲蓄帳戶 (HSA)
-        short: HSA
-      indian_equity:
-        long: 印度股票
-        short: 印度股票
-      indian_etf:
-        long: 印度 ETF
-        short: 印度 ETF
-      indian_stocks:
-        long: 印度股票 (Demat)
-        short: 印度股票
-      infrastructure_bond:
-        long: 基礎建設債券
-        short: 基礎建設債券
-      ira:
-        long: 傳統 IRA
-        short: IRA
-      isa:
-        long: 個人儲蓄帳戶 (ISA)
-        short: ISA
-      kvp:
-        long: Kisan Vikas Patra (KVP)
-        short: KVP
-      life_insurance:
-        long: 壽險
-        short: 壽險
-      lira:
-        long: 鎖定式退休帳戶 (LIRA)
-        short: LIRA
-      lisa:
-        long: 終身 ISA (LISA)
-        short: LISA
-      mutual_fund:
-        long: 共同基金
-        short: 共同基金
-      nps:
-        long: 國家退休金制度 (NPS)
-        short: NPS
-      nsc:
-        long: 國家儲蓄憑證 (NSC)
-        short: NSC
-      other:
-        long: 其他投資
-        short: 其他
-      pea:
-        long: 股票儲蓄計畫 (PEA)
-        short: PEA
-      pension:
-        long: 退休金
-        short: 退休金
-      pillar_3a:
-        long: 私人退休金 (Pillar 3a)
-        short: Pillar 3a
-      pomis:
-        long: 郵局月收益計畫 (POMIS)
-        short: POMIS
-      ppf:
-        long: 公共公積金 (PPF)
-        short: PPF
-      rd:
-        long: 零存整付存款 (RD)
-        short: RD
-      resp:
-        long: 註冊教育儲蓄計畫 (RESP)
-        short: RESP
-      retirement:
-        long: 退休帳戶
-        short: 退休
-      riester:
-        long: Riester 退休金 (Riester-Rente)
-        short: Riester
+        long: 證券帳戶
+      401k:
+        short: 401(k)
+        long: 401(k)
       roth_401k:
-        long: Roth 401(k)
         short: Roth 401(k)
-      roth_ira:
-        long: Roth IRA
-        short: Roth IRA
-      rrif:
-        long: 註冊退休收入基金 (RRIF)
-        short: RRIF
-      rrsp:
-        long: 註冊退休儲蓄計畫 (RRSP)
-        short: RRSP
-      scss:
-        long: 長者儲蓄計畫 (SCSS)
-        short: SCSS
-      sdl:
-        long: 邦發展貸款 (SDLs)
-        short: SDL
-      sep_ira:
-        long: SEP IRA
-        short: SEP IRA
-      sgb:
-        long: 主權黃金債券 (SGB)
-        short: SGB
-      simple_ira:
-        long: SIMPLE IRA
-        short: SIMPLE IRA
-      sipp:
-        long: 自主投資個人退休金 (SIPP)
-        short: SIPP
-      smsf:
-        long: 自管退休金基金 (SMSF)
-        short: SMSF
-      ssy:
-        long: Sukanya Samriddhi Yojana (SSY)
-        short: SSY
-      super:
-        long: 澳洲退休金 (Superannuation)
-        short: Super
-      tax_free_bond:
-        long: 免稅債券
-        short: 免稅債券
-      tfsa:
-        long: 免稅儲蓄帳戶 (TFSA)
-        short: TFSA
-      trust:
-        long: 信託
-        short: 信託
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
       tsp:
-        long: 節儉儲蓄計畫 (TSP)
         short: TSP
+        long: 節儉儲蓄計畫 (TSP)
+      ira:
+        short: IRA
+        long: 傳統 IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: 529 Plan
+        long: 529 教育儲蓄計畫
+      hsa:
+        short: HSA
+        long: 健康儲蓄帳戶 (HSA)
       ugma:
-        long: UGMA 未成年人保管帳戶
         short: UGMA
+        long: UGMA 未成年人保管帳戶
       utma:
-        long: UTMA 未成年人保管帳戶
         short: UTMA
+        long: UTMA 未成年人保管帳戶
+      isa:
+        short: ISA
+        long: 個人儲蓄帳戶 (ISA)
+      lisa:
+        short: LISA
+        long: 終身 ISA (LISA)
+      sipp:
+        short: SIPP
+        long: 自主投資個人退休金 (SIPP)
       workplace_pension_uk:
-        long: 職場退休金
         short: 退休金
+        long: 職場退休金
+      rrsp:
+        short: RRSP
+        long: 註冊退休儲蓄計畫 (RRSP)
+      tfsa:
+        short: TFSA
+        long: 免稅儲蓄帳戶 (TFSA)
+      resp:
+        short: RESP
+        long: 註冊教育儲蓄計畫 (RESP)
+      lira:
+        short: LIRA
+        long: 鎖定式退休帳戶 (LIRA)
+      rrif:
+        short: RRIF
+        long: 註冊退休收入基金 (RRIF)
+      super:
+        short: Super
+        long: 澳洲退休金 (Superannuation)
+      smsf:
+        short: SMSF
+        long: 自管退休金基金 (SMSF)
+      pea:
+        short: PEA
+        long: 股票儲蓄計畫 (PEA)
+      pillar_3a:
+        short: Pillar 3a
+        long: 私人退休金 (Pillar 3a)
+      riester:
+        short: Riester
+        long: Riester 退休金 (Riester-Rente)
+      nps:
+        short: NPS
+        long: 國家退休金制度 (NPS)
+      apy:
+        short: APY
+        long: Atal Pension Yojana (APY)
+      indian_stocks:
+        short: 印度股票
+        long: 印度股票 (Demat)
+      indian_equity:
+        short: 印度股票
+        long: 印度股票
+      indian_etf:
+        short: 印度 ETF
+        long: 印度 ETF
+      life_insurance:
+        short: 壽險
+        long: 壽險
+      ppf:
+        short: PPF
+        long: 公共公積金 (PPF)
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana (SSY)
+      nsc:
+        short: NSC
+        long: 國家儲蓄憑證 (NSC)
+      scss:
+        short: SCSS
+        long: 長者儲蓄計畫 (SCSS)
+      fd:
+        short: FD
+        long: 定期存款 (FD)
+      rd:
+        short: RD
+        long: 零存整付存款 (RD)
+      pomis:
+        short: POMIS
+        long: 郵局月收益計畫 (POMIS)
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra (KVP)
+      gold_etf:
+        short: 黃金 ETF
+        long: 黃金 ETF
+      gold_mf:
+        short: 黃金基金
+        long: 黃金共同基金
+      sgb:
+        short: SGB
+        long: 主權黃金債券 (SGB)
+      g_sec:
+        short: G-Sec
+        long: 政府公債 (G-Secs)
+      sdl:
+        short: SDL
+        long: 邦發展貸款 (SDLs)
+      corporate_bond:
+        short: 公司債
+        long: 公司債
+      infrastructure_bond:
+        short: 基礎建設債券
+        long: 基礎建設債券
+      tax_free_bond:
+        short: 免稅債券
+        long: 免稅債券
+      pension:
+        short: 退休金
+        long: 退休金
+      retirement:
+        short: 退休
+        long: 退休帳戶
+      mutual_fund:
+        short: 共同基金
+        long: 共同基金
+      gold:
+        short: 黃金
+        long: 黃金（實體或數位）
+      angel:
+        short: 天使
+        long: 天使投資
+      trust:
+        short: 信託
+        long: 信託
+      other:
+        short: 其他
+        long: 其他投資
     value_tooltip:
       cash: 現金
       holdings: 持股

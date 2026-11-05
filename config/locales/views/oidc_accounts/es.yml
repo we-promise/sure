@@ -1,49 +1,42 @@
 ---
 es:
   oidc_accounts:
-    create_link:
-      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
-    create_user:
-      account_created: "¡Bienvenido! Su cuenta se ha creado."
-      account_creation_disabled: La creación de cuentas mediante inicio de sesión
-        único está desactivada. Contacte con un administrador.
-      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
     link:
-      account_creation_disabled: La creación de cuentas mediante inicio de sesión
-        único está desactivada. Contacte a un administrador.
-      cancel: Cancelar
-      create_description_html: No se encontró ninguna cuenta con el correo electrónico
-        <strong>%{email}</strong>. Haga clic a continuación para crear una cuenta
-        nueva con su identidad de %{provider}.
-      create_heading: Crear cuenta nueva
+      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
+      title_link: Vincular cuenta OIDC
+      title_create: Crear cuenta
+      verify_heading: Verificar su identidad
+      verify_description_html: Para vincular su cuenta de %{provider}%{email_suffix}, verifique su identidad ingresando su contraseña.
+      email_suffix_html: ' (<strong>%{email}</strong>)'
       email_label: Correo electrónico
       email_placeholder: Ingrese su correo electrónico
-      email_suffix_html: " (<strong>%{email}</strong>)"
-      info_email: 'Correo electrónico:'
-      info_name: 'Nombre:'
-      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
       password_label: Contraseña
       password_placeholder: Ingrese su contraseña
-      submit_accept_invitation: Aceptar invitación
-      submit_create: Crear cuenta
+      verify_hint: Esto garantiza que solo usted pueda vincular cuentas externas a su perfil.
       submit_link: Vincular cuenta
-      title_create: Crear cuenta
-      title_link: Vincular cuenta OIDC
-      verify_description_html: Para vincular su cuenta de %{provider}%{email_suffix},
-        verifique su identidad ingresando su contraseña.
-      verify_heading: Verificar su identidad
-      verify_hint: Esto garantiza que solo usted pueda vincular cuentas externas a
-        su perfil.
-    new_user:
+      create_heading: Crear cuenta nueva
+      create_description_html: No se encontró ninguna cuenta con el correo electrónico <strong>%{email}</strong>. Haga clic a continuación para crear una cuenta nueva con su identidad de %{provider}.
+      info_email: 'Correo electrónico:'
+      info_name: 'Nombre:'
+      submit_create: Crear cuenta
+      submit_accept_invitation: Aceptar invitación
+      account_creation_disabled: La creación de cuentas mediante inicio de sesión único está desactivada. Contacte a un administrador.
       cancel: Cancelar
-      description: Confirme sus datos para completar la creación de cuenta con su
-        identidad de %{provider}.
+    create_link:
+      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
+    new_user:
+      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
+      title: Completar su cuenta
+      heading: Crear su cuenta
+      description: Confirme sus datos para completar la creación de cuenta con su identidad de %{provider}.
       email_label: Correo electrónico (del proveedor SSO)
       first_name_label: Nombre
       first_name_placeholder: Ingrese su nombre
-      heading: Crear su cuenta
       last_name_label: Apellido
       last_name_placeholder: Ingrese su apellido
-      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
       submit: Crear cuenta
-      title: Completar su cuenta
+      cancel: Cancelar
+    create_user:
+      no_pending_oidc: No se ha encontrado ninguna autenticación OIDC pendiente
+      account_creation_disabled: La creación de cuentas mediante inicio de sesión único está desactivada. Contacte con un administrador.
+      account_created: ¡Bienvenido! Su cuenta se ha creado.

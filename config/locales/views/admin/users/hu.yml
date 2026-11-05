@@ -3,54 +3,49 @@ hu:
   admin:
     users:
       index:
-        description: Felhasználói szerepkörök kezelése a példányodhoz. A szuperadminok
-          hozzáférnek az SSO-szolgáltató beállításaihoz és a felhasználókezeléshez.
+        title: "Felhasználókezelés"
+        description: "Felhasználói szerepkörök kezelése a példányodhoz. A szuperadminok hozzáférnek az SSO-szolgáltató beállításaihoz és a felhasználókezeléshez."
+        section_title: "Családok / Csoportok"
+        you: "(Te)"
+        trial_ends_at: "Próbaidő vége"
+        not_available: "n/a"
+        no_users: "Nem találhatók felhasználók."
+        unnamed_family: "Névtelen család/csoport"
+        no_subscription: "Nincs előfizetés"
         family_summary: "%{members} tag · %{accounts} fiók · %{transactions} tranzakció"
         filters:
-          role: Szerepkör
-          role_all: Minden szerepkör
-          submit: Szűrés
-          trial_all: Minden
-          trial_expiring_soon: 7 napon belül lejár
-          trial_status: Próbaidő állapota
-          trial_trialing: Próbaidőn
-        invitations:
-          delete: Törlés
-          delete_all: Összes törlése
-          expires: 'Lejár: %{date}'
-          pending_label: Meghívva (függőben)
-        no_subscription: Nincs előfizetés
-        no_users: Nem találhatók felhasználók.
-        not_available: n/a
-        role_descriptions:
-          admin: Családi rendszergazda. Hozzáférhet a fejlett beállításokhoz, mint
-            az API-kulcsok, importálások és AI-promptok.
-          guest: Asszisztens-első élmény, szándékosan korlátozott jogosultságokkal
-            az alapszintű munkafolyamatokhoz.
-          member: Alap felhasználói hozzáférés. Kezelheti saját fiókjait, tranzakcióit
-            és beállításait.
-          super_admin: Példány-rendszergazda. Kezelheti az SSO-szolgáltatókat, a felhasználói
-            szerepköröket, és megszemélyesíthet felhasználókat támogatási céllal.
-        role_descriptions_title: Szerepkörök leírása
-        roles:
-          admin: Admin
-          guest: Vendég
-          member: Tag
-          super_admin: Super Admin
-        section_title: Családok / Csoportok
+          role: "Szerepkör"
+          role_all: "Minden szerepkör"
+          trial_status: "Próbaidő állapota"
+          trial_all: "Minden"
+          trial_expiring_soon: "7 napon belül lejár"
+          trial_trialing: "Próbaidőn"
+          submit: "Szűrés"
         table:
-          family_accounts: Családi fiókok
-          family_transactions: Családi tranzakciók
-          last_login: Utolsó bejelentkezés
-          never: Soha
-          role: Szerepkör
-          session_count: Munkamenetek száma
-          trial_ends_at: Próbaidő vége
-          user: Felhasználó
-        title: Felhasználókezelés
-        trial_ends_at: Próbaidő vége
-        unnamed_family: Névtelen család/csoport
-        you: "(Te)"
+          user: "Felhasználó"
+          trial_ends_at: "Próbaidő vége"
+          family_accounts: "Családi fiókok"
+          family_transactions: "Családi tranzakciók"
+          last_login: "Utolsó bejelentkezés"
+          session_count: "Munkamenetek száma"
+          never: "Soha"
+          role: "Szerepkör"
+        role_descriptions_title: "Szerepkörök leírása"
+        roles:
+          guest: "Vendég"
+          member: "Tag"
+          admin: "Admin"
+          super_admin: "Super Admin"
+        role_descriptions:
+          guest: "Asszisztens-első élmény, szándékosan korlátozott jogosultságokkal az alapszintű munkafolyamatokhoz."
+          member: "Alap felhasználói hozzáférés. Kezelheti saját fiókjait, tranzakcióit és beállításait."
+          admin: "Családi rendszergazda. Hozzáférhet a fejlett beállításokhoz, mint az API-kulcsok, importálások és AI-promptok."
+          super_admin: "Példány-rendszergazda. Kezelheti az SSO-szolgáltatókat, a felhasználói szerepköröket, és megszemélyesíthet felhasználókat támogatási céllal."
+        invitations:
+          pending_label: "Meghívva (függőben)"
+          expires: "Lejár: %{date}"
+          delete: "Törlés"
+          delete_all: "Összes törlése"
       update:
-        failure: Nem sikerült frissíteni a felhasználói szerepkört.
-        success: A felhasználói szerepkör sikeresen frissítve.
+        success: "A felhasználói szerepkör sikeresen frissítve."
+        failure: "Nem sikerült frissíteni a felhasználói szerepkört."

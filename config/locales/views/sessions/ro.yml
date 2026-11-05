@@ -5,18 +5,18 @@ ro:
       invalid_credentials: Email sau parolă incorecte.
     destroy:
       logout_successful: Te-ai deconectat cu succes.
+    openid_connect:
+      failed: Autentificarea prin OpenID Connect nu a reușit.
     failure:
       failed: Autentificarea nu a reușit.
     new:
       email: Adresă de email
       email_placeholder: tu@exemplu.com
       forgot_password: Ai uitat parola?
-      google_auth_connect: Conectează-te cu Google
-      oidc: Conectează-te cu OpenID Connect
-      openid_connect: Conectează-te cu OpenID Connect
       password: Parolă
-      password_placeholder: Introdu parola
       submit: Conectare
       title: Conectează-te la contul tău
-    openid_connect:
-      failed: Autentificarea prin OpenID Connect nu a reușit.
+      password_placeholder: Introdu parola
+      openid_connect: Conectează-te cu OpenID Connect
+      oidc: Conectează-te cu OpenID Connect
+      google_auth_connect: Conectează-te cu Google

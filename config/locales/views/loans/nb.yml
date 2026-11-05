@@ -4,9 +4,9 @@ nb:
     edit:
       edit: Rediger %{account}
     form:
-      initial_balance: Opprinnelig lånebalanse
       interest_rate: Rente
       interest_rate_placeholder: '5.25'
+      initial_balance: Opprinnelig lånebalanse
       rate_type: Rentetype
       term_months: Løpetid (måneder)
       term_months_placeholder: '360'

@@ -10,14 +10,14 @@ zh-TW:
       title: 找不到任何紀錄
     loading:
       loading: 正在載入紀錄...
-    protection:
-      description: 您對這筆紀錄所做的修改不會被供應商的同步覆蓋。
-      locked_fields_label: 已鎖定的欄位：
-      title: 受同步保護
-      tooltip: 受同步保護
-      unlock_button: 允許同步更新
-      unlock_confirm: 要允許同步更新這筆紀錄嗎？您的修改可能會在下次同步時被覆蓋。
-    unlock:
-      success: 紀錄已解鎖，下次同步時可能會被更新。
     update:
       success: 紀錄已更新
+    unlock:
+      success: 紀錄已解鎖，下次同步時可能會被更新。
+    protection:
+      tooltip: 受同步保護
+      title: 受同步保護
+      description: 您對這筆紀錄所做的修改不會被供應商的同步覆蓋。
+      locked_fields_label: 已鎖定的欄位：
+      unlock_button: 允許同步更新
+      unlock_confirm: 要允許同步更新這筆紀錄嗎？您的修改可能會在下次同步時被覆蓋。

@@ -51,73 +51,38 @@ ru:
     form:
       additional_details: Дополнительные детали
       balance: 'Баланс на дату:'
-      enable_category_matcher_hint: Если включено, к импортированным операциям применяется
-        категория, предложенная провайдером. Отключите, чтобы оставлять новые операции
-        без категории.
-      enable_category_matcher_label: Включить подбор категорий
       exclude_from_reports: Исключить из всех отчётов
-      institution_domain_hint: Используется, чтобы найти иконку учреждения.
       institution_domain_label: Домен учреждения
-      institution_domain_missing_logo_key_hint: Используется, чтобы найти иконку учреждения.
-        Логотипы Brandfetch недоступны, потому что не задан Client ID Brandfetch.
       institution_domain_placeholder: например, sberbank.ru
+      institution_domain_hint: Используется, чтобы найти иконку учреждения.
+      institution_domain_missing_logo_key_hint: Используется, чтобы найти иконку учреждения. Логотипы Brandfetch недоступны, потому что не задан Client ID Brandfetch.
       institution_domain_settings_link: Задать в настройках Self-Hosting
+      logo_label: Иконка
+      logo_hint: Или загрузите свою картинку PNG, JPEG, GIF, WebP или ICO до 1 МБ. Она заменяет логотип Brandfetch.
       institution_name_label: Название учреждения
       institution_name_placeholder: например, Сбербанк
-      logo_hint: Или загрузите свою картинку PNG, JPEG, GIF, WebP или ICO до 1 МБ.
-        Она заменяет логотип Brandfetch.
-      logo_label: Иконка
       name_label: Название счёта
       name_placeholder: Пример названия счёта
       notes_label: Заметки
       notes_placeholder: Сохраните дополнительную информацию, такую как номера счетов,
         коды сортировки, IBAN, маршрутизационные номера и т.д.
       opening_balance_date_label: Дата начального баланса
+      enable_category_matcher_label: Включить подбор категорий
+      enable_category_matcher_hint: Если включено, к импортированным операциям применяется категория, предложенная провайдером. Отключите, чтобы оставлять новые операции без категории.
     index:
       accounts: Счета
-      cancel_sync: Отменить синхронизацию
       manual_accounts:
         other_accounts: Другие счета
       new_account: Новый счёт
       sync: Синхронизировать все
-    logo_caption:
-      appstore: Из App Store
-      brandfetch: Из Brandfetch
-      duckduckgo: Из DuckDuckGo
-      google: Из Google
-      googleplay: Из Google Play
-      none: Иконки пока нет
-      rustore: Из RuStore
-      uploaded: Загружена вами
-      yandex: Из Яндекса
-    logo_field:
-      current: сейчас
-      domain_needed: Введите домен учреждения, например tbank.ru, чтобы подобрать
-        иконку.
-      empty: Для этого домена иконок не нашлось. Загрузите свою ниже.
-      pending: Применится после сохранения
-      pick: Подобрать иконку
-      removal: Удалится после сохранения, вернётся автоматическая иконка
-      remove: Удалить
-      searching: Ищем…
-    logo_options:
-      size: "%{size} px"
-      sources:
-        appstore: App Store
-        brandfetch: Brandfetch
-        duckduckgo: DuckDuckGo
-        google: Google
-        googleplay: Google Play
-        rustore: RuStore
-        yandex: Яндекс
-      stored: Сохранённая иконка
+      cancel_sync: Отменить синхронизацию
     new:
       container:
         close: Закрыть
         navigate: Перейти
+        select: Выбрать
         next: Далее
         previous: Назад
-        select: Выбрать
       import_accounts: Импортировать счета
       method_selector:
         connected_entry: Связать счёт
@@ -133,6 +98,36 @@ ru:
       description: Выберите, какого провайдера вы хотите использовать для связи %{account_name}
       no_providers: В настоящее время провайдеры не настроены
       title: Выберите провайдера для связи
+    logo_caption:
+      appstore: Из App Store
+      brandfetch: Из Brandfetch
+      duckduckgo: Из DuckDuckGo
+      google: Из Google
+      googleplay: Из Google Play
+      none: Иконки пока нет
+      rustore: Из RuStore
+      uploaded: Загружена вами
+      yandex: Из Яндекса
+    logo_field:
+      current: сейчас
+      domain_needed: Введите домен учреждения, например tbank.ru, чтобы подобрать иконку.
+      empty: Для этого домена иконок не нашлось. Загрузите свою ниже.
+      pick: Подобрать иконку
+      pending: Применится после сохранения
+      remove: Удалить
+      removal: Удалится после сохранения, вернётся автоматическая иконка
+      searching: Ищем…
+    logo_options:
+      size: "%{size} px"
+      sources:
+        appstore: App Store
+        brandfetch: Brandfetch
+        duckduckgo: DuckDuckGo
+        google: Google
+        googleplay: Google Play
+        rustore: RuStore
+        yandex: Яндекс
+      stored: Сохранённая иконка
     set_default:
       depository_only: По умолчанию можно установить только денежные счета и счета
         кредитных карт.
@@ -187,12 +182,10 @@ ru:
         activity: Активность
         holdings: Инвестиционные позиции
         overview: Обзор
-        schedule: График платежей
         statements: Выписки
+        schedule: График платежей
     sidebar:
-      collapse_all: Свернуть все
       configure_providers: Настройте ваших провайдеров здесь.
-      expand_all: Развернуть все
       missing_data: Отсутствуют исторические данные
       missing_data_description: "%{product} использует сторонних провайдеров для получения
         исторических обменных курсов, цен на ценные бумаги и прочего. Эти данные необходимы
@@ -205,6 +198,8 @@ ru:
         all: Все
         assets: Активы
         debts: Долги
+      expand_all: Развернуть все
+      collapse_all: Свернуть все
     subtype_regions:
       au: Австралия
       ca: Канада
@@ -251,9 +246,8 @@ ru:
       not_linked: Счёт не связан с провайдером
       success: Счёт успешно отвязан. Теперь это ручной счёт.
     update:
-      logo_not_applied: Счёт сохранён, но выбранную иконку скачать не удалось. Попробуйте
-        ещё раз или загрузите свою.
       success: Счёт %{type} обновлён
+      logo_not_applied: Счёт сохранён, но выбранную иконку скачать не удалось. Попробуйте ещё раз или загрузите свою.
   email_confirmations:
     new:
       invalid_token: Неверная или истекшая ссылка подтверждения.

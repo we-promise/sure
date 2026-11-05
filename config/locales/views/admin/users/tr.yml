@@ -1,52 +1,10 @@
 ---
 tr:
   admin:
-    families:
-      destroy:
-        family_has_active_subscription: Aile/grubun aktif bir aboneliği var; abonelik
-          iptal edilene kadar silinemez.
-        family_has_users: Aile/grupta hâlâ kullanıcılar var ve silinemez.
-        success: Aile/grup başarıyla silindi.
     users:
-      deletion:
-        cancel: İptal
-        email_label: Kullanıcı e-postası
-        instruction: Onaylamak için %{email} yazın.
-        submit: Kullanıcıyı kalıcı olarak kaldır
-        title: Kullanıcıyı kalıcı olarak kaldır
-        warning: Bu işlem erişimi hemen iptal eder ve kullanıcının ve verilerinin
-          kalıcı olarak silinmesini planlar. Bu işlem geri alınamaz.
-      destroy:
-        cannot_remove_last_super_admin: Son aktif süper yöneticiyi kaldıramazsınız.
-        cannot_remove_self: Kendi hesabınızı buradan kaldıramazsınız.
-        confirmation_mismatch: E-posta adresi eşleşmedi. Kullanıcı kaldırılmadı.
-        failure: Kullanıcı kaldırılamadı.
-        success: Kullanıcının erişimi iptal edildi ve kalıcı silme işlemi planlandı.
       index:
-        actions:
-          delete_user: Kullanıcıyı sil
-          last_super_admin_role_locked: Sistemdeki son süper yönetici siz olduğunuz
-            için rol değişikliği engellendi.
-          manage_user: Kullanıcıyı yönet
-          self_edit_warning: Kendi rolünüzü değiştirmek yönetici yetkilerinizi değiştirecektir.
-          self_update_confirm: Kendi hesap rolünüzü veya ailenizi güncellemek istediğinizden
-            emin misiniz?
-          update: Kullanıcıyı güncelle
-        auth_types:
-          local: Yerel
-          local_and_sso: Yerel + SSO
-          sso: SSO
-          sso_provider_tooltip: 'SSO sağlayıcısı: %{providers}'
-        delete_confirm: Bu kullanıcıyı silmek istediğinizden emin misiniz? Bu işlem
-          geri alınamaz.
-        delete_confirm_last_user: Bu kullanıcıyı silmek istediğinizden emin misiniz?
-          Bu, ailesindeki/grubundaki son kullanıcı olduğundan onu silmek tüm aileyi/grubu
-          ve ilişkili tüm verileri de silecektir. Bu işlem geri alınamaz.
         description: Örneğiniz için kullanıcı rollerini yönetin. Süper yöneticiler
           SSO sağlayıcı ayarlarına ve kullanıcı yönetimine erişebilir.
-        family_monikers:
-          family: Aile
-          group: Grup
         family_summary: "%{members} üye · %{accounts} hesap · %{transactions} işlem"
         filters:
           role: Rol
@@ -64,14 +22,6 @@ tr:
         no_subscription: Abonelik yok
         no_users: Kullanıcı bulunamadı.
         not_available: yok
-        remove: Kullanıcıyı Sil
-        removed_sso_identities:
-          allow_again: Yeniden izin ver
-          confirm: "%{email} adresinin SSO üzerinden yeniden giriş yapmasına veya
-            hesap oluşturmasına izin verilsin mi?"
-          description: Bu kimlikler hesap oluşturamaz veya yeniden bağlanamaz. Bir
-            kimliğe yalnızca kaldırma işlemi yanlışlıkla yapıldıysa yeniden izin verin.
-          title: Kaldırılan SSO kimlikleri
         role_descriptions:
           admin: Aile yöneticisi. API anahtarları, içe aktarmalar ve AI istemleri
             gibi gelişmiş ayarlara erişebilir.
@@ -89,47 +39,86 @@ tr:
           super_admin: Süper Yönetici
         section_title: Aileler / Gruplar
         table:
-          actions: İşlemler
-          create_new_family_option: "+ Yeni aile/grup oluştur"
-          family: Aile / Grup
           family_accounts: Aile hesapları
           family_transactions: Aile işlemleri
-          keep_current_family: Mevcut aileyi/grubu koru
           last_login: Son giriş
           never: Hiç
-          new_family_moniker: Yeni aile/grup türü
-          new_family_name: Yeni aile/grup adı
-          new_family_name_placeholder: Yeni bir aile/grup oluşturmak için ad girin
-          password_placeholder: Mevcut şifreyi korumak için boş bırakın
           role: Rol
           session_count: Oturum sayısı
-          set_password: Yeni şifre belirle
           trial_ends_at: Deneme bitişi
           user: Kullanıcı
+          family: Aile / Grup
+          keep_current_family: Mevcut aileyi/grubu koru
+          create_new_family_option: + Yeni aile/grup oluştur
+          new_family_name: Yeni aile/grup adı
+          new_family_name_placeholder: Yeni bir aile/grup oluşturmak için ad girin
+          new_family_moniker: Yeni aile/grup türü
+          set_password: Yeni şifre belirle
+          password_placeholder: Mevcut şifreyi korumak için boş bırakın
+          actions: İşlemler
         title: Kullanıcı Yönetimi
         trial_ends_at: Deneme bitişi
         unnamed_family: İsimsiz Aile/Grup
-        unused_families:
-          delete: Kullanılmayan aileyi sil
-          delete_confirm: Bu kullanılmayan aileyi/grubu silmek istediğinizden emin
-            misiniz? Bu işlem geri alınamaz.
-          empty: Kullanılmayan aile/grup bulunamadı.
-          family_id: 'Aile kimliği: %{id}'
-          title: Kullanılmayan aileler / gruplar
         you: "(Siz)"
+        family_monikers:
+          family: Aile
+          group: Grup
+        actions:
+          manage_user: Kullanıcıyı yönet
+          update: Kullanıcıyı güncelle
+          delete_user: Kullanıcıyı sil
+          self_edit_warning: Kendi rolünüzü değiştirmek yönetici yetkilerinizi değiştirecektir.
+          self_update_confirm: Kendi hesap rolünüzü veya ailenizi güncellemek istediğinizden emin misiniz?
+          last_super_admin_role_locked: Sistemdeki son süper yönetici siz olduğunuz için rol değişikliği engellendi.
+        delete_confirm: Bu kullanıcıyı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+        delete_confirm_last_user: Bu kullanıcıyı silmek istediğinizden emin misiniz? Bu, ailesindeki/grubundaki son kullanıcı olduğundan onu silmek tüm aileyi/grubu ve ilişkili tüm verileri de silecektir. Bu işlem geri alınamaz.
+        remove: Kullanıcıyı Sil
+        removed_sso_identities:
+          title: Kaldırılan SSO kimlikleri
+          description: Bu kimlikler hesap oluşturamaz veya yeniden bağlanamaz. Bir kimliğe yalnızca kaldırma işlemi yanlışlıkla yapıldıysa yeniden izin verin.
+          allow_again: Yeniden izin ver
+          confirm: '%{email} adresinin SSO üzerinden yeniden giriş yapmasına veya hesap oluşturmasına izin verilsin mi?'
+        auth_types:
+          sso: SSO
+          local: Yerel
+          local_and_sso: Yerel + SSO
+          sso_provider_tooltip: 'SSO sağlayıcısı: %{providers}'
+        unused_families:
+          title: Kullanılmayan aileler / gruplar
+          family_id: 'Aile kimliği: %{id}'
+          delete: Kullanılmayan aileyi sil
+          delete_confirm: Bu kullanılmayan aileyi/grubu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.
+          empty: Kullanılmayan aile/grup bulunamadı.
       update:
         failure: Kullanıcı rolü güncellenemedi.
+        success: Kullanıcı rolü başarıyla güncellendi.
+        success_role: Kullanıcı rolü başarıyla güncellendi.
+        success_password: Kullanıcı şifresi başarıyla güncellendi.
+        success_role_and_password: Kullanıcı rolü ve şifresi başarıyla güncellendi.
+        success_family: Kullanıcının aile/grup üyeliği başarıyla güncellendi.
         family_required: Mevcut bir aile/grup seçin veya yeni bir tane için ad girin.
-        last_super_admin_error: Sistemdeki son süper yöneticinin yetkisi düşürülemez.
         password_and_family_conflict: Şifre ve aile/grup üyeliği aynı anda güncellenemez.
-        password_disabled: Kullanıcılar yalnızca SSO ile giriş yapabildiği için şifre
-          belirleme devre dışı.
+        password_disabled: Kullanıcılar yalnızca SSO ile giriş yapabildiği için şifre belirleme devre dışı.
+        password_too_short: Şifre en az 8 karakter uzunluğunda olmalıdır.
         password_missing_case: Şifre hem büyük hem de küçük harf içermelidir.
         password_missing_number: Şifre en az bir rakam içermelidir.
         password_missing_special: Şifre en az bir özel karakter içermelidir.
-        password_too_short: Şifre en az 8 karakter uzunluğunda olmalıdır.
-        success: Kullanıcı rolü başarıyla güncellendi.
-        success_family: Kullanıcının aile/grup üyeliği başarıyla güncellendi.
-        success_password: Kullanıcı şifresi başarıyla güncellendi.
-        success_role: Kullanıcı rolü başarıyla güncellendi.
-        success_role_and_password: Kullanıcı rolü ve şifresi başarıyla güncellendi.
+        last_super_admin_error: Sistemdeki son süper yöneticinin yetkisi düşürülemez.
+      destroy:
+        success: Kullanıcının erişimi iptal edildi ve kalıcı silme işlemi planlandı.
+        failure: Kullanıcı kaldırılamadı.
+        cannot_remove_self: Kendi hesabınızı buradan kaldıramazsınız.
+        cannot_remove_last_super_admin: Son aktif süper yöneticiyi kaldıramazsınız.
+        confirmation_mismatch: E-posta adresi eşleşmedi. Kullanıcı kaldırılmadı.
+      deletion:
+        title: Kullanıcıyı kalıcı olarak kaldır
+        warning: Bu işlem erişimi hemen iptal eder ve kullanıcının ve verilerinin kalıcı olarak silinmesini planlar. Bu işlem geri alınamaz.
+        instruction: Onaylamak için %{email} yazın.
+        email_label: Kullanıcı e-postası
+        cancel: İptal
+        submit: Kullanıcıyı kalıcı olarak kaldır
+    families:
+      destroy:
+        family_has_active_subscription: Aile/grubun aktif bir aboneliği var; abonelik iptal edilene kadar silinemez.
+        family_has_users: Aile/grupta hâlâ kullanıcılar var ve silinemez.
+        success: Aile/grup başarıyla silindi.

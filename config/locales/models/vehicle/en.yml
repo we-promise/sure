@@ -2,6 +2,7 @@
 en:
   activerecord:
     attributes:
+      # How the account form names the vehicle's field in its error messages.
       account/accountable:
         purchase_date: Purchase date
       vehicle:

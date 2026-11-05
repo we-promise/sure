@@ -2,29 +2,28 @@
 id:
   account_sharings:
     show:
-      exclude_from_finances: Kecualikan dari anggaran & laporan saya
-      finance_toggle_description: Hitung rekening ini dalam kekayaan bersih, anggaran,
-        dan laporan Anda
-      include_in_finances: Sertakan dalam anggaran & laporan saya
+      title: Berbagi Rekening
+      subtitle: Atur siapa yang dapat melihat dan berinteraksi dengan rekening ini
       member: Anggota
-      no_members: Tidak ada anggota lain di %{moniker} Anda untuk diajak berbagi
-      owner_label: 'Pemilik: %{name}'
       permission: Izin
+      shared: Dibagikan
+      no_members: Tidak ada anggota lain di %{moniker} Anda untuk diajak berbagi
       permissions:
         full_control: Kontrol penuh
         full_control_description: Dapat melihat, mengedit, dan mengelola transaksi
-        read_only: Hanya lihat
-        read_only_description: Hanya dapat melihat data rekening
         read_write: Dapat menganotasi
         read_write_description: Dapat mengategorikan, menandai, dan menambahkan catatan
+        read_only: Hanya lihat
+        read_only_description: Hanya dapat melihat data rekening
       save: Simpan setelan berbagi
-      shared: Dibagikan
+      owner_label: "Pemilik: %{name}"
       shared_with_count:
         one: Dibagikan dengan 1 anggota
-        other: Dibagikan dengan %{count} anggota
-      subtitle: Atur siapa yang dapat melihat dan berinteraksi dengan rekening ini
-      title: Berbagi Rekening
+        other: "Dibagikan dengan %{count} anggota"
+      include_in_finances: Sertakan dalam anggaran & laporan saya
+      exclude_from_finances: Kecualikan dari anggaran & laporan saya
+      finance_toggle_description: Hitung rekening ini dalam kekayaan bersih, anggaran, dan laporan Anda
     update:
-      finance_toggle_success: Preferensi penyertaan keuangan diperbarui
-      not_owner: Hanya pemilik rekening yang dapat mengelola setelan berbagi
       success: Setelan berbagi diperbarui
+      not_owner: Hanya pemilik rekening yang dapat mengelola setelan berbagi
+      finance_toggle_success: Preferensi penyertaan keuangan diperbarui

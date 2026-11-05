@@ -4,9 +4,9 @@ ro:
     edit:
       edit: Editează %{account}
     form:
-      initial_balance: Soldul inițial al împrumutului
       interest_rate: Rata dobânzii
       interest_rate_placeholder: '5.25'
+      initial_balance: Soldul inițial al împrumutului
       rate_type: Tipul ratei
       term_months: Termen (luni)
       term_months_placeholder: '360'

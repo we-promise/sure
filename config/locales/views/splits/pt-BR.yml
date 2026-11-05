@@ -1,51 +1,47 @@
 ---
 pt-BR:
   splits:
-    child:
-      description: Este lançamento faz parte de uma transação dividida.
-      edit_split: Editar divisão
-      title: Parte de uma divisão
-      unsplit: Desfazer divisão
-    create:
-      not_splittable: Esta transação não pode ser dividida.
-      success: Transação dividida com sucesso
-    destroy:
-      success: Divisão da transação desfeita com sucesso
-    edit:
-      description: Modifique os lançamentos divididos desta transação.
-      not_split: Esta transação não está dividida.
-      submit: Atualizar divisão
-      title: Editar divisão
     new:
-      add_row: Adicionar divisão
-      amount_label: Valor
-      amounts_must_match: Os valores das divisões devem ser iguais ao valor original
-        da transação.
+      title: Dividir transação
+      description: Divida esta transação em vários lançamentos com categorias e valores diferentes.
+      submit: Dividir transação
       cancel: Cancelar
-      category_label: Categoria
-      description: Divida esta transação em vários lançamentos com categorias e valores
-        diferentes.
+      add_row: Adicionar divisão
+      remove_row: Remover
+      remaining: Restante
+      amounts_must_match: Os valores das divisões devem ser iguais ao valor original da transação.
       name_label: Nome
       name_placeholder: Nome da divisão
-      original_amount: Valor
-      original_date: 'Data:'
-      original_name: 'Nome:'
-      remaining: Restante
-      remove_row: Remover
-      split_number: Divisão nº %{number}
-      submit: Dividir transação
-      title: Dividir transação
+      amount_label: Valor
+      category_label: Categoria
       uncategorized: "(sem categoria)"
+      original_name: "Nome:"
+      original_date: "Data:"
+      original_amount: "Valor"
+      split_number: "Divisão nº %{number}"
+    create:
+      success: Transação dividida com sucesso
+      not_splittable: Esta transação não pode ser dividida.
+    destroy:
+      success: Divisão da transação desfeita com sucesso
     show:
-      button: Dividir
-      button_description: Divida esta transação em vários lançamentos com categorias
-        e valores diferentes.
-      button_title: Dividir transação
-      description: Esta transação foi dividida nos seguintes lançamentos.
       title: Lançamentos divididos
-      unsplit_button: Desfazer divisão
-      unsplit_confirm: Isso removerá todos os lançamentos divididos e restaurará a
-        transação original.
+      description: Esta transação foi dividida nos seguintes lançamentos.
+      button_title: Dividir transação
+      button_description: Divida esta transação em vários lançamentos com categorias e valores diferentes.
+      button: Dividir
       unsplit_title: Desfazer divisão
+      unsplit_button: Desfazer divisão
+      unsplit_confirm: Isso removerá todos os lançamentos divididos e restaurará a transação original.
+    edit:
+      title: Editar divisão
+      description: Modifique os lançamentos divididos desta transação.
+      submit: Atualizar divisão
+      not_split: Esta transação não está dividida.
     update:
       success: Divisão atualizada com sucesso
+    child:
+      title: Parte de uma divisão
+      description: Este lançamento faz parte de uma transação dividida.
+      edit_split: Editar divisão
+      unsplit: Desfazer divisão

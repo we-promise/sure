@@ -4,39 +4,35 @@ de:
     edit:
       edit: "%{account} bearbeiten"
     form:
+      interest_rate: Zinssatz
+      interest_rate_placeholder: '5,25'
+      initial_balance: Ursprünglicher Kreditbetrag
       day_count_convention: Zinsberechnungsmethode
       day_count_convention_actual_365: Taggenau/365
       day_count_convention_actual_actual: Taggenau/taggenau
-      day_count_convention_hint: Wie Ihr Kreditgeber jede Periode gegen ein Jahr misst.
-        Taggenau/365 berechnet nach der Länge des Monats und ist bei britischen und
-        australischen Hypotheken üblich. 30/360 berechnet ein glattes Zwölftel, die
-        Grundlage, die Sure bisher immer verwendet hat.
+      day_count_convention_hint: Wie Ihr Kreditgeber jede Periode gegen ein Jahr
+        misst. Taggenau/365 berechnet nach der Länge des Monats und ist bei
+        britischen und australischen Hypotheken üblich. 30/360 berechnet ein
+        glattes Zwölftel, die Grundlage, die Sure bisher immer verwendet hat.
       day_count_convention_thirty_360: 30/360 (glattes Zwölftel)
-      initial_balance: Ursprünglicher Kreditbetrag
-      interest_rate: Zinssatz
-      interest_rate_placeholder: '5,25'
-      none: Keine
-      rate_change_add: Zinsänderung hinzufügen
-      rate_change_effective_date: Stichtag
-      rate_change_rate: Zinssatz
-      rate_change_remove: Entfernen
-      rate_changes: Zinsänderungen
-      rate_changes_empty: Keine Zinsänderungen erfasst. Der Kredit läuft mit dem oben
-        angegebenen Zinssatz.
-      rate_changes_hint: Jede Zeile legt den Zinssatz fest, der ab ihrem Stichtag
-        bis zum nächsten gilt. Ein erneut eingegebener Stichtag ersetzt diese Zeile,
-        statt eine zweite anzulegen.
       rate_type: Zinssatztyp
+      term_months: Laufzeit (Monate)
+      term_months_placeholder: '360'
       rate_type_adjustable: Anpassbar
       rate_type_fixed: Fest
       rate_type_variable: Variabel
+      rate_changes: Zinsänderungen
+      rate_changes_hint: Jede Zeile legt den Zinssatz fest, der ab ihrem Stichtag bis zum nächsten gilt. Ein erneut eingegebener Stichtag ersetzt diese Zeile, statt eine zweite anzulegen.
+      rate_changes_empty: Keine Zinsänderungen erfasst. Der Kredit läuft mit dem oben angegebenen Zinssatz.
+      rate_change_effective_date: Stichtag
+      rate_change_rate: Zinssatz
+      rate_change_add: Zinsänderung hinzufügen
+      rate_change_remove: Entfernen
       start_date: Auszahlungsdatum
-      start_date_hint: Wann der Kredit ausgezahlt wurde. Leer lassen, um das Eröffnungsdatum
-        des Kontos zu verwenden.
+      start_date_hint: Wann der Kredit ausgezahlt wurde. Leer lassen, um das Eröffnungsdatum des Kontos zu verwenden.
+      none: Keine
       subtype_none: Keine
       subtype_prompt: Kreditart wählen
-      term_months: Laufzeit (Monate)
-      term_months_placeholder: '360'
     new:
       title: Kreditdetails eingeben
     overview:
@@ -52,47 +48,49 @@ de:
     tabs:
       extra_repayments:
         amount_label: Sondertilgung
-        amount_placeholder: '0,00'
+        amount_placeholder: "0,00"
         apply: Anwenden
-        baseline_not_cleared: Mit der aktuellen Rate ist dieser Kredit bis zum ursprünglichen
-          Laufzeitende nicht getilgt, und %{balloon} blieben offen. Es gibt daher
-          kein früheres Datum und keine Zinsersparnis zum Vergleich. Mit diesem Zusatzbetrag
-          ist er zum oben genannten Datum getilgt.
+        baseline_not_cleared: "Mit der aktuellen Rate ist dieser Kredit bis zum ursprünglichen Laufzeitende nicht getilgt, und %{balloon} blieben offen. Es gibt daher kein früheres Datum und keine Zinsersparnis zum Vergleich. Mit diesem Zusatzbetrag ist er zum oben genannten Datum getilgt."
         clear: Zurücksetzen
-        comparison_basis: Verglichen mit der aktuellen Rate ohne Zusatzbetrag, ab
-          dem heutigen Saldo.
-        dated_note: Wöchentliche und zweiwöchentliche Zusatzbeträge werden jeweils
-          bei der nächsten Rate nach ihrer Zahlung angerechnet; die Zinsersparnis
-          ist daher eher zu niedrig angegeben.
-        extra_not_cleared: Auch mit diesem Zusatzbetrag ist der Kredit bis zum ursprünglichen
-          Laufzeitende nicht getilgt. Versuch es mit einem höheren Betrag.
+        comparison_basis: Verglichen mit der aktuellen Rate ohne Zusatzbetrag, ab dem heutigen Saldo.
+        dated_note: Wöchentliche und zweiwöchentliche Zusatzbeträge werden jeweils bei der nächsten Rate nach ihrer Zahlung angerechnet; die Zinsersparnis ist daher eher zu niedrig angegeben.
+        extra_not_cleared: Auch mit diesem Zusatzbetrag ist der Kredit bis zum ursprünglichen Laufzeitende nicht getilgt. Versuch es mit einem höheren Betrag.
         frequencies:
           fortnightly: Alle zwei Wochen
           monthly: Monatlich
           weekly: Wöchentlich
         frequency_label: Wie oft
         interest_saved: Gesparte Zinsen
-        intro: Sieh dir an, wie viel früher der Kredit getilgt ist und wie viel Zinsen
-          du sparst, wenn du zusätzlich zu deinen Raten wöchentlich, alle zwei Wochen
-          oder monatlich einen Zusatzbetrag zahlst.
+        intro: Sieh dir an, wie viel früher der Kredit getilgt ist und wie viel Zinsen du sparst, wenn du zusätzlich zu deinen Raten wöchentlich, alle zwei Wochen oder monatlich einen Zusatzbetrag zahlst.
         invalid_amount: Gib einen Betrag von null oder mehr in Ziffern ein.
         invalid_frequency: Wähle wöchentlich, alle zwei Wochen oder monatlich.
         months_sooner:
+          zero: Im selben Monat getilgt
           one: "%{count} Monat früher"
           other: "%{count} Monate früher"
-          zero: Im selben Monat getilgt
-        no_scheduled_repayments: Für diesen Kredit sind keine planmäßigen Raten mehr
-          vorgesehen, aber es ist noch ein Saldo offen. Daher gibt es keine Rate,
-          zu der du einen Zusatzbetrag zahlen kannst.
-        not_applicable: Auf diesen Kredit ist nichts mehr zu tilgen, daher gibt es
-          keine Sondertilgung zu berechnen.
+        no_scheduled_repayments: Für diesen Kredit sind keine planmäßigen Raten mehr vorgesehen, aber es ist noch ein Saldo offen. Daher gibt es keine Rate, zu der du einen Zusatzbetrag zahlen kannst.
+        not_applicable: Auf diesen Kredit ist nichts mehr zu tilgen, daher gibt es keine Sondertilgung zu berechnen.
         payoff_with_extra: Tilgung mit Zusatzbetrag
         total_cost: Gesamtkosten ab heute
         total_cost_not_cleared: Bis zum ursprünglichen Laufzeitende nicht getilgt
         total_cost_saved: "%{amount} weniger als ohne Zusatzbetrag"
-        variable_rate_notice: Der Zinssatz dieses Kredits ändert sich. Diese Zahlen
-          berücksichtigen die bereits erfassten Zinsänderungen; eine noch nicht erfasste
-          Änderung verschiebt sie.
+        variable_rate_notice: Der Zinssatz dieses Kredits ändert sich. Diese Zahlen berücksichtigen die bereits erfassten Zinsänderungen; eine noch nicht erfasste Änderung verschiebt sie.
+      schedule:
+        date: Datum
+        description: Hochgerechnet aus ursprünglicher Kreditsumme, Zinssatz und Laufzeit, beginnend am %{start_date}. Sondertilgungen sind nicht berücksichtigt.
+        variable_rate_notice: Der Zinssatz dieses Kredits ändert sich im Laufe der Zeit. Der Tilgungsplan wird bei jeder erfassten Änderung neu berechnet; das ursprüngliche Ablösedatum bleibt, die Rate passt sich an. Eine noch nicht erfasste Änderung verschiebt diese Zahlen.
+        opening_payment: Anfangsrate
+        forecasted_payoff_date: Voraussichtliches Ablösedatum
+        forecasted_payoff_not_converged: Mit der aktuellen Rate nicht getilgt
+        interest: Zinsen
+        monthly_payment: Monatsrate
+        not_applicable: "–"
+        number: "Nr."
+        payment: Rate
+        principal: Tilgung
+        remaining_balance: Restschuld
+        total_cost: Gesamtkosten
+        total_interest: Zinsen gesamt
       overview:
         edit_loan_details: Kreditdaten bearbeiten
         interest_rate: Zinssatz
@@ -104,23 +102,3 @@ de:
         term: Laufzeit
         type: Art
         unknown: Unbekannt
-      schedule:
-        date: Datum
-        description: Hochgerechnet aus ursprünglicher Kreditsumme, Zinssatz und Laufzeit,
-          beginnend am %{start_date}. Sondertilgungen sind nicht berücksichtigt.
-        forecasted_payoff_date: Voraussichtliches Ablösedatum
-        forecasted_payoff_not_converged: Mit der aktuellen Rate nicht getilgt
-        interest: Zinsen
-        monthly_payment: Monatsrate
-        not_applicable: "–"
-        number: Nr.
-        opening_payment: Anfangsrate
-        payment: Rate
-        principal: Tilgung
-        remaining_balance: Restschuld
-        total_cost: Gesamtkosten
-        total_interest: Zinsen gesamt
-        variable_rate_notice: Der Zinssatz dieses Kredits ändert sich im Laufe der
-          Zeit. Der Tilgungsplan wird bei jeder erfassten Änderung neu berechnet;
-          das ursprüngliche Ablösedatum bleibt, die Rate passt sich an. Eine noch
-          nicht erfasste Änderung verschiebt diese Zahlen.
