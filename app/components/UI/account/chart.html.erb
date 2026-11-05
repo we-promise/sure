@@ -32,7 +32,7 @@
       <%= render UI::PeriodPicker.new(
         selected: period_picker_selected,
         url: account_path(account),
-        extra_params: account.supports_trades? ? { chart_view: view } : {},
+        extra_params: period_picker_extra_params,
         options: period_picker_options
       ) %>
     </div>

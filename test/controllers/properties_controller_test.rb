@@ -553,6 +553,14 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_property_path
   end
 
+  test "edit form leaves out the icon picker, which property updates do not save" do
+    get edit_property_url(@account)
+
+    assert_response :success
+    assert_select "[data-controller=account-logo-picker]", 0
+    assert_select "form##{dom_id(@account, :logo_options)}", 0
+  end
+
   # Chimnie (UK, UPRN-based) lookups
 
   def chimnie_avm_response

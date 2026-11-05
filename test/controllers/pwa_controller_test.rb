@@ -7,6 +7,8 @@ class PwaControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "application/manifest+json", response.media_type
     assert_includes response.body, '"start_url": "/"'
+    assert_includes response.body, '"display": "standalone"'
+    refute_includes response.body, "display_override"
   end
 
   test "service worker responds successfully without origin or referer headers" do

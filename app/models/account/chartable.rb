@@ -28,11 +28,20 @@ module Account::Chartable
   end
 
   def sparkline_series
-    cache_key = family.build_cache_key("#{id}_sparkline_#{SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
-
-    Rails.cache.fetch(cache_key, expires_in: 24.hours) do
+    Rails.cache.fetch(sparkline_cache_key, expires_in: 24.hours) do
       balance_series
     end
+  end
+
+  # Built from this account's own data, so a sync of another account keeps it cached.
+  # Investment series are normalized from holdings and entries that can change outside
+  # this account's syncs, so those keep the family-wide sync timestamp.
+  def sparkline_cache_key
+    @sparkline_cache_key ||= [
+      "account_sparkline", SPARKLINE_CACHE_VERSION, id, updated_at.to_f, last_synced_at&.to_f,
+      rows_version(balances), rows_version(account_providers), Date.current,
+      (family.latest_sync_completed_at&.to_f if balance_type == :investment)
+    ].join("_")
   end
 
   private
@@ -106,6 +115,10 @@ module Account::Chartable
       return unless linked? && balance_type == :investment
 
       Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(self)
+    end
+
+    def rows_version(scope)
+      scope.pick(Arel.sql("count(*)"), Arel.sql("max(#{scope.table_name}.updated_at)")).map { |v| v&.to_f }.join("-")
     end
 
     def normalize_linked_investment_series(series, view: :balance)

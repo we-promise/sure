@@ -68,6 +68,8 @@ en:
           interactive_chart: interactive chart
           no_payoff: not on the current repayment
           aria_description: Loan balance chart. Recorded balance %{current_balance}. Original scheduled payoff %{scheduled_payoff_date}. Projected payoff from today's balance %{projected_payoff_date}.
+          aria_extra_payoff: Projected payoff with the extra repayment %{date}.
+          extra: With extra repayment
           aria_actual_history_starts: Recorded balance history begins %{date}.
           aria_interest_share: Across the first year's repayments about %{first}% of the amount paid is interest; across the final year's, about %{last}%.
           aria_interest_share_overall: Across all the repayments about %{share}% of the amount paid is interest.
