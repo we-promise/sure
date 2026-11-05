@@ -755,14 +755,15 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     @statement.current_holdings.to_a
     queries = capture_sql_queries { @statement.previous_holdings; @statement.day_change }
-    holdings_queries = queries.grep(/FROM "holdings"/)
+    holdings_queries = queries.grep(/FROM "?holdings"?\b/)
 
     assert_equal 1, holdings_queries.size, "previous snapshots must come from one query, not one per holding"
 
     previous = @statement.previous_holdings
+    current = @statement.current_holdings.index_by { |holding| [ holding.account_id, holding.security_id ] }
     assert_equal 3, previous.size
-    assert_equal 1.day.ago.to_date, previous[[ ira.id, aapl.id ]].date
-    assert_nil previous[[ taxable.id, only_today.id ]]
+    assert_equal 1.day.ago.to_date, previous[current[[ ira.id, aapl.id ]].id].date
+    assert_nil previous[current[[ taxable.id, only_today.id ]].id]
 
     # Same answer as the per-holding lookup, summed in family currency:
     # today 19 * 120 = 2280 vs yesterday 19 * 110 = 2090.
@@ -795,9 +796,9 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 15, aapl_row.qty
     assert_equal Money.new(3000, "USD"), aapl_row.amount_money
     assert aapl_row.missing_cost_basis, "one position has no known basis, so the row still warns"
-    # Partial credit, the rule the unrealised-gains KPI and combined_holding_trend
-    # already use (P28): cost and return cover the 10 shares whose basis is
-    # known (2000 now against 1500 cost), not the 5 that have none.
+    # Partial credit, the rule unrealized_gains and combined_holding_trend
+    # already use: cost and return cover the 10 shares whose basis is known
+    # (2000 now against 1500 cost), not the 5 that have none.
     assert_equal Money.new(150, "USD"), aapl_row.avg_cost
     assert_equal Money.new(2000, "USD"), aapl_row.unrealized.current
     assert_equal Money.new(1500, "USD"), aapl_row.unrealized.previous
@@ -845,7 +846,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     queries = capture_sql_queries { @statement.holdings_table_rows(sort: "day_change", dir: "desc") }
 
-    assert_equal 1, queries.grep(/FROM "holdings"/).size, "only the previous-snapshot query may run"
+    assert_equal 1, queries.grep(/FROM "?holdings"?\b/).size, "only the previous-snapshot query may run"
     assert_empty queries.grep(/FROM "trades"|FROM "security_prices"/), "no cost-basis fallback or price lookups per row"
   end
 
@@ -865,8 +866,46 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     queries = Holding.uncached { capture_sql_queries { rows = @statement.holdings_table_rows } }
 
     assert_equal 1, queries.grep(/FROM "trades"|JOIN trades/).size, "one batched cost query, not two per holding"
-    assert_equal [ 60, 70, 80 ], rows.map { |row| row.avg_cost.amount.to_i }.sort
+    assert_equal({ "T0" => 60, "T1" => 70, "T2" => 80 }, rows.to_h { |row| [ row.ticker, row.avg_cost.amount.to_i ] })
     assert rows.none?(&:missing_cost_basis)
+  end
+
+  # A provider can report one security in two currencies in the same account on
+  # the same day, and both rows are current. Each compares against its own
+  # currency's previous snapshot, as Holding#day_change does.
+  test "a security held in two currencies in one account keeps a day change per currency" do
+    account = create_investment_account(balance: 10_000)
+    security = Security.create!(ticker: "DUAL", name: "Dual listed")
+    { "USD" => [ 100, 130 ], "CAD" => [ 200, 210 ] }.each do |currency, (before, now)|
+      Holding.create!(account: account, security: security, date: 1.day.ago.to_date, qty: 1, price: before, amount: before, currency: currency)
+      Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: now, amount: now, currency: currency)
+    end
+    current = Holding.where(account: account, date: Date.current).order(:currency).to_a
+    @statement.stubs(:current_holdings).returns(current)
+
+    changes = current.to_h { |holding| [ holding.currency, @statement.holding_day_change(holding) ] }
+
+    assert_equal Money.new(100, "USD"), changes["USD"].previous
+    assert_equal Money.new(30, "USD"), changes["USD"].value
+    assert_equal Money.new(200, "CAD"), changes["CAD"].previous
+    assert_equal Money.new(10, "CAD"), changes["CAD"].value
+    current.each do |holding|
+      assert_equal holding.day_change.value, @statement.holding_day_change(holding).value, "#{holding.currency} must match Holding#day_change"
+    end
+  end
+
+  test "holdings table rows with the same figure keep a fixed order in both directions" do
+    account = create_investment_account(balance: 10_000)
+    %w[Beta Alpha Gamma].each_with_index do |name, i|
+      security = Security.create!(ticker: "TIE#{i}", name: name)
+      Holding.create!(account: account, security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+    end
+
+    asc = @statement.holdings_table_rows(sort: "value", dir: "asc").map(&:name)
+    desc = @statement.holdings_table_rows(sort: "value", dir: "desc").map(&:name)
+
+    assert_equal %w[Alpha Beta Gamma], asc
+    assert_equal %w[Alpha Beta Gamma], desc, "ties break by name in both directions"
   end
 
   # Pins top_holdings and allocation on a portfolio that exercises every path

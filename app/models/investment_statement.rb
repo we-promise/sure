@@ -287,21 +287,24 @@ class InvestmentStatement
       current_ids = current_holdings.map(&:id)
 
       if current_ids.any?
-        Holding
-          .joins(ActiveRecord::Base.sanitize_sql_array([
-            <<~SQL.squish,
-              JOIN holdings current_holdings
-                ON current_holdings.id IN (:current_ids)
-                AND current_holdings.account_id = holdings.account_id
-                AND current_holdings.security_id = holdings.security_id
-                AND current_holdings.currency = holdings.currency
-                AND holdings.date < current_holdings.date
-            SQL
-            { current_ids: current_ids }
-          ]))
-          .select("DISTINCT ON (holdings.account_id, holdings.security_id) holdings.*")
-          .order(Arel.sql("holdings.account_id, holdings.security_id, holdings.date DESC"))
-          .index_by { |holding| [ holding.account_id, holding.security_id ] }
+        # Keyed by the current holding, not by account and security: a provider
+        # can report one security in two currencies, and each current row has
+        # its own previous snapshot in its own currency.
+        Holding.find_by_sql([ <<~SQL.squish, { current_ids: current_ids } ]).index_by(&:current_holding_id)
+          SELECT prior.*, current_holdings.id AS current_holding_id
+          FROM holdings current_holdings
+          JOIN LATERAL (
+            SELECT holdings.*
+            FROM holdings
+            WHERE holdings.account_id = current_holdings.account_id
+              AND holdings.security_id = current_holdings.security_id
+              AND holdings.currency = current_holdings.currency
+              AND holdings.date < current_holdings.date
+            ORDER BY holdings.date DESC
+            LIMIT 1
+          ) prior ON TRUE
+          WHERE current_holdings.id IN (:current_ids)
+        SQL
       else
         {}
       end
@@ -314,7 +317,7 @@ class InvestmentStatement
   def holding_day_change(holding)
     return nil unless holding.amount_money
 
-    previous = previous_holdings[[ holding.account_id, holding.security_id ]]
+    previous = previous_holdings[holding.id]
     return nil unless previous&.amount_money
 
     Trend.new(current: holding.amount_money, previous: previous.amount_money)
@@ -463,10 +466,19 @@ class InvestmentStatement
       dir = HOLDINGS_SORT_DIRECTIONS.include?(dir.to_s) ? dir.to_s : "desc"
 
       # Rows without the sorted figure go last whichever direction is asked.
+      # Ties break by name, then security id, in both directions, so rows with
+      # the same figure keep their order between requests.
       present, absent = rows.partition { |row| sort_key_present?(row, sort) }
-      present = present.sort_by { |row| sort_value(row, sort) }
-      present.reverse! if dir == "desc"
-      present + absent
+      present = present.sort do |a, b|
+        order = sort_value(a, sort) <=> sort_value(b, sort)
+        order = -order if dir == "desc"
+        order.nonzero? || (tiebreak(a) <=> tiebreak(b))
+      end
+      present + absent.sort_by { |row| tiebreak(row) }
+    end
+
+    def tiebreak(row)
+      [ row.name.downcase, row.security.id.to_s ]
     end
 
     def sort_value(row, sort)
