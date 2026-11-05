@@ -3,7 +3,7 @@
   data = spending_trend_data
   period = data[:current_period]
   pill_button_class = "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0 whitespace-nowrap"
-  has_data = data[:current].any? { |p| p[:value].positive? } || data[:previous].any? { |p| p[:value]&.positive? }
+  has_data = data[:current].any? { |p| p[:value].positive? } || data[:previous].any? { |p| p[:value].positive? }
   chart_data = {
     days: data[:days],
     current_days: data[:current_days],
@@ -106,7 +106,7 @@
         <p class="text-sm text-secondary truncate">
           <span class="capitalize"><%= previous_label %></span>
           <%# While the selected month is still running, the figure below covers %>
-          <%# the same elapsed days rather than the whole average month. %>
+          <%# the same elapsed days rather than the whole previous month. %>
           <% if previous_comparison_day %>
             <span class="text-xs"><%= t(".previous_comparison_days", end_day: previous_comparison_day) %></span>
           <% end %>

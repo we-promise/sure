@@ -7,7 +7,6 @@ de:
       subtitle: Umfassende Einblicke in deine finanzielle Situation
       export: CSV exportieren
       print_report: Bericht drucken
-      drag_to_reorder: "Bereich per Drag & Drop neu anordnen"
       sections_aria: Berichtsbereiche
       toggle_section: "Sichtbarkeit des Bereichs umschalten"
       periods:
@@ -193,19 +192,14 @@ de:
         previous: Zurück
         next: Weiter
     google_sheets_instructions:
-      title_with_key: "✅ URL für Google Sheets kopieren"
-      title_no_key: "⚠️ API-Schlüssel erforderlich"
-      ready: Deine CSV-URL (mit API-Schlüssel) ist bereit.
-      steps: "So importierst du in Google Sheets:\n1. Erstelle ein neues Google Sheet\n2. Gib in Zelle A1 die unten angezeigte Formel ein\n3. Drücke Enter"
-      security_warning: "Diese URL enthält deinen API-Schlüssel. Bewahre sie sicher auf!"
+      title_no_key: "API-Schlüssel erforderlich"
       need_key: Um Daten in Google Sheets zu importieren, benötigst du einen API-Schlüssel.
       step1: "Gehe zu Einstellungen → API-Schlüssel"
       step2: "Erstelle einen neuen API-Schlüssel mit Lesezugriff"
       step3: Kopiere den API-Schlüssel
-      step4: "Füge ihn an diese URL an: ?api_key=DEIN_SCHLÜSSEL"
+      step4: "Füge ihn an diese URL an: &api_key=DEIN_SCHLÜSSEL"
       example: Beispiel
       then_use: Verwende dann die vollständige URL mit =IMPORTDATA() in Google Sheets.
-      open_sheets: Google Sheets öffnen
       go_to_api_keys: Zu den API-Schlüsseln
       close: Verstanden
     print:

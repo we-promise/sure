@@ -32,8 +32,6 @@ vi:
       delete_all: Xóa tất cả
       empty: Không tìm thấy danh mục
       new: Danh mục mới
-    menu:
-      loading: Đang tải...
     new:
       new_category: Danh mục mới
     update:
