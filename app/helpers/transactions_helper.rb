@@ -150,6 +150,21 @@ module TransactionsHelper
     @annotatable_account_ids.include?(account.id)
   end
 
+  # Sentence explaining Entry#auto_exclusion, e.g. "On October 3, 2026 the bank sync excluded …".
+  def auto_exclusion_description(enrichment)
+    metadata = enrichment.metadata || {}
+    date = l(enrichment.updated_at.to_date, format: :long)
+
+    case metadata["reason"]
+    when "stale_pending"
+      t("transactions.show.auto_excluded_stale_pending", date: date, days: metadata["days"])
+    when "posted_match"
+      t("transactions.show.auto_excluded_posted_match", date: date)
+    else
+      t("transactions.show.auto_excluded_other", date: date)
+    end
+  end
+
   # The dashboard drill-down filters by account id, so its filter chips name
   # the account rather than print the id. Memoized per request like the above.
   def transaction_filter_account_name(account_id)

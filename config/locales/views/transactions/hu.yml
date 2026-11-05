@@ -74,6 +74,10 @@ hu:
       attachments: Mellékletek
       exclude: Kizárás
       exclude_description: A kizárt tranzakciók eltávolításra kerülnek a költségvetési számításokból és a jelentésekből.
+      auto_excluded_title: "Automatikusan kizárva"
+      auto_excluded_stale_pending: "%{date} napján a banki szinkronizálás kizárta ezt a függőben lévő tranzakciót, mert %{days} nap alatt sem lett könyvelve."
+      auto_excluded_posted_match: "%{date} napján a banki szinkronizálás kizárta ezt a függőben lévő tranzakciót, mert a könyvelt változata külön tranzakcióként érkezett meg."
+      auto_excluded_other: "%{date} napján a banki szinkronizálás kizárta ezt a tranzakciót."
       activity_type: Tevékenység típusa
       activity_type_description: Befektetési tevékenység típusa (Vétel, Eladás, Osztalék stb.). Automatikusan felismert vagy manuálisan beállított.
       one_time_title: Egyszeri %{type}

@@ -474,8 +474,7 @@ class SimplefinItem < ApplicationRecord
 
     # Batch query to avoid N+1
     account_ids = linked_accounts.map(&:id)
-    counts_by_account = Entry.stale_pending(days: days)
-      .where(excluded: false)
+    counts_by_account = Entry.excludable_stale_pending(days: days)
       .where(account_id: account_ids)
       .group(:account_id)
       .count

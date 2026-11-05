@@ -1415,14 +1415,10 @@ class SimplefinItem::Importer
     # which is why it must run before that exclusion (see
     # review_and_exclude_stale_pending).
     def track_stale_unmatched_pending(account)
-      stale_unmatched = account.entries
-        .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
-        .where(excluded: false)
-        .where("entries.date < ?", 8.days.ago.to_date)
-        .where(Transaction.pending_sql)
-        .where(<<~SQL.squish)
-          transactions.extra -> 'potential_posted_match' IS NULL
-        SQL
+      # The same rows the exclusion would pick, so entries the user kept by
+      # turning Exclude off are not up for review either.
+      stale_unmatched = account.entries.excludable_stale_pending
+        .where("transactions.extra -> 'potential_posted_match' IS NULL")
         .count
 
       return unless stale_unmatched > 0

@@ -139,6 +139,18 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ "simplefin_false" ], account.entries.where(excluded: false).pluck(:name)
   end
 
+  test "stale pending review skips entries the user kept by turning Exclude off" do
+    account = @family.accounts.create!(name: "Kept pending", balance: 0, currency: "USD", accountable: Depository.new)
+    kept = create_pending_entry(account, "simplefin_kept", "simplefin", true, 10)
+    kept.lock_attr!(:excluded)
+
+    @importer.send(:review_and_exclude_stale_pending, account)
+
+    stats = @importer.send(:stats)
+    assert_nil stats["stale_unmatched_pending"]
+    assert_not kept.reload.excluded?
+  end
+
   test "a rejected access URL marks the item for reconnection and logs it" do
     provider = mock
     provider.expects(:get_accounts).raises(

@@ -10,6 +10,23 @@ class SimplefinItemTest < ActiveSupport::TestCase
     )
   end
 
+  test "stale_pending_status leaves out pending entries the user kept included" do
+    account = @family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    simplefin_account = @simplefin_item.simplefin_accounts.create!(
+      name: "Checking", account_id: "sf_stale_status", account_type: "checking", currency: "USD", current_balance: 0
+    )
+    account.update!(simplefin_account_id: simplefin_account.id)
+    holds = [ 10, 11 ].map do |amount|
+      account.entries.create!(
+        name: "Hold #{amount}", date: 10.days.ago.to_date, amount: amount, currency: "USD",
+        entryable: Transaction.new(extra: { "simplefin" => { "pending" => true } })
+      )
+    end
+    holds.last.lock_attr!(:excluded)
+
+    assert_equal 1, @simplefin_item.stale_pending_status[:count]
+  end
+
   test "belongs to family" do
     assert_equal @family, @simplefin_item.family
   end
