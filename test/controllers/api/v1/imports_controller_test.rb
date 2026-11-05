@@ -307,6 +307,131 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "-10.00", import.rows.first.amount # Normalized
   end
 
+  test "should create category mappings for configured API import without publishing" do
+    category = categories(:food_and_drink)
+    csv_content = "date,amount,name,category\n2024-01-01,-10.00,API Grocery,#{category.name}"
+
+    assert_difference("Import::CategoryMapping.count", 1) do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             category_col_label: "category",
+             account_id: @account.id,
+             date_format: "%Y-%m-%d",
+             publish: "false"
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+
+    import = Import.find(JSON.parse(response.body)["data"]["id"])
+    mapping = import.mappings.categories.find_by!(key: category.name)
+
+    assert_equal "pending", import.status
+    assert_equal category, mapping.mappable
+  end
+
+  test "should apply category mappings when API import is published automatically" do
+    category = categories(:food_and_drink)
+    transaction_name = "API Categorized Grocery #{SecureRandom.hex(4)}"
+    csv_content = "date,amount,name,category\n2024-01-02,-12.34,#{transaction_name},#{category.name}"
+
+    assert_difference("Transaction.count", 1) do
+      perform_enqueued_jobs(only: ImportJob) do
+        post api_v1_imports_url,
+             params: {
+               raw_file_content: csv_content,
+               date_col_label: "date",
+               amount_col_label: "amount",
+               name_col_label: "name",
+               category_col_label: "category",
+               account_id: @account.id,
+               date_format: "%Y-%m-%d",
+               publish: "true"
+             },
+             headers: api_headers(@api_key)
+      end
+    end
+
+    assert_response :created
+
+    import = Import.find(JSON.parse(response.body)["data"]["id"])
+    transaction = import.entries.sole.transaction
+
+    assert_equal "complete", import.status
+    assert_equal category, import.mappings.categories.find_by!(key: category.name).mappable
+    assert_equal category, transaction.category
+  end
+
+  test "should return error response and not auto publish when API import mapping sync fails" do
+    TransactionImport.any_instance.stubs(:sync_mappings).raises(StandardError, "mapping failed")
+    csv_content = "date,amount,name,category\n2024-01-03,-9.99,API Mapping Failure,Food & Drink"
+
+    assert_difference("Import.count", 1) do
+      assert_no_enqueued_jobs only: ImportJob do
+        post api_v1_imports_url,
+             params: {
+               raw_file_content: csv_content,
+               date_col_label: "date",
+               amount_col_label: "amount",
+               name_col_label: "name",
+               category_col_label: "category",
+               account_id: @account.id,
+               date_format: "%Y-%m-%d",
+               publish: "true"
+             },
+             headers: api_headers(@api_key)
+      end
+    end
+
+    assert_response :internal_server_error
+    json_response = JSON.parse(response.body)
+    assert_equal "processing_failed", json_response["error"]
+    assert_equal "Import was uploaded but could not be processed.", json_response["message"]
+
+    import = Import.find(json_response["import_id"])
+
+    assert_equal "failed", import.status
+    assert_equal "mapping failed", import.error
+    assert_equal 1, import.rows_count
+  end
+
+  test "should return error response and not auto publish when API import row generation fails" do
+    TransactionImport.any_instance.stubs(:generate_rows_from_csv).raises(StandardError, "row generation failed")
+    csv_content = "date,amount,name\n2024-01-04,-9.99,API Row Failure"
+
+    assert_difference("Import.count", 1) do
+      assert_no_enqueued_jobs only: ImportJob do
+        post api_v1_imports_url,
+             params: {
+               raw_file_content: csv_content,
+               date_col_label: "date",
+               amount_col_label: "amount",
+               name_col_label: "name",
+               account_id: @account.id,
+               date_format: "%Y-%m-%d",
+               publish: "true"
+             },
+             headers: api_headers(@api_key)
+      end
+    end
+
+    assert_response :internal_server_error
+    json_response = JSON.parse(response.body)
+    assert_equal "processing_failed", json_response["error"]
+    assert_equal "Import was uploaded but could not be processed.", json_response["message"]
+
+    import = Import.find(json_response["import_id"])
+
+    assert_equal "failed", import.status
+    assert_equal "row generation failed", import.error
+    assert_equal 0, import.rows_count
+  end
+
   test "should instantiate RuleImport before generating rows" do
     @family.categories.create!(
       name: "Groceries",
