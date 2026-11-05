@@ -13,7 +13,7 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     assert_selector ".hw-combobox [role='option']", text: "Starbucks"
     assert_selector "input[role='combobox']", count: 1
 
-    fill_in "entry_name", with: "Starb"
+    search_starbucks
     assert_selector ".hw-combobox [role='option']", text: "Starbucks"
     assert_selector ".hw-combobox [role='option']", count: 1
     find("#entry_name").send_keys(:arrow_down, :enter)
@@ -109,13 +109,34 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     end
 
     def select_starbucks
-      fill_in "entry_name", with: "Starb"
-      # Wait for filtered results before selecting; recent options can still be
-      # replaced by the asynchronous search response.
+      search_starbucks
       assert_selector ".hw-combobox [role='option']", count: 1
       assert_selector ".hw-combobox [role='option']", text: "Starbucks"
       find("#entry_name").send_keys(:arrow_down, :enter)
       assert_field "entry_name", with: "Starbucks"
+    end
+
+    def search_starbucks
+      # Record the search request, then wait for its matching Turbo Stream
+      # sentinel. Recent options can have identical text and counts.
+      page.execute_script(<<~JS)
+        delete document.documentElement.dataset.nameSearchCallback;
+        if (!window.nameSearchFetchRecorded) {
+          window.nameSearchFetchRecorded = true;
+          const originalFetch = window.fetch;
+          window.fetch = (url, init) => {
+            const requestUrl = new URL(url, window.location.href);
+            if (requestUrl.pathname === "/transactions/name_suggestions" && requestUrl.searchParams.get("q") === "Starb") {
+              document.documentElement.dataset.nameSearchCallback = requestUrl.searchParams.get("callback_id");
+            }
+            return originalFetch(url, init);
+          };
+        }
+      JS
+      fill_in "entry_name", with: "Starb"
+      assert_selector "html[data-name-search-callback]"
+      callback_id = find("html")["data-name-search-callback"]
+      assert_selector "[data-hw-combobox-target='endOfOptionsStream'][data-callback-id='#{callback_id}']", visible: :all
     end
 
     def choose_category(category)
