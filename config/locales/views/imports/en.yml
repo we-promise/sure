@@ -168,6 +168,10 @@ en:
         manually_configure: Manually configure
         apply_template: Apply template
         sample_caption: Sample data from your uploaded CSV
+    mappings:
+      form:
+        security_placeholder: Search by name or ticker
+        current_security: "Matched: %{security}"
     confirms:
       sure_import:
         title: Confirm your import
@@ -202,6 +206,10 @@ en:
         tag_mapping_description: Assign all of your imported file's tags to %{product_name}'s
           existing tags.  You can also add new tags or leave them uncategorized.
         tag_mapping_title: Assign your tags
+        security_mapping_description: Match the tickers in your imported file to real
+          securities. Recognized tickers are matched automatically; map any unrecognized
+          labels so your trades fetch the correct prices.
+        security_mapping_title: Assign your securities
     uploads:
       handle_qif_upload:
         qif_uploaded: "QIF file uploaded successfully."
@@ -254,6 +262,7 @@ en:
       account: "Account"
       category: "Category"
       tag: "Tag"
+      security: "Security"
     dry_run_resources:
       transactions: "Transactions"
       balances: "Balances"

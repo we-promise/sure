@@ -4,7 +4,8 @@ module ImportsHelper
       "Import::AccountTypeMapping" => I18n.t("imports.mapping_labels.account_type"),
       "Import::AccountMapping" => I18n.t("imports.mapping_labels.account"),
       "Import::CategoryMapping" => I18n.t("imports.mapping_labels.category"),
-      "Import::TagMapping" => I18n.t("imports.mapping_labels.tag")
+      "Import::TagMapping" => I18n.t("imports.mapping_labels.tag"),
+      "Import::SecurityMapping" => I18n.t("imports.mapping_labels.security")
     }.fetch(mapping_class.name)
   end
 
