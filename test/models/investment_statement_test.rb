@@ -738,7 +738,76 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     InvestmentStatement.new(@family.reload).totals(period: period)
   end
 
+  # Two parcels of one security, materialised the way a sync does: 60 bought on
+  # 2024-01-10 at $12 and 40 on 2024-03-05 at $20 (blended $15.20), then 40 sold
+  # on 2024-06-01 at $25 and priced at $30 the day after. Average cost relieves
+  # the sale at the blend, so every figure below follows from $15.20, not from
+  # either parcel's own price.
+  test "investment statement figures on the two-parcel fixture" do
+    travel_to Time.zone.local(2024, 6, 2, 12) do
+      account, security, sale = materialize_two_parcel_example(first_parcel_label: "Buy")
+
+      assert_equal 12, cost_basis_on(account, security, Date.new(2024, 3, 4)), "the first parcel alone"
+      assert_equal BigDecimal("15.2"), cost_basis_on(account, security, Date.new(2024, 5, 31)), "both parcels, before the sale"
+      assert_equal BigDecimal("15.2"), cost_basis_on(account, security, Date.new(2024, 6, 1)), "the sale relieves at the blend"
+
+      holding = @statement.current_holdings.first
+      assert_equal 60, holding.qty
+      assert_equal Money.new(BigDecimal("15.2"), "USD"), holding.avg_cost
+      # 60 x $30 = $1,800 against 60 x $15.20 = $912.
+      assert_equal Money.new(1800, "USD"), holding.trend.current
+      assert_equal Money.new(912, "USD"), holding.trend.previous
+      assert_equal 888, @statement.unrealized_gains
+
+      # 40 x $25 = $1,000 against 40 x $15.20 = $608.
+      gain = sale.realized_gain_loss
+      assert_equal Money.new(1000, "USD"), gain.current
+      assert_equal Money.new(608, "USD"), gain.previous
+      assert_equal Money.new(392, "USD"), gain.value
+    end
+  end
+
+  # The same fixture with the first parcel transferred in rather than bought.
+  # Its cost is unknown, and today that makes the whole position unknown on
+  # every date it is held: the $20 parcel's own price is not applied to the
+  # transferred units, and the sale has no realized gain.
+  test "investment statement figures on the two-parcel fixture with the first parcel transferred in" do
+    travel_to Time.zone.local(2024, 6, 2, 12) do
+      account, security, sale = materialize_two_parcel_example(first_parcel_label: Trade::TRANSFER_LABEL)
+
+      assert_nil cost_basis_on(account, security, Date.new(2024, 3, 4))
+      assert_nil cost_basis_on(account, security, Date.new(2024, 5, 31)), "not the $20 parcel's price"
+      assert_nil cost_basis_on(account, security, Date.new(2024, 6, 2))
+
+      holding = @statement.current_holdings.first
+      assert_equal 60, holding.qty
+      assert_nil holding.avg_cost
+      assert_nil holding.trend
+      assert_equal 0, @statement.unrealized_gains
+
+      assert_nil sale.realized_gain_loss
+    end
+  end
+
   private
+    def materialize_two_parcel_example(first_parcel_label:)
+      account = create_investment_account(balance: 1800)
+      security = create_portfolio_security
+      Security::Price.create!(security: security, date: Date.new(2024, 6, 2), price: 30, currency: "USD")
+
+      create_portfolio_trade(account: account, security: security, qty: 60, price: 12, date: Date.new(2024, 1, 10), label: first_parcel_label)
+      create_portfolio_trade(account: account, security: security, qty: 40, price: 20, date: Date.new(2024, 3, 5), label: "Buy")
+      sale = create_portfolio_trade(account: account, security: security, qty: -40, price: 25, date: Date.new(2024, 6, 1), label: "Sell")
+
+      Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+
+      [ account, security, sale.entryable ]
+    end
+
+    def cost_basis_on(account, security, date)
+      account.holdings.find_by!(security: security, date: date).cost_basis
+    end
+
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(
         name: "Investment #{SecureRandom.hex(3)}",
