@@ -170,13 +170,25 @@ class HoldingTest < ActiveSupport::TestCase
     create_trade(sweep, account: @account, qty: 5, price: 10, date: Date.current)
       .entryable.update!(investment_activity_label: "Sweep In")
     create_trade(plain, account: @account, qty: 5, price: 8, date: Date.current)
+    # neither a sale nor a trade dated after the holding enters the average
+    create_trade(@amzn.security, account: @account, qty: -5, price: 300.00, date: Date.current)
+    create_trade(plain, account: @account, qty: 5, price: 999, date: 1.day.from_now.to_date)
+
+    # a second account in another currency: its USD purchase converts into EUR
+    # at the exchange-rate table's rate, 4 * 10 USD at 0.9
+    euro_account = families(:empty).accounts.create!(name: "Euro Brokerage", balance: 0, cash_balance: 0, currency: "EUR", accountable: Investment.new)
+    euro_security = create_security("EURB", prices: [ { date: Date.current, price: 10 } ])
+    euro_holding = euro_account.holdings.create!(date: Date.current, security: euro_security, qty: 4, price: 9, amount: 36, currency: "EUR")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    create_trade(euro_security, account: euro_account, qty: 4, price: 10, date: Date.current, currency: "USD")
 
     expected = {
       @amzn => Money.new(BigDecimal("215")),
       @nvda => Money.new(BigDecimal("160")),
       unrated_holding => nil,
       sweep_holding => nil,
-      plain_holding => Money.new(BigDecimal("8"))
+      plain_holding => Money.new(BigDecimal("8")),
+      euro_holding => Money.new(BigDecimal("9"), "EUR")
     }
     expected.each { |holding, value| assert_cost value, Holding.find(holding.id).avg_cost, holding.ticker }
 
@@ -217,15 +229,17 @@ class HoldingTest < ActiveSupport::TestCase
   end
 
   test "a reload drops the preloaded average cost and the trend built on it" do
-    Holding.preload_avg_costs([ @amzn ])
-    assert_nil @amzn.avg_cost
-    assert_nil @amzn.trend
-
     create_trade(@amzn.security, account: @account, qty: 15, price: 200.00, date: Date.current)
+    Holding.preload_avg_costs([ @amzn ])
+    assert_equal Money.new(200), @amzn.avg_cost
+    trend_before = @amzn.trend
+    assert_not_nil trend_before, "the trend must be built before the reload, or keeping it would go unseen"
+
+    create_trade(@amzn.security, account: @account, qty: 15, price: 100.00, date: Date.current)
     @amzn.reload
 
-    assert_equal Money.new(200), @amzn.avg_cost
-    assert_not_nil @amzn.trend
+    assert_equal Money.new(150), @amzn.avg_cost
+    assert_not_equal trend_before.value, @amzn.trend.value
   end
 
   test "calculates total return trend" do
