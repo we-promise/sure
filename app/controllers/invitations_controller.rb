@@ -14,6 +14,9 @@ class InvitationsController < ApplicationController
     @invitation = Current.family.invitations.build(invitation_params)
     @invitation.inviter = Current.user
 
+    # An invitation never moves an existing account; it only signs up a new
+    # one. The answer is the same for any email, so admins cannot probe which
+    # emails have an account.
     if save_invitation
       InvitationMailer.invite_email(@invitation).deliver_later unless self_hosted?
       flash[:notice] = t(".success")
@@ -28,7 +31,6 @@ class InvitationsController < ApplicationController
     @invitation = Invitation.find_by!(token: params[:id])
 
     if @invitation.pending?
-      @account_exists = @invitation.email_registered?
       render :accept_choice, layout: "auth"
     else
       raise ActiveRecord::RecordNotFound

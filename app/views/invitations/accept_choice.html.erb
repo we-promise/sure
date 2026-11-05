@@ -11,15 +11,15 @@
 </div>
 
 <div class="space-y-4">
-  <% unless @account_exists %>
-    <%= render DS::Link.new(
-      text: t(".create_account"),
-      href: new_registration_path(invitation: @invitation.token),
-      variant: "outline",
-      size: "lg",
-      full_width: true
-    ) %>
-  <% end %>
+  <%# The page looks the same whether or not the email has an account, since
+      household admins can open pending invitation links. %>
+  <%= render DS::Link.new(
+    text: t(".create_account"),
+    href: new_registration_path(invitation: @invitation.token),
+    variant: "outline",
+    size: "lg",
+    full_width: true
+  ) %>
 
   <p class="text-secondary text-sm text-center"><%= t(".existing_account_hint") %></p>
 </div>

@@ -29,20 +29,6 @@ class Invitation < ApplicationRecord
     accepted_at.nil? && expires_at > Time.current
   end
 
-  # Every user already belongs to a family, so an invitation never moves an
-  # existing account; it can only be used to sign up. Creating one gives the
-  # same answer either way, so admins cannot probe which emails have an
-  # account; the accept page tells the invitee instead.
-  def email_registered?
-    return false if email.blank?
-
-    if self.class.encryption_ready?
-      User.exists?(email: email)
-    else
-      User.where("LOWER(email) = ?", email.to_s.strip.downcase).exists?
-    end
-  end
-
   private
 
     def generate_token

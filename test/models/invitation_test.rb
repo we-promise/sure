@@ -93,11 +93,6 @@ class InvitationTest < ActiveSupport::TestCase
     assert_includes invitation.errors[:email], "has already been invited to this family"
   end
 
-  test "email_registered? matches existing accounts regardless of case" do
-    assert @family.invitations.build(email: users(:family_member).email.upcase).email_registered?
-    assert_not @family.invitations.build(email: "nobody-yet@example.com").email_registered?
-  end
-
   test "an email that already belongs to an account can be invited like any other" do
     invitation = @family.invitations.build(email: users(:empty).email, role: "member", inviter: @inviter)
 

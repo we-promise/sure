@@ -184,14 +184,17 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", text: I18n.t("invitations.accept_choice.existing_account_hint")
   end
 
-  test "accept page offers no account creation when the invited email already has an account" do
-    @invitation.update_columns(email: users(:family_member).email)
+  test "accept page looks the same when the invited email already has an account" do
+    # Dialogs get random element ids on every render.
+    page = -> { response.body.gsub(/dialog-title-\h+/, "") }
+    get accept_invitation_url(@invitation.token)
+    new_email_page = page.call
 
+    @invitation.update_columns(email: users(:family_member).email)
     get accept_invitation_url(@invitation.token)
 
     assert_response :success
-    assert_select "a[href=?]", new_registration_path(invitation: @invitation.token), count: 0
-    assert_select "p", text: I18n.t("invitations.accept_choice.existing_account_hint")
+    assert_equal new_email_page, page.call
   end
 
   test "should not accept invalid invitation token" do
