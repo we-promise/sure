@@ -1,6 +1,13 @@
 require "test_helper"
 
 class LanguagesHelperTest < ActionView::TestCase
+  # The zone list is cached per process with the offsets current when it was
+  # built. Another test may have built it under travel_to, when some zones had
+  # a different standard offset, so rebuild it at the real time.
+  setup do
+    LanguagesHelper.instance_variable_set(:@timezone_option_rows, nil)
+  end
+
   test "timezone options have unique values so the saved zone stays selected" do
     values = timezone_options.map(&:last)
 
