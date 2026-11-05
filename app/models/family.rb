@@ -16,6 +16,7 @@ class Family < ApplicationRecord
   include RedbarkConnectable
   include OnchainWalletConnectable
   include AiPromptable
+  include TransactionReferences
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],
