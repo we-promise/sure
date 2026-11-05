@@ -11,13 +11,15 @@
 </div>
 
 <div class="space-y-4">
-  <%= link_to new_registration_path(invitation: @invitation.token),
-      class: "block w-full rounded-md border border-secondary bg-container px-4 py-3 text-center text-sm font-medium text-primary hover:bg-secondary transition" do %>
-    <%= t(".create_account") %>
+  <% unless @account_exists %>
+    <%= render DS::Link.new(
+      text: t(".create_account"),
+      href: new_registration_path(invitation: @invitation.token),
+      variant: "outline",
+      size: "lg",
+      full_width: true
+    ) %>
   <% end %>
 
-  <%= link_to new_session_path(invitation: @invitation.token),
-      class: "block w-full rounded-md border border-secondary bg-container px-4 py-3 text-center text-sm font-medium text-primary hover:bg-secondary transition" do %>
-    <%= t(".sign_in_existing") %>
-  <% end %>
+  <p class="text-secondary text-sm text-center"><%= t(".existing_account_hint") %></p>
 </div>

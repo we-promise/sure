@@ -15,18 +15,8 @@ class InvitationsController < ApplicationController
     @invitation.inviter = Current.user
 
     if save_invitation
-      normalized_email = @invitation.email.to_s.strip.downcase
-      existing_user = User.find_by(email: normalized_email)
-      if existing_user && @invitation.would_orphan_owned_accounts?(existing_user)
-        flash[:alert] = t(".existing_user_has_family_data")
-      elsif existing_user && @invitation.accept_for(existing_user)
-        flash[:notice] = t(".existing_user_added")
-      elsif existing_user
-        flash[:alert] = t(".failure")
-      else
-        InvitationMailer.invite_email(@invitation).deliver_later unless self_hosted?
-        flash[:notice] = t(".success")
-      end
+      InvitationMailer.invite_email(@invitation).deliver_later unless self_hosted?
+      flash[:notice] = t(".success")
     else
       flash[:alert] = t(".failure")
     end
@@ -38,6 +28,7 @@ class InvitationsController < ApplicationController
     @invitation = Invitation.find_by!(token: params[:id])
 
     if @invitation.pending?
+      @account_exists = @invitation.email_registered?
       render :accept_choice, layout: "auth"
     else
       raise ActiveRecord::RecordNotFound
@@ -71,8 +62,6 @@ class InvitationsController < ApplicationController
     # Persist the invitation, treating a raced partial-unique-index violation as
     # an ordinary save failure. A concurrent double-submit can still slip between
     # the `no_duplicate_pending_invitation_in_family` validation and the INSERT.
-    # Scoping the rescue to the save alone keeps later writes in #create (e.g.
-    # accept_for) from silently swallowing a genuine RecordNotUnique.
     def save_invitation
       @invitation.save
     rescue ActiveRecord::RecordNotUnique
