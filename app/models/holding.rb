@@ -118,6 +118,17 @@ class Holding < ApplicationRecord
     new_priority >= cost_basis_source_priority
   end
 
+  # The position's open lots, the opening lot first and then by acquisition.
+  # The stored lots are the position as it stands, so only its latest row
+  # shows them, and only while they add up to it (HoldingLot.in_partition).
+  def open_lots
+    return HoldingLot.none unless date == account.holdings.where(security_id: security_id).maximum(:date)
+    return HoldingLot.none unless HoldingLot.in_partition([ account_id ], [ security_id ]).include?([ account_id, security_id ])
+
+    HoldingLot.where(account_id: account_id, security_id: security_id).where("qty > 0")
+      .order(Arel.sql("acquired_on ASC NULLS FIRST"), :created_at)
+  end
+
   # Set cost_basis from user input (locks the value)
   def set_manual_cost_basis!(value)
     update!(
@@ -199,8 +210,10 @@ class Holding < ApplicationRecord
         end
       end
 
-      # Move all trades for old security to new security
+      # Move all trades for old security to new security, and their lots
       account.trades.where(security: old_security).update_all(security_id: new_security.id)
+      lots = account.holding_lots.where(security: old_security)
+      HoldingLot.move!(derived: lots.derived, opening: lots.opening, to: new_security)
     end
 
     # Reload self to reflect changes (may raise RecordNotFound if self was destroyed)
@@ -229,6 +242,8 @@ class Holding < ApplicationRecord
     transaction do
       # Move trades back (see note above about limitation)
       account.trades.where(security: current_security).update_all(security_id: original_security.id)
+      lots = account.holding_lots.where(security: current_security)
+      HoldingLot.move!(derived: lots.derived, opening: lots.opening.where(origin_security: original_security), to: original_security)
 
       # Reset ALL holdings that were remapped from this provider_security
       account.holdings.where(security: current_security, provider_security: original_security).find_each do |holding|
