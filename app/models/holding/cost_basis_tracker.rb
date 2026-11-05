@@ -1,77 +1,8 @@
-# Tracks weighted-average cost basis for a single security as trades are
-# applied in chronological order.
-#
-# Buys add to the running cost and quantity. Sells relieve quantity at the
-# current average cost (leaving the per-share average unchanged), and once the
-# position is fully closed the tracker resets so a later repurchase starts from
-# a clean basis. Without this relief, cost basis would be averaged over every
-# buy the account ever made for the security — corrupting the figure after a
-# position is sold off and bought again.
-#
-# Prices are expected in the account's currency (callers convert before
-# applying), so the tracker itself is currency-agnostic.
-#
-# A buy whose price is unknown (nil, e.g. no exchange rate for its day) makes
-# the average unknown until the position is fully closed. Skipping it instead
-# would average the known buys over fewer units than are held -- a figure that
-# looks measured and is not.
-class Holding::CostBasisTracker
-  def initialize
-    reset
-  end
-
-  # Applies a trade by its signed quantity: positive is a buy, negative a sell.
-  def apply(price, qty)
-    return if qty.nil?
-
-    qty = qty.to_d
-    return if qty.zero?
-
-    qty.positive? ? buy(price, qty) : sell(qty)
-  end
-
-  def buy(price, qty)
-    qty = qty&.to_d
-    return if qty.nil? || !qty.positive?
-
-    @unknown = true if price.nil?
-    @total_cost += price.to_d * qty unless price.nil?
-    @total_qty += qty
-  end
-
-  def sell(qty)
-    qty = qty&.to_d
-    return if qty.nil? || qty.zero? || @total_qty.zero?
-
-    # Relieve at the current average cost so the per-share average is unchanged.
-    # Guard against over-selling more than is currently held.
-    relieved_qty = [ qty.abs, @total_qty ].min
-    @total_cost -= (@total_cost / @total_qty) * relieved_qty
-    @total_qty -= relieved_qty
-
-    # Coercing to BigDecimal keeps arithmetic exact, so a full liquidation lands
-    # on exactly zero and the reset fires (Float math could leave a tiny remainder).
-    reset if @total_qty <= 0
-  end
-
-  # A split changes the share count and not the money invested, so total cost
-  # stays and the per-share average moves by the inverse of the ratio.
-  def split(ratio)
-    @total_qty = Security::Split.scale(@total_qty, ratio)
-  end
-
-  # Current weighted-average cost per share, or nil when nothing is held or
-  # the cost of what is held is unknown.
-  def average_cost
-    return nil if @total_qty.zero? || @unknown
-
-    @total_cost / @total_qty
-  end
-
-  private
-    def reset
-      @total_cost = BigDecimal("0")
-      @total_qty = BigDecimal("0")
-      @unknown = false
-    end
+# The pre-lot weighted-average tracker's name, kept only as the subject of the
+# parity suite: cost_basis_tracker_test.rb and the oracle block in
+# lot_book_test.rb assert Holding::LotBook reproduces its figures to the last
+# digit. No production code constructs it — the calculators use LotBook
+# directly. The alias and its parity tests go away with #4501, the series'
+# last PR, once no reader can still be running old code.
+class Holding::CostBasisTracker < Holding::LotBook
 end
