@@ -39,6 +39,11 @@ en:
         confirm_clear_cache:
           title: Clear data cache?
           body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+        reset_market_data: Reset market data for all families
+        reset_market_data_warning: Deletes all exchange rates and all provider-fetched security prices on this instance, re-imports them from your providers, and then syncs every family. Families may see unconverted totals until the import finishes.
+        confirm_reset_market_data:
+          title: Reset market data for all families?
+          body: This deletes all exchange rates and all provider-fetched security prices for every family on this instance and re-imports them. Until the import finishes, foreign-currency amounts may be shown unconverted. This action cannot be undone.
       provider_selection:
         exchange_rate_title: Exchange Rate Provider
         exchange_rate_description: Select a single provider for fetching currency exchange rates.
@@ -334,6 +339,8 @@ en:
         external_assistant_disconnected: External assistant disconnected
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
+      reset_market_data:
+        market_data_reset: Market data reset queued. Rates and prices will be re-imported, then all families will sync.
       not_authorized: You are not authorized to perform this action
       ensure_admin:
         not_authorized: You are not authorized to perform this action

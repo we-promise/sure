@@ -863,6 +863,48 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     assert_not Balance.exists?(account_balance.id)
   end
 
+  test "super admin can reset market data for the whole instance" do
+    sign_in users(:sure_support_staff)
+
+    with_self_hosting do
+      assert_enqueued_with(job: MarketDataResetJob) do
+        delete reset_market_data_settings_hosting_url
+      end
+    end
+
+    assert_redirected_to settings_hosting_url
+    assert_equal I18n.t("settings.hostings.reset_market_data.market_data_reset"), flash[:notice]
+  end
+
+  test "family admin cannot reset market data for the whole instance" do
+    users(:family_admin).update!(role: :admin)
+
+    with_self_hosting do
+      assert_no_enqueued_jobs only: MarketDataResetJob do
+        delete reset_market_data_settings_hosting_url
+      end
+    end
+
+    assert_redirected_to settings_hosting_url
+    assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+  end
+
+  test "only super admins see the market data reset" do
+    users(:family_admin).update!(role: :admin)
+
+    with_self_hosting do
+      get settings_hosting_url
+      assert_response :success
+      assert_select "form[action='#{reset_market_data_settings_hosting_path}']", count: 0
+      assert_select "form[action='#{clear_cache_settings_hosting_path}']", count: 1
+
+      sign_in users(:sure_support_staff)
+      get settings_hosting_url
+      assert_response :success
+      assert_select "form[action='#{reset_market_data_settings_hosting_path}']", count: 1
+    end
+  end
+
   test "can update assistant type to external" do
     with_self_hosting do
       assert_equal "builtin", users(:family_admin).family.assistant_type

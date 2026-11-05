@@ -29,6 +29,11 @@ de:
         confirm_clear_cache:
           title: Daten-Cache leeren?
           body: Bist du sicher, dass du den Daten-Cache leeren möchtest? Dadurch werden alle Wechselkurse, Wertpapierpreise, Kontostände und andere Daten entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
+        reset_market_data: Marktdaten für alle Familien zurücksetzen
+        reset_market_data_warning: Löscht alle Wechselkurse und alle von Anbietern geladenen Wertpapierpreise dieser Instanz, lädt sie bei deinen Anbietern neu und synchronisiert danach jede Familie. Bis der Import fertig ist, sehen Familien Fremdwährungsbeträge eventuell unumgerechnet.
+        confirm_reset_market_data:
+          title: Marktdaten für alle Familien zurücksetzen?
+          body: Dadurch werden alle Wechselkurse und alle von Anbietern geladenen Wertpapierpreise für jede Familie dieser Instanz gelöscht und neu geladen. Bis der Import fertig ist, werden Fremdwährungsbeträge eventuell unumgerechnet angezeigt. Diese Aktion kann nicht rückgängig gemacht werden.
         ai_assistant: KI-Assistent
         property_valuation_providers: Anbieter für Immobilienbewertung
       provider_selection:
@@ -149,6 +154,8 @@ de:
         invalid_llm_budget: "%{field} muss eine ganze Zahl ≥ %{minimum} sein."
       clear_cache:
         cache_cleared: Daten-Cache wurde geleert. Dies kann einige Augenblicke dauern.
+      reset_market_data:
+        market_data_reset: Zurücksetzen der Marktdaten eingeplant. Kurse und Preise werden neu geladen, danach synchronisieren alle Familien.
       not_authorized: Du bist nicht berechtigt, diese Aktion auszuführen.
       sync_settings:
         auto_sync_label: Automatische Synchronisierung aktivieren
