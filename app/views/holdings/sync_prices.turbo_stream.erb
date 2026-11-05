@@ -2,7 +2,7 @@
   <%= turbo_stream.replace dom_id(@holding, :current_market_price) do %>
     <dd id="<%= dom_id(@holding, :current_market_price) %>" class="text-primary">
       <% begin %>
-        <%= @holding.security.current_price ? format_money(@holding.security.current_price) : t("holdings.show.unknown") %>
+        <%= @holding.security.current_price ? current_price_with_quote(@holding.security, @holding.currency) : t("holdings.show.unknown") %>
         <% rescue ActiveRecord::RecordInvalid %>
         <%= t("holdings.show.unknown") %>
         <% rescue StandardError => e %>

@@ -26,6 +26,19 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(@holding, :shares)}", text: "10.374"
   end
 
+  # The quote is in the listing's currency; the value and cost beside it are in
+  # the holding's. Showing the quote alone put a foreign figure among them.
+  test "shows a quote in another currency converted to the holding's, with the quote beside it" do
+    Security.any_instance.stubs(:current_price).returns(Money.new(200, "EUR"))
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @holding.currency, date: Date.current, rate: 1.1)
+
+    get holding_path(@holding)
+
+    price = css_select("##{dom_id(@holding, :current_market_price)}").text.squish
+    assert_includes price, Money.new(220, @holding.currency).format
+    assert_includes price, "(#{Money.new(200, "EUR").format})"
+  end
+
   test "shows the exact stored quantity for a small crypto holding in the holdings list" do
     account = accounts(:crypto)
     security = Security.create!(
