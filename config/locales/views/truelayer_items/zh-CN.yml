@@ -1,0 +1,113 @@
+---
+zh-CN:
+  truelayer_items:
+    default_name: TrueLayer 连接
+    redirect_blocked: 无法打开 TrueLayer，请重试。
+    create:
+      success: TrueLayer 凭据已保存。您现在可以连接银行。
+    update:
+      success: TrueLayer 凭据已更新。
+    destroy:
+      success: 已计划删除 TrueLayer 连接。
+    connect:
+      credentials_required: 请先添加您的 TrueLayer Client ID 和 Client Secret。
+    sync:
+      not_connected: 同步前请先连接银行。
+    callback:
+      authorization_error: TrueLayer 授权失败：%{error}
+      authorization_failed: 无法完成 TrueLayer 连接：%{message}
+      invalid_callback: TrueLayer 登录已过期或与此会话不匹配。请重新开始。
+      success: 银行已连接。正在导入您的账户；同步完成后即可进行设置。
+    truelayer_item:
+      consent_expiring: 银行访问权限将于 %{date} 到期
+      delete: 删除连接
+      deletion_in_progress: 正在删除中...
+      error: 错误
+      history_missed: 较早的历史记录未导入。重新连接以获取历史记录。
+      no_accounts_description: 此连接尚未关联任何账户。
+      no_accounts_title: 无账户
+      reconnect: 重新连接
+      requires_update: 重新连接此银行以继续同步
+      setup_action: 设置新账户
+      setup_description: 已关联 %{total} 个账户中的 %{linked} 个。为您新导入的 TrueLayer 账户选择账户类型。
+      setup_needed: 新账户已准备就绪，需要设置
+      status: 上次同步于 %{timestamp} 前
+      status_never: 从未同步
+      status_with_summary: 上次同步于 %{timestamp} 前 • %{summary}
+      syncing: 同步中...
+      sync_status:
+        no_accounts: 未找到账户
+        synced:
+          one: 已同步 %{count} 个账户
+          other: 已同步 %{count} 个账户
+        partial_setup:
+          one: 已同步 %{linked} 个，%{unlinked} 个需要设置
+          other: 已同步 %{linked} 个，%{unlinked} 个需要设置
+    subtype_select:
+      placeholder:
+        subtype: 选择子类型
+        type: 选择类型
+    setup_accounts:
+      account_type_label: 账户类型：
+      all_accounts_linked: 您的所有 TrueLayer 账户均已设置。
+      cancel: 取消
+      choose_account_type: 为每个 TrueLayer 账户选择正确的账户类型：
+      create_accounts: 创建账户
+      creating_accounts: 正在创建账户...
+      kind_account: 银行账户
+      kind_card: 卡片
+      no_accounts_to_setup: 没有需要设置的账户
+      page_title: 设置 TrueLayer 账户
+      subtitle: 为您导入的账户选择正确的账户类型
+      sync_start_date_help: 此日期之前的交易将被忽略。留空以保留银行提供的全部交易。
+      sync_start_date_label: 导入交易起始日期
+      title: 设置您的 TrueLayer 账户
+      account_types:
+        skip: 跳过此账户
+        depository: 支票或储蓄账户
+        credit_card: 信用卡
+        loan: 贷款或抵押贷款
+      subtype_labels:
+        depository: 账户子类型：
+        credit_card: ""
+        loan: 贷款类型：
+      subtype_messages:
+        credit_card: 信用卡将自动设置为信用卡账户。
+    complete_account_setup:
+      all_skipped: 已跳过所有账户。未创建任何账户。
+      creation_failed: 创建账户失败：%{error}
+      success:
+        one: 已创建 %{count} 个账户。
+        other: 已创建 %{count} 个账户。
+    select_existing_account:
+      cancel: 取消
+      description: 选择要关联的 TrueLayer 账户。其交易将同步到此账户中。
+      link_account: 关联账户
+      no_accounts: 没有未关联的 TrueLayer 账户。请先在“设置 → 提供商”中连接银行。
+      title: 将 %{account_name} 关联到 TrueLayer
+    link_existing_account:
+      already_linked: 该 TrueLayer 账户已关联到其他账户。
+      only_manual: 只有手动账户才能关联到 TrueLayer。
+      success: 已将 %{account_name} 关联到 TrueLayer。
+  settings:
+    providers:
+      truelayer_panel:
+        client_id_label: Client ID
+        client_id_placeholder: 例如 sure-abc123（模拟银行为 sandbox-...）
+        client_secret_label: Client Secret
+        client_secret_placeholder_new: 粘贴您的 Client Secret
+        client_secret_placeholder_update: 留空以保留当前密钥
+        connect_bank: 连接银行
+        consent_expires: 银行访问权限将于 %{date} 到期
+        reconnect: 重新连接
+        reconnect_required: 需要重新连接
+        remove: 移除
+        remove_confirm: 确定要移除此银行连接吗？已关联的账户将保留历史记录，但会停止同步。
+        save_credentials: 保存凭据
+        step_1_html: 在 %{link} 创建应用并复制其 Client ID 和 Client Secret。
+        step_2_html: 将 %{callback_url} 添加到应用的“Allowed redirect URIs”中。
+        step_3: 在下方保存凭据，然后连接银行。在您批准访问权限后的几分钟内，Sure 将导入完整的历史记录。
+        step_4: 英国银行会要求您每 90 天重新连接一次；Sure 会在访问权限到期前显示“重新连接”按钮。
+        sync: 同步
+        syncing: 同步中...
+        update_credentials: 更新凭据
