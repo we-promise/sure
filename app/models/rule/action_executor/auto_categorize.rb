@@ -78,12 +78,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     end
 
     def cached_transaction_ids(protected_scope)
-      protected_scope
-        .joins(:data_enrichments)
-        .where(data_enrichments: { attribute_name: "category_id", source: "ai" })
-        .where(Arel.sql("data_enrichments.value = to_jsonb(transactions.category_id::text)"))
-        .distinct
-        .pluck(:id)
+      protected_scope.category_from("ai").pluck(:id)
     end
 
     def log_cache_usage(transaction_ids)

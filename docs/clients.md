@@ -115,7 +115,7 @@ Read monthly server-calculated totals and the daily spending comparison using
 use these values instead of rebuilding Sure's reporting rules from transactions.
 
 Structural node `name` values are fallback labels; clients should localize
-`cash_flow`, `surplus`, and `deficit` by `kind` at the presentation boundary.
+`cash_flow`, `surplus`, `deficit`, and `invested` by `kind` at the presentation boundary.
 
 `include` and `view` are mutually exclusive; combining them returns `422 invalid_view`.
 
@@ -160,4 +160,4 @@ owner or removed by that owner; knowing the APNs token alone never authorizes tr
 
 ## FinanceKit device publisher
 
-The native Apple client can enroll as a FinanceKit device publisher, map explicitly selected Wallet accounts, and upload an ordered local outbox during foreground or iOS-granted background execution. Setup and repair use normal Sure authentication; uploads use a revocable one-purpose credential that cannot read Sure data. Stable server-issued account lineages preserve identity across publisher replacement. See the [OpenAPI reference](api/openapi.yaml) and [operator guide](hosting/financekit.md).
+The native Apple client can enroll as a FinanceKit device publisher, map explicitly selected Wallet accounts, and upload an ordered local outbox during foreground or iOS-granted background execution. Setup and repair use normal Sure authentication; uploads use a revocable one-purpose credential that cannot read Sure data. Stable server-issued account lineages preserve identity across publisher replacement. See the [OpenAPI reference](api/openapi.yaml) and [operator guide](providers/financekit.md).

@@ -1,0 +1,19 @@
+---
+zh-CN:
+  onchain:
+    chains:
+      arbitrum: Arbitrum
+      base: Base
+      bitcoin: Bitcoin
+      cosmos: Cosmos Hub
+      ethereum: Ethereum
+      gnosis: Gnosis
+      optimism: Optimism
+      polkadot: Polkadot
+      polygon: Polygon
+      solana: Solana
+    institution_name: 自托管钱包
+  onchain_wallet_item:
+    movement:
+      received: 收到 %{quantity} %{symbol}
+      sent: 发送了 %{quantity} %{symbol}

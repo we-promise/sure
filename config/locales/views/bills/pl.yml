@@ -9,7 +9,8 @@ pl:
       safe_to_spend: Ile mogę bezpiecznie wydać w tym okresie?
       subscriptions_up: Które subskrypcje podrożały w tym roku?
     all:
-      any_status: Dowolny status
+      current_bills: Bieżące rachunki
+      dismissed_hidden_description: Zakończone rachunki są ukryte.
       any_type: Dowolny typ
       col_actions: Akcje
       col_amount: Kwota
@@ -285,6 +286,14 @@ pl:
       bridge_amount: "· do zapłaty %{amount}"
       bridge_label: Przed następną wypłatą
       bridge_split: Termin przed %{date}, pokryte przez %{cash} na Twoich kontach.
+      bridge_left: "%{amount} zostaje po rachunkach"
+      bridge_show_more:
+        few: "Pokaż %{count} więcej"
+        many: "Pokaż %{count} więcej"
+        one: Pokaż 1 więcej
+        other: "Pokaż %{count} więcej"
+      bridge_allocation_aria: "Z %{cash} na Twoich kontach %{due} jest do zapłaty przed następną wypłatą, a zostaje %{left}."
+      item_overdue: Zaległe
       due_this_period: Termin w tym okresie
       empty:
         action: Dodaj przychód

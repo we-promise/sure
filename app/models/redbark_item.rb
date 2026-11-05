@@ -32,14 +32,19 @@ class RedbarkItem < ApplicationRecord
   end
 
   # Import data from provider API
-  def import_latest_redbark_data(sync: nil)
+  # `fetched_at` is the sync's own clock, injected so that the account-details
+  # snapshot is stamped with the same instant the processing phase dates its
+  # findings by (see RedbarkItem::Syncer). A caller outside a sync -- the
+  # manual refresh in RedbarkItemsController -- stamps the real fetch time,
+  # which is what it means.
+  def import_latest_redbark_data(sync: nil, fetched_at: Time.current)
     provider = redbark_provider
     unless provider
       Rails.logger.error "RedbarkItem #{id} - Cannot import: provider is not configured"
       raise StandardError, I18n.t("redbark_items.errors.provider_not_configured")
     end
 
-    RedbarkItem::Importer.new(self, redbark_provider: provider, sync: sync).import
+    RedbarkItem::Importer.new(self, redbark_provider: provider, sync: sync, fetched_at: fetched_at).import
   rescue => e
     DebugLogEntry.capture(
       category: "provider_sync",
@@ -55,13 +60,18 @@ class RedbarkItem < ApplicationRecord
   end
 
   # Process linked accounts after data import
-  def process_accounts
+  #
+  # `as_of` is captured ONCE here and passed down, so every account in one sync
+  # dates its findings the same way. A sync that starts at 23:59 must not write
+  # one loan's detected rate change under today and the next loan's under
+  # tomorrow (we-promise/sure#3891).
+  def process_accounts(as_of: Date.current)
     return [] if redbark_accounts.empty?
 
     results = []
     linked_redbark_accounts.includes(account_provider: :account).each do |redbark_account|
       begin
-        result = RedbarkAccount::Processor.new(redbark_account).process
+        result = RedbarkAccount::Processor.new(redbark_account, as_of: as_of).process
         results << { redbark_account_id: redbark_account.id, success: true, result: result }
       rescue => e
         DebugLogEntry.capture(

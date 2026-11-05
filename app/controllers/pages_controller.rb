@@ -62,8 +62,15 @@ class PagesController < ApplicationController
   end
 
   def update_preferences
-    if Current.user.update_dashboard_preferences(preferences_params, laid_out_order: ordered_dashboard_section_keys)
-      head :ok
+    saved = Current.user.update_dashboard_preferences(preferences_params, laid_out_order: ordered_dashboard_section_keys)
+
+    # Grouping, collapse, and layout save with a JSON PATCH and expect an empty
+    # 200. The comparison toggle is an HTML form so the dashboard can re-render
+    # the chart that the preference reveals.
+    if dashboard_preference_json_request?
+      head(saved ? :ok : :unprocessable_entity)
+    elsif saved
+      redirect_back fallback_location: root_path, status: :see_other
     else
       head :unprocessable_entity
     end
@@ -129,7 +136,14 @@ class PagesController < ApplicationController
         permitted["section_order"] = prefs[:section_order] if prefs[:section_order].is_a?(Array)
         permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout].respond_to?(:to_unsafe_h)
         permitted["cashflow_sankey_group_by"] = prefs[:cashflow_sankey_group_by] if User::CASHFLOW_SANKEY_GROUPINGS.include?(prefs[:cashflow_sankey_group_by])
+        permitted["cashflow_preview_enabled"] = ActiveModel::Type::Boolean.new.cast(prefs[:cashflow_preview_enabled]) if prefs.key?(:cashflow_preview_enabled)
       end
+    end
+
+    # Fetch callers send JSON without an Accept header, which Rails would
+    # otherwise treat as HTML and redirect.
+    def dashboard_preference_json_request?
+      request.format.json? || request.media_type == "application/json"
     end
 
     # The spending filter is carried as the widget resolved it: a selection
@@ -281,7 +295,8 @@ class PagesController < ApplicationController
         dashboard_net_totals,
         dashboard_income_statement.income_totals(period: @period),
         dashboard_income_statement.expense_totals(period: @period),
-        Current.family.currency
+        Current.family.currency,
+        invested_total: dashboard_income_statement.invested_total(period: @period)
       )
     end
 
@@ -350,7 +365,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency)
+    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, invested_total: nil)
       nodes = []
       links = []
       node_indices = {}
@@ -364,9 +379,12 @@ class PagesController < ApplicationController
 
       total_income = net_totals.total_net_income.to_f.round(2)
       total_expense = net_totals.total_net_expense.to_f.round(2)
+      total_invested = invested_total&.amount.to_f.round(2)
 
-      # Central Cash Flow node
-      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", total_income, 100.0, "var(--color-success)")
+      # Central Cash Flow node, sized to whichever side is larger so a deficit
+      # (outflows above income) still balances, as IncomeStatement::Sankey does
+      capacity = [ total_income, (total_expense + total_invested).round(2) ].max
+      cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", capacity, 100.0, "var(--color-success)")
 
       # Build netted subcategory data from raw totals
       net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals)
@@ -395,12 +413,24 @@ class PagesController < ApplicationController
         flow_direction: :outbound
       )
 
+      # Money moved into investments, for a family that does not count it as spending
+      if total_invested.positive?
+        percentage = capacity.zero? ? 0 : (total_invested / capacity * 100).round(1)
+        idx = add_node.call("invested_node", t("pages.dashboard.cashflow_preview.node_labels.invested"), total_invested, percentage, IncomeStatement::Sankey::INVESTED_COLOR)
+        links << { source: cash_flow_idx, target: idx, value: total_invested, color: IncomeStatement::Sankey::INVESTED_COLOR, percentage: percentage }
+      end
+
       # Surplus/Deficit
-      net = (total_income - total_expense).round(2)
+      net = (total_income - total_expense - total_invested).round(2)
       if net.positive?
         percentage = total_income.zero? ? 0 : (net / total_income * 100).round(1)
         idx = add_node.call("surplus_node", "Surplus", net, percentage, "var(--color-success)")
         links << { source: cash_flow_idx, target: idx, value: net, color: "var(--color-success)", percentage: percentage }
+      elsif net.negative?
+        deficit = net.abs
+        percentage = capacity.zero? ? 0 : (deficit / capacity * 100).round(1)
+        idx = add_node.call("deficit_node", t("pages.dashboard.cashflow_preview.node_labels.deficit"), deficit, percentage, "var(--color-destructive)")
+        links << { source: idx, target: cash_flow_idx, value: deficit, color: "var(--color-destructive)", percentage: percentage }
       end
 
       { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency).symbol }

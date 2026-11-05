@@ -1,6 +1,14 @@
 ---
 fr:
   credit_cards:
+    due:
+      in_days:
+        one: À payer demain
+        other: À payer dans %{count} jours
+        zero: À payer aujourd'hui
+      overdue:
+        one: Était à payer hier
+        other: "%{count} jours de retard"
     edit:
       edit: Éditer %{account}
     form:
@@ -10,10 +18,39 @@ fr:
       apr_placeholder: '15.99'
       available_credit: Crédit disponible
       available_credit_placeholder: '10000'
+      due_day: Jour d'échéance du paiement
       expiration_date: Date d'expiration
       minimum_payment: Paiement minimum
       minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automatique
+      simplefin_balance_sign_credit: Crédit (la banque vous doit de l'argent)
+      simplefin_balance_sign_debt: Dette (vous devez de l'argent à la banque)
+      simplefin_balance_sign_description: Ne forcez la valeur que lorsque SimpleFIN renvoie un signe ambigu. Automatique continue d'utiliser l'historique des transactions et le solde du fournisseur.
+      simplefin_balance_sign_label: Signification du solde SimpleFIN
+      sophtron_balance_sign_auto: Automatique
+      sophtron_balance_sign_credit: Crédit (la banque vous doit de l'argent)
+      sophtron_balance_sign_debt: Dette (vous devez de l'argent à la banque)
+      sophtron_balance_sign_description: Ne forcez la valeur que lorsque Sophtron renvoie un signe ambigu. Automatique continue d'inverser le signe des soldes de carte de crédit.
+      sophtron_balance_sign_label: Signification du solde Sophtron
+      statement_close_day: Date d'arrêté du relevé
+      statement_cycle_description: Le jour du mois où votre relevé est arrêté et le jour où le paiement est dû. Une fois ces jours renseignés, l'onglet Aperçu indique le montant de votre dernier relevé et ce qui s'accumule pour le prochain. Une carte liée les renseigne automatiquement et conserve ce que vous avez saisi à la main.
       treat_balance_as_available_credit_description: Activez cette option si votre banque communique le solde de cette carte sous forme de crédit disponible restant plutôt que de montant dû. La dette est alors déduite de la limite de crédit communiquée par votre banque, ou du champ Crédit disponible si votre banque n'en fournit pas.
       treat_balance_as_available_credit_label: Le solde correspond au crédit disponible
     new:
       title: Saisir les détails de la carte de crédit
+    tabs:
+      overview:
+        above_minimum: Ce relevé s'élevait à %{balance}, au-dessus du minimum de %{minimum}. Ne payer que le minimum laisse le solde sur la carte à ce TAEG.
+        apr: TAEG
+        closes_on: Prochain relevé arrêté le %{date}
+        credit_toward_next: Crédit pour le prochain relevé
+        due_on: À payer le %{date}
+        edit_card_details: Modifier les détails de la carte
+        multi_currency_unavailable: Ce relevé additionne des opérations enregistrées dans plusieurs devises, qui ne peuvent pas être totalisées ici sans un taux pour chacune d'elles. Les soldes sont laissés vides plutôt qu'estimés.
+        no_cycle_description: 'Indiquez le jour où votre relevé est arrêté et le jour où le paiement est dû : cet onglet affichera alors le montant de votre dernier relevé et ce qui s''accumule pour le prochain. Une carte liée les renseigne généralement pour vous.'
+        no_cycle_title: Aucun cycle de relevé défini
+        since_last_statement: Depuis le dernier relevé
+        statement_balance: Solde du relevé
+        unknown: Inconnu
+    update:
+      sophtron_balance_sign_error: Impossible d'appliquer la signification du solde Sophtron. Votre réglage précédent a été conservé. Veuillez réessayer.

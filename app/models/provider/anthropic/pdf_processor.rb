@@ -1,5 +1,6 @@
 class Provider::Anthropic::PdfProcessor
   include Provider::Anthropic::Concerns::UsageRecorder
+  include Provider::Anthropic::Concerns::StructuredOutput
 
   TOOL_NAME = "report_document_analysis".freeze
 
@@ -31,18 +32,20 @@ class Provider::Anthropic::PdfProcessor
             "PDF is too large (#{pdf_content.bytesize} bytes); base64-encoded it would exceed Anthropic's 32 MB request limit"
     end
 
-    span = langfuse_trace&.span(name: "process_pdf_api_call", input: {
+    span = langfuse_trace&.generation(name: "process_pdf_api_call", model: model, input: {
       model: model,
       pdf_size: pdf_content&.bytesize
     })
 
-    response = client.messages.create(
+    response = create_structured_message(
+      tool_name: TOOL_NAME,
+      operation: "process_pdf",
       model: model,
       max_tokens: max_tokens,
-      system_: instructions,
+      system_: Provider::Anthropic.structured_output_system(instructions, model, TOOL_NAME),
       messages: [ { role: "user", content: user_content } ],
       tools: [ output_tool ],
-      tool_choice: { type: "tool", name: TOOL_NAME, disable_parallel_tool_use: true }
+      tool_choice: Provider::Anthropic.structured_output_tool_choice(model, TOOL_NAME)
     )
 
     parsed = extract_tool_input(response)
@@ -144,10 +147,10 @@ class Provider::Anthropic::PdfProcessor
     end
 
     def extract_tool_input(response)
-      tool_use = Array(response.content).find { |block| block_type(block) == :tool_use }
-      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME}" unless tool_use
+      tool_use = Array(response.content).find { |block| structured_block_type(block) == :tool_use }
+      raise Provider::Anthropic::Error, "Model did not invoke #{TOOL_NAME} (stop_reason: #{response.stop_reason})" unless tool_use
 
-      input = block_input(tool_use)
+      input = structured_block_input(tool_use)
       input = JSON.parse(input) if input.is_a?(String)
       input
     end
@@ -165,23 +168,5 @@ class Provider::Anthropic::PdfProcessor
 
       normalized = doc_type.to_s.strip.downcase.gsub(/\s+/, "_")
       Import::DOCUMENT_TYPES.include?(normalized) ? normalized : "other"
-    end
-
-    def block_type(block)
-      raw = block.respond_to?(:type) ? block.type : block[:type] || block["type"]
-      raw.to_s.to_sym
-    end
-
-    def block_input(block)
-      block.respond_to?(:input) ? block.input : (block[:input] || block["input"])
-    end
-
-    def usage_hash(raw_usage)
-      return {} unless raw_usage
-      {
-        "input_tokens" => raw_usage.input_tokens.to_i,
-        "output_tokens" => raw_usage.output_tokens.to_i,
-        "total_tokens" => raw_usage.input_tokens.to_i + raw_usage.output_tokens.to_i
-      }
     end
 end

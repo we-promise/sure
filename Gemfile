@@ -9,6 +9,9 @@ gem "rails", "~> 8.1.0"
 gem "pg", "~> 1.5"
 gem "redis", "~> 5.4"
 
+# Bech32/Bech32m encoding for watch-only Bitcoin addresses.
+gem "bech32", "1.5.1"
+
 # Deployment
 gem "puma", ">= 7.2.1"
 gem "bootsnap", require: false
@@ -106,7 +109,8 @@ gem "after_commit_everywhere", "~> 1.0"
 # AI
 gem "ruby-openai"
 gem "anthropic", "~> 1.0"
-gem "langfuse-ruby", "~> 0.1.4", require: "langfuse"
+gem "opentelemetry-sdk", "~> 1.13"
+gem "opentelemetry-exporter-otlp", "~> 0.36"
 
 group :development, :test do
   gem "debug", platforms: %i[mri mswin mswin64 mingw x64_mingw]
