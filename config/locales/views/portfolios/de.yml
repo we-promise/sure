@@ -1,0 +1,15 @@
+---
+de:
+  portfolios:
+    empty_state:
+      add_account: Anlagekonto hinzufügen
+      description: Verbinde oder ergänze ein Depot-, Vorsorge- oder Krypto-Konto, dann zeigt diese Seite Wert, Rendite und Bestände.
+      title: Noch keine Anlagekonten
+    sections:
+      accounts: Konten
+    show:
+      section_aria_label: "Abschnitt %{title}. Drücke Enter oder Leertaste, um ihn zum Umsortieren zu greifen, dann bewege ihn mit den Pfeiltasten."
+      sections_aria_label: Portfolio-Abschnitte
+      subtitle: Alles, was du hältst, was es wert ist und wie es sich entwickelt hat.
+      title: Portfolio
+      toggle_section: Abschnitt ein-/ausklappen

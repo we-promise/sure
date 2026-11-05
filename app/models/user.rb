@@ -754,12 +754,12 @@ class User < ApplicationRecord
   end
 
   # Section preferences for the pages built on the Reports section
-  # framework. Each page is a namespace; its order lives under
-  # "<namespace>_section_order" and its collapsed set under
+  # framework (Reports, the portfolio hub). Each page is a namespace; its
+  # order lives under "<namespace>_section_order" and its collapsed set under
   # "<namespace>_collapsed_sections", so two pages never read or write each
   # other's keys. Reports' original keys are the "reports" namespace, so
   # nothing already stored changes meaning.
-  SECTION_NAMESPACES = %w[reports].freeze
+  SECTION_NAMESPACES = %w[reports portfolio].freeze
 
   def section_order(namespace)
     preferences&.[]("#{section_namespace!(namespace)}_section_order") || default_section_order(namespace)
@@ -906,6 +906,14 @@ class User < ApplicationRecord
 
     def default_reports_section_order
       %w[trends_insights transactions_breakdown]
+    end
+
+    # Read from the registry rather than repeated here. These two lists must
+    # agree -- a key missing from this one is appended after every other
+    # section instead of appearing where it was declared -- and a second copy
+    # here would drift from the registry's.
+    def default_portfolio_section_order
+      Portfolio::SectionRegistry::KEYS.dup
     end
 
     def default_section_order(namespace)

@@ -146,6 +146,24 @@ module ApplicationHelper
     end
   end
 
+  # The family-wide investment hub. Preview-gated (hidden entirely without the
+  # flag) and desktop-only: the bottom bar already carries five entries at the
+  # width it has, and the hub is a wide, multi-section page. `desktop_only`
+  # is filtered out of the mobile bar in the layout, the mirror of the
+  # `mobile_only` flag the Assistant entry uses.
+  def portfolio_nav_item
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.portfolio"),
+        path: portfolio_path,
+        icon: "briefcase",
+        icon_custom: false,
+        active: page_active?(portfolio_path),
+        desktop_only: true
+      }
+    )
+  end
+
   # Wrapper around I18n.l to support custom date formats
   def format_date(object, format = :default, options = {})
     date = object.to_date

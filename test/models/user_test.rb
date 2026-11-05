@@ -866,6 +866,40 @@ class UserTest < ActiveSupport::TestCase
     assert_equal %w[reports_collapsed_sections reports_section_order], @user.preferences.keys.sort
   end
 
+  test "section preferences are namespaced so two pages never touch each other's keys" do
+    @user.update!(preferences: {})
+
+    @user.update_section_preferences("reports", order: %w[transactions_breakdown], collapsed: { "trends_insights" => true })
+    @user.update_section_preferences("portfolio", order: %w[accounts], collapsed: { "accounts" => true })
+    @user.reload
+
+    assert_equal %w[transactions_breakdown], @user.section_order("reports")
+    assert_equal %w[accounts], @user.section_order("portfolio")
+    assert @user.section_collapsed?("reports", "trends_insights")
+    assert_not @user.section_collapsed?("reports", "accounts")
+    assert @user.section_collapsed?("portfolio", "accounts")
+    assert_not @user.section_collapsed?("portfolio", "trends_insights")
+
+    assert_equal %w[transactions_breakdown], @user.reports_section_order
+    assert @user.reports_section_collapsed?("trends_insights")
+    assert_equal %w[reports_section_order reports_collapsed_sections portfolio_section_order portfolio_collapsed_sections].sort,
+      @user.preferences.keys.sort
+  end
+
+  test "the portfolio order defaults to the registry's keys and collapsing writes no order" do
+    @user.update!(preferences: {})
+
+    assert_equal Portfolio::SectionRegistry::KEYS, @user.section_order("portfolio")
+    assert_not @user.section_collapsed?("portfolio", "accounts")
+
+    @user.update_section_preferences("portfolio", collapsed: { "accounts" => true })
+    @user.reload
+
+    assert @user.section_collapsed?("portfolio", "accounts")
+    assert_nil @user.preferences["portfolio_section_order"], "collapsing must not write an order"
+    assert_equal Portfolio::SectionRegistry::KEYS, @user.section_order("portfolio")
+  end
+
   test "section preferences reject an unknown namespace" do
     assert_raises(ArgumentError) { @user.section_order("dashboard") }
     assert_raises(ArgumentError) { @user.section_collapsed?("dashboard", "net_worth") }
