@@ -79,7 +79,11 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
 
   test "non-release builds and January do not emit compatibility tags" do
     with_repo do |dir|
-      [ "push", "schedule", "workflow_dispatch" ].each do |event|
+      # Fork: push ke main MEMANG mengeluarkan tag stable/latest (produksi
+      # fork men-deploy :stable di setiap push main). Yang tetap dilarang
+      # adalah schedule dan build manual (workflow_dispatch) yang
+      # mengeluarkan tag floating.
+      [ "schedule", "workflow_dispatch" ].each do |event|
         success, output = resolve(dir, "2026.10.28", event: event, ref: "refs/heads/main")
         assert success
         assert_includes output, "release=false"
@@ -96,6 +100,14 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
           assert_includes output, "type=raw,value=sha-#{git!(dir, 'rev-parse', 'HEAD').strip}"
         end
       end
+      success, output = resolve(dir, "2026.10.28", event: "push", ref: "refs/heads/main")
+      assert success
+      assert_includes output, "release=false"
+      assert_includes output, "version=2026.10.28-alpha\n"
+      assert_includes output, "type=raw,value=sha-#{git!(dir, 'rev-parse', 'HEAD').strip}"
+      assert_includes output, "type=raw,value=stable"
+      assert_includes output, "type=raw,value=latest"
+      assert_not_includes output, "compatibility_version=0.7.7"
       success, output = resolve(dir, "2027.1.1", extra_env: { "COMPATIBILITY_CHANNEL" => "stable" })
       assert success
       assert_not_includes output, "type=raw,value=0.7.7"

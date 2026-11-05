@@ -21,6 +21,13 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+concurrency:
+  # Antrekan rilis: dua push ke main di hari yang sama tidak boleh jalan
+  # bersamaan — kalau tidak, keduanya lolos pengecekan "rilis sudah ada",
+  # lalu yang kedua gagal saat membuat rilis (TOCTOU).
+  group: create-release
+  cancel-in-progress: false
+
 permissions:
   contents: write
 

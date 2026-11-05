@@ -144,7 +144,10 @@ jobs:
               # latest (dulu di step "Configure image tags", hilang saat
               # merge resolusi sync CalVer). Tanpa ini, Deploy to VPS yang
               # menarik :stable tidak pernah dapat image baru.
-              elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+              # Hanya event push: build manual (workflow_dispatch) harus
+              # menjaga identitas yang dipilih (lihat
+              # test/workflows/release_workflow_test.rb).
+              elif [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/heads/main ]]; then
                 echo 'type=raw,value=stable'
                 echo 'type=raw,value=latest'
               fi
