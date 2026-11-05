@@ -7,6 +7,7 @@ import '../services/balance_sheet_service.dart';
 import '../services/offline_storage_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/log_service.dart';
+import '../services/widget_bridge_service.dart';
 
 class AccountsProvider with ChangeNotifier {
   final AccountsService _accountsService = AccountsService();
@@ -101,6 +102,8 @@ class AccountsProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    unawaited(WidgetBridgeService.instance.pushConfig());
+
     try {
       // Always load from local storage first for instant display
       final cachedAccounts = await _offlineStorage.getAccounts();
@@ -115,6 +118,7 @@ class AccountsProvider with ChangeNotifier {
       final isOnline = _connectivityService?.isOnline ?? false;
       final maybeTruncated =
           cachedAccounts.length == AccountsService.legacyPageSize;
+      var fetchedFromServer = false;
       if (isOnline &&
           (forceSync || cachedAccounts.isEmpty || maybeTruncated)) {
         final result = await _accountsService.getAllAccounts(
@@ -133,6 +137,7 @@ class AccountsProvider with ChangeNotifier {
           // Update in-memory accounts
           _accounts = serverAccounts;
           _errorMessage = null;
+          fetchedFromServer = true;
         } else {
           // If server fetch failed but we have cached data, that's OK
           if (_accounts.isEmpty) {
@@ -148,6 +153,16 @@ class AccountsProvider with ChangeNotifier {
       // Fetch balance sheet independently — works even with cached accounts
       if (isOnline) {
         await _fetchBalanceSheet(accessToken);
+      }
+
+      // Cached accounts are shared too, so the widget has data even when it
+      // can't fetch on its own; they never replace newer widget data.
+      if (_accounts.isNotEmpty) {
+        unawaited(WidgetBridgeService.instance.syncAccounts(
+          _accounts,
+          fromServer: fetchedFromServer,
+          netWorth: _isBalanceSheetStale ? null : _netWorthFormatted,
+        ));
       }
 
       _isLoading = false;
