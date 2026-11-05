@@ -2641,6 +2641,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
     t.jsonb "data"
     t.string "error"
     t.datetime "failed_at"
+    t.datetime "last_attempted_at"
     t.uuid "parent_id"
     t.datetime "pending_at"
     t.string "status", default: "pending"
