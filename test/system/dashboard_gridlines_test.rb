@@ -74,6 +74,35 @@ class DashboardGridlinesTest < ApplicationSystemTestCase
     assert_operator g["dateBottom"], :<=, g["svgBottom"] + 0.5, "dates are cut off at the bottom"
   end
 
+  # Two quick toggles whose saves both fail, in click order. Rolling each back to
+  # "the opposite of what it tried" would leave the switch ON after the second
+  # rollback although the server never accepted it.
+  test "overlapping failed saves leave the switch and chart at the last saved state" do
+    sign_in @user
+    assert_no_selector "#netWorthChart svg .y-gridlines", visible: :all
+
+    page.execute_script(<<~JS)
+      const delays = [300, 700];
+      const realFetch = window.fetch.bind(window);
+      window.fetch = (url, options) => {
+        if (!String(url).includes("/dashboard/preferences")) return realFetch(url, options);
+        return new Promise((resolve) => setTimeout(() => resolve(new Response("", { status: 500 })), delays.shift() ?? 300));
+      };
+    JS
+
+    section = find("[data-section-key='net_worth_chart']")
+    section.hover
+    section.find("summary").click
+    find("label[for='gridlines-net_worth_chart']", match: :first).click # on
+    find("label[for='gridlines-net_worth_chart']", match: :first).click # off again
+
+    sleep 1.2 # both failures have landed
+
+    assert_not find("#gridlines-net_worth_chart", visible: :all).checked?
+    assert_no_selector "#netWorthChart svg .y-gridlines", visible: :all
+    assert_not @user.reload.dashboard_section_gridlines?("net_worth_chart")
+  end
+
   test "the Spending chart still draws its gridlines through the shared module" do
     sign_in @user
 

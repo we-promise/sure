@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { compactAxisFormatter } from "../../../app/javascript/utils/chart_axis_labels.mjs";
 
-const labelsFor = (ticks, currency = "USD") => {
-  const format = compactAxisFormatter(ticks, currency, "en-US");
+const labelsFor = (ticks, currency = "USD", locale = "en-US") => {
+  const format = compactAxisFormatter(ticks, currency, locale);
   return ticks.map(format);
 };
 
@@ -38,6 +38,18 @@ describe("compactAxisFormatter", () => {
   it("falls back to the full number when compact decimals cannot separate neighbours", () => {
     // $50 apart on a $14M balance: five compact decimals would be needed.
     assert.deepEqual(labelsFor([14223200, 14223250, 14223300]), ["$14,223,200", "$14,223,250", "$14,223,300"]);
+  });
+
+  it("follows the locale's own compact unit, not an assumed thousand", () => {
+    // Chinese/Japanese compact in units of 10,000 (万): 15,000 is 1.5万, not 2万.
+    assert.deepEqual(labelsFor([0, 5000, 10000, 15000], "CNY", "zh-CN"), ["¥0", "¥5000", "¥1万", "¥1.5万"]);
+    assert.deepEqual(labelsFor([100000000, 150000000], "JPY", "ja"), ["￥1億", "￥1.5億"]);
+    // en-IN uses lakh (1e5).
+    assert.deepEqual(labelsFor([0, 50000, 100000, 150000], "INR", "en-IN"), ["₹0", "₹50K", "₹1L", "₹1.5L"]);
+  });
+
+  it("keeps small crypto balances distinct, past the compact decimal cap", () => {
+    assert.deepEqual(labelsFor([0.001, 0.00105, 0.0011], "BTC"), ["BTC 0.001", "BTC 0.00105", "BTC 0.0011"]);
   });
 
   it("copes with a single tick or none", () => {

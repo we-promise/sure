@@ -68,11 +68,20 @@ export default class extends Controller {
         String(value),
       );
 
+    // Rolling back to "the opposite of what I tried" breaks when toggles
+    // overlap (on, then off, both failing would end up on). Roll back to the
+    // last value the server confirmed instead, and only for the newest toggle.
+    this._confirmedGridlines ??= checkbox.defaultChecked;
+    this._gridlinesSequence = (this._gridlinesSequence ?? 0) + 1;
+    const sequence = this._gridlinesSequence;
+
     apply(enabled);
 
-    if (!(await this._save({ gridlines: enabled }))) {
-      checkbox.checked = !enabled;
-      apply(!enabled);
+    if (await this._save({ gridlines: enabled })) {
+      this._confirmedGridlines = enabled;
+    } else if (sequence === this._gridlinesSequence) {
+      checkbox.checked = this._confirmedGridlines;
+      apply(this._confirmedGridlines);
     }
   }
 

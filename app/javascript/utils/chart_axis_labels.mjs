@@ -11,21 +11,37 @@
 // (test/javascript/utils/chart_axis_labels_test.mjs).
 
 const MAX_FRACTION_DIGITS = 4;
+// Ceiling for the full-number fallback, which is not tied to a compact unit
+// (a BTC balance moves in steps of 0.00005).
+const MAX_FULL_FRACTION_DIGITS = 8;
 
-// Decimals needed to show a step exactly (0.25 -> 2); capped.
-function decimalsFor(step) {
-  for (let digits = 0; digits <= MAX_FRACTION_DIGITS; digits++) {
+// Decimals needed to show a step exactly (0.25 -> 2), up to `max`.
+function decimalsFor(step, max = MAX_FRACTION_DIGITS) {
+  for (let digits = 0; digits <= max; digits++) {
     const scaled = step * 10 ** digits;
-    if (Math.abs(scaled - Math.round(scaled)) < 1e-6) return digits;
+    // A step below one unit at this precision would "round" to zero: keep going.
+    if (Math.round(scaled) !== 0 && Math.abs(scaled - Math.round(scaled)) < 1e-6) return digits;
   }
-  return MAX_FRACTION_DIGITS;
+  return max;
 }
 
-function unitFor(largest) {
-  if (largest >= 1e9) return 1e9;
-  if (largest >= 1e6) return 1e6;
-  if (largest >= 1e3) return 1e3;
-  return 1;
+// The unit Intl's compact notation uses for `largest` in this locale: 1e3 (K)
+// in English, but 1e4 (万) in Chinese and Japanese, 1e5 (L) in en-IN. Read it
+// back from a generously precise rendering instead of assuming thousands.
+function unitFor(largest, locale, currency) {
+  if (!(largest > 0)) return 1;
+
+  const parts = buildFormatter(locale, currency, {
+    notation: "compact",
+    maximumFractionDigits: MAX_FRACTION_DIGITS,
+  }).formatToParts(largest);
+  const integer = parts.filter((p) => p.type === "integer").map((p) => p.value).join("");
+  const fraction = parts.find((p) => p.type === "fraction")?.value;
+  // NaN for locales with non-Latin digits: fall back to plain units.
+  const shown = Number(fraction ? `${integer}.${fraction}` : integer);
+
+  if (!(shown > 0)) return 1;
+  return 10 ** Math.round(Math.log10(largest / shown));
 }
 
 function buildFormatter(locale, currency, options) {
@@ -53,7 +69,9 @@ export function compactAxisFormatter(ticks, currency, locale) {
   const step = steps.length > 0 ? Math.min(...steps) : 0;
 
   // Fewest decimals that show the tick spacing exactly, bumped until unique.
-  let digits = step > 0 ? decimalsFor(step / unitFor(largest)) : 0;
+  // When even MAX_FRACTION_DIGITS cannot show the spacing exactly, compact
+  // labels would be unique but rounded, so go straight to the full number.
+  let digits = step > 0 ? decimalsFor(step / unitFor(largest, locale, currency), MAX_FRACTION_DIGITS + 1) : 0;
   for (; digits <= MAX_FRACTION_DIGITS; digits++) {
     const formatter = buildFormatter(locale, currency, {
       notation: "compact",
@@ -68,7 +86,7 @@ export function compactAxisFormatter(ticks, currency, locale) {
   // Compact formatting cannot separate these ticks: show the full number.
   const full = buildFormatter(locale, currency, {
     notation: "standard",
-    maximumFractionDigits: step >= 1 ? 0 : decimalsFor(step),
+    maximumFractionDigits: step >= 1 ? 0 : decimalsFor(step, MAX_FULL_FRACTION_DIGITS),
   });
   return (value) => full.format(value);
 }
