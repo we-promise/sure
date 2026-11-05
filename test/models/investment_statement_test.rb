@@ -738,7 +738,250 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     InvestmentStatement.new(@family.reload).totals(period: period)
   end
 
+  # ---------------------------------------------- allocation by classification
+
+  test "allocation groups by asset class, and cash counts as liquidity" do
+    account = create_investment_account(balance: 3000, cash_balance: 1000)
+    equity = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    bond = create_classified_security(asset_class: "fixed_income", asset_sub_class: "bond")
+    Holding.create!(account: account, security: equity, date: Date.current, qty: 1, price: 1200, amount: 1200, currency: "USD")
+    Holding.create!(account: account, security: bond, date: Date.current, qty: 1, price: 800, amount: 800, currency: "USD")
+
+    segments = @statement.allocation_by("asset_class").index_by(&:id)
+
+    assert_equal %w[equity fixed_income liquidity], segments.keys.sort
+    assert_equal 1200, segments["equity"].amount.amount
+    assert_equal 800, segments["fixed_income"].amount.amount
+    assert_equal 1000, segments["liquidity"].amount.amount, "the account's cash is liquidity"
+  end
+
+  # The bucket has to be a real segment: a portfolio of unclassified
+  # securities is told it has nothing classified yet rather than handed an
+  # empty list a caller would read as "nothing to show".
+  test "an entirely unclassified portfolio gets one Unclassified segment, not an empty list" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    security = create_classified_security(asset_class: nil, asset_sub_class: nil)
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    segments = @statement.allocation_by("asset_class")
+
+    assert_equal 1, segments.length
+    assert_equal InvestmentStatement::UNCLASSIFIED, segments.first.id
+    assert_equal 1000, segments.first.amount.amount
+    assert_in_delta 100, segments.first.weight, 0.01
+  end
+
+  # A cash balance is liquidity, and it is cash as a sub-class -- but it has
+  # no sector and no region, and putting it in one would invent an exposure
+  # the family does not have.
+  test "cash lands in liquidity by asset class and in Unclassified by sector" do
+    account = create_investment_account(balance: 1000, cash_balance: 1000)
+
+    by_class = @statement.allocation_by("asset_class").index_by(&:id)
+    by_sector = @statement.allocation_by("sector").index_by(&:id)
+    by_sub_class = @statement.allocation_by("asset_sub_class").index_by(&:id)
+    by_region = @statement.allocation_by("region").index_by(&:id)
+
+    assert_equal 1000, by_class["liquidity"].amount.amount
+    assert_equal 1000, by_sub_class["cash"].amount.amount
+    assert_equal 1000, by_sector[InvestmentStatement::UNCLASSIFIED].amount.amount,
+                 "cash was given a sector it does not have"
+    assert_equal 1000, by_region[InvestmentStatement::UNCLASSIFIED].amount.amount,
+                 "cash was given a region it does not have"
+  end
+
+  # A non-primary-currency cash POSITION is a real holding -- Security.cash_for
+  # creates one per currency -- and its classification columns may be empty.
+  # Reading the column alone would file the family's euros under Unclassified
+  # while the account's own cash balance sits under Liquidity: two answers for
+  # the same money on one chart.
+  #
+  # The columns are emptied with `update_columns` so the test exercises the
+  # `cash?` rule whatever a callback or default would otherwise put there.
+  test "a cash holding is liquidity, whatever its classification columns say" do
+    account = create_investment_account(balance: 2000, cash_balance: 0)
+    cash_security = Security.create!(ticker: "CASH-EUR-#{SecureRandom.hex(3)}", kind: "cash", offline: true)
+    cash_security.update_columns(asset_class: nil, asset_sub_class: nil, classification_source: nil)
+    assert_nil cash_security.reload.asset_class, "precondition: the taxonomy is empty here"
+    Holding.create!(account: account, security: cash_security, date: Date.current,
+                    qty: 1, price: 2000, amount: 2000, currency: "USD")
+
+    by_class = @statement.allocation_by("asset_class").index_by(&:id)
+    by_sub = @statement.allocation_by("asset_sub_class").index_by(&:id)
+
+    assert_equal 2000, by_class["liquidity"]&.amount&.amount,
+                 "a cash holding was filed as Unclassified"
+    assert_equal 2000, by_sub["cash"]&.amount&.amount
+
+    # And the drill-down agrees, or the parent row and its children disagree.
+    children = @statement.allocation_children("asset_class", "liquidity").index_by(&:id)
+    assert_equal 2000, children["cash"]&.amount&.amount
+  end
+
+  test "allocation groups by sector and region from the security's own columns" do
+    account = create_investment_account(balance: 2000, cash_balance: 0)
+    tech = create_classified_security(sector: "Technology", region: "north_america")
+    bank = create_classified_security(sector: "Financials", region: "europe")
+    Holding.create!(account: account, security: tech, date: Date.current, qty: 1, price: 1500, amount: 1500, currency: "USD")
+    Holding.create!(account: account, security: bank, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+
+    by_sector = @statement.allocation_by("sector").index_by(&:id)
+    by_region = @statement.allocation_by("region").index_by(&:id)
+
+    assert_equal 1500, by_sector["Technology"].amount.amount
+    assert_equal 500, by_sector["Financials"].amount.amount
+    assert_equal 1500, by_region["north_america"].amount.amount
+    assert_equal 500, by_region["europe"].amount.amount
+  end
+
+  test "a partly classified portfolio reports both the classified and the rest" do
+    account = create_investment_account(balance: 2000, cash_balance: 0)
+    known = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    unknown = create_classified_security(asset_class: nil)
+    Holding.create!(account: account, security: known, date: Date.current, qty: 1, price: 1500, amount: 1500, currency: "USD")
+    Holding.create!(account: account, security: unknown, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+
+    segments = @statement.allocation_by("asset_class").index_by(&:id)
+
+    assert_equal 1500, segments["equity"].amount.amount
+    assert_equal 500, segments[InvestmentStatement::UNCLASSIFIED].amount.amount
+    assert_in_delta 100, segments.values.sum(&:weight), 0.02, "weights must still sum to 100"
+  end
+
+  # The drill-down: asset class -> sub-class -> holdings.
+  test "an asset class expands to its sub-classes, and a sub-class to its holdings" do
+    account = create_investment_account(balance: 3000, cash_balance: 0)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    etf = create_classified_security(asset_class: "equity", asset_sub_class: "etf")
+    Holding.create!(account: account, security: stock, date: Date.current, qty: 1, price: 2000, amount: 2000, currency: "USD")
+    Holding.create!(account: account, security: etf, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    sub_classes = @statement.allocation_children("asset_class", "equity").index_by(&:id)
+
+    assert_equal %w[etf stock], sub_classes.keys.sort
+    assert_equal 2000, sub_classes["stock"].amount.amount
+    assert_equal 1000, sub_classes["etf"].amount.amount
+
+    holdings = @statement.allocation_children("asset_sub_class", "stock")
+
+    assert_equal 1, holdings.length
+    assert_equal 2000, holdings.first.amount.amount
+  end
+
+  # Expanding Liquidity has to show the cash, or the children contradict the
+  # parent row's amount.
+  test "Liquidity expands to the account cash it is made of" do
+    create_investment_account(balance: 1000, cash_balance: 1000)
+
+    children = @statement.allocation_children("asset_class", "liquidity").index_by(&:id)
+
+    assert_equal 1000, children["cash"].amount.amount
+  end
+
+  # A sector has no sub-sector here, and inventing one would be a different
+  # chart. These render flat.
+  test "the groupings that do not nest return no children" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    security = create_classified_security(sector: "Technology", region: "north_america")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    %w[sector region currency account security].each do |grouping|
+      assert_empty @statement.allocation_children(grouping, "Technology"), "#{grouping} invented a child level"
+    end
+  end
+
+  # A sub-class name is not unique across asset classes, so the bottom level is
+  # scoped to the branch it hangs from. Without it, opening equity's
+  # `unclassified` also lists fixed income's, and the level reports more money
+  # than the child above it.
+  test "an unclassified sub-class opens onto its own asset class only" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    # asset_class set, asset_sub_class left blank -> UNCLASSIFIED in both classes.
+    share = create_classified_security(ticker: "UEQ1", asset_class: "equity")
+    bond = create_classified_security(ticker: "UFI1", asset_class: "fixed_income")
+    Holding.create!(account: account, security: share, date: Date.current, qty: 1, price: 600, amount: 600, currency: "USD")
+    Holding.create!(account: account, security: bond, date: Date.current, qty: 1, price: 400, amount: 400, currency: "USD")
+
+    rows = @statement.allocation_children("asset_sub_class", InvestmentStatement::UNCLASSIFIED, parent: "equity")
+
+    assert_equal [ share.id ], rows.map(&:id),
+                 "fixed income's unclassified position leaked into equity's"
+    assert_equal 600, rows.sum { |r| r.amount.amount }.to_i,
+                 "the bottom level reported more than its parent holds"
+  end
+
+  # `build_segments` drops a non-positive ROW, which is right for a row but
+  # makes the levels disagree: a sub-class holding +1,000 and -500 nets to 500
+  # one level up, while the bottom level -- where they are two rows -- drops the
+  # negative and reports 1,000. A negative amount is corrupt data (upsert_all
+  # bypasses Holding's validations), so it is excluded before anything sums.
+  test "a corrupt negative holding is excluded at every level, not just the bottom" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    good = create_classified_security(ticker: "POS1", asset_class: "equity", asset_sub_class: "stock")
+    bad = create_classified_security(ticker: "NEG1", asset_class: "equity", asset_sub_class: "stock")
+    Holding.create!(account: account, security: good, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+    corrupt = Holding.create!(account: account, security: bad, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+    # Holding validates a non-negative amount, so reproduce the only way one
+    # lands in production: a write that skips validation.
+    corrupt.update_columns(amount: -500)
+
+    top = @statement.allocation_by("asset_class")
+    equity = top.find { |r| r.id == "equity" }
+    parent = @statement.allocation_children("asset_class", "equity")
+    stock = parent.find { |r| r.id == "stock" }
+    bottom = @statement.allocation_children("asset_sub_class", "stock", parent: "equity")
+
+    assert_equal 1000, equity.amount.amount.to_i, "the top-level segment netted the corrupt row in"
+    assert_equal 1000, stock.amount.amount.to_i, "the negative row netted against the good one a level up"
+    assert_equal 1000, bottom.sum { |r| r.amount.amount }.to_i, "the bottom level disagreed with its parent"
+    assert_equal [ good.id ], bottom.map(&:id), "the corrupt position was still listed"
+  end
+
+  test "every allocation grouping measures the same portfolio" do
+    # One account holding securities plus cash, one all-cash: the shape the
+    # groupings could disagree on, since each reads the holdings plus each
+    # account's cash.
+    mixed = create_investment_account(balance: 10_000, cash_balance: 2_000)
+    create_investment_account(balance: 3_000, cash_balance: 3_000)
+    security = create_portfolio_security
+    Holding.create!(account: mixed, security: security, date: Date.current, qty: 80, price: 100, amount: 8_000, currency: "USD")
+
+    totals = InvestmentStatement::ALLOCATION_GROUPINGS.to_h do |by|
+      segments = @statement.allocation_by(by)
+      assert_in_delta 100.0, segments.sum(&:weight), 0.01, "#{by} weights must sum to 100"
+      [ by, segments.sum { |segment| segment.amount.amount } ]
+    end
+
+    assert_equal [ @statement.portfolio_value ], totals.values.uniq,
+      "every grouping must add up to the portfolio value: #{totals.inspect}"
+  end
+
+  test "every classification grouping is reachable through allocation_by" do
+    %w[asset_class asset_sub_class sector region].each do |grouping|
+      assert_includes InvestmentStatement::ALLOCATION_GROUPINGS, grouping
+      assert_nothing_raised { @statement.allocation_by(grouping) }
+    end
+  end
+
+  # A grouping name comes from a query string, so one that is not offered
+  # answers with no segments rather than raising or borrowing another
+  # grouping's answer.
+  test "an unknown grouping returns no segments" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    security = create_classified_security(asset_class: "equity")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+    assert_not_empty @statement.allocation_by("asset_class"), "precondition: the portfolio has segments to borrow"
+
+    assert_empty @statement.allocation_by("nonsense")
+  end
+
   private
+    def create_classified_security(**attrs)
+      Security.create!(
+        { ticker: "T#{SecureRandom.hex(6)}", exchange_operating_mic: "XNAS", offline: true }.merge(attrs)
+      )
+    end
+
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(
         name: "Investment #{SecureRandom.hex(3)}",
