@@ -1,6 +1,7 @@
 ---
 ca:
   settings:
+    encryption_migration_guide: Guia de configuració del xifratge i migració
     ai_prompts:
       show:
         disable_ai: Desactiva l'assistent d'IA

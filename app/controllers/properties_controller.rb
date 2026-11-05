@@ -22,6 +22,9 @@ class PropertiesController < ApplicationController
         currency: property_params[:currency].presence || Current.family.currency
       )
     )
+    # Details typed into the manual wizard are user-set, so a later AVM link
+    # sends the user's area rather than deferring to the provider's record.
+    @account.accountable.lock_saved_attributes!
     @account.auto_share_with_family! if Current.family.share_all_by_default?
 
     redirect_to balances_property_path(@account)
@@ -29,6 +32,7 @@ class PropertiesController < ApplicationController
 
   def update
     if @account.update(property_params)
+      @account.accountable.lock_saved_attributes!
       @success_message = "Property details updated successfully."
 
       if @account.active?

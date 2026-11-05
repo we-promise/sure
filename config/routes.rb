@@ -265,7 +265,25 @@ Rails.application.routes.draw do
       post :new_connection
     end
   end
-  get ".well-known/oauth-protected-resource", to: "oauth_metadata#protected_resource"
+  resources :truelayer_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :callback
+      post :connect
+      get :select_existing_account
+      post :link_existing_account
+    end
+    member do
+      post :sync
+      post :reauthorize
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
+  get ".well-known/oauth-protected-resource(/*resource_path)",
+      to: "oauth_metadata#protected_resource",
+      as: :oauth_protected_resource_metadata,
+      format: false
   get ".well-known/oauth-authorization-server", to: "oauth_metadata#authorization_server"
   post "register", to: "oauth_registration#create"
   use_doorkeeper do |mapping|
@@ -301,6 +319,8 @@ Rails.application.routes.draw do
   end
 
   # AI chats
+  resource :chat_reservation, only: :create
+
   resources :chats do
     resources :messages, only: :create do
       member do
@@ -499,6 +519,8 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :merchants, only: :show
+
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do
       get :merge
@@ -555,6 +577,7 @@ Rails.application.routes.draw do
 
   namespace :transactions do
     resource :bulk_deletion, only: :create
+    resource :merchant_filter, only: :show
     resource :bulk_update, only: %i[new create]
     resource :categorize, only: %i[show create] do
       patch :assign_entry, on: :collection
@@ -564,7 +587,7 @@ Rails.application.routes.draw do
 
   resources :transactions, only: %i[index new create show update destroy] do
     resource :split, only: %i[new create edit update destroy]
-    resource :transfer_match, only: %i[new create]
+    resource :transfer_match, only: %i[new create destroy]
     resource :pending_duplicate_merges, only: %i[new create]
     resource :category, only: :update, controller: :transaction_categories
     resources :attachments, only: %i[show create destroy], controller: :transaction_attachments
@@ -680,9 +703,17 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :rule_groups, only: %i[new create edit update destroy] do
+    member do
+      patch :reorder
+      patch :activation
+    end
+  end
+
   resources :accounts, only: %i[index new show destroy], shallow: true do
     member do
       post :sync
+      get :logo_options
       get :sparkline
       patch :toggle_active
       patch :toggle_exclude_from_reports
@@ -696,6 +727,7 @@ Rails.application.routes.draw do
 
     collection do
       post :sync_all
+      get :logo_options, action: :new_logo_options
       patch :reorder
     end
 
@@ -764,6 +796,7 @@ Rails.application.routes.draw do
       post "auth/signup", to: "auth#signup"
       post "auth/login", to: "auth#login"
       post "auth/refresh", to: "auth#refresh"
+      get "auth/sso_providers", to: "auth#sso_providers"
       post "auth/sso_exchange", to: "auth#sso_exchange"
       post "auth/sso_link", to: "auth#sso_link"
       post "auth/sso_create_account", to: "auth#sso_create_account"
