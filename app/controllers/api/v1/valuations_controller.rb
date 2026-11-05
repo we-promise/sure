@@ -9,12 +9,10 @@ class Api::V1::ValuationsController < Api::V1::BaseController
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create, :update ]
   before_action :set_valuation, only: [ :show, :update ]
+  before_action :ensure_write_permission, only: [ :update ]
 
   def index
-    family = current_resource_owner.family
-    accessible_account_ids = family.accounts.accessible_by(current_resource_owner).select(:id)
-    valuations_query = family.entries
-      .where(entryable_type: "Valuation", account_id: accessible_account_ids)
+    valuations_query = accessible_valuation_entries
       .includes(:account, :entryable)
 
     valuations_query = apply_filters(valuations_query).reverse_chronological
@@ -83,7 +81,7 @@ class Api::V1::ValuationsController < Api::V1::BaseController
       return
     end
 
-    account = current_resource_owner.family.accounts.find(valuation_account_id)
+    account = current_resource_owner.family.accounts.writable_by(current_resource_owner).find(valuation_account_id)
     requested_upsert = upsert_requested?
     existing_write = false
 
@@ -231,17 +229,31 @@ class Api::V1::ValuationsController < Api::V1::BaseController
 
   private
 
+    # Valuation entries on accounts the caller can at least read.
+    def accessible_valuation_entries
+      family = current_resource_owner.family
+      family.entries.where(
+        entryable_type: "Valuation",
+        account_id: family.accounts.accessible_by(current_resource_owner).select(:id)
+      )
+    end
+
     def set_valuation
-      @entry = current_resource_owner.family
-                 .entries
-                 .where(entryable_type: "Valuation")
-                 .find(params[:id])
+      # Load through accessible accounts only: a valuation on an account the
+      # caller cannot see is a 404. Write access is checked next
+      # (ensure_write_permission).
+      @entry = accessible_valuation_entries.find(params[:id])
       @valuation = @entry.entryable
     rescue ActiveRecord::RecordNotFound
       render json: {
         error: "not_found",
         message: "Valuation not found"
       }, status: :not_found
+    end
+
+    # A valuation the caller can see but not change is a 403, not a 404.
+    def ensure_write_permission
+      require_api_account_permission!(@entry.account, resource: "valuation")
     end
 
     def ensure_read_scope
