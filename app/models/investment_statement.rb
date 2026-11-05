@@ -322,9 +322,9 @@ class InvestmentStatement
     )
   end
 
-  # The snapshot before each current holding, keyed by [account_id,
-  # security_id]: the latest row for the same account, security and currency
-  # dated before the current row, which is what Holding#day_change compares
+  # The snapshot before each current holding, keyed by the current holding's
+  # id: the latest row for the same account, security and currency dated
+  # before the current row, which is what Holding#day_change compares
   # against. One query for every holding rather than one per holding, so a
   # page that lists every position does not issue a query per row. Memoized
   # like current_holdings.
