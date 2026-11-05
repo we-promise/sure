@@ -258,6 +258,14 @@ class Family < ApplicationRecord
   validates :auto_generate_transaction_names, inclusion: { in: [ true, false ] }
   validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
+  # The searchable timezone select submits "" while no zone is saved yet;
+  # store nil so provider date parsing keeps its default instead of raising.
+  # Rails' friendly names (e.g. "Pacific Time (US & Canada)") are stored as
+  # their IANA identifier, the value the timezone select offers.
+  normalizes :timezone, with: ->(timezone) {
+    timezone = timezone.strip
+    ActiveSupport::TimeZone::MAPPING[timezone] || timezone.presence
+  }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
   validate :currency_must_be_known, if: :currency_changed?
 
