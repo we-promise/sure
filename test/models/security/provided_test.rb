@@ -267,6 +267,57 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal :ok, @security.provider_status
   end
 
+  # --- price_source ---
+
+  test "price_source names the assigned provider" do
+    Security.stubs(:provider_for).with("twelve_data").returns(mock("provider"))
+    @security.update!(price_provider: "twelve_data", offline: false)
+
+    assert_equal Security::PriceSource.new(provider: "twelve_data", status: :assigned), @security.price_source
+  end
+
+  test "price_source names the fallback provider when none is assigned" do
+    Security.stubs(:providers).returns([ Provider::YahooFinance.new ])
+    @security.update!(price_provider: nil, offline: false)
+
+    assert_equal Security::PriceSource.new(provider: "yahoo_finance", status: :default), @security.price_source
+  end
+
+  test "price_source marks an assigned provider that is unavailable" do
+    Security.stubs(:provider_for).with("tiingo").returns(nil)
+    @security.update!(price_provider: "tiingo", offline: true, offline_reason: "provider_disabled")
+
+    assert_equal Security::PriceSource.new(provider: "tiingo", status: :unavailable), @security.price_source
+  end
+
+  test "price_source marks an offline security that keeps its provider" do
+    Security.stubs(:provider_for).with("twelve_data").returns(mock("provider"))
+    @security.update!(price_provider: "twelve_data", offline: true, offline_reason: "health_check_failed")
+
+    assert_equal Security::PriceSource.new(provider: "twelve_data", status: :offline), @security.price_source
+  end
+
+  test "price_source names no fallback for a synced-only security paused by the health check" do
+    Security.stubs(:providers).returns([ Provider::YahooFinance.new ])
+    @security.update!(price_provider: nil, offline: true, offline_reason: "health_check_failed")
+
+    assert_equal Security::PriceSource.new(provider: nil, status: :none), @security.price_source
+  end
+
+  test "price_source is none for an offline security without a provider" do
+    Security.stubs(:providers).returns([ Provider::YahooFinance.new ])
+    @security.update!(price_provider: nil, offline: true, offline_reason: nil)
+
+    assert_equal Security::PriceSource.new(provider: nil, status: :none), @security.price_source
+  end
+
+  test "price_source is none when no provider is enabled" do
+    Security.stubs(:providers).returns([])
+    @security.update!(price_provider: nil, offline: false)
+
+    assert_equal Security::PriceSource.new(provider: nil, status: :none), @security.price_source
+  end
+
   # --- rank_search_results ---
 
   # Helper to build unsaved Security objects for ranking tests

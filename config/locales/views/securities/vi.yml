@@ -4,7 +4,15 @@ vi:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (mặc định)"
+      offline: "%{provider} (tạm dừng)"
+      unavailable: "%{provider} (không khả dụng)"
+      none: "Không có, giá từ đồng bộ tài khoản hoặc giao dịch"
     providers:
+      tinkoff_invest: T-Invest (T-Bank)
+      unknown: "Không rõ"
       twelve_data: Twelve Data
       yahoo_finance: Yahoo Finance
       tiingo: Tiingo

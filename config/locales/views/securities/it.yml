@@ -4,7 +4,15 @@ it:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (predefinito)"
+      offline: "%{provider} (in pausa)"
+      unavailable: "%{provider} (non disponibile)"
+      none: "Nessuna, prezzi dalla sincronizzazione del conto o dalle operazioni"
     providers:
+      tinkoff_invest: T-Invest (T-Bank)
+      unknown: "Sconosciuto"
       twelve_data: Twelve Data
       yahoo_finance: Yahoo Finance
       tiingo: Tiingo

@@ -1,0 +1,11 @@
+---
+nb:
+  securities:
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (standard)"
+      offline: "%{provider} (pauset)"
+      unavailable: "%{provider} (ikke tilgjengelig)"
+      none: "Ingen, kurser fra kontosynkronisering eller handler"
+    providers:
+      unknown: "Ukjent"
