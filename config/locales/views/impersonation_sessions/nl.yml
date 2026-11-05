@@ -16,10 +16,10 @@ nl:
     super_admin_bar:
       super_admin: "Superbeheerder"
       jobs: "Jobs"
-      impersonating: "Imiteert"
+      impersonating: "Aangemeld als"
       leave: "Verlaten"
       terminate: "Beëindigen"
       join_a_session: "Deelnemen aan een sessie"
       join: "Deelnemen"
       uuid_placeholder: "UUID"
-      request_impersonation: "Imitatie aanvragen"
+      request_impersonation: "Toegang als gebruiker aanvragen"
