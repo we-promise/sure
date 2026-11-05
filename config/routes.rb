@@ -577,6 +577,7 @@ Rails.application.routes.draw do
 
   namespace :transactions do
     resource :bulk_deletion, only: :create
+    resource :read, only: :create
     resource :merchant_filter, only: :show
     resource :bulk_update, only: %i[new create]
     resource :categorize, only: %i[show create] do

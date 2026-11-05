@@ -37,6 +37,13 @@ module AccountsHelper
     match && match[1]
   end
 
+  # Unread (synced or imported, not yet seen) transactions per account for the
+  # sidebar badges. One grouped query per request, shared by every render of
+  # the sidebar (desktop and mobile).
+  def sidebar_unread_counts
+    @sidebar_unread_counts ||= Current.user ? Current.user.unread_entry_counts_by_account : {}
+  end
+
   # Cache key for `accounts/_account_sidebar_tabs.html.erb`.
   # Kept here (not in the ERB) so the partial stays render-only.
   #
@@ -76,7 +83,9 @@ module AccountsHelper
       # order, must re-render the sidebar right away rather than after the
       # 12h expiry.
       Current.user&.default_account_order,
-      Current.user&.account_order&.manual? ? Digest::SHA256.hexdigest(Current.user.manual_account_order.to_json) : nil
+      Current.user&.account_order&.manual? ? Digest::SHA256.hexdigest(Current.user.manual_account_order.to_json) : nil,
+      # Unread badges change whenever a list render marks rows read.
+      Digest::SHA256.hexdigest(sidebar_unread_counts.sort.to_json)
     ]
   end
 
