@@ -3,6 +3,8 @@
 require "test_helper"
 
 class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     @user = users(:family_admin)
     @user.api_keys.active.destroy_all
@@ -998,6 +1000,26 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert trade_data["account"].key?("name")
     assert trade_data["account"].key?("account_type")
     assert trade_data.key?("notes")
+  end
+
+
+  test "a sale that names its lot reports the acquiring trade, in show and index" do
+    @investment_account.update!(cost_basis_method: "fifo")
+    security = Security.create!(ticker: "LOTAPI", name: "LOTAPI")
+    buy = create_trade(security, account: @investment_account, qty: 40, price: 20, date: 3.days.ago.to_date)
+    sale = create_trade(security, account: @investment_account, qty: -10, price: 25, date: 1.day.ago.to_date)
+    other_sale = create_trade(security, account: @investment_account, qty: -5, price: 25, date: Date.current)
+    sale.trade.update!(lot_source_entry: buy)
+
+    get "/api/v1/trades/#{sale.entryable_id}", headers: api_headers(read_only_api_key)
+    assert_response :success
+    assert_equal buy.entryable_id, JSON.parse(response.body)["lot_source_trade_id"]
+
+    get "/api/v1/trades", params: { account_id: @investment_account.id, per_page: 100 }, headers: api_headers(read_only_api_key)
+    by_id = JSON.parse(response.body)["trades"].index_by { |trade| trade["id"] }
+    assert_equal buy.entryable_id, by_id.fetch(sale.entryable_id)["lot_source_trade_id"]
+    assert by_id.fetch(other_sale.entryable_id).key?("lot_source_trade_id")
+    assert_nil by_id.fetch(other_sale.entryable_id)["lot_source_trade_id"]
   end
 
   private

@@ -23,5 +23,13 @@ end
 avg = holding.avg_cost
 json.avg_cost avg ? avg.format : nil
 
+# The position's open lots on its latest row; null on any other row.
+lots = local_assigns.fetch(:lots) { Holding.open_lots_for([ holding ])[holding.id] }
+if lots
+  json.lots lots, partial: "api/v1/holdings/lot", as: :lot
+else
+  json.lots nil
+end
+
 json.created_at holding.created_at.iso8601
 json.updated_at holding.updated_at.iso8601

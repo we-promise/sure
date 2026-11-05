@@ -9,6 +9,7 @@ json.notes trade.entry.notes
 json.qty trade.qty
 json.price trade.price_money.format
 json.investment_activity_label trade.investment_activity_label
+json.lot_source_trade_id trade.lot_source_entry&.entryable_id
 
 json.account do
   json.id trade.entry.account.id

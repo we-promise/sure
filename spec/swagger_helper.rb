@@ -1676,6 +1676,7 @@ RSpec.configure do |config|
               qty: { type: :string },
               price: { type: :string },
               investment_activity_label: { type: :string, nullable: true },
+              lot_source_trade_id: { type: :string, format: :uuid, nullable: true, description: 'For a sale, the trade whose lot it names to sell from first. It applies only while the account sells by FIFO; an account that sells by average keeps it but sells from the pooled average.' },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {
                 type: :object,
@@ -1731,8 +1732,27 @@ RSpec.configure do |config|
                 }
               },
               avg_cost: { type: :string, nullable: true },
+              lots: {
+                type: :array,
+                nullable: true,
+                description: "The position's open lots, the opening lot first and then by acquisition. Present only on the position's latest row, while its lots add up to the holding; null otherwise.",
+                items: { '$ref' => '#/components/schemas/HoldingLot' }
+              },
               created_at: { type: :string, format: :'date-time' },
               updated_at: { type: :string, format: :'date-time' }
+            }
+          },
+          HoldingLot: {
+            type: :object,
+            required: %w[id opening qty manual_cost],
+            properties: {
+              id: { type: :string, format: :uuid },
+              opening: { type: :boolean, description: 'Units held before the first imported trade' },
+              acquired_on: { type: :string, format: :date, nullable: true, description: 'Null for the opening lot' },
+              qty: { type: :string, description: 'Units of the lot still held' },
+              unit_cost: { type: :string, nullable: true, description: 'Formatted cost per unit; null when unknown' },
+              manual_cost: { type: :boolean, description: 'Whether the cost was set by the user' },
+              trade_id: { type: :string, format: :uuid, nullable: true, description: 'The trade that acquired the lot; null for the opening lot' }
             }
           },
           HoldingCollection: {

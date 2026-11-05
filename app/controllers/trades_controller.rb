@@ -101,7 +101,7 @@ class TradesController < ApplicationController
     def entry_params
       params.require(:entry).permit(
         :name, :date, :amount, :currency, :excluded, :notes, :nature,
-        entryable_attributes: [ :id, :qty, :price, :fee, :investment_activity_label ]
+        entryable_attributes: [ :id, :qty, :price, :fee, :investment_activity_label, :lot_source_entry_id ]
       )
     end
 
