@@ -101,8 +101,10 @@ vi:
         access_token_placeholder: Nhập token truy cập của bạn vào đây
         uri_base_label: URL cơ sở API (Tùy chọn)
         uri_base_placeholder: "https://api.openai.com/v1 (mặc định)"
+        uri_base_local_help: "Với mô hình chạy trên máy của bạn, hãy nhập endpoint tương thích OpenAI của nó, ví dụ Ollama tại http://localhost:11434/v1, hoặc http://ollama:11434/v1 khi Sure và Ollama chạy dưới dạng dịch vụ Docker Compose."
         model_label: Mô hình (Tùy chọn)
         model_placeholder: "gpt-4.1 (mặc định)"
+        model_required_help: "Bắt buộc khi bạn đặt URL cơ sở của API: nhập tên mô hình máy chủ của bạn dùng, chẳng hạn llama3.1 cho Ollama."
         json_mode_label: Chế độ JSON
         json_mode_auto: Tự động (khuyến nghị)
         json_mode_strict: Nghiêm ngặt (tốt nhất cho mô hình suy nghĩ)
