@@ -14,6 +14,14 @@
 </div>
 
 <div class="mx-auto max-w-2xl space-y-4">
+  <% if import.is_a?(TransactionImport) %>
+    <%= render DS::Alert.new(
+      variant: :info,
+      title: t(".synced_transaction_notice_title"),
+      message: t(".synced_transaction_notice_description")
+    ) %>
+  <% end %>
+
   <% if missing_merchant_count > 0 || skipped_recurring_count > 0 %>
     <%= render DS::Alert.new(
       variant: :warning,

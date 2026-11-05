@@ -2,6 +2,7 @@ require "test_helper"
 
 class TransactionImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper, ImportInterfaceTest
+  include EntriesTestHelper
 
   setup do
     @subject = @import = imports(:transaction)
@@ -270,6 +271,241 @@ class TransactionImportTest < ActiveSupport::TestCase
 
     # Both transactions should exist
     assert_equal 2, account.entries.where(date: Date.new(2024, 1, 1), amount: 100).count
+  end
+
+  test "does not duplicate a synced transaction with a different CSV name" do
+    account = accounts(:connected)
+    synced = create_transaction(account: account, date: Date.new(2024, 1, 1), amount: 100,
+                                name: "Provider description", external_id: "provider-1", source: "plaid")
+    manual = create_transaction(account: account, date: synced.date, amount: 100, name: "Other purchase")
+
+    @import.update!(
+      account: account,
+      raw_file_str: "date,name,amount\n01/01/2024,Bank CSV description,100\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+
+    assert_no_difference -> { Entry.count } do
+      @import.publish
+    end
+
+    assert @import.reload.complete?
+    assert_nil synced.reload.import_id
+    assert_not synced.import_locked?
+    assert_equal "Provider description", synced.name
+    assert_nil manual.reload.import_id
+
+    @import.revert
+    assert Entry.exists?(synced.id), "reverting the CSV import must not delete a synced transaction"
+  end
+
+  test "provider-only reconciliation remains complete after interruption before post-import sync" do
+    account = accounts(:connected)
+    synced = create_transaction(account: account, date: Date.new(2024, 1, 1), amount: 100,
+                                name: "Provider description", external_id: "provider-interruption", source: "plaid")
+    @import.update!(account: account, status: :importing,
+      raw_file_str: "date,name,amount\n01/01/2024,CSV description,100\n",
+      date_col_label: "date", amount_col_label: "amount", name_col_label: "name",
+      date_format: "%m/%d/%Y", amount_type_strategy: "signed_amount", signage_convention: "inflows_negative")
+    @import.generate_rows_from_csv
+    @import.family.stubs(:sync_later).raises(Interrupt)
+
+    assert_raises(Interrupt) { @import.publish }
+    assert @import.reload.complete?
+    assert_empty @import.entries
+    assert_nil synced.reload.import_id
+    assert_not synced.import_locked?
+    @import.update_columns(updated_at: 7.hours.ago)
+    Import.clean
+    assert @import.reload.complete?
+    @import.expects(:import!).never
+    @import.publish
+    @import.revert
+    assert Entry.exists?(synced.id)
+  end
+
+  test "overlapping CSV imports preserve a synced transaction and its mapped details" do
+    account = accounts(:connected)
+    synced = create_transaction(account: account, date: Date.new(2024, 1, 1), amount: 100,
+                                name: "Provider description", external_id: "provider-overlap", source: "plaid")
+    synced.update!(notes: "Provider notes")
+    synced.transaction.update!(category: categories(:food_and_drink), tags: [ tags(:one) ])
+    original_category = synced.transaction.category_id
+    original_tags = synced.transaction.tag_ids
+
+    imports = [ @import, @import.dup.tap(&:save!) ]
+    imports.each do |import|
+      import.update!(account: account,
+        raw_file_str: "date,name,amount,category,tags,notes\n01/01/2024,CSV description,100,CSV category,CSV tag,CSV notes\n",
+        date_col_label: "date", amount_col_label: "amount", name_col_label: "name",
+        category_col_label: "category", tags_col_label: "tags", notes_col_label: "notes",
+        date_format: "%m/%d/%Y", amount_type_strategy: "signed_amount", signage_convention: "inflows_negative")
+      import.generate_rows_from_csv
+      import.mappings.create!(key: "CSV category", mappable: categories(:income), type: "Import::CategoryMapping")
+      import.mappings.create!(key: "CSV tag", create_when_empty: true, type: "Import::TagMapping")
+      assert_no_difference -> { Entry.count } do
+        import.publish
+      end
+      assert import.reload.complete?
+      assert_nil synced.reload.import_id
+      assert_not synced.import_locked?
+      assert_equal "Provider notes", synced.notes
+      assert_equal original_category, synced.transaction.reload.category_id
+      assert_equal original_tags.sort, synced.transaction.tag_ids.sort
+    end
+
+    imports.each(&:revert)
+    assert Entry.exists?(synced.id)
+  end
+
+  test "one synced transaction only claims one of two identical CSV rows" do
+    account = accounts(:connected)
+    synced = create_transaction(account: account, date: Date.new(2024, 1, 1), amount: 100,
+                                name: "Provider description", external_id: "provider-2", source: "plaid")
+
+    @import.update!(
+      account: account,
+      raw_file_str: "date,name,amount\n01/01/2024,Bank CSV description,100\n01/01/2024,Bank CSV description,100\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+
+    assert_difference -> { Entry.count }, 1 do
+      @import.publish
+    end
+
+    assert_nil synced.reload.import_id
+    assert_equal 1, @import.entries.count
+    assert_equal "Bank CSV description", @import.entries.sole.name
+  end
+
+  test "a blank CSV name does not claim a synced transaction by date and amount alone" do
+    account = accounts(:connected)
+    synced = create_transaction(account: account, date: Date.new(2024, 1, 1), amount: 100,
+                                name: "Provider description", external_id: "provider-3", source: "plaid")
+
+    @import.update!(
+      account: account,
+      raw_file_str: "date,name,amount\n01/01/2024,,100\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+
+    assert_difference -> { Entry.count }, 1 do
+      @import.publish
+    end
+
+    assert_nil synced.reload.import_id
+    assert_equal "Imported item", @import.entries.sole.name
+  end
+
+  test "a CSV name equal to the default placeholder still claims a synced transaction" do
+    account = accounts(:connected)
+    synced = create_transaction(account: account, date: Date.new(2024, 1, 1), amount: 100,
+                                name: "Provider description", external_id: "provider-4", source: "plaid")
+
+    @import.update!(
+      account: account,
+      raw_file_str: "date,name,amount\n01/01/2024,Imported item,100\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+
+    assert_no_difference -> { Entry.count } do
+      @import.publish
+    end
+
+    assert_nil synced.reload.import_id
+  end
+
+  test "a stale excluded pending entry does not suppress a named CSV row" do
+    account = accounts(:connected)
+    pending = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Pending provider description",
+      external_id: "pending-provider-1",
+      source: "plaid",
+      entryable: Transaction.new(extra: { "plaid" => { "pending" => true } })
+    )
+    assert_equal 1, Entry.auto_exclude_stale_pending(account: account)
+    assert pending.reload.excluded?
+
+    @import.update!(
+      account: account,
+      raw_file_str: "date,name,amount\n01/01/2024,Bank CSV description,100\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+
+    assert_difference -> { Entry.count }, 1 do
+      @import.publish
+    end
+
+    assert_equal "Bank CSV description", @import.entries.sole.name
+    assert pending.reload.excluded?
+  end
+
+  test "an active pending entry does not suppress a posted CSV row" do
+    account = accounts(:connected)
+    pending = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Pending provider description",
+      external_id: "pending-provider-2",
+      source: "plaid",
+      entryable: Transaction.new(extra: { "plaid" => { "pending" => true } })
+    )
+    assert_not pending.excluded?
+
+    @import.update!(
+      account: account,
+      raw_file_str: "date,name,amount\n01/01/2024,Bank CSV description,100\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+
+    assert_difference -> { Entry.count }, 1 do
+      @import.publish
+    end
+
+    imported = @import.entries.sole
+    assert_equal 1, Entry.auto_exclude_stale_pending(account: account)
+    assert pending.reload.excluded?
+    assert Entry.exists?(imported.id), "the posted CSV transaction survives pending cleanup"
   end
 
   test "imports all identical transactions from CSV even when one exists in database" do
