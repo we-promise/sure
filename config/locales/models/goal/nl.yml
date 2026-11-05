@@ -1,0 +1,36 @@
+---
+nl:
+  activerecord:
+    attributes:
+      goal:
+        name: "Naam"
+        target_amount: "Doelbedrag"
+        currency: "Valuta"
+        target_date: "Streefdatum"
+        color: "Kleur"
+        notes: "Notities"
+        state: "Status"
+        linked_accounts: "Gekoppelde accounts"
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              missing_exchange_rate: "Er is nog geen wisselkoers beschikbaar voor een van de accounts van dit doel, dus het kan niet worden voltooid."
+              at_least_one_linked_account_required: "Kies minstens één account om dit doel te financieren."
+              whole_account_conflict_on_restore: "Kan dit doel niet herstellen: “%{account_name}” is nu volledig gereserveerd voor “%{goal_name}”. Voer eerst bij een van beide een bedrag in."
+            target_mode:
+              months_requires_maintained: "Alleen een reserve die u aanhoudt, kan een doel in maanden aan uitgaven hebben."
+            target_months:
+              blank: "Geef aan hoeveel maanden aan uitgaven deze reserve moet dekken."
+              only_with_months_mode: "Maanden aan uitgaven gelden alleen als het doel zo is ingesteld."
+            linked_accounts:
+              must_be_fundable: "Alle gekoppelde accounts moeten contant-geld-, beleggings- of crypto-accounts zijn."
+              must_belong_to_family: "Gekoppelde accounts moeten tot hetzelfde huishouden behoren als het doel."
+            kind:
+              locked_while_released: "Heropen dit doel voordat u er een reserve van maakt."
+              locked_once_consumed: "Dit doel heeft al geld als uitgegeven geregistreerd, dus het kan geen reserve worden."
+            target_amount:
+              below_consumed: "Kan geen doelbedrag instellen dat lager is dan wat dit doel al als uitgegeven heeft geregistreerd."
+            currency:
+              locked_after_linked: "Kan de valuta niet wijzigen nadat het doel aan accounts is gekoppeld."

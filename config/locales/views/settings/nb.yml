@@ -5,6 +5,7 @@ nb:
       payments:
         renewal: "Bidraget ditt fortsetter den %{date}."
   settings:
+    encryption_migration_guide: Veiledning for oppsett av kryptering og migrering
     payments:
       show:
         page_title: Betaling
