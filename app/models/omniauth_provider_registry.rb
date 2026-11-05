@@ -4,14 +4,22 @@ class OmniauthProviderRegistry
   Registration = Struct.new(:strategy, :args, :options, :config, keyword_init: true)
 
   class << self
+    # Register static strategies while leaving live database OIDC routing to the dynamic strategy.
     def register(builder, raw_cfg)
       registration = registration_for(raw_cfg)
       return unless registration
+
+      # Live database OIDC names are handled exclusively by the dynamic strategy.
+      # A boot-time copy would keep intercepting routes after disablement.
+      if FeatureFlags.db_sso_providers? && registration.strategy == :openid_connect
+        return registration.config
+      end
 
       builder.provider registration.strategy, *registration.args, registration.options
       registration.config
     end
 
+    # Normalize provider keys and build options for a supported authentication strategy.
     def registration_for(raw_cfg)
       cfg = raw_cfg.deep_symbolize_keys
       strategy = cfg[:strategy].to_s
@@ -28,11 +36,13 @@ class OmniauthProviderRegistry
       end
     end
 
+    # Register one OIDC strategy that resolves enabled database providers at request time.
     def register_dynamic_database_oidc_provider(builder)
       builder.provider :openid_connect, dynamic_database_oidc_options
     end
 
     private
+      # Build validated OIDC options and preserve the provider name and issuer.
       def openid_connect_registration(cfg)
         name = provider_name(cfg)
         oidc_options = Oidc::ProviderOptionsBuilder.call(cfg)
@@ -50,6 +60,7 @@ class OmniauthProviderRegistry
         )
       end
 
+      # Build a named Google OAuth strategy when client credentials are available.
       def google_oauth2_registration(cfg)
         name = provider_name(cfg)
         client_id = cfg[:client_id].presence || ENV["GOOGLE_OAUTH_CLIENT_ID"].presence
@@ -73,6 +84,7 @@ class OmniauthProviderRegistry
         )
       end
 
+      # Build a named GitHub OAuth strategy when client credentials are available.
       def github_registration(cfg)
         name = provider_name(cfg)
         client_id = cfg[:client_id].presence || ENV["GITHUB_CLIENT_ID"].presence
@@ -96,6 +108,7 @@ class OmniauthProviderRegistry
         )
       end
 
+      # Build a named SAML strategy with its configured identity-provider endpoints.
       def saml_registration(cfg)
         name = provider_name(cfg)
         settings = cfg[:settings] || {}
@@ -141,6 +154,7 @@ class OmniauthProviderRegistry
         )
       end
 
+      # Use live route predicates and per-request setup for database-backed OIDC.
       def dynamic_database_oidc_options
         {
           name: :db_openid_connect,
@@ -150,14 +164,17 @@ class OmniauthProviderRegistry
         }.merge(openid_connect_options({}, "db_openid_connect", nil, nil, nil, nil))
       end
 
+      # Accept an enabled database OIDC login route, excluding callbacks.
       def database_oidc_request_path?(env)
         database_oidc_config_for(env).present? && !callback_request?(env)
       end
 
+      # Accept a callback only for a currently enabled database OIDC provider.
       def database_oidc_callback_path?(env)
         database_oidc_config_for(env).present? && callback_request?(env)
       end
 
+      # Apply the selected live provider options to the request strategy.
       def setup_database_oidc_provider(env)
         registration = database_oidc_registration_for(env)
         return unless registration
@@ -166,10 +183,12 @@ class OmniauthProviderRegistry
         strategy.options.deep_merge!(registration.options)
       end
 
+      # Return the selected request-scoped database provider configuration.
       def database_oidc_config_for(env)
         database_oidc_registration_for(env)&.config
       end
 
+      # Resolve an enabled provider once per request without retaining stale boot-time routes.
       def database_oidc_registration_for(env)
         return unless FeatureFlags.db_sso_providers?
         return env["sure.omniauth.database_oidc_registration"] if env.key?("sure.omniauth.database_oidc_registration")
@@ -187,16 +206,19 @@ class OmniauthProviderRegistry
         env["sure.omniauth.database_oidc_registration"] = nil
       end
 
+      # Extract a provider name only from a supported OmniAuth login or callback path.
       def auth_path_provider_name(env)
         path = env["PATH_INFO"].to_s
         match = path.match(%r{\A/auth/([^/]+)(?:/callback)?\z})
         match&.[](1)
       end
 
+      # Distinguish callback requests from authentication-start requests.
       def callback_request?(env)
         env["PATH_INFO"].to_s.end_with?("/callback")
       end
 
+      # Build common OIDC discovery, PKCE, scope and client options.
       def openid_connect_options(cfg, name, issuer, client_id, client_secret, redirect_uri)
         options = {
           name: name.to_sym,
@@ -218,6 +240,7 @@ class OmniauthProviderRegistry
         options
       end
 
+      # Use configured scopes or the standard OIDC identity scopes.
       def openid_connect_scopes(cfg)
         custom_scopes = cfg.dig(:settings, :scopes).presence || cfg.dig(:settings, "scopes").presence
         return %i[openid email profile] if custom_scopes.blank?
@@ -225,6 +248,7 @@ class OmniauthProviderRegistry
         custom_scopes.to_s.split(/\s+/).map(&:to_sym)
       end
 
+      # Honor the application certificate and TLS verification settings.
       def ssl_options
         ssl_config = Rails.configuration.x.ssl
         options = {}
@@ -233,6 +257,7 @@ class OmniauthProviderRegistry
         options
       end
 
+      # Resolve the custom provider name with its identifier as fallback.
       def provider_name(cfg)
         (cfg[:name] || cfg[:id]).to_s
       end

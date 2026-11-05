@@ -203,6 +203,20 @@ class OidcIdentityTest < ActiveSupport::TestCase
     assert_not_nil identity.last_authenticated_at
   end
 
+  test "issuer validation trims configured whitespace and preserves trailing slashes" do
+    issuer = "https://idp.example.com/"
+    config = { name: @oidc_identity.provider, strategy: "openid_connect", issuer: "  #{issuer}\n" }
+    auth = OmniAuth::AuthHash.new(provider: @oidc_identity.provider, extra: { raw_info: { iss: issuer } })
+
+    assert_equal issuer, OidcIdentity.verified_issuer_for!(auth, config)
+    @oidc_identity.update!(issuer: issuer)
+    assert @oidc_identity.issuer_matches_config?(config)
+
+    auth.extra.raw_info.iss = issuer.delete_suffix("/")
+    assert_raises(OidcIdentity::IssuerMismatch) { OidcIdentity.verified_issuer_for!(auth, config) }
+    assert_not @oidc_identity.issuer_matches_config?(config.merge(issuer: issuer.delete_suffix("/")))
+  end
+
   test "does not accept an issuerless OIDC identity as matching the active provider" do
     @oidc_identity.update!(issuer: nil)
 

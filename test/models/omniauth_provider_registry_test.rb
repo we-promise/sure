@@ -41,6 +41,34 @@ class OmniauthProviderRegistryTest < ActiveSupport::TestCase
     assert_equal "authentik", registration.config[:name]
   end
 
+  test "database OIDC configuration is not also registered statically" do
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    builder = mock("omniauth builder")
+    builder.expects(:provider).never
+
+    config = OmniauthProviderRegistry.register(builder, custom_oidc_provider)
+    assert_equal "authentik", config[:name]
+  end
+
+  test "a disabled provider is no longer intercepted by a builder created while it was enabled" do
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    providers = [ custom_oidc_provider ]
+    ProviderLoader.stubs(:load_providers).returns(providers)
+    app = Rack::Builder.new do
+      use Rack::Session::Cookie, secret: "a" * 64
+      use OmniAuth::Builder do
+        OmniauthProviderRegistry.register_dynamic_database_oidc_provider(self)
+        OmniauthProviderRegistry.register(self, providers.first)
+      end
+      run ->(env) { [ 200, { "content-type" => "text/plain" }, [ env["omniauth.auth"] ? "authenticated" : "no auth" ] ] }
+    end.to_app
+    OmniAuth.config.mock_auth[:authentik] = OmniAuth::AuthHash.new(provider: "authentik", uid: "uid-123")
+    assert_equal "authenticated", Rack::MockRequest.new(app).get("/auth/authentik/callback").body
+
+    ProviderLoader.stubs(:load_providers).returns([])
+    assert_equal "no auth", Rack::MockRequest.new(app).get("/auth/authentik/callback").body
+  end
+
   test "does not intercept incomplete database OIDC providers" do
     Rails.env.stubs(:test?).returns(false)
     FeatureFlags.stubs(:db_sso_providers?).returns(true)

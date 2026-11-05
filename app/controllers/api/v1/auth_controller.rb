@@ -150,7 +150,7 @@ module Api
       # provider config also carries client secrets. Labels fall back the same
       # way as the web sign-in page.
       def sso_providers
-        providers = Rails.configuration.x.auth.sso_providers.map do |provider|
+        providers = AuthConfig.sso_providers.map do |provider|
           name = provider[:name].to_s
           strategy = provider[:strategy].to_s
           id = provider[:id].to_s
@@ -524,6 +524,7 @@ module Api
           )
         end
 
+        # Return the API error for deferred SSO authentication that is no longer valid.
         def render_invalid_sso_linking_code
           if params[:linking_code].present?
             Rails.cache.delete("mobile_sso_link:#{params[:linking_code]}")

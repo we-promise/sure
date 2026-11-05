@@ -1369,6 +1369,8 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "sso_providers lists configured providers without secrets" do
+    AuthConfig.unstub(:sso_providers)
+    FeatureFlags.stubs(:db_sso_providers?).returns(false)
     Rails.configuration.x.auth.stubs(:sso_providers).returns([
       { id: "authentik", name: "authentik", strategy: "openid_connect", label: "Authentik", client_secret: "shh", issuer: "https://idp.example.com" },
       { id: "oidc", name: "openid_connect", strategy: "openid_connect", label: "", client_secret: "shh" },
@@ -1388,7 +1390,38 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "shh"
   end
 
+  test "sso_providers reflects database provider additions and disablement without restarting" do
+    AuthConfig.unstub(:sso_providers)
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([])
+    provider = {
+      "name" => "live_oidc", "strategy" => "openid_connect", "label" => "Live SSO",
+      "issuer" => "https://idp.example.com", "client_id" => "client-id", "client_secret" => "private-secret"
+    }
+    ProviderLoader.stubs(:load_providers).returns([ provider ])
+
+    get "/api/v1/auth/sso_providers"
+
+    assert_response :success
+    assert_equal [ { "name" => "live_oidc", "strategy" => "openid_connect", "label" => "Live SSO" } ], JSON.parse(response.body)["providers"]
+    assert_not_includes response.body, "private-secret"
+    assert_not_includes response.body, "https://idp.example.com"
+    get "/auth/mobile/live_oidc", params: { device_id: "live-device", device_name: "Test", device_type: "ios" }
+    assert_response :success
+
+    ProviderLoader.stubs(:load_providers).returns([])
+    get "/api/v1/auth/sso_providers"
+
+    assert_response :success
+    assert_empty JSON.parse(response.body)["providers"]
+    get "/auth/mobile/live_oidc", params: { device_id: "live-device", device_name: "Test", device_type: "ios" }
+    assert_response :redirect
+    assert_equal "invalid_provider", Rack::Utils.parse_query(URI.parse(response.location).query)["error"]
+  end
+
   test "sso_providers returns an empty list when no providers are configured" do
+    AuthConfig.unstub(:sso_providers)
+    FeatureFlags.stubs(:db_sso_providers?).returns(false)
     Rails.configuration.x.auth.stubs(:sso_providers).returns([])
 
     get "/api/v1/auth/sso_providers"

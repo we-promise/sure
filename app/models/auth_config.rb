@@ -80,6 +80,7 @@ class AuthConfig
       domains.map(&:downcase).include?(domain)
     end
 
+    # Load normalized enabled providers live so cache refreshes take effect without rebooting.
     def sso_providers
       if FeatureFlags.db_sso_providers?
         # Load live DB-backed providers so login paths see provider changes

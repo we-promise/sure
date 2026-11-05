@@ -256,7 +256,7 @@ RSpec.describe 'API V1 Auth', type: :request do
       tags 'Auth'
       consumes 'application/json'
       produces 'application/json'
-      description 'Authenticates with email/password and links the SSO identity from a previously issued linking code. Creates an OidcIdentity, logs the link via SsoAuditLog, and issues mobile OAuth tokens.'
+      description 'Authenticates with email/password and links the SSO identity from a previously issued linking code. Creates an OidcIdentity, logs the link via SsoAuditLog, and issues mobile OAuth tokens. The provider must remain enabled and its trusted issuer must still match the linking code.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
         properties: {
@@ -303,7 +303,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '403', 'SSO identity removed by an administrator' do
+      response '403', 'SSO identity removed, provider disabled, or issuer changed' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:linking_code) { 'rswag-removed-identity' }
@@ -348,6 +348,7 @@ RSpec.describe 'API V1 Auth', type: :request do
       produces 'application/json'
       description 'Creates a new user and family from a previously issued linking code. Links the SSO identity ' \
                   'via OidcIdentity, logs the JIT account creation via SsoAuditLog, and issues mobile OAuth tokens. ' \
+                  'The provider must remain enabled and its trusted issuer must match the linking code. ' \
                   'The linking code must have allow_account_creation enabled. The first user on a fresh instance is ' \
                   'assigned the super_admin role; later family creators are assigned an admin-capable role.'
       parameter name: :body, in: :body, required: true, schema: {
@@ -393,7 +394,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '403', 'SSO identity removed or account creation disabled' do
+      response '403', 'SSO identity removed, provider disabled, issuer changed, or account creation disabled' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end

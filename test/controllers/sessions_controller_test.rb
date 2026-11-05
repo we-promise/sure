@@ -1302,6 +1302,29 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_path
   end
 
+  test "desktop_sso_start accepts a database provider added after boot" do
+    original_sso_providers = Rails.configuration.x.auth.sso_providers
+    Rails.configuration.x.auth.sso_providers = [
+      { name: "boot_provider", strategy: "openid_connect", label: "Boot provider" }
+    ]
+    FeatureFlags.stubs(:db_sso_providers?).returns(true)
+    ProviderLoader.stubs(:load_providers).returns([
+      {
+        "name" => "authentik",
+        "strategy" => "openid_connect",
+        "label" => "Sign in with Authentik",
+        "settings" => { "default_role" => "super_admin" }
+      }
+    ])
+
+    get "/auth/desktop/authentik", params: { code_challenge: "a" * 43 }
+
+    assert_response :success
+    assert_match %r{action="/auth/authentik"}, @response.body
+  ensure
+    Rails.configuration.x.auth.sso_providers = original_sso_providers
+  end
+
   test "a session inactive past the timeout is rejected and destroyed" do
     sign_in @user
     session_record = Session.order(created_at: :desc).first
@@ -1342,28 +1365,5 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_session_path
     assert_not Session.exists?(user_id: @user.id)
-  end
-
-  test "desktop_sso_start accepts a database provider added after boot" do
-    original_sso_providers = Rails.configuration.x.auth.sso_providers
-    Rails.configuration.x.auth.sso_providers = [
-      { name: "boot_provider", strategy: "openid_connect", label: "Boot provider" }
-    ]
-    FeatureFlags.stubs(:db_sso_providers?).returns(true)
-    ProviderLoader.stubs(:load_providers).returns([
-      {
-        "name" => "authentik",
-        "strategy" => "openid_connect",
-        "label" => "Sign in with Authentik",
-        "settings" => { "default_role" => "super_admin" }
-      }
-    ])
-
-    get "/auth/desktop/authentik", params: { code_challenge: "a" * 43 }
-
-    assert_response :success
-    assert_match %r{action="/auth/authentik"}, @response.body
-  ensure
-    Rails.configuration.x.auth.sso_providers = original_sso_providers
   end
 end
