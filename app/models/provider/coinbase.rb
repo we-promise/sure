@@ -7,6 +7,19 @@ class Provider::Coinbase
   class RateLimitError < Error; end
   class ApiError < Error; end
 
+  # Raised instead of RateLimitError when a rate limit hits a later page of a
+  # paginated fetch after earlier pages already succeeded -- see
+  # #paginated_get. Carries those earlier pages so a caller can keep them
+  # instead of the fetch as a whole discarding real, already-fetched data.
+  class PartialResultError < Error
+    attr_reader :partial_results
+
+    def initialize(message, partial_results)
+      super(message)
+      @partial_results = partial_results
+    end
+  end
+
   # CDP API base URL
   API_BASE_URL = "https://api.coinbase.com".freeze
 
@@ -129,29 +142,60 @@ class Provider::Coinbase
       end
 
       results.first(limit)
+    rescue RateLimitError => e
+      # Earlier pages already fetched are real data -- raising RateLimitError
+      # here as before would discard them along with the pages never reached,
+      # forcing every later sync to restart this backfill from page one.
+      # Nothing to preserve on a first-page limit, so that case still raises
+      # RateLimitError exactly as before.
+      raise PartialResultError.new(e.message, results.first(limit)) if results.any?
+      raise
     end
 
     # Parses a PEM EC private key, normalizing literal \n sequences to real
     # newlines. Coinbase CDP keys are often stored or pasted as a single-line
     # string with escaped newlines (e.g. copied directly from the JSON download
-    # file). Both forms are accepted.
+    # file), or with the newlines collapsed to spaces. All forms are accepted.
     def parse_ec_private_key(pem)
-      OpenSSL::PKey::EC.new(pem.to_s.gsub('\n', "\n"))
+      pem = pem.to_s.gsub('\n', "\n").strip
+      if (parts = pem.match(/\A(-----BEGIN [A-Z ]+-----)\s*(.+?)\s*(-----END [A-Z ]+-----)\z/m))
+        body = parts[2].gsub(/\s+/, "").scan(/.{1,64}/)
+        pem = [ parts[1], *body, parts[3] ].join("\n")
+      end
+      OpenSSL::PKey::EC.new(pem)
+    end
+
+    # Ed25519 secrets (the CDP default for new keys) are base64 of the 32-byte
+    # seed followed by the 32-byte public key. A bare 32-byte seed also works.
+    def ed25519_secret?(secret)
+      secret = secret.to_s
+      !secret.include?("-----BEGIN") && [ 32, 64 ].include?(decode_ed25519_secret(secret)&.bytesize)
+    end
+
+    def decode_ed25519_secret(secret)
+      Base64.strict_decode64(secret.to_s.strip)
+    rescue ArgumentError
+      nil
+    end
+
+    def parse_ed25519_private_key(secret)
+      OpenSSL::PKey.new_raw_private_key("ED25519", decode_ed25519_secret(secret).byteslice(0, 32))
     end
 
     # Generate JWT token for CDP API authentication.
-    # Uses ES256 (ECDSA P-256) signing — matches the key format Coinbase CDP
-    # issues. api_secret must be a PEM EC private key
-    # (-----BEGIN EC PRIVATE KEY-----) either with real newlines or literal \n.
+    # Coinbase CDP issues two key types: ECDSA keys (a PEM EC private key,
+    # signed with ES256) and Ed25519 keys (a base64 secret, signed with EdDSA).
+    # PEM keys may use real newlines or literal \n.
     def generate_jwt(method, path)
-      private_key = parse_ec_private_key(api_secret)
+      ed25519 = ed25519_secret?(api_secret)
+      private_key = ed25519 ? parse_ed25519_private_key(api_secret) : parse_ec_private_key(api_secret)
 
       now = Time.now.to_i
       uri = "#{method} api.coinbase.com#{path}"
 
       # JWT header
       header = {
-        alg: "ES256",
+        alg: ed25519 ? "EdDSA" : "ES256",
         kid: api_key,
         nonce: SecureRandom.hex(16),
         typ: "JWT"
@@ -170,15 +214,22 @@ class Provider::Coinbase
       encoded_header = Base64.urlsafe_encode64(header.to_json, padding: false)
       encoded_payload = Base64.urlsafe_encode64(payload.to_json, padding: false)
 
-      # Sign with ECDSA SHA-256
       message = "#{encoded_header}.#{encoded_payload}"
-      der_sig = private_key.sign(OpenSSL::Digest::SHA256.new, message)
 
-      # Convert DER-encoded signature to raw r||s (required by JWT spec)
-      asn1 = OpenSSL::ASN1.decode(der_sig)
-      r = asn1.value[0].value.to_s(2).rjust(32, "\x00")[-32..]
-      s = asn1.value[1].value.to_s(2).rjust(32, "\x00")[-32..]
-      encoded_signature = Base64.urlsafe_encode64(r + s, padding: false)
+      if ed25519
+        # EdDSA signs the message directly (no digest); the signature is already raw 64 bytes
+        raw_sig = private_key.sign(nil, message)
+      else
+        # Sign with ECDSA SHA-256
+        der_sig = private_key.sign(OpenSSL::Digest::SHA256.new, message)
+
+        # Convert DER-encoded signature to raw r||s (required by JWT spec)
+        asn1 = OpenSSL::ASN1.decode(der_sig)
+        r = asn1.value[0].value.to_s(2).rjust(32, "\x00")[-32..]
+        s = asn1.value[1].value.to_s(2).rjust(32, "\x00")[-32..]
+        raw_sig = r + s
+      end
+      encoded_signature = Base64.urlsafe_encode64(raw_sig, padding: false)
 
       "#{message}.#{encoded_signature}"
     end
