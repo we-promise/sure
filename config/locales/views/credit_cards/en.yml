@@ -54,6 +54,7 @@ en:
         annual_percentage_rate: Annual Percentage Rate
         apr: APR
         balance_carried_label: Balance carried
+        balance_updates: Balance updates
         charges: Charges
         estimated_interest_label: Estimated interest
         monthly_rate_label: Monthly rate
@@ -62,8 +63,7 @@ en:
         credit_toward_next: Credit toward the next statement
         due_on: "Due %{date}"
         edit_card_details: Edit card details
-        payments_credits: Payments/Credits
-        remaining_due: Remaining due %{amount}
+        payments_applied: Payments applied
         scheduled_payment: Scheduled payment %{amount} on %{date}
         since_last_statement: Since Last Statement
         statement_balance: Statement Balance

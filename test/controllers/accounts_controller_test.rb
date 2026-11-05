@@ -826,6 +826,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       entryable: Transaction.new
     )
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -836,6 +837,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     accounts(:credit_card).credit_card.update!(statement_close_day: 25, due_day: 5, apr: nil, minimum_payment: nil)
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -848,6 +850,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_admin)
     accounts(:credit_card).credit_card.update!(statement_close_day: 25, due_day: 5, apr: 18.99, minimum_payment: nil)
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -867,6 +870,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -889,6 +893,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -911,10 +916,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
-      assert_match I18n.t("credit_cards.tabs.overview.remaining_due", amount: Money.new(60, "USD").format), response.body
+      # The bill card shows what is still owed on the statement: 100 less the 40 paid.
+      # Scoped to that card, since the APR card also renders a balance.
+      bill_card = Nokogiri::HTML(response.body)
+        .css("[data-testid=credit-card-summary-grid] > div:first-child")
+        .first
+      assert_includes bill_card.text, Money.new(60, "USD").format
       assert_match I18n.t("credit_cards.tabs.overview.status_partial"), response.body
     end
   end
@@ -934,11 +945,12 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
       assert_match I18n.t("credit_cards.tabs.overview.charges"), response.body
-      assert_match I18n.t("credit_cards.tabs.overview.payments_credits"), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.payments_applied"), response.body
       assert_match Money.new(100, "USD").format, response.body
       assert_match Money.new(40, "USD").format, response.body
       assert_match I18n.t("credit_cards.tabs.overview.closes_on", date: I18n.l(Date.new(2026, 11, 10), format: :long)), response.body
@@ -964,6 +976,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       )
       open_due = series.recurring_occurrences.open_status.minimum(:due_on)
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -992,6 +1005,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       manual: true
     )
 
+    materialize_balances(account)
     get account_url(account, tab: "overview")
 
     assert_response :success
@@ -1009,6 +1023,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -1025,6 +1040,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     # of THIS month -- not the 26th of next, which is the statement still
     # building and not yet owed.
     travel_to Date.new(2026, 10, 16) do
+      materialize_balances(accounts(:credit_card))
       get account_url(accounts(:credit_card), tab: "overview")
 
       assert_response :success
@@ -1048,6 +1064,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -1074,6 +1091,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
         entryable: Transaction.new
       )
 
+      materialize_balances(account)
       get account_url(account, tab: "overview")
 
       assert_response :success
@@ -1085,6 +1103,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "credit card overview asks for a cycle when none is set" do
     sign_in users(:family_admin)
 
+    materialize_balances(accounts(:credit_card))
     get account_url(accounts(:credit_card), tab: "overview")
 
     assert_response :success
@@ -1803,6 +1822,12 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   private
     def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
       Account::LogoFetcher::Icon.new(key:, source:, name:, body:, size:, content_type: "image/png", extension: "png")
+    end
+
+    # The Overview reads the account's balance records, which sync builds from
+    # the entries. Tests build them after creating entries directly.
+    def materialize_balances(account)
+      Balance::Materializer.new(account, strategy: :forward).materialize_balances
     end
 
     # #3630. Links a shared and an unshared account to +item+ through two fresh
