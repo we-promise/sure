@@ -54,7 +54,8 @@ class Account::MarketDataImporter
         from: source,
         to: target,
         start_date: start_date,
-        end_date: Date.current
+        end_date: Date.current,
+        account: account
       )
     end
   end
