@@ -46,6 +46,10 @@
     @apply bg-container text-primary w-full;
   }
 
+  .hw-combobox__input {
+    @apply text-sm;
+  }
+
   .hw-combobox__main__wrapper {
     @apply border-0 p-0 focus:border-0 ring-0 focus:ring-0 shadow-none focus:shadow-none focus-within:shadow-none;
   }

@@ -164,8 +164,8 @@ class Portfolio::FlowClassifier
   # make one transaction a leg of two transfers. A plain join would then give
   # the entry two rows and a SUM over it would count the entry twice. The
   # lateral reads one transfer per transaction, preferring one the
-  # transaction is the inflow of, as #transfer_counterpart_account_id does,
-  # then the earliest by created_at and id, which #classify reads too.
+  # transaction is the inflow of, as #transfer_counterpart does, then the
+  # earliest by created_at and id, which #classify reads too.
   def sql_joins
     <<~SQL.squish
       LEFT JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id

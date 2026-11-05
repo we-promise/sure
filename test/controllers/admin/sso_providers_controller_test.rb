@@ -16,6 +16,25 @@ class Admin::SsoProvidersControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "index renders provider status badges with design-system tones" do
+    SsoProvider.create!(
+      strategy: "openid_connect",
+      name: "oidc_disabled_test",
+      label: "Disabled OIDC",
+      enabled: false,
+      client_id: "client-id",
+      client_secret: "secret",
+      issuer: "https://issuer.example.com"
+    )
+
+    get admin_sso_providers_path
+
+    assert_response :success
+    assert_select "span.rounded-full[style*='--color-green-50']", text: I18n.t("admin.sso_providers.index.enabled")
+    assert_select "span.rounded-full[style*='--color-gray-100']", text: I18n.t("admin.sso_providers.index.disabled")
+    assert_no_match(/\bbg-green-100\b/, response.body)
+  end
+
   test "edit form posts nested settings and optional client secret" do
     get edit_admin_sso_provider_path(@provider)
 
