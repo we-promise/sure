@@ -35,6 +35,28 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert entry.user_modified?, "unlinked transaction's entry must be flagged so provider sync won't re-link it"
   end
 
+  test "convert_to_family_merchant_for points the family's rules at the new merchant" do
+    create_transaction(merchant: @provider_merchant)
+    rule = @family.rules.build(resource_type: "transaction")
+    rule.conditions.build(condition_type: "transaction_merchant", operator: "=", value: @provider_merchant.id)
+    compound = rule.conditions.build(condition_type: "compound", operator: "or")
+    compound.sub_conditions.build(condition_type: "transaction_merchant", operator: "=", value: @provider_merchant.id)
+    rule.actions.build(action_type: "set_transaction_merchant", value: @provider_merchant.id)
+    rule.save!
+
+    other_rule = families(:empty).rules.build(resource_type: "transaction")
+    other_rule.actions.build(action_type: "set_transaction_merchant", value: @provider_merchant.id)
+    other_rule.save!
+
+    family_merchant = @provider_merchant.convert_to_family_merchant_for(@family)
+
+    rule.reload
+    assert_equal family_merchant.id, rule.conditions.find_by(parent_id: nil, condition_type: "transaction_merchant").value
+    assert_equal family_merchant.id, compound.sub_conditions.first.reload.value
+    assert_equal family_merchant.id, rule.actions.first.value
+    assert_equal @provider_merchant.id, other_rule.actions.first.reload.value, "other families' rules keep the shared merchant"
+  end
+
   test "find_by_import_data prefers provider_merchant_id over name, scoped to source" do
     by_id = ProviderMerchant.create!(name: "Renamed Upstream", source: "plaid", provider_merchant_id: "plaid_acme")
     ProviderMerchant.create!(name: "Acme", source: "lunchflow")

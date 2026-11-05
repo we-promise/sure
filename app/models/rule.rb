@@ -185,6 +185,26 @@ class Rule < ApplicationRecord
     [ family.rules.maximum(:position).to_i, family.rule_groups.maximum(:position).to_i ].max + 1
   end
 
+  # Points the family's merchant conditions and actions at another merchant
+  # after its transactions moved there (a provider merchant converted to a
+  # family merchant, or merchants merged). Otherwise a rule would keep matching
+  # or setting the old merchant and undo the move on its next run.
+  def self.replace_merchant_references!(family, from:, to:)
+    from_ids = Array(from).map { |id| id.to_s.downcase }
+    return if from_ids.empty?
+
+    rule_ids = family.rules.select(:id)
+    conditions = Rule::Condition.where(condition_type: "transaction_merchant").where("LOWER(rule_conditions.value) IN (?)", from_ids)
+    conditions
+      .where(rule_id: rule_ids)
+      .or(conditions.where(parent_id: Rule::Condition.where(rule_id: rule_ids).select(:id)))
+      .update_all(value: to.to_s, updated_at: Time.current)
+
+    Rule::Action.where(rule_id: rule_ids, action_type: "set_transaction_merchant")
+      .where("LOWER(rule_actions.value) IN (?)", from_ids)
+      .update_all(value: to.to_s, updated_at: Time.current)
+  end
+
   # Excludes transaction ids with one array parameter. where.not(id: ids) sends
   # one bind per id, which breaks beyond PostgreSQL's 65,535 bind limit when a
   # broad rule claims or stops many transactions.

@@ -200,6 +200,105 @@ class Rule::ActionTest < ActiveSupport::TestCase
     end
   end
 
+  test "set_transaction_merchant assigns a provider merchant already on the family's transactions" do
+    provider_merchant = ProviderMerchant.create!(name: "Rule test provider merchant", source: "plaid")
+    @txn1.update!(merchant: provider_merchant)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_transaction_merchant",
+      value: provider_merchant.id
+    )
+
+    assert action.reserves_claimed_attributes?
+    action.apply(@rule_scope)
+
+    [ @txn2, @txn3 ].each do |transaction|
+      assert_equal provider_merchant.id, transaction.reload.merchant_id
+    end
+  end
+
+  test "set_transaction_merchant ignores a provider merchant the family's transactions don't carry" do
+    provider_merchant = ProviderMerchant.create!(name: "Other family's provider merchant", source: "plaid")
+    other_account = families(:empty).accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+    create_transaction(account: other_account, merchant: provider_merchant)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_transaction_merchant",
+      value: provider_merchant.id
+    )
+
+    assert_not action.reserves_claimed_attributes?
+    assert_equal 0, action.apply(@rule_scope)
+    assert_nil @txn2.reload.merchant_id
+  end
+
+  test "set_transaction_merchant offers family merchants and provider merchants on the user's transactions" do
+    assigned = ProviderMerchant.create!(name: "Assigned provider merchant", source: "plaid")
+    unlinked = ProviderMerchant.create!(name: "Unlinked provider merchant", source: "plaid")
+    foreign = ProviderMerchant.create!(name: "Foreign provider merchant", source: "plaid")
+    @txn1.update!(merchant: assigned)
+    FamilyMerchantAssociation.create!(family: @family, merchant: unlinked, unlinked_at: 1.day.ago)
+    other_account = families(:empty).accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+    create_transaction(account: other_account, merchant: foreign)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant")
+    Current.stubs(:user).returns(users(:family_admin))
+    option_ids = action.options.map(&:last)
+
+    assert_includes option_ids, assigned.id
+    assert_includes option_ids, @whole_foods_merchant.id
+    assert_not_includes option_ids, unlinked.id
+    assert_not_includes option_ids, foreign.id
+  end
+
+  test "set_transaction_merchant keeps a saved merchant the current user can't see in the options" do
+    hidden = ProviderMerchant.create!(name: "Hidden provider merchant", source: "plaid")
+    @txn1.update!(merchant: hidden)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant", value: hidden.id)
+    Current.stubs(:user).returns(users(:family_member))
+
+    assert_not_includes action.executor.options.map(&:last), hidden.id
+    assert_includes action.options.map(&:last), hidden.id
+    assert_equal I18n.t("rule.actions.set_transaction_merchant.not_accessible"), action.value_display
+  end
+
+  test "set_transaction_merchant keeps an unlinked provider merchant in the options, marked as no longer assigned" do
+    unlinked = ProviderMerchant.create!(name: "Unlinked provider merchant", source: "plaid")
+    @txn1.update!(merchant: unlinked)
+    unlinked.unlink_from_family(@family)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant", value: unlinked.id)
+    Current.stubs(:user).returns(users(:family_admin))
+
+    assert_not action.reserves_claimed_attributes?
+    assert_includes action.options.map(&:last), unlinked.id
+    assert_equal I18n.t("rule.actions.set_transaction_merchant.unassigned", name: "Unlinked provider merchant"), action.value_display
+  end
+
+  test "set_transaction_merchant keeps a saved merchant the family no longer knows without revealing its name" do
+    foreign = ProviderMerchant.create!(name: "Foreign provider merchant", source: "plaid")
+    other_account = families(:empty).accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+    create_transaction(account: other_account, merchant: foreign)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant", value: foreign.id)
+    Current.stubs(:user).returns(users(:family_admin))
+
+    assert_includes action.options.map(&:last), foreign.id
+    assert_equal I18n.t("rule.actions.set_transaction_merchant.unavailable"), action.value_display
+  end
+
+  test "set_transaction_merchant marks an unknown saved id like another family's merchant" do
+    unknown = SecureRandom.uuid
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant", value: unknown)
+    Current.stubs(:user).returns(users(:family_admin))
+
+    assert_includes action.options.map(&:last), unknown
+    assert_equal I18n.t("rule.actions.set_transaction_merchant.unavailable"), action.value_display
+  end
+
   test "set_transaction_name" do
     new_name = "Renamed Transaction"
 

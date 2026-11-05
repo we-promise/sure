@@ -23,6 +23,19 @@ class Merchant::MergerTest < ActiveSupport::TestCase
     assert entry.user_modified?, "merged transaction's entry must be flagged so provider sync won't revert it"
   end
 
+  test "merge! points the family's rules at the target merchant" do
+    rule = @family.rules.build(resource_type: "transaction")
+    rule.conditions.build(condition_type: "transaction_merchant", operator: "=", value: @source.id)
+    rule.actions.build(action_type: "set_transaction_merchant", value: @source.id)
+    rule.save!
+
+    Merchant::Merger.new(family: @family, target_merchant: @target, source_merchants: [ @source ]).merge!
+
+    rule.reload
+    assert_equal @target.id, rule.conditions.first.value
+    assert_equal @target.id, rule.actions.first.value
+  end
+
   test "merge! does not touch entries of unrelated merchants" do
     other = create_transaction(merchant: @target)
     assert_not other.user_modified?
