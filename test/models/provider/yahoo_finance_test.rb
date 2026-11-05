@@ -383,6 +383,47 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   #      Exchange Rate Tests
   # ================================
 
+  test "fetch_exchange_rates rejects a quote Yahoo gives no currency for" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("GELRUB=X", anything)
+             .returns("chart" => { "error" => { "code" => "Not Found" } })
+    # Live on that date: GEL per 100 RUB, with no currency.
+    @provider.stubs(:fetch_authenticated_chart).with("RUBGEL=X", anything).returns(fx_chart(date, nil, 3.1481))
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:category] == "exchange_rates" &&
+        attributes[:metadata] == { symbol: "RUBGEL=X", expected_currency: "GEL", quote_currency: nil }
+    end
+
+    response = @provider.fetch_exchange_rates(from: "GEL", to: "RUB", start_date: date, end_date: date)
+
+    assert_not response.success?
+  end
+
+  test "fetch_exchange_rates takes a quote in the pair's currency as is and inverts the reverse quote" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("EURUSD=X", anything).returns(fx_chart(date, "USD", 1.12))
+    @provider.stubs(:fetch_authenticated_chart).with("USDEUR=X", anything)
+             .returns("chart" => { "error" => { "code" => "Not Found" } })
+
+    eur_usd = @provider.fetch_exchange_rates(from: "EUR", to: "USD", start_date: date, end_date: date)
+    usd_eur = @provider.fetch_exchange_rates(from: "USD", to: "EUR", start_date: date, end_date: date)
+
+    assert_in_delta 1.12, eur_usd.data.first.rate.to_f
+    assert_in_delta 1 / 1.12, usd_eur.data.first.rate.to_f, 1e-9
+  end
+
+  test "fetch_exchange_rates matches the quote currency regardless of case" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("eurusd=X", anything).returns(fx_chart(date, "USD", 1.12))
+
+    response = @provider.fetch_exchange_rates(from: "eur", to: "usd", start_date: date, end_date: date)
+
+    assert_in_delta 1.12, response.data.first.rate.to_f
+  end
+
   test "fetch_exchange_rate returns 1.0 for same currency" do
     date = Date.parse("2024-01-15")
     response = @provider.fetch_exchange_rate(from: "USD", to: "USD", date: date)
@@ -828,6 +869,32 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal 0.5, @provider.send(:min_request_interval)
   end
 
+  test "client retries on 5xx statuses in addition to 429" do
+    retry_statuses = retry_middleware_options(@provider.send(:client)).retry_statuses
+    assert_equal [ 429, 500, 502, 503, 504 ], retry_statuses
+  end
+
+  test "authenticated_client retries on 5xx statuses in addition to 429" do
+    retry_statuses = retry_middleware_options(@provider.send(:authenticated_client, "cookie")).retry_statuses
+    assert_equal [ 429, 500, 502, 503, 504 ], retry_statuses
+  end
+
+  test "fetch_chart_data logs (rather than silently swallows) a Faraday error" do
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:fetch_authenticated_chart).raises(Faraday::ConnectionFailed, "connection failed")
+
+    Rails.logger.expects(:warn).with(regexp_matches(/fetch_chart_data failed for EURUSD=X/))
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:provider_key] == "yahoo_finance" &&
+        attributes[:metadata][:symbol] == "EURUSD=X" &&
+        attributes[:metadata][:exception_class] == "Faraday::ConnectionFailed"
+    end
+
+    result = @provider.send(:fetch_chart_data, "EURUSD=X", Date.current - 5.days, Date.current, currency: "USD") { |ts, close| close }
+
+    assert_nil result
+  end
+
   # ================================
   #  Cookie/Crumb Authentication Tests
   # ================================
@@ -1096,6 +1163,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
 
   private
 
+    def retry_middleware_options(faraday_connection)
+      handler = faraday_connection.builder.handlers.find { |h| h.klass.to_s.include?("Retry") }
+      handler.build.instance_variable_get(:@options)
+    end
+
     def stub_successful_health_authentication(provider: @provider, count: 1)
       responses = count.times.flat_map do |index|
         [
@@ -1106,6 +1178,14 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
       auth_client = mock
       auth_client.expects(:get).times(responses.length).returns(*responses)
       provider.stubs(:health_auth_client).returns(auth_client)
+    end
+
+    def fx_chart(date, currency, close)
+      { "chart" => { "result" => [ {
+        "meta" => { "currency" => currency },
+        "timestamp" => [ date.to_time.utc.to_i ],
+        "indicators" => { "quote" => [ { "close" => [ close ] } ] }
+      } ] } }
     end
 
     def stub_health_chart_responses(*responses, provider: @provider)
