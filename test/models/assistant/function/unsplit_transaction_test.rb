@@ -11,6 +11,9 @@ class Assistant::Function::UnsplitTransactionTest < ActiveSupport::TestCase
   end
 
   test "removes the parts and restores the original" do
+    child_ids = @children.map(&:id)
+    child_transaction_ids = @children.map(&:entryable_id)
+
     result = @function.call("id" => @entry.entryable_id)
 
     assert_equal true, result[:success], result[:message]
@@ -18,6 +21,8 @@ class Assistant::Function::UnsplitTransactionTest < ActiveSupport::TestCase
     assert_not @entry.split_parent?
     assert_not @entry.excluded?
     assert_empty result[:transaction][:children]
+    assert_empty Entry.where(id: child_ids)
+    assert_empty Transaction.where(id: child_transaction_ids)
   end
 
   test "accepts the id of a part" do

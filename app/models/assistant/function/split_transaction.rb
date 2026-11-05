@@ -27,8 +27,10 @@ class Assistant::Function::SplitTransaction < Assistant::Function
         reports (e.g. someone else's share). The original stays in the ledger
         but is excluded, so only the parts count.
 
-        Amounts use the same sign as the original transaction's amount from
-        get_transactions, and the parts must add up to it exactly.
+        Part amounts are positive magnitudes, like the amount get_transactions
+        returns; each part takes the original's income or expense direction.
+        They must add up to the original's amount exactly, with at most 4
+        decimal places.
 
         Passing the id of a part works on the whole split. A transaction that is
         already split is only re-split when replace_existing is true; the parts
@@ -62,7 +64,7 @@ class Assistant::Function::SplitTransaction < Assistant::Function
             required: [ "amount" ],
             properties: {
               name: { type: "string", description: "Name of this part. Defaults to the transaction's name." },
-              amount: { type: "string", description: "Amount of this part, as a decimal string with the original's sign, e.g. \"295.00\"." },
+              amount: { type: "string", description: "Positive amount of this part as a decimal string, e.g. \"295.00\"." },
               category_id: { type: [ "string", "null" ], description: "Category ID from get_categories." },
               merchant_id: { type: [ "string", "null" ], description: "Merchant ID from get_merchants. Defaults to the transaction's merchant." },
               tag_ids: { type: "array", items: { type: "string" }, description: "Tag IDs from get_tags." },
@@ -103,13 +105,10 @@ class Assistant::Function::SplitTransaction < Assistant::Function
       return error("not_splittable", not_splittable_reason(transaction, entry))
     end
 
-    entry.sync_account_later
-
-    {
-      success: true,
-      transaction: serialize_split(entry.reload),
-      message: "Transaction '#{entry.name}' #{replacing ? "re-split" : "split"} into #{splits.size} parts."
-    }
+    split_response(
+      entry,
+      "Transaction '#{entry.name}' #{replacing ? "re-split" : "split"} into #{splits.size} parts."
+    )
   rescue ActiveRecord::RecordInvalid => e
     error("validation_failed", e.record.errors.full_messages.presence&.join("; ") || e.message)
   end
@@ -121,11 +120,16 @@ class Assistant::Function::SplitTransaction < Assistant::Function
       end
       return error("invalid_splits", "Each split must be an object.") unless raw.all? { |s| s.is_a?(Hash) }
 
+      references_snapshot = split_references
+      sign = entry.amount.negative? ? -1 : 1
+
       splits = raw.each_with_index.map do |s, index|
         position = index + 1
 
         amount = parse_amount(s["amount"])
-        return error("invalid_amount", "Split #{position} needs a numeric amount.") unless amount
+        unless amount
+          return error("invalid_amount", "Split #{position} needs a positive amount with at most #{AMOUNT_SCALE} decimal places.")
+        end
 
         %w[category_id merchant_id].each do |key|
           next if s[key].nil? || s[key].is_a?(String)
@@ -137,7 +141,7 @@ class Assistant::Function::SplitTransaction < Assistant::Function
         end
 
         references = { category_id: s["category_id"], merchant_id: s["merchant_id"], tag_ids: s["tag_ids"] }
-        kind, id = split_references.unknown(**references).first
+        kind, id = references_snapshot.unknown(**references).first
         return error("invalid_#{kind}", "Split #{position}: unknown #{kind} '#{id}'.") if kind
 
         name = s["name"].to_s.strip.presence || entry.name
@@ -145,28 +149,30 @@ class Assistant::Function::SplitTransaction < Assistant::Function
 
         {
           name: name,
-          amount: amount,
+          amount: amount * sign,
           excluded: s["excluded"] == true,
-          **split_references.scope(**references)
+          **references_snapshot.scope(**references)
         }
       end
 
       total = splits.sum { |s| s[:amount] }
       unless total == entry.amount
-        return error("amounts_do_not_sum", "Split amounts must sum to #{entry.amount.to_s("F")} (got #{total.to_s("F")}).")
+        return error("amounts_do_not_sum", "Split amounts must sum to #{entry.amount.abs.to_s("F")} (got #{total.abs.to_s("F")}).")
       end
 
       splits
     end
 
+    # Rejects rather than rounds extra decimals, so the sum check runs on what
+    # the caller sent and not on silently adjusted values.
     def parse_amount(value)
-      return nil if value.nil? || value.is_a?(Array) || value.is_a?(Hash) || value == true || value == false
+      return nil unless value.is_a?(String) || value.is_a?(Numeric)
 
       amount = BigDecimal(value.to_s)
-      return nil unless amount.finite?
+      return nil unless amount.finite? && amount.positive? && amount < AMOUNT_LIMIT
+      return nil unless amount.round(AMOUNT_SCALE) == amount
 
-      amount = amount.round(AMOUNT_SCALE)
-      amount.abs < AMOUNT_LIMIT ? amount : nil
+      amount
     rescue ArgumentError, TypeError
       nil
     end

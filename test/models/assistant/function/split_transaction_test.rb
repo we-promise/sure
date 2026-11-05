@@ -36,6 +36,70 @@ class Assistant::Function::SplitTransactionTest < ActiveSupport::TestCase
     assert flatmate.excluded?
   end
 
+  test "gives each part its own merchant and tags" do
+    merchant = merchants(:amazon)
+    tag = tags(:one)
+
+    result = @function.call(
+      "id" => @transaction.id,
+      "splits" => [
+        { "amount" => "295", "merchant_id" => merchant.id, "tag_ids" => [ tag.id ] },
+        { "amount" => "295" }
+      ]
+    )
+
+    assert_equal true, result[:success], result[:message]
+    first, second = @entry.reload.child_entries.order(:created_at).map(&:entryable)
+    assert_equal merchant, first.merchant
+    assert_equal [ tag ], first.tags.to_a
+    assert_empty second.tags
+  end
+
+  test "splits income using positive amounts like get_transactions returns" do
+    income = create_transaction(account: accounts(:depository), amount: -200, name: "Refund")
+
+    result = @function.call(
+      "id" => income.entryable_id,
+      "splits" => [ { "amount" => "150" }, { "amount" => "50" } ]
+    )
+
+    assert_equal true, result[:success], result[:message]
+    assert_equal [ -150, -50 ], income.reload.child_entries.order(:created_at).pluck(:amount)
+  end
+
+  test "rejects negative amounts" do
+    result = @function.call(
+      "id" => @transaction.id,
+      "splits" => [ { "amount" => "-10" }, { "amount" => "600" } ]
+    )
+
+    assert_equal "invalid_amount", result[:error]
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "rejects amounts with more than four decimal places instead of rounding them" do
+    result = @function.call(
+      "id" => @transaction.id,
+      "splits" => [ { "amount" => "295.00004" }, { "amount" => "295.00004" } ]
+    )
+
+    assert_equal "invalid_amount", result[:error]
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "reports a saved split with a warning when the sync cannot be enqueued" do
+    Entry.any_instance.stubs(:sync_account_later).raises(StandardError, "queue down")
+
+    result = @function.call(
+      "id" => @transaction.id,
+      "splits" => [ { "amount" => "295" }, { "amount" => "295" } ]
+    )
+
+    assert_equal true, result[:success]
+    assert_match "could not be enqueued", result[:warning]
+    assert @entry.reload.split_parent?
+  end
+
   test "names parts after the original when no name is given" do
     result = @function.call(
       "id" => @transaction.id,
