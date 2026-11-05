@@ -161,18 +161,19 @@ class Family::DataExporter
 
     def generate_rules_csv
       CSV.generate do |csv|
-        csv << [ "name", "resource_type", "active", "effective_date", "conditions", "actions" ]
+        csv << [ "name", "resource_type", "active", "effective_date", "conditions", "actions", "group" ]
 
         # Only export rules belonging to this family, in run order so an
         # import recreates them in the same order
-        @family.rules.includes(conditions: :sub_conditions, actions: []).ordered.each do |rule|
+        @family.rules.includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
           csv << [
             rule.name,
             rule.resource_type,
             rule.active,
             rule.effective_date&.iso8601,
             serialize_conditions_for_csv(rule.conditions),
-            serialize_actions_for_csv(rule.actions)
+            serialize_actions_for_csv(rule.actions),
+            rule.rule_group&.name
           ]
         end
       end
@@ -541,7 +542,7 @@ class Family::DataExporter
       end
 
       # Export rules with versioned schema, in run order
-      @family.rules.includes(conditions: :sub_conditions, actions: []).ordered.each do |rule|
+      @family.rules.includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
         lines << {
           type: "Rule",
           version: 1,
@@ -757,6 +758,7 @@ class Family::DataExporter
         effective_date: rule.effective_date&.iso8601,
         position: rule.position,
         stop_processing: rule.stop_processing,
+        group: rule.rule_group&.name,
         conditions: rule.conditions.where(parent_id: nil).map { |condition| serialize_condition(condition) },
         actions: rule.actions.map { |action| serialize_action(action) }
       }
