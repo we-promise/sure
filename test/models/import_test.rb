@@ -200,6 +200,14 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal "failed", stuck.reload.status
   end
 
+  test "date detection reads the first fifty distinct dates unless told to read them all" do
+    ambiguous = (1..12).to_a.product((1..12).to_a).first(50).map { |month, day| format("%02d/%02d/2025", month, day) }
+    samples = ambiguous + [ "03/25/2026" ]
+
+    assert_equal "%d/%m/%Y", Import.detect_date_format(samples), "the 51st date is not read by default"
+    assert_equal "%m/%d/%Y", Import.detect_date_format(samples, limit: nil)
+  end
+
   test "CSV-only date formats are not offered as a global family preference" do
     # 2-digit years are ambiguous (see we-promise/sure#1530 and the rejected
     # PR #531), so this format must stay out of Family::DATE_FORMATS and only
