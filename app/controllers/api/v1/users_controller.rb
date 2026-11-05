@@ -1,9 +1,14 @@
 # frozen_string_literal: true
 
 class Api::V1::UsersController < Api::V1::BaseController
-  before_action :ensure_read_scope, only: :reset_status
-  before_action :ensure_write_scope, except: :reset_status
+  before_action :ensure_read_scope, only: %i[reset_status show]
+  before_action :ensure_write_scope, except: %i[reset_status show]
   before_action :ensure_admin, only: %i[reset reset_status]
+
+  def show
+    @user = current_resource_owner
+    render :show
+  end
 
   def reset
     family = current_resource_owner.family

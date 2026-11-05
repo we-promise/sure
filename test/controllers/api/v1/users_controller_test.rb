@@ -206,6 +206,70 @@ class Api::V1::UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Account has been deactivated", body["message"]
   end
 
+  # -- Current user ----------------------------------------------------------
+
+  test "current user requires authentication" do
+    get "/api/v1/users/me"
+    assert_response :unauthorized
+  end
+
+  test "current user returns the resolved payload" do
+    @user.update_columns(locale: "en", amount_format: "indian")
+
+    get "/api/v1/users/me", headers: api_headers(@read_only_api_key)
+
+    assert_response :ok
+    body = JSON.parse(response.body)
+
+    assert_equal @user.id, body["id"]
+    assert_equal @user.email, body["email"]
+    assert_equal @user.first_name, body["first_name"]
+    assert_equal @user.last_name, body["last_name"]
+    assert_equal @user.ui_layout, body["ui_layout"]
+    assert_equal @user.ai_enabled?, body["ai_enabled"]
+
+    amount_format = body["amount_format"]
+    assert_equal "indian", amount_format["key"]
+    assert_equal "indian", amount_format["grouping"]
+    assert_equal ",", amount_format["delimiter"]
+    assert_equal ".", amount_format["separator"]
+    assert_equal "before", amount_format["symbol_position"]
+    assert_equal "", amount_format["symbol_spacing"]
+  end
+
+  test "current user follows the user locale and family currency" do
+    @user.update_columns(locale: "de", amount_format: "language")
+    @user.family.update_columns(currency: "EUR")
+
+    get "/api/v1/users/me", headers: api_headers(@read_only_api_key)
+
+    assert_response :ok
+    body = JSON.parse(response.body)
+    amount_format = body["amount_format"]
+
+    assert_equal "language", amount_format["key"]
+    assert_equal "standard", amount_format["grouping"]
+    assert_equal ".", amount_format["delimiter"]
+    assert_equal ",", amount_format["separator"]
+    assert_equal "after", amount_format["symbol_position"]
+    assert_equal " ", amount_format["symbol_spacing"]
+  end
+
+  test "current user reports Indian grouping for INR without an override" do
+    @user.update_columns(locale: "en", amount_format: "language")
+    @user.family.update_columns(currency: "INR")
+
+    get "/api/v1/users/me", headers: api_headers(@read_only_api_key)
+
+    assert_response :ok
+    amount_format = JSON.parse(response.body)["amount_format"]
+
+    assert_equal "language", amount_format["key"]
+    assert_equal "indian", amount_format["grouping"]
+    assert_equal ",", amount_format["delimiter"]
+    assert_equal ".", amount_format["separator"]
+  end
+
   private
 
     def api_headers(api_key)

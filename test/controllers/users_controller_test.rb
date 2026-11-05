@@ -10,6 +10,19 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_url
   end
 
+  test "can update amount format preference" do
+    patch user_url(@user), params: { user: { redirect_to: "preferences", amount_format: "indian" } }
+
+    assert_redirected_to settings_preferences_url
+    assert_equal "indian", @user.reload.amount_format
+  end
+
+  test "rejects an unknown amount format" do
+    patch user_url(@user), params: { user: { redirect_to: "preferences", amount_format: "roman" } }
+
+    assert_equal "language", @user.reload.amount_format
+  end
+
   test "can update user profile" do
     patch user_url(@user), params: {
       user: {

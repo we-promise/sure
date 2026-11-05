@@ -3699,6 +3699,74 @@ components:
       properties:
         message:
           type: string
+    AmountFormat:
+      type: object
+      required:
+      - key
+      - grouping
+      - delimiter
+      - separator
+      - symbol_position
+      - symbol_spacing
+      description: Resolved number formatting rules for this user. Clients should
+        render amounts with these rules instead of inferring grouping from their own
+        locale or country.
+      properties:
+        key:
+          type: string
+          enum:
+          - language
+          - international
+          - indian
+          - european
+        grouping:
+          type: string
+          enum:
+          - standard
+          - indian
+        delimiter:
+          type: string
+          description: Exact thousands delimiter character.
+        separator:
+          type: string
+          description: Exact decimal separator character.
+        symbol_position:
+          type: string
+          enum:
+          - before
+          - after
+        symbol_spacing:
+          type: string
+          description: Exact spacing character between the currency symbol and the
+            amount, or an empty string.
+    CurrentUserResponse:
+      type: object
+      required:
+      - id
+      - email
+      - first_name
+      - last_name
+      - ui_layout
+      - ai_enabled
+      - amount_format
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        ui_layout:
+          type: string
+        ai_enabled:
+          type: boolean
+        amount_format:
+          "$ref": "#/components/schemas/AmountFormat"
     ResetInitiatedResponse:
       type: object
       required:
@@ -4852,6 +4920,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      amount_format:
+                        "$ref": "#/components/schemas/AmountFormat"
         '422':
           description: validation error
           content:
@@ -4962,6 +5032,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      amount_format:
+                        "$ref": "#/components/schemas/AmountFormat"
         '401':
           description: invalid credentials, MFA required, or account deactivated
           content:
@@ -5096,6 +5168,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      amount_format:
+                        "$ref": "#/components/schemas/AmountFormat"
         '401':
           description: invalid or expired code
           content:
@@ -5216,6 +5290,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      amount_format:
+                        "$ref": "#/components/schemas/AmountFormat"
         '400':
           description: missing linking code
           content:
@@ -5306,6 +5382,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      amount_format:
+                        "$ref": "#/components/schemas/AmountFormat"
         '400':
           description: missing linking code
           content:
@@ -5389,6 +5467,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      amount_format:
+                        "$ref": "#/components/schemas/AmountFormat"
         '401':
           description: unauthorized
           content:
@@ -10611,6 +10691,23 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/users/me":
+    get:
+      summary: Get current user
+      tags:
+      - Users
+      description: Returns the authenticated user together with the resolved number
+        formatting rules they should use for amounts. Requires read scope.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: current user returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CurrentUserResponse"
+        '401':
+          description: unauthorized
     delete:
       summary: Delete account
       tags:

@@ -32,7 +32,7 @@
                   <p class="text-sm text-secondary"><%= category[:name] %></p>
 
                   <p data-donut-chart-target="amount" class="text-3xl font-medium text-primary privacy-sensitive whitespace-nowrap">
-                    <%= outflows_data[:currency_symbol] %><%= number_with_delimiter(category[:amount], delimiter: ",") %>
+                    <%= format_money(category[:amount], currency: category[:currency], precision: 0) %>
                   </p>
 
                   <p class="text-sm text-secondary privacy-sensitive"><%= category[:percentage] %>%</p>

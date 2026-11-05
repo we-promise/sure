@@ -81,6 +81,42 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "formatted balances follow the user amount format and locale" do
+    account = accounts(:depository)
+    account.update_columns(balance: 1_234_567.89, currency: "USD")
+    @user.update_columns(locale: "en", amount_format: "indian")
+
+    get "/api/v1/accounts/#{account.id}", headers: api_headers(@api_key)
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    assert_equal "$12,34,567.89", response_body["balance"]
+  end
+
+  test "formatted balances follow the user locale" do
+    account = accounts(:depository)
+    account.update_columns(balance: 1_234_567.89, currency: "EUR")
+    @user.update_columns(locale: "de", amount_format: "language")
+
+    get "/api/v1/accounts/#{account.id}", headers: api_headers(@api_key)
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    assert_equal "1.234.567,89 €", response_body["balance"]
+  end
+
+  test "INR balances use Indian grouping without a per-user override" do
+    account = accounts(:depository)
+    account.update_columns(balance: 1_234_567.89, currency: "INR")
+    @user.update_columns(locale: "en", amount_format: "language")
+
+    get "/api/v1/accounts/#{account.id}", headers: api_headers(@api_key)
+
+    assert_response :success
+    response_body = JSON.parse(response.body)
+    assert_equal "₹12,34,567.89", response_body["balance"]
+  end
+
   test "should only return active accounts" do
     # Make one account inactive
     inactive_account = accounts(:depository)

@@ -55,7 +55,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string },
                      last_name: { type: :string },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     amount_format: { '$ref' => '#/components/schemas/AmountFormat' }
                    }
                  }
                }
@@ -116,7 +117,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string },
                      last_name: { type: :string },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     amount_format: { '$ref' => '#/components/schemas/AmountFormat' }
                    }
                  }
                }
@@ -193,7 +195,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string },
                      last_name: { type: :string },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     amount_format: { '$ref' => '#/components/schemas/AmountFormat' }
                    }
                  }
                }
@@ -283,7 +286,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string },
                      last_name: { type: :string },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     amount_format: { '$ref' => '#/components/schemas/AmountFormat' }
                    }
                  }
                }
@@ -376,7 +380,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string },
                      last_name: { type: :string },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     amount_format: { '$ref' => '#/components/schemas/AmountFormat' }
                    }
                  }
                }
@@ -429,7 +434,8 @@ RSpec.describe 'API V1 Auth', type: :request do
                      first_name: { type: :string, nullable: true },
                      last_name: { type: :string, nullable: true },
                      ui_layout: { type: :string, enum: %w[dashboard intro] },
-                     ai_enabled: { type: :boolean }
+                     ai_enabled: { type: :boolean },
+                     amount_format: { '$ref' => '#/components/schemas/AmountFormat' }
                    }
                  }
                }

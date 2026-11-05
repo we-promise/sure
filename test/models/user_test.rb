@@ -1426,4 +1426,34 @@ class UserTest < ActiveSupport::TestCase
     assert_not @user.update_manual_account_order("transactions", [ accounts(:depository).id ])
     assert_equal({}, @user.reload.manual_account_order)
   end
+
+  test "amount format defaults to language" do
+    user = users(:family_member)
+
+    assert_equal "language", user.amount_format
+    assert_equal "language", user.effective_amount_format
+  end
+
+  test "amount format accepts every supported override" do
+    User::AMOUNT_FORMATS.each do |format|
+      @user.amount_format = format
+
+      assert @user.valid?, "expected #{format} to be valid: #{@user.errors.full_messages.to_sentence}"
+      assert_equal format, @user.effective_amount_format
+    end
+  end
+
+  test "amount format rejects unknown values" do
+    @user.amount_format = "roman"
+
+    assert_not @user.valid?
+    assert_includes @user.errors[:amount_format], "is not included in the list"
+  end
+
+  test "effective amount format falls back to language for an unknown stored value" do
+    @user.update_column(:amount_format, "language")
+    @user.stubs(:amount_format).returns("roman")
+
+    assert_equal "language", @user.effective_amount_format
+  end
 end

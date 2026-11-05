@@ -46,6 +46,31 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Enable preview features"
   end
 
+  test "renders the amount format selector with the current value" do
+    user = users(:family_admin)
+    user.update!(amount_format: "indian")
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "select[name='user[amount_format]']" do
+      assert_select "option[value='language']"
+      assert_select "option[value='international']"
+      assert_select "option[value='indian'][selected]"
+      assert_select "option[value='european']"
+    end
+  end
+
+  test "non-admin members can change their own amount format" do
+    user = users(:family_member)
+    sign_in user
+
+    patch user_url(user), params: { user: { redirect_to: "preferences", amount_format: "european" } }
+
+    assert_redirected_to settings_preferences_url
+    assert_equal "european", user.reload.amount_format
+  end
+
   test "update toggles preview_features_enabled on" do
     user = users(:family_admin)
     assert_not user.preview_features_enabled?

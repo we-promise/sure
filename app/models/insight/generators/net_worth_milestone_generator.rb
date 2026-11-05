@@ -53,6 +53,6 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
     end
 
     def format_whole_money(amount)
-      Money.new(amount, family.currency).format(precision: 0)
+      format_money(amount, precision: 0)
     end
 end
