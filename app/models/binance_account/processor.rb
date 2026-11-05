@@ -6,12 +6,10 @@ class BinanceAccount::Processor
 
   # Quote currencies probed when fetching trade history. Ordered by prevalence so
   # the most common pairs are tried first and rate-limit weight is front-loaded.
-  TRADE_QUOTE_CURRENCIES = %w[USDT BUSD FDUSD BTC ETH BNB].freeze
+  TRADE_QUOTE_CURRENCIES = %w[USDT BUSD FDUSD USDC EUR BTC ETH BNB].freeze
 
-  # Binance caps the startTime/endTime span per trade-history endpoint: 24h for
-  # spot myTrades, 7 days for futures userTrades. Because fromId cannot be
-  # combined with startTime/endTime, the initial history sync walks forward one
-  # window at a time from the configured start date.
+  # Binance caps the startTime/endTime span per trade-history endpoint. Futures
+  # history starts with seven-day windows because fromId cannot use time bounds.
   TRADE_WINDOW_MS = { spot: 24 * 60 * 60 * 1000, futures: 7 * 24 * 60 * 60 * 1000 }.freeze
 
   # Futures userTrades only serves the past 6 months, so the initial window walk
@@ -81,6 +79,13 @@ class BinanceAccount::Processor
       existing_spot    = binance_account.raw_transactions_payload&.dig("spot") || {}
       existing_futures = binance_account.raw_transactions_payload&.dig("futures") || {}
       existing_p2p     = binance_account.raw_transactions_payload&.dig("p2p") || []
+      start_date = binance_account.binance_item.sync_start_date&.iso8601
+      payload_start_date = binance_account.raw_transactions_payload&.dig("spot_cursor_start_date")
+      rescan_spot = payload_start_date.present? && (start_date.nil? || start_date < payload_start_date)
+      cursors = payload_start_date == start_date ?
+        binance_account.raw_transactions_payload.to_h.fetch("spot_cursors", {}).dup : {}
+
+      repair_cached_trade_securities(existing_spot, existing_futures, existing_p2p)
 
       # 2. Fetch P2P Trades (This now runs even if you have no spot assets)
       new_p2p = fetch_new_p2p_trades(provider, existing_p2p)
@@ -89,6 +94,8 @@ class BinanceAccount::Processor
       symbols = extract_trade_symbols
       new_trades_by_symbol = {}
       new_futures_by_symbol = {}
+      payload = binance_account.raw_payload.to_h
+      futures_available = !payload.key?("futures") || payload["futures"].present?
 
       # Only attempt to loop if we actually have symbols (e.g., BTC, ETH)
       if symbols.any?
@@ -96,11 +103,13 @@ class BinanceAccount::Processor
           TRADE_QUOTE_CURRENCIES.each do |quote|
             pair = "#{symbol}#{quote}"
             begin
-              new_trades = fetch_new_trades(provider, pair, existing_spot[pair], :spot)
+              new_trades = fetch_new_trades(provider, pair, rescan_spot ? nil : existing_spot[pair], :spot, cursors: cursors)
               new_trades_by_symbol[pair] = new_trades if new_trades.present?
             rescue Provider::Binance::InvalidSymbolError => e
               Rails.logger.debug "BinanceAccount::Processor - skipping spot #{pair}: #{e.message}"
             end
+
+            next unless futures_available
 
             begin
               new_futures = fetch_new_trades(provider, pair, existing_futures[pair], :futures)
@@ -121,28 +130,43 @@ class BinanceAccount::Processor
       process_p2p_trades(new_p2p) if new_p2p.any?
 
       # 5. Merge Results ONLY after successful DB insertion
-      merged_spot    = existing_spot.merge(new_trades_by_symbol) { |_pair, old, new_t| old + new_t }
+      merged_spot    = existing_spot.merge(new_trades_by_symbol) { |_pair, old, new_t| (old + new_t).uniq { |trade| trade["id"] } }
       merged_futures = existing_futures.merge(new_futures_by_symbol) { |_pair, old, new_t| old + new_t }
       merged_p2p     = existing_p2p + new_p2p
 
       # 6. Update the Account Payload LAST (Safe Caching Boundary)
       binance_account.update!(raw_transactions_payload: {
-        "spot"       => merged_spot,
-        "futures"    => merged_futures,
-        "p2p"        => merged_p2p,
-        "fetched_at" => Time.current.iso8601
+        "spot"                   => merged_spot,
+        "futures"                => merged_futures,
+        "p2p"                    => merged_p2p,
+        "spot_cursors"           => cursors,
+        "spot_cursor_start_date" => start_date,
+        "fetched_at"             => Time.current.iso8601
       })
     end
 
     # Fetches only trades newer than what is already cached for the given pair.
-    # On subsequent syncs (trades already cached) it paginates forward by trade id
-    # from max_cached_id + 1. On the first sync it walks forward through Binance's
-    # per-endpoint time windows from the configured start date, because fromId
-    # cannot be combined with startTime/endTime.
-    def fetch_new_trades(provider, pair, cached_trades, market_type)
+    # With a configured start date, spot starts at ID zero and filters by date.
+    # Without one, the first spot request is bounded to the last 24 hours.
+    def fetch_new_trades(provider, pair, cached_trades, market_type, cursors: nil)
       max_cached_id = cached_trades&.map { |t| t["id"].to_i }&.max
 
-      if max_cached_id
+      if market_type == :spot
+        last_id = [ max_cached_id, cursors[pair] ].compact.max
+        start_time = binance_account.binance_item&.sync_start_date&.to_time&.to_i
+        if last_id || start_time
+          trades = fetch_trades_from_id(provider, pair, market_type, last_id ? last_id + 1 : 0)
+        else
+          now_ms = Time.current.to_i * 1000
+          start_time = (now_ms - TRADE_WINDOW_MS[:spot]) / 1000
+          trades = request_trades(provider, pair, market_type, start_time: start_time * 1000, end_time: now_ms)
+          if trades.size >= TRADE_PAGE_LIMIT
+            trades += fetch_trades_from_id(provider, pair, market_type, trades.map { |trade| trade["id"].to_i }.max + 1)
+          end
+        end
+        cursors[pair] = trades.map { |trade| trade["id"].to_i }.max if trades.any?
+        start_time ? trades.select { |trade| trade["time"].to_i >= start_time * 1000 } : trades
+      elsif max_cached_id
         fetch_trades_from_id(provider, pair, market_type, max_cached_id + 1)
       else
         fetch_trades_in_windows(provider, pair, market_type)
@@ -167,8 +191,8 @@ class BinanceAccount::Processor
       all_new
     end
 
-    # Initial sync: walk forward from the configured start date in fixed windows
-    # (24h spot / 7d futures). If a window yields a full page there may be more
+    # Walk forward from the configured start date in fixed windows. If a window
+    # yields a full page there may be more
     # trades inside it, so we advance the cursor past the last trade and re-scan
     # the same window before moving on.
     def fetch_trades_in_windows(provider, pair, market_type)
@@ -228,9 +252,10 @@ class BinanceAccount::Processor
 
       all_new = []
       current_start = start_time
+      end_time = Time.current.to_i * 1000
 
       loop do
-        current_end = [ current_start + 30.days.to_i * 1000, Time.current.to_i * 1000 ].min
+        current_end = [ current_start + 30.days.to_i * 1000, end_time ].min
 
         page = provider.get_all_p2p_trades(start_timestamp: current_start, end_timestamp: current_end)
 
@@ -246,7 +271,7 @@ class BinanceAccount::Processor
           all_new.concat(unique_page)
         end
 
-        break if current_end >= Time.current.to_i * 1000
+        break if current_end >= end_time
         current_start = current_end + 1
       end
 
@@ -277,6 +302,36 @@ class BinanceAccount::Processor
     rescue StandardError => e
       Rails.logger.error "BinanceAccount::Processor - trade processing failed: #{e.message}"
       raise
+    end
+
+    # Cached trades are not fetched again; repair legacy pair securities in place.
+    def repair_cached_trade_securities(spot, futures, p2p)
+      symbols_by_id = {}
+      { "spot" => spot, "futures" => futures }.each do |market, pairs|
+        pairs.each do |pair, trades|
+          quote = TRADE_QUOTE_CURRENCIES.find { |suffix| pair.end_with?(suffix) }
+          symbol = quote ? pair.delete_suffix(quote) : pair
+          trades.each { |trade| symbols_by_id["binance_#{market}_#{pair}_#{trade['id']}"] = symbol }
+        end
+      end
+      p2p.each { |trade| symbols_by_id["binance_p2p_#{trade['orderNumber']}"] = trade["asset"] }
+      symbols_by_id.keys.each_slice(1000) do |ids|
+        binance_account.current_account.entries.where(external_id: ids, entryable_type: "Trade")
+          .includes(entryable: :security).each do |entry|
+            repair_trade_security(entry, symbols_by_id[entry.external_id])
+          end
+      end
+    end
+
+    def repair_trade_security(entry, symbol)
+      return if symbol.blank? || entry.protected_from_sync?
+
+      old_security = entry.entryable.security
+      return unless old_security && Provider::BinancePublic.parse_ticker(old_security.ticker)&.dig(:base) == symbol
+      return if old_security.ticker == "CRYPTO:#{symbol}"
+
+      security = BinanceAccount::SecurityResolver.resolve("CRYPTO:#{symbol}", symbol)
+      entry.entryable.update!(security: security) if security
     end
 
     def process_trade(trade, pair, market_type)

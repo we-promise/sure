@@ -1,23 +1,8 @@
 # frozen_string_literal: true
 
-# Resolves or creates a Security for a given Binance ticker.
-# First attempts Security::Resolver; on failure, falls back to find_or_initialize_by
-# and saves an offline security so syncs are not blocked by provider outages.
+# Resolve the asset itself so a provider search cannot substitute a trading pair.
 class BinanceAccount::SecurityResolver
-  EXCHANGE_MIC = "XBNC"
-
   def self.resolve(ticker, symbol)
-    result = Security::Resolver.new(ticker).resolve
-    if result.nil?
-      Rails.logger.debug "BinanceAccount::SecurityResolver - primary resolver returned nil for #{ticker}"
-    end
-    result
-  rescue StandardError => e
-    Rails.logger.warn "BinanceAccount::SecurityResolver - resolver failed for #{ticker}: #{e.message}"
-    Security.find_or_initialize_by(ticker: ticker, exchange_operating_mic: EXCHANGE_MIC).tap do |sec|
-      sec.name = symbol if sec.name.blank?
-      sec.offline = true unless sec.offline
-      sec.save! if sec.changed?
-    end
+    Onchain::SecurityResolver.resolve(symbol: symbol.presence || ticker.to_s.delete_prefix("CRYPTO:"), canonicalize: false)
   end
 end
