@@ -5,5 +5,6 @@ it:
       models:
         rule:
           min_actions: "deve avere almeno un'azione"
+          conflicting_note_actions: "Una regola non può sostituire e aggiungere una riga alle note della transazione contemporaneamente"
           duplicate_actions: "La regola non può avere azioni duplicate %{types}"
           nested_conditions: "Le condizioni composte non possono essere nidificate"
