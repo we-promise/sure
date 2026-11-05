@@ -3,6 +3,7 @@ require "csv"
 
 class Family::DataExporter
   EXPORT_VERSION = 2
+  TRANSACTIONS_CSV_HEADERS = [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ].freeze
 
   def initialize(family)
     @family = family
@@ -81,7 +82,7 @@ class Family::DataExporter
 
     def generate_transactions_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
+        csv << TRANSACTIONS_CSV_HEADERS
 
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)

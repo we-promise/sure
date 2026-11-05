@@ -1,4 +1,23 @@
 class TransactionImport < Import
+  SURE_EXPORT_SETTINGS = {
+    amount_type_strategy: "signed_amount",
+    signage_convention: "inflows_negative",
+    date_format: "%Y-%m-%d",
+    number_format: "1,234.56",
+    rows_to_skip: 0
+  }.freeze
+
+  SURE_EXPORT_LABELS = {
+    date_col_label: "date",
+    account_col_label: "account_name",
+    amount_col_label: "amount",
+    name_col_label: "name",
+    category_col_label: "category",
+    tags_col_label: "tags",
+    notes_col_label: "notes",
+    currency_col_label: "currency"
+  }.freeze
+
   def import!
     transaction do
       mappings.each(&:create_mappable!)
@@ -116,4 +135,37 @@ class TransactionImport < Import
     csv.delete("account") if account.present?
     csv
   end
+
+  # Sure's own transactions.csv export keeps the stored sign (outflows positive),
+  # ISO dates and plain decimals, so a re-import of it needs matching settings.
+  # Call after assigning a new raw_file_str and before saving it.
+  def preset_for_uploaded_csv
+    if sure_export_csv?(raw_file_str, col_sep)
+      assign_attributes(SURE_EXPORT_SETTINGS)
+    elsif sure_export_csv?(raw_file_str_was, col_sep_was)
+      assign_attributes(amount_type_strategy: "signed_amount", signage_convention: "inflows_positive", date_format: family.date_format)
+    end
+  end
+
+  # A template from another bank's file would bring its own sign, formats,
+  # column names and skipped rows, none of which fit a Sure export.
+  def apply_template!(import_template)
+    return super unless sure_export_csv?(raw_file_str, col_sep)
+
+    update!(template_attributes(import_template).merge(SURE_EXPORT_SETTINGS.stringify_keys, SURE_EXPORT_LABELS.stringify_keys))
+  end
+
+  private
+    def sure_export_csv?(csv_str, separator)
+      header_line = csv_str.to_s.each_line.first
+      return false if header_line.blank?
+
+      # A dropped file is read as binary bytes; read the header line as UTF-8
+      # so a BOM or non-ASCII characters elsewhere in the file cannot raise.
+      header_line = header_line.dup.force_encoding(Encoding::UTF_8).scrub.delete_prefix("\uFEFF")
+      headers = CSV.parse_line(header_line, col_sep: separator.presence || ",", liberal_parsing: true).to_a.map { |header| header.to_s.strip.downcase }
+      (Family::DataExporter::TRANSACTIONS_CSV_HEADERS - headers).empty?
+    rescue CSV::MalformedCSVError
+      false
+    end
 end
