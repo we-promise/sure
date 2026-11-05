@@ -774,6 +774,27 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
+  test "cannot delete a confirmed transfer leg when the other side's balance counts transfers" do
+    other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: other_liability, status: "confirmed")
+    leg = transfer.outflow_transaction.entry
+
+    assert_no_difference [ -> { Transfer.count }, -> { Entry.count } ] do
+      delete transaction_url(leg)
+      post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ leg.id ] } }
+    end
+  end
+
+  test "editing the amount of a confirmed transfer resyncs both accounts" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: accounts(:other_liability), status: "confirmed")
+    Sync.where(syncable: [ accounts(:depository), accounts(:other_liability) ]).delete_all
+
+    assert_difference [ -> { accounts(:depository).syncs.count }, -> { accounts(:other_liability).syncs.count } ], 1 do
+      patch transfer_url(transfer), params: { transfer: { amount: 300 } }
+    end
+    assert_equal 300, transfer.outflow_transaction.entry.reload.amount
+  end
+
   test "can reject a pending match from one side when the other side's balance counts transfers" do
     other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
     transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: other_liability)

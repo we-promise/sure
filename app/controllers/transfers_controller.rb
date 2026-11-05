@@ -95,12 +95,15 @@ class TransfersController < ApplicationController
     # Confirming or rejecting rewrites the kind of both legs
     return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
-    Transfer.transaction do
+    amounts_changed = Transfer.transaction do
       update_transfer_status
-      update_transfer_fees_and_amount
+      changed = update_transfer_fees_and_amount
       update_transfer_details
       update_investment_contribution
+      changed
     end
+    # Rewriting the legs and fees changes the balances of every account involved.
+    [ outflow_account, inflow_account ].uniq.each(&:sync_later) if amounts_changed
 
     respond_to do |format|
       format.html { redirect_back_or_to transactions_url, notice: t(".success") }
@@ -262,8 +265,7 @@ class TransfersController < ApplicationController
       writable_endpoint = endpoints.find { |account| writable_ids.include?(account.id) }
       return endpoints.first unless writable_endpoint
 
-      balance_accounts = @transfer.confirmed? ? endpoints.select(&:balance_counts_transfers?) : []
-      (fee_accounts + balance_accounts).find { |account| !writable_ids.include?(account.id) } || writable_endpoint
+      (fee_accounts + @transfer.transfer_counting_accounts).find { |account| !writable_ids.include?(account.id) } || writable_endpoint
     end
 
     def transfer_params
@@ -337,7 +339,7 @@ class TransfersController < ApplicationController
       dest_fee_changed = new_destination_fee.present? && new_destination_fee.to_d != current_destination_fee
       amount_changed = new_amount.present? && new_amount.to_d != @transfer.amount.to_d
 
-      return unless amount_changed || source_fee_changed || dest_fee_changed
+      return false unless amount_changed || source_fee_changed || dest_fee_changed
 
       @transfer.amount = new_amount.to_d if amount_changed
 
@@ -372,6 +374,7 @@ class TransfersController < ApplicationController
       end
 
       @transfer.save!
+      true
     end
 
     def update_fee_transaction(account:, old_fee:, new_fee:, name:)

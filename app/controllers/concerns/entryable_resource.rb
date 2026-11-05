@@ -32,6 +32,11 @@ module EntryableResource
 
   def destroy
     return unless require_account_permission!(@entry.account)
+    # Deleting a transfer leg removes the transfer, which moves the balance of
+    # a counterpart that counts transfers.
+    @entry.entryable.try(:transfer)&.transfer_counting_accounts&.each do |account|
+      return unless require_account_permission!(account)
+    end
 
     @entry.destroy!
     @entry.sync_account_later

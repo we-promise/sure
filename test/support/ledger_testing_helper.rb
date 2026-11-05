@@ -64,7 +64,7 @@ module LedgerTestingHelper
           currency: currency,
           entryable: Transaction.new(**entry_data.slice(:kind))
         )
-        link_confirmed_transfer(entry) if entry_data[:transfer]
+        link_confirmed_transfer(entry, status: entry_data[:transfer] == :pending ? "pending" : "confirmed") if entry_data[:transfer]
       when "trade"
         # Find or create security
         security = Security.find_or_create_by!(ticker: entry_data[:ticker]) do |s|
@@ -333,7 +333,7 @@ module LedgerTestingHelper
   end
 
   # Pairs the entry with an opposite leg in a separate cash account, as a confirmed transfer.
-  def link_confirmed_transfer(entry)
+  def link_confirmed_transfer(entry, status: "confirmed")
     counterpart_account = entry.account.family.accounts.create!(
       name: "Transfer counterpart", balance: 0, currency: entry.currency, accountable: Depository.new
     )
@@ -342,6 +342,6 @@ module LedgerTestingHelper
       entryable: Transaction.new(kind: "funds_movement")
     )
     inflow, outflow = entry.amount.negative? ? [ entry, counterpart ] : [ counterpart, entry ]
-    Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction, status: "confirmed")
+    Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction, status: status)
   end
 end

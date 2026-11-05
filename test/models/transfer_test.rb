@@ -246,6 +246,19 @@ class TransferTest < ActiveSupport::TestCase
     end
   end
 
+  test "confirming resyncs even when the transfer is saved again in the same transaction" do
+    liability = accounts(:other_liability)
+    transfer = create_pending_transfer(from: accounts(:depository), to: liability)
+    Sync.where(syncable: liability).delete_all
+
+    assert_difference -> { liability.syncs.count }, 1 do
+      Transfer.transaction do
+        transfer.confirm!
+        transfer.update!(notes: "Paid back")
+      end
+    end
+  end
+
   test "rejecting a pending match does not resync an account that counts transfers" do
     liability = accounts(:other_liability)
     transfer = create_pending_transfer(from: accounts(:depository), to: liability)

@@ -511,6 +511,24 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a pending transfer match leaves other asset and other liability balances unchanged" do
+    [ OtherLiability, OtherAsset ].each do |account_type|
+      account = create_account_with_ledger(
+        account: { type: account_type, currency: "USD" },
+        entries: [
+          { type: "opening_anchor", date: 2.days.ago.to_date, balance: 2500 },
+          { type: "transaction", date: 1.day.ago.to_date, amount: -500, kind: "funds_movement", transfer: :pending }
+        ]
+      )
+
+      calculated = Balance::ForwardCalculator.new(account).calculate
+      day = calculated.find { |b| b.date == 1.day.ago.to_date }
+
+      assert_equal 2500, day.balance, account_type.name
+      assert_equal 0, day.non_cash_inflows, account_type.name
+    end
+  end
+
   test "a transfer paying off an other liability brings its balance to zero" do
     account = create_account_with_ledger(
       account: { type: OtherLiability, currency: "USD" },
@@ -558,7 +576,8 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
         account: { type: account_type, currency: "USD" },
         entries: [
           { type: "opening_anchor", date: 2.days.ago.to_date, balance: 500000 },
-          { type: "transaction", date: 1.day.ago.to_date, amount: -10000, kind: "funds_movement" }
+          { type: "transaction", date: 1.day.ago.to_date, amount: -10000, kind: "funds_movement" },
+          { type: "transaction", date: 1.day.ago.to_date, amount: -20000, kind: "funds_movement", transfer: true }
         ]
       )
 

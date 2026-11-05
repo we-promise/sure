@@ -23,6 +23,7 @@ class Transfer < ApplicationRecord
   # Confirming or removing a confirmed transfer moves the balance of accounts
   # that count transfers. Runs after commit, so callers that confirm inside
   # their own transaction never lock an account row while holding theirs.
+  after_save :note_status_change
   after_commit :sync_transfer_counting_accounts_later, if: :moved_transfer_counting_balances?
 
   class << self
@@ -219,8 +220,23 @@ class Transfer < ApplicationRecord
     fee_transactions.each { |t| t.entry&.sync_account_later }
   end
 
+  # Accounts whose balance moves if this transfer goes away.
+  def transfer_counting_accounts
+    return [] unless confirmed?
+
+    [ from_account, to_account ].compact.select(&:balance_counts_transfers?)
+  end
+
+  # Checked after commit, when a later save in the same transaction (notes,
+  # fees) would already have cleared saved_change_to_status?.
   def moved_transfer_counting_balances?
-    confirmed? && (destroyed? || saved_change_to_status?)
+    changed = @status_changed_in_transaction
+    @status_changed_in_transaction = false
+    confirmed? && (destroyed? || changed)
+  end
+
+  def note_status_change
+    @status_changed_in_transaction = true if saved_change_to_status?
   end
 
   # Other accounts keep their balance when a transfer is confirmed or removed.
