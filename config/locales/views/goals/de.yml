@@ -2,7 +2,8 @@
 de:
   goals:
     archive:
-      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht archivieren.
+      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht
+        archivieren.
       success: Ziel archiviert.
     color_picker:
       auto_adjust: automatisch anpassen.
@@ -11,7 +12,8 @@ de:
       poor_contrast: Schwacher Kontrast, wähl eine dunklere Farbe oder
       trigger_label: Farbe und Symbol wählen
     complete:
-      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht abschließen.
+      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht
+        abschließen.
       success: Ziel als erreicht markiert.
     create:
       success: Ziel erstellt.
@@ -22,10 +24,12 @@ de:
       save: Änderungen speichern
     empty_state:
       add_account: Konto hinzufügen
-      body: Setz dir ein Ziel, verknüpf die Konten, auf die du sparst, und sieh zu, wie es wächst.
+      body: Setz dir ein Ziel, verknüpf die Konten, auf die du sparst, und sieh zu,
+        wie es wächst.
       heading: Noch keine Ziele
       new_goal: Erstes Ziel anlegen
-      no_depository_accounts: Du brauchst mindestens ein Bankkonto (Giro, Spar, HSA, Festgeld, Geldmarkt), bevor du ein Ziel anlegen kannst.
+      no_depository_accounts: Du brauchst mindestens ein Bankkonto (Giro, Spar, HSA,
+        Festgeld, Geldmarkt), bevor du ein Ziel anlegen kannst.
       subtitle: Setz dir ein Ziel und fang an, darauf zu sparen.
     errors:
       not_found: Dieses Ziel wurde nicht gefunden. Vielleicht ist es gelöscht.
@@ -40,14 +44,15 @@ de:
         earmark_for: Betrag für %{account} vormerken
         earmark_hint: Lass den Betrag leer, um den ganzen Saldo dieses Kontos zu verwenden.
         funding_accounts: Konten, aus denen gespart wird
-        funding_accounts_hint: Der Stand dieses Ziels ist der Saldo dieser Konten – oder der vorgemerkte Anteil davon.
+        funding_accounts_hint: Der Stand dieses Ziels ist der Saldo dieser Konten
+          – oder der vorgemerkte Anteil davon.
         name: Name
         name_placeholder: Notgroschen, Anzahlung fürs Haus …
         notes: Notizen (optional)
         notes_placeholder: Eine Erinnerung an dein späteres Ich …
         target_amount: Zielbetrag
         target_date: Zieldatum
-        whole_balance: "Leer: ganzer Saldo"
+        whole_balance: 'Leer: ganzer Saldo'
       save: Änderungen speichern
       subtypes:
         cd: Festgeld
@@ -57,7 +62,8 @@ de:
         other: Sonstiges
         savings: Sparkonto
       suggested_no_date: Setz eine Frist, um ein Zieldatum hochzurechnen.
-      suggested_with_date: Spar {monthly}/Monat über {accounts}, um es rechtzeitig zu schaffen.
+      suggested_with_date: Spar {monthly}/Monat über {accounts}, um es rechtzeitig
+        zu schaffen.
     goal_card:
       accounts:
         one: 1 Konto
@@ -135,7 +141,8 @@ de:
       new_goal: Neues Ziel
       ongoing_section:
         heading: Ziele
-      pending_pledges_callout: Du hast offene Zusagen. Sure bestätigt sie beim nächsten Sync.
+      pending_pledges_callout: Du hast offene Zusagen. Sure bestätigt sie beim nächsten
+        Sync.
       search:
         aria_label: Ziele suchen
         clear_search: Suche zurücksetzen
@@ -151,16 +158,19 @@ de:
       heading: Neues Ziel
       subtitle: Spar auf etwas Konkretes.
     pause:
-      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht pausieren.
+      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht
+        pausieren.
       success: Ziel pausiert.
     perform_transition!:
       invalid_transition: Ziel kann nicht in diesen Status wechseln.
       success: Ziel aktualisiert.
     reopen:
-      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht wieder öffnen.
+      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht
+        wieder öffnen.
       success: Ziel wieder geöffnet.
     resume:
-      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht fortsetzen.
+      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht
+        fortsetzen.
       success: Ziel fortgesetzt.
     show:
       archive: Archivieren
@@ -170,27 +180,38 @@ de:
         title: Dieses Ziel ist archiviert
       catch_up:
         adjust_target_cta: Lieber das Ziel anpassen
-        body: Aktuelles Tempo %{avg}/Monat · nötig sind %{required}/Monat für dein Ziel.
+        body: Aktuelles Tempo %{avg}/Monat · nötig sind %{required}/Monat für dein
+          Ziel.
         title: Spar %{amount}/Monat mehr, um aufzuholen
       celebration:
         archive_cta: Ziel archivieren
-        body: Ziel abgeschlossen bei %{saved} von %{target}. Lass es als Beleg stehen oder archivier es gleich.
+        body: Ziel abgeschlossen bei %{saved} von %{target}. Lass es als Beleg stehen
+          oder archivier es gleich.
         heading: Ziel erreicht. Gut gemacht.
       complete: Als erreicht markieren
-      confirm_archive_body: Archivierte Ziele verschwinden aus der Hauptliste. Du kannst sie später wiederherstellen.
+      confirm_archive_body: Archivierte Ziele verschwinden aus der Hauptliste. Du
+        kannst sie später wiederherstellen.
       confirm_archive_cta: Archivieren
       confirm_archive_title: Dieses Ziel archivieren?
-      confirm_complete_body: Es verschwindet aus der Liste der laufenden Ziele. Archivieren oder wiederherstellen kannst du es später trotzdem.
-      confirm_complete_body_short: Du stehst bei %{progress} %, also %{saved} von %{target}. Wenn du abschließt, wird dieser Stand als dein Ergebnis festgehalten statt des ursprünglichen Ziels. Weiter, oder lieber schließen und das Ziel anpassen?
+      confirm_complete_body: Es verschwindet aus der Liste der laufenden Ziele. Archivieren
+        oder wiederherstellen kannst du es später trotzdem.
+      confirm_complete_body_short: Du stehst bei %{progress} %, also %{saved} von
+        %{target}. Wenn du abschließt, wird dieser Stand als dein Ergebnis festgehalten
+        statt des ursprünglichen Ziels. Weiter, oder lieber schließen und das Ziel
+        anpassen?
       confirm_complete_cta: Als erreicht markieren
       confirm_complete_title: Dieses Ziel als erreicht markieren?
-      confirm_delete_body: "%{name} und der zugehörige Verlauf der Zusagen werden endgültig entfernt. Deine verknüpften Konten, Salden und Transaktionen sind davon nicht betroffen. Wenn du es stattdessen als Beleg behalten willst, archivier es."
+      confirm_delete_body: "%{name} und der zugehörige Verlauf der Zusagen werden
+        endgültig entfernt. Deine verknüpften Konten, Salden und Transaktionen sind
+        davon nicht betroffen. Wenn du es stattdessen als Beleg behalten willst, archivier
+        es."
       confirm_delete_cta: Ziel löschen
       confirm_delete_title: Dieses Ziel löschen?
       delete: Löschen
       edit: Bearbeiten
       empty:
-        body: Überweis Geld auf dein verknüpftes Konto. Sure erkennt es beim nächsten Sync. Oder aktualisier den Saldo deines manuellen Kontos.
+        body: Überweis Geld auf dein verknüpftes Konto. Sure erkennt es beim nächsten
+          Sync. Oder aktualisier den Saldo deines manuellen Kontos.
         heading: Noch keine Einzahlungen
       funding_accounts:
         earmarked_of: "%{earmarked} von %{balance} vorgemerkt"
@@ -209,7 +230,8 @@ de:
         heading_archived: Dieses Ziel ist archiviert
         heading_paused: Dieses Ziel ist pausiert
       no_target_date:
-        body: Setz eine Frist, um ein Zieldatum hochzurechnen und das nötige Tempo zu verfolgen.
+        body: Setz eine Frist, um ein Zieldatum hochzurechnen und das nötige Tempo
+          zu verfolgen.
         cta: Frist setzen
         heading: Frist hinzufügen
       notes: Notizen
@@ -220,9 +242,11 @@ de:
         title: Dieses Ziel ist pausiert
       pending_pledge:
         body_manual: Bestätigt sich, sobald du den Saldo das nächste Mal selbst anpasst.
-        body_transfer: Bestätigt sich automatisch, sobald Sure beim nächsten Sync eine passende Einzahlung findet.
+        body_transfer: Bestätigt sich automatisch, sobald Sure beim nächsten Sync
+          eine passende Einzahlung findet.
         cancel: Abbrechen
-        confirm_cancel_body: Die Zusage über %{amount} wird entfernt. Du kannst jederzeit eine neue erfassen.
+        confirm_cancel_body: Die Zusage über %{amount} wird entfernt. Du kannst jederzeit
+          eine neue erfassen.
         confirm_cancel_cta: Zusage zurückziehen
         confirm_cancel_title: Diese Zusage zurückziehen?
         extend: Um 7 Tage verlängern
@@ -240,9 +264,11 @@ de:
         legend_projection: Hochrechnung
         legend_required: Nötig
         legend_saved: Gespart
-        no_pace: Noch keine Einzahlungen. Zahl auf ein verknüpftes Konto ein, dann startet die Hochrechnung.
+        no_pace: Noch keine Einzahlungen. Zahl auf ein verknüpftes Konto ein, dann
+          startet die Hochrechnung.
         no_target_date: Keine Frist gesetzt. Setz eine, um ein Zieldatum hochzurechnen.
-        on_track_html: Bei deinem aktuellen Tempo erreichst du dieses Ziel um den <strong class="text-primary whitespace-nowrap">%{date}</strong>.
+        on_track_html: Bei deinem aktuellen Tempo erreichst du dieses Ziel um den
+          <strong class="text-primary whitespace-nowrap">%{date}</strong>.
         reached: Ziel erreicht. Eine Hochrechnung erübrigt sich.
         today_marker: Heute
         tooltip_projected: 'Hochgerechnet: %{amount}'
@@ -278,7 +304,8 @@ de:
       paused: Pausiert
       reached: Erreicht
     unarchive:
-      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht wiederherstellen.
+      invalid_transition: Dieses Ziel lässt sich in seinem aktuellen Zustand nicht
+        wiederherstellen.
       success: Ziel wiederhergestellt.
     update:
       success: Ziel aktualisiert.

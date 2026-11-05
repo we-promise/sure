@@ -1,84 +1,90 @@
 ---
 de:
+  rule:
+    conditions:
+      condition:
+        value_placeholder: Wert eingeben
+      condition_group:
+        add_condition: Bedingung hinzufügen
+        all: alle
+        and_prefix: und
+        any: beliebige
+        match: erfüllen
+        of_the_following_conditions: der folgenden Bedingungen
   rules:
-    no_action: Keine Aktion
-    no_condition: Keine Bedingung
     actions:
-      value_placeholder: Wert eingeben
       split:
-        type_fixed: Fester Betrag
-        type_percentage: Prozent
-        type_label: Split-Typ
         add_split: Split hinzufügen
-        name_placeholder: Name des Splits
-        share_label: Betrag oder Prozentsatz des Splits
         category_label: Kategorie des Splits
-        merchant_label: Händler des Splits
-        tags_label: "Tags des Splits"
-        remove_split: "Split entfernen"
-        hint: "Feste Beträge werden zuerst als exakte Summen abgezogen. Prozent-Splits verteilen anschließend den verbleibenden Betrag. Wenn hier ausschließlich feste Beträge verwendet werden, füge zusätzlich eine Bedingung mit einem exakten Transaktionsbetrag hinzu (z. B. Betrag = 42,00), da jede passende Transaktion denselben Gesamtbetrag haben muss, damit die festen Beträge aufgehen. Eine Regel mit Aufteilung darf keine weiteren Aktionen haben."
         fixed_summary_label: fest
+        hint: Feste Beträge werden zuerst als exakte Summen abgezogen. Prozent-Splits
+          verteilen anschließend den verbleibenden Betrag. Wenn hier ausschließlich
+          feste Beträge verwendet werden, füge zusätzlich eine Bedingung mit einem
+          exakten Transaktionsbetrag hinzu (z. B. Betrag = 42,00), da jede passende
+          Transaktion denselben Gesamtbetrag haben muss, damit die festen Beträge
+          aufgehen. Eine Regel mit Aufteilung darf keine weiteren Aktionen haben.
+        merchant_label: Händler des Splits
+        name_placeholder: Name des Splits
+        remove_split: Split entfernen
+        share_label: Betrag oder Prozentsatz des Splits
         summary:
           one: "%{count} Split"
           other: "%{count} Splits"
+        tags_label: Tags des Splits
+        type_fixed: Fester Betrag
+        type_label: Split-Typ
+        type_percentage: Prozent
+      value_placeholder: Wert eingeben
     apply_all:
-      button: Alle anwenden
-      confirm_title: Alle Regeln anwenden
-      confirm_message: Du bist dabei, %{count} Regeln anzuwenden, die %{transactions} eindeutige Transaktionen betreffen. Bitte bestätige, wenn du fortfahren möchtest.
-      confirm_button: Bestätigen und alle anwenden
-      success: Alle Regeln wurden zur Ausführung in die Warteschlange gestellt
+      ai_cost_message: Dies verwendet KI, um bis zu %{transactions} Transaktionen
+        zu kategorisieren.
       ai_cost_title: KI-Kostenschätzung
-      ai_cost_message: Dies verwendet KI, um bis zu %{transactions} Transaktionen zu kategorisieren.
-      estimated_cost: "Geschätzte Kosten: ca. %{cost} $"
+      button: Alle anwenden
+      confirm_button: Bestätigen und alle anwenden
+      confirm_message: Du bist dabei, %{count} Regeln anzuwenden, die %{transactions}
+        eindeutige Transaktionen betreffen. Bitte bestätige, wenn du fortfahren möchtest.
+      confirm_title: Alle Regeln anwenden
       cost_unavailable_model: Kostenschätzung für Modell „%{model}“ nicht verfügbar.
-      cost_unavailable_no_provider: Kostenschätzung nicht verfügbar (kein LLM-Anbieter konfiguriert).
-      cost_warning: Es können Kosten entstehen. Bitte informiere dich beim Modellanbieter über die aktuellen Preise.
+      cost_unavailable_no_provider: Kostenschätzung nicht verfügbar (kein LLM-Anbieter
+        konfiguriert).
+      cost_warning: Es können Kosten entstehen. Bitte informiere dich beim Modellanbieter
+        über die aktuellen Preise.
+      estimated_cost: 'Geschätzte Kosten: ca. %{cost} $'
+      success: Alle Regeln wurden zur Ausführung in die Warteschlange gestellt
       view_usage: Nutzungshistorie anzeigen
-    recent_runs:
-      title: Letzte Ausführungen
-      description: Zeige die Ausführungsgeschichte deiner Regeln einschließlich Erfolgs-/Fehlerstatus und Transaktionsanzahlen.
-      unnamed_rule: Unbenannte Regel
-      columns:
-        date_time: Datum/Uhrzeit
-        execution_type: Typ
-        status: Status
-        rule_name: Regelname
-        transactions_counts:
-          queued: In Warteschlange
-          processed: Verarbeitet
-          modified: Geändert
-          blocked: Blockiert
-      execution_types:
-        manual: Manuell
-        scheduled: Geplant
-      statuses:
-        pending: Ausstehend
-        success: Erfolgreich
-        failed: Fehlgeschlagen
     clear_ai_cache:
       button: KI-Cache zurücksetzen
-      confirm_title: KI-Cache zurücksetzen?
-      confirm_body: Bist du sicher, dass du den KI-Cache zurücksetzen möchtest? Dadurch können KI-Regeln alle Transaktionen erneut verarbeiten. Dies kann zusätzliche API-Kosten verursachen.
+      confirm_body: Bist du sicher, dass du den KI-Cache zurücksetzen möchtest? Dadurch
+        können KI-Regeln alle Transaktionen erneut verarbeiten. Dies kann zusätzliche
+        API-Kosten verursachen.
       confirm_button: Cache zurücksetzen
+      confirm_title: KI-Cache zurücksetzen?
       success: Der KI-Cache wird geleert. Das kann einen Moment dauern.
     condition_filters:
       transaction_type:
-        income: Einnahme
-        expense: Ausgabe
-        transfer: Überweisung
         equal_to: Gleich
+        expense: Ausgabe
+        income: Einnahme
+        transfer: Überweisung
     confirm:
       ai_cost_no_estimate_html: Damit kategorisiert die KI %{count} Transaktion(en).
       ai_cost_title: Geschätzte KI-Kosten
-      ai_cost_with_estimate_html: 'Damit kategorisiert die KI %{count} Transaktion(en). Geschätzte Kosten: <span class="font-semibold">~$%{cost}</span>'
-      apply_notice_html: Du wendest diese Regel gleich auf <span class="text-primary font-medium">%{count} %{resource}</span> an, die den Bedingungen entsprechen. Bestätige, wenn du fortfahren willst.
+      ai_cost_with_estimate_html: 'Damit kategorisiert die KI %{count} Transaktion(en).
+        Geschätzte Kosten: <span class="font-semibold">~$%{cost}</span>'
+      apply_notice_html: Du wendest diese Regel gleich auf <span class="text-primary
+        font-medium">%{count} %{resource}</span> an, die den Bedingungen entsprechen.
+        Bestätige, wenn du fortfahren willst.
       confirm_changes: Änderungen bestätigen
       cost_unavailable_model: Für das Modell „%{model}“ gibt es keine Kostenschätzung.
-      cost_unavailable_no_provider: Keine Kostenschätzung möglich (kein LLM-Anbieter eingerichtet).
-      cost_warning: Es können Kosten entstehen. Die aktuellen Preise findest du beim Modellanbieter.
+      cost_unavailable_no_provider: Keine Kostenschätzung möglich (kein LLM-Anbieter
+        eingerichtet).
+      cost_warning: Es können Kosten entstehen. Die aktuellen Preise findest du beim
+        Modellanbieter.
       rules_above_notice:
-        one: Die aktive Regel darüber läuft vorher, damit das Ergebnis dem vollen Lauf entspricht.
-        other: Die %{count} aktiven Regeln darüber laufen vorher, damit das Ergebnis dem vollen Lauf entspricht.
+        one: Die aktive Regel darüber läuft vorher, damit das Ergebnis dem vollen
+          Lauf entspricht.
+        other: Die %{count} aktiven Regeln darüber laufen vorher, damit das Ergebnis
+          dem vollen Lauf entspricht.
       title: Änderungen bestätigen
       title_with_name: Änderungen an „%{name}“ bestätigen
       view_usage_history: Nutzungsverlauf ansehen
@@ -86,79 +92,115 @@ de:
       success: Regel gelöscht
     destroy_all:
       success: Alle Regeln gelöscht
+    filters:
+      account:
+        all: Alle Konten
+        label: Konto
+      action_type:
+        all: Alle Aktionen
+        label: Aktion
+      active_label: Aktive Filter
+      button: Filter
+      condition_type:
+        all: Alle Bedingungen
+        label: Bedingung
+      done: Fertig
+      group:
+        all: Alle Gruppen
+        label: Gruppe
+        none: Ohne Gruppe
+      remove: Filter %{filter} entfernen
+      reset: Zurücksetzen
+      search_label: Regeln durchsuchen
+      search_placeholder: Name, Bedingungen und Aktionen durchsuchen
+      status:
+        active: Aktiv
+        all: Alle Status
+        inactive: Inaktiv
+        label: Status
     form:
       add_action: Aktion hinzufügen
       add_condition: Bedingung hinzufügen
       add_condition_group: Bedingungsgruppe hinzufügen
       all_past_and_future: Alle bisherigen und künftigen %{resource}
+      group_hint: Gruppen ordnen nur die Liste. Eine Regel in einer Gruppe läuft dort,
+        wo die Gruppe in der Liste steht.
+      group_label: Gruppe (optional)
+      group_select_label: Gruppe
+      new_group_label: Oder neue Gruppe
+      new_group_placeholder: Name einer neuen Gruppe
+      no_group: Keine Gruppe
       rule_name_label: Regelname (optional)
       rule_name_placeholder: Gib dieser Regel einen Namen
       starting_from: Ab dem
-      stop_processing_description: Weiter unten stehende Regeln ändern die Transaktionen nicht mehr, die diese Regel trifft.
-      group_label: Gruppe (optional)
-      group_select_label: Gruppe
-      no_group: Keine Gruppe
-      new_group_label: Oder neue Gruppe
-      new_group_placeholder: Name einer neuen Gruppe
-      group_hint: Gruppen ordnen nur die Liste. Eine Regel in einer Gruppe läuft dort, wo die Gruppe in der Liste steht.
+      stop_processing_description: Weiter unten stehende Regeln ändern die Transaktionen
+        nicht mehr, die diese Regel trifft.
       stop_processing_label: Danach keine weiteren Regeln anwenden
       then: DANN
-    index:
-      ai_cost_warning: Regelaktionen mit KI kosten Geld. Filtere so eng wie möglich, damit keine unnötigen Kosten entstehen.
-      delete_all_rules: Alle Regeln löschen
-      new_rule: Neue Regel
-      no_rules_description: Mit Regeln bearbeitest du Transaktionen und andere Daten automatisch bei jedem Konto-Sync.
-      no_rules_title: Noch keine Regeln
-      order_hint: Regeln laufen von oben nach unten, auch die Regeln in Gruppen. Setzt eine Regel ein Feld einer Transaktion, ändern weiter unten stehende Regeln dieses Feld nicht mehr. Tags ergänzt jede passende Regel. Ziehe Regeln und Gruppen, um die Reihenfolge zu ändern.
-      new_group: Neue Gruppe
-      reorder_group: "Gruppe %{name} verschieben. Mit Enter oder Leertaste greifen, dann mit den Pfeiltasten verschieben."
-      filters:
-        no_matches: Keine Regel passt zur Suche oder zu den Filtern.
-        drag_disabled: Während einer Suche oder eines Filters ist das Sortieren aus. Setze sie zurück, um die Reihenfolge zu ändern.
-      page_title: Regeln
-      fold_rule: "Regel %{name} ein- oder ausklappen"
-      reorder_rule: "Regel %{name} verschieben. Mit Enter oder Leertaste greifen, dann mit den Pfeiltasten verschieben."
-      rules_heading: Regeln
-    filters:
-      search_label: Regeln durchsuchen
-      search_placeholder: Name, Bedingungen und Aktionen durchsuchen
-      reset: Zurücksetzen
-      button: Filter
-      done: Fertig
-      active_label: Aktive Filter
-      remove: "Filter %{filter} entfernen"
-      status:
-        label: Status
-        all: Alle Status
-        active: Aktiv
-        inactive: Inaktiv
-      action_type:
-        label: Aktion
-        all: Alle Aktionen
-      condition_type:
-        label: Bedingung
-        all: Alle Bedingungen
-      account:
-        label: Konto
-        all: Alle Konten
-      group:
-        label: Gruppe
-        all: Alle Gruppen
-        none: Ohne Gruppe
     group:
-      rules_count:
-        one: 1 Regel
-        other: "%{count} Regeln"
+      activate_all: Alle Regeln einschalten
+      deactivate_all: Alle Regeln ausschalten
+      delete: Gruppe löschen
+      delete_confirm_body: Die Regeln bleiben an ihrer Stelle, nur ohne Gruppe. Keine
+        Regel wird gelöscht.
+      delete_confirm_title: Gruppe „%{name}“ löschen?
+      empty: Noch keine Regeln in dieser Gruppe. Wähle die Gruppe im Formular einer
+        Regel.
       inactive_count:
         one: 1 inaktiv
         other: "%{count} inaktiv"
-      empty: Noch keine Regeln in dieser Gruppe. Wähle die Gruppe im Formular einer Regel.
-      activate_all: Alle Regeln einschalten
-      deactivate_all: Alle Regeln ausschalten
       rename: Umbenennen
-      delete: Gruppe löschen
-      delete_confirm_title: Gruppe „%{name}“ löschen?
-      delete_confirm_body: Die Regeln bleiben an ihrer Stelle, nur ohne Gruppe. Keine Regel wird gelöscht.
+      rules_count:
+        one: 1 Regel
+        other: "%{count} Regeln"
+    index:
+      ai_cost_warning: Regelaktionen mit KI kosten Geld. Filtere so eng wie möglich,
+        damit keine unnötigen Kosten entstehen.
+      delete_all_rules: Alle Regeln löschen
+      filters:
+        drag_disabled: Während einer Suche oder eines Filters ist das Sortieren aus.
+          Setze sie zurück, um die Reihenfolge zu ändern.
+        no_matches: Keine Regel passt zur Suche oder zu den Filtern.
+      fold_rule: Regel %{name} ein- oder ausklappen
+      new_group: Neue Gruppe
+      new_rule: Neue Regel
+      no_rules_description: Mit Regeln bearbeitest du Transaktionen und andere Daten
+        automatisch bei jedem Konto-Sync.
+      no_rules_title: Noch keine Regeln
+      order_hint: Regeln laufen von oben nach unten, auch die Regeln in Gruppen. Setzt
+        eine Regel ein Feld einer Transaktion, ändern weiter unten stehende Regeln
+        dieses Feld nicht mehr. Tags ergänzt jede passende Regel. Ziehe Regeln und
+        Gruppen, um die Reihenfolge zu ändern.
+      page_title: Regeln
+      reorder_group: Gruppe %{name} verschieben. Mit Enter oder Leertaste greifen,
+        dann mit den Pfeiltasten verschieben.
+      reorder_rule: Regel %{name} verschieben. Mit Enter oder Leertaste greifen, dann
+        mit den Pfeiltasten verschieben.
+      rules_heading: Regeln
+    no_action: Keine Aktion
+    no_condition: Keine Bedingung
+    recent_runs:
+      columns:
+        date_time: Datum/Uhrzeit
+        execution_type: Typ
+        rule_name: Regelname
+        status: Status
+        transactions_counts:
+          blocked: Blockiert
+          modified: Geändert
+          processed: Verarbeitet
+          queued: In Warteschlange
+      description: Zeige die Ausführungsgeschichte deiner Regeln einschließlich Erfolgs-/Fehlerstatus
+        und Transaktionsanzahlen.
+      execution_types:
+        manual: Manuell
+        scheduled: Geplant
+      statuses:
+        failed: Fehlgeschlagen
+        pending: Ausstehend
+        success: Erfolgreich
+      title: Letzte Ausführungen
+      unnamed_rule: Unbenannte Regel
     rule:
       action_label_to: "%{label} auf %{value}"
       all_past_and_future: Alle bisherigen und künftigen %{resource}
@@ -173,18 +215,8 @@ de:
       on_or_after: "%{resource} ab dem %{date}"
       re_apply_rule: Regel erneut anwenden
       stop_processing: Stopp
-      stop_processing_hint: Weiter unten stehende Regeln ändern die Transaktionen nicht mehr, die diese Regel trifft.
+      stop_processing_hint: Weiter unten stehende Regeln ändern die Transaktionen
+        nicht mehr, die diese Regel trifft.
       then: DANN
     update:
       success: Regel aktualisiert
-  rule:
-    conditions:
-      condition:
-        value_placeholder: Wert eingeben
-      condition_group:
-        add_condition: Bedingung hinzufügen
-        all: alle
-        and_prefix: und
-        any: beliebige
-        match: erfüllen
-        of_the_following_conditions: der folgenden Bedingungen

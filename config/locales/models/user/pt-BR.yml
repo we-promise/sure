@@ -15,7 +15,8 @@ pt-BR:
         user:
           attributes:
             base:
-              cannot_deactivate_admin_with_other_users: Administrador não pode excluir a conta
-                enquanto outros usuários estiverem presentes. Por favor, exclua todos os membros primeiro.
+              cannot_deactivate_admin_with_other_users: Administrador não pode excluir
+                a conta enquanto outros usuários estiverem presentes. Por favor, exclua
+                todos os membros primeiro.
             profile_image:
               invalid_file_size: tamanho do arquivo deve ser menor que %{max_megabytes}MB

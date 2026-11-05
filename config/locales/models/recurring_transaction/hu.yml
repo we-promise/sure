@@ -4,4 +4,4 @@ hu:
     errors:
       models:
         recurring_transaction:
-          merchant_or_name_required: "Kereskedőt vagy nevet kötelező megadni"
+          merchant_or_name_required: Kereskedőt vagy nevet kötelező megadni

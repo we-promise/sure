@@ -1,56 +1,56 @@
 ---
 nl:
   period:
-    last_day:
-      label_short: "1D"
-      label: "Afgelopen dag"
-      comparison_label: "t.o.v. gisteren"
-    current_week:
-      label_short: "WTD"
-      label: "Huidige week"
-      comparison_label: "t.o.v. begin van de week"
-    last_7_days:
-      label_short: "7D"
-      label: "Afgelopen 7 dagen"
-      comparison_label: "t.o.v. vorige week"
-    current_month:
-      label_short: "MTD"
-      label: "Huidige maand"
-      comparison_label: "t.o.v. begin van de maand"
-    last_month:
-      label_short: "VM"
-      label: "Vorige maand"
-      comparison_label: "t.o.v. vorige maand"
-    last_30_days:
-      label_short: "30D"
-      label: "Afgelopen 30 dagen"
-      comparison_label: "t.o.v. afgelopen 30 dagen"
-    last_90_days:
-      label_short: "90D"
-      label: "Afgelopen 90 dagen"
-      comparison_label: "t.o.v. vorig kwartaal"
-    current_year:
-      label_short: "YTD"
-      label: "Huidig jaar"
-      comparison_label: "t.o.v. begin van het jaar"
-    last_365_days:
-      label_short: "365D"
-      label: "Afgelopen 365 dagen"
-      comparison_label: "t.o.v. 1 jaar geleden"
-    last_5_years:
-      label_short: "5J"
-      label: "Afgelopen 5 jaar"
-      comparison_label: "t.o.v. 5 jaar geleden"
-    last_10_years:
-      label_short: "10J"
-      label: "Afgelopen 10 jaar"
-      comparison_label: "t.o.v. 10 jaar geleden"
     all_time:
-      label_short: "Alles"
-      label: "Altijd"
-      comparison_label: "t.o.v. begin"
+      comparison_label: t.o.v. begin
+      label: Altijd
+      label_short: Alles
+    current_month:
+      comparison_label: t.o.v. begin van de maand
+      label: Huidige maand
+      label_short: MTD
+    current_week:
+      comparison_label: t.o.v. begin van de week
+      label: Huidige week
+      label_short: WTD
+    current_year:
+      comparison_label: t.o.v. begin van het jaar
+      label: Huidig jaar
+      label_short: YTD
     custom:
-      label_short: "Aangepast"
-      label: "Aangepaste periode"
       comparison_label: "%{start_date} tot %{end_date}"
+      label: Aangepaste periode
+      label_short: Aangepast
+    last_10_years:
+      comparison_label: t.o.v. 10 jaar geleden
+      label: Afgelopen 10 jaar
+      label_short: 10J
+    last_30_days:
+      comparison_label: t.o.v. afgelopen 30 dagen
+      label: Afgelopen 30 dagen
+      label_short: 30D
+    last_365_days:
+      comparison_label: t.o.v. 1 jaar geleden
+      label: Afgelopen 365 dagen
+      label_short: 365D
+    last_5_years:
+      comparison_label: t.o.v. 5 jaar geleden
+      label: Afgelopen 5 jaar
+      label_short: 5J
+    last_7_days:
+      comparison_label: t.o.v. vorige week
+      label: Afgelopen 7 dagen
+      label_short: 7D
+    last_90_days:
+      comparison_label: t.o.v. vorig kwartaal
+      label: Afgelopen 90 dagen
+      label_short: 90D
+    last_day:
+      comparison_label: t.o.v. gisteren
+      label: Afgelopen dag
+      label_short: 1D
+    last_month:
+      comparison_label: t.o.v. vorige maand
+      label: Vorige maand
+      label_short: VM
     range: "%{start_date} – %{end_date}"

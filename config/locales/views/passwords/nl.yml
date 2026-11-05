@@ -1,7 +1,8 @@
 ---
 nl:
   passwords:
-    disabled: "Wachtwoord wijzigen via Sure is uitgeschakeld. Beheer uw wachtwoord via uw identiteitsprovider."
+    disabled: Wachtwoord wijzigen via Sure is uitgeschakeld. Beheer uw wachtwoord
+      via uw identiteitsprovider.
     edit:
       password: Nieuw wachtwoord
       password_challenge: Huidig wachtwoord

@@ -10,14 +10,16 @@ vi:
       title: Không tìm thấy mục nhập
     loading:
       loading: Đang tải mục nhập...
-    update:
-      success: Đã cập nhật mục nhập
+    protection:
+      description: Các chỉnh sửa của bạn với mục nhập này sẽ không bị ghi đè khi đồng
+        bộ từ nhà cung cấp.
+      locked_fields_label: 'Các trường bị khóa:'
+      title: Được bảo vệ khỏi đồng bộ
+      tooltip: Được bảo vệ khỏi đồng bộ
+      unlock_button: Cho phép đồng bộ cập nhật
+      unlock_confirm: Cho phép đồng bộ cập nhật mục nhập này? Các thay đổi của bạn
+        có thể bị ghi đè lần đồng bộ tiếp theo.
     unlock:
       success: Đã mở khóa mục nhập. Có thể được cập nhật lần đồng bộ tiếp theo.
-    protection:
-      tooltip: Được bảo vệ khỏi đồng bộ
-      title: Được bảo vệ khỏi đồng bộ
-      description: Các chỉnh sửa của bạn với mục nhập này sẽ không bị ghi đè khi đồng bộ từ nhà cung cấp.
-      locked_fields_label: "Các trường bị khóa:"
-      unlock_button: Cho phép đồng bộ cập nhật
-      unlock_confirm: Cho phép đồng bộ cập nhật mục nhập này? Các thay đổi của bạn có thể bị ghi đè lần đồng bộ tiếp theo.
+    update:
+      success: Đã cập nhật mục nhập

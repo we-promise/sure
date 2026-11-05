@@ -2,30 +2,28 @@
 es:
   valuations:
     confirmation_contents:
+      account_balance: el saldo de la cuenta
+      asset_value: el valor del activo
+      balance: el saldo
+      brokerage_cash: Efectivo del bróker
+      change: cambio
+      credit_card_balance: el saldo de la tarjeta de crédito
+      crypto_balance: el saldo de criptomonedas
+      holdings_value: Valor de las posiciones
+      liability_balance: el saldo del pasivo
+      loan_balance: el saldo del préstamo
+      'on': el
+      property_value: el valor de la propiedad
+      recalculate_notice: Todas las transacciones y saldos futuros se recalcularán
+        en función de este %{change_or_update}.
       this_will: Esto %{action_verb} el valor de la cuenta el
+      to: a
       to_colon: 'a:'
       total_account_value: Valor total de la cuenta
-      holdings_value: Valor de las posiciones
-      brokerage_cash: Efectivo del bróker
-      account_balance: el saldo de la cuenta
-      credit_card_balance: el saldo de la tarjeta de crédito
-      loan_balance: el saldo del préstamo
-      property_value: el valor de la propiedad
-      vehicle_value: el valor del vehículo
-      crypto_balance: el saldo de criptomonedas
-      asset_value: el valor del activo
-      liability_balance: el saldo del pasivo
-      balance: el saldo
-      'on': el
-      to: a
-      recalculate_notice: Todas las transacciones y saldos futuros se recalcularán en función de este %{change_or_update}.
-      change: cambio
       update: actualización
+      vehicle_value: el valor del vehículo
     create:
       account_updated: Cuenta actualizada
-    update:
-      account_updated: Cuenta actualizada
-      entry_updated: Registro actualizado
     errors:
       amount_required: El importe es obligatorio
     form:
@@ -54,7 +52,10 @@ es:
       name_placeholder: Introduce un nombre para esta entrada
       note_label: Notas
       note_placeholder: Añade cualquier detalle adicional sobre esta entrada
+      opening_balance: Saldo inicial
       overview: Resumen
       settings: Configuración
-      opening_balance: Saldo inicial
       update_value: Actualizar valor
+    update:
+      account_updated: Cuenta actualizada
+      entry_updated: Registro actualizado

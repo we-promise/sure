@@ -3,31 +3,87 @@ en:
   account:
     entries:
       destroy:
-        success: "Entry deleted successfully."
+        success: Entry deleted successfully.
   accounts:
-    not_authorized: "You don't have permission to manage this account"
     account:
-      complete_setup: Complete setup
-      edit: Edit
-      link_lunchflow: Link with Lunch Flow
-      link_provider: Link with provider
-      unlink_provider: Unlink from provider
       change_simplefin_account: Change SimpleFIN account
-      troubleshoot: Troubleshoot
-      enable: Enable account
-      disable: Disable account
-      exclude_from_reports: Exclude from all reports
-      include_in_reports: Include in reports
-      excluded_from_reports_indicator: Excluded from reports
-      set_default: Set as default
-      remove_default: Unset default
+      complete_setup: Complete setup
       default_label: Default
       delete: Delete account
+      disable: Disable account
+      edit: Edit
+      enable: Enable account
+      exclude_from_reports: Exclude from all reports
+      excluded_from_reports_indicator: Excluded from reports
+      include_in_reports: Include in reports
+      link_lunchflow: Link with Lunch Flow
+      link_provider: Link with provider
+      remove_default: Unset default
+      set_default: Set as default
       sharing: Sharing
+      troubleshoot: Troubleshoot
+      unlink_provider: Unlink from provider
     chart:
       data_not_available: Data not available for the selected period
+    confirm_unlink:
+      confirm_button: Confirm and unlink
+      description_html: You are about to unlink <strong>%{account_name}</strong> from
+        <strong>%{provider_name}</strong>. This will convert it to a manual account.
+      title: Unlink account from provider?
+      warning_can_delete: After unlinking, you will be able to delete the account
+        if needed
+      warning_manual_updates: You will need to add transactions and update balances
+        manually
+      warning_no_sync: The account will no longer sync automatically with your provider
+      warning_title: What this means
+      warning_transactions_kept: All existing transactions and balances will be preserved
+      warning_wallet_connection: All accounts in this Apple Wallet connection will
+        be unlinked. Their transactions and balances will be preserved. You can reconnect
+        through the Sure iOS app with a new Wallet setup.
     create:
       success: "%{type} account created"
+    destroy:
+      cannot_delete_linked: Cannot delete a linked account. Please unlink it first.
+      failed: Resource deletion failed. Try again later.
+      success: "%{type} account scheduled for deletion"
+    empty:
+      empty_message: Add an account either via connection, importing or entering manually.
+      new_account: New account
+      no_accounts: No accounts yet
+    form:
+      additional_details: Additional details
+      balance: 'Balance on date:'
+      enable_category_matcher_hint: When enabled, the provider's suggested category
+        is applied to imported transactions. Disable to leave new transactions uncategorized.
+      enable_category_matcher_label: Enable category matcher
+      exclude_from_reports: Exclude from all reports
+      institution_domain_hint: Used to find the institution's icon.
+      institution_domain_label: Institution domain
+      institution_domain_missing_logo_key_hint: Used to find the institution's icon.
+        Brandfetch logos are not available because no Brandfetch client ID is configured.
+      institution_domain_placeholder: e.g., chase.com
+      institution_domain_settings_link: Add one in Self-Hosting settings
+      institution_name_label: Institution name
+      institution_name_placeholder: e.g., Chase Bank
+      logo_hint: Or upload your own PNG, JPEG, GIF, WebP or ICO image up to 1 MB.
+        It replaces the Brandfetch logo.
+      logo_label: Icon
+      name_label: Account name
+      name_placeholder: Example account name
+      notes_label: Notes
+      notes_placeholder: Store additional information like account numbers, sort codes,
+        IBAN, routing numbers, etc.
+      opening_balance_date_label: Opening balance date
+    index:
+      accounts: Accounts
+      cancel_sync: Cancel sync
+      financekit_accounts:
+        description: Manage Apple Wallet connections and sync in the Sure iOS app.
+        title: Apple Wallet
+      manual_accounts:
+        other_accounts: Other accounts
+      new_account: New account
+      sync: Sync all
     logo_caption:
       appstore: From the App Store
       brandfetch: From Brandfetch
@@ -42,10 +98,10 @@ en:
       current: current
       domain_needed: Enter the institution domain, such as tbank.ru, to pick an icon.
       empty: No icons found for this domain. Upload your own below.
-      pick: Pick icon
       pending: Applied when you save
-      remove: Remove
+      pick: Pick icon
       removal: Removed when you save; the automatic icon comes back
+      remove: Remove
       searching: Searching…
     logo_options:
       size: "%{size} px"
@@ -58,73 +114,31 @@ en:
         rustore: RuStore
         yandex: Yandex
       stored: Saved icon
-    set_default:
-      depository_only: "Only cash and credit card accounts can be set as default."
-    destroy:
-      success: "%{type} account scheduled for deletion"
-      cannot_delete_linked: "Cannot delete a linked account. Please unlink it first."
-      failed: "Resource deletion failed. Try again later."
-    empty:
-      empty_message: Add an account either via connection, importing or entering manually.
-      new_account: New account
-      no_accounts: No accounts yet
-    form:
-      balance: "Balance on date:"
-      opening_balance_date_label: Opening balance date
-      name_label: Account name
-      name_placeholder: Example account name
-      additional_details: Additional details
-      institution_name_label: Institution name
-      institution_name_placeholder: e.g., Chase Bank
-      institution_domain_label: Institution domain
-      institution_domain_placeholder: e.g., chase.com
-      institution_domain_hint: Used to find the institution's icon.
-      institution_domain_missing_logo_key_hint: Used to find the institution's icon. Brandfetch logos are not available because no Brandfetch client ID is configured.
-      institution_domain_settings_link: Add one in Self-Hosting settings
-      logo_label: Icon
-      logo_hint: Or upload your own PNG, JPEG, GIF, WebP or ICO image up to 1 MB. It replaces the Brandfetch logo.
-      notes_label: Notes
-      notes_placeholder: Store additional information like account numbers, sort codes, IBAN, routing numbers, etc.
-      exclude_from_reports: Exclude from all reports
-      enable_category_matcher_label: Enable category matcher
-      enable_category_matcher_hint: When enabled, the provider's suggested category is applied to imported transactions. Disable to leave new transactions uncategorized.
-    index:
-      accounts: Accounts
-      financekit_accounts:
-        title: Apple Wallet
-        description: Manage Apple Wallet connections and sync in the Sure iOS app.
-      cancel_sync: Cancel sync
-      manual_accounts:
-        other_accounts: Other accounts
-      new_account: New account
-      sync: Sync all
-    sync_all:
-      syncing: "Syncing accounts..."
     new:
-      import_accounts: Import accounts
       container:
-        select: Select
-        navigate: Navigate
         close: Close
+        navigate: Navigate
         next: Next
         previous: Previous
+        select: Select
+      import_accounts: Import accounts
       method_selector:
         connected_entry: Link account
         connected_entry_eu: Link EU account
-        link_with_provider: "Link with %{provider}"
+        link_with_provider: Link with %{provider}
         lunchflow_entry: Link Lunch Flow account
         manual_entry: Enter account balance
         title: How would you like to add it?
       title: What would you like to add?
+    not_authorized: You don't have permission to manage this account
+    select_provider:
+      already_linked: Account is already linked to a provider
+      description: Choose which provider you want to use to link %{account_name}
+      no_providers: No providers are currently configured
+      title: Select a provider to link
+    set_default:
+      depository_only: Only cash and credit card accounts can be set as default.
     show:
-      limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
-      tabs:
-        activity: Activity
-        extra_repayments: Extra repayments
-        holdings: Holdings
-        overview: Overview
-        schedule: Schedule
-        statements: Statements
       activity:
         amount: Amount
         balance: Balance
@@ -148,6 +162,9 @@ en:
         owed: Amount owed
       header:
         complete_setup: Complete setup
+      limited_fx_history_warning: Exchange rate history is only available from %{date}
+        onwards. Transactions before this date use approximate currency conversions
+        — this can happen when the FX provider only offers a limited historical window.
       menu:
         confirm_accept: Delete "%{name}"
         confirm_body_html: "<p>By deleting this account, you will erase its value
@@ -158,96 +175,93 @@ en:
         confirm_title: Delete account?
         delete_account: Delete account
         edit: Edit
+        exclude_from_reports: Exclude from all reports
         import: Import transactions
         import_trades: Import trades
         import_transactions: Import transactions
+        include_in_reports: Include in reports
         manage: Manage accounts
         sharing: Sharing
         statements: Statements
-        exclude_from_reports: Exclude from all reports
-        include_in_reports: Include in reports
-    update:
-      success: "%{type} account updated"
-      logo_not_applied: The account was saved, but the chosen icon could not be downloaded. Try again or upload your own.
+      tabs:
+        activity: Activity
+        extra_repayments: Extra repayments
+        holdings: Holdings
+        overview: Overview
+        schedule: Schedule
+        statements: Statements
     sidebar:
-      missing_data: Missing historical data
-      missing_data_description: "%{product} uses third party providers to fetch historical exchange rates, security prices, and more. This data is required to calculate accurate historical account balances."
+      collapse_all: Collapse all
       configure_providers: Configure your providers here.
+      expand_all: Expand all
+      missing_data: Missing historical data
+      missing_data_description: "%{product} uses third party providers to fetch historical
+        exchange rates, security prices, and more. This data is required to calculate
+        accurate historical account balances."
+      new_account: New account
+      new_account_group: New %{account_group}
+      new_asset: New asset
+      new_debt: New debt
+      reorder_account: Move %{account}
+      reorder_hint: Drag to reorder. With the keyboard, press Enter, then the arrow
+        keys.
+      sort_mode:
+        done: Done
+        hint: Drag accounts by their handle to reorder them.
+        start: Sort accounts
       tabs:
         all: All
         assets: Assets
         debts: Debts
-      new_asset: New asset
-      new_debt: New debt
-      new_account: New account
-      new_account_group: "New %{account_group}"
-      expand_all: Expand all
-      collapse_all: Collapse all
-      reorder_account: "Move %{account}"
-      reorder_hint: Drag to reorder. With the keyboard, press Enter, then the arrow keys.
-      sort_mode:
-        start: Sort accounts
-        hint: Drag accounts by their handle to reorder them.
-        done: Done
-    types:
-      depository: Cash
-      investment: Investment
-      crypto: Crypto
-      property: Property
-      vehicle: Vehicle
-      other_asset: Other Asset
-      credit_card: Credit Card
-      loan: Loan
-      other_liability: Other Liability
-    types_plural:
-      depository: Cash
-      investment: Investments
-      crypto: Crypto
-      property: Properties
-      vehicle: Vehicles
-      other_asset: Other Assets
-      credit_card: Credit Cards
-      loan: Loans
-      other_liability: Other Liabilities
-    tax_treatments:
-      taxable: Taxable
-      tax_deferred: Tax-Deferred
-      tax_exempt: Tax-Exempt
-      tax_advantaged: Tax-Advantaged
+    subtype_regions:
+      au: Australia
+      ca: Canada
+      eu: Europe
+      generic: General
+      in: India
+      uk: United Kingdom
+      us: United States
+    sync_all:
+      syncing: Syncing accounts...
     tax_treatment_descriptions:
-      taxable: Gains taxed when realized
+      tax_advantaged: Special tax benefits with conditions
       tax_deferred: Contributions deductible, taxed on withdrawal
       tax_exempt: Contributions after-tax, gains not taxed
-      tax_advantaged: Special tax benefits with conditions
-    subtype_regions:
-      us: United States
-      uk: United Kingdom
-      ca: Canada
-      au: Australia
-      eu: Europe
-      in: India
-      generic: General
-    confirm_unlink:
-      title: Unlink account from provider?
-      description_html: "You are about to unlink <strong>%{account_name}</strong> from <strong>%{provider_name}</strong>. This will convert it to a manual account."
-      warning_title: What this means
-      warning_wallet_connection: All accounts in this Apple Wallet connection will be unlinked. Their transactions and balances will be preserved. You can reconnect through the Sure iOS app with a new Wallet setup.
-      warning_no_sync: The account will no longer sync automatically with your provider
-      warning_manual_updates: You will need to add transactions and update balances manually
-      warning_transactions_kept: All existing transactions and balances will be preserved
-      warning_can_delete: After unlinking, you will be able to delete the account if needed
-      confirm_button: Confirm and unlink
+      taxable: Gains taxed when realized
+    tax_treatments:
+      tax_advantaged: Tax-Advantaged
+      tax_deferred: Tax-Deferred
+      tax_exempt: Tax-Exempt
+      taxable: Taxable
+    types:
+      credit_card: Credit Card
+      crypto: Crypto
+      depository: Cash
+      investment: Investment
+      loan: Loan
+      other_asset: Other Asset
+      other_liability: Other Liability
+      property: Property
+      vehicle: Vehicle
+    types_plural:
+      credit_card: Credit Cards
+      crypto: Crypto
+      depository: Cash
+      investment: Investments
+      loan: Loans
+      other_asset: Other Assets
+      other_liability: Other Liabilities
+      property: Properties
+      vehicle: Vehicles
     unlink:
-      success: "Account unlinked successfully. It is now a manual account."
-      not_linked: "Account is not linked to a provider"
-      error: "Failed to unlink account: %{error}"
-      generic_error: "An unexpected error occurred. Please try again."
-    select_provider:
-      title: Select a provider to link
-      description: "Choose which provider you want to use to link %{account_name}"
-      already_linked: "Account is already linked to a provider"
-      no_providers: "No providers are currently configured"
-
+      error: 'Failed to unlink account: %{error}'
+      generic_error: An unexpected error occurred. Please try again.
+      not_linked: Account is not linked to a provider
+      success: Account unlinked successfully. It is now a manual account.
+    update:
+      logo_not_applied: The account was saved, but the chosen icon could not be downloaded.
+        Try again or upload your own.
+      success: "%{type} account updated"
   email_confirmations:
     new:
       invalid_token: Invalid or expired confirmation link.

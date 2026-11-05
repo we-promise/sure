@@ -39,12 +39,13 @@ tr:
       syncing: Senkronize ediliyor...
       update_credentials: Kimlik bilgilerini güncelle
     complete_account_setup:
+      invalid_sync_start_date: Senkronizasyon başlangıç tarihi geçmişte geçerli bir
+        tarih olmalıdır.
       no_accounts: İçe aktarılacak hesap yok
       none_selected: Hiç hesap seçilmedi
       success:
         one: "%{count} hesap içe aktarıldı"
         other: "%{count} hesap içe aktarıldı"
-      invalid_sync_start_date: Senkronizasyon başlangıç tarihi geçmişte geçerli bir tarih olmalıdır.
     create:
       default_name: Binance
       success: Binance'a başarıyla bağlandı! Hesabınız senkronize ediliyor.

@@ -2,37 +2,43 @@
 de:
   plaid_items:
     create:
-      success: Konto erfolgreich verknüpft Bitte warte bis die Konten synchronisiert sind
+      success: Konto erfolgreich verknüpft Bitte warte bis die Konten synchronisiert
+        sind
     destroy:
       success: Konten zur Löschung vorgemerkt
+    errors:
+      link_token_generic: Plaid ließ sich gerade nicht öffnen. Versuch es noch einmal;
+        bleibt es dabei, sieh in den Server-Logs nach.
+      link_token_with_message: 'Plaid konnte die Verbindung nicht öffnen: %{message}'
+    link_existing_account:
+      already_linked: Dieses Plaid-Konto ist bereits verknüpft
+      invalid_account: Ungültiges Plaid-Konto gewählt
+      success: Konto mit Plaid verknüpft
     plaid_item:
       add_accounts: Konten hinzufügen
       add_new: Neue Verbindung hinzufügen
       confirm_accept: Institut löschen
-      confirm_body: Dadurch werden alle Konten dieser Gruppe und alle zugehörigen Daten dauerhaft gelöscht
+      confirm_body: Dadurch werden alle Konten dieser Gruppe und alle zugehörigen
+        Daten dauerhaft gelöscht
       confirm_title: Institut löschen
       connection_lost: Verbindung verloren
-      connection_lost_description: Diese Verbindung ist nicht mehr gültig Du musst sie löschen und erneut hinzufügen um die Datensynchronisierung fortzusetzen
+      connection_lost_description: Diese Verbindung ist nicht mehr gültig Du musst
+        sie löschen und erneut hinzufügen um die Datensynchronisierung fortzusetzen
       delete: Löschen
+      deletion_in_progress: "(wird gelöscht …)"
       error: Beim Synchronisieren der Daten ist ein Fehler aufgetreten
-      no_accounts_description: Es konnten keine Konten von diesem Finanzinstitut geladen werden
+      no_accounts_description: Es konnten keine Konten von diesem Finanzinstitut geladen
+        werden
       no_accounts_title: Keine Konten gefunden
       requires_update: Erneute Authentifizierung erforderlich
       status: Zuletzt vor %{timestamp} synchronisiert
       status_never: Synchronisierung erforderlich
       syncing: Wird synchronisiert...
       update: Verbindung aktualisieren
-      deletion_in_progress: "(wird gelöscht …)"
     select_existing_account:
-      title: "%{account_name} mit Plaid verknüpfen"
-      description: Wähl ein Plaid-Konto zur Verknüpfung mit deinem bestehenden Konto
       cancel: Abbrechen
+      description: Wähl ein Plaid-Konto zur Verknüpfung mit deinem bestehenden Konto
       link_account: Konto verknüpfen
-      no_available_accounts: Keine Plaid-Konten zum Verknüpfen verfügbar. Verbinde zuerst ein neues Plaid-Konto.
-    errors:
-      link_token_generic: Plaid ließ sich gerade nicht öffnen. Versuch es noch einmal; bleibt es dabei, sieh in den Server-Logs nach.
-      link_token_with_message: 'Plaid konnte die Verbindung nicht öffnen: %{message}'
-    link_existing_account:
-      already_linked: Dieses Plaid-Konto ist bereits verknüpft
-      invalid_account: Ungültiges Plaid-Konto gewählt
-      success: Konto mit Plaid verknüpft
+      no_available_accounts: Keine Plaid-Konten zum Verknüpfen verfügbar. Verbinde
+        zuerst ein neues Plaid-Konto.
+      title: "%{account_name} mit Plaid verknüpfen"

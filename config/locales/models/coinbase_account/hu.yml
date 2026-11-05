@@ -2,4 +2,4 @@
 hu:
   coinbase:
     processor:
-      paid_via: "Fizetve: %{method}"
+      paid_via: 'Fizetve: %{method}'

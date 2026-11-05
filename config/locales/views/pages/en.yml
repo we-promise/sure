@@ -1,173 +1,190 @@
 ---
 en:
   pages:
-    feedback:
-      title: Feedback
-      heading: Leave feedback
-      description: Let us know if you have any specific feedback. Feel free to include links to videos or screenshots.
-      feature_request: Write a feature request
-      bug_report: File a bug report
-      discuss: "Discuss %{product} with others"
-    intro:
-      not_authorized: "Intro is only available to guest users."
-      welcome: "Welcome!"
-      coming_soon: Intro experience coming soon
-      description: "We're building a richer onboarding journey to learn about your goals, milestones, and day-to-day needs. For now, head over to the chat sidebar to start a conversation with Sure and let us know where you are in your financial journey."
-      start_chatting: Start chatting
-    redis_configuration_error:
-      page_title: Redis Configuration Required - Sure
-      heading: Redis Configuration Required
-      subheading: Your self-hosted Sure installation needs Redis to be properly configured.
-      why_required_title: Why is Redis required?
-      why_required_body: Sure uses Redis to power Sidekiq background jobs for tasks like syncing account data, processing imports, and other background operations that keep your financial data up to date.
-      view_setup_guide: View Setup Guide
-      setup_guide_hint: Follow our complete Docker setup guide to configure Redis
-      refresh_hint: "Once you've configured Redis, refresh this page to continue."
-      refresh_page: Refresh Page
     changelog:
       title: What's new
-    release_notes_unavailable:
-      name: Release notes unavailable
-      body_html: "<p>Unable to fetch the latest release notes at this time. Please check back later or visit our <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub releases page</a> directly.</p>"
-    privacy:
-      title: Privacy Policy
-      heading: Privacy Policy
-      placeholder: Privacy policy content will be displayed here.
-    terms:
-      title: Terms of Service
-      heading: Terms of Service
-      placeholder: Terms of service content will be displayed here.
     dashboard:
-      welcome: "Welcome back, %{name}"
-      subtitle: "Here's what's happening with your finances"
-      new: "New"
-      sections_aria_label: "Dashboard sections"
-      toggle_section: "Toggle section visibility"
+      balance_sheet:
+        add_accounts: Add your %{name} accounts to see a full breakdown
+        add_asset_accounts: Add your asset accounts to see a full breakdown
+        add_liability_accounts: Add your liability accounts to see a full breakdown
+        classifications:
+          asset: Assets
+          liability: Liabilities
+        collapse_all: Collapse all
+        expand_all: Expand all
+        name: Name
+        no_asset: No assets yet
+        no_items: No %{name} yet
+        no_liability: No liabilities yet
+        title: Balance Sheet
+        value: Value
+        weight: Weight
+      cashflow_preview:
+        feedback_loading: Loading feedback form…
+        feedback_privacy: Your response is sent to PostHog. Describe the issue without
+          account numbers, balances, or other private financial details.
+        feedback_prompt: Compare this chart with the original above and let us know
+          if it looks different other than sorting.
+        feedback_submit: Send feedback
+        feedback_thanks: Thanks for helping improve the chart!
+        feedback_title: Cash flow chart feedback
+        feedback_unavailable: Feedback isn't available right now. Please try again
+          later.
+        group_by_account: Account
+        group_by_category: Category
+        group_by_label: Show flows by
+        negative: Something looks wrong
+        node_labels:
+          cash_flow: Cash Flow
+          deficit: Deficit
+          invested: Invested
+          surplus: Surplus
+        opt_in_description: Compare an experimental Sankey with the chart above. You
+          can turn this off at any time.
+        opt_in_title: Show the new chart
+        positive: Looks right
+        preview: Preview
+        preview_tooltip: This will replace the above visualization as it uses a new
+          shared API with the mobile Swift client.
+        sort_ascending: Smallest first
+        sort_auto: Auto
+        sort_descending: Largest first
+        sort_label: Sort flows
+        title: New Sankey chart
+      cashflow_sankey:
+        add_transaction: Add transaction
+        load_error: Cash flow could not be loaded. Please try again.
+        loading: Loading cash flow…
+        no_data_description: Add transactions to display cash flow data or expand
+          the time period
+        no_data_title: No cash flow data for this time period
+        retry: Try again
+        title: Cashflow
+        zoom_out: Back to full cashflow
       customize:
-        start: "Customize"
-        done: "Done"
-        hide: "Hide %{title}"
-        hidden_title: "Hidden widgets"
-        hidden_description: "Add a widget back to the dashboard."
-        none_hidden: "Every widget is shown. Hide one with its eye button."
-        all_hidden_title: "Every widget is hidden"
-        all_hidden_description: "Customize the dashboard to add widgets back."
-      widget_size:
-        label: "Adjust size"
-        width_label: "Width"
-        half: "Half"
-        full: "Full"
-        height_label: "Height"
-        compact: "Compact"
-        auto: "Auto"
-        tall: "Tall"
+        all_hidden_description: Customize the dashboard to add widgets back.
+        all_hidden_title: Every widget is hidden
+        done: Done
+        hidden_description: Add a widget back to the dashboard.
+        hidden_title: Hidden widgets
+        hide: Hide %{title}
+        none_hidden: Every widget is shown. Hide one with its eye button.
+        start: Customize
+      insights_feed:
+        title: Insights
+      investment_summary:
+        add_investment: Add an investment account to track your portfolio
+        contributions: Contributions
+        holding: Holding
+        no_investments: No investment accounts
+        period_activity: "%{period} Activity"
+        return: Return
+        title: Investments
+        total_return: Total Return
+        trades: Trades
+        value: Value
+        weight: Weight
+        withdrawals: Withdrawals
+      money_flow:
+        apply: Apply
+        balance: Transaction balance
+        chart_span: Last %{count} months
+        date_range: "%{start_date} to %{end_date}"
+        expenses: Expenses
+        filter_accounts: Filter accounts (%{count})
+        filter_accounts_all: All accounts
+        income: Income
+        month_picker_aria_label: Select month
+        period_scope_hint: Shows the months you pick here — independent of the dashboard's
+          time period at the top.
+        search_accounts: Search accounts
+        title: Money In / Out
       net_worth_chart:
         data_not_available: Data not available for the selected period
         title: Net Worth
+      new: New
       no_account_empty_state:
         new_account: New account
-        no_account_subtitle: Since no accounts have been added, there's no data to display. Add your first accounts to start viewing dashboard data.
+        no_account_subtitle: Since no accounts have been added, there's no data to
+          display. Add your first accounts to start viewing dashboard data.
         no_account_title: No accounts yet
-      balance_sheet:
-        title: "Balance Sheet"
-        no_items: "No %{name} yet"
-        add_accounts: "Add your %{name} accounts to see a full breakdown"
-        no_asset: "No assets yet"
-        no_liability: "No liabilities yet"
-        add_asset_accounts: "Add your asset accounts to see a full breakdown"
-        add_liability_accounts: "Add your liability accounts to see a full breakdown"
-        name: "Name"
-        weight: "Weight"
-        value: "Value"
-        expand_all: "Expand all"
-        collapse_all: "Collapse all"
-        classifications:
-          asset: "Assets"
-          liability: "Liabilities"
-      insights_feed:
-        title: "Insights"
-      cashflow_preview:
-        opt_in_title: "Show the new chart"
-        opt_in_description: "Compare an experimental Sankey with the chart above. You can turn this off at any time."
-        node_labels:
-          cash_flow: "Cash Flow"
-          surplus: "Surplus"
-          deficit: "Deficit"
-          invested: "Invested"
-        title: "New Sankey chart"
-        preview: "Preview"
-        preview_tooltip: "This will replace the above visualization as it uses a new shared API with the mobile Swift client."
-        group_by_label: "Show flows by"
-        group_by_category: "Category"
-        group_by_account: "Account"
-        feedback_prompt: "Compare this chart with the original above and let us know if it looks different other than sorting."
-        positive: "Looks right"
-        negative: "Something looks wrong"
-        feedback_title: "Cash flow chart feedback"
-        feedback_loading: "Loading feedback form…"
-        feedback_unavailable: "Feedback isn't available right now. Please try again later."
-        feedback_thanks: "Thanks for helping improve the chart!"
-        feedback_privacy: "Your response is sent to PostHog. Describe the issue without account numbers, balances, or other private financial details."
-        feedback_submit: "Send feedback"
-        sort_label: "Sort flows"
-        sort_auto: "Auto"
-        sort_ascending: "Smallest first"
-        sort_descending: "Largest first"
-      cashflow_sankey:
-        loading: "Loading cash flow…"
-        load_error: "Cash flow could not be loaded. Please try again."
-        retry: "Try again"
-        title: "Cashflow"
-        zoom_out: "Back to full cashflow"
-        no_data_title: "No cash flow data for this time period"
-        no_data_description: "Add transactions to display cash flow data or expand the time period"
-        add_transaction: "Add transaction"
       no_accounts:
-        title: "No accounts yet"
-        description: "Add accounts to display net worth data"
-        add_account: "Add account"
+        add_account: Add account
+        description: Add accounts to display net worth data
+        title: No accounts yet
       outflows_donut:
-        title: "Outflows"
-        total_outflows: "Total Outflows"
-        categories: "Categories"
-        value: "Value"
-        weight: "Weight"
-      investment_summary:
-        title: "Investments"
-        total_return: "Total Return"
-        holding: "Holding"
-        weight: "Weight"
-        value: "Value"
-        return: "Return"
-        period_activity: "%{period} Activity"
-        contributions: "Contributions"
-        withdrawals: "Withdrawals"
-        trades: "Trades"
-        no_investments: "No investment accounts"
-        add_investment: "Add an investment account to track your portfolio"
-      money_flow:
-        title: "Money In / Out"
-        date_range: "%{start_date} to %{end_date}"
-        month_picker_aria_label: "Select month"
-        filter_accounts: "Filter accounts (%{count})"
-        filter_accounts_all: "All accounts"
-        period_scope_hint: "Shows the months you pick here — independent of the dashboard's time period at the top."
-        search_accounts: "Search accounts"
-        apply: "Apply"
-        balance: "Transaction balance"
-        chart_span: "Last %{count} months"
-        income: "Income"
-        expenses: "Expenses"
+        categories: Categories
+        title: Outflows
+        total_outflows: Total Outflows
+        value: Value
+        weight: Weight
+      sections_aria_label: Dashboard sections
       spending_trend:
-        title: "Spending"
+        apply: Apply
         date_range: "%{start_date} to %{end_date}"
         date_range_short: "%{start_date} - %{end_day}, %{year}"
         date_range_short_single: "%{date}, %{year}"
-        month_picker_aria_label: "Select month"
-        filter_categories: "Filter categories (%{count})"
-        filter_categories_all: "All categories"
-        search_categories: "Search categories"
-        apply: "Apply"
-        period_scope_hint: "Shows the month you pick here — independent of the dashboard's time period at the top."
-        no_data: "No spending data for this month"
+        filter_categories: Filter categories (%{count})
+        filter_categories_all: All categories
+        month_picker_aria_label: Select month
+        no_data: No spending data for this month
+        period_scope_hint: Shows the month you pick here — independent of the dashboard's
+          time period at the top.
         previous_comparison_days: "(1-%{end_day})"
+        search_categories: Search categories
+        title: Spending
+      subtitle: Here's what's happening with your finances
+      toggle_section: Toggle section visibility
+      welcome: Welcome back, %{name}
+      widget_size:
+        auto: Auto
+        compact: Compact
+        full: Full
+        half: Half
+        height_label: Height
+        label: Adjust size
+        tall: Tall
+        width_label: Width
+    feedback:
+      bug_report: File a bug report
+      description: Let us know if you have any specific feedback. Feel free to include
+        links to videos or screenshots.
+      discuss: Discuss %{product} with others
+      feature_request: Write a feature request
+      heading: Leave feedback
+      title: Feedback
+    intro:
+      coming_soon: Intro experience coming soon
+      description: We're building a richer onboarding journey to learn about your
+        goals, milestones, and day-to-day needs. For now, head over to the chat sidebar
+        to start a conversation with Sure and let us know where you are in your financial
+        journey.
+      not_authorized: Intro is only available to guest users.
+      start_chatting: Start chatting
+      welcome: Welcome!
+    privacy:
+      heading: Privacy Policy
+      placeholder: Privacy policy content will be displayed here.
+      title: Privacy Policy
+    redis_configuration_error:
+      heading: Redis Configuration Required
+      page_title: Redis Configuration Required - Sure
+      refresh_hint: Once you've configured Redis, refresh this page to continue.
+      refresh_page: Refresh Page
+      setup_guide_hint: Follow our complete Docker setup guide to configure Redis
+      subheading: Your self-hosted Sure installation needs Redis to be properly configured.
+      view_setup_guide: View Setup Guide
+      why_required_body: Sure uses Redis to power Sidekiq background jobs for tasks
+        like syncing account data, processing imports, and other background operations
+        that keep your financial data up to date.
+      why_required_title: Why is Redis required?
+    release_notes_unavailable:
+      body_html: "<p>Unable to fetch the latest release notes at this time. Please
+        check back later or visit our <a href='https://github.com/we-promise/sure/releases'
+        target='_blank' rel='noopener noreferrer'>GitHub releases page</a> directly.</p>"
+      name: Release notes unavailable
+    terms:
+      heading: Terms of Service
+      placeholder: Terms of service content will be displayed here.
+      title: Terms of Service

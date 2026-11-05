@@ -1,32 +1,35 @@
 ---
 fr:
   auto_matches:
-    title: Rapprochements automatiques
-    settings:
-      enable_label: Activer le rapprochement automatique
-      enable_description: Détecte et suggère automatiquement des rapprochements de virements entre comptes à chaque synchronisation. Les suggestions ne sont appliquées qu'après confirmation ci-dessous.
-      admin_only: Seuls les administrateurs peuvent modifier ce paramètre.
-    update_settings:
-      settings_updated: Paramètres de rapprochement automatique mis à jour
+    bulk_actions:
+      confirm_selected: Confirmer la sélection
+      reject_selected: Rejeter la sélection
+      select_all: Tout sélectionner
+      selected_label: sélectionnés
     bulk_update:
-      invalid_selection: Sélectionnez au moins une suggestion à confirmer ou rejeter
       bulk_confirmed:
         one: 1 virement confirmé
         other: "%{count} virements confirmés"
       bulk_rejected:
         one: 1 virement rejeté
         other: "%{count} virements rejetés"
+      invalid_selection: Sélectionnez au moins une suggestion à confirmer ou rejeter
     empty:
+      description: Lorsqu'une synchronisation détecte un virement probable entre deux
+        de vos comptes, il apparaîtra ici pour vérification.
       title: Aucune suggestion de rapprochement automatique en attente
-      description: Lorsqu'une synchronisation détecte un virement probable entre deux de vos comptes, il apparaîtra ici pour vérification.
+    settings:
+      admin_only: Seuls les administrateurs peuvent modifier ce paramètre.
+      enable_description: Détecte et suggère automatiquement des rapprochements de
+        virements entre comptes à chaque synchronisation. Les suggestions ne sont
+        appliquées qu'après confirmation ci-dessous.
+      enable_label: Activer le rapprochement automatique
     table:
-      from: De
-      to: Vers
-      date: Date
       actions: Actions
+      date: Date
+      from: De
       separator: "·"
-    bulk_actions:
-      selected_label: sélectionnés
-      confirm_selected: Confirmer la sélection
-      reject_selected: Rejeter la sélection
-      select_all: Tout sélectionner
+      to: Vers
+    title: Rapprochements automatiques
+    update_settings:
+      settings_updated: Paramètres de rapprochement automatique mis à jour

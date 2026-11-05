@@ -3,101 +3,117 @@ es:
   holdings:
     cash:
       brokerage_cash: Efectivo en la cuenta de corretaje
-    destroy:
-      success: Posición eliminada
-      cannot_delete: No puedes eliminar esta posición
-    update:
-      success: Base de costes guardada.
-      error: Valor de base de costes no válido.
-    unlock_cost_basis:
-      success: Base de costes desbloqueada. Podría actualizarse en la próxima sincronización.
-    remap_security:
-      success: Valor actualizado correctamente.
-      security_not_found: No se ha podido encontrar el valor seleccionado.
-    reset_security:
-      success: Valor restablecido al valor del proveedor.
-    sync_prices:
-      success: Datos de mercado sincronizados correctamente.
-      unavailable: La sincronización de datos de mercado no está disponible para valores fuera de línea.
-      provider_error: No se pudieron obtener los precios más recientes. Inténtalo de nuevo en unos minutos.
-    errors:
-      security_collision: 'No se puede reasignar: ya tienes una posición para %{ticker} en la fecha %{date}.'
-    cost_basis_sources:
-      manual: Configurado por el usuario
-      calculated: Desde operaciones
-      provider: Desde el proveedor
     cost_basis_cell:
-      unknown: --
+      cancel: Cancelar
+      overwrite_confirm_body: Esto reemplazará la base de costes actual de %{current}.
+      overwrite_confirm_title: "¿Sobrescribir base de costes?"
+      per_share_label: Por acción
+      save: Guardar
       set: Establecer
       set_cost_basis_header: Establecer base de costes para %{ticker}
       total_cost_basis_label: Base de costes total
-      per_share_label: "Por acción"
-      cancel: Cancelar
-      save: Guardar
-      overwrite_confirm_title: ¿Sobrescribir base de costes?
-      overwrite_confirm_body: Esto reemplazará la base de costes actual de %{current}.
+      unknown: "--"
+    cost_basis_sources:
+      calculated: Desde operaciones
+      manual: Configurado por el usuario
+      provider: Desde el proveedor
+    destroy:
+      cannot_delete: No puedes eliminar esta posición
+      success: Posición eliminada
+    errors:
+      security_collision: 'No se puede reasignar: ya tienes una posición para %{ticker}
+        en la fecha %{date}.'
     holding:
-      per_share: por acción
-      shares: '%{qty} acciones'
-      unknown: --
       no_cost_basis: Sin base de costes
+      per_share: por acción
+      shares: "%{qty} acciones"
+      unknown: "--"
     index:
-      positions:
-        one: "%{count} posición"
-        other: "%{count} posiciones"
       average_cost: Costo promedio
       holdings: Posiciones
       name: Nombre
       new_holding: Nueva transacción
       no_holdings: No hay posiciones para mostrar.
+      positions:
+        one: "%{count} posición"
+        other: "%{count} posiciones"
       return: Rendimiento total
       weight: Peso
     missing_price_tooltip:
-      description: Esta inversión tiene valores faltantes y no pudimos calcular su rendimiento o valor.
+      description: Esta inversión tiene valores faltantes y no pudimos calcular su
+        rendimiento o valor.
       missing_data: Datos faltantes
+    remap_security:
+      security_not_found: No se ha podido encontrar el valor seleccionado.
+      success: Valor actualizado correctamente.
+    reset_security:
+      success: Valor restablecido al valor del proveedor.
     show:
       avg_cost_label: Costo promedio
+      book_value_label: Valor en libros
+      cancel: Cancelar
+      cost_basis_locked_description: La base de costes establecida manualmente no
+        cambiará con las sincronizaciones.
+      cost_basis_locked_label: La base de costes está bloqueada
       current_market_price_label: Precio de mercado actual
       delete: Eliminar
-      delete_subtitle: Esto eliminará la posición y todas tus operaciones asociadas en esta cuenta. Esta acción no se puede deshacer.
+      delete_subtitle: Esto eliminará la posición y todas tus operaciones asociadas
+        en esta cuenta. Esta acción no se puede deshacer.
       delete_title: Eliminar posición
       edit_security: Editar valor
       history: Historial
-      no_trade_history: No hay historial de operaciones disponible para esta posición.
-      overview: Resumen
-      portfolio_weight_label: Peso en el portafolio
-      settings: Configuración
-      security_label: Valor
-      originally: era %{ticker}
-      search_security: Buscar valor
-      search_security_placeholder: Buscar por ticker o nombre
-      cancel: Cancelar
-      remap_security: Guardar
-      provider_disabled_warning: 'Actualizaciones de precios en pausa: el proveedor %{provider} está desactivado. Cambia a otro proveedor abajo o vuelve a activarlo en Ajustes.'
-      truncated_history_warning: El historial de precios solo está disponible a partir del %{date}. Las fechas anteriores no tienen datos del proveedor seleccionado; esto puede ocurrir cuando el activo empezó a cotizar después de la fecha de tu operación, o cuando el proveedor solo ofrece un histórico limitado en su plan actual.
-      switch_provider_label: Cambiar de proveedor
-      switch_provider_description: '%{provider} está desactivado. Busca este valor en otro proveedor activado.'
-      switch_provider_button: Cambiar
-      no_security_provider: Proveedor de valores no configurado. No se pueden buscar valores.
-      security_remapped_label: Valor reasignado
-      provider_sent: 'El proveedor envió: %{ticker}'
-      reset_to_provider: Restablecer al proveedor
-      reset_confirm_title: ¿Restablecer valor al del proveedor?
-      reset_confirm_body: Esto cambiará el valor de %{current} de nuevo a %{original} y moverá todas las operaciones asociadas.
-      ticker_label: Ticker
-      trade_history_entry: '%{qty} acciones de %{security} a %{price}'
-      total_return_label: Rendimiento total
-      unknown: Desconocido
-      cost_basis_locked_label: La base de costes está bloqueada
-      cost_basis_locked_description: La base de costes establecida manualmente no cambiará con las sincronizaciones.
-      unlock_cost_basis: Desbloquear
-      unlock_confirm_title: ¿Desbloquear base de costes?
-      unlock_confirm_body: Esto permitirá que la base de costes se actualice mediante las sincronizaciones del proveedor o los cálculos de operaciones.
-      shares_label: Acciones
-      book_value_label: Valor en libros
-      market_value_label: Valor de mercado
+      last_price_update: Última actualización de precio
       market_data_label: Datos de mercado
       market_data_sync_button: Actualizar
-      last_price_update: Última actualización de precio
-      syncing: Sincronizando...
+      market_value_label: Valor de mercado
       never: Nunca
+      no_security_provider: Proveedor de valores no configurado. No se pueden buscar
+        valores.
+      no_trade_history: No hay historial de operaciones disponible para esta posición.
+      originally: era %{ticker}
+      overview: Resumen
+      portfolio_weight_label: Peso en el portafolio
+      provider_disabled_warning: 'Actualizaciones de precios en pausa: el proveedor
+        %{provider} está desactivado. Cambia a otro proveedor abajo o vuelve a activarlo
+        en Ajustes.'
+      provider_sent: 'El proveedor envió: %{ticker}'
+      remap_security: Guardar
+      reset_confirm_body: Esto cambiará el valor de %{current} de nuevo a %{original}
+        y moverá todas las operaciones asociadas.
+      reset_confirm_title: "¿Restablecer valor al del proveedor?"
+      reset_to_provider: Restablecer al proveedor
+      search_security: Buscar valor
+      search_security_placeholder: Buscar por ticker o nombre
+      security_label: Valor
+      security_remapped_label: Valor reasignado
+      settings: Configuración
+      shares_label: Acciones
+      switch_provider_button: Cambiar
+      switch_provider_description: "%{provider} está desactivado. Busca este valor
+        en otro proveedor activado."
+      switch_provider_label: Cambiar de proveedor
+      syncing: Sincronizando...
+      ticker_label: Ticker
+      total_return_label: Rendimiento total
+      trade_history_entry: "%{qty} acciones de %{security} a %{price}"
+      truncated_history_warning: El historial de precios solo está disponible a partir
+        del %{date}. Las fechas anteriores no tienen datos del proveedor seleccionado;
+        esto puede ocurrir cuando el activo empezó a cotizar después de la fecha de
+        tu operación, o cuando el proveedor solo ofrece un histórico limitado en su
+        plan actual.
+      unknown: Desconocido
+      unlock_confirm_body: Esto permitirá que la base de costes se actualice mediante
+        las sincronizaciones del proveedor o los cálculos de operaciones.
+      unlock_confirm_title: "¿Desbloquear base de costes?"
+      unlock_cost_basis: Desbloquear
+    sync_prices:
+      provider_error: No se pudieron obtener los precios más recientes. Inténtalo
+        de nuevo en unos minutos.
+      success: Datos de mercado sincronizados correctamente.
+      unavailable: La sincronización de datos de mercado no está disponible para valores
+        fuera de línea.
+    unlock_cost_basis:
+      success: Base de costes desbloqueada. Podría actualizarse en la próxima sincronización.
+    update:
+      error: Valor de base de costes no válido.
+      success: Base de costes guardada.

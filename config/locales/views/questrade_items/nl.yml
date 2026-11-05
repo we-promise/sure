@@ -1,257 +1,290 @@
 ---
 nl:
   questrade_items:
-    default_name: "Questrade-koppeling"
-    sync_status:
-      no_accounts: "Geen accounts gevonden"
-      synced:
-        one: "%{count} account gesynchroniseerd"
-        other: "%{count} accounts gesynchroniseerd"
-      synced_with_setup: "%{linked} gesynchroniseerd, %{unlinked} moeten nog worden ingesteld"
+    complete_account_setup:
+      all_skipped: Alle accounts zijn overgeslagen. Er zijn geen accounts aangemaakt.
+      creation_failed: 'Accounts konden niet worden aangemaakt: %{error}'
+      no_accounts: Geen accounts om in te stellen.
+      success: "%{count} account(s) aangemaakt."
+    create:
+      success: Questrade-koppeling aangemaakt
+    default_name: Questrade-koppeling
+    destroy:
+      success: Questrade-koppeling verwijderd
+    errors:
+      provider_not_configured: Questrade-provider is niet geconfigureerd
+    index:
+      title: Questrade-koppelingen
     institution_summary:
-      none: "Geen instellingen gekoppeld"
       count:
         one: "%{count} instelling"
         other: "%{count} instellingen"
-    errors:
-      provider_not_configured: "Questrade-provider is niet geconfigureerd"
-    sync:
-      status:
-        importing: "Accounts importeren uit Questrade..."
-        processing: "Posities en activiteiten verwerken..."
-        calculating: "Saldi berekenen..."
-        importing_data: "Accountgegevens importeren..."
-        checking_setup: "Accountconfiguratie controleren..."
-        needs_setup: "%{count} accounts moeten worden ingesteld..."
-      success: "Synchronisatie gestart"
-    panel:
-      eyebrow: "Instellen · alleen op desktop"
-      help_text: "Questrade-API-documentatie"
-      disconnect: "Loskoppelen"
-      disconnect_confirm: "Questrade loskoppelen? Hiermee wordt de koppeling verwijderd en worden de gesynchroniseerde accounts ontkoppeld."
-      steps:
-        s1_html: "Log in op het <a href=\"https://my.questrade.com\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary font-medium underline\">Questrade-portaal</a> in een desktopbrowser. De API-instellingen zijn niet beschikbaar in de mobiele app."
-        s2: "Open Settings en bewerk onder General settings de IQ API settings."
-        s3_html: "Klik in het venster API access op <strong>Manage</strong> onder <strong>My applications</strong>."
-        s4: "Registreer een persoonlijke app met een naam en beschrijving en sla deze op."
-        s5: "Voeg een nieuw apparaat toe en genereer een token."
-        s6: "Plak het gegenereerde token hieronder en sla op."
-      setup_instructions: "Configuratie-instructies:"
-      step_1: "Ga naar uw Questrade-dashboard om uw inloggegevens op te halen"
-      step_2: "Voer hieronder uw inloggegevens in en klik op Opslaan"
-      step_3: "Ga na een geslaagde koppeling naar het tabblad Accounts om nieuwe accounts in te stellen"
-      field_descriptions: "Veldbeschrijvingen:"
-      optional: "(Optioneel)"
-      required: "(verplicht)"
-      optional_with_default: "(optioneel, standaard %{default_value})"
-      save_button: "Configuratie opslaan"
-      update_button: "Configuratie bijwerken"
-      token_refresh_hint: "Questrade-tokens worden automatisch vernieuwd bij elke synchronisatie van uw accounts. Als een koppeling meer dan 7 dagen niet wordt gebruikt en verloopt, plak dan hier een nieuw token om deze weer te activeren zonder los te koppelen."
-      status_configured_html: "Geconfigureerd en klaar voor gebruik. Ga naar het tabblad <a href=\"%{accounts_path}\" class=\"link\">Accounts</a> om accounts te beheren en in te stellen."
-      status_not_configured: "Niet geconfigureerd"
-      fields:
-        refresh_token:
-          label: "Refresh-token"
-          description: "Uw Questrade-refresh-token"
-          placeholder_new: "Plak hier het refresh-token"
-          placeholder_update: "Voer een nieuw refresh-token in om bij te werken"
-        api_server:
-          label: "API-server"
-          description: "Uw Questrade-API-server"
-          placeholder_new: "Plak hier de API-server"
-          placeholder_update: "Voer een nieuwe API-server in om bij te werken"
-    create:
-      success: "Questrade-koppeling aangemaakt"
-    update:
-      success: "Questrade-koppeling bijgewerkt"
-    destroy:
-      success: "Questrade-koppeling verwijderd"
-    index:
-      title: "Questrade-koppelingen"
-    loading:
-      loading_message: "Questrade-accounts laden..."
-      loading_title: "Laden"
+      none: Geen instellingen gekoppeld
     link_accounts:
       all_already_linked:
-        one: "Het geselecteerde account (%{names}) is al gekoppeld"
-        other: "Alle %{count} geselecteerde accounts zijn al gekoppeld: %{names}"
-      api_error: "API-fout: %{message}"
+        one: Het geselecteerde account (%{names}) is al gekoppeld
+        other: 'Alle %{count} geselecteerde accounts zijn al gekoppeld: %{names}'
+      api_error: 'API-fout: %{message}'
       invalid_account_names:
-        one: "Kan account met lege naam niet koppelen"
-        other: "Kan %{count} accounts met een lege naam niet koppelen"
-      link_failed: "Accounts koppelen mislukt"
-      no_accounts_selected: "Selecteer ten minste één account"
-      no_api_key: "Questrade-API-sleutel niet gevonden. Configureer deze in de providerinstellingen."
-      partial_invalid: "%{created_count} account(s) gekoppeld, %{already_linked_count} waren al gekoppeld, %{invalid_count} account(s) hadden een ongeldige naam"
-      partial_success: "%{created_count} account(s) gekoppeld. %{already_linked_count} account(s) waren al gekoppeld: %{already_linked_names}"
+        one: Kan account met lege naam niet koppelen
+        other: Kan %{count} accounts met een lege naam niet koppelen
+      link_failed: Accounts koppelen mislukt
+      no_accounts_selected: Selecteer ten minste één account
+      no_api_key: Questrade-API-sleutel niet gevonden. Configureer deze in de providerinstellingen.
+      partial_invalid: "%{created_count} account(s) gekoppeld, %{already_linked_count}
+        waren al gekoppeld, %{invalid_count} account(s) hadden een ongeldige naam"
+      partial_success: "%{created_count} account(s) gekoppeld. %{already_linked_count}
+        account(s) waren al gekoppeld: %{already_linked_names}"
       success:
         one: "%{count} account gekoppeld"
         other: "%{count} accounts gekoppeld"
-    questrade_item:
-      kind: "Effectenrekening"
-      accounts_need_setup: "Accounts moeten worden ingesteld"
-      delete: "Koppeling verwijderen"
-      deletion_in_progress: "verwijderen bezig..."
-      error: "Fout"
-      more_accounts_available:
-        one: "Nog %{count} account beschikbaar"
-        other: "Nog %{count} accounts beschikbaar"
-      no_accounts_description: "Deze koppeling heeft nog geen gekoppelde accounts."
-      no_accounts_title: "Geen accounts"
-      provider_name: "Questrade"
-      requires_update: "Koppeling moet worden bijgewerkt"
-      setup_action: "Nieuwe accounts instellen"
-      setup_description: "%{linked} van %{total} accounts gekoppeld. Kies accounttypes voor uw nieuw geïmporteerde Questrade-accounts."
-      setup_needed: "Nieuwe accounts klaar om in te stellen"
-      status: "Gesynchroniseerd %{timestamp} geleden"
-      status_never: "Nooit gesynchroniseerd"
-      status_with_summary: "Laatst gesynchroniseerd %{timestamp} geleden - %{summary}"
-      syncing: "Synchroniseren..."
-      total: "Totaal"
-      unlinked: "Niet gekoppeld"
-      update_credentials: "Inloggegevens bijwerken"
-    select_accounts:
-      accounts_selected: "accounts geselecteerd"
-      api_error: "API-fout: %{message}"
-      cancel: "Annuleren"
-      configure_name_in_provider: "Kan niet importeren - configureer de accountnaam in Questrade"
-      description: "Selecteer de accounts die u wilt koppelen aan uw %{product_name}-account."
-      link_accounts: "Geselecteerde accounts koppelen"
-      no_accounts_found: "Geen accounts gevonden. Controleer de configuratie van uw API-sleutel."
-      no_api_key: "Questrade-API-sleutel is niet geconfigureerd. Configureer deze in Instellingen."
-      no_credentials_configured: "Configureer eerst uw Questrade-inloggegevens in de providerinstellingen."
-      no_name_placeholder: "(Geen naam)"
-      title: "Questrade-accounts selecteren"
-    select_existing_account:
-      page_title: "Een Questrade-account koppelen"
-      dialog_title: "Koppelen aan een Questrade-account"
-      linking_label: "Koppelen"
-      none_available: "Geen niet-gekoppelde Questrade-accounts beschikbaar."
-      buttons:
-        cancel: "Annuleren"
-        link: "Koppelen"
-      account_already_linked: "Dit account is al aan een provider gekoppeld"
-      all_accounts_already_linked: "Alle Questrade-accounts zijn al gekoppeld"
-      api_error: "API-fout: %{message}"
-      balance_label: "Saldo:"
-      cancel: "Annuleren"
-      cancel_button: "Annuleren"
-      configure_name_in_provider: "Kan niet importeren - configureer de accountnaam in Questrade"
-      connect_hint: "Koppel een Questrade-account om automatisch synchroniseren in te schakelen."
-      description: "Selecteer een Questrade-account om aan dit account te koppelen. Transacties worden automatisch gesynchroniseerd en ontdubbeld."
-      header: "Koppelen met Questrade"
-      link_account: "Account koppelen"
-      link_button: "Dit account koppelen"
-      linking_to: "Koppelen aan:"
-      no_account_specified: "Geen account opgegeven"
-      no_accounts: "Geen niet-gekoppelde Questrade-accounts gevonden."
-      no_accounts_found: "Geen Questrade-accounts gevonden. Controleer de configuratie van uw API-sleutel."
-      no_api_key: "Questrade-API-sleutel is niet geconfigureerd. Configureer deze in Instellingen."
-      no_credentials_configured: "Configureer eerst uw Questrade-inloggegevens in de providerinstellingen."
-      no_name_placeholder: "(Geen naam)"
-      settings_link: "Ga naar providerinstellingen"
-      subtitle: "Koppel dit account aan een van uw Questrade-accounts"
-      title: "%{account_name} koppelen met Questrade"
     link_existing_account:
-      account_already_linked: "Dit account is al aan een provider gekoppeld"
-      api_error: "API-fout: %{message}"
-      invalid_account_name: "Kan account met lege naam niet koppelen"
-      provider_account_already_linked: "Dit Questrade-account is al aan een ander account gekoppeld"
-      provider_account_not_found: "Questrade-account niet gevonden"
-      missing_parameters: "Vereiste parameters ontbreken"
-      no_api_key: "Questrade-API-sleutel niet gevonden. Configureer deze in de providerinstellingen."
+      account_already_linked: Dit account is al aan een provider gekoppeld
+      api_error: 'API-fout: %{message}'
+      invalid_account_name: Kan account met lege naam niet koppelen
+      missing_parameters: Vereiste parameters ontbreken
+      no_api_key: Questrade-API-sleutel niet gevonden. Configureer deze in de providerinstellingen.
+      provider_account_already_linked: Dit Questrade-account is al aan een ander account
+        gekoppeld
+      provider_account_not_found: Questrade-account niet gevonden
       success: "%{account_name} gekoppeld met Questrade"
-    setup_accounts:
-      page_title: "Questrade-accounts instellen"
-      dialog_title: "Uw Questrade-accounts instellen"
-      all_linked: "Alle Questrade-accounts zijn al gekoppeld."
-      import_as: "Importeren als"
+    loading:
+      loading_message: Questrade-accounts laden...
+      loading_title: Laden
+    panel:
+      disconnect: Loskoppelen
+      disconnect_confirm: Questrade loskoppelen? Hiermee wordt de koppeling verwijderd
+        en worden de gesynchroniseerde accounts ontkoppeld.
+      eyebrow: Instellen · alleen op desktop
+      field_descriptions: 'Veldbeschrijvingen:'
+      fields:
+        api_server:
+          description: Uw Questrade-API-server
+          label: API-server
+          placeholder_new: Plak hier de API-server
+          placeholder_update: Voer een nieuwe API-server in om bij te werken
+        refresh_token:
+          description: Uw Questrade-refresh-token
+          label: Refresh-token
+          placeholder_new: Plak hier het refresh-token
+          placeholder_update: Voer een nieuw refresh-token in om bij te werken
+      help_text: Questrade-API-documentatie
+      optional: "(Optioneel)"
+      optional_with_default: "(optioneel, standaard %{default_value})"
+      required: "(verplicht)"
+      save_button: Configuratie opslaan
+      setup_instructions: 'Configuratie-instructies:'
+      status_configured_html: Geconfigureerd en klaar voor gebruik. Ga naar het tabblad
+        <a href="%{accounts_path}" class="link">Accounts</a> om accounts te beheren
+        en in te stellen.
+      status_not_configured: Niet geconfigureerd
+      step_1: Ga naar uw Questrade-dashboard om uw inloggegevens op te halen
+      step_2: Voer hieronder uw inloggegevens in en klik op Opslaan
+      step_3: Ga na een geslaagde koppeling naar het tabblad Accounts om nieuwe accounts
+        in te stellen
+      steps:
+        s1_html: Log in op het <a href="https://my.questrade.com" target="_blank"
+          rel="noopener noreferrer" class="text-primary font-medium underline">Questrade-portaal</a>
+          in een desktopbrowser. De API-instellingen zijn niet beschikbaar in de mobiele
+          app.
+        s2: Open Settings en bewerk onder General settings de IQ API settings.
+        s3_html: Klik in het venster API access op <strong>Manage</strong> onder <strong>My
+          applications</strong>.
+        s4: Registreer een persoonlijke app met een naam en beschrijving en sla deze
+          op.
+        s5: Voeg een nieuw apparaat toe en genereer een token.
+        s6: Plak het gegenereerde token hieronder en sla op.
+      token_refresh_hint: Questrade-tokens worden automatisch vernieuwd bij elke synchronisatie
+        van uw accounts. Als een koppeling meer dan 7 dagen niet wordt gebruikt en
+        verloopt, plak dan hier een nieuw token om deze weer te activeren zonder los
+        te koppelen.
+      update_button: Configuratie bijwerken
+    preload_accounts:
+      no_credentials_configured: Configureer eerst uw Questrade-inloggegevens in de
+        providerinstellingen.
+    questrade_item:
+      accounts_need_setup: Accounts moeten worden ingesteld
+      delete: Koppeling verwijderen
+      deletion_in_progress: verwijderen bezig...
+      error: Fout
+      kind: Effectenrekening
+      more_accounts_available:
+        one: Nog %{count} account beschikbaar
+        other: Nog %{count} accounts beschikbaar
+      no_accounts_description: Deze koppeling heeft nog geen gekoppelde accounts.
+      no_accounts_title: Geen accounts
+      provider_name: Questrade
+      requires_update: Koppeling moet worden bijgewerkt
+      setup_action: Nieuwe accounts instellen
+      setup_description: "%{linked} van %{total} accounts gekoppeld. Kies accounttypes
+        voor uw nieuw geïmporteerde Questrade-accounts."
+      setup_needed: Nieuwe accounts klaar om in te stellen
+      status: Gesynchroniseerd %{timestamp} geleden
+      status_never: Nooit gesynchroniseerd
+      status_with_summary: Laatst gesynchroniseerd %{timestamp} geleden - %{summary}
+      syncing: Synchroniseren...
+      total: Totaal
+      unlinked: Niet gekoppeld
+      update_credentials: Inloggegevens bijwerken
+    select_accounts:
+      accounts_selected: accounts geselecteerd
+      api_error: 'API-fout: %{message}'
+      cancel: Annuleren
+      configure_name_in_provider: Kan niet importeren - configureer de accountnaam
+        in Questrade
+      description: Selecteer de accounts die u wilt koppelen aan uw %{product_name}-account.
+      link_accounts: Geselecteerde accounts koppelen
+      no_accounts_found: Geen accounts gevonden. Controleer de configuratie van uw
+        API-sleutel.
+      no_api_key: Questrade-API-sleutel is niet geconfigureerd. Configureer deze in
+        Instellingen.
+      no_credentials_configured: Configureer eerst uw Questrade-inloggegevens in de
+        providerinstellingen.
+      no_name_placeholder: "(Geen naam)"
+      title: Questrade-accounts selecteren
+    select_existing_account:
+      account_already_linked: Dit account is al aan een provider gekoppeld
+      all_accounts_already_linked: Alle Questrade-accounts zijn al gekoppeld
+      api_error: 'API-fout: %{message}'
+      balance_label: 'Saldo:'
       buttons:
-        cancel: "Annuleren"
-        create: "Accounts aanmaken"
-        done: "Klaar"
-      types:
-        investment: "Belegging"
-        depository: "Contant geld / bankrekening"
-        skip: "Dit account overslaan"
-      account_type_label: "Accounttype:"
+        cancel: Annuleren
+        link: Koppelen
+      cancel: Annuleren
+      cancel_button: Annuleren
+      configure_name_in_provider: Kan niet importeren - configureer de accountnaam
+        in Questrade
+      connect_hint: Koppel een Questrade-account om automatisch synchroniseren in
+        te schakelen.
+      description: Selecteer een Questrade-account om aan dit account te koppelen.
+        Transacties worden automatisch gesynchroniseerd en ontdubbeld.
+      dialog_title: Koppelen aan een Questrade-account
+      header: Koppelen met Questrade
+      link_account: Account koppelen
+      link_button: Dit account koppelen
+      linking_label: Koppelen
+      linking_to: 'Koppelen aan:'
+      no_account_specified: Geen account opgegeven
+      no_accounts: Geen niet-gekoppelde Questrade-accounts gevonden.
+      no_accounts_found: Geen Questrade-accounts gevonden. Controleer de configuratie
+        van uw API-sleutel.
+      no_api_key: Questrade-API-sleutel is niet geconfigureerd. Configureer deze in
+        Instellingen.
+      no_credentials_configured: Configureer eerst uw Questrade-inloggegevens in de
+        providerinstellingen.
+      no_name_placeholder: "(Geen naam)"
+      none_available: Geen niet-gekoppelde Questrade-accounts beschikbaar.
+      page_title: Een Questrade-account koppelen
+      settings_link: Ga naar providerinstellingen
+      subtitle: Koppel dit account aan een van uw Questrade-accounts
+      title: "%{account_name} koppelen met Questrade"
+    setup_accounts:
+      account_type_label: 'Accounttype:'
+      account_types:
+        credit_card: Creditcard
+        crypto: Crypto-account
+        depository: Betaal- of spaarrekening
+        investment: Beleggingsaccount
+        loan: Lening of hypotheek
+        other_asset: Overige bezittingen
+        skip: Dit account overslaan
       accounts_count:
         one: "%{count} account beschikbaar"
         other: "%{count} accounts beschikbaar"
-      all_accounts_linked: "Al uw Questrade-accounts zijn al ingesteld."
-      api_error: "API-fout: %{message}"
-      creating: "Accounts aanmaken..."
-      fetch_failed: "Accounts ophalen mislukt"
-      import_selected: "Geselecteerde accounts importeren"
-      instructions: "Selecteer de accounts die u uit Questrade wilt importeren. U kunt meerdere accounts kiezen."
-      no_accounts: "Geen niet-gekoppelde accounts gevonden voor deze Questrade-koppeling."
-      no_accounts_to_setup: "Geen accounts om in te stellen"
-      no_api_key: "Questrade-API-sleutel is niet geconfigureerd. Controleer de instellingen van uw koppeling."
-      select_all: "Alles selecteren"
-      account_types:
-        skip: "Dit account overslaan"
-        depository: "Betaal- of spaarrekening"
-        credit_card: "Creditcard"
-        investment: "Beleggingsaccount"
-        crypto: "Crypto-account"
-        loan: "Lening of hypotheek"
-        other_asset: "Overige bezittingen"
+      all_accounts_linked: Al uw Questrade-accounts zijn al ingesteld.
+      all_linked: Alle Questrade-accounts zijn al gekoppeld.
+      api_error: 'API-fout: %{message}'
+      balance: Saldo
+      buttons:
+        cancel: Annuleren
+        create: Accounts aanmaken
+        done: Klaar
+      cancel: Annuleren
+      choose_account_type: 'Kies het juiste accounttype voor elk Questrade-account:'
+      create_accounts: Accounts aanmaken
+      creating: Accounts aanmaken...
+      creating_accounts: Accounts aanmaken...
+      dialog_title: Uw Questrade-accounts instellen
+      fetch_failed: Accounts ophalen mislukt
+      historical_data_range: 'Historisch gegevensbereik:'
+      import_as: Importeren als
+      import_selected: Geselecteerde accounts importeren
+      instructions: Selecteer de accounts die u uit Questrade wilt importeren. U kunt
+        meerdere accounts kiezen.
+      no_accounts: Geen niet-gekoppelde accounts gevonden voor deze Questrade-koppeling.
+      no_accounts_to_setup: Geen accounts om in te stellen
+      no_api_key: Questrade-API-sleutel is niet geconfigureerd. Controleer de instellingen
+        van uw koppeling.
+      page_title: Questrade-accounts instellen
+      select_all: Alles selecteren
+      subtitle: Kies hoe elk account wordt geïmporteerd
       subtype_labels:
-        depository: "Accountsubtype:"
-        investment: "Beleggingstype:"
-        loan: "Leningtype:"
-        credit_card: ""
-        crypto: ""
-        other_asset: ""
+        credit_card: ''
+        crypto: ''
+        depository: 'Accountsubtype:'
+        investment: 'Beleggingstype:'
+        loan: 'Leningtype:'
+        other_asset: ''
       subtype_messages:
-        credit_card: "Creditcards worden automatisch ingesteld als creditcardaccounts."
-        other_asset: "Voor overige bezittingen zijn geen extra opties nodig."
-        crypto: "Crypto-accounts worden ingesteld om posities en transacties bij te houden."
+        credit_card: Creditcards worden automatisch ingesteld als creditcardaccounts.
+        crypto: Crypto-accounts worden ingesteld om posities en transacties bij te
+          houden.
+        other_asset: Voor overige bezittingen zijn geen extra opties nodig.
       subtypes:
         depository:
-          checking: "Betaalrekening"
-          savings: "Spaarrekening"
-          hsa: "Zorgspaarrekening"
-          cd: "Termijndeposito"
-          money_market: "Geldmarktrekening"
+          cd: Termijndeposito
+          checking: Betaalrekening
+          hsa: Zorgspaarrekening
+          money_market: Geldmarktrekening
+          savings: Spaarrekening
         investment:
-          brokerage: "Effectenrekening"
-          pension: "Pensioen"
-          retirement: "Pensioenvoorziening"
-          "401k": "401(k)"
-          roth_401k: "Roth 401(k)"
-          "403b": "403(b)"
-          tsp: "Thrift Savings Plan"
-          "529_plan": "529-plan"
-          hsa: "Zorgspaarrekening"
-          mutual_fund: "Beleggingsfonds"
-          ira: "Traditionele IRA"
-          roth_ira: "Roth IRA"
-          angel: "Angel-investering"
+          401k: 401(k)
+          403b: 403(b)
+          529_plan: 529-plan
+          angel: Angel-investering
+          brokerage: Effectenrekening
+          hsa: Zorgspaarrekening
+          ira: Traditionele IRA
+          mutual_fund: Beleggingsfonds
+          pension: Pensioen
+          retirement: Pensioenvoorziening
+          roth_401k: Roth 401(k)
+          roth_ira: Roth IRA
+          tsp: Thrift Savings Plan
         loan:
-          mortgage: "Hypotheek"
-          student: "Studielening"
-          auto: "Autolening"
-          other: "Overige lening"
-      balance: "Saldo"
-      cancel: "Annuleren"
-      choose_account_type: "Kies het juiste accounttype voor elk Questrade-account:"
-      create_accounts: "Accounts aanmaken"
-      creating_accounts: "Accounts aanmaken..."
-      historical_data_range: "Historisch gegevensbereik:"
-      subtitle: "Kies hoe elk account wordt geïmporteerd"
-      sync_start_date_help: "Selecteer hoe ver terug u de transactiegeschiedenis wilt synchroniseren."
-      sync_start_date_label: "Transacties synchroniseren vanaf:"
-      title: "Uw Questrade-accounts instellen"
+          auto: Autolening
+          mortgage: Hypotheek
+          other: Overige lening
+          student: Studielening
+      sync_start_date_help: Selecteer hoe ver terug u de transactiegeschiedenis wilt
+        synchroniseren.
+      sync_start_date_label: 'Transacties synchroniseren vanaf:'
+      title: Uw Questrade-accounts instellen
+      types:
+        depository: Contant geld / bankrekening
+        investment: Belegging
+        skip: Dit account overslaan
     setup_required:
-      title: "Koppel eerst Questrade"
-      not_configured_title: "Questrade is nog niet gekoppeld"
-      not_configured_description: "Voeg uw Questrade-koppeling toe onder Providerinstellingen en kom daarna hier terug om accounts te koppelen."
-      go_to_provider_settings: "Ga naar providerinstellingen"
-    complete_account_setup:
-      all_skipped: "Alle accounts zijn overgeslagen. Er zijn geen accounts aangemaakt."
-      creation_failed: "Accounts konden niet worden aangemaakt: %{error}"
-      no_accounts: "Geen accounts om in te stellen."
-      success: "%{count} account(s) aangemaakt."
-    preload_accounts:
-      no_credentials_configured: "Configureer eerst uw Questrade-inloggegevens in de providerinstellingen."
+      go_to_provider_settings: Ga naar providerinstellingen
+      not_configured_description: Voeg uw Questrade-koppeling toe onder Providerinstellingen
+        en kom daarna hier terug om accounts te koppelen.
+      not_configured_title: Questrade is nog niet gekoppeld
+      title: Koppel eerst Questrade
+    sync:
+      status:
+        calculating: Saldi berekenen...
+        checking_setup: Accountconfiguratie controleren...
+        importing: Accounts importeren uit Questrade...
+        importing_data: Accountgegevens importeren...
+        needs_setup: "%{count} accounts moeten worden ingesteld..."
+        processing: Posities en activiteiten verwerken...
+      success: Synchronisatie gestart
+    sync_status:
+      no_accounts: Geen accounts gevonden
+      synced:
+        one: "%{count} account gesynchroniseerd"
+        other: "%{count} accounts gesynchroniseerd"
+      synced_with_setup: "%{linked} gesynchroniseerd, %{unlinked} moeten nog worden
+        ingesteld"
+    update:
+      success: Questrade-koppeling bijgewerkt

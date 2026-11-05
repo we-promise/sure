@@ -3,33 +3,34 @@ ca:
   activerecord:
     attributes:
       recurrence_rule:
+        day_of_month: Dia del mes
         frequency: Freqüència
         interval: Interval
-        day_of_month: Dia del mes
+        month_of_year: Mes
         weekday: Dia de la setmana
         weekday_ordinal: Setmana del mes
-        month_of_year: Mes
       recurring_transaction/recurrence_rules:
         base: 'Regla de repetició:'
+        day_of_month: Dia del mes
         frequency: Freqüència
         interval: Interval
-        day_of_month: Dia del mes
+        month_of_year: Mes
         weekday: Dia de la setmana
         weekday_ordinal: Setmana del mes
-        month_of_year: Mes
     errors:
       models:
         recurrence_rule:
-          day_spec_required: Tria o bé un dia del mes o bé un dia de la setmana
           attributes:
+            day_of_month:
+              not_allowed_for_weekly: no s'aplica a una regla setmanal
+            month_of_year:
+              not_allowed: només s'aplica a una regla anual
+              required_for_yearly: és obligatori per a una regla anual
             weekday:
               required_for_weekly: és obligatori per a una regla setmanal
             weekday_ordinal:
               not_allowed_for_weekly: no s'aplica a una regla setmanal
+              not_allowed_without_weekday: només s'aplica quan s'indica un dia de
+                la setmana
               required_with_weekday: és obligatòria quan s'indica un dia de la setmana
-              not_allowed_without_weekday: només s'aplica quan s'indica un dia de la setmana
-            day_of_month:
-              not_allowed_for_weekly: no s'aplica a una regla setmanal
-            month_of_year:
-              required_for_yearly: és obligatori per a una regla anual
-              not_allowed: només s'aplica a una regla anual
+          day_spec_required: Tria o bé un dia del mes o bé un dia de la setmana

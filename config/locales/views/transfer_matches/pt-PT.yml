@@ -3,22 +3,25 @@ pt-PT:
   transfer_matches:
     create:
       success: Transferência criada
-    new:
-      header:
-        title: Corresponder transferência ou pagamento
-        subtitle: Associe a transação correspondente noutra conta ou crie uma caso não exista.
-      from_account: Conta de origem
-      from_account_named: "Conta de origem: %{name}"
-      to_account: Conta de destino
-      to_account_named: "Conta de destino: %{name}"
-      outflow_transaction: Transação de saída
-      inflow_transaction: Transação de entrada
-      create_transfer_match: Criar correspondência de transferência
     matching_fields:
-      select_method: Selecione um método para fazer corresponder as suas transações.
-      match_existing_recommended: Associar transação existente (recomendado)
       create_new_transaction: Criar nova transação
+      match_existing_recommended: Associar transação existente (recomendado)
       matching_method: Método de correspondência
       matching_transaction: Transação a associar
+      no_matching_transactions: Não conseguimos encontrar nenhuma transação para associar
+        nas suas outras contas. Selecione uma conta e criaremos uma nova transação
+        de entrada para si.
+      select_method: Selecione um método para fazer corresponder as suas transações.
       target_account: Conta de destino
-      no_matching_transactions: Não conseguimos encontrar nenhuma transação para associar nas suas outras contas. Selecione uma conta e criaremos uma nova transação de entrada para si.
+    new:
+      create_transfer_match: Criar correspondência de transferência
+      from_account: Conta de origem
+      from_account_named: 'Conta de origem: %{name}'
+      header:
+        subtitle: Associe a transação correspondente noutra conta ou crie uma caso
+          não exista.
+        title: Corresponder transferência ou pagamento
+      inflow_transaction: Transação de entrada
+      outflow_transaction: Transação de saída
+      to_account: Conta de destino
+      to_account_named: 'Conta de destino: %{name}'

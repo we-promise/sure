@@ -7,4 +7,4 @@ ro:
       cta: Confirmă schimbarea adresei de email
       expiry_notice: Acest link va expira în %{hours} ore.
       greeting: Salut!
-      subject: '%{product_name}: Confirmă schimbarea adresei de email'
+      subject: "%{product_name}: Confirmă schimbarea adresei de email"

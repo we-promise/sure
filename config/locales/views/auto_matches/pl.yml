@@ -1,36 +1,39 @@
 ---
 pl:
   auto_matches:
-    title: Automatyczne dopasowywanie
-    settings:
-      enable_label: Włącz automatyczne dopasowywanie
-      enable_description: Automatycznie wykrywa i sugeruje dopasowania przelewów między kontami przy każdej synchronizacji. Sugestie nie są stosowane, dopóki ich nie potwierdzisz poniżej.
-      admin_only: Tylko administratorzy mogą zmienić to ustawienie.
-    update_settings:
-      settings_updated: Zaktualizowano ustawienia automatycznego dopasowywania
-    bulk_update:
-      invalid_selection: Wybierz co najmniej jedną sugestię do potwierdzenia lub odrzucenia
-      bulk_confirmed:
-        one: Potwierdzono 1 przelew
-        few: "Potwierdzono %{count} przelewy"
-        many: "Potwierdzono %{count} przelewów"
-        other: "Potwierdzono %{count} przelewu"
-      bulk_rejected:
-        one: Odrzucono 1 przelew
-        few: "Odrzucono %{count} przelewy"
-        many: "Odrzucono %{count} przelewów"
-        other: "Odrzucono %{count} przelewu"
-    empty:
-      title: Brak oczekujących sugestii automatycznego dopasowania
-      description: Gdy synchronizacja wykryje prawdopodobny przelew między dwoma Twoimi kontami, pojawi się tutaj do przeglądu.
-    table:
-      from: Od
-      to: Do
-      date: Data
-      actions: Działania
-      separator: "·"
     bulk_actions:
-      selected_label: zaznaczonych
       confirm_selected: Potwierdź zaznaczone
       reject_selected: Odrzuć zaznaczone
       select_all: Zaznacz wszystko
+      selected_label: zaznaczonych
+    bulk_update:
+      bulk_confirmed:
+        few: Potwierdzono %{count} przelewy
+        many: Potwierdzono %{count} przelewów
+        one: Potwierdzono 1 przelew
+        other: Potwierdzono %{count} przelewu
+      bulk_rejected:
+        few: Odrzucono %{count} przelewy
+        many: Odrzucono %{count} przelewów
+        one: Odrzucono 1 przelew
+        other: Odrzucono %{count} przelewu
+      invalid_selection: Wybierz co najmniej jedną sugestię do potwierdzenia lub odrzucenia
+    empty:
+      description: Gdy synchronizacja wykryje prawdopodobny przelew między dwoma Twoimi
+        kontami, pojawi się tutaj do przeglądu.
+      title: Brak oczekujących sugestii automatycznego dopasowania
+    settings:
+      admin_only: Tylko administratorzy mogą zmienić to ustawienie.
+      enable_description: Automatycznie wykrywa i sugeruje dopasowania przelewów między
+        kontami przy każdej synchronizacji. Sugestie nie są stosowane, dopóki ich
+        nie potwierdzisz poniżej.
+      enable_label: Włącz automatyczne dopasowywanie
+    table:
+      actions: Działania
+      date: Data
+      from: Od
+      separator: "·"
+      to: Do
+    title: Automatyczne dopasowywanie
+    update_settings:
+      settings_updated: Zaktualizowano ustawienia automatycznego dopasowywania

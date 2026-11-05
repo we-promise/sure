@@ -9,4 +9,5 @@ uk:
         wise_item:
           attributes:
             sca_private_key:
-              encryption_unavailable: неможливо зберегти, оскільки шифрування Active Record не налаштовано в цій інсталяції
+              encryption_unavailable: неможливо зберегти, оскільки шифрування Active
+                Record не налаштовано в цій інсталяції

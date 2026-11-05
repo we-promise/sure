@@ -1,74 +1,10 @@
 ---
 de:
-  provider_sync_summary:
-    title: Sync-Zusammenfassung
-    last_sync: "Letzter Sync: vor %{time_ago}"
-    accounts:
-      title: Konten
-      total: "Gesamt: %{count}"
-      linked: "Verknüpft: %{count}"
-      unlinked: "Nicht verknüpft: %{count}"
-      institutions: "Institute: %{count}"
-    transactions:
-      title: Buchungen
-      seen: "Erfasst: %{count}"
-      imported: "Importiert: %{count}"
-      updated: "Aktualisiert: %{count}"
-      skipped: "Übersprungen: %{count}"
-      fetching: "Wird vom Broker abgerufen..."
-      protected:
-        one: "%{count} Buchung geschützt (nicht überschrieben)"
-        other: "%{count} Buchungen geschützt (nicht überschrieben)"
-      view_protected: Geschützte Buchungen anzeigen
-    skip_reasons:
-      excluded: Ausgeschlossen
-      user_modified: Vom Benutzer geändert
-      import_locked: CSV-Import
-      protected: Geschützt
-    holdings:
-      title: Bestände
-      found: "Gefunden: %{count}"
-      processed: "Verarbeitet: %{count}"
-    trades:
-      title: Trades
-      imported: "Importiert: %{count}"
-      skipped: "Übersprungen: %{count}"
-      fetching: "Aktivitäten werden vom Broker abgerufen..."
-    health:
-      title: Status
-      view_error_details: Fehlerdetails anzeigen
-      rate_limited: "Rate-Limit vor %{time_ago}"
-      recently: kürzlich
-      errors: "Fehler: %{count}"
-      pending_reconciled:
-        one: "%{count} ausstehende Doppelbuchung abgeglichen"
-        other: "%{count} ausstehende Doppelbuchungen abgeglichen"
-      view_reconciled: Abgeglichene Buchungen anzeigen
-      duplicate_suggestions:
-        one: "%{count} mögliche Doppelbuchung zur Prüfung"
-        other: "%{count} mögliche Doppelbuchungen zur Prüfung"
-      view_duplicate_suggestions: Vorgeschlagene Duplikate anzeigen
-      stale_pending:
-        one: "%{count} veraltete ausstehende Buchung (von Budgets ausgeschlossen)"
-        other: "%{count} veraltete ausstehende Buchungen (von Budgets ausgeschlossen)"
-      view_stale_pending: Betroffene Konten anzeigen
-      stale_pending_count:
-        one: "%{count} Buchung"
-        other: "%{count} Buchungen"
-      stale_unmatched:
-        one: "%{count} ausstehende Buchung benötigt manuelle Prüfung"
-        other: "%{count} ausstehende Buchungen benötigen manuelle Prüfung"
-      view_stale_unmatched: Zu prüfende Buchungen anzeigen
-      stale_unmatched_count:
-        one: "%{count} Buchung"
-        other: "%{count} Buchungen"
-      data_warnings: "Datenwarnungen: %{count}"
-      notices: "Hinweise: %{count}"
-      view_data_quality: Datenqualitätsdetails anzeigen
   UI:
     account:
       activity_date:
-        balance_tooltip: Der Kontostand am Tagesende, nach allen Transaktionen und Anpassungen
+        balance_tooltip: Der Kontostand am Tagesende, nach allen Transaktionen und
+          Anpassungen
         no_balance_data: Für dieses Datum liegen keine Saldodaten vor
       activity_feed:
         toggle_selection_checkboxes: Auswahl umschalten
@@ -99,7 +35,8 @@ de:
           adjustments: Manuelle Abgleiche oder andere Anpassungen
           adjustments_asset: Manuelle Wertanpassungen oder Gutachten
           buys: Krypto-Käufe an diesem Tag
-          change_in_brokerage_cash: Netto-Veränderung der Barmittel durch Ein- und Auszahlungen sowie Trades
+          change_in_brokerage_cash: Netto-Veränderung der Barmittel durch Ein- und
+            Auszahlungen sowie Trades
           change_in_holdings_market: Wertveränderung der Bestände durch Kursbewegungen
           change_in_holdings_trades: Auswirkung von Käufen und Verkäufen auf die Bestände
           charges: Neue Belastungen an diesem Tag
@@ -114,9 +51,11 @@ de:
           final_principal: Die Restschuld am Ende des Tages
           final_value: Der Vermögenswert am Ende des Tages
           market_changes: Wertveränderungen durch Kursbewegungen
-          net_cash_flow: Netto-Veränderung des Saldos durch alle Transaktionen des Tages
+          net_cash_flow: Netto-Veränderung des Saldos durch alle Transaktionen des
+            Tages
           net_principal_change: Tilgungen und neue Kreditaufnahmen an diesem Tag
-          net_value_change: Alle Wertveränderungen, auch durch Verbesserungen und Abnutzung
+          net_value_change: Alle Wertveränderungen, auch durch Verbesserungen und
+            Abnutzung
           payments: Zahlungen auf die Karte an diesem Tag
           sells: Krypto-Verkäufe an diesem Tag
           start_balance: Der Kontostand zu Beginn dieses Tages
@@ -127,31 +66,41 @@ de:
           start_value: Der Vermögenswert zu Beginn dieses Tages
       chart:
         loan:
-          actual: "Erfasster Saldo"
-          aria_description: "Kreditsaldo-Diagramm. Erfasster Saldo %{current_balance}. Ursprünglich geplante Tilgung %{scheduled_payoff_date}. Voraussichtliche Tilgung ab dem heutigen Saldo %{projected_payoff_date}."
-          aria_extra_payoff: "Voraussichtliche Tilgung mit der Sondertilgung %{date}."
-          extra: "Mit Sondertilgung"
-          aria_actual_history_starts: "Die erfasste Saldenhistorie beginnt am %{date}."
-          aria_interest_share: "Über die Raten des ersten Jahres sind etwa %{first} % des gezahlten Betrags Zinsen, über die des letzten Jahres etwa %{last} %."
-          aria_interest_share_overall: "Über alle Raten sind etwa %{share} % des gezahlten Betrags Zinsen."
-          aria_composition: "Der Tooltip zu jeder geplanten Zahlung teilt sie in %{principal} und %{interest} auf."
-          interest_share: "Zinsanteil"
-          principal_share: "Tilgungsanteil"
-          interactive_chart: "interaktives Diagramm"
-          interest_saved: "Eingesparte Zinsen"
-          legend: "Diagrammreihen"
+          actual: Erfasster Saldo
+          aria_actual_history_starts: Die erfasste Saldenhistorie beginnt am %{date}.
+          aria_composition: Der Tooltip zu jeder geplanten Zahlung teilt sie in %{principal}
+            und %{interest} auf.
+          aria_description: Kreditsaldo-Diagramm. Erfasster Saldo %{current_balance}.
+            Ursprünglich geplante Tilgung %{scheduled_payoff_date}. Voraussichtliche
+            Tilgung ab dem heutigen Saldo %{projected_payoff_date}.
+          aria_extra_payoff: Voraussichtliche Tilgung mit der Sondertilgung %{date}.
+          aria_interest_share: Über die Raten des ersten Jahres sind etwa %{first}
+            % des gezahlten Betrags Zinsen, über die des letzten Jahres etwa %{last}
+            %.
+          aria_interest_share_overall: Über alle Raten sind etwa %{share} % des gezahlten
+            Betrags Zinsen.
+          extra: Mit Sondertilgung
+          interactive_chart: interaktives Diagramm
+          interest_saved: Eingesparte Zinsen
+          interest_share: Zinsanteil
+          legend: Diagrammreihen
           months_saved:
             one: "%{count} Monat früher als geplant"
             other: "%{count} Monate früher als geplant"
-          no_payoff: "mit der aktuellen Rate nicht erreicht"
-          not_converged: "Mit der aktuellen Rate ist dieser Saldo bis zum ursprünglichen Laufzeitende nicht getilgt; %{balloon} blieben offen."
-          on_schedule: "Im Plan"
-          projected: "Prognose ab heute"
-          projected_payoff: "Voraussichtliche Tilgung"
-          projection_basis: "Vergleicht den heute erfassten Saldo mit dem Saldo laut Tilgungsplan am selben Tag. Eine vor ihrem Fälligkeitstermin gebuchte Zahlung erscheint bis zu diesem Termin als Vorsprung, eine danach gebuchte als Rückstand."
-          scheduled: "Ursprünglicher Tilgungsplan"
-          since_start: "seit Kreditbeginn"
-          today: "Heute"
+          no_payoff: mit der aktuellen Rate nicht erreicht
+          not_converged: Mit der aktuellen Rate ist dieser Saldo bis zum ursprünglichen
+            Laufzeitende nicht getilgt; %{balloon} blieben offen.
+          on_schedule: Im Plan
+          principal_share: Tilgungsanteil
+          projected: Prognose ab heute
+          projected_payoff: Voraussichtliche Tilgung
+          projection_basis: Vergleicht den heute erfassten Saldo mit dem Saldo laut
+            Tilgungsplan am selben Tag. Eine vor ihrem Fälligkeitstermin gebuchte
+            Zahlung erscheint bis zu diesem Termin als Vorsprung, eine danach gebuchte
+            als Rückstand.
+          scheduled: Ursprünglicher Tilgungsplan
+          since_start: seit Kreditbeginn
+          today: Heute
         no_data_available: Keine Daten vorhanden
         title:
           balance: Saldo
@@ -182,11 +131,11 @@ de:
         warning: Warnung
     dialog:
       close: Schließen
-    link:
-      opens_in_new_tab: "(öffnet in neuem Tab)"
     icon_picker:
       no_matching_icons: Keine passenden Symbole
       search_placeholder: Symbole suchen ...
+    link:
+      opens_in_new_tab: "(öffnet in neuem Tab)"
     pill:
       aria_label: "%{label}"
       default_label: Vorschau
@@ -194,3 +143,68 @@ de:
       avatar_default_label: Menü öffnen
     tooltip:
       trigger_label: Mehr Infos
+  provider_sync_summary:
+    accounts:
+      institutions: 'Institute: %{count}'
+      linked: 'Verknüpft: %{count}'
+      title: Konten
+      total: 'Gesamt: %{count}'
+      unlinked: 'Nicht verknüpft: %{count}'
+    health:
+      data_warnings: 'Datenwarnungen: %{count}'
+      duplicate_suggestions:
+        one: "%{count} mögliche Doppelbuchung zur Prüfung"
+        other: "%{count} mögliche Doppelbuchungen zur Prüfung"
+      errors: 'Fehler: %{count}'
+      notices: 'Hinweise: %{count}'
+      pending_reconciled:
+        one: "%{count} ausstehende Doppelbuchung abgeglichen"
+        other: "%{count} ausstehende Doppelbuchungen abgeglichen"
+      rate_limited: Rate-Limit vor %{time_ago}
+      recently: kürzlich
+      stale_pending:
+        one: "%{count} veraltete ausstehende Buchung (von Budgets ausgeschlossen)"
+        other: "%{count} veraltete ausstehende Buchungen (von Budgets ausgeschlossen)"
+      stale_pending_count:
+        one: "%{count} Buchung"
+        other: "%{count} Buchungen"
+      stale_unmatched:
+        one: "%{count} ausstehende Buchung benötigt manuelle Prüfung"
+        other: "%{count} ausstehende Buchungen benötigen manuelle Prüfung"
+      stale_unmatched_count:
+        one: "%{count} Buchung"
+        other: "%{count} Buchungen"
+      title: Status
+      view_data_quality: Datenqualitätsdetails anzeigen
+      view_duplicate_suggestions: Vorgeschlagene Duplikate anzeigen
+      view_error_details: Fehlerdetails anzeigen
+      view_reconciled: Abgeglichene Buchungen anzeigen
+      view_stale_pending: Betroffene Konten anzeigen
+      view_stale_unmatched: Zu prüfende Buchungen anzeigen
+    holdings:
+      found: 'Gefunden: %{count}'
+      processed: 'Verarbeitet: %{count}'
+      title: Bestände
+    last_sync: 'Letzter Sync: vor %{time_ago}'
+    skip_reasons:
+      excluded: Ausgeschlossen
+      import_locked: CSV-Import
+      protected: Geschützt
+      user_modified: Vom Benutzer geändert
+    title: Sync-Zusammenfassung
+    trades:
+      fetching: Aktivitäten werden vom Broker abgerufen...
+      imported: 'Importiert: %{count}'
+      skipped: 'Übersprungen: %{count}'
+      title: Trades
+    transactions:
+      fetching: Wird vom Broker abgerufen...
+      imported: 'Importiert: %{count}'
+      protected:
+        one: "%{count} Buchung geschützt (nicht überschrieben)"
+        other: "%{count} Buchungen geschützt (nicht überschrieben)"
+      seen: 'Erfasst: %{count}'
+      skipped: 'Übersprungen: %{count}'
+      title: Buchungen
+      updated: 'Aktualisiert: %{count}'
+      view_protected: Geschützte Buchungen anzeigen

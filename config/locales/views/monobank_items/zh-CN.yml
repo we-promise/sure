@@ -1,134 +1,134 @@
 ---
 zh-CN:
-  providers:
-    monobank:
-      name: Monobank
-      description: 使用个人 API 令牌连接乌克兰 Monobank 卡片和储钱罐
   family:
     monobank:
       create_monobank_item:
         default_name: Monobank 连接
   monobank_account:
-    jar_fallback: Monobank 储钱罐
     card_types:
       black: 黑卡
-      white: 白卡
-      platinum: 白金卡
-      iron: 铁卡
-      yellow: 黄卡
       eaid: eAid 卡
       fop: 商业账户
+      iron: 铁卡
       jar: 储钱罐
+      platinum: 白金卡
       unknown: Monobank 卡
+      white: 白卡
+      yellow: 黄卡
+    jar_fallback: Monobank 储钱罐
   monobank_item:
     errors:
       account_processing_failed: 无法同步 Monobank 账户
       account_sync_schedule_failed: 无法计划 Monobank 账户同步
-      transactions_failed: 无法获取 Monobank 对账单
       sync_failed: 无法同步 Monobank 连接
+      transactions_failed: 无法获取 Monobank 对账单
+    institution_summary:
+      count:
+        one: 1 个机构
+        other: "%{count} 个机构"
+      none: 未连接任何机构
+      one: 1 个机构
     sync:
       status:
-        importing: 正在从 Monobank 导入账户...
+        calculating: 正在计算余额...
         checking_setup: 正在检查账户配置...
+        importing: 正在从 Monobank 导入账户...
         needs_setup:
           one: 1 个账户需要设置...
           other: "%{count} 个账户需要设置..."
         processing: 正在处理交易...
-        calculating: 正在计算余额...
     sync_status:
-      no_accounts: 未找到账户
       all_synced:
         one: 已同步 1 个账户
         other: 已同步 %{count} 个账户
+      no_accounts: 未找到账户
       partial: 已同步 %{linked} 个，%{unlinked} 个需要设置
-    institution_summary:
-      none: 未连接任何机构
-      one: 1 个机构
-      count:
-        one: 1 个机构
-        other: "%{count} 个机构"
   monobank_items:
-    provider_panel:
-      default_connection_name: Monobank 连接
-      add_connection: 添加 Monobank 连接
-      update_connection: 更新连接
-      connection_name_label: 连接名称
-      connection_name_placeholder: 我的 Monobank
-      access_token_label: 个人 API 令牌
-      access_token_placeholder: 粘贴您的 Monobank 个人令牌
-      keep_access_token_placeholder: 留空以保留现有令牌
-      setup_accounts: 设置账户
-      syncing: 同步中...
-      sync: 同步
-      disconnect: 断开连接
-      disconnect_confirm: 确定要断开 %{name} 的连接吗？
-      rate_limit_notice: Monobank 限制每分钟只能请求一次，因此每次同步仅获取少量账户，较早的历史记录将通过多次同步逐步获取。
+    complete_account_setup:
+      all_skipped: 未创建任何 Monobank 账户。
+      creation_failed: 无法创建 Monobank 账户。
+      no_accounts: 未选择任何 Monobank 账户。
+      success:
+        one: 已创建 1 个 Monobank 账户。
+        other: 已创建 %{count} 个 Monobank 账户。
     create:
       success: Monobank 连接已保存。
-    update:
-      success: Monobank 连接已更新。
     destroy:
       success: 已计划删除 Monobank 连接。
       unlink_failed: 无法断开 Monobank 连接
-    select_accounts:
-      title: 关联 Monobank 账户
-      description: 选择要添加的 Monobank 卡片或储钱罐。
-      no_accounts_found: 未找到未关联的 Monobank 账户。
-      no_credentials_configured: 请先在提供商设置中配置 Monobank。
-      cancel: 取消
-      link_accounts: 关联账户
     link_accounts:
-      success:
-        one: 已关联 1 个 Monobank 账户。
-        other: "已关联 %{count} 个 Monobank 账户。"
+      link_failed: 未关联任何账户。
       no_accounts_selected: 请至少选择一个账户。
       no_credentials_configured: 请先在提供商设置中配置 Monobank。
+      success:
+        one: 已关联 1 个 Monobank 账户。
+        other: 已关联 %{count} 个 Monobank 账户。
       unsupported_account_type: Monobank 不支持该账户类型。
-      link_failed: 未关联任何账户。
-    select_existing_account:
-      title: 将 Monobank 账户关联到 %{account_name}
-      description: 选择一个未关联的 Monobank 账户以连接到此账户。
-      no_accounts_found: 未找到未关联的 Monobank 账户。
-      no_credentials_configured: 请先在提供商设置中配置 Monobank。
-      account_already_linked: 此账户已关联到其他提供商。
-      cancel: 取消
-      link_account: 关联账户
     link_existing_account:
-      success: 已将 Monobank 账户关联到 %{account_name}。
       account_already_linked: 此账户已关联到其他提供商。
       monobank_account_already_linked: 此 Monobank 账户已关联。
       no_account_selected: 请选择要关联的 Monobank 账户。
-    setup_accounts:
+      success: 已将 Monobank 账户关联到 %{account_name}。
+    monobank_item:
+      delete: 删除
+      deletion_in_progress: 正在删除中
+      error: 错误
+      no_accounts_description: 获取 Monobank 账户并选择要关联的账户。
+      no_accounts_title: 尚未导入账户
+      setup_action: 设置账户
+      setup_description: 已关联 %{total} 个账户中的 %{linked} 个。
+      setup_needed: 账户需要设置
+      status_never: 从未同步
+      status_with_summary: 上次同步于 %{timestamp} 前 · %{summary}
+      syncing: 同步中
+    provider_panel:
+      access_token_label: 个人 API 令牌
+      access_token_placeholder: 粘贴您的 Monobank 个人令牌
+      add_connection: 添加 Monobank 连接
+      connection_name_label: 连接名称
+      connection_name_placeholder: 我的 Monobank
+      default_connection_name: Monobank 连接
+      disconnect: 断开连接
+      disconnect_confirm: 确定要断开 %{name} 的连接吗？
+      keep_access_token_placeholder: 留空以保留现有令牌
+      rate_limit_notice: Monobank 限制每分钟只能请求一次，因此每次同步仅获取少量账户，较早的历史记录将通过多次同步逐步获取。
+      setup_accounts: 设置账户
+      sync: 同步
+      syncing: 同步中...
+      update_connection: 更新连接
+    select_accounts:
+      cancel: 取消
+      description: 选择要添加的 Monobank 卡片或储钱罐。
+      link_accounts: 关联账户
+      no_accounts_found: 未找到未关联的 Monobank 账户。
+      no_credentials_configured: 请先在提供商设置中配置 Monobank。
       title: 关联 Monobank 账户
-      subtitle: 选择每个 Monobank 卡片或储钱罐在 Sure 中的显示方式。
-      no_credentials: 请先配置 Monobank 凭据。
-      api_error: 无法从 Monobank 刷新账户，因此改用上次同步保存的账户。
-      no_accounts_to_setup: 没有需要设置的账户
-      all_accounts_linked: 所有 Monobank 账户均已关联。
-      choose_account_type: 选择账户类型
-      choose_account_type_description: 跳过您不想追踪的账户。
+    select_existing_account:
+      account_already_linked: 此账户已关联到其他提供商。
+      cancel: 取消
+      description: 选择一个未关联的 Monobank 账户以连接到此账户。
+      link_account: 关联账户
+      no_accounts_found: 未找到未关联的 Monobank 账户。
+      no_credentials_configured: 请先在提供商设置中配置 Monobank。
+      title: 将 Monobank 账户关联到 %{account_name}
+    setup_accounts:
       account_type_label: 账户类型
       account_types:
-        skip: 跳过
         depository: 现金
-      create_accounts: 创建账户
+        skip: 跳过
+      all_accounts_linked: 所有 Monobank 账户均已关联。
+      api_error: 无法从 Monobank 刷新账户，因此改用上次同步保存的账户。
       cancel: 取消
-    complete_account_setup:
-      success:
-        one: 已创建 1 个 Monobank 账户。
-        other: "已创建 %{count} 个 Monobank 账户。"
-      all_skipped: 未创建任何 Monobank 账户。
-      no_accounts: 未选择任何 Monobank 账户。
-      creation_failed: 无法创建 Monobank 账户。
-    monobank_item:
-      deletion_in_progress: 正在删除中
-      syncing: 同步中
-      error: 错误
-      status_with_summary: 上次同步于 %{timestamp} 前 · %{summary}
-      status_never: 从未同步
-      delete: 删除
-      setup_needed: 账户需要设置
-      setup_description: 已关联 %{total} 个账户中的 %{linked} 个。
-      setup_action: 设置账户
-      no_accounts_title: 尚未导入账户
-      no_accounts_description: 获取 Monobank 账户并选择要关联的账户。
+      choose_account_type: 选择账户类型
+      choose_account_type_description: 跳过您不想追踪的账户。
+      create_accounts: 创建账户
+      no_accounts_to_setup: 没有需要设置的账户
+      no_credentials: 请先配置 Monobank 凭据。
+      subtitle: 选择每个 Monobank 卡片或储钱罐在 Sure 中的显示方式。
+      title: 关联 Monobank 账户
+    update:
+      success: Monobank 连接已更新。
+  providers:
+    monobank:
+      description: 使用个人 API 令牌连接乌克兰 Monobank 卡片和储钱罐
+      name: Monobank

@@ -22,10 +22,10 @@ ru:
       creation_failed: 'Не удалось создать счета: %{error}'
       no_accounts: Нет счетов для настройки.
       success:
-        one: "Успешно создан %{count} счёт."
-        few: "Успешно создано %{count} счёта."
-        many: "Успешно создано %{count} счетов."
-        other: "Успешно создано %{count} счёта."
+        few: Успешно создано %{count} счёта.
+        many: Успешно создано %{count} счетов.
+        one: Успешно создан %{count} счёт.
+        other: Успешно создано %{count} счёта.
     create:
       success: Подключение к Mercury успешно создано
     destroy:
@@ -48,8 +48,10 @@ ru:
       no_accounts_selected: Пожалуйста, выберите хотя бы один счёт
       no_api_token: API токен Mercury не найден. Пожалуйста, настройте его в настройках
         провайдера.
-      partial_invalid: "Привязано счетов: %{created_count}; уже были привязаны: %{already_linked_count}; с недопустимыми именами: %{invalid_count}"
-      partial_success: "Привязано счетов: %{created_count}. Уже были привязаны (%{already_linked_count}): %{already_linked_names}"
+      partial_invalid: 'Привязано счетов: %{created_count}; уже были привязаны: %{already_linked_count};
+        с недопустимыми именами: %{invalid_count}'
+      partial_success: 'Привязано счетов: %{created_count}. Уже были привязаны (%{already_linked_count}):
+        %{already_linked_names}'
       select_connection: Выберите подключение к Mercury перед связыванием счетов.
       success:
         few: Успешно связаны %{count} счёта

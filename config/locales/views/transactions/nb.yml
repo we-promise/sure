@@ -7,53 +7,32 @@ nb:
       amount: Beløp
       category: Kategori
       category_prompt: Velg en kategori
+      create_tag: Opprett
       date: Dato
       description: Beskrivelse
       description_placeholder: Beskriv transaksjonen
-      description_placeholder_optional: "La stå tomt for å bruke kategori-/selgernavnet, eller velg ett av dem først"
+      description_placeholder_optional: La stå tomt for å bruke kategori-/selgernavnet,
+        eller velg ett av dem først
       expense: Utgift
       income: Inntekt
-      none: (ingen)
+      none: "(ingen)"
       note_label: Notater
       note_placeholder: Skriv et notat
-      create_tag: Opprett
       submit: Legg til transaksjon
       tag_search_placeholder: Søk etter eller opprett tagg
       tags_label: Tagger
       transfer: Overføring
-    new:
-      new_transaction: Ny transaksjon
-    show:
-      account_label: Konto
-      amount: Beløp
-      category_label: Kategori
-      date_label: Dato
-      delete: Slett
-      delete_subtitle: Dette sletter transaksjonen permanent, påvirker dine historiske
-        saldoer og kan ikke angres.
-      delete_title: Slett transaksjon
-      details: Detaljer
-      merchant_label: Selger
-      name_label: Navn
-      nature: Type
-      none: (ingen)
-      note_label: Notater
-      note_placeholder: Skriv et notat
-      overview: Oversikt
-      settings: Innstillinger
-      tags_label: Tagger
-      uncategorized: "(ukategorisert)"
     header:
       edit_categories: Rediger kategorier
       edit_imports: Rediger importer
       edit_merchants: Rediger selgere
       edit_tags: Rediger tagger
       import: Importer
-    transaction:
-      linked_with_provider: Koblet med %{provider}
     index:
       transaction: transaksjon
       transactions: transaksjoner
+    new:
+      new_transaction: Ny transaksjon
     searches:
       filters:
         amount_filter:
@@ -71,6 +50,8 @@ nb:
           expense: Utgift
           income: Inntekt
           transfer: Overføring
+      form:
+        toggle_selection_checkboxes: Veksle alle avkryssingsbokser
       menu:
         account_filter: Konto
         amount_filter: Beløp
@@ -86,5 +67,25 @@ nb:
         equal_to: lik
         greater_than: større enn
         less_than: mindre enn
-      form:
-        toggle_selection_checkboxes: Veksle alle avkryssingsbokser
+    show:
+      account_label: Konto
+      amount: Beløp
+      category_label: Kategori
+      date_label: Dato
+      delete: Slett
+      delete_subtitle: Dette sletter transaksjonen permanent, påvirker dine historiske
+        saldoer og kan ikke angres.
+      delete_title: Slett transaksjon
+      details: Detaljer
+      merchant_label: Selger
+      name_label: Navn
+      nature: Type
+      none: "(ingen)"
+      note_label: Notater
+      note_placeholder: Skriv et notat
+      overview: Oversikt
+      settings: Innstillinger
+      tags_label: Tagger
+      uncategorized: "(ukategorisert)"
+    transaction:
+      linked_with_provider: Koblet med %{provider}

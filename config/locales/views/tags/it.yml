@@ -3,7 +3,7 @@ it:
   tags:
     create:
       created: Etichetta creata
-      error: "Errore nella creazione dell'etichetta: %{error}"
+      error: 'Errore nella creazione dell''etichetta: %{error}'
     destroy:
       deleted: Etichetta eliminata
     destroy_all:
@@ -13,10 +13,10 @@ it:
     form:
       placeholder: Nome etichetta
     index:
+      delete_all: Elimina tutto
       empty: Nessuna etichetta ancora
       new: Nuova etichetta
       tags: Etichette
-      delete_all: Elimina tutto
     new:
       new: Nuova etichetta
     tag:

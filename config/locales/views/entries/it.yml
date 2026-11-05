@@ -6,18 +6,21 @@ it:
     destroy:
       success: Voce eliminata
     empty:
-      description: Prova ad aggiungere una voce, modificare i filtri o affinare la ricerca
+      description: Prova ad aggiungere una voce, modificare i filtri o affinare la
+        ricerca
       title: Nessuna voce trovata
     loading:
       loading: Caricamento voci...
-    update:
-      success: Voce aggiornata
+    protection:
+      description: Le tue modifiche a questa voce non verranno sovrascritte dalla
+        sincronizzazione del provider.
+      locked_fields_label: 'Campi bloccati:'
+      title: Protetta dalla sincronizzazione
+      tooltip: Protetta dalla sincronizzazione
+      unlock_button: Consenti aggiornamento dalla sincronizzazione
+      unlock_confirm: Consentire alla sincronizzazione di aggiornare questa voce?
+        Le tue modifiche potrebbero essere sovrascritte alla prossima sincronizzazione.
     unlock:
       success: Voce sbloccata. Potrebbe essere aggiornata alla prossima sincronizzazione.
-    protection:
-      tooltip: Protetta dalla sincronizzazione
-      title: Protetta dalla sincronizzazione
-      description: Le tue modifiche a questa voce non verranno sovrascritte dalla sincronizzazione del provider.
-      locked_fields_label: "Campi bloccati:"
-      unlock_button: Consenti aggiornamento dalla sincronizzazione
-      unlock_confirm: Consentire alla sincronizzazione di aggiornare questa voce? Le tue modifiche potrebbero essere sovrascritte alla prossima sincronizzazione.
+    update:
+      success: Voce aggiornata

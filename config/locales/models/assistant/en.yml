@@ -3,5 +3,5 @@ en:
   assistant:
     external:
       model_catalog:
-        default_agent_label: "Default agent (%{id})"
+        default_agent_label: Default agent (%{id})
         named_agent_label: "%{name} (%{id})"

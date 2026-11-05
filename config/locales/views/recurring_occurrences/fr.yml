@@ -20,7 +20,8 @@ fr:
       link_payment: Lier le paiement
       manual_amount_label: Montant
       manual_date_label: Date
-      manual_explainer: Enregistrez un paiement dont vous êtes sûr lorsqu'aucune transaction ne lui correspond ici.
+      manual_explainer: Enregistrez un paiement dont vous êtes sûr lorsqu'aucune transaction
+        ne lui correspond ici.
       manual_payment: Paiement manuel
       mark_paid: Marquer comme payée
       mark_paid_hint: Solde le reste sans enregistrer de transaction.

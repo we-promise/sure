@@ -1,119 +1,143 @@
 ---
 nl:
   settings:
-    api_keys_controller:
-      success: "Uw API-sleutel is succesvol aangemaakt"
-      revoked_successfully: "API-sleutel is succesvol ingetrokken"
-      revoke_failed: "Intrekken van API-sleutel mislukt"
-      scope_descriptions:
-        read_accounts: "Accounts bekijken"
-        read_transactions: "Transacties bekijken"
-        read_balances: "Saldo's bekijken"
-        write_transactions: "Transacties aanmaken"
     api_keys:
       create:
-        success: "Uw API-sleutel is aangemaakt"
-      destroy:
-        revoked_successfully: "API-sleutel is ingetrokken"
-        revoke_failed: "Intrekken van API-sleutel mislukt"
-      shared:
-        active: "Actief"
-        created_ago: "%{time} geleden aangemaakt"
-        last_used_ago: "Laatst %{time} geleden gebruikt"
-        never_used: "Nooit gebruikt"
-        scope_read_only: "Alleen lezen"
-        scope_read_write: "Lezen/schrijven"
-      index:
-        title: "API-sleutels"
-        subtitle: "Beheer API-sleutels voor programmatische toegang tot uw gegevens."
-        new_key: "Nieuwe API-sleutel"
-        empty_heading: "Nog geen API-sleutels"
-        empty_description: "Maak een API-sleutel aan om programmatisch toegang te krijgen tot uw gegevens."
-        revoke_key: "Intrekken"
-        revoke_confirmation: "Weet u zeker dat u \"%{name}\" wilt intrekken? Elke applicatie die deze sleutel gebruikt, werkt dan direct niet meer."
-      key_reveal:
-        copied: "Gekopieerd!"
-      show:
-        title: "Beheer van API-sleutels"
-        newly_created:
-          page_title: "API-sleutel aangemaakt"
-          heading: "API-sleutel aangemaakt!"
-          key_ready: "Uw nieuwe API-sleutel \"%{name}\" is aangemaakt en klaar voor gebruik."
-          your_api_key: "Uw API-sleutel"
-          copy_store_securely: "Kopieer deze sleutel en bewaar hem veilig. U heeft hem nodig om uw API-verzoeken te authenticeren."
-          copy_api_key: "API-sleutel kopiëren"
-          how_to_use: "Zo gebruikt u uw API-sleutel"
-          continue: "Doorgaan naar instellingen voor API-sleutels"
-        current_api_key:
-          title: "Uw API-sleutel"
-          permissions: "Rechten"
-          copy_api_key: "API-sleutel kopiëren"
-          copy_store_securely: "Kopieer deze sleutel en bewaar hem veilig. U heeft hem nodig om uw API-verzoeken te authenticeren."
-          usage_instructions_title: "Hoe uw API-sleutel te gebruiken"
-          usage_instructions: "Voeg uw API-sleutel toe in de X-Api-Key header bij het maken van verzoeken naar de %{product_name} API:"
-          back_to_keys: "Terug naar API-sleutels"
-          revoke_key: "Sleutel intrekken"
-          revoke_confirmation: "Weet u zeker dat u deze API-sleutel wilt intrekken? Deze actie kan niet ongedaan worden gemaakt en zal alle applicaties die deze key gebruiken onmiddellijk uitschakelen."
-          description: "Uw actieve API-sleutel is klaar voor gebruik. Bewaar deze veilig en deel deze nooit publiekelijk."
-          active: "Actief"
-          key_name: "Naam"
-          created_at: "Aangemaakt"
-          last_used: "Laatst gebruikt"
-          expires: "Verloopt"
-          ago: "geleden"
-          never_used: "Nooit gebruikt"
-          never_expires: "Verloopt nooit"
-          regenerate_key: "Nieuwe key aanmaken"
-        no_api_key:
-          title: "API-sleutel"
-          heading: "Toegang tot uw accountgegevens via programma's"
-          description: "Krijg programmatische toegang tot uw %{product_name} gegevens met een beveiligde API-sleutel."
-          what_you_can_do: "Wat u kunt doen met de API:"
-          feature_1: "Programmatisch toegang tot uw accountgegevens"
-          feature_2: "Aangepaste integraties en applicaties bouwen"
-          feature_3: "Gegevensopvraging en -analyse automatiseren"
-          security_note_title: "Beveiliging eerst"
-          security_note: "Uw API-sleutel heeft beperkte rechten op basis van de scopes die u selecteert. U kunt slechts één actieve API-sleutel tegelijk hebben."
-          create_api_key: "API-sleutel aanmaken"
-      new:
-        title: "API-sleutel aanmaken"
-        create_new_api_key: "Nieuwe API-sleutel aanmaken"
-        subtitle: "Genereer een nieuwe API-sleutel om programmatisch toegang te krijgen tot uw Sure-gegevens."
-        description: "Configureer uw nieuwe API-sleutel met een beschrijvende naam en passende rechten."
-        name_label: "Naam van API-sleutel"
-        name_placeholder: "bijv. Productie App, Analytics Dashboard"
-        name_help_text: "Kies een beschrijvende naam zodat u deze sleutel later kunt herkennen."
-        name_help: "Kies een beschrijvende naam om het doel van deze key te identificeren."
-        permissions_label: "Rechten"
-        permissions_help: "Selecteer de rechten die uw API-sleutel nodig heeft. U kunt altijd een nieuwe sleutel aanmaken met andere rechten."
-        scope_read_only: "Alleen lezen"
-        scope_read_only_description: "Uw accounts, transacties en saldi bekijken"
-        scope_read_write: "Lezen/schrijven"
-        scope_read_write_description: "Uw gegevens bekijken en nieuwe transacties aanmaken"
-        scope_details:
-          read_accounts: "Accountinformatie, saldo's en accountgegevens bekijken"
-          read_transactions: "Transactiegegevens, categorieën en transactiedetails bekijken"
-          read_balances: "Historische saldogegevens en accountwaardetrends bekijken"
-          write_transactions: "Transactierecords aanmaken en bijwerken (binnenkort beschikbaar)"
-        security_warning_title: "Belangrijke beveiligingsmelding"
-        security_warning_body: "Uw API-sleutel wordt na het aanmaken maar één keer getoond. Kopieer hem en bewaar hem veilig. Iedereen met toegang tot deze sleutel heeft toegang tot uw gegevens volgens de rechten die u kiest."
-        security_warning: "Uw API-sleutel wordt slechts één keer getoond na aanmaak. Bewaar deze veilig en deel deze nooit publiekelijk. Als u deze verliest, moet u een nieuwe aanmaken."
-        create_key: "API-sleutel aanmaken"
-        cancel: "Annuleren"
-        save_api_key: "API-sleutel opslaan"
-        create_new_key: "Nieuwe API-sleutel aanmaken"
+        success: Uw API-sleutel is aangemaakt
       created:
-        title: "API-sleutel aangemaakt"
-        success_title: "API-sleutel succesvol aangemaakt"
-        success_description: "Uw nieuwe API-sleutel is klaar voor gebruik. Kopieer deze nu, want u zult deze niet opnieuw kunnen zien."
-        your_api_key: "Uw API-sleutel"
-        key_name: "Naam"
-        permissions: "Rechten"
+        continue: Doorgaan naar instellingen voor API-sleutels
+        copy_key: API-sleutel kopiëren
+        critical_warning_1: Dit is de enige keer dat u uw API-sleutel in platte tekst
+          ziet.
+        critical_warning_2: Kopieer en bewaar deze veilig in uw wachtwoordbeheerder
+          of applicatie.
+        critical_warning_3: Als u deze key verliest, moet u een nieuwe aanmaken.
         critical_warning_title: "⚠️ Kritiek: Bewaar uw API-sleutel nu"
-        critical_warning_1: "Dit is de enige keer dat u uw API-sleutel in platte tekst ziet."
-        critical_warning_2: "Kopieer en bewaar deze veilig in uw wachtwoordbeheerder of applicatie."
-        critical_warning_3: "Als u deze key verliest, moet u een nieuwe aanmaken."
-        usage_instructions_title: "Snelstart"
-        usage_instructions: "Gebruik uw API-sleutel door deze toe te voegen in de X-Api-Key header:"
-        copy_key: "API-sleutel kopiëren"
-        continue: "Doorgaan naar instellingen voor API-sleutels"
+        key_name: Naam
+        permissions: Rechten
+        success_description: Uw nieuwe API-sleutel is klaar voor gebruik. Kopieer
+          deze nu, want u zult deze niet opnieuw kunnen zien.
+        success_title: API-sleutel succesvol aangemaakt
+        title: API-sleutel aangemaakt
+        usage_instructions: 'Gebruik uw API-sleutel door deze toe te voegen in de
+          X-Api-Key header:'
+        usage_instructions_title: Snelstart
+        your_api_key: Uw API-sleutel
+      destroy:
+        revoke_failed: Intrekken van API-sleutel mislukt
+        revoked_successfully: API-sleutel is ingetrokken
+      index:
+        empty_description: Maak een API-sleutel aan om programmatisch toegang te krijgen
+          tot uw gegevens.
+        empty_heading: Nog geen API-sleutels
+        new_key: Nieuwe API-sleutel
+        revoke_confirmation: Weet u zeker dat u "%{name}" wilt intrekken? Elke applicatie
+          die deze sleutel gebruikt, werkt dan direct niet meer.
+        revoke_key: Intrekken
+        subtitle: Beheer API-sleutels voor programmatische toegang tot uw gegevens.
+        title: API-sleutels
+      key_reveal:
+        copied: Gekopieerd!
+      new:
+        cancel: Annuleren
+        create_key: API-sleutel aanmaken
+        create_new_api_key: Nieuwe API-sleutel aanmaken
+        create_new_key: Nieuwe API-sleutel aanmaken
+        description: Configureer uw nieuwe API-sleutel met een beschrijvende naam
+          en passende rechten.
+        name_help: Kies een beschrijvende naam om het doel van deze key te identificeren.
+        name_help_text: Kies een beschrijvende naam zodat u deze sleutel later kunt
+          herkennen.
+        name_label: Naam van API-sleutel
+        name_placeholder: bijv. Productie App, Analytics Dashboard
+        permissions_help: Selecteer de rechten die uw API-sleutel nodig heeft. U kunt
+          altijd een nieuwe sleutel aanmaken met andere rechten.
+        permissions_label: Rechten
+        save_api_key: API-sleutel opslaan
+        scope_details:
+          read_accounts: Accountinformatie, saldo's en accountgegevens bekijken
+          read_balances: Historische saldogegevens en accountwaardetrends bekijken
+          read_transactions: Transactiegegevens, categorieën en transactiedetails
+            bekijken
+          write_transactions: Transactierecords aanmaken en bijwerken (binnenkort
+            beschikbaar)
+        scope_read_only: Alleen lezen
+        scope_read_only_description: Uw accounts, transacties en saldi bekijken
+        scope_read_write: Lezen/schrijven
+        scope_read_write_description: Uw gegevens bekijken en nieuwe transacties aanmaken
+        security_warning: Uw API-sleutel wordt slechts één keer getoond na aanmaak.
+          Bewaar deze veilig en deel deze nooit publiekelijk. Als u deze verliest,
+          moet u een nieuwe aanmaken.
+        security_warning_body: Uw API-sleutel wordt na het aanmaken maar één keer
+          getoond. Kopieer hem en bewaar hem veilig. Iedereen met toegang tot deze
+          sleutel heeft toegang tot uw gegevens volgens de rechten die u kiest.
+        security_warning_title: Belangrijke beveiligingsmelding
+        subtitle: Genereer een nieuwe API-sleutel om programmatisch toegang te krijgen
+          tot uw Sure-gegevens.
+        title: API-sleutel aanmaken
+      shared:
+        active: Actief
+        created_ago: "%{time} geleden aangemaakt"
+        last_used_ago: Laatst %{time} geleden gebruikt
+        never_used: Nooit gebruikt
+        scope_read_only: Alleen lezen
+        scope_read_write: Lezen/schrijven
+      show:
+        current_api_key:
+          active: Actief
+          ago: geleden
+          back_to_keys: Terug naar API-sleutels
+          copy_api_key: API-sleutel kopiëren
+          copy_store_securely: Kopieer deze sleutel en bewaar hem veilig. U heeft
+            hem nodig om uw API-verzoeken te authenticeren.
+          created_at: Aangemaakt
+          description: Uw actieve API-sleutel is klaar voor gebruik. Bewaar deze veilig
+            en deel deze nooit publiekelijk.
+          expires: Verloopt
+          key_name: Naam
+          last_used: Laatst gebruikt
+          never_expires: Verloopt nooit
+          never_used: Nooit gebruikt
+          permissions: Rechten
+          regenerate_key: Nieuwe key aanmaken
+          revoke_confirmation: Weet u zeker dat u deze API-sleutel wilt intrekken?
+            Deze actie kan niet ongedaan worden gemaakt en zal alle applicaties die
+            deze key gebruiken onmiddellijk uitschakelen.
+          revoke_key: Sleutel intrekken
+          title: Uw API-sleutel
+          usage_instructions: 'Voeg uw API-sleutel toe in de X-Api-Key header bij
+            het maken van verzoeken naar de %{product_name} API:'
+          usage_instructions_title: Hoe uw API-sleutel te gebruiken
+        newly_created:
+          continue: Doorgaan naar instellingen voor API-sleutels
+          copy_api_key: API-sleutel kopiëren
+          copy_store_securely: Kopieer deze sleutel en bewaar hem veilig. U heeft
+            hem nodig om uw API-verzoeken te authenticeren.
+          heading: API-sleutel aangemaakt!
+          how_to_use: Zo gebruikt u uw API-sleutel
+          key_ready: Uw nieuwe API-sleutel "%{name}" is aangemaakt en klaar voor gebruik.
+          page_title: API-sleutel aangemaakt
+          your_api_key: Uw API-sleutel
+        no_api_key:
+          create_api_key: API-sleutel aanmaken
+          description: Krijg programmatische toegang tot uw %{product_name} gegevens
+            met een beveiligde API-sleutel.
+          feature_1: Programmatisch toegang tot uw accountgegevens
+          feature_2: Aangepaste integraties en applicaties bouwen
+          feature_3: Gegevensopvraging en -analyse automatiseren
+          heading: Toegang tot uw accountgegevens via programma's
+          security_note: Uw API-sleutel heeft beperkte rechten op basis van de scopes
+            die u selecteert. U kunt slechts één actieve API-sleutel tegelijk hebben.
+          security_note_title: Beveiliging eerst
+          title: API-sleutel
+          what_you_can_do: 'Wat u kunt doen met de API:'
+        title: Beheer van API-sleutels
+    api_keys_controller:
+      revoke_failed: Intrekken van API-sleutel mislukt
+      revoked_successfully: API-sleutel is succesvol ingetrokken
+      scope_descriptions:
+        read_accounts: Accounts bekijken
+        read_balances: Saldo's bekijken
+        read_transactions: Transacties bekijken
+        write_transactions: Transacties aanmaken
+      success: Uw API-sleutel is succesvol aangemaakt

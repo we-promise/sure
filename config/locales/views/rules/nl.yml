@@ -1,166 +1,198 @@
 ---
 nl:
+  rule:
+    conditions:
+      condition:
+        value_placeholder: Voer een waarde in
+      condition_group:
+        add_condition: Voorwaarde toevoegen
+        all: alle
+        and_prefix: en
+        any: een van de
+        match: voldoet aan
+        of_the_following_conditions: volgende voorwaarden
   rules:
-    no_action: "Geen actie"
-    no_condition: "Geen voorwaarde"
-    notification_baseline_timed_out: "Deze regel staat nog uit. Controleren met welke transacties de regel al overeenkomt duurde te lang, en zonder die controle zou de regel voor al die transacties een e-mail sturen. Vereenvoudig de voorwaarden en zet de regel daarna weer aan."
-    category_rule_cta:
-      close: "Sluiten"
-      create_rule: "Regel aanmaken"
-      description: "U kunt een regel aanmaken om transacties zoals deze automatisch te categoriseren"
-      dont_show_again: "Niet meer tonen"
-      hide_for_today: "Vandaag verbergen"
-      hide_for_today_hint: "Met Vandaag verbergen worden deze suggesties 24 uur gepauzeerd."
-      message: "Bijgewerkt naar %{category_name}"
-    classifier_rules:
-      category_classifier: "Categorieclassificatie"
-      merchant_matcher: "Handelaarherkenning"
-    rule:
-      edit: "Bewerken"
-      re_apply_rule: "Regel opnieuw toepassen"
-      delete: "Verwijderen"
-      then: "DAN"
-      and_more_conditions:
-        one: "en nog 1 voorwaarde"
-        other: "en nog %{count} voorwaarden"
-      and_more_actions:
-        one: "en nog 1 actie"
-        other: "en nog %{count} acties"
-      action_label_to: "%{label}: %{value}"
-      all_past_and_future: "Alle eerdere en toekomstige %{resource}"
-      on_or_after: "%{resource} op of na %{date}"
-      stop_processing: "Stop"
-      stop_processing_hint: "Regels verderop wijzigen geen transacties die met deze regel overeenkomen."
-    form:
-      rule_name_label: "Naam van regel (optioneel)"
-      rule_name_placeholder: "Voer een naam in voor deze regel"
-      add_condition: "Voorwaarde toevoegen"
-      add_condition_group: "Voorwaardengroep toevoegen"
-      add_action: "Actie toevoegen"
-      all_past_and_future: "Alle eerdere en toekomstige %{resource}"
-      starting_from: "Vanaf"
-      then: "DAN"
-      stop_processing_label: "Verdere regels niet meer verwerken"
-      stop_processing_description: "Regels verderop in de lijst wijzigen geen transacties waarmee deze regel overeenkomt."
-    index:
-      page_title: "Regels"
-      delete_all_rules: "Alle regels verwijderen"
-      new_rule: "Nieuwe regel"
-      ai_cost_warning: "Regelacties met AI kosten geld. Filter zo nauwkeurig mogelijk om onnodige kosten te voorkomen."
-      rules_heading: "Regels"
-      order_hint: "Regels worden van boven naar beneden uitgevoerd. Zodra een regel een veld van een transactie instelt, wijzigen regels verderop dat veld niet meer. Tags worden door elke overeenkomende regel toegevoegd. Sleep regels om de volgorde te wijzigen."
-      reorder_rule: "Regel %{name} verplaatsen. Druk op Enter of spatie om de regel vast te pakken en gebruik daarna de pijltjestoetsen om hem te verplaatsen."
-      no_rules_title: "Nog geen regels"
-      no_rules_description: "Stel regels in om bij elke accountsynchronisatie acties uit te voeren op uw transacties en andere gegevens."
-    confirm:
-      title: "Wijzigingen bevestigen"
-      title_with_name: "Wijzigingen aan \"%{name}\" bevestigen"
-      apply_notice_html: "U staat op het punt deze regel toe te passen op <span class=\"text-primary font-medium\">%{count} %{resource}</span> die aan de criteria van de regel voldoen. Bevestig of u met deze wijziging wilt doorgaan."
-      rules_above_notice:
-        one: "De actieve regel erboven wordt eerst uitgevoerd, dus het resultaat is hetzelfde als bij een volledige uitvoering."
-        other: "De %{count} actieve regels erboven worden eerst uitgevoerd, dus het resultaat is hetzelfde als bij een volledige uitvoering."
-      ai_cost_title: "Geschatte AI-kosten"
-      ai_cost_with_estimate_html: "Hiermee wordt AI gebruikt om %{count} transactie(s) te categoriseren. Geschatte kosten: <span class=\"font-semibold\">~$%{cost}</span>"
-      ai_cost_no_estimate_html: "Hiermee wordt AI gebruikt om %{count} transactie(s) te categoriseren."
-      cost_unavailable_model: "Kostenschatting niet beschikbaar voor model \"%{model}\"."
-      cost_unavailable_no_provider: "Kostenschatting niet beschikbaar (geen LLM-provider geconfigureerd)."
-      cost_warning: "Er kunnen kosten in rekening worden gebracht. Raadpleeg de modelprovider voor de actuele prijzen."
-      view_usage_history: "Gebruiksgeschiedenis bekijken"
-      confirm_changes: "Wijzigingen bevestigen"
     actions:
-      to_label: "naar"
-      value_placeholder: "Voer een waarde in"
       split:
-        type_fixed: "Vast bedrag"
-        type_percentage: "Percentage"
-        type_label: "Type splitsing"
-        add_split: "Splitsing toevoegen"
-        name_placeholder: "Naam van splitsing"
-        share_label: "Bedrag of percentage van splitsing"
-        category_label: "Categorie van splitsing"
-        merchant_label: "Handelaar van splitsing"
-        tags_label: "Tags van splitsing"
-        remove_split: "Splitsing verwijderen"
-        hint: "Vaste splitsingen worden eerst afgetrokken, als exacte bedragen. Procentuele splitsingen verdelen daarna wat overblijft. Als elke splitsing hier een vast bedrag gebruikt, voeg dan ook een voorwaarde toe die op een exact transactiebedrag filtert (bijv. Bedrag = 42,00), omdat elke overeenkomende transactie hetzelfde totaal moet hebben om de vaste bedragen te laten kloppen. Een splitsingsregel kan geen andere acties hebben."
-        fixed_summary_label: "vast"
+        add_split: Splitsing toevoegen
+        category_label: Categorie van splitsing
+        fixed_summary_label: vast
+        hint: Vaste splitsingen worden eerst afgetrokken, als exacte bedragen. Procentuele
+          splitsingen verdelen daarna wat overblijft. Als elke splitsing hier een
+          vast bedrag gebruikt, voeg dan ook een voorwaarde toe die op een exact transactiebedrag
+          filtert (bijv. Bedrag = 42,00), omdat elke overeenkomende transactie hetzelfde
+          totaal moet hebben om de vaste bedragen te laten kloppen. Een splitsingsregel
+          kan geen andere acties hebben.
+        merchant_label: Handelaar van splitsing
+        name_placeholder: Naam van splitsing
+        remove_split: Splitsing verwijderen
+        share_label: Bedrag of percentage van splitsing
         summary:
           one: "%{count} splitsing"
           other: "%{count} splitsingen"
-    update:
-      success: "Regel bijgewerkt"
-    destroy:
-      success: "Regel verwijderd"
-    destroy_all:
-      success: "Alle regels verwijderd"
+        tags_label: Tags van splitsing
+        type_fixed: Vast bedrag
+        type_label: Type splitsing
+        type_percentage: Percentage
+      to_label: naar
+      value_placeholder: Voer een waarde in
     apply_all:
-      button: "Alles toepassen"
-      confirm_title: "Alle regels toepassen"
-      confirm_message: "U staat op het punt om %{count} regels toe te passen die %{transactions} unieke transacties beïnvloeden. Bevestig alstublieft als u wilt doorgaan."
-      confirm_button: "Bevestigen en alles toepassen"
-      success: "Alle regels zijn in de wachtrij geplaatst voor uitvoering"
-      ai_cost_title: "AI kostenraming"
-      ai_cost_message: "Dit zal AI gebruiken om tot %{transactions} transacties te categoriseren."
-      estimated_cost: "Geschatte kosten: ~$%{cost}"
-      cost_unavailable_model: "Kostenraming niet beschikbaar voor model \"%{model}\"."
-      cost_unavailable_no_provider: "Kostenraming niet beschikbaar (geen LLM provider geconfigureerd)."
-      cost_warning: "U kunt kosten maken, controleer bij de modelprovider voor de meest actuele prijzen."
-      view_usage: "Gebruiksgeschiedenis bekijken"
-    recent_runs:
-      title: "Recente uitvoeringen"
-      description: "Bekijk de uitvoeringsgeschiedenis van uw regels inclusief succes/faalstatus en transactieaantallen."
-      unnamed_rule: "Naamloze regel"
-      columns:
-        date_time: "Datum/tijd"
-        execution_type: "Type"
-        status: "Status"
-        rule_name: "Regelnaam"
-        transactions_counts:
-          queued: "In wachtrij"
-          processed: "Verwerkt"
-          modified: "Gewijzigd"
-          blocked: "Geblokkeerd"
-      execution_types:
-        manual: "Handmatig"
-        scheduled: "Gepland"
-      statuses:
-        pending: "In behandeling"
-        success: "Succesvol"
-        failed: "Mislukt"
+      ai_cost_message: Dit zal AI gebruiken om tot %{transactions} transacties te
+        categoriseren.
+      ai_cost_title: AI kostenraming
+      button: Alles toepassen
+      confirm_button: Bevestigen en alles toepassen
+      confirm_message: U staat op het punt om %{count} regels toe te passen die %{transactions}
+        unieke transacties beïnvloeden. Bevestig alstublieft als u wilt doorgaan.
+      confirm_title: Alle regels toepassen
+      cost_unavailable_model: Kostenraming niet beschikbaar voor model "%{model}".
+      cost_unavailable_no_provider: Kostenraming niet beschikbaar (geen LLM provider
+        geconfigureerd).
+      cost_warning: U kunt kosten maken, controleer bij de modelprovider voor de meest
+        actuele prijzen.
+      estimated_cost: 'Geschatte kosten: ~$%{cost}'
+      success: Alle regels zijn in de wachtrij geplaatst voor uitvoering
+      view_usage: Gebruiksgeschiedenis bekijken
+    category_rule_cta:
+      close: Sluiten
+      create_rule: Regel aanmaken
+      description: U kunt een regel aanmaken om transacties zoals deze automatisch
+        te categoriseren
+      dont_show_again: Niet meer tonen
+      hide_for_today: Vandaag verbergen
+      hide_for_today_hint: Met Vandaag verbergen worden deze suggesties 24 uur gepauzeerd.
+      message: Bijgewerkt naar %{category_name}
+    classifier_rules:
+      category_classifier: Categorieclassificatie
+      merchant_matcher: Handelaarherkenning
     clear_ai_cache:
-      button: "AI-cache resetten"
-      confirm_title: "AI-cache resetten?"
-      confirm_body: "Weet u zeker dat u de AI-cache wilt resetten? Hierdoor kunnen AI-regels alle transacties opnieuw verwerken. Dit kan extra API-kosten met zich meebrengen."
-      confirm_button: "Cache resetten"
-      success: "AI-cache wordt gewist. Dit kan even duren."
+      button: AI-cache resetten
+      confirm_body: Weet u zeker dat u de AI-cache wilt resetten? Hierdoor kunnen
+        AI-regels alle transacties opnieuw verwerken. Dit kan extra API-kosten met
+        zich meebrengen.
+      confirm_button: Cache resetten
+      confirm_title: AI-cache resetten?
+      success: AI-cache wordt gewist. Dit kan even duren.
     condition_filters:
-      transaction_type:
-        income: "Inkomsten"
-        expense: "Uitgave"
-        transfer: "Overboeking"
-        equal_to: "Gelijk aan"
       operators:
-        contains: "Bevat"
-        does_not_contain: "Bevat niet"
-        starts_with: "Begint met"
-        ends_with: "Eindigt op"
-        matches_regex: "Komt overeen met regex"
-        equal_to: "Gelijk aan"
-        is_equal_to: "Is gelijk aan"
-        not_equal_to: "Niet gelijk aan"
-        is_empty: "Is leeg"
-        is_not_empty: "Is niet leeg"
-        greater_than: "Groter dan"
-        greater_or_equal_to: "Groter dan of gelijk aan"
-        less_than: "Kleiner dan"
-        less_than_or_equal_to: "Kleiner dan of gelijk aan"
-  rule:
-    conditions:
-      condition_group:
-        and_prefix: "en"
-        match: "voldoet aan"
-        all: "alle"
-        any: "een van de"
-        of_the_following_conditions: "volgende voorwaarden"
-        add_condition: "Voorwaarde toevoegen"
-      condition:
-        value_placeholder: "Voer een waarde in"
+        contains: Bevat
+        does_not_contain: Bevat niet
+        ends_with: Eindigt op
+        equal_to: Gelijk aan
+        greater_or_equal_to: Groter dan of gelijk aan
+        greater_than: Groter dan
+        is_empty: Is leeg
+        is_equal_to: Is gelijk aan
+        is_not_empty: Is niet leeg
+        less_than: Kleiner dan
+        less_than_or_equal_to: Kleiner dan of gelijk aan
+        matches_regex: Komt overeen met regex
+        not_equal_to: Niet gelijk aan
+        starts_with: Begint met
+      transaction_type:
+        equal_to: Gelijk aan
+        expense: Uitgave
+        income: Inkomsten
+        transfer: Overboeking
+    confirm:
+      ai_cost_no_estimate_html: Hiermee wordt AI gebruikt om %{count} transactie(s)
+        te categoriseren.
+      ai_cost_title: Geschatte AI-kosten
+      ai_cost_with_estimate_html: 'Hiermee wordt AI gebruikt om %{count} transactie(s)
+        te categoriseren. Geschatte kosten: <span class="font-semibold">~$%{cost}</span>'
+      apply_notice_html: U staat op het punt deze regel toe te passen op <span class="text-primary
+        font-medium">%{count} %{resource}</span> die aan de criteria van de regel
+        voldoen. Bevestig of u met deze wijziging wilt doorgaan.
+      confirm_changes: Wijzigingen bevestigen
+      cost_unavailable_model: Kostenschatting niet beschikbaar voor model "%{model}".
+      cost_unavailable_no_provider: Kostenschatting niet beschikbaar (geen LLM-provider
+        geconfigureerd).
+      cost_warning: Er kunnen kosten in rekening worden gebracht. Raadpleeg de modelprovider
+        voor de actuele prijzen.
+      rules_above_notice:
+        one: De actieve regel erboven wordt eerst uitgevoerd, dus het resultaat is
+          hetzelfde als bij een volledige uitvoering.
+        other: De %{count} actieve regels erboven worden eerst uitgevoerd, dus het
+          resultaat is hetzelfde als bij een volledige uitvoering.
+      title: Wijzigingen bevestigen
+      title_with_name: Wijzigingen aan "%{name}" bevestigen
+      view_usage_history: Gebruiksgeschiedenis bekijken
+    destroy:
+      success: Regel verwijderd
+    destroy_all:
+      success: Alle regels verwijderd
+    form:
+      add_action: Actie toevoegen
+      add_condition: Voorwaarde toevoegen
+      add_condition_group: Voorwaardengroep toevoegen
+      all_past_and_future: Alle eerdere en toekomstige %{resource}
+      rule_name_label: Naam van regel (optioneel)
+      rule_name_placeholder: Voer een naam in voor deze regel
+      starting_from: Vanaf
+      stop_processing_description: Regels verderop in de lijst wijzigen geen transacties
+        waarmee deze regel overeenkomt.
+      stop_processing_label: Verdere regels niet meer verwerken
+      then: DAN
+    index:
+      ai_cost_warning: Regelacties met AI kosten geld. Filter zo nauwkeurig mogelijk
+        om onnodige kosten te voorkomen.
+      delete_all_rules: Alle regels verwijderen
+      new_rule: Nieuwe regel
+      no_rules_description: Stel regels in om bij elke accountsynchronisatie acties
+        uit te voeren op uw transacties en andere gegevens.
+      no_rules_title: Nog geen regels
+      order_hint: Regels worden van boven naar beneden uitgevoerd. Zodra een regel
+        een veld van een transactie instelt, wijzigen regels verderop dat veld niet
+        meer. Tags worden door elke overeenkomende regel toegevoegd. Sleep regels
+        om de volgorde te wijzigen.
+      page_title: Regels
+      reorder_rule: Regel %{name} verplaatsen. Druk op Enter of spatie om de regel
+        vast te pakken en gebruik daarna de pijltjestoetsen om hem te verplaatsen.
+      rules_heading: Regels
+    no_action: Geen actie
+    no_condition: Geen voorwaarde
+    notification_baseline_timed_out: Deze regel staat nog uit. Controleren met welke
+      transacties de regel al overeenkomt duurde te lang, en zonder die controle zou
+      de regel voor al die transacties een e-mail sturen. Vereenvoudig de voorwaarden
+      en zet de regel daarna weer aan.
+    recent_runs:
+      columns:
+        date_time: Datum/tijd
+        execution_type: Type
+        rule_name: Regelnaam
+        status: Status
+        transactions_counts:
+          blocked: Geblokkeerd
+          modified: Gewijzigd
+          processed: Verwerkt
+          queued: In wachtrij
+      description: Bekijk de uitvoeringsgeschiedenis van uw regels inclusief succes/faalstatus
+        en transactieaantallen.
+      execution_types:
+        manual: Handmatig
+        scheduled: Gepland
+      statuses:
+        failed: Mislukt
+        pending: In behandeling
+        success: Succesvol
+      title: Recente uitvoeringen
+      unnamed_rule: Naamloze regel
+    rule:
+      action_label_to: "%{label}: %{value}"
+      all_past_and_future: Alle eerdere en toekomstige %{resource}
+      and_more_actions:
+        one: en nog 1 actie
+        other: en nog %{count} acties
+      and_more_conditions:
+        one: en nog 1 voorwaarde
+        other: en nog %{count} voorwaarden
+      delete: Verwijderen
+      edit: Bewerken
+      on_or_after: "%{resource} op of na %{date}"
+      re_apply_rule: Regel opnieuw toepassen
+      stop_processing: Stop
+      stop_processing_hint: Regels verderop wijzigen geen transacties die met deze
+        regel overeenkomen.
+      then: DAN
+    update:
+      success: Regel bijgewerkt

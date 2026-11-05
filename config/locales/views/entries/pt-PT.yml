@@ -10,14 +10,16 @@ pt-PT:
       title: Não foram encontrados registos
     loading:
       loading: A carregar registos...
-    update:
-      success: Registo atualizado
+    protection:
+      description: As suas edições neste registo não serão sobrescritas pela sincronização
+        do serviço.
+      locked_fields_label: 'Campos bloqueados:'
+      title: Protegido contra sincronização
+      tooltip: Protegido contra sincronização
+      unlock_button: Permitir que a sincronização atualize
+      unlock_confirm: Permitir que a sincronização atualize este registo? As suas
+        alterações podem ser sobrescritas na próxima sincronização.
     unlock:
       success: Registo desbloqueado. Poderá ser atualizado na próxima sincronização.
-    protection:
-      tooltip: Protegido contra sincronização
-      title: Protegido contra sincronização
-      description: As suas edições neste registo não serão sobrescritas pela sincronização do serviço.
-      locked_fields_label: "Campos bloqueados:"
-      unlock_button: Permitir que a sincronização atualize
-      unlock_confirm: Permitir que a sincronização atualize este registo? As suas alterações podem ser sobrescritas na próxima sincronização.
+    update:
+      success: Registo atualizado

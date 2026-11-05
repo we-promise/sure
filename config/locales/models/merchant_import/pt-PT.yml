@@ -4,5 +4,5 @@ pt-PT:
     errors:
       models:
         merchant_import:
-          missing_columns: "Colunas obrigatórias em falta: %{columns}"
-          duplicate_columns: "Nomes de colunas duplicados após normalização: %{columns}"
+          duplicate_columns: 'Nomes de colunas duplicados após normalização: %{columns}'
+          missing_columns: 'Colunas obrigatórias em falta: %{columns}'

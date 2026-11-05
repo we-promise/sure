@@ -1,6 +1,30 @@
 ---
 en:
   properties:
+    address:
+      address_line1_label: Address Line 1
+      address_line1_placeholder: 123 Main Street
+      city_label: City
+      city_placeholder: San Francisco
+      country_label: Country
+      country_placeholder: USA
+      postal_code_label: Postal Code
+      postal_code_placeholder: '12345'
+      save: Save
+      state_region_label: State/Region
+      state_region_placeholder: CA
+      title: Enter property manually
+    avm_providers:
+      chimnie: Chimnie
+      realie: Realie
+      rentcast: RentCast
+    balances:
+      market_value_label: Estimated market value
+      market_value_tooltip: The estimated market value of your property. This number
+        can often be found on sites like Zillow or Redfin, and is never an exact number.
+      next: Next
+      save: Save
+      title: Enter property manually
     edit:
       edit: Edit %{account}
       title: Enter property manually
@@ -22,69 +46,55 @@ en:
       subtype_prompt: Select property type
       year_built: Year built
       year_built_placeholder: '2000'
-    avm_providers:
-      rentcast: RentCast
-      realie: Realie
-      chimnie: Chimnie
+    form_tabs:
+      address: Address
+      overview: Overview
+      value: Value
+    link_valuation:
+      link_failed: "%{provider} couldn't value this property, so it wasn't linked.
+        Check that the address is correct, then try again."
+      linked: Linked to %{provider} and updated the property's value.
+      not_linkable: This property can't be linked to that provider. Check that its
+        address is complete and in a supported country, and that the account currency
+        matches the provider.
     new:
-      title: Enter property manually
-      next: "Next"
-      avm_option: "Add via %{provider}"
-      avm_title: "Add property via %{provider}"
-      avm_description: "Enter a name for the property and its address. %{provider} will look up the property details and estimated market value for you."
-      avm_us_only: "%{provider} only supports properties located in the United States."
-      avm_uk_only: "%{provider} only supports residential properties located in the United Kingdom."
-      avm_uprn_label: "UPRN"
-      avm_uprn_placeholder: "100023336956"
-      avm_uprn_help: "The Unique Property Reference Number (up to 12 digits) identifies every UK address. Find it on GeoPlace's findmyaddress.co.uk or ask your local council. %{provider} uses it to value the property for free."
-      avm_county_label: "County (optional)"
-      avm_town_label: "Town or city"
-      avm_postcode_label: "Postcode"
-      avm_submit: "Look up property"
-      avm_preview_title: "Confirm property details"
-      avm_preview_description: "Here's what %{provider} found. Review the details before adding the property — nothing has been created yet."
-      avm_preview_no_record: "%{provider} couldn't find a property record at this address, so the value shown is an estimate based on the surrounding area. Double-check the address before continuing."
-      avm_preview_back: "Back"
-      avm_preview_uprn: "UPRN"
-      avm_preview_range: "Estimate range"
-      avm_preview_confidence: "Confidence"
+      avm_attribution_chimnie: Valuation data from Chimnie. Contains OS data © Crown
+        copyright and database right, Royal Mail data © Royal Mail copyright and database
+        right, and HM Land Registry data © Crown copyright and database right, licensed
+        under the Open Government Licence v3.0.
       avm_confidence:
-        high: "High"
-        medium: "Medium"
-        low: "Low"
-      avm_attribution_chimnie: "Valuation data from Chimnie. Contains OS data © Crown copyright and database right, Royal Mail data © Royal Mail copyright and database right, and HM Land Registry data © Crown copyright and database right, licensed under the Open Government Licence v3.0."
-      avm_preview_confirm: "Add property"
-    address:
-      title: "Enter property manually"
-      address_line1_label: "Address Line 1"
-      address_line1_placeholder: "123 Main Street"
-      city_label: "City"
-      city_placeholder: "San Francisco"
-      state_region_label: "State/Region"
-      state_region_placeholder: "CA"
-      postal_code_label: "Postal Code"
-      postal_code_placeholder: "12345"
-      country_label: "Country"
-      country_placeholder: "USA"
-      save: "Save"
-    balances:
-      title: "Enter property manually"
-      market_value_label: "Estimated market value"
-      market_value_tooltip: "The estimated market value of your property. This number can often be found on sites like Zillow or Redfin, and is never an exact number."
-      save: "Save"
-      next: "Next"
-    overview_fields:
-      name_label: "Name"
-      name_placeholder: "Vacation home"
-      subtype_prompt: "Select type"
-      property_type_label: "Property type"
-      year_built_label: "Year Built (optional)"
-      year_built_placeholder: "1990"
-      area_label: "Area (optional)"
-      area_placeholder: "1200"
-      square_feet: "Square Feet"
-      square_meters: "Square Meters"
-      area_unit_label: "Area Unit"
+        high: High
+        low: Low
+        medium: Medium
+      avm_county_label: County (optional)
+      avm_description: Enter a name for the property and its address. %{provider}
+        will look up the property details and estimated market value for you.
+      avm_option: Add via %{provider}
+      avm_postcode_label: Postcode
+      avm_preview_back: Back
+      avm_preview_confidence: Confidence
+      avm_preview_confirm: Add property
+      avm_preview_description: Here's what %{provider} found. Review the details before
+        adding the property — nothing has been created yet.
+      avm_preview_no_record: "%{provider} couldn't find a property record at this
+        address, so the value shown is an estimate based on the surrounding area.
+        Double-check the address before continuing."
+      avm_preview_range: Estimate range
+      avm_preview_title: Confirm property details
+      avm_preview_uprn: UPRN
+      avm_submit: Look up property
+      avm_title: Add property via %{provider}
+      avm_town_label: Town or city
+      avm_uk_only: "%{provider} only supports residential properties located in the
+        United Kingdom."
+      avm_uprn_help: The Unique Property Reference Number (up to 12 digits) identifies
+        every UK address. Find it on GeoPlace's findmyaddress.co.uk or ask your local
+        council. %{provider} uses it to value the property for free.
+      avm_uprn_label: UPRN
+      avm_uprn_placeholder: '100023336956'
+      avm_us_only: "%{provider} only supports properties located in the United States."
+      next: Next
+      title: Enter property manually
     overview:
       living_area: Living Area
       market_value: Market Value
@@ -92,44 +102,49 @@ en:
       trend: Trend
       unknown: Unknown
       year_built: Year Built
+    overview_fields:
+      area_label: Area (optional)
+      area_placeholder: '1200'
+      area_unit_label: Area Unit
+      name_label: Name
+      name_placeholder: Vacation home
+      property_type_label: Property type
+      square_feet: Square Feet
+      square_meters: Square Meters
+      subtype_prompt: Select type
+      year_built_label: Year Built (optional)
+      year_built_placeholder: '1990'
+    refresh_valuation:
+      not_configured: "%{provider} isn't configured. Add its API key in Settings →
+        Self-Hosting to refresh this valuation."
+      not_linked: This property isn't linked to a valuation provider.
+      queued: The valuation refresh has started. The new value will appear shortly.
+    subtypes:
+      agri_land:
+        long: Agricultural Land
+        short: Agri Land
+      apartment:
+        long: Apartment
+        short: Apartment
+      commercial:
+        long: Commercial Property
+        short: Commercial
+      plot:
+        long: Plot / Land
+        short: Plot
+      rented:
+        long: Rented Property
+        short: Rented
     tabs:
       overview:
+        edit_account_details: Edit account details
+        link_valuation: Update value automatically with %{provider}
+        link_valuation_description: This property's value is only updated manually.
         living_area: Living Area
         market_value: Market Value
         purchase_price: Purchase Price
+        refresh_valuation: Refresh valuation
         trend: Trend
         unknown: Unknown
+        valuation_source: Valued by %{provider}, last updated %{date}
         year_built: Year Built
-        edit_account_details: "Edit account details"
-        refresh_valuation: "Refresh valuation"
-        valuation_source: "Valued by %{provider}, last updated %{date}"
-        link_valuation: "Update value automatically with %{provider}"
-        link_valuation_description: "This property's value is only updated manually."
-    refresh_valuation:
-      queued: "The valuation refresh has started. The new value will appear shortly."
-      not_linked: "This property isn't linked to a valuation provider."
-      not_configured: "%{provider} isn't configured. Add its API key in Settings → Self-Hosting to refresh this valuation."
-    link_valuation:
-      linked: "Linked to %{provider} and updated the property's value."
-      link_failed: "%{provider} couldn't value this property, so it wasn't linked. Check that the address is correct, then try again."
-      not_linkable: "This property can't be linked to that provider. Check that its address is complete and in a supported country, and that the account currency matches the provider."
-    subtypes:
-      apartment:
-        short: Apartment
-        long: Apartment
-      plot:
-        short: Plot
-        long: Plot / Land
-      commercial:
-        short: Commercial
-        long: Commercial Property
-      rented:
-        short: Rented
-        long: Rented Property
-      agri_land:
-        short: Agri Land
-        long: Agricultural Land
-    form_tabs:
-      address: Address
-      overview: Overview
-      value: Value

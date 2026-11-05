@@ -6,7 +6,9 @@ nl:
         sso_provider:
           attributes:
             settings:
-              saml_url_required: "Een IdP-metadata-URL of IdP-SSO-URL is vereist voor SAML-providers"
-              saml_cert_required: "Een IdP-certificaat of certificaatvingerafdruk is vereist als er geen metadata-URL wordt gebruikt"
-              metadata_url_invalid: "IdP-metadata-URL moet een geldige URL zijn"
-              sso_url_invalid: "IdP-SSO-URL moet een geldige URL zijn"
+              metadata_url_invalid: IdP-metadata-URL moet een geldige URL zijn
+              saml_cert_required: Een IdP-certificaat of certificaatvingerafdruk is
+                vereist als er geen metadata-URL wordt gebruikt
+              saml_url_required: Een IdP-metadata-URL of IdP-SSO-URL is vereist voor
+                SAML-providers
+              sso_url_invalid: IdP-SSO-URL moet een geldige URL zijn

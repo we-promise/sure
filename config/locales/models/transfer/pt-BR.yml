@@ -6,12 +6,12 @@ pt-BR:
         transfer:
           attributes:
             base:
-              inflow_cannot_be_in_multiple_transfers: Transação de entrada não pode fazer
-                parte de múltiplas transferências
+              inflow_cannot_be_in_multiple_transfers: Transação de entrada não pode
+                fazer parte de múltiplas transferências
               must_be_from_different_accounts: Transferência deve ter contas diferentes
               must_be_from_same_family: Transferência deve ser da mesma família
-              must_be_within_date_range: Datas das transações de transferência devem estar
-                dentro de 4 dias uma da outra
+              must_be_within_date_range: Datas das transações de transferência devem
+                estar dentro de 4 dias uma da outra
               must_have_opposite_amounts: Transações de transferência devem ter valores
                 opostos
               must_have_single_currency: Transferência deve ter uma única moeda

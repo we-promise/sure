@@ -16,5 +16,8 @@ fr:
             account:
               must_be_linked_to_goal: Sélectionnez l'un des comptes liés à l'objectif.
             currency:
-              must_match_goal: La devise de la promesse doit correspondre à celle de l'objectif.
-          duplicate_open_pledge: Vous avez déjà une promesse en cours pour ce montant sur ce compte. Annulez ou prolongez la promesse existante avant d'en enregistrer une autre.
+              must_match_goal: La devise de la promesse doit correspondre à celle
+                de l'objectif.
+          duplicate_open_pledge: Vous avez déjà une promesse en cours pour ce montant
+            sur ce compte. Annulez ou prolongez la promesse existante avant d'en enregistrer
+            une autre.

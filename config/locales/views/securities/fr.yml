@@ -8,9 +8,9 @@ fr:
       alpha_vantage: Alpha Vantage
       binance_public: Binance
       eodhd: EODHD
+      mansa: Mansa
       mfapi: MFAPI.in
+      moex_public: MOEX
       tiingo: Tiingo
       twelve_data: Twelve Data
       yahoo_finance: Yahoo Finance
-      moex_public: MOEX
-      mansa: Mansa

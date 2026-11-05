@@ -1,39 +1,41 @@
 ---
 nl:
   plans:
-    show:
-      title: "Plan"
-      subtitle: "Bepaal waar uw geld naartoe gaat — wat u uitgeeft en wat u spaart."
     budget_card:
-      title: "Deze maand"
-      edit_budget: "Budget bewerken"
-      of_total: "van %{total}"
       days_left:
-        one: "Nog 1 dag"
-        other: "Nog %{count} dagen"
+        one: Nog 1 dag
+        other: Nog %{count} dagen
+      edit_budget: Budget bewerken
+      empty_body: Stel een maandelijks uitgavendoel en limieten per categorie in om
+        te zien hoe deze maand verloopt.
+      of_total: van %{total}
       percent_used: "%{percent}% gebruikt"
-      top_categories: "Topcategorieën"
-      view_budget: "Volledig budget bekijken"
-      empty_body: "Stel een maandelijks uitgavendoel en limieten per categorie in om te zien hoe deze maand verloopt."
-      set_up: "Budget voor deze maand instellen"
+      set_up: Budget voor deze maand instellen
+      title: Deze maand
+      top_categories: Topcategorieën
+      view_budget: Volledig budget bekijken
     goals_card:
-      title: "Uw doelen"
-      currency_warning:
-        one: "1 doel laat saldi in %{currencies} buiten beschouwing (nog geen wisselkoers)."
-        other: "%{count} doelen laten saldi in %{currencies} buiten beschouwing (nog geen wisselkoers)."
-      new_goal: "Nieuw doel"
       active_count:
-        one: "1 actief"
+        one: 1 actief
         other: "%{count} actief"
-      of_targets: "van %{total} over alle doelen"
+      active_goals: Actieve doelen
+      all_goals: Alle doelen
+      all_on_pace: Alles ligt op schema
       behind_count:
-        one: "1 loopt achter"
+        one: 1 loopt achter
         other: "%{count} lopen achter"
+      currency_warning:
+        one: 1 doel laat saldi in %{currencies} buiten beschouwing (nog geen wisselkoers).
+        other: "%{count} doelen laten saldi in %{currencies} buiten beschouwing (nog
+          geen wisselkoers)."
+      new_goal: Nieuw doel
+      of_targets: van %{total} over alle doelen
       pending_count:
-        one: "1 toezegging in behandeling"
+        one: 1 toezegging in behandeling
         other: "%{count} toezeggingen in behandeling"
-      all_on_pace: "Alles ligt op schema"
-      active_goals: "Actieve doelen"
-      pending_marker: "in behandeling"
+      pending_marker: in behandeling
       runway: "%{months} mnd te gaan · %{pace}/mnd"
-      all_goals: "Alle doelen"
+      title: Uw doelen
+    show:
+      subtitle: Bepaal waar uw geld naartoe gaat — wat u uitgeeft en wat u spaart.
+      title: Plan

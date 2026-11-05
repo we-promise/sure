@@ -2,54 +2,60 @@
 nl:
   transfers:
     create:
-      success: "Overboeking aangemaakt"
-      exchange_rate_unavailable: "Wisselkoers niet beschikbaar voor de geselecteerde valuta en datum"
-      date_invalid: "is ongeldig"
-      stale_form: "Dit formulier is al met andere gegevens verzonden. Vernieuw de pagina en probeer het opnieuw."
+      date_invalid: is ongeldig
+      exchange_rate_unavailable: Wisselkoers niet beschikbaar voor de geselecteerde
+        valuta en datum
+      stale_form: Dit formulier is al met andere gegevens verzonden. Vernieuw de pagina
+        en probeer het opnieuw.
+      success: Overboeking aangemaakt
     destroy:
-      success: "Overboeking verwijderd"
+      success: Overboeking verwijderd
     form:
-      amount: "Bedrag"
-      bank_charges: "Bankkosten"
-      outgoing_fee: "Kosten uitgaande overboeking"
-      incoming_fee: "Kosten inkomende overboeking"
-      date: "Datum"
-      destination_amount: "Bedrag bij ontvanger"
-      destination_amount_display: "Bedrag bij ontvanger: %{amount}"
-      exchange_rate_display: "Wisselkoers: %{rate}"
-      expense: "Uitgave"
-      from: "Van"
-      income: "Inkomsten"
-      select_account: "Selecteer account"
-      source_amount: "Bedrag bij afzender"
-      submit: "Maak overboeking aan"
-      to: "Naar"
-      transfer: "Overboeking"
+      amount: Bedrag
+      bank_charges: Bankkosten
+      date: Datum
+      destination_amount: Bedrag bij ontvanger
+      destination_amount_display: 'Bedrag bij ontvanger: %{amount}'
+      exchange_rate_display: 'Wisselkoers: %{rate}'
+      expense: Uitgave
+      from: Van
+      income: Inkomsten
+      incoming_fee: Kosten inkomende overboeking
+      outgoing_fee: Kosten uitgaande overboeking
+      select_account: Selecteer account
+      source_amount: Bedrag bij afzender
+      submit: Maak overboeking aan
+      to: Naar
+      transfer: Overboeking
     new:
-      title: "Nieuwe overboeking"
+      title: Nieuwe overboeking
     show:
-      delete: "Verwijder overboeking"
-      delete_subtitle: "Dit verwijdert de overboeking. Het verwijdert niet de onderliggende transacties."
-      delete_title: "Overboeking verwijderen?"
-      details: "Details"
-      investment_contribution_subtitle: "Tel deze overboeking mee als uitgave in budgetten en rapporten. Schakel dit uit als het beleggings- of crypto-account het geld alleen omzet naar een andere valuta."
-      investment_contribution_title: "Inleg in belegging"
-      mark_recurring: "Markeren als terugkerend"
-      mark_recurring_subtitle: "Volg deze overboeking als terugkerend patroon in het overzicht van komende posten en op de pagina Terugkerend."
-      mark_recurring_title: "Overboeking markeren als terugkerend"
-      note_label: "Notities"
-      note_placeholder: "Voeg een notitie toe aan deze overboeking"
-      overview: "Overzicht"
-      settings: "Instellingen"
-      from: "Van"
-      to: "Naar"
-      date: "Datum"
-      transfer_amount: "Overboekingsbedrag"
-      total: "Totaal"
-      bank_charges: "Bankkosten"
-      source_fee: "Kosten afzender"
-      destination_fee: "Kosten ontvanger"
-      category: "Categorie"
-      uncategorized: "Zonder categorie"
+      bank_charges: Bankkosten
+      category: Categorie
+      date: Datum
+      delete: Verwijder overboeking
+      delete_subtitle: Dit verwijdert de overboeking. Het verwijdert niet de onderliggende
+        transacties.
+      delete_title: Overboeking verwijderen?
+      destination_fee: Kosten ontvanger
+      details: Details
+      from: Van
+      investment_contribution_subtitle: Tel deze overboeking mee als uitgave in budgetten
+        en rapporten. Schakel dit uit als het beleggings- of crypto-account het geld
+        alleen omzet naar een andere valuta.
+      investment_contribution_title: Inleg in belegging
+      mark_recurring: Markeren als terugkerend
+      mark_recurring_subtitle: Volg deze overboeking als terugkerend patroon in het
+        overzicht van komende posten en op de pagina Terugkerend.
+      mark_recurring_title: Overboeking markeren als terugkerend
+      note_label: Notities
+      note_placeholder: Voeg een notitie toe aan deze overboeking
+      overview: Overzicht
+      settings: Instellingen
+      source_fee: Kosten afzender
+      to: Naar
+      total: Totaal
+      transfer_amount: Overboekingsbedrag
+      uncategorized: Zonder categorie
     update:
-      success: "Overboeking bijgewerkt"
+      success: Overboeking bijgewerkt

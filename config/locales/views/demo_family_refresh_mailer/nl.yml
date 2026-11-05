@@ -2,14 +2,14 @@
 nl:
   demo_family_refresh_mailer:
     completed:
-      subject: "Vernieuwing demohuishouden voltooid"
-      activity_heading: "Activiteit in deze periode"
-      sessions_label: "Unieke inlogsessies voor het vorige demohuishouden"
-      families_label: "Nieuw aangemaakte huishoudaccounts"
-      period_heading: "Rapportageperiode (UTC)"
-      from_label: "Van:"
-      to_label: "Tot:"
+      activity_heading: Activiteit in deze periode
+      families_label: Nieuw aangemaakte huishoudaccounts
+      family_heading: Vorig demohuishouden
+      family_not_found: Niet gevonden
+      from_label: 'Van:'
+      id_label: 'ID:'
+      period_heading: Rapportageperiode (UTC)
+      sessions_label: Unieke inlogsessies voor het vorige demohuishouden
+      subject: Vernieuwing demohuishouden voltooid
       time_format: "%-d %b %Y om %H:%M:%S UTC"
-      family_heading: "Vorig demohuishouden"
-      family_not_found: "Niet gevonden"
-      id_label: "ID:"
+      to_label: 'Tot:'

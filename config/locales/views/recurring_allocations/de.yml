@@ -1,15 +1,16 @@
 ---
 de:
   recurring_allocations:
-    over_allocation: Damit würdest du mehr als den Transaktionsbetrag zuordnen.
-    missing_rate: Kein Wechselkurs verfügbar. Gib den Betrag manuell ein.
     already_allocated: Diese Transaktion ist dieser Rechnung bereits zugeordnet
-    invalid: Die Zahlung konnte nicht erfasst werden
+    confirm:
+      success: Zahlung der Rechnung zugeordnet
     create:
       success: Zahlung zugeordnet
     destroy:
       success: Zahlungszuordnung entfernt
-    confirm:
-      success: Zahlung der Rechnung zugeordnet
+    invalid: Die Zahlung konnte nicht erfasst werden
+    missing_rate: Kein Wechselkurs verfügbar. Gib den Betrag manuell ein.
+    over_allocation: Damit würdest du mehr als den Transaktionsbetrag zuordnen.
     reject:
-      success: Vorschlag abgelehnt. Diese Transaktion wird für diese Rechnung nicht mehr vorgeschlagen.
+      success: Vorschlag abgelehnt. Diese Transaktion wird für diese Rechnung nicht
+        mehr vorgeschlagen.

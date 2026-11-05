@@ -3,12 +3,12 @@ zh-CN:
   activerecord:
     attributes:
       goal_pledge:
+        account: 账户
         amount: 金额
         currency: 货币
-        account: 账户
+        expires_at: 过期时间
         kind: 类型
         status: 状态
-        expires_at: 过期时间
     errors:
       models:
         goal_pledge:

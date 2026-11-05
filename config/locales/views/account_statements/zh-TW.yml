@@ -2,9 +2,9 @@
 zh-TW:
   account_statements:
     account_tab:
-      coverage_title: 對帳單涵蓋範圍
       coverage_description: 這些月份已上傳對帳單，餘額也已核對。
-      coverage_range: '%{start} - %{end}'
+      coverage_range: "%{start} - %{end}"
+      coverage_title: 對帳單涵蓋範圍
       empty: 這個帳戶還沒有連結任何對帳單。
       open_inbox: 收件匣
       statements_title: 對帳單
@@ -36,10 +36,10 @@ zh-TW:
       files_hint: PDF、CSV 或 XLSX，每個檔案最大 %{max_size}MB。
       files_label: 對帳單檔案
       inbox_upload: 上傳
-      period_hint: "如果 PDF 中載明對帳單期間，Sure 會直接讀取，否則從檔名中的日期（例如 2026-04）讀取。你也可以在對帳單上手動設定。"
+      period_hint: 如果 PDF 中載明對帳單期間，Sure 會直接讀取，否則從檔名中的日期（例如 2026-04）讀取。你也可以在對帳單上手動設定。
     index:
       account_label: 帳戶
-      confidence: '%{confidence} 相符度'
+      confidence: "%{confidence} 相符度"
       empty_linked: 還沒有已連結的對帳單。
       empty_unmatched: 對帳單收件匣目前沒有待配對項目。
       leave_unmatched: 維持未配對
@@ -77,9 +77,9 @@ zh-TW:
       download: 下載
       institution_name_hint: 機構名稱提示
       ledger_amount: Sure 帳務紀錄
+      link_suggestion: 連結建議
       linked_to: 已連結到 %{account}。
       linking_title: 帳戶連結
-      link_suggestion: 連結建議
       metadata_title: 對帳單中繼資料
       no_suggestion: 還沒有帳戶建議。
       opening_balance: 期初餘額
@@ -92,9 +92,9 @@ zh-TW:
       statement_amount: 對帳單
       suggested_account: 建議的帳戶是 %{account}（相符度 %{confidence}）。
       title: 對帳單
+      unknown_value: 未知
       unlink: 取消連結
       unmatched_account: 未配對收件匣
-      unknown_value: 未知
     status:
       linked: 已連結
       rejected: 已拒絕

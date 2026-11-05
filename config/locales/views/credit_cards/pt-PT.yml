@@ -14,8 +14,8 @@ pt-PT:
       minimum_payment: Pagamento mínimo
       minimum_payment_placeholder: '100'
       treat_balance_as_available_credit_description: Ative se o seu banco comunicar
-        o saldo deste cartão como crédito disponível restante, em vez do montante em
-        dívida. A dívida é então calculada a partir do limite de crédito comunicado
+        o saldo deste cartão como crédito disponível restante, em vez do montante
+        em dívida. A dívida é então calculada a partir do limite de crédito comunicado
         pelo seu banco, ou do campo Crédito disponível se o seu banco não fornecer
         um.
       treat_balance_as_available_credit_label: O saldo é crédito disponível

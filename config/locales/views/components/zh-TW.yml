@@ -1,9 +1,10 @@
 ---
 zh-TW:
   UI:
-    period_picker:
-      aria_label: 時間區間：%{period}
     account:
+      activity_date:
+        balance_tooltip: 計入所有交易與調整之後的當日結束餘額
+        no_balance_data: 這一天沒有可用的餘額資料
       activity_feed:
         toggle_selection_checkboxes: 切換選取
       balance_reconciliation:
@@ -76,91 +77,90 @@ zh-TW:
           gains: 獲利 / 報酬率
           holdings: 持股
           total_value: 總價值
-        vs_available_history: （對比可用歷史資料）
-      activity_date:
-        balance_tooltip: 計入所有交易與調整之後的當日結束餘額
-        no_balance_data: 這一天沒有可用的餘額資料
+        vs_available_history: "（對比可用歷史資料）"
+    period_picker:
+      aria_label: 時間區間：%{period}
   ds:
     alert:
       variants:
+        destructive: 錯誤
+        error: 錯誤
         info: 資訊
         success: 成功
         warning: 警告
-        error: 錯誤
-        destructive: 錯誤
-    pill:
-      aria_label: '%{label}'
-      default_label: 預覽
     dialog:
       close: 關閉
+    link:
+      opens_in_new_tab: "（在新分頁開啟）"
+    pill:
+      aria_label: "%{label}"
+      default_label: 預覽
     popover:
       avatar_default_label: 開啟選單
     tooltip:
       trigger_label: 更多資訊
-    link:
-      opens_in_new_tab: （在新分頁開啟）
   provider_sync_summary:
-    title: 同步摘要
-    last_sync: 上次同步：%{time_ago}前
     accounts:
+      institutions: 機構：%{count}
+      linked: 已連結：%{count}
       title: 帳戶
       total: 總計：%{count}
-      linked: 已連結：%{count}
       unlinked: 未連結：%{count}
-      institutions: 機構：%{count}
-    transactions:
-      title: 交易紀錄
-      seen: 偵測到：%{count}
-      imported: 已匯入：%{count}
-      updated: 已更新：%{count}
-      skipped: 已跳過：%{count}
-      fetching: 正在從券商取得資料...
-      protected:
-        one: '%{count} 筆項目受保護（未被覆蓋）'
-        other: '%{count} 筆項目受保護（未被覆蓋）'
-      view_protected: 查看受保護的項目
-    skip_reasons:
-      excluded: 已排除
-      user_modified: 使用者已修改
-      import_locked: CSV 匯入
-      protected: 受保護
-    holdings:
-      title: 持股
-      found: 找到：%{count}
-      processed: 已處理：%{count}
-    trades:
-      title: 證券交易
-      imported: 已匯入：%{count}
-      skipped: 已跳過：%{count}
-      fetching: 正在從券商取得交易活動...
     health:
-      title: 健康狀態
-      view_error_details: 查看錯誤詳情
-      rate_limited: '%{time_ago}前遭到用量限制'
-      recently: 不久
+      data_warnings: 資料警告：%{count}
+      duplicate_suggestions:
+        one: "%{count} 筆可能重複的交易需要檢視"
+        other: "%{count} 筆可能重複的交易需要檢視"
       errors: 錯誤：%{count}
+      notices: 通知：%{count}
       pending_reconciled:
         one: 已對帳 %{count} 筆重複的待處理交易
         other: 已對帳 %{count} 筆重複的待處理交易
-      view_reconciled: 查看已對帳的交易
-      duplicate_suggestions:
-        one: '%{count} 筆可能重複的交易需要檢視'
-        other: '%{count} 筆可能重複的交易需要檢視'
-      view_duplicate_suggestions: 查看疑似重複的交易
+      rate_limited: "%{time_ago}前遭到用量限制"
+      recently: 不久
       stale_pending:
-        one: '%{count} 筆過期的待處理交易（已排除於預算之外）'
-        other: '%{count} 筆過期的待處理交易（已排除於預算之外）'
-      view_stale_pending: 查看受影響的帳戶
+        one: "%{count} 筆過期的待處理交易（已排除於預算之外）"
+        other: "%{count} 筆過期的待處理交易（已排除於預算之外）"
       stale_pending_count:
-        one: '%{count} 筆交易'
-        other: '%{count} 筆交易'
+        one: "%{count} 筆交易"
+        other: "%{count} 筆交易"
       stale_unmatched:
-        one: '%{count} 筆待處理交易需要手動檢視'
-        other: '%{count} 筆待處理交易需要手動檢視'
-      view_stale_unmatched: 查看需要檢視的交易
+        one: "%{count} 筆待處理交易需要手動檢視"
+        other: "%{count} 筆待處理交易需要手動檢視"
       stale_unmatched_count:
-        one: '%{count} 筆交易'
-        other: '%{count} 筆交易'
-      data_warnings: 資料警告：%{count}
-      notices: 通知：%{count}
+        one: "%{count} 筆交易"
+        other: "%{count} 筆交易"
+      title: 健康狀態
       view_data_quality: 查看資料品質詳情
+      view_duplicate_suggestions: 查看疑似重複的交易
+      view_error_details: 查看錯誤詳情
+      view_reconciled: 查看已對帳的交易
+      view_stale_pending: 查看受影響的帳戶
+      view_stale_unmatched: 查看需要檢視的交易
+    holdings:
+      found: 找到：%{count}
+      processed: 已處理：%{count}
+      title: 持股
+    last_sync: 上次同步：%{time_ago}前
+    skip_reasons:
+      excluded: 已排除
+      import_locked: CSV 匯入
+      protected: 受保護
+      user_modified: 使用者已修改
+    title: 同步摘要
+    trades:
+      fetching: 正在從券商取得交易活動...
+      imported: 已匯入：%{count}
+      skipped: 已跳過：%{count}
+      title: 證券交易
+    transactions:
+      fetching: 正在從券商取得資料...
+      imported: 已匯入：%{count}
+      protected:
+        one: "%{count} 筆項目受保護（未被覆蓋）"
+        other: "%{count} 筆項目受保護（未被覆蓋）"
+      seen: 偵測到：%{count}
+      skipped: 已跳過：%{count}
+      title: 交易紀錄
+      updated: 已更新：%{count}
+      view_protected: 查看受保護的項目

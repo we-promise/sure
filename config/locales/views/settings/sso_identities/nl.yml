@@ -3,5 +3,5 @@ nl:
   settings:
     sso_identities:
       destroy:
-        cannot_unlink_last: "De laatste identiteit kan niet worden ontkoppeld"
-        success: "Gelukt"
+        cannot_unlink_last: De laatste identiteit kan niet worden ontkoppeld
+        success: Gelukt

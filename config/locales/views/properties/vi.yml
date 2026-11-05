@@ -1,6 +1,27 @@
 ---
 vi:
   properties:
+    address:
+      address_line1_label: Địa chỉ dòng 1
+      address_line1_placeholder: 123 Main Street
+      city_label: Thành phố
+      city_placeholder: San Francisco
+      country_label: Quốc gia
+      country_placeholder: USA
+      postal_code_label: Mã bưu điện
+      postal_code_placeholder: '12345'
+      save: Lưu
+      state_region_label: Tỉnh/Bang
+      state_region_placeholder: CA
+      title: Nhập bất động sản thủ công
+    balances:
+      market_value_label: Giá trị thị trường ước tính
+      market_value_tooltip: Giá trị thị trường ước tính của bất động sản. Con số này
+        thường có thể tìm thấy trên các trang như Zillow hoặc Redfin và không bao
+        giờ là con số chính xác.
+      next: Tiếp theo
+      save: Lưu
+      title: Nhập bất động sản thủ công
     edit:
       edit: Chỉnh sửa %{account}
     form:
@@ -22,39 +43,8 @@ vi:
       year_built: Năm xây dựng
       year_built_placeholder: '2000'
     new:
+      next: Tiếp theo
       title: Nhập bất động sản thủ công
-      next: "Tiếp theo"
-    address:
-      title: "Nhập bất động sản thủ công"
-      address_line1_label: "Địa chỉ dòng 1"
-      address_line1_placeholder: "123 Main Street"
-      city_label: "Thành phố"
-      city_placeholder: "San Francisco"
-      state_region_label: "Tỉnh/Bang"
-      state_region_placeholder: "CA"
-      postal_code_label: "Mã bưu điện"
-      postal_code_placeholder: "12345"
-      country_label: "Quốc gia"
-      country_placeholder: "USA"
-      save: "Lưu"
-    balances:
-      title: "Nhập bất động sản thủ công"
-      market_value_label: "Giá trị thị trường ước tính"
-      market_value_tooltip: "Giá trị thị trường ước tính của bất động sản. Con số này thường có thể tìm thấy trên các trang như Zillow hoặc Redfin và không bao giờ là con số chính xác."
-      save: "Lưu"
-      next: "Tiếp theo"
-    overview_fields:
-      name_label: "Tên"
-      name_placeholder: "Nhà nghỉ dưỡng"
-      subtype_prompt: "Chọn loại"
-      property_type_label: "Loại bất động sản"
-      year_built_label: "Năm xây dựng (tùy chọn)"
-      year_built_placeholder: "1990"
-      area_label: "Diện tích (tùy chọn)"
-      area_placeholder: "1200"
-      square_feet: "Feet vuông"
-      square_meters: "Mét vuông"
-      area_unit_label: "Đơn vị diện tích"
     overview:
       living_area: Diện tích sử dụng
       market_value: Giá trị thị trường
@@ -62,28 +52,40 @@ vi:
       trend: Xu hướng
       unknown: Không xác định
       year_built: Năm xây dựng
+    overview_fields:
+      area_label: Diện tích (tùy chọn)
+      area_placeholder: '1200'
+      area_unit_label: Đơn vị diện tích
+      name_label: Tên
+      name_placeholder: Nhà nghỉ dưỡng
+      property_type_label: Loại bất động sản
+      square_feet: Feet vuông
+      square_meters: Mét vuông
+      subtype_prompt: Chọn loại
+      year_built_label: Năm xây dựng (tùy chọn)
+      year_built_placeholder: '1990'
+    subtypes:
+      agri_land:
+        long: Đất nông nghiệp
+        short: Đất nông nghiệp
+      apartment:
+        long: Căn hộ
+        short: Căn hộ
+      commercial:
+        long: Bất động sản thương mại
+        short: Thương mại
+      plot:
+        long: Lô đất / Đất đai
+        short: Lô đất
+      rented:
+        long: Bất động sản cho thuê
+        short: Cho thuê
     tabs:
       overview:
+        edit_account_details: Chỉnh sửa thông tin tài khoản
         living_area: Diện tích sử dụng
         market_value: Giá trị thị trường
         purchase_price: Giá mua
         trend: Xu hướng
         unknown: Không xác định
         year_built: Năm xây dựng
-        edit_account_details: "Chỉnh sửa thông tin tài khoản"
-    subtypes:
-      apartment:
-        short: Căn hộ
-        long: Căn hộ
-      plot:
-        short: Lô đất
-        long: Lô đất / Đất đai
-      commercial:
-        short: Thương mại
-        long: Bất động sản thương mại
-      rented:
-        short: Cho thuê
-        long: Bất động sản cho thuê
-      agri_land:
-        short: Đất nông nghiệp
-        long: Đất nông nghiệp

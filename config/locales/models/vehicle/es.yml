@@ -2,7 +2,6 @@
 es:
   activerecord:
     attributes:
-      # How the account form names the vehicle's field in its error messages.
       account/accountable:
         purchase_date: Fecha de compra
       vehicle:
@@ -12,4 +11,5 @@ es:
         vehicle:
           attributes:
             purchase_date:
-              must_precede_entries: debe ser anterior al movimiento más antiguo de la cuenta
+              must_precede_entries: debe ser anterior al movimiento más antiguo de
+                la cuenta

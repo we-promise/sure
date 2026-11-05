@@ -10,8 +10,8 @@ ca:
         success: El proveïdor SSO s'ha eliminat correctament.
       edit:
         description: Actualitza la configuració per a %{label}
-        title: Edita el proveïdor SSO
         provider_configuration: Configuració del proveïdor
+        title: Edita el proveïdor SSO
       form:
         admin_groups: Grups d'administradors
         advanced_title: Configuració OIDC avançada
@@ -149,8 +149,8 @@ ca:
         title: Proveïdors SSO
       new:
         description: Configura un nou proveïdor d'autenticació d'inici de sessió únic
-        title: Afegeix proveïdor SSO
         provider_configuration: Configuració del proveïdor
+        title: Afegeix proveïdor SSO
       toggle:
         confirm_disable: Segur que vols desactivar aquest proveïdor?
         confirm_enable: Segur que vols activar aquest proveïdor?

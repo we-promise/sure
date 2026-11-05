@@ -2,24 +2,24 @@
 uk:
   impersonation_sessions:
     approve:
-      success: "Запит схвалено"
+      success: Запит схвалено
     complete:
-      success: "Сесію завершено"
+      success: Сесію завершено
     create:
-      success: "Запит надіслано користувачеві. Очікується схвалення."
+      success: Запит надіслано користувачеві. Очікується схвалення.
     join:
-      success: "Приєднався до сесії"
+      success: Приєднався до сесії
     leave:
-      success: "Покинув сесію"
+      success: Покинув сесію
     reject:
-      success: "Запит відхилено"
+      success: Запит відхилено
     super_admin_bar:
-      super_admin: "Суперадміністратор"
-      jobs: "Завдання"
-      impersonating: "Імперсонація"
-      leave: "Покинути"
-      terminate: "Завершити"
-      join_a_session: "Приєднатися до сесії"
-      join: "Приєднатися"
-      uuid_placeholder: "UUID"
-      request_impersonation: "Запросити імперсонацію"
+      impersonating: Імперсонація
+      jobs: Завдання
+      join: Приєднатися
+      join_a_session: Приєднатися до сесії
+      leave: Покинути
+      request_impersonation: Запросити імперсонацію
+      super_admin: Суперадміністратор
+      terminate: Завершити
+      uuid_placeholder: UUID

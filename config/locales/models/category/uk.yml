@@ -2,28 +2,28 @@
 uk:
   models:
     category:
-      uncategorized: "Без категорії"
-      other_investments: "Інші інвестиції"
-      investment_contributions: "Інвестиційні внески"
       defaults:
-        income: "Дохід"
-        food_and_drink: "Їжа та напої"
-        groceries: "Продукти"
-        shopping: "Покупки"
-        transportation: "Транспорт"
-        travel: "Подорожі"
-        entertainment: "Розваги"
-        healthcare: "Охорона здоров'я"
-        personal_care: "Особистий догляд"
-        home_improvement: "Ремонт житла"
-        mortgage_rent: "Іпотека / Оренда"
-        utilities: "Комунальні послуги"
-        subscriptions: "Підписки"
-        insurance: "Страхування"
-        sports_and_fitness: "Спорт та фітнес"
-        gifts_and_donations: "Подарунки та пожертви"
-        taxes: "Податки"
-        loan_payments: "Платежі за кредитом"
-        services: "Послуги"
-        fees: "Комісії"
-        savings_and_investments: "Заощадження та інвестиції"
+        entertainment: Розваги
+        fees: Комісії
+        food_and_drink: Їжа та напої
+        gifts_and_donations: Подарунки та пожертви
+        groceries: Продукти
+        healthcare: Охорона здоров'я
+        home_improvement: Ремонт житла
+        income: Дохід
+        insurance: Страхування
+        loan_payments: Платежі за кредитом
+        mortgage_rent: Іпотека / Оренда
+        personal_care: Особистий догляд
+        savings_and_investments: Заощадження та інвестиції
+        services: Послуги
+        shopping: Покупки
+        sports_and_fitness: Спорт та фітнес
+        subscriptions: Підписки
+        taxes: Податки
+        transportation: Транспорт
+        travel: Подорожі
+        utilities: Комунальні послуги
+      investment_contributions: Інвестиційні внески
+      other_investments: Інші інвестиції
+      uncategorized: Без категорії

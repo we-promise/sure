@@ -1,236 +1,240 @@
 ---
 hu:
   reports:
+    budget_performance:
+      budgeted: Tervezett
+      no_budgets: Erre a hónapra nincsenek beállított költségvetési kategóriák
+      over_by: Túllépés
+      remaining: Maradék
+      shared: megosztott
+      spent: Elköltve
+      status:
+        good: Tervezett szerint
+        over: Túllépte a keretet
+        warning: Közel a határhoz
+      suggested_daily: 'Javasolt napi összeg: %{amount} a hátralévő %{days} napra'
+      title: Költségvetés teljesítése
+    empty_state:
+      add_account: Számla hozzáadása
+      add_transaction: Tranzakció hozzáadása
+      description: Kezdj el tranzakciókat rögzíteni vagy kapcsold össze a számláidat
+        az átfogó jelentések megtekintéséhez
+      title: Nem állnak rendelkezésre adatok
+    google_sheets_instructions:
+      close: Rendben
+      example: Példa
+      go_to_api_keys: Ugrás az API-kulcsokhoz
+      need_key: Az adatok Google Sheetsbe importálásához API-kulcs szükséges.
+      step1: Menj a Beállítások → API-kulcsok menüpontra
+      step2: Hozz létre egy új API-kulcsot "olvasás" jogosultsággal
+      step3: Másold ki az API-kulcsot
+      step4: 'Add hozzá az URL-hez így: &api_key=A_TE_KULCSOD'
+      then_use: Ezután használd a teljes URL-t =IMPORTDATA() képlettel a Google Sheetsben.
+      title_no_key: API-kulcs szükséges
     index:
-      title: Jelentések
-      subtitle: Átfogó betekintés a pénzügyi helyzetedbe
-      export: CSV exportálása
-      print_report: Jelentés nyomtatása
-      toggle_section: "Szakasz láthatóságának váltása"
-      periods:
-        monthly: Havi
-        quarterly: Negyedéves
-        ytd: Év elejétől
-        last_6_months: Elmúlt 6 hónap
-        custom: Egyéni időszak
       date_range:
         from: Kezdő dátum
         to: Záró dátum
-      showing_period: "Adatok megjelenítése: %{start} – %{end}"
-      previous_period: "Előző időszak"
-      next_period: "Következő időszak"
-      today: "Ma"
+      export: CSV exportálása
+      next_decade: Következő évtized
+      next_period: Következő időszak
+      next_year: Következő év
       period_label:
-        quarterly: "N%{quarter} %{year}"
-        ytd: "ÉTD %{year}"
-        past_year: "%{year}"
         last_6_months: "%{start} – %{end}"
+        past_year: "%{year}"
+        quarterly: N%{quarter} %{year}
+        ytd: ÉTD %{year}
       period_picker:
-        quarter: "N%{quarter} %{year}"
-        ytd: "ÉTD %{year}"
-      previous_year: "Előző év"
-      next_year: "Következő év"
-      previous_decade: "Előző évtized"
-      next_decade: "Következő évtized"
-    invalid_date_range: "A záró dátum nem lehet korábbi a kezdő dátumnál. A dátumok fel lettek cserélve."
-    summary:
-      total_income: Összes bevétel
-      total_expenses: Összes kiadás
-      net_savings: Nettó megtakarítás
-      budget_performance: Költségvetés teljesítése
-      vs_previous: az előző időszakhoz képest
-      income_minus_expenses: Bevétel mínusz kiadás
-      of_budget_used: a költségvetés felhasználva
-      no_budget_data: Nincs költségvetési adat erre az időszakra
-    budget_performance:
-      title: Költségvetés teljesítése
-      spent: Elköltve
-      budgeted: Tervezett
-      remaining: Maradék
-      over_by: Túllépés
-      shared: megosztott
-      suggested_daily: "Javasolt napi összeg: %{amount} a hátralévő %{days} napra"
-      no_budgets: Erre a hónapra nincsenek beállított költségvetési kategóriák
-      status:
-        good: Tervezett szerint
-        warning: Közel a határhoz
-        over: Túllépte a keretet
-    trends:
-      title: Trendek és elemzések
-      monthly_breakdown: Havi bontás
-      month: Hónap
-      income: Bevétel
-      expenses: Kiadások
-      net: Nettó
-      savings_rate: Megtakarítási ráta
-      current: aktuális
-      avg_monthly_income: Átl. havi bevétel
-      avg_monthly_expenses: Átl. havi kiadás
-      avg_monthly_savings: Átl. havi megtakarítás
-      no_data: Nem áll rendelkezésre trendadat
-      spending_patterns: Költési szokások
-      weekday_spending: Hétköznapi kiadások
-      weekend_spending: Hétvégi kiadások
-      total: Összesen
-      avg_per_transaction: Átl. tranzakciónként
-      transactions: Tranzakciók
-      insight_title: Elemzés
-      insight_higher_weekend: "Hétvégén tranzakciónként %{percent}%-kal többet költesz, mint hétköznapokon"
-      insight_higher_weekday: "Hétköznapokon tranzakciónként %{percent}%-kal többet költesz, mint hétvégén"
-      insight_similar: "A tranzakciónkénti kiadásaid hasonlóak hétköznapokon és hétvégén"
-      no_spending_data: Nincs elérhető kiadási adat erre az időszakra
-    empty_state:
-      title: Nem állnak rendelkezésre adatok
-      description: Kezdj el tranzakciókat rögzíteni vagy kapcsold össze a számláidat az átfogó jelentések megtekintéséhez
-      add_transaction: Tranzakció hozzáadása
-      add_account: Számla hozzáadása
-    transactions_breakdown:
-      title: Tevékenység bontása
-      no_transactions: Nem található tevékenység a kiválasztott időszakra és szűrőkre
-      filters:
-        title: Szűrők
-        category: Kategória
-        account: Számla
-        tag: Címke
-        amount_min: Min összeg
-        amount_max: Max összeg
-        date_range: Időszak
-        all_categories: Összes kategória
-        all_accounts: Összes számla
-        all_tags: Összes címke
-        apply: Szűrők alkalmazása
-        clear: Szűrők törlése
-      sort:
-        label: Rendezés
-        date_desc: Dátum (legújabb elöl)
-        amount_desc: Összeg (csökkenő)
-        amount_asc: Összeg (növekvő)
-      export:
-        label: Exportálás
-        csv: CSV
-        excel: Excel
-        pdf: PDF
-        google_sheets: Megnyitás Google Sheetsben
-      table:
-        category: Kategória
-        amount: Összeg
-        type: Típus
-        expense: Kiadások
-        income: Bevétel
-        uncategorized: Kategorizálatlan
-        entries:
-          one: "%{count} tétel"
-          other: "%{count} tétel"
-        percentage: "% az összesből"
-      pagination:
-        showing:
-          one: "%{count} tétel megjelenítve"
-          other: "%{count} tétel megjelenítve"
-        previous: Előző
-        next: Következő
-    net_worth:
-      title: Nettó vagyon
-      current_net_worth: Jelenlegi nettó vagyon
-      period_change: Időszaki változás
-      assets_vs_liabilities: Vagyon vs. kötelezettségek
-      total_assets: Vagyon
-      total_liabilities: Kötelezettségek
-      no_assets: Nincs vagyon
-      no_liabilities: Nincsenek kötelezettségek
+        quarter: N%{quarter} %{year}
+        ytd: ÉTD %{year}
+      periods:
+        custom: Egyéni időszak
+        last_6_months: Elmúlt 6 hónap
+        monthly: Havi
+        quarterly: Negyedéves
+        ytd: Év elejétől
+      previous_decade: Előző évtized
+      previous_period: Előző időszak
+      previous_year: Előző év
+      print_report: Jelentés nyomtatása
+      showing_period: 'Adatok megjelenítése: %{start} – %{end}'
+      subtitle: Átfogó betekintés a pénzügyi helyzetedbe
+      title: Jelentések
+      today: Ma
+      toggle_section: Szakasz láthatóságának váltása
+    invalid_date_range: A záró dátum nem lehet korábbi a kezdő dátumnál. A dátumok
+      fel lettek cserélve.
+    investment_flows:
+      contributions: Befizetések
+      contributions_description: Befektetésekbe befizetett összeg
+      description: Kövesd nyomon a befektetési számláidra be- és onnan kiáramló pénzt
+      net_flow: Nettó pénzáramlás
+      net_flow_description: Teljes nettó változás
+      title: Befektetési pénzáramlás
+      withdrawals: Kivétek
+      withdrawals_description: Befektetésekből kivett összeg
     investment_performance:
-      title: Befektetési teljesítmény
-      portfolio_value: Portfólió értéke
-      total_return: Teljes hozam
-      contributions: Időszaki befizetések
-      withdrawals: Időszaki kivétek
-      top_holdings: Legjobb pozíciók
-      holding: Pozíció
-      weight: Súly
-      value: Érték
-      return: Hozam
       accounts: Befektetési számlák
+      and_more: "+%{count} további"
+      contributions: Időszaki befizetések
       gains_by_tax_treatment: Nyereség adózási típus szerint
-      unrealized_gains: Nem realizált nyereség
-      realized_gains: Realizált nyereség
-      total_gains: Teljes nyereség
-      taxable_realized_note: Ezek a nyereségek adókötelesek lehetnek
-      no_data: "-"
-      view_details: Részletek megtekintése
+      holding: Pozíció
+      holdings: Pozíciók
       holdings_count:
         one: "%{count} pozíció"
         other: "%{count} pozíció"
+      no_data: "-"
+      portfolio_value: Portfólió értéke
+      realized_gains: Realizált nyereség
+      return: Hozam
+      sell_trades: Eladási ügyletek
       sells_count:
         one: "%{count} eladás"
         other: "%{count} eladás"
-      holdings: Pozíciók
-      sell_trades: Eladási ügyletek
-      and_more: "+%{count} további"
-    investment_flows:
-      title: Befektetési pénzáramlás
-      description: Kövesd nyomon a befektetési számláidra be- és onnan kiáramló pénzt
-      contributions: Befizetések
-      contributions_description: Befektetésekbe befizetett összeg
-      withdrawals: Kivétek
-      withdrawals_description: Befektetésekből kivett összeg
-      net_flow: Nettó pénzáramlás
-      net_flow_description: Teljes nettó változás
-    google_sheets_instructions:
-      title_no_key: "API-kulcs szükséges"
-      need_key: Az adatok Google Sheetsbe importálásához API-kulcs szükséges.
-      step1: "Menj a Beállítások → API-kulcsok menüpontra"
-      step2: "Hozz létre egy új API-kulcsot \"olvasás\" jogosultsággal"
-      step3: Másold ki az API-kulcsot
-      step4: "Add hozzá az URL-hez így: &api_key=A_TE_KULCSOD"
-      example: Példa
-      then_use: Ezután használd a teljes URL-t =IMPORTDATA() képlettel a Google Sheetsben.
-      go_to_api_keys: Ugrás az API-kulcsokhoz
-      close: Rendben
+      taxable_realized_note: Ezek a nyereségek adókötelesek lehetnek
+      title: Befektetési teljesítmény
+      top_holdings: Legjobb pozíciók
+      total_gains: Teljes nyereség
+      total_return: Teljes hozam
+      unrealized_gains: Nem realizált nyereség
+      value: Érték
+      view_details: Részletek megtekintése
+      weight: Súly
+      withdrawals: Időszaki kivétek
+    net_worth:
+      assets_vs_liabilities: Vagyon vs. kötelezettségek
+      current_net_worth: Jelenlegi nettó vagyon
+      no_assets: Nincs vagyon
+      no_liabilities: Nincsenek kötelezettségek
+      period_change: Időszaki változás
+      title: Nettó vagyon
+      total_assets: Vagyon
+      total_liabilities: Kötelezettségek
     print:
       document_title: Pénzügyi jelentés
-      title: Pénzügyi jelentés
-      generated_on: "Generálva: %{date}"
-      summary:
-        title: Összefoglaló
-        income: Bevétel
-        expenses: Kiadások
-        net_savings: Nettó megtakarítás
-        budget: Költségvetés
-        vs_prior: "%{percent}% az előző időszakhoz képest"
-        of_income: "a bevétel %{percent}%-a"
-        used: felhasználva
-      net_worth:
-        title: Nettó vagyon
-        current_balance: Jelenlegi egyenleg
+      generated_on: 'Generálva: %{date}'
+      investments:
+        contributions: Befizetések
+        holding: Pozíció
+        portfolio_value: Portfólió értéke
+        return: Hozam
         this_period: ebben az időszakban
+        title: Befektetések
+        top_holdings: Legjobb pozíciók
+        total_return: Teljes hozam
+        value: Érték
+        weight: Súly
+        withdrawals: Kivétek
+      net_worth:
         assets: Vagyon
+        current_balance: Jelenlegi egyenleg
         liabilities: Kötelezettségek
         no_liabilities: Nincsenek kötelezettségek
-      trends:
-        title: Havi trendek
-        month: Hónap
-        income: Bevétel
+        this_period: ebben az időszakban
+        title: Nettó vagyon
+      spending:
+        amount: Összeg
+        category: Kategória
         expenses: Kiadások
-        net: Nettó
-        savings_rate: Megtakarítási ráta
+        income: Bevétel
+        more_categories: "+ %{count} további kategória"
+        percent: "%"
+        title: Kiadások kategóriánként
+      summary:
+        budget: Költségvetés
+        expenses: Kiadások
+        income: Bevétel
+        net_savings: Nettó megtakarítás
+        of_income: a bevétel %{percent}%-a
+        title: Összefoglaló
+        used: felhasználva
+        vs_prior: "%{percent}% az előző időszakhoz képest"
+      title: Pénzügyi jelentés
+      trends:
         average: Átlag
         current_month_note: "* Aktuális hónap (részleges adat)"
-      investments:
-        title: Befektetések
-        portfolio_value: Portfólió értéke
-        total_return: Teljes hozam
-        contributions: Befizetések
-        withdrawals: Kivétek
-        this_period: ebben az időszakban
-        top_holdings: Legjobb pozíciók
-        holding: Pozíció
-        weight: Súly
-        value: Érték
-        return: Hozam
-      spending:
-        title: Kiadások kategóriánként
-        income: Bevétel
         expenses: Kiadások
+        income: Bevétel
+        month: Hónap
+        net: Nettó
+        savings_rate: Megtakarítási ráta
+        title: Havi trendek
+    summary:
+      budget_performance: Költségvetés teljesítése
+      income_minus_expenses: Bevétel mínusz kiadás
+      net_savings: Nettó megtakarítás
+      no_budget_data: Nincs költségvetési adat erre az időszakra
+      of_budget_used: a költségvetés felhasználva
+      total_expenses: Összes kiadás
+      total_income: Összes bevétel
+      vs_previous: az előző időszakhoz képest
+    transactions_breakdown:
+      export:
+        csv: CSV
+        excel: Excel
+        google_sheets: Megnyitás Google Sheetsben
+        label: Exportálás
+        pdf: PDF
+      filters:
+        account: Számla
+        all_accounts: Összes számla
+        all_categories: Összes kategória
+        all_tags: Összes címke
+        amount_max: Max összeg
+        amount_min: Min összeg
+        apply: Szűrők alkalmazása
         category: Kategória
+        clear: Szűrők törlése
+        date_range: Időszak
+        tag: Címke
+        title: Szűrők
+      no_transactions: Nem található tevékenység a kiválasztott időszakra és szűrőkre
+      pagination:
+        next: Következő
+        previous: Előző
+        showing:
+          one: "%{count} tétel megjelenítve"
+          other: "%{count} tétel megjelenítve"
+      sort:
+        amount_asc: Összeg (növekvő)
+        amount_desc: Összeg (csökkenő)
+        date_desc: Dátum (legújabb elöl)
+        label: Rendezés
+      table:
         amount: Összeg
-        percent: "%"
-        more_categories: "+ %{count} további kategória"
+        category: Kategória
+        entries:
+          one: "%{count} tétel"
+          other: "%{count} tétel"
+        expense: Kiadások
+        income: Bevétel
+        percentage: "% az összesből"
+        type: Típus
+        uncategorized: Kategorizálatlan
+      title: Tevékenység bontása
+    trends:
+      avg_monthly_expenses: Átl. havi kiadás
+      avg_monthly_income: Átl. havi bevétel
+      avg_monthly_savings: Átl. havi megtakarítás
+      avg_per_transaction: Átl. tranzakciónként
+      current: aktuális
+      expenses: Kiadások
+      income: Bevétel
+      insight_higher_weekday: Hétköznapokon tranzakciónként %{percent}%-kal többet
+        költesz, mint hétvégén
+      insight_higher_weekend: Hétvégén tranzakciónként %{percent}%-kal többet költesz,
+        mint hétköznapokon
+      insight_similar: A tranzakciónkénti kiadásaid hasonlóak hétköznapokon és hétvégén
+      insight_title: Elemzés
+      month: Hónap
+      monthly_breakdown: Havi bontás
+      net: Nettó
+      no_data: Nem áll rendelkezésre trendadat
+      no_spending_data: Nincs elérhető kiadási adat erre az időszakra
+      savings_rate: Megtakarítási ráta
+      spending_patterns: Költési szokások
+      title: Trendek és elemzések
+      total: Összesen
+      transactions: Tranzakciók
+      weekday_spending: Hétköznapi kiadások
+      weekend_spending: Hétvégi kiadások

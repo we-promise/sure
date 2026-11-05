@@ -7,4 +7,4 @@ hu:
         format: "%n %u"
         precision: 0
         separator: ","
-        unit: "Ft"
+        unit: Ft

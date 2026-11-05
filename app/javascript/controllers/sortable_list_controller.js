@@ -65,12 +65,23 @@ export default class extends Controller {
       capture: true,
       passive: true,
     });
+
+    // A morph (a page refresh, a broadcast) can reorder the items without
+    // reconnecting this controller; the new order is what the server has.
+    this.refreshSavedOrder = () => {
+      const queue = this.queueController();
+      if (queue.saving || queue.pendingOrder || this.isMoving()) return;
+      this.savedOrder = this.currentOrder();
+      queue.savedOrder = this.savedOrder;
+    };
+    document.addEventListener("turbo:morph", this.refreshSavedOrder);
   }
 
   disconnect() {
     document.removeEventListener("touchstart", this.cancelOnSecondFinger, {
       capture: true,
     });
+    document.removeEventListener("turbo:morph", this.refreshSavedOrder);
     this.cancelHold();
   }
 
@@ -112,6 +123,7 @@ export default class extends Controller {
     event.currentTarget.setAttribute("aria-grabbed", "false");
     this.clearPlaceholders();
     this.draggedElement = null;
+    this.finishDeferredRollback();
   }
 
   // Only a drag that started on one of the items is a reorder; a file or
@@ -215,6 +227,7 @@ export default class extends Controller {
 
     if (!this.holdActivated || !this.isTouching || !this.draggedElement) {
       this.resetTouchState();
+      this.finishDeferredRollback();
       return;
     }
 
@@ -226,6 +239,7 @@ export default class extends Controller {
     if (moved) this.saveOrder();
 
     this.resetTouchState();
+    this.finishDeferredRollback();
   }
 
   touchCancel() {
@@ -238,6 +252,7 @@ export default class extends Controller {
 
     this.clearPlaceholders();
     this.resetTouchState();
+    this.finishDeferredRollback();
   }
 
   // Belt-and-suspenders alongside the `[-webkit-touch-callout:none]` class:
@@ -539,12 +554,32 @@ export default class extends Controller {
       });
     });
 
+    return this.queueController();
+  }
+
+  // The controller whose queue saves for this list and all its copies.
+  queueController() {
+    if (!this.mirrorListsValue) return this;
+
     return (
       this.application.getControllerForElementAndIdentifier(
-        lists[0],
+        this.mirroredLists()[0],
         this.identifier,
       ) ?? this
     );
+  }
+
+  mirroredListControllers() {
+    if (!this.mirrorListsValue) return [this];
+
+    return this.mirroredLists()
+      .map((list) =>
+        this.application.getControllerForElementAndIdentifier(
+          list,
+          this.identifier,
+        ),
+      )
+      .filter(Boolean);
   }
 
   mirroredLists() {
@@ -593,6 +628,7 @@ export default class extends Controller {
 
       if (response.ok) {
         this.savedOrder = order;
+        this.rollbackPending = false;
       } else {
         const errorData = await response.json().catch(() => ({}));
         console.error(
@@ -617,26 +653,36 @@ export default class extends Controller {
         return;
       }
 
-      // The request never arrived: put back the saved order and say so;
-      // reloading would fail too while offline. A move the user has not
-      // released yet stays, and its release sends the order again.
-      const lists = this.mirrorListsValue
-        ? this.mirroredLists()
-            .map((list) =>
-              this.application.getControllerForElementAndIdentifier(
-                list,
-                this.identifier,
-              ),
-            )
-            .filter(Boolean)
-        : [this];
-      if (!lists.some((list) => list.isMoving())) {
-        lists.forEach((list) => {
-          list.restoreOrder(this.savedOrder);
-        });
+      // No response: the order may or may not have been saved, and
+      // reloading would fail too while offline. Put back the last order the
+      // server confirmed and say the save could not be confirmed. A move the
+      // user has not released yet stays; its release sends the order again,
+      // and a gesture that ends without a move puts the order back then.
+      const lists = this.mirroredListControllers();
+      if (lists.some((list) => list.isMoving())) {
+        this.rollbackPending = true;
+      } else {
+        this.rollBack(lists);
       }
       this.showSaveFailed();
     }
+  }
+
+  rollBack(lists = this.mirroredListControllers()) {
+    this.rollbackPending = false;
+    lists.forEach((list) => {
+      list.restoreOrder(this.savedOrder);
+    });
+  }
+
+  // Called when a gesture ends. A save that failed while it was going on put
+  // nothing back; if the gesture saved no new order, do that now.
+  finishDeferredRollback() {
+    const queue = this.queueController();
+    if (!queue.rollbackPending || queue.saving || queue.pendingOrder) return;
+    if (queue.mirroredListControllers().some((list) => list.isMoving())) return;
+
+    queue.rollBack();
   }
 
   isMoving() {

@@ -16,6 +16,7 @@ ca:
     budgets: Pressupostos
     categories: Categories
     categorize: Categoritza
+    changelog: Novetats
     chats: Xats
     coinbase_items: Coinbase
     coinstats_items: CoinStats
@@ -29,6 +30,7 @@ ca:
     exports: Exportacions
     family_exports: Exportacions
     family_merchants: Comerços
+    feedback: Comentaris
     guides: Guies
     holdings: Posicions
     home: Inici
@@ -46,10 +48,12 @@ ca:
     llm_usages: Ús d'LLM
     loans: Préstecs
     lunchflow_items: Lunch Flow
+    mcp: Servidor MCP
     merchants: Comerços
     mercury_items: Mercury
     messages: Missatges
     mfa: Autenticació de dos factors
+    monobank_items: Monobank
     oidc_accounts: Comptes SSO
     onboardings: Configuració inicial
     other_assets: Altres actius
@@ -57,12 +61,14 @@ ca:
     payments: Pagaments
     pending_duplicate_merges: Revisió de duplicats
     plaid_items: Plaid
+    plan: Pla
     preferences: Preferències
     profile: Informació del perfil
     profiles: Informació del perfil
     properties: Propietats
     providers: Proveïdors
     recurring_transactions: Recurrents
+    redbark_items: Redbark
     registrations: Registre
     reports: Informes
     rules: Regles
@@ -77,6 +83,7 @@ ca:
     sso_identities: Connexions SSO
     sso_providers: Proveïdors SSO
     subscriptions: Subscripció
+    system_health: Estat del sistema
     tags: Etiquetes
     trades: Operacions
     transactions: Transaccions
@@ -85,10 +92,3 @@ ca:
     users: Usuaris
     valuations: Valoracions
     vehicles: Vehicles
-    changelog: Novetats
-    feedback: Comentaris
-    mcp: Servidor MCP
-    monobank_items: Monobank
-    plan: Pla
-    redbark_items: Redbark
-    system_health: Estat del sistema

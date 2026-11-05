@@ -2,4 +2,4 @@
 hu:
   pdf_import_mailer:
     next_steps:
-      subject: "A PDF dokumentumod elemzése kész – %{product_name}"
+      subject: A PDF dokumentumod elemzése kész – %{product_name}

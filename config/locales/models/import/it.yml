@@ -12,7 +12,8 @@ it:
     errors:
       models:
         import:
-          duplicate_headers: "Le intestazioni CSV si normalizzano in colonne duplicate: %{columns}"
           attributes:
             raw_file_str:
               invalid_csv_format: non è un formato CSV valido
+          duplicate_headers: 'Le intestazioni CSV si normalizzano in colonne duplicate:
+            %{columns}'

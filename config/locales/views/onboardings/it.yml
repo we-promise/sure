@@ -1,66 +1,70 @@
 ---
 it:
   onboardings:
+    goals:
+      ai_insights: Usare l'AI per capire meglio le mie finanze
+      budgeting: Gestire piani finanziari e budget
+      cashflow: Capire i flussi di cassa e le spese
+      investments: Monitorare gli investimenti
+      optimization: Analizzare e ottimizzare i conti
+      partner: Gestire le finanze con un partner
+      reduce_stress: Ridurre lo stress o l'ansia finanziaria
+      submit: Avanti
+      subtitle: Seleziona uno o più obiettivi che hai nell'utilizzare %{product_name}
+        come strumento di finanza personale.
+      title: Cosa ti porta qui?
+      unified_accounts: Vedere tutti i miei conti in un unico posto
     header:
-      sign_out: Disconnetti
-      setup: Configurazione
-      preferences: Preferenze
       goals: Obiettivi
+      preferences: Preferenze
+      setup: Configurazione
+      sign_out: Disconnetti
       start: Inizia
     logout:
       sign_out: Disconnetti
+    preferences:
+      color_theme: Tema colore
+      currency: Valuta
+      date_format: Formato data
+      example: Conto di esempio
+      locale: Lingua
+      preview: Anteprima di come vengono visualizzati i dati in base alle preferenze.
+      submit: Completa
+      subtitle: Configuriamo le tue preferenze.
+      theme_dark: Scuro
+      theme_light: Chiaro
+      theme_system: Sistema
+      title: Configura le tue preferenze
     show:
-      title: Configuriamo il tuo account
-      subtitle: Prima di tutto, configuriamo il tuo profilo.
+      country: Paese
       first_name: Nome
       first_name_placeholder: Nome
-      last_name: Cognome
-      last_name_placeholder: Cognome
       group_name: Nome del gruppo
       group_name_placeholder: Nome del gruppo
       household_name: Nome del nucleo familiare
       household_name_placeholder: Nome del nucleo familiare
-      moniker_prompt: "Utilizzerò %{product_name} con ..."
+      last_name: Cognome
+      last_name_placeholder: Cognome
       moniker_family: Familiari (solo tu o con partner, figli, ecc.)
       moniker_group: Gruppo di persone (azienda, club, associazione, altro)
-      country: Paese
+      moniker_prompt: Utilizzerò %{product_name} con ...
       submit: Continua
-    preferences:
-      title: Configura le tue preferenze
-      subtitle: Configuriamo le tue preferenze.
-      example: Conto di esempio
-      preview: Anteprima di come vengono visualizzati i dati in base alle preferenze.
-      color_theme: Tema colore
-      theme_system: Sistema
-      theme_light: Chiaro
-      theme_dark: Scuro
-      locale: Lingua
-      currency: Valuta
-      date_format: Formato data
-      submit: Completa
-    goals:
-      title: Cosa ti porta qui?
-      subtitle: Seleziona uno o più obiettivi che hai nell'utilizzare %{product_name} come strumento di finanza personale.
-      unified_accounts: Vedere tutti i miei conti in un unico posto
-      cashflow: Capire i flussi di cassa e le spese
-      budgeting: Gestire piani finanziari e budget
-      partner: Gestire le finanze con un partner
-      investments: Monitorare gli investimenti
-      ai_insights: Usare l'AI per capire meglio le mie finanze
-      optimization: Analizzare e ottimizzare i conti
-      reduce_stress: Ridurre lo stress o l'ansia finanziaria
-      submit: Avanti
+      subtitle: Prima di tutto, configuriamo il tuo profilo.
+      title: Configuriamo il tuo account
     trial:
-      title: Prova Sure per 45 giorni
-      data_deletion: I dati saranno eliminati in seguito
-      description_html: A partire da oggi puoi dare un'occhiata approfondita al prodotto.<br/>Se ti piace, fai self-hosting o contribuisci per continuare a usarlo qui.
-      try_button: Prova Sure per 45 giorni
       continue_trial: Continua la prova
-      upgrade: Aggiorna
+      data_deletion: I dati saranno eliminati in seguito
+      description_html: A partire da oggi puoi dare un'occhiata approfondita al prodotto.<br/>Se
+        ti piace, fai self-hosting o contribuisci per continuare a usarlo qui.
       how_it_works: Come funziona qui
+      in_40_days: Tra 40 giorni (%{date})
+      in_40_days_description: Ti invieremo una notifica per ricordarti di esportare
+        i tuoi dati.
+      in_45_days: Tra 45 giorni (%{date})
+      in_45_days_description: Eliminiamo i tuoi dati — contribuisci per continuare
+        a usare Sure qui!
+      title: Prova Sure per 45 giorni
       today: Oggi
       today_description: Avrai accesso gratuito a Sure per 45 giorni sul nostro AWS.
-      in_40_days: Tra 40 giorni (%{date})
-      in_40_days_description: Ti invieremo una notifica per ricordarti di esportare i tuoi dati.
-      in_45_days: Tra 45 giorni (%{date})
-      in_45_days_description: Eliminiamo i tuoi dati — contribuisci per continuare a usare Sure qui!
+      try_button: Prova Sure per 45 giorni
+      upgrade: Aggiorna

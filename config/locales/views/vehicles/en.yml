@@ -9,14 +9,14 @@ en:
       mileage: Mileage
       mileage_placeholder: '15000'
       mileage_unit: Unit
+      mileage_unit_kilometers: Kilometers
+      mileage_unit_miles: Miles
       model: Model
       model_placeholder: Camry
       purchase_date: Purchase date
       purchase_price: Purchase price
       year: Year
       year_placeholder: '2023'
-      mileage_unit_kilometers: Kilometers
-      mileage_unit_miles: Miles
     new:
       title: Enter vehicle details
     overview:
@@ -30,10 +30,10 @@ en:
     tabs:
       overview:
         current_price: Current Price
+        edit_account_details: Edit account details
         make_model: Make & Model
         mileage: Mileage
         purchase_price: Purchase Price
         trend: Trend
         unknown: Unknown
         year: Year
-        edit_account_details: "Edit account details"

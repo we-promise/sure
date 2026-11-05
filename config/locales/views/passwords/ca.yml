@@ -1,7 +1,8 @@
 ---
 ca:
   passwords:
-    disabled: "El canvi de contrasenya a través de Sure està desactivat. Gestiona la teva contrasenya a través del teu proveïdor d'identitat."
+    disabled: El canvi de contrasenya a través de Sure està desactivat. Gestiona la
+      teva contrasenya a través del teu proveïdor d'identitat.
     edit:
       password: Nova contrasenya
       password_challenge: Contrasenya actual

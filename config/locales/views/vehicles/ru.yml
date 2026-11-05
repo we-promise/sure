@@ -9,12 +9,12 @@ ru:
       mileage: Пробег
       mileage_placeholder: '15000'
       mileage_unit: Единица измерения
+      mileage_unit_kilometers: Километры
+      mileage_unit_miles: Мили
       model: Модель
       model_placeholder: Camry
       year: Год
       year_placeholder: '2023'
-      mileage_unit_kilometers: Километры
-      mileage_unit_miles: Мили
     new:
       title: Введите данные транспортного средства
     overview:

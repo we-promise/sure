@@ -51,8 +51,8 @@ ca:
         other: No es poden enllaçar %{count} comptes sense nom
       link_failed: No s'han pogut enllaçar els comptes
       no_accounts_selected: Selecciona almenys un compte
-      no_api_key: No s'han trobat les credencials d'Indexa Capital. Configura-les a
-        la configuració del proveïdor.
+      no_api_key: No s'han trobat les credencials d'Indexa Capital. Configura-les
+        a la configuració del proveïdor.
       partial_invalid: S'han enllaçat correctament %{created_count} compte(s), %{already_linked_count}
         ja estaven enllaçats, %{invalid_count} compte(s) tenien noms no vàlids
       partial_success: 'S''han enllaçat correctament %{created_count} compte(s). %{already_linked_count}
@@ -65,8 +65,8 @@ ca:
       api_error: 'Error de l''API: %{message}'
       invalid_account_name: No es pot enllaçar un compte sense nom
       missing_parameters: Falten paràmetres obligatoris
-      no_api_key: No s'han trobat les credencials d'Indexa Capital. Configura-les a
-        la configuració del proveïdor.
+      no_api_key: No s'han trobat les credencials d'Indexa Capital. Configura-les
+        a la configuració del proveïdor.
       provider_account_already_linked: Aquest compte Indexa Capital ja està enllaçat
         a un altre compte
       provider_account_not_found: No s'ha trobat el compte Indexa Capital
@@ -110,8 +110,8 @@ ca:
         nous comptes
       update_button: Actualitza la configuració
     preload_accounts:
-      no_credentials_configured: Primer, configura les teves credencials d'Indexa Capital
-        a la configuració del proveïdor.
+      no_credentials_configured: Primer, configura les teves credencials d'Indexa
+        Capital a la configuració del proveïdor.
     select_accounts:
       accounts_selected: comptes seleccionats
       api_error: 'Error de l''API: %{message}'
@@ -120,11 +120,12 @@ ca:
         a Indexa Capital
       description: Selecciona els comptes que vols enllaçar al teu compte de %{product_name}.
       link_accounts: Enllaça els comptes seleccionats
-      no_accounts_found: No s'han trobat comptes. Comprova les teves credencials d'Indexa Capital.
+      no_accounts_found: No s'han trobat comptes. Comprova les teves credencials d'Indexa
+        Capital.
       no_api_key: Les credencials d'Indexa Capital no estan configurades. Configura-les
         a la configuració.
-      no_credentials_configured: Primer, configura les teves credencials d'Indexa Capital
-        a la configuració del proveïdor.
+      no_credentials_configured: Primer, configura les teves credencials d'Indexa
+        Capital a la configuració del proveïdor.
       no_name_placeholder: "(Sense nom)"
       title: Selecciona comptes Indexa Capital
     select_existing_account:
@@ -138,8 +139,8 @@ ca:
         a Indexa Capital
       connect_hint: Connecta un compte Indexa Capital per habilitar la sincronització
         automàtica.
-      description: Selecciona un compte Indexa Capital per enllaçar-lo amb aquest compte.
-        Les transaccions es sincronitzaran i deduplicaran automàticament.
+      description: Selecciona un compte Indexa Capital per enllaçar-lo amb aquest
+        compte. Les transaccions es sincronitzaran i deduplicaran automàticament.
       header: Enllaça amb Indexa Capital
       link_account: Enllaça compte
       link_button: Enllaça aquest compte
@@ -150,8 +151,8 @@ ca:
         credencials.
       no_api_key: Les credencials d'Indexa Capital no estan configurades. Configura-les
         a la configuració.
-      no_credentials_configured: Primer, configura les teves credencials d'Indexa Capital
-        a la configuració del proveïdor.
+      no_credentials_configured: Primer, configura les teves credencials d'Indexa
+        Capital a la configuració del proveïdor.
       no_name_placeholder: "(Sense nom)"
       settings_link: Ves a la configuració del proveïdor
       subtitle: Tria un compte Indexa Capital
@@ -173,7 +174,8 @@ ca:
       api_error: 'Error de l''API: %{message}'
       balance: Saldo
       cancel: Cancel·la
-      choose_account_type: 'Tria el tipus de compte correcte per a cada compte Indexa Capital:'
+      choose_account_type: 'Tria el tipus de compte correcte per a cada compte Indexa
+        Capital:'
       create_accounts: Crea comptes
       creating: Creant comptes...
       creating_accounts: Creant comptes...
@@ -182,7 +184,8 @@ ca:
       import_selected: Importa els comptes seleccionats
       instructions: Selecciona els comptes que vols importar des d'Indexa Capital.
         Pots triar diversos comptes.
-      no_accounts: No s'han trobat comptes sense enllaçar d'aquesta connexió Indexa Capital.
+      no_accounts: No s'han trobat comptes sense enllaçar d'aquesta connexió Indexa
+        Capital.
       no_accounts_to_setup: No hi ha comptes per configurar
       no_api_key: Les credencials d'Indexa Capital no estan configurades. Revisa la
         configuració de la connexió.

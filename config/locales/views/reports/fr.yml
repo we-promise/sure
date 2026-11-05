@@ -31,7 +31,7 @@ fr:
       step3: Copiez la clé API
       step4: 'Ajoutez-la à cette URL comme : &api_key=VOTRE_CLÉ'
       then_use: Ensuite, utilisez l'URL complète avec =IMPORTDATA() dans Google Sheets.
-      title_no_key: "Clé API requise"
+      title_no_key: Clé API requise
     index:
       date_range:
         from: Du
@@ -175,11 +175,14 @@ fr:
         slightly_less: 15–50 % de moins
         slightly_more: 15–50 % de plus
       no_changes: Les dépenses sont conformes à la normale dans toutes les catégories.
-      no_history_html: "%{total} dépensés sur cette période. L'historique antérieur ne suffit pas encore pour déterminer ce qui est normal."
+      no_history_html: "%{total} dépensés sur cette période. L'historique antérieur
+        ne suffit pas encore pour déterminer ce qui est normal."
       no_history_short: Pas encore assez d'historique antérieur pour comparer.
       no_spending: Aucune dépense sur cette période.
-      summary_html: "%{total} dépensés sur cette période. La normale pour une période de cette durée est de %{normal}, calculée du %{baseline_start} au %{baseline_end}."
-      summary_so_far_html: "%{total} dépensés jusqu'ici. La normale pour ce nombre de jours est de %{normal}, calculée du %{baseline_start} au %{baseline_end}."
+      summary_html: "%{total} dépensés sur cette période. La normale pour une période
+        de cette durée est de %{normal}, calculée du %{baseline_start} au %{baseline_end}."
+      summary_so_far_html: "%{total} dépensés jusqu'ici. La normale pour ce nombre
+        de jours est de %{normal}, calculée du %{baseline_start} au %{baseline_end}."
       title: Dépenses par rapport à la normale
       tooltip:
         less: "%{amount} de moins que la normale (%{percent})"

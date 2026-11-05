@@ -2,30 +2,28 @@
 vi:
   valuations:
     confirmation_contents:
-      this_will: "Thao tác này sẽ %{action_verb} giá trị tài khoản vào"
-      to_colon: "thành:"
-      total_account_value: Tổng giá trị tài khoản
-      holdings_value: Giá trị danh mục nắm giữ
-      brokerage_cash: Tiền mặt môi giới
       account_balance: số dư tài khoản
-      credit_card_balance: số dư thẻ tín dụng
-      loan_balance: số dư khoản vay
-      property_value: giá trị bất động sản
-      vehicle_value: giá trị xe
-      crypto_balance: số dư tiền mã hóa
       asset_value: giá trị tài sản
-      liability_balance: số dư nợ phải trả
       balance: số dư
-      "on": "vào"
-      to: "thành"
-      recalculate_notice: "Tất cả giao dịch và số dư trong tương lai sẽ được tính lại dựa trên %{change_or_update} này."
+      brokerage_cash: Tiền mặt môi giới
       change: thay đổi
+      credit_card_balance: số dư thẻ tín dụng
+      crypto_balance: số dư tiền mã hóa
+      holdings_value: Giá trị danh mục nắm giữ
+      liability_balance: số dư nợ phải trả
+      loan_balance: số dư khoản vay
+      'on': vào
+      property_value: giá trị bất động sản
+      recalculate_notice: Tất cả giao dịch và số dư trong tương lai sẽ được tính lại
+        dựa trên %{change_or_update} này.
+      this_will: Thao tác này sẽ %{action_verb} giá trị tài khoản vào
+      to: thành
+      to_colon: 'thành:'
+      total_account_value: Tổng giá trị tài khoản
       update: cập nhật
+      vehicle_value: giá trị xe
     create:
       account_updated: Tài khoản đã được cập nhật
-    update:
-      account_updated: Tài khoản đã được cập nhật
-      entry_updated: Mục nhập đã được cập nhật
     errors:
       amount_required: Số tiền là bắt buộc
     form:
@@ -54,7 +52,10 @@ vi:
       name_placeholder: Nhập tên cho mục nhập này
       note_label: Ghi chú
       note_placeholder: Thêm bất kỳ thông tin chi tiết nào về mục nhập này
+      opening_balance: Số dư đầu kỳ
       overview: Tổng quan
       settings: Cài đặt
-      opening_balance: "Số dư đầu kỳ"
       update_value: Cập nhật giá trị
+    update:
+      account_updated: Tài khoản đã được cập nhật
+      entry_updated: Mục nhập đã được cập nhật

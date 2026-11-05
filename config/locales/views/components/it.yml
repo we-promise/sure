@@ -1,9 +1,10 @@
 ---
 it:
   UI:
-    period_picker:
-      aria_label: "Periodo: %{period}"
     account:
+      activity_date:
+        balance_tooltip: Il saldo a fine giornata, dopo tutte le transazioni e rettifiche
+        no_balance_data: Nessun dato di saldo disponibile per questa data
       activity_feed:
         toggle_selection_checkboxes: Attiva/disattiva selezione
       balance_reconciliation:
@@ -33,9 +34,12 @@ it:
           adjustments: Riconciliazioni manuali o altre rettifiche
           adjustments_asset: Rettifiche manuali del valore o perizie
           buys: Acquisti di crypto durante il giorno
-          change_in_brokerage_cash: Variazione netta della liquidità da depositi, prelievi e operazioni
-          change_in_holdings_market: Variazione del valore delle posizioni dai movimenti del prezzo di mercato
-          change_in_holdings_trades: Impatto sulle posizioni dall'acquisto e dalla vendita di titoli
+          change_in_brokerage_cash: Variazione netta della liquidità da depositi,
+            prelievi e operazioni
+          change_in_holdings_market: Variazione del valore delle posizioni dai movimenti
+            del prezzo di mercato
+          change_in_holdings_trades: Impatto sulle posizioni dall'acquisto e dalla
+            vendita di titoli
           charges: Nuovi addebiti effettuati durante il giorno
           end_balance: Il saldo calcolato dopo tutte le transazioni
           end_balance_investment: Il saldo calcolato dopo tutte le attività
@@ -48,19 +52,24 @@ it:
           final_principal: Il saldo del capitale finale per il giorno
           final_value: Il valore dell'asset finale per il giorno
           market_changes: Variazioni di valore dai movimenti del prezzo di mercato
-          net_cash_flow: Variazione netta del saldo da tutte le transazioni durante il giorno
-          net_principal_change: Pagamenti del capitale e nuovi prestiti durante il giorno
-          net_value_change: Tutte le variazioni di valore inclusi miglioramenti e deprezzamento
+          net_cash_flow: Variazione netta del saldo da tutte le transazioni durante
+            il giorno
+          net_principal_change: Pagamenti del capitale e nuovi prestiti durante il
+            giorno
+          net_value_change: Tutte le variazioni di valore inclusi miglioramenti e
+            deprezzamento
           payments: Pagamenti effettuati alla carta durante il giorno
           sells: Vendite di crypto durante il giorno
           start_balance: Il saldo del conto all'inizio di questo giorno
           start_balance_credit: Il saldo dovuto all'inizio di questo giorno
-          start_balance_crypto: Il valore delle posizioni crypto all'inizio di questo giorno
-          start_balance_investment: Il valore totale del portafoglio all'inizio di questo giorno
+          start_balance_crypto: Il valore delle posizioni crypto all'inizio di questo
+            giorno
+          start_balance_investment: Il valore totale del portafoglio all'inizio di
+            questo giorno
           start_principal: Il saldo del capitale all'inizio di questo giorno
           start_value: Il valore dell'asset all'inizio di questo giorno
       chart:
-        no_data_available: "Nessun dato disponibile"
+        no_data_available: Nessun dato disponibile
         title:
           balance: Saldo
           cash_value: Valore in liquidità
@@ -75,90 +84,89 @@ it:
           holdings: Posizioni
           total_value: Valore totale
         vs_available_history: vs. cronologia disponibile
-      activity_date:
-        balance_tooltip: "Il saldo a fine giornata, dopo tutte le transazioni e rettifiche"
-        no_balance_data: "Nessun dato di saldo disponibile per questa data"
+    period_picker:
+      aria_label: 'Periodo: %{period}'
   ds:
     alert:
       variants:
+        destructive: Errore
+        error: Errore
         info: Info
         success: Successo
         warning: Avviso
-        error: Errore
-        destructive: Errore
+    dialog:
+      close: Chiudi
+    link:
+      opens_in_new_tab: "(si apre in una nuova scheda)"
     pill:
       aria_label: "%{label}"
       default_label: Anteprima
-    dialog:
-      close: Chiudi
     popover:
       avatar_default_label: Apri menu
     tooltip:
       trigger_label: Ulteriori informazioni
-    link:
-      opens_in_new_tab: (si apre in una nuova scheda)
   provider_sync_summary:
-    title: Riepilogo sincronizzazione
-    last_sync: "Ultima sincronizzazione: %{time_ago} fa"
     accounts:
+      institutions: 'Istituti: %{count}'
+      linked: 'Collegati: %{count}'
       title: Conti
-      total: "Totale: %{count}"
-      linked: "Collegati: %{count}"
-      unlinked: "Scollegati: %{count}"
-      institutions: "Istituti: %{count}"
-    transactions:
-      title: Transazioni
-      seen: "Viste: %{count}"
-      imported: "Importate: %{count}"
-      updated: "Aggiornate: %{count}"
-      skipped: "Saltate: %{count}"
-      fetching: "Recupero dal broker..."
-      protected:
-        one: "%{count} voce protetta (non sovrascritta)"
-        other: "%{count} voci protette (non sovrascritte)"
-      view_protected: Vedi voci protette
-    skip_reasons:
-      excluded: Esclusa
-      user_modified: Modificata dall'utente
-      import_locked: Importazione CSV
-      protected: Protetta
-    holdings:
-      title: Posizioni
-      found: "Trovate: %{count}"
-      processed: "Elaborate: %{count}"
-    trades:
-      title: Operazioni
-      imported: "Importate: %{count}"
-      skipped: "Saltate: %{count}"
-      fetching: "Recupero attività dal broker..."
+      total: 'Totale: %{count}'
+      unlinked: 'Scollegati: %{count}'
     health:
-      title: Salute
-      view_error_details: Vedi dettagli errori
-      rate_limited: "Limite di frequenza raggiunto %{time_ago} fa"
-      recently: di recente
-      errors: "Errori: %{count}"
-      pending_reconciled:
-        one: "%{count} transazione in attesa duplicata riconciliata"
-        other: "%{count} transazioni in attesa duplicate riconciliate"
-      view_reconciled: Vedi transazioni riconciliate
+      data_warnings: 'Avvisi dati: %{count}'
       duplicate_suggestions:
         one: "%{count} possibile duplicato da rivedere"
         other: "%{count} possibili duplicati da rivedere"
-      view_duplicate_suggestions: Vedi duplicati suggeriti
+      errors: 'Errori: %{count}'
+      notices: 'Avvisi: %{count}'
+      pending_reconciled:
+        one: "%{count} transazione in attesa duplicata riconciliata"
+        other: "%{count} transazioni in attesa duplicate riconciliate"
+      rate_limited: Limite di frequenza raggiunto %{time_ago} fa
+      recently: di recente
       stale_pending:
         one: "%{count} transazione in attesa obsoleta (esclusa dai budget)"
         other: "%{count} transazioni in attesa obsolete (escluse dai budget)"
-      view_stale_pending: Vedi conti interessati
       stale_pending_count:
         one: "%{count} transazione"
         other: "%{count} transazioni"
       stale_unmatched:
         one: "%{count} transazione in attesa richiede revisione manuale"
         other: "%{count} transazioni in attesa richiedono revisione manuale"
-      view_stale_unmatched: Vedi transazioni che richiedono revisione
       stale_unmatched_count:
         one: "%{count} transazione"
         other: "%{count} transazioni"
-      data_warnings: "Avvisi dati: %{count}"
-      notices: "Avvisi: %{count}"
+      title: Salute
       view_data_quality: Vedi dettagli qualità dati
+      view_duplicate_suggestions: Vedi duplicati suggeriti
+      view_error_details: Vedi dettagli errori
+      view_reconciled: Vedi transazioni riconciliate
+      view_stale_pending: Vedi conti interessati
+      view_stale_unmatched: Vedi transazioni che richiedono revisione
+    holdings:
+      found: 'Trovate: %{count}'
+      processed: 'Elaborate: %{count}'
+      title: Posizioni
+    last_sync: 'Ultima sincronizzazione: %{time_ago} fa'
+    skip_reasons:
+      excluded: Esclusa
+      import_locked: Importazione CSV
+      protected: Protetta
+      user_modified: Modificata dall'utente
+    title: Riepilogo sincronizzazione
+    trades:
+      fetching: Recupero attività dal broker...
+      imported: 'Importate: %{count}'
+      skipped: 'Saltate: %{count}'
+      title: Operazioni
+    transactions:
+      fetching: Recupero dal broker...
+      imported: 'Importate: %{count}'
+      protected:
+        one: "%{count} voce protetta (non sovrascritta)"
+        other: "%{count} voci protette (non sovrascritte)"
+      seen: 'Viste: %{count}'
+      skipped: 'Saltate: %{count}'
+      title: Transazioni
+      updated: 'Aggiornate: %{count}'
+      view_protected: Vedi voci protette

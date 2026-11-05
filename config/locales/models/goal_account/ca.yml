@@ -6,4 +6,5 @@ ca:
         goal_account:
           attributes:
             base:
-              account_already_fully_earmarked: Aquest compte ja està totalment reservat per a «%{goal_name}». Introdueix un import per repartir-lo.
+              account_already_fully_earmarked: Aquest compte ja està totalment reservat
+                per a «%{goal_name}». Introdueix un import per repartir-lo.

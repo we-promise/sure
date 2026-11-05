@@ -4,8 +4,8 @@ zh-TW:
     attributes:
       user:
         email: 電子郵件
-        family: '%{moniker}'
-        family_id: '%{moniker}'
+        family: "%{moniker}"
+        family_id: "%{moniker}"
         first_name: 名字
         last_name: 姓氏
         password: 密碼

@@ -2,4 +2,4 @@
 nl:
   pdf_import_mailer:
     next_steps:
-      subject: "Uw PDF-document is geanalyseerd - %{product_name}"
+      subject: Uw PDF-document is geanalyseerd - %{product_name}

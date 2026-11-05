@@ -4,62 +4,62 @@ zh-CN:
     self_hostable:
       redis_configured: Redis 现已正确配置！您现在可以设置您的 Sure 应用了。
   shared:
-    dot_separator: "·"
+    cancel: 取消
     confirm_modal:
       accept: 确认
       body_html: "<p>此决定无法撤销</p>"
       cancel: 取消
       title: 确定吗？
-    money_field:
-      above_max: 输入的金额不能超过 %{max}。
-      below_min: 输入的金额不能少于 %{min}。
-      invalid_amount: 请输入有效的金额或算式。
-      label: 金额
-      operator_add: 加
-      operator_subtract: 减
-      operator_multiply: 乘
-      operator_divide: 除
+    custom_confirm:
+      default_body: 此操作不可逆。
+      default_btn_text: 确认
+      default_title: 确定吗？
+      resource_deletion_body: 确定要删除%{resource}吗？此操作不可逆。
+      resource_deletion_btn_text: 删除%{resource}
+      resource_deletion_title: 删除%{resource}？
+    dot_separator: "·"
     exchange_rate_tabs:
       calculate_rate_tab: 计算汇率
       convert_tab: 使用汇率换算
       destination_amount: 目标金额
       exchange_rate: 汇率
       exchange_rate_help: 选择如何输入金额。
-    syncing_notice:
-      syncing: 账户数据同步中……
-    require_admin: 只有管理员才能执行此操作
-    require_non_guest: 访客无法执行此操作
-    require_connector_owner: 您只能管理自己添加的连接
-    custom_confirm:
-      default_title: 确定吗？
-      default_body: 此操作不可逆。
-      default_btn_text: 确认
-      resource_deletion_title: "删除%{resource}？"
-      resource_deletion_body: "确定要删除%{resource}吗？此操作不可逆。"
-      resource_deletion_btn_text: "删除%{resource}"
     family_moniker:
       group_plural: 组
       group_singular: 组
       plural: 家庭
       singular: 家庭
-    trend_change:
-      no_change: 无变化
-    cancel: 取消
+    money_field:
+      above_max: 输入的金额不能超过 %{max}。
+      below_min: 输入的金额不能少于 %{min}。
+      invalid_amount: 请输入有效的金额或算式。
+      label: 金额
+      operator_add: 加
+      operator_divide: 除
+      operator_multiply: 乘
+      operator_subtract: 减
+    preview: 预览
+    require_admin: 只有管理员才能执行此操作
+    require_connector_owner: 您只能管理自己添加的连接
+    require_non_guest: 访客无法执行此操作
+    sidekiq_health_banner:
+      body: 后台任务未在处理，因此余额、净资产和账户同步可能已过期或缺失。
+      cta: 查看系统运行状况
+      reasons:
+        ai_queues_not_polled: 没有工作进程正在处理 AI 队列（聊天、商户识别、分类）。请检查工作进程是否加载了 config/sidekiq.yml。
+        no_worker_processes: 没有连接的 Sidekiq 工作进程。请启动 worker 容器或 systemd 服务单元。
+        queue_backed_up: 队列中最早的任务等待时间已超出延迟预算。工作进程仍在运行但已落后。
+        redis_unreachable: 应用程序无法连接到 Redis。请检查您的 REDIS_URL 并确认 Redis 正在运行。
+        stale_heartbeat: Sidekiq 工作进程近期未上报心跳。可能已卡住或崩溃。
+      title: 部分数据可能已过期
+    sync_toast:
+      message: 有新数据可用
+      refresh: 刷新
+    syncing_notice:
+      syncing: 账户数据同步中……
     transaction_tabs:
       expense: 支出
       income: 收入
       transfer: 转账
-    preview: 预览
-    sync_toast:
-      message: 有新数据可用
-      refresh: 刷新
-    sidekiq_health_banner:
-      title: 部分数据可能已过期
-      body: 后台任务未在处理，因此余额、净资产和账户同步可能已过期或缺失。
-      cta: 查看系统运行状况
-      reasons:
-        redis_unreachable: 应用程序无法连接到 Redis。请检查您的 REDIS_URL 并确认 Redis 正在运行。
-        no_worker_processes: 没有连接的 Sidekiq 工作进程。请启动 worker 容器或 systemd 服务单元。
-        stale_heartbeat: Sidekiq 工作进程近期未上报心跳。可能已卡住或崩溃。
-        ai_queues_not_polled: 没有工作进程正在处理 AI 队列（聊天、商户识别、分类）。请检查工作进程是否加载了 config/sidekiq.yml。
-        queue_backed_up: 队列中最早的任务等待时间已超出延迟预算。工作进程仍在运行但已落后。
+    trend_change:
+      no_change: 无变化

@@ -13,10 +13,10 @@ id:
     form:
       placeholder: Nama tag
     index:
+      delete_all: Hapus semua
       empty: Belum ada tag
       new: Tag baru
       tags: Tag
-      delete_all: Hapus semua
     menu:
       label: Edit tag
     new:

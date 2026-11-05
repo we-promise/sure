@@ -1,8 +1,5 @@
 ---
 nb:
-  defaults:
-    brand_name: "%{brand_name}"
-    product_name: "%{product_name}"
   activerecord:
     errors:
       messages:
@@ -110,6 +107,9 @@ nb:
       month: måned
       second: sekund
       year: år
+  defaults:
+    brand_name: "%{brand_name}"
+    product_name: "%{product_name}"
   errors:
     format: "%{attribute} %{message}"
     messages:

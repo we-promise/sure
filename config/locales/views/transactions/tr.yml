@@ -24,7 +24,7 @@ tr:
       failed_delete: 'Ek silinemedi: %{error}'
       failed_upload: 'Ek yüklenemedi: %{error}'
       files:
-        one: "Dosya (%{count})"
+        one: Dosya (%{count})
         other: Dosyalar (%{count})
       max_reached: Maksimum dosya sınırına ulaşıldı (%{count}/%{max}). Başka bir dosya
         yüklemek için mevcut bir dosyayı silin.
@@ -151,18 +151,28 @@ tr:
       account: Hesap
       account_prompt: Bir Hesap Seçin
       amount: Tutar
+      back_to_categories: Geri
       category: Kategori
       category_label: Kategori
       category_prompt: Bir Kategori Seçin
+      category_search_placeholder: Kategori ara
+      choose_parent: '"%{name}" şunun altında oluştur:'
+      create_as_subcategory: Alt kategori olarak ekle…
+      create_category: '"%{name}" oluştur'
+      create_category_error: Kategori oluşturulamadı
+      create_merchant: Oluştur
+      create_merchant_error: Satıcı oluşturulamadı
       create_tag: Oluştur
       date: Tarih
       description: Açıklama
       description_placeholder: İşlemi açıklayın
-      description_placeholder_optional: "Kategori/satıcı adını kullanmak için boş bırakın veya önce birini seçin"
+      description_placeholder_optional: Kategori/satıcı adını kullanmak için boş bırakın
+        veya önce birini seçin
       details: Detaylar
       expense: Gider
       income: Gelir
       merchant_label: Satıcı
+      merchant_search_placeholder: Satıcı ara veya oluştur
       none: "(yok)"
       note_label: Notlar
       note_placeholder: Not girin
@@ -170,15 +180,6 @@ tr:
       tag_search_placeholder: Etiket ara veya oluştur
       tags_label: Etiketler
       transfer: Transfer
-      category_search_placeholder: Kategori ara
-      create_category: '"%{name}" oluştur'
-      create_category_error: Kategori oluşturulamadı
-      create_as_subcategory: Alt kategori olarak ekle…
-      choose_parent: '"%{name}" şunun altında oluştur:'
-      back_to_categories: Geri
-      create_merchant: Oluştur
-      create_merchant_error: Satıcı oluşturulamadı
-      merchant_search_placeholder: Satıcı ara veya oluştur
     header:
       edit_categories: Kategorileri düzenle
       edit_imports: İçe aktarımları düzenle
@@ -187,7 +188,7 @@ tr:
       import: İçe aktar
     index:
       categorize_button:
-        one: "Kategorilendir (%{count})"
+        one: Kategorilendir (%{count})
         other: Kategorilendir (%{count})
       edit_categories: Kategorileri düzenle
       edit_imports: İçe aktarımları düzenle
@@ -299,6 +300,9 @@ tr:
         vb.). Otomatik algılanır veya manuel olarak ayarlanır.
       additional_details: Ek detaylar
       amount: Tutar
+      applied_to_detail: Son ödeme tarihi %{date} olan faturaya %{amount}
+      applied_to_title: Bu ödemeyle kapatılan faturalar
+      applied_to_unreviewed: İnceleme gerekiyor
       attachments: Ekler
       category_label: Kategori
       convert: Dönüştür
@@ -306,6 +310,7 @@ tr:
       convert_to_trade_description: Bu işlemi, portföy takibi için menkul kıymet detaylarıyla
         bir Alış veya Satış işlemine dönüştürün.
       convert_to_trade_title: Menkul Kıymet Alım Satımına Dönüştür
+      create_bill: Fatura oluştur
       date_label: Tarih
       delete: Sil
       delete_subtitle: Bu işlem kalıcı olarak silinir, geçmiş bakiyelerinizi etkiler
@@ -352,10 +357,6 @@ tr:
       transfer_matcher_description: Bu işlemi başka bir hesaptaki karşılığına bağlayın.
       transfer_or_debt_payment: Transfer mi yoksa Borç Ödemesi mi?
       uncategorized: "(kategorilendirilmemiş)"
-      create_bill: Fatura oluştur
-      applied_to_title: Bu ödemeyle kapatılan faturalar
-      applied_to_detail: Son ödeme tarihi %{date} olan faturaya %{amount}
-      applied_to_unreviewed: İnceleme gerekiyor
     split_parent_row:
       split_label: Bölünmüş
     summary:

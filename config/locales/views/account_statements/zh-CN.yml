@@ -2,9 +2,9 @@
 zh-CN:
   account_statements:
     account_tab:
-      coverage_title: 对账单覆盖范围
       coverage_description: 由已上传对账单和余额核验支持的历史月份。
       coverage_range: "%{start} - %{end}"
+      coverage_title: 对账单覆盖范围
       empty: 此账户尚未关联任何对账单。
       open_inbox: 收件箱
       statements_title: 对账单
@@ -36,7 +36,7 @@ zh-CN:
       files_hint: PDF、CSV 或 XLSX。每个文件最大 %{max_size}MB。
       files_label: 对账单文件
       inbox_upload: 上传
-      period_hint: "如果 PDF 中写明了账单周期，Sure 会直接读取，否则从文件名中的日期（例如 2026-04）读取。你也可以在账单上手动设置。"
+      period_hint: 如果 PDF 中写明了账单周期，Sure 会直接读取，否则从文件名中的日期（例如 2026-04）读取。你也可以在账单上手动设置。
     index:
       account_label: 账户
       confidence: "%{confidence} 匹配"
@@ -77,9 +77,9 @@ zh-CN:
       download: 下载
       institution_name_hint: 机构提示
       ledger_amount: Sure 账本
+      link_suggestion: 关联建议
       linked_to: 已关联到 %{account}。
       linking_title: 账户关联
-      link_suggestion: 关联建议
       metadata_title: 对账单元数据
       no_suggestion: 还没有账户建议。
       opening_balance: 期初余额
@@ -92,9 +92,9 @@ zh-CN:
       statement_amount: 对账单
       suggested_account: 建议账户是 %{account}（置信度 %{confidence}）。
       title: 对账单
+      unknown_value: 未知
       unlink: 取消关联
       unmatched_account: 未匹配收件箱
-      unknown_value: 未知
     status:
       linked: 已关联
       rejected: 已拒绝

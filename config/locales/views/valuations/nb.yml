@@ -26,6 +26,6 @@ nb:
       name_placeholder: Skriv inn et navn for denne oppføringen
       note_label: Notater
       note_placeholder: Legg til eventuelle tilleggsdetaljer om denne oppføringen
+      opening_balance: Startsaldo
       overview: Oversikt
       settings: Innstillinger
-      opening_balance: Startsaldo

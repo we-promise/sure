@@ -11,190 +11,183 @@ en:
     show:
       chart_title: Total value
     subtypes:
-      # United States
-      brokerage:
-        short: Brokerage
-        long: Brokerage
-      cash_management:
-        short: CMA
-        long: Cash Management Account
       401k:
-        short: 401(k)
         long: 401(k)
-      roth_401k:
-        short: Roth 401(k)
-        long: Roth 401(k)
+        short: 401(k)
       403b:
-        short: 403(b)
         long: 403(b)
+        short: 403(b)
       457b:
-        short: 457(b)
         long: 457(b)
-      tsp:
-        short: TSP
-        long: Thrift Savings Plan
-      ira:
-        short: IRA
-        long: Traditional IRA
-      roth_ira:
-        short: Roth IRA
-        long: Roth IRA
-      sep_ira:
-        short: SEP IRA
-        long: SEP IRA
-      simple_ira:
-        short: SIMPLE IRA
-        long: SIMPLE IRA
+        short: 457(b)
       529_plan:
-        short: 529 Plan
         long: 529 Education Savings Plan
-      hsa:
-        short: HSA
-        long: Health Savings Account
-      ugma:
-        short: UGMA
-        long: UGMA Custodial Account
-      utma:
-        short: UTMA
-        long: UTMA Custodial Account
-      # United Kingdom
-      isa:
-        short: ISA
-        long: Individual Savings Account
-      lisa:
-        short: LISA
-        long: Lifetime ISA
-      sipp:
-        short: SIPP
-        long: Self-Invested Personal Pension
-      workplace_pension_uk:
-        short: Pension
-        long: Workplace Pension
-      # Canada
-      rrsp:
-        short: RRSP
-        long: Registered Retirement Savings Plan
-      tfsa:
-        short: TFSA
-        long: Tax-Free Savings Account
-      resp:
-        short: RESP
-        long: Registered Education Savings Plan
-      lira:
-        short: LIRA
-        long: Locked-In Retirement Account
-      rrif:
-        short: RRIF
-        long: Registered Retirement Income Fund
-      # Australia
-      super:
-        short: Super
-        long: Superannuation
-      smsf:
-        short: SMSF
-        long: Self-Managed Super Fund
-      # Europe
-      pea:
-        short: PEA
-        long: Plan d'Épargne en Actions
-      pillar_3a:
-        short: Pillar 3a
-        long: Private Pension (Pillar 3a)
-      riester:
-        short: Riester
-        long: Riester-Rente
-      # India
-      nps:
-        short: NPS
-        long: National Pension System
-      apy:
-        short: APY
-        long: Atal Pension Yojana
-      indian_stocks:
-        short: Indian Stocks
-        long: Indian Stocks (Demat)
-      indian_equity:
-        short: Indian Equity
-        long: Indian Equity
-      indian_etf:
-        short: Indian ETF
-        long: Indian ETF
-      life_insurance:
-        short: Life Insurance
-        long: Life Insurance
-      epf:
-        short: EPF
-        long: Employees' Provident Fund
-      ppf:
-        short: PPF
-        long: Public Provident Fund
-      ssy:
-        short: SSY
-        long: Sukanya Samriddhi Yojana
-      nsc:
-        short: NSC
-        long: National Savings Certificate
-      scss:
-        short: SCSS
-        long: Senior Citizens' Savings Scheme
-      fd:
-        short: FD
-        long: Fixed Deposit
-      rd:
-        short: RD
-        long: Recurring Deposit
-      pomis:
-        short: POMIS
-        long: Post Office Monthly Income Scheme
-      kvp:
-        short: KVP
-        long: Kisan Vikas Patra
-      gold_etf:
-        short: Gold ETF
-        long: Gold ETF
-      gold_mf:
-        short: Gold MF
-        long: Gold Mutual Fund
-      sgb:
-        short: SGB
-        long: Sovereign Gold Bond
-      g_sec:
-        short: G-Sec
-        long: Government Securities (G-Secs)
-      sdl:
-        short: SDL
-        long: State Development Loans (SDLs)
-      corporate_bond:
-        short: Corporate Bond
-        long: Corporate Bond
-      infrastructure_bond:
-        short: Infra Bond
-        long: Infrastructure Bond
-      tax_free_bond:
-        short: Tax-Free Bond
-        long: Tax-Free Bond
-      # Generic
-      pension:
-        short: Pension
-        long: Pension
-      retirement:
-        short: Retirement
-        long: Retirement Account
-      mutual_fund:
-        short: Mutual Fund
-        long: Mutual Fund
-      gold:
-        short: Gold
-        long: Gold (physical or digital)
+        short: 529 Plan
       angel:
-        short: Angel
         long: Angel Investment
-      trust:
-        short: Trust
-        long: Trust
+        short: Angel
+      apy:
+        long: Atal Pension Yojana
+        short: APY
+      brokerage:
+        long: Brokerage
+        short: Brokerage
+      cash_management:
+        long: Cash Management Account
+        short: CMA
+      corporate_bond:
+        long: Corporate Bond
+        short: Corporate Bond
+      epf:
+        long: Employees' Provident Fund
+        short: EPF
+      fd:
+        long: Fixed Deposit
+        short: FD
+      g_sec:
+        long: Government Securities (G-Secs)
+        short: G-Sec
+      gold:
+        long: Gold (physical or digital)
+        short: Gold
+      gold_etf:
+        long: Gold ETF
+        short: Gold ETF
+      gold_mf:
+        long: Gold Mutual Fund
+        short: Gold MF
+      hsa:
+        long: Health Savings Account
+        short: HSA
+      indian_equity:
+        long: Indian Equity
+        short: Indian Equity
+      indian_etf:
+        long: Indian ETF
+        short: Indian ETF
+      indian_stocks:
+        long: Indian Stocks (Demat)
+        short: Indian Stocks
+      infrastructure_bond:
+        long: Infrastructure Bond
+        short: Infra Bond
+      ira:
+        long: Traditional IRA
+        short: IRA
+      isa:
+        long: Individual Savings Account
+        short: ISA
+      kvp:
+        long: Kisan Vikas Patra
+        short: KVP
+      life_insurance:
+        long: Life Insurance
+        short: Life Insurance
+      lira:
+        long: Locked-In Retirement Account
+        short: LIRA
+      lisa:
+        long: Lifetime ISA
+        short: LISA
+      mutual_fund:
+        long: Mutual Fund
+        short: Mutual Fund
+      nps:
+        long: National Pension System
+        short: NPS
+      nsc:
+        long: National Savings Certificate
+        short: NSC
       other:
-        short: Other
         long: Other Investment
+        short: Other
+      pea:
+        long: Plan d'Épargne en Actions
+        short: PEA
+      pension:
+        long: Pension
+        short: Pension
+      pillar_3a:
+        long: Private Pension (Pillar 3a)
+        short: Pillar 3a
+      pomis:
+        long: Post Office Monthly Income Scheme
+        short: POMIS
+      ppf:
+        long: Public Provident Fund
+        short: PPF
+      rd:
+        long: Recurring Deposit
+        short: RD
+      resp:
+        long: Registered Education Savings Plan
+        short: RESP
+      retirement:
+        long: Retirement Account
+        short: Retirement
+      riester:
+        long: Riester-Rente
+        short: Riester
+      roth_401k:
+        long: Roth 401(k)
+        short: Roth 401(k)
+      roth_ira:
+        long: Roth IRA
+        short: Roth IRA
+      rrif:
+        long: Registered Retirement Income Fund
+        short: RRIF
+      rrsp:
+        long: Registered Retirement Savings Plan
+        short: RRSP
+      scss:
+        long: Senior Citizens' Savings Scheme
+        short: SCSS
+      sdl:
+        long: State Development Loans (SDLs)
+        short: SDL
+      sep_ira:
+        long: SEP IRA
+        short: SEP IRA
+      sgb:
+        long: Sovereign Gold Bond
+        short: SGB
+      simple_ira:
+        long: SIMPLE IRA
+        short: SIMPLE IRA
+      sipp:
+        long: Self-Invested Personal Pension
+        short: SIPP
+      smsf:
+        long: Self-Managed Super Fund
+        short: SMSF
+      ssy:
+        long: Sukanya Samriddhi Yojana
+        short: SSY
+      super:
+        long: Superannuation
+        short: Super
+      tax_free_bond:
+        long: Tax-Free Bond
+        short: Tax-Free Bond
+      tfsa:
+        long: Tax-Free Savings Account
+        short: TFSA
+      trust:
+        long: Trust
+        short: Trust
+      tsp:
+        long: Thrift Savings Plan
+        short: TSP
+      ugma:
+        long: UGMA Custodial Account
+        short: UGMA
+      utma:
+        long: UTMA Custodial Account
+        short: UTMA
+      workplace_pension_uk:
+        long: Workplace Pension
+        short: Pension
     value_tooltip:
       cash: Cash
       holdings: Holdings

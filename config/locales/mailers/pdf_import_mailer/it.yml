@@ -2,4 +2,4 @@
 it:
   pdf_import_mailer:
     next_steps:
-      subject: "Il tuo documento PDF è stato analizzato - %{product_name}"
+      subject: Il tuo documento PDF è stato analizzato - %{product_name}

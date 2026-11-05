@@ -2,6 +2,8 @@
 ca:
   rule:
     conditions:
+      condition:
+        value_placeholder: Introdueix un valor
       condition_group:
         add_condition: Afegeix condició
         all: totes
@@ -9,12 +11,10 @@ ca:
         any: qualsevol
         match: coincideixen
         of_the_following_conditions: de les condicions següents
-      condition:
-        value_placeholder: Introdueix un valor
   rules:
     actions:
-      value_placeholder: Introdueix un valor
       to_label: a
+      value_placeholder: Introdueix un valor
     apply_all:
       ai_cost_message: Això utilitzarà IA per categoritzar fins a %{transactions}
         transaccions.
@@ -41,23 +41,23 @@ ca:
       confirm_title: Vols buidar la memòria cau d'IA?
       success: La memòria cau d'IA s'està netejant. Pot trigar uns instants.
     condition_filters:
+      operators:
+        contains: Conté
+        does_not_contain: No conté
+        equal_to: Igual a
+        greater_or_equal_to: Més gran o igual que
+        greater_than: Més gran que
+        is_empty: Està buit
+        is_equal_to: És igual a
+        is_not_empty: No està buit
+        less_than: Més petit que
+        less_than_or_equal_to: Més petit o igual que
+        not_equal_to: Diferent de
       transaction_type:
         equal_to: Igual a
         expense: Despesa
         income: Ingrés
         transfer: Transferència
-      operators:
-        contains: Conté
-        does_not_contain: No conté
-        equal_to: Igual a
-        is_equal_to: És igual a
-        not_equal_to: Diferent de
-        is_empty: Està buit
-        is_not_empty: No està buit
-        greater_than: Més gran que
-        greater_or_equal_to: Més gran o igual que
-        less_than: Més petit que
-        less_than_or_equal_to: Més petit o igual que
     confirm:
       ai_cost_no_estimate_html: Això utilitzarà IA per categoritzar %{count} transaccions.
       ai_cost_title: Estimació de cost d'IA

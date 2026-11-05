@@ -2,9 +2,6 @@
 de:
   models:
     category:
-      uncategorized: Nicht kategorisiert
-      other_investments: Sonstige Anlagen
-      investment_contributions: Anlagebeiträge
       defaults:
         entertainment: Unterhaltung
         fees: Gebühren
@@ -27,3 +24,6 @@ de:
         transportation: Transport
         travel: Reisen
         utilities: Nebenkosten
+      investment_contributions: Anlagebeiträge
+      other_investments: Sonstige Anlagen
+      uncategorized: Nicht kategorisiert

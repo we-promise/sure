@@ -2,9 +2,10 @@
 nl:
   account_statements:
     account_tab:
-      coverage_title: Dekking van afschriften
-      coverage_description: Historische maanden onderbouwd door geüploade afschriften en saldocontroles.
+      coverage_description: Historische maanden onderbouwd door geüploade afschriften
+        en saldocontroles.
       coverage_range: "%{start} - %{end}"
+      coverage_title: Dekking van afschriften
       empty: Nog geen afschriften gekoppeld aan dit account.
       open_inbox: Inbox
       statements_title: Afschriften
@@ -36,7 +37,9 @@ nl:
       files_hint: PDF, CSV of XLSX. Max. %{max_size} MB per bestand.
       files_label: Afschriftbestanden
       inbox_upload: Uploaden
-      period_hint: "Sure leest de periode uit de pdf als die erin staat, of uit een datum in de bestandsnaam (bijv. 2026-04). U kunt hem ook bij het afschrift instellen."
+      period_hint: Sure leest de periode uit de pdf als die erin staat, of uit een
+        datum in de bestandsnaam (bijv. 2026-04). U kunt hem ook bij het afschrift
+        instellen.
     index:
       account_label: Account
       confidence: "%{confidence} overeenkomst"
@@ -48,7 +51,8 @@ nl:
       storage_used: Gebruikte opslag
       title: Afschriftenkluis
       unmatched_title: Niet-toegewezen inbox
-      upload_description: Upload afschriften naar de inbox of kies een account om ze meteen te koppelen.
+      upload_description: Upload afschriften naar de inbox of kies een account om
+        ze meteen te koppelen.
       upload_title: Afschriften uploaden
     link:
       no_account: Kies een account voordat u dit afschrift koppelt.
@@ -77,24 +81,25 @@ nl:
       download: Downloaden
       institution_name_hint: Hint voor instelling
       ledger_amount: Sure-grootboek
+      link_suggestion: Koppelsuggestie
       linked_to: Gekoppeld aan %{account}.
       linking_title: Accountkoppeling
-      link_suggestion: Koppelsuggestie
       metadata_title: Afschriftmetagegevens
       no_suggestion: Nog geen accountsuggestie.
       opening_balance: Beginsaldo
       period_end_on: Einde periode
       period_start_on: Begin periode
       reconciliation_title: Afstemming
-      reconciliation_unavailable: Voeg een afschriftperiode en een begin- of eindsaldo toe en zorg ervoor dat Sure een saldogeschiedenis heeft voor die datums.
+      reconciliation_unavailable: Voeg een afschriftperiode en een begin- of eindsaldo
+        toe en zorg ervoor dat Sure een saldogeschiedenis heeft voor die datums.
       reject: Afwijzen
       save: Afschrift opslaan
       statement_amount: Afschrift
       suggested_account: Voorgesteld account is %{account} (%{confidence} betrouwbaarheid).
       title: Afschrift
+      unknown_value: Onbekend
       unlink: Ontkoppelen
       unmatched_account: Niet-toegewezen inbox
-      unknown_value: Onbekend
     status:
       linked: Gekoppeld
       rejected: Afgewezen

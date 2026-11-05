@@ -9,8 +9,8 @@ vi:
       amount: Số tiền
       date: Ngày
       destination_amount: Số tiền đích
-      destination_amount_display: "Số tiền đích: %{amount}"
-      exchange_rate_display: "Tỷ giá: %{rate}"
+      destination_amount_display: 'Số tiền đích: %{amount}'
+      exchange_rate_display: 'Tỷ giá: %{rate}'
       expense: Chi tiêu
       from: Từ
       income: Thu nhập
@@ -22,24 +22,26 @@ vi:
     new:
       title: Chuyển khoản mới
     show:
+      amount: Số tiền
+      category: Danh mục
+      date: Ngày
       delete: Xóa chuyển khoản
-      delete_subtitle: Thao tác này sẽ xóa chuyển khoản. Các giao dịch liên quan sẽ không bị xóa.
+      delete_subtitle: Thao tác này sẽ xóa chuyển khoản. Các giao dịch liên quan sẽ
+        không bị xóa.
       delete_title: Xóa chuyển khoản?
       details: Chi tiết
+      from: Từ
       mark_recurring: Đánh dấu là định kỳ
-      mark_recurring_subtitle: Theo dõi chuyển khoản này như một mẫu định kỳ trong nguồn cấp sắp tới và trang định kỳ.
+      mark_recurring_subtitle: Theo dõi chuyển khoản này như một mẫu định kỳ trong
+        nguồn cấp sắp tới và trang định kỳ.
       mark_recurring_title: Đánh dấu chuyển khoản là định kỳ
       note_label: Ghi chú
       note_placeholder: Thêm ghi chú cho chuyển khoản này
       overview: Tổng quan
       settings: Cài đặt
-      from: Từ
       to: Đến
-      date: Ngày
-      amount: Số tiền
-      category: Danh mục
+      total: "[Total]"
+      transfer_amount: "[Transfer amount]"
       uncategorized: Chưa phân loại
-      total: '[Total]'
-      transfer_amount: '[Transfer amount]'
     update:
       success: Chuyển khoản đã được cập nhật

@@ -1,9 +1,10 @@
 ---
 pt-PT:
   messages:
+    chat_form:
+      coming_soon: Em breve
+      disclaimer: As respostas da IA são apenas informativas. Não constituem aconselhamento
+        financeiro!
+      placeholder: Pergunte o que quiser ...
     create:
       chat_not_found: Este chat já não está disponível.
-    chat_form:
-      placeholder: "Pergunte o que quiser ..."
-      disclaimer: "As respostas da IA são apenas informativas. Não constituem aconselhamento financeiro!"
-      coming_soon: Em breve

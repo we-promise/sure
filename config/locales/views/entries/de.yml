@@ -6,18 +6,21 @@ de:
     destroy:
       success: Buchung gelöscht
     empty:
-      description: Versuche eine Buchung hinzuzufügen, Filter anzupassen oder deine Suche zu verfeinern
+      description: Versuche eine Buchung hinzuzufügen, Filter anzupassen oder deine
+        Suche zu verfeinern
       title: Keine Buchungen gefunden
     loading:
       loading: Buchungen werden geladen...
-    update:
-      success: Buchung aktualisiert
+    protection:
+      description: Deine Änderungen an dieser Buchung werden vom Anbieter-Sync nicht
+        überschrieben.
+      locked_fields_label: 'Gesperrte Felder:'
+      title: Vor Sync geschützt
+      tooltip: Vor Sync geschützt
+      unlock_button: Sync-Updates zulassen
+      unlock_confirm: Soll der Sync diese Buchung aktualisieren dürfen? Deine Änderungen
+        können beim nächsten Sync überschrieben werden.
     unlock:
       success: Buchung freigegeben. Sie kann beim nächsten Sync aktualisiert werden.
-    protection:
-      tooltip: Vor Sync geschützt
-      title: Vor Sync geschützt
-      description: Deine Änderungen an dieser Buchung werden vom Anbieter-Sync nicht überschrieben.
-      locked_fields_label: "Gesperrte Felder:"
-      unlock_button: Sync-Updates zulassen
-      unlock_confirm: Soll der Sync diese Buchung aktualisieren dürfen? Deine Änderungen können beim nächsten Sync überschrieben werden.
+    update:
+      success: Buchung aktualisiert

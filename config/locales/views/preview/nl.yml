@@ -1,4 +1,5 @@
 ---
 nl:
   preview:
-    not_enabled: "Deze functie is in preview. Schakel previewfuncties in via Instellingen → Voorkeuren om het te proberen."
+    not_enabled: Deze functie is in preview. Schakel previewfuncties in via Instellingen
+      → Voorkeuren om het te proberen.

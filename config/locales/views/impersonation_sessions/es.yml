@@ -14,12 +14,12 @@ es:
     reject:
       success: Solicitud rechazada
     super_admin_bar:
-      super_admin: Super admin
-      jobs: Trabajos
       impersonating: Suplantando a
-      leave: Salir
-      terminate: Terminar
-      join_a_session: Unirse a una sesión
+      jobs: Trabajos
       join: Unirse
-      uuid_placeholder: UUID
+      join_a_session: Unirse a una sesión
+      leave: Salir
       request_impersonation: Solicitar suplantación
+      super_admin: Super admin
+      terminate: Terminar
+      uuid_placeholder: UUID

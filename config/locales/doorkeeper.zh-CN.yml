@@ -89,8 +89,10 @@ zh-CN:
     errors:
       messages:
         access_denied: 资源所有者或授权服务器拒绝了请求。
-        admin_authenticator_not_configured: 访问管理面板被禁止，因为 Doorkeeper.configure.admin_authenticator 未配置。
-        credential_flow_not_configured: 资源所有者密码凭据流程失败，因为 Doorkeeper.configure.resource_owner_from_credentials 未配置。
+        admin_authenticator_not_configured: 访问管理面板被禁止，因为 Doorkeeper.configure.admin_authenticator
+          未配置。
+        credential_flow_not_configured: 资源所有者密码凭据流程失败，因为 Doorkeeper.configure.resource_owner_from_credentials
+          未配置。
         forbidden_token:
           missing_scope: 访问此资源需要范围 "%{oauth_scopes}"。
         invalid_client: 客户端认证失败：未知客户端、未包含客户端认证，或使用了不受支持的认证方法。
@@ -110,7 +112,8 @@ zh-CN:
           expired: 访问令牌已过期
           revoked: 访问令牌已被撤销
           unknown: 访问令牌无效
-        resource_owner_authenticator_not_configured: 资源所有者查找失败，因为 Doorkeeper.configure.resource_owner_authenticator 未配置。
+        resource_owner_authenticator_not_configured: 资源所有者查找失败，因为 Doorkeeper.configure.resource_owner_authenticator
+          未配置。
         revoke:
           unauthorized: 您无权撤销此令牌
         server_error: 授权服务器遇到意外情况，无法完成请求。

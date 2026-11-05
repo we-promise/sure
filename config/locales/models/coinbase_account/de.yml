@@ -2,4 +2,4 @@
 de:
   coinbase:
     processor:
-      paid_via: "Bezahlt über %{method}"
+      paid_via: Bezahlt über %{method}

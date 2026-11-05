@@ -1,56 +1,55 @@
 ---
 zh-TW:
   redbark_items:
-    default_name: Redbark 連線
-    sync_status:
-      no_accounts: 找不到帳戶
-      synced:
-        one: 已同步 %{count} 個帳戶
-        other: 已同步 %{count} 個帳戶
-      synced_with_setup: 已同步 %{linked} 個，%{unlinked} 個需要設定
-    institution_summary:
-      none: 沒有已連線的機構
-      count:
-        one: '%{count} 個機構'
-        other: '%{count} 個機構'
-    errors:
-      provider_not_configured: 尚未設定 Redbark 供應商
-    sync:
-      status:
-        importing: 正在從 Redbark 匯入帳戶...
-        processing: 正在處理交易...
-        calculating: 正在計算餘額...
-        importing_data: 正在匯入帳戶資料...
-        checking_setup: 正在檢查帳戶設定...
-        needs_setup: '%{count} 個帳戶需要設定...'
-      success: 同步已開始
-    panel:
-      step_1: 在 app.redbark.com 的 Settings 中建立 API 金鑰
-      step_2: 在下方輸入您的 API 金鑰並按下儲存
-      step_3: 連線成功後，前往「帳戶管理」分頁設定新帳戶
-      optional: （選填）
-      optional_with_default: （選填，預設為 %{default_value}）
-      save_button: 儲存設定
-      update_button: 更新設定
-      fields:
-        api_key:
-          label: API 金鑰
-          placeholder_new: rbk_live_...
-          placeholder_update: 輸入新的 API 金鑰以更新
+    complete_account_setup:
+      all_skipped: 已跳過所有帳戶。未建立任何帳戶。
+      creation_failed: 建立帳戶失敗：%{error}
+      creation_failed_generic: 無法建立帳戶。
+      no_accounts: 沒有需要設定的帳戶。
+      setup_failed: 有 %{count} 個帳戶無法建立。其他項目均未變更 - 請修正問題後再試一次。
+      success: 已成功建立 %{count} 個帳戶。
     create:
       success: Redbark 連線建立成功
-    update:
-      success: 已更新 Redbark 連線
+    default_name: Redbark 連線
     destroy:
       success: 已移除 Redbark 連線
       unlink_failed:
         one: 無法取消連結 %{count} 個帳戶。請再試一次。
         other: 無法取消連結 %{count} 個帳戶。請再試一次。
+    errors:
+      provider_not_configured: 尚未設定 Redbark 供應商
     index:
       title: Redbark 連線
+    institution_summary:
+      count:
+        one: "%{count} 個機構"
+        other: "%{count} 個機構"
+      none: 沒有已連線的機構
+    link_existing_account:
+      account_already_linked: 此帳戶已與供應商連結
+      api_error: API 錯誤：%{message}
+      invalid_account_name: 無法連結名稱空白的帳戶
+      missing_parameters: 缺少必要參數
+      no_api_key: 找不到 Redbark API 金鑰。請在供應商設定中設定。
+      provider_account_already_linked: 此 Redbark 帳戶已連結至其他帳戶
+      provider_account_not_found: 找不到 Redbark 帳戶
+      success: 已成功將 %{account_name} 與 Redbark 連結
     loading:
       loading_message: 正在載入 Redbark 帳戶...
       loading_title: 載入中
+    panel:
+      fields:
+        api_key:
+          label: API 金鑰
+          placeholder_new: rbk_live_...
+          placeholder_update: 輸入新的 API 金鑰以更新
+      optional: "（選填）"
+      optional_with_default: "（選填，預設為 %{default_value}）"
+      save_button: 儲存設定
+      step_1: 在 app.redbark.com 的 Settings 中建立 API 金鑰
+      step_2: 在下方輸入您的 API 金鑰並按下儲存
+      step_3: 連線成功後，前往「帳戶管理」分頁設定新帳戶
+      update_button: 更新設定
     redbark_item:
       accounts_need_setup: 帳戶需要設定
       delete: 刪除連線
@@ -66,7 +65,7 @@ zh-TW:
       setup_action: 設定新帳戶
       setup_description: 已連結 %{total} 個帳戶中的 %{linked} 個。請為新匯入的 Redbark 帳戶選擇帳戶類型。
       setup_needed: 有新帳戶可以設定
-      status: '%{timestamp}前已同步'
+      status: "%{timestamp}前已同步"
       status_never: 從未同步
       status_with_summary: 上次同步於 %{timestamp}前 - %{summary}
       syncing: 同步中...
@@ -83,7 +82,7 @@ zh-TW:
       no_accounts_found: 找不到帳戶。請檢查您的 API 金鑰設定。
       no_api_key: 尚未設定 Redbark API 金鑰，請前往「設定」完成設定。
       no_credentials_configured: 請先在供應商設定中設定您的 Redbark 憑證。
-      no_name_placeholder: （無名稱）
+      no_name_placeholder: "（無名稱）"
       title: 選擇 Redbark 帳戶
     select_existing_account:
       account_already_linked: 此帳戶已與供應商連結
@@ -104,43 +103,42 @@ zh-TW:
       no_accounts_found: 找不到任何 Redbark 帳戶。請檢查您的 API 金鑰設定。
       no_api_key: 尚未設定 Redbark API 金鑰，請前往「設定」完成設定。
       no_credentials_configured: 請先在供應商設定中設定您的 Redbark 憑證。
-      no_name_placeholder: （無名稱）
+      no_name_placeholder: "（無名稱）"
       settings_link: 前往供應商設定
       subtitle: 選擇一個 Redbark 帳戶
       title: 將 %{account_name} 與 Redbark 連結
-    link_existing_account:
-      account_already_linked: 此帳戶已與供應商連結
-      api_error: API 錯誤：%{message}
-      invalid_account_name: 無法連結名稱空白的帳戶
-      provider_account_already_linked: 此 Redbark 帳戶已連結至其他帳戶
-      provider_account_not_found: 找不到 Redbark 帳戶
-      missing_parameters: 缺少必要參數
-      no_api_key: 找不到 Redbark API 金鑰。請在供應商設定中設定。
-      success: 已成功將 %{account_name} 與 Redbark 連結
     setup_accounts:
       account_type_label: 帳戶類型：
+      account_types:
+        credit_card: 信用卡
+        depository: 支票或儲蓄帳戶
+        loan: 貸款或房屋貸款
+        other_asset: 其他資產
+        skip: 跳過此帳戶
       accounts_count:
         one: 有 %{count} 個帳戶可用
         other: 有 %{count} 個帳戶可用
       all_accounts_linked: 您所有的 Redbark 帳戶都已設定完成。
       api_error: API 錯誤：%{message}
+      balance: 餘額
+      cancel: 取消
+      choose_account_type: 為每個 Redbark 帳戶選擇正確的帳戶類型：
+      create_accounts: 建立帳戶
       creating: 正在建立帳戶...
+      creating_accounts: 正在建立帳戶...
+      done: 完成
       fetch_failed: 取得帳戶失敗
+      historical_data_range: 歷史資料範圍：
       import_selected: 匯入所選帳戶
       instructions: 選擇您想從 Redbark 匯入的帳戶，可以複選。
       no_accounts: 此 Redbark 連線中找不到未連結的帳戶。
       no_accounts_to_setup: 沒有需要設定的帳戶
       no_api_key: 尚未設定 Redbark API 金鑰。請檢查您的連線設定。
       select_all: 全選
-      account_types:
-        skip: 跳過此帳戶
-        depository: 支票或儲蓄帳戶
-        credit_card: 信用卡
-        loan: 貸款或房屋貸款
-        other_asset: 其他資產
+      subtitle: 為您匯入的帳戶選擇正確的帳戶類型
       subtype_labels:
-        depository: 帳戶子類型：
         credit_card: ''
+        depository: 帳戶子類型：
         loan: 貸款類型：
         other_asset: ''
       subtype_messages:
@@ -148,36 +146,38 @@ zh-TW:
         other_asset: 其他資產不需要額外選項。
       subtypes:
         depository:
-          checking: 支票帳戶 (Checking)
-          savings: 儲蓄帳戶 (Savings)
-          hsa: 健康儲蓄帳戶 (HSA)
           cd: 定期存款 (CD)
+          checking: 支票帳戶 (Checking)
+          hsa: 健康儲蓄帳戶 (HSA)
           money_market: 貨幣市場帳戶
+          savings: 儲蓄帳戶 (Savings)
         loan:
-          mortgage: 房屋貸款
-          student: 學生貸款
           auto: 汽車貸款
+          mortgage: 房屋貸款
           other: 其他貸款
-      balance: 餘額
-      cancel: 取消
-      done: 完成
-      choose_account_type: 為每個 Redbark 帳戶選擇正確的帳戶類型：
-      create_accounts: 建立帳戶
-      creating_accounts: 正在建立帳戶...
-      historical_data_range: 歷史資料範圍：
-      subtitle: 為您匯入的帳戶選擇正確的帳戶類型
+          student: 學生貸款
       sync_start_date_help: 選擇您希望回溯同步交易歷史的時間範圍。
       sync_start_date_label: 開始同步交易的日期：
       title: 設定您的 Redbark 帳戶
     setup_required:
-      title: 請先連接 Redbark
-      not_configured_title: 尚未連接 Redbark
-      not_configured_description: 請先在供應商設定中新增您的 Redbark API 金鑰，然後回到這裡連結帳戶。
       go_to_provider_settings: 前往供應商設定
-    complete_account_setup:
-      all_skipped: 已跳過所有帳戶。未建立任何帳戶。
-      creation_failed: 建立帳戶失敗：%{error}
-      creation_failed_generic: 無法建立帳戶。
-      setup_failed: 有 %{count} 個帳戶無法建立。其他項目均未變更 - 請修正問題後再試一次。
-      no_accounts: 沒有需要設定的帳戶。
-      success: 已成功建立 %{count} 個帳戶。
+      not_configured_description: 請先在供應商設定中新增您的 Redbark API 金鑰，然後回到這裡連結帳戶。
+      not_configured_title: 尚未連接 Redbark
+      title: 請先連接 Redbark
+    sync:
+      status:
+        calculating: 正在計算餘額...
+        checking_setup: 正在檢查帳戶設定...
+        importing: 正在從 Redbark 匯入帳戶...
+        importing_data: 正在匯入帳戶資料...
+        needs_setup: "%{count} 個帳戶需要設定..."
+        processing: 正在處理交易...
+      success: 同步已開始
+    sync_status:
+      no_accounts: 找不到帳戶
+      synced:
+        one: 已同步 %{count} 個帳戶
+        other: 已同步 %{count} 個帳戶
+      synced_with_setup: 已同步 %{linked} 個，%{unlinked} 個需要設定
+    update:
+      success: 已更新 Redbark 連線

@@ -2,8 +2,15 @@
 nl:
   sure_import:
     preflight:
-      missing_reference: "Regel %{line} %{type} verwijst naar ontbrekend %{field} %{value}."
-      skipped_missing_reference: "Regel %{line} %{type} verwijst naar ontbrekend %{field} %{value}. Deze wordt overgeslagen tijdens het importeren."
-      skipped_missing_merchant_reference: "Regel %{line} %{type} verwijst naar een handelaar (%{value}) die niet in deze export staat. Dit kan gebeuren bij een export van vóór de tijd dat door providers toegewezen handelaren aan Sure-exports werden toegevoegd. Deze wordt geïmporteerd zonder die handelaar."
-      skipped_unnamed_recurring: "Regel %{line} %{type} heeft geen naam en verwijst naar een handelaar (%{value}) die niet in deze export staat. Deze wordt overgeslagen tijdens het importeren."
-      provider_merchant_diff: "Regel %{line} ProviderMerchant %{name} bestaat al met een andere %{fields}. De bestaande handelaar blijft behouden."
+      missing_reference: Regel %{line} %{type} verwijst naar ontbrekend %{field} %{value}.
+      provider_merchant_diff: Regel %{line} ProviderMerchant %{name} bestaat al met
+        een andere %{fields}. De bestaande handelaar blijft behouden.
+      skipped_missing_merchant_reference: Regel %{line} %{type} verwijst naar een
+        handelaar (%{value}) die niet in deze export staat. Dit kan gebeuren bij een
+        export van vóór de tijd dat door providers toegewezen handelaren aan Sure-exports
+        werden toegevoegd. Deze wordt geïmporteerd zonder die handelaar.
+      skipped_missing_reference: Regel %{line} %{type} verwijst naar ontbrekend %{field}
+        %{value}. Deze wordt overgeslagen tijdens het importeren.
+      skipped_unnamed_recurring: Regel %{line} %{type} heeft geen naam en verwijst
+        naar een handelaar (%{value}) die niet in deze export staat. Deze wordt overgeslagen
+        tijdens het importeren.

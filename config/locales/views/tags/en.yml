@@ -13,10 +13,10 @@ en:
     form:
       placeholder: Tag name
     index:
+      delete_all: Delete all
       empty: No tags yet
       new: New tag
       tags: Tags
-      delete_all: Delete all
     menu:
       label: Edit tags
     new:

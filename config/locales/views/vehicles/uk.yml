@@ -1,3 +1,4 @@
+---
 uk:
   vehicles:
     edit:
@@ -8,12 +9,12 @@ uk:
       mileage: Пробіг
       mileage_placeholder: '15000'
       mileage_unit: Одиниця
+      mileage_unit_kilometers: Кілометри
+      mileage_unit_miles: Милі
       model: Модель
       model_placeholder: Camry
       year: Рік
       year_placeholder: '2023'
-      mileage_unit_kilometers: Кілометри
-      mileage_unit_miles: Милі
     new:
       title: Введіть дані про транспортний засіб
     overview:
@@ -27,10 +28,10 @@ uk:
     tabs:
       overview:
         current_price: Поточна ціна
+        edit_account_details: Редагувати дані рахунку
         make_model: Марка та модель
         mileage: Пробіг
         purchase_price: Ціна покупки
         trend: Тренд
         unknown: Невідомо
         year: Рік
-        edit_account_details: "Редагувати дані рахунку"

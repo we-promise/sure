@@ -1,11 +1,5 @@
+---
 uk:
-  defaults:
-    brand_name: "%{brand_name}"
-    product_name: "%{product_name}"
-    common:
-      close: "Закрити"
-  global:
-    expand: "Розгорнути"
   activerecord:
     errors:
       messages:
@@ -47,10 +41,10 @@ uk:
     formats:
       default: "%d.%m.%Y"
       long: "%d %B %Y"
+      month_year: "%m.%Y"
       short: "%d %b"
-      month_year: '%m.%Y'
-      short_month_year: '%b %Y'
-      short_with_year: '%d %b %Y'
+      short_month_year: "%b %Y"
+      short_with_year: "%d %b %Y"
     month_names:
     -
     - Січня
@@ -139,6 +133,11 @@ uk:
       month: Місяць
       second: Секунда
       year: Рік
+  defaults:
+    brand_name: "%{brand_name}"
+    common:
+      close: Закрити
+    product_name: "%{product_name}"
   errors:
     format: "%{attribute} %{message}"
     messages:
@@ -151,6 +150,7 @@ uk:
       exclusion: зарезервовано
       greater_than: має бути більше ніж %{count}
       greater_than_or_equal_to: має бути більше ніж або дорівнювати %{count}
+      in: має бути в межах %{count}
       inclusion: не включено до переліку
       invalid: недійсний
       less_than: має бути менше ніж %{count}
@@ -178,7 +178,6 @@ uk:
         many: неправильна довжина (має бути %{count} знаків)
         one: неправильна довжина (має бути %{count} знак)
         other: неправильна довжина (має бути %{count} знаку)
-      in: має бути в межах %{count}
     template:
       body: 'Помилки виявлено в таких полях:'
       header:
@@ -186,25 +185,26 @@ uk:
         many: "%{model} не збережено через %{count} помилок"
         one: "%{model} не збережено через %{count} помилку"
         other: "%{model} не збережено через %{count} помилки"
+  global:
+    expand: Розгорнути
   helpers:
     select:
+      default_label: Вибрати...
       prompt: 'Оберіть: '
-      search_placeholder: "Пошук"
-      default_label: "Вибрати..."
+      search_placeholder: Пошук
     submit:
       create: Створити %{model}
       submit: Зберегти %{model}
       update: Зберегти %{model}
+  mcp:
+    errors:
+      invalid_session_id: Недійсний ідентифікатор сесії MCP
+      unsupported_protocol_version: 'Непідтримувана версія протоколу MCP: %{version}'
   number:
     currency:
       format:
-        delimiter: " "
-        format: "%n %u"
-        precision: 2
-        separator: ","
         significant: false
         strip_insignificant_zeros: false
-        unit: "₴"
     format:
       delimiter: " "
       precision: 3
@@ -268,6 +268,12 @@ uk:
     precision:
       format:
         delimiter: ''
+  oauth:
+    registration:
+      invalid_client_name: client_name не може містити керівні символи напрямку тексту
+      invalid_redirect_uris: redirect_uris мають використовувати https, loopback http
+        або URI-схему нативного застосунку
+      reserved_client_name: client_name зарезервовано для власних застосунків
   support:
     array:
       last_word_connector: " та "
@@ -280,12 +286,3 @@ uk:
       long: "%d %B %Y, %H:%M"
       short: "%d %b, %H:%M"
     pm: по полудні
-  mcp:
-    errors:
-      invalid_session_id: Недійсний ідентифікатор сесії MCP
-      unsupported_protocol_version: 'Непідтримувана версія протоколу MCP: %{version}'
-  oauth:
-    registration:
-      invalid_redirect_uris: redirect_uris мають використовувати https, loopback http або URI-схему нативного застосунку
-      invalid_client_name: client_name не може містити керівні символи напрямку тексту
-      reserved_client_name: client_name зарезервовано для власних застосунків

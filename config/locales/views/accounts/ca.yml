@@ -13,6 +13,9 @@ ca:
       disable: Desactiva el compte
       edit: Edita
       enable: Activa el compte
+      exclude_from_reports: Exclou de tots els informes
+      excluded_from_reports_indicator: Exclòs dels informes
+      include_in_reports: Inclou als informes
       link_lunchflow: Enllaça amb Lunch Flow
       link_provider: Enllaça amb proveïdor
       remove_default: Treu com a predeterminat
@@ -20,9 +23,6 @@ ca:
       sharing: Compartició
       troubleshoot: Resolució de problemes
       unlink_provider: Desenllaça del proveïdor
-      exclude_from_reports: Exclou de tots els informes
-      include_in_reports: Inclou als informes
-      excluded_from_reports_indicator: Exclòs dels informes
     chart:
       data_not_available: Dades no disponibles per al període seleccionat
     confirm_unlink:
@@ -33,7 +33,8 @@ ca:
       warning_can_delete: Després de desenllaçar-lo, podràs eliminar el compte si
         és necessari
       warning_manual_updates: Hauràs d'afegir transaccions i actualitzar saldos manualment
-      warning_no_sync: El compte ja no es sincronitzarà automàticament amb el teu proveïdor
+      warning_no_sync: El compte ja no es sincronitzarà automàticament amb el teu
+        proveïdor
       warning_title: Això significa
       warning_transactions_kept: Totes les transaccions i saldos existents es conservaran
     create:
@@ -50,6 +51,11 @@ ca:
     form:
       additional_details: Detalls addicionals
       balance: 'Saldo a la data:'
+      enable_category_matcher_hint: Si està activat, la categoria suggerida pel proveïdor
+        s'aplica a les transaccions importades. Desactiva-ho per deixar les transaccions
+        noves sense categoria.
+      enable_category_matcher_label: Activa l'assignació de categories
+      exclude_from_reports: Exclou de tots els informes
       institution_domain_label: Domini de l'entitat
       institution_domain_placeholder: p. ex., chase.com
       institution_name_label: Nom de l'entitat
@@ -60,9 +66,6 @@ ca:
       notes_placeholder: Emmagatzema informació addicional com números de compte,
         codis de sortida, IBAN, números de ruta, etc.
       opening_balance_date_label: Data del saldo inicial
-      exclude_from_reports: Exclou de tots els informes
-      enable_category_matcher_label: Activa l'assignació de categories
-      enable_category_matcher_hint: Si està activat, la categoria suggerida pel proveïdor s'aplica a les transaccions importades. Desactiva-ho per deixar les transaccions noves sense categoria.
     index:
       accounts: Comptes
       cancel_sync: Cancel·la la sincronització
@@ -74,9 +77,9 @@ ca:
       container:
         close: Tanca
         navigate: Navega
-        select: Selecciona
         next: Següent
         previous: Anterior
+        select: Selecciona
       import_accounts: Importa comptes
       method_selector:
         connected_entry: Enllaça el compte
@@ -137,22 +140,24 @@ ca:
         confirm_title: Vols eliminar el compte?
         delete_account: Elimina el compte
         edit: Edita
+        exclude_from_reports: Exclou de tots els informes
         import: Importa transaccions
         import_trades: Importa operacions
         import_transactions: Importa transaccions
+        include_in_reports: Inclou als informes
         manage: Gestiona els comptes
         sharing: Compartició
         statements: Extractes
-        exclude_from_reports: Exclou de tots els informes
-        include_in_reports: Inclou als informes
       tabs:
         activity: Activitat
         holdings: Posicions
         overview: Resum
-        statements: Extractes
         schedule: Amortització
+        statements: Extractes
     sidebar:
+      collapse_all: Plega-ho tot
       configure_providers: Configura els teus proveïdors aquí.
+      expand_all: Desplega-ho tot
       missing_data: Falten dades històriques
       missing_data_description: "%{product} utilitza proveïdors externs per obtenir
         tipus de canvi històrics, preus de valors i més. Aquestes dades són necessàries
@@ -165,8 +170,6 @@ ca:
         all: Tots
         assets: Actius
         debts: Deutes
-      expand_all: Desplega-ho tot
-      collapse_all: Plega-ho tot
     subtype_regions:
       au: Austràlia
       ca: Canadà

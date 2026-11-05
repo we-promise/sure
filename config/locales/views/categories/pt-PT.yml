@@ -10,20 +10,20 @@ pt-PT:
       success: Categoria criada com sucesso
     destroy:
       success: Categoria eliminada com sucesso
+    destroy_all:
+      success: Todas as categorias eliminadas
     edit:
       edit: Editar categoria
     form:
-      placeholder: Nome da categoria
-      name_label: Designação
-      unassigned: "(sem atribuição)"
-      parent_category_label: "Categoria principal (opcional)"
-      trigger_label: Escolher cor e ícone
+      auto_adjust: ajuste automático.
       color: Cor
       icon: Ícone
-      auto_adjust: ajuste automático.
-      poor_contrast: "Contraste fraco, escolha uma cor mais escura ou"
-    destroy_all:
-      success: Todas as categorias eliminadas
+      name_label: Designação
+      parent_category_label: Categoria principal (opcional)
+      placeholder: Nome da categoria
+      poor_contrast: Contraste fraco, escolha uma cor mais escura ou
+      trigger_label: Escolher cor e ícone
+      unassigned: "(sem atribuição)"
     index:
       bootstrap: Utilizar predefinições (recomendado)
       categories: Categorias
@@ -34,35 +34,39 @@ pt-PT:
       merge: Unir categorias
       new: Nova categoria
     merge:
-      title: Unir categorias
-      description: Selecione uma categoria de destino e as categorias a unir. As transações e linhas de orçamento correspondentes serão movidas para o destino.
-      target_label: Unir em (destino)
+      description: Selecione uma categoria de destino e as categorias a unir. As transações
+        e linhas de orçamento correspondentes serão movidas para o destino.
       select_target: Selecionar categoria de destino...
+      sources_hint: As categorias selecionadas serão eliminadas depois de as suas
+        transações e linhas de orçamento serem movidas para o destino. Não selecione
+        o destino como origem.
       sources_label: Categorias a unir
-      sources_hint: As categorias selecionadas serão eliminadas depois de as suas transações e linhas de orçamento serem movidas para o destino. Não selecione o destino como origem.
       submit: Unir selecionadas
+      target_label: Unir em (destino)
+      title: Unir categorias
     new:
       new_category: Nova categoria
     perform_merge:
+      invalid_categories: Categorias selecionadas inválidas
+      no_categories_selected: Nenhuma categoria selecionada para unir
       success:
         one: "%{count} categoria unida com sucesso"
         other: "%{count} categorias unidas com sucesso"
-      no_categories_selected: Nenhuma categoria selecionada para unir
       target_not_found: Categoria de destino não encontrada
-      invalid_categories: Categorias selecionadas inválidas
-      target_selected_as_source: Escolha categorias diferentes para o destino e as origens.
+      target_selected_as_source: Escolha categorias diferentes para o destino e as
+        origens.
     update:
       success: Categoria atualizada com sucesso
     virtual:
-      transfer: Transferência
       payment: Pagamento
       trade: Negociação
+      transfer: Transferência
   category:
     dropdowns:
       show:
         bootstrap: Gerar categorias predefinidas
         empty: Nenhuma categoria encontrada
-        match_transfer: "Corresponder transferência/pagamento"
+        expense: despesa
+        income: rendimento
+        match_transfer: Corresponder transferência/pagamento
         one_time: "%{type} único(a)"
-        income: "rendimento"
-        expense: "despesa"

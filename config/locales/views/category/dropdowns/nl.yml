@@ -3,16 +3,17 @@ nl:
   category:
     dropdowns:
       row:
-        delete: "Categorie verwijderen"
-        edit: "Categorie bewerken"
+        delete: Categorie verwijderen
+        edit: Categorie bewerken
       show:
-        assign_error: "De categorie is aangemaakt, maar kon niet worden toegewezen. Kies nogmaals Aanmaken om het opnieuw te proberen."
-        back: "Terug"
-        choose_parent: "\"%{name}\" aanmaken onder:"
-        clear: "Categorie wissen"
-        create: "\"%{name}\" aanmaken"
-        create_as_subcategory: "Toevoegen als subcategorie…"
-        create_error: "Kon die categorie niet aanmaken. Probeer het opnieuw."
-        no_categories: "Geen categorieën gevonden"
-        recent: "Recent"
-        search_placeholder: "Zoeken"
+        assign_error: De categorie is aangemaakt, maar kon niet worden toegewezen.
+          Kies nogmaals Aanmaken om het opnieuw te proberen.
+        back: Terug
+        choose_parent: '"%{name}" aanmaken onder:'
+        clear: Categorie wissen
+        create: '"%{name}" aanmaken'
+        create_as_subcategory: Toevoegen als subcategorie…
+        create_error: Kon die categorie niet aanmaken. Probeer het opnieuw.
+        no_categories: Geen categorieën gevonden
+        recent: Recent
+        search_placeholder: Zoeken

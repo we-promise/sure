@@ -2,23 +2,23 @@
 ca:
   layouts:
     application:
+      insights: Observacions
       nav:
         assistant: Assistent
+        bills: Factures
         budgets: Pressupostos
+        goals: Objectius
         home: Inici
+        plan: Pla
         reports: Informes
         transactions: Transaccions
-        bills: Factures
-        plan: Pla
-        goals: Objectius
       privacy_mode: Commuta el mode de privadesa
+      release_highlight:
+        done: Entesos
+        title: Novetats
       resize_left_sidebar: Redimensiona la barra lateral de comptes
       resize_right_sidebar: Redimensiona la barra lateral de l'assistent
       skip_to_main: Salta al contingut principal
-      insights: Observacions
-      release_highlight:
-        title: Novetats
-        done: Entesos
     auth:
       existing_account: Ja tens un compte?
       no_account: Ets nou a %{product_name}?

@@ -9,7 +9,8 @@ it:
       title: Unisciti a %{family}
     create:
       existing_user_added: L'utente è stato aggiunto alla tua famiglia.
-      existing_user_has_family_data: Quell'utente possiede già una famiglia con conti. Deve rimuovere o trasferire quei conti prima di unirsi alla tua.
+      existing_user_has_family_data: Quell'utente possiede già una famiglia con conti.
+        Deve rimuovere o trasferire quei conti prima di unirsi alla tua.
       failure: Impossibile inviare l'invito
       success: Invito inviato con successo
     destroy:

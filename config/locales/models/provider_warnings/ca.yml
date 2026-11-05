@@ -8,7 +8,9 @@ ca:
     lunchflow_accounts_failed:
       one: 'Importació de Lunchflow: no s''ha pogut actualitzar %{count} compte'
       other: 'Importació de Lunchflow: no s''han pogut actualitzar %{count} comptes'
-    lunchflow_transactions_failed:
-      one: 'Importació de Lunchflow: no s''han pogut obtenir les transaccions de %{count} compte'
-      other: 'Importació de Lunchflow: no s''han pogut obtenir les transaccions de %{count} comptes'
     lunchflow_import_error: 'Importació de Lunchflow: %{error}'
+    lunchflow_transactions_failed:
+      one: 'Importació de Lunchflow: no s''han pogut obtenir les transaccions de %{count}
+        compte'
+      other: 'Importació de Lunchflow: no s''han pogut obtenir les transaccions de
+        %{count} comptes'

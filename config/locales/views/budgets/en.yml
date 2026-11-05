@@ -1,89 +1,15 @@
 ---
 en:
-  budgets:
-    switcher:
-      aria_label: "Switch budget"
-      household: "Household"
-    budget_donut:
-      spent: "Spent"
-      new_budget: "New budget"
-      of_budget: "of %{amount}"
-      unused: "Unused"
-    budget_header:
-      today: "Today"
-    budget_nav:
-      categories: Categories
-      setup: Setup
-    over_allocation_warning:
-      over_allocated_message: "You have over-allocated your budget. Please fix your allocations."
-      fix_allocations: "Fix allocations"
-    actuals_summary:
-      income: "Income"
-      expenses: "Expenses"
-    budgeted_summary:
-      expected_income: "Expected income"
-      budgeted: "Budgeted"
-      earned: "%{amount} earned"
-      over: "%{amount} over"
-      left: "%{amount} left"
-      spent: "%{amount} spent"
-    edit:
-      setup_title: "Setup your budget"
-      setup_description: "Enter your monthly earnings and planned spending below to setup your budget."
-      budgeted_spending: "Budgeted spending"
-      expected_income: "Expected income"
-      autosuggest_title: "Autosuggest income & spending budget"
-      autosuggest_description: "This will be based on transaction history. AI can make mistakes, verify before continuing."
-      continue: "Continue"
-    name:
-      custom_range: "%{start} - %{end_date}"
-      month_year: "%{month}"
-    available_cash:
-      heading: Cash on hand
-      subtitle: Beside the plan above, not part of it.
-      available: Available in cash
-      earmarked: Already earmarked for goals
-      free: Really free
-      goals_link: View goals
-      currency_warning: "%{currencies} balances aren't included because no exchange rate to %{currency} is available yet."
-    show:
-      categories:
-        amount: Amount
-        edit: Edit
-        title: Categories
-      on_track_categories:
-        short_title: On Track
-        title: On Track
-      over_budget_categories:
-        short_title: Over Budget
-        title: Over Budget
-      filter:
-        all: All
-        aria_label: Filter budget categories
-        on_track: On Track
-        over_budget: Over Budget
-      tabs:
-        actual: Actual
-        budgeted: Budgeted
-    copy_previous_prompt:
-      title: "Set up your budget"
-      description: "You can copy your budget from %{source_name} or start fresh."
-      copy_button: "Copy from %{source_name}"
-      fresh_button: "Start fresh"
-    copy_previous:
-      success: "Budget copied from %{source_name}"
-      no_source: "No previous budget found to copy from"
-      already_initialized: "This budget has already been set up"
   budget_categories:
-    bills_reserved: "%{amount} reserved by bills"
-    bills_reserved_unconvertible:
-      one: "1 bill is not reserved, no exchange rate available"
-      other: "%{count} bills are not reserved, no exchange rate available"
     allocation_progress:
-      budget_exceeded_html: 'Budget exceeded by <span class="text-red-500 privacy-sensitive">%{amount}</span>'
+      budget_exceeded_html: Budget exceeded by <span class="text-red-500 privacy-sensitive">%{amount}</span>
       left_to_allocate: left to allocate
       over_set: "> 100% set"
       percent_set: "%{percent} set"
+    bills_reserved: "%{amount} reserved by bills"
+    bills_reserved_unconvertible:
+      one: 1 bill is not reserved, no exchange rate available
+      other: "%{count} bills are not reserved, no exchange rate available"
     budget_category:
       rolled_over: "+%{amount} rolled over"
     budget_category_form:
@@ -93,44 +19,127 @@ en:
       shared_placeholder: Shared
       shared_title: Leave empty to share parent's budget
     confirm_button:
-      confirm: "Confirm"
+      confirm: Confirm
+    index:
+      description: Adjust category budgets to set spending limits. Unallocated funds
+        will be automatically assigned as uncategorized.
+      title: Edit your category budgets
     move:
+      amount_label: Amount
+      available: "%{amount} available"
       button_title: Move money from this category
       cancel: Cancel
       dialog_title: Move money
-      no_destination: This is the only envelope money can move between right now — a category cannot send to its own parent or child.
-      submit: Move
-      amount_label: Amount
-      available: "%{amount} available"
-      from_label: From
-      to_label: To
-      success: Money moved.
       errors:
         different_budgets: Both categories must belong to the same budget.
         insufficient_funds: That is more than this category has allocated.
         non_positive_amount: Enter an amount greater than zero.
-        parent_child: Money cannot move between a category and its own subcategory — adjust the subcategory directly.
+        parent_child: Money cannot move between a category and its own subcategory
+          — adjust the subcategory directly.
         same_category: Pick a different category to move the money to.
-        uncategorized: Uncategorized is not a real envelope, so money cannot move in or out of it.
+        uncategorized: Uncategorized is not a real envelope, so money cannot move
+          in or out of it.
+      from_label: From
+      no_destination: This is the only envelope money can move between right now —
+        a category cannot send to its own parent or child.
+      submit: Move
+      success: Money moved.
+      to_label: To
     no_categories:
-      oops: "Oops!"
-      no_categories_message: "You have not created or assigned any expense categories to your transactions yet."
-      use_defaults: "Use defaults (recommended)"
-      new_category: "New category"
-    index:
-      title: "Edit your category budgets"
-      description: "Adjust category budgets to set spending limits. Unallocated funds will be automatically assigned as uncategorized."
+      new_category: New category
+      no_categories_message: You have not created or assigned any expense categories
+        to your transactions yet.
+      oops: Oops!
+      use_defaults: Use defaults (recommended)
     show:
-      category: "Category"
-      overview: "Overview"
+      budgeted: Budgeted
+      category: Category
+      left: left
+      monthly_average_spending: Monthly average spending
+      monthly_median_spending: Monthly median spending
+      no_transactions: No transactions found for this budget period.
+      overspent: overspent
+      overview: Overview
+      recent_transactions: Recent Transactions
+      rolled_over: Rolled over
       spending: "%{date} spending"
-      status: "Status"
-      overspent: "overspent"
-      left: "left"
-      budgeted: "Budgeted"
-      rolled_over: "Rolled over"
-      monthly_average_spending: "Monthly average spending"
-      monthly_median_spending: "Monthly median spending"
-      recent_transactions: "Recent Transactions"
-      view_all_transactions: "View all category transactions"
-      no_transactions: "No transactions found for this budget period."
+      status: Status
+      view_all_transactions: View all category transactions
+  budgets:
+    actuals_summary:
+      expenses: Expenses
+      income: Income
+    available_cash:
+      available: Available in cash
+      currency_warning: "%{currencies} balances aren't included because no exchange
+        rate to %{currency} is available yet."
+      earmarked: Already earmarked for goals
+      free: Really free
+      goals_link: View goals
+      heading: Cash on hand
+      subtitle: Beside the plan above, not part of it.
+    budget_donut:
+      new_budget: New budget
+      of_budget: of %{amount}
+      spent: Spent
+      unused: Unused
+    budget_header:
+      today: Today
+    budget_nav:
+      categories: Categories
+      setup: Setup
+    budgeted_summary:
+      budgeted: Budgeted
+      earned: "%{amount} earned"
+      expected_income: Expected income
+      left: "%{amount} left"
+      over: "%{amount} over"
+      spent: "%{amount} spent"
+    copy_previous:
+      already_initialized: This budget has already been set up
+      no_source: No previous budget found to copy from
+      success: Budget copied from %{source_name}
+    copy_previous_prompt:
+      copy_button: Copy from %{source_name}
+      description: You can copy your budget from %{source_name} or start fresh.
+      fresh_button: Start fresh
+      title: Set up your budget
+    edit:
+      autosuggest_description: This will be based on transaction history. AI can make
+        mistakes, verify before continuing.
+      autosuggest_title: Autosuggest income & spending budget
+      budgeted_spending: Budgeted spending
+      continue: Continue
+      expected_income: Expected income
+      setup_description: Enter your monthly earnings and planned spending below to
+        setup your budget.
+      setup_title: Setup your budget
+    name:
+      custom_range: "%{start} - %{end_date}"
+      month_year: "%{month}"
+    over_allocation_warning:
+      fix_allocations: Fix allocations
+      over_allocated_message: You have over-allocated your budget. Please fix your
+        allocations.
+    show:
+      categories:
+        amount: Amount
+        edit: Edit
+        title: Categories
+      filter:
+        all: All
+        aria_label: Filter budget categories
+        on_track: On Track
+        over_budget: Over Budget
+      on_track_categories:
+        short_title: On Track
+        title: On Track
+      over_budget_categories:
+        short_title: Over Budget
+        title: Over Budget
+      tabs:
+        actual: Actual
+        budgeted: Budgeted
+    switcher:
+      aria_label: Switch budget
+      household: Household

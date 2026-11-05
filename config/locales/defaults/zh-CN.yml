@@ -1,21 +1,5 @@
 ---
 zh-CN:
-  defaults:
-    brand_name: "%{brand_name}"
-    product_name: "%{product_name}"
-    common:
-      close: 关闭
-  global:
-    expand: 展开
-  mcp:
-    errors:
-      invalid_session_id: 无效的 MCP 会话 ID
-      unsupported_protocol_version: "不支持的 MCP 协议版本：%{version}"
-  oauth:
-    registration:
-      invalid_redirect_uris: redirect_uris 必须使用 https、本地回环 http 或原生应用 URI 方案
-      invalid_client_name: client_name 不能包含双向控制字符
-      reserved_client_name: client_name 保留给第一方应用使用
   activerecord:
     errors:
       messages:
@@ -60,7 +44,7 @@ zh-CN:
       month_year: "%Y年%m月"
       short: "%m月%d日"
       short_month_year: "%Y年%m月"
-      short_with_year: '%Y年%m月%d日'
+      short_with_year: "%Y年%m月%d日"
     month_names:
     -
     - 一月
@@ -125,6 +109,11 @@ zh-CN:
       month: 月
       second: 秒
       year: 年
+  defaults:
+    brand_name: "%{brand_name}"
+    common:
+      close: 关闭
+    product_name: "%{product_name}"
   errors:
     format: "%{attribute}%{message}"
     messages:
@@ -164,15 +153,21 @@ zh-CN:
       header:
         one: '%{count}个错误导致"%{model}"无法被保存。'
         other: '%{count}个错误导致"%{model}"无法被保存。'
+  global:
+    expand: 展开
   helpers:
     select:
+      default_label: 选择...
       prompt: 请选择
       search_placeholder: 搜索
-      default_label: 选择...
     submit:
       create: 新增%{model}
       submit: 储存%{model}
       update: 更新%{model}
+  mcp:
+    errors:
+      invalid_session_id: 无效的 MCP 会话 ID
+      unsupported_protocol_version: 不支持的 MCP 协议版本：%{version}
   number:
     currency:
       format:
@@ -223,6 +218,11 @@ zh-CN:
     precision:
       format:
         delimiter: ''
+  oauth:
+    registration:
+      invalid_client_name: client_name 不能包含双向控制字符
+      invalid_redirect_uris: redirect_uris 必须使用 https、本地回环 http 或原生应用 URI 方案
+      reserved_client_name: client_name 保留给第一方应用使用
   support:
     array:
       last_word_connector: 和

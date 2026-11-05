@@ -9,8 +9,8 @@ hu:
       amount: Összeg
       date: Dátum
       destination_amount: Célösszeg
-      destination_amount_display: "Célösszeg: %{amount}"
-      exchange_rate_display: "Árfolyam: %{rate}"
+      destination_amount_display: 'Célösszeg: %{amount}'
+      exchange_rate_display: 'Árfolyam: %{rate}'
       expense: Kiadás
       from: Honnan
       income: Bevétel
@@ -22,24 +22,26 @@ hu:
     new:
       title: Új átutalás
     show:
+      amount: Összeg
+      category: Kategória
+      date: Dátum
       delete: Átutalás eltávolítása
-      delete_subtitle: Ez eltávolítja az átutalást. Az alapul szolgáló tranzakciókat nem törli.
+      delete_subtitle: Ez eltávolítja az átutalást. Az alapul szolgáló tranzakciókat
+        nem törli.
       delete_title: Eltávolítja az átutalást?
       details: Részletek
+      from: Honnan
       mark_recurring: Ismétlődőként jelölés
-      mark_recurring_subtitle: Kövesd ezt az átutalást ismétlődő mintaként a közelgő eseménylistában és az ismétlődők oldalon.
+      mark_recurring_subtitle: Kövesd ezt az átutalást ismétlődő mintaként a közelgő
+        eseménylistában és az ismétlődők oldalon.
       mark_recurring_title: Átutalás ismétlődőként jelölése
       note_label: Megjegyzések
       note_placeholder: Adj meg egy megjegyzést ehhez az átutaláshoz
       overview: Áttekintés
       settings: Beállítások
-      from: Honnan
       to: Hova
-      date: Dátum
-      amount: Összeg
-      category: Kategória
+      total: "[Total]"
+      transfer_amount: "[Transfer amount]"
       uncategorized: Kategorizálatlan
-      total: '[Total]'
-      transfer_amount: '[Transfer amount]'
     update:
       success: Átutalás frissítve

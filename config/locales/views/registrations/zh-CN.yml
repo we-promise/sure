@@ -16,6 +16,12 @@ zh-CN:
     new:
       invitation_message: "%{inviter} 邀请您以 %{role} 身份加入"
       join_family_title: 加入 %{family} %{moniker}
+      password_placeholder: 输入您的密码
+      password_requirements:
+        case: 包含大写和小写字母
+        length: 至少 8 个字符
+        number: 包含一个数字（0-9）
+        special: 包含一个特殊字符（!、@、#、$、%、等）
       role_admin: 管理员
       role_guest: 访客
       role_member: 成员
@@ -23,9 +29,3 @@ zh-CN:
       title: 创建您的账户
       welcome_body: 要开始使用，您必须先注册一个新账户。之后您可以在应用内配置更多设置。
       welcome_title: 欢迎使用自托管 %{product_name}！
-      password_placeholder: 输入您的密码
-      password_requirements:
-        length: 至少 8 个字符
-        case: 包含大写和小写字母
-        number: 包含一个数字（0-9）
-        special: 包含一个特殊字符（!、@、#、$、%、等）

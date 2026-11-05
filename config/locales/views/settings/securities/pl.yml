@@ -19,14 +19,15 @@ pl:
         mfa_title: Uwierzytelnianie dwuskładnikowe
         webauthn_add: Dodaj klucz dostępu lub klucz bezpieczeństwa
         webauthn_added: Dodano %{date}
+        webauthn_code_label: Kod z aplikacji uwierzytelniającej lub zapasowy
+        webauthn_code_placeholder: Aktualny kod z aplikacji uwierzytelniającej lub
+          nieużyty kod zapasowy
         webauthn_description: Użyj klucza dostępu, Touch ID, Windows Hello albo sprzętowego
           klucza bezpieczeństwa jako drugiego składnika logowania.
         webauthn_empty: Nie zarejestrowano jeszcze żadnych kluczy dostępu ani kluczy
           bezpieczeństwa.
         webauthn_last_used: Ostatnio użyto %{time_ago} temu
         webauthn_name_label: Nazwa klucza
-        webauthn_code_label: "Kod z aplikacji uwierzytelniającej lub zapasowy"
-        webauthn_code_placeholder: "Aktualny kod z aplikacji uwierzytelniającej lub nieużyty kod zapasowy"
         webauthn_name_placeholder: MacBook Touch ID, YubiKey itp.
         webauthn_remove: Usuń
         webauthn_remove_confirm: Czy na pewno chcesz usunąć ten klucz dostępu lub
@@ -38,12 +39,14 @@ pl:
         webauthn_unsupported: Ta przeglądarka nie obsługuje kluczy dostępu ani kluczy
           bezpieczeństwa.
   webauthn_credentials:
-    code_already_used: "Ten kod został już użyty. Poczekaj na kolejny kod z aplikacji uwierzytelniającej."
-    invalid_code: "Ten kod jest nieprawidłowy. Wpisz aktualny kod z aplikacji uwierzytelniającej lub nieużyty kod zapasowy."
-    rate_limited: "Zbyt wiele prób. Poczekaj minutę i spróbuj ponownie."
+    code_already_used: Ten kod został już użyty. Poczekaj na kolejny kod z aplikacji
+      uwierzytelniającej.
     default_name: Klucz bezpieczeństwa
     failure: Nie udało się zapisać klucza dostępu ani klucza bezpieczeństwa. Spróbuj
       ponownie.
+    invalid_code: Ten kod jest nieprawidłowy. Wpisz aktualny kod z aplikacji uwierzytelniającej
+      lub nieużyty kod zapasowy.
     mfa_required: Włącz uwierzytelnianie dwuskładnikowe, zanim dodasz klucz dostępu
       lub klucz bezpieczeństwa.
+    rate_limited: Zbyt wiele prób. Poczekaj minutę i spróbuj ponownie.
     success: Usunięto klucz dostępu lub klucz bezpieczeństwa.

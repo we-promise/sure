@@ -1,54 +1,106 @@
 ---
 de:
   simplefin_items:
-    new:
-      title: SimpleFIN verbinden
-      setup_token: Setup-Token
-      setup_token_placeholder: Füge dein SimpleFIN-Setup-Token ein
-      connect: Verbinden
-      cancel: Abbrechen
+    complete_account_setup:
+      all_skipped: Alle Konten wurden übersprungen. Es wurden keine Konten erstellt.
+      no_accounts: Keine Konten zum Einrichten.
+      stale_accounts_errors:
+        one: "%{count} Aktion für veraltetes Konto fehlgeschlagen. Details in den
+          Logs prüfen."
+        other: "%{count} Aktionen für veraltete Konten fehlgeschlagen. Details in
+          den Logs prüfen."
+      stale_accounts_processed: 'Veraltete Konten: %{deleted} gelöscht, %{moved} verschoben.'
+      success:
+        one: "%{count} SimpleFIN-Konto erfolgreich erstellt! Deine Transaktionen und
+          Positionen werden im Hintergrund importiert."
+        other: "%{count} SimpleFIN-Konten erfolgreich erstellt! Deine Transaktionen
+          und Positionen werden im Hintergrund importiert."
     create:
-      success: SimpleFIN-Verbindung erfolgreich hinzugefügt! Deine Konten werden in Kürze angezeigt, sobald sie im Hintergrund synchronisiert wurden.
       errors:
         blank_token: Bitte gib ein SimpleFIN-Setup-Token ein.
-        invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige Token aus der SimpleFIN Bridge kopiert hast.
-        token_compromised: Das Setup-Token ist möglicherweise kompromittiert, abgelaufen oder wurde bereits verwendet. Bitte erstelle ein neues.
-        create_failed: "Verbindung konnte nicht hergestellt werden: %{message}"
+        create_failed: 'Verbindung konnte nicht hergestellt werden: %{message}'
+        invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige
+          Token aus der SimpleFIN Bridge kopiert hast.
+        token_compromised: Das Setup-Token ist möglicherweise kompromittiert, abgelaufen
+          oder wurde bereits verwendet. Bitte erstelle ein neues.
         unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.
+      success: SimpleFIN-Verbindung erfolgreich hinzugefügt! Deine Konten werden in
+        Kürze angezeigt, sobald sie im Hintergrund synchronisiert wurden.
     destroy:
       success: SimpleFIN-Verbindung wird entfernt.
-    update:
-      success: SimpleFIN-Verbindung erfolgreich aktualisiert! Deine Konten werden neu verbunden.
-      errors:
-        blank_token: Bitte gib ein SimpleFIN-Setup-Token ein.
-        invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige Token aus der SimpleFIN Bridge kopiert hast.
-        token_compromised: Das Setup-Token ist möglicherweise kompromittiert, abgelaufen oder wurde bereits verwendet. Bitte erstelle ein neues.
-        update_failed: "Verbindung konnte nicht aktualisiert werden: %{message}"
-        unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.
+    dismiss_replacement_suggestion:
+      dismissed: Hinweis auf die Ersatzkarte ausgeblendet
     edit:
-      setup_token:
-        label: "SimpleFIN-Setup-Token:"
-        placeholder: "Füge hier dein SimpleFIN-Setup-Token ein..."
-        help_text: "Das Token sollte eine lange Zeichenfolge aus Buchstaben und Zahlen sein."
       cancel: Abbrechen
       connection_needs_update: 'Deine SimpleFIN-Verbindung muss aktualisiert werden:'
-      header_subtitle: Hol dir einen neuen Einrichtungstoken, um dein SimpleFIN-Konto wieder zu verbinden
-      step_1_html: Öffne die <a href="https://bridge.simplefin.org/simplefin/create" target="_blank" rel="noopener noreferrer" class="text-link hover:text-link underline">SimpleFIN Bridge</a> und erzeug einen neuen Einrichtungstoken
+      header_subtitle: Hol dir einen neuen Einrichtungstoken, um dein SimpleFIN-Konto
+        wieder zu verbinden
+      setup_token:
+        help_text: Das Token sollte eine lange Zeichenfolge aus Buchstaben und Zahlen
+          sein.
+        label: 'SimpleFIN-Setup-Token:'
+        placeholder: Füge hier dein SimpleFIN-Setup-Token ein...
+      step_1_html: Öffne die <a href="https://bridge.simplefin.org/simplefin/create"
+        target="_blank" rel="noopener noreferrer" class="text-link hover:text-link
+        underline">SimpleFIN Bridge</a> und erzeug einen neuen Einrichtungstoken
       step_2: Kopier den Token und füg ihn unten ein
       step_3: Klick auf „Aktualisieren“, um den Zugriff wiederherzustellen
       title: SimpleFIN-Verbindung aktualisieren
       update: Aktualisieren
+    institution_summary:
+      count:
+        one: "%{count} Institut"
+        other: "%{count} Institute"
+      none: Keine Institute verbunden
+    link_existing_account:
+      errors:
+        different_provider: Dieses Konto ist mit einem anderen Anbieter verknüpft.
+          Lös die Verknüpfung dort zuerst, dann kannst du es mit SimpleFIN verbinden.
+        invalid_simplefin_account: Ungültiges SimpleFIN-Konto ausgewählt
+        only_manual: Nur manuelle Konten können verknüpft werden
+      success: Konto erfolgreich mit SimpleFIN verknüpft
+    new:
+      cancel: Abbrechen
+      connect: Verbinden
+      setup_token: Setup-Token
+      setup_token_placeholder: Füge dein SimpleFIN-Setup-Token ein
+      title: SimpleFIN verbinden
+    rate_limited:
+      daily_refresh: Du hast das tägliche Aktualisierungslimit von SimpleFIN erreicht.
+        Versuch es erneut, sobald die SimpleFIN Bridge die Daten aktualisiert hat
+        (das kann bis zu 24 Stunden dauern).
+    reconciled_status:
+      message:
+        one: "%{count} doppelte ausstehende Transaktion abgeglichen"
+        other: "%{count} doppelte ausstehende Transaktionen abgeglichen"
+    replacement_prompt:
+      confirm_body: "„%{account_name}“ wird mit „%{new_name}“ verknüpft. Deine bisherige
+        Historie bleibt, künftige Transaktionen kommen von der neuen Karte."
+      confirm_title: Mit der neuen Karte verknüpfen?
+      description: "„%{account_name}“ ist mit „%{old_name}“ verknüpft, wo es zuletzt
+        keine Bewegung gab und der Saldo null ist. Beim selben Institut ist jetzt
+        eine neue Karte aktiv: „%{new_name}“. Verknüpf sie neu, damit deine Historie
+        erhalten bleibt."
+      dismiss_aria: Hinweis auf die Ersatzkarte ausblenden
+      relink: Mit neuer Karte verknüpfen
+      title: Deine Karte bei %{institution} wurde womöglich ersetzt
+    select_existing_account:
+      all_accounts_already_linked: Alle SimpleFIN-Konten scheinen bereits verknüpft
+        zu sein.
+      cancel: Abbrechen
+      check_provider_health: Prüf unter Einstellungen → Anbieter, ob deine SimpleFIN-Verbindung
+        in Ordnung ist.
+      currently_linked_to: 'Aktuell verknüpft mit: %{account_name}'
+      description: Wähle ein SimpleFIN-Konto aus, das mit deinem bestehenden Konto
+        verknüpft werden soll
+      link_account: Konto verknüpfen
+      no_accounts_found: Keine SimpleFIN-Konten für diesen %{moniker} gefunden.
+      title: "%{account_name} mit SimpleFIN verknüpfen"
+      unlink_to_move: Um eine Verknüpfung zu verschieben, trenne sie zuerst im Aktionsmenü
+        des Kontos.
+      wait_for_sync: Wenn du gerade verbunden oder synchronisiert hast, versuche es
+        nach Abschluss der Synchronisierung erneut.
     setup_accounts:
-      stale_accounts:
-        title: "Konten nicht mehr in SimpleFIN"
-        description: "Diese Konten existieren in deiner Datenbank, werden aber nicht mehr von SimpleFIN bereitgestellt. Das kann passieren, wenn sich Kontokonfigurationen beim Anbieter ändern."
-        action_prompt: "Was möchtest du tun?"
-        action_delete: "Konto und alle Transaktionen löschen"
-        action_move: "Transaktionen verschieben nach:"
-        action_skip: "Vorerst überspringen"
-        transaction_count:
-          one: "%{count} Transaktion"
-          other: "%{count} Transaktionen"
       account_card:
         balance: Saldo
       account_type_checking_savings: Giro oder Spar
@@ -68,7 +120,8 @@ de:
           other: vor %{count} Tagen
         dormant: Keine Bewegung seit %{days} Tagen
         empty: Noch keine Transaktionen importiert
-        likely_closed: Keine Bewegung und Saldo null – die Karte ist womöglich gekündigt oder ersetzt
+        likely_closed: Keine Bewegung und Saldo null – die Karte ist womöglich gekündigt
+          oder ersetzt
         recent:
           one: 1 Transaktion • zuletzt %{when}
           other: "%{count} Transaktionen • zuletzt %{when}"
@@ -79,99 +132,85 @@ de:
       create_accounts: Konten anlegen
       creating_accounts: Konten werden angelegt …
       header_subtitle: Wähl die passende Kontoart für deine importierten Konten
+      stale_accounts:
+        action_delete: Konto und alle Transaktionen löschen
+        action_move: 'Transaktionen verschieben nach:'
+        action_prompt: Was möchtest du tun?
+        action_skip: Vorerst überspringen
+        description: Diese Konten existieren in deiner Datenbank, werden aber nicht
+          mehr von SimpleFIN bereitgestellt. Das kann passieren, wenn sich Kontokonfigurationen
+          beim Anbieter ändern.
+        title: Konten nicht mehr in SimpleFIN
+        transaction_count:
+          one: "%{count} Transaktion"
+          other: "%{count} Transaktionen"
       title: SimpleFIN-Konten einrichten
-      transaction_history_description_html: SimpleFIN liefert je nach Bank meist <strong>60 bis 90 Tage</strong> Transaktionshistorie. Nach der Einrichtung kommen neue Transaktionen automatisch dazu. Wie weit die Historie zurückreicht, hängt vom Institut und der Kontoart ab.
+      transaction_history_description_html: SimpleFIN liefert je nach Bank meist <strong>60
+        bis 90 Tage</strong> Transaktionshistorie. Nach der Einrichtung kommen neue
+        Transaktionen automatisch dazu. Wie weit die Historie zurückreicht, hängt
+        vom Institut und der Kontoart ab.
       transaction_history_title: 'Transaktionshistorie:'
-    complete_account_setup:
-      all_skipped: "Alle Konten wurden übersprungen. Es wurden keine Konten erstellt."
-      no_accounts: "Keine Konten zum Einrichten."
-      success:
-        one: "%{count} SimpleFIN-Konto erfolgreich erstellt! Deine Transaktionen und Positionen werden im Hintergrund importiert."
-        other: "%{count} SimpleFIN-Konten erfolgreich erstellt! Deine Transaktionen und Positionen werden im Hintergrund importiert."
-      stale_accounts_processed: "Veraltete Konten: %{deleted} gelöscht, %{moved} verschoben."
-      stale_accounts_errors:
-        one: "%{count} Aktion für veraltetes Konto fehlgeschlagen. Details in den Logs prüfen."
-        other: "%{count} Aktionen für veraltete Konten fehlgeschlagen. Details in den Logs prüfen."
-    sync_status:
-      no_accounts: Keine Konten gefunden
-      synced:
-        one: "%{count} Konto synchronisiert"
-        other: "%{count} Konten synchronisiert"
-      partial_setup:
-        one: "%{linked} synchronisiert, %{unlinked} muss eingerichtet werden"
-        other: "%{linked} synchronisiert, %{unlinked} müssen eingerichtet werden"
-    institution_summary:
-      none: Keine Institute verbunden
-      count:
-        one: "%{count} Institut"
-        other: "%{count} Institute"
-    rate_limited:
-      daily_refresh: "Du hast das tägliche Aktualisierungslimit von SimpleFIN erreicht. Versuch es erneut, sobald die SimpleFIN Bridge die Daten aktualisiert hat (das kann bis zu 24 Stunden dauern)."
-    stale_sync:
-      last_successful: "Die letzte erfolgreiche Synchronisierung war vor %{count} Tagen. Deine SimpleFIN-Verbindung braucht möglicherweise Aufmerksamkeit."
-      no_transactions: "Seit %{count} Tagen gibt es keine neuen Transaktionen. Prüfe in deinem SimpleFIN-Dashboard, ob deine Bankverbindungen aktiv sind."
     simplefin_item:
+      accounts_skipped_label: 'Übersprungen: %{count}'
+      accounts_skipped_tooltip: Einige Konten wurden aufgrund von Fehlern bei der
+        Synchronisierung übersprungen
       add_new: Neue Verbindung hinzufügen
       confirm_accept: Verbindung löschen
-      confirm_body: Dadurch werden alle Konten dieser Gruppe und alle zugehörigen Daten dauerhaft gelöscht.
+      confirm_body: Dadurch werden alle Konten dieser Gruppe und alle zugehörigen
+        Daten dauerhaft gelöscht.
       confirm_title: SimpleFIN-Verbindung löschen?
       delete: Löschen
       deletion_in_progress: "(Löschung läuft...)"
+      duplicate_accounts_skipped: Einige Konten wurden als Duplikate übersprungen
+        — nutze „Bestehendes Konto verknüpfen“, um sie zusammenzuführen.
       error: Beim Synchronisieren der Daten ist ein Fehler aufgetreten.
-      no_accounts_description: Diese Verbindung enthält noch keine synchronisierten Konten.
-      no_accounts_title: Keine Konten gefunden
-      requires_update: Erneute Authentifizierung erforderlich
-      setup_needed: Neue Konten bereit zur Einrichtung
-      setup_description: Wähle die Kontotypen für deine neu importierten SimpleFIN-Konten aus.
-      setup_action: Neue Konten einrichten
-      setup_accounts_menu: Konten einrichten
       more_accounts_available:
         one: "%{count} weiteres Konto kann eingerichtet werden"
         other: "%{count} weitere Konten können eingerichtet werden"
-      accounts_skipped_tooltip: "Einige Konten wurden aufgrund von Fehlern bei der Synchronisierung übersprungen"
-      accounts_skipped_label: "Übersprungen: %{count}"
-      rate_limited_ago: "Ratenbegrenzung (vor %{time})"
-      rate_limited_recently: "Kürzlich ratenbegrenzt"
+      no_accounts_description: Diese Verbindung enthält noch keine synchronisierten
+        Konten.
+      no_accounts_title: Keine Konten gefunden
+      rate_limited_ago: Ratenbegrenzung (vor %{time})
+      rate_limited_recently: Kürzlich ratenbegrenzt
+      reconciled_details_note: "(Details siehe Synchronisierungszusammenfassung)"
+      requires_update: Erneute Authentifizierung erforderlich
+      setup_accounts_menu: Konten einrichten
+      setup_action: Neue Konten einrichten
+      setup_description: Wähle die Kontotypen für deine neu importierten SimpleFIN-Konten
+        aus.
+      setup_needed: Neue Konten bereit zur Einrichtung
+      stale_pending_accounts: 'in: %{accounts}'
+      stale_pending_note: "(von Budgets ausgeschlossen)"
       status: Zuletzt vor %{timestamp} synchronisiert
       status_never: Noch nie synchronisiert
-      status_with_summary: "Zuletzt vor %{timestamp} synchronisiert • %{summary}"
+      status_with_summary: Zuletzt vor %{timestamp} synchronisiert • %{summary}
       syncing: Wird synchronisiert...
       update: Verbindung aktualisieren
-      stale_pending_note: "(von Budgets ausgeschlossen)"
-      stale_pending_accounts: "in: %{accounts}"
-      reconciled_details_note: "(Details siehe Synchronisierungszusammenfassung)"
-      duplicate_accounts_skipped: "Einige Konten wurden als Duplikate übersprungen — nutze „Bestehendes Konto verknüpfen“, um sie zusammenzuführen."
-    select_existing_account:
-      title: "%{account_name} mit SimpleFIN verknüpfen"
-      description: Wähle ein SimpleFIN-Konto aus, das mit deinem bestehenden Konto verknüpft werden soll
-      cancel: Abbrechen
-      link_account: Konto verknüpfen
-      no_accounts_found: "Keine SimpleFIN-Konten für diesen %{moniker} gefunden."
-      wait_for_sync: Wenn du gerade verbunden oder synchronisiert hast, versuche es nach Abschluss der Synchronisierung erneut.
-      check_provider_health: Prüf unter Einstellungen → Anbieter, ob deine SimpleFIN-Verbindung in Ordnung ist.
-      unlink_to_move: Um eine Verknüpfung zu verschieben, trenne sie zuerst im Aktionsmenü des Kontos.
-      all_accounts_already_linked: Alle SimpleFIN-Konten scheinen bereits verknüpft zu sein.
-      currently_linked_to: "Aktuell verknüpft mit: %{account_name}"
-    link_existing_account:
-      success: Konto erfolgreich mit SimpleFIN verknüpft
-      errors:
-        only_manual: Nur manuelle Konten können verknüpft werden
-        invalid_simplefin_account: Ungültiges SimpleFIN-Konto ausgewählt
-        different_provider: Dieses Konto ist mit einem anderen Anbieter verknüpft. Lös die Verknüpfung dort zuerst, dann kannst du es mit SimpleFIN verbinden.
-    reconciled_status:
-      message:
-        one: "%{count} doppelte ausstehende Transaktion abgeglichen"
-        other: "%{count} doppelte ausstehende Transaktionen abgeglichen"
     stale_pending_status:
       message:
         one: "%{count} ausstehende Transaktion älter als %{days} Tage"
         other: "%{count} ausstehende Transaktionen älter als %{days} Tage"
-    dismiss_replacement_suggestion:
-      dismissed: Hinweis auf die Ersatzkarte ausgeblendet
-    replacement_prompt:
-      confirm_body: "„%{account_name}“ wird mit „%{new_name}“ verknüpft. Deine bisherige Historie bleibt, künftige Transaktionen kommen von der neuen Karte."
-      confirm_title: Mit der neuen Karte verknüpfen?
-      description: "„%{account_name}“ ist mit „%{old_name}“ verknüpft, wo es zuletzt keine Bewegung gab und der Saldo null ist. Beim selben Institut ist jetzt eine neue Karte aktiv: „%{new_name}“. Verknüpf sie neu, damit deine Historie erhalten bleibt."
-      dismiss_aria: Hinweis auf die Ersatzkarte ausblenden
-      relink: Mit neuer Karte verknüpfen
-      title: Deine Karte bei %{institution} wurde womöglich ersetzt
+    stale_sync:
+      last_successful: Die letzte erfolgreiche Synchronisierung war vor %{count} Tagen.
+        Deine SimpleFIN-Verbindung braucht möglicherweise Aufmerksamkeit.
+      no_transactions: Seit %{count} Tagen gibt es keine neuen Transaktionen. Prüfe
+        in deinem SimpleFIN-Dashboard, ob deine Bankverbindungen aktiv sind.
+    sync_status:
+      no_accounts: Keine Konten gefunden
+      partial_setup:
+        one: "%{linked} synchronisiert, %{unlinked} muss eingerichtet werden"
+        other: "%{linked} synchronisiert, %{unlinked} müssen eingerichtet werden"
+      synced:
+        one: "%{count} Konto synchronisiert"
+        other: "%{count} Konten synchronisiert"
+    update:
+      errors:
+        blank_token: Bitte gib ein SimpleFIN-Setup-Token ein.
+        invalid_token: Ungültiges Setup-Token. Bitte überprüfe, ob du das vollständige
+          Token aus der SimpleFIN Bridge kopiert hast.
+        token_compromised: Das Setup-Token ist möglicherweise kompromittiert, abgelaufen
+          oder wurde bereits verwendet. Bitte erstelle ein neues.
+        unexpected: Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut.
+        update_failed: 'Verbindung konnte nicht aktualisiert werden: %{message}'
+      success: SimpleFIN-Verbindung erfolgreich aktualisiert! Deine Konten werden
+        neu verbunden.

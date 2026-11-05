@@ -3,12 +3,12 @@ zh-CN:
   activerecord:
     attributes:
       import:
-        currency: 货币
-        number_format: 数字格式
         col_sep: 列分隔符
         col_seps:
           comma: 逗号（,）
           semicolon: 分号（;）
+        currency: 货币
+        number_format: 数字格式
     errors:
       models:
         import:

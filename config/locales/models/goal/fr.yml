@@ -16,21 +16,33 @@ fr:
         goal:
           attributes:
             base:
-              at_least_one_linked_account_required: Sélectionnez au moins un compte pour financer cet objectif.
-              missing_exchange_rate: 'Aucun taux de change n''est encore disponible pour l''un des comptes de cet objectif : il ne peut donc pas être terminé.'
-              whole_account_conflict_on_restore: "Impossible de restaurer cet objectif : « %{account_name} » est désormais entièrement affecté à « %{goal_name} ». Indiquez d'abord un montant sur l'un des deux."
-            kind:
-              locked_while_released: Rouvrez cet objectif avant d'en faire une réserve.
-              locked_once_consumed: Cet objectif a déjà enregistré des dépenses, il ne peut pas devenir une réserve.
-            target_amount:
-              below_consumed: Impossible de fixer une cible inférieure à ce que cet objectif a déjà enregistré comme dépensé.
+              at_least_one_linked_account_required: Sélectionnez au moins un compte
+                pour financer cet objectif.
+              missing_exchange_rate: 'Aucun taux de change n''est encore disponible
+                pour l''un des comptes de cet objectif : il ne peut donc pas être
+                terminé.'
+              whole_account_conflict_on_restore: 'Impossible de restaurer cet objectif
+                : « %{account_name} » est désormais entièrement affecté à « %{goal_name}
+                ». Indiquez d''abord un montant sur l''un des deux.'
             currency:
-              locked_after_linked: Impossible de modifier la devise après que l'objectif a été lié à des comptes.
+              locked_after_linked: Impossible de modifier la devise après que l'objectif
+                a été lié à des comptes.
+            kind:
+              locked_once_consumed: Cet objectif a déjà enregistré des dépenses, il
+                ne peut pas devenir une réserve.
+              locked_while_released: Rouvrez cet objectif avant d'en faire une réserve.
+            linked_accounts:
+              must_be_fundable: Tous les comptes liés doivent être des comptes de
+                trésorerie, d'investissement ou de cryptomonnaies.
+              must_belong_to_family: Les comptes liés doivent appartenir au même foyer
+                que l'objectif.
+            target_amount:
+              below_consumed: Impossible de fixer une cible inférieure à ce que cet
+                objectif a déjà enregistré comme dépensé.
             target_mode:
-              months_requires_maintained: Seule une réserve à maintenir peut avoir une cible exprimée en mois de dépenses.
+              months_requires_maintained: Seule une réserve à maintenir peut avoir
+                une cible exprimée en mois de dépenses.
             target_months:
               blank: Indiquez combien de mois de dépenses cette réserve doit couvrir.
-              only_with_months_mode: Les mois de dépenses ne s'appliquent que si la cible est exprimée ainsi.
-            linked_accounts:
-              must_be_fundable: Tous les comptes liés doivent être des comptes de trésorerie, d'investissement ou de cryptomonnaies.
-              must_belong_to_family: Les comptes liés doivent appartenir au même foyer que l'objectif.
+              only_with_months_mode: Les mois de dépenses ne s'appliquent que si la
+                cible est exprimée ainsi.

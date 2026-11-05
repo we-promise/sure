@@ -4,5 +4,5 @@ zh-CN:
     errors:
       models:
         merchant_import:
-          missing_columns: 缺少必填列：%{columns}
           duplicate_columns: 规范化后列名重复：%{columns}
+          missing_columns: 缺少必填列：%{columns}

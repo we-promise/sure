@@ -9,12 +9,12 @@ ca:
       mileage: Quilometratge
       mileage_placeholder: '15000'
       mileage_unit: Unitat
+      mileage_unit_kilometers: Quilòmetres
+      mileage_unit_miles: Milles
       model: Model
       model_placeholder: Born
       year: Any
       year_placeholder: '2023'
-      mileage_unit_kilometers: Quilòmetres
-      mileage_unit_miles: Milles
     new:
       title: Introdueix els detalls del vehicle
     overview:

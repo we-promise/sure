@@ -4,42 +4,48 @@ en:
     edit:
       edit: Edit %{account}
     form:
-      interest_rate: Interest rate
-      interest_rate_placeholder: '5.25'
-      initial_balance: Original loan balance
       day_count_convention: Interest basis
       day_count_convention_actual_365: Actual/365
       day_count_convention_actual_actual: Actual/actual
       day_count_convention_hint: How your lender measures each period against a year.
-        Actual/365 charges by the length of the month and is standard for UK and
-        Australian mortgages. 30/360 charges a flat twelfth, the basis Sure has
-        always used.
+        Actual/365 charges by the length of the month and is standard for UK and Australian
+        mortgages. 30/360 charges a flat twelfth, the basis Sure has always used.
       day_count_convention_thirty_360: 30/360 (a flat twelfth)
-      rate_type: Rate type
-      term_months: Term (months)
-      term_months_placeholder: '360'
-      none: None
-      subtype_prompt: Select loan type
-      subtype_none: None
-      rate_type_adjustable: Adjustable
-      rate_type_fixed: Fixed
-      rate_type_variable: Variable
-      rate_changes: Rate changes
-      rate_changes_hint: Each row sets the rate that applies from its effective date until the next one. Re-entering a date replaces that row rather than adding a second.
-      rate_changes_empty: No rate changes recorded. The loan runs at its interest rate above.
-      rate_change_effective_date: Effective date
-      rate_change_rate: Rate
-      rate_change_add: Add rate change
-      rate_change_remove: Remove
-      start_date: Origination date
-      start_date_hint: When the loan was drawn down. A new loan's balance history starts on this date, not the opening balance date. Leave blank to use the opening balance date.
       down_payment: Down payment
+      initial_balance: Original loan balance
       insurance_rate: Insurance rate
+      insurance_rate_hint: An annual rate, charged monthly alongside the repayment.
+        Level term is charged on the original balance; decreasing on what is still
+        owed.
       insurance_rate_placeholder: '0.36'
-      insurance_rate_hint: An annual rate, charged monthly alongside the repayment. Level term is charged on the original balance; decreasing on what is still owed.
       insurance_rate_type: Insurance type
       insurance_rate_type_decreasing_life: Decreasing
       insurance_rate_type_level_term: Level term
+      interest_rate: Interest rate
+      interest_rate_placeholder: '5.25'
+      none: None
+      rate_change_add: Add rate change
+      rate_change_effective_date: Effective date
+      rate_change_rate: Rate
+      rate_change_remove: Remove
+      rate_changes: Rate changes
+      rate_changes_empty: No rate changes recorded. The loan runs at its interest
+        rate above.
+      rate_changes_hint: Each row sets the rate that applies from its effective date
+        until the next one. Re-entering a date replaces that row rather than adding
+        a second.
+      rate_type: Rate type
+      rate_type_adjustable: Adjustable
+      rate_type_fixed: Fixed
+      rate_type_variable: Variable
+      start_date: Origination date
+      start_date_hint: When the loan was drawn down. A new loan's balance history
+        starts on this date, not the opening balance date. Leave blank to use the
+        opening balance date.
+      subtype_none: None
+      subtype_prompt: Select loan type
+      term_months: Term (months)
+      term_months_placeholder: '360'
     new:
       title: Enter loan details
     overview:
@@ -55,58 +61,47 @@ en:
     tabs:
       extra_repayments:
         amount_label: Extra repayment
-        amount_placeholder: "0.00"
+        amount_placeholder: '0.00'
         apply: Apply
-        baseline_not_cleared: On the current repayment this loan is not paid off by the original maturity, and %{balloon} would still be owed, so there is no earlier date or interest saving to compare. With this extra it is paid off on the date above.
+        baseline_not_cleared: On the current repayment this loan is not paid off by
+          the original maturity, and %{balloon} would still be owed, so there is no
+          earlier date or interest saving to compare. With this extra it is paid off
+          on the date above.
         clear: Clear
-        comparison_basis: Compared with paying the current repayment and nothing extra, from today's balance.
-        dated_note: Weekly and fortnightly extras are counted at the next repayment after each one is paid, so the interest saved is, if anything, understated.
-        extra_not_cleared: Even with this extra, the loan is not paid off by the original maturity. Try a larger amount.
+        comparison_basis: Compared with paying the current repayment and nothing extra,
+          from today's balance.
+        dated_note: Weekly and fortnightly extras are counted at the next repayment
+          after each one is paid, so the interest saved is, if anything, understated.
+        extra_not_cleared: Even with this extra, the loan is not paid off by the original
+          maturity. Try a larger amount.
         frequencies:
           fortnightly: Fortnightly
           monthly: Monthly
           weekly: Weekly
         frequency_label: How often
         interest_saved: Interest saved
-        intro: See how much sooner the loan is paid off, and how much interest you save, if you pay an extra amount each week, fortnight or month on top of your repayments.
+        intro: See how much sooner the loan is paid off, and how much interest you
+          save, if you pay an extra amount each week, fortnight or month on top of
+          your repayments.
         invalid_amount: Enter an amount of zero or more, in digits.
         invalid_frequency: Choose weekly, fortnightly or monthly.
         months_sooner:
-          zero: Paid off in the same month
           one: "%{count} month sooner"
           other: "%{count} months sooner"
-        no_scheduled_repayments: No scheduled repayments remain on this loan, but a balance is still owing, so there is no repayment to add an extra to.
-        not_applicable: There is nothing left to repay on this loan, so there is no extra repayment to model.
+          zero: Paid off in the same month
+        no_scheduled_repayments: No scheduled repayments remain on this loan, but
+          a balance is still owing, so there is no repayment to add an extra to.
+        not_applicable: There is nothing left to repay on this loan, so there is no
+          extra repayment to model.
         payoff_with_extra: Payoff with extra
         total_cost: Total cost from today
         total_cost_not_cleared: Not paid off by the original maturity
         total_cost_saved: "%{amount} less than without the extra"
-        variable_rate_notice: This loan's rate changes over time. These figures apply the rate changes already recorded; a change that has not been recorded yet will shift them.
-      repayment_progress:
-        instalment: Payment %{number} · %{date}
-        insurance: Insurance
-        interest: Interest
-        of_original: of %{amount}
-        principal: Principal
-        repaid: Repaid
-        total: Total
-      schedule:
-        date: Date
-        description: Projected from the original balance, rate and term, starting %{start_date}. Extra payments are not reflected.
-        variable_rate_notice: This loan's rate changes over time. The schedule re-amortises at each recorded change, keeping the original payoff date and resizing the repayment; a change that has not been recorded yet will shift these figures.
-        opening_payment: Opening Payment
-        forecasted_payoff_date: Forecasted Payoff Date
-        forecasted_payoff_not_converged: Not paid off on the current repayment
-        interest: Interest
-        monthly_payment: Monthly Payment
-        not_applicable: N/A
-        number: "#"
-        payment: Payment
-        principal: Principal
-        remaining_balance: Remaining Balance
-        total_cost: Total Cost
-        total_interest: Total Interest
+        variable_rate_notice: This loan's rate changes over time. These figures apply
+          the rate changes already recorded; a change that has not been recorded yet
+          will shift them.
       overview:
+        edit_loan_details: Edit loan details
         insurance_rate_only: "%{rate} a year"
         interest_rate: Interest Rate
         leverage: Leverage
@@ -119,10 +114,36 @@ en:
         original_payoff_date: Original Payoff Date
         original_principal: Original Loan Amount
         remaining_principal: Remaining Loan Amount
+        term: Term
         total_cost: Total Cost
         total_cost_with_insurance: Total Cost incl. Insurance
         total_insurance: Insurance
-        term: Term
         type: Type
         unknown: Unknown
-        edit_loan_details: "Edit loan details"
+      repayment_progress:
+        instalment: Payment %{number} · %{date}
+        insurance: Insurance
+        interest: Interest
+        of_original: of %{amount}
+        principal: Principal
+        repaid: Repaid
+        total: Total
+      schedule:
+        date: Date
+        description: Projected from the original balance, rate and term, starting
+          %{start_date}. Extra payments are not reflected.
+        forecasted_payoff_date: Forecasted Payoff Date
+        forecasted_payoff_not_converged: Not paid off on the current repayment
+        interest: Interest
+        monthly_payment: Monthly Payment
+        not_applicable: N/A
+        number: "#"
+        opening_payment: Opening Payment
+        payment: Payment
+        principal: Principal
+        remaining_balance: Remaining Balance
+        total_cost: Total Cost
+        total_interest: Total Interest
+        variable_rate_notice: This loan's rate changes over time. The schedule re-amortises
+          at each recorded change, keeping the original payoff date and resizing the
+          repayment; a change that has not been recorded yet will shift these figures.

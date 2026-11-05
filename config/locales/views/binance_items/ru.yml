@@ -43,6 +43,8 @@ ru:
       syncing: Синхронизация...
       update_credentials: Обновить данные
     complete_account_setup:
+      invalid_sync_start_date: Дата начала синхронизации должна быть действительной
+        датой в прошлом.
       no_accounts: Нет счетов для импорта
       none_selected: Счета не выбраны
       success:
@@ -50,7 +52,6 @@ ru:
         many: Импортировано %{count} счетов
         one: Импортирован %{count} счёт
         other: Импортированы %{count} счёта
-      invalid_sync_start_date: Дата начала синхронизации должна быть действительной датой в прошлом.
     create:
       default_name: Binance
       success: Успешно подключено к Binance! Ваш счёт синхронизируется.

@@ -32,6 +32,9 @@ ru:
       brokerage:
         long: Брокерский счёт
         short: Брокерский
+      cash_management:
+        long: Счёт управления денежными средствами (CMA)
+        short: CMA
       corporate_bond:
         long: Корпоративная облигация
         short: Корпоративная облигация
@@ -185,9 +188,6 @@ ru:
       workplace_pension_uk:
         long: Рабочая пенсия
         short: Пенсия
-      cash_management:
-        short: CMA
-        long: Счёт управления денежными средствами (CMA)
     value_tooltip:
       cash: Денежные средства
       holdings: Активы

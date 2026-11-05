@@ -3,6 +3,6 @@ nl:
   admin:
     invitations:
       destroy:
-        success: "Uitnodiging verwijderd."
+        success: Uitnodiging verwijderd.
       destroy_all:
-        success: "Alle uitnodigingen voor dit huishouden zijn verwijderd."
+        success: Alle uitnodigingen voor dit huishouden zijn verwijderd.

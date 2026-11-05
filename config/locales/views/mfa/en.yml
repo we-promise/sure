@@ -1,8 +1,6 @@
 ---
 en:
   mfa:
-    local_password_required: Two-factor authentication needs a local password.
-      Yours is managed through your identity provider.
     backup_codes:
       backup_codes_description: Each code can only be used once. Keep these codes
         safe and secure.
@@ -13,12 +11,15 @@ en:
       page_title: Backup Codes
       title: Save Your Backup Codes
     create:
-      code_already_used: That code was already used. Please enter the next code from your authenticator app.
+      code_already_used: That code was already used. Please enter the next code from
+        your authenticator app.
       invalid_code: Invalid verification code. Please try again.
       invalid_password: Incorrect password. Please try again.
     disable:
       invalid_password: Incorrect password. Please try again.
       success: Two-factor authentication has been disabled
+    local_password_required: Two-factor authentication needs a local password. Yours
+      is managed through your identity provider.
     new:
       code_label: Verification Code
       code_placeholder: Enter 6-digit code
@@ -47,6 +48,7 @@ en:
     verify_code:
       invalid_code: Invalid authentication code. Please try again.
     verify_webauthn:
-      invalid_credential: Could not verify that passkey or security key. Please try again.
+      invalid_credential: Could not verify that passkey or security key. Please try
+        again.
     webauthn_options:
       unavailable: No passkeys or security keys are available for this account.

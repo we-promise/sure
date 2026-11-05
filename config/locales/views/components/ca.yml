@@ -78,9 +78,9 @@ ca:
           total_gains: Guanys totals
         views:
           cash: Efectiu
+          gains: Guanys / ROI
           holdings: Posicions
           total_value: Valor total
-          gains: Guanys / ROI
         vs_available_history: vs. historial disponible
     period_picker:
       aria_label: 'Període: %{period}'
@@ -94,6 +94,11 @@ ca:
         warning: Avís
     dialog:
       close: Tanca
+    icon_picker:
+      no_matching_icons: No hi ha icones que coincideixin
+      search_placeholder: Cerca icones...
+    link:
+      opens_in_new_tab: "(s'obre en una pestanya nova)"
     pill:
       aria_label: "%{label}"
       default_label: Experimental
@@ -101,11 +106,6 @@ ca:
       avatar_default_label: Obre el menú
     tooltip:
       trigger_label: Més informació
-    link:
-      opens_in_new_tab: (s'obre en una pestanya nova)
-    icon_picker:
-      no_matching_icons: No hi ha icones que coincideixin
-      search_placeholder: Cerca icones...
   provider_sync_summary:
     accounts:
       institutions: 'Entitats: %{count}'

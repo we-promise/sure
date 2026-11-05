@@ -1,7 +1,8 @@
 ---
 id:
   passwords:
-    disabled: "Perubahan kata sandi di Sure dinonaktifkan. Silakan kelola kata sandi Anda melalui penyedia identitas Anda."
+    disabled: Perubahan kata sandi di Sure dinonaktifkan. Silakan kelola kata sandi
+      Anda melalui penyedia identitas Anda.
     edit:
       password: Kata Sandi Baru
       password_challenge: Kata Sandi Saat Ini

@@ -2,431 +2,630 @@
 nl:
   admin:
     system_health:
+      configuration:
+        checks:
+          exchange_rates:
+            guidance: Kies een wisselkoersprovider en voeg indien nodig de API-sleutel
+              toe in de zelfhostinginstellingen, of configureer deze in de deploymentomgeving.
+              EXCHANGE_RATE_PROVIDER en provider-API-sleutels uit omgevingsvariabelen
+              gaan voor.
+            issues:
+              invalid_provider: De geselecteerde wisselkoersprovider wordt niet herkend.
+                Het automatisch opvragen van koersen mislukt totdat een ondersteunde
+                provider is geselecteerd.
+            statuses:
+              configured: De geselecteerde wisselkoersprovider is geconfigureerd.
+              not_configured: Er is geen bruikbare wisselkoersprovider geconfigureerd.
+                Automatische valutaomrekening is mogelijk niet beschikbaar wanneer
+                een opgeslagen koers ontbreekt.
+            title: Wisselkoersen
+          securities:
+            guidance: Kies providers en voeg eventueel vereiste API-sleutels toe in
+              de zelfhostinginstellingen, of configureer ze in de deploymentomgeving.
+              Instellingen uit omgevingsvariabelen gaan voor. Openbare providers hebben
+              geen API-sleutel nodig.
+            statuses:
+              configured: Alle ingeschakelde providers van marktkoersen zijn geconfigureerd.
+              disabled: Er is geen provider van marktkoersen ingeschakeld. Automatisch
+                zoeken naar effecten en opvragen van koersen zijn niet beschikbaar.
+              incomplete: Bij ten minste één ingeschakelde provider van marktkoersen
+                ontbreekt configuratie of is de selectie ongeldig. Effecten die aan
+                die provider zijn toegewezen, krijgen mogelijk geen koersupdates.
+              not_configured: De API-sleutels van de ingeschakelde providers van marktkoersen
+                ontbreken. Automatisch zoeken naar effecten en opvragen van koersen
+                zijn via deze providers niet beschikbaar.
+            title: Marktkoersen
+          smtp:
+            guidance: SMTP kan niet in de beheerdersinterface worden geconfigureerd.
+              Stel de e-mailomgevingsvariabelen in voor zowel de web- als de workerdienst
+              en herstart beide. SMTP_USERNAME en SMTP_PASSWORD kunnen allebei worden
+              weggelaten voor een relay zonder authenticatie.
+            issues:
+              address: SMTP_ADDRESS
+              app_domain: APP_DOMAIN (gebruikt in e-maillinks)
+              authentication: SMTP_USERNAME en SMTP_PASSWORD (geef beide of geen van
+                beide op)
+              port: SMTP_PORT (een getal van 1 tot 65535)
+              sender: EMAIL_SENDER (vervang de standaardafzender sender@sure.local)
+            statuses:
+              configured: SMTP-instellingen zijn aanwezig.
+              disabled: E-mailbezorging is uitgeschakeld in de actieve mailerconfiguratie.
+              incomplete: Sommige e-mailinstellingen ontbreken of zijn onvolledig.
+                Systeem-e-mails of de links daarin werken mogelijk niet.
+              not_checked: Dit proces gebruikt een andere bezorgmethode dan SMTP,
+                zoals een voorbeeldweergave in development. SMTP-bezorging wordt niet
+                beoordeeld.
+              not_configured: SMTP is niet geconfigureerd. Wachtwoordherstel, uitnodigingen
+                en andere systeem-e-mails kunnen niet via SMTP worden verstuurd.
+            title: E-mail (SMTP)
+          storage:
+            guidance: Controleer ACTIVE_STORAGE_SERVICE en de deploymentinstellingen
+              van de geselecteerde backend. Lokale schijf vereist persistente opslag
+              die door de web- en workerdiensten wordt gedeeld. Wisselen van backend
+              migreert bestaande bestanden niet; plan een eventuele migratie apart.
+            issues:
+              bucket: Opslagbucket
+              credentials: Toegangssleutel en geheime sleutel voor opslag (geef beide
+                op of gebruik externe detectie van inloggegevens)
+              endpoint: Opslagendpoint (en CLOUDFLARE_ACCOUNT_ID voor R2)
+              region: Opslagregio
+              root: Hoofdmap lokale opslag
+            statuses:
+              configured: Opslaginstellingen zijn aanwezig; lokale schijf heeft geen
+                cloudinloggegevens nodig.
+              incomplete: Vereiste opslaginstellingen ontbreken of zijn onvolledig.
+                Bestandsuploads of het ophalen van bestanden werken mogelijk niet.
+              not_checked: Deze backend gebruikt externe detectie van inloggegevens
+                of een aangepaste configuratie. De toegang kan niet alleen op basis
+                van deze instellingen worden bepaald.
+              not_configured: De geselecteerde opslagbackend heeft geen bijbehorende
+                configuratie. Bestandsuploads zijn mogelijk niet beschikbaar.
+            title: Bestandsuploads en opslag
+        configure_providers: Zelfhostinginstellingen openen
+        description: Configuratie die zichtbaar is voor dit webproces. Deze controles
+          versturen geen e-mails, maken geen contact met providers en uploaden of
+          downloaden geen bestanden. Geconfigureerd betekent dat de instellingen aanwezig
+          zijn, niet dat bezorging, toegang tot providers of toegang tot opslag is
+          geverifieerd.
+        provider_statuses:
+          configured: Geconfigureerd
+          invalid: Ongeldige selectie
+          not_configured: API-sleutel ontbreekt
+        settings_needed: Te controleren instellingen
+        statuses:
+          configured: Geconfigureerd
+          disabled: Uitgeschakeld
+          incomplete: Onvolledige configuratie
+          not_checked: Niet geverifieerd
+          not_configured: Niet geconfigureerd
+        storage_backend: 'Geselecteerde opslag: %{backend}'
+        storage_backends:
+          amazon: Amazon S3
+          cloudflare: Cloudflare R2
+          generic_s3: S3-compatibele opslag
+          google: Google Cloud Storage
+          local: Lokale schijf
+          other: Aangepaste of onbekende backend
+          test: Testschijf
+        unknown_provider: Onbekende providerselectie
       hosted_usage:
-        loading: "Gebruik van de gehoste versie laden…"
-        title: "Gebruik gehoste versie"
-        snapshot: "Alleen-lezen momentopname van de database van %{time}"
-        summary:
-          trial_households_count: "Huishoudens met proefperiode (laatste 30 dagen)"
-          trial_members_count: "Huidige ledenaccounts met proefperiode"
-          trials_expiring_soon_count: "Proefperiodes die binnen 7 dagen aflopen"
-          cleanup_eligible_count: "Huishoudens die in aanmerking komen voor opschoning"
-          active_supporter_households_count: "Actieve supporterhuishoudens (lokaal)"
-          supporter_subscription_count: "Aan Stripe gekoppelde abonnementsrijen"
-        summary_help: "Totalen voor proefperiodes omvatten abonnementen die in de laatste 30 dagen zijn geregistreerd. Totalen voor aflopende proefperiodes, opschoning en supporters omvatten alle overeenkomende huidige rijen, zonder de tabellimieten."
-        limitations_title: "Wat deze cijfers ons kunnen vertellen"
-        limitations: "De huidige tabellen bewaren geen volledige geschiedenis van proefperiodes, betalingen of sessieactiviteit. Het aanmaken van abonnementen kan het gevolg zijn van imports. Ledenaccounts zijn geen geverifieerde unieke personen. Deze weergave wijzigt geen huishoud- of abonnementsgegevens. Resets van de gedeelde demo verwijderen oude huishoudens en sessies, waardoor de bezoekersgeschiedenis niet kan worden gereconstrueerd."
-        trials:
-          title: "Recente huishoudens met proefperiode"
-          description: "Abonnementen geregistreerd sinds %{date} die een einddatum van de proefperiode behouden, inclusief omgezette proefperiodes. Er worden maximaal %{limit} huishoudens getoond."
-          sessions_help: "Sessies zijn bewaarde aanmeldingsrecords van ingeschakelde gebruikers, geen gebruikers die nu online zijn of bezoeken. Afmelden verwijdert een record. De laatste aanmaaktijd is geen tijdstip van laatste activiteit."
-          empty: "Geen huishoudens met proefperiode geregistreerd in deze periode"
         cleanup:
-          title: "Geschiktheid voor opschoning"
-          description: "Komt overeen met de bestaande opschoningsscope: een gepauzeerd abonnement of abonnement in proefperiode dat meer dan 14 dagen geleden is beëindigd, of geen abonnement en een huishouden ouder dan 45 + 14 dagen. Er worden maximaal %{limit} huishoudens getoond."
-          eligibility_help: "Recente aanmeldingen voorkomen geen overeenkomst. Geschiktheid bevestigt geen verwijdering; 90 dagen is de archiefbewaartermijn, niet de drempel voor het opschonen van proefperiodes."
-          disabled: "Geplande opschoning van proefperiodes is uitgeschakeld buiten de beheerde modus. Dit zijn alleen overeenkomsten met de scope."
-          empty: "Geen huishoudens die overeenkomen met de opschoningsscope"
+          description: 'Komt overeen met de bestaande opschoningsscope: een gepauzeerd
+            abonnement of abonnement in proefperiode dat meer dan 14 dagen geleden
+            is beëindigd, of geen abonnement en een huishouden ouder dan 45 + 14 dagen.
+            Er worden maximaal %{limit} huishoudens getoond.'
+          disabled: Geplande opschoning van proefperiodes is uitgeschakeld buiten
+            de beheerde modus. Dit zijn alleen overeenkomsten met de scope.
+          eligibility_help: Recente aanmeldingen voorkomen geen overeenkomst. Geschiktheid
+            bevestigt geen verwijdering; 90 dagen is de archiefbewaartermijn, niet
+            de drempel voor het opschonen van proefperiodes.
+          empty: Geen huishoudens die overeenkomen met de opschoningsscope
           reasons:
-            expired_trial_grace_elapsed: "Proefperiode beëindigd; respijtperiode van 14 dagen verstreken"
-            no_subscription_grace_elapsed: "Geen abonnement; 45 + 14 dagen verstreken"
+            expired_trial_grace_elapsed: Proefperiode beëindigd; respijtperiode van
+              14 dagen verstreken
+            no_subscription_grace_elapsed: Geen abonnement; 45 + 14 dagen verstreken
+          title: Geschiktheid voor opschoning
+        columns:
+          cleanup_eligible: Geschikt voor opschoning
+          cleanup_reason: Reden
+          household: Huishouden-ID
+          latest_session: Laatste bewaarde aanmelding
+          members: Ledenaccounts
+          recent_sessions: Bewaarde sessies aangemaakt in de laatste 30 dagen
+          recorded_at: Abonnement geregistreerd
+          retained_sessions: Bewaarde aanmeldingssessies
+          status: Huidige status
+          subscription_rows: Abonnementsrijen
+          trial_ends_at: Proefperiode eindigt
+        eligible: Geschikt
+        limitations: De huidige tabellen bewaren geen volledige geschiedenis van proefperiodes,
+          betalingen of sessieactiviteit. Het aanmaken van abonnementen kan het gevolg
+          zijn van imports. Ledenaccounts zijn geen geverifieerde unieke personen.
+          Deze weergave wijzigt geen huishoud- of abonnementsgegevens. Resets van
+          de gedeelde demo verwijderen oude huishoudens en sessies, waardoor de bezoekersgeschiedenis
+          niet kan worden gereconstrueerd.
+        limitations_title: Wat deze cijfers ons kunnen vertellen
+        loading: Gebruik van de gehoste versie laden…
+        not_eligible: Niet geschikt
+        not_recorded: Niet geregistreerd
+        snapshot: Alleen-lezen momentopname van de database van %{time}
+        statuses:
+          active: Actief
+          canceled: Opgezegd
+          incomplete: Onvolledig
+          incomplete_expired: Onvolledig, verlopen
+          no_subscription: Geen abonnement
+          past_due: Achterstallig
+          paused: Gepauzeerd
+          trialing: In proefperiode
+          unknown: Onbekend
+          unpaid: Onbetaald
+        summary:
+          active_supporter_households_count: Actieve supporterhuishoudens (lokaal)
+          cleanup_eligible_count: Huishoudens die in aanmerking komen voor opschoning
+          supporter_subscription_count: Aan Stripe gekoppelde abonnementsrijen
+          trial_households_count: Huishoudens met proefperiode (laatste 30 dagen)
+          trial_members_count: Huidige ledenaccounts met proefperiode
+          trials_expiring_soon_count: Proefperiodes die binnen 7 dagen aflopen
+        summary_help: Totalen voor proefperiodes omvatten abonnementen die in de laatste
+          30 dagen zijn geregistreerd. Totalen voor aflopende proefperiodes, opschoning
+          en supporters omvatten alle overeenkomende huidige rijen, zonder de tabellimieten.
         supporters:
-          title: "Lokale supporterstatus"
-          description: "Huidige lokale abonnementsrijen met klant- en abonnements-ID's in Stripe-formaat; het synthetische demo-abonnement is uitgesloten. Statussen verifiëren geen ontvangen betalingen of data van de eerste betaling. Er wordt geen verzoek naar Stripe gestuurd."
-          empty: "Geen aan Stripe gekoppelde abonnementsrijen"
-        columns:
-          household: "Huishouden-ID"
-          recorded_at: "Abonnement geregistreerd"
-          trial_ends_at: "Proefperiode eindigt"
-          status: "Huidige status"
-          members: "Ledenaccounts"
-          retained_sessions: "Bewaarde aanmeldingssessies"
-          recent_sessions: "Bewaarde sessies aangemaakt in de laatste 30 dagen"
-          latest_session: "Laatste bewaarde aanmelding"
-          cleanup_eligible: "Geschikt voor opschoning"
-          cleanup_reason: "Reden"
-          subscription_rows: "Abonnementsrijen"
-        statuses:
-          unknown: "Onbekend"
-          incomplete: "Onvolledig"
-          incomplete_expired: "Onvolledig, verlopen"
-          trialing: "In proefperiode"
-          active: "Actief"
-          past_due: "Achterstallig"
-          canceled: "Opgezegd"
-          unpaid: "Onbetaald"
-          paused: "Gepauzeerd"
-          no_subscription: "Geen abonnement"
-        not_recorded: "Niet geregistreerd"
-        eligible: "Geschikt"
-        not_eligible: "Niet geschikt"
-        synthetic_demo: "Synthetische demo"
-      push_notifications:
-        send_test: "Testpushmelding versturen"
-        queueing: "In wachtrij plaatsen…"
-        title: "Pushmeldingen"
-        requested_at: "Laatste test aangevraagd op %{time}"
-        result_help: "Acceptatie door APNs bevestigt niet dat de melding op uw apparaat is afgeleverd. Vernieuw om de resultaten van de worker te zien. Resultaten worden 24 uur bewaard."
-        results_label: "Testresultaten"
-        device: "Apparaat %{number}"
-        pending: "In behandeling"
-        refresh: "Resultaten vernieuwen"
-        columns:
-          device: "Apparaat"
-          environment: "APNs-omgeving"
-          status: "Resultaat"
-          checked_at: "Laatste update"
-        environments:
-          sandbox: "Sandbox"
-          production: "Productie"
-        messages:
-          enqueue_failed: "De test kon niet in de wachtrij worden geplaatst. Controleer Sidekiq en vernieuw de resultaten hieronder."
-          ready: "Verstuur een testmelding naar de ingeschakelde iOS-apparaten die aan uw account zijn gekoppeld."
-          queued: "Testmelding in de wachtrij geplaatst. Vernieuw de resultaten hieronder om de status te controleren."
-          hosted_only: "Pushmeldingen zijn alleen beschikbaar in de gehoste modus."
-          ineligible: "Alleen een actieve superbeheerder kan een testmelding versturen."
-          no_devices: "Schakel pushmeldingen in de Sure-app voor iOS in voor dit account om een test te versturen."
-          disabled: "Pushbezorging is uitgeschakeld door de beheerder van de server."
-          not_configured: "APNs-inloggegevens zijn niet geconfigureerd."
-          cooldown: "Wacht 30 seconden voordat u nog een test verstuurt."
-          storage_unavailable: "Het testverzoek kon niet worden opgeslagen. Controleer de configuratie van de gedeelde cache."
-        statuses:
-          queued: "In wachtrij"
-          accepted: "Geaccepteerd door APNs"
-          skipped: "Overgeslagen: niet langer geschikt"
-          rejected: "Geweigerd door APNs; controleer de push-debuglogs"
-          unregistered: "Apparaatregistratie is niet langer geldig"
-          retrying: "Opnieuw proberen na een tijdelijke fout"
-          failed: "Mislukt; controleer de push-debuglogs"
-          enqueue_failed: "Kon niet in de wachtrij worden geplaatst; controleer Sidekiq"
-          expired: "Verlopen zonder eindresultaat"
-      push_notification:
-        title: "Sure-testmelding"
-        body: "Dit is een testpushmelding voor uw Sure-account."
-      verify_worker_ai:
-        queued: "Workercontrole in de wachtrij geplaatst. Deze verschijnt hieronder zodra een workerproces de controle oppakt, meestal binnen enkele seconden."
+          description: Huidige lokale abonnementsrijen met klant- en abonnements-ID's
+            in Stripe-formaat; het synthetische demo-abonnement is uitgesloten. Statussen
+            verifiëren geen ontvangen betalingen of data van de eerste betaling. Er
+            wordt geen verzoek naar Stripe gestuurd.
+          empty: Geen aan Stripe gekoppelde abonnementsrijen
+          title: Lokale supporterstatus
+        synthetic_demo: Synthetische demo
+        title: Gebruik gehoste versie
+        trials:
+          description: Abonnementen geregistreerd sinds %{date} die een einddatum
+            van de proefperiode behouden, inclusief omgezette proefperiodes. Er worden
+            maximaal %{limit} huishoudens getoond.
+          empty: Geen huishoudens met proefperiode geregistreerd in deze periode
+          sessions_help: Sessies zijn bewaarde aanmeldingsrecords van ingeschakelde
+            gebruikers, geen gebruikers die nu online zijn of bezoeken. Afmelden verwijdert
+            een record. De laatste aanmaaktijd is geen tijdstip van laatste activiteit.
+          title: Recente huishoudens met proefperiode
       optional_services:
-        title: "Optionele diensten"
-        description: "Optionele integraties voor de beheerder van de server. Niet-geconfigureerde diensten zijn informatief. Deze controles bekijken alleen instellingen; ze testen geen verbinding, versturen geen testgebeurtenissen en wijzigen geen toestemming voor analytics. Klap een dienst uit voor configuratiedetails."
-        missing_settings: "Ontbrekende instellingen: %{settings}"
-        statuses:
-          configured: "Geconfigureerd"
-          not_configured: "Niet geconfigureerd"
-          incomplete: "Onvolledige configuratie"
-          disabled: "Uitgeschakeld in dit proces"
-          not_checked: "Niet geverifieerd"
+        description: Optionele integraties voor de beheerder van de server. Niet-geconfigureerde
+          diensten zijn informatief. Deze controles bekijken alleen instellingen;
+          ze testen geen verbinding, versturen geen testgebeurtenissen en wijzigen
+          geen toestemming voor analytics. Klap een dienst uit voor configuratiedetails.
+        missing_settings: 'Ontbrekende instellingen: %{settings}'
         notes:
-          environment_disabled: "De geladen integratie is uitgeschakeld voor deze Rails-omgeving."
-          explicitly_disabled: "SKYLIGHT_ENABLED schakelt instrumentatie expliciet uit."
-          self_hosted_checkout_disabled: "Afrekenen voor abonnementen en het factureringsportaal zijn uitgeschakeld in de zelfgehoste modus. Stripe-webhooks kunnen nog steeds worden geconfigureerd; prijs-ID's voor het afrekenen zijn hier niet vereist."
-          browser_analytics_disabled: "Browseranalytics zijn uitgeschakeld voor deze omgeving. Dit schakelt de afzonderlijk geconfigureerde serverclient niet uit."
-          shared_feedback_configured: "Feedback voor zelfgehoste installaties heeft een apart meegeleverd project en wordt ingeschakeld via de eigen configuratie. Hiervoor is geen POSTHOG_KEY van de beheerder nodig. Afmelden in de browser en de beschikbaarheid van de SDK worden niet gecontroleerd."
-          shared_feedback_disabled: "Het aparte feedbackproject voor zelfgehoste installaties is uitgeschakeld via de feedback- of omgevingsinstelling. Dit schakelt de analytics van de beheerder niet uit."
-          production_only: "Deze integratie wordt volgens de huidige configuratie van de applicatie alleen in productie gebruikt."
+          browser_analytics_disabled: Browseranalytics zijn uitgeschakeld voor deze
+            omgeving. Dit schakelt de afzonderlijk geconfigureerde serverclient niet
+            uit.
+          environment_disabled: De geladen integratie is uitgeschakeld voor deze Rails-omgeving.
+          explicitly_disabled: SKYLIGHT_ENABLED schakelt instrumentatie expliciet
+            uit.
+          production_only: Deze integratie wordt volgens de huidige configuratie van
+            de applicatie alleen in productie gebruikt.
+          self_hosted_checkout_disabled: Afrekenen voor abonnementen en het factureringsportaal
+            zijn uitgeschakeld in de zelfgehoste modus. Stripe-webhooks kunnen nog
+            steeds worden geconfigureerd; prijs-ID's voor het afrekenen zijn hier
+            niet vereist.
+          shared_feedback_configured: Feedback voor zelfgehoste installaties heeft
+            een apart meegeleverd project en wordt ingeschakeld via de eigen configuratie.
+            Hiervoor is geen POSTHOG_KEY van de beheerder nodig. Afmelden in de browser
+            en de beschikbaarheid van de SDK worden niet gecontroleerd.
+          shared_feedback_disabled: Het aparte feedbackproject voor zelfgehoste installaties
+            is uitgeschakeld via de feedback- of omgevingsinstelling. Dit schakelt
+            de analytics van de beheerder niet uit.
         services:
           langfuse:
-            title: "Langfuse"
-            description: "Optionele AI-tracing en rapportage van evaluaties. Deze controle verstuurt geen traces of evaluatieverzoeken."
-            guidance: "Stel LANGFUSE_PUBLIC_KEY en LANGFUSE_SECRET_KEY samen in. LANGFUSE_HOST is optioneel. Herstart de betrokken diensten nadat u deze instellingen heeft gewijzigd."
-          sentry:
-            title: "Sentry"
-            description: "Optionele rapportage van fouten en prestaties. De huidige initializer schakelt rapportage alleen in productie in."
-            guidance: "Stel SENTRY_DSN in en herstart de betrokken diensten. Dit controleert de geladen SDK-configuratie zonder een fout vast te leggen of een gebeurtenis te versturen."
-          skylight:
-            title: "Skylight"
-            description: "Optionele prestatie-instrumentatie van de applicatie. Een aanwezige configuratie bevestigt niet dat de agent actief is of rapporteert."
-            guidance: "Stel SKYLIGHT_AUTHENTICATION in en zorg ervoor dat Skylight in de bedoelde Rails-omgeving wordt geladen. SKYLIGHT_ENABLED=false schakelt instrumentatie uit; de vlag alleen laadt de gem niet. Herstart na wijzigingen."
-          stripe:
-            title: "Stripe"
-            description: "Optionele abonnementsfacturering en betalingswebhooks. Deze controle maakt geen Stripe-client aan, valideert geen inloggegevens en doet geen betalingsverzoeken."
-            guidance: "Stel STRIPE_SECRET_KEY en STRIPE_WEBHOOK_SECRET samen in. Beheerd afrekenen voor abonnementen vereist ook STRIPE_MONTHLY_PRICE_ID en STRIPE_ANNUAL_PRICE_ID."
-          posthog:
-            title: "PostHog"
-            description: "Optionele analytics van de beheerder, met de configuratie die bij het opstarten is geladen. Geconfigureerd betekent niet dat een gebruiker toestemming heeft gegeven voor analytics."
-            guidance: "Stel POSTHOG_KEY en een niet-lege POSTHOG_HOST in, of laat de host leeg om de standaardwaarde te gebruiken. Browseranalytics vereisen productie of POSTHOG_DEVELOPMENT_ENABLED in development. POSTHOG_FEEDBACK_ENABLED bepaalt de aparte feedback voor zelfgehoste installaties, niet de analytics van de beheerder."
+            description: Optionele AI-tracing en rapportage van evaluaties. Deze controle
+              verstuurt geen traces of evaluatieverzoeken.
+            guidance: Stel LANGFUSE_PUBLIC_KEY en LANGFUSE_SECRET_KEY samen in. LANGFUSE_HOST
+              is optioneel. Herstart de betrokken diensten nadat u deze instellingen
+              heeft gewijzigd.
+            title: Langfuse
           logtail:
-            title: "Logtail"
-            description: "Optioneel doorsturen van productielogs. Als dit niet is geconfigureerd, blijft de applicatie loggen naar standaarduitvoer."
-            guidance: "Stel LOGTAIL_API_KEY en LOGTAIL_INGESTING_HOST samen in en herstart de betrokken diensten. Deze controle verstuurt geen testlog."
-      configuration:
-        description: "Configuratie die zichtbaar is voor dit webproces. Deze controles versturen geen e-mails, maken geen contact met providers en uploaden of downloaden geen bestanden. Geconfigureerd betekent dat de instellingen aanwezig zijn, niet dat bezorging, toegang tot providers of toegang tot opslag is geverifieerd."
+            description: Optioneel doorsturen van productielogs. Als dit niet is geconfigureerd,
+              blijft de applicatie loggen naar standaarduitvoer.
+            guidance: Stel LOGTAIL_API_KEY en LOGTAIL_INGESTING_HOST samen in en herstart
+              de betrokken diensten. Deze controle verstuurt geen testlog.
+            title: Logtail
+          posthog:
+            description: Optionele analytics van de beheerder, met de configuratie
+              die bij het opstarten is geladen. Geconfigureerd betekent niet dat een
+              gebruiker toestemming heeft gegeven voor analytics.
+            guidance: Stel POSTHOG_KEY en een niet-lege POSTHOG_HOST in, of laat de
+              host leeg om de standaardwaarde te gebruiken. Browseranalytics vereisen
+              productie of POSTHOG_DEVELOPMENT_ENABLED in development. POSTHOG_FEEDBACK_ENABLED
+              bepaalt de aparte feedback voor zelfgehoste installaties, niet de analytics
+              van de beheerder.
+            title: PostHog
+          sentry:
+            description: Optionele rapportage van fouten en prestaties. De huidige
+              initializer schakelt rapportage alleen in productie in.
+            guidance: Stel SENTRY_DSN in en herstart de betrokken diensten. Dit controleert
+              de geladen SDK-configuratie zonder een fout vast te leggen of een gebeurtenis
+              te versturen.
+            title: Sentry
+          skylight:
+            description: Optionele prestatie-instrumentatie van de applicatie. Een
+              aanwezige configuratie bevestigt niet dat de agent actief is of rapporteert.
+            guidance: Stel SKYLIGHT_AUTHENTICATION in en zorg ervoor dat Skylight
+              in de bedoelde Rails-omgeving wordt geladen. SKYLIGHT_ENABLED=false
+              schakelt instrumentatie uit; de vlag alleen laadt de gem niet. Herstart
+              na wijzigingen.
+            title: Skylight
+          stripe:
+            description: Optionele abonnementsfacturering en betalingswebhooks. Deze
+              controle maakt geen Stripe-client aan, valideert geen inloggegevens
+              en doet geen betalingsverzoeken.
+            guidance: Stel STRIPE_SECRET_KEY en STRIPE_WEBHOOK_SECRET samen in. Beheerd
+              afrekenen voor abonnementen vereist ook STRIPE_MONTHLY_PRICE_ID en STRIPE_ANNUAL_PRICE_ID.
+            title: Stripe
         statuses:
-          configured: "Geconfigureerd"
-          not_configured: "Niet geconfigureerd"
-          incomplete: "Onvolledige configuratie"
-          disabled: "Uitgeschakeld"
-          not_checked: "Niet geverifieerd"
-        settings_needed: "Te controleren instellingen"
-        unknown_provider: "Onbekende providerselectie"
-        provider_statuses:
-          configured: "Geconfigureerd"
-          not_configured: "API-sleutel ontbreekt"
-          invalid: "Ongeldige selectie"
-        configure_providers: "Zelfhostinginstellingen openen"
-        storage_backend: "Geselecteerde opslag: %{backend}"
-        storage_backends:
-          local: "Lokale schijf"
-          test: "Testschijf"
-          amazon: "Amazon S3"
-          cloudflare: "Cloudflare R2"
-          generic_s3: "S3-compatibele opslag"
-          google: "Google Cloud Storage"
-          other: "Aangepaste of onbekende backend"
-        checks:
-          smtp:
-            title: "E-mail (SMTP)"
-            statuses:
-              configured: "SMTP-instellingen zijn aanwezig."
-              not_configured: "SMTP is niet geconfigureerd. Wachtwoordherstel, uitnodigingen en andere systeem-e-mails kunnen niet via SMTP worden verstuurd."
-              incomplete: "Sommige e-mailinstellingen ontbreken of zijn onvolledig. Systeem-e-mails of de links daarin werken mogelijk niet."
-              disabled: "E-mailbezorging is uitgeschakeld in de actieve mailerconfiguratie."
-              not_checked: "Dit proces gebruikt een andere bezorgmethode dan SMTP, zoals een voorbeeldweergave in development. SMTP-bezorging wordt niet beoordeeld."
-            guidance: "SMTP kan niet in de beheerdersinterface worden geconfigureerd. Stel de e-mailomgevingsvariabelen in voor zowel de web- als de workerdienst en herstart beide. SMTP_USERNAME en SMTP_PASSWORD kunnen allebei worden weggelaten voor een relay zonder authenticatie."
-            issues:
-              address: "SMTP_ADDRESS"
-              port: "SMTP_PORT (een getal van 1 tot 65535)"
-              sender: "EMAIL_SENDER (vervang de standaardafzender sender@sure.local)"
-              app_domain: "APP_DOMAIN (gebruikt in e-maillinks)"
-              authentication: "SMTP_USERNAME en SMTP_PASSWORD (geef beide of geen van beide op)"
-          securities:
-            title: "Marktkoersen"
-            statuses:
-              configured: "Alle ingeschakelde providers van marktkoersen zijn geconfigureerd."
-              not_configured: "De API-sleutels van de ingeschakelde providers van marktkoersen ontbreken. Automatisch zoeken naar effecten en opvragen van koersen zijn via deze providers niet beschikbaar."
-              incomplete: "Bij ten minste één ingeschakelde provider van marktkoersen ontbreekt configuratie of is de selectie ongeldig. Effecten die aan die provider zijn toegewezen, krijgen mogelijk geen koersupdates."
-              disabled: "Er is geen provider van marktkoersen ingeschakeld. Automatisch zoeken naar effecten en opvragen van koersen zijn niet beschikbaar."
-            guidance: "Kies providers en voeg eventueel vereiste API-sleutels toe in de zelfhostinginstellingen, of configureer ze in de deploymentomgeving. Instellingen uit omgevingsvariabelen gaan voor. Openbare providers hebben geen API-sleutel nodig."
-          exchange_rates:
-            title: "Wisselkoersen"
-            statuses:
-              configured: "De geselecteerde wisselkoersprovider is geconfigureerd."
-              not_configured: "Er is geen bruikbare wisselkoersprovider geconfigureerd. Automatische valutaomrekening is mogelijk niet beschikbaar wanneer een opgeslagen koers ontbreekt."
-            guidance: "Kies een wisselkoersprovider en voeg indien nodig de API-sleutel toe in de zelfhostinginstellingen, of configureer deze in de deploymentomgeving. EXCHANGE_RATE_PROVIDER en provider-API-sleutels uit omgevingsvariabelen gaan voor."
-            issues:
-              invalid_provider: "De geselecteerde wisselkoersprovider wordt niet herkend. Het automatisch opvragen van koersen mislukt totdat een ondersteunde provider is geselecteerd."
-          storage:
-            title: "Bestandsuploads en opslag"
-            statuses:
-              configured: "Opslaginstellingen zijn aanwezig; lokale schijf heeft geen cloudinloggegevens nodig."
-              not_configured: "De geselecteerde opslagbackend heeft geen bijbehorende configuratie. Bestandsuploads zijn mogelijk niet beschikbaar."
-              incomplete: "Vereiste opslaginstellingen ontbreken of zijn onvolledig. Bestandsuploads of het ophalen van bestanden werken mogelijk niet."
-              not_checked: "Deze backend gebruikt externe detectie van inloggegevens of een aangepaste configuratie. De toegang kan niet alleen op basis van deze instellingen worden bepaald."
-            guidance: "Controleer ACTIVE_STORAGE_SERVICE en de deploymentinstellingen van de geselecteerde backend. Lokale schijf vereist persistente opslag die door de web- en workerdiensten wordt gedeeld. Wisselen van backend migreert bestaande bestanden niet; plan een eventuele migratie apart."
-            issues:
-              root: "Hoofdmap lokale opslag"
-              bucket: "Opslagbucket"
-              region: "Opslagregio"
-              credentials: "Toegangssleutel en geheime sleutel voor opslag (geef beide op of gebruik externe detectie van inloggegevens)"
-              endpoint: "Opslagendpoint (en CLOUDFLARE_ACCOUNT_ID voor R2)"
+          configured: Geconfigureerd
+          disabled: Uitgeschakeld in dit proces
+          incomplete: Onvolledige configuratie
+          not_checked: Niet geverifieerd
+          not_configured: Niet geconfigureerd
+        title: Optionele diensten
+      push_notification:
+        body: Dit is een testpushmelding voor uw Sure-account.
+        title: Sure-testmelding
+      push_notifications:
+        columns:
+          checked_at: Laatste update
+          device: Apparaat
+          environment: APNs-omgeving
+          status: Resultaat
+        device: Apparaat %{number}
+        environments:
+          production: Productie
+          sandbox: Sandbox
+        messages:
+          cooldown: Wacht 30 seconden voordat u nog een test verstuurt.
+          disabled: Pushbezorging is uitgeschakeld door de beheerder van de server.
+          enqueue_failed: De test kon niet in de wachtrij worden geplaatst. Controleer
+            Sidekiq en vernieuw de resultaten hieronder.
+          hosted_only: Pushmeldingen zijn alleen beschikbaar in de gehoste modus.
+          ineligible: Alleen een actieve superbeheerder kan een testmelding versturen.
+          no_devices: Schakel pushmeldingen in de Sure-app voor iOS in voor dit account
+            om een test te versturen.
+          not_configured: APNs-inloggegevens zijn niet geconfigureerd.
+          queued: Testmelding in de wachtrij geplaatst. Vernieuw de resultaten hieronder
+            om de status te controleren.
+          ready: Verstuur een testmelding naar de ingeschakelde iOS-apparaten die
+            aan uw account zijn gekoppeld.
+          storage_unavailable: Het testverzoek kon niet worden opgeslagen. Controleer
+            de configuratie van de gedeelde cache.
+        pending: In behandeling
+        queueing: In wachtrij plaatsen…
+        refresh: Resultaten vernieuwen
+        requested_at: Laatste test aangevraagd op %{time}
+        result_help: Acceptatie door APNs bevestigt niet dat de melding op uw apparaat
+          is afgeleverd. Vernieuw om de resultaten van de worker te zien. Resultaten
+          worden 24 uur bewaard.
+        results_label: Testresultaten
+        send_test: Testpushmelding versturen
+        statuses:
+          accepted: Geaccepteerd door APNs
+          enqueue_failed: Kon niet in de wachtrij worden geplaatst; controleer Sidekiq
+          expired: Verlopen zonder eindresultaat
+          failed: Mislukt; controleer de push-debuglogs
+          queued: In wachtrij
+          rejected: Geweigerd door APNs; controleer de push-debuglogs
+          retrying: Opnieuw proberen na een tijdelijke fout
+          skipped: 'Overgeslagen: niet langer geschikt'
+          unregistered: Apparaatregistratie is niet langer geldig
+        title: Pushmeldingen
       show:
-        title: "Systeemstatus"
-        tabs:
-          hosted_usage: "Gebruik"
-          background_jobs: "Jobs"
-          ai: "AI"
-          configuration: "Configuratie"
-        alert:
-          title: "Achtergrondjobs worden niet uitgevoerd"
-        status_section_title: "Sidekiq-status"
-        status_section_description: "Huidige status van de achtergrondworker die synchronisaties, saldi en berekeningen van het netto vermogen uitvoert."
-        counters_section_title: "Jobtellers"
-        counters_section_description: "Totale Sidekiq-tellers over alle wachtrijen."
-        queues_section_title: "Wachtrijen"
-        queues_section_description: "Omvang en leeftijd van de oudste job per wachtrij. Latentie is het aantal seconden dat de oudste job al wacht."
-        labels:
-          status: "Status"
-          processes: "Workerprocessen"
-          last_heartbeat: "Laatste heartbeat"
-          max_queue_latency: "Leeftijd oudste job"
-          enqueued: "In wachtrij"
-          retries: "Nieuwe pogingen"
-          failed: "Mislukt"
-          processed_total: "Totaal verwerkt"
-          queue: "Wachtrij"
-          size: "Omvang"
-          latency: "Latentie"
-        values:
-          healthy: "Gezond"
-          unhealthy: "Verslechterd"
-          time_ago: "%{time_ago} geleden"
-          never: "Nooit"
-          seconds: "%{seconds}s"
-          no_queues: "Er zijn geen wachtrijen geregistreerd. De worker draait mogelijk niet."
         ai:
-          run_checks: "Controles opnieuw uitvoeren"
-          last_checked: "Live controles %{time_ago} geleden voltooid. Resultaten worden kort in de cache bewaard."
-          not_checked_help: "Open de AI-status-URL rechtstreeks of voer de controles uit om te verifiëren dat de dienst actief is."
-          loading: "Live controles uitvoeren…"
+          adapters:
+            openai: Gehoste vectorstore van OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
           alerts:
             custom_openai:
-              title: "De controle van de gehoste vectorstore is mislukt op dit aangepaste endpoint"
-              message: "Het geconfigureerde endpoint heeft de liveness-controle van /v1/vector_stores niet doorstaan. De meeste lokale en OpenAI-compatibele endpoints implementeren die API niet. Chat en PDF-verwerking werken mogelijk nog wel; gebruik pgvector met een apart embeddings-endpoint voor de gebruikelijke lokale opzet. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger."
-            function_calling_unsupported:
-              title: "Het model ondersteunt geen function calling"
-              message: "Het endpoint verwerkte een gewoon chatverzoek, maar weigerde hetzelfde verzoek met de parameter tools. De AI-assistent leest accounts, transacties en posities via function calls, dus de chat blijft mislukken — vaak met een weinig behulpzame 404 — totdat u een model gebruikt dat tools ondersteunt. Kies een model waarvan de provider ondersteuning voor function calling documenteert. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger."
-            function_calling_not_used:
-              title: "Het model antwoordde zonder de gevraagde tool aan te roepen"
-              message: "Het endpoint accepteerde de parameter tools, maar het model antwoordde met tekst in plaats van de health-check-tool aan te roepen. De AI-assistent kan zonder tool calls geen financiële gegevens lezen, dus de chat antwoordt mogelijk met niets of met verzonnen cijfers. Kies bij voorkeur een model waarvan de provider ondersteuning voor function calling documenteert."
-            llm_probe_failed:
-              title: "De live controle van het LLM is mislukt"
-              message: "Sure kon het geconfigureerde endpoint en model niet allebei verifiëren. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger."
-            llm_model_not_available:
-              title: "Het geconfigureerde AI-model is niet beschikbaar"
-              message: "Het endpoint antwoordde, maar vermeldde of leverde het geconfigureerde model niet. Kies een actief model voor de geselecteerde provider en voer de controles opnieuw uit. Gebruik voor Gemini via een OpenAI-compatibele vertaallaag een momenteel ondersteund model, zoals gemini-3.8-flash."
-            pdf_text_extraction_failed:
-              title: "De synthetische controle van PDF-tekstextractie is mislukt"
-              message: "Sure kon het tekstgerichte pad niet voltooien, dat ingesloten PDF-tekst lokaal extraheert en naar het geconfigureerde model stuurt. Er zijn geen klantgegevens verstuurd. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger."
-            pdf_vision_processing_failed:
-              title: "De synthetische PDF-controle voor vision/native is mislukt"
-              message: "Sure kon het PDF-pad voor afbeeldingen of native documenten niet voltooien via het geconfigureerde model. Er zijn geen klantgegevens verstuurd. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger."
-            vector_probe_failed:
-              title: "De live controle van zoeken in documenten is mislukt"
-              message: "Sure kon de geselecteerde vectorstore en alle vereiste embeddingdiensten niet verifiëren. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger."
-            pgvector_extension_not_enabled:
-              title: "De PostgreSQL-extensie vector is niet ingeschakeld"
-              message: "De pgvector-adapter is geselecteerd, maar PostgreSQL heeft de extensie vector niet ingeschakeld voor deze database. Gebruik een PostgreSQL-image met pgvector, schakel de extensie in als database-eigenaar of superuser en voer de migraties opnieuw uit met VECTOR_STORE_PROVIDER=pgvector."
-            pgvector_table_not_found:
-              title: "De tabel vector_store_chunks ontbreekt"
-              message: "De pgvector-extensie is ingeschakeld, maar de chunks-tabel is niet gevonden. Controleer de migratiestatus en voer de vectorstore-migratie opnieuw uit met VECTOR_STORE_PROVIDER=pgvector, zodat Sure vector_store_chunks kan aanmaken."
-            pgvector_probe_failed:
-              title: "De opslagcontrole van pgvector is mislukt"
-              message: "Sure kon de chunks-tabel van pgvector niet bevragen. Controleer de PostgreSQL-rechten, de extensie vector en de migratie van vector_store_chunks. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger."
+              message: Het geconfigureerde endpoint heeft de liveness-controle van
+                /v1/vector_stores niet doorstaan. De meeste lokale en OpenAI-compatibele
+                endpoints implementeren die API niet. Chat en PDF-verwerking werken
+                mogelijk nog wel; gebruik pgvector met een apart embeddings-endpoint
+                voor de gebruikelijke lokale opzet. De fout is vastgelegd in Instellingen
+                → Debuglogs en Rails.logger.
+              title: De controle van de gehoste vectorstore is mislukt op dit aangepaste
+                endpoint
             embedding_dimensions_mismatch:
-              title: "De embeddingdimensies komen niet overeen"
-              message: "Het embedding-endpoint gaf een vector terug waarvan de lengte niet overeenkomt met EMBEDDING_DIMENSIONS. Stel EMBEDDING_MODEL en EMBEDDING_DIMENSIONS in op de gedocumenteerde vectorgrootte van het model, herstart Sure zodat de omgeving behouden blijft, en wijzig of maak vervolgens de pgvector-embeddingkolom/-tabel opnieuw aan en maak opnieuw embeddings van documenten als bestaande gegevens een andere grootte gebruikten."
-            embedding_probe_timeout:
-              title: "Er is een time-out opgetreden bij de live controle van embeddings"
-              message: "Het embedding-endpoint antwoordde niet binnen AI_HEALTH_PROBE_TIMEOUT. Verhoog die time-out voor de health-check als de provider traag is en herstart Sure zodat de omgeving in elk proces behouden blijft. Als gewone AI-chataanroepen ook een time-out krijgen, verhoog dan apart OPENAI_REQUEST_TIMEOUT."
+              message: Het embedding-endpoint gaf een vector terug waarvan de lengte
+                niet overeenkomt met EMBEDDING_DIMENSIONS. Stel EMBEDDING_MODEL en
+                EMBEDDING_DIMENSIONS in op de gedocumenteerde vectorgrootte van het
+                model, herstart Sure zodat de omgeving behouden blijft, en wijzig
+                of maak vervolgens de pgvector-embeddingkolom/-tabel opnieuw aan en
+                maak opnieuw embeddings van documenten als bestaande gegevens een
+                andere grootte gebruikten.
+              title: De embeddingdimensies komen niet overeen
             embedding_probe_failed:
-              title: "De live controle van embeddings is mislukt"
-              message: "Sure kon geen korte testembedding maken via het geconfigureerde endpoint en model. Controleer EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN en de logs van de embeddingprovider. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger."
-            qdrant:
-              title: "Ondersteuning voor Qdrant is nog niet geïmplementeerd"
-              message: "De Qdrant-adapter is opgezet, maar uploaden van en zoeken in documenten mislukken momenteel. Selecteer OpenAI of pgvector voor zoeken in documenten."
+              message: Sure kon geen korte testembedding maken via het geconfigureerde
+                endpoint en model. Controleer EMBEDDING_URI_BASE, EMBEDDING_MODEL,
+                EMBEDDING_ACCESS_TOKEN en de logs van de embeddingprovider. De fout
+                is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+              title: De live controle van embeddings is mislukt
+            embedding_probe_timeout:
+              message: Het embedding-endpoint antwoordde niet binnen AI_HEALTH_PROBE_TIMEOUT.
+                Verhoog die time-out voor de health-check als de provider traag is
+                en herstart Sure zodat de omgeving in elk proces behouden blijft.
+                Als gewone AI-chataanroepen ook een time-out krijgen, verhoog dan
+                apart OPENAI_REQUEST_TIMEOUT.
+              title: Er is een time-out opgetreden bij de live controle van embeddings
+            function_calling_not_used:
+              message: Het endpoint accepteerde de parameter tools, maar het model
+                antwoordde met tekst in plaats van de health-check-tool aan te roepen.
+                De AI-assistent kan zonder tool calls geen financiële gegevens lezen,
+                dus de chat antwoordt mogelijk met niets of met verzonnen cijfers.
+                Kies bij voorkeur een model waarvan de provider ondersteuning voor
+                function calling documenteert.
+              title: Het model antwoordde zonder de gevraagde tool aan te roepen
+            function_calling_unsupported:
+              message: Het endpoint verwerkte een gewoon chatverzoek, maar weigerde
+                hetzelfde verzoek met de parameter tools. De AI-assistent leest accounts,
+                transacties en posities via function calls, dus de chat blijft mislukken
+                — vaak met een weinig behulpzame 404 — totdat u een model gebruikt
+                dat tools ondersteunt. Kies een model waarvan de provider ondersteuning
+                voor function calling documenteert. De fout is vastgelegd in Instellingen
+                → Debuglogs en Rails.logger.
+              title: Het model ondersteunt geen function calling
+            llm_model_not_available:
+              message: Het endpoint antwoordde, maar vermeldde of leverde het geconfigureerde
+                model niet. Kies een actief model voor de geselecteerde provider en
+                voer de controles opnieuw uit. Gebruik voor Gemini via een OpenAI-compatibele
+                vertaallaag een momenteel ondersteund model, zoals gemini-3.8-flash.
+              title: Het geconfigureerde AI-model is niet beschikbaar
+            llm_probe_failed:
+              message: Sure kon het geconfigureerde endpoint en model niet allebei
+                verifiëren. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+              title: De live controle van het LLM is mislukt
             missing_vector_store:
-              title: "Er is geen vectorstore geconfigureerd"
-              message: "Geüploade documenten kunnen niet worden geïndexeerd of doorzocht totdat een vectorstore-adapter en de bijbehorende vereisten zijn geconfigureerd."
+              message: Geüploade documenten kunnen niet worden geïndexeerd of doorzocht
+                totdat een vectorstore-adapter en de bijbehorende vereisten zijn geconfigureerd.
+              title: Er is geen vectorstore geconfigureerd
+            pdf_text_extraction_failed:
+              message: Sure kon het tekstgerichte pad niet voltooien, dat ingesloten
+                PDF-tekst lokaal extraheert en naar het geconfigureerde model stuurt.
+                Er zijn geen klantgegevens verstuurd. De fout is vastgelegd in Instellingen
+                → Debuglogs en Rails.logger.
+              title: De synthetische controle van PDF-tekstextractie is mislukt
+            pdf_vision_processing_failed:
+              message: Sure kon het PDF-pad voor afbeeldingen of native documenten
+                niet voltooien via het geconfigureerde model. Er zijn geen klantgegevens
+                verstuurd. De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+              title: De synthetische PDF-controle voor vision/native is mislukt
+            pgvector_extension_not_enabled:
+              message: De pgvector-adapter is geselecteerd, maar PostgreSQL heeft
+                de extensie vector niet ingeschakeld voor deze database. Gebruik een
+                PostgreSQL-image met pgvector, schakel de extensie in als database-eigenaar
+                of superuser en voer de migraties opnieuw uit met VECTOR_STORE_PROVIDER=pgvector.
+              title: De PostgreSQL-extensie vector is niet ingeschakeld
+            pgvector_probe_failed:
+              message: Sure kon de chunks-tabel van pgvector niet bevragen. Controleer
+                de PostgreSQL-rechten, de extensie vector en de migratie van vector_store_chunks.
+                De fout is vastgelegd in Instellingen → Debuglogs en Rails.logger.
+              title: De opslagcontrole van pgvector is mislukt
+            pgvector_table_not_found:
+              message: De pgvector-extensie is ingeschakeld, maar de chunks-tabel
+                is niet gevonden. Controleer de migratiestatus en voer de vectorstore-migratie
+                opnieuw uit met VECTOR_STORE_PROVIDER=pgvector, zodat Sure vector_store_chunks
+                kan aanmaken.
+              title: De tabel vector_store_chunks ontbreekt
+            qdrant:
+              message: De Qdrant-adapter is opgezet, maar uploaden van en zoeken in
+                documenten mislukken momenteel. Selecteer OpenAI of pgvector voor
+                zoeken in documenten.
+              title: Ondersteuning voor Qdrant is nog niet geïmplementeerd
             unavailable_vector_store:
-              title: "De geselecteerde vectorstore is niet beschikbaar"
-              message: "Controleer de adaptervereisten hieronder. Voor pgvector moet de database de extensie vector of een bestaande tabel vector_store_chunks bieden."
-          llm:
-            title: "LLM en PDF-verwerking"
-            description: "De live controles verifiëren het geconfigureerde model, vragen het om één eenvoudige function call zoals de assistent dat doet, en testen daarna apart tekstextractie en vision/native-verwerking met een synthetische PDF van één pagina zonder klantgegevens. Waarden van inloggegevens worden nooit getoond."
-          vector_store:
-            title: "Vectorstore en zoeken in documenten"
-            description: "De live controle bevraagt de gehoste vectorstore-API, of test de pgvector-tabel en maakt één korte embedding zonder deze op te slaan."
-          labels:
-            selected_provider: "Geselecteerde provider"
-            effective_provider: "Effectieve provider"
-            model: "Model"
-            endpoint: "Endpoint"
-            function_calling: "Function calling (tools)"
-            pdf_text_extraction: "Pad voor PDF-tekstextractie"
-            pdf_vision_processing: "Pad voor PDF-vision/native"
-            llm_request_timeout: "Time-out LLM-verzoek"
-            probe_request_timeout: "Time-out health-check"
-            openai_credentials: "OpenAI-inloggegevens"
-            openai_compatible_credentials: "Inloggegevens OpenAI-compatibele API"
-            anthropic_credentials: "Anthropic-inloggegevens"
-            adapter: "Adapter"
-            adapter_available: "Adapter beschikbaar"
-            pgvector_extension: "PostgreSQL-extensie vector"
-            pgvector_table: "Tabel met vectorchunks"
-            embedding_model: "Embeddingmodel"
-            embedding_endpoint: "Embedding-endpoint"
-            embedding_dimensions: "Embeddingdimensies"
-            function_calling_failure_reason: "Reden mislukte function calling"
-            pdf_text_extraction_failure_reason: "Reden mislukte tekstextractie"
-            pdf_vision_processing_failure_reason: "Reden mislukte vision/native-verwerking"
-            storage_probe: "Opslagcontrole pgvector"
-            embedding_probe: "Controle embedding-endpoint"
-            failure_reason: "Reden van fout"
-          providers:
-            openai: "OpenAI"
-            openai_compatible: "OpenAI-compatibel"
-            anthropic: "Anthropic"
-            ollama: "Ollama"
-            openrouter: "OpenRouter"
-            together: "Together"
-            kilo: "Kilo"
-            cloudflare: "Cloudflare"
-            custom_openai_compatible: "Aangepast endpoint"
-          adapters:
-            openai: "Gehoste vectorstore van OpenAI"
-            pgvector: "pgvector"
-            qdrant: "Qdrant"
-          values:
-            configured: "Geconfigureerd"
-            not_configured: "Niet geconfigureerd"
-            fallback: "(terugvaloptie)"
-            not_set: "Niet ingesteld"
-            "yes": "Ja"
-            "no": "Nee"
-            enabled: "Ingeschakeld"
-            available_not_enabled: "Beschikbaar, niet ingeschakeld"
-            not_available: "Niet beschikbaar"
-            available: "Beschikbaar"
-            not_found: "Niet gevonden"
-          function_calling_statuses:
-            supported: "Live tool call geslaagd"
-            unsupported: "Niet ondersteund door de effectieve provider/het effectieve model"
-            not_used: "Tools geaccepteerd, maar het model riep er geen aan"
-            failing: "Live controle mislukt"
-            not_checked: "Niet gecontroleerd"
-            unavailable: "Niet beschikbaar totdat een LLM-provider is geconfigureerd"
-          pdf_statuses:
-            supported: "Synthetische PDF-controle geslaagd"
-            failing: "Synthetische PDF-controle mislukt"
-            unsupported: "Uitgeschakeld of niet ondersteund door de effectieve provider/het effectieve model"
-            not_checked: "Niet gecontroleerd"
-            unavailable: "Niet beschikbaar totdat een LLM-provider is geconfigureerd"
-          probe_statuses:
-            passing: "Live controle geslaagd"
-            failing: "Live controle mislukt"
-            not_checked: "Niet gecontroleerd"
-            not_configured: "Niet geconfigureerd"
-          vector_statuses:
-            passing: "Live controles geslaagd"
-            failing: "Live controle mislukt"
-            not_checked: "Niet gecontroleerd"
-            not_configured: "Niet geconfigureerd"
-            scaffolded: "Opgezet, niet geïmplementeerd"
-            missing: "Niet geconfigureerd"
+              message: Controleer de adaptervereisten hieronder. Voor pgvector moet
+                de database de extensie vector of een bestaande tabel vector_store_chunks
+                bieden.
+              title: De geselecteerde vectorstore is niet beschikbaar
+            vector_probe_failed:
+              message: Sure kon de geselecteerde vectorstore en alle vereiste embeddingdiensten
+                niet verifiëren. De fout is vastgelegd in Instellingen → Debuglogs
+                en Rails.logger.
+              title: De live controle van zoeken in documenten is mislukt
           failure_codes:
-            model_not_available: "Het geconfigureerde model werd niet door de provider teruggegeven"
-            no_tool_call: "Het model antwoordde zonder de health-check-tool aan te roepen"
-            tools_refused: "De dienst verwerkte hetzelfde verzoek zonder tools, maar weigerde het met tools"
-            invalid_response: "De dienst gaf een onverwacht antwoord"
-            dimensions_mismatch: "De dimensies van de embeddingvector komen niet overeen met de geconfigureerde dimensies"
-            extension_not_enabled: "De PostgreSQL-extensie vector is niet ingeschakeld"
-            table_not_found: "De tabel vector_store_chunks is niet gevonden"
-            render_missing_binary: "De pdftoppm-renderer (poppler-utils) is niet beschikbaar in deze container"
-            timeout: "De dienst reageerde niet binnen de time-out van de controle"
-            request_failed: "Het verzoek aan de dienst is mislukt"
-            unsupported_provider: "De provider ondersteunt deze controle niet"
-          worker:
-            title: "Workerverificatie"
-            description: "De controles hierboven zijn uitgevoerd vanuit dit webproces. Het meeste AI-werk -- antwoorden van de assistent, PDF-verwerking, embeddings, automatisch categoriseren en het herkennen van handelaren -- draait in werkelijkheid in een Sidekiq-workerproces, dat kan verschillen in netwerktoegang, DNS, proxyregels of zelfs geladen inloggegevens. Plaats een controle in de wachtrij om de eigen configuratie en connectiviteit van een worker te verifiëren."
-            verify_button: "Workerconfiguratie verifiëren"
-            coverage_notice: "Elke controle verifieert precies één workerproces -- het proces dat de controle uit de wachtrij haalt. Met meer dan één workerreplica bevestigt een geslaagd resultaat niet dat elke worker gezond is; plaats de controle opnieuw in de wachtrij om een andere te testen."
-            empty:
-              title: "Er heeft zich nog geen worker gemeld"
-              description: "Klik op \"Workerconfiguratie verifiëren\" om een asynchrone controle in de wachtrij te plaatsen. Het resultaat verschijnt hier zodra een workerproces de controle oppakt."
-            labels:
-              process: "Workerproces"
-              checked_at: "Gecontroleerd"
-              configuration: "Configuratie"
-            configuration_statuses:
-              match: "Komt overeen met web"
-              mismatch: "Wijkt af van web"
-            statuses:
-              passing: "Geslaagd"
-              failing: "Mislukt"
-              stale: "Verouderd"
-            settings_origin:
-              title: "Welke instellingen vereisen een herstart?"
-              database_backed: "Instellingen voor provider, model en API-sleutel die in Instellingen → Zelfhosting worden gewijzigd, worden in de database opgeslagen. rails-settings-cached maakt de gedeelde cache bij het schrijven ongeldig, zodat zowel web als worker de nieuwe waarde gebruiken voor het volgende verzoek of de volgende job in de wachtrij -- een herstart is niet nodig."
-              env_backed: "De embeddingconfiguratie, en elke waarde die alleen via een omgevingsvariabele is ingesteld, ligt vast wanneer elke container start. Rails kan de omgeving van een andere container niet wijzigen, dus voor het wijzigen hiervan moeten zowel de web- als de workerdienst opnieuw worden gestart of aangemaakt -- en deploymenttooling die maar één van beide herstart (gedeeltelijke uitrol, een bijgewerkt Secret zonder herstart van de pod) neemt de wijziging niet over."
+            dimensions_mismatch: De dimensies van de embeddingvector komen niet overeen
+              met de geconfigureerde dimensies
+            extension_not_enabled: De PostgreSQL-extensie vector is niet ingeschakeld
+            invalid_response: De dienst gaf een onverwacht antwoord
+            model_not_available: Het geconfigureerde model werd niet door de provider
+              teruggegeven
+            no_tool_call: Het model antwoordde zonder de health-check-tool aan te
+              roepen
+            render_missing_binary: De pdftoppm-renderer (poppler-utils) is niet beschikbaar
+              in deze container
+            request_failed: Het verzoek aan de dienst is mislukt
+            table_not_found: De tabel vector_store_chunks is niet gevonden
+            timeout: De dienst reageerde niet binnen de time-out van de controle
+            tools_refused: De dienst verwerkte hetzelfde verzoek zonder tools, maar
+              weigerde het met tools
+            unsupported_provider: De provider ondersteunt deze controle niet
+          function_calling_statuses:
+            failing: Live controle mislukt
+            not_checked: Niet gecontroleerd
+            not_used: Tools geaccepteerd, maar het model riep er geen aan
+            supported: Live tool call geslaagd
+            unavailable: Niet beschikbaar totdat een LLM-provider is geconfigureerd
+            unsupported: Niet ondersteund door de effectieve provider/het effectieve
+              model
+          labels:
+            adapter: Adapter
+            adapter_available: Adapter beschikbaar
+            anthropic_credentials: Anthropic-inloggegevens
+            effective_provider: Effectieve provider
+            embedding_dimensions: Embeddingdimensies
+            embedding_endpoint: Embedding-endpoint
+            embedding_model: Embeddingmodel
+            embedding_probe: Controle embedding-endpoint
+            endpoint: Endpoint
+            failure_reason: Reden van fout
+            function_calling: Function calling (tools)
+            function_calling_failure_reason: Reden mislukte function calling
+            llm_request_timeout: Time-out LLM-verzoek
+            model: Model
+            openai_compatible_credentials: Inloggegevens OpenAI-compatibele API
+            openai_credentials: OpenAI-inloggegevens
+            pdf_text_extraction: Pad voor PDF-tekstextractie
+            pdf_text_extraction_failure_reason: Reden mislukte tekstextractie
+            pdf_vision_processing: Pad voor PDF-vision/native
+            pdf_vision_processing_failure_reason: Reden mislukte vision/native-verwerking
+            pgvector_extension: PostgreSQL-extensie vector
+            pgvector_table: Tabel met vectorchunks
+            probe_request_timeout: Time-out health-check
+            selected_provider: Geselecteerde provider
+            storage_probe: Opslagcontrole pgvector
+          last_checked: Live controles %{time_ago} geleden voltooid. Resultaten worden
+            kort in de cache bewaard.
+          llm:
+            description: De live controles verifiëren het geconfigureerde model, vragen
+              het om één eenvoudige function call zoals de assistent dat doet, en
+              testen daarna apart tekstextractie en vision/native-verwerking met een
+              synthetische PDF van één pagina zonder klantgegevens. Waarden van inloggegevens
+              worden nooit getoond.
+            title: LLM en PDF-verwerking
+          loading: Live controles uitvoeren…
           local_setup:
-            title: "Aanbevolen lokale opzet"
-            description: "Laat het LLM draaien via uw lokale OpenAI-compatibele endpoint, sla documentvectoren op in pgvector en laat de embeddinginstellingen verwijzen naar een OpenAI-compatibel embeddings-endpoint. De PostgreSQL-image moet de extensie vector bevatten, en de embeddingdimensies moeten overeenkomen met het geselecteerde model."
+            description: Laat het LLM draaien via uw lokale OpenAI-compatibele endpoint,
+              sla documentvectoren op in pgvector en laat de embeddinginstellingen
+              verwijzen naar een OpenAI-compatibel embeddings-endpoint. De PostgreSQL-image
+              moet de extensie vector bevatten, en de embeddingdimensies moeten overeenkomen
+              met het geselecteerde model.
+            title: Aanbevolen lokale opzet
+          not_checked_help: Open de AI-status-URL rechtstreeks of voer de controles
+            uit om te verifiëren dat de dienst actief is.
+          pdf_statuses:
+            failing: Synthetische PDF-controle mislukt
+            not_checked: Niet gecontroleerd
+            supported: Synthetische PDF-controle geslaagd
+            unavailable: Niet beschikbaar totdat een LLM-provider is geconfigureerd
+            unsupported: Uitgeschakeld of niet ondersteund door de effectieve provider/het
+              effectieve model
+          probe_statuses:
+            failing: Live controle mislukt
+            not_checked: Niet gecontroleerd
+            not_configured: Niet geconfigureerd
+            passing: Live controle geslaagd
+          providers:
+            anthropic: Anthropic
+            cloudflare: Cloudflare
+            custom_openai_compatible: Aangepast endpoint
+            kilo: Kilo
+            ollama: Ollama
+            openai: OpenAI
+            openai_compatible: OpenAI-compatibel
+            openrouter: OpenRouter
+            together: Together
+          run_checks: Controles opnieuw uitvoeren
+          values:
+            available: Beschikbaar
+            available_not_enabled: Beschikbaar, niet ingeschakeld
+            configured: Geconfigureerd
+            enabled: Ingeschakeld
+            fallback: "(terugvaloptie)"
+            'no': Nee
+            not_available: Niet beschikbaar
+            not_configured: Niet geconfigureerd
+            not_found: Niet gevonden
+            not_set: Niet ingesteld
+            'yes': Ja
+          vector_statuses:
+            failing: Live controle mislukt
+            missing: Niet geconfigureerd
+            not_checked: Niet gecontroleerd
+            not_configured: Niet geconfigureerd
+            passing: Live controles geslaagd
+            scaffolded: Opgezet, niet geïmplementeerd
+          vector_store:
+            description: De live controle bevraagt de gehoste vectorstore-API, of
+              test de pgvector-tabel en maakt één korte embedding zonder deze op te
+              slaan.
+            title: Vectorstore en zoeken in documenten
+          worker:
+            configuration_statuses:
+              match: Komt overeen met web
+              mismatch: Wijkt af van web
+            coverage_notice: Elke controle verifieert precies één workerproces --
+              het proces dat de controle uit de wachtrij haalt. Met meer dan één workerreplica
+              bevestigt een geslaagd resultaat niet dat elke worker gezond is; plaats
+              de controle opnieuw in de wachtrij om een andere te testen.
+            description: De controles hierboven zijn uitgevoerd vanuit dit webproces.
+              Het meeste AI-werk -- antwoorden van de assistent, PDF-verwerking, embeddings,
+              automatisch categoriseren en het herkennen van handelaren -- draait
+              in werkelijkheid in een Sidekiq-workerproces, dat kan verschillen in
+              netwerktoegang, DNS, proxyregels of zelfs geladen inloggegevens. Plaats
+              een controle in de wachtrij om de eigen configuratie en connectiviteit
+              van een worker te verifiëren.
+            empty:
+              description: Klik op "Workerconfiguratie verifiëren" om een asynchrone
+                controle in de wachtrij te plaatsen. Het resultaat verschijnt hier
+                zodra een workerproces de controle oppakt.
+              title: Er heeft zich nog geen worker gemeld
+            labels:
+              checked_at: Gecontroleerd
+              configuration: Configuratie
+              process: Workerproces
+            settings_origin:
+              database_backed: Instellingen voor provider, model en API-sleutel die
+                in Instellingen → Zelfhosting worden gewijzigd, worden in de database
+                opgeslagen. rails-settings-cached maakt de gedeelde cache bij het
+                schrijven ongeldig, zodat zowel web als worker de nieuwe waarde gebruiken
+                voor het volgende verzoek of de volgende job in de wachtrij -- een
+                herstart is niet nodig.
+              env_backed: De embeddingconfiguratie, en elke waarde die alleen via
+                een omgevingsvariabele is ingesteld, ligt vast wanneer elke container
+                start. Rails kan de omgeving van een andere container niet wijzigen,
+                dus voor het wijzigen hiervan moeten zowel de web- als de workerdienst
+                opnieuw worden gestart of aangemaakt -- en deploymenttooling die maar
+                één van beide herstart (gedeeltelijke uitrol, een bijgewerkt Secret
+                zonder herstart van de pod) neemt de wijziging niet over.
+              title: Welke instellingen vereisen een herstart?
+            statuses:
+              failing: Mislukt
+              passing: Geslaagd
+              stale: Verouderd
+            title: Workerverificatie
+            verify_button: Workerconfiguratie verifiëren
+        alert:
+          title: Achtergrondjobs worden niet uitgevoerd
+        counters_section_description: Totale Sidekiq-tellers over alle wachtrijen.
+        counters_section_title: Jobtellers
+        labels:
+          enqueued: In wachtrij
+          failed: Mislukt
+          last_heartbeat: Laatste heartbeat
+          latency: Latentie
+          max_queue_latency: Leeftijd oudste job
+          processed_total: Totaal verwerkt
+          processes: Workerprocessen
+          queue: Wachtrij
+          retries: Nieuwe pogingen
+          size: Omvang
+          status: Status
+        queues_section_description: Omvang en leeftijd van de oudste job per wachtrij.
+          Latentie is het aantal seconden dat de oudste job al wacht.
+        queues_section_title: Wachtrijen
+        status_section_description: Huidige status van de achtergrondworker die synchronisaties,
+          saldi en berekeningen van het netto vermogen uitvoert.
+        status_section_title: Sidekiq-status
+        tabs:
+          ai: AI
+          background_jobs: Jobs
+          configuration: Configuratie
+          hosted_usage: Gebruik
+        title: Systeemstatus
+        values:
+          healthy: Gezond
+          never: Nooit
+          no_queues: Er zijn geen wachtrijen geregistreerd. De worker draait mogelijk
+            niet.
+          seconds: "%{seconds}s"
+          time_ago: "%{time_ago} geleden"
+          unhealthy: Verslechterd
+      verify_worker_ai:
+        queued: Workercontrole in de wachtrij geplaatst. Deze verschijnt hieronder
+          zodra een workerproces de controle oppakt, meestal binnen enkele seconden.

@@ -2,22 +2,25 @@
 nl:
   entries:
     create:
-      success: "Item aangemaakt"
+      success: Item aangemaakt
     destroy:
-      success: "Item verwijderd"
+      success: Item verwijderd
     empty:
-      description: "Probeer een item toe te voegen, filters te bewerken of uw zoekopdracht te verfijnen"
-      title: "Geen items gevonden"
+      description: Probeer een item toe te voegen, filters te bewerken of uw zoekopdracht
+        te verfijnen
+      title: Geen items gevonden
     loading:
-      loading: "Items laden..."
-    update:
-      success: "Item bijgewerkt"
-    unlock:
-      success: "Item ontgrendeld. Het kan bij de volgende synchronisatie worden bijgewerkt."
+      loading: Items laden...
     protection:
-      tooltip: "Beschermd tegen synchronisatie"
-      title: "Beschermd tegen synchronisatie"
-      description: "Uw wijzigingen aan dit item worden niet overschreven door synchronisatie met de provider."
-      locked_fields_label: "Vergrendelde velden:"
-      unlock_button: "Bijwerken door synchronisatie toestaan"
-      unlock_confirm: "Toestaan dat synchronisatie dit item bijwerkt? Uw wijzigingen kunnen bij de volgende synchronisatie worden overschreven."
+      description: Uw wijzigingen aan dit item worden niet overschreven door synchronisatie
+        met de provider.
+      locked_fields_label: 'Vergrendelde velden:'
+      title: Beschermd tegen synchronisatie
+      tooltip: Beschermd tegen synchronisatie
+      unlock_button: Bijwerken door synchronisatie toestaan
+      unlock_confirm: Toestaan dat synchronisatie dit item bijwerkt? Uw wijzigingen
+        kunnen bij de volgende synchronisatie worden overschreven.
+    unlock:
+      success: Item ontgrendeld. Het kan bij de volgende synchronisatie worden bijgewerkt.
+    update:
+      success: Item bijgewerkt

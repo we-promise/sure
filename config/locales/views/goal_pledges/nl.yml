@@ -1,20 +1,23 @@
 ---
 nl:
   goal_pledges:
-    new:
-      helper_transfer: "Sure zoekt naar een overeenkomende storting op uw gekoppelde account. De toezegging blijft 7 dagen in behandeling en wordt automatisch bevestigd zodra Sure de storting ziet."
-      helper_manual: "Sure legt dit vast bij uw volgende handmatige saldowijziging en bevestigt de inleg."
-      amount_label: "Bedrag"
-      account_label: "Naar account"
-      submit: "Toezegging vastleggen"
-      preview_zero: "Momenteel {current} van {target} gespaard."
-      preview_nonzero: "Komt op {percent}%, {newTotal} van {target}."
-      preview_reached: "Haalt uw doel van {target}. Doel bereikt."
     create:
-      success: "Toezegging vastgelegd. Sure bevestigt deze bij de volgende synchronisatie."
-    renew:
-      success: "Toezeggingsperiode met 7 dagen verlengd."
-      not_open: "Alleen openstaande toezeggingen kunnen worden verlengd."
+      success: Toezegging vastgelegd. Sure bevestigt deze bij de volgende synchronisatie.
     destroy:
-      success: "Toezegging geannuleerd."
-      not_open: "Alleen openstaande toezeggingen kunnen worden geannuleerd."
+      not_open: Alleen openstaande toezeggingen kunnen worden geannuleerd.
+      success: Toezegging geannuleerd.
+    new:
+      account_label: Naar account
+      amount_label: Bedrag
+      helper_manual: Sure legt dit vast bij uw volgende handmatige saldowijziging
+        en bevestigt de inleg.
+      helper_transfer: Sure zoekt naar een overeenkomende storting op uw gekoppelde
+        account. De toezegging blijft 7 dagen in behandeling en wordt automatisch
+        bevestigd zodra Sure de storting ziet.
+      preview_nonzero: Komt op {percent}%, {newTotal} van {target}.
+      preview_reached: Haalt uw doel van {target}. Doel bereikt.
+      preview_zero: Momenteel {current} van {target} gespaard.
+      submit: Toezegging vastleggen
+    renew:
+      not_open: Alleen openstaande toezeggingen kunnen worden verlengd.
+      success: Toezeggingsperiode met 7 dagen verlengd.

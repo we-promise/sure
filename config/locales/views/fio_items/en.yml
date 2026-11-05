@@ -1,141 +1,160 @@
 ---
 en:
-  providers:
-    fio:
-      name: Fio banka
-      description: Sync a Fio banka account with a read-only API token
   family:
     fio:
       create_fio_item:
         default_name: Fio banka Connection
   fio_item:
     errors:
+      account_mismatch: This token belongs to a different Fio account than the one
+        this connection already syncs. Add it as a separate connection instead.
       account_processing_failed: Could not sync Fio account
-      account_mismatch: This token belongs to a different Fio account than the one this connection already syncs. Add it as a separate connection instead.
       account_sync_schedule_failed: Could not schedule Fio account sync
-      statement_too_large: The statement has more transactions than Fio serves in one request. Move the sync start date forward and sync again.
+      history_locked: Fio refused this statement period. Unlock the account's full
+        history in internet banking under Settings → API, then sync again within 10
+        minutes.
       statement_fetch_failed: Could not fetch the statement from Fio
-      history_locked: Fio refused this statement period. Unlock the account's full history in internet banking under Settings → API, then sync again within 10 minutes.
+      statement_too_large: The statement has more transactions than Fio serves in
+        one request. Move the sync start date forward and sync again.
       sync_failed: Could not sync Fio connection
     sync:
       status:
-        importing: Importing the statement from Fio...
+        calculating: Calculating balances...
         checking_setup: Checking account configuration...
+        importing: Importing the statement from Fio...
         needs_setup:
           one: 1 account needs setup...
           other: "%{count} accounts need setup..."
         processing: Processing transactions...
-        calculating: Calculating balances...
     sync_status:
-      no_accounts: No account found yet
       all_synced:
         one: 1 account synced
         other: "%{count} accounts synced"
+      no_accounts: No account found yet
       partial: "%{linked} synced, %{unlinked} need setup"
   fio_items:
     account_types:
       depository: Current or savings account
       loan: Loan, mortgage or overdraft
-    provider_panel:
-      default_connection_name: Fio banka Connection
-      add_connection: Add Fio banka connection
-      update_connection: Update connection
-      connection_name_label: Connection name
-      connection_name_placeholder: My Fio account
-      token_label: API token (read-only)
-      token_placeholder: Paste the 64-character token
-      keep_token_placeholder: Leave blank to keep the existing token
-      sync_start_date_label: Import transactions from
-      sync_start_date_hint: Fio serves the last 90 days without extra authorization. For anything older, unlock the account's full history in internet banking under Settings → API (padlock icon) — that opens a 10-minute window — and sync during it.
-      one_account_notice: One token reaches one Fio account, so add a connection for each account you want to track. A token may be used once every 30 seconds; a sync that arrives sooner is picked up by the next one.
-      connected_account: Connected account
-      no_account_yet: No account yet — the first sync discovers the account this token reaches.
-      account_needs_setup: Not linked to a Sure account yet.
-      requires_update: New token needed
-      requires_update_notice: Fio rejected this token. Tokens are valid for up to 180 days unless they are auto-extended on each banking login, so create a new read-only token under Settings → API and paste it below.
-      last_synced: Synced %{timestamp} ago
-      never_synced: Never synced
-      syncing: Syncing...
-      sync: Sync
-      setup_accounts: Setup account
-      disconnect: Disconnect
-      disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+    complete_account_setup:
+      creation_failed: Could not create the Sure account.
+      no_account: No Fio account needed setting up.
+      skipped: The Fio account was skipped.
+      success: Created %{account_name}.
+      unsupported_account_type: Fio does not support that account type.
     create:
       success: Fio banka connection saved.
       token_required: Paste the API token from Fio internet banking.
-    update:
-      success: Fio banka connection updated.
     destroy:
       success: Scheduled Fio banka connection for deletion.
       unlink_failed: Could not disconnect Fio banka connection
-    select_accounts:
-      title: Link your Fio account
-      description: This token reaches one account. Choose how it should be tracked in Sure.
-      account_type_label: Account type
-      awaiting_first_sync: Fio has not reported the account for this token yet. Run a sync and come back.
-      already_linked: This connection's account is already linked to a Sure account.
+    fio_item:
+      delete: Delete
+      deletion_in_progress: Deletion in progress
+      error: Error
+      no_accounts_description: Fio reports the account only in a statement, so it
+        appears after the first successful sync.
+      no_accounts_title: No account imported yet
+      requires_update: New token needed
+      requires_update_description: Fio rejected the token for this connection. Create
+        a new read-only token under Settings → API in internet banking.
+      requires_update_title: New token needed
+      setup_action: Setup account
+      setup_description: The account this token reaches is not linked to a Sure account
+        yet.
+      setup_needed: Account setup needed
+      status_never: Never synced
+      status_with_summary: Synced %{timestamp} ago · %{summary}
       sync_now: Sync now
-      no_credentials_configured: Configure Fio banka in provider settings first.
-      cancel: Cancel
-      link_account: Link account
+      syncing: Syncing
+      update_token: Update token
     link_accounts:
-      success: "Linked your Fio account to %{account_name}."
+      link_failed: The account could not be linked.
       no_account_found: No unlinked Fio account was found for this connection.
       no_credentials_configured: Configure Fio banka in provider settings first.
+      success: Linked your Fio account to %{account_name}.
       unsupported_account_type: Fio does not support that account type.
-      link_failed: The account could not be linked.
-    select_existing_account:
-      title: "Link Fio account to %{account_name}"
-      description: Connect the account this token reaches to the account you picked.
-      awaiting_first_sync: Fio has not reported the account for this token yet. Run a sync and come back.
-      already_linked: This connection's account is already linked to a Sure account.
-      sync_now: Sync now
-      no_credentials_configured: Configure Fio banka in provider settings first.
-      account_already_linked: This account is already linked to a provider.
-      cancel: Cancel
-      link_account: Link account
     link_existing_account:
-      success: "Linked your Fio account to %{account_name}."
       account_already_linked: This account is already linked to a provider.
       fio_account_already_linked: This Fio account is already linked.
       no_account_selected: No Fio account was available to link.
+      success: Linked your Fio account to %{account_name}.
       unsupported_account_type: Fio can only sync cash and loan accounts.
-    setup_accounts:
+    provider_panel:
+      account_needs_setup: Not linked to a Sure account yet.
+      add_connection: Add Fio banka connection
+      connected_account: Connected account
+      connection_name_label: Connection name
+      connection_name_placeholder: My Fio account
+      default_connection_name: Fio banka Connection
+      disconnect: Disconnect
+      disconnect_confirm: Are you sure you want to disconnect %{name}?
+      keep_token_placeholder: Leave blank to keep the existing token
+      last_synced: Synced %{timestamp} ago
+      never_synced: Never synced
+      no_account_yet: No account yet — the first sync discovers the account this token
+        reaches.
+      one_account_notice: One token reaches one Fio account, so add a connection for
+        each account you want to track. A token may be used once every 30 seconds;
+        a sync that arrives sooner is picked up by the next one.
+      requires_update: New token needed
+      requires_update_notice: Fio rejected this token. Tokens are valid for up to
+        180 days unless they are auto-extended on each banking login, so create a
+        new read-only token under Settings → API and paste it below.
+      setup_accounts: Setup account
+      sync: Sync
+      sync_start_date_hint: Fio serves the last 90 days without extra authorization.
+        For anything older, unlock the account's full history in internet banking
+        under Settings → API (padlock icon) — that opens a 10-minute window — and
+        sync during it.
+      sync_start_date_label: Import transactions from
+      syncing: Syncing...
+      token_label: API token (read-only)
+      token_placeholder: Paste the 64-character token
+      update_connection: Update connection
+    select_accounts:
+      account_type_label: Account type
+      already_linked: This connection's account is already linked to a Sure account.
+      awaiting_first_sync: Fio has not reported the account for this token yet. Run
+        a sync and come back.
+      cancel: Cancel
+      description: This token reaches one account. Choose how it should be tracked
+        in Sure.
+      link_account: Link account
+      no_credentials_configured: Configure Fio banka in provider settings first.
+      sync_now: Sync now
       title: Link your Fio account
-      subtitle: Choose how the account this token reaches should appear in Sure.
-      choose_account_type: Choose an account type
-      choose_account_type_description: Skip it if you do not want to track this account.
+    select_existing_account:
+      account_already_linked: This account is already linked to a provider.
+      already_linked: This connection's account is already linked to a Sure account.
+      awaiting_first_sync: Fio has not reported the account for this token yet. Run
+        a sync and come back.
+      cancel: Cancel
+      description: Connect the account this token reaches to the account you picked.
+      link_account: Link account
+      no_credentials_configured: Configure Fio banka in provider settings first.
+      sync_now: Sync now
+      title: Link Fio account to %{account_name}
+    setup_accounts:
+      account_already_handled: This connection's account is already linked or skipped.
       account_type_label: Account type
       account_types:
         skip: Skip
-      create_account: Create account
       awaiting_first_sync: No account found yet
-      awaiting_first_sync_description: Fio reports the account only in a statement, so it appears after the first successful sync.
-      sync_now: Sync now
-      nothing_to_setup: Nothing to set up
-      account_already_handled: This connection's account is already linked or skipped.
-      close: Close
+      awaiting_first_sync_description: Fio reports the account only in a statement,
+        so it appears after the first successful sync.
       cancel: Cancel
-    complete_account_setup:
-      success: "Created %{account_name}."
-      skipped: The Fio account was skipped.
-      no_account: No Fio account needed setting up.
-      unsupported_account_type: Fio does not support that account type.
-      creation_failed: Could not create the Sure account.
-    fio_item:
-      deletion_in_progress: Deletion in progress
-      syncing: Syncing
-      requires_update: New token needed
-      error: Error
-      status_with_summary: "Synced %{timestamp} ago · %{summary}"
-      status_never: Never synced
-      delete: Delete
-      requires_update_title: New token needed
-      requires_update_description: Fio rejected the token for this connection. Create a new read-only token under Settings → API in internet banking.
-      update_token: Update token
-      setup_needed: Account setup needed
-      setup_description: The account this token reaches is not linked to a Sure account yet.
-      setup_action: Setup account
-      no_accounts_title: No account imported yet
-      no_accounts_description: Fio reports the account only in a statement, so it appears after the first successful sync.
+      choose_account_type: Choose an account type
+      choose_account_type_description: Skip it if you do not want to track this account.
+      close: Close
+      create_account: Create account
+      nothing_to_setup: Nothing to set up
+      subtitle: Choose how the account this token reaches should appear in Sure.
       sync_now: Sync now
+      title: Link your Fio account
+    update:
+      success: Fio banka connection updated.
+  providers:
+    fio:
+      description: Sync a Fio banka account with a read-only API token
+      name: Fio banka

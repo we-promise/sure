@@ -4,192 +4,193 @@ nl:
     edit:
       edit: "%{account} bewerken"
     form:
-      none: "Geen"
-      subtype_prompt: "Selecteer beleggingstype"
+      none: Geen
+      subtype_prompt: Selecteer beleggingstype
     new:
-      title: "Accountsaldo invoeren"
+      title: Accountsaldo invoeren
     show:
-      chart_title: "Totale waarde"
+      chart_title: Totale waarde
     subtypes:
-      brokerage:
-        short: "Beleggingsrekening"
-        long: "Beleggingsrekening"
-      cash_management:
-        short: "CMA"
-        long: "Cash Management Account"
-      "401k":
-        short: "401(k)"
-        long: "401(k)"
-      roth_401k:
-        short: "Roth 401(k)"
-        long: "Roth 401(k)"
-      "403b":
-        short: "403(b)"
-        long: "403(b)"
-      "457b":
-        short: "457(b)"
-        long: "457(b)"
-      tsp:
-        short: "TSP"
-        long: "Thrift Savings Plan"
-      ira:
-        short: "IRA"
-        long: "Traditionele IRA"
-      roth_ira:
-        short: "Roth IRA"
-        long: "Roth IRA"
-      sep_ira:
-        short: "SEP IRA"
-        long: "SEP IRA"
-      simple_ira:
-        short: "SIMPLE IRA"
-        long: "SIMPLE IRA"
-      "529_plan":
-        short: "529 Plan"
-        long: "529 Onderwijs Spaarplan"
-      hsa:
-        short: "HSA"
-        long: "Gezondheidsspaarrekening"
-      ugma:
-        short: "UGMA"
-        long: "UGMA Bewaarrekening"
-      utma:
-        short: "UTMA"
-        long: "UTMA Bewaarrekening"
-      isa:
-        short: "ISA"
-        long: "Individuele Spaarrekening"
-      lisa:
-        short: "LISA"
-        long: "Lifetime ISA"
-      sipp:
-        short: "SIPP"
-        long: "Zelfbeheerd Persoonlijk Pensioen"
-      workplace_pension_uk:
-        short: "Pensioen"
-        long: "Werknemerspensioen"
-      rrsp:
-        short: "RRSP"
-        long: "Geregistreerd Pensioenspaarplan"
-      tfsa:
-        short: "TFSA"
-        long: "Belastingvrije Spaarrekening"
-      resp:
-        short: "RESP"
-        long: "Geregistreerd Onderwijs Spaarplan"
-      lira:
-        short: "LIRA"
-        long: "Vergrendelde Pensioenrekening"
-      rrif:
-        short: "RRIF"
-        long: "Geregistreerd Pensioeninkomen Fonds"
-      super:
-        short: "Super"
-        long: "Superannuation"
-      smsf:
-        short: "SMSF"
-        long: "Zelfbeheerd Super Fonds"
-      pea:
-        short: "PEA"
-        long: "Plan d'Épargne en Actions"
-      pillar_3a:
-        short: "Pijler 3a"
-        long: "Privé Pensioen (Pijler 3a)"
-      riester:
-        short: "Riester"
-        long: "Riester-Rente"
-      nps:
-        short: "NPS"
-        long: "National Pension System"
-      apy:
-        short: "APY"
-        long: "Atal Pension Yojana"
-      indian_stocks:
-        short: "Indiase aandelen"
-        long: "Indiase aandelen (Demat)"
-      indian_equity:
-        short: "Indiaas aandelenvermogen"
-        long: "Indiaas aandelenvermogen"
-      indian_etf:
-        short: "Indiase ETF"
-        long: "Indiase ETF"
-      life_insurance:
-        short: "Levensverzekering"
-        long: "Levensverzekering"
-      epf:
-        short: "EPF"
-        long: "Employees' Provident Fund"
-      ppf:
-        short: "PPF"
-        long: "Public Provident Fund"
-      ssy:
-        short: "SSY"
-        long: "Sukanya Samriddhi Yojana"
-      nsc:
-        short: "NSC"
-        long: "National Savings Certificate"
-      scss:
-        short: "SCSS"
-        long: "Senior Citizens' Savings Scheme"
-      fd:
-        short: "FD"
-        long: "Termijndeposito"
-      rd:
-        short: "RD"
-        long: "Periodiek deposito"
-      pomis:
-        short: "POMIS"
-        long: "Post Office Monthly Income Scheme"
-      kvp:
-        short: "KVP"
-        long: "Kisan Vikas Patra"
-      gold_etf:
-        short: "Goud-ETF"
-        long: "Goud-ETF"
-      gold_mf:
-        short: "Goud-MF"
-        long: "Goud-beleggingsfonds"
-      sgb:
-        short: "SGB"
-        long: "Sovereign Gold Bond"
-      g_sec:
-        short: "G-Sec"
-        long: "Staatsobligaties (G-Secs)"
-      sdl:
-        short: "SDL"
-        long: "State Development Loans (SDL's)"
-      corporate_bond:
-        short: "Bedrijfsobligatie"
-        long: "Bedrijfsobligatie"
-      infrastructure_bond:
-        short: "Infra-obligatie"
-        long: "Infrastructuurobligatie"
-      tax_free_bond:
-        short: "Belastingvrije obligatie"
-        long: "Belastingvrije obligatie"
-      pension:
-        short: "Pensioen"
-        long: "Pensioen"
-      retirement:
-        short: "Pensioen"
-        long: "Pensioenrekening"
-      mutual_fund:
-        short: "Beleggingsfonds"
-        long: "Beleggingsfonds"
-      gold:
-        short: "Goud"
-        long: "Goud (fysiek of digitaal)"
+      401k:
+        long: 401(k)
+        short: 401(k)
+      403b:
+        long: 403(b)
+        short: 403(b)
+      457b:
+        long: 457(b)
+        short: 457(b)
+      529_plan:
+        long: 529 Onderwijs Spaarplan
+        short: 529 Plan
       angel:
-        short: "Angel"
-        long: "Angel-investering"
-      trust:
-        short: "Trust"
-        long: "Trust"
+        long: Angel-investering
+        short: Angel
+      apy:
+        long: Atal Pension Yojana
+        short: APY
+      brokerage:
+        long: Beleggingsrekening
+        short: Beleggingsrekening
+      cash_management:
+        long: Cash Management Account
+        short: CMA
+      corporate_bond:
+        long: Bedrijfsobligatie
+        short: Bedrijfsobligatie
+      epf:
+        long: Employees' Provident Fund
+        short: EPF
+      fd:
+        long: Termijndeposito
+        short: FD
+      g_sec:
+        long: Staatsobligaties (G-Secs)
+        short: G-Sec
+      gold:
+        long: Goud (fysiek of digitaal)
+        short: Goud
+      gold_etf:
+        long: Goud-ETF
+        short: Goud-ETF
+      gold_mf:
+        long: Goud-beleggingsfonds
+        short: Goud-MF
+      hsa:
+        long: Gezondheidsspaarrekening
+        short: HSA
+      indian_equity:
+        long: Indiaas aandelenvermogen
+        short: Indiaas aandelenvermogen
+      indian_etf:
+        long: Indiase ETF
+        short: Indiase ETF
+      indian_stocks:
+        long: Indiase aandelen (Demat)
+        short: Indiase aandelen
+      infrastructure_bond:
+        long: Infrastructuurobligatie
+        short: Infra-obligatie
+      ira:
+        long: Traditionele IRA
+        short: IRA
+      isa:
+        long: Individuele Spaarrekening
+        short: ISA
+      kvp:
+        long: Kisan Vikas Patra
+        short: KVP
+      life_insurance:
+        long: Levensverzekering
+        short: Levensverzekering
+      lira:
+        long: Vergrendelde Pensioenrekening
+        short: LIRA
+      lisa:
+        long: Lifetime ISA
+        short: LISA
+      mutual_fund:
+        long: Beleggingsfonds
+        short: Beleggingsfonds
+      nps:
+        long: National Pension System
+        short: NPS
+      nsc:
+        long: National Savings Certificate
+        short: NSC
       other:
-        short: "Overig"
-        long: "Overige belegging"
+        long: Overige belegging
+        short: Overig
+      pea:
+        long: Plan d'Épargne en Actions
+        short: PEA
+      pension:
+        long: Pensioen
+        short: Pensioen
+      pillar_3a:
+        long: Privé Pensioen (Pijler 3a)
+        short: Pijler 3a
+      pomis:
+        long: Post Office Monthly Income Scheme
+        short: POMIS
+      ppf:
+        long: Public Provident Fund
+        short: PPF
+      rd:
+        long: Periodiek deposito
+        short: RD
+      resp:
+        long: Geregistreerd Onderwijs Spaarplan
+        short: RESP
+      retirement:
+        long: Pensioenrekening
+        short: Pensioen
+      riester:
+        long: Riester-Rente
+        short: Riester
+      roth_401k:
+        long: Roth 401(k)
+        short: Roth 401(k)
+      roth_ira:
+        long: Roth IRA
+        short: Roth IRA
+      rrif:
+        long: Geregistreerd Pensioeninkomen Fonds
+        short: RRIF
+      rrsp:
+        long: Geregistreerd Pensioenspaarplan
+        short: RRSP
+      scss:
+        long: Senior Citizens' Savings Scheme
+        short: SCSS
+      sdl:
+        long: State Development Loans (SDL's)
+        short: SDL
+      sep_ira:
+        long: SEP IRA
+        short: SEP IRA
+      sgb:
+        long: Sovereign Gold Bond
+        short: SGB
+      simple_ira:
+        long: SIMPLE IRA
+        short: SIMPLE IRA
+      sipp:
+        long: Zelfbeheerd Persoonlijk Pensioen
+        short: SIPP
+      smsf:
+        long: Zelfbeheerd Super Fonds
+        short: SMSF
+      ssy:
+        long: Sukanya Samriddhi Yojana
+        short: SSY
+      super:
+        long: Superannuation
+        short: Super
+      tax_free_bond:
+        long: Belastingvrije obligatie
+        short: Belastingvrije obligatie
+      tfsa:
+        long: Belastingvrije Spaarrekening
+        short: TFSA
+      trust:
+        long: Trust
+        short: Trust
+      tsp:
+        long: Thrift Savings Plan
+        short: TSP
+      ugma:
+        long: UGMA Bewaarrekening
+        short: UGMA
+      utma:
+        long: UTMA Bewaarrekening
+        short: UTMA
+      workplace_pension_uk:
+        long: Werknemerspensioen
+        short: Pensioen
     value_tooltip:
-      cash: "Contant geld bij broker"
-      holdings: "Posities"
-      total: "Portfoliosaldo"
-      total_value_tooltip: "Het totale portfoliosaldo is de som van contant geld bij broker (beschikbaar voor handelen) en de huidige marktwaarde van uw bezittingen."
+      cash: Contant geld bij broker
+      holdings: Posities
+      total: Portfoliosaldo
+      total_value_tooltip: Het totale portfoliosaldo is de som van contant geld bij
+        broker (beschikbaar voor handelen) en de huidige marktwaarde van uw bezittingen.

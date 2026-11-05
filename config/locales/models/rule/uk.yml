@@ -4,9 +4,9 @@ uk:
     errors:
       models:
         rule:
-          min_actions: "повинно мати принаймні одну дію"
-          duplicate_actions: "Правило не може мати дублікатів дій %{types}"
-          nested_conditions: "Складні умови не можуть бути вкладеними"
+          duplicate_actions: Правило не може мати дублікатів дій %{types}
+          min_actions: повинно мати принаймні одну дію
+          nested_conditions: Складні умови не можуть бути вкладеними
   rule:
     conditions:
       unsupported_label: Не підтримується (%{type})

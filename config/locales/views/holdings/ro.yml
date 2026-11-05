@@ -9,19 +9,19 @@ ro:
       per_share: per acțiune
       shares: "%{qty} acțiuni"
     index:
-      positions:
-        one: "%{count} poziție"
-        other: "%{count} poziții"
       average_cost: Cost mediu
       holdings: Dețineri
       name: Nume
       new_holding: Tranzacție nouă
       no_holdings: Nu există dețineri de afișat.
+      positions:
+        one: "%{count} poziție"
+        other: "%{count} poziții"
       return: Randament total
       weight: Pondere
     missing_price_tooltip:
-      description: Această investiție are valori lipsă și nu am putut calcula
-        randamentele sau valoarea sa.
+      description: Această investiție are valori lipsă și nu am putut calcula randamentele
+        sau valoarea sa.
       missing_data: Date lipsă
     show:
       avg_cost_label: Cost mediu
@@ -35,6 +35,6 @@ ro:
       portfolio_weight_label: Ponderea portofoliului
       settings: Setări
       ticker_label: Simbol bursier
-      trade_history_entry: "%{qty} acțiuni din %{security} la %{price}"
       total_return_label: Randament total
+      trade_history_entry: "%{qty} acțiuni din %{security} la %{price}"
       unknown: Necunoscut

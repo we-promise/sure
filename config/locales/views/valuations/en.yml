@@ -1,45 +1,37 @@
 ---
 en:
   valuations:
-    names:
-      current_account_value: Current account value
-      current_balance: Current balance
-      current_loan_balance: Current loan balance
-      current_market_value: Current market value
-      manual_balance_update: Manual balance update
-      manual_principal_update: Manual principal update
-      manual_value_update: Manual value update
-      opening_account_value: Opening account value
-      opening_balance: Opening balance
-      original_principal: Original principal
-      original_purchase_price: Original purchase price
+    confirm_create:
+      confirm: Confirm
+      title: Confirm new balance
+    confirm_update:
+      title: Update balance
+      update: Update
     confirmation_contents:
-      this_will: "This will %{action_verb} the account value on"
-      to_colon: "to:"
-      total_account_value: Total account value
-      holdings_value: Holdings value
-      brokerage_cash: Brokerage cash
       account_balance: account balance
-      credit_card_balance: credit card balance
-      loan_balance: loan balance
-      property_value: property value
-      vehicle_value: vehicle value
-      crypto_balance: crypto balance
-      asset_value: asset value
-      liability_balance: liability balance
-      balance: balance
-      "on": "on"
-      to: "to"
-      recalculate_notice: "All future transactions and balances will be recalculated based on this %{change_or_update}."
-      change: change
-      update: update
       action_set: set
       action_update: update
+      asset_value: asset value
+      balance: balance
+      brokerage_cash: Brokerage cash
+      change: change
+      credit_card_balance: credit card balance
+      crypto_balance: crypto balance
+      holdings_value: Holdings value
+      liability_balance: liability balance
+      loan_balance: loan balance
+      'on': 'on'
+      property_value: property value
+      recalculate_notice: All future transactions and balances will be recalculated
+        based on this %{change_or_update}.
+      this_will: This will %{action_verb} the account value on
+      to: to
+      to_colon: 'to:'
+      total_account_value: Total account value
+      update: update
+      vehicle_value: vehicle value
     create:
       account_updated: Account updated
-    update:
-      account_updated: Account updated
-      entry_updated: Entry updated
     errors:
       amount_required: Amount is required
     form:
@@ -54,6 +46,18 @@ en:
       no_valuations: No valuations for this account yet
       valuations: Value
       value: value
+    names:
+      current_account_value: Current account value
+      current_balance: Current balance
+      current_loan_balance: Current loan balance
+      current_market_value: Current market value
+      manual_balance_update: Manual balance update
+      manual_principal_update: Manual principal update
+      manual_value_update: Manual value update
+      opening_account_value: Opening account value
+      opening_balance: Opening balance
+      original_principal: Original principal
+      original_purchase_price: Original purchase price
     new:
       title: New balance
     show:
@@ -68,13 +72,10 @@ en:
       name_placeholder: Enter a name for this entry
       note_label: Notes
       note_placeholder: Add any additional details about this entry
+      opening_balance: Opening balance
       overview: Overview
       settings: Settings
-      opening_balance: "Opening balance"
       update_value: Update value
-    confirm_create:
-      confirm: Confirm
-      title: Confirm new balance
-    confirm_update:
-      title: Update balance
-      update: Update
+    update:
+      account_updated: Account updated
+      entry_updated: Entry updated

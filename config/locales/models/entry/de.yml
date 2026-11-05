@@ -6,4 +6,5 @@ de:
         entry:
           attributes:
             base:
-              invalid_sell_quantity: Du kannst keine %{sell_qty} Anteile von %{ticker} verkaufen, da du nur %{current_qty} Anteile besitzt.
+              invalid_sell_quantity: Du kannst keine %{sell_qty} Anteile von %{ticker}
+                verkaufen, da du nur %{current_qty} Anteile besitzt.

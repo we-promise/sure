@@ -4,26 +4,26 @@ nl:
     edit:
       edit: "%{account} bewerken"
     form:
-      none: "Geen"
-      subtype_prompt: "Selecteer accounttype"
+      none: Geen
+      subtype_prompt: Selecteer accounttype
     new:
-      title: "Saldo invoeren"
+      title: Saldo invoeren
     subtypes:
       cash:
-        long: "Contant geld"
-        short: "Contant"
+        long: Contant geld
+        short: Contant
       cd:
-        long: "Depositocertificaat"
-        short: "CD"
+        long: Depositocertificaat
+        short: CD
       checking:
-        long: "Betaalrekening"
-        short: "Betaalrekening"
+        long: Betaalrekening
+        short: Betaalrekening
       hsa:
-        long: "Zorgspaarrekening"
-        short: "HSA"
+        long: Zorgspaarrekening
+        short: HSA
       money_market:
-        long: "Geldmarktrekening"
-        short: "MM"
+        long: Geldmarktrekening
+        short: MM
       savings:
-        long: "Spaarrekening"
-        short: "Spaarrekening"
+        long: Spaarrekening
+        short: Spaarrekening

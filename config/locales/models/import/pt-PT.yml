@@ -12,7 +12,8 @@ pt-PT:
     errors:
       models:
         import:
-          duplicate_headers: "Os cabeçalhos do CSV normalizam para colunas duplicadas: %{columns}"
           attributes:
             raw_file_str:
               invalid_csv_format: não é um formato CSV válido
+          duplicate_headers: 'Os cabeçalhos do CSV normalizam para colunas duplicadas:
+            %{columns}'

@@ -2,16 +2,19 @@
 nl:
   pdf_import_mailer:
     next_steps:
-      greeting: "Hallo %{name},"
-      intro: "We hebben het PDF-document dat u naar %{product} hebt geüpload geanalyseerd."
-      document_type_label: "Documenttype"
-      summary_label: "AI-samenvatting"
-      transactions_note: "Dit document lijkt transacties te bevatten. U kunt ze nu extraheren en controleren."
-      document_stored_note: "Dit document is ter referentie opgeslagen. Het kan worden gebruikt als context in toekomstige AI-gesprekken."
-      next_steps_label: "Wat nu?"
-      next_steps_intro: "U hebt verschillende mogelijkheden:"
-      option_extract_transactions: "Transacties uit dit afschrift extraheren"
-      option_keep_reference: "Dit document bewaren als referentie voor toekomstige AI-gesprekken"
-      option_delete: "Deze import verwijderen als u die niet meer nodig hebt"
-      view_import_button: "Importdetails bekijken"
-      footer_note: "Dit is een automatisch bericht. Beantwoord deze e-mail niet rechtstreeks."
+      document_stored_note: Dit document is ter referentie opgeslagen. Het kan worden
+        gebruikt als context in toekomstige AI-gesprekken.
+      document_type_label: Documenttype
+      footer_note: Dit is een automatisch bericht. Beantwoord deze e-mail niet rechtstreeks.
+      greeting: Hallo %{name},
+      intro: We hebben het PDF-document dat u naar %{product} hebt geüpload geanalyseerd.
+      next_steps_intro: 'U hebt verschillende mogelijkheden:'
+      next_steps_label: Wat nu?
+      option_delete: Deze import verwijderen als u die niet meer nodig hebt
+      option_extract_transactions: Transacties uit dit afschrift extraheren
+      option_keep_reference: Dit document bewaren als referentie voor toekomstige
+        AI-gesprekken
+      summary_label: AI-samenvatting
+      transactions_note: Dit document lijkt transacties te bevatten. U kunt ze nu
+        extraheren en controleren.
+      view_import_button: Importdetails bekijken

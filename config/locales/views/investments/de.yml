@@ -11,111 +11,27 @@ de:
     show:
       chart_title: Gesamtwert
     subtypes:
-      brokerage:
-        short: Brokerage
-        long: Brokerage
-      "401k":
-        short: "401(k)"
-        long: "401(k)"
-      roth_401k:
-        short: Roth 401(k)
-        long: Roth 401(k)
-      "403b":
-        short: "403(b)"
-        long: "403(b)"
-      "457b":
-        short: "457(b)"
-        long: "457(b)"
-      tsp:
-        short: TSP
-        long: Thrift Savings Plan
-      ira:
-        short: IRA
-        long: Traditionelles IRA
-      roth_ira:
-        short: Roth IRA
-        long: Roth IRA
-      sep_ira:
-        short: SEP IRA
-        long: SEP IRA
-      simple_ira:
-        short: SIMPLE IRA
-        long: SIMPLE IRA
-      "529_plan":
-        short: "529 Plan"
-        long: "529 Bildungssparplan"
-      hsa:
-        short: HSA
-        long: Health Savings Account
-      ugma:
-        short: UGMA
-        long: UGMA-Treuhandkonto
-      utma:
-        short: UTMA
-        long: UTMA-Treuhandkonto
-      isa:
-        short: ISA
-        long: Individual Savings Account
-      lisa:
-        short: LISA
-        long: Lifetime ISA
-      sipp:
-        short: SIPP
-        long: Self-Invested Personal Pension
-      workplace_pension_uk:
-        short: Pension
-        long: Betriebliche Altersvorsorge
-      rrsp:
-        short: RRSP
-        long: Registered Retirement Savings Plan
-      tfsa:
-        short: TFSA
-        long: Tax-Free Savings Account
-      resp:
-        short: RESP
-        long: Registered Education Savings Plan
-      lira:
-        short: LIRA
-        long: Locked-In Retirement Account
-      rrif:
-        short: RRIF
-        long: Registered Retirement Income Fund
-      super:
-        short: Super
-        long: Superannuation
-      smsf:
-        short: SMSF
-        long: Self-Managed Super Fund
-      pea:
-        short: PEA
-        long: Plan d'Épargne en Actions
-      pillar_3a:
-        short: Säule 3a
-        long: Private Vorsorge (Säule 3a)
-      riester:
-        short: Riester
-        long: Riester-Rente
-      pension:
-        short: Pension
-        long: Pension
-      retirement:
-        short: Ruhestand
-        long: Ruhestandskonto
-      mutual_fund:
-        short: Fonds
-        long: Investmentfonds
+      401k:
+        long: 401(k)
+        short: 401(k)
+      403b:
+        long: 403(b)
+        short: 403(b)
+      457b:
+        long: 457(b)
+        short: 457(b)
+      529_plan:
+        long: 529 Bildungssparplan
+        short: 529 Plan
       angel:
-        short: Angel
         long: Angel-Investment
-      trust:
-        short: Trust
-        long: Trust
-      other:
-        short: Sonstige
-        long: Sonstige Anlage
+        short: Angel
       apy:
         long: Atal Pension Yojana
         short: APY
+      brokerage:
+        long: Brokerage
+        short: Brokerage
       corporate_bond:
         long: Unternehmensanleihe
         short: Unternehmensanleihe
@@ -134,6 +50,9 @@ de:
       gold_mf:
         long: Gold-Investmentfonds
         short: Gold-Fonds
+      hsa:
+        long: Health Savings Account
+        short: HSA
       indian_equity:
         long: Indische Aktien
         short: Indische Aktien
@@ -146,18 +65,45 @@ de:
       infrastructure_bond:
         long: Infrastrukturanleihe
         short: Infra-Anleihe
+      ira:
+        long: Traditionelles IRA
+        short: IRA
+      isa:
+        long: Individual Savings Account
+        short: ISA
       kvp:
         long: Kisan Vikas Patra
         short: KVP
       life_insurance:
         long: Lebensversicherung
         short: Lebensversicherung
+      lira:
+        long: Locked-In Retirement Account
+        short: LIRA
+      lisa:
+        long: Lifetime ISA
+        short: LISA
+      mutual_fund:
+        long: Investmentfonds
+        short: Fonds
       nps:
         long: National Pension System
         short: NPS
       nsc:
         long: National Savings Certificate
         short: NSC
+      other:
+        long: Sonstige Anlage
+        short: Sonstige
+      pea:
+        long: Plan d'Épargne en Actions
+        short: PEA
+      pension:
+        long: Pension
+        short: Pension
+      pillar_3a:
+        long: Private Vorsorge (Säule 3a)
+        short: Säule 3a
       pomis:
         long: Post Office Monthly Income Scheme
         short: POMIS
@@ -167,23 +113,78 @@ de:
       rd:
         long: Sparplan-Einlage
         short: Sparplan
+      resp:
+        long: Registered Education Savings Plan
+        short: RESP
+      retirement:
+        long: Ruhestandskonto
+        short: Ruhestand
+      riester:
+        long: Riester-Rente
+        short: Riester
+      roth_401k:
+        long: Roth 401(k)
+        short: Roth 401(k)
+      roth_ira:
+        long: Roth IRA
+        short: Roth IRA
+      rrif:
+        long: Registered Retirement Income Fund
+        short: RRIF
+      rrsp:
+        long: Registered Retirement Savings Plan
+        short: RRSP
       scss:
         long: Senior Citizens' Savings Scheme
         short: SCSS
       sdl:
         long: State Development Loans (SDLs)
         short: SDL
+      sep_ira:
+        long: SEP IRA
+        short: SEP IRA
       sgb:
         long: Sovereign Gold Bond
         short: SGB
+      simple_ira:
+        long: SIMPLE IRA
+        short: SIMPLE IRA
+      sipp:
+        long: Self-Invested Personal Pension
+        short: SIPP
+      smsf:
+        long: Self-Managed Super Fund
+        short: SMSF
       ssy:
         long: Sukanya Samriddhi Yojana
         short: SSY
+      super:
+        long: Superannuation
+        short: Super
       tax_free_bond:
         long: Steuerfreie Anleihe
         short: Steuerfreie Anleihe
+      tfsa:
+        long: Tax-Free Savings Account
+        short: TFSA
+      trust:
+        long: Trust
+        short: Trust
+      tsp:
+        long: Thrift Savings Plan
+        short: TSP
+      ugma:
+        long: UGMA-Treuhandkonto
+        short: UGMA
+      utma:
+        long: UTMA-Treuhandkonto
+        short: UTMA
+      workplace_pension_uk:
+        long: Betriebliche Altersvorsorge
+        short: Pension
     value_tooltip:
       cash: Bargeld
       holdings: Positionen
       total: Portfoliostand
-      total_value_tooltip: Der gesamte Portfoliostand setzt sich aus dem verfügbaren Depotguthaben zum Handel und dem aktuellen Marktwert deiner Positionen zusammen
+      total_value_tooltip: Der gesamte Portfoliostand setzt sich aus dem verfügbaren
+        Depotguthaben zum Handel und dem aktuellen Marktwert deiner Positionen zusammen

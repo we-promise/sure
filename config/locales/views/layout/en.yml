@@ -3,41 +3,42 @@ en:
   layouts:
     application:
       insights: Insights
-      privacy_mode: Toggle privacy mode
-      resize_left_sidebar: Resize the accounts sidebar
-      resize_right_sidebar: Resize the assistant sidebar
-      skip_to_main: Skip to main content
-      release_highlight:
-        title: What's new
-        done: Got it
       nav:
         assistant: Assistant
         bills: Bills
         budgets: Budgets
+        goals: Goals
         home: Home
         plan: Plan
         reports: Reports
-        goals: Goals
         transactions: Transactions
+      privacy_mode: Toggle privacy mode
+      release_highlight:
+        done: Got it
+        title: What's new
+      resize_left_sidebar: Resize the accounts sidebar
+      resize_right_sidebar: Resize the assistant sidebar
+      skip_to_main: Skip to main content
     auth:
       existing_account: Already have an account?
       no_account: New to %{product_name}?
       sign_in: Sign in
       sign_up: Create account
     shared:
-      footer:
-        privacy_policy: Privacy Policy
-        terms_of_service: Terms of Service
       confirm_dialog:
         are_you_sure: Are you sure?
         cannot_be_undone: This action cannot be undone.
         confirm: Confirm
+      footer:
+        privacy_policy: Privacy Policy
+        terms_of_service: Terms of Service
       notification_tray:
         download_complete: Download complete
         download_failed: Download failed. Please try again.
         download_location: The file is in your Downloads folder.
-        order_save_failed: Couldn't save the new order. Check your connection and try again.
+        order_save_failed: Couldn't confirm that the new order was saved. Check your
+          connection and reload the page to see the saved order.
     trial:
-      open_demo: Open demo
-      data_deleted_in_days: Data deleted in %{days} days
       contribute: Contribute
+      data_deleted_in_days: Data deleted in %{days} days
+      open_demo: Open demo

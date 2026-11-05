@@ -122,6 +122,54 @@ class SortableListTest < ApplicationSystemTestCase
     assert_equal keys.first, page.evaluate_script("document.activeElement.dataset.sectionKey")
   end
 
+  test "a save that fails during a drag puts the order back when the drag ends without a move" do
+    sign_in @user
+    keys = section_keys
+    page.execute_script(<<~JS, keys.first, keys.second)
+      const [firstKey, secondKey] = arguments;
+      const list = document.querySelector(`section[data-section-key='${firstKey}']`).closest("[data-controller~='sortable-list']");
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(list, "sortable-list");
+      window.fetch = () => Promise.reject(new TypeError("Failed to fetch"));
+
+      // A drag is still going on when the save of an earlier move fails.
+      const first = list.querySelector(`[data-section-key='${firstKey}']`);
+      list.querySelector(`[data-section-key='${secondKey}']`).after(first);
+      controller.draggedElement = first;
+      controller.saveOrder().then(() => {
+        document.documentElement.dataset.orderWhileDragging = controller.currentOrder().join(",");
+        controller.dragEnd({ currentTarget: first });
+        document.documentElement.dataset.dragEnded = "true";
+      });
+    JS
+
+    assert_selector "html[data-drag-ended='true']"
+    moved = [ keys.second, keys.first, *keys.drop(2) ]
+    assert_equal moved.join(","), page.evaluate_script("document.documentElement.dataset.orderWhileDragging")
+    assert_equal keys, section_keys
+  end
+
+  test "a failed save goes back to the order a morph brought in" do
+    sign_in @user
+    keys = section_keys
+    page.execute_script(<<~JS, keys.first, keys.second, keys.third)
+      const [firstKey, secondKey, thirdKey] = arguments;
+      const list = document.querySelector(`section[data-section-key='${firstKey}']`).closest("[data-controller~='sortable-list']");
+      const controller = window.Stimulus.getControllerForElementAndIdentifier(list, "sortable-list");
+      const item = (key) => list.querySelector(`[data-section-key='${key}']`);
+
+      // A refresh morph swaps the first two cards; the controller stays.
+      item(secondKey).after(item(firstKey));
+      document.dispatchEvent(new Event("turbo:morph"));
+
+      window.fetch = () => Promise.reject(new TypeError("Failed to fetch"));
+      item(thirdKey).after(item(secondKey));
+      controller.saveOrder().then(() => { document.documentElement.dataset.saveDone = "true"; });
+    JS
+
+    assert_selector "html[data-save-done='true']"
+    assert_equal [ keys.second, keys.first, *keys.drop(2) ], section_keys
+  end
+
   private
     def section_keys
       all("section[data-section-key]").map { |section| section["data-section-key"] }

@@ -48,13 +48,14 @@ pl:
     create:
       success: Trade Republic zapisano. Potwierdź logowanie w aplikacji Trade Republic,
         aby zakończyć łączenie.
-    duplicate_connection: "To konto Trade Republic jest już połączone. Nowe połączenie zostało usunięte."
     defaults:
       name: Trade Republic
     destroy:
       success: Zaplanowano usunięcie połączenia Trade Republic.
       unlink_failed: Nie udało się w pełni rozłączyć Trade Republic. Połączenie zostało
         zachowane, aby można je było bezpiecznie ponowić.
+    duplicate_connection: To konto Trade Republic jest już połączone. Nowe połączenie
+      zostało usunięte.
     initiate_login:
       not_configured: Trade Republic nie jest skonfigurowane.
       pin_required: Podaj swój PIN lub hasło Trade Republic, aby rozpocząć nowe logowanie.
@@ -209,7 +210,7 @@ pl:
       no_accounts_discovered_description: Zakończ logowanie i uruchom synchronizację,
         aby wykryć rachunek.
       requires_update: Wymagana ponowna autoryzacja
-      session_expires_in: "Logowanie wygasa za %{time} (%{at})."
+      session_expires_in: Logowanie wygasa za %{time} (%{at}).
       setup_accounts: Skonfiguruj rachunki
       synced: Zsynchronizowano %{time} temu. %{summary}.
       syncing: Synchronizowanie

@@ -17,7 +17,12 @@ fr:
         add_split: Ajouter une division
         category_label: Catégorie de la division
         fixed_summary_label: fixe
-        hint: Les divisions à montant fixe sont déduites en premier, comme montants exacts. Les divisions en pourcentage se partagent ensuite le reste. Si toutes les divisions utilisent un montant fixe, ajoutez aussi une condition correspondant à un montant de transaction exact (par ex. Montant = 42.00), car chaque transaction correspondante doit avoir le même total pour que les montants fixes tombent juste. Une règle de division ne peut pas avoir d'autres actions.
+        hint: Les divisions à montant fixe sont déduites en premier, comme montants
+          exacts. Les divisions en pourcentage se partagent ensuite le reste. Si toutes
+          les divisions utilisent un montant fixe, ajoutez aussi une condition correspondant
+          à un montant de transaction exact (par ex. Montant = 42.00), car chaque
+          transaction correspondante doit avoir le même total pour que les montants
+          fixes tombent juste. Une règle de division ne peut pas avoir d'autres actions.
         merchant_label: Marchand de la division
         name_placeholder: Nom de la division
         remove_split: Supprimer la division
@@ -52,10 +57,12 @@ fr:
     category_rule_cta:
       close: Fermer
       create_rule: Créer une règle
-      description: Vous pouvez créer une règle pour catégoriser automatiquement les transactions comme celle-ci
+      description: Vous pouvez créer une règle pour catégoriser automatiquement les
+        transactions comme celle-ci
       dont_show_again: Ne plus afficher
       hide_for_today: Masquer pour aujourd'hui
-      hide_for_today_hint: Masquer pour aujourd'hui suspend ces suggestions pendant 24 heures.
+      hide_for_today_hint: Masquer pour aujourd'hui suspend ces suggestions pendant
+        24 heures.
       message: Catégorie changée en %{category_name}
     classifier_rules:
       category_classifier: Classifieur de catégories
@@ -95,7 +102,8 @@ fr:
         one: Cela utilisera l’IA pour catégoriser %{count} transaction.
         other: Cela utilisera l’IA pour catégoriser %{count} transactions.
       ai_cost_title: Estimation des coûts de l'IA
-      ai_cost_with_estimate_html: 'Cela utilisera l’IA pour catégoriser %{count} transaction(s). Coût estimé : <span class="font-semibold">~$%{cost}</span>'
+      ai_cost_with_estimate_html: 'Cela utilisera l’IA pour catégoriser %{count} transaction(s).
+        Coût estimé : <span class="font-semibold">~$%{cost}</span>'
       apply_notice_html: Vous êtes sur le point d'appliquer cette règle aux <span
         class="text-primary font-medium">%{count} %{resource}</span> qui répondent
         aux critères de règle spécifiés. Veuillez confirmer si vous souhaitez procéder
@@ -108,8 +116,10 @@ fr:
       cost_warning: Vous pouvez encourir des frais, veuillez vérifier auprès du fournisseur
         de modèles pour connaître les prix les plus récents.
       rules_above_notice:
-        one: 'La règle active située au-dessus s''exécute en premier : le résultat est donc le même que lors de l''exécution complète.'
-        other: 'Les %{count} règles actives situées au-dessus s''exécutent en premier : le résultat est donc le même que lors de l''exécution complète.'
+        one: 'La règle active située au-dessus s''exécute en premier : le résultat
+          est donc le même que lors de l''exécution complète.'
+        other: 'Les %{count} règles actives situées au-dessus s''exécutent en premier
+          : le résultat est donc le même que lors de l''exécution complète.'
       title: Confirmer les modifications
       title_with_name: Confirmez les modifications apportées à "%{name}"
       view_usage_history: Afficher l'historique d'utilisation
@@ -125,24 +135,33 @@ fr:
       rule_name_label: Nom de la règle (facultatif)
       rule_name_placeholder: Entrez un nom pour cette règle
       starting_from: À partir de
-      stop_processing_description: Les règles situées plus bas dans la liste ne modifient pas les transactions correspondant à cette règle.
+      stop_processing_description: Les règles situées plus bas dans la liste ne modifient
+        pas les transactions correspondant à cette règle.
       stop_processing_label: Arrêter le traitement des règles suivantes
       then: ALORS
     index:
-      ai_cost_warning: Les actions de règles basées sur l’IA coûteront de l’argent. Assurez-vous
-        de filtrer le plus étroitement possible pour éviter des coûts inutiles.
+      ai_cost_warning: Les actions de règles basées sur l’IA coûteront de l’argent.
+        Assurez-vous de filtrer le plus étroitement possible pour éviter des coûts
+        inutiles.
       delete_all_rules: Supprimer toutes les règles
       new_rule: Nouvelle règle
       no_rules_description: Configurez des règles pour effectuer des actions sur vos
         transactions et autres données à chaque synchronisation de compte.
       no_rules_title: Pas encore de règles
-      order_hint: Les règles s'exécutent de haut en bas. Dès qu'une règle définit un champ d'une transaction, les règles situées plus bas ne modifient plus ce champ. Les étiquettes sont ajoutées par chaque règle correspondante. Faites glisser les règles pour changer leur ordre.
+      order_hint: Les règles s'exécutent de haut en bas. Dès qu'une règle définit
+        un champ d'une transaction, les règles situées plus bas ne modifient plus
+        ce champ. Les étiquettes sont ajoutées par chaque règle correspondante. Faites
+        glisser les règles pour changer leur ordre.
       page_title: Règles
-      reorder_rule: Déplacer la règle %{name}. Appuyez sur Entrée ou Espace pour la saisir, puis utilisez les flèches pour la déplacer.
+      reorder_rule: Déplacer la règle %{name}. Appuyez sur Entrée ou Espace pour la
+        saisir, puis utilisez les flèches pour la déplacer.
       rules_heading: Règles
     no_action: Aucune action
     no_condition: Aucune condition
-    notification_baseline_timed_out: Cette règle est toujours désactivée. La vérification des transactions auxquelles elle correspond déjà a pris trop de temps, et sans cette vérification elle enverrait un e-mail pour chacune d'elles. Simplifiez ses conditions, puis réactivez-la.
+    notification_baseline_timed_out: Cette règle est toujours désactivée. La vérification
+      des transactions auxquelles elle correspond déjà a pris trop de temps, et sans
+      cette vérification elle enverrait un e-mail pour chacune d'elles. Simplifiez
+      ses conditions, puis réactivez-la.
     recent_runs:
       columns:
         date_time: Date/Heure
@@ -179,7 +198,8 @@ fr:
       on_or_after: "%{resource} le %{date} ou après"
       re_apply_rule: Réappliquer la règle
       stop_processing: Arrêt
-      stop_processing_hint: Les règles situées plus bas ne modifient pas les transactions correspondant à cette règle.
+      stop_processing_hint: Les règles situées plus bas ne modifient pas les transactions
+        correspondant à cette règle.
       then: ALORS
     update:
       success: Règle mise à jour

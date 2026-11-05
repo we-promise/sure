@@ -2,28 +2,29 @@
 pt-PT:
   account_sharings:
     show:
-      title: Partilha de conta
-      subtitle: Controla quem pode ver e interagir com esta conta
+      exclude_from_finances: Excluir dos meus orçamentos e relatórios
+      finance_toggle_description: Contar esta conta no seu património líquido, orçamentos
+        e relatórios
+      include_in_finances: Incluir nos meus orçamentos e relatórios
       member: Membro
-      permission: Permissão
-      shared: Partilhada
       no_members: Não há outros membros na sua %{moniker} com quem partilhar
+      owner_label: 'Proprietário: %{name}'
+      permission: Permissão
       permissions:
         full_control: Controlo total
         full_control_description: Pode ver, editar e gerir transações
-        read_write: Pode anotar
-        read_write_description: Pode categorizar, etiquetar e adicionar notas
         read_only: Apenas visualização
         read_only_description: Só pode ver os dados da conta
+        read_write: Pode anotar
+        read_write_description: Pode categorizar, etiquetar e adicionar notas
       save: Guardar definições de partilha
-      owner_label: "Proprietário: %{name}"
+      shared: Partilhada
       shared_with_count:
         one: Partilhado com 1 membro
-        other: "Partilhado com %{count} membros"
-      include_in_finances: Incluir nos meus orçamentos e relatórios
-      exclude_from_finances: Excluir dos meus orçamentos e relatórios
-      finance_toggle_description: Contar esta conta no seu património líquido, orçamentos e relatórios
+        other: Partilhado com %{count} membros
+      subtitle: Controla quem pode ver e interagir com esta conta
+      title: Partilha de conta
     update:
-      success: Definições de partilha atualizadas
-      not_owner: Apenas o proprietário da conta pode gerir a partilha
       finance_toggle_success: Preferência de inclusão financeira atualizada
+      not_owner: Apenas o proprietário da conta pode gerir a partilha
+      success: Definições de partilha atualizadas

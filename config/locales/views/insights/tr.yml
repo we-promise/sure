@@ -1,30 +1,27 @@
 ---
 tr:
   insights:
-    notification:
-      title: Yeni finansal içgörü
-      body: En son yapay zekâ içgörünüzü incelemek için Sure'ı açın.
     actions:
       budget: Bütçeyi görüntüle
       cash_flow_warning: Yinelenen işlemleri incele
       idle_cash: Hesaba git
+      maintained_goal_depleted: Rezervi görüntüle
       net_worth_milestone: Net değer raporunu görüntüle
       savings_rate_change: O ayın işlemlerini görüntüle
       spending_anomaly: "%{category} işlemlerini görüntüle"
       subscription_audit: Yinelenen işlemleri incele
-      maintained_goal_depleted: Rezervi görüntüle
     card:
-      acknowledged: "İçgörü yoksayıldı"
+      acknowledge: Anladım
+      acknowledge_title: Rakamlar değişene kadar bunu gizle
+      acknowledged: İçgörü yoksayıldı
       dismiss: Yoksay
       dismissed: İçgörü yoksayıldı
       new: Yeni
-      acknowledge: Anladım
-      acknowledge_title: Rakamlar değişene kadar bunu gizle
     feed:
+      acknowledge_aria: 'Anladım: %{title}'
       header: Son
       header_new: Yeni
       view_all: Tüm içgörüleri görüntüle
-      acknowledge_aria: 'Anladım: %{title}'
     figures:
       days_overdue:
         one: "%{count} gün gecikti"
@@ -32,11 +29,11 @@ tr:
       idle_days:
         one: "%{count} gündür hareketsiz"
         other: "%{count} gündür hareketsiz"
+      need_attention: dikkat gerektiriyor
       of_budget: bütçenin
       on_pace: bu tempoda
       today: bugün
       vs_previous: önceki aya göre
-      need_attention: dikkat gerektiriyor
     index:
       empty:
         description: Hesaplarınızda yeterli hareket olduğunda içgörüler burada görünür.
@@ -53,6 +50,9 @@ tr:
       next_n_days:
         one: Sonraki gün
         other: Sonraki %{count} gün
+    notification:
+      body: En son yapay zekâ içgörünüzü incelemek için Sure'ı açın.
+      title: Yeni finansal içgörü
     refresh:
       checking: Kontrol ediliyor…
       queued: Yeni içgörüler oluşturuyoruz. Bir dakika sonra tekrar kontrol edin.
@@ -72,6 +72,8 @@ tr:
           kadar gerileyebilir.
       idle_cash: "%{account} hesabında son %{idle_days} gündür herhangi bir hareket
         olmadan %{balance} bulunuyor."
+      maintained_goal_depleted: "%{goal}, korunması gereken %{target} tutarının %{saved}
+        kadarını tutuyor. %{missing} eksik."
       net_worth_milestone: Net değeriniz %{milestone} sınırını geçti ve şu anda %{net_worth}
         seviyesinde.
       savings_rate_change:
@@ -90,7 +92,6 @@ tr:
           daha az.
       subscription_audit: "%{name} (%{amount}), %{expected_on} tarihinde beklenmesine
         rağmen görünmedi. İptal edilmiş olabilir veya ödeme tarihi değişmiş olabilir."
-      maintained_goal_depleted: '%{goal}, korunması gereken %{target} tutarının %{saved} kadarını tutuyor. %{missing} eksik.'
     titles:
       budget_at_risk:
         one: Bütçenizde bir kategori dikkat gerektiriyor
@@ -100,6 +101,7 @@ tr:
         low: Nakit bakiyeniz azalabilir
         negative: Nakit bakiyeniz eksiye düşebilir
       idle_cash: "%{account} hesabında hareketsiz nakit"
+      maintained_goal_depleted: "%{goal} olması gereken seviyenin altına düştü"
       net_worth_milestone: 'Net değer kilometre taşı: %{milestone}'
       savings_rate_change:
         down: Tasarruf oranınız %{month} ayında düştü
@@ -108,14 +110,13 @@ tr:
         above: "%{category} harcamaları artış eğiliminde"
         below: "%{category} harcamaları azalış eğiliminde"
       subscription_audit: "%{name} hâlâ aktif mi?"
-      maintained_goal_depleted: '%{goal} olması gereken seviyenin altına düştü'
     types:
       budget_at_risk: Bütçe
       budget_on_track: Bütçe
       cash_flow_warning: Nakit akışı
       idle_cash: Hareketsiz nakit
+      maintained_goal_depleted: Rezerv
       net_worth_milestone: Net değer
       savings_rate_change: Tasarruf oranı
       spending_anomaly: Harcama
       subscription_audit: Abonelikler
-      maintained_goal_depleted: Rezerv

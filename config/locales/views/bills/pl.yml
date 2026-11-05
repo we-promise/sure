@@ -9,13 +9,13 @@ pl:
       safe_to_spend: Ile mogę bezpiecznie wydać w tym okresie?
       subscriptions_up: Które subskrypcje podrożały w tym roku?
     all:
-      current_bills: Bieżące rachunki
-      dismissed_hidden_description: Zakończone rachunki są ukryte.
       any_type: Dowolny typ
       col_actions: Akcje
       col_amount: Kwota
       col_name: Nazwa
       col_next: Następny termin
+      current_bills: Bieżące rachunki
+      dismissed_hidden_description: Zakończone rachunki są ukryte.
       monthly_equivalent: "%{amount}/mies."
       no_matches_description: Spróbuj wyczyścić filtr lub wyszukiwanie.
       no_matches_title: Brak wyników
@@ -167,11 +167,11 @@ pl:
         one: 1 wymaga uwagi
         other: "%{count} wymaga uwagi"
       needs_attention: Wymaga uwagi
-      notices_heading: Zmiany
       needs_review: Wymaga sprawdzenia
       notice_price: "%{name}: zmiana ceny %{from} → %{to} (%{percent})"
       notice_renewal: "%{name} odnawia się %{date}"
       notice_trial: Okres próbny %{name} kończy się %{date}
+      notices_heading: Zmiany
       notices_routine:
         few: "%{count} mniejsze zmiany"
         many: "%{count} mniejszych zmian"
@@ -283,17 +283,17 @@ pl:
         many: Rachunki w tym okresie · %{count}
         one: Rachunki w tym okresie · 1
         other: Rachunki w tym okresie · %{count}
+      bridge_allocation_aria: Z %{cash} na Twoich kontach %{due} jest do zapłaty przed
+        następną wypłatą, a zostaje %{left}.
       bridge_amount: "· do zapłaty %{amount}"
       bridge_label: Przed następną wypłatą
-      bridge_split: Termin przed %{date}, pokryte przez %{cash} na Twoich kontach.
       bridge_left: "%{amount} zostaje po rachunkach"
       bridge_show_more:
-        few: "Pokaż %{count} więcej"
-        many: "Pokaż %{count} więcej"
+        few: Pokaż %{count} więcej
+        many: Pokaż %{count} więcej
         one: Pokaż 1 więcej
-        other: "Pokaż %{count} więcej"
-      bridge_allocation_aria: "Z %{cash} na Twoich kontach %{due} jest do zapłaty przed następną wypłatą, a zostaje %{left}."
-      item_overdue: Zaległe
+        other: Pokaż %{count} więcej
+      bridge_split: Termin przed %{date}, pokryte przez %{cash} na Twoich kontach.
       due_this_period: Termin w tym okresie
       empty:
         action: Dodaj przychód
@@ -310,6 +310,7 @@ pl:
         many: "%{count} źródeł dochodu"
         one: "%{count} źródło dochodu"
         other: "%{count} źródeł dochodu"
+      item_overdue: Zaległe
       manage: Zarządzaj
       next_on: Następna %{date}
       no_income_arriving: Brak wpływających przychodów

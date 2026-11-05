@@ -57,7 +57,8 @@ fr:
       loading_title: Chargement
     panel:
       disconnect: Déconnecter
-      disconnect_confirm: Déconnecter Questrade ? Cette action supprime la connexion et délie les comptes qu'elle synchronisait.
+      disconnect_confirm: Déconnecter Questrade ? Cette action supprime la connexion
+        et délie les comptes qu'elle synchronisait.
       eyebrow: Configuration · ordinateur uniquement
       field_descriptions: 'Description des champs :'
       fields:
@@ -82,22 +83,27 @@ fr:
         <a href="%{accounts_path}" class="link">Comptes</a> pour gérer et configurer
         les comptes.
       status_not_configured: Non configuré
-      step_1: Rendez-vous sur votre tableau de bord Questrade pour récupérer vos
-        identifiants
+      step_1: Rendez-vous sur votre tableau de bord Questrade pour récupérer vos identifiants
       step_2: Saisissez vos identifiants ci-dessous et cliquez sur le bouton Enregistrer
-      step_3: Après une connexion réussie, rendez-vous sur l'onglet Comptes pour
-        configurer les nouveaux comptes
+      step_3: Après une connexion réussie, rendez-vous sur l'onglet Comptes pour configurer
+        les nouveaux comptes
       steps:
-        s1_html: Connectez-vous au <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">portail Questrade</a> depuis un navigateur sur ordinateur. Les paramètres d'API ne sont pas disponibles dans l'application mobile.
-        s2: Ouvrez les paramètres, puis, dans les paramètres généraux, modifiez les paramètres de l'API IQ.
-        s3_html: Dans la fenêtre d'accès à l'API, cliquez sur <strong>Manage</strong> sous <strong>My applications</strong>.
-        s4: Enregistrez une application personnelle avec un nom et une description, puis validez.
+        s1_html: Connectez-vous au <a href="https://my.questrade.com" target="_blank"
+          rel="noopener noreferrer" class="text-primary font-medium underline">portail
+          Questrade</a> depuis un navigateur sur ordinateur. Les paramètres d'API
+          ne sont pas disponibles dans l'application mobile.
+        s2: Ouvrez les paramètres, puis, dans les paramètres généraux, modifiez les
+          paramètres de l'API IQ.
+        s3_html: Dans la fenêtre d'accès à l'API, cliquez sur <strong>Manage</strong>
+          sous <strong>My applications</strong>.
+        s4: Enregistrez une application personnelle avec un nom et une description,
+          puis validez.
         s5: Ajoutez un nouvel appareil et générez un jeton.
         s6: Collez le jeton généré ci-dessous et enregistrez.
-      token_refresh_hint: Les jetons Questrade se renouvellent automatiquement à
-        chaque synchronisation de vos comptes. Si une connexion reste inutilisée
-        pendant plus de 7 jours et devient obsolète, collez un nouveau jeton ici
-        pour la réactiver sans la déconnecter.
+      token_refresh_hint: Les jetons Questrade se renouvellent automatiquement à chaque
+        synchronisation de vos comptes. Si une connexion reste inutilisée pendant
+        plus de 7 jours et devient obsolète, collez un nouveau jeton ici pour la réactiver
+        sans la déconnecter.
       update_button: Mettre à jour la configuration
     preload_accounts:
       no_credentials_configured: Veuillez d'abord configurer vos identifiants Questrade
@@ -130,13 +136,13 @@ fr:
       accounts_selected: comptes sélectionnés
       api_error: 'Erreur API : %{message}'
       cancel: Annuler
-      configure_name_in_provider: Impossible d'importer - veuillez configurer le
-        nom du compte dans Questrade
+      configure_name_in_provider: Impossible d'importer - veuillez configurer le nom
+        du compte dans Questrade
       description: Sélectionnez les comptes que vous souhaitez lier à votre compte
         %{product_name}.
       link_accounts: Lier les comptes sélectionnés
-      no_accounts_found: Aucun compte trouvé. Veuillez vérifier la configuration
-        de votre clé API.
+      no_accounts_found: Aucun compte trouvé. Veuillez vérifier la configuration de
+        votre clé API.
       no_api_key: La clé API Questrade n'est pas configurée. Veuillez la configurer
         dans les Paramètres.
       no_credentials_configured: Veuillez d'abord configurer vos identifiants Questrade
@@ -153,8 +159,8 @@ fr:
         link: Lier
       cancel: Annuler
       cancel_button: Annuler
-      configure_name_in_provider: Impossible d'importer - veuillez configurer le
-        nom du compte dans Questrade
+      configure_name_in_provider: Impossible d'importer - veuillez configurer le nom
+        du compte dans Questrade
       connect_hint: Connectez un compte Questrade pour activer la synchronisation
         automatique.
       description: Sélectionnez un compte Questrade à lier avec ce compte. Les transactions

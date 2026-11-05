@@ -1,4 +1,5 @@
 ---
 tr:
   passkey_sessions:
-    invalid_credential: Bu geçiş anahtarıyla giriş yapılamadı. Lütfen tekrar deneyin veya şifrenizi kullanın.
+    invalid_credential: Bu geçiş anahtarıyla giriş yapılamadı. Lütfen tekrar deneyin
+      veya şifrenizi kullanın.

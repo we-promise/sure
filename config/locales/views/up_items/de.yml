@@ -104,7 +104,8 @@ de:
       delete: Löschen
       deletion_in_progress: Wird gelöscht
       error: Fehler
-      no_accounts_description: Ruf die Up-Konten ab und wähl aus, welche verknüpft werden sollen.
+      no_accounts_description: Ruf die Up-Konten ab und wähl aus, welche verknüpft
+        werden sollen.
       no_accounts_title: Noch keine Konten importiert
       setup_action: Konten einrichten
       setup_description: "%{linked} von %{total} Konten verknüpft."

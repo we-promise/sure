@@ -171,7 +171,8 @@ fr:
   mcp:
     errors:
       invalid_session_id: Identifiant de session MCP invalide
-      unsupported_protocol_version: 'Version du protocole MCP non prise en charge : %{version}'
+      unsupported_protocol_version: 'Version du protocole MCP non prise en charge
+        : %{version}'
   number:
     currency:
       format:
@@ -224,9 +225,12 @@ fr:
         delimiter: ''
   oauth:
     registration:
-      invalid_client_name: client_name ne doit pas contenir de caractères de contrôle bidirectionnels
-      invalid_redirect_uris: redirect_uris doit utiliser https, http en loopback ou un schéma d'URI d'application native
-      reserved_client_name: client_name est réservé aux applications officielles de Sure
+      invalid_client_name: client_name ne doit pas contenir de caractères de contrôle
+        bidirectionnels
+      invalid_redirect_uris: redirect_uris doit utiliser https, http en loopback ou
+        un schéma d'URI d'application native
+      reserved_client_name: client_name est réservé aux applications officielles de
+        Sure
   support:
     array:
       last_word_connector: " et "

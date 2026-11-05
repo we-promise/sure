@@ -2,5 +2,5 @@
 zh-CN:
   messages:
     chat_form:
-      placeholder: 任何问题都可以问……
       disclaimer: AI 回复仅供参考，不构成财务建议！
+      placeholder: 任何问题都可以问……

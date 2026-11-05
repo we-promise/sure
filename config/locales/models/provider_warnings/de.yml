@@ -1,4 +1,7 @@
 ---
 de:
   provider_warnings:
-    limited_investment_data: Dieser Anbieter liefert nur eingeschränkte Investmentdaten. Kennzeichnungen wie Kauf, Verkauf oder Dividende fehlen, was die Budgetgenauigkeit beeinträchtigen kann. Leg dir Regeln an, um Investment-Transaktionen auszuschließen oder zu kategorisieren.
+    limited_investment_data: Dieser Anbieter liefert nur eingeschränkte Investmentdaten.
+      Kennzeichnungen wie Kauf, Verkauf oder Dividende fehlen, was die Budgetgenauigkeit
+      beeinträchtigen kann. Leg dir Regeln an, um Investment-Transaktionen auszuschließen
+      oder zu kategorisieren.

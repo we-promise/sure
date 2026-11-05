@@ -1,3 +1,4 @@
+---
 uk:
   tags:
     create:
@@ -12,10 +13,10 @@ uk:
     form:
       placeholder: Назва тегу
     index:
+      delete_all: Видалити всі
       empty: Тегів ще немає
       new: Новий тег
       tags: Теги
-      delete_all: Видалити всі
     new:
       new: Новий тег
     tag:

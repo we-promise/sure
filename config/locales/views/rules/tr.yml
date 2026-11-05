@@ -2,6 +2,8 @@
 tr:
   rule:
     conditions:
+      condition:
+        value_placeholder: Bir değer girin
       condition_group:
         add_condition: Koşul ekle
         all: tümü
@@ -9,12 +11,10 @@ tr:
         any: herhangi biri
         match: eşleşsin
         of_the_following_conditions: aşağıdaki koşullardan
-      condition:
-        value_placeholder: Bir değer girin
   rules:
     actions:
-      value_placeholder: Bir değer girin
       to_label: değer
+      value_placeholder: Bir değer girin
     apply_all:
       ai_cost_message: Bu işlem, %{transactions} adede kadar işlemi kategorize etmek
         için yapay zeka kullanacak.
@@ -41,23 +41,23 @@ tr:
       confirm_title: Yapay zeka önbelleği sıfırlansın mı?
       success: Yapay zeka önbelleği temizleniyor. Bu birkaç dakika sürebilir.
     condition_filters:
+      operators:
+        contains: İçerir
+        does_not_contain: İçermez
+        equal_to: Eşittir
+        greater_or_equal_to: Büyük veya eşittir
+        greater_than: Büyüktür
+        is_empty: Boş
+        is_equal_to: Eşittir
+        is_not_empty: Boş değil
+        less_than: Küçüktür
+        less_than_or_equal_to: Küçük veya eşittir
+        not_equal_to: Eşit değildir
       transaction_type:
         equal_to: Eşittir
         expense: Gider
         income: Gelir
         transfer: Transfer
-      operators:
-        contains: İçerir
-        does_not_contain: İçermez
-        equal_to: Eşittir
-        is_equal_to: Eşittir
-        not_equal_to: Eşit değildir
-        is_empty: Boş
-        is_not_empty: Boş değil
-        greater_than: Büyüktür
-        greater_or_equal_to: Büyük veya eşittir
-        less_than: Küçüktür
-        less_than_or_equal_to: Küçük veya eşittir
     confirm:
       ai_cost_no_estimate_html: Bu işlem, %{count} işlemi kategorize etmek için yapay
         zeka kullanacak.
@@ -100,7 +100,7 @@ tr:
       no_rules_title: Henüz kural yok
       page_title: Kurallar
       rules_heading: Kurallar
-    no_action: "Eylem yok"
+    no_action: Eylem yok
     no_condition: Koşul yok
     recent_runs:
       columns:
@@ -128,10 +128,10 @@ tr:
       action_label_to: "%{label} - %{value}"
       all_past_and_future: Geçmişteki ve gelecekteki tüm %{resource}
       and_more_actions:
-        one: "ve %{count} eylem daha"
+        one: ve %{count} eylem daha
         other: ve %{count} eylem daha
       and_more_conditions:
-        one: "ve %{count} koşul daha"
+        one: ve %{count} koşul daha
         other: ve %{count} koşul daha
       delete: Sil
       edit: Düzenle

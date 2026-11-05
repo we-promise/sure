@@ -1,3 +1,4 @@
+---
 uk:
   helpers:
     label:
@@ -15,16 +16,17 @@ uk:
     new:
       invitation_message: "%{inviter} запросив вас приєднатися як %{role}"
       join_family_title: Приєднатися до %{family} %{moniker}
+      password_placeholder: Введіть свій пароль
+      password_requirements:
+        case: Великі та малі літери
+        length: Мінімум 8 символів
+        number: Цифра (0-9)
+        special: 'Спеціальний символ (!, @, #, $, %, тощо)'
       role_admin: адміністратор
       role_guest: гість
       role_member: учасник
       submit: Створити обліковий запис
       title: Створіть свій обліковий запис
-      welcome_body: Щоб розпочати, ви повинні зареєструвати новий обліковий запис. Потім ви зможете налаштувати додаткові параметри в програмі.
+      welcome_body: Щоб розпочати, ви повинні зареєструвати новий обліковий запис.
+        Потім ви зможете налаштувати додаткові параметри в програмі.
       welcome_title: Ласкаво просимо до Self Hosted %{product_name}!
-      password_placeholder: Введіть свій пароль
-      password_requirements:
-        length: Мінімум 8 символів
-        case: Великі та малі літери
-        number: Цифра (0-9)
-        special: "Спеціальний символ (!, @, #, $, %, тощо)"

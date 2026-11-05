@@ -2,8 +2,10 @@
 en:
   other_assets:
     edit:
+      balance_tracking_info: Other Assets are tracked via manual valuations using
+        'New Balance', not transactions. Cashflow will not affect the account balance.
       edit: Edit %{account}
-      balance_tracking_info: "Other Assets are tracked via manual valuations using 'New Balance', not transactions. Cashflow will not affect the account balance."
     new:
+      balance_tracking_info: Other Assets are tracked via manual valuations using
+        'New Balance', not transactions. Cashflow will not affect the account balance.
       title: Enter asset details
-      balance_tracking_info: "Other Assets are tracked via manual valuations using 'New Balance', not transactions. Cashflow will not affect the account balance."

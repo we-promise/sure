@@ -14,6 +14,7 @@ ru:
       invalid_account: Выбран недействительный счёт Plaid
       success: Счёт успешно привязан к Plaid
     plaid_item:
+      add_accounts: Добавить счета
       add_new: Добавить новое подключение
       confirm_accept: Удалить учреждение
       confirm_body: Это навсегда удалит все счета в этой группе и все связанные данные.
@@ -27,13 +28,12 @@ ru:
       error: Произошла ошибка при синхронизации данных
       no_accounts_description: Мы не смогли загрузить счета из этого финансового учреждения.
       no_accounts_title: Счета не найдены
+      provider_name: Plaid
       requires_update: Переподключить
       status: Последняя синхронизация %{timestamp} назад
       status_never: Требуется синхронизация данных
       syncing: Синхронизация...
       update: Обновить
-      add_accounts: Добавить счета
-      provider_name: Plaid
     select_existing_account:
       cancel: Отмена
       description: Выберите счёт Plaid для привязки к вашему существующему счёту

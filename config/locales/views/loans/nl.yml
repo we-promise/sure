@@ -4,122 +4,151 @@ nl:
     edit:
       edit: "%{account} bewerken"
     form:
-      interest_rate: "Rentepercentage"
-      interest_rate_placeholder: "5.25"
-      initial_balance: "Oorspronkelijke leningbalans"
-      day_count_convention: "Rentegrondslag"
-      day_count_convention_actual_365: "Actual/365"
-      day_count_convention_actual_actual: "Actual/actual"
-      day_count_convention_hint: "Hoe uw geldverstrekker elke periode afzet tegen een jaar. Actual/365 rekent naar de lengte van de maand en is standaard voor Britse en Australische hypotheken. 30/360 rekent een vast twaalfde, de grondslag die Sure altijd heeft gebruikt."
-      day_count_convention_thirty_360: "30/360 (een vast twaalfde)"
-      rate_type: "Rentetype"
-      term_months: "Looptijd (maanden)"
-      term_months_placeholder: "360"
-      none: "Geen"
-      subtype_prompt: "Selecteer type lening"
-      subtype_none: "Geen"
-      rate_type_adjustable: "Aanpasbaar"
-      rate_type_fixed: "Vast"
-      rate_type_variable: "Variabel"
-      rate_changes: "Rentewijzigingen"
-      rate_changes_hint: "Elke rij stelt de rente in die geldt vanaf de ingangsdatum tot de volgende. Een datum opnieuw invoeren vervangt die rij in plaats van een tweede toe te voegen."
-      rate_changes_empty: "Geen rentewijzigingen vastgelegd. De lening loopt tegen het rentepercentage hierboven."
-      rate_change_effective_date: "Ingangsdatum"
-      rate_change_rate: "Rente"
-      rate_change_add: "Rentewijziging toevoegen"
-      rate_change_remove: "Verwijderen"
-      start_date: "Ingangsdatum lening"
-      start_date_hint: "Wanneer de lening is opgenomen. De saldogeschiedenis van een nieuwe lening begint op deze datum, niet op de datum van het beginsaldo. Laat leeg om de datum van het beginsaldo te gebruiken."
-      down_payment: "Aanbetaling"
-      insurance_rate: "Verzekeringstarief"
-      insurance_rate_placeholder: "0.36"
-      insurance_rate_hint: "Een jaartarief, maandelijks in rekening gebracht naast de aflossing. Bij een gelijkblijvende looptijdverzekering wordt het berekend over het oorspronkelijke saldo; bij een dalende over wat nog verschuldigd is."
-      insurance_rate_type: "Type verzekering"
-      insurance_rate_type_decreasing_life: "Dalend"
-      insurance_rate_type_level_term: "Gelijkblijvend"
+      day_count_convention: Rentegrondslag
+      day_count_convention_actual_365: Actual/365
+      day_count_convention_actual_actual: Actual/actual
+      day_count_convention_hint: Hoe uw geldverstrekker elke periode afzet tegen een
+        jaar. Actual/365 rekent naar de lengte van de maand en is standaard voor Britse
+        en Australische hypotheken. 30/360 rekent een vast twaalfde, de grondslag
+        die Sure altijd heeft gebruikt.
+      day_count_convention_thirty_360: 30/360 (een vast twaalfde)
+      down_payment: Aanbetaling
+      initial_balance: Oorspronkelijke leningbalans
+      insurance_rate: Verzekeringstarief
+      insurance_rate_hint: Een jaartarief, maandelijks in rekening gebracht naast
+        de aflossing. Bij een gelijkblijvende looptijdverzekering wordt het berekend
+        over het oorspronkelijke saldo; bij een dalende over wat nog verschuldigd
+        is.
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_type: Type verzekering
+      insurance_rate_type_decreasing_life: Dalend
+      insurance_rate_type_level_term: Gelijkblijvend
+      interest_rate: Rentepercentage
+      interest_rate_placeholder: '5.25'
+      none: Geen
+      rate_change_add: Rentewijziging toevoegen
+      rate_change_effective_date: Ingangsdatum
+      rate_change_rate: Rente
+      rate_change_remove: Verwijderen
+      rate_changes: Rentewijzigingen
+      rate_changes_empty: Geen rentewijzigingen vastgelegd. De lening loopt tegen
+        het rentepercentage hierboven.
+      rate_changes_hint: Elke rij stelt de rente in die geldt vanaf de ingangsdatum
+        tot de volgende. Een datum opnieuw invoeren vervangt die rij in plaats van
+        een tweede toe te voegen.
+      rate_type: Rentetype
+      rate_type_adjustable: Aanpasbaar
+      rate_type_fixed: Vast
+      rate_type_variable: Variabel
+      start_date: Ingangsdatum lening
+      start_date_hint: Wanneer de lening is opgenomen. De saldogeschiedenis van een
+        nieuwe lening begint op deze datum, niet op de datum van het beginsaldo. Laat
+        leeg om de datum van het beginsaldo te gebruiken.
+      subtype_none: Geen
+      subtype_prompt: Selecteer type lening
+      term_months: Looptijd (maanden)
+      term_months_placeholder: '360'
     new:
-      title: "Voer leninggegevens in"
+      title: Voer leninggegevens in
     overview:
-      interest_rate: "Rentepercentage"
-      monthly_payment: "Maandelijkse betaling"
-      not_applicable: "N.v.t."
-      original_payoff_date: "Oorspronkelijke einddatum"
-      original_principal: "Oorspronkelijke hoofdsom"
-      remaining_principal: "Resterende hoofdsom"
-      term: "Looptijd"
-      type: "Type"
-      unknown: "Onbekend"
+      interest_rate: Rentepercentage
+      monthly_payment: Maandelijkse betaling
+      not_applicable: N.v.t.
+      original_payoff_date: Oorspronkelijke einddatum
+      original_principal: Oorspronkelijke hoofdsom
+      remaining_principal: Resterende hoofdsom
+      term: Looptijd
+      type: Type
+      unknown: Onbekend
     tabs:
       extra_repayments:
-        amount_label: "Extra aflossing"
-        amount_placeholder: "0.00"
-        apply: "Toepassen"
-        baseline_not_cleared: "Bij de huidige aflossing is deze lening niet afbetaald op de oorspronkelijke einddatum en zou er nog %{balloon} verschuldigd zijn, dus er is geen eerdere datum of rentebesparing om mee te vergelijken. Met deze extra aflossing is de lening afbetaald op de datum hierboven."
-        clear: "Wissen"
-        comparison_basis: "Vergeleken met het betalen van de huidige aflossing zonder extra, vanaf het saldo van vandaag."
-        dated_note: "Wekelijkse en tweewekelijkse extra aflossingen worden meegeteld bij de eerstvolgende aflossing nadat ze zijn betaald, dus de bespaarde rente is eerder te laag dan te hoog ingeschat."
-        extra_not_cleared: "Zelfs met deze extra aflossing is de lening niet afbetaald op de oorspronkelijke einddatum. Probeer een hoger bedrag."
+        amount_label: Extra aflossing
+        amount_placeholder: '0.00'
+        apply: Toepassen
+        baseline_not_cleared: Bij de huidige aflossing is deze lening niet afbetaald
+          op de oorspronkelijke einddatum en zou er nog %{balloon} verschuldigd zijn,
+          dus er is geen eerdere datum of rentebesparing om mee te vergelijken. Met
+          deze extra aflossing is de lening afbetaald op de datum hierboven.
+        clear: Wissen
+        comparison_basis: Vergeleken met het betalen van de huidige aflossing zonder
+          extra, vanaf het saldo van vandaag.
+        dated_note: Wekelijkse en tweewekelijkse extra aflossingen worden meegeteld
+          bij de eerstvolgende aflossing nadat ze zijn betaald, dus de bespaarde rente
+          is eerder te laag dan te hoog ingeschat.
+        extra_not_cleared: Zelfs met deze extra aflossing is de lening niet afbetaald
+          op de oorspronkelijke einddatum. Probeer een hoger bedrag.
         frequencies:
-          fortnightly: "Tweewekelijks"
-          monthly: "Maandelijks"
-          weekly: "Wekelijks"
-        frequency_label: "Hoe vaak"
-        interest_saved: "Bespaarde rente"
-        intro: "Bekijk hoeveel eerder de lening is afbetaald, en hoeveel rente u bespaart, als u elke week, twee weken of maand een extra bedrag bovenop uw aflossingen betaalt."
-        invalid_amount: "Voer een bedrag van nul of meer in, in cijfers."
-        invalid_frequency: "Kies wekelijks, tweewekelijks of maandelijks."
+          fortnightly: Tweewekelijks
+          monthly: Maandelijks
+          weekly: Wekelijks
+        frequency_label: Hoe vaak
+        interest_saved: Bespaarde rente
+        intro: Bekijk hoeveel eerder de lening is afbetaald, en hoeveel rente u bespaart,
+          als u elke week, twee weken of maand een extra bedrag bovenop uw aflossingen
+          betaalt.
+        invalid_amount: Voer een bedrag van nul of meer in, in cijfers.
+        invalid_frequency: Kies wekelijks, tweewekelijks of maandelijks.
         months_sooner:
-          zero: "Afbetaald in dezelfde maand"
           one: "%{count} maand eerder"
           other: "%{count} maanden eerder"
-        no_scheduled_repayments: "Er staan geen geplande aflossingen meer op deze lening, maar er is nog een saldo verschuldigd, dus er is geen aflossing om een extra bedrag aan toe te voegen."
-        not_applicable: "Er valt niets meer af te lossen op deze lening, dus er is geen extra aflossing om door te rekenen."
-        payoff_with_extra: "Afbetaling met extra"
-        total_cost: "Totale kosten vanaf vandaag"
-        total_cost_not_cleared: "Niet afbetaald op de oorspronkelijke einddatum"
+          zero: Afbetaald in dezelfde maand
+        no_scheduled_repayments: Er staan geen geplande aflossingen meer op deze lening,
+          maar er is nog een saldo verschuldigd, dus er is geen aflossing om een extra
+          bedrag aan toe te voegen.
+        not_applicable: Er valt niets meer af te lossen op deze lening, dus er is
+          geen extra aflossing om door te rekenen.
+        payoff_with_extra: Afbetaling met extra
+        total_cost: Totale kosten vanaf vandaag
+        total_cost_not_cleared: Niet afbetaald op de oorspronkelijke einddatum
         total_cost_saved: "%{amount} minder dan zonder extra"
-        variable_rate_notice: "De rente van deze lening verandert in de loop van de tijd. Deze cijfers gebruiken de rentewijzigingen die al zijn vastgelegd; een wijziging die nog niet is vastgelegd, zal ze verschuiven."
-      repayment_progress:
-        instalment: "Betaling %{number} · %{date}"
-        insurance: "Verzekering"
-        interest: "Rente"
-        of_original: "van %{amount}"
-        principal: "Hoofdsom"
-        repaid: "Afgelost"
-        total: "Totaal"
-      schedule:
-        date: "Datum"
-        description: "Berekend op basis van het oorspronkelijke saldo, de rente en de looptijd, vanaf %{start_date}. Extra betalingen zijn niet meegenomen."
-        variable_rate_notice: "De rente van deze lening verandert in de loop van de tijd. Het schema wordt bij elke vastgelegde wijziging opnieuw berekend, met behoud van de oorspronkelijke einddatum en een aangepaste aflossing; een wijziging die nog niet is vastgelegd, zal deze cijfers verschuiven."
-        opening_payment: "Eerste betaling"
-        forecasted_payoff_date: "Verwachte einddatum"
-        forecasted_payoff_not_converged: "Niet afbetaald bij de huidige aflossing"
-        interest: "Rente"
-        monthly_payment: "Maandelijkse betaling"
-        not_applicable: "N.v.t."
-        number: "#"
-        payment: "Betaling"
-        principal: "Hoofdsom"
-        remaining_balance: "Resterend saldo"
-        total_cost: "Totale kosten"
-        total_interest: "Totale rente"
+        variable_rate_notice: De rente van deze lening verandert in de loop van de
+          tijd. Deze cijfers gebruiken de rentewijzigingen die al zijn vastgelegd;
+          een wijziging die nog niet is vastgelegd, zal ze verschuiven.
       overview:
+        edit_loan_details: Leninggegevens bewerken
         insurance_rate_only: "%{rate} per jaar"
-        interest_rate: "Rentepercentage"
-        leverage: "Hefboom"
-        leverage_band_conservative: "Conservatief"
-        leverage_band_high: "Hoog"
-        leverage_band_moderate: "Gemiddeld"
+        interest_rate: Rentepercentage
+        leverage: Hefboom
+        leverage_band_conservative: Conservatief
+        leverage_band_high: Hoog
+        leverage_band_moderate: Gemiddeld
         leverage_multiple: "%{ratio}x"
-        monthly_payment: "Maandelijkse betaling"
-        not_applicable: "N.v.t."
-        original_payoff_date: "Oorspronkelijke einddatum"
-        original_principal: "Oorspronkelijk leenbedrag"
-        remaining_principal: "Resterend leenbedrag"
-        total_cost: "Totale kosten"
-        total_cost_with_insurance: "Totale kosten incl. verzekering"
-        total_insurance: "Verzekering"
-        term: "Looptijd"
-        type: "Type"
-        unknown: "Onbekend"
-        edit_loan_details: "Leninggegevens bewerken"
+        monthly_payment: Maandelijkse betaling
+        not_applicable: N.v.t.
+        original_payoff_date: Oorspronkelijke einddatum
+        original_principal: Oorspronkelijk leenbedrag
+        remaining_principal: Resterend leenbedrag
+        term: Looptijd
+        total_cost: Totale kosten
+        total_cost_with_insurance: Totale kosten incl. verzekering
+        total_insurance: Verzekering
+        type: Type
+        unknown: Onbekend
+      repayment_progress:
+        instalment: Betaling %{number} · %{date}
+        insurance: Verzekering
+        interest: Rente
+        of_original: van %{amount}
+        principal: Hoofdsom
+        repaid: Afgelost
+        total: Totaal
+      schedule:
+        date: Datum
+        description: Berekend op basis van het oorspronkelijke saldo, de rente en
+          de looptijd, vanaf %{start_date}. Extra betalingen zijn niet meegenomen.
+        forecasted_payoff_date: Verwachte einddatum
+        forecasted_payoff_not_converged: Niet afbetaald bij de huidige aflossing
+        interest: Rente
+        monthly_payment: Maandelijkse betaling
+        not_applicable: N.v.t.
+        number: "#"
+        opening_payment: Eerste betaling
+        payment: Betaling
+        principal: Hoofdsom
+        remaining_balance: Resterend saldo
+        total_cost: Totale kosten
+        total_interest: Totale rente
+        variable_rate_notice: De rente van deze lening verandert in de loop van de
+          tijd. Het schema wordt bij elke vastgelegde wijziging opnieuw berekend,
+          met behoud van de oorspronkelijke einddatum en een aangepaste aflossing;
+          een wijziging die nog niet is vastgelegd, zal deze cijfers verschuiven.

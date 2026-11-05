@@ -4,4 +4,5 @@ es:
     errors:
       models:
         api_key:
-          cannot_destroy_demo_key: No se puede eliminar la clave de API de monitorización de demostración
+          cannot_destroy_demo_key: No se puede eliminar la clave de API de monitorización
+            de demostración

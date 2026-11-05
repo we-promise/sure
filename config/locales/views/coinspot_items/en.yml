@@ -1,92 +1,98 @@
 ---
 en:
-  coinspot_items:
-    provider_connection:
-      default_name: CoinSpot
-      default_description: Link to a CoinSpot exchange account
-      name: "CoinSpot - %{name}"
-      description: "Link to %{name}"
-    create:
-      default_name: CoinSpot
-      success: Successfully connected to CoinSpot. Your exchange account is being synced.
-    update:
-      success: Successfully updated CoinSpot connection.
-    destroy:
-      success: Scheduled CoinSpot connection for deletion.
-      unlink_failed: Could not disconnect CoinSpot connection
-    select_accounts:
-      select_connection: Choose a CoinSpot connection in Provider Settings.
-      no_credentials_configured: Add CoinSpot API credentials before setting up accounts.
-    link_accounts:
-      select_connection: Choose a CoinSpot connection before linking accounts.
-    select_existing_account:
-      title: Link CoinSpot Account
-      no_accounts_found: No CoinSpot accounts found.
-      wait_for_sync: Wait for CoinSpot to finish syncing.
-      check_provider_health: Check that your CoinSpot API credentials are valid.
-      link: Link
-      cancel: Cancel
-    link_existing_account:
-      success: Successfully linked to CoinSpot account
-      select_connection: Choose a CoinSpot connection before linking accounts.
-      errors:
-        only_manual: Only manual Crypto exchange accounts without an existing provider link can be linked to CoinSpot
-        invalid_coinspot_account: Invalid CoinSpot account
-        coinspot_account_already_linked: This CoinSpot account is already linked
-    setup_accounts:
-      title: Import CoinSpot Account
-      subtitle: Select the exchange account to track
-      instructions: CoinSpot imports one combined Crypto exchange account for this connection, with balances, AUD values, transfers, deposits, withdrawals, and order history.
-      no_accounts: All CoinSpot accounts have been imported.
-      accounts_count:
-        one: "%{count} account available"
-        other: "%{count} accounts available"
-      select_all: Select all
-      import_selected: Import Selected
-      cancel: Cancel
-      creating: Importing...
-    complete_account_setup:
-      success:
-        one: "Imported %{count} account"
-        other: "Imported %{count} accounts"
-      none_selected: No accounts selected
-      no_accounts: No accounts to import
-      setup_failed:
-        one: "Failed to import %{count} account"
-        other: "Failed to import %{count} accounts"
-    coinspot_item:
-      provider_name: CoinSpot
-      syncing: Syncing...
-      reconnect: Credentials need updating
-      deletion_in_progress: Deleting...
-      sync_status:
-        no_accounts: No accounts found
-        all_synced:
-          one: "%{count} account synced"
-          other: "%{count} accounts synced"
-        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
-      status: "Last synced %{timestamp} ago"
-      status_with_summary: "Last synced %{timestamp} ago - %{summary}"
-      status_never: Never synced
-      delete: Delete
-      no_accounts_title: No accounts found
-      no_accounts_message: Your CoinSpot exchange account will appear here after syncing.
-      setup_needed: Account ready to import
-      setup_description: Import this CoinSpot connection as a Crypto exchange account.
-      setup_action: Import Account
-      import_accounts_menu: Import Account
-      stale_rate_warning: "Balance is approximate because the exact exchange rate for %{date} was unavailable. Will update on next sync."
   coinspot_item:
     syncer:
-      checking_credentials: Checking credentials...
-      credentials_invalid: Invalid CoinSpot API credentials. Please check your API key and secret.
-      importing_accounts: Importing accounts from CoinSpot...
-      checking_configuration: Checking account configuration...
       accounts_need_setup:
         one: "%{count} account needs setup"
         other: "%{count} accounts need setup"
+      calculating_balances: Calculating balances...
+      checking_configuration: Checking account configuration...
+      checking_credentials: Checking credentials...
+      credentials_invalid: Invalid CoinSpot API credentials. Please check your API
+        key and secret.
+      importing_accounts: Importing accounts from CoinSpot...
       processing_accounts: Processing account data...
       processing_failed:
         one: "%{count} CoinSpot account failed to process"
         other: "%{count} CoinSpot accounts failed to process"
-      calculating_balances: Calculating balances...
+  coinspot_items:
+    coinspot_item:
+      delete: Delete
+      deletion_in_progress: Deleting...
+      import_accounts_menu: Import Account
+      no_accounts_message: Your CoinSpot exchange account will appear here after syncing.
+      no_accounts_title: No accounts found
+      provider_name: CoinSpot
+      reconnect: Credentials need updating
+      setup_action: Import Account
+      setup_description: Import this CoinSpot connection as a Crypto exchange account.
+      setup_needed: Account ready to import
+      stale_rate_warning: Balance is approximate because the exact exchange rate for
+        %{date} was unavailable. Will update on next sync.
+      status: Last synced %{timestamp} ago
+      status_never: Never synced
+      status_with_summary: Last synced %{timestamp} ago - %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} account synced"
+          other: "%{count} accounts synced"
+        no_accounts: No accounts found
+        partial_sync: "%{linked_count} synced, %{unlinked_count} need setup"
+      syncing: Syncing...
+    complete_account_setup:
+      no_accounts: No accounts to import
+      none_selected: No accounts selected
+      setup_failed:
+        one: Failed to import %{count} account
+        other: Failed to import %{count} accounts
+      success:
+        one: Imported %{count} account
+        other: Imported %{count} accounts
+    create:
+      default_name: CoinSpot
+      success: Successfully connected to CoinSpot. Your exchange account is being
+        synced.
+    destroy:
+      success: Scheduled CoinSpot connection for deletion.
+      unlink_failed: Could not disconnect CoinSpot connection
+    link_accounts:
+      select_connection: Choose a CoinSpot connection before linking accounts.
+    link_existing_account:
+      errors:
+        coinspot_account_already_linked: This CoinSpot account is already linked
+        invalid_coinspot_account: Invalid CoinSpot account
+        only_manual: Only manual Crypto exchange accounts without an existing provider
+          link can be linked to CoinSpot
+      select_connection: Choose a CoinSpot connection before linking accounts.
+      success: Successfully linked to CoinSpot account
+    provider_connection:
+      default_description: Link to a CoinSpot exchange account
+      default_name: CoinSpot
+      description: Link to %{name}
+      name: CoinSpot - %{name}
+    select_accounts:
+      no_credentials_configured: Add CoinSpot API credentials before setting up accounts.
+      select_connection: Choose a CoinSpot connection in Provider Settings.
+    select_existing_account:
+      cancel: Cancel
+      check_provider_health: Check that your CoinSpot API credentials are valid.
+      link: Link
+      no_accounts_found: No CoinSpot accounts found.
+      title: Link CoinSpot Account
+      wait_for_sync: Wait for CoinSpot to finish syncing.
+    setup_accounts:
+      accounts_count:
+        one: "%{count} account available"
+        other: "%{count} accounts available"
+      cancel: Cancel
+      creating: Importing...
+      import_selected: Import Selected
+      instructions: CoinSpot imports one combined Crypto exchange account for this
+        connection, with balances, AUD values, transfers, deposits, withdrawals, and
+        order history.
+      no_accounts: All CoinSpot accounts have been imported.
+      select_all: Select all
+      subtitle: Select the exchange account to track
+      title: Import CoinSpot Account
+    update:
+      success: Successfully updated CoinSpot connection.

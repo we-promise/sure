@@ -7,52 +7,32 @@ ro:
       amount: Sumă
       category: Categorie
       category_prompt: Selectează o categorie
+      create_tag: Creează
       date: Dată
       description: Descriere
       description_placeholder: Descrie tranzacția
-      description_placeholder_optional: "Lasă gol pentru a folosi numele categoriei/comerciantului sau selectează mai întâi unul dintre ele"
+      description_placeholder_optional: Lasă gol pentru a folosi numele categoriei/comerciantului
+        sau selectează mai întâi unul dintre ele
       expense: Cheltuială
       income: Venit
-      none: (niciunul)
+      none: "(niciunul)"
       note_label: Notițe
       note_placeholder: Introdu o notiță
-      create_tag: Creează
       submit: Adaugă tranzacție
       tag_search_placeholder: Caută sau creează etichetă
       tags_label: Etichete
       transfer: Transfer
-    new:
-      new_transaction: Tranzacție nouă
-    show:
-      account_label: Cont
-      amount: Sumă
-      category_label: Categorie
-      date_label: Dată
-      delete: Șterge
-      delete_subtitle: Aceasta șterge permanent tranzacția, afectează soldurile tale istorice și nu poate fi anulată.
-      delete_title: Șterge tranzacția
-      details: Detalii
-      merchant_label: Comerciant
-      name_label: Nume
-      nature: Tip
-      none: "(niciunul)"
-      note_label: Notițe
-      note_placeholder: Introdu o notiță
-      overview: Prezentare generală
-      settings: Setări
-      tags_label: Etichete
-      uncategorized: "(necategorizat)"
     header:
       edit_categories: Editează categorii
       edit_imports: Editează importuri
       edit_merchants: Editează comercianți
       edit_tags: Editează etichete
       import: Importă
-    transaction:
-      linked_with_provider: Conectat cu %{provider}
     index:
       transaction: tranzacție
       transactions: tranzacții
+    new:
+      new_transaction: Tranzacție nouă
     searches:
       filters:
         amount_filter:
@@ -70,6 +50,8 @@ ro:
           expense: Cheltuială
           income: Venit
           transfer: Transfer
+      form:
+        toggle_selection_checkboxes: Comută toate casetele de selectare
       menu:
         account_filter: Cont
         amount_filter: Sumă
@@ -85,5 +67,25 @@ ro:
         equal_to: egal cu
         greater_than: mai mare decât
         less_than: mai mic decât
-      form:
-        toggle_selection_checkboxes: Comută toate casetele de selectare
+    show:
+      account_label: Cont
+      amount: Sumă
+      category_label: Categorie
+      date_label: Dată
+      delete: Șterge
+      delete_subtitle: Aceasta șterge permanent tranzacția, afectează soldurile tale
+        istorice și nu poate fi anulată.
+      delete_title: Șterge tranzacția
+      details: Detalii
+      merchant_label: Comerciant
+      name_label: Nume
+      nature: Tip
+      none: "(niciunul)"
+      note_label: Notițe
+      note_placeholder: Introdu o notiță
+      overview: Prezentare generală
+      settings: Setări
+      tags_label: Etichete
+      uncategorized: "(necategorizat)"
+    transaction:
+      linked_with_provider: Conectat cu %{provider}

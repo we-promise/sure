@@ -1,61 +1,66 @@
 ---
 ro:
   onboardings:
+    goals:
+      ai_insights: Să las AI să mă ajute să-mi înțeleg finanțele
+      budgeting: Să gestionez planuri financiare și bugete
+      cashflow: Să înțeleg fluxul de numerar și cheltuielile
+      investments: Să urmăresc investițiile
+      optimization: Să analizez și să optimizez conturile
+      partner: Să gestionez finanțele împreună cu partenerul
+      reduce_stress: Să reduc stresul financiar sau anxietatea
+      submit: Următorul
+      subtitle: Selectează unul sau mai multe obiective pe care le ai cu %{product_name}
+        ca instrument de finanțe personale.
+      title: Ce te aduce aici?
+      unified_accounts: Să-mi văd toate conturile într-un singur loc
     header:
-      sign_out: Deconectare
-      setup: Configurare
-      preferences: Preferințe
       goals: Obiective
+      preferences: Preferințe
+      setup: Configurare
+      sign_out: Deconectare
       start: Start
     logout:
       sign_out: Deconectare
-    show:
-      title: Să-ți configurăm contul
-      subtitle: Mai întâi, să-ți completăm profilul.
-      first_name: Prenume
-      first_name_placeholder: Prenume
-      last_name: Nume de familie
-      last_name_placeholder: Nume de familie
-      household_name: Numele gospodăriei
-      household_name_placeholder: Numele gospodăriei
-      country: Țară
-      submit: Continuă
     preferences:
-      title: Configurează preferințele
-      subtitle: Să-ți configurăm preferințele.
-      example: Cont exemplu
-      preview: Previzualizare a modului în care sunt afișate datele pe baza preferințelor.
       color_theme: Tema de culoare
-      theme_system: Sistem
-      theme_light: Deschis
-      theme_dark: Întunecat
-      locale: Limbă
       currency: Monedă
       date_format: Format dată
+      example: Cont exemplu
+      locale: Limbă
+      preview: Previzualizare a modului în care sunt afișate datele pe baza preferințelor.
       submit: Finalizare
-    goals:
-      title: Ce te aduce aici?
-      subtitle: Selectează unul sau mai multe obiective pe care le ai cu %{product_name} ca instrument de finanțe personale.
-      unified_accounts: Să-mi văd toate conturile într-un singur loc
-      cashflow: Să înțeleg fluxul de numerar și cheltuielile
-      budgeting: Să gestionez planuri financiare și bugete
-      partner: Să gestionez finanțele împreună cu partenerul
-      investments: Să urmăresc investițiile
-      ai_insights: Să las AI să mă ajute să-mi înțeleg finanțele
-      optimization: Să analizez și să optimizez conturile
-      reduce_stress: Să reduc stresul financiar sau anxietatea
-      submit: Următorul
+      subtitle: Să-ți configurăm preferințele.
+      theme_dark: Întunecat
+      theme_light: Deschis
+      theme_system: Sistem
+      title: Configurează preferințele
+    show:
+      country: Țară
+      first_name: Prenume
+      first_name_placeholder: Prenume
+      household_name: Numele gospodăriei
+      household_name_placeholder: Numele gospodăriei
+      last_name: Nume de familie
+      last_name_placeholder: Nume de familie
+      submit: Continuă
+      subtitle: Mai întâi, să-ți completăm profilul.
+      title: Să-ți configurăm contul
     trial:
-      title: Încearcă Sure timp de 45 de zile
-      data_deletion: Datele vor fi șterse după aceea
-      description_html: Începând de azi poți testa produsul în profunzime.<br/>Dacă îți place, găzduiește-l singur sau contribuie pentru a continua să-l folosești aici.
-      try_button: Încearcă Sure timp de 45 de zile
       continue_trial: Continuă perioada de probă
-      upgrade: Actualizează
+      data_deletion: Datele vor fi șterse după aceea
+      description_html: Începând de azi poți testa produsul în profunzime.<br/>Dacă
+        îți place, găzduiește-l singur sau contribuie pentru a continua să-l folosești
+        aici.
       how_it_works: Cum funcționează
-      today: Astăzi
-      today_description: Vei avea acces gratuit la Sure timp de 45 de zile pe AWS-ul nostru.
       in_40_days: În 40 de zile (%{date})
       in_40_days_description: Te vom notifica să-ți amintim să-ți exporți datele.
       in_45_days: În 45 de zile (%{date})
-      in_45_days_description: Îți ștergem datele — contribuie pentru a continua să folosești Sure aici!
+      in_45_days_description: Îți ștergem datele — contribuie pentru a continua să
+        folosești Sure aici!
+      title: Încearcă Sure timp de 45 de zile
+      today: Astăzi
+      today_description: Vei avea acces gratuit la Sure timp de 45 de zile pe AWS-ul
+        nostru.
+      try_button: Încearcă Sure timp de 45 de zile
+      upgrade: Actualizează

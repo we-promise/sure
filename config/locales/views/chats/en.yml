@@ -1,51 +1,62 @@
 ---
 en:
-  chats:
-    demo_banner_title: "Demo Mode Active"
-    demo_banner_message: "Free LLM tokens courtesy of Vercel AI Gateway. Results may vary since we change model weights often for testing purposes. Refer to Vercel's documentation to see where your conversations go! 🤖"
-    thinking: "Thinking ..."
-    ai_busy: "Just finishing off a background task, then I'll get straight onto your message."
-    reservation:
-      ready_html: "I've put off some background tasks so I can get straight onto your message. They'll sneak back in %{countdown} s, so keep typing!"
-      busy: "Just finishing off a background task, then I'm all yours. Keep typing!"
-    worker_unhealthy_warning: "AI responses may not be delivered right now — the background worker appears to be down or backed up. Check that your Sidekiq worker is running."
-    ai_greeting:
-      greeting: "Hey %{name}! I'm an AI/large-language-model that can help with your finances. I have access to the web and your account data."
-      there: "there"
-      commands_hint_html: "You can use <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> to access commands"
-      questions_intro: "Here's a few questions you can ask:"
-      evaluate_portfolio: "Evaluate investment portfolio"
-      spending_insights: "Show spending insights"
-      unusual_patterns: "Find unusual patterns"
-    chat:
-      edit_chat_title: "Edit chat title"
-      delete_chat: "Delete chat"
-    chat_nav:
-      all_chats: "All chats"
-      start_new_chat: "Start new chat"
-      edit_chat_title: "Edit chat title"
-      delete_chat: "Delete chat"
-    error:
-      retry: "Retry"
-    destroy:
-      notice: "Chat was successfully deleted"
-    index:
-      chats: "Chats"
-      new_chat: "New chat"
-    new:
-      default_title: "New chat %{timestamp}"
-    update:
-      success: "Chat updated"
-    ai_consent:
-      title: "Enable AI Chats"
-      available_description: "AI chat can answer financial questions and provide insights based on your data. To use this feature you'll need to explicitly enable it."
-      unavailable_description_html: "To use the AI assistant, you need to set the <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> environment variable or configure it in the Self-Hosting settings of your instance."
-      enable_button: "Enable AI Chats"
-      disable_note: "Disable anytime. All data sent to our LLM providers is anonymized."
   assistant_messages:
     assistant_message:
-      assistant_reasoning: "Assistant reasoning"
+      assistant_reasoning: Assistant reasoning
     tool_calls:
-      tool_calls: "Tool Calls"
-      function: "Function:"
-      arguments: "Arguments:"
+      arguments: 'Arguments:'
+      function: 'Function:'
+      tool_calls: Tool Calls
+  chats:
+    ai_busy: Just finishing off a background task, then I'll get straight onto your
+      message.
+    ai_consent:
+      available_description: AI chat can answer financial questions and provide insights
+        based on your data. To use this feature you'll need to explicitly enable it.
+      disable_note: Disable anytime. All data sent to our LLM providers is anonymized.
+      enable_button: Enable AI Chats
+      title: Enable AI Chats
+      unavailable_description_html: To use the AI assistant, you need to set the <code
+        class="bg-surface-inset px-1 py-0.5 rounded font-mono text-xs">OPENAI_ACCESS_TOKEN</code>
+        environment variable or configure it in the Self-Hosting settings of your
+        instance.
+    ai_greeting:
+      commands_hint_html: You can use <span class="bg-container border border-secondary
+        px-1.5 py-0.5 rounded font-mono text-xs">/</span> to access commands
+      evaluate_portfolio: Evaluate investment portfolio
+      greeting: Hey %{name}! I'm an AI/large-language-model that can help with your
+        finances. I have access to the web and your account data.
+      questions_intro: 'Here''s a few questions you can ask:'
+      spending_insights: Show spending insights
+      there: there
+      unusual_patterns: Find unusual patterns
+    chat:
+      delete_chat: Delete chat
+      edit_chat_title: Edit chat title
+    chat_nav:
+      all_chats: All chats
+      delete_chat: Delete chat
+      edit_chat_title: Edit chat title
+      start_new_chat: Start new chat
+    demo_banner_message: "Free LLM tokens courtesy of Vercel AI Gateway. Results may
+      vary since we change model weights often for testing purposes. Refer to Vercel's
+      documentation to see where your conversations go! 🤖"
+    demo_banner_title: Demo Mode Active
+    destroy:
+      notice: Chat was successfully deleted
+    error:
+      retry: Retry
+    index:
+      chats: Chats
+      new_chat: New chat
+    new:
+      default_title: New chat %{timestamp}
+    reservation:
+      busy: Just finishing off a background task, then I'm all yours. Keep typing!
+      ready_html: I've put off some background tasks so I can get straight onto your
+        message. They'll sneak back in %{countdown} s, so keep typing!
+    thinking: Thinking ...
+    update:
+      success: Chat updated
+    worker_unhealthy_warning: AI responses may not be delivered right now — the background
+      worker appears to be down or backed up. Check that your Sidekiq worker is running.

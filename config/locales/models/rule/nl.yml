@@ -4,33 +4,44 @@ nl:
     errors:
       models:
         rule:
-          min_actions: "moet minstens één actie hebben"
-          duplicate_actions: "Regel kan geen dubbele acties hebben: %{types}"
-          nested_conditions: "Samengestelde voorwaarden kunnen niet worden genest"
-          split_not_alone: "Een splitsingsregel kan geen andere acties hebben"
-        "rule/action":
+          duplicate_actions: 'Regel kan geen dubbele acties hebben: %{types}'
+          min_actions: moet minstens één actie hebben
+          nested_conditions: Samengestelde voorwaarden kunnen niet worden genest
+          split_not_alone: Een splitsingsregel kan geen andere acties hebben
+        rule/action:
           attributes:
             value:
-              invalid_config: "moet een geldige splitsingsconfiguratie zijn"
-              invalid_split_count: "moet tussen %{min} en %{max} splitsingen hebben"
-              split_name_required: "splitsing #%{index} heeft geen naam"
-              split_name_too_long: "naam van splitsing #%{index} is te lang (max. 255 tekens)"
-              split_name_invalid: "naam van splitsing #%{index} bevat ongeldige tekens"
-              split_type_invalid: "type van splitsing #%{index} moet vast of percentage zijn"
-              split_share_invalid: "aandeel van splitsing #%{index} moet een positief getal zijn"
-              split_category_invalid: "categorie van splitsing #%{index} hoort niet bij dit huishouden"
-              split_merchant_invalid: "handelaar van splitsing #%{index} hoort niet bij dit huishouden"
-              split_tags_invalid: "splitsing #%{index} heeft een tag die niet bij dit huishouden hoort"
-              percentages_must_total_100: "percentages moeten samen 100 zijn (nu %{total})"
-              fixed_requires_exact_amount_condition: "splitsingen met vaste bedragen vereisen een regelvoorwaarde op een exact transactiebedrag (bijv. Bedrag = 42.00), anders tellen de aandelen niet betrouwbaar op tot het totaal van elke overeenkomende transactie"
-              fixed_shares_must_equal_condition_amount: "de aandelen van de splitsing moeten samen %{amount} zijn, het exacte bedrag dat de voorwaarde van deze regel vereist"
-        "rule/condition":
+              fixed_requires_exact_amount_condition: splitsingen met vaste bedragen
+                vereisen een regelvoorwaarde op een exact transactiebedrag (bijv.
+                Bedrag = 42.00), anders tellen de aandelen niet betrouwbaar op tot
+                het totaal van elke overeenkomende transactie
+              fixed_shares_must_equal_condition_amount: de aandelen van de splitsing
+                moeten samen %{amount} zijn, het exacte bedrag dat de voorwaarde van
+                deze regel vereist
+              invalid_config: moet een geldige splitsingsconfiguratie zijn
+              invalid_split_count: moet tussen %{min} en %{max} splitsingen hebben
+              percentages_must_total_100: percentages moeten samen 100 zijn (nu %{total})
+              split_category_invalid: 'categorie van splitsing #%{index} hoort niet
+                bij dit huishouden'
+              split_merchant_invalid: 'handelaar van splitsing #%{index} hoort niet
+                bij dit huishouden'
+              split_name_invalid: 'naam van splitsing #%{index} bevat ongeldige tekens'
+              split_name_required: 'splitsing #%{index} heeft geen naam'
+              split_name_too_long: 'naam van splitsing #%{index} is te lang (max.
+                255 tekens)'
+              split_share_invalid: 'aandeel van splitsing #%{index} moet een positief
+                getal zijn'
+              split_tags_invalid: 'splitsing #%{index} heeft een tag die niet bij
+                dit huishouden hoort'
+              split_type_invalid: 'type van splitsing #%{index} moet vast of percentage
+                zijn'
+        rule/condition:
           attributes:
             value:
-              regex_invalid: "is geen geldige reguliere expressie"
-              regex_too_complex: "is te complex om veilig uit te voeren"
-              regex_too_long: "is te lang (maximaal %{count} tekens)"
-              regex_backreference: "kan geen terugverwijzingen gebruiken (\\1 t/m \\9)"
+              regex_backreference: kan geen terugverwijzingen gebruiken (\1 t/m \9)
+              regex_invalid: is geen geldige reguliere expressie
+              regex_too_complex: is te complex om veilig uit te voeren
+              regex_too_long: is te lang (maximaal %{count} tekens)
   rule:
     conditions:
-      unsupported_label: "Niet ondersteund (%{type})"
+      unsupported_label: Niet ondersteund (%{type})

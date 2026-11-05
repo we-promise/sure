@@ -1,4 +1,5 @@
 ---
 de:
   preview:
-    not_enabled: Diese Funktion ist eine Vorschau. Schalte Vorschaufunktionen unter Einstellungen → Einstellungen frei, um sie auszuprobieren.
+    not_enabled: Diese Funktion ist eine Vorschau. Schalte Vorschaufunktionen unter
+      Einstellungen → Einstellungen frei, um sie auszuprobieren.

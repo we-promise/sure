@@ -4,4 +4,4 @@ pt-PT:
     errors:
       models:
         plaid_account:
-          no_balance: "A conta Plaid tem de ter um saldo atual ou disponível"
+          no_balance: A conta Plaid tem de ter um saldo atual ou disponível

@@ -30,7 +30,7 @@ ca:
       step3: Copia la clau API
       step4: 'Afegeix-la a aquesta URL com: &api_key=LA_TEVA_CLAU'
       then_use: Després fes servir l'URL completa amb =IMPORTDATA() a Google Sheets.
-      title_no_key: "Es requereix clau API"
+      title_no_key: Es requereix clau API
     index:
       date_range:
         from: Des de
@@ -85,6 +85,7 @@ ca:
         one: "%{count} posició"
         other: "%{count} posicions"
       no_data: "-"
+      period_return: Rendiment del període
       portfolio_value: Valor de la cartera
       realized_gains: Guanys realitzats
       return: Rendiment
@@ -102,7 +103,6 @@ ca:
       view_details: Veure detalls
       weight: Pes
       withdrawals: Retirades del període
-      period_return: Rendiment del període
     net_worth:
       assets_vs_liabilities: Actius vs. Passius
       current_net_worth: Patrimoni net actual
@@ -118,6 +118,7 @@ ca:
       investments:
         contributions: Aportacions
         holding: Posició
+        period_return: Rendiment del període
         portfolio_value: Valor de la cartera
         return: Rendiment
         this_period: aquest període
@@ -127,7 +128,6 @@ ca:
         value: Valor
         weight: Pes
         withdrawals: Retirades
-        period_return: Rendiment del període
       net_worth:
         assets: Actius
         current_balance: Saldo actual

@@ -3,40 +3,31 @@ de:
   holdings:
     cash:
       brokerage_cash: Depotguthaben
-    destroy:
-      success: Position gelöscht
-      cannot_delete: Diese Position lässt sich nicht löschen
-    update:
-      success: Einstandspreis gespeichert.
-      error: Ungültiger Einstandspreis.
-    unlock_cost_basis:
-      success: Einstandspreis freigegeben. Er kann beim nächsten Sync aktualisiert werden.
-    remap_security:
-      success: Wertpapier erfolgreich aktualisiert.
-      security_not_found: Das ausgewählte Wertpapier konnte nicht gefunden werden.
-    reset_security:
-      success: Wertpapier auf Provider-Wert zurückgesetzt.
-    errors:
-      security_collision: 'Umbildung nicht möglich: Du hast bereits eine Position für %{ticker} am %{date}.'
-    cost_basis_sources:
-      manual: Vom Benutzer gesetzt
-      calculated: Aus Trades
-      provider: Vom Provider
     cost_basis_cell:
-      unknown: "--"
-      set_cost_basis_header: "Einstandspreis für %{ticker} setzen"
-      total_cost_basis_label: Gesamter Einstandspreis
-      per_share_label: "Pro Anteil"
       cancel: Abbrechen
-      save: Speichern
+      overwrite_confirm_body: Dies ersetzt den aktuellen Einstandspreis von %{current}.
       overwrite_confirm_title: Einstandspreis überschreiben?
-      overwrite_confirm_body: "Dies ersetzt den aktuellen Einstandspreis von %{current}."
+      per_share_label: Pro Anteil
+      save: Speichern
       set: Setzen
+      set_cost_basis_header: Einstandspreis für %{ticker} setzen
+      total_cost_basis_label: Gesamter Einstandspreis
+      unknown: "--"
+    cost_basis_sources:
+      calculated: Aus Trades
+      manual: Vom Benutzer gesetzt
+      provider: Vom Provider
+    destroy:
+      cannot_delete: Diese Position lässt sich nicht löschen
+      success: Position gelöscht
+    errors:
+      security_collision: 'Umbildung nicht möglich: Du hast bereits eine Position
+        für %{ticker} am %{date}.'
     holding:
+      no_cost_basis: Kein Einstandspreis
       per_share: pro Anteil
       shares: "%{qty} Anteile"
       unknown: "--"
-      no_cost_basis: Kein Einstandspreis
     index:
       average_cost: Durchschnittlicher Einstandspreis
       holdings: Positionen
@@ -49,55 +40,79 @@ de:
       return: Gesamtrendite
       weight: Gewichtung
     missing_price_tooltip:
-      description: Bei dieser Position fehlen Werte, deshalb ließen sich Rendite und Wert nicht berechnen
+      description: Bei dieser Position fehlen Werte, deshalb ließen sich Rendite und
+        Wert nicht berechnen
       missing_data: Fehlende Daten
+    remap_security:
+      security_not_found: Das ausgewählte Wertpapier konnte nicht gefunden werden.
+      success: Wertpapier erfolgreich aktualisiert.
+    reset_security:
+      success: Wertpapier auf Provider-Wert zurückgesetzt.
     show:
       avg_cost_label: Durchschnittlicher Einstandspreis
+      book_value_label: Buchwert
+      cancel: Abbrechen
+      cost_basis_locked_description: Dein manuell gesetzter Einstandspreis wird durch
+        Syncs nicht geändert.
+      cost_basis_locked_label: Einstandspreis ist gesperrt
       current_market_price_label: Aktueller Marktpreis
       delete: Löschen
-      delete_subtitle: Dadurch wird die Position und alle zugehörigen Trades auf diesem Konto gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
+      delete_subtitle: Dadurch wird die Position und alle zugehörigen Trades auf diesem
+        Konto gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
       delete_title: Position löschen
       edit_security: Wertpapier bearbeiten
       history: Verlauf
-      no_trade_history: Für diese Position ist keine Trade-Historie verfügbar.
-      overview: Übersicht
-      portfolio_weight_label: Portfolio-Gewichtung
-      settings: Einstellungen
-      security_label: Wertpapier
-      originally: "war %{ticker}"
-      search_security: Wertpapier suchen
-      search_security_placeholder: Nach Ticker oder Name suchen
-      cancel: Abbrechen
-      remap_security: Speichern
-      no_security_provider: Wertpapier-Provider nicht konfiguriert. Suche nach Wertpapieren nicht möglich.
-      security_remapped_label: Wertpapier umgebildet
-      provider_sent: "Provider: %{ticker}"
-      reset_to_provider: Auf Provider zurücksetzen
-      reset_confirm_title: Wertpapier auf Provider zurücksetzen?
-      reset_confirm_body: "Das Wertpapier wird von %{current} zurück auf %{original} geändert; alle zugehörigen Trades werden verschoben."
-      ticker_label: Ticker
-      trade_history_entry: "%{qty} Anteile von %{security} zu %{price}"
-      total_return_label: Gesamtrendite
-      shares_label: Anteile
-      book_value_label: Buchwert
-      market_value_label: Marktwert
-      unknown: Unbekannt
-      cost_basis_locked_label: Einstandspreis ist gesperrt
-      cost_basis_locked_description: Dein manuell gesetzter Einstandspreis wird durch Syncs nicht geändert.
-      unlock_cost_basis: Freigeben
-      unlock_confirm_title: Einstandspreis freigeben?
-      unlock_confirm_body: Der Einstandspreis kann dann durch Provider-Syncs oder Trade-Berechnungen aktualisiert werden.
       last_price_update: Letzte Kursaktualisierung
       market_data_label: Marktdaten
       market_data_sync_button: Aktualisieren
+      market_value_label: Marktwert
       never: Nie
-      provider_disabled_warning: Kursaktualisierung pausiert – der Anbieter %{provider} ist deaktiviert. Wechsle unten den Anbieter oder aktivier ihn in den Einstellungen wieder.
+      no_security_provider: Wertpapier-Provider nicht konfiguriert. Suche nach Wertpapieren
+        nicht möglich.
+      no_trade_history: Für diese Position ist keine Trade-Historie verfügbar.
+      originally: war %{ticker}
+      overview: Übersicht
+      portfolio_weight_label: Portfolio-Gewichtung
+      provider_disabled_warning: Kursaktualisierung pausiert – der Anbieter %{provider}
+        ist deaktiviert. Wechsle unten den Anbieter oder aktivier ihn in den Einstellungen
+        wieder.
+      provider_sent: 'Provider: %{ticker}'
+      remap_security: Speichern
+      reset_confirm_body: Das Wertpapier wird von %{current} zurück auf %{original}
+        geändert; alle zugehörigen Trades werden verschoben.
+      reset_confirm_title: Wertpapier auf Provider zurücksetzen?
+      reset_to_provider: Auf Provider zurücksetzen
+      search_security: Wertpapier suchen
+      search_security_placeholder: Nach Ticker oder Name suchen
+      security_label: Wertpapier
+      security_remapped_label: Wertpapier umgebildet
+      settings: Einstellungen
+      shares_label: Anteile
       switch_provider_button: Wechseln
-      switch_provider_description: "%{provider} ist deaktiviert. Such dieses Wertpapier bei einem anderen aktiven Anbieter."
+      switch_provider_description: "%{provider} ist deaktiviert. Such dieses Wertpapier
+        bei einem anderen aktiven Anbieter."
       switch_provider_label: Anbieter wechseln
       syncing: Sync läuft …
-      truncated_history_warning: Kurshistorie liegt erst ab %{date} vor. Für frühere Tage hat der gewählte Anbieter keine Daten. Das kommt vor, wenn das Papier erst nach deinem Kaufdatum notiert wurde oder der Anbieter im aktuellen Tarif nur einen begrenzten Verlauf liefert.
+      ticker_label: Ticker
+      total_return_label: Gesamtrendite
+      trade_history_entry: "%{qty} Anteile von %{security} zu %{price}"
+      truncated_history_warning: Kurshistorie liegt erst ab %{date} vor. Für frühere
+        Tage hat der gewählte Anbieter keine Daten. Das kommt vor, wenn das Papier
+        erst nach deinem Kaufdatum notiert wurde oder der Anbieter im aktuellen Tarif
+        nur einen begrenzten Verlauf liefert.
+      unknown: Unbekannt
+      unlock_confirm_body: Der Einstandspreis kann dann durch Provider-Syncs oder
+        Trade-Berechnungen aktualisiert werden.
+      unlock_confirm_title: Einstandspreis freigeben?
+      unlock_cost_basis: Freigeben
     sync_prices:
-      provider_error: Die aktuellen Kurse ließen sich nicht abrufen. Versuch es in ein paar Minuten noch einmal.
+      provider_error: Die aktuellen Kurse ließen sich nicht abrufen. Versuch es in
+        ein paar Minuten noch einmal.
       success: Marktdaten aktualisiert.
       unavailable: Für Offline-Wertpapiere gibt es keinen Marktdaten-Abgleich.
+    unlock_cost_basis:
+      success: Einstandspreis freigegeben. Er kann beim nächsten Sync aktualisiert
+        werden.
+    update:
+      error: Ungültiger Einstandspreis.
+      success: Einstandspreis gespeichert.

@@ -9,8 +9,7 @@ fr:
     success:
       contribution_failed: Une erreur s'est produite lors du traitement de votre contribution.
         Veuillez réessayer.
-      welcome_with_contribution: Bienvenue sur Sure ! Votre contribution est
-        appréciée.
+      welcome_with_contribution: Bienvenue sur Sure ! Votre contribution est appréciée.
     upgrade:
       account_settings: Paramètres du compte
       already_contributing: Vous contribuez déjà. Merci !

@@ -1,45 +1,37 @@
 ---
 id:
   valuations:
-    names:
-      current_account_value: Nilai rekening saat ini
-      current_balance: Saldo saat ini
-      current_loan_balance: Saldo pinjaman saat ini
-      current_market_value: Nilai pasar saat ini
-      manual_balance_update: Pembaruan saldo manual
-      manual_principal_update: Pembaruan pokok manual
-      manual_value_update: Pembaruan nilai manual
-      opening_account_value: Nilai awal rekening
-      opening_balance: Saldo awal
-      original_principal: Pokok pinjaman awal
-      original_purchase_price: Harga pembelian awal
+    confirm_create:
+      confirm: Konfirmasi
+      title: Konfirmasi saldo baru
+    confirm_update:
+      title: Perbarui saldo
+      update: Perbarui
     confirmation_contents:
-      this_will: "Ini akan %{action_verb} nilai rekening pada"
-      to_colon: "menjadi:"
-      total_account_value: Total nilai rekening
-      holdings_value: Nilai kepemilikan
-      brokerage_cash: Kas broker
       account_balance: saldo rekening
-      credit_card_balance: saldo kartu kredit
-      loan_balance: saldo pinjaman
-      property_value: nilai properti
-      vehicle_value: nilai kendaraan
-      crypto_balance: saldo kripto
-      asset_value: nilai aset
-      liability_balance: saldo liabilitas
-      balance: saldo
-      "on": "pada"
-      to: "menjadi"
-      recalculate_notice: "Semua transaksi dan saldo mendatang akan dihitung ulang berdasarkan %{change_or_update} ini."
-      change: perubahan
-      update: pembaruan
       action_set: menetapkan
       action_update: memperbarui
+      asset_value: nilai aset
+      balance: saldo
+      brokerage_cash: Kas broker
+      change: perubahan
+      credit_card_balance: saldo kartu kredit
+      crypto_balance: saldo kripto
+      holdings_value: Nilai kepemilikan
+      liability_balance: saldo liabilitas
+      loan_balance: saldo pinjaman
+      'on': pada
+      property_value: nilai properti
+      recalculate_notice: Semua transaksi dan saldo mendatang akan dihitung ulang
+        berdasarkan %{change_or_update} ini.
+      this_will: Ini akan %{action_verb} nilai rekening pada
+      to: menjadi
+      to_colon: 'menjadi:'
+      total_account_value: Total nilai rekening
+      update: pembaruan
+      vehicle_value: nilai kendaraan
     create:
       account_updated: Rekening diperbarui
-    update:
-      account_updated: Rekening diperbarui
-      entry_updated: Entri diperbarui
     errors:
       amount_required: Jumlah wajib diisi
     form:
@@ -54,6 +46,18 @@ id:
       no_valuations: Belum ada penilaian untuk rekening ini
       valuations: Nilai
       value: nilai
+    names:
+      current_account_value: Nilai rekening saat ini
+      current_balance: Saldo saat ini
+      current_loan_balance: Saldo pinjaman saat ini
+      current_market_value: Nilai pasar saat ini
+      manual_balance_update: Pembaruan saldo manual
+      manual_principal_update: Pembaruan pokok manual
+      manual_value_update: Pembaruan nilai manual
+      opening_account_value: Nilai awal rekening
+      opening_balance: Saldo awal
+      original_principal: Pokok pinjaman awal
+      original_purchase_price: Harga pembelian awal
     new:
       title: Saldo baru
     show:
@@ -68,13 +72,10 @@ id:
       name_placeholder: Masukkan nama untuk entri ini
       note_label: Catatan
       note_placeholder: Tambahkan detail tambahan tentang entri ini
+      opening_balance: Saldo awal
       overview: Ringkasan
       settings: Pengaturan
-      opening_balance: "Saldo awal"
       update_value: Perbarui nilai
-    confirm_create:
-      confirm: Konfirmasi
-      title: Konfirmasi saldo baru
-    confirm_update:
-      title: Perbarui saldo
-      update: Perbarui
+    update:
+      account_updated: Rekening diperbarui
+      entry_updated: Entri diperbarui

@@ -2,28 +2,28 @@
 it:
   models:
     category:
-      uncategorized: Non categorizzata
-      other_investments: Altri investimenti
-      investment_contributions: Contributi investimento
       defaults:
-        income: Entrate
+        entertainment: Intrattenimento
+        fees: Commissioni
         food_and_drink: Cibo e bevande
+        gifts_and_donations: Regali e donazioni
         groceries: Spesa alimentare
+        healthcare: Salute
+        home_improvement: Miglioramento casa
+        income: Entrate
+        insurance: Assicurazioni
+        loan_payments: Rate prestiti
+        mortgage_rent: Mutuo / Affitto
+        personal_care: Cura personale
+        savings_and_investments: Risparmi e investimenti
+        services: Servizi
         shopping: Shopping
+        sports_and_fitness: Sport e fitness
+        subscriptions: Abbonamenti
+        taxes: Tasse
         transportation: Trasporti
         travel: Viaggi
-        entertainment: Intrattenimento
-        healthcare: Salute
-        personal_care: Cura personale
-        home_improvement: Miglioramento casa
-        mortgage_rent: Mutuo / Affitto
         utilities: Utenze
-        subscriptions: Abbonamenti
-        insurance: Assicurazioni
-        sports_and_fitness: Sport e fitness
-        gifts_and_donations: Regali e donazioni
-        taxes: Tasse
-        loan_payments: Rate prestiti
-        services: Servizi
-        fees: Commissioni
-        savings_and_investments: Risparmi e investimenti
+      investment_contributions: Contributi investimento
+      other_investments: Altri investimenti
+      uncategorized: Non categorizzata

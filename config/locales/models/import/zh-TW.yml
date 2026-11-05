@@ -12,7 +12,7 @@ zh-TW:
     errors:
       models:
         import:
-          duplicate_headers: CSV 標題正規化後出現重複的欄位：%{columns}
           attributes:
             raw_file_str:
               invalid_csv_format: 格式無效，不是合法的 CSV 格式
+          duplicate_headers: CSV 標題正規化後出現重複的欄位：%{columns}

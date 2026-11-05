@@ -1,4 +1,5 @@
 ---
 es:
   passkey_sessions:
-    invalid_credential: No se pudo iniciar sesión con esa passkey. Inténtalo de nuevo o usa tu contraseña.
+    invalid_credential: No se pudo iniciar sesión con esa passkey. Inténtalo de nuevo
+      o usa tu contraseña.

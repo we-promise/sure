@@ -13,6 +13,30 @@ ru:
     complete:
       invalid_transition: Нельзя завершить цель в текущем состоянии.
       success: Цель отмечена как выполненная.
+    consume:
+      account_label: С какого счёта?
+      amount_hint: Сейчас на эту цель приходится %{saved}.
+      amount_label: Сколько вы потратили?
+      cancel: Отмена
+      earmark_note: Записанная сумма перестаёт быть зарезервированной под эту цель,
+        и другие ваши цели на этом счёте получают свою долю обратно.
+      errors:
+        account_not_linked: Этот счёт не пополняет эту цель.
+        account_required: Эта цель пополняется с нескольких счетов — укажите, с какого
+          из них были списаны деньги.
+        exceeds_earmark: Это больше, чем зарезервировано под цель на этом счёте.
+        exceeds_target: Это больше, чем эта цель вообще предполагала накопить.
+        maintained: Резерв расходуют и пополняют, а не тратят — его нехватка уже отображается
+          в цели.
+        no_linked_account: У этой цели не осталось счетов для накоплений.
+        non_positive: Введите сумму больше нуля.
+        not_active: Эта цель больше не активна, поэтому по ней нельзя ничего записать.
+        transaction_already_claimed: Это списание уже отнесено к цели.
+        transaction_not_found: Это списание больше нельзя отнести к цели.
+      submit: Записать
+      subtitle: "%{goal}"
+      success: "%{amount} записано как потраченное."
+      title: Записать трату
     create:
       success: Цель создана.
     destroy:
@@ -25,12 +49,19 @@ ru:
       body: Установите цель, выберите счета для накоплений и отслеживайте прогресс.
       heading: Пока нет целей
       new_goal: Создать первую цель
-      no_depository_accounts: Перед созданием цели нужен хотя бы один счёт (расчётный, сберегательный и т.д.).
+      no_depository_accounts: Перед созданием цели нужен хотя бы один счёт (расчётный,
+        сберегательный и т.д.).
       subtitle: Установите цель и начните копить.
     errors:
       not_found: Цель не найдена. Возможно, она была удалена.
     form:
       create: Создать цель
+      earmark:
+        headroom: Ещё можно зарезервировать {left} на этом счёте.
+        prorata: Ваши цели на этом счёте в сумме составляют {total} при балансе {balance}
+          — они будут продвигаться пропорционально.
+        whole_balance: Этот счёт будет пополнять цель всем остатком после других резервирований.
+        whole_balance_alone: Эта цель будет использовать весь баланс этого счёта.
       errors:
         accounts_required: Выберите хотя бы один счёт.
         amount_required: Укажите цель больше нуля.
@@ -46,14 +77,25 @@ ru:
         notes: Заметки (необязательно)
         notes_placeholder: Напоминание себе…
         target_amount: Целевая сумма
+        target_balance: Целевой баланс
+        target_balance_hint: По медиане ваших ежемесячных расходов за указанное выше
+          число месяцев. Обновляется каждый месяц.
+        target_balance_pending: Рассчитается при сохранении
         target_date: Дата достижения
-        whole_balance: "Пусто: весь баланс"
         target_mode: Как задаётся целевой баланс
         target_months: Месяцев расходов
-        target_months_hint: Пересчитывается 1-го числа каждого месяца по медиане ваших ежемесячных расходов.
-        target_balance: Целевой баланс
-        target_balance_pending: Рассчитается при сохранении
-        target_balance_hint: По медиане ваших ежемесячных расходов за указанное выше число месяцев. Обновляется каждый месяц.
+        target_months_hint: Пересчитывается 1-го числа каждого месяца по медиане ваших
+          ежемесячных расходов.
+        whole_balance: 'Пусто: весь баланс'
+      kinds:
+        maintained:
+          hint: Баланс, который нужно поддерживать, например финансовая подушка. Никогда
+            не закрывается.
+          label: Постоянный резерв
+        one_off:
+          hint: Копите на что-то конкретное, а потом закройте цель, когда потратите
+            деньги.
+          label: Разовая цель
       save: Сохранить изменения
       subtypes:
         cd: Срочный вклад
@@ -63,47 +105,39 @@ ru:
         other: Другое
         savings: Сберегательный счёт
       suggested_no_date: Укажите дату, чтобы рассчитать срок достижения.
-      suggested_with_date: Откладывайте {monthly}/мес. на {accounts}, чтобы уложиться в срок.
+      suggested_with_date: Откладывайте {monthly}/мес. на {accounts}, чтобы уложиться
+        в срок.
       target_modes:
         fixed: Фиксированная сумма
         months_of_expenses: Несколько месяцев расходов
-      kinds:
-        one_off:
-          hint: Копите на что-то конкретное, а потом закройте цель, когда потратите деньги.
-          label: Разовая цель
-        maintained:
-          hint: Баланс, который нужно поддерживать, например финансовая подушка. Никогда не закрывается.
-          label: Постоянный резерв
-      earmark:
-        headroom: Ещё можно зарезервировать {left} на этом счёте.
-        prorata: Ваши цели на этом счёте в сумме составляют {total} при балансе {balance} — они будут продвигаться пропорционально.
-        whole_balance: Этот счёт будет пополнять цель всем остатком после других резервирований.
-        whole_balance_alone: Эта цель будет использовать весь баланс этого счёта.
     goal_card:
       accounts:
-        one: "%{count} счёт"
         few: "%{count} счёта"
         many: "%{count} счетов"
+        one: "%{count} счёт"
         other: "%{count} счёта"
       aria_progress: "%{percent}% от %{target}"
       completed: Выполнено
       days_left:
-        one: "%{count} день остался"
         few: "%{count} дня осталось"
         many: "%{count} дней осталось"
+        one: "%{count} день остался"
         other: "%{count} дня осталось"
       footer_archived: Архив
       footer_catch_up: Откладывайте %{amount}/мес., чтобы наверстать
       footer_last_days:
-        one: Последнее пополнение %{count} день назад
         few: Последнее пополнение %{count} дня назад
         many: Последнее пополнение %{count} дней назад
+        one: Последнее пополнение %{count} день назад
         other: Последнее пополнение %{count} дня назад
       footer_last_today: Последнее пополнение сегодня
       footer_no_deadline: Без срока
       footer_no_pledges: Пока нет пополнений
       footer_paused: Пауза
       footer_reached: Цель достигнута
+      footer_reserve_intact: Резерв в норме
+      footer_reserve_short: Пополнить на %{amount}
+      including_used: Включая уже потраченные %{amount}
       left: осталось
       n_accounts: "%{first} +%{count}"
       no_accounts: Нет привязанных счетов
@@ -112,14 +146,11 @@ ru:
       pace_with_target: "%{avg}/мес. · цель %{target}/мес."
       past_due: Просрочено
       pending_count:
-        one: "%{count} в ожидании"
         few: "%{count} в ожидании"
         many: "%{count} в ожидании"
+        one: "%{count} в ожидании"
         other: "%{count} в ожидании"
       pending_pledge: Ожидаемое пополнение
-      including_used: Включая уже потраченные %{amount}
-      footer_reserve_intact: Резерв в норме
-      footer_reserve_short: Пополнить на %{amount}
     index:
       archived_section:
         heading: Архив
@@ -130,6 +161,7 @@ ru:
         no_target_date: Без срока
         on_track: По плану
         paused: Пауза
+      chips_aria: Фильтр целей по статусу
       empty_filtered: Нет подходящих целей.
       goals_section:
         heading: Цели
@@ -138,9 +170,9 @@ ru:
         contributed_label: Пополнено · за 30 дней
         needs_this_month_label: Требуется в этом месяце
         needs_this_month_sub:
-          one: "%{count} цель отстаёт"
           few: "%{count} цели отстают"
           many: "%{count} целей отстают"
+          one: "%{count} цель отстаёт"
           other: "%{count} цели отстают"
         needs_this_month_zero_sub: Нет отстающих целей
         on_track_all_caught_up: Всё по плану
@@ -148,24 +180,24 @@ ru:
         on_track_sub_all_good: Все активные цели идут по плану
         on_track_sub_parts:
           behind:
-            one: "%{count} отстаёт"
             few: "%{count} отстают"
             many: "%{count} отстают"
+            one: "%{count} отстаёт"
             other: "%{count} отстают"
           no_date:
-            one: "%{count} без срока"
             few: "%{count} без срока"
             many: "%{count} без срока"
+            one: "%{count} без срока"
             other: "%{count} без срока"
           paused:
-            one: "%{count} на паузе"
             few: "%{count} на паузе"
             many: "%{count} на паузе"
+            one: "%{count} на паузе"
             other: "%{count} на паузе"
           reached:
-            one: "%{count} достигнута"
             few: "%{count} достигнуты"
             many: "%{count} достигнуты"
+            one: "%{count} достигнута"
             other: "%{count} достигнуты"
         on_track_value: "%{on_track} из %{total}"
         velocity_delta_down: "↓ %{percent}%% к предыдущим 30 дн."
@@ -175,7 +207,8 @@ ru:
       new_goal: Новая цель
       ongoing_section:
         heading: Цели
-      pending_pledges_callout: У вас есть ожидаемые пополнения. Они подтвердятся при следующей синхронизации.
+      pending_pledges_callout: У вас есть ожидаемые пополнения. Они подтвердятся при
+        следующей синхронизации.
       search:
         aria_label: Поиск целей
         clear_search: Очистить поиск
@@ -187,7 +220,6 @@ ru:
         show_all: Показать все
       subtitle: Копите на важное.
       title: Цели
-      chips_aria: Фильтр целей по статусу
     new:
       heading: Новая цель
       subtitle: Копите на конкретную цель.
@@ -213,24 +245,31 @@ ru:
       celebration:
         archive_cta: Архивировать цель
         body: Накоплено %{saved} из %{target}.
+        body_reached: 'Вы достигли цели: %{saved} из %{target}. Цель ещё не закрыта
+          — деньги по-прежнему зарезервированы под неё.'
+        body_reserve: 'Ваш резерв на целевом уровне: %{saved} из %{target}. Ничего
+          делать не нужно — сумма остаётся зарезервированной.'
+        close_cta: Закрыть цель
+        close_hint: Закрытие освобождает зарезервированные деньги для других ваших
+          целей на том же счёте. Сделайте это, когда действительно потратите их.
+        frozen: Достигнута %{date} · %{amount}
         heading: Цель достигнута
         heading_reserve: Резерв в норме
-        body_reserve: 'Ваш резерв на целевом уровне: %{saved} из %{target}. Ничего делать не нужно — сумма остаётся зарезервированной.'
-        body_reached: 'Вы достигли цели: %{saved} из %{target}. Цель ещё не закрыта — деньги по-прежнему зарезервированы под неё.'
-        close_cta: Закрыть цель
-        close_hint: Закрытие освобождает зарезервированные деньги для других ваших целей на том же счёте. Сделайте это, когда действительно потратите их.
-        frozen: Достигнута %{date} · %{amount}
       complete: Отметить выполненной
-      confirm_archive_body: Архивные цели скрываются из списка. Их можно восстановить позже.
+      confirm_archive_body: Архивные цели скрываются из списка. Их можно восстановить
+        позже.
       confirm_archive_cta: Архивировать
       confirm_archive_title: Архивировать цель?
-      confirm_delete_title: "Удалить эту цель?"
-      confirm_delete_body: "%{name} и история пополнений будут удалены безвозвратно. Связанные счета, балансы и операции не затрагиваются. Чтобы сохранить её как запись, заархивируйте её вместо удаления."
-      confirm_delete_cta: "Удалить цель"
       confirm_complete_body: Цель исчезнет из активных.
       confirm_complete_body_short: Вы достигли %{progress}%, %{saved} из %{target}.
       confirm_complete_cta: Отметить выполненной
       confirm_complete_title: Завершить цель?
+      confirm_delete_body: "%{name} и история пополнений будут удалены безвозвратно.
+        Связанные счета, балансы и операции не затрагиваются. Чтобы сохранить её как
+        запись, заархивируйте её вместо удаления."
+      confirm_delete_cta: Удалить цель
+      confirm_delete_title: Удалить эту цель?
+      consume: Я потратил часть этих денег
       delete: Удалить
       edit: Редактировать
       empty:
@@ -262,62 +301,68 @@ ru:
         body: Возобновите, чтобы продолжить отслеживание.
         resume_cta: Возобновить
         title: Цель на паузе
+      pending_pledge:
+        body_manual: Подтвердится при следующем ручном изменении баланса.
+        body_transfer: Подтвердится автоматически, когда Sure найдёт соответствующее
+          поступление при следующей синхронизации.
+        cancel: Отменить
+        confirm_cancel_body: Пополнение на %{amount} будет удалено. Вы можете записать
+          новое в любое время.
+        confirm_cancel_cta: Отменить пополнение
+        confirm_cancel_title: Отменить это пополнение?
+        extend: Продлить на 7 дней
+        pledged_at: Добавлено %{time_ago} назад
+        title:
+          few: 'Ожидается: %{amount} на %{account} · осталось %{count} дня'
+          many: 'Ожидается: %{amount} на %{account} · осталось %{count} дней'
+          one: 'Ожидается: %{amount} на %{account} · остался %{count} день'
+          other: 'Ожидается: %{amount} на %{account} · осталось %{count} дня'
+          zero: 'Ожидается: %{amount} на %{account} · истекает сегодня'
+      pledge_just_saved: Записать отложенные деньги
+      pledge_just_transferred: Записать сделанный перевод
+      projection:
+        aria_label: График прогноза для %{name}
+        behind: При текущем темпе цель не будет достигнута в срок.
+        heading: Прогноз
+        legend_projection: Прогноз
+        legend_required: Требуется
+        legend_saved: Накоплено
+        no_pace: Пополнений пока нет. Пополните связанный счёт, чтобы появился прогноз.
+        no_target_date: Дата достижения не указана. Укажите её, чтобы получить прогноз.
+        on_track_html: При текущем темпе вы достигнете цели около <strong class="text-primary
+          whitespace-nowrap">%{date}</strong>.
+        reached: Вы достигли цели. Прогноз не нужен.
+        reserve: Резерв поддерживает целевой баланс, поэтому дату достижения спрогнозировать
+          нельзя.
+        today_marker: Сегодня
+        tooltip_projected: 'Прогноз: %{amount}'
+        tooltip_saved: 'Накоплено: %{amount}'
+        tooltip_target_relation: "%{percent}% от цели %{target}"
       record_pledge_cta: Добавить пополнение
       reopen: Открыть снова
+      reserve_shortfall:
+        body: Сейчас в резерве %{saved} из %{target}. Добавьте %{missing}, чтобы вернуть
+          его к целевому балансу.
+        heading: Резерв ниже целевого баланса
       resume: Возобновить
       ring:
         aria_label: Выполнено %{percent}%. %{amount} из %{target}
+        aria_label_with_used: Выполнено %{percent}%. %{amount} из %{target}, включая
+          уже потраченные %{used}.
+        including_used: Включая уже потраченные %{amount}
         market_value: Текущая стоимость %{amount}
         of: из %{target}
         of_target: от цели
         saved: Накоплено
         to_go: Осталось %{amount}
-        including_used: Включая уже потраченные %{amount}
-        aria_label_with_used: Выполнено %{percent}%. %{amount} из %{target}, включая уже потраченные %{used}.
       status_callout:
         behind: откладывайте %{amount}/мес. больше
         behind_covered: ожидаемые пополнения покроют разницу
+        depleted: на %{amount} ниже целевого баланса — пополните, чтобы восстановить
+          резерв
         no_target_date: укажите дату
         on_track: достижение около %{date}
-        depleted: на %{amount} ниже целевого баланса — пополните, чтобы восстановить резерв
       unarchive: Восстановить
-      consume: Я потратил часть этих денег
-      reserve_shortfall:
-        heading: Резерв ниже целевого баланса
-        body: Сейчас в резерве %{saved} из %{target}. Добавьте %{missing}, чтобы вернуть его к целевому балансу.
-      pledge_just_transferred: Записать сделанный перевод
-      pledge_just_saved: Записать отложенные деньги
-      pending_pledge:
-        title:
-          zero: 'Ожидается: %{amount} на %{account} · истекает сегодня'
-          one: 'Ожидается: %{amount} на %{account} · остался %{count} день'
-          few: 'Ожидается: %{amount} на %{account} · осталось %{count} дня'
-          many: 'Ожидается: %{amount} на %{account} · осталось %{count} дней'
-          other: 'Ожидается: %{amount} на %{account} · осталось %{count} дня'
-        body_transfer: Подтвердится автоматически, когда Sure найдёт соответствующее поступление при следующей синхронизации.
-        body_manual: Подтвердится при следующем ручном изменении баланса.
-        pledged_at: Добавлено %{time_ago} назад
-        extend: Продлить на 7 дней
-        cancel: Отменить
-        confirm_cancel_title: Отменить это пополнение?
-        confirm_cancel_body: Пополнение на %{amount} будет удалено. Вы можете записать новое в любое время.
-        confirm_cancel_cta: Отменить пополнение
-      projection:
-        heading: Прогноз
-        legend_saved: Накоплено
-        legend_projection: Прогноз
-        legend_required: Требуется
-        reserve: Резерв поддерживает целевой баланс, поэтому дату достижения спрогнозировать нельзя.
-        reached: Вы достигли цели. Прогноз не нужен.
-        no_target_date: Дата достижения не указана. Укажите её, чтобы получить прогноз.
-        no_pace: Пополнений пока нет. Пополните связанный счёт, чтобы появился прогноз.
-        behind: При текущем темпе цель не будет достигнута в срок.
-        on_track_html: При текущем темпе вы достигнете цели около <strong class="text-primary whitespace-nowrap">%{date}</strong>.
-        aria_label: График прогноза для %{name}
-        today_marker: Сегодня
-        tooltip_projected: 'Прогноз: %{amount}'
-        tooltip_saved: 'Накоплено: %{amount}'
-        tooltip_target_relation: '%{percent}% от цели %{target}'
     states:
       active: Активна
       archived: В архиве
@@ -327,39 +372,19 @@ ru:
       archived: В архиве
       behind: Отстаёт
       completed: Выполнена
+      depleted: Нужно пополнить
+      funded: Резерв в норме
       no_target_date: Без срока
       on_track: По плану
       paused: На паузе
       reached: Достигнута
-      funded: Резерв в норме
-      depleted: Нужно пополнить
     unarchive:
       invalid_transition: Нельзя восстановить цель в текущем состоянии.
       success: Цель восстановлена.
+    unattributed_outflows:
+      attribute: Это оно
+      body: Если что-то из этого было потрачено на цель «%{goal}», укажите это — и
+        сумма перестанет уменьшать прогресс к цели.
+      heading: С этих счетов были списания
     update:
       success: Цель обновлена.
-    consume:
-      title: Записать трату
-      subtitle: '%{goal}'
-      amount_label: Сколько вы потратили?
-      amount_hint: Сейчас на эту цель приходится %{saved}.
-      account_label: С какого счёта?
-      earmark_note: Записанная сумма перестаёт быть зарезервированной под эту цель, и другие ваши цели на этом счёте получают свою долю обратно.
-      cancel: Отмена
-      submit: Записать
-      success: '%{amount} записано как потраченное.'
-      errors:
-        non_positive: Введите сумму больше нуля.
-        maintained: Резерв расходуют и пополняют, а не тратят — его нехватка уже отображается в цели.
-        exceeds_target: Это больше, чем эта цель вообще предполагала накопить.
-        account_required: Эта цель пополняется с нескольких счетов — укажите, с какого из них были списаны деньги.
-        account_not_linked: Этот счёт не пополняет эту цель.
-        not_active: Эта цель больше не активна, поэтому по ней нельзя ничего записать.
-        exceeds_earmark: Это больше, чем зарезервировано под цель на этом счёте.
-        transaction_already_claimed: Это списание уже отнесено к цели.
-        transaction_not_found: Это списание больше нельзя отнести к цели.
-        no_linked_account: У этой цели не осталось счетов для накоплений.
-    unattributed_outflows:
-      heading: С этих счетов были списания
-      body: Если что-то из этого было потрачено на цель «%{goal}», укажите это — и сумма перестанет уменьшать прогресс к цели.
-      attribute: Это оно

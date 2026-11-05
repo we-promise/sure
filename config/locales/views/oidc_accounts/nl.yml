@@ -1,42 +1,48 @@
 ---
 nl:
   oidc_accounts:
-    link:
-      no_pending_oidc: "Geen openstaande OIDC-authenticatie gevonden"
-      title_link: "OIDC-account koppelen"
-      title_create: "Account aanmaken"
-      verify_heading: "Verifieer uw identiteit"
-      verify_description_html: "Om uw %{provider}-account%{email_suffix} te koppelen, verifieert u uw identiteit door uw wachtwoord in te voeren."
-      email_suffix_html: " (<strong>%{email}</strong>)"
-      email_label: "E-mailadres"
-      email_placeholder: "Voer uw e-mailadres in"
-      password_label: "Wachtwoord"
-      password_placeholder: "Voer uw wachtwoord in"
-      verify_hint: "Dit zorgt ervoor dat alleen u externe accounts aan uw profiel kunt koppelen."
-      submit_link: "Account koppelen"
-      create_heading: "Nieuw account aanmaken"
-      create_description_html: "Geen account gevonden met het e-mailadres <strong>%{email}</strong>. Klik hieronder om een nieuw account aan te maken met uw %{provider}-identiteit."
-      info_email: "E-mail:"
-      info_name: "Naam:"
-      submit_create: "Account aanmaken"
-      submit_accept_invitation: "Uitnodiging accepteren"
-      account_creation_disabled: "Het aanmaken van accounts via single sign-on is uitgeschakeld. Neem contact op met een beheerder."
-      cancel: "Annuleren"
     create_link:
-      no_pending_oidc: "Geen openstaande OIDC-authenticatie gevonden"
-    new_user:
-      no_pending_oidc: "Geen openstaande OIDC-authenticatie gevonden"
-      title: "Account voltooien"
-      heading: "Account aanmaken"
-      description: "Bevestig uw gegevens om het aanmaken van uw account met uw %{provider}-identiteit te voltooien."
-      email_label: "E-mail (van SSO-provider)"
-      first_name_label: "Voornaam"
-      first_name_placeholder: "Voer uw voornaam in"
-      last_name_label: "Achternaam"
-      last_name_placeholder: "Voer uw achternaam in"
-      submit: "Account aanmaken"
-      cancel: "Annuleren"
+      no_pending_oidc: Geen openstaande OIDC-authenticatie gevonden
     create_user:
-      no_pending_oidc: "Geen openstaande OIDC-authenticatie gevonden"
-      account_creation_disabled: "Accounts aanmaken via SSO is uitgeschakeld. Neem contact op met een beheerder."
-      account_created: "Welkom! Uw account is aangemaakt."
+      account_created: Welkom! Uw account is aangemaakt.
+      account_creation_disabled: Accounts aanmaken via SSO is uitgeschakeld. Neem
+        contact op met een beheerder.
+      no_pending_oidc: Geen openstaande OIDC-authenticatie gevonden
+    link:
+      account_creation_disabled: Het aanmaken van accounts via single sign-on is uitgeschakeld.
+        Neem contact op met een beheerder.
+      cancel: Annuleren
+      create_description_html: Geen account gevonden met het e-mailadres <strong>%{email}</strong>.
+        Klik hieronder om een nieuw account aan te maken met uw %{provider}-identiteit.
+      create_heading: Nieuw account aanmaken
+      email_label: E-mailadres
+      email_placeholder: Voer uw e-mailadres in
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      info_email: 'E-mail:'
+      info_name: 'Naam:'
+      no_pending_oidc: Geen openstaande OIDC-authenticatie gevonden
+      password_label: Wachtwoord
+      password_placeholder: Voer uw wachtwoord in
+      submit_accept_invitation: Uitnodiging accepteren
+      submit_create: Account aanmaken
+      submit_link: Account koppelen
+      title_create: Account aanmaken
+      title_link: OIDC-account koppelen
+      verify_description_html: Om uw %{provider}-account%{email_suffix} te koppelen,
+        verifieert u uw identiteit door uw wachtwoord in te voeren.
+      verify_heading: Verifieer uw identiteit
+      verify_hint: Dit zorgt ervoor dat alleen u externe accounts aan uw profiel kunt
+        koppelen.
+    new_user:
+      cancel: Annuleren
+      description: Bevestig uw gegevens om het aanmaken van uw account met uw %{provider}-identiteit
+        te voltooien.
+      email_label: E-mail (van SSO-provider)
+      first_name_label: Voornaam
+      first_name_placeholder: Voer uw voornaam in
+      heading: Account aanmaken
+      last_name_label: Achternaam
+      last_name_placeholder: Voer uw achternaam in
+      no_pending_oidc: Geen openstaande OIDC-authenticatie gevonden
+      submit: Account aanmaken
+      title: Account voltooien

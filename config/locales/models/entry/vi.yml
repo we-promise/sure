@@ -6,4 +6,5 @@ vi:
         entry:
           attributes:
             base:
-              invalid_sell_quantity: không thể bán %{sell_qty} cổ phiếu %{ticker} vì bạn chỉ đang nắm giữ %{current_qty} cổ phiếu
+              invalid_sell_quantity: không thể bán %{sell_qty} cổ phiếu %{ticker}
+                vì bạn chỉ đang nắm giữ %{current_qty} cổ phiếu

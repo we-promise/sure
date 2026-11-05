@@ -2,4 +2,4 @@
 nl:
   coinbase:
     processor:
-      paid_via: "Betaald via %{method}"
+      paid_via: Betaald via %{method}

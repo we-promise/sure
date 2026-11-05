@@ -4,15 +4,15 @@ es:
     edit:
       edit: Editar %{account}
     form:
+      initial_balance: Saldo original del préstamo
       interest_rate: Tasa de interés
       interest_rate_placeholder: '5.25'
-      initial_balance: Saldo original del préstamo
+      none: Ninguno
       rate_type: Tipo de interés
+      subtype_none: Ninguno
+      subtype_prompt: Selecciona el tipo de préstamo
       term_months: Plazo (meses)
       term_months_placeholder: '360'
-      none: Ninguno
-      subtype_prompt: Selecciona el tipo de préstamo
-      subtype_none: Ninguno
     new:
       title: Introduce los detalles del préstamo
     overview:
@@ -26,6 +26,7 @@ es:
       unknown: Desconocido
     tabs:
       overview:
+        edit_loan_details: Editar detalles del préstamo
         interest_rate: Tipo de interés
         monthly_payment: Cuota mensual
         not_applicable: N/D
@@ -34,4 +35,3 @@ es:
         term: Plazo
         type: Tipo
         unknown: Desconocido
-        edit_loan_details: Editar detalles del préstamo

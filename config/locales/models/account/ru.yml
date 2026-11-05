@@ -28,7 +28,8 @@ ru:
         account:
           attributes:
             logo:
-              invalid_content_type: должна быть изображением PNG, JPEG, GIF, WebP или ICO
+              invalid_content_type: должна быть изображением PNG, JPEG, GIF, WebP
+                или ICO
               too_large: должна быть меньше %{max_size} МБ
     models:
       account: Счёт

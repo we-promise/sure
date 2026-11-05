@@ -39,6 +39,18 @@ ca:
         not_found: Clau API no trobada
         revoke_failed: No s'ha pogut revocar la clau API
         revoked_successfully: La clau API s'ha revocat correctament
+      index:
+        empty_description: Crea una clau API per accedir a les teves dades de manera
+          programàtica.
+        empty_heading: Encara no hi ha claus API
+        new_key: Nova clau API
+        revoke_confirmation: Segur que vols revocar «%{name}»? Això desactivarà immediatament
+          qualsevol aplicació que utilitzi aquesta clau.
+        revoke_key: Revoca
+        subtitle: Gestiona les claus API per accedir a les teves dades de manera programàtica.
+        title: Claus API
+      key_reveal:
+        copied: Copiat!
       new:
         cancel: Cancel·la
         create_key: Crea clau API
@@ -76,10 +88,18 @@ ca:
         subtitle: Genera una nova clau API per accedir a les teves dades de Sure de
           manera programàtica.
         title: Crea clau API
+      shared:
+        active: Activa
+        created_ago: Creada fa %{time}
+        last_used_ago: Última utilització fa %{time}
+        never_used: Mai utilitzada
+        scope_read_only: Només lectura
+        scope_read_write: Lectura/Escriptura
       show:
         current_api_key:
           active: Activa
           ago: fa
+          back_to_keys: Torna a les claus API
           copy_api_key: Copia la clau API
           copy_store_securely: Copia i desa aquesta clau de manera segura. La necessitaràs
             per autenticar les peticions a l'API.
@@ -105,7 +125,6 @@ ca:
           usage_instructions: 'Inclou la teva clau API a la capçalera X-Api-Key quan
             facis peticions a l''API de %{product_name}:'
           usage_instructions_title: Com utilitzar la teva clau API
-          back_to_keys: Torna a les claus API
         newly_created:
           continue: Continua a la configuració de claus API
           copy_api_key: Copia la clau API
@@ -131,23 +150,6 @@ ca:
           title: Clau API
           what_you_can_do: 'Què pots fer amb l''API:'
         title: Gestió de claus API
-      shared:
-        active: Activa
-        created_ago: Creada fa %{time}
-        last_used_ago: Última utilització fa %{time}
-        never_used: Mai utilitzada
-        scope_read_only: Només lectura
-        scope_read_write: Lectura/Escriptura
-      index:
-        title: Claus API
-        subtitle: Gestiona les claus API per accedir a les teves dades de manera programàtica.
-        new_key: Nova clau API
-        empty_heading: Encara no hi ha claus API
-        empty_description: Crea una clau API per accedir a les teves dades de manera programàtica.
-        revoke_key: Revoca
-        revoke_confirmation: Segur que vols revocar «%{name}»? Això desactivarà immediatament qualsevol aplicació que utilitzi aquesta clau.
-      key_reveal:
-        copied: Copiat!
     api_keys_controller:
       revoke_failed: No s'ha pogut revocar la clau API
       revoked_successfully: La clau API s'ha revocat correctament

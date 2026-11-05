@@ -7,56 +7,32 @@ pt-BR:
       amount: Valor
       category: Categoria
       category_prompt: Selecione uma Categoria
+      create_tag: Criar
       date: Data
       description: Descrição
       description_placeholder: Descreva a transação
-      description_placeholder_optional: "Deixe em branco para usar o nome da categoria/comerciante, ou selecione um deles primeiro"
+      description_placeholder_optional: Deixe em branco para usar o nome da categoria/comerciante,
+        ou selecione um deles primeiro
       expense: Despesa
       income: Receita
-      none: (nenhum)
+      none: "(nenhum)"
       note_label: Notas
       note_placeholder: Digite uma nota
-      create_tag: Criar
       submit: Adicionar transação
       tag_search_placeholder: Pesquisar ou criar tag
       tags_label: Tags
       transfer: Transferência
-    new:
-      new_transaction: Nova transação
-    show:
-      account_label: Conta
-      amount: Valor
-      category_label: Categoria
-      date_label: Data
-      delete: Excluir
-      delete_subtitle: Isso exclui permanentemente a transação, afeta seus saldos históricos
-        e não pode ser desfeito.
-      delete_title: Excluir transação
-      details: Detalhes
-      mark_recurring: Marcar como Recorrente
-      mark_recurring_subtitle: Acompanhe como uma transação recorrente. A variação de valor é calculada automaticamente com base nos últimos 6 meses de transações similares.
-      mark_recurring_title: Transação Recorrente
-      merchant_label: Comerciante
-      name_label: Nome
-      nature: Tipo
-      none: "(nenhum)"
-      note_label: Notas
-      note_placeholder: Digite uma nota
-      overview: Visão geral
-      settings: Configurações
-      tags_label: Tags
-      uncategorized: "(sem categoria)"
     header:
       edit_categories: Editar categorias
       edit_imports: Editar importações
       edit_merchants: Editar comerciantes
       edit_tags: Editar tags
       import: Importar
-    transaction:
-      linked_with_provider: Vinculado com %{provider}
     index:
       transaction: transação
       transactions: transações
+    new:
+      new_transaction: Nova transação
     searches:
       filters:
         amount_filter:
@@ -74,6 +50,8 @@ pt-BR:
           expense: Despesa
           income: Receita
           transfer: Transferência
+      form:
+        toggle_selection_checkboxes: Alternar todas as caixas de seleção
       menu:
         account_filter: Conta
         amount_filter: Valor
@@ -89,5 +67,30 @@ pt-BR:
         equal_to: igual a
         greater_than: maior que
         less_than: menor que
-      form:
-        toggle_selection_checkboxes: Alternar todas as caixas de seleção
+    show:
+      account_label: Conta
+      amount: Valor
+      category_label: Categoria
+      date_label: Data
+      delete: Excluir
+      delete_subtitle: Isso exclui permanentemente a transação, afeta seus saldos
+        históricos e não pode ser desfeito.
+      delete_title: Excluir transação
+      details: Detalhes
+      mark_recurring: Marcar como Recorrente
+      mark_recurring_subtitle: Acompanhe como uma transação recorrente. A variação
+        de valor é calculada automaticamente com base nos últimos 6 meses de transações
+        similares.
+      mark_recurring_title: Transação Recorrente
+      merchant_label: Comerciante
+      name_label: Nome
+      nature: Tipo
+      none: "(nenhum)"
+      note_label: Notas
+      note_placeholder: Digite uma nota
+      overview: Visão geral
+      settings: Configurações
+      tags_label: Tags
+      uncategorized: "(sem categoria)"
+    transaction:
+      linked_with_provider: Vinculado com %{provider}

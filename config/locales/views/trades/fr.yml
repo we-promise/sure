@@ -2,7 +2,8 @@
 fr:
   trades:
     api_errors:
-      activity_label_must_match_type: investment_activity_label doit valoir %{label} lorsque type vaut %{type}
+      activity_label_must_match_type: investment_activity_label doit valoir %{label}
+        lorsque type vaut %{type}
       invalid_activity_label: Libellé d'activité d'investissement invalide
       invalid_type: Type invalide
       supported_types: 'type doit être l''une des valeurs suivantes : %{types}'
@@ -18,7 +19,8 @@ fr:
       qty: Quantité
       submit: Ajouter la transaction
       ticker_placeholder: AAPL
-      trade_requires_security: Un titre (ticker) est requis pour les transactions d'achat et de vente
+      trade_requires_security: Un titre (ticker) est requis pour les transactions
+        d'achat et de vente
       type: Type
       type_buy: Acheter
       type_deposit: Dépôt
@@ -59,13 +61,16 @@ fr:
       delete_subtitle: Cette action ne peut pas être annulée
       delete_title: Supprimer la transaction boursière
       details: Détails
-      exclude_subtitle: Cette transaction ne sera pas incluse dans les rapports et les calculs
+      exclude_subtitle: Cette transaction ne sera pas incluse dans les rapports et
+        les calculs
       exclude_title: Exclure des analyses
       fee_label: Frais de transaction
       no_category: Aucune catégorie
       note_label: Note
       note_placeholder: Ajoutez tout commentaire supplémentaire ici...
-      provider_disabled_warning: Mises à jour des prix en pause — le fournisseur %{provider} est désactivé. Réactivez-le dans les paramètres ou réassociez l'holding à un autre fournisseur.
+      provider_disabled_warning: Mises à jour des prix en pause — le fournisseur %{provider}
+        est désactivé. Réactivez-le dans les paramètres ou réassociez l'holding à
+        un autre fournisseur.
       quantity_label: Quantité
       sell: Vendre
       settings: Paramètres

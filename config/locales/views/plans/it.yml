@@ -1,36 +1,37 @@
 ---
 it:
   plans:
-    show:
-      title: Piano
-      subtitle: "Decidi come destinare il tuo denaro: quanto spendere e quanto risparmiare."
     budget_card:
-      title: Questo mese
-      edit_budget: Modifica budget
-      of_total: di %{total}
       days_left:
         one: 1 giorno rimanente
         other: "%{count} giorni rimanenti"
+      edit_budget: Modifica budget
+      empty_body: Imposta un obiettivo di spesa mensile e limiti per categoria per
+        vedere l'andamento di questo mese.
+      of_total: di %{total}
       percent_used: "%{percent}% utilizzato"
+      set_up: Configura il budget di questo mese
+      title: Questo mese
       top_categories: Categorie principali
       view_budget: Vedi il budget completo
-      empty_body: Imposta un obiettivo di spesa mensile e limiti per categoria per vedere l'andamento di questo mese.
-      set_up: Configura il budget di questo mese
     goals_card:
-      title: I tuoi obiettivi
-      new_goal: Nuovo obiettivo
       active_count:
         one: 1 attivo
         other: "%{count} attivi"
-      of_targets: di %{total} tra gli obiettivi
+      active_goals: Obiettivi attivi
+      all_goals: Tutti gli obiettivi
+      all_on_pace: Tutto procede secondo i piani
       behind_count:
         one: 1 in ritardo
         other: "%{count} in ritardo"
+      new_goal: Nuovo obiettivo
+      of_targets: di %{total} tra gli obiettivi
       pending_count:
         one: 1 impegno in attesa
         other: "%{count} impegni in attesa"
-      all_on_pace: Tutto procede secondo i piani
-      active_goals: Obiettivi attivi
       pending_marker: in attesa
       runway: "%{months} mesi di autonomia · %{pace}/mese"
-      all_goals: Tutti gli obiettivi
+      title: I tuoi obiettivi
+    show:
+      subtitle: 'Decidi come destinare il tuo denaro: quanto spendere e quanto risparmiare.'
+      title: Piano

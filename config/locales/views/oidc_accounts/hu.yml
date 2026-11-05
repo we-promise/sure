@@ -1,42 +1,48 @@
 ---
 hu:
   oidc_accounts:
-    link:
-      no_pending_oidc: Nem található függőben lévő OIDC-hitelesítés
-      title_link: OIDC-fiók összekapcsolása
-      title_create: Fiók létrehozása
-      verify_heading: Igazold az azonosságodat
-      verify_description_html: "A(z) %{provider} fiókod%{email_suffix} összekapcsolásához kérjük, igazold az azonosságodat a jelszavad megadásával."
-      email_suffix_html: " (<strong>%{email}</strong>)"
-      email_label: E-mail
-      email_placeholder: Add meg az e-mail címedet
-      password_label: Jelszó
-      password_placeholder: Add meg a jelszavadat
-      verify_hint: Ez segít biztosítani, hogy csak te tudhass külső fiókokat összekapcsolni a profiloddal.
-      submit_link: Fiók összekapcsolása
-      create_heading: Új fiók létrehozása
-      create_description_html: "Nem található fiók a(z) <strong>%{email}</strong> e-mail címhez. Kattints az alábbira, hogy új fiókot hozz létre a(z) %{provider} azonosítóddal."
-      info_email: "E-mail:"
-      info_name: "Név:"
-      submit_create: Fiók létrehozása
-      submit_accept_invitation: Meghívó elfogadása
-      account_creation_disabled: Az egyszeri bejelentkezésen keresztüli új fiók létrehozása le van tiltva. Kérjük, lépj kapcsolatba egy rendszergazdával a fiókod létrehozásához.
-      cancel: Mégse
     create_link:
       no_pending_oidc: Nem található függőben lévő OIDC-hitelesítés
-    new_user:
+    create_user:
+      account_created: Üdvözlünk! A fiókod sikeresen létrejött.
+      account_creation_disabled: Az SSO-fiók létrehozása le van tiltva. Kérjük, lépj
+        kapcsolatba egy rendszergazdával.
       no_pending_oidc: Nem található függőben lévő OIDC-hitelesítés
-      title: Fiókod véglegesítése
-      heading: Hozd létre a fiókodat
-      description: Kérjük, erősítsd meg az adataidat a fiókod létrehozásának befejezéséhez a(z) %{provider} azonosítóddal.
+    link:
+      account_creation_disabled: Az egyszeri bejelentkezésen keresztüli új fiók létrehozása
+        le van tiltva. Kérjük, lépj kapcsolatba egy rendszergazdával a fiókod létrehozásához.
+      cancel: Mégse
+      create_description_html: Nem található fiók a(z) <strong>%{email}</strong> e-mail
+        címhez. Kattints az alábbira, hogy új fiókot hozz létre a(z) %{provider} azonosítóddal.
+      create_heading: Új fiók létrehozása
+      email_label: E-mail
+      email_placeholder: Add meg az e-mail címedet
+      email_suffix_html: " (<strong>%{email}</strong>)"
+      info_email: 'E-mail:'
+      info_name: 'Név:'
+      no_pending_oidc: Nem található függőben lévő OIDC-hitelesítés
+      password_label: Jelszó
+      password_placeholder: Add meg a jelszavadat
+      submit_accept_invitation: Meghívó elfogadása
+      submit_create: Fiók létrehozása
+      submit_link: Fiók összekapcsolása
+      title_create: Fiók létrehozása
+      title_link: OIDC-fiók összekapcsolása
+      verify_description_html: A(z) %{provider} fiókod%{email_suffix} összekapcsolásához
+        kérjük, igazold az azonosságodat a jelszavad megadásával.
+      verify_heading: Igazold az azonosságodat
+      verify_hint: Ez segít biztosítani, hogy csak te tudhass külső fiókokat összekapcsolni
+        a profiloddal.
+    new_user:
+      cancel: Mégse
+      description: Kérjük, erősítsd meg az adataidat a fiókod létrehozásának befejezéséhez
+        a(z) %{provider} azonosítóddal.
       email_label: E-mail (az SSO-szolgáltatótól)
       first_name_label: Keresztnév
       first_name_placeholder: Add meg a keresztnevedet
+      heading: Hozd létre a fiókodat
       last_name_label: Vezetéknév
       last_name_placeholder: Add meg a vezetéknevedet
-      submit: Fiók létrehozása
-      cancel: Mégse
-    create_user:
       no_pending_oidc: Nem található függőben lévő OIDC-hitelesítés
-      account_creation_disabled: Az SSO-fiók létrehozása le van tiltva. Kérjük, lépj kapcsolatba egy rendszergazdával.
-      account_created: "Üdvözlünk! A fiókod sikeresen létrejött."
+      submit: Fiók létrehozása
+      title: Fiókod véglegesítése

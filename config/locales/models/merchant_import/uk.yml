@@ -4,5 +4,5 @@ uk:
     errors:
       models:
         merchant_import:
-          missing_columns: "Відсутні обов'язкові стовпці: %{columns}"
-          duplicate_columns: "Дублікати назв стовпців після нормалізації: %{columns}"
+          duplicate_columns: 'Дублікати назв стовпців після нормалізації: %{columns}'
+          missing_columns: 'Відсутні обов''язкові стовпці: %{columns}'

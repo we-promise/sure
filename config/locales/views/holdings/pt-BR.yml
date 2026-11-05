@@ -9,14 +9,14 @@ pt-BR:
       per_share: por ação
       shares: "%{qty} ações"
     index:
-      positions:
-        one: "%{count} posição"
-        other: "%{count} posições"
       average_cost: Custo médio
       holdings: Posições
       name: Nome
       new_holding: Nova transação
       no_holdings: Nenhuma posição para mostrar.
+      positions:
+        one: "%{count} posição"
+        other: "%{count} posições"
       return: Retorno total
       weight: Peso
     missing_price_tooltip:
@@ -35,6 +35,6 @@ pt-BR:
       portfolio_weight_label: Peso do Portfólio
       settings: Configurações
       ticker_label: Ticker
-      trade_history_entry: "%{qty} ações de %{security} a %{price}"
       total_return_label: Retorno Total
+      trade_history_entry: "%{qty} ações de %{security} a %{price}"
       unknown: Desconhecido

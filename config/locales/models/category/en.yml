@@ -2,28 +2,28 @@
 en:
   models:
     category:
-      uncategorized: Uncategorized
-      other_investments: Other Investments
-      investment_contributions: Investment Contributions
       defaults:
-        income: Income
+        entertainment: Entertainment
+        fees: Fees
         food_and_drink: Food & Drink
+        gifts_and_donations: Gifts & Donations
         groceries: Groceries
+        healthcare: Healthcare
+        home_improvement: Home Improvement
+        income: Income
+        insurance: Insurance
+        loan_payments: Loan Payments
+        mortgage_rent: Mortgage / Rent
+        personal_care: Personal Care
+        savings_and_investments: Savings & Investments
+        services: Services
         shopping: Shopping
+        sports_and_fitness: Sports & Fitness
+        subscriptions: Subscriptions
+        taxes: Taxes
         transportation: Transportation
         travel: Travel
-        entertainment: Entertainment
-        healthcare: Healthcare
-        personal_care: Personal Care
-        home_improvement: Home Improvement
-        mortgage_rent: Mortgage / Rent
         utilities: Utilities
-        subscriptions: Subscriptions
-        insurance: Insurance
-        sports_and_fitness: Sports & Fitness
-        gifts_and_donations: Gifts & Donations
-        taxes: Taxes
-        loan_payments: Loan Payments
-        services: Services
-        fees: Fees
-        savings_and_investments: Savings & Investments
+      investment_contributions: Investment Contributions
+      other_investments: Other Investments
+      uncategorized: Uncategorized

@@ -2,30 +2,27 @@
 zh-TW:
   valuations:
     confirmation_contents:
+      account_balance: 帳戶餘額
+      asset_value: 資產價值
+      balance: 餘額
+      brokerage_cash: 經紀帳戶現金
+      change: 變動
+      credit_card_balance: 信用卡餘額
+      crypto_balance: 加密貨幣餘額
+      holdings_value: 持股價值
+      liability_balance: 負債餘額
+      loan_balance: 貸款餘額
+      'on': 在
+      property_value: 房地產價值
+      recalculate_notice: 所有未來的交易與餘額都會依據這次的%{change_or_update}重新計算。
       this_will: 這會 %{action_verb} 該帳戶在
+      to: 為
       to_colon: 的價值為：
       total_account_value: 帳戶總價值
-      holdings_value: 持股價值
-      brokerage_cash: 經紀帳戶現金
-      account_balance: 帳戶餘額
-      credit_card_balance: 信用卡餘額
-      loan_balance: 貸款餘額
-      property_value: 房地產價值
-      vehicle_value: 車輛價值
-      crypto_balance: 加密貨幣餘額
-      asset_value: 資產價值
-      liability_balance: 負債餘額
-      balance: 餘額
-      'on': 在
-      to: 為
-      recalculate_notice: 所有未來的交易與餘額都會依據這次的%{change_or_update}重新計算。
-      change: 變動
       update: 更新
+      vehicle_value: 車輛價值
     create:
       account_updated: 帳戶已更新
-    update:
-      account_updated: 帳戶已更新
-      entry_updated: 紀錄已更新
     errors:
       amount_required: 必須填寫金額
     form:
@@ -54,7 +51,10 @@ zh-TW:
       name_placeholder: 為此紀錄輸入名稱
       note_label: 備註
       note_placeholder: 加入關於此紀錄的額外資訊
+      opening_balance: 期初餘額
       overview: 概覽
       settings: 設定
-      opening_balance: 期初餘額
       update_value: 更新價值
+    update:
+      account_updated: 帳戶已更新
+      entry_updated: 紀錄已更新

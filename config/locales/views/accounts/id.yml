@@ -3,92 +3,112 @@ id:
   account:
     entries:
       destroy:
-        success: "Entri berhasil dihapus."
+        success: Entri berhasil dihapus.
   accounts:
-    not_authorized: "Anda tidak memiliki izin untuk mengelola rekening ini"
     account:
-      complete_setup: Selesaikan penyiapan
-      edit: Edit
-      link_lunchflow: Hubungkan dengan Lunch Flow
-      link_provider: Hubungkan dengan penyedia
-      unlink_provider: Putuskan tautan dari penyedia
       change_simplefin_account: Ubah rekening SimpleFIN
-      troubleshoot: Pemecahan masalah
-      enable: Aktifkan rekening
-      disable: Nonaktifkan rekening
-      exclude_from_reports: Kecualikan dari semua laporan
-      include_in_reports: Sertakan dalam laporan
-      excluded_from_reports_indicator: Dikecualikan dari laporan
-      set_default: Jadikan default
-      remove_default: Hapus status default
+      complete_setup: Selesaikan penyiapan
       default_label: Default
       delete: Hapus rekening
+      disable: Nonaktifkan rekening
+      edit: Edit
+      enable: Aktifkan rekening
+      exclude_from_reports: Kecualikan dari semua laporan
+      excluded_from_reports_indicator: Dikecualikan dari laporan
+      include_in_reports: Sertakan dalam laporan
+      link_lunchflow: Hubungkan dengan Lunch Flow
+      link_provider: Hubungkan dengan penyedia
+      remove_default: Hapus status default
+      set_default: Jadikan default
       sharing: Berbagi
+      troubleshoot: Pemecahan masalah
+      unlink_provider: Putuskan tautan dari penyedia
     chart:
       data_not_available: Data tidak tersedia untuk periode yang dipilih
+    confirm_unlink:
+      confirm_button: Konfirmasi dan putuskan tautan
+      description_html: Anda akan memutuskan tautan <strong>%{account_name}</strong>
+        dari <strong>%{provider_name}</strong>. Tindakan ini akan mengubahnya menjadi
+        rekening manual.
+      title: Putuskan tautan rekening dari penyedia?
+      warning_can_delete: Setelah tautan diputuskan, Anda dapat menghapus rekening
+        tersebut jika diperlukan
+      warning_manual_updates: Anda perlu menambahkan transaksi dan memperbarui saldo
+        secara manual
+      warning_no_sync: Rekening tidak akan lagi disinkronkan secara otomatis dengan
+        penyedia Anda
+      warning_title: Artinya bagi rekening Anda
+      warning_transactions_kept: Semua transaksi dan saldo yang ada akan tetap disimpan
+      warning_wallet_connection: Semua rekening dalam koneksi Apple Wallet ini akan
+        diputuskan tautannya. Transaksi dan saldonya akan tetap disimpan. Anda dapat
+        menghubungkannya kembali melalui aplikasi iOS Sure dengan penyiapan Wallet
+        baru.
     create:
-      success: "Rekening %{type} berhasil dibuat"
-    set_default:
-      depository_only: "Hanya rekening kas dan kartu kredit yang dapat dijadikan default."
+      success: Rekening %{type} berhasil dibuat
     destroy:
-      success: "Rekening %{type} dijadwalkan untuk dihapus"
-      cannot_delete_linked: "Tidak dapat menghapus rekening yang terhubung. Silakan putuskan tautannya terlebih dahulu."
-      failed: "Gagal menghapus sumber daya. Coba lagi nanti."
+      cannot_delete_linked: Tidak dapat menghapus rekening yang terhubung. Silakan
+        putuskan tautannya terlebih dahulu.
+      failed: Gagal menghapus sumber daya. Coba lagi nanti.
+      success: Rekening %{type} dijadwalkan untuk dihapus
     empty:
-      empty_message: Tambahkan rekening baik melalui koneksi, impor, maupun input manual.
+      empty_message: Tambahkan rekening baik melalui koneksi, impor, maupun input
+        manual.
       new_account: Rekening baru
       no_accounts: Belum ada rekening
     form:
-      balance: "Saldo pada tanggal:"
-      opening_balance_date_label: Tanggal saldo awal
-      name_label: Nama rekening
-      name_placeholder: Contoh nama rekening
       additional_details: Detail tambahan
-      institution_name_label: Nama institusi
-      institution_name_placeholder: mis., Bank BCA
+      balance: 'Saldo pada tanggal:'
+      enable_category_matcher_hint: Saat diaktifkan, kategori yang disarankan penyedia
+        akan diterapkan pada transaksi yang diimpor. Nonaktifkan untuk membiarkan
+        transaksi baru tanpa kategori.
+      enable_category_matcher_label: Aktifkan pencocok kategori
+      exclude_from_reports: Kecualikan dari semua laporan
       institution_domain_label: Domain institusi
       institution_domain_placeholder: mis., bca.co.id
+      institution_name_label: Nama institusi
+      institution_name_placeholder: mis., Bank BCA
+      name_label: Nama rekening
+      name_placeholder: Contoh nama rekening
       notes_label: Catatan
-      notes_placeholder: Simpan informasi tambahan seperti nomor rekening, kode bank, IBAN, nomor perutean, dll.
-      exclude_from_reports: Kecualikan dari semua laporan
-      enable_category_matcher_label: Aktifkan pencocok kategori
-      enable_category_matcher_hint: Saat diaktifkan, kategori yang disarankan penyedia akan diterapkan pada transaksi yang diimpor. Nonaktifkan untuk membiarkan transaksi baru tanpa kategori.
+      notes_placeholder: Simpan informasi tambahan seperti nomor rekening, kode bank,
+        IBAN, nomor perutean, dll.
+      opening_balance_date_label: Tanggal saldo awal
     index:
       accounts: Rekening
-      financekit_accounts:
-        title: Apple Wallet
-        description: Kelola koneksi dan sinkronisasi Apple Wallet di aplikasi iOS Sure.
       cancel_sync: Batalkan sinkronisasi
+      financekit_accounts:
+        description: Kelola koneksi dan sinkronisasi Apple Wallet di aplikasi iOS
+          Sure.
+        title: Apple Wallet
       manual_accounts:
         other_accounts: Rekening lainnya
       new_account: Rekening baru
       sync: Sinkronkan semua
-    sync_all:
-      syncing: "Menyinkronkan rekening..."
     new:
-      import_accounts: Impor rekening
       container:
-        select: Pilih
-        navigate: Navigasi
         close: Tutup
+        navigate: Navigasi
         next: Berikutnya
         previous: Sebelumnya
+        select: Pilih
+      import_accounts: Impor rekening
       method_selector:
         connected_entry: Hubungkan rekening
         connected_entry_eu: Hubungkan rekening UE
-        link_with_provider: "Hubungkan dengan %{provider}"
+        link_with_provider: Hubungkan dengan %{provider}
         lunchflow_entry: Hubungkan rekening Lunch Flow
         manual_entry: Masukkan saldo rekening
         title: Bagaimana Anda ingin menambahkannya?
       title: Apa yang ingin Anda tambahkan?
+    not_authorized: Anda tidak memiliki izin untuk mengelola rekening ini
+    select_provider:
+      already_linked: Rekening sudah terhubung ke penyedia
+      description: Pilih penyedia yang ingin Anda gunakan untuk menghubungkan %{account_name}
+      no_providers: Belum ada penyedia yang dikonfigurasi saat ini
+      title: Pilih penyedia untuk dihubungkan
+    set_default:
+      depository_only: Hanya rekening kas dan kartu kredit yang dapat dijadikan default.
     show:
-      limited_fx_history_warning: "Riwayat kurs valas hanya tersedia mulai %{date} dan seterusnya. Transaksi sebelum tanggal ini menggunakan konversi mata uang perkiraan — hal ini dapat terjadi ketika penyedia valas hanya menyediakan rentang data historis yang terbatas."
-      tabs:
-        activity: Aktivitas
-        holdings: Kepemilikan
-        overview: Ringkasan
-        schedule: Jadwal
-        statements: Rekening koran
       activity:
         amount: Jumlah
         balance: Saldo
@@ -112,102 +132,108 @@ id:
         owed: Jumlah terutang
       header:
         complete_setup: Selesaikan penyiapan
+      limited_fx_history_warning: Riwayat kurs valas hanya tersedia mulai %{date}
+        dan seterusnya. Transaksi sebelum tanggal ini menggunakan konversi mata uang
+        perkiraan — hal ini dapat terjadi ketika penyedia valas hanya menyediakan
+        rentang data historis yang terbatas.
       menu:
         confirm_accept: Hapus "%{name}"
-        confirm_body_html: "<p>Dengan menghapus rekening ini, Anda akan menghapus riwayat nilainya, yang akan memengaruhi berbagai aspek dari keseluruhan akun Anda. Tindakan ini akan berdampak langsung pada perhitungan kekayaan bersih dan grafik rekening Anda.</p><br /> <p>Setelah dihapus, Anda tidak akan dapat memulihkan informasi rekening tersebut dan harus menambahkannya kembali sebagai rekening baru.</p>"
+        confirm_body_html: "<p>Dengan menghapus rekening ini, Anda akan menghapus
+          riwayat nilainya, yang akan memengaruhi berbagai aspek dari keseluruhan
+          akun Anda. Tindakan ini akan berdampak langsung pada perhitungan kekayaan
+          bersih dan grafik rekening Anda.</p><br /> <p>Setelah dihapus, Anda tidak
+          akan dapat memulihkan informasi rekening tersebut dan harus menambahkannya
+          kembali sebagai rekening baru.</p>"
         confirm_title: Hapus rekening?
         delete_account: Hapus rekening
         edit: Edit
+        exclude_from_reports: Kecualikan dari semua laporan
         import: Impor transaksi
         import_trades: Impor transaksi efek
         import_transactions: Impor transaksi
+        include_in_reports: Sertakan dalam laporan
         manage: Kelola rekening
         sharing: Berbagi
         statements: Rekening koran
-        exclude_from_reports: Kecualikan dari semua laporan
-        include_in_reports: Sertakan dalam laporan
-    update:
-      success: "Rekening %{type} berhasil diperbarui"
+      tabs:
+        activity: Aktivitas
+        holdings: Kepemilikan
+        overview: Ringkasan
+        schedule: Jadwal
+        statements: Rekening koran
     sidebar:
-      missing_data: Data historis belum lengkap
-      missing_data_description: "%{product} menggunakan penyedia pihak ketiga untuk mengambil kurs valas historis, harga sekuritas, dan lainnya. Data ini diperlukan untuk menghitung saldo rekening historis secara akurat."
+      collapse_all: Ciutkan semua
       configure_providers: Konfigurasikan penyedia Anda di sini.
+      expand_all: Perluas semua
+      missing_data: Data historis belum lengkap
+      missing_data_description: "%{product} menggunakan penyedia pihak ketiga untuk
+        mengambil kurs valas historis, harga sekuritas, dan lainnya. Data ini diperlukan
+        untuk menghitung saldo rekening historis secara akurat."
+      new_account: Rekening baru
+      new_account_group: "%{account_group} baru"
+      new_asset: Aset baru
+      new_debt: Utang baru
+      reorder_account: Pindahkan %{account}
+      reorder_hint: Seret untuk mengubah urutan. Dengan keyboard, tekan Enter, lalu
+        gunakan tombol panah.
+      sort_mode:
+        done: Selesai
+        hint: Seret rekening menggunakan pegangannya untuk mengubah urutan.
+        start: Urutkan rekening
       tabs:
         all: Semua
         assets: Aset
         debts: Utang
-      new_asset: Aset baru
-      new_debt: Utang baru
-      new_account: Rekening baru
-      new_account_group: "%{account_group} baru"
-      expand_all: Perluas semua
-      collapse_all: Ciutkan semua
-      reorder_account: "Pindahkan %{account}"
-      reorder_hint: Seret untuk mengubah urutan. Dengan keyboard, tekan Enter, lalu gunakan tombol panah.
-      sort_mode:
-        start: Urutkan rekening
-        hint: Seret rekening menggunakan pegangannya untuk mengubah urutan.
-        done: Selesai
-    types:
-      depository: Kas
-      investment: Investasi
-      crypto: Kripto
-      property: Properti
-      vehicle: Kendaraan
-      other_asset: Aset Lainnya
-      credit_card: Kartu Kredit
-      loan: Pinjaman
-      other_liability: Liabilitas Lainnya
-    types_plural:
-      depository: Kas
-      investment: Investasi
-      crypto: Kripto
-      property: Properti
-      vehicle: Kendaraan
-      other_asset: Aset Lainnya
-      credit_card: Kartu Kredit
-      loan: Pinjaman
-      other_liability: Liabilitas Lainnya
-    tax_treatments:
-      taxable: Kena Pajak
-      tax_deferred: Pajak Ditangguhkan
-      tax_exempt: Bebas Pajak
-      tax_advantaged: Fasilitas Pajak
+    subtype_regions:
+      au: Australia
+      ca: Kanada
+      eu: Eropa
+      generic: Umum
+      in: India
+      uk: Inggris Raya
+      us: Amerika Serikat
+    sync_all:
+      syncing: Menyinkronkan rekening...
     tax_treatment_descriptions:
-      taxable: Keuntungan dikenakan pajak saat direalisasikan
+      tax_advantaged: Manfaat pajak khusus dengan syarat tertentu
       tax_deferred: Setoran dapat mengurangi pajak, dikenakan pajak saat penarikan
       tax_exempt: Setoran setelah pajak, keuntungan tidak dikenakan pajak
-      tax_advantaged: Manfaat pajak khusus dengan syarat tertentu
-    subtype_regions:
-      us: Amerika Serikat
-      uk: Inggris Raya
-      ca: Kanada
-      au: Australia
-      eu: Eropa
-      in: India
-      generic: Umum
-    confirm_unlink:
-      title: Putuskan tautan rekening dari penyedia?
-      description_html: "Anda akan memutuskan tautan <strong>%{account_name}</strong> dari <strong>%{provider_name}</strong>. Tindakan ini akan mengubahnya menjadi rekening manual."
-      warning_title: Artinya bagi rekening Anda
-      warning_wallet_connection: Semua rekening dalam koneksi Apple Wallet ini akan diputuskan tautannya. Transaksi dan saldonya akan tetap disimpan. Anda dapat menghubungkannya kembali melalui aplikasi iOS Sure dengan penyiapan Wallet baru.
-      warning_no_sync: Rekening tidak akan lagi disinkronkan secara otomatis dengan penyedia Anda
-      warning_manual_updates: Anda perlu menambahkan transaksi dan memperbarui saldo secara manual
-      warning_transactions_kept: Semua transaksi dan saldo yang ada akan tetap disimpan
-      warning_can_delete: Setelah tautan diputuskan, Anda dapat menghapus rekening tersebut jika diperlukan
-      confirm_button: Konfirmasi dan putuskan tautan
+      taxable: Keuntungan dikenakan pajak saat direalisasikan
+    tax_treatments:
+      tax_advantaged: Fasilitas Pajak
+      tax_deferred: Pajak Ditangguhkan
+      tax_exempt: Bebas Pajak
+      taxable: Kena Pajak
+    types:
+      credit_card: Kartu Kredit
+      crypto: Kripto
+      depository: Kas
+      investment: Investasi
+      loan: Pinjaman
+      other_asset: Aset Lainnya
+      other_liability: Liabilitas Lainnya
+      property: Properti
+      vehicle: Kendaraan
+    types_plural:
+      credit_card: Kartu Kredit
+      crypto: Kripto
+      depository: Kas
+      investment: Investasi
+      loan: Pinjaman
+      other_asset: Aset Lainnya
+      other_liability: Liabilitas Lainnya
+      property: Properti
+      vehicle: Kendaraan
     unlink:
-      success: "Tautan rekening berhasil diputuskan. Rekening ini sekarang menjadi rekening manual."
-      not_linked: "Rekening tidak terhubung ke penyedia"
-      error: "Gagal memutuskan tautan rekening: %{error}"
-      generic_error: "Terjadi kesalahan tak terduga. Silakan coba lagi."
-    select_provider:
-      title: Pilih penyedia untuk dihubungkan
-      description: "Pilih penyedia yang ingin Anda gunakan untuk menghubungkan %{account_name}"
-      already_linked: "Rekening sudah terhubung ke penyedia"
-      no_providers: "Belum ada penyedia yang dikonfigurasi saat ini"
-
+      error: 'Gagal memutuskan tautan rekening: %{error}'
+      generic_error: Terjadi kesalahan tak terduga. Silakan coba lagi.
+      not_linked: Rekening tidak terhubung ke penyedia
+      success: Tautan rekening berhasil diputuskan. Rekening ini sekarang menjadi
+        rekening manual.
+    update:
+      success: Rekening %{type} berhasil diperbarui
   email_confirmations:
     new:
       invalid_token: Tautan konfirmasi tidak valid atau sudah kedaluwarsa.
-      success_login: Email Anda telah dikonfirmasi. Silakan masuk dengan alamat email baru Anda.
+      success_login: Email Anda telah dikonfirmasi. Silakan masuk dengan alamat email
+        baru Anda.

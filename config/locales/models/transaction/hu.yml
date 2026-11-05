@@ -6,6 +6,6 @@ hu:
         transaction:
           attributes:
             attachments:
-              too_many: "tranzakciónként legfeljebb %{max} fájl csatolható"
-              too_large: "a(z) %{index}. fájl túl nagy (maximum %{max_mb}MB)"
-              invalid_format: "a(z) %{index}. fájl formátuma nem támogatott (%{file_format})"
+              invalid_format: a(z) %{index}. fájl formátuma nem támogatott (%{file_format})
+              too_large: a(z) %{index}. fájl túl nagy (maximum %{max_mb}MB)
+              too_many: tranzakciónként legfeljebb %{max} fájl csatolható

@@ -14,7 +14,8 @@ fr:
       service_down_label: Service en panne
       title: Erreur de connexion à Lunchflow
       unable_to_connect: Impossible de se connecter à Lunchflow
-      unexpected_error: Une erreur inattendue s'est produite. Veuillez réessayer plus tard.
+      unexpected_error: Une erreur inattendue s'est produite. Veuillez réessayer plus
+        tard.
     complete_account_setup:
       all_skipped: Tous les comptes ont été ignorés. Aucun compte n'a été créé.
       creation_failed: 'Échec de la création des comptes : %{error}'

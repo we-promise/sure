@@ -11,186 +11,180 @@ vi:
     show:
       chart_title: Tổng giá trị
     subtypes:
-      # United States
-      brokerage:
-        short: Brokerage
-        long: Brokerage
       401k:
-        short: 401(k)
         long: 401(k)
-      roth_401k:
-        short: Roth 401(k)
-        long: Roth 401(k)
+        short: 401(k)
       403b:
-        short: 403(b)
         long: 403(b)
+        short: 403(b)
       457b:
-        short: 457(b)
         long: 457(b)
-      tsp:
-        short: TSP
-        long: Thrift Savings Plan
-      ira:
-        short: IRA
-        long: Traditional IRA
-      roth_ira:
-        short: Roth IRA
-        long: Roth IRA
-      sep_ira:
-        short: SEP IRA
-        long: SEP IRA
-      simple_ira:
-        short: SIMPLE IRA
-        long: SIMPLE IRA
+        short: 457(b)
       529_plan:
-        short: 529 Plan
         long: 529 Education Savings Plan
-      hsa:
-        short: HSA
-        long: Tài khoản tiết kiệm y tế
-      ugma:
-        short: UGMA
-        long: Tài khoản ủy thác UGMA
-      utma:
-        short: UTMA
-        long: Tài khoản ủy thác UTMA
-      # United Kingdom
-      isa:
-        short: ISA
-        long: Tài khoản tiết kiệm cá nhân
-      lisa:
-        short: LISA
-        long: Lifetime ISA
-      sipp:
-        short: SIPP
-        long: Quỹ hưu trí cá nhân tự quản
-      workplace_pension_uk:
-        short: Lương hưu
-        long: Lương hưu doanh nghiệp
-      # Canada
-      rrsp:
-        short: RRSP
-        long: Kế hoạch tiết kiệm hưu trí đăng ký
-      tfsa:
-        short: TFSA
-        long: Tài khoản tiết kiệm miễn thuế
-      resp:
-        short: RESP
-        long: Kế hoạch tiết kiệm giáo dục đăng ký
-      lira:
-        short: LIRA
-        long: Tài khoản hưu trí bị phong tỏa
-      rrif:
-        short: RRIF
-        long: Quỹ thu nhập hưu trí đăng ký
-      # Australia
-      super:
-        short: Super
-        long: Siêu quỹ hưu trí
-      smsf:
-        short: SMSF
-        long: Quỹ siêu hưu trí tự quản
-      # Europe
-      pea:
-        short: PEA
-        long: Plan d'Épargne en Actions
-      pillar_3a:
-        short: Pillar 3a
-        long: Lương hưu tư nhân (Pillar 3a)
-      riester:
-        short: Riester
-        long: Riester-Rente
-      # India
-      nps:
-        short: NPS
-        long: Hệ thống lương hưu quốc gia
-      apy:
-        short: APY
-        long: Atal Pension Yojana
-      indian_stocks:
-        short: Cổ phiếu Ấn Độ
-        long: Cổ phiếu Ấn Độ (Demat)
-      indian_equity:
-        short: Cổ phần Ấn Độ
-        long: Cổ phần Ấn Độ
-      indian_etf:
-        short: ETF Ấn Độ
-        long: ETF Ấn Độ
-      life_insurance:
-        short: Bảo hiểm nhân thọ
-        long: Bảo hiểm nhân thọ
-      ppf:
-        short: PPF
-        long: Quỹ tiết kiệm công cộng
-      ssy:
-        short: SSY
-        long: Sukanya Samriddhi Yojana
-      nsc:
-        short: NSC
-        long: Chứng chỉ tiết kiệm quốc gia
-      scss:
-        short: SCSS
-        long: Kế hoạch tiết kiệm người cao tuổi
-      fd:
-        short: FD
-        long: Tiền gửi cố định
-      rd:
-        short: RD
-        long: Tiền gửi định kỳ
-      pomis:
-        short: POMIS
-        long: Kế hoạch thu nhập hàng tháng bưu điện
-      kvp:
-        short: KVP
-        long: Kisan Vikas Patra
-      gold_etf:
-        short: ETF Vàng
-        long: ETF Vàng
-      gold_mf:
-        short: Quỹ tương hỗ Vàng
-        long: Quỹ tương hỗ Vàng
-      sgb:
-        short: SGB
-        long: Trái phiếu vàng có bảo đảm
-      g_sec:
-        short: G-Sec
-        long: Chứng khoán chính phủ (G-Secs)
-      sdl:
-        short: SDL
-        long: Khoản vay phát triển tiểu bang (SDLs)
-      corporate_bond:
-        short: Trái phiếu doanh nghiệp
-        long: Trái phiếu doanh nghiệp
-      infrastructure_bond:
-        short: Trái phiếu cơ sở hạ tầng
-        long: Trái phiếu cơ sở hạ tầng
-      tax_free_bond:
-        short: Trái phiếu miễn thuế
-        long: Trái phiếu miễn thuế
-      # Generic
-      pension:
-        short: Lương hưu
-        long: Lương hưu
-      retirement:
-        short: Hưu trí
-        long: Tài khoản hưu trí
-      mutual_fund:
-        short: Quỹ tương hỗ
-        long: Quỹ tương hỗ
-      gold:
-        short: Vàng
-        long: Vàng (vật chất hoặc kỹ thuật số)
+        short: 529 Plan
       angel:
-        short: Angel
         long: Đầu tư thiên thần
-      trust:
-        short: Quỹ tín thác
-        long: Quỹ tín thác
+        short: Angel
+      apy:
+        long: Atal Pension Yojana
+        short: APY
+      brokerage:
+        long: Brokerage
+        short: Brokerage
+      corporate_bond:
+        long: Trái phiếu doanh nghiệp
+        short: Trái phiếu doanh nghiệp
+      fd:
+        long: Tiền gửi cố định
+        short: FD
+      g_sec:
+        long: Chứng khoán chính phủ (G-Secs)
+        short: G-Sec
+      gold:
+        long: Vàng (vật chất hoặc kỹ thuật số)
+        short: Vàng
+      gold_etf:
+        long: ETF Vàng
+        short: ETF Vàng
+      gold_mf:
+        long: Quỹ tương hỗ Vàng
+        short: Quỹ tương hỗ Vàng
+      hsa:
+        long: Tài khoản tiết kiệm y tế
+        short: HSA
+      indian_equity:
+        long: Cổ phần Ấn Độ
+        short: Cổ phần Ấn Độ
+      indian_etf:
+        long: ETF Ấn Độ
+        short: ETF Ấn Độ
+      indian_stocks:
+        long: Cổ phiếu Ấn Độ (Demat)
+        short: Cổ phiếu Ấn Độ
+      infrastructure_bond:
+        long: Trái phiếu cơ sở hạ tầng
+        short: Trái phiếu cơ sở hạ tầng
+      ira:
+        long: Traditional IRA
+        short: IRA
+      isa:
+        long: Tài khoản tiết kiệm cá nhân
+        short: ISA
+      kvp:
+        long: Kisan Vikas Patra
+        short: KVP
+      life_insurance:
+        long: Bảo hiểm nhân thọ
+        short: Bảo hiểm nhân thọ
+      lira:
+        long: Tài khoản hưu trí bị phong tỏa
+        short: LIRA
+      lisa:
+        long: Lifetime ISA
+        short: LISA
+      mutual_fund:
+        long: Quỹ tương hỗ
+        short: Quỹ tương hỗ
+      nps:
+        long: Hệ thống lương hưu quốc gia
+        short: NPS
+      nsc:
+        long: Chứng chỉ tiết kiệm quốc gia
+        short: NSC
       other:
-        short: Khác
         long: Đầu tư khác
+        short: Khác
+      pea:
+        long: Plan d'Épargne en Actions
+        short: PEA
+      pension:
+        long: Lương hưu
+        short: Lương hưu
+      pillar_3a:
+        long: Lương hưu tư nhân (Pillar 3a)
+        short: Pillar 3a
+      pomis:
+        long: Kế hoạch thu nhập hàng tháng bưu điện
+        short: POMIS
+      ppf:
+        long: Quỹ tiết kiệm công cộng
+        short: PPF
+      rd:
+        long: Tiền gửi định kỳ
+        short: RD
+      resp:
+        long: Kế hoạch tiết kiệm giáo dục đăng ký
+        short: RESP
+      retirement:
+        long: Tài khoản hưu trí
+        short: Hưu trí
+      riester:
+        long: Riester-Rente
+        short: Riester
+      roth_401k:
+        long: Roth 401(k)
+        short: Roth 401(k)
+      roth_ira:
+        long: Roth IRA
+        short: Roth IRA
+      rrif:
+        long: Quỹ thu nhập hưu trí đăng ký
+        short: RRIF
+      rrsp:
+        long: Kế hoạch tiết kiệm hưu trí đăng ký
+        short: RRSP
+      scss:
+        long: Kế hoạch tiết kiệm người cao tuổi
+        short: SCSS
+      sdl:
+        long: Khoản vay phát triển tiểu bang (SDLs)
+        short: SDL
+      sep_ira:
+        long: SEP IRA
+        short: SEP IRA
+      sgb:
+        long: Trái phiếu vàng có bảo đảm
+        short: SGB
+      simple_ira:
+        long: SIMPLE IRA
+        short: SIMPLE IRA
+      sipp:
+        long: Quỹ hưu trí cá nhân tự quản
+        short: SIPP
+      smsf:
+        long: Quỹ siêu hưu trí tự quản
+        short: SMSF
+      ssy:
+        long: Sukanya Samriddhi Yojana
+        short: SSY
+      super:
+        long: Siêu quỹ hưu trí
+        short: Super
+      tax_free_bond:
+        long: Trái phiếu miễn thuế
+        short: Trái phiếu miễn thuế
+      tfsa:
+        long: Tài khoản tiết kiệm miễn thuế
+        short: TFSA
+      trust:
+        long: Quỹ tín thác
+        short: Quỹ tín thác
+      tsp:
+        long: Thrift Savings Plan
+        short: TSP
+      ugma:
+        long: Tài khoản ủy thác UGMA
+        short: UGMA
+      utma:
+        long: Tài khoản ủy thác UTMA
+        short: UTMA
+      workplace_pension_uk:
+        long: Lương hưu doanh nghiệp
+        short: Lương hưu
     value_tooltip:
       cash: Tiền mặt
       holdings: Danh mục nắm giữ
       total: Số dư danh mục
-      total_value_tooltip: Tổng số dư danh mục là tổng tiền mặt tại sàn giao dịch (có sẵn để giao dịch) và giá trị thị trường hiện tại của các tài sản nắm giữ.
+      total_value_tooltip: Tổng số dư danh mục là tổng tiền mặt tại sàn giao dịch
+        (có sẵn để giao dịch) và giá trị thị trường hiện tại của các tài sản nắm giữ.

@@ -1,3 +1,4 @@
+---
 uk:
   breadcrumbs:
     account_sharings: Спільний доступ до рахунків
@@ -15,6 +16,7 @@ uk:
     budgets: Бюджети
     categories: Категорії
     categorize: Класифікація
+    changelog: Що нового
     chats: Чати
     coinbase_items: Coinbase
     coinstats_items: CoinStats
@@ -28,6 +30,7 @@ uk:
     exports: Експорт
     family_exports: Експорт
     family_merchants: Продавці
+    feedback: Відгук
     guides: Посібники
     holdings: Портфель
     home: Головна
@@ -50,6 +53,7 @@ uk:
     mercury_items: Mercury
     messages: Повідомлення
     mfa: Двофакторна автентифікація
+    monobank_items: Monobank
     oidc_accounts: SSO-рахунки
     onboardings: Онбординг
     other_assets: Інші активи
@@ -57,6 +61,7 @@ uk:
     payments: Платежі
     pending_duplicate_merges: Перевірка дублікатів
     plaid_items: Plaid
+    plan: План
     preferences: Налаштування
     profile: Профіль
     profiles: Профіль
@@ -64,10 +69,11 @@ uk:
     providers: Постачальники
     questrade_items: Questrade
     recurring_transactions: Повторювані
+    redbark_items: Redbark
     registrations: Реєстрація
     reports: Звіти
     rules: Правила
-    securities: "Цінні папери"
+    securities: Цінні папери
     security: Безпека
     self_hosting: Self-Hosting
     sessions: Вхід
@@ -78,6 +84,7 @@ uk:
     sso_identities: SSO-з'єднання
     sso_providers: Постачальники SSO
     subscriptions: Підписка
+    system_health: Стан системи
     tags: Теги
     trades: Угоди
     transactions: Транзакції
@@ -86,9 +93,3 @@ uk:
     users: Користувачі
     valuations: Оцінки
     vehicles: Транспорт
-    changelog: Що нового
-    feedback: Відгук
-    monobank_items: Monobank
-    plan: План
-    redbark_items: Redbark
-    system_health: Стан системи

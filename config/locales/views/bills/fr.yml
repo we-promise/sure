@@ -5,17 +5,18 @@ fr:
     add_payment: Ajouter un paiement
     ai_prompts:
       due_before_paycheck: Qu'est-ce qui est à payer avant ma prochaine paie ?
-      monthly_subscriptions: Combien est-ce que je paie chaque mois en abonnements ?
+      monthly_subscriptions: Combien est-ce que je paie chaque mois en abonnements
+        ?
       safe_to_spend: Combien puis-je dépenser sans risque cette période ?
       subscriptions_up: Quels abonnements ont augmenté cette année ?
     all:
-      current_bills: Factures en cours
-      dismissed_hidden_description: Les factures terminées sont masquées.
       any_type: Tous les types
       col_actions: Actions
       col_amount: Montant
       col_name: Nom
       col_next: Prochaine échéance
+      current_bills: Factures en cours
+      dismissed_hidden_description: Les factures terminées sont masquées.
       monthly_equivalent: "%{amount}/mois"
       no_matches_description: Essayez de retirer un filtre ou de modifier la recherche.
       no_matches_title: Aucun résultat
@@ -59,7 +60,8 @@ fr:
       reset_feed: Réinitialiser le lien
       subscribe_ical: S'abonner (iCal)
       today: Aujourd'hui
-    cancelled_still_scheduled: "Vous l'avez marquée comme annulée le %{date}, mais elle reste programmée : de nouvelles factures continueront donc d'apparaître."
+    cancelled_still_scheduled: 'Vous l''avez marquée comme annulée le %{date}, mais
+      elle reste programmée : de nouvelles factures continueront donc d''apparaître.'
     debt_payment: Remboursement de dette
     detail:
       annualized: Par an
@@ -87,7 +89,8 @@ fr:
       rule_aliases: Correspond aussi à %{names}
       rule_amount_range: de %{min} à %{max}
       rule_detected: Correspond aux transactions nommées %{name}
-      rule_learned_tolerance: Les montants situés à %{percent} près du montant habituel correspondent à cette facture
+      rule_learned_tolerance: Les montants situés à %{percent} près du montant habituel
+        correspondent à cette facture
       rule_named: "%{name}"
       rules: Comment cette facture est reconnue
       spent_per_year: Dépensé
@@ -100,7 +103,8 @@ fr:
       found:
         one: 1 facture possible trouvée. Vérifiez-la ci-dessous.
         other: "%{count} factures possibles trouvées. Vérifiez-les ci-dessous."
-      none_found: Aucun nouveau motif récurrent trouvé. Vous pouvez ajouter des factures manuellement.
+      none_found: Aucun nouveau motif récurrent trouvé. Vous pouvez ajouter des factures
+        manuellement.
     due_label:
       due_since: À payer le %{date}
       overdue:
@@ -123,14 +127,21 @@ fr:
       attention_overdue_total: "%{amount} en retard"
       confidence: "%{percent} % de correspondance"
       detected_review:
-        one: Nous avons trouvé 1 paiement récurrent dans vos transactions. Vérifiez-le pour que les totaux affichés ici correspondent à ce que vous payez réellement.
-        other: Nous avons trouvé %{count} paiements récurrents dans vos transactions. Vérifiez-les pour que les totaux affichés ici correspondent à ce que vous payez réellement.
+        one: Nous avons trouvé 1 paiement récurrent dans vos transactions. Vérifiez-le
+          pour que les totaux affichés ici correspondent à ce que vous payez réellement.
+        other: Nous avons trouvé %{count} paiements récurrents dans vos transactions.
+          Vérifiez-les pour que les totaux affichés ici correspondent à ce que vous
+          payez réellement.
       detected_review_action: Les vérifier
       dormant: En pause
       empty:
         action: Trouver les transactions récurrentes
-        description: Les factures sont vos dépenses récurrentes. Sure les détecte automatiquement dans votre historique de transactions, et vous pouvez ajouter un lien de paiement à chacune pour régler directement depuis ici.
-        no_history_description: Aucune transaction pour l'instant. Connectez un compte ou importez un historique et Sure trouvera vos factures automatiquement, ou ajoutez-en une manuellement.
+        description: Les factures sont vos dépenses récurrentes. Sure les détecte
+          automatiquement dans votre historique de transactions, et vous pouvez ajouter
+          un lien de paiement à chacune pour régler directement depuis ici.
+        no_history_description: Aucune transaction pour l'instant. Connectez un compte
+          ou importez un historique et Sure trouvera vos factures automatiquement,
+          ou ajoutez-en une manuellement.
         title: Aucune facture pour l'instant
       hero_next_seven: "%{amount} à payer dans les 7 prochains jours"
       hero_past_due: "%{amount} en retard"
@@ -144,11 +155,11 @@ fr:
         one: 1 requiert votre attention
         other: "%{count} requièrent votre attention"
       needs_attention: Requiert votre attention
-      notices_heading: Changements
       needs_review: À vérifier
       notice_price: "%{name} a changé de prix : %{from} → %{to} (%{percent})"
       notice_renewal: "%{name} se renouvelle le %{date}"
       notice_trial: L'essai de %{name} se termine le %{date}
+      notices_heading: Changements
       notices_routine:
         one: 1 changement mineur
         other: "%{count} changements mineurs"
@@ -221,10 +232,13 @@ fr:
     paycheck:
       add_income: Ajouter un revenu
       all_clear:
-        description: Aucune facture n'arrive à échéance d'ici le %{date}, rien n'est donc engagé sur cette période.
+        description: Aucune facture n'arrive à échéance d'ici le %{date}, rien n'est
+          donc engagé sur cette période.
         title: Rien à couvrir
-      allocation_aria: Sur %{income} de revenus, %{due} est à payer maintenant, %{reserved} est réservé pour plus tard et %{safe} peut être dépensé sans risque.
-      allocation_aria_short: "%{income} de revenus couvrent les engagements listés ici, et il manque encore %{short}."
+      allocation_aria: Sur %{income} de revenus, %{due} est à payer maintenant, %{reserved}
+        est réservé pour plus tard et %{safe} peut être dépensé sans risque.
+      allocation_aria_short: "%{income} de revenus couvrent les engagements listés
+        ici, et il manque encore %{short}."
       before_next_paycheck: Avant le %{date}
       bills_before_payday:
         one: Factures avant votre prochaine paie · 1
@@ -232,19 +246,22 @@ fr:
       bills_this_period:
         one: Factures de cette période · 1
         other: Factures de cette période · %{count}
+      bridge_allocation_aria: Sur les %{cash} de vos comptes, %{due} sont à payer
+        avant votre prochaine paie et il reste %{left}.
       bridge_amount: "· %{amount} à payer"
       bridge_label: Avant votre prochaine paie
-      bridge_split: À payer avant le %{date}, couvert par les %{cash} présents sur vos comptes.
       bridge_left: "%{amount} restants après les factures"
       bridge_show_more:
         one: Afficher 1 de plus
-        other: "Afficher %{count} de plus"
-      bridge_allocation_aria: "Sur les %{cash} de vos comptes, %{due} sont à payer avant votre prochaine paie et il reste %{left}."
-      item_overdue: En retard
+        other: Afficher %{count} de plus
+      bridge_split: À payer avant le %{date}, couvert par les %{cash} présents sur
+        vos comptes.
       due_this_period: À payer cette période
       empty:
         action: Ajouter un revenu
-        description: Ajoutez vos revenus pour voir ce que chaque paie doit couvrir. Les entrées détectées ne définissent jamais vos jours de paie toutes seules (c'est vous qui décidez).
+        description: Ajoutez vos revenus pour voir ce que chaque paie doit couvrir.
+          Les entrées détectées ne définissent jamais vos jours de paie toutes seules
+          (c'est vous qui décidez).
         title: Déclarez votre calendrier de revenus
       income_amount: "%{amount} de revenus"
       income_detected: Détecté automatiquement, ne définit pas les jours de paie
@@ -254,6 +271,7 @@ fr:
       income_source_count:
         one: "%{count} source de revenus"
         other: "%{count} sources de revenus"
+      item_overdue: En retard
       manage: Gérer
       next_on: Prochaine le %{date}
       no_income_arriving: Aucun revenu attendu
@@ -272,16 +290,19 @@ fr:
       short_short: Déficit
       shortfall_amount: "· %{amount}"
       shortfall_label: Déficit avant votre prochaine paie
-      shortfall_largest: "Plus gros engagement à venir :"
-      shortfall_split: "%{obligations} sont à payer avant le %{date} et vos comptes contiennent %{cash}."
+      shortfall_largest: 'Plus gros engagement à venir :'
+      shortfall_split: "%{obligations} sont à payer avant le %{date} et vos comptes
+        contiennent %{cash}."
       unconvertible:
         one: 1 engagement n'est pas inclus, aucun taux de change disponible
         other: "%{count} engagements ne sont pas inclus, aucun taux de change disponible"
     possible_duplicate: Doublon possible
     remaining_label: restant
     reset_feed_token:
-      confirm: Réinitialiser le lien du flux de calendrier ? Tous les liens partagés jusqu'ici cesseront de fonctionner.
-      done: Lien du flux réinitialisé. Les applications de calendrier qui utilisent l'ancien lien ne se mettront plus à jour ; réabonnez-vous avec le nouveau.
+      confirm: Réinitialiser le lien du flux de calendrier ? Tous les liens partagés
+        jusqu'ici cesseront de fonctionner.
+      done: Lien du flux réinitialisé. Les applications de calendrier qui utilisent
+        l'ancien lien ne se mettront plus à jour ; réabonnez-vous avec le nouveau.
     resolve: Résoudre
     review_match: Vérifier la correspondance
     row_overdue: En retard
@@ -293,15 +314,18 @@ fr:
         apply: Appliquer la sélection
         autopay_off: Désactivé
         autopay_on: Activé
-        failed: Impossible d'analyser cette facture pour le moment. Sa configuration reste inchangée.
+        failed: Impossible d'analyser cette facture pour le moment. Sa configuration
+          reste inchangée.
         field_amount: Montant
         field_autopay: Prélèvement automatique
         field_category: Catégorie
         field_kind: Type
         field_name: Nom
         field_schedule: Échéancier
-        intro: Vérifiez les changements à appliquer. Ceux qui ne sont pas cochés restent exactement en l'état.
-        no_changes: Cette facture correspond déjà à son historique de paiements. Rien à changer.
+        intro: Vérifiez les changements à appliquer. Ceux qui ne sont pas cochés restent
+          exactement en l'état.
+        no_changes: Cette facture correspond déjà à son historique de paiements. Rien
+          à changer.
         title: Suggestions de l'IA pour %{name}
         trigger: Laisser l'IA configurer
         uncategorized: Sans catégorie

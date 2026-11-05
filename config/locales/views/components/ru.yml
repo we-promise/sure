@@ -34,8 +34,8 @@ ru:
           adjustments: Ручные корректировки или другие изменения
           adjustments_asset: Ручные корректировки стоимости или оценки
           buys: Покупки криптовалюты в течение дня
-          change_in_brokerage_cash: Чистое изменение денежных средств за счёт пополнений, выводов
-            и сделок
+          change_in_brokerage_cash: Чистое изменение денежных средств за счёт пополнений,
+            выводов и сделок
           change_in_holdings_market: Изменение стоимости активов из-за рыночных колебаний
           change_in_holdings_trades: Влияние на активы от покупок и продаж ценных
             бумаг
@@ -77,12 +77,12 @@ ru:
           total_gains: Общая доходность
         views:
           cash: Денежные средства
+          gains: Доходность / ROI
           holdings: Активы
           total_value: Общая стоимость
-          gains: Доходность / ROI
         vs_available_history: по сравнению с доступной историей
     period_picker:
-      aria_label: "Период: %{period}"
+      aria_label: 'Период: %{period}'
   ds:
     alert:
       variants:
@@ -93,6 +93,9 @@ ru:
         warning: Предупреждение
     dialog:
       close: Закрыть
+    icon_picker:
+      no_matching_icons: Подходящих иконок нет
+      search_placeholder: Поиск иконок...
     link:
       opens_in_new_tab: "(открывается в новой вкладке)"
     pill:
@@ -102,9 +105,6 @@ ru:
       avatar_default_label: Открыть меню
     tooltip:
       trigger_label: Подробнее
-    icon_picker:
-      no_matching_icons: Подходящих иконок нет
-      search_placeholder: Поиск иконок...
   provider_sync_summary:
     accounts:
       institutions: 'Учреждения: %{count}'

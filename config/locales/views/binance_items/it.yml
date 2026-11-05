@@ -1,75 +1,78 @@
 ---
 it:
-  binance_items:
-    create:
-      default_name: Binance
-      success: Connessione a Binance riuscita! Il tuo conto viene sincronizzato.
-    update:
-      success: Configurazione Binance aggiornata con successo.
-    destroy:
-      success: Connessione Binance pianificata per l'eliminazione.
-    setup_accounts:
-      title: Importa conto Binance
-      subtitle: Seleziona quali portafogli tracciare
-      instructions: Seleziona i portafogli Binance che vuoi importare. Vengono mostrati solo i portafogli con saldi.
-      no_accounts: Tutti i conti sono stati importati.
-      accounts_count:
-        one: "%{count} conto disponibile"
-        other: "%{count} conti disponibili"
-      select_all: Seleziona tutto
-      import_selected: Importa selezionati
-      cancel: Annulla
-      creating: Importazione in corso...
-    complete_account_setup:
-      success:
-        one: "Importato %{count} conto"
-        other: "Importati %{count} conti"
-      none_selected: Nessun conto selezionato
-      no_accounts: Nessun conto da importare
-    binance_item:
-      provider_name: Binance
-      syncing: Sincronizzazione in corso...
-      reconnect: Le credenziali devono essere aggiornate
-      deletion_in_progress: Eliminazione in corso...
-      sync_status:
-        no_accounts: Nessun conto trovato
-        all_synced:
-          one: "%{count} conto sincronizzato"
-          other: "%{count} conti sincronizzati"
-        partial_sync: "%{linked_count} sincronizzati, %{unlinked_count} da configurare"
-      status: "Ultima sincronizzazione %{timestamp} fa"
-      status_with_summary: "Ultima sincronizzazione %{timestamp} fa - %{summary}"
-      status_never: Mai sincronizzato
-      update_credentials: Aggiorna credenziali
-      delete: Elimina
-      no_accounts_title: Nessun conto trovato
-      no_accounts_message: Il tuo portafoglio Binance apparirà qui dopo la sincronizzazione.
-      setup_needed: Conto pronto per l'importazione
-      setup_description: Seleziona quali portafogli Binance vuoi tracciare.
-      setup_action: Importa conto
-      import_accounts_menu: Importa conto
-      stale_rate_warning: "Il saldo è approssimativo — il tasso di cambio esatto per %{date} non era disponibile. Verrà aggiornato alla prossima sincronizzazione."
-    select_existing_account:
-      title: Collega conto Binance
-      no_accounts_found: Nessun conto Binance trovato.
-      wait_for_sync: Attendi il completamento della sincronizzazione Binance
-      check_provider_health: Verifica che le tue credenziali API Binance siano valide
-      currently_linked_to: "Attualmente collegato a: %{account_name}"
-      link: Collega
-      cancel: Annulla
-    link_existing_account:
-      success: Collegato con successo al conto Binance
-      errors:
-        only_manual: Solo i conti manuali possono essere collegati a Binance
-        invalid_binance_account: Conto Binance non valido
   binance_item:
     syncer:
-      checking_credentials: Verifica credenziali...
-      credentials_invalid: Credenziali API non valide. Controlla la tua chiave API e il segreto.
-      importing_accounts: Importazione conti da Binance...
-      checking_configuration: Verifica configurazione conto...
       accounts_need_setup:
         one: "%{count} conto da configurare"
         other: "%{count} conti da configurare"
-      processing_accounts: Elaborazione dati conto...
       calculating_balances: Calcolo saldi...
+      checking_configuration: Verifica configurazione conto...
+      checking_credentials: Verifica credenziali...
+      credentials_invalid: Credenziali API non valide. Controlla la tua chiave API
+        e il segreto.
+      importing_accounts: Importazione conti da Binance...
+      processing_accounts: Elaborazione dati conto...
+  binance_items:
+    binance_item:
+      delete: Elimina
+      deletion_in_progress: Eliminazione in corso...
+      import_accounts_menu: Importa conto
+      no_accounts_message: Il tuo portafoglio Binance apparirà qui dopo la sincronizzazione.
+      no_accounts_title: Nessun conto trovato
+      provider_name: Binance
+      reconnect: Le credenziali devono essere aggiornate
+      setup_action: Importa conto
+      setup_description: Seleziona quali portafogli Binance vuoi tracciare.
+      setup_needed: Conto pronto per l'importazione
+      stale_rate_warning: Il saldo è approssimativo — il tasso di cambio esatto per
+        %{date} non era disponibile. Verrà aggiornato alla prossima sincronizzazione.
+      status: Ultima sincronizzazione %{timestamp} fa
+      status_never: Mai sincronizzato
+      status_with_summary: Ultima sincronizzazione %{timestamp} fa - %{summary}
+      sync_status:
+        all_synced:
+          one: "%{count} conto sincronizzato"
+          other: "%{count} conti sincronizzati"
+        no_accounts: Nessun conto trovato
+        partial_sync: "%{linked_count} sincronizzati, %{unlinked_count} da configurare"
+      syncing: Sincronizzazione in corso...
+      update_credentials: Aggiorna credenziali
+    complete_account_setup:
+      no_accounts: Nessun conto da importare
+      none_selected: Nessun conto selezionato
+      success:
+        one: Importato %{count} conto
+        other: Importati %{count} conti
+    create:
+      default_name: Binance
+      success: Connessione a Binance riuscita! Il tuo conto viene sincronizzato.
+    destroy:
+      success: Connessione Binance pianificata per l'eliminazione.
+    link_existing_account:
+      errors:
+        invalid_binance_account: Conto Binance non valido
+        only_manual: Solo i conti manuali possono essere collegati a Binance
+      success: Collegato con successo al conto Binance
+    select_existing_account:
+      cancel: Annulla
+      check_provider_health: Verifica che le tue credenziali API Binance siano valide
+      currently_linked_to: 'Attualmente collegato a: %{account_name}'
+      link: Collega
+      no_accounts_found: Nessun conto Binance trovato.
+      title: Collega conto Binance
+      wait_for_sync: Attendi il completamento della sincronizzazione Binance
+    setup_accounts:
+      accounts_count:
+        one: "%{count} conto disponibile"
+        other: "%{count} conti disponibili"
+      cancel: Annulla
+      creating: Importazione in corso...
+      import_selected: Importa selezionati
+      instructions: Seleziona i portafogli Binance che vuoi importare. Vengono mostrati
+        solo i portafogli con saldi.
+      no_accounts: Tutti i conti sono stati importati.
+      select_all: Seleziona tutto
+      subtitle: Seleziona quali portafogli tracciare
+      title: Importa conto Binance
+    update:
+      success: Configurazione Binance aggiornata con successo.

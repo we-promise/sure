@@ -9,7 +9,9 @@ id:
       title: Bergabung dengan %{family}
     create:
       existing_user_added: Pengguna telah ditambahkan ke keluarga Anda.
-      existing_user_has_family_data: Pengguna tersebut sudah memiliki keluarga yang memiliki rekening. Mereka perlu menghapus atau mentransfer rekening tersebut sebelum bergabung dengan keluarga Anda.
+      existing_user_has_family_data: Pengguna tersebut sudah memiliki keluarga yang
+        memiliki rekening. Mereka perlu menghapus atau mentransfer rekening tersebut
+        sebelum bergabung dengan keluarga Anda.
       failure: Tidak dapat mengirim undangan
       success: Undangan berhasil dikirim
     destroy:

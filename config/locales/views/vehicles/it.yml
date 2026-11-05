@@ -26,10 +26,10 @@ it:
     tabs:
       overview:
         current_price: Prezzo Attuale
+        edit_account_details: Modifica dettagli conto
         make_model: Marca e Modello
         mileage: Chilometraggio
         purchase_price: Prezzo di Acquisto
         trend: Tendenza
         unknown: Sconosciuto
         year: Anno
-        edit_account_details: "Modifica dettagli conto"

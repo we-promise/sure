@@ -13,10 +13,10 @@ hu:
     form:
       placeholder: Címke neve
     index:
+      delete_all: Összes törlése
       empty: Még nincsenek címkék
       new: Új címke
       tags: Címkék
-      delete_all: Összes törlése
     new:
       new: Új címke
     tag:

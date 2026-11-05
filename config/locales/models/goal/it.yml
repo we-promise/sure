@@ -3,22 +3,26 @@ it:
   activerecord:
     attributes:
       goal:
-        name: Nome
-        target_amount: Importo obiettivo
-        currency: Valuta
-        target_date: Data obiettivo
         color: Colore
+        currency: Valuta
+        linked_accounts: Conti collegati
+        name: Nome
         notes: Note
         state: Stato
-        linked_accounts: Conti collegati
+        target_amount: Importo obiettivo
+        target_date: Data obiettivo
     errors:
       models:
         goal:
           attributes:
             base:
-              at_least_one_linked_account_required: Scegli almeno un conto per finanziare questo obiettivo.
-            linked_accounts:
-              must_be_fundable: Tutti i conti collegati devono essere conti correnti, conti di investimento o conti cripto.
-              must_belong_to_family: I conti collegati devono appartenere alla stessa famiglia dell'obiettivo.
+              at_least_one_linked_account_required: Scegli almeno un conto per finanziare
+                questo obiettivo.
             currency:
-              locked_after_linked: Impossibile cambiare la valuta dopo che l'obiettivo è stato collegato ai conti.
+              locked_after_linked: Impossibile cambiare la valuta dopo che l'obiettivo
+                è stato collegato ai conti.
+            linked_accounts:
+              must_be_fundable: Tutti i conti collegati devono essere conti correnti,
+                conti di investimento o conti cripto.
+              must_belong_to_family: I conti collegati devono appartenere alla stessa
+                famiglia dell'obiettivo.

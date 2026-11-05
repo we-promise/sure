@@ -5,10 +5,10 @@ pl:
       brokerage_cash: Gotówka maklerska
     cost_basis_cell:
       cancel: Anuluj
-      per_share_label: "Na akcję"
       overwrite_confirm_body: Spowoduje to zastąpienie aktualnego kosztu bazowego
         wynoszącego %{current}.
       overwrite_confirm_title: Nadpisać koszt bazowy?
+      per_share_label: Na akcję
       save: Zapisz
       set: Ustaw
       set_cost_basis_header: Ustaw koszt bazowy dla %{ticker}

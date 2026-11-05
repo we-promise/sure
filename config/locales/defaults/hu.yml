@@ -39,7 +39,7 @@ hu:
       default: "%Y.%m.%d."
       long: "%Y. %B %e."
       short: "%b %e."
-      short_with_year: '%Y. %b %d.'
+      short_with_year: "%Y. %b %d."
     month_names:
     -
     - január
@@ -137,12 +137,6 @@ hu:
       submit: "%{model} mentése"
       update: "%{model} módosítása"
   number:
-    currency:
-      format:
-        delimiter: " "
-        format: "%n %u"
-        precision: 2
-        separator: ","
     format:
       delimiter: " "
       precision: 2

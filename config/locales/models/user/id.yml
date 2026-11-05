@@ -15,8 +15,14 @@ id:
         user:
           attributes:
             base:
-              cannot_deactivate_admin_with_other_users: Admin tidak dapat menghapus akun selama pengguna lain masih ada. Silakan hapus semua anggota terlebih dahulu.
-              provider_item_has_other_accounts: Pengguna memiliki rekening yang terhubung ke koneksi penyedia yang juga memiliki rekening milik pengguna lain. Pindahkan atau putuskan tautan rekening tersebut sebelum mengubah keanggotaan keluarga/grup.
-              cannot_remove_last_super_admin: Tidak dapat menghapus super admin aktif terakhir. Angkat pengguna lain menjadi super admin terlebih dahulu.
+              cannot_deactivate_admin_with_other_users: Admin tidak dapat menghapus
+                akun selama pengguna lain masih ada. Silakan hapus semua anggota terlebih
+                dahulu.
+              cannot_remove_last_super_admin: Tidak dapat menghapus super admin aktif
+                terakhir. Angkat pengguna lain menjadi super admin terlebih dahulu.
+              provider_item_has_other_accounts: Pengguna memiliki rekening yang terhubung
+                ke koneksi penyedia yang juga memiliki rekening milik pengguna lain.
+                Pindahkan atau putuskan tautan rekening tersebut sebelum mengubah
+                keanggotaan keluarga/grup.
             profile_image:
               invalid_file_size: ukuran file harus kurang dari %{max_megabytes}MB

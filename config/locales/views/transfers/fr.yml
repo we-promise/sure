@@ -3,19 +3,21 @@ fr:
   transfers:
     create:
       date_invalid: est invalide
-      exchange_rate_unavailable: Aucun taux de change disponible pour les devises et la date sélectionnées
-      stale_form: Ce formulaire a déjà été envoyé avec des informations différentes. Actualisez la page et réessayez.
+      exchange_rate_unavailable: Aucun taux de change disponible pour les devises
+        et la date sélectionnées
+      stale_form: Ce formulaire a déjà été envoyé avec des informations différentes.
+        Actualisez la page et réessayez.
       success: Transfert créé
     destroy:
       success: Transfert supprimé
     form:
       amount: Montant
+      bank_charges: Frais bancaires
       date: Date
       destination_amount: Montant de destination
-      destination_amount_display: "Montant de destination : %{amount}"
-      exchange_rate_display: "Taux de change : %{rate}"
+      destination_amount_display: 'Montant de destination : %{amount}'
+      exchange_rate_display: 'Taux de change : %{rate}'
       expense: Dépense
-      bank_charges: Frais bancaires
       from: De
       income: Revenu
       incoming_fee: Frais de transfert entrant
@@ -29,32 +31,32 @@ fr:
       title: Nouveau transfert
     show:
       amount: Montant
+      bank_charges: Frais bancaires
       category: Catégorie
       date: Date
       delete: Supprimer le transfert
-      delete_subtitle:
-        Ceci supprime le transfert. Cela ne supprimera pas les transactions
+      delete_subtitle: Ceci supprime le transfert. Cela ne supprimera pas les transactions
         sous-jacentes.
       delete_title: Voulez-vous vraiment supprimer ce transfert ?
+      destination_fee: Frais de destination
       details: Détails
       from: De
+      investment_contribution_subtitle: Compter ce transfert comme une dépense dans
+        les budgets et les rapports. Désactivez cette option lorsque le compte de
+        courtage ou crypto ne fait que convertir l'argent dans une autre devise.
+      investment_contribution_title: Versement d'investissement
       mark_recurring: Marquer comme récurrent
-      mark_recurring_subtitle:
-        Suivez ce transfert comme un modèle récurrent dans
+      mark_recurring_subtitle: Suivez ce transfert comme un modèle récurrent dans
         le prochain flux et la page récurrente.
       mark_recurring_title: Marquer le transfert comme récurrent
       note_label: Notes
       note_placeholder: Ajoutez une note à ce transfert
       overview: Aperçu
       settings: Paramètres
-      bank_charges: Frais bancaires
-      destination_fee: Frais de destination
       source_fee: Frais d'origine
       to: À
       total: Total
       transfer_amount: Montant du transfert
       uncategorized: Non classé
-      investment_contribution_subtitle: Compter ce transfert comme une dépense dans les budgets et les rapports. Désactivez cette option lorsque le compte de courtage ou crypto ne fait que convertir l'argent dans une autre devise.
-      investment_contribution_title: Versement d'investissement
     update:
       success: Transfert mis à jour
