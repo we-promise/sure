@@ -69,7 +69,8 @@
             </div>
           </div>
 
-          <div class="pt-4">
+          <%# Turbo would reuse a hover prefetch on click, and the page change would not be remembered. %>
+          <div class="pt-4" data-turbo-prefetch="false">
             <%= render "shared/pagination", pagy: @pagy_family_merchants %>
           </div>
         <% elsif params[:family_search].present? %>
@@ -163,7 +164,8 @@
             </div>
           </div>
 
-          <div class="pt-4">
+          <%# Turbo would reuse a hover prefetch on click, and the page change would not be remembered. %>
+          <div class="pt-4" data-turbo-prefetch="false">
             <%= render "shared/pagination", pagy: @pagy_provider_merchants %>
           </div>
         <% elsif params[:provider_search].present? %>
