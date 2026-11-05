@@ -52,7 +52,7 @@ module BillsHelper
   # pre-bucketing the rows. Each marker carries its period and the summed
   # obligations due inside it. Dated like the rail, so a snoozed row counts
   # toward the period it sits in.
-  def bills_pay_period_markers(occurrences, pay_periods)
+  def bills_pay_period_markers(occurrences, pay_periods, totals_from: occurrences)
     return {} if pay_periods.blank?
 
     seen = Set.new
@@ -63,7 +63,7 @@ module BillsHelper
       period = pay_periods[index]
       markers[occurrence.id] = {
         period: period,
-        due_total: occurrences.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
+        due_total: totals_from.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
                               .sum { |o| o.resolved_expected_amount.abs }
       }
     end
