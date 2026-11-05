@@ -1,6 +1,7 @@
 ---
 pl:
   settings:
+    encryption_migration_guide: Przewodnik po konfiguracji szyfrowania i migracji
     ai_prompts:
       prompt_field:
         format_risk: 'Twoje polecenie dla %{provider} usunęło przykład {"%{key}":
@@ -65,6 +66,8 @@ pl:
           nadrzędną na liście transakcji. Gdy opcja jest wyłączona, pozycje podrzędne
           pojawiają się jako osobne wiersze.
         split_grouped_title: Grupuj podzielone transakcje
+        auto_generate_transaction_names_title: "Automatycznie generuj nazwy transakcji"
+        auto_generate_transaction_names_description: "Jeśli nazwa ręcznie wprowadzonej transakcji pozostanie pusta, zostanie uzupełniona na podstawie wybranej kategorii i kontrahenta (np. „Rozrywka - Netflix”). Nazwa jest nadal wymagana, jeśli nie wybrano żadnego z nich. Dotyczy całego gospodarstwa domowego i tylko nowych transakcji."
         theme_dark: Ciemny
         theme_light: Jasny
         theme_subtitle: Wybierz preferowany motyw aplikacji
@@ -850,6 +853,7 @@ pl:
       accounts_label: Konta
       advanced_section_title: Zaawansowane
       ai_prompts_label: Prompty AI
+      auto_matches_label: Automatyczne dopasowywanie
       api_key_label: Klucz API
       api_keys_label: Klucz API
       appearance_label: Wygląd

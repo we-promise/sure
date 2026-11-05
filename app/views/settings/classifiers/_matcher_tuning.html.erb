@@ -1,0 +1,14 @@
+<%# locals: (settings:) %>
+<%# How many near-duplicates must agree on a merchant, which words are too
+    common to count, and what it copies from. %>
+<%= classifier_section_form do |form| %>
+  <%= render "settings/classifiers/select", form: form, key: :similar_min_neighbours, settings: settings,
+        choices: Family::BayesSettings::STEPS[:similar_min_neighbours].map { |n| [ t(".similar_min_neighbours_option", count: n), n ] },
+        label: t(".similar_min_neighbours"), hint: t(".similar_min_neighbours_hint") %>
+  <%= render "settings/classifiers/number", key: :similar_common_share, settings: settings,
+        attrs: { step: 0.01 },
+        label: t(".similar_common_share"), hint: t(".similar_common_share_hint") %>
+  <%= render "settings/classifiers/option", key: :similar_skip_self, settings: settings,
+        number_key: :similar_self_grace_days,
+        label: t(".similar_skip_self"), hint: t(".similar_skip_self_hint") %>
+<% end %>

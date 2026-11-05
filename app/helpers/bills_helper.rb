@@ -1,4 +1,8 @@
 module BillsHelper
+  # Bills the covered bridge strip lists before folding the rest behind a
+  # disclosure. A month-long window holds dozens; five keeps the strip a strip.
+  PAYCHECK_BRIDGE_VISIBLE_ITEMS = 5
+
   # A bill's next due date reads "Oct 5" when it falls this year and gains the
   # year otherwise, so an every-2-years bill never shows "Sep 1" for a date
   # that is years out. Same rule as Period#label. Payment dates are historical
@@ -90,7 +94,8 @@ module BillsHelper
   def bills_matcher_hints(series)
     {
       aliases: Array(series.matcher_hints["name_aliases"]).compact_blank,
-      learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f
+      learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f,
+      detected_name: series.merchant_id.blank? ? series.matcher_hints["detected_name"].presence : nil
     }
   end
 
@@ -161,6 +166,25 @@ module BillsHelper
 
       [ key, percent ]
     end
+  end
+
+  # The bridge's bar: what is due before payday against the cash on hand.
+  # Empty when the balance is unknown, since the bar would state a figure the
+  # planner deliberately does not claim.
+  def paycheck_bridge_segments(period)
+    return [] if period.cash_on_hand.nil?
+
+    normalize_segments([
+      [ :due, period.obligation_total ],
+      [ :left, period.cash_after_obligations ]
+    ], period.cash_on_hand)
+  end
+
+  def paycheck_bridge_aria(period, currency)
+    t("bills.paycheck.bridge_allocation_aria",
+      cash: format_money(Money.new(period.cash_on_hand, currency)),
+      due: format_money(Money.new(period.obligation_total, currency)),
+      left: format_money(Money.new(period.cash_after_obligations, currency)))
   end
 
   # The bar in words, in the same terms the card states in text.
