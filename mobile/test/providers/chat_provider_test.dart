@@ -76,7 +76,7 @@ void main() {
           case '1':
             return _chatListPage(page: 1, totalPages: 3, chatIds: [1, 2]);
           case '2':
-            return _chatListPage(page: 2, totalPages: 3, chatIds: [3, 4]);
+            return _chatListPage(page: 2, totalPages: 3, chatIds: [2, 3, 4]);
           case '3':
             return _chatListPage(page: 3, totalPages: 3, chatIds: [5]);
           default:
@@ -106,6 +106,57 @@ void main() {
       await provider.fetchChats(accessToken: 'token');
 
       expect(provider.chats.map((c) => c.id).toList(), ['chat_1', 'chat_2']);
+    });
+
+    test('keeps the list already shown when a later page fails on refresh',
+        () async {
+      var failPageTwo = false;
+      final client = MockClient((request) async {
+        final page = request.url.queryParameters['page'] ?? '1';
+        switch (page) {
+          case '1':
+            return _chatListPage(page: 1, totalPages: 2, chatIds: [1, 2]);
+          case '2':
+            if (failPageTwo) return http.Response('{"error":"boom"}', 500);
+            return _chatListPage(page: 2, totalPages: 2, chatIds: [3]);
+          default:
+            return http.Response('{"error":"unexpected page"}', 500);
+        }
+      });
+
+      final provider = ChatProvider(chatService: ChatService(client: client));
+      await provider.fetchChats(accessToken: 'token');
+      expect(provider.chats.map((c) => c.id).toList(),
+          ['chat_1', 'chat_2', 'chat_3']);
+
+      failPageTwo = true;
+      await provider.fetchChats(accessToken: 'token');
+
+      expect(provider.chats.map((c) => c.id).toList(),
+          ['chat_1', 'chat_2', 'chat_3']);
+    });
+
+    test('continues after the requested page instead of restarting at page 2',
+        () async {
+      final requestedPages = <String>[];
+      final client = MockClient((request) async {
+        final page = request.url.queryParameters['page'] ?? '1';
+        requestedPages.add(page);
+        switch (page) {
+          case '3':
+            return _chatListPage(page: 3, totalPages: 4, chatIds: [5]);
+          case '4':
+            return _chatListPage(page: 4, totalPages: 4, chatIds: [6]);
+          default:
+            return http.Response('{"error":"unexpected page"}', 500);
+        }
+      });
+
+      final provider = ChatProvider(chatService: ChatService(client: client));
+      await provider.fetchChats(accessToken: 'token', page: 3);
+
+      expect(requestedPages, ['3', '4']);
+      expect(provider.chats.map((c) => c.id).toList(), ['chat_5', 'chat_6']);
     });
   });
 

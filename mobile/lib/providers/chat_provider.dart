@@ -70,11 +70,15 @@ class ChatProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        _chats = await _loadRemainingChatPages(
+        final loaded = await _loadRemainingChatPages(
           accessToken: accessToken,
           perPage: perPage,
+          page: page,
           firstPage: result,
         );
+        // A failed later page returns null: keep the list already on screen
+        // rather than replacing it with a truncated one.
+        if (loaded != null) _chats = loaded;
         _errorMessage = null;
       } else {
         _errorMessage = result['error'] ?? 'Failed to fetch chats';
@@ -92,13 +96,15 @@ class ChatProvider with ChangeNotifier {
   /// `total_pages` from the server cannot trigger an unbounded request loop.
   static const _maxChatListPages = 100;
 
-  /// Fetches the pages after [firstPage] of the chat list and returns all
-  /// chats. The API paginates `/chats`, so without this only the first page
-  /// would ever be shown. If a later page fails, the pages already loaded are
-  /// kept rather than discarding the list.
-  Future<List<Chat>> _loadRemainingChatPages({
+  /// Fetches the pages after [firstPage] (the response for [page]) of the chat
+  /// list and returns all chats. The API paginates `/chats`, so without this
+  /// only the first page would ever be shown. If a later page fails, returns
+  /// the pages loaded so far when nothing is shown yet, and null otherwise so
+  /// the caller keeps the list it already has.
+  Future<List<Chat>?> _loadRemainingChatPages({
     required String accessToken,
     required int perPage,
+    required int page,
     required Map<String, dynamic> firstPage,
   }) async {
     final chats = <Chat>[...(firstPage['chats'] as List<Chat>)];
@@ -107,16 +113,16 @@ class ChatProvider with ChangeNotifier {
     final lastPage = totalPages < _maxChatListPages ? totalPages : _maxChatListPages;
     final seen = chats.map((c) => c.id).toSet();
 
-    for (var page = 2; page <= lastPage; page++) {
+    for (var next = page + 1; next <= lastPage; next++) {
       final pageResult = await _chatService.getChats(
         accessToken: accessToken,
-        page: page,
+        page: next,
         perPage: perPage,
       );
 
       if (pageResult['success'] != true) {
-        _log.warning('ChatProvider', 'fetchChats page $page failed; stopping');
-        break;
+        _log.warning('ChatProvider', 'fetchChats page $next failed; stopping');
+        return _chats.isEmpty ? chats : null;
       }
       for (final chat in pageResult['chats'] as List<Chat>) {
         if (seen.add(chat.id)) chats.add(chat);
