@@ -144,6 +144,12 @@ it:
         of_target: dell'obiettivo
         market_value: "Valore di mercato %{amount}"
         aria_label: "Obiettivo %{percent}%% completato. %{amount} di %{target} risparmiati."
+        basis:
+          balance: Conta ciò che valgono oggi i conti
+          contributions: Conta solo ciò che hai versato
+        basis_at_completion:
+          balance: Ha contato ciò che valevano i conti al completamento dell'obiettivo
+          contributions: Ha contato solo ciò che avevi versato al completamento dell'obiettivo
       projection:
         heading: Proiezione
         legend_saved: Risparmiato
@@ -270,6 +276,7 @@ it:
         whole_balance: "Vuoto: tutto il saldo"
         earmark_for: Accantona un importo per %{account}
         earmark_hint: Lascia vuoto un importo per dedicare l'intero saldo di quel conto.
+        progress_basis: Cosa conta per questo obiettivo
       subtypes:
         checking: Conto corrente
         savings: Risparmio
@@ -277,3 +284,11 @@ it:
         cd: CD
         money_market: Mercato monetario
         other: Altro
+      progress_basis_locked: Questo obiettivo è completato. Riaprilo per cambiare cosa conta.
+      progress_bases:
+        balance:
+          label: Ciò che valgono oggi i conti
+          hint: Valore di mercato. Guadagni e perdite degli investimenti contano per l'obiettivo.
+        contributions:
+          label: Solo ciò che ho versato
+          hint: Contributi netti. Guadagni e perdite di mercato restano esclusi.

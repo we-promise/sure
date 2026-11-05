@@ -22,3 +22,5 @@ it:
               must_belong_to_family: I conti collegati devono appartenere alla stessa famiglia dell'obiettivo.
             currency:
               locked_after_linked: Impossibile cambiare la valuta dopo che l'obiettivo è stato collegato ai conti.
+            progress_basis:
+              locked_once_completed: Riapri questo obiettivo prima di cambiare cosa conta.

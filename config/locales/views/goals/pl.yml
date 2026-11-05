@@ -88,6 +88,7 @@ pl:
         target_months_hint: Przeliczane 1. dnia każdego miesiąca na podstawie mediany
           Twoich miesięcznych wydatków.
         whole_balance: "Puste: całe saldo"
+        progress_basis: Co liczy się do tego celu
       kinds:
         maintained:
           hint: Saldo do utrzymania, jak fundusz awaryjny. Nigdy nie jest zamykane.
@@ -109,6 +110,14 @@ pl:
       target_modes:
         fixed: Stała kwota
         months_of_expenses: Liczba miesięcy wydatków
+      progress_basis_locked: Ten cel jest zakończony. Otwórz go ponownie, aby zmienić, co się do niego liczy.
+      progress_bases:
+        balance:
+          label: Ile konta są dziś warte
+          hint: Wartość rynkowa. Zyski i straty z inwestycji liczą się do celu.
+        contributions:
+          label: Tylko wpłacone środki
+          hint: Wpłaty netto. Zyski i straty rynkowe są pomijane.
     goal_card:
       accounts:
         few: "%{count} konta"
@@ -359,6 +368,12 @@ pl:
         of_target: z celu
         saved: Zaoszczędzono
         to_go: Pozostało %{amount}
+        basis:
+          balance: Liczy, ile konta są dziś warte
+          contributions: Liczy tylko wpłacone środki
+        basis_at_completion:
+          balance: Liczył, ile konta były warte w chwili zakończenia celu
+          contributions: Liczył tylko środki wpłacone do chwili zakończenia celu
       status_callout:
         behind: oszczędzaj %{amount}/mies. więcej, aby nadrobić
         behind_covered: oczekujące zobowiązania wypełniają lukę
