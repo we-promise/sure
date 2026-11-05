@@ -36,7 +36,7 @@ id:
       avm_uk_only: "%{provider} hanya mendukung properti residensial yang berlokasi di Inggris Raya."
       avm_uprn_label: UPRN
       avm_uprn_placeholder: '100023336956'
-      avm_uprn_help: "Nomor Referensi Properti Unik (hingga 12 digit) yang mengidentifikasi setiap alamat di Inggris. Temukan di findmyaddress.co.uk GeoPlace atau tanyakan ke dewan lokal Anda. %{provider} menggunakannya untuk menilai properti secara gratis."
+      avm_uprn_help: "Nomor Referensi Properti Unik (hingga 12 digit) yang mengidentifikasi setiap alamat di Inggris Raya. Temukan di findmyaddress.co.uk GeoPlace atau tanyakan ke dewan lokal Anda. %{provider} menggunakannya untuk menilai properti secara gratis."
       avm_county_label: "Wilayah/County (opsional)"
       avm_town_label: Kota
       avm_postcode_label: Kode pos

@@ -12,7 +12,7 @@ id:
       day_count_convention_actual_actual: Aktual/aktual
       day_count_convention_hint: Cara pemberi pinjaman mengukur setiap periode terhadap
         satu tahun. Aktual/365 mengenakan bunga berdasarkan jumlah hari dalam sebulan
-        dan merupakan standar hipotek di Inggris dan Australia. 30/360 mengenakan
+        dan merupakan standar hipotek di Inggris Raya dan Australia. 30/360 mengenakan
         bunga satu per dua belas tetap, basis yang selalu digunakan Sure.
       day_count_convention_thirty_360: 30/360 (satu per dua belas tetap)
       rate_type: Jenis suku bunga
