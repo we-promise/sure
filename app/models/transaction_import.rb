@@ -152,20 +152,36 @@ class TransactionImport < Import
   def apply_template!(import_template)
     return super unless sure_export_csv?(raw_file_str, col_sep)
 
-    update!(template_attributes(import_template).merge(SURE_EXPORT_SETTINGS.stringify_keys, SURE_EXPORT_LABELS.stringify_keys))
+    update!(template_attributes(import_template).merge(SURE_EXPORT_SETTINGS.stringify_keys, sure_export_labels.stringify_keys))
   end
 
   private
     def sure_export_csv?(csv_str, separator)
-      header_line = csv_str.to_s.each_line.first
+      # A dropped file is read as binary bytes; read it as UTF-8 so a BOM or
+      # non-ASCII characters elsewhere in the file cannot raise. CSV parsing
+      # strips leading blank lines, so detection skips them too.
+      header_line = utf8_without_bom(csv_str).lstrip.each_line.first
       return false if header_line.blank?
 
-      # A dropped file is read as binary bytes; read the header line as UTF-8
-      # so a BOM or non-ASCII characters elsewhere in the file cannot raise.
-      header_line = header_line.dup.force_encoding(Encoding::UTF_8).scrub.delete_prefix("\uFEFF")
-      headers = CSV.parse_line(header_line, col_sep: separator.presence || ",", liberal_parsing: true).to_a.map { |header| header.to_s.strip.downcase }
+      headers = CSV.parse_line(header_line, col_sep: separator.presence || ",", liberal_parsing: true).to_a.map { |header| export_header_key(header) }
       (Family::DataExporter::TRANSACTIONS_CSV_HEADERS - headers).empty?
     rescue CSV::MalformedCSVError
       false
+    end
+
+    # Column labels must match the parsed headers exactly, which keep a BOM and
+    # the file's own spelling (e.g. "Date"), so map each export column to it.
+    def sure_export_labels
+      SURE_EXPORT_LABELS.transform_values do |label|
+        csv_headers.find { |header| export_header_key(header) == label } || label
+      end
+    end
+
+    def export_header_key(header)
+      utf8_without_bom(header).strip.downcase
+    end
+
+    def utf8_without_bom(str)
+      str.to_s.dup.force_encoding(Encoding::UTF_8).scrub.delete_prefix("\uFEFF")
     end
 end

@@ -63,6 +63,27 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal "amount", @import.amount_col_label
   end
 
+  test "recognises a Sure export after leading blank lines" do
+    @import.raw_file_str = "\n\n#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",")}\n2024-05-15,Checking,42.5,Grocery,,,,USD\n"
+
+    @import.preset_for_uploaded_csv
+
+    assert_equal "inflows_negative", @import.signage_convention
+  end
+
+  test "maps template labels to the export's own header spelling" do
+    template = imports(:transaction).dup
+    template.update!(status: "complete", date_col_label: "Buchungstag")
+    headers = Family::DataExporter::TRANSACTIONS_CSV_HEADERS.map(&:capitalize)
+    @import = families(:dylan_family).imports.create!(type: "TransactionImport", raw_file_str: "\uFEFF#{headers.join(",")}\n2024-05-15,Checking,42.5,Grocery,,,,USD\n")
+
+    @import.apply_template!(template)
+
+    assert_equal "\uFEFFDate", @import.reload.date_col_label
+    assert_equal "Amount", @import.amount_col_label
+    assert_equal "2024-05-15", @import.csv_rows.first[@import.date_col_label]
+  end
+
   test "ignores blank and unparseable CSV headers when presetting the sign convention" do
     @import.raw_file_str = "\"date,\"amount\n"
 
