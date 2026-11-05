@@ -97,17 +97,6 @@
                       </span>
                     <% end %>
 
-                    <%# Pending indicator %>
-                    <% if transaction.pending? %>
-                      <%= render DS::Pill.new(
-                        label: t("transactions.transaction.pending"),
-                        tone: :neutral,
-                        marker: false,
-                        icon: "clock",
-                        title: t("transactions.transaction.pending_tooltip")
-                      ) %>
-                    <% end %>
-
                     <%# Potential duplicate indicator - different styling for low vs medium confidence %>
                     <% if transaction.has_potential_duplicate? %>
                       <% if transaction.low_confidence_duplicate? %>
@@ -241,6 +230,17 @@
           <% end %>
 
           <div class="shrink-0 ml-auto flex items-center justify-end gap-2 <%= "opacity-50" if entry.excluded %>">
+            <%# Pending indicator %>
+            <% if transaction.pending? %>
+              <%= render DS::Pill.new(
+                label: t("transactions.transaction.pending"),
+                tone: :neutral,
+                marker: false,
+                icon: "clock",
+                title: t("transactions.transaction.pending_tooltip")
+              ) %>
+            <% end %>
+
             <%# Protection indicator - shows on hover when entry is protected from sync %>
             <% if entry.protected_from_sync? && !entry.excluded? %>
               <%= link_to entry_path(entry),

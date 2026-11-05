@@ -140,6 +140,34 @@ class TransactionsTest < ApplicationSystemTestCase
     assert_text @transaction.name
   end
 
+  test "keeps pending status beside the amount without crowding the name" do
+    @user.update!(show_ai_sidebar: false)
+    entry = create_transaction("Streaming subscription with a long merchant name", Date.current, 12.99)
+    entry.entryable.update!(extra: { "plaid" => { "pending" => true } })
+    pending = "[title='#{I18n.t("transactions.transaction.pending_tooltip")}']"
+
+    [ 390, 820, 1024, 1440 ].each do |width|
+      page.current_window.resize_to(width, 900)
+      visit transactions_url(per_page: @page_size)
+
+      row = find("##{dom_id(entry)} [data-controller='clickable-row']")
+      assert_no_selector "##{dom_id(entry)} [data-tag-fit-bounds='0.5'] #{pending}"
+      pill = row.find(pending).evaluate_script("this.getBoundingClientRect().toJSON()")
+      amount = row.find("p.privacy-sensitive").evaluate_script("this.getBoundingClientRect().toJSON()")
+      bounds = row.evaluate_script("this.getBoundingClientRect().toJSON()")
+
+      assert_operator pill["right"], :<=, amount["left"], "Pending must precede the amount at #{width}px"
+      assert_in_delta pill["y"] + pill["height"] / 2, amount["y"] + amount["height"] / 2, 1
+      assert_operator pill["left"], :>=, bounds["left"]
+      assert_operator amount["right"], :<=, bounds["right"]
+      assert_operator amount["height"], :<=, 24, "the amount should stay on one line at #{width}px"
+    end
+
+    entry.entryable.update!(extra: { "plaid" => { "pending" => false } })
+    visit transactions_url(per_page: @page_size)
+    assert_no_selector "##{dom_id(entry)} #{pending}"
+  end
+
   test "confirms an auto-matched transfer from beside the amount" do
     outflow = create_transaction("Payment to credit card", Date.current, 100)
     inflow = create_transaction("Payment received", Date.current, -100, account: accounts(:credit_card))
