@@ -487,7 +487,14 @@ class AccountStatement < ApplicationRecord
       changed.present?
     end
 
+    # A vault upload is not an AI action on its own, and indexing it into an
+    # OpenAI-backed store sends the whole statement to OpenAI. It is indexed
+    # only when a store is configured and the uploader has turned AI on; without
+    # either, search_family_files falls back to metadata and get_document_text
+    # still reads the file directly.
     def index_in_vector_store_later
+      return unless Current.user&.ai_enabled? && VectorStore.configured?
+
       IndexAccountStatementJob.perform_later(id)
     end
 

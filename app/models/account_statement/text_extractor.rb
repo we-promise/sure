@@ -8,11 +8,11 @@ class AccountStatement
   # (config/initializers/active_storage_authorization.rb), so a tool client has
   # no route to them at all.
   #
-  # No new dependency: PDF::Reader is already in the Gemfile, and the same
-  # extraction backs VectorStore::Embeddable. Image-only PDFs return no text,
-  # which is reported rather than hidden, because there is no OCR in this
-  # codebase and pretending otherwise would send an assistant hunting for
-  # figures that were never extracted.
+  # PDFs are read through Pdf::TextExtractor, the same extraction that backs
+  # VectorStore::Embeddable and the statement metadata detector. Image-only
+  # PDFs return no text, which is reported rather than hidden, because there is
+  # no OCR in this codebase and pretending otherwise would send an assistant
+  # hunting for figures that were never extracted.
   class TextExtractor
     # CSV membership is AccountStatement's to decide: it accepts four content
     # types for .csv and a second partial list here reported a statement stored
@@ -48,8 +48,7 @@ class AccountStatement
 
     private
       def extract_pdf(content)
-        reader = PDF::Reader.new(StringIO.new(content))
-        pages = reader.pages.map { |page| encode(page.text) }
+        pages = Pdf::TextExtractor.pages(content).map { |text| encode(text) }
 
         if pages.all?(&:blank?)
           return Result.new(

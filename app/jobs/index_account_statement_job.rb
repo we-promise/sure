@@ -4,8 +4,11 @@
 # producers at once: the web Vault, the MCP upload_account_statement tool, and
 # PdfImport. Failing here must never fail the upload, which has already
 # succeeded and whose bytes are safely stored.
+#
+# Indexing calls an embeddings or hosted vector store provider, so it runs in
+# the AI capsule alongside ProcessPdfJob rather than competing with syncs.
 class IndexAccountStatementJob < ApplicationJob
-  queue_as :default
+  queue_as :ai_low_priority
 
   def perform(statement_id)
     statement = AccountStatement.find_by(id: statement_id)

@@ -255,24 +255,4 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       "#{base} #{listing}, by metadata only. " \
       "Call get_document_text with an account_statement_id to read one of them."
     end
-
-    def langfuse_client
-      return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
-
-      @langfuse_client ||= Langfuse.new
-    end
-
-    def create_langfuse_trace(name:, input:)
-      return unless langfuse_client
-
-      langfuse_client.trace(
-        name: name,
-        input: input,
-        user_id: user.id&.to_s,
-        environment: Rails.env
-      )
-    rescue => e
-      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace creation failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
-      nil
-    end
 end
