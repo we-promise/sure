@@ -6,6 +6,7 @@ require "turbo/broadcastable/test_helper"
 class OnchainWalletItem::SyncCompleteEventTest < ActiveSupport::TestCase
   include OnchainTestHelper
   include Turbo::Broadcastable::TestHelper
+  include ActiveJob::TestHelper
 
   setup do
     register_fake_chain!
@@ -23,7 +24,7 @@ class OnchainWalletItem::SyncCompleteEventTest < ActiveSupport::TestCase
   # wallet's accounts are not shared with.
   test "a sync completion sends the family toast instead of the rendered wallet row" do
     streams = capture_turbo_stream_broadcasts(@item.family) do
-      OnchainWalletItem::SyncCompleteEvent.new(@item).broadcast
+      perform_enqueued_jobs(only: FamilySyncToastJob) { OnchainWalletItem::SyncCompleteEvent.new(@item).broadcast }
     end
 
     targets = streams.map { |stream| stream["target"] }

@@ -3,6 +3,7 @@ require "turbo/broadcastable/test_helper"
 
 class KrakenItem::SyncCompleteEventTest < ActiveSupport::TestCase
   include Turbo::Broadcastable::TestHelper
+  include ActiveJob::TestHelper
 
   # #3630. Kraken's event never sent the family toast; it relied on replacing
   # the card. With the card replace gone it must send the toast instead, or a
@@ -11,7 +12,7 @@ class KrakenItem::SyncCompleteEventTest < ActiveSupport::TestCase
     item = kraken_items(:one)
 
     streams = capture_turbo_stream_broadcasts(item.family) do
-      KrakenItem::SyncCompleteEvent.new(item).broadcast
+      perform_enqueued_jobs(only: FamilySyncToastJob) { KrakenItem::SyncCompleteEvent.new(item).broadcast }
     end
 
     targets = streams.map { |stream| stream["target"] }
