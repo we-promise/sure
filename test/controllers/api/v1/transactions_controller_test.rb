@@ -74,7 +74,11 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
     end
 
-    assert_equal baseline_queries, expanded_queries
+    # Rails reuses already loaded records when preloading the transfer
+    # counterparts' accounts. Whether that saves the accounts query depends on
+    # the row order Postgres returns, which can change with the query plan, so
+    # allow that one query. A per-transaction lookup would add at least five.
+    assert_operator expanded_queries, :<=, baseline_queries + 1
   end
 
   test "should get index with read-only API key" do
