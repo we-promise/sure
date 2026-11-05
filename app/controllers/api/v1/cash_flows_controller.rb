@@ -44,12 +44,4 @@ class Api::V1::CashFlowsController < Api::V1::BaseController
     def invalid_query(error, message)
       render json: { error: error, message: message }, status: :unprocessable_entity
     end
-
-    def parse_date(value)
-      return unless value.is_a?(String) && value.match?(/\A\d{4}-\d{2}-\d{2}\z/)
-      date = Date.iso8601(value)
-      date if date.year.positive?
-    rescue Date::Error
-      nil
-    end
 end

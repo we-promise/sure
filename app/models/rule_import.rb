@@ -16,7 +16,7 @@ class RuleImport < Import
   end
 
   def column_keys
-    %i[name resource_type active effective_date conditions actions]
+    %i[name resource_type active effective_date conditions actions rule_group]
   end
 
   def required_column_keys
@@ -33,7 +33,7 @@ class RuleImport < Import
 
   def csv_template
     csv_string = CSV.generate do |csv|
-      csv << %w[name resource_type* active effective_date conditions* actions*]
+      csv << %w[name resource_type* active effective_date conditions* actions* group]
 
       csv << [
         "Categorize groceries",
@@ -41,7 +41,8 @@ class RuleImport < Import
         "true",
         "2024-01-01",
         '[{"condition_type":"transaction_name","operator":"like","value":"grocery"}]',
-        '[{"action_type":"set_transaction_category","value":"Groceries"}]'
+        '[{"action_type":"set_transaction_category","value":"Groceries"}]',
+        "Shopping"
       ]
 
       csv << [
@@ -50,7 +51,8 @@ class RuleImport < Import
         "true",
         "",
         '[{"condition_type":"transaction_name","operator":"like","value":"amazon"}]',
-        '[{"action_type":"auto_categorize"}]'
+        '[{"action_type":"auto_categorize"}]',
+        ""
       ]
 
       csv << [
@@ -59,7 +61,8 @@ class RuleImport < Import
         "true",
         "",
         '[{"condition_type":"transaction_name","operator":"like","value":"rent"}]',
-        '[{"action_type":"split_transaction","value":{"splits":[{"type":"percentage","name":"My share","share":"50","category":"Rent"},{"type":"percentage","name":"Partner share","share":"50","category":"Rent","tags":["Shared"]}]}}]'
+        '[{"action_type":"split_transaction","value":{"splits":[{"type":"percentage","name":"My share","share":"50","category":"Rent"},{"type":"percentage","name":"Partner share","share":"50","category":"Rent","tags":["Shared"]}]}}]',
+        ""
       ]
     end
 
@@ -69,8 +72,9 @@ class RuleImport < Import
   def generate_rows_from_csv
     rows.destroy_all
 
+    header_size = header_row_size
     csv_rows.each.with_index(1) do |row, index|
-      normalized_row = normalize_rule_row(row)
+      normalized_row = normalize_rule_row(row, header_size: header_size)
 
       rows.create!(
         source_row_number: index,
@@ -80,6 +84,7 @@ class RuleImport < Import
         effective_date: normalized_row[:effective_date].to_s.strip,
         conditions: normalized_row[:conditions].to_s.strip,
         actions: normalized_row[:actions].to_s.strip,
+        rule_group: normalized_row[:rule_group] && normalized_rule_text(normalized_row[:rule_group], attribute: :rule_group),
         currency: default_currency
       )
     end
@@ -91,8 +96,17 @@ class RuleImport < Import
 
   private
 
-    def normalize_rule_row(row)
-      fields = row.fields
+    # The optional group column is read by its header and left out of the
+    # positional fields, which re-assemble conditions and actions from
+    # everything after the fourth column.
+    def normalize_rule_row(row, header_size: row.headers.compact.size)
+      fields = row.fields.dup
+      headers = row.headers
+      group_index = headers.index { |header| header.to_s.strip.delete_suffix("*") == "group" }
+      # Counted from the end of the header row, so a row whose JSON was split
+      # into extra fields (CSV pads headers with nil for those) still gives up
+      # the right one.
+      group = fields.delete_at(group_index - header_size) if group_index
       name, resource_type, active, effective_date = fields[0..3]
       conditions, actions = extract_conditions_and_actions(fields[4..])
 
@@ -102,8 +116,17 @@ class RuleImport < Import
         active: row["active"].presence || active,
         effective_date: row["effective_date"].presence || effective_date,
         conditions: conditions,
-        actions: actions
+        actions: actions,
+        rule_group: group_index ? group.to_s : nil
       }
+    end
+
+    # The number of cells in the header row, blank ones included. A row's
+    # headers cannot tell a blank header cell from the nil CSV pads in for a
+    # row with more fields than the header.
+    def header_row_size
+      header = CSV.parse_line((raw_file_str || "").strip, col_sep: col_sep, liberal_parsing: true)
+      header ? header.size : 0
     end
 
     def normalized_rule_text(value, attribute:)
@@ -174,6 +197,8 @@ class RuleImport < Import
 
       rule.active = row.active || false
       rule.effective_date = parse_date(row.effective_date)
+      # A file without the group column leaves the rule's group as it is.
+      rule.rule_group = find_or_create_rule_group(row.rule_group) unless row.rule_group.nil?
 
       # An email action replacing the rule's own keeps the baseline it recorded
       # (see Rule::Action#keep_notification_baseline), as stored before this
@@ -197,6 +222,13 @@ class RuleImport < Import
       end
 
       rule.save!
+    end
+
+    def find_or_create_rule_group(name)
+      name = name.strip
+      return if name.empty?
+
+      family.rule_groups.find_or_create_named!(name)
     end
 
     def build_condition(rule, condition_data, parent: nil)

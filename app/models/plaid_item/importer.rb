@@ -36,6 +36,18 @@ class PlaidItem::Importer
       plaid_item.upsert_plaid_institution_snapshot!(institution_data)
     end
 
+    # Every stored account is processed after an import, but only the ones
+    # Plaid returned were imported. A liabilities payload left on any other is
+    # an earlier sync's, so it is cleared as PlaidAccount::Importer clears its
+    # own, rather than processed again as if fresh. The payload is encrypted,
+    # so its presence is read in Ruby.
+    def clear_liabilities_of_omitted_accounts(snapshot)
+      returned = snapshot.accounts.map(&:account_id)
+      plaid_item.plaid_accounts.where.not(plaid_id: returned).find_each do |plaid_account|
+        plaid_account.upsert_plaid_liabilities_snapshot!({}) if plaid_account.raw_liabilities_payload.present?
+      end
+    end
+
     def fetch_and_import_accounts_data
       snapshot = PlaidItem::AccountsSnapshot.new(plaid_item, plaid_provider: plaid_provider)
 
@@ -50,6 +62,8 @@ class PlaidItem::Importer
             account_snapshot: snapshot.get_account_data(raw_account.account_id)
           ).import
         end
+
+        clear_liabilities_of_omitted_accounts(snapshot)
 
         # Once we know all data has been imported, save the cursor to avoid re-fetching the same data next time
         plaid_item.update!(next_cursor: snapshot.transactions_cursor)

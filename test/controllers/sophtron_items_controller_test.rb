@@ -2,6 +2,8 @@ require "test_helper"
 
 class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
   setup do
+    # Exercise controller jobs independently of the daily login sync.
+    families(:dylan_family).update!(auto_sync_on_login: false)
     sign_in @user = users(:family_admin)
     @item = @user.family.sophtron_items.create!(
       name: "Sophtron",
@@ -678,6 +680,8 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "manual sync starts Sophtron refresh and renders MFA challenge" do
+    # Keep the fixture sync on yesterday to cover runs that cross midnight.
+    families(:dylan_family).syncs.update_all(created_at: 1.day.ago)
     @item.update!(user_institution_id: "ui-1")
     sophtron_account = @item.sophtron_accounts.create!(
       account_id: "acct-1",
