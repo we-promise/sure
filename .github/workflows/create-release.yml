@@ -1,7 +1,13 @@
 name: Create release
 
-# Bikin GitHub Release otomatis setiap versi di .sure-version berubah di main,
-# supaya popup "Yang baru" selalu ada isinya tanpa langkah manual.
+# Bikin GitHub Release otomatis setiap push ke main (satu rilis per hari,
+# penanggalan CalVer vYYYY.M.D-alpha), supaya popup "Yang baru" selalu ada
+# isinya tanpa langkah manual.
+#
+# Dulu pemicunya perubahan file .sure-version; file itu dihapus upstream
+# saat adopsi CalVer (#4539), jadi pemicu dan pembacaan versi diganti ke
+# tanggal UTC hari jalan (sama dengan BUILD_DATE di publish.yml). Kalau
+# rilis hari ini sudah ada, langkah Create release lewati saja.
 #
 # Isi notes = auto-generated notes GitHub (daftar PR fork) + Ringkasan +
 # "Perubahan dari upstream" (judul PR upstream + author, dikelompokkan per
@@ -13,8 +19,7 @@ name: Create release
 on:
   push:
     branches: [ main ]
-    paths:
-      - .sure-version
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -27,10 +32,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read version
+      - name: Determine CalVer version
         id: version
         run: |
-          VERSION="$(tr -d '[:space:]' < .sure-version)"
+          VERSION="$(date -u +'%-Y.%-m.%-d')-alpha"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 

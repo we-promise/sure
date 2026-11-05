@@ -140,6 +140,13 @@ jobs:
               if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then
                 echo 'type=schedule,pattern=nightly'
                 echo "type=raw,value=$version"
+              # Kustomisasi fork: push ke main otomatis bikin tag stable &
+              # latest (dulu di step "Configure image tags", hilang saat
+              # merge resolusi sync CalVer). Tanpa ini, Deploy to VPS yang
+              # menarik :stable tidak pernah dapat image baru.
+              elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+                echo 'type=raw,value=stable'
+                echo 'type=raw,value=latest'
               fi
             fi
             echo 'RELEASE_TAGS'
