@@ -53,6 +53,44 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "unique-user@example.com", @user.reload.email
   end
 
+  test "normalized email queries and uniqueness use persisted rows" do
+    email = "normalized-query@example.com"
+    @user.update!(email: "  NORMALIZED-Query@EXAMPLE.COM  ")
+
+    stored = User.connection.select_value(
+      "SELECT email FROM users WHERE id = #{User.connection.quote(@user.id)}"
+    )
+    if User.encryption_ready?
+      assert_not_equal email, stored
+    else
+      assert_equal email, stored
+    end
+
+    storage_modes = [ :current ]
+    storage_modes << :legacy_plaintext if ActiveRecord::Encryption.config.support_unencrypted_data
+
+    storage_modes.each do |storage_mode|
+      if storage_mode == :legacy_plaintext
+        User.connection.execute(
+          "UPDATE users SET email = #{User.connection.quote(email)} WHERE id = #{User.connection.quote(@user.id)}"
+        )
+      end
+
+      assert_equal email, @user.reload.email
+      assert_equal @user.id, User.find_by!(email: "  NORMALIZED-Query@EXAMPLE.COM  ").id
+      assert_equal [ @user.id ], User.where(email: "  NORMALIZED-Query@EXAMPLE.COM  ").pluck(:id)
+      assert User.exists?(email: "  NORMALIZED-Query@EXAMPLE.COM  ")
+      assert @user.valid?, @user.errors.full_messages.to_sentence
+      duplicate = @user.dup
+      duplicate.password = user_password_test
+      duplicate.email = "  NORMALIZED-Query@EXAMPLE.COM  "
+      assert_no_difference "User.count" do
+        assert_not duplicate.save
+      end
+      assert duplicate.errors.of_kind?(:email, :taken)
+    end
+  end
+
   test "display name" do
     user = User.new(email: "user@example.com")
     assert_equal "user@example.com", user.display_name
