@@ -577,6 +577,7 @@ Rails.application.routes.draw do
 
   namespace :transactions do
     resource :bulk_deletion, only: :create
+    resource :merchant_filter, only: :show
     resource :bulk_update, only: %i[new create]
     resource :categorize, only: %i[show create] do
       patch :assign_entry, on: :collection
@@ -699,6 +700,13 @@ Rails.application.routes.draw do
       get :confirm_all
       post :apply_all
       post :clear_ai_cache
+    end
+  end
+
+  resources :rule_groups, only: %i[new create edit update destroy] do
+    member do
+      patch :reorder
+      patch :activation
     end
   end
 
