@@ -1227,6 +1227,75 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "sparkline stays fresh when another account syncs" do
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    @account.family.touch(:latest_sync_completed_at)
+    get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+
+    assert_response :not_modified
+  end
+
+  test "sparkline is re-rendered when the account's balances change" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+    before = response.body
+
+    travel 1.minute do
+      @account.balances.create!(date: 3.days.ago.to_date, balance: 1234, start_cash_balance: 1234, currency: @account.currency)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+    assert_not_equal before, response.body
+  end
+
+  test "sparkline is re-rendered after the account's own sync completes" do
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      @account.syncs.create!(status: "completed", completed_at: Time.current)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
+  # AccountProvider rows don't touch the account, and swapping one keeps it linked.
+  test "sparkline is re-rendered when the account's provider link changes" do
+    AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      @account.account_providers.destroy_all
+      other = PlaidAccount.create!(
+        plaid_item: plaid_items(:one), plaid_id: "acc_mock_swap", name: "Swapped", plaid_type: "depository",
+        currency: "USD", current_balance: 1
+      )
+      AccountProvider.create!(account: @account, provider: other)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
+  test "an investment sparkline is re-rendered after any family sync" do
+    investment = accounts(:investment)
+    get sparkline_account_url(investment)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      investment.family.touch(:latest_sync_completed_at)
+      get sparkline_account_url(investment), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
   test "sparkline renders an empty series without a trend" do
     empty_series = Series.new(
       start_date: 1.day.ago.to_date,
