@@ -43,45 +43,29 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal "last_30_days", @user.reload.default_period
   end
 
-  test "renders the hub, its turbo frame and the accounts section" do
+  test "renders the hub and the accounts section" do
     get portfolio_path
 
     assert_response :success
     assert_select "h1", text: I18n.t("portfolios.show.title")
-    assert_select "turbo-frame#portfolio_sections"
     assert_equal %w[accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_select "header + div[role=list]"
   end
 
-  test "the period picker reflects the requested period" do
+  # No section reads the period yet, so the page offers no control that
+  # would change nothing.
+  test "the page carries no period picker" do
     get portfolio_path(period: "last_5_years")
 
     assert_response :success
-    # DS::MenuItem marks the current row with role=menuitemradio + aria-checked
-    # (not aria-current), so that is what the picker's selection looks like.
-    assert_select "a[href=?][aria-checked=?]", portfolio_path(period: "last_5_years"), "true"
-    assert_select "button[aria-label=?]", I18n.t("UI.period_picker.aria_label", period: "5Y")
-    assert_equal "last_5_years", @user.reload.default_period
-  end
-
-  # The picker shares the heading's row, and that row is the frame's first
-  # child, so the first section follows it one gap below the heading.
-  test "the period picker shares the heading's row, directly above the sections" do
-    get portfolio_path(period: "last_5_years")
-
-    assert_response :success
-    assert_select "turbo-frame#portfolio_sections > div:first-child > header h1",
-      text: I18n.t("portfolios.show.title")
-    assert_select "turbo-frame#portfolio_sections > div:first-child > header + div[data-controller='DS--menu']" do
-      assert_select "button[aria-label=?]", I18n.t("UI.period_picker.aria_label", period: "5Y")
-    end
-    assert_select "turbo-frame#portfolio_sections > div:first-child + div[role=list]"
+    assert_select "button[aria-label=?]", I18n.t("UI.period_picker.aria_label", period: "5Y"), count: 0
+    assert_select "a[href^=?]", "#{portfolio_path}?period=", count: 0
   end
 
   test "an unknown period falls back rather than erroring" do
     get portfolio_path(period: "not_a_period")
 
     assert_response :success
-    assert_select "button[aria-label=?]", I18n.t("UI.period_picker.aria_label", period: "30D")
   end
 
   test "shows an empty state with an add-account link when the family has no investment accounts" do
@@ -95,7 +79,6 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match I18n.t("portfolios.empty_state.title"), response.body
     assert_select "a[href=?]", new_account_path
-    assert_select "turbo-frame#portfolio_sections", count: 0
     assert_select "[data-section-key]", count: 0
   end
 
@@ -121,8 +104,8 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_nil @user.reload.preferences["reports_section_order"]
   end
 
-  # `kpis` is a real portfolio section that has not shipped here: a key the
-  # registry does not list yet is ignored exactly like an invented one.
+  # `kpis` is a key not in Portfolio::SectionRegistry::KEYS, and is dropped
+  # like any other unknown key.
   test "drops section keys the registry does not know, in both shapes" do
     patch update_preferences_portfolio_path,
       params: { preferences: { portfolio_section_order: %w[kpis nonsense accounts], portfolio_collapsed_sections: { accounts: true, kpis: true, nonsense: true } } },
@@ -133,6 +116,15 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[accounts], @user.preferences["portfolio_section_order"]
     assert_equal({ "accounts" => true }, @user.preferences["portfolio_collapsed_sections"],
       "an unknown key must not be written into the user's preferences")
+  end
+
+  test "a preferences body that is not an object is refused and writes nothing" do
+    before = @user.reload.preferences.dup
+
+    patch update_preferences_portfolio_path, params: { preferences: "foo" }
+
+    assert_response :bad_request
+    assert_equal before, @user.reload.preferences
   end
 
   test "deduplicates the saved order, first occurrence winning" do
@@ -217,6 +209,8 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_select "#portfolio-accounts a[href=?]", account_path(accounts(:investment), tab: "holdings")
     assert_select "#portfolio-accounts a[href=?]", account_path(shared, tab: "holdings"), count: 0
     assert_equal InvestmentStatement.new(@family, user: @user).investment_accounts.count, css_select("#portfolio-accounts a").size
+    # The cards sit in a narrow grid cell, so they truncate and show focus.
+    assert_select "#portfolio-accounts a.focus-ring p.truncate", minimum: 2
   end
 
   # Each card's logo falls back to its provider's, read through

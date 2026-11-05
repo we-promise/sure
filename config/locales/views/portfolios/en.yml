@@ -3,13 +3,13 @@ en:
   portfolios:
     empty_state:
       add_account: Add an investment account
-      description: Connect or add a brokerage, retirement or crypto account and this page will show its value, returns and holdings.
+      description: Connect or add a brokerage, retirement or crypto account and it will be listed here with its balance.
       title: No investment accounts yet
     sections:
       accounts: Accounts
     show:
-      section_aria_label: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
-      sections_aria_label: Portfolio sections
-      subtitle: Everything you hold, what it is worth, and how it has moved.
+      section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
+      sections_aria: Portfolio sections
+      subtitle: Your investment accounts and what each one is worth.
       title: Portfolio
       toggle_section: Toggle section

@@ -32,6 +32,21 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     assert_not empty.find { |s| s[:key] == "accounts" }[:visible]
   end
 
+  # Created in reverse name order, so the cards come back by name only if the
+  # query asks for it.
+  test "the accounts section lists the cards in name order" do
+    zeta = @family.accounts.create!(name: "Zeta brokerage", balance: 100, currency: "USD", accountable: Investment.new, owner: @user)
+    alpha = @family.accounts.create!(name: "Alpha brokerage", balance: 100, currency: "USD", accountable: Investment.new, owner: @user)
+    @statement = InvestmentStatement.new(@family, user: @user)
+
+    cards = registry.sections.find { |s| s[:key] == "accounts" }[:locals][:accounts]
+
+    assert_includes cards, zeta
+    assert_operator cards.index(alpha), :<, cards.index(zeta)
+    assert_equal @statement.investment_accounts.to_a.sort_by(&:id), cards.sort_by(&:id),
+      "the cards must be exactly the statement's investment accounts"
+  end
+
   test "orders sections by the user's saved order, appending anything it omits" do
     @user.update_section_preferences("portfolio", order: %w[stub])
 

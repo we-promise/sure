@@ -1,7 +1,7 @@
 <%# Family-wide investment hub. Built on the Reports section framework, so the
     sections drag to reorder and collapse exactly as Reports' do -- only the
     preferences namespace and endpoint differ. %>
-<% header = capture do %>
+<div class="@container space-y-6 pb-6 lg:pb-12">
   <header>
     <div class="flex items-center gap-2">
       <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
@@ -9,93 +9,15 @@
     </div>
     <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
   </header>
-<% end %>
 
-<div class="@container space-y-6 pb-6 lg:pb-12">
   <% if @statement.investment_accounts.empty? %>
-    <%= header %>
     <%= render "portfolios/empty_state" %>
   <% else %>
-    <%# The header shares a row with the period picker, so the first section
-        sits one gap below the heading as it does on the Plan page. The row is
-        inside the frame because the picker's label has to re-render with the
-        sections when a period is picked. %>
-    <%= turbo_frame_tag "portfolio_sections", target: "_top", class: "block space-y-6" do %>
-      <div class="flex items-start justify-between gap-4">
-        <%= header %>
-        <%= render UI::PeriodPicker.new(selected: @period, url: portfolio_path, frame: "portfolio_sections") %>
-      </div>
-
-      <div
-        data-controller="sortable-list"
-        data-sortable-list-url-value="<%= update_preferences_portfolio_path %>"
-        data-sortable-list-param-value="preferences.portfolio_section_order"
-        data-sortable-list-hold-delay-value="800"
-        data-sortable-list-own-keys-only-value="true"
-        data-action="dragover->sortable-list#dragOver drop->sortable-list#drop turbo:before-visit@window->sortable-list#saveBeforeVisit"
-        role="list"
-        aria-label="<%= t(".sections_aria_label") %>">
-        <% @sections.each do |section| %>
-          <% next unless section[:visible] %>
-          <% collapsed = Current.user.section_collapsed?("portfolio", section[:key]) %>
-          <%# [-webkit-touch-callout:none] keeps iOS Safari's long-press link
-              preview from cancelling the press-and-hold drag, as on Reports. %>
-          <section
-            class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group focus:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 focus-visible:ring-offset-2 [-webkit-touch-callout:none]"
-            data-sortable-list-target="item"
-            data-sortable-list-id="<%= section[:key] %>"
-            data-section-key="<%= section[:key] %>"
-            data-controller="reports-section"
-            data-reports-section-section-key-value="<%= section[:key] %>"
-            data-reports-section-collapsed-value="<%= collapsed %>"
-            data-reports-section-url-value="<%= update_preferences_portfolio_path %>"
-            data-reports-section-preference-key-value="portfolio"
-            draggable="true"
-            tabindex="0"
-            role="listitem"
-            aria-grabbed="false"
-            aria-label="<%= t(".section_aria_label", title: t(section[:title])) %>"
-            data-action="
-              dragstart->sortable-list#dragStart
-              dragend->sortable-list#dragEnd
-              touchstart->sortable-list#touchStart
-              touchmove->sortable-list#touchMove
-              touchend->sortable-list#touchEnd
-              touchcancel->sortable-list#touchCancel
-              contextmenu->sortable-list#suppressContextMenu
-              keydown->sortable-list#handleKeyDown">
-            <div class="px-4 py-2 flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <% if section[:collapsible] %>
-                  <button
-                    type="button"
-                    class="text-secondary hover:text-primary transition-colors p-0.5"
-                    data-action="click->reports-section#toggle keydown->reports-section#handleToggleKeydown"
-                    data-reports-section-target="button"
-                    aria-label="<%= t(".toggle_section") %>"
-                    aria-expanded="<%= !collapsed %>">
-                    <%= icon("chevron-down", size: "sm", class: "transition-transform", data: { reports_section_target: "chevron" }) %>
-                  </button>
-                <% end %>
-                <h2 class="text-base font-medium">
-                  <%= t(section[:title]) %>
-                </h2>
-              </div>
-              <%# A mouse grab hint. Keys only grab the section itself, so the
-                  hint stays out of the tab order instead of being an invisible
-                  stop. %>
-              <span
-                class="cursor-grab active:cursor-grabbing hidden lg:flex items-center justify-center w-6 h-6 text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                aria-hidden="true">
-                <%= icon("grip-vertical", size: "sm") %>
-              </span>
-            </div>
-            <div class="p-4" data-reports-section-target="content">
-              <%= render partial: section[:partial], locals: section[:locals] %>
-            </div>
-          </section>
-        <% end %>
-      </div>
-    <% end %>
+    <%= render "shared/reorderable_sections",
+          sections: @sections,
+          namespace: "portfolio",
+          url: update_preferences_portfolio_path,
+          collapse_url: update_preferences_portfolio_path,
+          i18n_scope: "portfolios.show" %>
   <% end %>
 </div>

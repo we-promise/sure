@@ -22,6 +22,10 @@ class PortfoliosController < ApplicationController
   end
 
   def update_preferences
+    # `require` passes a scalar through, and indexing a String by key raises,
+    # so a body whose `preferences` is not an object is refused here.
+    return head :bad_request unless params[:preferences].is_a?(ActionController::Parameters)
+
     if Current.user.update_section_preferences(
       "portfolio",
       order: preferences_params["portfolio_section_order"],

@@ -1,0 +1,79 @@
+<%# locals: (sections:, namespace:, url:, i18n_scope:, collapse_url: nil) %>
+<%# The section list Reports and the portfolio page share: each visible section
+    drags to reorder (saved to `url` as preferences.<namespace>_section_order)
+    and collapses (saved under <namespace>_collapsed_sections). The collapse
+    control posts to the Reports endpoint unless `collapse_url` is given.
+    `i18n_scope` holds the page's `sections_aria`, `section_aria` and
+    `toggle_section` labels. %>
+<div data-controller="sortable-list"
+     data-sortable-list-url-value="<%= url %>"
+     data-sortable-list-param-value="preferences.<%= namespace %>_section_order"
+     data-sortable-list-hold-delay-value="800"
+     data-sortable-list-own-keys-only-value="true"
+     data-action="dragover->sortable-list#dragOver drop->sortable-list#drop turbo:before-visit@window->sortable-list#saveBeforeVisit"
+     role="list"
+     aria-label="<%= t("#{i18n_scope}.sections_aria") %>">
+  <% sections.each do |section| %>
+    <% next unless section[:visible] %>
+    <% collapsed = Current.user.section_collapsed?(namespace, section[:key]) %>
+    <%# [-webkit-touch-callout:none] keeps iOS Safari's long-press link preview
+        on links inside a section from cancelling the touch, which would stop
+        the press-and-hold drag from ever starting. %>
+    <section
+      class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group focus:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 focus-visible:ring-offset-2 [-webkit-touch-callout:none]"
+      data-sortable-list-target="item"
+      data-sortable-list-id="<%= section[:key] %>"
+      data-section-key="<%= section[:key] %>"
+      data-controller="reports-section"
+      data-reports-section-section-key-value="<%= section[:key] %>"
+      data-reports-section-collapsed-value="<%= collapsed %>"
+      <% if collapse_url %>
+      data-reports-section-url-value="<%= collapse_url %>"
+      data-reports-section-preference-key-value="<%= namespace %>"
+      <% end %>
+      draggable="true"
+      tabindex="0"
+      role="listitem"
+      aria-grabbed="false"
+      aria-label="<%= t("#{i18n_scope}.section_aria", title: t(section[:title])) %>"
+      data-action="
+        dragstart->sortable-list#dragStart
+        dragend->sortable-list#dragEnd
+        touchstart->sortable-list#touchStart
+        touchmove->sortable-list#touchMove
+        touchend->sortable-list#touchEnd
+        touchcancel->sortable-list#touchCancel
+        contextmenu->sortable-list#suppressContextMenu
+        keydown->sortable-list#handleKeyDown">
+      <div class="px-4 py-2 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="text-secondary hover:text-primary transition-colors p-0.5"
+            data-action="click->reports-section#toggle keydown->reports-section#handleToggleKeydown"
+            data-reports-section-target="button"
+            aria-label="<%= t("#{i18n_scope}.toggle_section") %>"
+            aria-expanded="<%= !collapsed %>">
+            <%= icon("chevron-down", size: "sm", class: "transition-transform", data: { reports_section_target: "chevron" }) %>
+          </button>
+          <h2 class="text-base font-medium">
+            <%= t(section[:title]) %>
+          </h2>
+          <% if section[:preview] %>
+            <%= render DS::Pill.new(label: t("shared.preview")) %>
+          <% end %>
+        </div>
+        <%# A mouse grab hint. Keys only grab the section itself, so the hint
+            stays out of the tab order instead of being an invisible stop. %>
+        <span
+          class="cursor-grab active:cursor-grabbing hidden lg:flex items-center justify-center w-6 h-6 text-secondary hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
+          aria-hidden="true">
+          <%= icon("grip-vertical", size: "sm") %>
+        </span>
+      </div>
+      <div class="p-4" data-reports-section-target="content">
+        <%= render partial: section[:partial], locals: section[:locals] %>
+      </div>
+    </section>
+  <% end %>
+</div>

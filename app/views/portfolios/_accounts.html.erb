@@ -1,23 +1,8 @@
-<%# locals: (statement:, period:, as_of:) %>
+<%# locals: (accounts:, statement:, period:, as_of:) %>
 
-<%# One card per investment account the user may count, straight to its holdings tab.
-    The logo partial reads the attached logo, the accountable's colour and
-    Account#logo_url, which goes through #linked? (the provider links, the
-    Plaid account and the SimpleFIN account) and falls back to the first
-    link's provider record. All of them are loaded up front rather than once
-    per card. %>
-<% accounts = statement.investment_accounts.with_attached_logo.includes(:accountable, :plaid_account, :simplefin_account, account_providers: :provider).to_a %>
+<%# One card per investment account the user may count, straight to its holdings tab. %>
 <div id="portfolio-accounts" class="grid grid-cols-1 @2xl:grid-cols-2 @4xl:grid-cols-3 gap-3">
   <% accounts.each do |account| %>
-    <%= link_to account_path(account, tab: "holdings"), class: "bg-container-inset rounded-lg p-4 flex items-center justify-between hover:bg-container-hover transition-colors focus-ring", data: { turbo_frame: "_top" } do %>
-      <div class="flex items-center gap-3 min-w-0">
-        <%= render "accounts/logo", account: account, size: "sm" %>
-        <div class="min-w-0">
-          <p class="font-medium text-primary text-sm truncate"><%= account.name %></p>
-          <p class="text-xs text-secondary truncate"><%= account.short_subtype_label %></p>
-        </div>
-      </div>
-      <p class="font-medium text-primary privacy-sensitive whitespace-nowrap"><%= format_money(account.balance_money) %></p>
-    <% end %>
+    <%= render "accounts/balance_card", account: account, href: account_path(account, tab: "holdings"), truncate: true, focus_ring: true %>
   <% end %>
 </div>

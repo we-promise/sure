@@ -61,11 +61,20 @@ class Portfolio::SectionRegistry
           key: "accounts",
           title: "portfolios.sections.accounts",
           partial: "portfolios/accounts",
-          locals: shared_locals,
+          locals: shared_locals.merge(accounts: accounts_for_cards),
           visible: statement.investment_accounts.any?,
           collapsible: true
         }
       ]
+    end
+
+    # The accounts the cards show, in name order, with every record the logo
+    # reads (the attachment, the accountable's colour, the provider links and
+    # the provider each falls back to) loaded here rather than once per card.
+    def accounts_for_cards
+      statement.investment_accounts.with_attached_logo
+        .includes(:accountable, :plaid_account, :simplefin_account, account_providers: :provider)
+        .alphabetically.to_a
     end
 
     def shared_locals
