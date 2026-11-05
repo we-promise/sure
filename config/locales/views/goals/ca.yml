@@ -236,6 +236,7 @@ ca:
       empty:
         heading: Encara no hi ha ingressos
         body: Fes una transferència al teu compte enllaçat. Sure la detectarà a la propera sincronització. O actualitza el saldo del teu compte manual.
+      milestone: "%{percent}% · %{date}"
     errors:
       not_found: No s'ha trobat aquest objectiu. És possible que s'hagi eliminat.
     states:

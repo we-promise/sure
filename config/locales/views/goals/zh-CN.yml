@@ -155,6 +155,7 @@ zh-CN:
       notes: 备注
       funding_last_30d: 最近 30 天
       funding_last_90d: 最近 90 天
+      milestone: "%{percent}% · %{date}"
       status_callout:
         depleted: "比目标余额少 %{amount} — 请补充以恢复储备"
         behind: 每月多存 %{amount} 以赶上进度

@@ -155,6 +155,7 @@ en:
       notes: Notes
       funding_last_30d: last 30d
       funding_last_90d: last 90d
+      milestone: "%{percent}% · %{date}"
       status_callout:
         depleted: "%{amount} below its target balance — top it up to bring the reserve back"
         behind: "save %{amount}/mo more to catch up"
