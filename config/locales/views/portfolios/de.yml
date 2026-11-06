@@ -26,6 +26,8 @@ de:
       position_missing_cost_basis_hint: Diese Position hat keine bekannte Kostenbasis, daher hat sie keine Durchschnittskosten und fließt nicht in die Rendite der Zeile ein.
       positions_caption: Positionen in %{ticker} nach Konto
       toggle_positions: Positionen in %{ticker} anzeigen
+    index_chart:
+      explainer: Zu Beginn des Zeitraums auf 100 normiert, ohne den Effekt von Ein- und Auszahlungen. Ein Stand von 121 bedeutet 21% Rendite.
     kpi_row:
       as_of: Stand %{date}
       day_change: Tagesveränderung
@@ -39,10 +41,29 @@ de:
         other: "%{count} Konten ohne Wechselkurs ausgeschlossen"
       unrealized_pnl: Nicht realisiertes Ergebnis
       value: Wert
+    performance:
+      annualized_hint: Auf ein volles Jahr hochgerechnet, bezogen auf Kalendertage; bei Zeiträumen unter einem Jahr nicht ausgewiesen.
+      annualized_mwr: Annualisiert, geldgewichtet
+      annualized_twr: Annualisiert, zeitgewichtet
+      incomplete_title: Einige Kennzahlen konnten nicht berechnet werden
+      max_drawdown: Maximaler Rückgang
+      max_drawdown_hint: Größter Rückgang vom Hoch zum Tief innerhalb des Zeitraums.
+      mwr: Geldgewichtete Rendite (Zeitraum)
+      mwr_hint: 'Geldgewichtet, über den Zeitraum. Sie berücksichtigt, wann Geld angelegt wurde: Mittel, die erst im Verlauf hinzukamen, werden auf den gesamten Zeitraum bezogen — deshalb kann diese Zahl von der Haltedauer-Rendite deines Brokers abweichen.'
+      rate_missing: Für einen Teil dieses Zeitraums fehlte ein Wechselkurs. Betroffene Kennzahlen werden zurückgehalten statt zum Kurs 1 umgerechnet.
+      suppressed_days:
+        one: Ein Tag wurde als Nullrendite gezählt, weil er nicht ermittelt werden konnte.
+        other: "%{count} Tage wurden als Nullrendite gezählt, weil sie nicht ermittelt werden konnten."
+      twr: Zeitgewichtete Rendite
+      twr_hint: Was die Anlagen erwirtschaftet haben, ohne den Effekt deiner Einzahlungen. Täglich, nach Gebühren, wobei jede Einzahlung ab dem Beginn ihres Tages zählt.
+      volatility: Volatilität
+      volatility_hint: Annualisierte Standardabweichung der Tagesrenditen, bezogen auf Kalendertage statt Handelstage.
     sections:
       accounts: Konten
       holdings: Bestände
+      index_chart: Rendite-Index
       kpis: Überblick
+      performance: Wertentwicklung
       value_chart: Portfoliowert
     show:
       section_aria: "Abschnitt %{title}. Drücke Enter oder Leertaste, um ihn zum Umsortieren zu greifen, dann bewege ihn mit den Pfeiltasten."

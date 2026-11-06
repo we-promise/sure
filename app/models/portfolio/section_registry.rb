@@ -17,7 +17,7 @@ class Portfolio::SectionRegistry
   # The built-in section keys, in declaration order. The preferences
   # endpoint accepts only these, so a saved order or collapsed set cannot
   # carry arbitrary strings into the user's preferences.
-  KEYS = %w[kpis value_chart holdings accounts].freeze
+  KEYS = %w[kpis performance index_chart value_chart holdings accounts].freeze
 
   # Everything an account card's logo reads, preloaded onto the cards.
   CARD_PRELOADS = [ { logo_attachment: :blob }, :accountable, :plaid_account, :simplefin_account, { account_providers: :provider } ].freeze
@@ -82,6 +82,30 @@ class Portfolio::SectionRegistry
           visible: true,
           collapsible: true
         },
+        # Always visible, like kpis and value_chart. A period in which no
+        # figure could be computed is a fact about the portfolio worth showing
+        # -- the section says which figures are missing and why -- where a
+        # vanishing section reads as "this page does not do returns".
+        {
+          key: "performance",
+          title: "portfolios.sections.performance",
+          partial: "portfolios/performance",
+          locals: shared_locals.merge(performance: performance, returns: returns),
+          visible: true,
+          collapsible: true
+        },
+        # Hidden when the period cannot produce two points to join. Unlike the
+        # performance cards, an empty chart says nothing a sentence could not
+        # say better, and the cards above already state why a period has no
+        # figures.
+        {
+          key: "index_chart",
+          title: "portfolios.sections.index_chart",
+          partial: "portfolios/index_chart",
+          locals: shared_locals.merge(series: index_chart_series),
+          visible: index_chart_series.present?,
+          collapsible: true
+        },
         {
           key: "value_chart",
           title: "portfolios.sections.value_chart",
@@ -121,6 +145,67 @@ class Portfolio::SectionRegistry
         net_contributions: statement.net_contributions(period: period),
         income: statement.totals(period: period).total_income
       }
+    end
+
+    # One Portfolio::Performance for the request, so the six figures below and
+    # the disclosure flags all come from a single computation over a single
+    # period rather than from six that could each re-derive it.
+    def performance
+      @performance ||= statement.performance(period: period)
+    end
+
+    # The six return figures, read here so the partial only formats. Each may
+    # be nil -- a missing rate, fewer than two balance days, or no
+    # money-weighted return for a valuation-only scope -- and nil is passed
+    # through rather than defaulted, because a zero return and no return are
+    # different statements.
+    def returns
+      @returns ||= {
+        twr: performance.time_weighted_return,
+        annualized_twr: performance.annualized_time_weighted_return,
+        mwr: performance.money_weighted_return,
+        annualized_mwr: performance.annualized_money_weighted_return,
+        volatility: performance.volatility,
+        max_drawdown: performance.max_drawdown
+      }
+    end
+
+    # The flow-adjusted index as a Series the time-series chart can draw.
+    #
+    # Built here rather than in the partial for the same reason the KPI
+    # figures are: the view formats, it does not assemble. Built here rather
+    # than on Portfolio::Performance because a Series is a presentation shape,
+    # and that class stays free of one.
+    #
+    # `index_series` is [[date, level], ...] rebased on 100, so the values are
+    # plain BigDecimals rather than Money. Series passes a non-Money value
+    # through untouched (`display_amount`), and the chart's tooltip then reads
+    # a level and a percentage change -- which is what an index is, and why
+    # this is not the value chart with different numbers in it.
+    #
+    # from_raw_values demands two values, and a period with one day or none has
+    # no line to draw; nil here is what hides the section.
+    def index_chart_series
+      return @index_chart_series if defined?(@index_chart_series)
+
+      # Size checked before mapping: a period with one point or none has no line
+      # to draw, and building the hashes only to discard them is allocation for
+      # nothing on a page that renders this on every request.
+      levels = performance.index_series
+      @index_chart_series =
+        if levels.size >= 2
+          # Rounded to two places HERE, because nothing downstream will do it.
+          # A chained level is a BigDecimal division result --
+          # 112.30000000000000000000000000000311 for an ordinary two-day series
+          # -- and Series#display_amount passes a non-Money value through
+          # untouched, Trend#as_json emits it raw, and the chart's
+          # _extractFormattedValue returns it verbatim. The hover would read
+          # every one of those digits. The percentage half is already fine:
+          # Trend#percent_formatted rounds it.
+          Series.from_raw_values(
+            levels.map { |date, level| { date: date, value: level.round(2) } }
+          )
+        end
     end
 
     def holdings_rows

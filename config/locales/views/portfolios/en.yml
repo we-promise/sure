@@ -26,6 +26,8 @@ en:
       position_missing_cost_basis_hint: This position has no known cost basis, so it has no average cost and is left out of the row's return.
       positions_caption: Positions in %{ticker} by account
       toggle_positions: Show positions in %{ticker}
+    index_chart:
+      explainer: Rebased to 100 at the start of the period, with the effect of money you paid in or took out removed. A level of 121 means a 21% return.
     kpi_row:
       as_of: As of %{date}
       day_change: Day change
@@ -39,10 +41,29 @@ en:
         other: excludes %{count} accounts with no exchange rate
       unrealized_pnl: Unrealised P&L
       value: Value
+    performance:
+      annualized_hint: Extrapolated to a full year, over calendar days; not shown for periods under a year.
+      annualized_mwr: Annualised money-weighted
+      annualized_twr: Annualised time-weighted
+      incomplete_title: Some figures could not be computed
+      max_drawdown: Max drawdown
+      max_drawdown_hint: Largest peak-to-trough fall within the period.
+      mwr: Money-weighted return (period)
+      mwr_hint: Money-weighted, over the period. It reflects when money was invested, so money that arrived part-way through is expressed over the whole period — which is why this can differ from a broker's holding-period figure.
+      rate_missing: An exchange rate was missing for part of this period, so affected figures are withheld rather than converted at parity.
+      suppressed_days:
+        one: One day was counted as a zero return because it could not be measured.
+        other: "%{count} days were counted as a zero return because they could not be measured."
+      twr: Time-weighted return
+      twr_hint: What the investments did, with the effect of your contributions removed. Daily, net of fees, with each contribution counted from the start of its day.
+      volatility: Volatility
+      volatility_hint: Annualised standard deviation of daily returns, over calendar days rather than trading days.
     sections:
       accounts: Accounts
       holdings: Holdings
+      index_chart: Return index
       kpis: Overview
+      performance: Performance
       value_chart: Portfolio value
     show:
       section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."

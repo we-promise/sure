@@ -1,0 +1,87 @@
+<%# locals: (statement:, period:, as_of:, performance:, returns:) %>
+
+<%# What the portfolio RETURNED over the period, as rates rather than amounts.
+    The KPI row above answers "how much"; this answers "how well", which is the
+    figure a reader compares against a broker statement or another tracker.
+
+    `returns` is the figure set the registry read off Portfolio::Performance for
+    this one period; this partial only formats. Every figure may legitimately be
+    nil -- see the disclosure note below -- so each card is allowed to say so
+    without the section disappearing. %>
+<div id="portfolio-performance" class="space-y-4">
+  <%# A figure withheld is not the same as a figure of zero, and the reader
+      cannot tell them apart from the cards alone. A figure whose exchange rate
+      is missing is suppressed, as is a day whose denominator is not positive
+      or whose journalled position has no usable price or rate. All of them are
+      surfaced here rather than hidden.
+
+      "Counted as a zero return" and not "left out": a suppressed day keeps its
+      place in the series, so it is an omission for the chained TWR only.
+      Volatility still counts it as an observation of zero and its flows still
+      enter the money-weighted series. %>
+  <% if performance.rate_missing? || performance.suppressed_dates.any? %>
+    <div class="px-4">
+      <%= render DS::Alert.new(title: t("portfolios.performance.incomplete_title"), variant: :warning) do %>
+        <ul class="text-xs text-secondary space-y-1">
+          <% if performance.rate_missing? %>
+            <li><%= t("portfolios.performance.rate_missing") %></li>
+          <% end %>
+          <% if performance.suppressed_dates.any? %>
+            <li><%= t("portfolios.performance.suppressed_days", count: performance.suppressed_dates.count) %></li>
+          <% end %>
+        </ul>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <%# The method matters as much as the number. Users compare these against a
+        broker, and brokers do not agree on a convention -- this engine uses a
+        start-of-day flow convention, so a tool defaulting to another method
+        gives a different figure for the same account. The hint says which. %>
+    <%= render "portfolios/kpi_card",
+          icon: "trending-up",
+          label: t("portfolios.performance.twr"),
+          money: nil,
+          rate: returns[:twr],
+          hint: t("portfolios.performance.twr_hint") %>
+
+    <%= render "portfolios/kpi_card",
+          icon: "calendar",
+          label: t("portfolios.performance.annualized_twr"),
+          money: nil,
+          rate: returns[:annualized_twr],
+          hint: t("portfolios.performance.annualized_hint") %>
+
+    <%# Withheld entirely for a valuation-only scope: without trade or
+        transfer records the external flows are unknown, and an XIRR over them
+        would be a fabrication. Nil arrives here and reads as no data. %>
+    <%= render "portfolios/kpi_card",
+          icon: "user",
+          label: t("portfolios.performance.mwr"),
+          money: nil,
+          rate: returns[:mwr],
+          hint: t("portfolios.performance.mwr_hint") %>
+
+    <%= render "portfolios/kpi_card",
+          icon: "calendar-clock",
+          label: t("portfolios.performance.annualized_mwr"),
+          money: nil,
+          rate: returns[:annualized_mwr],
+          hint: t("portfolios.performance.annualized_hint") %>
+
+    <%= render "portfolios/kpi_card",
+          icon: "activity",
+          label: t("portfolios.performance.volatility"),
+          money: nil,
+          rate: returns[:volatility],
+          hint: t("portfolios.performance.volatility_hint") %>
+
+    <%= render "portfolios/kpi_card",
+          icon: "trending-down",
+          label: t("portfolios.performance.max_drawdown"),
+          money: nil,
+          rate: returns[:max_drawdown],
+          hint: t("portfolios.performance.max_drawdown_hint") %>
+  </div>
+</div>
