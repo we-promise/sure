@@ -128,6 +128,32 @@ class MarketDataResetJobTest < ActiveJob::TestCase
     MarketDataResetJob.release_guard
   end
 
+  test "the guard is released after the advisory lock" do
+    use_own_guard_key
+    stub_imports
+    advisory_locks_at_release = []
+    MarketDataResetJob.stubs(:release_guard).with do
+      advisory_locks_at_release << ActiveRecord::Base.connection.select_value("SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid()")
+      true
+    end
+
+    MarketDataResetJob.perform_now
+
+    assert_equal [ 0 ], advisory_locks_at_release
+  end
+
+  test "a run that cannot check the advisory lock releases the guard" do
+    use_own_guard_key
+    assert_equal :queued, MarketDataResetJob.enqueue_once
+    MarketDataResetJob.any_instance.stubs(:try_advisory_lock).raises(ActiveRecord::ConnectionNotEstablished)
+
+    assert_raises(ActiveRecord::ConnectionNotEstablished) { MarketDataResetJob.perform_now }
+
+    assert_equal :queued, MarketDataResetJob.enqueue_once
+  ensure
+    MarketDataResetJob.release_guard
+  end
+
   test "enqueue_once releases the guard when the job cannot be queued" do
     use_own_guard_key
     MarketDataResetJob.stubs(:perform_later).raises(RedisClient::CannotConnectError).then.returns(false).then.returns(MarketDataResetJob.new)

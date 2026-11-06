@@ -47,14 +47,15 @@ class MarketDataResetJob < ApplicationJob
     Rails.logger.error("MarketDataResetJob could not release its enqueue guard: #{e.class}: #{e.message}")
   end
 
-  # Only the run that holds the lock releases the guard; one that finds
-  # another reset running leaves it to that run.
+  # The guard is released after the advisory lock, so a reset queued in
+  # between always finds the lock free. A run that finds another reset
+  # running leaves the guard to that run; one that cannot even check the lock
+  # releases it, since nothing else would.
   def perform
-    with_advisory_lock do
-      reset_market_data
-    ensure
-      self.class.release_guard
-    end
+    @release_guard = false
+    with_advisory_lock { reset_market_data }
+  ensure
+    self.class.release_guard if @release_guard
   end
 
   private
@@ -126,9 +127,13 @@ class MarketDataResetJob < ApplicationJob
     # Only one reset runs at a time, also when two were queued.
     def with_advisory_lock
       lock_key = Digest::MD5.hexdigest(self.class.name).to_i(16) % (2**62)
-      acquired = ActiveRecord::Base.connection.select_value(
-        ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", lock_key ])
-      )
+      begin
+        acquired = try_advisory_lock(lock_key)
+      rescue
+        @release_guard = true
+        raise
+      end
+      @release_guard = acquired
 
       unless acquired
         Rails.logger.warn("MarketDataResetJob skipped: another reset is running")
@@ -142,6 +147,12 @@ class MarketDataResetJob < ApplicationJob
           ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", lock_key ])
         )
       end
+    end
+
+    def try_advisory_lock(lock_key)
+      ActiveRecord::Base.connection.select_value(
+        ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_try_advisory_lock(?)", lock_key ])
+      )
     end
 
     # A failed import must not stop the account syncs: they fetch any rates and
