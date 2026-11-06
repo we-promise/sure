@@ -87,4 +87,18 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     assert_match(/"p":/, account.read_attribute_before_type_cast(:raw_payload).to_s,
       "the stored value must be an encryption envelope, not plaintext {}")
   end
+
+  test "backfill encrypts a legacy plaintext enable banking iban" do
+    item = EnableBankingItem.create!(family: families(:dylan_family), name: "Backfill EB",
+      country_code: "FR", application_id: "app_id", client_certificate: "cert")
+    account = item.enable_banking_accounts.create!(name: "Backfill EB Account", uid: "backfill-eb-1", currency: "EUR")
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE enable_banking_accounts SET iban = ? WHERE id = ?", "nl91 abna 0417 1643 00", account.id ])) # pipelock:ignore IBAN
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    account.reload
+    assert_equal "NL91ABNA0417164300", account.iban # pipelock:ignore IBAN
+    assert_match(/"p":/, account.read_attribute_before_type_cast(:iban).to_s)
+  end
 end

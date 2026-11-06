@@ -78,6 +78,10 @@ en:
       institution_name_placeholder: e.g., Chase Bank
       institution_domain_label: Institution domain
       institution_domain_placeholder: e.g., chase.com
+      iban_label: IBAN
+      iban_placeholder: e.g., DE89370400440532013000 # pipelock:ignore IBAN
+      iban_set_placeholder: •••• •••• •••• •••• — IBAN on file, enter a new value to replace it
+      iban_remove_label: Remove IBAN
       institution_domain_hint: Used to find the institution's icon.
       institution_domain_missing_logo_key_hint: Used to find the institution's icon. Brandfetch logos are not available because no Brandfetch client ID is configured.
       institution_domain_settings_link: Add one in Self-Hosting settings

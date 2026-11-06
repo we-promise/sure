@@ -88,6 +88,10 @@ nl:
       exclude_from_reports: "Uitsluiten van alle rapporten"
       enable_category_matcher_label: "Categoriekoppeling inschakelen"
       enable_category_matcher_hint: "Indien ingeschakeld wordt de door de provider voorgestelde categorie toegepast op geïmporteerde transacties. Schakel uit om nieuwe transacties zonder categorie te laten."
+      iban_label: "IBAN"
+      iban_placeholder: "bijv. DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN opgeslagen, voer een nieuwe waarde in om deze te vervangen"
+      iban_remove_label: "IBAN verwijderen"
     index:
       accounts: "Accounts"
       financekit_accounts:
