@@ -47,6 +47,15 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     assert_match "Cardpayment-HighStPetrolStation", requests.sole.input
   end
 
+  test "a model with a large context window reads the text layer in one chunk a page" do
+    requests = stub_ai(:extract_pdf, returns: statement(BAC_ROWS))
+
+    with_reading_routes(text_model.with(context_window: 1_000_000)) do
+      assert_equal :text, reading(@bac).extract(read_as: :text).way
+    end
+    assert_match "Cardpayment-HighStPetrolStation", requests.sole.input
+  end
+
   test "a scan with no vision model and no OCR is unavailable: an empty text layer is never sent" do
     requests = stub_ai(:extract_pdf, returns: statement([]))
 

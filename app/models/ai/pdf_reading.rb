@@ -179,7 +179,7 @@ class Ai::PdfReading
       units = pages.each_with_index.flat_map do |text, index|
         next [] if text.strip.empty?
 
-        text.scan(/.{1,#{limit}}/m).map { Ai::PdfReading::Unit.text(_1, page: index + 1) }
+        (0...text.length).step(limit).map { Ai::PdfReading::Unit.text(text[_1, limit], page: index + 1) }
       end
       raise Ai::Error::Unavailable, :no_text_layer if units.empty?
 
