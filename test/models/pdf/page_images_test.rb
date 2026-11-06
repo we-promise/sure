@@ -77,7 +77,7 @@ class Pdf::PageImagesTest < ActiveSupport::TestCase
       assert_equal :timeout, error.code
       assert_operator seconds, :<, 3
       File.read(pids).split.map(&:to_i).each do |pid|
-        assert_raises(Errno::ESRCH, "process #{pid} survived") { Process.kill(0, pid) }
+        assert dead_within?(pid, 2), "process #{pid} survived"
       end
     end
   end
@@ -91,6 +91,22 @@ class Pdf::PageImagesTest < ActiveSupport::TestCase
 
   private
     def statement(name) = file_fixture("statements/#{name}.pdf").binread
+
+    # A killed orphan stays a zombie until init reaps it, which can lag under a parallel run;
+    # a zombie runs nothing, so it counts as dead.
+    def dead_within?(pid, seconds)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + seconds
+      loop do
+        Process.kill(0, pid)
+        stat = "/proc/#{pid}/stat"
+        return true if File.exist?(stat) && File.read(stat).split(") ").last.to_s.start_with?("Z")
+        return false if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+
+        sleep 0.05
+      end
+    rescue Errno::ESRCH, Errno::ENOENT
+      true
+    end
 
     def size(png) = png.byteslice(16, 8).unpack("NN")
 
