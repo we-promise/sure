@@ -245,7 +245,7 @@ namespace :evals do
       puts
       puts "Produce the runs first, all on the same split:"
       puts "  PROVIDER=bayes SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,naive-bayes]'"
-      puts "  PROVIDER=jev SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,~typesafe/jev-latest]'"
+      puts "  PROVIDER=jev SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,jev-latest]'"
       exit 1
     end
 

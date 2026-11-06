@@ -53,16 +53,25 @@ class Eval::ProviderFactory
       Eval::GenerationClient.new(endpoint:, model:, chat_provider: Provider::Openai.new(access_token, uri_base:, model:))
     end
 
+    # The run's Jev endpoint, else the install's: categorization through the generation's
+    # judgement, as production runs it (2d). Only TypeSafe-style …/v1/systemone endpoints are
+    # reachable until RubyLLM 2.2 (PR 5).
     def build_jev
-      api_key = config[:api_key].presence || Provider::Jev.api_key # pipelock:ignore
-
+      jev = Ai::LegacyEnvConfig::Jev
+      api_key = config[:api_key].presence || jev.api_key # pipelock:ignore
       raise Error, "Jev API key not configured" unless api_key.present?
 
-      Provider::Jev.new(
-        api_key,
-        endpoint: config[:endpoint].presence || Provider::Jev.effective_endpoint,
-        model: model,
-        concurrency: config[:concurrency]
+      url = config[:endpoint].presence || jev.effective_endpoint
+      unless jev.endpoint_allowed?(url) && jev.unsupported_reason(url).nil?
+        raise Error, "Jev endpoint not supported: #{jev.redacted_endpoint(url)} (only …/v1/systemone until RubyLLM 2.2)"
+      end
+
+      base_url = jev.base_url(url)
+      local = base_url.start_with?("http:")
+      endpoint = Ai::Config::Endpoint.new(
+        name: "jev", protocol: :jev, preset: local ? :jev_local : :jev, base_url:, api_key:, location: local ? :local : :cloud,
+        timeout_seconds: 30, max_retries: Ai::LegacyEnvConfig::JEV_RETRIES, parallel_requests: config[:concurrency]
       )
+      Eval::GenerationClient.new(endpoint:, model:)
     end
 end
