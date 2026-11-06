@@ -1304,6 +1304,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       get src
       assert_response :success
       assert_includes response.headers["Cache-Control"], "max-age=86400"
+      assert_includes response.headers["Vary"], "Turbo-Frame", "each sidebar frame needs its own copy"
     end
   end
 

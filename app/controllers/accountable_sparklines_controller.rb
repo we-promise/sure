@@ -9,6 +9,8 @@ class AccountableSparklinesController < ApplicationController
 
     # A URL carrying the current version can't go stale, so the browser may reuse it.
     expires_in 1.day if params[:v] == sparkline.version
+    # The body echoes the requesting frame id, so a reused copy must come from the same frame.
+    response.headers["Vary"] = [ response.headers["Vary"], "Turbo-Frame" ].compact.join(", ")
 
     # Use HTTP conditional GET so the client receives 304 Not Modified when possible.
     # The frame id is part of the response body, so it is part of the ETag.
