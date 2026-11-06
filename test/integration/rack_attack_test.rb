@@ -277,6 +277,33 @@ class RackAttackTest < ActionDispatch::IntegrationTest
     assert_nil ip_block.call(unrelated_request)
   end
 
+  test "health throttle matches the health endpoint only" do
+    block = Rack::Attack.throttles["health/ip"].block
+
+    assert_equal "203.0.113.5", block.call(throttle_request("/health"))
+    assert_equal "203.0.113.5", block.call(throttle_request("/health.json"))
+    assert_nil block.call(throttle_request("/up"))
+    assert_nil block.call(throttle_request("/healthz"))
+  end
+
+  test "health throttle blocks a client polling faster than an uptime monitor would" do
+    HealthCheck.stubs(:errors).returns([])
+    freeze_time
+
+    with_rack_attack_enabled do
+      60.times do
+        get health_path
+        assert_response :ok
+      end
+
+      get health_path
+      assert_response :too_many_requests
+
+      get health_path, env: { "REMOTE_ADDR" => "198.51.100.7" }
+      assert_response :ok, "another client keeps its own budget"
+    end
+  end
+
   test "json email extraction tolerates non-object JSON payloads without raising" do
     api_login_email_block = Rack::Attack.throttles["api_login/email"].block
 
