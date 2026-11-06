@@ -5,6 +5,8 @@ json.id transaction.id
 # not the transaction id, so expose it for clients that link back into the app.
 json.entry_id transaction.entry.id
 json.date transaction.entry.date
+# entries.time is stored on a dummy anchor date; strftime keeps that date out of the response.
+json.time transaction.entry.time&.strftime("%H:%M")
 json.amount transaction.entry.amount_money.format
 
 # Agent/automation-friendly numeric fields (avoid localized parsing and clarify sign)

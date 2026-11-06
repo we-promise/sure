@@ -134,8 +134,15 @@ class Api::V1::TransactionsController < Api::V1::BaseController
   end
 
   def update
-    if @entry.split_child?
+    if @entry.split_child? && split_child_restricted_fields_changed?
       render json: { error: "validation_failed", message: "Split child transactions cannot be edited directly. Use the split editor." }, status: :unprocessable_entity
+      return
+    end
+
+    if @entry.split_child? &&
+        (transaction_params.key?(:time) || transaction_params.key?(:user_modified)) &&
+        !Account.writable_by(current_resource_owner).exists?(id: @entry.account_id)
+      render json: { error: "forbidden", message: "You do not have permission to edit this account" }, status: :forbidden
       return
     end
 
@@ -304,7 +311,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     def transaction_params
       params.require(:transaction).permit(
-        :date, :amount, :name, :description, :notes, :currency,
+        :date, :time, :amount, :name, :description, :notes, :currency,
         :category_id, :merchant_id, :nature, :user_modified, tag_ids: []
       )
     end
@@ -327,6 +334,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       entry_params = {
         name: transaction_params[:name] || transaction_params[:description],
         date: transaction_params[:date],
+        time: transaction_params[:time],
         amount: calculate_signed_amount,
         currency: transaction_params[:currency] || current_resource_owner.family.currency,
         notes: transaction_params[:notes],
@@ -349,6 +357,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       entry_params = {
         name: transaction_params[:name] || transaction_params[:description],
         date: transaction_params[:date],
+        time: transaction_params[:time],
         notes: transaction_params[:notes],
         entryable_attributes: {
           id: @entry.entryable_id,
@@ -377,6 +386,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       params.dig(:transaction, :amount).present? ||
         params.dig(:transaction, :date).present? ||
         params.dig(:transaction, :nature).present?
+    end
+
+    def split_child_restricted_fields_changed?
+      (transaction_params.keys.map(&:to_sym) - [ :time, :user_modified ]).any? || tags_provided?
     end
 
     def idempotency_key_requested?
