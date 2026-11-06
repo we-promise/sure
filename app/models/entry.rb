@@ -549,10 +549,10 @@ class Entry < ApplicationRecord
     parent_entry_id.present?
   end
 
-  # Accounts whose balance moves when this entry and its split children are
-  # deleted: removing a transfer leg removes the transfer.
-  def transfer_counting_accounts
-    [ self, *child_entries ].flat_map { |entry| entry.entryable.try(:transfer)&.transfer_counting_accounts || [] }.uniq
+  # Other accounts that change when this entry and its split children are
+  # deleted: removing a transfer leg removes the transfer with its fees.
+  def accounts_changed_by_transfer_removal
+    [ self, *child_entries ].flat_map { |entry| entry.entryable.try(:transfer)&.accounts_changed_by_removal || [] }.uniq
   end
 
   # Splits this entry into child entries. Marks parent as excluded.

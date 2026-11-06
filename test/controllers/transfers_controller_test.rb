@@ -799,6 +799,19 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "cannot delete a transfer leg whose fee sits on an account the user can't write" do
+    member_loan = accounts(:loan).tap { |account| account.update!(owner: users(:family_member)) }
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: accounts(:credit_card), status: "confirmed")
+    fee = attach_fee(transfer, account: member_loan)
+    leg = transfer.outflow_transaction.entry
+
+    assert_no_difference [ -> { Transfer.count }, -> { Entry.count } ] do
+      delete transaction_url(leg)
+      post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ leg.id ] } }
+    end
+    assert Transaction.exists?(fee.id)
+  end
+
   test "editing the amount of a confirmed transfer resyncs both accounts" do
     transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: accounts(:other_liability), status: "confirmed")
     Sync.where(syncable: [ accounts(:depository), accounts(:other_liability) ]).delete_all

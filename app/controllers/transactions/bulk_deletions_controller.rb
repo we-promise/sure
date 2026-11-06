@@ -18,12 +18,12 @@ class Transactions::BulkDeletionsController < ApplicationController
     end
 
     # Deleting a transfer leg (or a split whose child is one) removes the
-    # transfer, which moves the balance of a counterpart that counts transfers;
-    # skip those the user cannot write.
+    # transfer, its fee transactions and, on a counterpart that counts
+    # transfers, the balance it moved; skip those the user cannot write.
     def entries_moving_unwritable_balances(scope, writable_account_ids)
       scope.where(id: bulk_delete_params[:entry_ids], entryable_type: "Transaction")
            .includes(:entryable, child_entries: :entryable)
-           .select { |entry| entry.transfer_counting_accounts.any? { |account| !writable_account_ids.include?(account.id) } }
+           .select { |entry| entry.accounts_changed_by_transfer_removal.any? { |account| !writable_account_ids.include?(account.id) } }
            .map(&:id)
     end
 

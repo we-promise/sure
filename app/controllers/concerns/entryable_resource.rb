@@ -33,8 +33,9 @@ module EntryableResource
   def destroy
     return unless require_account_permission!(@entry.account)
     # Deleting a transfer leg (or a split whose child is one) removes the
-    # transfer, which moves the balance of a counterpart that counts transfers.
-    @entry.transfer_counting_accounts.each do |account|
+    # transfer, its fee transactions and, on a counterpart that counts
+    # transfers, the balance it moved.
+    @entry.accounts_changed_by_transfer_removal.each do |account|
       return unless require_account_permission!(account)
     end
 

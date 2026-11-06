@@ -220,6 +220,13 @@ class Transfer < ApplicationRecord
     fee_transactions.each { |t| t.entry&.sync_account_later }
   end
 
+  # Accounts that change when this transfer goes away with one of its legs:
+  # the fee transactions are deleted, and a counterpart that counts transfers
+  # moves its balance.
+  def accounts_changed_by_removal
+    (Account.where(id: fee_transactions.joins(:entry).select("entries.account_id")).to_a + transfer_counting_accounts).uniq
+  end
+
   # Accounts whose balance moves if this transfer goes away.
   def transfer_counting_accounts
     return [] unless confirmed?

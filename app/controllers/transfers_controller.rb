@@ -257,15 +257,15 @@ class TransfersController < ApplicationController
     # writable endpoint.
     def unlink_permission_account
       endpoints = [ @transfer.from_account, @transfer.to_account ].compact
-      fee_accounts = Account.where(id: @transfer.fee_transactions.joins(:entry).select("entries.account_id")).to_a
+      changed_accounts = @transfer.accounts_changed_by_removal
       writable_ids = Current.family.accounts.writable_by(Current.user)
-                       .where(id: (endpoints + fee_accounts).map(&:id))
+                       .where(id: (endpoints + changed_accounts).map(&:id))
                        .pluck(:id).to_set
 
       writable_endpoint = endpoints.find { |account| writable_ids.include?(account.id) }
       return endpoints.first unless writable_endpoint
 
-      (fee_accounts + @transfer.transfer_counting_accounts).find { |account| !writable_ids.include?(account.id) } || writable_endpoint
+      changed_accounts.find { |account| !writable_ids.include?(account.id) } || writable_endpoint
     end
 
     def transfer_params
