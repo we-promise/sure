@@ -419,7 +419,7 @@ class InvestmentStatement
     # positive -- the rule `allocation_sub_classes_within` and
     # `allocation_by_classification` count it by. It belongs to Liquidity/Cash
     # only, so any other bucket, or a cash sub-class reached from another asset
-    # class, gets none. Identified and named as `allocation`'s own cash row.
+    # class, gets none.
     def account_cash_rows(bucket, cash_bucket, parent)
       return [] unless cash_bucket.present? && bucket == cash_bucket
       return [] unless parent.nil? || parent == "liquidity"
