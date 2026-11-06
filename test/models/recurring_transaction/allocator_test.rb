@@ -438,7 +438,7 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
 
     # The entry is fully consumed by the active allocation, so there is no
     # capacity left for another active bill.
-    assert_raises(ActiveRecord::RecordInvalid) do
+    assert_raises(Allocator::EntryExhaustedError) do
       Allocator.new(other_occurrence).allocate!(entry: payment)
     end
     assert_not other_occurrence.reload.paid?
