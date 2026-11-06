@@ -176,13 +176,16 @@ class Assistant::Function::SplitTransactionTest < ActiveSupport::TestCase
   end
 
   test "refuses transfers" do
+    transfer = create_transaction(account: accounts(:depository), amount: 100, kind: "funds_movement")
+
     result = @function.call(
-      "id" => transactions(:transfer_out).id,
+      "id" => transfer.entryable_id,
       "splits" => [ { "amount" => "50" }, { "amount" => "50" } ]
     )
 
     assert_equal false, result[:success]
     assert_equal "not_splittable", result[:error]
+    assert_not transfer.reload.split_parent?
   end
 
   test "does not let read-only collaborators split" do
