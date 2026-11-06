@@ -238,9 +238,10 @@ class InvestmentStatement
   # trades can compute, by the same rules the holdings tab applies), a price
   # dated more than STALE_PRICE_AFTER_DAYS before as_of or no price on or
   # before it, or a provider link that is not healthy. Cash securities are
-  # never flagged. The cost bases come from the batched preload and the
-  # price dates from one query, so the list is bounded regardless of the
-  # number of holdings.
+  # never flagged. Issues sort by kind, ticker, security and account, so ties
+  # keep their order between requests. The cost bases come from the batched
+  # preload and the price dates from one query, so the list is bounded
+  # regardless of the number of holdings.
   STALE_PRICE_AFTER_DAYS = 5
 
   def data_quality_issues(as_of: Date.current)
@@ -269,7 +270,9 @@ class InvestmentStatement
       issues << DataQualityIssue.new(kind: :provider, holding: nil, security: security, detail: status) unless status == :ok
     end
 
-    issues.sort_by { |issue| [ DATA_QUALITY_KINDS.index(issue.kind), issue.security.ticker.to_s ] }
+    issues.sort_by do |issue|
+      [ DATA_QUALITY_KINDS.index(issue.kind), issue.security.ticker.to_s, issue.security.id.to_s, issue.holding&.account_id.to_s ]
+    end
   end
 
   DATA_QUALITY_KINDS = %i[missing_cost_basis stale_price provider].freeze

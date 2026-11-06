@@ -1966,6 +1966,42 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       "asked about today, the same statement reads the newer prices"
   end
 
+  # Issues tied on kind and ticker still come out in one order whatever order
+  # the holdings arrive in: by security id, then by the holding's account id.
+  test "data_quality_issues orders ties by security id, then account id" do
+    first_account = create_investment_account(balance: 5000)
+    second_account = create_investment_account(balance: 5000)
+    shared = Security.create!(ticker: "TIE", name: "Tied")
+    dup_a = Security.create!(ticker: "DUP", name: "Dup A", exchange_operating_mic: "XNAS")
+    dup_b = Security.create!(ticker: "DUP", name: "Dup B", exchange_operating_mic: "XNYS")
+    Security::Price.create!(security: shared, date: Date.current, price: 10, currency: "USD")
+    [ first_account, second_account ].each do |account|
+      Holding.create!(account: account, security: shared, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    end
+    [ dup_a, dup_b ].each do |security|
+      Holding.create!(account: first_account, security: security, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+    end
+
+    accounts_in_order = [ first_account, second_account ].map(&:id).sort_by(&:to_s)
+    dups_in_order = [ dup_a, dup_b ].map(&:id).sort_by(&:to_s)
+    key = ->(issues) do
+      [
+        issues.select { |i| i.kind == :missing_cost_basis }.map { |i| i.holding.account_id },
+        issues.select { |i| i.kind == :stale_price }.map { |i| i.security.id }
+      ]
+    end
+
+    holdings = @statement.holdings_with_avg_costs
+    forward = key.call(@statement.data_quality_issues)
+
+    reversed_statement = InvestmentStatement.new(@family, user: nil)
+    reversed_statement.stubs(:holdings_with_avg_costs).returns(holdings.reverse)
+    backward = key.call(reversed_statement.data_quality_issues)
+
+    assert_equal [ accounts_in_order, dups_in_order ], forward
+    assert_equal [ accounts_in_order, dups_in_order ], backward
+  end
+
   private
     def materialize_two_parcel_example(first_parcel_label:)
       account = create_investment_account(balance: 1800)
