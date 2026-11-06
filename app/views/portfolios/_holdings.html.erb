@@ -23,7 +23,9 @@
       row_detail: ->(row) { render("portfolios/holding_positions", row: row) }
     ) do |table| %>
   <% table.with_column(header.call(t("portfolios.holdings.columns.security"), "name"), row_header: true, aria_sort: holdings_aria_sort("name", **sorting)) do |row, index| %>
-    <div class="flex items-center gap-3 min-w-0">
+    <%# Capped so a long name truncates rather than widening the table: in an
+        auto-layout table a nowrap cell is as wide as its whole text. %>
+    <div class="flex items-center gap-3 min-w-0 max-w-64">
       <%= render DS::Button.new(
             variant: :icon,
             size: :sm,
@@ -38,7 +40,7 @@
         <%= render DS::FilledIcon.new(variant: :text, text: row.name, size: "md", rounded: true) %>
       <% end %>
       <div class="min-w-0 space-y-0.5 text-left">
-        <p class="truncate"><%= row.name %></p>
+        <%= tag.p row.name, class: "truncate", title: row.name %>
         <div class="flex items-center gap-2">
           <%= tag.p row.ticker, class: "text-secondary text-xs uppercase" %>
           <% if row.missing_cost_basis %>
