@@ -2741,7 +2741,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `preferred_llm_provider`, and their test stubs. `llm_provider_order` stays while today's chat
      uses it (`Assistant::Provided#get_model_provider`) and goes with it in PR 6, and so does
      `Provider::Openai::UsageCost`, which chat's usage rows still use.
-     A new PR, after #4765 and #3422, branched on both. Its calls (by @josh-sanders during
+     A new PR, #4771, after #4765 and #3422, branched on both. Its calls (by @josh-sanders during
      development of PR #4440): OCR ships as code and tests, configurable only from PR 7, so
      "Read as: OCR" is greyed out until then (no new ENV or settings fields); Mistral and Cohere
      OCR ship with stubbed tests, marked untested live until someone records them with a key;
