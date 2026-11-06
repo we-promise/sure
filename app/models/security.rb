@@ -259,7 +259,7 @@ class Security < ApplicationRecord
   # close of `to`: the product of the ratios of splits whose ex-date falls
   # after `from` and on or before `to`. 1 when there are none.
   def split_factor_between(from, to)
-    splits.where(ex_date: (from + 1)..to).reduce(Rational(1)) { |factor, split| factor * split.ratio }
+    Security::Split.factor_between(splits, from, to)
   end
 
   def to_combobox_option
