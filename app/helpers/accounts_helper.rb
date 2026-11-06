@@ -43,6 +43,16 @@ module AccountsHelper
     match && match[1]
   end
 
+  # Versions for the sidebar's sparkline URLs, keyed by account id and by group
+  # accountable, computed together rather than per account.
+  def sidebar_sparkline_versions(family)
+    @sidebar_sparkline_versions ||= begin
+      groups = family.balance_sheet.account_groups
+      Account.sparkline_versions(groups.flat_map(&:accounts).map(&:account))
+        .merge(AccountableSparkline.versions(groups.map(&:accountable_type).uniq))
+    end
+  end
+
   # Cache key for `accounts/_account_sidebar_tabs.html.erb`.
   # Kept here (not in the ERB) so the partial stays render-only.
   #
@@ -50,13 +60,20 @@ module AccountsHelper
   # same source the sidebar sparkline frame ids use, so a change in the user's
   # account access moves both together.
   def account_sidebar_tabs_cache_key(family:, active_tab:, mobile:)
+    # Linking or unlinking a provider doesn't touch the account, but changes its sparkline versions.
+    providers_version = AccountProvider.where(account_id: family.accounts.select(:id))
+      .pick(Arel.sql("count(*)"), Arel.sql("max(account_providers.updated_at)"))
+
     [
-      family.build_cache_key("account_sidebar_tabs_v6", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v8", invalidate_on_data_updates: true),
       Current.user&.id,
       Current.account_share_version,
+      providers_version,
       active_tab,
       mobile,
       I18n.locale,
+      # Sparkline URLs carry a version that rolls over with the 30-day window.
+      Date.current,
       sidebar_active_account_id,
       # Fold the per-user "start expanded by default" preference into the key
       # so toggling it in Settings busts the 12h fragment cache immediately

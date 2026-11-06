@@ -77,10 +77,33 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
   end
   AccountsController.prepend(BrokenSparklines)
 
+  # The shared browser caches versioned sparkline URLs for a day, so salt the
+  # versions per test or the stalled/broken responses below are never requested.
+  module FreshSparklineVersions
+    mattr_accessor :salt
+
+    module AccountKey
+      def sparkline_cache_key_from(...)
+        "#{super}#{FreshSparklineVersions.salt}"
+      end
+    end
+
+    module GroupKey
+      def cache_key
+        "#{super}#{FreshSparklineVersions.salt}"
+      end
+    end
+  end
+  Account.prepend(FreshSparklineVersions::AccountKey)
+  AccountableSparkline.prepend(FreshSparklineVersions::GroupKey)
+
   setup do
+    FreshSparklineVersions.salt = SecureRandom.hex(4)
     @user = users(:family_admin)
     sign_in @user
   end
+
+  teardown { FreshSparklineVersions.salt = nil }
 
   test "a frame that is never fetched keeps its placeholder instead of a timeout badge" do
     with_short_sparkline_timeout do

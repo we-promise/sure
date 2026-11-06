@@ -239,6 +239,8 @@ class AccountsController < ApplicationController
   def sparkline
     # Short-circuit with 304 Not Modified when the client already has the latest version.
     # We defer the expensive series computation until we know the content is stale.
+    # A URL carrying the current version can't go stale, so the browser may reuse it.
+    expires_in 1.day if params[:v] == @account.sparkline_version
     # The frame id is part of the response body, so it is part of the ETag.
     if stale?(etag: [ @account.sparkline_cache_key, turbo_frame_request_id ])
       @sparkline_series = @account.sparkline_series
