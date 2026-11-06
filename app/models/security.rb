@@ -107,7 +107,6 @@ class Security < ApplicationRecord
   before_validation :apply_classification_defaults
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
   before_save :reset_first_provider_price_on_if_provider_changed
-  before_save :reset_classification_fetched_at_if_provider_changed
 
   has_many :trades, dependent: :nullify, class_name: "Trade"
   has_many :prices, dependent: :destroy
@@ -449,11 +448,5 @@ class Security < ApplicationRecord
       return unless price_provider_changed?
       return if first_provider_price_on_changed?
       self.first_provider_price_on = nil
-    end
-
-    # `classification_fetched_at` records that the price provider was asked
-    # and had nothing to give. A newly assigned provider has not been asked.
-    def reset_classification_fetched_at_if_provider_changed
-      self.classification_fetched_at = nil if price_provider_changed?
     end
 end
