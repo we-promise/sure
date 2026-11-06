@@ -762,11 +762,13 @@ class User < ApplicationRecord
   SECTION_NAMESPACES = %w[reports portfolio].freeze
 
   def section_order(namespace)
-    preferences&.[]("#{section_namespace!(namespace)}_section_order") || default_section_order(namespace)
+    prefix = section_namespace!(namespace)
+    preferences&.[]("#{prefix}_section_order") || default_section_order(prefix)
   end
 
   def section_collapsed?(namespace, section_key)
-    preferences&.dig("#{section_namespace!(namespace)}_collapsed_sections", section_key) == true
+    prefix = section_namespace!(namespace)
+    preferences&.dig("#{prefix}_collapsed_sections", section_key) == true
   end
 
   # `order` replaces the namespace's order; `collapsed` merges into the
