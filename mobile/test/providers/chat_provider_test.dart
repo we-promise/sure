@@ -92,6 +92,44 @@ void main() {
       expect(provider.chats.map((c) => c.id).toList(),
           ['chat_1', 'chat_2', 'chat_3', 'chat_4', 'chat_5']);
       expect(provider.errorMessage, isNull);
+      expect(provider.hasIncompleteChatList, isFalse);
+    });
+
+    test('flags the list as incomplete when a later page fails, and clears it on a full refresh', () async {
+      var failPageTwo = true;
+      final client = MockClient((request) async {
+        final page = request.url.queryParameters['page'] ?? '1';
+        if (page == '1') {
+          return _chatListPage(page: 1, totalPages: 2, chatIds: [1, 2]);
+        }
+        if (failPageTwo) return http.Response('{"error":"boom"}', 500);
+        return _chatListPage(page: 2, totalPages: 2, chatIds: [3]);
+      });
+
+      final provider = ChatProvider(chatService: ChatService(client: client));
+      await provider.fetchChats(accessToken: 'token');
+      expect(provider.hasIncompleteChatList, isTrue);
+
+      failPageTwo = false;
+      await provider.fetchChats(accessToken: 'token');
+      expect(provider.hasIncompleteChatList, isFalse);
+      expect(provider.chats.length, 3);
+    });
+
+    test('flags the list as incomplete when the page cap truncates it', () async {
+      final requested = <String>[];
+      final client = MockClient((request) async {
+        final page = request.url.queryParameters['page'] ?? '1';
+        requested.add(page);
+        return _chatListPage(
+            page: int.parse(page), totalPages: 150, chatIds: [int.parse(page)]);
+      });
+
+      final provider = ChatProvider(chatService: ChatService(client: client));
+      await provider.fetchChats(accessToken: 'token');
+
+      expect(requested.length, 100);
+      expect(provider.hasIncompleteChatList, isTrue);
     });
 
     test('keeps the pages already loaded when a later page fails', () async {

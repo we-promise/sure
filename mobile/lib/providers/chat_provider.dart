@@ -57,6 +57,12 @@ class ChatProvider with ChangeNotifier {
   bool _hasIncompleteHistory = false;
   bool get hasIncompleteHistory => _hasIncompleteHistory;
 
+  /// True when the chat list on screen may be missing chats: a later page
+  /// failed to load, or the server reported more pages than we follow. The
+  /// UI can offer a retry without treating it as a hard error.
+  bool _hasIncompleteChatList = false;
+  bool get hasIncompleteChatList => _hasIncompleteChatList;
+
   /// Fetch list of chats
   Future<void> fetchChats({
     required String accessToken,
@@ -83,13 +89,14 @@ class ChatProvider with ChangeNotifier {
           page: page,
           firstPage: result,
         );
-        // A failed later page returns null: keep the list already on screen
-        // rather than replacing it with a truncated one.
-        if (loaded != null) {
+        _hasIncompleteChatList = !loaded.complete;
+        // A failed later page returns null chats: keep the list already on
+        // screen rather than replacing it with a truncated one.
+        if (loaded.chats != null) {
           final deleted = deletedDuringFetch;
           _chats = deleted.isEmpty
-              ? loaded
-              : loaded.where((c) => !deleted.contains(c.id)).toList();
+              ? loaded.chats!
+              : loaded.chats!.where((c) => !deleted.contains(c.id)).toList();
         }
         _errorMessage = null;
       } else {
@@ -112,9 +119,10 @@ class ChatProvider with ChangeNotifier {
   /// Fetches the pages after [firstPage] (the response for [page]) of the chat
   /// list and returns all chats. The API paginates `/chats`, so without this
   /// only the first page would ever be shown. If a later page fails, returns
-  /// the pages loaded so far when nothing is shown yet, and null otherwise so
-  /// the caller keeps the list it already has.
-  Future<List<Chat>?> _loadRemainingChatPages({
+  /// the pages loaded so far when nothing is shown yet, and null chats otherwise
+  /// so the caller keeps the list it already has. `complete` is false when a
+  /// page failed or the page cap truncated the list.
+  Future<({List<Chat>? chats, bool complete})> _loadRemainingChatPages({
     required String accessToken,
     required int perPage,
     required int page,
@@ -135,14 +143,14 @@ class ChatProvider with ChangeNotifier {
 
       if (pageResult['success'] != true) {
         _log.warning('ChatProvider', 'fetchChats page $next failed; stopping');
-        return _chats.isEmpty ? chats : null;
+        return (chats: _chats.isEmpty ? chats : null, complete: false);
       }
       for (final chat in pageResult['chats'] as List<Chat>) {
         if (seen.add(chat.id)) chats.add(chat);
       }
     }
 
-    return chats;
+    return (chats: chats, complete: totalPages <= lastPage);
   }
 
   /// Fetch a specific chat with messages
