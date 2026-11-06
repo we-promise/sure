@@ -715,7 +715,7 @@ class User < ApplicationRecord
   def parsed_release_tag_version!(tag)
     raise ArgumentError, "invalid release tag" unless tag.to_s.match?(/\Av\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.-]+)?\z/)
 
-    Semver.from_release_tag(tag).version
+    Calver.from_release_tag(tag).version
   end
 
   def parsed_release_tag_version(tag)
@@ -838,6 +838,13 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
+  end
+
+  # The experimental Sankey comparison chart (and its feedback prompt) is
+  # opt-in on top of preview features, so a user can keep preview features
+  # enabled without a second chart rendering underneath the cash flow widget.
+  def cashflow_preview_enabled?
+    preferences&.dig("cashflow_preview_enabled") == true
   end
 
   private

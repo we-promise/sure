@@ -8,7 +8,11 @@ class PlaidAccount::Importer
     import_account_info
     import_transactions if account_snapshot.transactions_data.present?
     import_investments if account_snapshot.investments_data.present?
-    import_liabilities if account_snapshot.liabilities_data.present?
+    if account_snapshot.liabilities_data.present?
+      import_liabilities
+    elsif plaid_account.raw_liabilities_payload.present?
+      clear_liabilities
+    end
   end
 
   private
@@ -28,5 +32,12 @@ class PlaidAccount::Importer
 
     def import_liabilities
       plaid_account.upsert_plaid_liabilities_snapshot!(account_snapshot.liabilities_data)
+    end
+
+    # This sync fetched no liabilities, so a payload still stored is an earlier
+    # sync's. Processed again, a variable loan would record its rate as a
+    # change dated to this sync.
+    def clear_liabilities
+      plaid_account.upsert_plaid_liabilities_snapshot!({})
     end
 end

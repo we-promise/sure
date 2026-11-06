@@ -246,7 +246,8 @@ uk:
       empty_month: Цього місяця платежів немає.
     all:
       search_placeholder: Шукати платежі
-      any_status: Будь-який статус
+      current_bills: Поточні платежі
+      dismissed_hidden_description: Завершені платежі приховані.
       status_filters:
         overdue: Прострочені
         due: Незабаром до сплати

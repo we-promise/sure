@@ -4,22 +4,36 @@ nl:
     edit:
       edit: "%{account} bewerken"
     form:
-      make: Merk
-      make_placeholder: Toyota
-      mileage: Kilometerstand
-      mileage_placeholder: '15000'
-      mileage_unit: Eenheid
-      model: Model
-      model_placeholder: Camry
-      year: Jaar
-      year_placeholder: '2023'
+      make: "Merk"
+      make_placeholder: "Toyota"
+      mileage: "Kilometerstand"
+      mileage_placeholder: "15000"
+      mileage_unit: "Eenheid"
+      model: "Model"
+      model_placeholder: "Camry"
+      purchase_date: "Aankoopdatum"
+      purchase_price: "Aankoopprijs"
+      year: "Jaar"
+      year_placeholder: "2023"
+      mileage_unit_kilometers: "Kilometers"
+      mileage_unit_miles: "Mijlen"
     new:
-      title: Voer voertuiggegevens in
+      title: "Voer voertuiggegevens in"
     overview:
-      current_price: Huidige prijs
-      make_model: Merk & Model
-      mileage: Kilometerstand
-      purchase_price: Aankoopprijs
-      trend: Trend
-      unknown: Onbekend
-      year: Jaar
+      current_price: "Huidige prijs"
+      make_model: "Merk & Model"
+      mileage: "Kilometerstand"
+      purchase_price: "Aankoopprijs"
+      trend: "Trend"
+      unknown: "Onbekend"
+      year: "Jaar"
+    tabs:
+      overview:
+        current_price: "Huidige prijs"
+        make_model: "Merk en model"
+        mileage: "Kilometerstand"
+        purchase_price: "Aankoopprijs"
+        trend: "Trend"
+        unknown: "Onbekend"
+        year: "Bouwjaar"
+        edit_account_details: "Accountgegevens bewerken"
