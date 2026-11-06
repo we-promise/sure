@@ -281,7 +281,8 @@ module Security::Provided
     #   sector, are not asked again for an answer no provider has.
     # - `classification_fetched_at` unset: an answer that holds nothing (a bond,
     #   an ETF with no sector) is stamped, so it is asked once. A failed answer
-    #   is not stamped, so it is retried.
+    #   is not stamped, so it is retried. A change of price provider clears
+    #   the stamp, since the new provider has not been asked.
     wants_classification = include_classification && price_data_provider.supplies_classification? &&
       !classification_locked? && classification_source.blank? && sector.blank? && industry.blank? &&
       classification_fetched_at.nil?
