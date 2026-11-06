@@ -876,6 +876,18 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("settings.hostings.reset_market_data.market_data_reset"), flash[:notice]
   end
 
+  test "a second market data reset is not queued while one is pending" do
+    sign_in users(:sure_support_staff)
+    MarketDataResetJob.stubs(:enqueue_once).returns(false)
+
+    with_self_hosting do
+      delete reset_market_data_settings_hosting_url
+    end
+
+    assert_redirected_to settings_hosting_url
+    assert_equal I18n.t("settings.hostings.reset_market_data.market_data_reset_already_queued"), flash[:notice]
+  end
+
   test "family admin cannot reset market data for the whole instance" do
     users(:family_admin).update!(role: :admin)
 

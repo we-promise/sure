@@ -343,8 +343,8 @@ class Settings::HostingsController < ApplicationController
   end
 
   def reset_market_data
-    MarketDataResetJob.perform_later
-    redirect_to settings_hosting_path, notice: t(".market_data_reset")
+    notice = MarketDataResetJob.enqueue_once ? t(".market_data_reset") : t(".market_data_reset_already_queued")
+    redirect_to settings_hosting_path, notice: notice
   end
 
   def disconnect_external_assistant

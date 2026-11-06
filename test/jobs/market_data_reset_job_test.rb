@@ -1,35 +1,82 @@
 require "test_helper"
 
 class MarketDataResetJobTest < ActiveJob::TestCase
+  Window = Security::Price::ImportWindows::Window
+
   setup do
-    @exchange_rate = exchange_rates(:one)
-    @security_price = Security::Price.create!(security: securities(:aapl), date: Date.new(2000, 1, 3), price: 200, currency: "USD")
-    ExchangeRate.stubs(:provider).returns(mock("exchange_rate_provider"))
-    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data" ])
-    Security.stubs(:provider_for).with("twelve_data").returns(mock("securities_provider"))
+    @security = securities(:aapl)
+    @price_in_window = @security.prices.create!(date: 20.days.ago.to_date, price: 200, currency: "USD")
+    @price_before_window = @security.prices.create!(date: 2.years.ago.to_date, price: 150, currency: "USD")
+    @rate_in_window = exchange_rates(:one)
+    @rate_before_window = ExchangeRate.create!(from_currency: "EUR", to_currency: "GBP", date: 2.years.ago.to_date, rate: 0.9)
+
+    @securities_provider = stub(max_history_days: nil)
+    @exchange_rate_provider = stub(max_history_days: nil)
+    Security.stubs(:providers).returns([ @securities_provider ])
+    ExchangeRate.stubs(:provider).returns(@exchange_rate_provider)
+
+    MarketDataImporter.any_instance.stubs(:required_security_price_windows)
+      .returns(@security.id => Window.new(start_date: 1.year.ago.to_date, end_date: Date.current))
+    MarketDataImporter.any_instance.stubs(:required_exchange_rate_pairs)
+      .returns([ { source: "EUR", target: "GBP", start_date: 1.year.ago.to_date } ])
   end
 
-  test "deletes market data, re-imports it, then syncs every family" do
+  test "deletes the data the import requests, re-imports it, then syncs every account" do
     sequence = sequence("reset")
     MarketDataImporter.any_instance.expects(:import_security_prices).in_sequence(sequence).with do
-      assert_not Security::Price.exists?(@security_price.id), "prices must be gone before the re-import"
+      assert_not Security::Price.exists?(@price_in_window.id), "prices must be gone before the re-import"
       true
     end
     MarketDataImporter.any_instance.expects(:import_exchange_rates).in_sequence(sequence).with do
-      assert_not ExchangeRate.exists?(@exchange_rate.id), "rates must be gone before the re-import"
-      assert_no_enqueued_jobs only: SyncAllJob
+      assert_not ExchangeRate.exists?(@rate_in_window.id), "rates must be gone before the re-import"
+      assert_no_enqueued_jobs only: SyncJob
       true
     end
 
     MarketDataResetJob.perform_now
 
-    assert_enqueued_jobs 1, only: SyncAllJob
+    assert Security::Price.exists?(@price_before_window.id), "prices outside the import window stay"
+    assert ExchangeRate.exists?(@rate_before_window.id), "rates outside the import window stay"
+    assert_enqueued_jobs Account.count, only: SyncJob
   end
 
-  test "keeps account-level data and prices of offline securities" do
+  test "imports with the cache cleared so stored coverage does not shorten the request" do
+    importer = MarketDataImporter.new(mode: :full, clear_cache: true)
+    MarketDataImporter.expects(:new).with(mode: :full, clear_cache: true).returns(importer)
+    stub_imports
+
+    MarketDataResetJob.perform_now
+  end
+
+  test "keeps prices and rates older than the provider's history" do
+    stub_imports
+    @securities_provider.stubs(:max_history_days).returns(10)
+    @exchange_rate_provider.stubs(:max_history_days).returns(0)
+
+    MarketDataResetJob.perform_now
+
+    assert Security::Price.exists?(@price_in_window.id), "20 days back is beyond a 10-day history"
+    assert ExchangeRate.exists?(@rate_before_window.id)
+    assert_not ExchangeRate.exists?(@rate_in_window.id), "today's rate is within a latest-only history"
+  end
+
+  test "keeps data that no configured provider can fetch again" do
+    stub_imports
+    ExchangeRate.stubs(:provider).returns(nil)
+    Security.stubs(:providers).returns([])
+
+    MarketDataResetJob.perform_now
+
+    assert ExchangeRate.exists?(@rate_in_window.id)
+    assert Security::Price.exists?(@price_in_window.id)
+  end
+
+  test "keeps offline securities, balances and holdings" do
     stub_imports
     offline = Security.create!(ticker: "OFFL", name: "Offline Co", offline: true)
-    offline_price = offline.prices.create!(date: Date.new(2000, 1, 3), price: 10, currency: "USD")
+    offline_price = offline.prices.create!(date: 20.days.ago.to_date, price: 10, currency: "USD")
+    MarketDataImporter.any_instance.stubs(:required_security_price_windows)
+      .returns(offline.id => Window.new(start_date: 1.year.ago.to_date, end_date: Date.current))
     balance = accounts(:depository).balances.create!(date: Date.current, balance: 1000, currency: "USD")
     holding = accounts(:investment).holdings.first
 
@@ -40,7 +87,7 @@ class MarketDataResetJobTest < ActiveJob::TestCase
     assert Holding.exists?(holding.id)
   end
 
-  test "still imports exchange rates and syncs every family when the price import fails" do
+  test "still imports exchange rates and syncs every account when the price import fails" do
     MarketDataImporter.any_instance.stubs(:import_security_prices).raises(StandardError, "provider down")
     MarketDataImporter.any_instance.expects(:import_exchange_rates).once
 
@@ -48,32 +95,22 @@ class MarketDataResetJobTest < ActiveJob::TestCase
       MarketDataResetJob.perform_now
     end
 
-    assert_enqueued_jobs 1, only: SyncAllJob
+    assert_enqueued_jobs Account.count, only: SyncJob
   end
 
-  test "keeps data that no configured provider can fetch again" do
+  test "enqueue_once queues one reset until it has run" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     stub_imports
-    ExchangeRate.stubs(:provider).returns(nil)
-    Security.stubs(:provider_for).with("twelve_data").returns(nil)
+
+    assert_enqueued_jobs 1, only: MarketDataResetJob do
+      assert MarketDataResetJob.enqueue_once
+      assert_not MarketDataResetJob.enqueue_once
+    end
 
     MarketDataResetJob.perform_now
-
-    assert ExchangeRate.exists?(@exchange_rate.id)
-    assert Security::Price.exists?(@security_price.id)
-  end
-
-  test "keeps prices of securities whose assigned provider is unavailable" do
-    stub_imports
-    other = Security.create!(ticker: "MFX", name: "Other provider", price_provider: nil)
-    other_price = other.prices.create!(date: Date.new(2000, 1, 3), price: 5, currency: "USD")
-    Setting.stubs(:enabled_securities_providers).returns([ "twelve_data", "mfapi" ])
-    Security.stubs(:provider_for).with("mfapi").returns(nil)
-    securities(:aapl).update_column(:price_provider, "mfapi")
-
-    MarketDataResetJob.perform_now
-
-    assert Security::Price.exists?(@security_price.id), "assigned provider unavailable"
-    assert_not Security::Price.exists?(other_price.id), "unassigned security falls back to an enabled provider"
+    assert_enqueued_jobs 1, only: MarketDataResetJob do
+      assert MarketDataResetJob.enqueue_once
+    end
   end
 
   private
