@@ -63,7 +63,7 @@
   }
   
   .hw-combobox__option {
-    @apply bg-container hover:bg-container-hover;
+    @apply bg-container hover:bg-container-inset-hover;
   }
 
   /* Below `mobile_at` the gem opens a full-screen dialog with fixed light colors */

@@ -654,17 +654,18 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
 
     first = initialized_budget(2.months.ago)
     allocate(first, 100)
-    first.budget_categories.find_by!(category: subcategory).update!(budgeted_spending: 0, rollover_enabled: true)
+    first.budget_categories.find_by!(category: subcategory).update!(budgeted_spending: 0, rollover_enabled: false)
 
     second = initialized_budget(1.month.ago)
     allocate(second, 100)
     second_subcategory = second.budget_categories.find_by!(category: subcategory)
-    second_subcategory.update!(budgeted_spending: 0, rollover_enabled: true)
+    second_subcategory.update!(budgeted_spending: 0, rollover_enabled: false)
 
     recompute!
 
     assert_equal 0, second_subcategory.reload[:rolled_over_amount]
     assert_equal 0, second_subcategory.rolled_over_amount
+    assert second_subcategory.inherits_parent_budget?
   end
 
   test "a parent's rollover excludes what its ring-fenced subcategories carry themselves" do
