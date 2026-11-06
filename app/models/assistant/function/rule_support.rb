@@ -263,6 +263,7 @@ module Assistant::Function::RuleSupport
 
     def value_hint(key)
       case key
+      when "set_as_transfer_or_payment" then "Use an account id from get_accounts that you can edit (not a read-only share)."
       when *ACCOUNT_KEYS then "Use an account id from get_accounts."
       when *CATEGORY_KEYS then "Use a category id from get_categories."
       when *TAG_KEYS then "Use tag ids from get_tags."

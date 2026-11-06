@@ -54,6 +54,7 @@ class SplitsController < ApplicationController
     end
 
     @entry.sync_account_later
+    sync_accounts_changed_by_unsplit
 
     redirect_to transactions_path, notice: t("splits.update.success")
   rescue ActiveRecord::RecordInvalid => e
@@ -73,6 +74,7 @@ class SplitsController < ApplicationController
       return
     end
     @entry.sync_account_later
+    sync_accounts_changed_by_unsplit
 
     redirect_to transactions_path, notice: t("splits.destroy.success")
   end
@@ -87,11 +89,17 @@ class SplitsController < ApplicationController
     # transfer leg takes its transfer along, like deleting the entry would.
     def require_split_write_permission!
       return unless require_account_permission!(@entry.account, redirect_path: transactions_path)
+      return if action_name == "create"
 
       parent = @entry.split_child? ? @entry.parent_entry : @entry
-      parent.accounts_changed_by_transfer_removal.each do |account|
+      @accounts_changed_by_unsplit = parent.accounts_changed_by_transfer_removal
+      @accounts_changed_by_unsplit.each do |account|
         return unless require_account_permission!(account, redirect_path: transactions_path)
       end
+    end
+
+    def sync_accounts_changed_by_unsplit
+      @accounts_changed_by_unsplit.to_a.each { |account| account.sync_later(window_start_date: @entry.date) }
     end
 
     def resolve_to_parent!

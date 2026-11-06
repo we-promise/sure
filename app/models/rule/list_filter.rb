@@ -6,7 +6,6 @@ class Rule::ListFilter
   def initialize(rules)
     @rules = rules.to_a
     @condition_options = {}
-    @action_options = {}
   end
 
   # The rule's name with the labels and values of its conditions and actions,
@@ -91,7 +90,7 @@ class Rule::ListFilter
 
       # A free-text action (e.g. set the name) has no options: its value is
       # the text itself.
-      options = action_options_for(action)
+      options = action.options
       return action.value if options.nil?
       return if options.empty?
 
@@ -106,10 +105,4 @@ class Rule::ListFilter
       end
     end
 
-    # A transfer action adds its saved target when the viewer can't pick it,
-    # so its list depends on the value.
-    def action_options_for(action)
-      key = action.action_type == "set_as_transfer_or_payment" ? [ action.action_type, action.value ] : action.action_type
-      @action_options.fetch(key) { @action_options[key] = action.options }
-    end
 end
