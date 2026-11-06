@@ -1,6 +1,10 @@
 require "test_helper"
 
 class MarketDataResetJobTest < ActiveJob::TestCase
+  class OtherSession < ActiveRecord::Base
+    self.abstract_class = true
+  end
+
   Window = Security::Price::ImportWindows::Window
 
   setup do
@@ -107,25 +111,30 @@ class MarketDataResetJobTest < ActiveJob::TestCase
       assert_equal :already_queued, MarketDataResetJob.enqueue_once
     end
 
-    MarketDataResetJob.perform_now
+    perform_enqueued_jobs(only: MarketDataResetJob)
     assert_enqueued_jobs 1, only: MarketDataResetJob do
       assert_equal :queued, MarketDataResetJob.enqueue_once
     end
   ensure
-    MarketDataResetJob.release_guard
+    clear_guard
   end
 
   test "a run that finds another reset running keeps the guard" do
     use_own_guard_key
     stub_imports
     assert_equal :queued, MarketDataResetJob.enqueue_once
-    MarketDataResetJob.any_instance.stubs(:with_advisory_lock)
-
-    MarketDataResetJob.perform_now
+    # A separate session: the test's own connection would re-enter its lock.
+    OtherSession.establish_connection(ActiveRecord::Base.connection_db_config)
+    begin
+      OtherSession.connection.select_value("SELECT pg_advisory_lock(#{MarketDataResetJob::ADVISORY_LOCK_KEY})")
+      perform_enqueued_jobs(only: MarketDataResetJob)
+    ensure
+      OtherSession.remove_connection
+    end
 
     assert_equal :already_queued, MarketDataResetJob.enqueue_once
   ensure
-    MarketDataResetJob.release_guard
+    clear_guard
   end
 
   test "the guard is released after the advisory lock" do
@@ -147,28 +156,90 @@ class MarketDataResetJobTest < ActiveJob::TestCase
     assert_equal :queued, MarketDataResetJob.enqueue_once
     MarketDataResetJob.any_instance.stubs(:try_advisory_lock).raises(ActiveRecord::ConnectionNotEstablished)
 
-    assert_raises(ActiveRecord::ConnectionNotEstablished) { MarketDataResetJob.perform_now }
+    assert_raises(ActiveRecord::ConnectionNotEstablished) { perform_enqueued_jobs(only: MarketDataResetJob) }
 
     assert_equal :queued, MarketDataResetJob.enqueue_once
   ensure
-    MarketDataResetJob.release_guard
+    clear_guard
   end
 
-  test "enqueue_once releases the guard when the job cannot be queued" do
+  test "a run stopped by a Sidekiq shutdown keeps the guard for the requeued job" do
+    use_own_guard_key
+    assert_equal :queued, MarketDataResetJob.enqueue_once
+    MarketDataImporter.any_instance.stubs(:import_security_prices).raises(Sidekiq::Shutdown)
+
+    assert_raises(Sidekiq::Shutdown) { perform_enqueued_jobs(only: MarketDataResetJob) }
+
+    assert_equal :already_queued, MarketDataResetJob.enqueue_once
+  ensure
+    clear_guard
+  end
+
+  test "a run does not release the guard of a reset queued after its own guard expired" do
+    use_own_guard_key
+    stub_imports
+    assert_equal :queued, MarketDataResetJob.enqueue_once
+    clear_guard
+    assert_equal :queued, MarketDataResetJob.enqueue_once
+
+    MarketDataResetJob.perform_now(enqueued_jobs.first[:args].first)
+
+    assert_equal :already_queued, MarketDataResetJob.enqueue_once
+  ensure
+    clear_guard
+  end
+
+  test "a deadlock in the deletes is retried and keeps the guard for the retry" do
+    use_own_guard_key
+    stub_imports
+    assert_equal :queued, MarketDataResetJob.enqueue_once
+    token = enqueued_jobs.first[:args].first
+    MarketDataResetJob.any_instance.stubs(:delete_security_prices).raises(ActiveRecord::Deadlocked)
+
+    assert_enqueued_with(job: MarketDataResetJob, args: [ token ]) do
+      MarketDataResetJob.perform_now(token)
+    end
+    assert_equal :already_queued, MarketDataResetJob.enqueue_once
+  ensure
+    clear_guard
+  end
+
+  test "a run without a token, queued before guards had one, still releases the guard" do
+    use_own_guard_key
+    stub_imports
+    Sidekiq.redis { |conn| conn.call("SET", MarketDataResetJob.guard_key, "1") }
+
+    MarketDataResetJob.perform_now
+
+    assert_equal :queued, MarketDataResetJob.enqueue_once
+  ensure
+    clear_guard
+  end
+
+  test "enqueue_once reports a failure instead of raising when the job or the guard cannot be written" do
     use_own_guard_key
     MarketDataResetJob.stubs(:perform_later).raises(RedisClient::CannotConnectError).then.returns(false).then.returns(MarketDataResetJob.new)
 
     assert_equal :failed, MarketDataResetJob.enqueue_once
     assert_equal :failed, MarketDataResetJob.enqueue_once
     assert_equal :queued, MarketDataResetJob.enqueue_once
+    clear_guard
+
+    Sidekiq.stubs(:redis).raises(RedisClient::CannotConnectError)
+    assert_equal :failed, MarketDataResetJob.enqueue_once
   ensure
-    MarketDataResetJob.release_guard
+    Sidekiq.unstub(:redis)
+    clear_guard
   end
 
   private
     # Parallel test processes share Redis, so each test guards its own key.
     def use_own_guard_key
       MarketDataResetJob.stubs(:guard_key).returns("market_data_reset_job:test:#{SecureRandom.hex(8)}")
+    end
+
+    def clear_guard
+      Sidekiq.redis { |conn| conn.call("DEL", MarketDataResetJob.guard_key) }
     end
 
     def stub_imports

@@ -11,27 +11,35 @@
 # needs) stay as they are.
 class MarketDataResetJob < ApplicationJob
   queue_as :scheduled
-  # A retry would delete the freshly re-imported data again.
+  # A retry would delete the freshly re-imported data again. ApplicationJob's
+  # deadlock retry stays: a deadlock can only come from the deletes, before
+  # anything is imported.
   sidekiq_options retry: false
 
   ENQUEUE_GUARD_KEY = "market_data_reset_job:enqueued".freeze
   ENQUEUE_GUARD_TTL = 12.hours
+  ADVISORY_LOCK_KEY = Digest::MD5.hexdigest(name).to_i(16) % (2**62)
+  # Deletes the guard only while it still holds the caller's token, so a run
+  # whose guard expired cannot release the guard of a reset queued later.
+  RELEASE_GUARD_SCRIPT = <<~LUA.freeze
+    if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("DEL", KEYS[1]) else return 0 end
+  LUA
 
   # Queues the reset unless one is already queued or running, so a second
   # click does not delete and re-import everything again. The guard lives in
   # Redis, which every web and worker process shares. Returns :queued,
   # :already_queued or :failed.
   def self.enqueue_once
-    return :already_queued unless Sidekiq.redis { |conn| conn.call("SET", guard_key, "1", "NX", "EX", ENQUEUE_GUARD_TTL.to_i) }
+    token = SecureRandom.uuid
+    return :already_queued unless Sidekiq.redis { |conn| conn.call("SET", guard_key, token, "NX", "EX", ENQUEUE_GUARD_TTL.to_i) }
 
-    begin
-      queued = perform_later
-    rescue => e
-      Rails.logger.error("MarketDataResetJob could not be queued: #{e.class}: #{e.message}")
-    end
-    return :queued if queued
+    return :queued if perform_later(token)
 
-    release_guard
+    release_guard(token)
+    :failed
+  rescue => e
+    Rails.logger.error("MarketDataResetJob could not be queued: #{e.class}: #{e.message}")
+    release_guard(token)
     :failed
   end
 
@@ -40,22 +48,31 @@ class MarketDataResetJob < ApplicationJob
   end
 
   # The guard expires on its own, so a failure to release it only delays the
-  # next reset.
-  def self.release_guard
-    Sidekiq.redis { |conn| conn.call("DEL", guard_key) }
+  # next reset. Without a token (a job queued before guards had one, a run
+  # from the console) the guard is released whoever set it.
+  def self.release_guard(token)
+    Sidekiq.redis do |conn|
+      token ? conn.call("EVAL", RELEASE_GUARD_SCRIPT, 1, guard_key, token) : conn.call("DEL", guard_key)
+    end
   rescue => e
     Rails.logger.error("MarketDataResetJob could not release its enqueue guard: #{e.class}: #{e.message}")
   end
 
   # The guard is released after the advisory lock, so a reset queued in
-  # between always finds the lock free. A run that finds another reset
-  # running leaves the guard to that run; one that cannot even check the lock
-  # releases it, since nothing else would.
-  def perform
-    @release_guard = false
-    with_advisory_lock { reset_market_data }
+  # between always finds the lock free. A run that finds another reset running
+  # leaves the guard to that run. A run Sidekiq requeues for a shutdown, or
+  # that ApplicationJob retries after a deadlock, keeps it for the next
+  # attempt, which carries the same token.
+  def perform(guard_token = nil)
+    release = with_advisory_lock { reset_market_data }
+  rescue Sidekiq::Shutdown, ActiveRecord::Deadlocked
+    release = false
+    raise
+  rescue
+    release = true
+    raise
   ensure
-    self.class.release_guard if @release_guard
+    self.class.release_guard(guard_token) if release
   end
 
   private
@@ -124,24 +141,19 @@ class MarketDataResetJob < ApplicationJob
       nil
     end
 
-    # Only one reset runs at a time, also when two were queued.
+    # Only one reset runs at a time, also when two were queued. Returns false
+    # when another reset holds the lock.
     def with_advisory_lock
-      lock_key = Digest::MD5.hexdigest(self.class.name).to_i(16) % (2**62)
-      begin
-        acquired = try_advisory_lock(lock_key)
-      rescue
-        @release_guard = true
-        raise
-      end
-      @release_guard = acquired
+      lock_key = ADVISORY_LOCK_KEY
 
-      unless acquired
+      unless try_advisory_lock(lock_key)
         Rails.logger.warn("MarketDataResetJob skipped: another reset is running")
-        return
+        return false
       end
 
       begin
         yield
+        true
       ensure
         ActiveRecord::Base.connection.execute(
           ActiveRecord::Base.sanitize_sql_array([ "SELECT pg_advisory_unlock(?)", lock_key ])

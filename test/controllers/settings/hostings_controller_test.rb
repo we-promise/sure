@@ -876,7 +876,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_hosting_url
     assert_equal I18n.t("settings.hostings.reset_market_data.market_data_reset"), flash[:notice]
   ensure
-    MarketDataResetJob.release_guard
+    Sidekiq.redis { |conn| conn.call("DEL", MarketDataResetJob.guard_key) }
   end
 
   test "a second market data reset is not queued while one is pending" do
