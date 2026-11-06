@@ -104,5 +104,4 @@ class Rule::ListFilter
         @condition_options[condition.condition_type] = condition.options
       end
     end
-
 end
