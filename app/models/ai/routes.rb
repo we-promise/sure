@@ -26,11 +26,17 @@ module Ai::Routes
                          sends: %i[merchant_names] }
   }.freeze
 
+  # Each lane's queue. Until PR 4 brings the three lane queues and the ai_chat capsule, lanes
+  # map onto today's two: interactive work first, as chat is today.
+  QUEUES = { interactive: "ai_high_priority", prompt: "ai_low_priority", background: "ai_low_priority" }.freeze
+
   module_function
 
   def features = MATRIX.keys
 
   def fetch(feature) = MATRIX.fetch(feature.to_sym)
+
+  def queue_for(feature) = QUEUES.fetch(fetch(feature)[:lane])
 
   # The feature whose route and needs this one uses: a shadow's primary, or search's `embed`.
   def source_of(feature) = fetch(feature).values_at(:shadow_of, :route_of).compact.first || feature.to_sym
