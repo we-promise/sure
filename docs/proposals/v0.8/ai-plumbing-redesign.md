@@ -996,18 +996,20 @@ end
   - `search_documents` drops results below a score threshold: every search returned the one
     indexed statement, relevant or not;
   - its client is built by `Ai::Transport::Http`, so it gets the proxy, TLS settings and headers.
-- **Statements in the vault are indexed too (#3422, open and on the v0.7.7 milestone like PR 2).**
+- **Statements in the vault are indexed too (#3422, open).**
   #3422 queues `IndexAccountStatementJob` after every statement upload (the web vault, MCP's
-  `upload_account_statement` and `/imports`), so `search_family_files` finds them. The plan works
-  whichever of #3422 and PRs 2b and 2e lands first. The recommendation posted on #3422 is that it
-  lands first, with three changes: the job runs on `ai_low_priority`, inside #4237's AI capsule; it's queued only
+  `upload_account_statement` and `/imports`), so `search_family_files` finds them. #3422 lands
+  after #4765 (2a–2d) and before 2e, whose PR is stacked on both and moves #3422's pieces onto
+  the plumbing (call by @josh-sanders during development of PR #4440). The recommendation posted
+  on #3422, which it took, was three changes: the job runs on `ai_low_priority`, inside #4237's AI capsule; it's queued only
   when `VectorStore.configured?` and the uploading user has `ai_enabled?`, because a vault upload
   isn't an AI action and on an OpenAI vector store it sends the whole statement to OpenAI; and it
   reads PDFs through `Pdf::TextExtractor` (#4054).
   - **The job is an `embed` call.** It runs on `embed`'s lane, and is queued only when
     `Ai.available?(:embed, family:, user:)` is true for the uploader and the uploader's
-    `ai_enabled` switch is on. If #3422 lands first, 2b replaces its check, as it does every
-    other; if 2b lands first, #3422 asks `Ai.available?(:embed)` itself. `/imports` keeps
+    `ai_enabled` switch is on. 2e replaces #3422's `VectorStore.configured?` with
+    `Ai.available?(:embed)` and keeps the switch as its own check, because `Ai::Consent` checks
+    the switch only for chat and bills until PR 7. `/imports` keeps
     indexing without the switch, as today: there the user asked for AI.
   - **Indexing catches up** (call by @josh-sanders during development of PR #4440). From PR 7,
     when a family admin turns Documents on, or an `embed` route appears for a family that has it
@@ -1016,7 +1018,8 @@ end
     twice, also against `ProcessPdfJob`.
   - **Deleting a statement deletes its copy.** #3422 removes it through `Family#remove_document`,
     which on an OpenAI store leaves the file in OpenAI's Files API until this section's fix lands
-    in 2e.
+    in 2e. Files that earlier removals left there can't be traced to a row; 2e's release note
+    says so and how to find them (call by @josh-sanders during development of PR #4440).
   - **Not decided yet:** whether turning Documents off deletes the copies already in a cloud
     store, and whether catching up skips statements whose uploader has the switch off.
 
@@ -1532,8 +1535,13 @@ scan) through every server it had (spike: "Bank statements as PDFs" and "OCR on 
     own route entry, usually on its own endpoint;
   - **Mistral or Cohere through `RubyLLM.ocr`**, which returns markdown per page, for installs
     without a GPU. They get presets, and the `compatible` transport gains an `ocr` call on
-    RubyLLM's `:mistral` and `:cohere` providers. The spike had no key for them, so PR 2e records
-    live cassettes before relying on them.
+    RubyLLM's `:mistral` and `:cohere` providers. The spike had no key for them; PR 2e ships
+    them with stubbed tests, marked untested live until someone records cassettes with a key
+    (call by @josh-sanders during development of PR #4440). RubyLLM 2.1.1's Cohere call takes one
+    page image at a time, and OCR reports pages, not tokens.
+  - **Configured from PR 7.** The deprecated ENV builds no OCR entry and gets no new variable
+    (section 4.7), so until PR 7's tables an install reads a scan through page images on a vision
+    model, and "Read as: OCR" is greyed out (call by @josh-sanders during development of PR #4440).
 - **Rendering pages with a hardened `pdftoppm`** (call by @josh-sanders during development of
   PR #4440, keeping #3275's choice and its concrete failure reason). A child process keeps poppler out of the worker's memory only if
   hardened: an empty environment
@@ -1896,8 +1904,8 @@ ActiveSupport::Notifications.subscribe("compare.ai_shadow", Ai::Instrumentation:
   the model's prices. Since #4549 (v0.7.6), an OpenRouter call records OpenRouter's own
   `usage.cost` in US dollars; RubyLLM's `:openrouter` provider reads the same field as
   `tokens.reported_cost`, and adds a BYOK key's upstream cost, which #4549 doesn't, so the
-  adapter takes it from there and `Provider::Openai::UsageCost` goes with the usage recorders
-  (PR 2e). `metadata` gains `route` (endpoint,
+  adapter takes it from there. The usage recorders go in PR 2e; `Provider::Openai::UsageCost`,
+  which chat's usage rows still use, goes with chat in PR 6. `metadata` gains `route` (endpoint,
   model, overrides, prompt), `error_class`, `failed_over_from` and `escalated_from`, which the
   health page's rates read (section 13).
 - Transports normalise usage once into
@@ -2517,9 +2525,10 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
   for the token's user, except `search_family_files`, which is always listed and falls back to
   metadata search with the router's reason; no MCP request calls a transport; and, once #4628
   has landed, an `mcp:read` token sees `search_family_files` but not `import_bank_statement`.
-- `ai_documents_test.rb`: a vault upload is indexed only when `embed` is available for its
-  uploader and the uploader's switch is on; a search returns only documents the asking user may
-  read; and, from PR 7, turning Documents on indexes each stored statement once, with no
+- `ai_documents_test.rb` (from 2e): a vault upload is indexed only when `embed` is available for
+  its uploader and the uploader's switch is on; a search returns only documents the asking user
+  may read; `search_family_files` is always listed and falls back to the metadata search with the
+  router's reason; and, from PR 7, turning Documents on indexes each stored statement once, with no
   duplicate when `ProcessPdfJob` indexes the same statement.
 - `ai_chat_mode_test.rb`: in external mode every chat entry point (chat page, API, "Dig in with
   AI", bills AI review) resolves to an agent route; in built-in mode none does; with the Chat row
@@ -2659,13 +2668,14 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    decisions register. PR 2c records live cassettes for Anthropic's and OpenAI's successful
    paths before relying on them: the spike's keys had no credits.
 2. **Generations: every AI call except chat**, in five parts, merged in order (2a to 2e). Each is
-   its own PR into `main`, except 2a to 2d, which share #4765. All five land in the same release. Today's AI job classes are
+   its own PR into `main`, except 2a to 2d, which share #4765; 2e is its own PR. All five land in the same release. Today's AI job classes are
    deleted with no shims: the upgrade note says to let the AI queues drain first (call by @josh-sanders during development of
    PR #4440). Each part replaces something whole, so `main`
    works between them, and each brings a transport call only with its first caller. The target
    release is v0.7.7 (call by @josh-sanders during development of PR #4440).
-   #3422 (vault statements indexed and readable by chat tools) is on the same milestone and may
-   land before or after 2b and 2e; section 5.5 covers both orders.
+   #3422 (vault statements indexed and readable by chat tools) lands before 2e: 2e's PR is
+   stacked on #4765 and #3422, and moves #3422's pieces onto the plumbing (call by @josh-sanders
+   during development of PR #4440; section 5.5).
    - **2a. Transports and instrumentation.** The `compatible` and `anthropic` transports with
      `probe`, `Http`, `Ai::Result`, `Ai::Error` (with `NoCredit` and `ModelMissing`), the
      per-attempt time budget, the instrumentation subscribers with the correlation id, usage per
@@ -2729,7 +2739,15 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `get_document_text`'s note on scans. Adds the documents test.
      *Deletes:* the four PDF and statement workers, the usage recorders, the per-worker tracing,
      `preferred_llm_provider`, and their test stubs. `llm_provider_order` stays while today's chat
-     uses it (`Assistant::Provided#get_model_provider`) and goes with it in PR 6.
+     uses it (`Assistant::Provided#get_model_provider`) and goes with it in PR 6, and so does
+     `Provider::Openai::UsageCost`, which chat's usage rows still use.
+     A new PR, after #4765 and #3422, branched on both. Its calls (by @josh-sanders during
+     development of PR #4440): OCR ships as code and tests, configurable only from PR 7, so
+     "Read as: OCR" is greyed out until then (no new ENV or settings fields); Mistral and Cohere
+     OCR ship with stubbed tests, marked untested live until someone records them with a key;
+     and files that earlier removals left in OpenAI's Files API get a release note, not a
+     clean-up task.
+     Implementation plan: [`pr-2e-documents.md`](pr-2e-documents.md).
 
    *Still on old code after 2e:* chat, through `Assistant`, `Provider::Openai` and
    `Provider::Anthropic`'s chat methods and `Chat.default_model`, reading the same ENV and
@@ -2917,6 +2935,7 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md) | PR 2b's implementation plan (on #4765 with 2a), and the agreement test's setups |
 | [`pr-2c-generations.md`](pr-2c-generations.md) | PR 2c's implementation plan (on #4765 with 2a and 2b), with the JSON policy, prompt folders and batches |
 | [`pr-2d-jev-and-shadow-runs.md`](pr-2d-jev-and-shadow-runs.md) | PR 2d's implementation plan (on #4765 with 2a to 2c): the Jev transport, judgements and shadow runs |
+| [`pr-2e-documents.md`](pr-2e-documents.md) | PR 2e's implementation plan (a new PR after #4765 and #3422): attachments, `embed`, `ocr`, PDF reading with its checks, and the vector store fixes |
 
 **Terms this plan defines**, for readers and coding agents:
 
