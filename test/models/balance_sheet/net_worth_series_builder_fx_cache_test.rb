@@ -14,6 +14,7 @@ class BalanceSheet::NetWorthSeriesBuilderFxCacheTest < ActiveSupport::TestCase
       date: Date.current,
       rate: 0.75
     )
+    Current.reset
 
     after = builder.send(:cache_key, period)
 

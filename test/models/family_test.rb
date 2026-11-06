@@ -805,7 +805,7 @@ class FamilyTest < ActiveSupport::TestCase
   test "build_cache_key changes when an exchange rate is created" do
     family = families(:dylan_family)
 
-    before = family.build_cache_key("account_sidebar_tabs_v4", invalidate_on_data_updates: true)
+    before = family.build_cache_key("account_sidebar_tabs_v7", invalidate_on_data_updates: true)
 
     ExchangeRate.create!(
       from_currency: "EUR",
@@ -813,9 +813,30 @@ class FamilyTest < ActiveSupport::TestCase
       date: Date.current,
       rate: 1.1
     )
+    Current.reset
 
-    after = family.build_cache_key("account_sidebar_tabs_v4", invalidate_on_data_updates: true)
+    after = family.build_cache_key("account_sidebar_tabs_v7", invalidate_on_data_updates: true)
 
+    assert_not_equal before, after
+  end
+
+  test "build_cache_key preserves subsecond exchange rate freshness" do
+    family = families(:dylan_family)
+    timestamp = 1.day.from_now.change(usec: 100_000)
+    exchange_rate = ExchangeRate.create!(
+      from_currency: "EUR",
+      to_currency: family.currency,
+      date: Date.current,
+      rate: 1.1,
+      updated_at: timestamp
+    )
+
+    before = family.build_cache_key("net_worth", invalidate_on_data_updates: true)
+    exchange_rate.update_column(:updated_at, timestamp + 100.microseconds)
+    Current.reset
+    after = family.build_cache_key("net_worth", invalidate_on_data_updates: true)
+
+    assert_equal timestamp.to_i, (timestamp + 100.microseconds).to_i
     assert_not_equal before, after
   end
 
@@ -839,6 +860,7 @@ class FamilyTest < ActiveSupport::TestCase
       date: Date.current,
       rate: 1.25
     )
+    Current.reset
     after = family.build_cache_key("unrelated")
 
     assert_equal before, after
