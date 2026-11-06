@@ -135,7 +135,7 @@ class DS::TableTest < ViewComponent::TestCase
   test "renders a hidden detail row after each row the row_detail proc answers for" do
     detail = ->(row) { "Paid monthly" if row[:name] == "Rent" }
     render_inline(DS::Table.new(rows: ROWS, id: "bills", row_detail: detail)) do |table|
-      table.with_column("Name") { |row, index| %(<button aria-controls="#{table.row_detail_id(index)}">#{row[:name]}</button>).html_safe }
+      table.with_column("Name") { |row, index| ApplicationController.helpers.tag.button(row[:name], aria: { controls: table.row_detail_id(index) }) }
       table.with_column("Amount", numeric: true) { |row| row[:amount] }
     end
 
