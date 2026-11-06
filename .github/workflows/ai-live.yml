@@ -70,6 +70,7 @@ jobs:
           AI_LIVE: "1"
           OPENAI_ACCESS_TOKEN: ${{ secrets.OPENAI_ACCESS_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          JEV_LIVE_API_KEY: public   # OpenCode Zen's anonymous key for its free Jev, not a secret
         run: bin/rails test test/models/ai/live
 
       - name: Evals, live
