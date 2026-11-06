@@ -3,6 +3,11 @@
 class OmniauthProviderRegistry
   Registration = Struct.new(:strategy, :args, :options, :config, keyword_init: true)
 
+  # Provider settings are validated on every login page render and auth request,
+  # so an incomplete provider is reported once rather than on each request.
+  SKIP_WARNING_LOCK = Mutex.new
+  SKIPPED_PROVIDERS = Set.new
+
   class << self
     # Register static strategies while leaving live database OIDC routing to the dynamic strategy.
     def register(builder, raw_cfg)
@@ -48,10 +53,11 @@ class OmniauthProviderRegistry
         oidc_options = Oidc::ProviderOptionsBuilder.call(cfg)
 
         unless oidc_options.present?
-          Rails.logger.warn("[OmniAuth] Skipping OIDC provider '#{name}' - missing required configuration")
+          warn_skipped_provider(:openid_connect, name, "missing required configuration")
           return nil
         end
 
+        provider_configured(:openid_connect, name)
         Registration.new(
           strategy: :openid_connect,
           args: [],
@@ -117,9 +123,11 @@ class OmniauthProviderRegistry
         idp_sso_url = settings[:idp_sso_url].presence || settings["idp_sso_url"].presence
 
         unless idp_metadata_url.present? || idp_sso_url.present?
-          Rails.logger.warn("[OmniAuth] Skipping SAML provider '#{name}' - missing IdP configuration")
+          warn_skipped_provider(:saml, name, "missing IdP configuration")
           return
         end
+
+        provider_configured(:saml, name)
 
         options = {
           name: name.to_sym,
@@ -260,6 +268,20 @@ class OmniauthProviderRegistry
       # Resolve the custom provider name with its identifier as fallback.
       def provider_name(cfg)
         (cfg[:name] || cfg[:id]).to_s
+      end
+
+      # Warn once per incomplete provider until it is configured again.
+      def warn_skipped_provider(strategy, name, reason)
+        newly_skipped = SKIP_WARNING_LOCK.synchronize { SKIPPED_PROVIDERS.add?([ strategy, name ]) }
+        return unless newly_skipped
+
+        label = strategy == :saml ? "SAML" : "OIDC"
+        Rails.logger.warn("[OmniAuth] Skipping #{label} provider '#{name}' - #{reason}")
+      end
+
+      # A provider that becomes incomplete again after a fix is reported again.
+      def provider_configured(strategy, name)
+        SKIP_WARNING_LOCK.synchronize { SKIPPED_PROVIDERS.delete([ strategy, name ]) }
       end
   end
 end

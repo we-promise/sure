@@ -82,6 +82,21 @@ class OmniauthProviderRegistryTest < ActiveSupport::TestCase
     assert_equal "no auth", response.body
   end
 
+  test "an incomplete provider is reported once until its configuration changes" do
+    Rails.env.stubs(:test?).returns(false)
+    OmniauthProviderRegistry::SKIPPED_PROVIDERS.clear
+    incomplete = custom_oidc_provider.except(:client_secret)
+    warning = "[OmniAuth] Skipping OIDC provider 'authentik' - missing required configuration"
+
+    Rails.logger.expects(:warn).with(warning).twice
+    2.times { assert_nil OmniauthProviderRegistry.registration_for(incomplete) }
+
+    assert OmniauthProviderRegistry.registration_for(custom_oidc_provider)
+    assert_nil OmniauthProviderRegistry.registration_for(incomplete)
+  ensure
+    OmniauthProviderRegistry::SKIPPED_PROVIDERS.clear
+  end
+
   test "auth config returns current database providers instead of stale boot providers" do
     FeatureFlags.stubs(:db_sso_providers?).returns(true)
     Rails.configuration.x.auth.sso_providers = [
