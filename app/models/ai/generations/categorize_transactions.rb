@@ -1,6 +1,6 @@
 # Picks a category for each transaction from the family's own, or none. Replaces
-# Provider::{Openai,Anthropic}::AutoCategorizer. Jev answers the same feature as a judgement
-# (PR 2d); until then Family::AutoCategorizer calls Provider::Jev itself on a Jev route.
+# Provider::{Openai,Anthropic}::AutoCategorizer. On a `judge` model (Jev),
+# Ai::Judgements::CategorizeTransaction answers instead, in the same shape.
 class Ai::Generations::CategorizeTransactions < Ai::Generation
   feature :categorize
   prompt "categorize_transactions"
@@ -10,6 +10,7 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   required :transaction_id
   aliases categorizations: %w[results], transaction_id: %w[id txn_id], category_name: %w[category name]
   blank_item { _1[:category_name].nil? }
+  judged_by Ai::Judgements::CategorizeTransaction
 
   # Common ways a model names a category the family spells differently.
   NAME_VARIATIONS = [
@@ -28,6 +29,8 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   end
 
   def prompt_locals = { transactions: items, categories: @categories }
+
+  def arguments = { transactions: items, categories: @categories }
 
   # The family's spelling of the category the model named: exact, then ignoring case, then a
   # fuzzy match (today's OpenAI normaliser, now on every protocol). Nil when nothing matches.

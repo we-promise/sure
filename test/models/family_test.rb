@@ -676,6 +676,13 @@ class FamilyTest < ActiveSupport::TestCase
     "JEV_ENDPOINT" => "http://internal-gateway.example.com/v1/systemone"
   }.freeze
 
+  # A path RubyLLM's judge can't reach (only TypeSafe-style /v1/systemone), which JEV_ENDPOINT
+  # can set without passing the settings form.
+  UNSUPPORTED_JEV_ENV = {
+    "JEV_API_KEY" => "test_api_key",
+    "JEV_ENDPOINT" => "https://internal-gateway.example.com/v1/jev"
+  }.freeze
+
   test "the categorize plan names the Jev model when Jev will categorize" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
@@ -693,21 +700,21 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "the categorize plan falls back to the LLM when the Jev endpoint is rejected" do
+  test "the categorize plan falls back to the LLM when the Jev endpoint is unsupported" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
 
-    with_env_overrides(REJECTED_JEV_ENV.merge("OPENAI_ACCESS_TOKEN" => "sk-test")) do
+    with_env_overrides(UNSUPPORTED_JEV_ENV.merge("OPENAI_ACCESS_TOKEN" => "sk-test")) do
       assert_equal "openai", Ai.plan(:categorize, family:).route.endpoint.name
     end
   end
 
-  test "the categorize plan leaves out a rejected Jev endpoint and writes no diagnostics" do
+  test "the categorize plan leaves out an unsupported Jev endpoint and writes no diagnostics" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
 
     assert_no_difference "DebugLogEntry.count" do
-      with_env_overrides(REJECTED_JEV_ENV) do
+      with_env_overrides(UNSUPPORTED_JEV_ENV) do
         assert_nil Ai.plan(:categorize, family:)
       end
     end

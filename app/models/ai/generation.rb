@@ -6,7 +6,8 @@
 #   2. Stop if `cancelled` returns true, here and before every batch.
 #   3. Take the first route not marked down (Ai::DownMarks). Render its prompt (Ai::Prompt), take
 #      the next batch sized for its model (Ai::Batch), call its transport's `generate`, and
-#      coerce the answer (Ai::Schema). PR 4's sequencer takes this step's route choice.
+#      coerce the answer (Ai::Schema). On a `judge` model, the feature's judgement (`judged_by`)
+#      answers the same batch instead (section 8). PR 4's sequencer takes this step's route choice.
 #   4. On a failover error (Ai::DownMarks::FAILOVER), mark it down and take the next route. On
 #      InvalidOutput, escalate to the next route. On ContextTooLong or an answer cut at the
 #      output limit, halve the batch on the same route; a single item that still can't fit
@@ -18,7 +19,7 @@
 # raises the Ai::Error, for jobs.
 class Ai::Generation
   class_attribute :feature_key, :prompt_key, :static_schema, :schema_label, :batch_key, :merge_key, :merge_by,
-                  :blank_item_check, :key_aliases, :required_keys, instance_writer: false
+                  :blank_item_check, :key_aliases, :required_keys, :judgement_class, instance_writer: false
 
   class << self
     def feature(key) = self.feature_key = key.to_sym
@@ -49,6 +50,10 @@ class Ai::Generation
 
     # Item fields without which an answer can't be matched to its input.
     def required(*keys) = self.required_keys = keys.map(&:to_sym)
+
+    # The Ai::Judgement that answers this feature on a `judge` model (Jev). It takes #arguments
+    # and returns the same value shape.
+    def judged_by(klass) = self.judgement_class = klass
   end
 
   attr_reader :family, :user, :locale
@@ -67,6 +72,9 @@ class Ai::Generation
 
   def items = batch_key ? Array(instance_variable_get(:"@#{batch_key}")) : nil
 
+  # The initializer's arguments other than the family, for the judgement and the shadow job.
+  def arguments = raise(NotImplementedError, "#{self.class.name} defines no arguments")
+
   # A copy holding only `slice`, so prompt_locals only ever sees one batch.
   def with_items(slice) = dup.tap { _1.instance_variable_set(:"@#{batch_key}", slice) }
 
@@ -76,7 +84,7 @@ class Ai::Generation
     plan ||= Ai::Router.new(family:, user:).resolve(feature_key)
     return Ai::Result.unavailable(plan) unless plan.is_a?(Ai::Plan)
 
-    routes = plan.routes.select { !_1.judge? && _1.model.capable?(:structured_output) }
+    routes = plan.routes.select { servable?(_1) }
     return Ai::Result.unavailable(Ai::Availability.unavailable(feature_key, :capability_missing)) if routes.empty?
 
     @usage = nil
@@ -102,6 +110,10 @@ class Ai::Generation
   end
 
   private
+    def servable?(route)
+      route.judge? ? judgement_class.present? && route.model.capable?(:judge) : route.model.capable?(:structured_output)
+    end
+
     def call_single(routes, cancelled:)
       raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
 
@@ -179,6 +191,8 @@ class Ai::Generation
 
     def run(route, slice)
       generation = slice ? with_items(slice) : self
+      return judge(route, generation) if route.judge?
+
       prompt = Ai::Prompt.for(feature_key, default: prompt_key, route:, family:, locale: prompt_locale, locals: generation.prompt_locals)
       request = Ai::Transport::Base::Request.new(
         feature: feature_key, family:, model: route.model, instructions: prompt.instructions, input: prompt.input,
@@ -190,8 +204,17 @@ class Ai::Generation
       generation.coerce(response.json)
     end
 
-    # The tokens the prompt takes before any item: rendered once per route with no items.
+    def judge(route, generation)
+      value, usage = judgement_class.new(**generation.arguments, family:).run(route)
+      @usage = @usage && usage ? @usage + usage : (@usage || usage)
+      value
+    end
+
+    # The tokens the prompt takes before any item: rendered once per route with no items. A judge
+    # model has no prompt.
     def fixed_tokens(route)
+      return 0 if route.judge?
+
       @fixed_tokens ||= {}
       @fixed_tokens[route] ||= begin
         empty = with_items([])

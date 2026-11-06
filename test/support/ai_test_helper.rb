@@ -12,7 +12,7 @@ module AiTestHelper
       openai = endpoint.(:openai, preset: :openai, responses_api: true)
       gpu = endpoint.(:gpu, base_url: "http://gpu.local:8080/v1", location: :local)
       embed = endpoint.(:embed, base_url: "http://embed.local:8081/v1", location: :local)
-      jev = Ai::Config::Endpoint.new(name: :jev, protocol: :jev, preset: :jev, base_url: "https://api.typesafe.ai/v1/systemone", api_key: "test-key")
+      jev = Ai::Config::Endpoint.new(name: :jev, protocol: :jev, preset: :jev, base_url: "https://api.typesafe.ai", api_key: "test-key")
       agent = endpoint.(:agent, base_url: "https://agent.example.test/v1", agent: true, agent_settings: { allowed_emails: [] })
 
       models = [
@@ -61,8 +61,8 @@ module AiTestHelper
   end
   Ai::Transport.singleton_class.prepend(TransportStub)
 
-  # A transport that answers `generate` from the test, through Ai::Transport::Base#generate, so
-  # the call context and the generate.ai event are the real ones.
+  # A transport that answers `generate` and `judge` from the test, through Ai::Transport::Base,
+  # so the call context and the `.ai` events are the real ones.
   class FakeTransport < Ai::Transport::Base
     def initialize(endpoint, responder)
       super(endpoint)
@@ -75,11 +75,31 @@ module AiTestHelper
         Response.new(json: JSON.parse(answer.to_json), usage: Ai::Tokens.new(input_tokens: 10, output_tokens: 5),
                      raw_id: "stub", finish_reason: :stop, json_mode: request.json_mode)
       end
+
+      # The test answers { item id => { question => answer } }; an answer is a RubyLLM answer, a
+      # category name, or [name, confidence]. A missing id is a malformed answer.
+      def run_judge(request)
+        given = @responder.call(request).to_h.transform_keys(&:to_s)
+        answers = request.states.keys.to_h do |id|
+          [ id, given[id]&.to_h { |name, answer| [ name.to_sym, AiTestHelper.judge_answer(answer) ] } ]
+        end
+        JudgeResponse.new(answers:, usage: Ai::Tokens.new(input_tokens: 10 * answers.size, output_tokens: 0))
+      end
+  end
+
+  def self.judge_answer(answer)
+    return answer unless answer.is_a?(String) || answer.is_a?(Array)
+
+    choice, confidence = Array(answer)
+    confidence ||= 0.9
+    RubyLLM::Choice.new(choice:, probabilities: { choice => confidence }, confidence:)
   end
 
   # Makes `feature`'s generations answer `returns` (a value, or a proc taking the request), or
   # raise `raises`, with no HTTP. Coercion, failover, instrumentation and the requester still
   # run. Returns the requests sent, in order. A request for another feature fails the test.
+  # On a `judge` route the request is a JudgeRequest, answered by item id (FakeTransport#run_judge):
+  #   stub_ai(:categorize) { |request| request.states.keys.index_with { { category: "Groceries" } } }
   #   requests = stub_ai(:categorize, returns: { categorizations: [ ... ] })
   #   stub_ai(:bill_setup, raises: Ai::Error::Timeout)
   #   stub_ai { |request| request.model.endpoint.name == "gpu" ? raise(Ai::Error::InvalidOutput) : { ... } }
