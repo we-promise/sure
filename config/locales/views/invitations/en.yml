@@ -9,6 +9,7 @@ en:
       title: Join %{family}
     create:
       failure: Could not send invitation
+      own_email: "You can't invite yourself."
       success: Invitation sent successfully
     destroy:
       failure: There was a problem removing the invitation.

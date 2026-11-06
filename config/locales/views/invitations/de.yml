@@ -9,6 +9,7 @@ de:
       title: "%{family} beitreten"
     create:
       failure: Einladung konnte nicht gesendet werden.
+      own_email: "Du kannst dich nicht selbst einladen."
       success: Einladung erfolgreich gesendet.
     destroy:
       failure: Beim Entfernen der Einladung ist ein Problem aufgetreten.

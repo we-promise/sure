@@ -50,11 +50,13 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("invitations.create.success"), flash[:notice]
   end
 
-  test "admin inviting their own email keeps the admin role" do
-    post invitations_url, params: { invitation: { email: @admin.email, role: "member" } }
+  test "admin cannot invite their own email and keeps the admin role" do
+    assert_no_difference("Invitation.count") do
+      post invitations_url, params: { invitation: { email: " #{@admin.email.upcase} ", role: "member" } }
+    end
 
     assert_equal "admin", @admin.reload.role
-    assert_equal I18n.t("invitations.create.success"), flash[:notice]
+    assert_equal I18n.t("invitations.create.own_email"), flash[:alert]
   end
 
   test "inviting a current household member does not change their role" do
@@ -66,13 +68,16 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("invitations.create.success"), flash[:notice]
   end
 
-  test "super admin inviting their own email keeps the super admin role" do
+  test "super admin cannot invite their own email and keeps the super admin role" do
     sign_in staff = users(:sure_support_staff)
 
-    post invitations_url, params: { invitation: { email: staff.email, role: "member" } }
+    assert_no_difference("Invitation.count") do
+      post invitations_url, params: { invitation: { email: staff.email, role: "member" } }
+    end
 
     assert_redirected_to settings_profile_path
     assert_equal "super_admin", staff.reload.role
+    assert_equal I18n.t("invitations.create.own_email"), flash[:alert]
   end
 
   test "non-admin cannot create invitations" do

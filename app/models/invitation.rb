@@ -16,6 +16,7 @@ class Invitation < ApplicationRecord
   validate :no_duplicate_pending_invitation_in_family
   validate :inviter_is_admin
   validate :no_other_pending_invitation, on: :create
+  validate :not_inviting_self, on: :create
 
   before_validation :normalize_email
   before_validation :generate_token, on: :create
@@ -96,6 +97,13 @@ class Invitation < ApplicationRecord
       end
 
       errors.add(:email, "has already been invited to this family") if exists
+    end
+
+    # The inviter already has an account, and an invitation never moves one.
+    def not_inviting_self
+      return if email.blank? || inviter.nil?
+
+      errors.add(:email, :own_email) if email == inviter.email.to_s.strip.downcase
     end
 
     def inviter_is_admin

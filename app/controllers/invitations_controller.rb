@@ -21,7 +21,7 @@ class InvitationsController < ApplicationController
       InvitationMailer.invite_email(@invitation).deliver_later unless self_hosted?
       flash[:notice] = t(".success")
     else
-      flash[:alert] = t(".failure")
+      flash[:alert] = @invitation.errors.of_kind?(:email, :own_email) ? t(".own_email") : t(".failure")
     end
 
     redirect_to settings_profile_path

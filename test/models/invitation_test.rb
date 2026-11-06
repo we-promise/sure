@@ -7,6 +7,13 @@ class InvitationTest < ActiveSupport::TestCase
     @inviter = @invitation.inviter
   end
 
+  test "cannot invite the inviter's own email" do
+    invitation = @family.invitations.build(email: @inviter.email.upcase, role: "member", inviter: @inviter)
+
+    assert_not invitation.valid?
+    assert invitation.errors.of_kind?(:email, :own_email)
+  end
+
   test "cannot create invitation when email has pending invitation from another family" do
     other_family = families(:empty)
     other_inviter = users(:empty)
