@@ -99,12 +99,13 @@ class ReportsTest < ApplicationSystemTestCase
     ActionController::Base.allow_forgery_protection = true
     user = users(:family_admin)
     visit reports_path(period_type: :monthly)
+    record_saved_section_order
 
     find("section[data-section-key='transactions_breakdown'] button[data-reports-section-target='button']").click
 
     assert_selector "section[data-section-key='transactions_breakdown'] button[aria-expanded='false']"
-    assert wait_for { user.reload.preferences.dig("reports_collapsed_sections", "transactions_breakdown") == true },
-      "the collapse was not saved under reports_collapsed_sections"
+    assert_selector "html[data-order-saved='200']"
+    assert_equal true, user.reload.preferences.dig("reports_collapsed_sections", "transactions_breakdown")
   ensure
     ActionController::Base.allow_forgery_protection = original
   end
@@ -112,14 +113,5 @@ class ReportsTest < ApplicationSystemTestCase
   private
     def clicked_hotkeys
       page.evaluate_script("window.clickedHotkeys")
-    end
-
-    def wait_for(timeout: Capybara.default_max_wait_time)
-      deadline = Time.current + timeout
-      until (result = yield)
-        break if Time.current > deadline
-        sleep 0.1
-      end
-      result
     end
 end
