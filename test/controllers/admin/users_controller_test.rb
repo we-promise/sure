@@ -7,6 +7,35 @@ class Admin::UsersControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:sure_support_staff)
   end
 
+  [ ArgumentError, ActiveStorage::FileNotFoundError, Timeout::Error ].each do |error_class|
+    test "index falls back to initials when avatar storage raises #{error_class}" do
+      target = users(:family_member)
+      target.profile_image.attach(
+        io: file_fixture("profile_image.png").open,
+        filename: "avatar.png",
+        content_type: "image/png"
+      )
+      attachment_id = target.profile_image.attachment.id
+      blob_id = target.profile_image.blob.id
+      ActiveStorage::VariantWithRecord.any_instance.stubs(:url).raises(error_class, "private-storage-detail")
+      Rails.logger.expects(:warn).with(
+        "[Users] Avatar unavailable for user_id=#{target.id} (#{error_class})"
+      )
+
+      get admin_users_url
+
+      assert_response :success
+      row = Nokogiri::HTML(response.body).at_css("tr:has(p:contains('#{target.email}'))")
+      assert row, "User management row should remain available"
+      assert_includes row.text, target.initials
+      assert_empty row.css("img")
+      assert row.at_css("button[aria-haspopup='dialog']"), "User actions should remain available"
+      assert ActiveStorage::Attachment.exists?(attachment_id)
+      assert ActiveStorage::Blob.exists?(blob_id)
+      assert_no_match "private-storage-detail", response.body
+    end
+  end
+
   test "index leaves the expiring trial summary to hosted system health" do
     get admin_users_url
 
