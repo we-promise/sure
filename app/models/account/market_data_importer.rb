@@ -74,8 +74,9 @@ class Account::MarketDataImporter
       # Classification and a fund's holdings ride the same `fetch_security_info`
       # call, so asking for both never costs two requests. It is not free: a
       # security that already has metadata and a classification skipped the
-      # fetch entirely, and under a provider that supplies constituents a nil
-      # `constituents_fetched_at` reopens it until one answer succeeds.
+      # fetch entirely, and under a provider that supplies constituents a
+      # missing stamp, or one another provider left, reopens it until one
+      # answer succeeds.
       security.import_provider_details(include_classification: true, include_constituents: true)
     end
   end
