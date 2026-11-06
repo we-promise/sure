@@ -67,9 +67,18 @@ flowchart LR
    - `Ai::Config::Endpoint#probe_check` is `:models`, which makes no chat call, or `:chat`.
      `:chat` sends "Reply with OK" for about 16 output tokens; it catches `NoCredit` and
      `ModelMissing`, and compares the model name the response gives.
-   - The default keeps today's behaviour: `:models` for native OpenAI and Anthropic, and
-     `:chat` for OpenAI-compatible servers, which today's probe already checks with a chat
-     completion.
+   - The default is `:models` on every protocol, so a probe makes no chat call unless an
+     admin asks for one. Native OpenAI and Anthropic already list models today; for
+     OpenAI-compatible servers this is a change, because today's probe sends a chat completion
+     to them.
+   - What `:models` can't see:
+     - an empty balance (`NoCredit`);
+     - LM Studio answering for a model it hasn't loaded;
+     - a wrong key on a server whose model list needs none, such as OpenRouter's public
+       `/models`.
+
+     The function-calling probe still makes a real request, so it catches these. An admin who
+     wants the check itself to see them sets `:chat` from PR 7.
    - 2a adds no UI, `Setting` or ENV for it. PR 7 adds `ai_endpoints.probe_check` to the
      endpoint form and the config file; PR 9 adds it to `ai_endpoint_credentials`, beside the
      family's own key.
@@ -294,7 +303,8 @@ Nothing here blocks 2a on 2.1.1.
      request's status, tokens, cost and error.
    - Functional tokens and `t()` only; no new CSS.
 10. **`AiHealth::Probe` on transports.**
-    - `llm` → `probe(endpoint.probe_check)`.
+    - `llm` → `probe(endpoint.probe_check)`, which is `:models` by default on every protocol.
+      Compatible servers' chat-completion probe (`openai_chat_completion_available?`) goes.
     - `function_calling` → `probe(:tools)` inside `confirming_tools_refusal`, with `:chat` as
       the control; `endpoint.responses_api` picks the Responses variant.
     - `embedding` → `probe(:embedding)`.
