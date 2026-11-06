@@ -341,6 +341,32 @@ namespace :evals do
     end
   end
 
+  # EVAL_RECORDED=1: replay the model's answers from test/vcr_cassettes/ai/evals/ instead of
+  # calling it (the free gate on every AI change: parsing, coercion and mapping, not prompt
+  # quality, since a changed prompt was never shown to the model). With RECORD_CASSETTES=1 too,
+  # record them. A missing cassette skips the check, saying so.
+  def with_recorded_responses(dataset_name, model, &block)
+    return block.call unless ENV["EVAL_RECORDED"] == "1"
+
+    require "vcr"
+    require "webmock"
+    name = "ai/evals/#{dataset_name}_#{model.parameterize}"
+    recording = ENV["RECORD_CASSETTES"] == "1"
+    path = Rails.root.join("test/vcr_cassettes/#{name}.yml")
+    unless recording || path.exist?
+      puts "No recorded responses at #{path.relative_path_from(Rails.root)}; skipping. Record them with RECORD_CASSETTES=1."
+      return nil
+    end
+
+    WebMock.enable!
+    VCR.configure do |config|
+      config.cassette_library_dir = Rails.root.join("test/vcr_cassettes").to_s
+      config.hook_into :webmock
+      %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY].each { |key| config.filter_sensitive_data("<#{key}>") { ENV[key].presence } }
+    end
+    VCR.use_cassette(name, record: recording ? :all : :none, match_requests_on: %i[method uri], &block)
+  end
+
   desc "Run CI regression test"
   task ci_regression: :environment do
     dataset_name = ENV["EVAL_DATASET"] || "categorization_golden_v1"
@@ -367,7 +393,8 @@ namespace :evals do
     )
 
     runner = dataset.runner_class.new(eval_run)
-    result = runner.run
+    result = with_recorded_responses(dataset_name, model) { runner.run }
+    next if result.nil?
 
     current_accuracy = result.metrics["accuracy"] || 0
 

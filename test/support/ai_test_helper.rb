@@ -169,14 +169,35 @@ module AiTestHelper
   # Replays (or, with RECORD_CASSETTES=1 and the keys in ENV, records) a cassette under
   # test/vcr_cassettes/ai/<preset>/. Local servers listen on localhost, which Sure's VCR setup
   # ignores, so localhost is recorded inside the block only. Keys are filtered.
-  def with_ai_cassette(preset, name, match: %i[method uri], &)
+  #
+  # With AI_LIVE=1 (the `ai-live` label's workflow) the block runs against the real provider
+  # instead, with VCR off.
+  def with_ai_cassette(preset, name, match: %i[method uri], &block)
+    return with_ai_live(&block) if ENV["AI_LIVE"] == "1"
+
     recording = ENV["RECORD_CASSETTES"] == "1"
     path = "ai/#{preset}/#{name}"
     FileUtils.rm_f(Rails.root.join("test/vcr_cassettes/#{path}.yml")) if recording
     VCR.configuration.ignore_localhost = false
-    VCR.use_cassette(path, record: recording ? :all : :none, match_requests_on: match, &)
+    VCR.use_cassette(path, record: recording ? :all : :none, match_requests_on: match, &block)
   ensure
     VCR.configuration.ignore_localhost = true
+  end
+
+  # True when a live test can run: it's recording or live with its key, or replaying a cassette.
+  def ai_cassette_available?(preset, name, key:)
+    return ENV[key].present? if ENV["AI_LIVE"] == "1" || ENV["RECORD_CASSETTES"] == "1"
+
+    Rails.root.join("test/vcr_cassettes/ai/#{preset}/#{name}.yml").exist?
+  end
+
+  def with_ai_live
+    config = WebMock::Config.instance
+    previous = [ config.allow_net_connect, config.allow_localhost, config.allow ]
+    WebMock.allow_net_connect!
+    VCR.turned_off(ignore_cassettes: true) { yield }
+  ensure
+    config.allow_net_connect, config.allow_localhost, config.allow = previous if previous
   end
 end
 
