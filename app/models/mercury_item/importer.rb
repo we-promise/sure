@@ -306,6 +306,7 @@ class MercuryItem::Importer
         source: self.class.name,
         provider_key: "mercury",
         family: mercury_item.family,
+        account_provider: mercury_account.account_provider,
         metadata: { account_id: mercury_account.account_id, fetched_count: transactions.count }
       )
       { transactions: transactions }

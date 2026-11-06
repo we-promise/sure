@@ -92,6 +92,23 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
     assert_equal page_size + 2, mercury_account.reload.raw_transactions_payload.size
   end
 
+  test "logs a warning tied to the account provider when the page cap is reached" do
+    _account, mercury_account = create_linked_account("acc_capped")
+    page_size = MercuryItem::Importer::TRANSACTIONS_PAGE_SIZE
+    full_page = Array.new(page_size) { |i| tx_payload("tx_#{i}") }
+
+    @provider.stubs(:get_accounts).returns({ accounts: [ account_payload("acc_capped", "Checking") ] })
+    @provider.expects(:get_account_transactions)
+             .times(MercuryItem::Importer::MAX_TRANSACTION_PAGES)
+             .returns({ transactions: full_page })
+
+    run_import
+
+    entry = DebugLogEntry.where(level: "warn", provider_key: "mercury").last
+    assert_not_nil entry
+    assert_equal mercury_account.account_provider.id, entry.account_provider_id
+  end
+
   test "requests a single page when the first one is not full" do
     _account, mercury_account = create_linked_account("acc_short")
 
