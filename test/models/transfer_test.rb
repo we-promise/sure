@@ -389,6 +389,75 @@ class TransferTest < ActiveSupport::TestCase
     refute transfer.categorizable?
   end
 
+  test "a confirmed transfer from an investment account to cash keeps its category on the cash side" do
+    transfer = create_withdrawal(from: accounts(:investment))
+    inflow = transfer.inflow_transaction
+    outflow = transfer.outflow_transaction
+
+    assert transfer.investment_withdrawal?
+    assert transfer.categorizable?
+    assert_equal inflow, transfer.category_transaction
+    assert inflow.reload.category_editable?
+    assert_not inflow.category_set_on_transfer_counterpart?
+    assert_not outflow.reload.category_editable?
+    assert outflow.category_set_on_transfer_counterpart?
+  end
+
+  test "a confirmed transfer from a crypto account to cash is categorizable" do
+    transfer = create_withdrawal(from: accounts(:crypto))
+
+    assert transfer.categorizable?
+    assert_equal transfer.inflow_transaction, transfer.category_transaction
+  end
+
+  test "an investment contribution keeps its category on the outflow" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+    transfer.confirm!
+
+    assert_not transfer.investment_withdrawal?
+    assert_equal transfer.outflow_transaction, transfer.category_transaction
+  end
+
+  test "a transfer from an investment account to a credit card is not a categorizable withdrawal" do
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:investment), amount: 500, kind: "cc_payment")
+    inflow_entry = create_transaction(date: Date.current, account: accounts(:credit_card), amount: -500, kind: "funds_movement")
+    transfer = Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+
+    assert_not transfer.investment_withdrawal?
+    refute transfer.categorizable?
+  end
+
+  test "a pending transfer from an investment account to cash already keeps its category on the cash side" do
+    transfer = create_pending_transfer(from: accounts(:investment), to: accounts(:depository))
+
+    assert transfer.investment_withdrawal?
+    assert transfer.categorizable?
+    assert transfer.inflow_transaction.reload.category_editable?
+    assert_not transfer.outflow_transaction.reload.category_editable?
+  end
+
+  test "confirm! keeps a category picked on the cash leg of a pending withdrawal" do
+    transfer = create_pending_transfer(from: accounts(:investment), to: accounts(:depository))
+    transfer.inflow_transaction.update!(category: categories(:income))
+
+    transfer.confirm!
+
+    inflow = transfer.inflow_transaction.reload
+    assert_equal "funds_movement", inflow.kind
+    assert_equal categories(:income), inflow.category
+    assert inflow.category_editable?
+    assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+  end
+
+  test "an uncategorized investment withdrawal stays out of the Uncategorized bucket" do
+    transfer = create_pending_transfer(from: accounts(:investment), to: accounts(:depository))
+    transfer.confirm!
+
+    uncategorized_ids = Entry.uncategorized_transactions.pluck(:entryable_id)
+    assert_not_includes uncategorized_ids, transfer.inflow_transaction.id
+    assert_not_includes uncategorized_ids, transfer.outflow_transaction.id
+  end
+
   test "has_source_fee? returns true when source fee present" do
     transfer = transfers(:one)
     entry = accounts(:depository).entries.create!(name: "Fee", date: Date.current, amount: 5, currency: "USD", entryable: Transaction.new(kind: "standard"))
@@ -419,6 +488,12 @@ class TransferTest < ActiveSupport::TestCase
   end
 
   private
+    def create_withdrawal(from:)
+      outflow_entry = create_transaction(date: Date.current, account: from, amount: 500, kind: "funds_movement")
+      inflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: -500, kind: "funds_movement")
+      Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction, status: "confirmed")
+    end
+
     def create_pending_transfer(from:, to:)
       outflow_entry = create_transaction(date: Date.current, account: from, amount: 500)
       inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)

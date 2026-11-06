@@ -17,7 +17,7 @@ class MerchantsController < ApplicationController
     @pagy, @transactions = pagy(
       @search.transactions_scope.reverse_chronological.includes(
         { entry: :account }, :category, :merchant, :tags,
-        { transfer_as_outflow: { inflow_transaction: { entry: :account } } },
+        { transfer_as_outflow: { inflow_transaction: [ :category, { entry: :account } ] } },
         { transfer_as_inflow: { inflow_transaction: { entry: :account }, outflow_transaction: [ :category, { entry: :account } ] } }
       ),
       limit: safe_per_page(50)

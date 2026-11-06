@@ -30,14 +30,24 @@ module EntriesHelper
       entry.entryable.transfer&.id
     end
 
-    # For a more intuitive UX, we do not want to show the same transfer twice in the list
+    # For a more intuitive UX, we do not want to show the same transfer twice
+    # in the list. Show the leg that holds its category
+    # (Transfer#category_transaction), so the category picker stays in the
+    # list: the outflow, or the cash inflow of an investment withdrawal. The
+    # inflow only replaces the outflow while both legs carry a transfer kind,
+    # so day totals, which leave transfer kinds out, are unchanged.
     deduped_entries = transfer_groups.flat_map do |transfer_id, grouped_entries|
       if transfer_id.nil? || grouped_entries.size == 1
         grouped_entries
       else
+        transfer = grouped_entries.first.entryable.transfer
+        kept_inflow = transfer.categorizable? &&
+          transfer.category_transaction.id == transfer.inflow_transaction_id &&
+          transfer.inflow_transaction.transfer? && transfer.outflow_transaction.transfer?
+
         grouped_entries.reject do |e|
           e.entryable_type == "Transaction" &&
-          e.entryable.transfer_as_inflow.present?
+          (kept_inflow ? e.entryable.transfer_as_outflow.present? : e.entryable.transfer_as_inflow.present?)
         end
       end
     end

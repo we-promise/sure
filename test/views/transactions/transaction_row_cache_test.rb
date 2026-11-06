@@ -96,6 +96,23 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
     assert_not_equal base, row_key(entry: inflow_entry)
   end
 
+  # An investment withdrawal's cash leg (the inflow) owns the category, so the
+  # investment leg's row shows it read-only.
+  test "an investment withdrawal's outflow row follows the cash leg's category" do
+    transfer = transfers(:one)
+    outflow_entry = transfer.outflow_transaction.entry
+    outflow_entry.update!(account: accounts(:investment))
+    transfer.inflow_transaction.entry.update!(account: accounts(:depository))
+    assert transfer.reload.investment_withdrawal?
+    base = row_key(entry: outflow_entry)
+
+    transfer.inflow_transaction.update!(category: @category)
+    assert_not_equal base, (base = row_key(entry: outflow_entry))
+
+    @category.update!(name: "Renamed category")
+    assert_not_equal base, row_key(entry: outflow_entry)
+  end
+
   # The confirm and reject forms of a pending transfer match embed the
   # session's CSRF token, which a cached row would hand to other sessions.
   test "a row with a pending transfer match is never served from the cache" do

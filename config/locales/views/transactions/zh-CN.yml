@@ -64,10 +64,10 @@ zh-CN:
     new:
       new_transaction: 新建交易
     transaction_category:
-      set_on_outflow: 分类属于此转账的转出方，只能在转出方更改
+      set_on_counterpart: 分类属于此转账的另一方，只能在那里更改
     show:
-      category_set_on_hidden_outflow: 这是转账的转入方。其分类属于您无法访问的账户上的转出方，只能在转出方进行更改。
-      category_set_on_outflow: 这是转账的转入方。其分类属于转出方，只能在转出方更改，以便预算仅统计一次。
+      category_set_on_hidden_counterpart: 分类属于此转账的另一方，位于您无法访问的账户上，只能在那里更改。
+      category_set_on_counterpart: 分类属于此转账的另一方，只能在那里更改。
       keep_both: 不，保留两笔
       loan_payment: 贷款还款
       mark_recurring: 标记为循环

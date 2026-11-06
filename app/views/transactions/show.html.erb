@@ -95,20 +95,20 @@
                     locked: Current.family.categories_locked?
                   ) %>
             <% end %>
-          <% elsif @entry.transaction.category_set_on_transfer_outflow? %>
-            <% outflow_category = transfer_outflow_category(@entry.transaction) %>
+          <% elsif @entry.transaction.category_set_on_transfer_counterpart? %>
+            <% counterpart_category = transfer_counterpart_category(@entry.transaction) %>
             <div class="space-y-1">
               <div class="opacity-60 cursor-not-allowed">
                 <%= f.fields_for :entryable do |ef| %>
                   <%= render DS::CategorySelect.new(
                         form: ef,
                         categories: [],
-                        selected_category: outflow_category || transfer_category,
+                        selected_category: counterpart_category || transfer_category,
                         disabled: true
                       ) %>
                 <% end %>
               </div>
-              <p class="text-xs text-secondary"><%= outflow_category ? t(".category_set_on_outflow") : t(".category_set_on_hidden_outflow") %></p>
+              <p class="text-xs text-secondary"><%= counterpart_category ? t(".category_set_on_counterpart") : t(".category_set_on_hidden_counterpart") %></p>
             </div>
           <% end %>
         <% end %>

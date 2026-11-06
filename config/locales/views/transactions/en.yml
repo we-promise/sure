@@ -64,10 +64,10 @@ en:
     new:
       new_transaction: New transaction
     transaction_category:
-      set_on_outflow: "The category belongs to the outgoing side of this transfer and can only be changed there"
+      set_on_counterpart: "The category belongs to the other side of this transfer and can only be changed there"
     show:
-      category_set_on_hidden_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side, on an account you cannot access, and can only be changed there."
-      category_set_on_outflow: "This is the incoming side of a transfer. Its category belongs to the outgoing side and can only be changed there, so budgets count it once."
+      category_set_on_hidden_counterpart: "The category belongs to the other side of this transfer, on an account you cannot access, and can only be changed there."
+      category_set_on_counterpart: "The category belongs to the other side of this transfer and can only be changed there."
       keep_both: No, keep both
       loan_payment: Loan Payment
       mark_recurring: Mark as Recurring
