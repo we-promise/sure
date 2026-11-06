@@ -253,7 +253,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
         params: { trade: { notes: "Notes with #{source} category", category_id: category_id } },
         headers: api_headers(read_write_api_key)
 
-      assert_response :success, "#{source} category"
+      assert_response :ok, "#{source} category"
       body = JSON.parse(response.body)
       assert_equal "Notes with #{source} category", body["notes"]
       assert_equal "Notes with #{source} category", Trade.find(trade_id).entry.notes
@@ -262,15 +262,47 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "an update carrying only a category_id changes nothing" do
-    trade_id = create_buy_trade("CATNOOP")
-    before = Trade.find(trade_id).entry.attributes.except("updated_at")
+    trade = Trade.find(create_buy_trade("CATNOOP"))
+    reset_update_side_effects(trade)
+    entry_before = trade.entry.reload.attributes
+    trade_before = trade.reload.attributes
 
-    put api_v1_trade_url(trade_id),
-      params: { trade: { category_id: categories(:food_and_drink).id } },
-      headers: api_headers(read_write_api_key)
+    assert_no_enqueued_jobs only: SyncJob do
+      put api_v1_trade_url(trade),
+        params: { trade: { category_id: categories(:food_and_drink).id } },
+        headers: api_headers(read_write_api_key)
+    end
 
-    assert_response :success
-    assert_equal before, Trade.find(trade_id).entry.reload.attributes.except("updated_at")
+    assert_response :ok
+    assert_equal entry_before, trade.entry.reload.attributes
+    assert_equal trade_before, trade.reload.attributes
+    assert_not trade.entry.user_modified?
+    assert_empty trade.entry.locked_attributes
+    assert_empty trade.locked_attributes
+  end
+
+  # One change saves only the entry, the other only the trade, so each half of
+  # the changed-anything check is exercised on its own.
+  test "an update that changes a field marks, locks and syncs the trade" do
+    {
+      "entry" => [ { notes: "Changed notes" }, :entry, "notes" ],
+      "trade" => [ { investment_activity_label: "Other" }, :trade, "investment_activity_label" ]
+    }.each do |source, (fields, locked_on, locked_attr)|
+      trade = Trade.find(create_buy_trade("CAT#{source.upcase}"))
+      reset_update_side_effects(trade)
+
+      assert_enqueued_with(job: SyncJob) do
+        put api_v1_trade_url(trade),
+          params: { trade: fields.merge(category_id: categories(:food_and_drink).id) },
+          headers: api_headers(read_write_api_key)
+      end
+
+      assert_response :ok, "#{source} change"
+      trade.reload
+      assert trade.entry.reload.user_modified?, "#{source} change"
+      locked = locked_on == :entry ? trade.entry.locked_attributes : trade.locked_attributes
+      assert_includes locked.keys, locked_attr, "#{source} change"
+    end
   end
 
   test "create deposit returns 201" do
@@ -1062,6 +1094,14 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
         headers: api_headers(read_write_api_key)
       assert_response :created
       JSON.parse(response.body)["id"]
+    end
+
+    # Creating through the API marks, locks and syncs the trade, so clear that
+    # state before measuring what an update does.
+    def reset_update_side_effects(trade)
+      trade.entry.update_columns(user_modified: false, locked_attributes: {})
+      trade.update_columns(locked_attributes: {})
+      trade.entry.account.syncs.delete_all
     end
 
     def read_write_api_key
