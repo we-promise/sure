@@ -9,8 +9,14 @@
 module AiFeatureGuard
   extend ActiveSupport::Concern
 
+  included do
+    # feature => before_action options, read by test/architecture/ai_feature_guard_test.
+    class_attribute :ai_requirements, instance_accessor: false, default: {}
+  end
+
   class_methods do
     def requires_ai(feature, **options)
+      self.ai_requirements = ai_requirements.merge(feature.to_sym => options)
       before_action(**options) { require_ai!(feature) }
     end
   end
