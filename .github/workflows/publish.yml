@@ -712,15 +712,35 @@ jobs:
             // Move only the exact workflow-owned notice, never an entire Markdown section.
             // Removing its separator too makes reruns idempotent without trimming user text.
             for (const notice of [mobile, mobile.replace('applications.  Download', 'applications. Download')]) {
-              body = body.split(notice + '\n\n').join('').split(notice).join('');
+              for (const lineEnding of ['\n', '\r\n']) {
+                const matchingNotice = notice.replace(/\n/g, lineEnding);
+                body = body.split(matchingNotice + lineEnding + lineEnding).join('').split(matchingNotice).join('');
+              }
             }
             const alias = process.env.ALIAS_NOTE || '';
             const additions = alias && !body.split(/\r?\n/).includes(alias)
               ? alias + '\n\n' + mobile : mobile;
-            const heading = /^#{1,6}[ \t]+What['’]s Changed[ \t]*#*[ \t]*\r?$/m.exec(body);
-            const index = heading ? heading.index : body.length;
+            // Track fenced examples without rewriting any authored line endings.
+            let fence = null;
+            let index = body.length;
+            for (const line of body.matchAll(/[^\n]*(?:\n|$)/g)) {
+              const text = line[0].replace(/\r?\n$/, '');
+              const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(text);
+              if (fence) {
+                if (marker && marker[1][0] === fence[0] && marker[1].length >= fence.length && /^[ \t]*$/.test(marker[2])) {
+                  fence = null;
+                }
+                continue;
+              }
+              if (marker && (marker[1][0] !== '`' || !marker[2].includes('`'))) {
+                fence = marker[1];
+              } else if (/^#{1,6}[ \t]+What['’]s Changed[ \t]*#*[ \t]*$/.test(text)) {
+                index = line.index;
+                break;
+              }
+            }
             const before = body.slice(0, index);
-            const separator = !before || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+            const separator = !before || /(?:\r?\n){2}$/.test(before) ? '' : before.endsWith('\n') ? '\n' : '\n\n';
             body = before + separator + additions + '\n\n' + body.slice(index);
             fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'release-notes.md'), body);
 

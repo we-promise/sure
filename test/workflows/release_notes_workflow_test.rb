@@ -41,6 +41,36 @@ class ReleaseNotesWorkflowTest < ActiveSupport::TestCase
     assert_equal result, compose(result)
   end
 
+  test "relocates CRLF notices without changing authored line endings" do
+    mobile = compose("").delete_suffix("\n\n").gsub("\n", "\r\n")
+    intro = "# Highlights\r\n\r\nKeep this text.  \r\n\r\n"
+    changes = "## What's Changed\r\n* Original\r\n"
+    [ mobile, mobile.sub("applications.  Download", "applications. Download") ].each do |notice|
+      result = compose("#{notice}\r\n\r\n#{intro}#{changes}")
+      assert result.start_with?(intro)
+      assert result.end_with?(changes)
+      assert_equal 1, result.scan("## Mobile Debug Builds").size
+      assert_equal result, compose(result)
+      assert_equal result, compose(result.gsub(/\r?\n/, "\r\n"))
+    end
+  end
+
+  test "ignores changelog headings inside backtick and tilde fences" do
+    [ "```markdown", "~~~~markdown", "   ````markdown" ].each do |opening|
+      fence = opening.strip.delete_suffix("markdown")
+      example = "#{opening}\n## What's Changed\n```\n~~~\n## What's Changed\n#{fence}\n\n"
+      # A shorter or different-character fence must not end the outer fence.
+      example = "#{opening}\n## What's Changed\n#{fence}\n\n" if fence == "```"
+      changes = "## What’s Changed\n* Actual change\n"
+      result = compose(example + changes)
+      assert result.start_with?(example)
+      assert result.end_with?(changes)
+      assert_includes result, "credentials.\n\n#{changes}"
+      assert_equal result, compose(result)
+      assert compose(example).start_with?(example)
+    end
+  end
+
   test "preserves and deduplicates compatibility aliases" do
     alias_note = "Compatibility alias: v0.7.7 (same commit and image)."
     result = compose("Intro\n\n## What's Changed\n* Change", alias_note: alias_note)
