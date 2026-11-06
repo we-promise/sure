@@ -90,6 +90,8 @@ class ReportsController < ApplicationController
   def picker
     @period_type = params[:period_type]&.to_sym || :monthly
     @start_date = parse_date_param(:start_date) || Date.current.beginning_of_month
+    @category_selection = category_selection
+    @trend_granularity = trend_granularity
     render partial: "reports/period_picker", locals: {
       period_type: @period_type,
       start_date: @start_date
@@ -117,6 +119,10 @@ class ReportsController < ApplicationController
       @previous_income_totals = @income_statement.income_totals(period: @previous_period)
       @previous_expense_totals = @income_statement.expense_totals(period: @previous_period)
 
+      # Trend chart selection. It scopes the chart only, not the report totals.
+      @category_selection = category_selection
+      @trend_granularity = trend_granularity
+
       # Calculate summary metrics
       @summary_metrics = build_summary_metrics
 
@@ -128,6 +134,7 @@ class ReportsController < ApplicationController
 
       # Transactions breakdown
       @transactions = build_transactions_breakdown
+      @category_trend = build_category_trend(@transactions)
 
       # Investment metrics
       @investment_metrics = build_investment_metrics
@@ -167,7 +174,17 @@ class ReportsController < ApplicationController
           key: "trends_insights",
           title: "reports.trends.title",
           partial: "reports/trends_insights",
-          locals: { trends_data: @trends_data },
+          locals: {
+            trends_data: @trends_data,
+            period_type: @period_type,
+            start_date: @start_date,
+            end_date: @end_date,
+            category_trend: @category_trend,
+            category_options: category_selection.options,
+            selected_category_values: category_selection.selected_values,
+            selected_category_count: category_selection.selected_count,
+            trend_granularity: trend_granularity
+          },
           visible: @has_accounts,
           collapsible: true
         },
@@ -258,6 +275,8 @@ class ReportsController < ApplicationController
         Date.current.beginning_of_year.to_date
       when :last_6_months
         (Date.current.end_of_month + 1.day - 6.months).beginning_of_month.to_date
+      when :last_12_months
+        (Date.current.end_of_month + 1.day - 12.months).beginning_of_month.to_date
       when :custom
         1.month.ago.to_date
       else
@@ -267,7 +286,7 @@ class ReportsController < ApplicationController
 
     def default_end_date
       case @period_type
-      when :monthly, :last_6_months
+      when :monthly, :last_6_months, :last_12_months
         Date.current.end_of_month.to_date
       when :quarterly
         Date.current.end_of_quarter.to_date
@@ -399,7 +418,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
-        .includes(entry: :account, category: :parent)
+        .includes(entry: :account)
       trades = exclude_tax_advantaged_accounts(trades)
 
       trades = apply_entry_filters(trades)
@@ -429,6 +448,7 @@ class ReportsController < ApplicationController
           total: 0,
           count: 0,
           has_transactions: false,
+          buckets: Hash.new(0),
           subcategories: {}
         }
       end
@@ -443,7 +463,8 @@ class ReportsController < ApplicationController
           category_icon: category.lucide_icon,
           total: 0,
           count: 0,
-          has_transactions: false
+          has_transactions: false,
+          buckets: Hash.new(0)
         }
       end
 
@@ -476,6 +497,7 @@ class ReportsController < ApplicationController
           grouped_data[parent_key][:subcategories][category.id][:count] += 1
           grouped_data[parent_key][:subcategories][category.id][:total] += converted_amount
           grouped_data[parent_key][:subcategories][category.id][:has_transactions] = true unless is_trade
+          grouped_data[parent_key][:subcategories][category.id][:buckets][bucket_start(entry.date)] += converted_amount
         else
           # This is a root category (no parent)
           parent_key = [ category.id, type ]
@@ -485,6 +507,7 @@ class ReportsController < ApplicationController
         grouped_data[parent_key][:count] += 1
         grouped_data[parent_key][:total] += converted_amount
         grouped_data[parent_key][:has_transactions] = true unless is_trade
+        grouped_data[parent_key][:buckets][bucket_start(entry.date)] += converted_amount
       end
 
       # Process transactions
@@ -492,19 +515,145 @@ class ReportsController < ApplicationController
         process_entry.call(transaction.category, transaction.entry, false)
       end
 
-      # Process trades
+      # Trades carry no category: migration 20260114002048 removed the column.
+      # They belong to the synthetic Other Investments bucket.
       trades.each do |trade|
-        process_entry.call(trade.category, trade.entry, true)
+        process_entry.call(nil, trade.entry, true)
       end
 
       # Convert to array and sort subcategories
       result = grouped_data.values.map do |parent_data|
-        subcategories = parent_data[:subcategories].values.sort_by(&sort_logic)
-        parent_data.merge(subcategories: subcategories)
+        subcategories = parent_data[:subcategories].values.map do |subcategory|
+          subcategory.merge(buckets: filled_buckets(subcategory[:buckets]))
+        end.sort_by(&sort_logic)
+
+        parent_data.merge(buckets: filled_buckets(parent_data[:buckets]), subcategories: subcategories)
       end
 
       # Sort by the chosen key with the specified direction
       result.sort_by(&sort_logic)
+    end
+
+    def category_selection
+      @category_selection ||= Reports::CategorySelection.new(Current.family, params[:trend_category_ids])
+    end
+
+    def trend_granularity
+      @trend_granularity ||= begin
+        requested = params[:trend_granularity]
+        if %w[month year].include?(requested)
+          requested
+        else
+          long_period? ? "year" : "month"
+        end
+      end
+    end
+
+    # Two years of monthly points is still readable. Longer ranges default to
+    # years, and the user can override the choice.
+    def long_period?
+      @start_date.present? && @end_date.present? && @start_date.advance(months: 24) < @end_date
+    end
+
+    # One series per selected category. A selected parent covers its children,
+    # so its values are the parent group's buckets, which already include them.
+    def build_category_trend(groups)
+      series = category_selection.group_values.filter_map do |value|
+        category_trend_series(value, groups)
+      end
+
+      series.sort_by! { |entry| -entry[:values].sum { |point| point[:value] } }
+
+      {
+        granularity: trend_granularity,
+        currency: Current.family.currency,
+        series: series
+      }
+    end
+
+    def trend_bucket_starts
+      @trend_bucket_starts ||= begin
+        buckets = []
+        cursor = bucket_start(@start_date)
+        last = bucket_start(@end_date)
+
+        while cursor <= last
+          buckets << cursor
+          cursor = trend_granularity == "year" ? cursor.next_year : cursor.next_month
+        end
+
+        buckets
+      end
+    end
+
+    def bucket_start(date)
+      trend_granularity == "year" ? date.to_date.beginning_of_year : date.to_date.beginning_of_month
+    end
+
+    def filled_buckets(buckets)
+      trend_bucket_starts.index_with { |start| buckets[start] || 0 }
+    end
+
+    def category_trend_series(value, groups)
+      if value == Reports::CategorySelection::UNCATEGORIZED
+        uncategorized_series(groups)
+      else
+        category = Current.family.categories.find_by(id: value)
+        return nil unless category
+
+        buckets = parent_buckets(value, groups).presence || subcategory_buckets(value, groups)
+
+        {
+          name: category.name_with_parent,
+          color: category.color || Category::UNCATEGORIZED_COLOR,
+          values: chart_values(buckets)
+        }
+      end
+    end
+
+    def uncategorized_series(groups)
+      buckets = summed_buckets(groups.select { |group| group[:category_id] == :uncategorized })
+
+      {
+        name: Category.uncategorized.name,
+        color: Category::UNCATEGORIZED_COLOR,
+        values: chart_values(buckets)
+      }
+    end
+
+    def parent_buckets(id, groups)
+      summed_buckets(groups.select { |group| group[:category_id] == id })
+    end
+
+    def subcategory_buckets(id, groups)
+      summed_buckets(groups.flat_map { |group| group[:subcategories] }.select { |subcategory| subcategory[:category_id] == id })
+    end
+
+    def summed_buckets(items)
+      items.each_with_object({}) do |item, totals|
+        item[:buckets].each do |start, amount|
+          totals[start] = (totals[start] || 0) + amount
+        end
+      end
+    end
+
+    def chart_values(buckets)
+      trend_bucket_starts.map do |start|
+        {
+          date: start.iso8601,
+          label: trend_bucket_label(start),
+          short_label: trend_bucket_short_label(start),
+          value: (buckets[start] || 0).to_f
+        }
+      end
+    end
+
+    def trend_bucket_label(start)
+      trend_granularity == "year" ? start.year.to_s : I18n.l(start, format: :short_month_year)
+    end
+
+    def trend_bucket_short_label(start)
+      trend_granularity == "year" ? start.year.to_s : I18n.l(start, format: "%b")
     end
 
     def build_investment_metrics
@@ -1236,6 +1385,18 @@ class ReportsController < ApplicationController
           next_end   = next_start + 6.months - 1.day
         end
         at_latest  = @end_date >= Date.current.end_of_month
+      when :last_12_months
+        prev_start = @start_date.beginning_of_month - 12.months
+        prev_end   = prev_start + 12.months - 1.day
+        candidate_start = @start_date.beginning_of_month + 12.months
+        if candidate_start + 12.months >= Date.current.beginning_of_month
+          next_end   = Date.current.end_of_month
+          next_start = (next_end + 1.day - 12.months).beginning_of_month
+        else
+          next_start = candidate_start
+          next_end   = next_start + 12.months - 1.day
+        end
+        at_latest  = @end_date >= Date.current.end_of_month
       else
         return nil
       end
@@ -1257,6 +1418,10 @@ class ReportsController < ApplicationController
         end
       when :last_6_months
         t("reports.index.period_label.last_6_months",
+          start: I18n.l(@start_date, format: :short_month_year),
+          end: I18n.l(@end_date, format: :short_month_year))
+      when :last_12_months
+        t("reports.index.period_label.last_12_months",
           start: I18n.l(@start_date, format: :short_month_year),
           end: I18n.l(@end_date, format: :short_month_year))
       end

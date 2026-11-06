@@ -1,4 +1,142 @@
+<%# locals: (trends_data:, period_type:, start_date:, end_date:, category_trend:, category_options:, selected_category_values:, selected_category_count:, trend_granularity:) %>
 <div class="space-y-8">
+    <%# Category trends. Selection scopes this chart only, not the tables below. %>
+    <div>
+      <div class="flex items-start justify-between gap-3 flex-wrap mb-3">
+        <div class="space-y-1">
+          <h3 class="text-lg font-medium">
+            <%= t("reports.trends.category_trend.title") %>
+          </h3>
+          <p class="text-sm text-secondary">
+            <%= t("reports.trends.category_trend.subtitle") %>
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <%# Only an explicit granularity survives Apply. The chart's own default
+              must not turn into a user choice. %>
+          <% explicit_granularity_field = trend_granularity_param.present? ? { trend_granularity: trend_granularity_param } : {} %>
+          <%= render layout: "pages/dashboard/filter_popover", locals: {
+                button_text: selected_category_values.any? ?
+                  t("reports.trends.category_trend.selected", count: selected_category_count) :
+                  t("reports.trends.category_trend.select"),
+                search_label: t("reports.trends.category_trend.search"),
+                apply_text: t("reports.trends.category_trend.apply"),
+                hidden_fields: {
+                  period_type: period_type,
+                  start_date: start_date,
+                  end_date: end_date,
+                  **explicit_granularity_field,
+                  sort_by: params[:sort_by],
+                  sort_direction: params[:sort_direction]
+                },
+                url: reports_path,
+                method: :get,
+                form_data: {},
+                list_controllers: "list-filter category-filter"
+              } do %>
+            <% category_options.each do |option| %>
+              <%= render layout: "pages/dashboard/filter_popover_option", locals: {
+                    name: "trend_category_ids[]",
+                    value: option.value,
+                    checked: option.checked,
+                    filter_name: option.category.display_name,
+                    checkbox_data: {
+                      category_filter_target: "checkbox",
+                      action: "change->category-filter#toggle",
+                      category_id: option.category.id,
+                      parent_id: option.category.parent_id
+                    }
+                  } do %>
+                <% if option.category.parent_id.present? %>
+                  <%= icon("corner-down-right", size: "sm") %>
+                <% end %>
+                <%= render partial: "categories/badge", locals: { category: option.category } %>
+              <% end %>
+            <% end %>
+          <% end %>
+
+          <% if selected_category_values.any? %>
+            <%= link_to t("reports.trends.category_trend.clear"),
+                  report_view_path(trend_category_ids: nil),
+                  class: "text-xs font-medium text-secondary hover:text-primary" %>
+          <% end %>
+
+          <%= render DS::SegmentedControl.new(aria_label: t("reports.trends.category_trend.granularity_aria")) do |sc| %>
+            <% sc.with_segment(t("reports.trends.category_trend.month"),
+                 active: trend_granularity == "month",
+                 href: report_view_path(trend_granularity: "month")) %>
+            <% sc.with_segment(t("reports.trends.category_trend.year"),
+                 active: trend_granularity == "year",
+                 href: report_view_path(trend_granularity: "year")) %>
+          <% end %>
+        </div>
+      </div>
+
+      <% trend_series = category_trend[:series] %>
+      <% if trend_series.any? %>
+        <div class="rounded-xl bg-container-inset p-4">
+          <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-secondary mb-3">
+            <% trend_series.each do |series| %>
+              <span class="inline-flex items-center gap-1.5">
+                <span class="h-2 w-2 rounded-full" style="background-color: <%= series[:color] %>"></span>
+                <%= series[:name] %>
+              </span>
+            <% end %>
+          </div>
+          <div class="w-full h-64 privacy-sensitive"
+               data-controller="multi-series-chart"
+               data-multi-series-chart-data-value="<%= category_trend.to_json %>"
+               data-multi-series-chart-currency-value="<%= Current.family.currency %>"></div>
+
+          <%# The chart shows exact values only in a pointer tooltip. The table
+              gives keyboard and screen-reader users the same numbers. %>
+          <%= render DS::Disclosure.new(
+                variant: :inline,
+                align: :left,
+                title: t("reports.trends.category_trend.data_table"),
+                body_class: "mt-3"
+              ) do %>
+            <div class="overflow-x-auto privacy-sensitive">
+              <table class="w-full text-xs">
+                <caption class="sr-only"><%= t("reports.trends.category_trend.data_table_caption") %></caption>
+                <thead>
+                  <tr>
+                    <th scope="col" class="py-1 pr-3 text-left font-medium text-secondary">
+                      <%= t("reports.trends.category_trend.data_table_period") %>
+                    </th>
+                    <% trend_series.each do |series| %>
+                      <th scope="col" class="py-1 pl-3 text-right font-medium text-secondary"><%= series[:name] %></th>
+                    <% end %>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% trend_series.first[:values].each_with_index do |point, index| %>
+                    <tr>
+                      <th scope="row" class="py-1 pr-3 text-left font-normal text-secondary whitespace-nowrap"><%= point[:label] %></th>
+                      <% trend_series.each do |series| %>
+                        <td class="py-1 pl-3 text-right text-primary whitespace-nowrap">
+                          <%= format_money(Money.new(series[:values][index][:value], Current.family.currency)) %>
+                        </td>
+                      <% end %>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+            </div>
+          <% end %>
+        </div>
+      <% elsif selected_category_values.any? %>
+        <div class="rounded-xl bg-container-inset p-4 text-sm text-secondary">
+          <%= t("reports.trends.category_trend.no_data") %>
+        </div>
+      <% else %>
+        <div class="rounded-xl bg-container-inset p-4 text-sm text-secondary">
+          <%= t("reports.trends.category_trend.prompt") %>
+        </div>
+      <% end %>
+    </div>
+
     <%# Month-over-Month Trends %>
     <div>
       <h3 class="text-lg font-medium mb-4">
