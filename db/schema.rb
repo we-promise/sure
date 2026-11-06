@@ -2355,6 +2355,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.string "asset_class"
     t.string "asset_sub_class"
     t.datetime "classification_fetched_at"
+    t.string "classification_fetched_from"
     t.boolean "classification_locked", default: false, null: false
     t.string "classification_source"
     t.string "country_code"
