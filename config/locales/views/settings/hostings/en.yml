@@ -342,6 +342,7 @@ en:
       reset_market_data:
         market_data_reset: Market data reset queued. Rates and prices will be re-imported, then all accounts will sync.
         market_data_reset_already_queued: A market data reset is already queued or running.
+        market_data_reset_failed: The market data reset could not be queued. Nothing was deleted; please try again.
       not_authorized: You are not authorized to perform this action
       ensure_admin:
         not_authorized: You are not authorized to perform this action

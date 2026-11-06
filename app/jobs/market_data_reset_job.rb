@@ -15,21 +15,42 @@ class MarketDataResetJob < ApplicationJob
   sidekiq_options retry: false
 
   ENQUEUE_GUARD_KEY = "market_data_reset_job:enqueued".freeze
+  ENQUEUE_GUARD_TTL = 12.hours
 
   # Queues the reset unless one is already queued or running, so a second
-  # click does not delete and re-import everything again. Returns whether it
-  # queued one.
+  # click does not delete and re-import everything again. The guard lives in
+  # Redis, which every web and worker process shares. Returns :queued,
+  # :already_queued or :failed.
   def self.enqueue_once
-    return false unless Rails.cache.write(ENQUEUE_GUARD_KEY, true, unless_exist: true, expires_in: 12.hours)
+    return :already_queued unless Sidekiq.redis { |conn| conn.call("SET", guard_key, "1", "NX", "EX", ENQUEUE_GUARD_TTL.to_i) }
 
-    perform_later
-    true
+    begin
+      queued = perform_later
+    rescue => e
+      Rails.logger.error("MarketDataResetJob could not be queued: #{e.class}: #{e.message}")
+    end
+    return :queued if queued
+
+    release_guard
+    :failed
+  end
+
+  def self.guard_key
+    ENQUEUE_GUARD_KEY
+  end
+
+  # The guard expires on its own, so a failure to release it only delays the
+  # next reset.
+  def self.release_guard
+    Sidekiq.redis { |conn| conn.call("DEL", guard_key) }
+  rescue => e
+    Rails.logger.error("MarketDataResetJob could not release its enqueue guard: #{e.class}: #{e.message}")
   end
 
   def perform
     with_advisory_lock { reset_market_data }
   ensure
-    Rails.cache.delete(ENQUEUE_GUARD_KEY)
+    self.class.release_guard
   end
 
   private

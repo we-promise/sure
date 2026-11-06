@@ -157,6 +157,7 @@ de:
       reset_market_data:
         market_data_reset: Zurücksetzen der Marktdaten eingeplant. Kurse und Preise werden neu geladen, danach werden alle Konten synchronisiert.
         market_data_reset_already_queued: Ein Zurücksetzen der Marktdaten ist bereits eingeplant oder läuft.
+        market_data_reset_failed: Das Zurücksetzen der Marktdaten konnte nicht eingeplant werden. Es wurde nichts gelöscht, bitte versuche es erneut.
       not_authorized: Du bist nicht berechtigt, diese Aktion auszuführen.
       sync_settings:
         auto_sync_label: Automatische Synchronisierung aktivieren

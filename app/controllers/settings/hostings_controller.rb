@@ -343,8 +343,11 @@ class Settings::HostingsController < ApplicationController
   end
 
   def reset_market_data
-    notice = MarketDataResetJob.enqueue_once ? t(".market_data_reset") : t(".market_data_reset_already_queued")
-    redirect_to settings_hosting_path, notice: notice
+    case MarketDataResetJob.enqueue_once
+    when :queued then redirect_to settings_hosting_path, notice: t(".market_data_reset")
+    when :already_queued then redirect_to settings_hosting_path, notice: t(".market_data_reset_already_queued")
+    else redirect_to settings_hosting_path, alert: t(".market_data_reset_failed")
+    end
   end
 
   def disconnect_external_assistant

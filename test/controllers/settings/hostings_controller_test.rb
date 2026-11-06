@@ -865,6 +865,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "super admin can reset market data for the whole instance" do
     sign_in users(:sure_support_staff)
+    MarketDataResetJob.stubs(:guard_key).returns("market_data_reset_job:test:#{SecureRandom.hex(8)}")
 
     with_self_hosting do
       assert_enqueued_with(job: MarketDataResetJob) do
@@ -874,11 +875,13 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to settings_hosting_url
     assert_equal I18n.t("settings.hostings.reset_market_data.market_data_reset"), flash[:notice]
+  ensure
+    MarketDataResetJob.release_guard
   end
 
   test "a second market data reset is not queued while one is pending" do
     sign_in users(:sure_support_staff)
-    MarketDataResetJob.stubs(:enqueue_once).returns(false)
+    MarketDataResetJob.stubs(:enqueue_once).returns(:already_queued)
 
     with_self_hosting do
       delete reset_market_data_settings_hosting_url
@@ -886,6 +889,18 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to settings_hosting_url
     assert_equal I18n.t("settings.hostings.reset_market_data.market_data_reset_already_queued"), flash[:notice]
+  end
+
+  test "a market data reset that cannot be queued says so" do
+    sign_in users(:sure_support_staff)
+    MarketDataResetJob.stubs(:enqueue_once).returns(:failed)
+
+    with_self_hosting do
+      delete reset_market_data_settings_hosting_url
+    end
+
+    assert_redirected_to settings_hosting_url
+    assert_equal I18n.t("settings.hostings.reset_market_data.market_data_reset_failed"), flash[:alert]
   end
 
   test "family admin cannot reset market data for the whole instance" do

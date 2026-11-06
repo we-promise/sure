@@ -99,21 +99,39 @@ class MarketDataResetJobTest < ActiveJob::TestCase
   end
 
   test "enqueue_once queues one reset until it has run" do
-    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    use_own_guard_key
     stub_imports
 
     assert_enqueued_jobs 1, only: MarketDataResetJob do
-      assert MarketDataResetJob.enqueue_once
-      assert_not MarketDataResetJob.enqueue_once
+      assert_equal :queued, MarketDataResetJob.enqueue_once
+      assert_equal :already_queued, MarketDataResetJob.enqueue_once
     end
 
     MarketDataResetJob.perform_now
     assert_enqueued_jobs 1, only: MarketDataResetJob do
-      assert MarketDataResetJob.enqueue_once
+      assert_equal :queued, MarketDataResetJob.enqueue_once
     end
+  ensure
+    MarketDataResetJob.release_guard
+  end
+
+  test "enqueue_once releases the guard when the job cannot be queued" do
+    use_own_guard_key
+    MarketDataResetJob.stubs(:perform_later).raises(RedisClient::CannotConnectError).then.returns(false).then.returns(MarketDataResetJob.new)
+
+    assert_equal :failed, MarketDataResetJob.enqueue_once
+    assert_equal :failed, MarketDataResetJob.enqueue_once
+    assert_equal :queued, MarketDataResetJob.enqueue_once
+  ensure
+    MarketDataResetJob.release_guard
   end
 
   private
+    # Parallel test processes share Redis, so each test guards its own key.
+    def use_own_guard_key
+      MarketDataResetJob.stubs(:guard_key).returns("market_data_reset_job:test:#{SecureRandom.hex(8)}")
+    end
+
     def stub_imports
       MarketDataImporter.any_instance.stubs(:import_security_prices)
       MarketDataImporter.any_instance.stubs(:import_exchange_rates)
