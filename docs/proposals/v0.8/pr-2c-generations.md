@@ -597,3 +597,39 @@ flowchart LR
     `suggest_bill_setup(` on providers;
   - `resolved_categorization_provider`;
   - `parse_json_flexibly` outside the PDF workers.
+
+## As built
+
+The 2c commits on `feat/ai-transports-instrumentation` (#4765), 16 of them, follow the steps
+above. Where they differ:
+
+- **Order.** The old job classes go with their feature's move (steps 8a–8c), not in step 7, so
+  every commit passes the suite. Categorization and merchant detection land in one commit,
+  because the evals' new client (step 10) covers both.
+- **The evals moved in step 8.** `Eval::GenerationClient` runs the generations on the run's own
+  endpoint and model and answers in the `Provider::Response` the runners already read;
+  `Eval::ProviderFactory` reads the install's OpenAI endpoint from `Ai::Config`. Chat evals keep
+  `Provider::Openai` until PR 6. `evals:smoke_test` runs the categorize generation too.
+- **No schema example in `none` mode.** §7 appends one; today's prompts for custom servers
+  already show the shape, and appending would change them, so nothing is appended.
+- **`llm-evals.yml` is unchanged.** `ai-evals.yml` (recorded, on AI changes) and `ai-live.yml`
+  (the label) are new; the tag workflow keeps running as it did.
+- **The override keys** were read per protocol for two commits (Ai::Prompt's interim map), then
+  collapsed in step 9. The prompts page's field labels now use absolute i18n keys: rendered
+  inside the section layout, the relative ones resolved against the partial and showed
+  "translation missing", which is also true of the chat and dig-in labels on `main`.
+- **Bill setup's confidence** has no range in the schema: today's suggester clamps an
+  out-of-range value to 0..1, and a range would turn it into nil.
+- **Restored diagnostics.** The categorizer still logs "Jev is misconfigured; falling back to the
+  LLM provider" when a family chose Jev and it can't be built, and its completion entry still
+  lists the cached and blocked transactions.
+- **`Sure/NoPromptHeredoc` starts empty.** Nothing in its scope is over ten lines once the prompts
+  moved, so it has no allowlist, and its test keeps it that way.
+- **Open:** the live check behind decision 7 and every live cassette need funded keys.
+  `test/models/ai/live/generate_live_test.rb` skips each case until its cassette exists;
+  `ai-evals.yml` reports nothing to replay until `test/vcr_cassettes/ai/evals/` is recorded.
+
+**Validation:** full suite 14,904 runs, 0 errors, 14 failures, the same 14 that fail on `main`;
+110 system tests for settings, admin, bills, imports, rules, chats and categories (remote
+Chromium, `PARALLEL_WORKERS=1`) pass; RuboCop (with both Sure cops), erb_lint, Biome and
+Brakeman are clean; Pipelock 3.6.0's diff scan finds nothing.
