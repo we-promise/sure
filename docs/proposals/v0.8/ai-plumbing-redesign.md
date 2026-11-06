@@ -785,8 +785,8 @@ end
   (`FamilyDocument.readable_by`), and that filter stays.
 - `stored_document_text` is chat's tool `get_document_text` (#3422), which reads a vault
   statement's text into the conversation and makes no AI call of its own. It's in chat's manifest
-  from PR 2, so 2b's migration counts it as agreed for families with chat on, whichever of #3422
-  and 2b lands first.
+  from PR 2, so PR 7's consent migration counts it as agreed for families with chat on, whichever
+  of #3422 and 2b lands first.
 - `Ai::Routes.needs_for(feature)` follows `shadow_of` and `route_of`, so the router checks
   capabilities against the feature the needs come from.
 - A hash of needs (`categorize`) means the feature has a generation and a judgement: a route
@@ -2595,7 +2595,9 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 ## 19. Delivery
 
 Eight PRs after the spike, the first of them in five parts (2a to 2e). Each PR, and each part,
-is its own PR into `main`, merged in order. The spike branch (PR 1) is never merged; only its
+is its own PR into `main`, merged in order, except that 2a and 2b share one PR,
+we-promise/sure#4765, because the maintainer wants fewer PRs (call by @josh-sanders during
+development of PR #4440). The spike branch (PR 1) is never merged; only its
 report is in PR #4440, which holds the proposal documents, no code, and stays a draft until the
 whole plan is done. These are calls by @josh-sanders during development of
 PR #4440.
@@ -2643,8 +2645,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    fibers, llama.cpp's slots, interrupting background calls; section 11 is built on it), and a
    decisions register. PR 2c records live cassettes for Anthropic's and OpenAI's successful
    paths before relying on them: the spike's keys had no credits.
-2. **Generations: every AI call except chat**, in five parts, each its own PR into `main`, merged
-   in order (2a to 2e). All five land in the same release, so today's AI job classes stay as
+2. **Generations: every AI call except chat**, in five parts, merged in order (2a to 2e). Each is
+   its own PR into `main`, except 2a and 2b, which share #4765. All five land in the same release, so today's AI job classes stay as
    shims for that one release, not between parts. Each part replaces something whole, so `main`
    works between them, and each brings a transport call only with its first caller. The target
    release is v0.7.7 (call by @josh-sanders during development of PR #4440).
@@ -2667,6 +2669,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      today's checks until PR 7 (section 6). #3422's indexing job, if it has landed, asks
      `Ai.available?(:embed)` with the uploader's switch (section 5.5). Adds the agreement test, with chat's entry points on its allowlist until PR 6.
      *Deletes:* the non-chat availability checks and their test stubs.
+     Implementation plan: [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md).
    - **2c. Generations.** `transport.generate` with the JSON-mode policy, `Ai::Generation`,
      `Ai::Requester`, `Ai::Batch` with per-item costs and splitting on overflow,
      `Ai::GenerationJob` with small batches, failover and escalation down the list (section 5.4), the ERB prompt files with the key collapse (section
@@ -2699,7 +2702,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `search_family_files` always listed with its metadata fallback (section 14), and
      `get_document_text`'s note on scans. Adds the documents test.
      *Deletes:* the four PDF and statement workers, the usage recorders, the per-worker tracing,
-     `preferred_llm_provider` and `llm_provider_order`, and their test stubs.
+     `preferred_llm_provider`, and their test stubs. `llm_provider_order` stays while today's chat
+     uses it (`Assistant::Provided#get_model_provider`) and goes with it in PR 6.
 
    *Still on old code after 2e:* chat, through `Assistant`, `Provider::Openai` and
    `Provider::Anthropic`'s chat methods and `Chat.default_model`, reading the same ENV and
@@ -2884,6 +2888,7 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`06-ai-file-split-review.md`](06-ai-file-split-review.md) | Merge hotspots and files to split |
 | [`chatwoot-rubyllm-lessons-learned.md`](chatwoot-rubyllm-lessons-learned.md) | Chatwoot's move to RubyLLM |
 | [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md) | PR 2a's implementation plan, and the RubyLLM commits since 2.1.1 that matter for 2.2 |
+| [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md) | PR 2b's implementation plan (on #4765 with 2a), and the agreement test's setups |
 
 **Terms this plan defines**, for readers and coding agents:
 

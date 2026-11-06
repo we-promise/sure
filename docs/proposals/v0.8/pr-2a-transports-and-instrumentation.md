@@ -43,6 +43,8 @@ flowchart LR
 
 1. **Where it's built.** A branch from `origin/main` (`feat/ai-transports-instrumentation`)
    with none of #4440's commits. #4440 keeps the documents, this plan included.
+   2b is built on the same branch and goes into the same PR, we-promise/sure#4765, because the
+   maintainer wants fewer PRs ([`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md)).
 2. **How far the proxy fix reaches.** Everything `Ai::Transport::Http` builds, **plus** today's
    `Provider::Openai` client and `Assistant::External::Client`.
    - This is an exception to §19's principle: a few lines in code that 2e and PR 6 delete,
