@@ -37,7 +37,6 @@ Sure/NoAiEnv:
     - "app/models/provider/anthropic/auto_categorizer.rb"       # 2c
     - "app/models/provider/anthropic/auto_merchant_detector.rb" # 2c
     - "app/models/provider/anthropic/bank_statement_extractor.rb" # 2e
-    - "app/models/provider/anthropic/bill_setup_suggester.rb"   # 2c
     - "app/models/provider/anthropic/pdf_processor.rb"          # 2e
     - "app/models/provider/anthropic/provider_merchant_enhancer.rb" # 2c
     - "app/models/provider/jev.rb"                              # 2d

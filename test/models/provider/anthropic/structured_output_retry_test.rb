@@ -32,15 +32,6 @@ class Provider::Anthropic::StructuredOutputRetryTest < ActiveSupport::TestCase
       },
       check: ->(test, result) { test.assert_equal "walmart.com", result.first.business_url }
     },
-    "report_bill_setup" => {
-      input: { "name" => "Netflix", "amount" => 15.49, "frequency" => "monthly", "day_of_month" => 3,
-               "category_name" => "Subscriptions", "bill_type" => "subscription", "confidence" => 0.9 },
-      build: ->(client, family) {
-        Provider::Anthropic::BillSetupSuggester.new(client, model: AUTO_MODEL, family: family,
-          charges: [ { date: "2026-08-03", amount: 15.49, name: "NETFLIX.COM" } ], categories: [ "Subscriptions" ]).suggest
-      },
-      check: ->(test, result) { test.assert_equal "Netflix", result.name }
-    },
     "report_document_analysis" => {
       input: { "document_type" => "bank_statement", "summary" => "Statement" },
       build: ->(client, family) {
