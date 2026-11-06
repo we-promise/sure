@@ -61,7 +61,7 @@ module AiTestHelper
   end
   Ai::Transport.singleton_class.prepend(TransportStub)
 
-  # A transport that answers `generate` and `judge` from the test, through Ai::Transport::Base,
+  # A transport that answers `generate`, `judge` and `embed` from the test, through Ai::Transport::Base,
   # so the call context and the `.ai` events are the real ones.
   class FakeTransport < Ai::Transport::Base
     def initialize(endpoint, responder)
@@ -85,6 +85,22 @@ module AiTestHelper
         end
         JudgeResponse.new(answers:, usage: Ai::Tokens.new(input_tokens: 10 * answers.size, output_tokens: 0))
       end
+
+      # The test answers the vectors, or nil for one vector per text of the model's dimensions
+      # (3 when it has none), each text's own so a search can tell them apart.
+      def run_embed(request)
+        vectors = @responder.call(request) || request.texts.map { AiTestHelper.vector_for(_1, request.model.embedding_dimensions || 3) }
+        EmbedResponse.new(vectors: checked_vectors!(request.model, vectors, request.texts.size),
+                          usage: Ai::Tokens.new(input_tokens: 4 * request.texts.size, output_tokens: 0))
+      end
+  end
+
+  # A stable unit vector per text, for embedding stubs.
+  def self.vector_for(text, dimensions)
+    seed = Digest::SHA256.digest(text.to_s).bytes
+    raw = Array.new(dimensions) { |i| seed[i % seed.size] + 1.0 }
+    norm = Math.sqrt(raw.sum { _1 * _1 })
+    raw.map { _1 / norm }
   end
 
   def self.judge_answer(answer)

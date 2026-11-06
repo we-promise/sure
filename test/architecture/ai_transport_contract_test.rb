@@ -2,7 +2,8 @@ require "test_helper"
 
 # One contract every transport passes (ai-plumbing-redesign.md, section 17): error mapping,
 # retries, usage normalisation, the proxy, and that clients are built only by
-# Ai::Transport::Http. 2c adds generate's JSON-mode and bad-output cases, 2d judge, 2e embed.
+# Ai::Transport::Http. 2c adds generate's JSON-mode and bad-output cases, 2d judge, 2e files, embed and ocr
+# (their own files beside this one).
 class AiTransportContractTest < ActiveSupport::TestCase
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
 

@@ -1,6 +1,6 @@
 # The transport interface (section 7). A transport call arrives with its first caller: 2a
 # implements `probe` (AiHealth::Probe), 2c `generate` (Ai::Generation), 2d `judge`
-# (Ai::Judgement); `embed` comes in 2e and `converse` in PR 6.
+# (Ai::Judgement), 2e `embed` (Ai::Embeddings) and `ocr` (PDF reading); `converse` comes in PR 6.
 class Ai::Transport::Base
   # One structured-output request. `failed_ratio` (optional) takes the parsed JSON and returns
   # the share of items the model left blank or missed, for `auto` JSON mode's fallback; nil
@@ -43,6 +43,22 @@ class Ai::Transport::Base
   # its answer was malformed, and the summed usage of every request.
   JudgeResponse = Data.define(:answers, :usage) do
     def to_event = answers.transform_values { _1&.transform_values(&:to_h) }
+  end
+
+  # One embedding request (2e): a vector per text, in order. `task_type` is the provider's
+  # retrieval hint (RETRIEVAL_DOCUMENT, RETRIEVAL_QUERY): Gemini and Vertex read it, the OpenAI
+  # API ignores it.
+  EmbedRequest = Data.define(:feature, :family, :model, :texts, :task_type) do
+    def initialize(feature:, model:, texts:, family: nil, task_type: nil)
+      super(feature: feature.to_sym, family:, model:, texts: Array(texts), task_type:)
+    end
+
+    # The `.ai` event records how many texts, never the texts (a family's documents).
+    def to_event = { items: texts.size, task_type: }.compact
+  end
+
+  EmbedResponse = Data.define(:vectors, :usage) do
+    def to_event = { vectors: vectors.size, dimensions: vectors.first&.size }
   end
 
   # `auto` moves on when more than this share of items came back blank or missing (today's
@@ -94,7 +110,13 @@ class Ai::Transport::Base
   # How many requests one call may have in flight.
   def parallel_requests = endpoint.parallel_requests || 1
 
-  def embed(texts, model:)         = raise NotImplementedError, "#{self.class.name}#embed arrives in PR 2e"
+  # Embeds an EmbedRequest's texts and returns an EmbedResponse, or raises an Ai::Error: one
+  # vector per text, each of the model's dimensions when it has them.
+  def embed(request)
+    Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family, budget: endpoint.timeout_seconds) do
+      instrument("embed", model: request.model, request: request.to_event) { run_embed(request) }
+    end
+  end
 
   # Health probes reuse the production path (fixes drift bug 6): the same client settings,
   # headers, timeout, proxy and error mapping. Returns what the check found, or raises an
@@ -115,6 +137,21 @@ class Ai::Transport::Base
     def run_probe(model, check, timeout:) = raise(NotImplementedError)
     def run_generate(request) = raise(NotImplementedError, "#{self.class.name} doesn't generate")
     def run_judge(request) = raise(NotImplementedError, "#{self.class.name} doesn't judge")
+    def run_embed(request) = raise(NotImplementedError, "#{self.class.name} doesn't embed")
+
+    # RubyLLM 2.1.1 doesn't check the row count (#1269; 2.2 raises, #1297) and returns a flat
+    # vector for a single text.
+    def checked_vectors!(model, vectors, expected)
+      vectors = Array(vectors)
+      vectors = [ vectors ] if vectors.first.is_a?(Numeric)
+      raise Ai::Error::InvalidOutput, "expected #{expected} vectors, got #{vectors.size}" unless vectors.size == expected
+
+      dimensions = model.embedding_dimensions
+      wrong = vectors.find { dimensions && _1.size != dimensions }
+      raise Ai::Error::InvalidOutput, "expected #{dimensions} dimensions, got #{wrong.size}" if wrong
+
+      vectors
+    end
 
     # Tolerant parsing, the one copy of what each worker did (section 7): a reasoning model's
     # <think> block, fenced JSON (closed or not), prose around the object, or a bare array.
@@ -182,10 +219,10 @@ class Ai::Transport::Base
         result = yield
         payload[:output] = case result
         when Response then result.json
-        when JudgeResponse then result.to_event
+        when JudgeResponse, EmbedResponse then result.to_event
         else result
         end
-        payload[:usage] = result.usage if result.is_a?(Response) || result.is_a?(JudgeResponse)
+        payload[:usage] = result.usage if result.respond_to?(:usage)
         payload[:json_mode] = result.json_mode if result.is_a?(Response)
         result
       rescue Ai::Error::Base => error

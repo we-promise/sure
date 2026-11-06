@@ -28,22 +28,27 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       model.name
     end
 
-    # One vector per text, with the model's dimensions. RubyLLM 2.1.1 doesn't check the row
-    # count itself (2.2 does, #1297).
+    # Today's request: the model and the texts, no `dimensions` (a server that can't shorten
+    # vectors would refuse it). RubyLLM 2.1.1 keeps the rows in the server's order (#1160 sorts
+    # by index after 2.1.1); OpenAI-compatible servers answer in order.
+    def run_embed(request)
+      embedding = attempt do
+        mapping_errors do
+          ruby_llm_context.embed(request.texts, model: request.model.name, provider: ruby_llm_provider,
+                                                task_type: request.task_type, assume_model_exists: true)
+        end
+      end
+      vectors = checked_vectors!(request.model, embedding.vectors, request.texts.size)
+      EmbedResponse.new(vectors:, usage: Ai::Tokens.from_ruby_llm(embedding.tokens))
+    end
+
+    # One vector, with the model's dimensions.
     def probe_embedding(model)
       embedding = mapping_errors do
         ruby_llm_context.embed(Ai::Transport::Base::PROBE_EMBEDDING_INPUT, model: model.name, provider: ruby_llm_provider,
                                                                        assume_model_exists: true)
       end
-      vectors = embedding.vectors
-      vectors = [ vectors ] if vectors.first.is_a?(Numeric)
-      raise Ai::Error::InvalidOutput, "expected 1 vector, got #{vectors.size}" unless vectors.size == 1
-
-      dimensions = vectors.first.size
-      expected = model.embedding_dimensions
-      raise Ai::Error::InvalidOutput, "expected #{expected} dimensions, got #{dimensions}" if expected && dimensions != expected
-
-      dimensions
+      checked_vectors!(model, embedding.vectors, 1).first.size
     end
 
     # OpenRouter keeps its own RubyLLM provider: only it round-trips reasoning_details
