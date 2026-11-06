@@ -305,38 +305,35 @@ namespace :evals do
     puts
   end
 
-  desc "Quick smoke test to verify provider configuration"
+  desc "Quick smoke test to verify the categorize route works"
   task smoke_test: :environment do
     puts "Running smoke test..."
 
-    provider = Provider::Registry.get_provider(:openai)
-
-    unless provider
-      puts "FAIL: OpenAI provider not configured"
-      puts "Set OPENAI_ACCESS_TOKEN environment variable or configure in settings"
+    route = Ai::Config.current.routes_for(:categorize).find { !_1.judge? }
+    unless route
+      puts "FAIL: no model is configured for categorization"
+      puts "Set OPENAI_ACCESS_TOKEN or ANTHROPIC_API_KEY, or configure a provider in settings"
       exit 1
     end
 
-    puts "  Provider: #{provider.provider_name}"
-    puts "  Model: #{provider.instance_variable_get(:@default_model)}"
+    puts "  Endpoint: #{route.endpoint.name}"
+    puts "  Model: #{route.model.name}"
 
-    # Test with a single categorization sample
-    result = provider.auto_categorize(
-      transactions: [
-        { id: "test", amount: 10, classification: "expense", description: "McDonalds" }
-      ],
-      user_categories: [
-        { id: "1", name: "Food & Drink", classification: "expense" }
-      ]
+    # One categorization sample through the production generation and prompt.
+    generation = Ai::Generations::CategorizeTransactions.new(
+      transactions: [ { id: "test", amount: 10, classification: "expense", description: "McDonalds" } ],
+      categories: [ { id: "1", name: "Food & Drink", is_subcategory: false, parent_id: nil } ],
+      family: nil
     )
+    result = generation.call(plan: Ai::Plan.new(feature: :categorize, lane: :background, routes: [ route ]))
 
     if result.success?
-      category = result.data.first&.category_name
+      category = result.value[:categorizations].first&.dig(:category_name)
       puts "  Test result: #{category || 'null'}"
       puts
       puts "PASS: Provider is working correctly"
     else
-      puts "FAIL: #{result.error.message}"
+      puts "FAIL: #{result.error&.message || result.availability&.reason}"
       exit 1
     end
   end
