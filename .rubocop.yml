@@ -22,6 +22,7 @@ Sure/NoAiEnv:
     - "lib/**/*.rb"
   Exclude:
     - "app/models/ai/legacy_env_config.rb"
+    - "app/models/ai/legacy_env_config/jev.rb"
     - "db/migrate/**/*"
     # allowlist
     - "app/controllers/settings/hostings_controller.rb"        # PR 7: settings pages

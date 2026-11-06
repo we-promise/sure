@@ -183,7 +183,6 @@ nl:
         endpoint_placeholder: "https://api.typesafe.ai/v1/systemone (standaard)"
         model_label: "Model (optioneel)"
         model_placeholder: "jev-latest (standaard)"
-        model_help: "Gaat standaard rechtstreeks naar TypeSafe. Om Jev in plaats daarvan via OpenRouter te bereiken, stelt u het endpoint in op https://openrouter.ai/api/alpha/decisions en het model op ~typesafe/jev-latest."
       openai_settings:
         description: "Voer het toegangstoken in en configureer optioneel een aangepaste OpenAI-compatibele provider"
         env_configured_message: "Succesvol geconfigureerd via omgevingsvariabelen."
@@ -333,7 +332,6 @@ nl:
         invalid_llm_budget: "%{field} moet een geheel getal ≥ %{minimum} zijn."
         invalid_anthropic_base_url: "De Anthropic-basis-URL moet een http(s)-URL zijn."
         anthropic_model_required_for_base_url: "Een Anthropic-model is verplicht als er een aangepaste basis-URL is ingesteld."
-        invalid_jev_endpoint: "Het Jev-endpoint moet een https-URL zijn. Gewoon http wordt alleen voor localhost geaccepteerd."
         invalid_categorization_rate: "%{field} moet een getal tussen 0 en 1 zijn."
         scheduler_sync_failed: "Instellingen opgeslagen, maar bijwerken van synchronisatieschema mislukt. Probeer het opnieuw of controleer de serverlogs."
       disconnect_external_assistant:

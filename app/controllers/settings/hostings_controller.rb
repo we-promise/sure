@@ -270,18 +270,21 @@ class Settings::HostingsController < ApplicationController
     if hosting_params.key?(:jev_endpoint)
       raw_endpoint = hosting_params[:jev_endpoint].to_s.strip
       stored_endpoint = Setting.jev_endpoint
-      if stored_endpoint.present? && raw_endpoint == Provider::Jev.redacted_endpoint(stored_endpoint)
+      if stored_endpoint.present? && raw_endpoint == Ai::LegacyEnvConfig::Jev.redacted_endpoint(stored_endpoint)
         # The field shows the stored endpoint redacted, and auto-submits on
         # blur, so this is the page echoing it back, not a change. Saving it
         # would strip the credentials the operator put in the URL.
       elsif raw_endpoint.blank?
         Setting.jev_endpoint = nil
       else
-        # Provider::Jev owns the rule so settings, JEV_ENDPOINT and eval-time
-        # construction cannot drift apart; the controller's job is only to turn
-        # a rejection into a message instead of a 500.
-        unless Provider::Jev.endpoint_allowed?(raw_endpoint)
+        # Ai::LegacyEnvConfig::Jev owns the rules, so the form, JEV_ENDPOINT and the
+        # config can't drift apart; the controller only turns a rejection into a
+        # message instead of a 500.
+        unless Ai::LegacyEnvConfig::Jev.endpoint_allowed?(raw_endpoint)
           raise Setting::ValidationError, t(".invalid_jev_endpoint")
+        end
+        if Ai::LegacyEnvConfig::Jev.unsupported_reason(raw_endpoint)
+          raise Setting::ValidationError, t(".unsupported_jev_endpoint")
         end
         Setting.jev_endpoint = raw_endpoint
       end

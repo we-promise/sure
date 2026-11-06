@@ -2,7 +2,7 @@
 # installs configured either way keep working while the router replaces today's lookups.
 #
 # Each value resolves the way today's code resolves it. Wherever today's code has a resolver
-# (Provider::Registry, Provider::*.effective_*, Assistant::External.config), this calls it, so
+# (Provider::Registry, Provider::*.effective_*, Assistant::External.config, Ai::LegacyEnvConfig::Jev), this calls it, so
 # the router and the calls not yet on the router can't disagree. test/architecture/ai_config_test
 # checks that over every documented setup. The one deliberate difference is drift bug 5:
 # embeddings fall back to the OpenAI values saved in Settings, as every other AI setting does.
@@ -26,6 +26,11 @@ class Ai::LegacyEnvConfig
   ANTHROPIC_MAX_TOKENS = 4096
   EMBEDDING_TIMEOUT = 120         # VectorStore::Embeddable's client
   EXTERNAL_ASSISTANT_TIMEOUT = 120 # Assistant::External::Client::TIMEOUT_READ
+  JEV_RETRIES = 3                  # today's Provider::Jev client
+  JEV_UNSUPPORTED = {
+    openrouter: "OpenRouter's Jev needs RubyLLM 2.2 (PR 5)",
+    path: "only TypeSafe-style …/v1/systemone endpoints are supported"
+  }.freeze
 
   # The inputs a snapshot depends on, so Ai::Config rebuilds when one changes.
   ENV_PREFIXES = %w[OPENAI_ ANTHROPIC_ LLM_ JEV_ EMBEDDING_ VECTOR_STORE_ EXTERNAL_ASSISTANT_].freeze
@@ -136,19 +141,29 @@ class Ai::LegacyEnvConfig
 
     def positive(*values) = values.map(&:to_i).find(&:positive?)
 
-    # Jev serves only families that chose it (Ai::Route#serves?), and only when it can be built:
-    # its constructor refuses a cleartext endpoint off localhost.
+    # Jev serves only families that chose it (Ai::Route#serves?), and only when RubyLLM can reach
+    # it: a TypeSafe-style `…/v1/systemone` URL, http only for a server on a private network
+    # (section 7). An endpoint it can't reach is left out with a warning, so `categorize` uses
+    # the LLM, as today when Jev can't be built.
     def jev
-      return unless buildable { Provider::Registry.get_provider(:jev) }
+      return unless Jev.configured?
 
-      base_url = Provider::Jev.effective_endpoint
-      cloud = URI.parse(base_url).scheme == "https"
+      url = Jev.effective_endpoint
+      reason = Jev.endpoint_allowed?(url) ? Jev.unsupported_reason(url) : :path
+      if reason
+        Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{JEV_UNSUPPORTED.fetch(reason)}")
+        return
+      end
+
+      base_url = Jev.base_url(url)
+      location = location_for(base_url)
       endpoint = Ai::Config::Endpoint.new(
-        name: "jev", protocol: :jev, preset: cloud ? :jev : :jev_local, base_url:, api_key: Provider::Jev.api_key,
-        location: location_for(base_url), timeout_seconds: ENV.fetch("JEV_REQUEST_TIMEOUT", 30).to_i
+        name: "jev", protocol: :jev, preset: location == :cloud ? :jev : :jev_local, base_url:, api_key: Jev.api_key,
+        location:, timeout_seconds: ENV.fetch("JEV_REQUEST_TIMEOUT", 30).to_i, max_retries: JEV_RETRIES,
+        parallel_requests: positive(env("JEV_CONCURRENCY"))
       )
-      Ai::Config::Model.new(endpoint:, name: Provider::Jev.effective_model,
-                            capabilities: cloud ? %i[judge calibrated_confidence] : %i[judge])
+      Ai::Config::Model.new(endpoint:, name: Jev.effective_model,
+                            capabilities: location == :cloud ? %i[judge calibrated_confidence] : %i[judge])
     end
 
     def external_assistant

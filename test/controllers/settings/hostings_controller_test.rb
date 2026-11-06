@@ -617,7 +617,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   # whoever manages it sees the endpoint without its credentials.
   test "the jev panel shows a member neither the endpoint field nor its credentials" do
     with_self_hosting do
-      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/systemone?api_key=qk-secret" # pipelock:ignore Credential in URL
       member = users(:family_member)
       member.family.update!(categorization_provider: "jev")
       member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
@@ -633,7 +633,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "the jev panel shows the instance settings manager the endpoint without its credentials" do
     with_self_hosting do
-      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/systemone?api_key=qk-secret" # pipelock:ignore Credential in URL
       admin = users(:family_admin)
       admin.family.update!(categorization_provider: "jev")
       admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => true))
@@ -641,7 +641,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       get settings_hosting_url
 
       assert_response :success
-      assert_select "input[name='setting[jev_endpoint]'][value='https://gw.example.com/v1/jev']", 1
+      assert_select "input[name='setting[jev_endpoint]'][value='https://gw.example.com/v1/systemone']", 1
       assert_no_match(/gw-secret|qk-secret|gw-user/, response.body)
     end
   end
@@ -650,10 +650,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   # straight back. Saving it would silently strip the operator's credentials.
   test "submitting the redacted jev endpoint back keeps the stored one" do
     with_self_hosting do
-      stored = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      stored = "https://gw-user:gw-secret@gw.example.com/v1/systemone?api_key=qk-secret" # pipelock:ignore Credential in URL
       Setting.jev_endpoint = stored
 
-      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://gw.example.com/v1/jev" } }
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://gw.example.com/v1/systemone" } }
 
       assert_equal stored, Setting.jev_endpoint
     end
@@ -663,11 +663,11 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   # replaces a stored one that carries credentials.
   test "submitting a different jev endpoint replaces a stored one with credentials" do
     with_self_hosting do
-      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/jev?api_key=qk-secret" # pipelock:ignore Credential in URL
+      Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/systemone?api_key=qk-secret" # pipelock:ignore Credential in URL
 
-      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://other.example.com/v1/jev" } }
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://other.example.com/v1/systemone" } }
 
-      assert_equal "https://other.example.com/v1/jev", Setting.jev_endpoint
+      assert_equal "https://other.example.com/v1/systemone", Setting.jev_endpoint
     end
   end
 
@@ -683,18 +683,29 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "rejects a plaintext jev endpoint but allows loopback" do
+  # Section 7: https for cloud endpoints, http for a server on a private network.
+  test "accepts an http jev endpoint on a private network" do
     with_self_hosting do
       Setting.jev_endpoint = nil
 
-      patch settings_hosting_url, params: { setting: { jev_endpoint: "http://api.typesafe.ai/v1/systemone" } }
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "http://jev:8080/v1/systemone" } }
 
-      assert_response :unprocessable_entity
-      assert_nil Setting.jev_endpoint
+      assert_equal "http://jev:8080/v1/systemone", Setting.jev_endpoint
+    end
+  end
 
-      patch settings_hosting_url, params: { setting: { jev_endpoint: "http://localhost:4000/v1/systemone" } }
+  # RubyLLM 2.1.1 reaches only TypeSafe-style paths; OpenRouter's needs 2.2 (PR 5).
+  test "rejects an OpenRouter or other-path jev endpoint" do
+    with_self_hosting do
+      Setting.jev_endpoint = nil
 
-      assert_equal "http://localhost:4000/v1/systemone", Setting.jev_endpoint
+      [ "https://openrouter.ai/api/alpha/decisions", "https://gw.example.com/v1/jev" ].each do |endpoint|
+        patch settings_hosting_url, params: { setting: { jev_endpoint: endpoint } }
+
+        assert_response :unprocessable_entity
+        assert_match(%r{must end in /v1/systemone}, flash[:alert])
+        assert_nil Setting.jev_endpoint
+      end
     end
   end
 

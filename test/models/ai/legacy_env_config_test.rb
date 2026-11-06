@@ -172,7 +172,31 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert jev.model.capable?(:judge, :calibrated_confidence)
     assert_equal :jev, jev.endpoint.preset
 
-    assert_empty build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "http://jev.example.test/v1/systemone").routes_for(:categorize)
+    assert_equal "https://api.typesafe.ai", jev.endpoint.base_url, "RubyLLM appends /v1/systemone"
+    assert_equal 3, jev.endpoint.max_retries
+    assert_nil jev.endpoint.parallel_requests, "the transport's default: 8 in the cloud"
+  end
+
+  test "a self-hosted Jev on http is jev_local, with no calibrated confidence" do
+    jev = build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "http://jev:8080/v1/systemone", "JEV_CONCURRENCY" => "4")
+            .routes_for(:categorize).first
+
+    assert_equal :jev_local, jev.endpoint.preset
+    assert_equal :local, jev.endpoint.location
+    assert_equal "http://jev:8080", jev.endpoint.base_url
+    assert_equal 4, jev.endpoint.parallel_requests
+    assert jev.model.capable?(:judge)
+    assert_not jev.model.capable?(:calibrated_confidence)
+  end
+
+  test "a Jev endpoint RubyLLM can't reach is left out with a warning" do
+    { "https://openrouter.ai/api/alpha/decisions" => /RubyLLM 2.2/, "https://gw.example.test/v1/jev" => %r{/v1/systemone} }.each do |url, reason|
+      Rails.logger.expects(:warn).with(regexp_matches(reason))
+
+      config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => url)
+
+      assert_equal [ "openai" ], config.routes_for(:categorize).map { _1.endpoint.name }
+    end
   end
 
   test "the external assistant is an agent endpoint at the end of chat's list" do

@@ -157,7 +157,6 @@ fr:
         endpoint_label: Endpoint (Optionnel)
         endpoint_placeholder: https://api.typesafe.ai/v1/systemone (par défaut)
         env_configured_message: Configuré avec succès via les variables d'environnement.
-        model_help: Utilise TypeSafe directement par défaut. Pour passer par OpenRouter, définissez l'endpoint sur https://openrouter.ai/api/alpha/decisions et le modèle sur ~typesafe/jev-latest.
         model_label: Modèle (Optionnel)
         model_placeholder: jev-latest (par défaut)
       llm_provider_selector:
@@ -334,7 +333,6 @@ fr:
         invalid_anthropic_base_url: L'URL de base d'Anthropic doit être une URL http(s).
         invalid_categorization_rate: "%{field} doit être un nombre compris entre 0 et 1."
         invalid_demo_family: La famille sélectionnée doit être propriétaire de l'e-mail de démo configuré.
-        invalid_jev_endpoint: L'endpoint Jev doit être une URL https. Le http simple n'est accepté que pour localhost.
         invalid_llm_budget: "%{field} doit être un nombre entier ≥ %{minimum}."
         invalid_onboarding_state: État d'intégration invalide
         invalid_sync_time: Format d'heure de synchronisation invalide. Veuillez utiliser le format HH:MM (ex. 02:30).

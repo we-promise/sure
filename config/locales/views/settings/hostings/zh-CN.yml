@@ -142,7 +142,6 @@ zh-CN:
         invalid_llm_budget: "%{field} 必须是大于等于 %{minimum} 的整数。"
         invalid_anthropic_base_url: Anthropic Base URL 无效。
         anthropic_model_required_for_base_url: 设置 Anthropic Base URL 时必须填写模型。
-        invalid_jev_endpoint: Jev 端点必须是 https URL。仅 localhost 接受普通 http。
         invalid_categorization_rate: "%{field} 必须是 0 到 1 之间的数字。"
         scheduler_sync_failed: 设置已保存，但同步计划更新失败。请重试或检查服务器日志。
       yahoo_finance_settings:
@@ -257,7 +256,6 @@ zh-CN:
         endpoint_placeholder: https://api.typesafe.ai/v1/systemone（默认）
         model_label: 模型（可选）
         model_placeholder: jev-latest（默认）
-        model_help: 默认直接连接 TypeSafe。若要通过 OpenRouter 连接 Jev，请将端点设置为 https://openrouter.ai/api/alpha/decisions，模型设置为 ~typesafe/jev-latest。
       tiingo_settings:
         title: Tiingo
         description: 使用 Tiingo 同步证券价格。

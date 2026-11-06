@@ -150,7 +150,7 @@ class Family::AutoCategorizer
         category: "auto_categorization", level: "error", message: "Jev is misconfigured; #{consequence}",
         source: self.class.name, family:, provider: "jev",
         metadata: {
-          endpoint: Provider::Jev.redacted_endpoint(Provider::Jev.effective_endpoint),
+          endpoint: Ai::LegacyEnvConfig::Jev.redacted_endpoint(Ai::LegacyEnvConfig::Jev.effective_endpoint),
           error_class: error.class.name,
           error_message: error.message
         }
