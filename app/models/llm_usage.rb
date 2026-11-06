@@ -5,6 +5,16 @@ class LlmUsage < ApplicationRecord
   validates :prompt_tokens, :completion_tokens, :total_tokens, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :estimated_cost, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
+  # One row per request; a call's requests share a call_id (section 10). Rows from before
+  # call_id existed, and rows the per-provider usage recorders still write, have none: each is a
+  # call of one request.
+  CALL_KEY = "COALESCE(llm_usages.call_id, llm_usages.id)".freeze
+
+  enum :status, { succeeded: "succeeded", failed: "failed", cancelled: "cancelled" }, validate: true
+
+  # The per-provider usage recorders mark a failed request by its error in metadata.
+  before_validation -> { self.status = "failed" }, if: -> { succeeded? && metadata.is_a?(Hash) && metadata["error"].present? }
+
   scope :for_family, ->(family) { where(family: family) }
   scope :for_operation, ->(operation) { where(operation: operation) }
   scope :recent, -> { order(created_at: :desc) }
@@ -305,7 +315,8 @@ class LlmUsage < ApplicationRecord
     "openai"
   end
 
-  # Aggregate statistics for a family
+  # Aggregate statistics for a family, counting calls rather than requests: a call RubyLLM or
+  # the transport retried is still one call.
   def self.statistics_for_family(family, start_date: nil, end_date: nil)
     scope = for_family(family)
     scope = scope.for_date_range(start_date, end_date) if start_date && end_date
@@ -313,13 +324,14 @@ class LlmUsage < ApplicationRecord
     # Exclude records with nil cost from cost calculations
     scope_with_cost = scope.where.not(estimated_cost: nil)
 
-    requests_with_cost = scope_with_cost.count
+    calls_with_cost = scope_with_cost.distinct.count(Arel.sql(CALL_KEY))
     total_cost = scope_with_cost.sum(:estimated_cost).to_f.round(2)
-    avg_cost = requests_with_cost > 0 ? (total_cost / requests_with_cost).round(4) : 0.0
+    avg_cost = calls_with_cost > 0 ? (total_cost / calls_with_cost).round(4) : 0.0
 
     {
+      total_calls: scope.distinct.count(Arel.sql(CALL_KEY)),
       total_requests: scope.count,
-      requests_with_cost: requests_with_cost,
+      calls_with_cost: calls_with_cost,
       total_prompt_tokens: scope.sum(:prompt_tokens),
       total_completion_tokens: scope.sum(:completion_tokens),
       total_tokens: scope.sum(:total_tokens),
@@ -330,14 +342,18 @@ class LlmUsage < ApplicationRecord
     }
   end
 
+  # The most recent calls in scope, newest first, each with its requests in order.
+  # @return [Array<LlmUsage::Call>]
+  def self.recent_calls(limit: 100)
+    keys = group(Arel.sql(CALL_KEY)).order(Arel.sql("MAX(llm_usages.created_at) DESC")).limit(limit).pluck(Arel.sql(CALL_KEY))
+    requests = where(id: keys).or(where(call_id: keys)).order(:created_at).group_by { _1.call_id || _1.id }
+
+    keys.filter_map { requests[_1] }.map { LlmUsage::Call.new(_1) }
+  end
+
   # Format cost as currency
   def formatted_cost
     estimated_cost.nil? ? "N/A" : "$#{estimated_cost.round(4)}"
-  end
-
-  # Check if this usage record represents a failed API call
-  def failed?
-    metadata.present? && metadata["error"].present?
   end
 
   # Get the HTTP status code from metadata
