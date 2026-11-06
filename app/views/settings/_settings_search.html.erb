@@ -13,7 +13,7 @@
       placeholder: t("settings.settings_search.placeholder"),
       aria_label: t("settings.settings_search.aria_label"),
       role: "combobox",
-      aria: { expanded: "false", controls: "settings-search-results", autocomplete: "list" },
+      aria: { expanded: "false", controls: "settings-search-listbox", autocomplete: "list" },
       data: {
         controller: "hotkey",
         hotkey: "/",
@@ -24,8 +24,8 @@
     <kbd class="hidden md:block group-has-[input:not(:placeholder-shown)]:invisible absolute right-3 top-1/2 -translate-y-1/2 uppercase bg-surface-inset-hover rounded-sm px-1.5 py-0.5 text-xs text-secondary shadow-sm pointer-events-none">/</kbd>
   </div>
 
-  <div id="settings-search-results" data-settings-search-target="results" class="hidden w-0 min-w-full">
-    <ul role="listbox" aria-label="<%= t("settings.settings_search.results_label") %>" class="flex flex-col gap-1">
+  <div data-settings-search-target="results" class="hidden w-0 min-w-full">
+    <ul id="settings-search-listbox" role="listbox" aria-label="<%= t("settings.settings_search.results_label") %>" class="flex flex-col gap-1">
       <% visible_items.each_with_index do |item, index| %>
         <li
           role="presentation"

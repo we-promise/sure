@@ -103,6 +103,7 @@ class SettingsTest < ApplicationSystemTestCase
     mfa_title = I18n.t("settings.securities.show.mfa_title")
     assert_selector "[role=option][aria-selected=true]", text: mfa_title
     assert_selector "[role=option][aria-selected=true]", text: I18n.t("settings.settings_nav.security_label")
+    assert_selector "[role=option][aria-selected=true][href*='#:~:text='][data-turbo=false]"
 
     page.send_keys(:enter)
 
@@ -140,6 +141,19 @@ class SettingsTest < ApplicationSystemTestCase
 
     search.fill_in with: I18n.t("settings.preferences.show.personal_budgets")
     assert_selector "[data-settings-search-target=results] [data-slot=title]", exact_text: I18n.t("settings.preferences.show.personal_budgets")
+  end
+
+  test "settings search skips the body of a closed disclosure but keeps its summary" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: I18n.t("settings.securities.show.disable_mfa")
+    assert_selector "[data-settings-search-target=results] [role=option]", text: I18n.t("settings.securities.show.disable_mfa")
+
+    search.fill_in with: I18n.t("settings.securities.show.disable_mfa_password_label")
+    assert_selector "[data-settings-search-target=empty]"
   end
 
   test "settings search lists pages first when their name matches and reports when nothing matches" do

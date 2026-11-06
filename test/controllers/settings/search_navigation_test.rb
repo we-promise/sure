@@ -51,7 +51,7 @@ class Settings::SearchNavigationTest < ActionDispatch::IntegrationTest
 
     get settings_profile_path
 
-    assert_select "[data-controller~=settings-search][data-settings-search-scope-value='#{users(:family_member).id}']"
+    assert_select "[data-controller~=settings-search][data-settings-search-scope-value='#{users(:family_member).id}:#{I18n.locale}']"
   end
 
   test "members are not handed admin-only pages to search" do

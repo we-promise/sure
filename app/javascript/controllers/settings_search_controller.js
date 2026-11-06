@@ -273,6 +273,7 @@ export default class extends Controller {
           []),
       ]
         .filter((element) => !element.closest(SKIPPED_SELECTOR))
+        .filter((element) => !this.collapsed(element))
         .filter((element) => !element.querySelector(TEXT_SELECTOR))
         .map((element) => element.textContent.replace(/\s+/g, " ").trim())
         .filter(
@@ -288,6 +289,14 @@ export default class extends Controller {
     } catch {
       return [];
     }
+  }
+
+  // Text in the body of a closed <details> is not shown; its summary is.
+  collapsed(element) {
+    const details = element.closest("details:not([open])");
+    return (
+      details !== null && element.closest("summary")?.parentElement !== details
+    );
   }
 
   // Lowercase, strip diacritics and treat punctuation as a space, so
