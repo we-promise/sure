@@ -189,8 +189,9 @@ class InvestmentStatement
   # row with any position outside them is flagged missing_cost_basis. Weights
   # share top_holdings' denominator.
   #
-  # sort: one of HOLDINGS_SORT_KEYS; dir: "asc" or "desc". Anything else is
-  # the default (value desc), so the query string cannot raise.
+  # sort: one of HOLDINGS_SORT_KEYS; dir: "asc" or "desc". Each falls back on
+  # its own -- an unknown sort to "value", an unknown dir to "desc" -- so the
+  # query string cannot raise and a valid half of it is kept.
   HOLDINGS_SORT_KEYS = %w[value weight return day_change name].freeze
   HOLDINGS_SORT_DIRECTIONS = %w[asc desc].freeze
 
