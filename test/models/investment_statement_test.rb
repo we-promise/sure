@@ -878,6 +878,133 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 1000, children["cash"].amount.amount
   end
 
+  # The bottom level under Cash lists the account cash its parent counts, as ONE
+  # position: two accounts' cash is one exposure, not two rows at half weight.
+  # Asked with and without a parent, because Cash is reached both from
+  # Liquidity (asset class first) and directly (sub-class first).
+  test "two accounts' cash is one position under Cash" do
+    create_investment_account(balance: 1000, cash_balance: 1000)
+    create_investment_account(balance: 500, cash_balance: 500)
+
+    [ nil, "liquidity" ].each do |parent|
+      rows = @statement.allocation_children("asset_sub_class", "cash", parent: parent)
+
+      assert_equal [ "cash" ], rows.map(&:id), "parent=#{parent.inspect}: account cash was not one position"
+      assert_equal 1500, rows.first.amount.amount, "parent=#{parent.inspect}: the position was not both accounts' cash"
+      assert_equal I18n.t("models.investment_statement.cash"), rows.first.name
+    end
+  end
+
+  # Cash held in another currency converts into the family currency at every
+  # level that counts it: 1,000 EUR at 1.1 is 1,100 USD in Liquidity and in the
+  # Cash position below it, not 1,000.
+  test "account cash in another currency converts at every level" do
+    create_investment_account(balance: 1000, cash_balance: 1000, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+
+    liquidity = @statement.allocation_by("asset_class").find { |s| s.id == "liquidity" }
+    cash_sub = @statement.allocation_children("asset_class", "liquidity").find { |s| s.id == "cash" }
+    position = @statement.allocation_children("asset_sub_class", "cash", parent: "liquidity").sole
+
+    [ liquidity, cash_sub, position ].each_with_index do |segment, level|
+      assert_equal 1100, segment.amount.amount, "level #{level}: EUR cash was not converted"
+    end
+  end
+
+  # The parent counts each account's cash only where it is positive, so the
+  # child does too: +1,000 and -500 is 1,000 at both levels, not a netted 500.
+  test "negative account cash is left out below as above" do
+    create_investment_account(balance: 1000, cash_balance: 1000)
+    create_investment_account(balance: 0, cash_balance: -500)
+
+    parent = @statement.allocation_children("asset_class", "liquidity").find { |r| r.id == "cash" }
+    rows = @statement.allocation_children("asset_sub_class", "cash", parent: "liquidity")
+
+    assert_equal 1000, parent.amount.amount, "precondition: the parent counts positive cash only"
+    assert_equal [ 1000 ], rows.map { |r| r.amount.amount }, "the child cash row disagreed with its parent"
+  end
+
+  # Account cash sits on Liquidity/Cash only.
+  test "account cash is not listed under a cash sub-class reached from another asset class" do
+    create_investment_account(balance: 1000, cash_balance: 1000)
+    assert_not_empty @statement.allocation_children("asset_sub_class", "cash", parent: "liquidity"),
+                     "precondition: the cash is listed under Liquidity/Cash"
+
+    assert_empty @statement.allocation_children("asset_sub_class", "cash", parent: "equity"),
+                 "account cash was filed under equity"
+    assert_empty @statement.allocation_children("asset_sub_class", "stock", parent: "liquidity"),
+                 "account cash was listed outside the cash sub-class"
+  end
+
+  # One security held in a USD and a EUR account is one position of its whole
+  # family-currency value, as `allocation` and `top_holdings` already report it.
+  test "a security held in two accounts and two currencies is one row of the summed value" do
+    usd = create_investment_account(balance: 1000, cash_balance: 0, currency: "USD")
+    eur = create_investment_account(balance: 1000, cash_balance: 0, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    etf = create_classified_security(asset_class: "equity", asset_sub_class: "etf")
+    Holding.create!(account: usd, security: etf, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+    Holding.create!(account: eur, security: etf, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "EUR")
+
+    rows = @statement.allocation_children("asset_sub_class", "etf", parent: "equity")
+
+    assert_equal [ etf.id ], rows.map(&:id), "the security was listed once per account"
+    assert_in_delta 2100, rows.first.amount.amount, 0.0001, "1,000 USD plus 1,000 EUR at 1.1 is 2,100"
+    assert_in_delta 100, rows.first.weight, 0.01
+  end
+
+  # At every level, each bucket's children add up to the bucket, from both
+  # entry points of the ladder, on a portfolio with every kind of row the
+  # bottom level can hold: account cash in several accounts (one negative), a
+  # cash security, and one security across two accounts.
+  test "every allocation level sums to the bucket above it" do
+    first = create_investment_account(balance: 3000, cash_balance: 700)
+    second = create_investment_account(balance: 1000, cash_balance: 300)
+    create_investment_account(balance: 0, cash_balance: -200)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    bond = create_classified_security(asset_class: "fixed_income", asset_sub_class: "bond")
+    cash_security = Security.create!(ticker: "CASH-EUR-#{SecureRandom.hex(3)}", kind: "cash", offline: true)
+    Holding.create!(account: first, security: stock, date: Date.current, qty: 1, price: 1200, amount: 1200, currency: "USD")
+    Holding.create!(account: second, security: stock, date: Date.current, qty: 1, price: 400, amount: 400, currency: "USD")
+    Holding.create!(account: first, security: bond, date: Date.current, qty: 1, price: 800, amount: 800, currency: "USD")
+    Holding.create!(account: first, security: cash_security, date: Date.current, qty: 1, price: 300, amount: 300, currency: "USD")
+
+    @statement.allocation_by("asset_class").each do |klass|
+      subs = @statement.allocation_children("asset_class", klass.id)
+      assert_in_delta klass.amount.amount, subs.sum { |s| s.amount.amount }, 0.0001, "#{klass.id}'s sub-classes did not sum to it"
+
+      subs.each do |sub|
+        positions = @statement.allocation_children("asset_sub_class", sub.id, parent: klass.id)
+        assert_in_delta sub.amount.amount, positions.sum { |p| p.amount.amount }, 0.0001,
+                        "#{klass.id}/#{sub.id}'s positions did not sum to it"
+        assert_equal positions.map(&:id).uniq, positions.map(&:id), "#{klass.id}/#{sub.id} listed a position twice"
+      end
+    end
+
+    @statement.allocation_by("asset_sub_class").each do |sub|
+      positions = @statement.allocation_children("asset_sub_class", sub.id)
+      assert_in_delta sub.amount.amount, positions.sum { |p| p.amount.amount }, 0.0001,
+                      "#{sub.id}'s positions did not sum to it from the sub-class grouping"
+    end
+  end
+
+  # Negative control: with no account cash and each security in one account,
+  # the bottom level is the holdings as they are, row for row.
+  test "a portfolio with no account cash and one holding per security lists its holdings unchanged" do
+    account = create_investment_account(balance: 3000, cash_balance: 0)
+    big = create_classified_security(name: "Big", asset_class: "equity", asset_sub_class: "stock")
+    small = create_classified_security(name: "Small", asset_class: "equity", asset_sub_class: "stock")
+    Holding.create!(account: account, security: big, date: Date.current, qty: 1, price: 2000, amount: 2000, currency: "USD")
+    Holding.create!(account: account, security: small, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    rows = @statement.allocation_children("asset_sub_class", "stock", parent: "equity")
+
+    assert_equal [ [ big.id, "Big", 2000, BigDecimal("66.67") ], [ small.id, "Small", 1000, BigDecimal("33.33") ] ],
+                 rows.map { |r| [ r.id, r.name, r.amount.amount, r.weight ] }
+    assert_empty @statement.allocation_children("asset_sub_class", "cash", parent: "liquidity"),
+                 "a cash position appeared with no cash to show"
+  end
+
   # A sector has no sub-sector here, and inventing one would be a different
   # chart. These render flat.
   test "the groupings that do not nest return no children" do
@@ -956,10 +1083,20 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       "every grouping must add up to the portfolio value: #{totals.inspect}"
   end
 
+  # Each grouping must answer from its own column. One security with all four
+  # columns set, and a different value in each, so a grouping that is missing
+  # (and returns []) or that reads another grouping's column fails here.
   test "every classification grouping is reachable through allocation_by" do
-    %w[asset_class asset_sub_class sector region].each do |grouping|
-      assert_includes InvestmentStatement::ALLOCATION_GROUPINGS, grouping
-      assert_nothing_raised { @statement.allocation_by(grouping) }
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    security = create_classified_security(asset_class: "equity", asset_sub_class: "stock",
+                                          sector: "Technology", region: "north_america")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    expected = { "asset_class" => "equity", "asset_sub_class" => "stock", "sector" => "Technology", "region" => "north_america" }
+    assert_equal expected.keys, InvestmentStatement::ALLOCATION_GROUPINGS
+
+    expected.each do |grouping, bucket|
+      assert_equal [ bucket ], @statement.allocation_by(grouping).map(&:id), "#{grouping} did not group by its own column"
     end
   end
 
