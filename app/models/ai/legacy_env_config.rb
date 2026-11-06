@@ -82,6 +82,10 @@ class Ai::LegacyEnvConfig
     # decision 2). Chat keeps both until PR 6, which resolves its own provider.
     preferred = llm_models.first(1)
     routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
+    # Today's rule for PDF import: only a provider whose PDF support is on (supports_pdf_processing?,
+    # which `vision` carries), so OPENAI_SUPPORTS_PDF_PROCESSING=false keeps it off (2e plan;
+    # editable per model from PR 7).
+    routes[:extract_pdf] = route_list(:extract_pdf, preferred.select { _1.capable?(:vision) })
     routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
     # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM (2d plan,
     # decision 3); the shadow route runs the other one, as the family's shadow provider did.
@@ -143,7 +147,7 @@ class Ai::LegacyEnvConfig
 
     # What today's providers accept: chat's prefix allow-list decides `tools` and `streaming`, and
     # today's PDF support decides `vision` (a custom server is trusted with images, as today, unless
-    # OPENAI_SUPPORTS_PDF_PROCESSING is off). `documents`, a PDF sent as a file, only where the
+    # OPENAI_SUPPORTS_PDF_PROCESSING is off, which also keeps it out of PDF import). `documents`, a PDF sent as a file, only where the
     # provider reads one natively: Anthropic and OpenAI's own API. llama.cpp and Gemini's
     # compatible API refuse RubyLLM's file part, and OpenRouter bills parsing it (2e plan).
     # Every LLM model does structured output.

@@ -15,11 +15,18 @@ class AiConfigTest < ActiveSupport::TestCase
     @user = users(:family_admin)   # AI switch on
   end
 
+  # Setups where today's PDF import refuses to run: its model has no PDF support
+  # (supports_pdf_processing?, deleted in 2e and kept as extract_pdf's route rule).
+  PDF_IMPORT_OFF = %w[C8].freeze
+
   SETUPS.each_key do |id|
     test "#{id}: every non-chat feature's first route is today's provider and model" do
       in_ai_setup(id, family: @family) do
         today = Assistant.builtin_provider
-        LLM_FEATURES.each { |feature| assert_same_route(today, Ai.plan(feature, family: @family, user: @user), "#{id} #{feature}") }
+        LLM_FEATURES.each do |feature|
+          expected = feature == :extract_pdf && PDF_IMPORT_OFF.include?(id) ? nil : today
+          assert_same_route(expected, Ai.plan(feature, family: @family, user: @user), "#{id} #{feature}")
+        end
 
         assert_same_route(jev_chosen? ? :jev : today, Ai.plan(:categorize, family: @family), "#{id} categorize")
         assert_operator Ai::Config.current.routes_for(:categorize).size, :<=, 1, "#{id} categorize lists one model"

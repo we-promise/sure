@@ -1641,9 +1641,12 @@ Sure reads an uploaded PDF in one of four ways, then checks what the model retur
 |---|---|---|
 | **PDF** | The model reads PDFs natively (Anthropic, OpenAI's own API) and the file is within the provider's inline limit (32 MB or 100 pages) | The PDF file itself |
 | **Text** | The PDF has a text layer | The text layer, a batch of pages at a time |
-| **Images** | The model reads images (OpenAI's vision models, Anthropic, and any custom OpenAI-compatible server unless `OPENAI_SUPPORTS_PDF_PROCESSING=false`) | Each page as a 150 dpi image at high detail |
+| **Images** | The model reads images (OpenAI's vision models, Anthropic, and any custom OpenAI-compatible server) | Each page as a 150 dpi image at high detail |
 | **OCR** | An OCR model is set up (from the next config release; see below) | Each page as an image to the OCR model, then its transcription to the text model |
 
+- **PDF import runs only on a model with PDF support, as before:** OpenAI's vision models,
+  Claude, and a custom OpenAI-compatible server unless `OPENAI_SUPPORTS_PDF_PROCESSING=false`,
+  which turns PDF import off.
 - **Auto, the default, tries them in that order**, skipping a way the model can't do. A scan
   with no text layer is never sent as empty text. The next statement for the same account and
   model starts from the way that last passed.
