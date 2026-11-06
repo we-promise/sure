@@ -541,6 +541,19 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_select "#portfolio-allocation a[href*=?]", "drop", count: 0
   end
 
+  # The fallback is labelled `security`, so its rows must be the per-security
+  # allocation, not whatever allocation_by's else branch happens to return.
+  test "the default grouping lists one row per security plus cash" do
+    expected = InvestmentStatement.new(@family, user: @user).allocation.map { |row| row.cash? ? "cash" : row.security.id }
+    assert_operator expected.size, :>=, 2
+
+    get portfolio_path
+    assert_response :success
+
+    rows = css_select("#portfolio-allocation-table [data-portfolio-segment]").map { |node| node["data-portfolio-segment"] }
+    assert_equal expected, rows
+  end
+
   # Rendered through the controller because the partial stitches the levels
   # together: it asks for each level's children, and the bottom level only
   # stays inside its own asset class if the asset class is passed down. Each
