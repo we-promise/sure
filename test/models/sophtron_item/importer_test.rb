@@ -102,6 +102,11 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
     assert result[:success]
     assert_equal 1, result[:transactions_imported]
     assert_equal 1, sophtron_account.reload.raw_transactions_payload.count
+
+    messages = DebugLogEntry.order(:created_at).last(5).map(&:message)
+    assert_includes messages, "Sophtron accounts fetched"
+    assert_includes messages, "Sophtron transaction fetch started"
+    assert_includes messages, "Sophtron transactions stored"
   end
 
   test "automatic import skips linked accounts that require manual sync" do
@@ -328,5 +333,65 @@ class SophtronItem::ImporterTest < ActiveSupport::TestCase
       assert_equal 0, result[:transactions_imported]
       assert_equal 0, result[:transactions_failed]
     end
+  end
+
+  test "unauthorized transaction fetch does not crash when marking requires_update fails validation" do
+    account = accounts(:depository)
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Checking",
+      currency: "USD",
+      balance: 100,
+      raw_transactions_payload: [ { id: "existing-tx" } ]
+    )
+    AccountProvider.create!(account: account, provider: sophtron_account)
+
+    provider = mock
+    provider.expects(:get_accounts).with("ui-1").returns({
+      accounts: [
+        {
+          account_id: "acct-1",
+          account_name: "Checking",
+          balance: "100.00",
+          balance_currency: "USD",
+          currency: "USD"
+        }.with_indifferent_access
+      ],
+      total: 1
+    })
+    provider.expects(:refresh_account).with("acct-1").returns({ JobID: "refresh-job" })
+    provider.expects(:get_job_information).with("refresh-job").returns({ LastStatus: "Completed" })
+    provider.expects(:get_account_transactions).with("acct-1", start_date: anything)
+            .raises(Provider::Sophtron::Error.new("Invalid Sophtron User ID or Access Key", :unauthorized))
+
+    @item.expects(:update).with(status: :requires_update).returns(false).at_least_once
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider).import
+
+    assert_not result[:success]
+    assert result[:transactions_failed].positive?
+  end
+
+  test "refresh-before-fetch unauthorized does not crash when marking requires_update fails validation" do
+    sophtron_account = @item.sophtron_accounts.create!(
+      account_id: "acct-1",
+      name: "Checking",
+      currency: "USD",
+      balance: 100,
+      raw_transactions_payload: [ { id: "existing-tx" } ]
+    )
+
+    provider = mock
+    provider.expects(:refresh_account).with("acct-1")
+            .raises(Provider::Sophtron::Error.new("Access forbidden by Sophtron", :access_forbidden))
+
+    @item.expects(:update).with(status: :requires_update).returns(false)
+
+    result = SophtronItem::Importer.new(@item, sophtron_provider: provider)
+                                 .send(:refresh_account_before_transaction_fetch, sophtron_account)
+
+    assert_not result[:success]
+    assert result[:requires_update]
+    assert_equal "Access forbidden by Sophtron", result[:error]
   end
 end

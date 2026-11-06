@@ -44,4 +44,18 @@ class SophtronRefreshPollJobTest < ActiveJob::TestCase
       SophtronRefreshPollJob.perform_now(@sophtron_account, job_id: "refresh-job")
     end
   end
+
+  test "stores localized timeout message when polling attempts are exhausted" do
+    provider = mock
+    provider.expects(:get_job_information).with("refresh-job").returns({ LastStatus: "Started" })
+    SophtronItem.any_instance.stubs(:sophtron_provider).returns(provider)
+
+    SophtronRefreshPollJob.perform_now(@sophtron_account, job_id: "refresh-job", attempts_remaining: 1)
+
+    assert_equal I18n.t("sophtron_items.errors.refresh_timeout"), @item.reload.last_connection_error
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "sophtron_transaction_sync", entry.category
+    assert_equal "Sophtron refresh poll timed out", entry.message
+  end
 end
