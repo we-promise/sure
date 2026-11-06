@@ -1,4 +1,7 @@
 class GenerateInsightsJob < ApplicationJob
+  # Metadata that says which accounts an insight is about, not what it found.
+  ACCOUNT_SCOPE_KEYS = %w[accounts_digest account_id].freeze
+
   queue_as :scheduled
   sidekiq_options lock: :until_executed, on_conflict: :log
 
@@ -115,6 +118,15 @@ class GenerateInsightsJob < ApplicationJob
             generated_at: Time.current,
             dedup_key: generated.dedup_key
           )
+        elsif !existing.expired? && existing.metadata != metadata &&
+              existing.metadata.except(*ACCOUNT_SCOPE_KEYS) == metadata.except(*ACCOUNT_SCOPE_KEYS)
+          # Only the accounts behind the insight changed (a share granted or
+          # revoked, or a row written before these keys existed). The prose
+          # may quote figures from the old set, so it is rewritten, but the
+          # signal itself did not change: read and dismissed state stay.
+          existing.update!(title: generated.title, body: writer.write(generated), metadata: metadata,
+                           facts: facts, generated_at: Time.current)
+          nil
         elsif existing.metadata != metadata
           # The numbers changed materially: refresh the prose and resurface the
           # insight even if the user had read or dismissed the stale version.

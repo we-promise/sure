@@ -14,7 +14,8 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
   ].freeze
 
   def generate
-    series = balance_sheet.net_worth_series(period: Period.last_30_days)
+    series = BalanceSheet::NetWorthSeriesBuilder.new(family, accounts: shared_accounts)
+                                                .net_worth_series(period: Period.last_30_days)
     values = series.values
     return [] if values.size < 2
 
@@ -39,7 +40,8 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
         # the ~30 days the crossing stays in the series window — storing it
         # here would rewrite the body and resurrect dismissals every night.
         metadata: {
-          milestone: milestone
+          milestone: milestone,
+          accounts_digest: shared_accounts_digest
         },
         period: Period.last_30_days,
         dedup_key: "net_worth_milestone:#{milestone}"
