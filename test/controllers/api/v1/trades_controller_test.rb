@@ -716,7 +716,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     put api_v1_trade_url(trade_id),
       params: update_params,
       headers: api_headers(read_write_api_key)
-    assert_response :success
+    assert_response :ok
 
     response_data = JSON.parse(response.body)
     assert_equal "Updated notes", response_data["notes"]
@@ -740,7 +740,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       params: { trade: { type: "sweep_out", qty: 4 } },
       headers: api_headers(read_write_api_key)
 
-    assert_response :success
+    assert_response :ok
     body = JSON.parse(response.body)
     assert_equal(-4, body["qty"].to_d)
     assert_equal "Sweep Out", body["investment_activity_label"]
@@ -850,7 +850,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     put api_v1_trade_url(trade_id),
       params: update_params,
       headers: api_headers(read_write_api_key)
-    assert_response :success
+    assert_response :ok
 
     response_data = JSON.parse(response.body)
     assert_equal "Updated dividend notes", response_data["notes"]
