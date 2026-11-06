@@ -132,3 +132,76 @@ flowchart LR
 - `ai_config_test.rb` checks that the deprecated ENV path routes each feature to the provider and
   model today's code uses; `ai_feature_guard_test.rb` that every action starting an AI feature
   declares `requires_ai`.
+
+## Generations (PR 2c)
+
+Every structured-output feature (categorization, merchant detection and enhancement, bill setup)
+is one small `Ai::Generation` file, a prompt folder and a domain requester. Jobs, failover and
+parsing are the plumbing's.
+
+```mermaid
+flowchart LR
+  D["requester<br/>Family::AutoCategorizer, …"] -->|"Ai::GenerationJob(feature, ids)"| G["Ai::Generation#call(batches: 1)"]
+  G --> P["Ai::Prompt<br/>app/prompts/&lt;name&gt;/"]
+  G --> B["Ai::Batch<br/>batch_size + tokens"]
+  G --> T["route.transport.generate"]
+  T --> S["Ai::Schema<br/>coerce"]
+  S --> D
+```
+
+**Where things live**
+
+| Concern | File |
+|---|---|
+| A feature's declaration: key, prompt, schema, batching | `app/models/ai/generations/*.rb`, on `app/models/ai/generation.rb` |
+| Its prompts, one folder per variant | `app/prompts/<name>/instructions.txt.erb` and `input.txt.erb` |
+| The domain side: what to send, how to apply the answer | the requester, e.g. `app/models/family/auto_categorizer.rb` (`Ai::Requester`) |
+| The one job | `app/jobs/ai/generation_job.rb` |
+| JSON modes and tolerant parsing | `app/models/ai/transport/json_mode.rb`, `base.rb` |
+| Coercion | `app/models/ai/schema.rb` |
+| Batches and splitting | `app/models/ai/batch.rb`, `generation.rb` |
+| Down marks | `app/models/ai/down_marks.rb` |
+
+**Adding a generation feature**
+
+1. Add its row to `Ai::Routes::MATRIX` (see above).
+2. Write `app/models/ai/generations/<name>.rb`: `feature`, `prompt`, `schema` (a constant or a
+   method, valid in OpenAI's strict mode), and for a list `batch`, `merge … by:`, `required` and
+   `blank_item`. `prompt_locals` gives the templates their data.
+3. Write the prompt folder. ERB runs as RubyLLM renders it, with no trim mode, so check the
+   rendered text; shared parts go in `app/prompts/shared/_<name>.txt.erb`.
+4. Make a domain class its requester (`include Ai::Requester`, `ai_feature :key`,
+   `from_ai_job`, `ai_generation`, `apply_ai`, `ai_finished`, `ai_failed`) and list it in
+   `Ai::Requesters`. Enqueue `Ai::GenerationJob.perform_later(:key, { ids:, family_id: })`.
+5. Add `test/models/ai/generations/<name>_test.rb`; `ai_routing_matrix_test` and
+   `ai_schemas_test` check the rest.
+
+**Rules**
+
+- **One schema, every transport.** The schema goes through RubyLLM's `with_schema`: a strict
+  `response_format` on chat completions and the Responses API, native structured output on
+  Anthropic.
+- **JSON modes** apply to chat-completions servers: `auto` walks strict, json_object, none, moving
+  on when the answer doesn't parse or, for a list, when more than half the items are blank. A
+  400 about the JSON mode or the reasoning effort retries once in `none` without the effort; any
+  other 400 ends the call.
+- **Overflow splits, invalid output escalates.** `ContextTooLong` or an answer cut at the output
+  limit halves the batch on the same route; `InvalidOutput` moves to the next route; a
+  timeout, 5xx, 429, refused connection, bad key or missing model marks the smallest broken thing
+  down for 60 seconds and moves on.
+- **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
+  `app/models/ai/**` and controllers.
+- **Prompts change only with evals.** The prompts are today's, word for word
+  (`test/architecture/ai_prompts_test.rb` renders each against its golden text); a change is its
+  own PR, run with the `ai-live` label.
+
+**Tests**
+
+- `stub_ai(:categorize, returns: { categorizations: [...] })` answers the feature's generations
+  without HTTP, still running coercion, failover, instrumentation and the requester; it returns
+  the requests sent. `raises: Ai::Error::Timeout` fails them; a block answers per request.
+- `with_ai_model_settings(batch_size: 2) { }` changes the test setup's OpenAI model.
+- `test/models/ai/live/` replays cassettes under `test/vcr_cassettes/ai/<preset>/`; record them
+  with `RECORD_CASSETTES=1` and the keys in ENV, or run them live with `AI_LIVE=1`.
+- CI: `ai-evals.yml` runs the eval datasets against recorded answers on any AI change; the
+  `ai-live` label runs the live tests and evals with repository secrets.
