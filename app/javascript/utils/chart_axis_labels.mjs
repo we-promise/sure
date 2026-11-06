@@ -37,10 +37,11 @@ function unitFor(largest, locale, currency) {
   }).formatToParts(largest);
   const integer = parts.filter((p) => p.type === "integer").map((p) => p.value).join("");
   const fraction = parts.find((p) => p.type === "fraction")?.value;
-  // NaN for locales with non-Latin digits: fall back to plain units.
   const shown = Number(fraction ? `${integer}.${fraction}` : integer);
 
-  if (!(shown > 0)) return 1;
+  // Locales with non-Latin digits (ar-EG) can't be read back this way. Report
+  // "unknown" rather than guessing a unit, so the caller shows full numbers.
+  if (!(shown > 0)) return null;
   return 10 ** Math.round(Math.log10(largest / shown));
 }
 
@@ -71,7 +72,10 @@ export function compactAxisFormatter(ticks, currency, locale) {
   // Fewest decimals that show the tick spacing exactly, bumped until unique.
   // When even MAX_FRACTION_DIGITS cannot show the spacing exactly, compact
   // labels would be unique but rounded, so go straight to the full number.
-  let digits = step > 0 ? decimalsFor(step / unitFor(largest, locale, currency), MAX_FRACTION_DIGITS + 1) : 0;
+  // A lone tick has no spacing, so give it all the precision compact allows.
+  const unit = step > 0 ? unitFor(largest, locale, currency) : 1;
+  let digits = MAX_FRACTION_DIGITS;
+  if (step > 0) digits = unit ? decimalsFor(step / unit, MAX_FRACTION_DIGITS + 1) : MAX_FRACTION_DIGITS + 1;
   for (; digits <= MAX_FRACTION_DIGITS; digits++) {
     const formatter = buildFormatter(locale, currency, {
       notation: "compact",

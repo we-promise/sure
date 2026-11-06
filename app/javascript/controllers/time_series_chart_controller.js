@@ -703,10 +703,9 @@ export default class extends Controller {
   get _gridlineGutter() {
     if (this._gutterMemo == null) {
       const labels = gridlineLabels(this._gridlineTicks, this._seriesCurrency);
-      this._gutterMemo = gridlineLabelGutter(
-        labels,
-        getComputedStyle(this.element).fontFamily,
-      );
+      // d3's axis draws its labels in font-family="sans-serif", so measure
+      // with that (the helper's default), not the chart element's own font.
+      this._gutterMemo = gridlineLabelGutter(labels);
     }
     return this._gutterMemo;
   }

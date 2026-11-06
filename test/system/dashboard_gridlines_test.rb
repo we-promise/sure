@@ -90,9 +90,7 @@ class DashboardGridlinesTest < ApplicationSystemTestCase
       };
     JS
 
-    section = find("[data-section-key='net_worth_chart']")
-    section.hover
-    section.find("summary").click
+    open_widget_menu
     find("label[for='gridlines-net_worth_chart']", match: :first).click # on
     find("label[for='gridlines-net_worth_chart']", match: :first).click # off again
 
@@ -112,10 +110,18 @@ class DashboardGridlinesTest < ApplicationSystemTestCase
 
   private
     def toggle_gridlines
-      section = find("[data-section-key='net_worth_chart']")
-      section.hover
-      section.find("summary").click
+      open_widget_menu
       find("label[for='gridlines-net_worth_chart']", match: :first).click
+    end
+
+    # The settings button only fades in while the card is hovered (opacity-0
+    # until group-hover), and Selenium treats opacity 0 as not visible. A mouse
+    # hover is not dependable in CI, where the card is taller than the window and
+    # the pointer can land on the chart, so open the <details> directly.
+    def open_widget_menu
+      summary = find("[data-section-key='net_worth_chart'] summary", visible: :all)
+      page.execute_script("arguments[0].click()", summary)
+      assert_selector "[data-section-key='net_worth_chart'] details[open]", visible: :all
     end
 
     # The fixture family's balances are constant, so the real series is flat.

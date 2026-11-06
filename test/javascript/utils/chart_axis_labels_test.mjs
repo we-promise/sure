@@ -48,6 +48,15 @@ describe("compactAxisFormatter", () => {
     assert.deepEqual(labelsFor([0, 50000, 100000, 150000], "INR", "en-IN"), ["₹0", "₹50K", "₹1L", "₹1.5L"]);
   });
 
+  it("shows full numbers when the locale's digits can't be read back to find the unit", () => {
+    // ar-EG compact "١٫٠١ مليون" would stand for 1,010,000, not 1,005,000.
+    const ticks = [985000, 990000, 995000, 1000000, 1005000];
+    const labels = labelsFor(ticks, "USD", "ar-EG");
+    const full = new Intl.NumberFormat("ar-EG", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+    assert.deepEqual(labels, ticks.map((t) => full.format(t)));
+  });
+
   it("keeps small crypto balances distinct, past the compact decimal cap", () => {
     assert.deepEqual(labelsFor([0.001, 0.00105, 0.0011], "BTC"), ["BTC 0.001", "BTC 0.00105", "BTC 0.0011"]);
   });
