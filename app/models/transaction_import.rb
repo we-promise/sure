@@ -7,16 +7,11 @@ class TransactionImport < Import
     rows_to_skip: 0
   }.freeze
 
-  SURE_EXPORT_LABELS = {
-    date_col_label: "date",
-    account_col_label: "account_name",
-    amount_col_label: "amount",
-    name_col_label: "name",
-    category_col_label: "category",
-    tags_col_label: "tags",
-    notes_col_label: "notes",
-    currency_col_label: "currency"
-  }.freeze
+  # The column label for each column of Family::DataExporter::TRANSACTIONS_CSV_HEADERS, in its order.
+  SURE_EXPORT_LABELS = %i[
+    date_col_label account_col_label amount_col_label name_col_label
+    category_col_label tags_col_label notes_col_label currency_col_label
+  ].zip(Family::DataExporter::TRANSACTIONS_CSV_HEADERS).to_h.freeze
 
   def import!
     transaction do
@@ -158,23 +153,28 @@ class TransactionImport < Import
   private
     def sure_export_csv?(csv_str, separator)
       # A dropped file is read as binary bytes; read it as UTF-8 so a BOM or
-      # non-ASCII characters elsewhere in the file cannot raise. CSV parsing
-      # strips leading blank lines, so detection skips them too.
-      header_line = utf8_without_bom(csv_str).lstrip.each_line.first
-      return false if header_line.blank?
-
-      headers = CSV.parse_line(header_line, col_sep: separator.presence || ",", liberal_parsing: true).to_a.map { |header| export_header_key(header) }
-      (Family::DataExporter::TRANSACTIONS_CSV_HEADERS - headers).empty?
-    rescue CSV::MalformedCSVError
-      false
+      # non-ASCII characters elsewhere in the file cannot raise.
+      headers = header_record(utf8_without_bom(csv_str), separator).map { |header| export_header_key(header) }
+      headers.any? && (Family::DataExporter::TRANSACTIONS_CSV_HEADERS - headers).empty?
     end
 
     # Column labels must match the parsed headers exactly, which keep a BOM and
     # the file's own spelling (e.g. "Date"), so map each export column to it.
+    # Read from the file itself: a Sure export skips no rows, whatever
+    # rows_to_skip the import had before the template reset it.
     def sure_export_labels
+      headers = header_record(raw_file_str, col_sep)
       SURE_EXPORT_LABELS.transform_values do |label|
-        csv_headers.find { |header| export_header_key(header) == label } || label
+        headers.find { |header| export_header_key(header) == label } || label
       end
+    end
+
+    # The first CSV record, read like Import.parse_csv_str reads headers:
+    # leading blank lines are skipped and a quoted field may span lines.
+    def header_record(csv_str, separator)
+      CSV.new(csv_str.to_s.strip, col_sep: separator.presence || ",", liberal_parsing: true).shift.to_a
+    rescue CSV::MalformedCSVError
+      []
     end
 
     def export_header_key(header)

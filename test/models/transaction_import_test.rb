@@ -84,6 +84,27 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal "2024-05-15", @import.csv_rows.first[@import.date_col_label]
   end
 
+  test "recognises a Sure export whose extra header holds a quoted line break" do
+    @import.raw_file_str = "#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",")},\"counterparty\nIBAN\"\n2024-05-15,Checking,42.5,Grocery,,,,USD,\n"
+
+    @import.preset_for_uploaded_csv
+
+    assert_equal "inflows_negative", @import.signage_convention
+  end
+
+  test "maps template labels from the export's header even when rows were skipped before" do
+    template = imports(:transaction).dup
+    template.update!(status: "complete")
+    @import = families(:dylan_family).imports.create!(type: "TransactionImport", rows_to_skip: 1,
+      raw_file_str: "#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.map(&:capitalize).join(",")}\n2024-05-15,Checking,42.5,Grocery,,,,USD\n")
+
+    @import.apply_template!(template)
+
+    assert_equal 0, @import.reload.rows_to_skip
+    assert_equal "Date", @import.date_col_label
+    assert_equal "Account_name", @import.account_col_label
+  end
+
   test "ignores blank and unparseable CSV headers when presetting the sign convention" do
     @import.raw_file_str = "\"date,\"amount\n"
 
