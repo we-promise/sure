@@ -44,6 +44,15 @@ class LanguagesHelperTest < ActionView::TestCase
     assert_includes timezone_options, [ "(-05:00) America/New York", "America/New_York" ]
   end
 
+  test "timezone labels show the standard offset during daylight saving time too" do
+    travel_to Time.utc(2024, 7, 1, 12) do
+      LanguagesHelper.instance_variable_set(:@timezone_option_rows, nil)
+
+      assert_includes timezone_options, [ "(-05:00) America/New York", "America/New_York" ]
+      assert_includes timezone_options, [ "(+01:00) Europe/Berlin", "Europe/Berlin" ]
+    end
+  end
+
   test "timezone options show a saved old spelling in place of its renamed zone" do
     base = timezone_options
     # Hosts without tzdata's legacy names cannot resolve "Europe/Kiev".

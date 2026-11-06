@@ -416,7 +416,8 @@ module LanguagesHelper
     rows.map { |row| [ row[:label], row[:identifier] ] }
   end
 
-  # The zone list only changes with tzdata, so it is built once per process.
+  # Labels use each zone's standard (base) offset, which daylight saving time
+  # does not change, so the list only changes with tzdata and is built once per process.
   def self.timezone_option_rows
     @timezone_option_rows ||= begin
       identifiers = TZInfo::Timezone.all_country_zone_identifiers | ActiveSupport::TimeZone.all.map { |tz| tz.tzinfo.identifier }
