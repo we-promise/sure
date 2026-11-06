@@ -124,8 +124,10 @@ class InvestmentStatement
   end
 
   # Allocation of the portfolio grouped by a classification column of the
-  # security. Each account's positive cash balance is placed where the grouping
-  # says cash belongs, so weights sum to 100 within rounding. Segments are
+  # security. Each account's cash -- its balance less its holdings, positive
+  # only (`positive_account_cash`) -- is placed where the grouping says cash
+  # belongs, so every grouping and every level of the drill-down sums to the
+  # same total, and weights sum to 100 within rounding. Segments are
   # sorted largest first. Amounts convert to the family currency at the latest
   # rate; a currency with no rate counts 1:1 (`convert_to_family_currency`).
   ALLOCATION_GROUPINGS = %w[asset_class asset_sub_class sector region].freeze
@@ -357,8 +359,8 @@ class InvestmentStatement
     AllocationSegment = Data.define(:id, :name, :amount, :weight)
 
     # One shape for all four classification groupings: read the column off the
-    # security, fall back to UNCLASSIFIED, and place each account's positive
-    # cash balance where that grouping says it belongs.
+    # security, fall back to UNCLASSIFIED, and place each account's cash
+    # (`positive_account_cash`) where that grouping says it belongs.
     #
     # `cash_bucket` is the argument that matters. Cash is not a holding -- it
     # sits on the account -- so every grouping has to say where it goes, and
@@ -415,8 +417,8 @@ class InvestmentStatement
     end
 
     # Account cash as a position of the cash bucket: ONE row, the sum over
-    # accounts of each account's cash in the family currency where it is
-    # positive -- the rule `allocation_sub_classes_within` and
+    # accounts of each account's cash (balance less holdings) in the family
+    # currency where it is positive -- the rule `allocation_sub_classes_within` and
     # `allocation_by_classification` count it by. It belongs to Liquidity/Cash
     # only, so any other bucket, or a cash sub-class reached from another asset
     # class, gets none.
@@ -427,14 +429,31 @@ class InvestmentStatement
       [ [ "cash", I18n.t("models.investment_statement.cash"), account_cash_total ] ]
     end
 
-    # Each investment account whose cash balance is positive, with that cash in
-    # the family currency. Every allocation level counts account cash through
-    # this one rule -- positive balances only, converted per account -- so a
-    # parent bucket and the positions below it cannot disagree about it.
+    # Each investment account with cash, and that cash in the family currency.
+    # An account's cash is its balance less its allocatable holdings, each
+    # converted on its own and then subtracted, kept only where positive. Every
+    # allocation grouping and level counts account cash through this one rule,
+    # so a parent bucket and the positions below it cannot disagree about it,
+    # and no grouping counts a balance another grouping drops.
+    #
+    # Not Account#cash_balance. It can be absent (a manual or never-synced
+    # account), or default to the whole balance when a provider sends no cash
+    # figure (`Account::ProviderImportAdapter#update_balance`), which would
+    # count the holdings twice. `Balance::BaseCalculator` derives an
+    # investment account's cash the same way, so on synced data the two agree.
+    # Per account, so one account's margin cannot net against another's cash.
     def positive_account_cash
       @positive_account_cash ||= investment_accounts.filter_map do |account|
-        cash = account.cash_balance.to_d
-        [ account, convert_to_family_currency(cash, account.currency) ] if cash.positive?
+        balance = convert_to_family_currency(account.balance.to_d, account.currency)
+        cash = balance - account_holdings_totals[account.id]
+        [ account, cash ] if cash.positive?
+      end
+    end
+
+    # Each account's allocatable holdings in the family currency, by account id.
+    def account_holdings_totals
+      @account_holdings_totals ||= allocatable_holdings.each_with_object(Hash.new(0)) do |holding, totals|
+        totals[holding.account_id] += convert_to_family_currency(holding.amount, holding.currency)
       end
     end
 
