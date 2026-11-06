@@ -13,6 +13,14 @@ module EntryableResourceInterfaceTest
     assert_response :success
   end
 
+  test "modal frame requests skip the application layout" do
+    get new_polymorphic_url(@entry.entryable), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "turbo-frame#modal"
+    assert_select "body", count: 0
+  end
+
   test "destroys entry" do
     assert_difference "Entry.count", -1 do
       delete entry_url(@entry)

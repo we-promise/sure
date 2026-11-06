@@ -15,6 +15,16 @@ module AccountableResourceInterfaceTest
     assert_response :success
   end
 
+  test "modal frame requests skip the application layout" do
+    Family.any_instance.stubs(:get_link_token).returns("test-link-token")
+
+    get new_polymorphic_url(@account.accountable), headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "turbo-frame#modal"
+    assert_select "body", count: 0
+  end
+
   test "update saves currency change" do
     @account.update!(currency: "USD")
 
