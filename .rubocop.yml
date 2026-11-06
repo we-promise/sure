@@ -36,7 +36,6 @@ Sure/NoAiEnv:
     - "app/models/provider/anthropic.rb"                        # PR 6: chat
     - "app/models/provider/anthropic/bank_statement_extractor.rb" # 2e
     - "app/models/provider/anthropic/pdf_processor.rb"          # 2e
-    - "app/models/provider/jev.rb"                              # 2d
     - "app/models/provider/openai.rb"                           # PR 6: chat
     - "app/models/provider/registry.rb"                         # 2e, PR 6
     - "app/models/setting.rb"                                   # PR 7: settings pages

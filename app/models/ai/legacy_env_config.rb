@@ -26,7 +26,7 @@ class Ai::LegacyEnvConfig
   ANTHROPIC_MAX_TOKENS = 4096
   EMBEDDING_TIMEOUT = 120         # VectorStore::Embeddable's client
   EXTERNAL_ASSISTANT_TIMEOUT = 120 # Assistant::External::Client::TIMEOUT_READ
-  JEV_RETRIES = 3                  # today's Provider::Jev client
+  JEV_RETRIES = 3                  # what the hand-written Jev client retried
   JEV_UNSUPPORTED = {
     openrouter: "OpenRouter's Jev needs RubyLLM 2.2 (PR 5)",
     path: "only TypeSafe-style …/v1/systemone endpoints are supported"
