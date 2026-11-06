@@ -77,9 +77,9 @@ class InvestmentStatement
 
   # current_holdings as an Array, with the average-cost fallback for every
   # holding that has no stored cost basis computed in one query and handed
-  # to the holding (Holding.preload_avg_costs), so the roll-up's trends and
-  # the holdings table do not run Holding#calculate_avg_cost's two queries
-  # per holding. Memoized.
+  # to the holding (Holding.preload_avg_costs), so the roll-up's trends, the
+  # unrealized gains and the holdings table do not run
+  # Holding#calculate_avg_cost's two queries per holding. Memoized.
   def holdings_with_avg_costs
     @holdings_with_avg_costs ||= current_holdings.to_a.tap { |holdings| Holding.preload_avg_costs(holdings) }
   end
@@ -209,7 +209,7 @@ class InvestmentStatement
 
   # Unrealized gains across all holdings, summed in family currency
   def unrealized_gains
-    current_holdings.sum do |holding|
+    holdings_with_avg_costs.sum do |holding|
       trend = holding.trend
       trend ? convert_to_family_currency(trend.value, holding.currency) : 0
     end
@@ -231,7 +231,7 @@ class InvestmentStatement
   end
 
   def unrealized_gains_trend
-    holdings = current_holdings.to_a
+    holdings = holdings_with_avg_costs
     return nil if holdings.empty?
 
     # Only include holdings with known cost basis in the calculation

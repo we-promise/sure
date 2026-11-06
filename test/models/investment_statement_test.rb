@@ -1331,6 +1331,37 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert rows.none?(&:missing_cost_basis)
   end
 
+  # The dashboard and the report read unrealized_gains_trend before
+  # top_holdings on one statement, so the gains read the trade-history cost
+  # the same batched way, and top_holdings reuses it.
+  test "unrealized gains read the trade-history cost of every holding in one query" do
+    account = create_investment_account(balance: 10_000)
+    3.times do |i|
+      security = Security.create!(ticker: "G#{i}", name: "Gain #{i}")
+      Holding.create!(account: account, security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+      create_trade_for(account: account, security: security, qty: 10, price: 60 + i * 10, date: 1.day.ago.to_date)
+    end
+    cost_queries = ->(statement, &read) do
+      statement.current_holdings.to_a
+      Holding.uncached { capture_sql_queries { read.call(statement) } }.grep(/FROM "trades"|JOIN trades/).size
+    end
+
+    counts = %i[unrealized_gains unrealized_gains_trend].to_h do |method|
+      [ method, cost_queries.call(InvestmentStatement.new(@family, user: nil)) { |s| s.public_send(method) } ]
+    end
+    assert_equal({ unrealized_gains: 1, unrealized_gains_trend: 1 }, counts)
+
+    trend = nil
+    statement = InvestmentStatement.new(@family, user: nil)
+    dashboard = cost_queries.call(statement) { |s| trend = s.unrealized_gains_trend; s.top_holdings(limit: 5) }
+    assert_equal 1, dashboard, "top_holdings must reuse the cost the gains read"
+
+    # 3000 held at a cost of 600 + 700 + 800
+    assert_equal Money.new(3000), trend.current
+    assert_equal Money.new(2100), trend.previous
+    assert_in_delta 900, statement.unrealized_gains, 0.001
+  end
+
   # A provider can report one security in two currencies in the same account on
   # the same day, and both rows are current. Each compares against its own
   # currency's previous snapshot, as Holding#day_change does.
