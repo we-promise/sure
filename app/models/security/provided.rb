@@ -294,18 +294,23 @@ module Security::Provided
       )
 
       if response.success?
-        # Only overwrite fields the provider actually returned, so providers that
-        # don't support metadata (e.g. Alpha Vantage) won't blank existing values.
-        attrs = {}
-        attrs[:name]        = response.data.name    if response.data.name.present?
-        attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
-        attrs[:website_url] = response.data.links   if response.data.links.present?
-        attrs.merge!(classification_attributes_from(response.data))
-        stored = attrs.empty? || update(attrs)
-        # Recorded only when the answer was stored. `update` runs the model's
-        # validations, and a row can hold a value they now refuse; stamping
-        # anyway would close the gate on an answer that never landed.
-        update_column(:classification_fetched_at, Time.current) if wants_classification && stored
+        # `with_lock` re-reads the row, so precedence is checked against what
+        # it holds now: a manual classification, a sector or a lock written
+        # while the provider was answering is not overwritten.
+        with_lock do
+          # Only overwrite fields the provider actually returned, so providers that
+          # don't support metadata (e.g. Alpha Vantage) won't blank existing values.
+          attrs = {}
+          attrs[:name]        = response.data.name    if response.data.name.present?
+          attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
+          attrs[:website_url] = response.data.links   if response.data.links.present?
+          attrs.merge!(classification_attributes_from(response.data))
+          stored = attrs.empty? || update(attrs)
+          # Recorded only when the answer was stored. `update` runs the model's
+          # validations, and a row can hold a value they now refuse; stamping
+          # anyway would close the gate on an answer that never landed.
+          update_column(:classification_fetched_at, Time.current) if wants_classification && stored
+        end
       else
         Rails.logger.warn("Failed to fetch security info for #{ticker} from #{price_data_provider.class.name}: #{response.error.message}")
         DebugLogEntry.capture(
