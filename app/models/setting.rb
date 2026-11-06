@@ -23,6 +23,10 @@ class Setting < RailsSettings::Base
   field :jev_api_key, type: :string, default: ENV["JEV_API_KEY"]
   field :jev_endpoint, type: :string, default: ENV["JEV_ENDPOINT"]
   field :jev_model, type: :string, default: ENV["JEV_MODEL"]
+  # Which model categorizes every family's transactions: "llm" (the default) or "jev". One
+  # instance-wide choice from 2d until PR 7 lists routes per feature; CATEGORIZATION_PROVIDER
+  # overrides it (Ai::LegacyEnvConfig.categorization_provider).
+  field :categorization_provider, type: :string, default: nil
 
   # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
   # merchant detection, enhance-merchants, PDF processing). Defaults track

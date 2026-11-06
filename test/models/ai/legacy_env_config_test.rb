@@ -163,12 +163,13 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "sk-setting", endpoint.api_key
   end
 
-  test "Jev is listed first for categorization, for families that chose it, when it can be built" do
-    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test")
-    jev = config.routes_for(:categorize).first
+  test "Jev categorizes when the instance chose it, alone, and the LLM shadows it" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "CATEGORIZATION_PROVIDER" => "jev")
+    jev = config.routes_for(:categorize).sole
 
     assert_equal "jev", jev.endpoint.name
-    assert_equal :jev_family, jev.condition
+    assert_equal [ "openai" ], config.routes_for(:shadow_categorize).map { _1.endpoint.name }
+    assert_equal "categorize_transactions", config.routes_for(:shadow_categorize).first.prompt
     assert jev.model.capable?(:judge, :calibrated_confidence)
     assert_equal :jev, jev.endpoint.preset
 
@@ -178,7 +179,8 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
   end
 
   test "a self-hosted Jev on http is jev_local, with no calibrated confidence" do
-    jev = build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "http://jev:8080/v1/systemone", "JEV_CONCURRENCY" => "4")
+    jev = build("JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "http://jev:8080/v1/systemone", "JEV_CONCURRENCY" => "4",
+                "CATEGORIZATION_PROVIDER" => "jev")
             .routes_for(:categorize).first
 
     assert_equal :jev_local, jev.endpoint.preset

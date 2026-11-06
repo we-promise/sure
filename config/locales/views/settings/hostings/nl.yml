@@ -149,7 +149,6 @@ nl:
       categorization_provider_selector:
         title: "Transactiecategorisatie"
         preview_pill: "Preview"
-        description: "Kies welke provider transacties categoriseert. Dit staat los van de AI-provider hierboven, die chat en PDF-verwerking afhandelt."
         env_notice: "Ingesteld op %{type} via omgevingsvariabelen."
         provider_label: "Categorisatieprovider"
         provider_llm: "AI-provider (OpenAI of Anthropic)"

@@ -33,20 +33,29 @@ class Ai::LegacyEnvConfig
   }.freeze
 
   # The inputs a snapshot depends on, so Ai::Config rebuilds when one changes.
-  ENV_PREFIXES = %w[OPENAI_ ANTHROPIC_ LLM_ JEV_ EMBEDDING_ VECTOR_STORE_ EXTERNAL_ASSISTANT_].freeze
+  ENV_PREFIXES = %w[OPENAI_ ANTHROPIC_ LLM_ JEV_ EMBEDDING_ VECTOR_STORE_ EXTERNAL_ASSISTANT_ CATEGORIZATION_PROVIDER].freeze
   SETTING_FIELDS = %i[
     openai_access_token openai_uri_base openai_model openai_request_timeout anthropic_access_token anthropic_model
     anthropic_base_url llm_provider jev_api_key jev_endpoint jev_model external_assistant_url external_assistant_token
     external_assistant_model external_assistant_agent_id openai_json_mode llm_context_window llm_max_response_tokens
-    llm_max_items_per_call
+    llm_max_items_per_call categorization_provider
   ].freeze
+  CATEGORIZATION_PROVIDERS = %w[llm jev].freeze
 
   def self.build = new.build
+
+  # Which model categorizes every family's transactions: CATEGORIZATION_PROVIDER, then the
+  # instance's setting, else the LLM. Until 2d this was a family column; with one family its
+  # choice was copied to the setting (2d plan, decision 2).
+  def self.categorization_provider
+    [ ENV["CATEGORIZATION_PROVIDER"].presence, Setting.categorization_provider.presence ]
+      .find { CATEGORIZATION_PROVIDERS.include?(_1) } || "llm"
+  end
 
   # The prompt variant today's code sends for `feature` to this kind of endpoint: Anthropic's own,
   # the simplified one on a custom OpenAI-compatible server, otherwise OpenAI's detailed one.
   def self.prompt_for(feature, endpoint)
-    base = PROMPTS[feature.to_sym]
+    base = PROMPTS[Ai::Routes.source_of(feature)]
     return unless base && endpoint.protocol != :jev
 
     if endpoint.protocol == :anthropic then "#{base}_anthropic"
@@ -74,7 +83,11 @@ class Ai::LegacyEnvConfig
     preferred = llm_models.first(1)
     routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
     routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
-    routes[:categorize] = route_list(:categorize, [ jev_model, *preferred ].compact, conditions: { jev_model => :jev_family })
+    # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM (2d plan,
+    # decision 3); the shadow route runs the other one, as today's shadow_categorization_provider.
+    jev_first = jev_model && self.class.categorization_provider == "jev"
+    routes[:categorize] = route_list(:categorize, jev_first ? [ jev_model ] : preferred)
+    routes[:shadow_categorize] = route_list(:shadow_categorize, jev_first ? preferred : [ jev_model ].compact)
     routes[:embed] = route_list(:embed, [ embed_route_model ].compact)
 
     endpoints = (llm.values.map(&:first) + [ jev_model, agent_model, embed_model ].compact.map(&:endpoint)).uniq
@@ -141,8 +154,7 @@ class Ai::LegacyEnvConfig
 
     def positive(*values) = values.map(&:to_i).find(&:positive?)
 
-    # Jev serves only families that chose it (Ai::Route#serves?), and only when RubyLLM can reach
-    # it: a TypeSafe-style `…/v1/systemone` URL, http only for a server on a private network
+    # Jev, when RubyLLM can reach it: a TypeSafe-style `…/v1/systemone` URL, http only for a server on a private network
     # (section 7). An endpoint it can't reach is left out with a warning, so `categorize` uses
     # the LLM, as today when Jev can't be built.
     def jev
@@ -216,9 +228,9 @@ class Ai::LegacyEnvConfig
       )
     end
 
-    def route_list(feature, models, conditions: {})
+    def route_list(feature, models)
       models.each_with_index.map do |model, position|
-        Ai::Route.new(feature:, position:, model:, condition: conditions[model], prompt: prompt_for(feature, model))
+        Ai::Route.new(feature:, position:, model:, prompt: prompt_for(feature, model))
       end
     end
 

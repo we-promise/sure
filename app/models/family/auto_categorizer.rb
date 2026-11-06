@@ -2,10 +2,10 @@
 # and never over an answer that's locked. The requester of :categorize: Ai::GenerationJob runs it
 # one batch at a time.
 #
-# The route's first entry decides who answers: an LLM through
-# Ai::Generations::CategorizeTransactions, or Jev through Provider::Jev (JevCall) until PR 2d
-# makes it a judgement. Jev's answers carry calibrated confidence, so the family's threshold can
-# withhold them; the LLMs' don't, so they always apply.
+# Ai::Generations::CategorizeTransactions answers on an LLM, and its judgement
+# (Ai::Judgements::CategorizeTransaction) on Jev, in one shape. Answers from a model with
+# `calibrated_confidence` (cloud Jev) can be withheld by the family's threshold; the others
+# always apply (section 6).
 class Family::AutoCategorizer
   include Ai::Requester
   ai_feature :categorize
@@ -37,17 +37,13 @@ class Family::AutoCategorizer
       return
     end
 
-    plan = Ai.plan(:categorize, family:)
-    return JevCall.new(self, plan.route) if plan&.route&.judge?
-
-    log_jev_fallback if family.effective_categorization_provider == "jev"
-
-    Ai::Generations::CategorizeTransactions.new(transactions: transactions_input, categories: categories_input, family:)
+    log_jev_fallback
+    generation
   end
 
   def apply_ai(result)
     decisions = result.value[:categorizations]
-    shadow = run_shadow(result.route)
+    shadow = run_shadow
     modified_count = 0
     categorized_transaction_ids = []
     withheld = []
@@ -60,7 +56,7 @@ class Family::AutoCategorizer
       # Withheld rather than applied: the transaction is left unlocked and still enrichable, so a
       # later run (or a better model) can try again. Applying a coin-flip guess and locking it
       # would be worse than leaving it blank, because the lock stops anything else correcting it.
-      if withhold?(decision)
+      if withhold?(decision, result.route)
         withheld << { transaction_id: transaction.id, category_name: decision[:category_name], confidence: decision[:confidence] }
         next
       end
@@ -75,7 +71,7 @@ class Family::AutoCategorizer
 
     DebugLogEntry.capture(
       category: "auto_categorization", level: "info", message: "AI categorization completed",
-      source: self.class.name, family:, provider: provider_key(result.route),
+      source: self.class.name, family:, provider: result.route&.endpoint&.name,
       metadata: {
         requested_transaction_ids: transaction_ids,
         categorized_transaction_ids:,
@@ -104,64 +100,29 @@ class Family::AutoCategorizer
 
   def ai_correlation_id = @rule_run ? "rule_run:#{@rule_run.id}" : nil
 
-  # Jev's decisions as the generation's hashes, or nil when Jev failed.
-  def jev_decisions(provider = jev_provider)
-    return unless provider
-
-    response = provider.auto_categorize(transactions: transactions_input, user_categories: categories_input, family:)
-    return unless response.success?
-
-    response.data.map do |decision|
-      { transaction_id: decision.transaction_id, category_name: decision.category_name,
-        confidence: (decision.confidence if decision.respond_to?(:confidence)),
-        probabilities: (decision.probabilities if decision.respond_to?(:probabilities)), calibrated: true }
-    end
-  end
-
-  # Jev until PR 2d: one Provider::Jev call per batch, answered in the generation's shape, with
-  # each answer's calibrated confidence. No failover from Jev, as today.
-  class JevCall
-    def initialize(categorizer, route)
-      @categorizer, @route = categorizer, route
-    end
-
-    def call(**)
-      response = @categorizer.jev_decisions
-      return Ai::Result.new(value: { categorizations: response }, route: @route) if response
-
-      Ai::Result.failure(Ai::Error::Upstream.new("Jev categorization failed"), route: @route)
-    end
-  end
-
   private
     attr_reader :family, :transaction_ids
 
-    def jev_provider
-      Provider::Registry.get_provider(:jev)
-    rescue Provider::Error => error
-      log_jev_misconfiguration(error, "skipping Jev")
-      nil
+    def generation
+      Ai::Generations::CategorizeTransactions.new(transactions: transactions_input, categories: categories_input, family:)
     end
 
-    def log_jev_misconfiguration(error, consequence)
-      # Without this the only symptom is categorization silently running on the provider the
-      # family did not choose. The endpoint is redacted because a gateway URL can carry a key.
-      DebugLogEntry.capture(
-        category: "auto_categorization", level: "error", message: "Jev is misconfigured; #{consequence}",
-        source: self.class.name, family:, provider: "jev",
-        metadata: {
-          endpoint: Ai::LegacyEnvConfig::Jev.redacted_endpoint(Ai::LegacyEnvConfig::Jev.effective_endpoint),
-          error_class: error.class.name,
-          error_message: error.message
-        }
-      )
-    end
-
-    # The family chose Jev but its route has none: say why, as today, when Jev can't be built.
+    # The instance chose Jev, but the config left it out because RubyLLM can't reach its endpoint.
+    # Without this the only symptom is categorization silently running on the LLM. The endpoint is
+    # redacted, because a gateway URL can carry a key.
     def log_jev_fallback
-      Provider::Registry.get_provider(:jev)
-    rescue Provider::Error => error
-      log_jev_misconfiguration(error, "falling back to the LLM provider")
+      return unless Ai::LegacyEnvConfig.categorization_provider == "jev" && Ai::LegacyEnvConfig::Jev.configured?
+
+      endpoint = Ai::LegacyEnvConfig::Jev.effective_endpoint
+      reason = Ai::LegacyEnvConfig::Jev.endpoint_allowed?(endpoint) ? Ai::LegacyEnvConfig::Jev.unsupported_reason(endpoint) : :path
+      return unless reason
+
+      DebugLogEntry.capture(
+        category: "auto_categorization", level: "error", message: "Jev is misconfigured; falling back to the LLM provider",
+        source: self.class.name, family:, provider: "jev",
+        metadata: { endpoint: Ai::LegacyEnvConfig::Jev.redacted_endpoint(endpoint), reason:,
+                    detail: Ai::LegacyEnvConfig::JEV_UNSUPPORTED.fetch(reason) }
+      )
     end
 
     def log_no_categories
@@ -172,48 +133,30 @@ class Family::AutoCategorizer
       )
     end
 
-    # Only answers with calibrated confidence (Jev's) can be gated, and one that arrives without a
-    # confidence is malformed, so it's withheld: nil becomes 0, below any positive threshold.
-    def withhold?(decision)
+    # Only answers from a model with calibrated confidence can be gated (section 6), and one that
+    # arrives without a confidence is malformed, so it's withheld: nil becomes 0, below any
+    # positive threshold.
+    def withhold?(decision, route)
       threshold = family.effective_categorization_confidence_threshold
-      threshold.positive? && decision[:calibrated] && decision[:confidence].to_f < threshold
+      threshold.positive? && route&.model&.capable?(:calibrated_confidence) && decision[:confidence].to_f < threshold
     end
 
-    # Asks the provider that is NOT in use to categorize the same batch, so it can be judged on
-    # real data before anyone switches; its answers are never applied. Sampled per run, and any
-    # failure is swallowed: a diagnostic must never break the categorization it observes. Inline
-    # in the job as today; PR 2d moves it to Ai::ShadowJob on the shadow_categorize route.
-    def run_shadow(primary_route)
+    # Asks the shadow_categorize route (the model not in use) to categorize the same batch, so it
+    # can be judged on real data before anyone switches; its answers are never applied. Sampled
+    # per run, and any failure is swallowed: a diagnostic must never break the categorization it
+    # observes. Inline in the job until Ai::ShadowJob.
+    def run_shadow
       rate = family.effective_categorization_shadow_rate
       return unless rate.positive? && rand < rate
 
-      decisions, route_key =
-        if primary_route&.judge?
-          shadow_on_llm
-        elsif (provider = shadow_jev_provider)
-          [ jev_decisions(provider), "jev" ]
-        end
-      decisions && { decisions:, provider: route_key }
+      plan = Ai.plan(:shadow_categorize, family:)
+      return unless plan
+
+      result = generation.call(plan:)
+      { decisions: result.value[:categorizations], provider: result.route.endpoint.name } if result.success?
     rescue => error
       Rails.logger.warn("Shadow categorization failed for family #{family.id}: #{error.class}: #{error.message}")
       nil
-    end
-
-    # A Jev family's shadow: the LLM entries of its categorize route.
-    def shadow_on_llm
-      plan = Ai.plan(:categorize, family:)
-      llm = plan&.routes&.reject(&:judge?)
-      return if llm.blank?
-
-      result = Ai::Generations::CategorizeTransactions.new(transactions: transactions_input, categories: categories_input, family:)
-                                                       .call(plan: plan.with(routes: llm))
-      [ result.value[:categorizations], provider_key(result.route) ] if result.success?
-    end
-
-    # An LLM family's shadow is Jev, when it can be built, as today's shadow_categorization_provider.
-    def shadow_jev_provider
-      family.shadow_categorization_provider { |error| log_jev_misconfiguration(error, "skipping the shadow comparison") }
-            .then { _1.is_a?(Provider::Jev) ? _1 : nil }
     end
 
     # Built from the decision lists rather than from `scope`, which is a fresh query: by now the
@@ -230,7 +173,7 @@ class Family::AutoCategorizer
         {
           family_id: family.id,
           transaction_id: id,
-          applied_provider: provider_key(primary_route),
+          applied_provider: primary_route&.endpoint&.name,
           applied_category_name: applied&.dig(:category_name),
           shadow_provider: shadow[:provider],
           shadow_category_name: shadowed&.dig(:category_name),
@@ -247,14 +190,6 @@ class Family::AutoCategorizer
       CategorizationComparison.insert_all(rows) if rows.any?
     rescue => error
       Rails.logger.warn("Recording shadow comparison failed for family #{family.id}: #{error.class}: #{error.message}")
-    end
-
-    # The provider names CategorizationComparison and the debug log have always used.
-    def provider_key(route)
-      return if route.nil?
-      return "jev" if route.judge?
-
-      route.endpoint.protocol == :anthropic ? "anthropic" : "openai"
     end
 
     def categories_input

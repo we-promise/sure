@@ -222,7 +222,6 @@ zh-CN:
       categorization_provider_selector:
         title: 交易分类
         preview_pill: 预览
-        description: 选择由哪个提供商对交易进行分类。这与上方负责对话和 PDF 处理的 AI 提供商是分开的。
         env_notice: 已通过环境变量设置为 %{type}。
         provider_label: 分类提供商
         provider_llm: AI 提供商（OpenAI 或 Anthropic）

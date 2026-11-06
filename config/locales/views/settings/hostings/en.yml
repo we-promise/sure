@@ -147,7 +147,7 @@ en:
       categorization_provider_selector:
         title: Transaction Categorization
         preview_pill: Preview
-        description: Choose which provider categorizes transactions. This is separate from the AI provider above, which handles chat and PDF processing.
+        description: Choose which provider categorizes transactions for every family on this instance. This is separate from the AI provider above, which handles chat and PDF processing.
         env_notice: "Set to %{type} through environment variables."
         provider_label: Categorization provider
         provider_llm: AI provider (OpenAI or Anthropic)

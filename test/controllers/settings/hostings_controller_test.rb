@@ -32,7 +32,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   teardown do
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
-    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id
+    %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model categorization_provider llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id
        market_data_sync_enabled market_data_sync_time market_data_sync_timezone].each do |key|
       Setting.public_send("#{key}=", nil)
     end
@@ -520,6 +520,27 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # One choice for every family on the instance (2d, until PR 7 lists routes per feature).
+  test "saves the instance's categorization provider when opted into preview features" do
+    with_self_hosting do
+      enable_preview_features!
+
+      patch settings_hosting_url, params: { setting: { categorization_provider: "jev" } }
+      assert_equal "jev", Setting.categorization_provider
+
+      patch settings_hosting_url, params: { setting: { categorization_provider: "something-else" } }
+      assert_equal "jev", Setting.categorization_provider
+    end
+  end
+
+  test "ignores the categorization provider from a user without preview features" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { categorization_provider: "jev" } }
+
+      assert_nil Setting.categorization_provider
+    end
+  end
+
   test "can update categorization tuning when opted into preview features" do
     with_self_hosting do
       enable_preview_features!
@@ -619,7 +640,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/systemone?api_key=qk-secret" # pipelock:ignore Credential in URL
       member = users(:family_member)
-      member.family.update!(categorization_provider: "jev")
+      Setting.categorization_provider = "jev"
       member.update!(preferences: (member.preferences || {}).merge("preview_features_enabled" => true))
       sign_in member
 
@@ -635,7 +656,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       Setting.jev_endpoint = "https://gw-user:gw-secret@gw.example.com/v1/systemone?api_key=qk-secret" # pipelock:ignore Credential in URL
       admin = users(:family_admin)
-      admin.family.update!(categorization_provider: "jev")
+      Setting.categorization_provider = "jev"
       admin.update!(preferences: (admin.preferences || {}).merge("preview_features_enabled" => true))
 
       get settings_hosting_url

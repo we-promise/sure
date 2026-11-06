@@ -26,7 +26,7 @@ module AiLegacySetups
     "C7" => [ "both keys, LLM_PROVIDER=anthropic", OPENAI.merge(ANTHROPIC).merge("LLM_PROVIDER" => "anthropic"), {}, {} ],
     "C8" => [ "OpenAI key, OPENAI_MODEL=o4-mini", OPENAI.merge("OPENAI_MODEL" => "o4-mini"), {}, {} ],
     "C9" => [ "Jev only (CATEGORIZATION_PROVIDER=jev)", { "JEV_API_KEY" => "jev-test", "CATEGORIZATION_PROVIDER" => "jev" }, {}, {} ],
-    "M1" => [ "OpenAI and Jev keys, the family chose Jev", OPENAI.merge("JEV_API_KEY" => "jev-test"), {}, { categorization_provider: "jev" } ],
+    "M1" => [ "OpenAI and Jev keys, the instance chose Jev", OPENAI.merge("JEV_API_KEY" => "jev-test"), { categorization_provider: "jev" }, {} ],
     "M2" => [ "both keys, LLM_PROVIDER=anthropic, an embedding server",
               OPENAI.merge(ANTHROPIC).merge("LLM_PROVIDER" => "anthropic", "EMBEDDING_URI_BASE" => "http://ollama:11434/v1",
                                             "EMBEDDING_MODEL" => "nomic-embed-text"), {}, {} ],

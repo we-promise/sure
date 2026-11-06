@@ -25,7 +25,7 @@ class AiAgreementTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
     @family = @user.family
-    @family.update!(categorization_provider: "llm", assistant_type: "builtin")
+    @family.update!(assistant_type: "builtin")
     merchant = ProviderMerchant.create!(name: "Agreement Test Shop", source: "plaid")
     transactions(:one).update_columns(merchant_id: merchant.id)
   end

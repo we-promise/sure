@@ -360,7 +360,7 @@ class Settings::HostingsController < ApplicationController
     # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)
-      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :chimnie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :ai_health_probe_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :market_data_sync_enabled, :market_data_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
+      params.require(:setting).permit(:onboarding_state, :require_email_confirmation, :invite_only_default_family_id, :demo_family_refresh_enabled, :demo_family_refresh_family_id, :brand_fetch_client_id, :brand_fetch_high_res_logos, :twelve_data_api_key, :tiingo_api_key, :eodhd_api_key, :alpha_vantage_api_key, :tinkoff_invest_api_key, :mansa_api_key, :rentcast_api_key, :realie_api_key, :chimnie_api_key, :openai_access_token, :openai_uri_base, :openai_model, :openai_json_mode, :anthropic_access_token, :anthropic_base_url, :anthropic_model, :jev_api_key, :jev_endpoint, :jev_model, :categorization_provider, :llm_provider, :llm_context_window, :llm_max_response_tokens, :llm_max_items_per_call, :openai_request_timeout, :ai_response_timeout, :ai_health_probe_timeout, :exchange_rate_provider, :securities_provider, :syncs_include_pending, :auto_sync_enabled, :auto_sync_time, :market_data_sync_enabled, :market_data_sync_time, :external_assistant_url, :external_assistant_token, :external_assistant_model, securities_providers: [])
     end
 
     def load_external_assistant_models
@@ -451,21 +451,23 @@ class Settings::HostingsController < ApplicationController
       raise Setting::ValidationError, t("settings.hostings.assistant_settings.agent_discovery_error", error: error.message)
     end
 
-    # Family-scoped, like assistant_type: it decides whose transaction data is
-    # sent to Jev. Guarded by the preview gate because the selector that submits
-    # it is only rendered for opted-in users.
+    # The instance's choice, for every family (2d, until PR 7 lists routes per
+    # feature): `update` already requires whoever manages instance settings.
+    # Guarded by the preview gate because the selector that submits it is only
+    # rendered for opted-in users.
     def update_categorization_provider
-      return unless params[:family].present? && params[:family][:categorization_provider].present?
+      return unless hosting_params.key?(:categorization_provider)
       return if ENV["CATEGORIZATION_PROVIDER"].present?
       return unless preview_features_enabled?
 
-      provider = params[:family][:categorization_provider]
-      return unless Family::CATEGORIZATION_PROVIDERS.include?(provider)
+      provider = hosting_params[:categorization_provider].to_s
+      return unless Ai::LegacyEnvConfig::CATEGORIZATION_PROVIDERS.include?(provider)
 
-      Current.family.update!(categorization_provider: provider)
+      Setting.categorization_provider = provider
     end
 
-    # Family-scoped like categorization_provider. Validated here rather than
+    # Family-scoped: how much this family trusts a calibrated answer, and how
+    # often it lets a second model see its data. Validated here rather than
     # leaning on the DB check constraint, which would surface as a 500 instead
     # of the inline error the rest of this form gives.
     def update_categorization_tuning

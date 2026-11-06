@@ -160,118 +160,104 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal [ llm_txn.id ], ai_entry.metadata["categorized_transaction_ids"]
   end
 
-  # Jev runs only when the family has chosen it AND credentials are configured.
-  # The choice is a family column, not the preview flag: preview gates whether
-  # the selector is offered (see docs/llm-guides/gating-a-preview-feature.md),
-  # never what gets used. Every other install keeps the LLM path.
+  # Jev answers when the categorize route lists it: the instance's choice (2d, until PR 7), read
+  # by the deprecated ENV path. Preview gates whether the selector is offered (see
+  # docs/llm-guides/gating-a-preview-feature.md), never what gets used.
 
-  test "uses the LLM provider by default" do
+  test "uses the LLM by default" do
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
 
-    assert_equal "llm", @family.categorization_provider
-    # Not even looked up: the choice short-circuits before the registry.
-    Provider::Registry.expects(:get_provider).with(:jev).never
-    stub_ai(:categorize, returns: { categorizations: [
+    assert_equal "llm", Ai::LegacyEnvConfig.categorization_provider
+    requests = stub_ai(:categorize, returns: { categorizations: [
       { transaction_id: txn.id, category_name: category.name }
     ] })
 
     categorize([ txn.id ])
 
     assert_equal category, txn.reload.category
+    assert_instance_of Ai::Transport::Base::Request, requests.sole
   end
 
-  test "uses Jev when the family selects it and it is configured" do
-    @family.update!(categorization_provider: "jev")
+  test "uses Jev when the categorize route lists it" do
+    use_ai_routes(categorize: %w[jev/jev-latest])
     txn = create_transaction(account: @account, name: "Blue Bottle Coffee").transaction
     category = @family.categories.create!(name: "Coffee")
-
-    # A real instance, not a bare mock: DebugLogEntry derives provider_key from
-    # the class name, so a Mocha::Mock would log "mock".
-    jev = Provider::Jev.allocate
-    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
-    use_ai_routes(categorize: %w[jev/jev-latest openai/gpt-4.1-mini])
-    stub_ai(:categorize) { flunk "the model shouldn't be asked" }
-    jev.expects(:auto_categorize).returns(provider_success_response([
-      CategoryDecision.new(
-        transaction_id: txn.id,
-        category_name: category.name,
-        confidence: 0.97,
-        probabilities: { category.name => 0.97 },
-        usage: { "cost" => 0.000032 }
-      )
-    ])).once
+    requests = stub_ai(:categorize) { { txn.id => { category: [ category.name, 0.97 ] } } }
 
     categorize([ txn.id ])
 
-    # The richer struct maps back through the same loop as the LLM shape.
     assert_equal category, txn.reload.category
+    assert_instance_of Ai::Transport::Base::JudgeRequest, requests.sole
     assert_equal "jev", DebugLogEntry.order(:created_at).last.provider_key
   end
 
-  test "falls back to the LLM provider when Jev is selected but has no credentials" do
-    @family.update!(categorization_provider: "jev")
+  test "the instance's Jev choice routes categorize to Jev, and its shadow to the LLM" do
+    Ai::Config.override = nil
+    Setting.categorization_provider = "jev"
+
+    with_env_overrides("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test") do
+      assert_equal [ "jev" ], Ai.plan(:categorize, family: @family).routes.map { _1.endpoint.name }
+      assert_equal [ "openai" ], Ai.plan(:shadow_categorize, family: @family).routes.map { _1.endpoint.name }
+    end
+  ensure
+    Setting.categorization_provider = nil
+  end
+
+  test "falls back to the LLM when Jev is chosen but has no key" do
+    Ai::Config.override = nil
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
+    stub_ai(:categorize, returns: { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] })
 
-    Provider::Registry.stubs(:get_provider).with(:jev).returns(nil)
-    stub_ai(:categorize, returns: { categorizations: [
-      { transaction_id: txn.id, category_name: category.name }
-    ] })
-
-    categorize([ txn.id ])
+    with_env_overrides("OPENAI_ACCESS_TOKEN" => "sk-test", "CATEGORIZATION_PROVIDER" => "jev") do
+      assert_no_difference -> { DebugLogEntry.where(level: "error").count } do
+        categorize([ txn.id ])
+      end
+    end
 
     assert_equal category, txn.reload.category
   end
 
-  test "logs the rejected Jev endpoint only when categorization actually runs" do
-    @family.update!(categorization_provider: "jev")
+  test "logs an unsupported Jev endpoint when categorization falls back to the LLM" do
+    Ai::Config.override = nil
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
-
-    stub_ai(:categorize, returns: { categorizations: [
-      { transaction_id: txn.id, category_name: category.name }
-    ] })
+    stub_ai(:categorize, returns: { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] })
 
     with_env_overrides(
-      "JEV_API_KEY" => "test_api_key",
-      "JEV_ENDPOINT" => "http://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET#frag" # pipelock:ignore Credential in URL
+      "OPENAI_ACCESS_TOKEN" => "sk-test", "CATEGORIZATION_PROVIDER" => "jev", "JEV_API_KEY" => "test_api_key",
+      "JEV_ENDPOINT" => "https://someone:s3cret@gw.example.com/v1?api_key=QUERYSECRET#frag" # pipelock:ignore Credential in URL
     ) do
       assert_difference "DebugLogEntry.count", 2 do
         categorize([ txn.id ])
       end
     end
 
+    assert_equal category, txn.reload.category
     entry = DebugLogEntry.where(message: "Jev is misconfigured; falling back to the LLM provider").sole
     assert_equal "auto_categorization", entry.category
     assert_equal "error", entry.level
     assert_equal "jev", entry.provider_key
     assert_equal @family, entry.family
-    assert_equal "http://gw.example.com/v1", entry.metadata["endpoint"]
-    assert_equal "Provider::Jev::Error", entry.metadata["error_class"]
-
-    # error_message embeds the endpoint the constructor rejected, so it leaks
-    # just as readily as the endpoint field if it is not redacted at the raise.
+    assert_equal "https://gw.example.com/v1", entry.metadata["endpoint"]
+    assert_equal "path", entry.metadata["reason"]
     serialized = entry.metadata.to_json
     assert_not_includes serialized, "s3cret"
     assert_not_includes serialized, "QUERYSECRET"
     assert_not_includes serialized, "frag"
   end
 
-  # Confidence has to change behaviour, not just appear in logs. Below the
-  # threshold the answer is withheld and the transaction is left unlocked, so a
-  # later run can still correct it.
+  # Confidence has to change behaviour, not just appear in logs. Below the threshold the answer
+  # is withheld and the transaction is left unlocked, so a later run can still correct it. Only
+  # a model with calibrated confidence is gated (section 6).
 
-  test "withholds a classification answer that carries no confidence at all" do
-    # Previously the gate returned false on a nil confidence, which was there to
-    # avoid gating the LLM providers. That also let a malformed classification
-    # answer through — the one case where withholding matters most, since we
-    # have no idea how good it is.
+  test "withholds a calibrated answer that carries no confidence at all" do
     @family.update!(categorization_confidence_threshold: 0.7)
     txn = create_transaction(account: @account, name: "Ambiguous thing").transaction
     category = @family.categories.create!(name: "Coffee")
 
-    jev_returning(txn, category, confidence: nil)
+    jev_returning(txn, RubyLLM::Choice.new(choice: category.name, probabilities: {}, confidence: nil))
 
     categorize([ txn.id ])
 
@@ -280,14 +266,12 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
   end
 
   test "applies every answer when the threshold is zero" do
-    # Set explicitly rather than leaning on the column default, which is 0.7 —
-    # this test is about the zero-threshold behaviour, not about what ships.
     @family.update!(categorization_confidence_threshold: 0)
     txn = create_transaction(account: @account, name: "Ambiguous thing").transaction
     category = @family.categories.create!(name: "Coffee")
 
     assert_equal 0.0, @family.effective_categorization_confidence_threshold
-    jev_returning(txn, category, confidence: 0.12)
+    jev_returning(txn, [ category.name, 0.12 ])
 
     categorize([ txn.id ])
 
@@ -299,14 +283,13 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "Ambiguous thing").transaction
     category = @family.categories.create!(name: "Coffee")
 
-    jev_returning(txn, category, confidence: 0.52)
+    jev_returning(txn, [ category.name, 0.52 ])
 
     assert_no_difference "DataEnrichment.count" do
       categorize([ txn.id ])
     end
 
     assert_nil txn.reload.category
-    # Unlocked, so it stays eligible for a later attempt.
     assert_includes @account.transactions.reload.enrichable(:category_id), txn
 
     entry = DebugLogEntry.order(:created_at).last
@@ -320,45 +303,47 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "Blue Bottle Coffee").transaction
     category = @family.categories.create!(name: "Coffee")
 
-    jev_returning(txn, category, confidence: 0.97)
+    jev_returning(txn, [ category.name, 0.97 ])
 
     categorize([ txn.id ])
 
     assert_equal category, txn.reload.category
   end
 
-  test "a threshold never suppresses a provider that reports no confidence" do
-    # The LLM providers return a bare category name. Gating them on a confidence
-    # they cannot produce would silently stop categorizing altogether.
+  test "a threshold never suppresses a model without calibrated confidence" do
+    # The LLMs return a bare category name, and a self-hosted judge hasn't had its confidence
+    # checked. Gating them on it would silently stop categorizing.
     @family.update!(categorization_confidence_threshold: 0.9)
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
 
-    stub_ai(:categorize, returns: { categorizations: [
-      { transaction_id: txn.id, category_name: category.name }
-    ] })
-
+    stub_ai(:categorize, returns: { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] })
     categorize([ txn.id ])
-
     assert_equal category, txn.reload.category
+
+    other = create_transaction(account: @account, name: "Coffee again").transaction
+    local = Ai::Config::Endpoint.new(name: :jev_local, protocol: :jev, preset: :jev_local, base_url: "http://jev:8080", location: :local)
+    Ai::Config.override = AiTestHelper.build_ai_config([ Ai::Config::Model.new(endpoint: local, name: "jev-latest", capabilities: %i[judge]) ],
+                                                       { categorize: [ "jev_local/jev-latest" ] })
+    stub_ai(:categorize) { { other.id => { category: [ category.name, 0.3 ] } } }
+    categorize([ other.id ])
+    assert_equal category, other.reload.category
   end
 
-  # Shadow mode runs the provider that is NOT in use and records the comparison
-  # without applying any of its answers.
+  # Shadow mode runs the shadow_categorize route (the model not in use) and records the
+  # comparison without applying any of its answers.
 
-  test "does not run a shadow provider by default" do
+  test "does not run a shadow by default" do
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
 
     assert_equal 0.0, @family.effective_categorization_shadow_rate
-    Provider::Registry.expects(:get_provider).with(:jev).never
-    stub_ai(:categorize, returns: { categorizations: [
-      { transaction_id: txn.id, category_name: category.name }
-    ] })
+    requests = stub_ai(:categorize, returns: { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] })
 
     assert_no_difference "CategorizationComparison.count" do
       categorize([ txn.id ])
     end
+    assert_equal 1, requests.size
   end
 
   test "records a disagreement without applying the shadow answer" do
@@ -366,30 +351,12 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "Blue Bottle Coffee").transaction
     applied = @family.categories.create!(name: "Coffee")
     shadowed = @family.categories.create!(name: "Groceries")
-
-    # Real instances, not bare mocks: the comparison records each provider by
-    # its class name, and a Mocha::Mock would be stored as "mock".
-    stub_ai(:categorize, returns: { categorizations: [
-      { transaction_id: txn.id, category_name: applied.name }
-    ] })
-
-    jev = Provider::Jev.allocate
-    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
-    jev.expects(:auto_categorize).returns(provider_success_response([
-      CategoryDecision.new(
-        transaction_id: txn.id,
-        category_name: shadowed.name,
-        confidence: 0.88,
-        probabilities: { shadowed.name => 0.88 },
-        usage: { "cost" => 0.000032 }
-      )
-    ])).once
+    answer_both(llm: { txn.id => applied.name }, jev: { txn.id => [ shadowed.name, 0.88 ] })
 
     assert_difference "CategorizationComparison.count", 1 do
       categorize([ txn.id ])
     end
 
-    # The incumbent's answer is the one that lands.
     assert_equal applied, txn.reload.category
 
     comparison = CategorizationComparison.order(:created_at).last
@@ -402,23 +369,12 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
   end
 
   test "does not score a missing shadow answer as agreement" do
-    # The comparison rows come from the union of both providers' decisions, so
-    # one side can be absent entirely. When the other side abstained, both
-    # category names are nil — and comparing them directly recorded that as
-    # agreement, inflating the rate with rows where nobody agreed on anything.
+    # The rows come from the union of both models' answers, so one side can be absent. When the
+    # other abstained, both names are nil, and comparing them would count it as agreement.
     @family.update!(categorization_shadow_rate: 1.0)
     txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
     @family.categories.create!(name: "Coffee")
-
-    # Answered, but declined to pick a category.
-    stub_ai(:categorize, returns: { categorizations: [
-      { transaction_id: txn.id, category_name: nil }
-    ] })
-
-    jev = Provider::Jev.allocate
-    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
-    # Returned no decision for this transaction at all.
-    jev.expects(:auto_categorize).returns(provider_success_response([])).once
+    answer_both(llm: { txn.id => nil }, jev: {})
 
     assert_difference "CategorizationComparison.count", 1 do
       categorize([ txn.id ])
@@ -430,45 +386,25 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
   end
 
   test "counts a shared abstention as agreement" do
-    # The other half of the rule: both providers answering "no category" is a
-    # real agreement, and must not be swept up by the fix above.
     @family.update!(categorization_shadow_rate: 1.0)
     txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
     @family.categories.create!(name: "Coffee")
-
-    stub_ai(:categorize, returns: { categorizations: [
-      { transaction_id: txn.id, category_name: nil }
-    ] })
-
-    jev = Provider::Jev.allocate
-    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
-    jev.expects(:auto_categorize).returns(provider_success_response([
-      CategoryDecision.new(
-        transaction_id: txn.id,
-        category_name: nil,
-        confidence: 0.94,
-        probabilities: {},
-        usage: {}
-      )
-    ])).once
+    answer_both(llm: { txn.id => nil }, jev: { txn.id => [ Ai::Judgements::CategorizeTransaction::UNCATEGORIZED, 0.94 ] })
 
     categorize([ txn.id ])
 
     assert CategorizationComparison.order(:created_at).last.agreed
   end
 
-  test "a failing shadow provider does not break the run it observes" do
+  test "a failing shadow model does not break the run it observes" do
     @family.update!(categorization_shadow_rate: 1.0)
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
+    stub_ai(:categorize) do |request|
+      raise Ai::Error::Upstream, "upstream down" if request.is_a?(Ai::Transport::Base::JudgeRequest)
 
-    stub_ai(:categorize, returns: { categorizations: [
-      { transaction_id: txn.id, category_name: category.name }
-    ] })
-
-    jev = Provider::Jev.allocate
-    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
-    jev.expects(:auto_categorize).raises(Provider::Jev::Error.new("upstream down"))
+      { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] }
+    end
 
     assert_nothing_raised do
       categorize([ txn.id ])
@@ -478,46 +414,37 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal 0, CategorizationComparison.count
   end
 
-  test "logs a rejected Jev endpoint when it was due to shadow the run" do
-    @family.update!(categorization_provider: "llm", categorization_shadow_rate: 1.0)
+  test "no shadow route, no comparison" do
+    use_ai_routes(shadow_categorize: [])
+    @family.update!(categorization_shadow_rate: 1.0)
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     category = @family.categories.create!(name: "Coffee")
+    stub_ai(:categorize, returns: { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] })
 
-    stub_ai(:categorize, returns: { categorizations: [
-      { transaction_id: txn.id, category_name: category.name }
-    ] })
-
-    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_ENDPOINT" => "http://gw.example.com/v1") do
+    assert_no_difference "CategorizationComparison.count" do
       categorize([ txn.id ])
     end
-
-    entry = DebugLogEntry.where(message: "Jev is misconfigured; skipping the shadow comparison").sole
-    assert_equal "Provider::Jev::Error", entry.metadata["error_class"]
     assert_equal category, txn.reload.category
   end
 
   private
-    CategoryDecision = Provider::ClassificationConcept::CategoryDecision
-
     def categorize(transaction_ids)
       Ai::GenerationJob.perform_now(:categorize, { ids: transaction_ids, family_id: @family.id })
     end
 
-    # Puts the family on Jev and has it return one decision at a given confidence.
-    def jev_returning(transaction, category, confidence:)
-      @family.update!(categorization_provider: "jev")
-      use_ai_routes(categorize: %w[jev/jev-latest openai/gpt-4.1-mini])
-      jev = Provider::Jev.allocate
-      Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
-      jev.expects(:auto_categorize).returns(provider_success_response([
-        CategoryDecision.new(
-          transaction_id: transaction.id,
-          category_name: category.name,
-          confidence: confidence,
-          probabilities: { category.name => confidence },
-          usage: { "cost" => 0.000032 }
-        )
-      ])).once
-      jev
+    # Routes categorize to the test setup's cloud Jev and has it give one answer.
+    def jev_returning(transaction, answer)
+      use_ai_routes(categorize: %w[jev/jev-latest])
+      stub_ai(:categorize) { { transaction.id => { category: answer } } }
+    end
+
+    # The LLM (categorize) answers `llm` (id => name), the shadow's Jev answers `jev`
+    # (id => [name, confidence]).
+    def answer_both(llm:, jev:)
+      stub_ai(:categorize) do |request|
+        next jev.transform_values { { category: _1 } } if request.is_a?(Ai::Transport::Base::JudgeRequest)
+
+        { categorizations: llm.map { |id, name| { transaction_id: id, category_name: name } } }
+      end
     end
 end

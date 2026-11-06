@@ -1,15 +1,12 @@
 # One entry in a feature's ordered model list (section 5.2): a model on an endpoint. The first
 # entry is the normal choice; later ones are for failover and escalation (2c).
 #
-# `condition` limits who an entry serves. Until 2d, a Jev entry serves only families that chose
-# Jev (`:jev_family`), which is today's rule; 2d deletes it with `families.categorization_provider`.
-#
 # An entry's own settings, for that entry only (section 4.2):
 # - prompt: the app/prompts folder it runs; nil means the feature's default (section 8.3);
 # - json_mode: overrides the endpoint's;
 # - reasoning_effort: one lowercase word sent as the model's effort; nil sends nothing (#3605).
-Ai::Route = Data.define(:feature, :position, :model, :condition, :prompt, :json_mode, :reasoning_effort) do
-  def initialize(feature:, position:, model:, condition: nil, prompt: nil, json_mode: nil, reasoning_effort: nil)
+Ai::Route = Data.define(:feature, :position, :model, :prompt, :json_mode, :reasoning_effort) do
+  def initialize(feature:, position:, model:, prompt: nil, json_mode: nil, reasoning_effort: nil)
     json_mode = json_mode&.to_sym
     if json_mode && !Ai::Config::Endpoint::JSON_MODES.include?(json_mode)
       raise ArgumentError, "unknown JSON mode #{json_mode.inspect}"
@@ -18,7 +15,7 @@ Ai::Route = Data.define(:feature, :position, :model, :condition, :prompt, :json_
       raise ArgumentError, "reasoning effort must be one lowercase word"
     end
 
-    super(feature: feature.to_sym, position:, model:, condition:, prompt: prompt&.to_s, json_mode:,
+    super(feature: feature.to_sym, position:, model:, prompt: prompt&.to_s, json_mode:,
           reasoning_effort: reasoning_effort&.to_s)
   end
 
@@ -48,14 +45,6 @@ Ai::Route = Data.define(:feature, :position, :model, :condition, :prompt, :json_
     return true if !agent? || allowed.empty?
 
     user&.email.present? && allowed.include?(user.email.downcase)
-  end
-
-  def serves?(family)
-    case condition
-    when nil then true
-    when :jev_family then family.present? && family.effective_categorization_provider == "jev"
-    else raise ArgumentError, "unknown route condition #{condition.inspect}"
-    end
   end
 
   def inspect = "#<Ai::Route #{feature}[#{position}] #{endpoint.name}/#{model.name}>"
