@@ -4,6 +4,16 @@ pt-PT:
     show:
       title: Plano
       subtitle: Decida para onde vai o seu dinheiro — o que gasta e o que poupa.
+    bills_card:
+      nothing_owed: "Não falta pagar nada este mês."
+      overdue_count:
+        one: "1 em atraso"
+        other: "%{count} em atraso"
+      owed_count:
+        one: "1 fatura a pagar este mês"
+        other: "%{count} faturas a pagar este mês"
+      title: Faturas
+      view_bills: Ver faturas
     budget_card:
       title: Este mês
       edit_budget: Editar orçamento

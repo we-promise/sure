@@ -1,6 +1,20 @@
 ---
 pl:
   plans:
+    bills_card:
+      nothing_owed: "W tym miesiącu nie ma już nic do zapłaty."
+      overdue_count:
+        one: "1 zaległy"
+        few: "%{count} zaległe"
+        many: "%{count} zaległych"
+        other: "%{count} zaległego"
+      owed_count:
+        one: "1 rachunek do zapłaty w tym miesiącu"
+        few: "%{count} rachunki do zapłaty w tym miesiącu"
+        many: "%{count} rachunków do zapłaty w tym miesiącu"
+        other: "%{count} rachunku do zapłaty w tym miesiącu"
+      title: Rachunki
+      view_bills: Zobacz rachunki
     budget_card:
       days_left:
         few: Zostały %{count} dni
