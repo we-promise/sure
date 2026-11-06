@@ -52,5 +52,20 @@ module Ai::CallContext
     Fiber[CALL_KEY] = previous
   end
 
+  # Re-enters `call` on another thread, for a transport that fans one call out (Jev, section 7).
+  # RubyLLM 2.1.1 keeps the workflow per thread, so a pool thread's requests would otherwise reach
+  # `usage.ruby_llm` without the call's id and write no usage row.
+  def within(call, owner: nil)
+    previous = [ Fiber[CALL_KEY], Fiber[CORRELATION_KEY] ]
+    Fiber[CALL_KEY] = call
+    Fiber[CORRELATION_KEY] = call.correlation_id
+
+    RubyLLM.with_usage_owner(owner) do
+      RubyLLM.workflow("ai.#{call.feature}", id: call.call_id, metadata: call.metadata) { yield call }
+    end
+  ensure
+    Fiber[CALL_KEY], Fiber[CORRELATION_KEY] = previous
+  end
+
   def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 end

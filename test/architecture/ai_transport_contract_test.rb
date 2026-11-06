@@ -140,7 +140,8 @@ class AiTransportContractTest < ActiveSupport::TestCase
     { RubyLLM => %i[context workflow with_usage_owner render_prompt], RubyLLM::OpenTelemetry => %i[enable] }.each do |owner, methods|
       methods.each { assert owner.respond_to?(_1), "RubyLLM.#{_1}" }
     end
-    { RubyLLM::Context => %i[chat embed],
+    { RubyLLM::Context => %i[chat embed judge],
+      RubyLLM::Judgment => %i[answers tokens model []], RubyLLM::Choice => %i[choice probabilities confidence to_h],
       RubyLLM::Chat => %i[generate add_message with_headers with_max_output_tokens with_tools with_instructions with_schema
                           with_thinking with_provider_options],
       RubyLLM::Message => %i[content model tokens cost tool_calls finish_reason raw], RubyLLM::Embedding => %i[vectors],
@@ -148,6 +149,8 @@ class AiTransportContractTest < ActiveSupport::TestCase
       methods.each { assert klass.public_method_defined?(_1), "#{klass}##{_1}" }
     end
     assert_kind_of RubyLLM::Error, RubyLLM::PaymentRequiredError.new
+    assert_includes RubyLLM::Configuration.instance_methods, :typesafe_api_base=
+    assert_includes RubyLLM::Configuration.instance_methods, :typesafe_api_key=
   end
 
   private

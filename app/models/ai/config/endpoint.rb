@@ -9,9 +9,11 @@
 #   session key.
 # - json_mode: how chat completions ask for JSON (section 7). A route entry can override it.
 #   The Responses API and Anthropic always send the schema.
+# - parallel_requests: how many requests one call may have in flight. Only the Jev transport
+#   fans out (section 7); nil uses its preset's default.
 class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :api_key, :extra_headers, :location,
                                          :timeout_seconds, :max_retries, :responses_api, :probe_check, :vector_store,
-                                         :agent, :agent_settings, :json_mode)
+                                         :agent, :agent_settings, :json_mode, :parallel_requests)
   PROTOCOLS = %i[compatible anthropic jev].freeze
   LOCATIONS = %i[local cloud].freeze
   # What a health probe checks (decision 4 in pr-2a-transports-and-instrumentation.md):
@@ -23,7 +25,7 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
 
   def initialize(name:, protocol:, preset: nil, base_url: nil, api_key: nil, extra_headers: {}, location: :cloud,
                  timeout_seconds: 60, max_retries: 0, responses_api: false, probe_check: :models, vector_store: false,
-                 agent: false, agent_settings: {}, json_mode: :auto)
+                 agent: false, agent_settings: {}, json_mode: :auto, parallel_requests: nil)
     protocol = protocol.to_sym
     location = location.to_sym
     probe_check = probe_check.to_sym
@@ -37,7 +39,8 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
           extra_headers: extra_headers.to_h.transform_keys(&:to_s).freeze, location:, timeout_seconds: Integer(timeout_seconds),
           max_retries: Integer(max_retries), responses_api: responses_api ? true : false, probe_check:,
           vector_store: vector_store ? true : false, agent: agent ? true : false,
-          agent_settings: agent_settings.to_h.transform_keys(&:to_sym).freeze, json_mode:)
+          agent_settings: agent_settings.to_h.transform_keys(&:to_sym).freeze, json_mode:,
+          parallel_requests: parallel_requests && Integer(parallel_requests))
   end
 
   def local? = location == :local

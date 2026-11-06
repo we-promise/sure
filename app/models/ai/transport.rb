@@ -5,7 +5,8 @@ module Ai::Transport
     case endpoint.protocol
     when :compatible then Ai::Transport::Compatible.new(endpoint)
     when :anthropic then Ai::Transport::Anthropic.new(endpoint)
-    else raise ArgumentError, "no transport for the #{endpoint.protocol} protocol yet"   # jev: PR 2d
+    when :jev then Ai::Transport::Jev.new(endpoint)
+    else raise ArgumentError, "no transport for the #{endpoint.protocol} protocol"
     end
   end
 end

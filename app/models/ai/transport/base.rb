@@ -1,6 +1,6 @@
 # The transport interface (section 7). A transport call arrives with its first caller: 2a
-# implements `probe` (AiHealth::Probe), 2c `generate` (Ai::Generation); `judge` comes in 2d,
-# `embed` in 2e and `converse` in PR 6.
+# implements `probe` (AiHealth::Probe), 2c `generate` (Ai::Generation), 2d `judge`
+# (Ai::Judgement); `embed` comes in 2e and `converse` in PR 6.
 class Ai::Transport::Base
   # One structured-output request. `failed_ratio` (optional) takes the parsed JSON and returns
   # the share of items the model left blank or missed, for `auto` JSON mode's fallback; nil
@@ -20,6 +20,24 @@ class Ai::Transport::Base
   # The parsed JSON (a Hash or an Array), the summed usage of every request the call made, and
   # the JSON mode that produced it.
   Response = Data.define(:json, :usage, :raw_id, :finish_reason, :json_mode)
+
+  # One judgement request: the same questions about each state, keyed by the item's id. Jev takes
+  # one state per request, so the transport fans the states out (section 7). Questions are plain
+  # Hashes in RubyLLM's form ({ name => { type:, instructions:, options: } }), never blocks.
+  JudgeRequest = Data.define(:feature, :family, :model, :states, :questions) do
+    def initialize(feature:, model:, states:, questions:, family: nil)
+      super(feature: feature.to_sym, family:, model:, states: states.to_h, questions:)
+    end
+
+    # The `.ai` event records the questions asked, never the states (the family's transactions).
+    def to_event = { items: states.size, questions: questions.transform_values { _1.except(:options, :criteria, :levels) } }
+  end
+
+  # Each state's answers by question name (RubyLLM's Choice, Probability or Score), or nil when
+  # its answer was malformed, and the summed usage of every request.
+  JudgeResponse = Data.define(:answers, :usage) do
+    def to_event = answers.transform_values { _1&.transform_values(&:to_h) }
+  end
 
   # `auto` moves on when more than this share of items came back blank or missing (today's
   # AUTO_MODE_NULL_THRESHOLD).
@@ -56,7 +74,19 @@ class Ai::Transport::Base
   end
 
   def converse(request, &on_chunk) = raise NotImplementedError, "#{self.class.name}#converse arrives in PR 6"
-  def judge(state:, questions:)    = raise NotImplementedError, "#{self.class.name}#judge arrives in PR 2d"
+  # Answers a JudgeRequest and returns a JudgeResponse, or raises an Ai::Error. The budget covers
+  # every round of the fan-out: the endpoint's timeout per round of `parallel_requests`.
+  def judge(request)
+    rounds = (request.states.size.to_f / parallel_requests).ceil.clamp(1, nil)
+    Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family,
+                         budget: endpoint.timeout_seconds * rounds) do
+      instrument("judge", model: request.model, request: request.to_event) { run_judge(request) }
+    end
+  end
+
+  # How many requests one call may have in flight.
+  def parallel_requests = endpoint.parallel_requests || 1
+
   def embed(texts, model:)         = raise NotImplementedError, "#{self.class.name}#embed arrives in PR 2e"
 
   # Health probes reuse the production path (fixes drift bug 6): the same client settings,
@@ -76,7 +106,8 @@ class Ai::Transport::Base
 
   private
     def run_probe(model, check, timeout:) = raise(NotImplementedError)
-    def run_generate(request) = raise(NotImplementedError)
+    def run_generate(request) = raise(NotImplementedError, "#{self.class.name} doesn't generate")
+    def run_judge(request) = raise(NotImplementedError, "#{self.class.name} doesn't judge")
 
     # Tolerant parsing, the one copy of what each worker did (section 7): a reasoning model's
     # <think> block, fenced JSON (closed or not), prose around the object, or a bare array.
@@ -141,8 +172,12 @@ class Ai::Transport::Base
 
       ActiveSupport::Notifications.instrument("#{name}.ai", payload) do
         result = yield
-        payload[:output] = result.is_a?(Response) ? result.json : result
-        payload[:usage] = result.usage if result.is_a?(Response)
+        payload[:output] = case result
+        when Response then result.json
+        when JudgeResponse then result.to_event
+        else result
+        end
+        payload[:usage] = result.usage if result.is_a?(Response) || result.is_a?(JudgeResponse)
         payload[:json_mode] = result.json_mode if result.is_a?(Response)
         result
       rescue Ai::Error::Base => error
