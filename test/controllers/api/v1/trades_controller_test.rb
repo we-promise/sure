@@ -1000,7 +1000,62 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert trade_data.key?("notes")
   end
 
+  test "member with a read_only or read_write share cannot create, update or delete trades" do
+    %w[read_only read_write].each do |permission|
+      assert_member_cannot_write_trades(permission)
+    end
+  end
+
+  test "member without a share cannot list or read trades" do
+    @user = users(:family_member)
+    trade = entries(:trade).trade
+
+    get api_v1_trades_url, headers: api_headers(read_only_api_key)
+    assert_response :success
+    assert_not_includes JSON.parse(response.body)["trades"].map { |t| t["id"] }, trade.id
+
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_response :not_found
+    assert_equal "Trade not found", JSON.parse(response.body)["message"]
+  end
+
   private
+
+    def assert_member_cannot_write_trades(permission)
+      @user = users(:family_member)
+      share = @investment_account.account_shares.find_or_initialize_by(user: @user)
+      share.update!(permission: permission)
+      trade = entries(:trade).trade
+
+      assert_no_difference("Entry.count") do
+        post "/api/v1/trades",
+          params: { trade: {
+            account_id: @investment_account.id,
+            type: "dividend",
+            date: Date.current,
+            amount: 25.50,
+            currency: "USD",
+            ticker: "AAPL|XNAS"
+          } },
+          headers: api_headers(read_write_api_key)
+      end
+      assert_response :not_found
+      assert_equal "Account not found", JSON.parse(response.body)["message"]
+
+      patch api_v1_trade_url(trade), params: { trade: { notes: "changed" } }, headers: api_headers(read_write_api_key)
+      assert_response :not_found
+      assert_equal "Trade not found", JSON.parse(response.body)["message"]
+      assert_nil trade.entry.reload.notes
+
+      assert_no_difference("Entry.count") do
+        delete api_v1_trade_url(trade), headers: api_headers(read_write_api_key)
+      end
+      assert_response :not_found
+      assert_equal "Trade not found", JSON.parse(response.body)["message"]
+
+      get api_v1_trade_url(trade), headers: api_headers(read_write_api_key)
+      assert_response :success
+    end
 
     def read_write_api_key
       @read_write_api_key ||= ApiKey.create!(

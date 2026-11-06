@@ -9874,7 +9874,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: account not found
+          description: account not found or not writable by the API user
           content:
             application/json:
               schema:
@@ -9985,7 +9985,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: trade not found
+          description: trade not found or its account not shared with the API user
           content:
             application/json:
               schema:
@@ -10017,7 +10017,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: trade not found
+          description: trade not found or its account not writable by the API user
           content:
             application/json:
               schema:
@@ -10089,7 +10089,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: trade not found
+          description: trade not found or its account not writable by the API user
           content:
             application/json:
               schema:
@@ -10234,6 +10234,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '404':
+          description: account not found or not writable by the API user
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: validation error - missing required fields
           content:
@@ -10356,8 +10362,16 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '403':
+          description: account is shared with the API user to annotate only; only
+            category, merchant, tags and notes can change
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: transaction not found
+          description: transaction not found, or its account is shared with the API
+            user read-only
           content:
             application/json:
               schema:
@@ -10425,7 +10439,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/DeleteResponse"
         '404':
-          description: transaction not found
+          description: transaction not found, or the API user has no full_control
+            on its account
           content:
             application/json:
               schema:
@@ -10723,7 +10738,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: account not found
+          description: account not found or not writable by the API user
           content:
             application/json:
               schema:
@@ -10792,7 +10807,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Valuation"
         '404':
-          description: valuation not found
+          description: valuation not found or its account not shared with the API
+            user
           content:
             application/json:
               schema:
@@ -10818,7 +10834,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: valuation not found
+          description: valuation not found or its account not writable by the API
+            user
           content:
             application/json:
               schema:

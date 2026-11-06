@@ -366,7 +366,55 @@ class Api::V1::ValuationsControllerTest < ActionDispatch::IntegrationTest
     assert valuation_data.key?("notes")
   end
 
+  test "member with a read_only or read_write share cannot create or update valuations" do
+    entry = entries(:valuation)
+
+    %w[read_only read_write].each do |permission|
+      account_shares(:depository_shared_with_member).update!(permission: permission)
+
+      assert_no_difference("Entry.count") do
+        post api_v1_valuations_url,
+             params: { valuation: { account_id: accounts(:depository).id, amount: 1, date: Date.current } },
+             headers: api_headers(member_api_key)
+      end
+      assert_response :not_found
+      assert_equal "Account or valuation entry not found", JSON.parse(response.body)["message"]
+
+      put api_v1_valuation_url(entry),
+          params: { valuation: { notes: "changed" } },
+          headers: api_headers(member_api_key)
+      assert_response :not_found
+      assert_equal "Valuation not found", JSON.parse(response.body)["message"]
+      assert_nil entry.reload.notes
+
+      get api_v1_valuation_url(entry), headers: api_headers(member_api_key)
+      assert_response :success
+    end
+  end
+
+  test "member without a share cannot read a valuation" do
+    account_shares(:depository_shared_with_member).destroy!
+
+    get api_v1_valuation_url(entries(:valuation)), headers: api_headers(member_api_key)
+    assert_response :not_found
+    assert_equal "Valuation not found", JSON.parse(response.body)["message"]
+  end
+
   private
+
+    def member_api_key
+      @member_api_key ||= begin
+        member = users(:family_member)
+        member.api_keys.active.destroy_all
+        ApiKey.create!(
+          user: member,
+          name: "Member Read-Write Key",
+          scopes: [ "read_write" ],
+          source: "web",
+          display_key: "test_member_rw_#{SecureRandom.hex(8)}"
+        ).tap { |key| Redis.new.del("api_rate_limit:#{key.id}") }
+      end
+    end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.plain_key }

@@ -36,6 +36,7 @@ RSpec.describe 'API V1 Trades', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Investment Account',
       balance: 50_000,
       currency: 'USD',
@@ -259,6 +260,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         let(:checking_account) do
           Account.create!(
             family: family,
+            owner: user,
             name: 'Checking',
             balance: 1000,
             currency: 'USD',
@@ -281,7 +283,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '404', 'account not found' do
+      response '404', 'account not found or not writable by the API user' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -502,7 +504,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '404', 'trade not found' do
+      response '404', 'trade not found or its account not shared with the API user' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
@@ -583,7 +585,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '404', 'trade not found' do
+      response '404', 'trade not found or its account not writable by the API user' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
@@ -632,7 +634,7 @@ RSpec.describe 'API V1 Trades', type: :request do
         run_test!
       end
 
-      response '404', 'trade not found' do
+      response '404', 'trade not found or its account not writable by the API user' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
