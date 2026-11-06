@@ -16,12 +16,9 @@
 class Ai::Prompt
   ROOT = Rails.root.join("app/prompts")
 
-  # Features whose instructions a family can override, and the Family::AiPromptable key: today's
-  # one key per provider until the keys collapse to one per feature (section 8.3).
-  OVERRIDES = {
-    categorize: { anthropic: :categorizer_anthropic, compatible: :categorizer_openai },
-    detect_merchants: { anthropic: :merchant_anthropic, compatible: :merchant_openai }
-  }.freeze
+  # Features whose instructions a family can override, and the Family::AiPromptable key: one per
+  # feature, whichever provider serves it (section 8.3).
+  OVERRIDES = { categorize: :categorize_transactions, detect_merchants: :detect_merchants }.freeze
 
   Rendered = Data.define(:name, :instructions, :input, :locale, :override) do
     # What instrumentation and Ai::Comparison record about the prompt that ran.
@@ -56,7 +53,7 @@ class Ai::Prompt
 
   private
     def override_text
-      key = OVERRIDES.dig(@feature, @route&.endpoint&.protocol || :compatible)
+      key = OVERRIDES[@feature]
       key && @family&.ai_prompt(key)
     end
 

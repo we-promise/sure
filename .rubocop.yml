@@ -30,7 +30,6 @@ Sure/NoAiEnv:
     - "app/models/assistant/responder.rb"                       # PR 6: chat
     - "app/models/assistant/token_budget.rb"                    # PR 6: chat
     - "app/models/chat.rb"                                      # PR 6: chat
-    - "app/models/family/ai_promptable.rb"                      # 2c: prompt files
     - "app/models/family/ai_settings.rb"                        # PR 7: family settings
     - "app/models/provider/anthropic.rb"                        # PR 6: chat
     - "app/models/provider/anthropic/bank_statement_extractor.rb" # 2e

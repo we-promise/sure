@@ -13,6 +13,7 @@ class Settings::AiPromptsController < ApplicationController
 
   def update
     Current.family.update!(prompt_params)
+    Current.family.clear_dropped_ai_prompt_overrides
 
     redirect_to settings_ai_prompts_path, notice: t(".success")
   rescue ActiveRecord::RecordInvalid => e
