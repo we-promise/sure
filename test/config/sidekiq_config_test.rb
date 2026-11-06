@@ -3,7 +3,9 @@ require "test_helper"
 class SidekiqConfigTest < ActiveSupport::TestCase
   AI_JOBS = {
     AssistantResponseJob => "ai_high_priority",
-    ProcessPdfJob => "ai_low_priority"
+    ProcessPdfJob => "ai_low_priority",
+    IndexAccountStatementJob => "ai_low_priority",
+    VectorStore::IndexStatusJob => "ai_low_priority"
   }.freeze
 
   test "the ai capsule serves the AI queues in strict order, apart from the default capsule" do
@@ -18,7 +20,7 @@ class SidekiqConfigTest < ActiveSupport::TestCase
   end
 
   test "AI jobs run on the ai capsule's queues, which SidekiqHealth knows" do
-    AI_JOBS.each { |job, queue| assert_equal queue, job.queue_name, job.name }
+    AI_JOBS.each { |job, queue| assert_equal queue, job.new.queue_name, job.name }
     assert_equal sidekiq_config.dig(:capsules, :ai, :queues), SidekiqHealth::AI_QUEUES
   end
 

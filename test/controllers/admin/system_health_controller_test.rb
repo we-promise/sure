@@ -387,9 +387,11 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/local-token/, response.body)
   end
 
-  test "AI status does not probe PDF processing when it is explicitly disabled" do
+  # OPENAI_SUPPORTS_PDF_PROCESSING=false turns page images off, as its comment always said; a
+  # statement's text layer is still read (2e), so only the vision check is skipped.
+  test "AI status does not probe PDF images when PDF processing is explicitly disabled" do
     sign_in users(:sure_support_staff)
-    AiHealth::Probe.any_instance.expects(:pdf_text_extraction).never
+    AiHealth::Probe.any_instance.stubs(:pdf_text_extraction).returns(probe_result(:passing))
     AiHealth::Probe.any_instance.expects(:pdf_vision_processing).never
 
     with_ai_environment(
