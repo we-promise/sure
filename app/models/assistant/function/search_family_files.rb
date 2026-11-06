@@ -3,7 +3,6 @@
 # the router's reason, never "no documents have been uploaded". The query's embedding is an
 # `embed.ai` call, traced and recorded like any other.
 class Assistant::Function::SearchFamilyFiles < Assistant::Function
-
   class << self
     def name
       "search_family_files"

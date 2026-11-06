@@ -22,22 +22,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
 
         assert_instance_of Provider::Openai, provider
         assert provider.supports_responses_endpoint?
-        assert provider.supports_pdf_processing?(model: model)
-      end
-    end
-
-    test "#{model} PDF processing reserves only an explicitly configured output limit" do
-      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
-        Setting.stubs(:llm_max_response_tokens).returns(nil)
-        expect_pdf_response_limit(@openai, model: model, limit: nil)
-        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
-      end
-    end
-
-    test "#{model} PDF processing honors an explicit output limit" do
-      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "8192") do
-        expect_pdf_response_limit(@openai, model: model, limit: 8192)
-        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
       end
     end
   end
@@ -72,23 +56,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
-  test "native o-series PDF processing reserves only an explicitly configured output limit" do
-    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
-      Setting.stubs(:llm_max_response_tokens).returns(nil)
-      %w[o1 o3].each do |model|
-        expect_pdf_response_limit(@openai, model: model, limit: nil)
-        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
-      end
-    end
-
-    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "8192") do
-      %w[o1 o3].each do |model|
-        expect_pdf_response_limit(@openai, model: model, limit: 8192)
-        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
-      end
-    end
-  end
-
   # The registry and the settings form both stop a custom base URL without a
   # model before it gets here; this is the provider's own guard behind them.
   test "a custom base URL without a model is refused" do
@@ -105,21 +72,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert local.custom_provider?
     assert local.supports_model?("llama3.1")
     assert local.supports_model?("qwen2.5:32b")
-  end
-
-  test "legacy and custom PDF processing preserve the fallback output limit" do
-    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
-      Setting.stubs(:llm_max_response_tokens).returns(nil)
-      expect_pdf_response_limit(@openai, model: "gpt-4.1", limit: 512)
-      assert @openai.process_pdf(pdf_content: "synthetic PDF", model: "gpt-4.1").success?
-
-      custom = Provider::Openai.new("test-token", uri_base: "https://custom.example/v1", model: "gpt-6-sol")
-      expect_pdf_response_limit(custom, model: "gpt-6-sol", limit: 512)
-      assert custom.process_pdf(pdf_content: "synthetic PDF", model: "gpt-6-sol").success?
-
-      expect_pdf_response_limit(custom, model: "o3", limit: 512)
-      assert custom.process_pdf(pdf_content: "synthetic PDF", model: "o3").success?
-    end
   end
 
   test "effective_model uses Setting when ENV is unset" do
@@ -1000,19 +952,4 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_nil local.proxy
     end
   end
-  private
-    # Verify the response budget at the provider-to-processor boundary.
-    # @param limit [Integer, nil] expected explicit cap or omitted cap
-    def expect_pdf_response_limit(provider, model:, limit:)
-      result = Provider::LlmConcept::PdfProcessingResult.new(
-        summary: "Synthetic PDF", document_type: "other", extracted_data: {}
-      )
-      processor = mock
-      processor.expects(:process).returns(result)
-      Provider::Openai::PdfProcessor.expects(:new).with do |*args|
-        params = args.last
-        params[:model] == model && params[:max_response_tokens] == limit &&
-          params[:custom_provider] == provider.custom_provider?
-      end.returns(processor)
-    end
 end

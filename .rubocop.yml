@@ -34,10 +34,8 @@ Sure/NoAiEnv:
     - "app/models/chat.rb"                                      # PR 6: chat
     - "app/models/family/ai_settings.rb"                        # PR 7: family settings
     - "app/models/provider/anthropic.rb"                        # PR 6: chat
-    - "app/models/provider/anthropic/bank_statement_extractor.rb" # 2e
-    - "app/models/provider/anthropic/pdf_processor.rb"          # 2e
     - "app/models/provider/openai.rb"                           # PR 6: chat
-    - "app/models/provider/registry.rb"                         # 2e, PR 6
+    - "app/models/provider/registry.rb"                         # PR 6: chat
     - "app/models/setting.rb"                                   # PR 7: settings pages
 
 Layout/IndentationWidth:

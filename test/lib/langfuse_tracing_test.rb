@@ -109,21 +109,23 @@ class LangfuseTracingTest < ActiveSupport::TestCase
     client&.shutdown
   end
 
-  test "provider failures finish their roots without changing the provider response" do
+  # LangfuseTraceable, which chat's providers keep until PR 6; the AI plumbing traces through
+  # Ai::Instrumentation::LangfuseSubscriber.
+  TracedThing = Class.new do
+    include LangfuseTraceable
+    public :create_langfuse_trace, :finish_langfuse_trace
+  end
+
+  test "a finished root records its error level and output" do
     Rails.configuration.x.stubs(:langfuse).returns(@client)
     with_env_overrides("LANGFUSE_PUBLIC_KEY" => "pk-test", "LANGFUSE_SECRET_KEY" => "sk-test") do
-      [ Provider::Openai, Provider::Anthropic ].each do |provider_class|
-        provider_class::PdfProcessor.any_instance.stubs(:process).raises(StandardError, "LLM unavailable")
-        response = provider_class.new("test-token").process_pdf(pdf_content: "%PDF-1.4 fake")
-        refute response.success?
-        assert_equal "LLM unavailable", response.error.message
-      end
+      thing = TracedThing.new
+      thing.finish_langfuse_trace(trace: thing.create_langfuse_trace(name: "chat", input: {}), output: { error: "LLM unavailable" }, level: "ERROR")
     end
-    assert_equal 2, @exporter.finished_spans.size
-    @exporter.finished_spans.each do |span|
-      assert_equal "ERROR", span.attributes["langfuse.observation.level"]
-      assert_equal({ "error" => "LLM unavailable" }, JSON.parse(span.attributes["langfuse.observation.output"]))
-    end
+
+    span = @exporter.finished_spans.sole
+    assert_equal "ERROR", span.attributes["langfuse.observation.level"]
+    assert_equal({ "error" => "LLM unavailable" }, JSON.parse(span.attributes["langfuse.observation.output"]))
   end
 
   test "shutdown flushes pending observations and a failed flush reports failure" do
@@ -137,21 +139,11 @@ class LangfuseTracingTest < ActiveSupport::TestCase
     assert_requested request, times: 2
   end
 
-  test "tracing finalization failures preserve the original provider error" do
-    [ Provider::Openai, Provider::Anthropic ].each do |provider_class|
-      original_error = provider_class::Error.new("LLM unavailable", failure_code: :provider_unavailable)
-      provider_class::PdfProcessor.any_instance.stubs(:process).raises(original_error)
-      trace = mock
-      trace.expects(:end).with(output: { error: "LLM unavailable" }, level: "ERROR").raises(StandardError, "Tracing unavailable")
-      provider = provider_class.new("test-token")
-      provider.stubs(:create_langfuse_trace).returns(trace)
-      Rails.logger.expects(:warn).with("Langfuse trace finalization failed: StandardError: Tracing unavailable")
+  test "a tracing finalization failure is logged, not raised" do
+    trace = mock
+    trace.expects(:end).raises(StandardError, "Tracing unavailable")
+    Rails.logger.expects(:warn).with("Langfuse trace finalization failed: StandardError: Tracing unavailable")
 
-      response = provider.process_pdf(pdf_content: "%PDF-1.4 fake")
-
-      refute response.success?
-      assert_equal original_error.message, response.error.message
-      assert_equal :provider_unavailable, response.error.failure_code
-    end
+    assert_nil TracedThing.new.finish_langfuse_trace(trace:, output: { error: "LLM unavailable" }, level: "ERROR")
   end
 end

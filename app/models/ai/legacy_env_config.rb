@@ -22,7 +22,7 @@ class Ai::LegacyEnvConfig
     enhance_merchants: "enhance_merchants", bill_setup: "bill_setup"
   }.freeze
   SIMPLE_PROMPTS = %i[categorize detect_merchants enhance_merchants].freeze   # bill setup has one OpenAI prompt
-  JSON_MODES = %w[strict json_object none auto].freeze   # Provider::Openai::Concerns::JsonMode's
+  JSON_MODES = %w[strict json_object none auto].freeze   # LLM_JSON_MODE values today
   ANTHROPIC_MAX_TOKENS = 4096
   EMBEDDING_TIMEOUT = 120         # VectorStore::Embeddable's client
   EXTERNAL_ASSISTANT_TIMEOUT = 120 # Assistant::External::Client::TIMEOUT_READ
@@ -77,7 +77,7 @@ class Ai::LegacyEnvConfig
     embed_route_model = embed_route(backend, llm[:openai], embed_model)
 
     llm_models = Provider::Registry.llm_provider_order.filter_map { |name| llm[name]&.last }
-    # Generation routes list only the preferred LLM, as today's preferred_llm_provider picks one:
+    # Generation routes list only the preferred LLM, as today's code picked one provider:
     # failover never sends a family's data to the provider today's code wouldn't use (2c's plan,
     # decision 2). Chat keeps both until PR 6, which resolves its own provider.
     preferred = llm_models.first(1)

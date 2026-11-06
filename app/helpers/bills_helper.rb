@@ -44,7 +44,7 @@ module BillsHelper
   # with `requires_ai :chat`. Smart-fill and smart-configure ask the router for
   # `bill_setup` (ai_feature_available?).
   def bills_ai_chat_available?
-    Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider.present?
+    Current.user&.ai_enabled? && Assistant.builtin_provider.present?
   end
 
   # Pay-period markers keyed by the id of the FIRST occurrence inside each

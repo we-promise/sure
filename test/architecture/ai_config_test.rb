@@ -18,7 +18,7 @@ class AiConfigTest < ActiveSupport::TestCase
   SETUPS.each_key do |id|
     test "#{id}: every non-chat feature's first route is today's provider and model" do
       in_ai_setup(id, family: @family) do
-        today = Provider::Registry.preferred_llm_provider
+        today = Assistant.builtin_provider
         LLM_FEATURES.each { |feature| assert_same_route(today, Ai.plan(feature, family: @family, user: @user), "#{id} #{feature}") }
 
         assert_same_route(jev_chosen? ? :jev : today, Ai.plan(:categorize, family: @family), "#{id} categorize")
@@ -34,7 +34,7 @@ class AiConfigTest < ActiveSupport::TestCase
     in_ai_setup("M1", family: @family) do
       [ @family, families(:empty) ].each do |family|
         assert_equal "jev", Ai.plan(:categorize, family:).route.endpoint.name
-        assert_same_route(Provider::Registry.preferred_llm_provider, Ai.plan(:shadow_categorize, family:), "M1 shadow_categorize")
+        assert_same_route(Assistant.builtin_provider, Ai.plan(:shadow_categorize, family:), "M1 shadow_categorize")
       end
     end
 

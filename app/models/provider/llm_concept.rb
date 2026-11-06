@@ -1,16 +1,6 @@
 module Provider::LlmConcept
   extend ActiveSupport::Concern
 
-  PdfProcessingResult = Data.define(:summary, :document_type, :extracted_data)
-
-  def supports_pdf_processing?
-    false
-  end
-
-  def process_pdf(pdf_content:, family: nil)
-    raise NotImplementedError, "Provider does not support PDF processing"
-  end
-
   ChatMessage = Data.define(:id, :output_text)
   ChatStreamChunk = Data.define(:type, :data, :usage)
   ChatResponse = Data.define(:id, :model, :messages, :function_requests)

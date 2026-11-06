@@ -14,14 +14,8 @@ class Provider::Openai < Provider
   DEFAULT_REQUEST_TIMEOUT = 60
   MIN_REQUEST_TIMEOUT = 1
   SUPPORTED_MODELS = %w[gpt-4 gpt-5 gpt-6 o1 o3].freeze
+  # Models that read images, which Ai::LegacyEnvConfig reads for `vision` (2e).
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 gpt-6 o1 o3].freeze
-  PDF_COMPLETION_LIMIT_MODEL_PREFIXES = %w[gpt-6 o1 o3].freeze
-
-  # Keep the provider's response budget and the PDF request parameter in sync.
-  # @return [Boolean] whether native PDF vision uses max_completion_tokens
-  def self.native_pdf_completion_limit?(model:, custom_provider:)
-    !custom_provider && PDF_COMPLETION_LIMIT_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
-  end
 
   # Returns the effective model that would be used by the provider.
   # Priority: explicit ENV > Setting > DEFAULT_MODEL. A blank ENV value is
@@ -181,86 +175,6 @@ class Provider::Openai < Provider
       end
 
     [ context_window - max_response_tokens - prompt_reserve, 256 ].max
-  end
-
-  # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
-  # Only vision-capable models (gpt-4o, gpt-4-turbo, gpt-4.1, etc.) support PDF input
-  def supports_pdf_processing?(model: @default_model)
-    return false unless ENV.fetch("OPENAI_SUPPORTS_PDF_PROCESSING", "true").to_s.downcase.in?(%w[true 1 yes])
-
-    # Custom providers manage their own model capabilities
-    return true if custom_provider?
-
-    # Check if the specified model supports vision/PDF input
-    VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.start_with?(prefix) }
-  end
-
-  # Analyze PDF bytes with the selected model and attribute usage to the family.
-  # @param pdf_content [String] PDF bytes
-  # @param model [String] optional override of the configured model
-  # @param family [Family, nil] usage attribution
-  # @return [Provider::Response] structured result or provider failure
-  def process_pdf(pdf_content:, model: "", family: nil, json_mode: nil)
-    with_provider_response do
-      effective_model = model.presence || @default_model
-      raise Error, "Model does not support PDF/vision processing: #{effective_model}" unless supports_pdf_processing?(model: effective_model)
-
-      trace = create_langfuse_trace(
-        name: "openai.process_pdf",
-        input: { pdf_size: pdf_content&.bytesize }
-      )
-
-      # Reasoning-model completion limits include reasoning; the fallback is a budget reserve.
-      response_limit =
-        if self.class.native_pdf_completion_limit?(model: effective_model, custom_provider: custom_provider?)
-          explicit_max_response_tokens
-        else
-          max_response_tokens
-        end
-
-      result = PdfProcessor.new(
-        client,
-        model: effective_model,
-        pdf_content: pdf_content,
-        custom_provider: custom_provider?,
-        langfuse_trace: trace,
-        family: family,
-        max_response_tokens: response_limit,
-        json_mode: json_mode
-      ).process
-
-      finish_langfuse_trace(trace: trace, output: result.to_h)
-
-      result
-    rescue => error
-      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
-      raise
-    end
-  end
-
-  def extract_bank_statement(pdf_content:, model: "", family: nil, json_mode: nil)
-    with_provider_response do
-      effective_model = model.presence || @default_model
-
-      trace = create_langfuse_trace(
-        name: "openai.extract_bank_statement",
-        input: { pdf_size: pdf_content&.bytesize }
-      )
-
-      result = BankStatementExtractor.new(
-        client: client,
-        pdf_content: pdf_content,
-        model: effective_model,
-        json_mode: json_mode
-      ).extract
-
-      finish_langfuse_trace(trace: trace, output: { transaction_count: result[:transactions].size })
-
-      result
-    rescue => error
-      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
-      raise
-    end
   end
 
   def chat_response(

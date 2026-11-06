@@ -111,5 +111,4 @@ class VectorStore::EmbeddableTest < ActiveSupport::TestCase
         "Chunk too large: #{chunk.length} chars"
     end
   end
-
 end

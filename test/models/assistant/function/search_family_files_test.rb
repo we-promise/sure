@@ -300,5 +300,4 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal "no_user_consent", result[:reason]
     assert_no_match(/No documents have been uploaded/i, result[:message])
   end
-
 end

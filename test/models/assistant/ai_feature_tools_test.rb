@@ -22,7 +22,7 @@ class Assistant::AiFeatureToolsTest < ActiveSupport::TestCase
 
   test "the tool returns the router's reason when called anyway" do
     use_no_ai
-    Provider::Registry.expects(:preferred_llm_provider).never
+    Assistant.expects(:builtin_provider).never
 
     result = Assistant::Function::ImportBankStatement.new(@user)
                                                      .call("pdf_import_id" => imports(:pdf_with_rows).id, "account_id" => accounts(:depository).id)
