@@ -33,6 +33,7 @@ module Ai::Error
   ModelMissing   = Class.new(Base)   # the endpoint doesn't have the model
   ContextTooLong = Class.new(Base)   # 400 saying the input is too long
   InvalidOutput  = Class.new(Base)   # parse or schema failure after the transport's fallbacks
+  OutputCut      = Class.new(ContextTooLong)   # the answer stopped at the output limit: split the batch (section 8.1)
   Refused        = Class.new(Base)   # any other 4xx: not retried anywhere
 
   # Errors a transport retries itself, up to the endpoint's max_retries.

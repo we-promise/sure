@@ -6,6 +6,15 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
   DEFAULT_BASE = "https://api.anthropic.com".freeze
 
   private
+    # One request with the schema as Anthropic's native structured output (`output_config`),
+    # which RubyLLM's `with_schema` sends. No tool, so no forced or `auto` tool choice and no
+    # reminder retry (#4178, #4513; 2c plan, decision 7). Reasoning effort isn't sent (section 7).
+    def run_generate(request)
+      text, usage, raw_id, finish_reason = attempt { complete_json(request) }
+      json = parsed!(text, finish_reason, :schema)
+      Response.new(json:, usage:, raw_id:, finish_reason:, json_mode: :schema)
+    end
+
     def run_probe(model, check, timeout:)
       case check
       when :models then probe_models(model, timeout:)

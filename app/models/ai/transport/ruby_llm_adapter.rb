@@ -29,6 +29,39 @@ module Ai::Transport::RubyLlmAdapter
         .with_headers(Ai::Transport::Http.headers(endpoint))
     end
 
+    # One completion for a generation, without running tools (`Chat#generate`). The schema
+    # goes through `with_schema` on every protocol (2c plan, decision 7): `response_format` on
+    # chat completions and the Responses API, Anthropic's native `output_config`. Returns
+    # [text, Ai::Tokens, raw id, finish reason].
+    def complete_json(request, schema: true, response_format: nil, effort: nil, provider_options: {})
+      chat = ruby_llm_chat(request.model).with_instructions(request.instructions)
+      max_tokens = request.max_tokens || request.model.max_output_tokens
+      chat.with_max_output_tokens(max_tokens) if max_tokens
+      chat.with_schema(name: request.schema_name, schema: request.schema, strict: true) if schema
+      chat.with_thinking(effort:) if effort
+      options = provider_options.merge(response_format ? { response_format: } : {})
+      chat.with_provider_options(options) if options.any?
+      chat.add_message(role: :user, content: request.input)
+
+      message = mapping_errors { chat.generate }
+      [ message.content.to_s, Ai::Tokens.from_ruby_llm(message.tokens), raw_id(message), message.finish_reason ]
+    end
+
+    def raw_id(message)
+      body = message.raw.respond_to?(:body) ? message.raw.body : nil
+      body.is_a?(Hash) ? body["id"] : nil
+    end
+
+    # A parsed answer, or the error that ends the call: an answer cut at the output limit is
+    # OutputCut (the generation splits the batch); anything else unparseable is InvalidOutput.
+    def parsed!(text, finish_reason, json_mode)
+      json = parse_json(text)
+      return json if json
+      raise Ai::Error::OutputCut, "the answer stopped at the output limit (#{json_mode})" if cut_at_limit?(finish_reason)
+
+      raise Ai::Error::InvalidOutput, "the answer isn't JSON (#{json_mode})"
+    end
+
     def probe_chat(model)
       chat = ruby_llm_chat(model).with_max_output_tokens(Ai::Transport::Base::PROBE_MAX_OUTPUT_TOKENS)
       chat.add_message(role: :user, content: Ai::Transport::Base::PROBE_PROMPT)

@@ -137,11 +137,13 @@ class AiTransportContractTest < ActiveSupport::TestCase
   # RubyLLM hides internal helpers from its documented API between releases (#1438). These are
   # the public methods Sure relies on; an upgrade that drops one fails here, not in production.
   test "the RubyLLM surface Sure uses is still public" do
-    { RubyLLM => %i[context workflow with_usage_owner], RubyLLM::OpenTelemetry => %i[enable] }.each do |owner, methods|
+    { RubyLLM => %i[context workflow with_usage_owner render_prompt], RubyLLM::OpenTelemetry => %i[enable] }.each do |owner, methods|
       methods.each { assert owner.respond_to?(_1), "RubyLLM.#{_1}" }
     end
-    { RubyLLM::Context => %i[chat embed], RubyLLM::Chat => %i[generate add_message with_headers with_max_output_tokens with_tools],
-      RubyLLM::Message => %i[content model tokens cost tool_calls], RubyLLM::Embedding => %i[vectors],
+    { RubyLLM::Context => %i[chat embed],
+      RubyLLM::Chat => %i[generate add_message with_headers with_max_output_tokens with_tools with_instructions with_schema
+                          with_thinking with_provider_options],
+      RubyLLM::Message => %i[content model tokens cost tool_calls finish_reason raw], RubyLLM::Embedding => %i[vectors],
       RubyLLM::Tokens => %i[input output cache_read cache_write reported_cost] }.each do |klass, methods|
       methods.each { assert klass.public_method_defined?(_1), "#{klass}##{_1}" }
     end
