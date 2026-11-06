@@ -47,10 +47,14 @@ class MarketDataResetJob < ApplicationJob
     Rails.logger.error("MarketDataResetJob could not release its enqueue guard: #{e.class}: #{e.message}")
   end
 
+  # Only the run that holds the lock releases the guard; one that finds
+  # another reset running leaves it to that run.
   def perform
-    with_advisory_lock { reset_market_data }
-  ensure
-    self.class.release_guard
+    with_advisory_lock do
+      reset_market_data
+    ensure
+      self.class.release_guard
+    end
   end
 
   private

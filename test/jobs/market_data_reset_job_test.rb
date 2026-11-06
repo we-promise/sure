@@ -115,6 +115,19 @@ class MarketDataResetJobTest < ActiveJob::TestCase
     MarketDataResetJob.release_guard
   end
 
+  test "a run that finds another reset running keeps the guard" do
+    use_own_guard_key
+    stub_imports
+    assert_equal :queued, MarketDataResetJob.enqueue_once
+    MarketDataResetJob.any_instance.stubs(:with_advisory_lock)
+
+    MarketDataResetJob.perform_now
+
+    assert_equal :already_queued, MarketDataResetJob.enqueue_once
+  ensure
+    MarketDataResetJob.release_guard
+  end
+
   test "enqueue_once releases the guard when the job cannot be queued" do
     use_own_guard_key
     MarketDataResetJob.stubs(:perform_later).raises(RedisClient::CannotConnectError).then.returns(false).then.returns(MarketDataResetJob.new)
