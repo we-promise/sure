@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -157,6 +158,35 @@ void main() {
 
       expect(requestedPages, ['3', '4']);
       expect(provider.chats.map((c) => c.id).toList(), ['chat_5', 'chat_6']);
+    });
+
+    test('does not restore a chat deleted while later pages were loading',
+        () async {
+      final pageTwo = Completer<http.Response>();
+      final client = MockClient((request) async {
+        if (request.method == 'DELETE') return http.Response('', 204);
+        final page = request.url.queryParameters['page'] ?? '1';
+        switch (page) {
+          case '1':
+            return _chatListPage(page: 1, totalPages: 2, chatIds: [1, 2]);
+          case '2':
+            return pageTwo.future;
+          default:
+            return http.Response('{"error":"unexpected page"}', 500);
+        }
+      });
+
+      final provider = ChatProvider(chatService: ChatService(client: client));
+      final fetch = provider.fetchChats(accessToken: 'token');
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      await provider.deleteChat(accessToken: 'token', chatId: 'chat_2');
+      pageTwo.complete(
+          _chatListPage(page: 2, totalPages: 2, chatIds: [3]));
+      await fetch;
+
+      expect(provider.chats.map((c) => c.id).toList(), ['chat_1', 'chat_3']);
     });
   });
 

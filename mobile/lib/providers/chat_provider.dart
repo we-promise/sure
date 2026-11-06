@@ -38,6 +38,11 @@ class ChatProvider with ChangeNotifier {
   /// to avoid prematurely stopping on a brief server-side generation pause.
   int _stablePollingCount = 0;
 
+  /// Ids deleted while a chat-list fetch was awaiting later pages; null when
+  /// no fetch is running. Lets the fetch drop chats the user removed meanwhile
+  /// instead of restoring them from a stale page.
+  Set<String>? _deletedDuringChatListFetch;
+
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
   bool get isLoading => _isLoading;
@@ -61,6 +66,7 @@ class ChatProvider with ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
+    _deletedDuringChatListFetch = <String>{};
 
     try {
       final result = await _chatService.getChats(
@@ -78,7 +84,12 @@ class ChatProvider with ChangeNotifier {
         );
         // A failed later page returns null: keep the list already on screen
         // rather than replacing it with a truncated one.
-        if (loaded != null) _chats = loaded;
+        if (loaded != null) {
+          final deleted = _deletedDuringChatListFetch!;
+          _chats = deleted.isEmpty
+              ? loaded
+              : loaded.where((c) => !deleted.contains(c.id)).toList();
+        }
         _errorMessage = null;
       } else {
         _errorMessage = result['error'] ?? 'Failed to fetch chats';
@@ -87,6 +98,7 @@ class ChatProvider with ChangeNotifier {
       _log.warning('ChatProvider', 'fetchChats failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
     } finally {
+      _deletedDuringChatListFetch = null;
       _isLoading = false;
       notifyListeners();
     }
@@ -427,6 +439,7 @@ class ChatProvider with ChangeNotifier {
 
       if (result['success'] == true) {
         _chats.removeWhere((c) => c.id == chatId);
+        _deletedDuringChatListFetch?.add(chatId);
 
         if (_currentChat != null && _currentChat!.id == chatId) {
           _currentChat = null;
@@ -464,6 +477,7 @@ class ChatProvider with ChangeNotifier {
             ((result['failedIds'] as List?) ?? []).cast<String>().toSet();
         final deleted = chatIds.toSet().difference(failedIds);
         _chats.removeWhere((c) => deleted.contains(c.id));
+        _deletedDuringChatListFetch?.addAll(deleted);
 
         if (_currentChat != null && deleted.contains(_currentChat!.id)) {
           _currentChat = null;
