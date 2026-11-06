@@ -1,9 +1,15 @@
 # One connection a transport talks to (section 4.2): protocol, URL, key and tuning. Transports
-# take these values and never read ENV, Setting or ActiveRecord themselves. In 2a, AiHealth's
-# probes build them from today's settings; 2b's Ai::Config holds them for every feature, and
-# PR 7 copies `ai_endpoints` rows into them.
+# take these values and never read ENV, Setting or ActiveRecord themselves. Ai::Config holds
+# them (built by Ai::LegacyEnvConfig until PR 7 copies `ai_endpoints` rows into them).
+#
+# - vector_store: the endpoint offers OpenAI-style vector stores, which the `embed` route uses
+#   (section 5.5).
+# - agent: the endpoint is an external assistant, which serves only `chat`, for families whose
+#   chat mode is external (section 5.6). agent_settings holds its allowed emails, agent id and
+#   session key.
 class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :api_key, :extra_headers, :location,
-                                         :timeout_seconds, :max_retries, :responses_api, :probe_check)
+                                         :timeout_seconds, :max_retries, :responses_api, :probe_check, :vector_store,
+                                         :agent, :agent_settings)
   PROTOCOLS = %i[compatible anthropic jev].freeze
   LOCATIONS = %i[local cloud].freeze
   # What a health probe checks (decision 4 in pr-2a-transports-and-instrumentation.md):
@@ -13,7 +19,8 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
   PROBE_CHECKS = %i[models chat].freeze
 
   def initialize(name:, protocol:, preset: nil, base_url: nil, api_key: nil, extra_headers: {}, location: :cloud,
-                 timeout_seconds: 60, max_retries: 0, responses_api: false, probe_check: :models)
+                 timeout_seconds: 60, max_retries: 0, responses_api: false, probe_check: :models, vector_store: false,
+                 agent: false, agent_settings: {})
     protocol = protocol.to_sym
     location = location.to_sym
     probe_check = probe_check.to_sym
@@ -23,11 +30,15 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
 
     super(name: name.to_s, protocol:, preset: preset&.to_sym, base_url: base_url.presence, api_key: api_key.presence,
           extra_headers: extra_headers.to_h.transform_keys(&:to_s).freeze, location:, timeout_seconds: Integer(timeout_seconds),
-          max_retries: Integer(max_retries), responses_api: responses_api ? true : false, probe_check:)
+          max_retries: Integer(max_retries), responses_api: responses_api ? true : false, probe_check:,
+          vector_store: vector_store ? true : false, agent: agent ? true : false,
+          agent_settings: agent_settings.to_h.transform_keys(&:to_sym).freeze)
   end
 
   def local? = location == :local
   def cloud? = location == :cloud
+  def agent? = agent
+  def vector_store? = vector_store
 
   # Never shows the key or header values, which can carry credentials.
   def inspect

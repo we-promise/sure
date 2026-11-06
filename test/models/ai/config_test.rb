@@ -40,4 +40,30 @@ class Ai::ConfigTest < ActiveSupport::TestCase
     assert_nil ai_model.cost_for(Ai::Tokens.new(input_tokens: 2))
     assert_raises(ArgumentError) { ai_model(capabilities: [ :telepathy ]) }
   end
+
+  test "the snapshot is built once per request and rebuilt when an input changes" do
+    Ai::LegacyEnvConfig.expects(:build).twice.returns(Ai::Config.new, Ai::Config.new)
+
+    first = Ai::Config.current
+    assert_same first, Ai::Config.current
+
+    with_env_overrides("OPENAI_MODEL" => "gpt-4.1-nano") do
+      assert_not_same first, Ai::Config.current
+    end
+  end
+
+  test "with uses another snapshot inside the block only" do
+    other = Ai::Config.new
+    Ai::Config.with(other) { assert_same other, Ai::Config.current }
+    assert_not_same other, Ai::Config.current
+  end
+
+  test "routes are listed per feature, in order" do
+    config = AiTestHelper.test_config
+
+    assert_equal %w[gpt-4.1-mini openclaw/main], config.routes_for(:chat).map { _1.model.name }
+    assert_equal [], config.routes_for(:search_documents)
+    assert_equal "gpu", config.endpoint(:gpu).name
+    assert_equal "qwen3-8b", config.model(:gpu, "qwen3-8b").name
+  end
 end

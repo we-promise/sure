@@ -1,0 +1,55 @@
+# Every instance-wide AI value a process uses: endpoints, their models, and one ordered list of
+# routes per feature (sections 4.1, 4.6). Every AI feature reads it through Ai::Router; nothing
+# else reads AI ENV or AI `Setting` fields (cop Sure/NoAiEnv).
+#
+# Until PR 7 it's built in each process by Ai::LegacyEnvConfig from today's ENV and `Setting`
+# fields, so the web and the workers can disagree, as they do today. PR 7 builds it from the
+# `ai_*` tables instead.
+class Ai::Config
+  attr_reader :endpoints, :models, :routes, :vector_store_backend
+
+  # vector_store_backend: :openai (the `embed` route's endpoint is a vector store), :pgvector,
+  # :qdrant, or nil when no store is configured.
+  def initialize(endpoints: [], models: [], routes: {}, vector_store_backend: nil)
+    @endpoints = endpoints.freeze
+    @models = models.freeze
+    @routes = routes.transform_keys(&:to_sym).transform_values(&:freeze).freeze
+    @vector_store_backend = vector_store_backend&.to_sym
+    freeze
+  end
+
+  class << self
+    # The snapshot for this request or job, rebuilt when its ENV or `Setting` inputs change.
+    def current
+      return @override if @override
+
+      fingerprint = Ai::LegacyEnvConfig.fingerprint
+      unless Current.config && Current.fingerprint == fingerprint
+        Current.config, Current.fingerprint = Ai::LegacyEnvConfig.build, fingerprint
+      end
+      Current.config
+    end
+
+    def expire
+      Current.config = Current.fingerprint = nil
+    end
+
+    # Uses `config` instead of the built snapshot inside the block, across requests and jobs.
+    # For tests (AiTestHelper#with_ai_routes, #without_ai).
+    def with(config)
+      previous, @override = @override, config
+      yield
+    ensure
+      @override = previous
+    end
+  end
+
+  def routes_for(feature) = routes.fetch(feature.to_sym, [])
+
+  def endpoint(name) = endpoints.find { _1.name == name.to_s }
+
+  def model(endpoint_name, name) = models.find { _1.endpoint.name == endpoint_name.to_s && _1.name == name.to_s }
+
+  def inspect = "#<Ai::Config #{endpoints.map(&:name).join(", ")}; routes: #{routes.keys.join(", ")}>"
+  alias_method :to_s, :inspect
+end
