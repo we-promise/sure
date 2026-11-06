@@ -186,7 +186,7 @@ class AiHealth
         credential: access_token,
         dimensions: dimensions
       ) do
-        probe_endpoint = config_endpoint(provider: :openai_compatible, base_url: endpoint, api_key: access_token, extra_headers: {})
+        probe_endpoint = config_endpoint(provider: :openai_compatible, base_url: endpoint, api_key: access_token)
         returned = transport_for(probe_endpoint).probe(config_model(probe_endpoint, model), :embedding, timeout:)
         raise Failure, :dimensions_mismatch unless returned == dimensions
       end
@@ -260,18 +260,26 @@ class AiHealth
         result
       end
 
-      # The endpoint value the transports take, built from what AiHealth resolved.
-      # OpenAI-compatible LLM endpoints send the static OPENAI_EXTRA_HEADERS, as
-      # Provider::Openai does; the embedding endpoint sends none, as
-      # VectorStore::Embeddable doesn't.
+      # The endpoint the feature's own calls use, from Ai::Config, with the URL and key AiHealth
+      # resolved and the probe's timeout. Only a probe of a server Ai::Config doesn't know (an
+      # admin's ad-hoc check, or a test) builds one from those values alone.
       def config_endpoint(provider:, base_url:, api_key:, responses_api: false, extra_headers: nil)
-        protocol = provider.to_sym == :anthropic ? :anthropic : :compatible
-        extra_headers ||= protocol == :compatible ? Provider::Openai.extra_headers : {}
+        configured = configured_endpoint(provider.to_sym)
+        overrides = { base_url:, api_key:, timeout_seconds: timeout, max_retries: 0, responses_api: }
+        overrides[:extra_headers] = extra_headers if extra_headers
+        return configured.with(**overrides) if configured
 
-        Ai::Config::Endpoint.new(
-          name: provider.to_s, protocol:, base_url:, api_key:, extra_headers:,
-          timeout_seconds: timeout, max_retries: 0, responses_api:
-        )
+        protocol = provider.to_sym == :anthropic ? :anthropic : :compatible
+        Ai::Config::Endpoint.new(name: provider.to_s, protocol:, extra_headers: {}, **overrides)
+      end
+
+      def configured_endpoint(provider)
+        config = Ai::Config.current
+        case provider
+        when :anthropic then config.endpoint(:anthropic)
+        when :openai then config.endpoint(:openai) || config.endpoint(:openai_compatible)
+        when :openai_compatible then config.embedding_model&.endpoint
+        end
       end
 
       def config_model(endpoint, name) = Ai::Config::Model.new(endpoint:, name:)

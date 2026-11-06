@@ -46,27 +46,16 @@ module Family::AiSettings
   # Credentials alone never select Jev; the family has to choose it, because
   # this decides whose transaction descriptions reach a third party.
   #
-  # Anything naming the provider calls this, including the rule confirmation
-  # screen's cost estimate, or it quotes a provider that will not run. Views
-  # call it while rendering, so it writes nothing itself; a caller that runs
-  # categorization passes a block to hear why Jev could not be built.
+  # The categorization run calls this until it moves onto the router (2c); the
+  # router's `categorize` plan names the same provider first (Ai::LegacyEnvConfig).
+  # It writes nothing itself; a caller that runs categorization passes a block to
+  # hear why Jev could not be built.
   def resolved_categorization_provider(&on_jev_error)
     jev = configured_jev_provider(&on_jev_error) if effective_categorization_provider == "jev"
 
     # Honors Setting.llm_provider (#2113); Provider::Anthropic gained
     # auto_categorize in #1984, so either LLM provider can serve this.
     jev || Provider::Registry.preferred_llm_provider
-  end
-
-  def categorization_model_name
-    provider = resolved_categorization_provider
-    return unless provider
-
-    case provider
-    when Provider::Jev then Provider::Jev.effective_model
-    when Provider::Anthropic then Provider::Anthropic.effective_model
-    else Provider::Openai.effective_model
-    end
   end
 
   # Answers below this confidence are not applied. Zero applies everything and

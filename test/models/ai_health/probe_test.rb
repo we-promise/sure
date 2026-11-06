@@ -92,15 +92,18 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_not_requested chat
   end
 
-  test "LLM probe sends OPENAI_EXTRA_HEADERS, as production calls do" do
+  test "LLM probe sends the configured endpoint's static headers, as production calls do" do
     request = stub_request(:get, "https://llm.example.test/v1/models")
               .with(headers: { "X-Team" => "home" })
               .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: [ { id: "qwen3" } ] }.to_json)
 
-    ClimateControl.modify(OPENAI_EXTRA_HEADERS: { "X-Team" => "home" }.to_json) do
+    headers = { "X-Team" => "home", "X-Session" => "{session_id}" }.to_json
+    ClimateControl.modify(OPENAI_ACCESS_TOKEN: "t", OPENAI_URI_BASE: "https://llm.example.test/v1", OPENAI_MODEL: "qwen3",
+                          OPENAI_EXTRA_HEADERS: headers) do
       assert @probe.llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "qwen3").passing?
     end
     assert_requested request
+    assert_not_requested(:get, "https://llm.example.test/v1/models", headers: { "X-Session" => "{session_id}" })
   end
 
   test "LLM probe reports a spent balance and a wrong key by name" do

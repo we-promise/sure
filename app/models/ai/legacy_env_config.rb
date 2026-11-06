@@ -37,16 +37,17 @@ class Ai::LegacyEnvConfig
     llm = { openai: openai(vector_store: backend == :openai), anthropic: anthropic }.compact
     jev_model = jev
     agent_model = external_assistant
-    embed_model = embedding(backend, llm[:openai])
+    embed_model = embedding_model if %i[pgvector qdrant].include?(backend)
+    embed_route_model = embed_route(backend, llm[:openai], embed_model)
 
     llm_models = Provider::Registry.llm_provider_order.filter_map { |name| llm[name]&.last }
     routes = LLM_FEATURES.index_with { |feature| route_list(feature, llm_models) }
     routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
     routes[:categorize] = route_list(:categorize, [ jev_model, *llm_models ].compact, conditions: { jev_model => :jev_family })
-    routes[:embed] = route_list(:embed, [ embed_model ].compact)
+    routes[:embed] = route_list(:embed, [ embed_route_model ].compact)
 
     endpoints = (llm.values.map(&:first) + [ jev_model, agent_model, embed_model ].compact.map(&:endpoint)).uniq
-    models = (llm_models + [ jev_model, agent_model, embed_model ]).compact.uniq
+    models = (llm_models + [ jev_model, agent_model, embed_model, embed_route_model ]).compact.uniq
 
     Ai::Config.new(endpoints:, models:, routes: routes.reject { |_, list| list.empty? }, vector_store_backend: backend)
   end
@@ -130,14 +131,15 @@ class Ai::LegacyEnvConfig
     end
 
     # The `embed` route's model, present exactly when today's registry would build an adapter.
-    def embedding(backend, openai)
+    # pgvector without the extension keeps its embedding model in the config, for the health page.
+    def embed_route(backend, openai, embed_model)
       case backend
       when :openai
         Ai::Config::Model.new(endpoint: openai.first, name: VECTOR_STORE_MODEL, capabilities: %i[embedding]) if openai
       when :pgvector
-        embedding_model if VectorStore::Pgvector.available?
+        embed_model if VectorStore::Pgvector.available?
       when :qdrant
-        embedding_model
+        embed_model
       end
     end
 

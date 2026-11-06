@@ -685,20 +685,22 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "categorization_model_name names the Jev model when Jev will categorize" do
+  test "the categorize plan names the Jev model when Jev will categorize" do
     family = families(:dylan_family)
-    family.stubs(:resolved_categorization_provider).returns(Provider::Jev.allocate)
-    Provider::Jev.stubs(:effective_model).returns("~typesafe/jev-latest")
+    family.update!(categorization_provider: "jev")
 
-    assert_equal "~typesafe/jev-latest", family.categorization_model_name
+    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_MODEL" => "~typesafe/jev-latest", "OPENAI_ACCESS_TOKEN" => "sk-test") do
+      assert_equal "~typesafe/jev-latest", Ai.plan(:categorize, family:).model.name
+      assert_equal family.resolved_categorization_provider.class, Provider::Jev
+    end
   end
 
-  test "categorization_model_name names the Anthropic model when Anthropic will categorize" do
+  test "the categorize plan names the Anthropic model when Anthropic will categorize" do
     family = families(:dylan_family)
-    family.stubs(:resolved_categorization_provider).returns(Provider::Anthropic.allocate)
-    Provider::Anthropic.stubs(:effective_model).returns("claude-sonnet-test")
 
-    assert_equal "claude-sonnet-test", family.categorization_model_name
+    with_env_overrides("ANTHROPIC_API_KEY" => "test-key", "ANTHROPIC_MODEL" => "claude-sonnet-test", "LLM_PROVIDER" => "anthropic") do
+      assert_equal "claude-sonnet-test", Ai.plan(:categorize, family:).model.name
+    end
   end
 
   test "resolved_categorization_provider falls back to the LLM provider when the endpoint is rejected" do
@@ -724,14 +726,13 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "categorization_model_name does not write diagnostics from view-time callers" do
+  test "the categorize plan leaves out a rejected Jev endpoint and writes no diagnostics" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
 
     assert_no_difference "DebugLogEntry.count" do
       with_env_overrides(REJECTED_JEV_ENV) do
-        assert_nil family.categorization_model_name
+        assert_nil Ai.plan(:categorize, family:)
       end
     end
   end
