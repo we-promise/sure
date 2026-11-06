@@ -13,7 +13,7 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     sections = registry.sections
 
     assert_equal Portfolio::SectionRegistry::KEYS, sections.map { |s| s[:key] }
-    assert_equal %w[portfolios/holdings portfolios/accounts], sections.map { |s| s[:partial] }
+    assert_equal %w[portfolios/holdings portfolios/accounts portfolios/allocation], sections.map { |s| s[:partial] }
     assert sections.all? { |s| s[:collapsible] }
 
     # Every partial gets its locals passed in: none of them reaches for
@@ -101,7 +101,7 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
   test "orders sections by the user's saved order, appending anything it omits" do
     @user.update_section_preferences("portfolio", order: %w[stub])
 
-    assert_equal %w[stub holdings accounts], registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
+    assert_equal %w[stub holdings accounts allocation], registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
   end
 
   test "a saved order that repeats a key renders that section once" do
@@ -109,19 +109,19 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
 
     keys = registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
 
-    assert_equal %w[stub accounts holdings], keys
+    assert_equal %w[stub accounts holdings allocation], keys
   end
 
   test "ignores keys in the saved order that no longer exist" do
     @user.update_section_preferences("portfolio", order: %w[gone accounts])
 
-    assert_equal %w[accounts holdings], registry.sections.map { |s| s[:key] }
+    assert_equal %w[accounts holdings allocation], registry.sections.map { |s| s[:key] }
   end
 
   test "appends extra sections after the built-ins" do
     sections = registry(extra_sections: [ stub_section ]).sections
 
-    assert_equal %w[holdings accounts stub], sections.map { |s| s[:key] }
+    assert_equal %w[holdings accounts allocation stub], sections.map { |s| s[:key] }
   end
 
   # A family whose investment accounts hold nothing has no rows to list, so
@@ -171,18 +171,45 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     assert_equal "ZZZA", rows.first.ticker, "the name sort must put Aardvark first despite its ticker"
   end
 
+  # A saved order from before the allocation section existed still renders
+  # it, after the sections the user placed.
+  test "a saved order without the allocation section appends it" do
+    @user.update_section_preferences("portfolio", order: %w[accounts holdings])
+
+    assert_equal %w[accounts holdings allocation], registry.sections.map { |s| s[:key] }
+  end
+
+  test "the allocation section is visible only when the grouping has segments" do
+    assert_not_empty @statement.allocation_by(nil), "precondition: the fixture family holds something"
+    assert registry.sections.find { |s| s[:key] == "allocation" }[:visible]
+
+    empty_statement = InvestmentStatement.new(families(:empty), user: nil)
+    empty = Portfolio::SectionRegistry.new(statement: empty_statement, period: @period, as_of: @as_of, user: @user).sections
+    assert_not empty.find { |s| s[:key] == "allocation" }[:visible]
+  end
+
+  test "passes the grouping through to the allocation locals and its segments" do
+    locals = registry(by: "kind").sections.find { |s| s[:key] == "allocation" }[:locals]
+
+    assert_equal "kind", locals[:by]
+    assert_equal @statement.allocation_by("kind"), locals[:segments]
+    assert_not_equal @statement.allocation_by(nil).map(&:id), locals[:segments].map(&:id),
+      "precondition: the kind grouping differs from the default"
+  end
+
   private
     def stub_section
       { key: "stub", title: "portfolios.sections.accounts", partial: "portfolios/accounts",
         locals: {}, visible: true, collapsible: true }
     end
 
-    def registry(extra_sections: [])
+    def registry(extra_sections: [], by: nil)
       Portfolio::SectionRegistry.new(
         statement: @statement,
         period: @period,
         as_of: @as_of,
         user: @user,
+        by: by,
         extra_sections: extra_sections
       )
     end

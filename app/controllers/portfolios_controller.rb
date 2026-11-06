@@ -11,17 +11,20 @@ class PortfoliosController < ApplicationController
     # Current.family lookups of their own).
     @as_of = Date.current
     @statement = Current.family.investment_statement(user: Current.user)
-    # Query-string state for the holdings sort, reduced to the statement's
-    # whitelists so the sort links never carry anything else back into the URL.
+    # Query-string state for the holdings sort and the allocation grouping,
+    # reduced to the statement's whitelists so the sort links and the picker
+    # never carry anything else back into the URL.
     @sort = params[:sort].presence_in(InvestmentStatement::HOLDINGS_SORT_KEYS)
     @dir = params[:dir].presence_in(InvestmentStatement::HOLDINGS_SORT_DIRECTIONS)
+    @by = params[:by].presence_in(InvestmentStatement::ALLOCATION_GROUPINGS)
     registry = Portfolio::SectionRegistry.new(
       statement: @statement,
       period: @period,
       as_of: @as_of,
       user: Current.user,
       sort: @sort,
-      dir: @dir
+      dir: @dir,
+      by: @by
     )
     @empty = registry.empty?
     @sections = @empty ? [] : registry.sections

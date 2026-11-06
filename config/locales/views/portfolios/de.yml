@@ -1,6 +1,52 @@
 ---
 de:
   portfolios:
+    allocation:
+      grouping_aria_label: Allokation gruppieren nach
+      groupings:
+        account: Konto
+        asset_class: Anlageklasse
+        asset_sub_class: Unterklasse
+        currency: Währung
+        kind: Art
+        region: Region
+        sector: Sektor
+        security: Wertpapier
+      asset_classes:
+        alternative_investment: Alternative Anlagen
+        commodity: Rohstoffe
+        equity: Aktien
+        fixed_income: Anleihen
+        liquidity: Liquidität
+        real_estate: Immobilien
+      asset_sub_classes:
+        bond: Anleihe
+        cash: Bargeld
+        collectible: Sammlerstück
+        commodity: Rohstoff
+        cryptocurrency: Kryptowährung
+        etf: ETF
+        loan: Darlehen
+        mutual_fund: Investmentfonds
+        precious_metal: Edelmetall
+        private_equity: Private Equity
+        real_estate: Immobilien
+        stock: Aktie
+      regions:
+        asia_pacific: Asien-Pazifik
+        europe: Europa
+        latin_america: Lateinamerika
+        middle_east_africa: Naher Osten & Afrika
+        north_america: Nordamerika
+      unclassified: Nicht klassifiziert
+      kinds:
+        cash: Bargeld
+        crypto: Krypto
+        standard: Wertpapiere
+      toggle: Zusammensetzung von %{name} ein- oder ausblenden
+      total: Gesamt
+      value: Wert
+      weight: Gewichtung
     empty_state:
       add_account: Anlagekonto hinzufügen
       description: Depot-, Vorsorge- und Krypto-Konten, die du in deine Finanzen und Berichte einbeziehst, erscheinen hier mit ihrem Saldo.
@@ -28,9 +74,10 @@ de:
       toggle_positions: Positionen in %{ticker} anzeigen
     sections:
       accounts: Konten
+      allocation: Aufteilung
       holdings: Bestände
     show:
       section_aria: "Abschnitt %{title}. Drücke Enter oder Leertaste, um ihn zum Umsortieren zu greifen, dann bewege ihn mit den Pfeiltasten."
       sections_aria: Portfolio-Abschnitte
-      subtitle: Was du über deine Anlagekonten hinweg hältst, und was jedes Konto wert ist.
+      subtitle: Was du über deine Anlagekonten hinweg hältst, was jedes Konto wert ist und wie sich das Portfolio verteilt.
       title: Portfolio

@@ -17,28 +17,30 @@ class Portfolio::SectionRegistry
   # The built-in section keys, in declaration order. The preferences
   # endpoint accepts only these, so a saved order or collapsed set cannot
   # carry arbitrary strings into the user's preferences.
-  KEYS = %w[holdings accounts].freeze
+  KEYS = %w[holdings accounts allocation].freeze
 
   # Everything an account card's logo reads, preloaded onto the cards.
   CARD_PRELOADS = [ { logo_attachment: :blob }, :accountable, :plaid_account, :simplefin_account, { account_providers: :provider } ].freeze
 
-  attr_reader :statement, :period, :as_of, :user, :sort, :dir, :extra_sections
+  attr_reader :statement, :period, :as_of, :user, :sort, :dir, :by, :extra_sections
 
-  # `sort` and `dir` are the holdings table's query-string state, passed
-  # through as given: the statement whitelists them
-  # (InvestmentStatement::HOLDINGS_SORT_KEYS, HOLDINGS_SORT_DIRECTIONS) and
-  # falls back to its defaults for anything else.
+  # `sort`, `dir` and `by` are the query-string state of the holdings table
+  # and the allocation donut, passed through as given: the statement
+  # whitelists them (InvestmentStatement::HOLDINGS_SORT_KEYS,
+  # HOLDINGS_SORT_DIRECTIONS, ALLOCATION_GROUPINGS) and falls back to its
+  # defaults for anything else.
   #
   # `extra_sections` are appended after the built-ins, in the order given. It
   # is the seam that keeps this list open: a section can be added (or a test
   # can add one) without editing the built-in list.
-  def initialize(statement:, period:, as_of:, user:, sort: nil, dir: nil, extra_sections: [])
+  def initialize(statement:, period:, as_of:, user:, sort: nil, dir: nil, by: nil, extra_sections: [])
     @statement = statement
     @period = period
     @as_of = as_of
     @user = user
     @sort = sort
     @dir = dir
+    @by = by
     @extra_sections = extra_sections || []
   end
 
@@ -89,6 +91,14 @@ class Portfolio::SectionRegistry
           locals: shared_locals.merge(accounts: accounts_for_cards),
           visible: accounts_for_cards.any?,
           collapsible: true
+        },
+        {
+          key: "allocation",
+          title: "portfolios.sections.allocation",
+          partial: "portfolios/allocation",
+          locals: shared_locals.merge(segments: allocation_segments, by: by),
+          visible: allocation_segments.any?,
+          collapsible: true
         }
       ]
     end
@@ -101,6 +111,10 @@ class Portfolio::SectionRegistry
     # are ordered by even when the requested one fell back.
     def holdings_sort
       @holdings_sort ||= InvestmentStatement.holdings_sort(sort, dir)
+    end
+
+    def allocation_segments
+      @allocation_segments ||= statement.allocation_by(by)
     end
 
     # The accounts the cards show, in name order (case-insensitive; id breaks

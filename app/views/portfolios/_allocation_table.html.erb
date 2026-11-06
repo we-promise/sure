@@ -1,0 +1,44 @@
+<%# locals: (statement:, segments:, by:, parent:, path: "portfolio-allocation-table", depth: 0) %>
+
+<%# One table per level of the drill-down. Only the asset-class ladder nests: a
+    row with a level below it gets a toggle that reveals the same table for that
+    level in a detail row; every other row has none, so a sector is not dressed
+    up as something you can open. %>
+<%
+  marker = %w[segment child grandchild][depth]
+  children = segments.to_h { |segment| [ segment.id, statement.allocation_children(by, segment.id, parent: parent) ] }
+%>
+<%= render DS::Table.new(
+      rows: segments,
+      inset: depth.zero?,
+      id: path,
+      label: (t("portfolios.sections.allocation") if depth.zero?),
+      row_detail: ->(segment) {
+        next if children[segment.id].empty?
+
+        render "portfolios/allocation_table", statement: statement, segments: children[segment.id],
+               by: allocation_child_grouping(by), parent: allocation_child_parent(by, segment, parent),
+               path: "#{path}-#{segment.id.to_s.parameterize}", depth: depth + 1
+      }
+    ) do |table| %>
+  <% table.with_column(t("portfolios.allocation.groupings.#{by}"), row_header: true) do |segment, index| %>
+    <%= tag.div class: "flex items-center gap-3 min-w-0", data: { "portfolio-#{marker}": segment.id } do %>
+      <% if children[segment.id].any? %>
+        <%= render DS::Button.new(
+              variant: :icon,
+              size: :sm,
+              icon: "chevron-right",
+              class: "shrink-0 transition-transform",
+              data: { controller: "row-expander", action: "row-expander#toggle" },
+              aria: { expanded: false, controls: table.row_detail_id(index), label: t("portfolios.allocation.toggle", name: allocation_segment_name(segment, by)) }
+            ) %>
+      <% end %>
+      <% if depth.zero? %>
+        <span class="h-3 w-3 rounded-full shrink-0" style="background-color: <%= allocation_color(index) %>"></span>
+      <% end %>
+      <span class="truncate"><%= allocation_segment_name(segment, by) %></span>
+    <% end %>
+  <% end %>
+  <% table.with_column(t("portfolios.allocation.value"), numeric: true, class: "privacy-sensitive") { |segment| format_money(segment.amount) } %>
+  <% table.with_column(t("portfolios.allocation.weight"), numeric: true, class: "text-secondary privacy-sensitive") { |segment| number_to_percentage(segment.weight, precision: 1) } %>
+<% end %>

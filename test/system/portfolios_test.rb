@@ -84,4 +84,21 @@ class PortfoliosTest < ApplicationSystemTestCase
     assert page.evaluate_script("arguments[0].scrollWidth <= arguments[0].clientWidth", region),
            "the holdings table overflows its scroll region"
   end
+
+  test "an asset class reveals and hides what it is made of" do
+    share = Security.create!(ticker: "SHR8", name: "A share", asset_class: "equity", asset_sub_class: "stock", offline: true)
+    Holding.create!(account: accounts(:investment), security: share, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+
+    visit portfolio_path(by: "asset_class")
+    toggle = find("[data-portfolio-segment='equity'] button[aria-controls]")
+    assert_no_selector "#portfolio-allocation-table-equity", visible: true
+
+    toggle.click
+    assert_selector "#portfolio-allocation-table-equity [data-portfolio-child='stock']", visible: true
+    assert_equal "true", toggle["aria-expanded"]
+
+    toggle.click
+    assert_no_selector "#portfolio-allocation-table-equity", visible: true
+    assert_equal "false", toggle["aria-expanded"]
+  end
 end
