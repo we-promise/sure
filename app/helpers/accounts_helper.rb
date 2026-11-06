@@ -46,6 +46,16 @@ module AccountsHelper
   # Both are pulled in a single SQL round-trip via `pick`. Note: Rails
   # returns the values as Strings for raw SQL fragments — that's fine
   # since they only feed into a cache key (concat-stable, never coerced).
+  # Versions for the sidebar's sparkline URLs, keyed by account id and by group
+  # accountable, computed together rather than per account.
+  def sidebar_sparkline_versions(family)
+    @sidebar_sparkline_versions ||= begin
+      groups = family.balance_sheet.account_groups
+      Account.sparkline_versions(groups.flat_map(&:accounts).map(&:account))
+        .merge(AccountableSparkline.versions(groups.map(&:accountable_type).uniq))
+    end
+  end
+
   def account_sidebar_tabs_cache_key(family:, active_tab:, mobile:)
     shares_version =
       if Current.user
@@ -55,13 +65,20 @@ module AccountsHelper
         "#{count}-#{max_at}"
       end
 
+    # Linking or unlinking a provider doesn't touch the account, but changes its sparkline versions.
+    providers_version = AccountProvider.where(account_id: family.accounts.select(:id))
+      .pick(Arel.sql("count(*)"), Arel.sql("max(account_providers.updated_at)"))
+
     [
-      family.build_cache_key("account_sidebar_tabs_v6", invalidate_on_data_updates: true),
+      family.build_cache_key("account_sidebar_tabs_v7", invalidate_on_data_updates: true),
       Current.user&.id,
       shares_version,
+      providers_version,
       active_tab,
       mobile,
       I18n.locale,
+      # Sparkline URLs carry a version that rolls over with the 30-day window.
+      Date.current,
       sidebar_active_account_id,
       # Fold the per-user "start expanded by default" preference into the key
       # so toggling it in Settings busts the 12h fragment cache immediately
