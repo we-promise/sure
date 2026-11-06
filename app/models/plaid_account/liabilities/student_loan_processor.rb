@@ -1,25 +1,27 @@
 class PlaidAccount::Liabilities::StudentLoanProcessor
-  def initialize(plaid_account)
+  include PlaidAccount::Liabilities::LoanTermWriter
+
+  # `as_of` is the sync's date: a variable rate change Plaid reports is dated
+  # to it.
+  def initialize(plaid_account, as_of: Date.current)
     @plaid_account = plaid_account
+    @as_of = as_of
   end
 
   def process
     return unless student_loan_data.present?
 
-    loan = account.loan
-    loan.with_schedule_lock do
-      loan.update!(
-        rate_type: "fixed",
-        interest_rate: student_loan_data["interest_rate_percentage"],
-        initial_balance: student_loan_data["origination_principal_amount"],
-        term_months: term_months,
-        start_date: start_date
-      )
-    end
+    write_loan_terms(
+      rate_type: "fixed",
+      interest_rate: student_loan_data["interest_rate_percentage"],
+      initial_balance: student_loan_data["origination_principal_amount"],
+      term_months: term_months,
+      start_date: start_date
+    )
   end
 
   private
-    attr_reader :plaid_account
+    attr_reader :plaid_account, :as_of
 
     def account
       plaid_account.current_account

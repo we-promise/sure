@@ -198,12 +198,20 @@ class Loan::ScheduleLockTest < ActiveSupport::TestCase
     account&.destroy!
   end
 
-  [ PlaidAccount::Liabilities::MortgageProcessor, PlaidAccount::Liabilities::StudentLoanProcessor ].each do |processor_class|
+  # The writer reads the loan before taking the lock; the lock must refresh it
+  # before the rate is judged. A variable loan whose rate a concurrent write
+  # already moved to the reported figure records no row, and a fixed one takes
+  # the reported rate without losing the schedule written beside it.
+  {
+    PlaidAccount::Liabilities::MortgageProcessor => { interest_rate: BigDecimal("5"), rate_type: "variable" },
+    PlaidAccount::Liabilities::StudentLoanProcessor => { interest_rate: BigDecimal("7"), rate_type: "fixed" }
+  }.each do |processor_class, expected|
     test "#{processor_class.name} shares the schedule writer lock order" do
       account = families(:empty).accounts.create!(name: "Loan", currency: "USD", balance: 0, accountable: @loan)
       held = Queue.new
       release = Queue.new
       second_pid = Queue.new
+      plaid_item = plaid_items(:one)
 
       first = Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do |connection|
@@ -213,7 +221,7 @@ class Loan::ScheduleLockTest < ActiveSupport::TestCase
             writer_account.update!(name: "Updated")
             held << true
             Timeout.timeout(10) { release.pop }
-            writer_account.loan.enrich_attributes({ variable_rate_schedule: { "2026-01-01" => "6" } }, source: "redbark")
+            writer_account.loan.enrich_attributes({ variable_rate_schedule: { "2026-01-01" => "7" } }, source: "redbark")
           end
         end
       end
@@ -221,12 +229,16 @@ class Loan::ScheduleLockTest < ActiveSupport::TestCase
       second = Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do |connection|
           Thread.current[:schedule_lock_backend_pid] = connection.select_value("SELECT pg_backend_pid()").to_i
-          provider = OpenStruct.new(current_account: Account.find(account.id), raw_liabilities_payload: {
-            "mortgage" => { "interest_rate" => { "type" => "variable", "percentage" => 7 } },
-            "student" => { "interest_rate_percentage" => 7 }
-          })
+          provider = OpenStruct.new(
+            current_account: Account.find(account.id),
+            plaid_item: plaid_item,
+            raw_liabilities_payload: {
+              "mortgage" => { "interest_rate" => { "type" => "variable", "percentage" => 7 } },
+              "student" => { "interest_rate_percentage" => 7 }
+            }
+          )
           second_pid << connection.select_value("SELECT pg_backend_pid()").to_i
-          processor_class.new(provider).process
+          processor_class.new(provider, as_of: Date.new(2026, 3, 1)).process
         end
       end
       pid = Timeout.timeout(10) { second_pid.pop }
@@ -234,8 +246,10 @@ class Loan::ScheduleLockTest < ActiveSupport::TestCase
       release << true
       [ first, second ].each(&:value)
 
-      assert_equal BigDecimal("7"), @loan.reload.interest_rate
-      assert_equal({ "2026-01-01" => "6" }, @loan.variable_rate_schedule)
+      @loan.reload
+      assert_equal expected[:interest_rate], @loan.interest_rate
+      assert_equal expected[:rate_type], @loan.rate_type
+      assert_equal({ "2026-01-01" => "7" }, @loan.variable_rate_schedule)
     ensure
       release << true
       stop_workers(first, second)

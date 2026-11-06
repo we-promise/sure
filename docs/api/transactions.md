@@ -64,6 +64,7 @@ A transaction response includes:
 ```json
 {
   "id": "uuid",
+  "entry_id": "uuid",
   "date": "2024-01-15",
   "amount": "$75.50",
   "amount_cents": 7550,
@@ -115,6 +116,10 @@ A transaction response includes:
 | `kind` | One of `standard`, `funds_movement`, `cc_payment`, `loan_payment`, `one_time`, `investment_contribution`. Budgets and reports count `loan_payment` as an expense whatever the sign of its amount, and leave `funds_movement`, `cc_payment` and `one_time` out. `investment_contribution` also counts as an expense when the family counts investment contributions as spending (the default); when that setting is off it is reported as invested and left out of spending and income. `classification` only follows the amount's sign. |
 | `excluded` | `true` when the transaction is left out of budget and report totals. |
 | `split_parent` | `true` when the transaction has been split. Splitting a transaction marks it excluded, and its split children carry the amount. |
+
+### Linking to a transaction
+
+`id` identifies the transaction in the API. Web routes for a single transaction take the id of its entry instead, so use `entry_id` to link into the app, for example `/transactions/{entry_id}`.
 
 ## Creating transactions
 

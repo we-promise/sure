@@ -5,7 +5,6 @@ uk:
       subtitle: Комплексне уявлення про ваше фінансове здоров'я
       export: Експорт CSV
       print_report: Друк звіту
-      drag_to_reorder: "Перетягніть, щоб змінити порядок розділу"
       toggle_section: "Переключити видимість розділу"
       periods:
         monthly: Щомісяця
@@ -184,19 +183,14 @@ uk:
       net_flow: Чистий потік
       net_flow_description: Загальна чиста зміна
     google_sheets_instructions:
-      title_with_key: "✅ Скопіюйте URL-адресу для Google Sheets"
-      title_no_key: "⚠️ Потрібен ключ API"
-      ready: Ваша URL-адреса CSV (з ключем API) готова.
-      steps: "Щоб імпортувати в Google Sheets:\n1. Створіть нову таблицю Google\n2. У клітинці A1 введіть формулу, показану нижче\n3. Натисніть Enter"
-      security_warning: "Ця URL-адреса містить ваш ключ API. Зберігайте її в безпеці!"
+      title_no_key: "Потрібен ключ API"
       need_key: Щоб імпортувати дані в Google Sheets, вам потрібен ключ API.
       step1: "Перейдіть до Налаштування → Ключі API"
       step2: "Створіть новий ключ API з дозволом на читання"
       step3: Скопіюйте ключ API
-      step4: "Додайте його до цієї URL-адреси як: ?api_key=ВАШ_КЛЮЧ"
+      step4: "Додайте його до цієї URL-адреси як: &api_key=ВАШ_КЛЮЧ"
       example: Приклад
       then_use: Потім використовуйте повну URL-адресу з =IMPORTDATA() в Google Sheets.
-      open_sheets: Відкрити Google Sheets
       go_to_api_keys: Перейти до ключів API
       close: Зрозуміло
     print:

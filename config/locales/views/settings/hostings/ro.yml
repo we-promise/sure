@@ -36,8 +36,10 @@ ro:
         access_token_placeholder: Introdu tokenul tău de acces aici
         uri_base_label: URL de Bază API (Opțional)
         uri_base_placeholder: "https://api.openai.com/v1 (implicit)"
+        uri_base_local_help: "Pentru un model pe propriul calculator, introdu endpoint-ul compatibil OpenAI, de exemplu Ollama la http://localhost:11434/v1, sau http://ollama:11434/v1 când Sure și Ollama rulează ca servicii Docker Compose."
         model_label: Model (Opțional)
         model_placeholder: "gpt-4.1 (implicit)"
+        model_required_help: "Obligatoriu când setezi un URL de bază API: introdu numele modelului folosit de serverul tău, de exemplu llama3.1 pentru Ollama."
         title: OpenAI
       yahoo_finance_settings:
         title: Yahoo Finance

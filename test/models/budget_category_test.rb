@@ -115,6 +115,32 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 0, @parent_budget_category.bills_reserved_unconvertible_count
   end
 
+  test "bills_reserved loads the budget's obligations once for all its categories" do
+    bill = @family.recurring_transactions.create!(
+      name: "Groceries plan", account: accounts(:depository), amount: 120,
+      currency: "USD", bill_type: "bill", category_id: @subcategory_with_limit.id,
+      expected_day_of_month: 3, anchor_date: @budget.start_date,
+      last_occurrence_date: @budget.start_date, next_expected_date: @budget.start_date,
+      status: "active", manual: true
+    )
+    bill.recurring_occurrences.destroy_all
+    bill.recurring_occurrences.create!(
+      family: @family, original_due_on: @budget.start_date + 3,
+      due_on: @budget.start_date + 3, currency: "USD", expected_amount: 120
+    )
+
+    budget_categories = Budget.find(@budget.id).budget_categories.to_a
+    first, *rest = budget_categories
+    first.bills_reserved
+
+    assert_queries_count(0) do
+      rest.each(&:bills_reserved)
+    end
+    reserved = budget_categories.to_h { |bc| [ bc.category_id, bc.bills_reserved.amount ] }
+    assert_equal 120, reserved[@subcategory_with_limit.id]
+    assert_equal 0, reserved[@parent_category.id]
+  end
+
   test "subcategory with zero budget inherits from parent" do
     assert @subcategory_inheriting_bc.inherits_parent_budget?
     refute @subcategory_with_limit_bc.inherits_parent_budget?
