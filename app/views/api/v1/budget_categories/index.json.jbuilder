@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 json.budget_categories @budget_categories do |budget_category|
-  json.partial! "budget_category", budget_category: budget_category, include_derived_amounts: false
+  json.partial! "budget_category", budget_category: budget_category, include_derived_amounts: @include_derived_amounts
 end
 
 json.pagination do
