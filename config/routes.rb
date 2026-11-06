@@ -781,6 +781,7 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      resource :version, only: :show
       namespace :financekit do
         get "capabilities", to: "connections#capabilities"
         resources :connections, only: [ :create, :show, :destroy ] do
