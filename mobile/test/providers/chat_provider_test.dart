@@ -188,6 +188,35 @@ void main() {
 
       expect(provider.chats.map((c) => c.id).toList(), ['chat_1', 'chat_3']);
     });
+
+    test('overlapping refreshes both finish without error', () async {
+      final pageTwo = <Completer<http.Response>>[];
+      final client = MockClient((request) async {
+        final page = request.url.queryParameters['page'] ?? '1';
+        if (page == '1') {
+          return _chatListPage(page: 1, totalPages: 2, chatIds: [1]);
+        }
+        final c = Completer<http.Response>();
+        pageTwo.add(c);
+        return c.future;
+      });
+
+      final provider = ChatProvider(chatService: ChatService(client: client));
+      final first = provider.fetchChats(accessToken: 'token');
+      final second = provider.fetchChats(accessToken: 'token');
+      for (var i = 0; i < 5; i++) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      expect(pageTwo.length, 2);
+
+      pageTwo[0].complete(_chatListPage(page: 2, totalPages: 2, chatIds: [2]));
+      await first;
+      pageTwo[1].complete(_chatListPage(page: 2, totalPages: 2, chatIds: [2]));
+      await second;
+
+      expect(provider.errorMessage, isNull);
+      expect(provider.chats.map((c) => c.id).toList(), ['chat_1', 'chat_2']);
+    });
   });
 
   group('ChatProvider.fetchChat pagination', () {
