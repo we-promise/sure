@@ -200,6 +200,16 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
     assert_equal false, second[:has_more_pages]
   end
 
+  test "a scan's note suggests the Read as way this install can read it with" do
+    use_ai_routes
+    statement = create_statement
+    PDF::Reader.stubs(:new).returns(stub(pages: [ stub(text: "") ]))
+
+    result = @fn.call("account_statement_id" => statement.id)
+
+    assert_match(/"Read as" set to Images/, result[:note])
+  end
+
   test "reports a scan with no text layer as unreadable and names the reason" do
     statement = create_statement
 
@@ -210,7 +220,7 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
 
     assert_equal false, result[:extractable]
     assert_equal 2, result[:page_count]
-    assert_match(/no OCR/i, result[:note])
+    assert_match(/No model set up on this install can read scanned pages/i, result[:note])
     assert_not result.key?(:pages), "an empty pages array would read as a document that says nothing"
   end
 

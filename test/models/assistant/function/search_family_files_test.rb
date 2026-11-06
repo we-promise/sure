@@ -74,7 +74,8 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     result = @function.call("query" => "tax return")
 
     assert_equal true, result[:success]
-    assert_equal "provider_not_configured", result[:reason]
+    assert_equal "not_configured", result[:reason], "the router's reason"
+
     assert_match(/VECTOR_STORE_PROVIDER/, result[:message])
   end
 
@@ -146,12 +147,14 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     mock_adapter.expects(:search).with(
       store_id: "vs_test123",
       query: "test",
-      max_results: 20
+      max_results: 20,
+      family: @user.family,
+      user: @user
     ).returns(VectorStore::Response.new(success?: true, data: [], error: nil))
 
     VectorStore::Registry.stubs(:adapter).returns(mock_adapter)
 
-    @function.call("query" => "test", "max_results" => 50)
+    assert @function.call("query" => "test", "max_results" => 50)[:success]
   end
 
   test "never claims nothing was uploaded when statements are on file" do
@@ -273,20 +276,29 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal 1, result[:result_count]
   end
 
-  test "returns the search failure when tracing finalization also fails" do
+  test "a failing search says so, and isn't traced by the tool: the query's embedding is" do
     @user.family.update!(vector_store_id: "vs_test123")
     adapter = mock
     adapter.expects(:search).raises(StandardError, "Search unavailable")
     VectorStore::Registry.stubs(:adapter).returns(adapter)
-    trace = mock
-    trace.expects(:end).with(output: { error: "Search unavailable" }, level: "ERROR").raises(StandardError, "Tracing unavailable")
-    @function.stubs(:create_langfuse_trace).returns(trace)
-    Rails.logger.expects(:warn).with("Langfuse trace finalization failed: StandardError: Tracing unavailable")
 
     result = @function.call("query" => "tax return")
 
     assert_equal false, result[:success]
     assert_equal "search_failed", result[:error]
     assert_equal "An error occurred while searching documents: Search unavailable", result[:message]
+    assert_not @function.respond_to?(:create_langfuse_trace, true)
   end
+
+  test "without the user's consent it falls back to metadata search, saying the router's reason" do
+    @user.family.update!(vector_store_id: "vs_test123")
+    Ai::Router.any_instance.stubs(:resolve).returns(Ai::Availability.unavailable(:search_documents, :no_user_consent))
+
+    result = @function.call("query" => "tax return")
+
+    assert_equal "metadata_only", result[:search_mode]
+    assert_equal "no_user_consent", result[:reason]
+    assert_no_match(/No documents have been uploaded/i, result[:message])
+  end
+
 end

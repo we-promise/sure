@@ -492,8 +492,13 @@ class AccountStatement < ApplicationRecord
     # only when a store is configured and the uploader has turned AI on; without
     # either, search_family_files falls back to metadata and get_document_text
     # still reads the file directly.
+    # A vault upload isn't an AI action, so indexing it (on an OpenAI store, sending the whole
+    # statement to OpenAI) needs `embed` available to the uploader and the uploader's own AI
+    # switch, checked here because Ai::Consent checks the switch only for chat and bills until
+    # PR 7 (section 5.5).
     def index_in_vector_store_later
-      return unless Current.user&.ai_enabled? && VectorStore.configured?
+      user = Current.user
+      return unless user&.ai_enabled? && Ai.available?(:embed, family:, user:)
 
       IndexAccountStatementJob.perform_later(id)
     end

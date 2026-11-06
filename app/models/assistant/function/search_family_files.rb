@@ -1,5 +1,8 @@
+# Always listed (section 14): it searches documents' contents when `search_documents` is
+# available, and otherwise falls back to #3422's metadata search over the vault, saying why with
+# the router's reason, never "no documents have been uploaded". The query's embedding is an
+# `embed.ai` call, traced and recorded like any other.
 class Assistant::Function::SearchFamilyFiles < Assistant::Function
-  include LangfuseTraceable
 
   class << self
     def name
@@ -59,45 +62,28 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
     # "No documents have been uploaded" was answered whenever no vector store
     # had ever been created, which is a different statement entirely and was
-    # read as fact by assistants while the user's file sat in the database. Both
-    # unconfigured cases now fall back to what CAN be searched without
-    # embeddings, so the answer is "here is what exists, full-text search is
-    # unavailable" rather than "you uploaded nothing".
+    # read as fact by assistants while the user's file sat in the database.
+    # Every case without full-text search falls back to what CAN be searched
+    # without embeddings, with the router's reason.
+    availability = Ai.availability(:search_documents, family:, user:)
+    unless availability.available?
+      Rails.logger.debug("[SearchFamilyFiles] search_documents unavailable: #{availability.reason}")
+      return statement_fallback(query, max_results, reason: availability.reason.to_s, availability:)
+    end
+
     unless family.vector_store_id.present?
       Rails.logger.debug("[SearchFamilyFiles] family #{family.id} has no vector_store_id")
       return statement_fallback(query, max_results, reason: "no_vector_store")
     end
 
-    adapter = VectorStore.adapter if Ai.available?(:search_documents, family:, user:)
+    adapter = VectorStore.adapter
+    return statement_fallback(query, max_results, reason: "not_configured") unless adapter
 
-    unless adapter
-      Rails.logger.debug("[SearchFamilyFiles] search_documents unavailable")
-      return statement_fallback(query, max_results, reason: "provider_not_configured")
-    end
-
-    store_id = family.vector_store_id
-    Rails.logger.debug("[SearchFamilyFiles] searching store_id=#{store_id} via #{adapter.class.name}")
-
-    trace = create_langfuse_trace(
-      name: "search_family_files",
-      input: { query: query, max_results: max_results, store_id: store_id },
-      user_identifier: user.id&.to_s
-    )
-
-    response = adapter.search(
-      store_id: store_id,
-      query: query,
-      max_results: max_results
-    )
+    response = adapter.search(store_id: family.vector_store_id, query: query, max_results: max_results, family:, user:)
 
     unless response.success?
       error_msg = response.error&.message
       Rails.logger.debug("[SearchFamilyFiles] search failed: #{error_msg}")
-      begin
-        finish_langfuse_trace(trace: trace, output: { error: error_msg }, level: "ERROR")
-      rescue => e
-        Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
-      end
       return {
         success: false,
         error: "search_failed",
@@ -120,26 +106,12 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       { content: result[:content], filename: result[:filename], score: result[:score] }
     end
 
-    output = if mapped.empty?
+    if mapped.empty?
       { success: true, results: [], message: "No matching documents found for the query." }
     else
       { success: true, query: query, result_count: mapped.size, results: mapped }
     end
-
-    begin
-      if trace
-        finish_langfuse_trace(trace: trace, output: {
-          result_count: mapped.size,
-          chunks: mapped.map { |r| { filename: r[:filename], score: r[:score], content_length: r[:content]&.length } }
-        })
-      end
-    rescue => e
-      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
-    end
-
-    output
   rescue => e
-    finish_langfuse_trace(trace: trace, output: { error: e.message }, level: "ERROR")
     Rails.logger.error("[SearchFamilyFiles] error: #{e.class.name} - #{e.message}")
     {
       success: false,
@@ -153,7 +125,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     # account hints. No document CONTENT, because extracting it is exactly what
     # needs the machinery that is missing here. get_document_text reads one
     # statement's text directly and is the right next call.
-    def statement_fallback(query, max_results, reason:)
+    def statement_fallback(query, max_results, reason:, availability: nil)
       # The same gate every other vault tool opens with (GetDocumentText,
       # ListAccountStatements, GetAccountStatement, UploadAccountStatement).
       # Full-text search being unconfigured must not become a way around the
@@ -177,7 +149,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
         listing: matched ? "matched" : "most_recent",
         result_count: statements.size,
         results: statements.map { |statement| statement_result(statement) },
-        message: fallback_message(reason, statements.size, matched)
+        message: fallback_message(reason, statements.size, matched, availability:)
       }
     end
 
@@ -233,13 +205,17 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       }.compact
     end
 
-    def fallback_message(reason, count, matched = true)
-      base = if reason == "provider_not_configured"
+    def fallback_message(reason, count, matched = true, availability: nil)
+      base = case reason
+      when "no_vector_store"
+        "No document has been indexed for full-text search yet, so only stored statements are listed."
+      when "not_configured"
         "No vector store is configured, so documents cannot be searched by their contents. " \
         "Set VECTOR_STORE_PROVIDER (openai | pgvector | qdrant), or for an Anthropic-only install " \
         "enable the pgvector adapter and point EMBEDDING_URI_BASE at an embeddings endpoint."
       else
-        "No document has been indexed for full-text search yet, so only stored statements are listed."
+        "Searching documents by their contents isn't available for this user (#{reason}): " \
+        "#{availability&.message_for(user) || reason}."
       end
 
       return "#{base} No statement is stored either, so there is genuinely nothing on file." if count.zero?

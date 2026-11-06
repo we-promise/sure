@@ -5,14 +5,16 @@
 # PdfImport. Failing here must never fail the upload, which has already
 # succeeded and whose bytes are safely stored.
 #
-# Indexing calls an embeddings or hosted vector store provider, so it runs in
-# the AI capsule alongside ProcessPdfJob rather than competing with syncs.
+# Indexing is an `embed` call (section 5.5), so it runs on embed's lane, in the
+# AI capsule alongside ProcessPdfJob rather than competing with syncs.
 class IndexAccountStatementJob < ApplicationJob
-  queue_as :ai_low_priority
+  queue_as { Ai::Routes.queue_for(:embed) }
 
   def perform(statement_id)
     statement = AccountStatement.find_by(id: statement_id)
     return unless statement
+    # The route can have gone between the upload and the job.
+    return unless Ai.available?(:embed, family: statement.family)
 
     return if statement.index_in_vector_store!
     return if statement.indexed_in_vector_store?
@@ -23,7 +25,7 @@ class IndexAccountStatementJob < ApplicationJob
     # false is the ordinary answer on an install with no vector store provider,
     # and it was also the answer when a configured provider refused the upload.
     # Only the second is a problem, and it left no trace anywhere.
-    return if VectorStore.adapter.nil?
+    return unless VectorStore.configured?
 
     DebugLogEntry.capture(
       category: "documents",

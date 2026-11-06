@@ -9,10 +9,11 @@ class AccountStatement
   # no route to them at all.
   #
   # PDFs are read through Pdf::TextExtractor, the same extraction that backs
-  # VectorStore::Embeddable and the statement metadata detector. Image-only
-  # PDFs return no text, which is reported rather than hidden, because there is
-  # no OCR in this codebase and pretending otherwise would send an assistant
-  # hunting for figures that were never extracted.
+  # VectorStore::Embeddable and the statement metadata detector. This makes no
+  # AI call. Image-only PDFs return no text, which is reported rather than
+  # hidden, with the way PDF import could read the scan on this install (2e):
+  # images on a vision model, OCR on an OCR model, or nothing, so an assistant
+  # never hunts for figures that were never extracted.
   class TextExtractor
     # CSV membership is AccountStatement's to decide: it accepts four content
     # types for .csv and a second partial list here reported a statement stored
@@ -27,8 +28,9 @@ class AccountStatement
 
     Result = Data.define(:pages, :page_count, :extractable, :note)
 
-    def initialize(statement)
+    def initialize(statement, user: nil)
       @statement = statement
+      @user = user
     end
 
     def extract
@@ -56,14 +58,25 @@ class AccountStatement
             page_count: pages.size,
             extractable: false,
             note: "The PDF has #{pages.size} page(s) but contains no extractable text layer, which means it is " \
-                  "a scan. There is no OCR in this application, so its contents cannot be read here. Ask the " \
-                  "user for the figures directly rather than guessing."
+                  "a scan, so its contents cannot be read here. #{scan_hint}"
           )
         end
 
         Result.new(pages: pages, page_count: pages.size, extractable: true, note: nil)
       rescue PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError => e
         unsupported("The PDF could not be parsed (#{e.class.name.demodulize}).")
+      end
+
+      # What PDF import's "Read as" can do with a scan for this family and user.
+      def scan_hint
+        reasons = Ai::PdfReading.route_reasons(family: @statement.family, user: @user)
+        way = %i[images ocr].find { reasons[_1].nil? }
+        if way
+          "Importing it as a statement with \"Read as\" set to #{way == :images ? "Images" : "OCR"} can read the " \
+            "scanned pages; suggest that, or ask the user for the figures. Don't guess."
+        else
+          "No model set up on this install can read scanned pages. Ask the user for the figures directly rather than guessing."
+        end
       end
 
       def paginate_text(text)

@@ -33,18 +33,20 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
     @family.update!(vector_store_id: "vs_test")
   end
 
-  def upload_as(ai_enabled:, vector_store_configured: true)
+  # Indexing is an `embed` call: queued only when embed is available for the uploader and the
+  # uploader's own AI switch is on (2e, section 5.5).
+  def upload_as(ai_enabled:, embed: true)
     user = users(:family_admin)
     user.stubs(:ai_enabled?).returns(ai_enabled)
     Current.stubs(:user).returns(user)
-    VectorStore.stubs(:configured?).returns(vector_store_configured)
+    embed ? use_ai_routes : use_ai_routes(embed: [])
   end
 
   test "creating a statement enqueues its indexing on the AI queue" do
     upload_as(ai_enabled: true)
     statement = build_statement
 
-    assert_enqueued_with(job: IndexAccountStatementJob, queue: "ai_low_priority") do
+    assert_enqueued_with(job: IndexAccountStatementJob, queue: Ai::Routes.queue_for(:embed)) do
       statement.save!
     end
 
@@ -65,15 +67,15 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
 
   test "an upload with no signed-in user is not sent to the document store" do
     Current.stubs(:user).returns(nil)
-    VectorStore.stubs(:configured?).returns(true)
+    use_ai_routes
 
     assert_no_enqueued_jobs(only: IndexAccountStatementJob) do
       build_statement.save!
     end
   end
 
-  test "an upload is not queued for indexing when no vector store is configured" do
-    upload_as(ai_enabled: true, vector_store_configured: false)
+  test "an upload is not queued for indexing when embed isn't available" do
+    upload_as(ai_enabled: true, embed: false)
 
     assert_no_enqueued_jobs(only: IndexAccountStatementJob) do
       build_statement.save!
