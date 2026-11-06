@@ -1,0 +1,20 @@
+---
+sv:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: Belopp
+        currency: Valuta
+        account: Konto
+        kind: Typ
+        status: Status
+        expires_at: Går ut
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: Välj ett av målets länkade konton.
+            currency:
+              must_match_goal: Pantens valuta måste matcha målets valuta.
+          duplicate_open_pledge: Du har redan en öppen pant för detta belopp på detta konto. Avbryt eller förläng den befintliga innan du registrerar en ny.

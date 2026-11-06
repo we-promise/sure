@@ -1,0 +1,23 @@
+---
+sv:
+  entries:
+    create:
+      success: Post skapad
+    destroy:
+      success: Post borttagen
+    empty:
+      description: Prova att lägga till en post, ändra filter eller förfina din sökning
+      title: Inga poster hittades
+    loading:
+      loading: Laddar poster...
+    update:
+      success: Post uppdaterad
+    unlock:
+      success: Posten är olåst. Den kan uppdateras vid nästa synkronisering.
+    protection:
+      tooltip: Skyddad från synkronisering
+      title: Skyddad från synkronisering
+      description: Dina ändringar av denna post skrivs inte över av leverantörssynkronisering.
+      locked_fields_label: "Låsta fält:"
+      unlock_button: Tillåt synkronisering att uppdatera
+      unlock_confirm: Tillåt synkronisering att uppdatera denna post? Dina ändringar kan skrivas över vid nästa synkronisering.

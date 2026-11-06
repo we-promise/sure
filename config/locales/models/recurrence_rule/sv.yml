@@ -1,0 +1,35 @@
+---
+sv:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        frequency: "Frekvens"
+        interval: "Intervall"
+        day_of_month: "Dag i månaden"
+        weekday: "Veckodag"
+        weekday_ordinal: "Vecka i månaden"
+        month_of_year: "Månad"
+      recurring_transaction/recurrence_rules:
+        base: "Återkommande regel:"
+        frequency: "Frekvens"
+        interval: "Intervall"
+        day_of_month: "Dag i månaden"
+        weekday: "Veckodag"
+        weekday_ordinal: "Vecka i månaden"
+        month_of_year: "Månad"
+    errors:
+      models:
+        recurrence_rule:
+          day_spec_required: "Välj exakt en av dag i månaden eller veckodag"
+          attributes:
+            weekday:
+              required_for_weekly: "krävs för en veckoregel"
+            weekday_ordinal:
+              not_allowed_for_weekly: "gäller inte för en veckoregel"
+              required_with_weekday: "krävs när en veckodag är angiven"
+              not_allowed_without_weekday: "gäller endast när en veckodag är angiven"
+            day_of_month:
+              not_allowed_for_weekly: "gäller inte för en veckoregel"
+            month_of_year:
+              required_for_yearly: "krävs för en årlig regel"
+              not_allowed: "gäller endast för en årlig regel"

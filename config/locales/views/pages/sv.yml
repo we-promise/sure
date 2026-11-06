@@ -1,0 +1,151 @@
+---
+sv:
+  pages:
+    feedback:
+      title: Feedback
+      heading: Lämna feedback
+      description: Låt oss veta om du har någon specifik feedback. Lägg gärna till länkar till videor eller skärmdumpar.
+      feature_request: Skriv en funktionsförfrågan
+      bug_report: Rapportera en bugg
+      discuss: "Diskutera %{product} med andra"
+    intro:
+      not_authorized: "Introduktionen är endast tillgänglig för gästanvändare."
+      welcome: "Välkommen!"
+      coming_soon: Introduktionsupplevelsen kommer snart
+      description: "Vi bygger en rikare introduktionsresa för att lära känna dina mål, milstolpar och vardagsbehov. Just nu kan du gå till chattfältet för att starta en konversation med Sure och berätta var du är i din ekonomiska resa."
+      start_chatting: Börja chatta
+    redis_configuration_error:
+      page_title: Redis-konfiguration krävs - Sure
+      heading: Redis-konfiguration krävs
+      subheading: Din självvärdade Sure-installation behöver Redis korrekt konfigurerad.
+      why_required_title: Varför krävs Redis?
+      why_required_body: Sure använder Redis för att driva Sidekiq-bakgrundsjobb för uppgifter som att synka kontodata, bearbeta importer och andra bakgrundsåtgärder som håller din ekonomiska data uppdaterad.
+      view_setup_guide: Visa installationsguide
+      setup_guide_hint: Följ vår kompletta Docker-installationsguide för att konfigurera Redis
+      refresh_hint: "När du har konfigurerat Redis, uppdatera den här sidan för att fortsätta."
+      refresh_page: Uppdatera sidan
+    changelog:
+      title: Vad är nytt
+    release_notes_unavailable:
+      name: Versionsanteckningar ej tillgängliga
+      body_html: "<p>Kunde inte hämta de senaste versionsanteckningarna just nu. Kolla igen senare eller besök vår <a href='https://github.com/we-promise/sure/releases' target='_blank' rel='noopener noreferrer'>GitHub releases-sida</a> direkt.</p>"
+    privacy:
+      title: Integritetspolicy
+      heading: Integritetspolicy
+      placeholder: Integritetspolicyns innehåll visas här.
+    terms:
+      title: Användarvillkor
+      heading: Användarvillkor
+      placeholder: Användarvillkorens innehåll visas här.
+    dashboard:
+      welcome: "Välkommen tillbaka, %{name}"
+      subtitle: "Här är vad som händer med din ekonomi"
+      new: "Ny"
+      sections_aria_label: "Instrumentpanelens sektioner"
+      drag_to_reorder: "Dra för att ändra ordning på sektion"
+      toggle_section: "Visa/dölj sektion"
+      widget_size:
+        label: "Justera storlek"
+        width_label: "Bredd"
+        half: "Halv"
+        full: "Full"
+        height_label: "Höjd"
+        compact: "Kompakt"
+        auto: "Auto"
+        tall: "Hög"
+      net_worth_chart:
+        data_not_available: Data ej tillgänglig för vald period
+        title: Nettoförmögenhet
+      no_account_empty_state:
+        new_account: Nytt konto
+        no_account_subtitle: Eftersom inga konton har lagts till finns det ingen data att visa. Lägg till dina första konton för att börja se instrumentpaneldata.
+        no_account_title: Inga konton ännu
+      balance_sheet:
+        title: "Balansräkning"
+        no_items: "Inga %{name} ännu"
+        add_accounts: "Lägg till dina %{name}-konton för att se en fullständig översikt"
+        no_asset: "Inga tillgångar ännu"
+        no_liability: "Inga skulder ännu"
+        add_asset_accounts: "Lägg till dina tillgångskonton för att se en fullständig översikt"
+        add_liability_accounts: "Lägg till dina skuldkonton för att se en fullständig översikt"
+        name: "Namn"
+        weight: "Andel"
+        value: "Värde"
+        expand_all: "Expandera alla"
+        collapse_all: "Fäll ihop alla"
+        classifications:
+          asset: "Tillgångar"
+          liability: "Skulder"
+      insights_feed:
+        title: "Insikter"
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Kassaflöde"
+          surplus: "Överskott"
+          deficit: "Underskott"
+        title: "Nytt Sankey-diagram"
+        preview: "Förhandsgranska"
+        preview_tooltip: "Detta kommer att ersätta visualiseringen ovan eftersom den använder ett nytt delat API med mobilens Swift-klient."
+        feedback_prompt: "Jämför det här diagrammet med originalet ovan och berätta om det ser annorlunda ut, förutom sortering."
+        positive: "Ser rätt ut"
+        negative: "Något ser fel ut"
+        feedback_title: "Feedback om kassaflödesdiagrammet"
+        feedback_loading: "Laddar feedbackformulär…"
+        feedback_unavailable: "Feedback är inte tillgänglig just nu. Försök igen senare."
+        feedback_thanks: "Tack för att du hjälper till att förbättra diagrammet!"
+        feedback_privacy: "Ditt svar skickas till PostHog. Beskriv problemet utan kontonummer, saldon eller andra privata ekonomiska detaljer."
+        feedback_submit: "Skicka feedback"
+      cashflow_sankey:
+        loading: "Laddar kassaflöde…"
+        load_error: "Kassaflödet kunde inte laddas. Försök igen."
+        retry: "Försök igen"
+        title: "Kassaflöde"
+        zoom_out: "Tillbaka till fullt kassaflöde"
+        no_data_title: "Ingen kassaflödesdata för denna period"
+        no_data_description: "Lägg till transaktioner för att visa kassaflödesdata eller utöka perioden"
+        add_transaction: "Lägg till transaktion"
+      no_accounts:
+        title: "Inga konton ännu"
+        description: "Lägg till konton för att visa nettoförmögenhetsdata"
+        add_account: "Lägg till konto"
+      outflows_donut:
+        title: "Utflöden"
+        total_outflows: "Totala utflöden"
+        categories: "Kategorier"
+        value: "Värde"
+        weight: "Andel"
+      investment_summary:
+        title: "Investeringar"
+        total_return: "Totalavkastning"
+        holding: "Innehav"
+        weight: "Andel"
+        value: "Värde"
+        return: "Avkastning"
+        period_activity: "Aktivitet %{period}"
+        contributions: "Insättningar"
+        withdrawals: "Uttag"
+        trades: "Affärer"
+        no_investments: "Inga investeringskonton"
+        add_investment: "Lägg till ett investeringskonto för att spåra din portfölj"
+      money_flow:
+        title: "Pengar in/ut"
+        date_range: "%{start_date} till %{end_date}"
+        month_picker_aria_label: "Välj månad"
+        filter_accounts: "Filtrera konton (%{count})"
+        filter_accounts_all: "Alla konton"
+        period_scope_hint: "Visar de månader du väljer här — oberoende av instrumentpanelens tidsperiod högst upp."
+        search_accounts: "Sök konton"
+        apply: "Tillämpa"
+        balance: "Transaktionssaldo"
+        chart_span: "Senaste %{count} månaderna"
+        income: "Inkomst"
+        expenses: "Utgifter"
+      spending_trend:
+        title: "Utgifter"
+        date_range: "%{start_date} till %{end_date}"
+        date_range_short: "%{start_date} - %{end_day}, %{year}"
+        date_range_short_single: "%{date}, %{year}"
+        month_picker_aria_label: "Välj månad"
+        period_scope_hint: "Visar månaden du väljer här — oberoende av instrumentpanelens tidsperiod högst upp."
+        no_data: "Ingen utgiftsdata för denna månad"
+        previous_comparison_days: "(1-%{end_day})"

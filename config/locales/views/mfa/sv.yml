@@ -1,0 +1,45 @@
+---
+sv:
+  mfa:
+    backup_codes:
+      backup_codes_description: Varje kod kan bara användas en gång. Förvara dessa
+        koder säkert.
+      backup_codes_title: Dina backupkoder
+      continue: Fortsätt till säkerhetsinställningar
+      description: Förvara dessa backupkoder på ett säkert ställe – du behöver dem
+        om du förlorar åtkomst till din autentiseringsapp
+      page_title: Backupkoder
+      title: Spara dina backupkoder
+    create:
+      invalid_code: Ogiltig verifieringskod. Försök igen.
+    disable:
+      success: Tvåfaktorsautentisering har inaktiverats
+    new:
+      code_label: Verifieringskod
+      code_placeholder: Ange 6-siffrig kod
+      description: Öka säkerheten på ditt konto genom att aktivera tvåfaktorsautentisering
+      page_title: Konfigurera tvåfaktorsautentisering
+      scan_description: Använd en autentiseringsapp som Google Authenticator eller 1Password
+        för att skanna denna QR-kod
+      scan_title: 1. Skanna QR-kod
+      secret_description: Om du inte kan skanna QR-koden, ange denna hemliga nyckel manuellt
+        i din autentiseringsapp
+      secret_title: Kod för manuell inmatning
+      title: Konfigurera tvåfaktorsautentisering
+      verify_button: Verifiera och aktivera 2FA
+      verify_description: Ange den 6-siffriga koden från din autentiseringsapp
+      verify_title: 2. Ange verifieringskod
+    verify:
+      description: Ange koden från din autentiseringsapp för att fortsätta
+      or: eller
+      page_title: Verifiera tvåfaktorsautentisering
+      title: Tvåfaktorsautentisering
+      verify_button: Verifiera
+      webauthn_button: Använd säkerhetsnyckel eller passkey
+      webauthn_unsupported: Den här webbläsaren stöder inte passkeys eller säkerhetsnycklar.
+    verify_code:
+      invalid_code: Ogiltig autentiseringskod. Försök igen.
+    verify_webauthn:
+      invalid_credential: Kunde inte verifiera den passkeyn eller säkerhetsnyckeln. Försök igen.
+    webauthn_options:
+      unavailable: Inga passkeys eller säkerhetsnycklar finns tillgängliga för det här kontot.

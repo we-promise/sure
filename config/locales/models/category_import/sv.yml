@@ -1,0 +1,8 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: "Kategorin '%{name}' kan inte vara sin egen förälder"
+          missing_columns: "Saknade obligatoriska kolumner: %{columns}"

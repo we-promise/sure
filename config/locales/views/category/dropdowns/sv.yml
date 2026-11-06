@@ -1,0 +1,12 @@
+---
+sv:
+  category:
+    dropdowns:
+      row:
+        delete: Ta bort kategori
+        edit: Redigera kategori
+      show:
+        clear: Rensa kategori
+        no_categories: Inga kategorier hittades
+        recent: Senaste
+        search_placeholder: Sök

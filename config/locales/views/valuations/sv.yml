@@ -1,0 +1,68 @@
+---
+sv:
+  valuations:
+    confirmation_contents:
+      this_will: "Detta kommer att %{action_verb} kontovärdet den"
+      to_colon: "till:"
+      total_account_value: Totalt kontovärde
+      holdings_value: Innehavsvärde
+      brokerage_cash: Mäklarkontanter
+      account_balance: kontosaldo
+      credit_card_balance: kreditkortssaldo
+      loan_balance: lånesaldo
+      property_value: fastighetsvärde
+      vehicle_value: fordonsvärde
+      crypto_balance: kryptosaldo
+      asset_value: tillgångsvärde
+      liability_balance: skuldsaldo
+      balance: saldo
+      "on": "den"
+      to: "till"
+      recalculate_notice: "Alla framtida transaktioner och saldon räknas om baserat på denna %{change_or_update}."
+      change: ändring
+      update: uppdatering
+      action_set: sätt
+      action_update: uppdatera
+    create:
+      account_updated: Kontot har uppdaterats
+    update:
+      account_updated: Kontot har uppdaterats
+      entry_updated: Posten har uppdaterats
+    errors:
+      amount_required: Belopp krävs
+    form:
+      amount: Belopp
+      submit: Lägg till saldouppdatering
+    header:
+      balance: Saldo
+    index:
+      change: ändring
+      date: datum
+      new_entry: Ny post
+      no_valuations: Inga värderingar för detta konto än
+      valuations: Värde
+      value: värde
+    new:
+      title: Nytt saldo
+    show:
+      amount: Belopp
+      amount_label: Kontovärde vid datum
+      date_label: Datum
+      delete: Ta bort
+      delete_subtitle: Denna åtgärd kan inte ångras
+      delete_title: Ta bort post
+      details: Detaljer
+      name_label: Namn
+      name_placeholder: Ange ett namn för denna post
+      note_label: Anteckningar
+      note_placeholder: Lägg till ytterligare detaljer om denna post
+      overview: Översikt
+      settings: Inställningar
+      opening_balance: "Ingående saldo"
+      update_value: Uppdatera värde
+    confirm_create:
+      confirm: Bekräfta
+      title: Bekräfta nytt saldo
+    confirm_update:
+      title: Uppdatera saldo
+      update: Uppdatera

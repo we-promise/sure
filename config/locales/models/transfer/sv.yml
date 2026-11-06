@@ -1,0 +1,26 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        transfer:
+          attributes:
+            base:
+              inflow_cannot_be_in_multiple_transfers: Inflödestransaktionen kan inte
+                ingå i flera överföringar
+              must_be_from_different_accounts: Överföringen måste ha olika konton
+              must_be_from_same_family: Överföringen måste vara från samma familj
+              must_be_within_date_range: Överföringens transaktionsdatum måste vara inom
+                4 dagar från varandra
+              must_have_opposite_amounts: Överföringens transaktioner måste ha motsatta
+                belopp
+              must_have_single_currency: Överföringen måste ha en enda valuta
+              outflow_cannot_be_in_multiple_transfers: Utflödestransaktionen kan inte
+                ingå i flera överföringar
+          different_accounts: "Måste vara från olika konton"
+          same_family: "Måste vara från samma familj"
+          opposite_amounts: "Måste ha motsatta belopp"
+          within_days: "Måste vara inom %{count} dagar"
+  transfer:
+    name: Överföring till %{to_account}
+    payment_name: Betalning till %{to_account}

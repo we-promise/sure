@@ -1,0 +1,10 @@
+---
+sv:
+  passwords:
+    edit:
+      password: Nytt lösenord
+      password_challenge: Nuvarande lösenord
+      submit: Återställ lösenord
+      title: Uppdatera lösenord
+    update:
+      success: Ditt lösenord har återställts.

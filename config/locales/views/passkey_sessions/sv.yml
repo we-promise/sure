@@ -1,0 +1,5 @@
+---
+sv:
+  passkey_sessions:
+    invalid_credential: Kunde inte logga in med den passkeyn. Försök igen eller
+      använd ditt lösenord.

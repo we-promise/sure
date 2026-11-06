@@ -1,0 +1,92 @@
+---
+sv:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Anslut en Interactive Brokers Flex Web Service-rapport
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: Borttagning pågår
+      flex_web_service: Flex Web Service
+      syncing: Synkar
+      requires_update: Inloggningsuppgifter behöver åtgärdas
+      error: Fel
+      synced: Synkat %{time} sedan. %{summary}.
+      never_synced: Aldrig synkat.
+      setup_accounts: Konfigurera konton
+      delete: Ta bort
+      accounts_need_setup: Konton behöver konfigureras
+      accounts_need_setup_description: Vissa konton från IBKR behöver kopplas till Sure-konton.
+      no_accounts_discovered: Inga IBKR-konton upptäckta ännu.
+      no_accounts_discovered_description: Kör en synk efter att du konfigurerat din Flex-fråga för att upptäcka konton.
+    setup_accounts:
+      page_title: Konfigurera dina Interactive Brokers-konton
+      dialog_title: Konfigurera dina Interactive Brokers-konton
+      subtitle: Välj vilka IBKR-mäklarkonton som ska kopplas.
+      info_box:
+        title: IBKR Flex Query-import
+        items:
+          item_1: Innehav med aktuella priser och antal
+          item_2: Anskaffningsvärde per position
+          item_3: Affärer, utdelningar, provisioner och insättningar eller uttag
+        warning: Historisk aktivitet är begränsad till rapportfönstret för Flex Query
+      status:
+        fetching_accounts: Hämtar konton från Interactive Brokers...
+        no_accounts_found_title: Inga konton hittades.
+        no_accounts_found_description: Sure kunde inte hitta några IBKR-konton i den senaste Flex-rapporten.
+      available_accounts:
+        title: Tillgängliga konton
+        account_type_investment: Investering
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "Konto-ID: %{account_id}"
+      link_existing:
+        description: Eller koppla ett upptäckt IBKR-konto till ett befintligt manuellt investeringskonto.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Välj ett konto...
+      linked_accounts:
+        title: Redan kopplade
+        linked_to_html: "Kopplad till: %{account}"
+      buttons:
+        refresh: Uppdatera
+        cancel: Avbryt
+        back_to_settings: Tillbaka till inställningar
+        create_selected_accounts: Skapa valda konton
+        link: Koppla
+        done: Klar
+    sync_status:
+      no_accounts: Inga IBKR-konton upptäckta ännu
+      all_linked:
+        one: 1 konto kopplat
+        other: "%{count} konton kopplade"
+      partial: "%{linked} kopplade, %{unlinked} behöver konfigureras"
+    select_existing_account:
+      title: Koppla Interactive Brokers-konto
+      no_accounts_available: Inga okopplade Interactive Brokers-konton är tillgängliga ännu.
+      run_sync_hint: "Kör en synk från Inställningar > Leverantörer efter att du uppdaterat din Flex-fråga."
+      wait_for_sync: Vänta på att kontoupptäcktssynken ska slutföras.
+      balance: Saldo
+      link: Koppla
+      cancel: Avbryt
+    create:
+      success: Interactive Brokers konfigurerades.
+    update:
+      success: Interactive Brokers-konfigurationen uppdaterades.
+    destroy:
+      success: Interactive Brokers-anslutningen schemalagd för borttagning.
+    select_accounts:
+      not_configured: Interactive Brokers är inte konfigurerat.
+    link_existing_account:
+      not_found: Kontot eller Interactive Brokers-konfigurationen hittades inte.
+      only_manual_investment: Endast manuella investeringskonton kan kopplas till Interactive Brokers.
+      already_linked: Det här Interactive Brokers-kontot är redan kopplat.
+      success: Kopplades till Interactive Brokers-kontot.
+      failed: Det gick inte att koppla Interactive Brokers-kontot.
+    complete_account_setup:
+      success:
+        one: Skapade %{count} Interactive Brokers-konto.
+        other: Skapade %{count} Interactive Brokers-konton.
+      none_selected: Inga konton valdes.
+      none_created: Inga konton skapades.

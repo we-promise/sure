@@ -1,0 +1,23 @@
+sv:
+  subscriptions:
+    self_hosted_alert: "%{product_name} är inte tillgängligt i självhostat läge."
+    upgrade:
+      already_contributing: Du bidrar redan. Tack så mycket!
+      page_title: "Uppgradera"
+      account_settings: "Kontoinställningar"
+      sign_out: "Logga ut"
+      contribute_and_support_sure: "Bidra och stöd Sure"
+      cta: "Fortsätt stödja utvecklingen av den här kodbasen!"
+      header:
+        support: "Stöd"
+        sure: "Sure"
+        today: "idag"
+      redirect_to_stripe: "I nästa steg omdirigeras du till Stripe som hanterar kreditkort för oss."
+      trialing: "Din data raderas om %{days} dagar"
+      trial_over: "Din provperiod är slut"
+    create:
+      welcome: "Välkommen till Sure!"
+      trial_already_used: "Du har redan startat eller slutfört en provperiod. Uppgradera för att fortsätta."
+    success:
+      welcome_with_contribution: "Välkommen till Sure! Ditt bidrag uppskattas."
+      contribution_failed: "Något gick fel när ditt bidrag behandlades. Försök igen."

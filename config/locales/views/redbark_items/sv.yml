@@ -1,0 +1,211 @@
+---
+sv:
+  redbark_items:
+    default_name: "Redbark-anslutning"
+    # Model method strings (i18n for item_model.rb)
+    sync_status:
+      no_accounts: "Inga konton hittades"
+      synced:
+        one: "%{count} konto synkat"
+        other: "%{count} konton synkade"
+      synced_with_setup: "%{linked} synkade, %{unlinked} behöver konfigureras"
+    institution_summary:
+      none: "Inga institutioner anslutna"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutioner"
+    errors:
+      provider_not_configured: "Redbark-leverantören är inte konfigurerad"
+
+    # Syncer status messages
+    sync:
+      status:
+        importing: "Importerar konton från Redbark..."
+        processing: "Bearbetar transaktioner..."
+        calculating: "Beräknar saldon..."
+        importing_data: "Importerar kontodata..."
+        checking_setup: "Kontrollerar kontokonfiguration..."
+        needs_setup: "%{count} konton behöver konfigureras..."
+      success: "Synkronisering startad"
+
+    # Panel (settings view)
+    panel:
+      setup_instructions: "Installationsinstruktioner:"
+      step_1: "Skapa en API-nyckel på app.redbark.com under Inställningar"
+      step_2: "Ange din API-nyckel nedan och klicka på Spara-knappen"
+      step_3: "Efter en lyckad anslutning, gå till fliken Konton för att konfigurera nya konton"
+      field_descriptions: "Fältbeskrivningar:"
+      optional: "(Valfritt)"
+      required: "(obligatoriskt)"
+      optional_with_default: "(valfritt, standardvärde %{default_value})"
+      save_button: "Spara konfiguration"
+      update_button: "Uppdatera konfiguration"
+      status_configured_html: "Konfigurerad och redo att användas. Besök fliken <a href=\"%{accounts_path}\" class=\"link\">Konton</a> för att hantera och konfigurera konton."
+      status_not_configured: "Inte konfigurerad"
+      fields:
+        api_key:
+          label: "API-nyckel"
+          description: "Din Redbark API-nyckel (börjar med rbk_live_)"
+          placeholder_new: "rbk_live_..."
+          placeholder_update: "Ange ny API-nyckel för att uppdatera"
+
+    # CRUD success messages
+    create:
+      success: "Redbark-anslutningen skapades"
+    update:
+      success: "Redbark-anslutningen uppdaterades"
+    destroy:
+      success: "Redbark-anslutningen togs bort"
+      unlink_failed:
+        one: "Kunde inte avlänka %{count} konto. Försök igen."
+        other: "Kunde inte avlänka %{count} konton. Försök igen."
+    index:
+      title: "Redbark-anslutningar"
+
+    # Loading states
+    loading:
+      loading_message: "Laddar Redbark-konton..."
+      loading_title: "Laddar"
+
+    # Provider item display (used in _item partial)
+    redbark_item:
+      accounts_need_setup: "Konton behöver konfigureras"
+      delete: "Ta bort anslutning"
+      deletion_in_progress: "borttagning pågår..."
+      error: "Fel"
+      more_accounts_available:
+        one: "%{count} konto till tillgängligt"
+        other: "%{count} konton till tillgängliga"
+      no_accounts_description: "Denna anslutning har inga länkade konton än."
+      no_accounts_title: "Inga konton"
+      provider_name: "Redbark"
+      requires_update: "Anslutningen behöver uppdateras"
+      setup_action: "Konfigurera nya konton"
+      setup_description: "%{linked} av %{total} konton länkade. Välj kontotyper för dina nyimporterade Redbark-konton."
+      setup_needed: "Nya konton redo att konfigureras"
+      status: "Synkat %{timestamp} sedan"
+      status_never: "Aldrig synkat"
+      status_with_summary: "Senast synkat %{timestamp} sedan - %{summary}"
+      syncing: "Synkroniserar..."
+      total: "Totalt"
+      unlinked: "Ej länkat"
+      update_credentials: "Uppdatera inloggningsuppgifter"
+
+    # Select accounts view
+    select_accounts:
+      accounts_selected: "konton valda"
+      api_error: "API-fel: %{message}"
+      cancel: "Avbryt"
+      configure_name_in_provider: "Kan inte importera - konfigurera kontonamnet i Redbark"
+      description: "Välj de konton du vill länka till ditt %{product_name}-konto."
+      link_accounts: "Länka valda konton"
+      no_accounts_found: "Inga konton hittades. Kontrollera din API-nyckelkonfiguration."
+      no_api_key: "Redbark API-nyckel är inte konfigurerad. Konfigurera den i Inställningar."
+      no_credentials_configured: "Konfigurera dina Redbark-uppgifter först i leverantörsinställningarna."
+      no_name_placeholder: "(Inget namn)"
+      title: "Välj Redbark-konton"
+
+    # Select existing account view
+    select_existing_account:
+      account_already_linked: "Detta konto är redan länkat till en leverantör"
+      all_accounts_already_linked: "Alla Redbark-konton är redan länkade"
+      api_error: "API-fel: %{message}"
+      balance_label: "Saldo:"
+      cancel: "Avbryt"
+      cancel_button: "Avbryt"
+      configure_name_in_provider: "Kan inte importera - konfigurera kontonamnet i Redbark"
+      connect_hint: "Anslut ett Redbark-konto för att aktivera automatisk synkronisering."
+      description: "Välj ett Redbark-konto att länka med detta konto. Transaktioner synkas och dubblettrensas automatiskt."
+      header: "Länka med Redbark"
+      link_account: "Länka konto"
+      link_button: "Länka detta konto"
+      linking_to: "Länkar till:"
+      no_account_specified: "Inget konto angivet"
+      no_accounts: "Inga olänkade Redbark-konton hittades."
+      no_accounts_found: "Inga Redbark-konton hittades. Kontrollera din API-nyckelkonfiguration."
+      no_api_key: "Redbark API-nyckel är inte konfigurerad. Konfigurera den i Inställningar."
+      no_credentials_configured: "Konfigurera dina Redbark-uppgifter först i leverantörsinställningarna."
+      no_name_placeholder: "(Inget namn)"
+      settings_link: "Gå till leverantörsinställningar"
+      subtitle: "Välj ett Redbark-konto"
+      title: "Länka %{account_name} med Redbark"
+
+    # Link existing account
+    link_existing_account:
+      account_already_linked: "Detta konto är redan länkat till en leverantör"
+      api_error: "API-fel: %{message}"
+      invalid_account_name: "Kan inte länka konto med tomt namn"
+      provider_account_already_linked: "Detta Redbark-konto är redan länkat till ett annat konto"
+      provider_account_not_found: "Redbark-konto hittades inte"
+      missing_parameters: "Obligatoriska parametrar saknas"
+      no_api_key: "Redbark API-nyckel hittades inte. Konfigurera den i leverantörsinställningarna."
+      success: "Länkade %{account_name} med Redbark"
+
+    # Setup accounts wizard
+    setup_accounts:
+      account_type_label: "Kontotyp:"
+      accounts_count:
+        one: "%{count} konto tillgängligt"
+        other: "%{count} konton tillgängliga"
+      all_accounts_linked: "Alla dina Redbark-konton har redan konfigurerats."
+      api_error: "API-fel: %{message}"
+      creating: "Skapar konton..."
+      fetch_failed: "Det gick inte att hämta konton"
+      import_selected: "Importera valda konton"
+      instructions: "Välj de konton du vill importera från Redbark. Du kan välja flera konton."
+      no_accounts: "Inga olänkade konton hittades från denna Redbark-anslutning."
+      no_accounts_to_setup: "Inga konton att konfigurera"
+      no_api_key: "Redbark API-nyckel är inte konfigurerad. Kontrollera dina anslutningsinställningar."
+      select_all: "Välj alla"
+      account_types:
+        skip: "Hoppa över detta konto"
+        depository: "Check- eller sparkonto"
+        credit_card: "Kreditkort"
+        loan: "Lån eller bolån"
+        other_asset: "Annan tillgång"
+      subtype_labels:
+        depository: "Kontotyp:"
+        credit_card: ""
+        loan: "Lånetyp:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkort konfigureras automatiskt som kreditkortskonton."
+        other_asset: "Inga ytterligare alternativ behövs för andra tillgångar."
+      subtypes:
+        depository:
+          checking: "Checkkonto"
+          savings: "Sparkonto"
+          hsa: "Sjukvårdssparkonto"
+          cd: "Placeringskonto med fast ränta"
+          money_market: "Penningmarknadskonto"
+        loan:
+          mortgage: "Bolån"
+          student: "Studielån"
+          auto: "Billån"
+          other: "Annat lån"
+      balance: "Saldo"
+      cancel: "Avbryt"
+      done: "Klar"
+      choose_account_type: "Välj rätt kontotyp för varje Redbark-konto:"
+      create_accounts: "Skapa konton"
+      creating_accounts: "Skapar konton..."
+      historical_data_range: "Historiskt dataintervall:"
+      subtitle: "Välj rätt kontotyper för dina importerade konton"
+      sync_start_date_help: "Välj hur långt tillbaka du vill synka transaktionshistorik."
+      sync_start_date_label: "Börja synka transaktioner från:"
+      title: "Konfigurera dina Redbark-konton"
+
+    setup_required:
+      title: Anslut Redbark först
+      not_configured_title: Redbark är inte anslutet ännu
+      not_configured_description: Lägg till din Redbark API-nyckel under leverantörsinställningar, kom sedan tillbaka hit för att länka konton.
+      go_to_provider_settings: Gå till leverantörsinställningar
+
+    # Complete account setup
+    complete_account_setup:
+      all_skipped: "Alla konton hoppades över. Inga konton skapades."
+      creation_failed: "Det gick inte att skapa konton: %{error}"
+      creation_failed_generic: "Det gick inte att skapa konton."
+      setup_failed: "%{count} konto/konton kunde inte skapas. Inget annat ändrades - åtgärda problemet och försök igen."
+      no_accounts: "Inga konton att konfigurera."
+      success: "Skapade %{count} konto/konton."

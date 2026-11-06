@@ -1,0 +1,176 @@
+---
+sv:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: Anslut ett Trade Republic-investeringskonto via säker webbinloggning
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: Mäkleri
+      private_markets: Onoterade marknader
+      interest_products: Ränteprodukter
+      crypto_wallet: Kryptoplånbok
+    defaults:
+      name: Trade Republic
+    trade_republic_item:
+      deletion_in_progress: Borttagning pågår
+      syncing: Synkroniserar
+      requires_update: Ny autentisering krävs
+      error: Fel
+      synced: Synkroniserad %{time} sedan. %{summary}.
+      never_synced: Aldrig synkroniserad.
+      setup_accounts: Konfigurera konton
+      delete: Ta bort
+      accounts_need_setup: Konto behöver konfigureras
+      accounts_need_setup_description: Ditt Trade Republic-konto måste kopplas till ett Sure-konto.
+      no_accounts_discovered: Inget Trade Republic-konto hittades ännu.
+      no_accounts_discovered_description: Slutför inloggningen och kör en synkronisering för att hitta ditt konto.
+      data_quality:
+        title: Datakvalitet och synkroniseringsdetaljer
+        repair: Reparera importerad data
+        positions:
+          one: "%{count} innehav"
+          other: "%{count} innehav"
+        unpriced:
+          one: "%{count} utan aktuellt pris"
+          other: "%{count} utan aktuellt pris"
+        events:
+          one: "%{count} aktivitet"
+          other: "%{count} aktiviteter"
+        unknown:
+          one: "%{count} okänd aktivitet"
+          other: "%{count} okända aktiviteter"
+        pending_trade_details:
+          one: "%{count} investeringsaktivitet som väntar på detaljer"
+          other: "%{count} investeringsaktiviteter som väntar på detaljer"
+        expenses:
+          one: "%{count} utgift under de senaste 30 dagarna (%{amount})"
+          other: "%{count} utgifter under de senaste 30 dagarna (%{amount})"
+        reconciliation: "%{matched}/%{total} kontosaldon avstämda"
+        sync_history: Senaste synkroniseringar
+        sync_status:
+          completed: Slutförd
+          failed: Misslyckades
+          pending: Väntar
+          syncing: Synkroniserar
+          stale: Inaktuell
+    setup_accounts:
+      page_title: Konfigurera Trade Republic-konto
+      dialog_title: Konfigurera ditt Trade Republic-konto
+      subtitle: Koppla ditt Trade Republic-investeringskonto.
+      info_box:
+        title: Trade Republic-import
+        items:
+          item_1: Aktuella innehav med priser och antal
+          item_2: Genomförda affärer (köp och sälj)
+          item_3: Insättningar, uttag och ränteutbetalningar
+      status:
+        fetching_accounts: Hämtar konto från Trade Republic...
+        no_accounts_found_title: Inget konto hittades.
+        no_accounts_found_description: Sure kunde inte hitta något Trade Republic-konto. Kontrollera att din session fortfarande är giltig.
+      available_accounts:
+        title: Tillgängligt konto
+        account_type_investment: Investeringsportfölj
+        account_type_cash: Kontantkonto
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "Konto-ID: %{account_id}"
+      link_existing:
+        description: Eller koppla det hittade Trade Republic-kontot till ett befintligt manuellt investeringskonto.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Välj ett konto...
+      linked_accounts:
+        title: Redan kopplat
+        linked_to_html: "Kopplat till: %{account}"
+      buttons:
+        refresh: Uppdatera
+        cancel: Avbryt
+        back_to_settings: Tillbaka till Inställningar
+        create_selected_accounts: Skapa valda konton
+        link: Koppla
+        done: Klar
+    sync:
+      errors:
+        phone_number_missing: Trade Republic-telefonnummer saknas.
+        reauthentication_required: Trade Republic-session saknas eller har gått ut. Anslut igen från Inställningar > Leverantörer.
+      status:
+        checking_credentials: Kontrollerar Trade Republic-uppgifter...
+        importing_account: Importerar Trade Republic-konto...
+        checking_configuration: Kontrollerar kontokonfiguration...
+        accounts_need_setup:
+          one: 1 Trade Republic-konto behöver konfigureras...
+          other: "%{count} Trade Republic-konton behöver konfigureras..."
+        processing_activity: Bearbetar innehav och aktivitet...
+        calculating_balances: Beräknar saldon...
+    repair:
+      scheduled: Reparation av Trade Republic-data schemalagd.
+    sync_status:
+      no_accounts: Inget Trade Republic-konto hittades ännu
+      all_linked:
+        one: 1 konto kopplat
+        other: "%{count} konton kopplade"
+      partial: "%{linked} kopplade, %{unlinked} behöver konfigureras"
+    select_existing_account:
+      title: Koppla Trade Republic-konto
+      no_accounts_available: Inga fristående Trade Republic-konton är tillgängliga ännu.
+      run_sync_hint: "Slutför inloggningen och kör en synkronisering från Inställningar > Leverantörer."
+      wait_for_sync: Vänta på att synkroniseringen för kontoupptäckt slutförs.
+      balance: Saldo
+      link: Koppla
+      cancel: Avbryt
+    create:
+      success: Trade Republic sparad. Bekräfta inloggningen i Trade Republic-appen för att slutföra anslutningen.
+    update:
+      success: Trade Republic-konfigurationen uppdaterades.
+      pin_required: Ange din Trade Republic-pinkod eller lösenord för att autentisera igen.
+    destroy:
+      success: Trade Republic-anslutningen schemalagd för borttagning.
+      unlink_failed: Trade Republic kunde inte kopplas bort helt. Anslutningen behölls så att den kan försökas igen säkert.
+    select_accounts:
+      not_configured: Trade Republic är inte konfigurerad.
+    initiate_login:
+      not_configured: Trade Republic är inte konfigurerad.
+      pin_required: Ange din Trade Republic-pinkod eller lösenord för att starta en ny inloggning.
+      verification_required: "Inloggningen har startat. Bekräfta den via %{method} och tryck sedan på Bekräfta inloggning."
+    initiate_qr_login:
+      not_configured: Trade Republic är inte konfigurerad.
+    poll_login:
+      no_pending_login: Ingen inloggning väntar just nu. Starta en ny inloggning först.
+      login_expired: Inloggningsförfrågan gick ut. Försök igen.
+    poll_qr_login:
+      no_pending_login: Ingen QR-inloggning väntar.
+      success: Trade Republic anslöts.
+    complete_login:
+      no_pending_login: Ingen inloggning väntar just nu. Starta en ny inloggning först.
+      approval_pending: Inte bekräftad ännu. Godkänn inloggningen i Trade Republic-appen och försök igen.
+      still_pending: Inte bekräftad ännu. Godkänn inloggningen i Trade Republic-appen och försök igen.
+      success: Trade Republic anslöts.
+      login_expired: Inloggningsförfrågan gick ut. Försök igen.
+    link_existing_account:
+      not_found: Konto eller Trade Republic-konfiguration hittades inte.
+      only_manual_investment: Endast manuella investeringskonton kan kopplas till Trade Republic.
+      already_linked: Det här Trade Republic-kontot är redan kopplat.
+      success: Kopplingen till Trade Republic-kontot lyckades.
+      processing_failed: Kontot kopplades, men den första databehandlingen misslyckades. En synkronisering har schemalagts. Kontrollera felloggen om det fortfarande är ofullständigt.
+      failed: Kunde inte koppla Trade Republic-kontot.
+    complete_account_setup:
+      success:
+        one: Skapade %{count} Trade Republic-konto.
+        other: Skapade %{count} Trade Republic-konton.
+      none_selected: Inga konton valdes.
+      none_created: Inga konton skapades.
+      partial_failure:
+        one: Ett valt Trade Republic-konto kunde inte slutföras. Kontrollera felloggen och försök igen.
+        other: "%{count} valda Trade Republic-konton kunde inte slutföras. Kontrollera felloggen och försök igen."
+    activities:
+      labels:
+        contribution: Insättning
+        withdrawal: Uttag
+        interest: Ränta
+        dividend: Utdelning
+        card_payment: Kortbetalning
+        cash_withdrawal: Kontantuttag
+        card_fee: Kortavgift
+        card_refund: Kortåterbetalning
+        tax_refund: Skatteåterbetalning
+        round_up: Avrundning uppåt

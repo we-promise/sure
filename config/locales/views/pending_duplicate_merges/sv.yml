@@ -1,0 +1,21 @@
+---
+sv:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: Välj en bokförd transaktion att sammanfoga med
+      invalid_transaction: Ogiltig transaktion vald för sammanfogning
+      merge_success: Väntande transaktion sammanfogad med bokförd transaktion
+      merge_failed: Kunde inte sammanfoga transaktionerna
+    set_transaction:
+      pending_only: Den här funktionen är endast tillgänglig för väntande transaktioner
+    new:
+      title: Sammanfoga med bokförd transaktion
+      warning_title: Manuell dubblettsammanfogning
+      warning_description: Använd detta för att manuellt sammanfoga en väntande transaktion med dess bokförda version. Detta tar bort den väntande transaktionen och behåller bara den bokförda.
+      pending_transaction: Väntande transaktion
+      select_posted: Välj bokförd transaktion att sammanfoga med
+      showing_range: "Visar %{start} - %{end}"
+      previous: "← Föregående 10"
+      next: "Nästa 10 →"
+      no_candidates: Inga bokförda transaktioner hittades på det här kontot.
+      submit_button: Sammanfoga transaktioner

@@ -1,0 +1,38 @@
+---
+sv:
+  sessions:
+    create:
+      invalid_credentials: Ogiltig e-postadress eller lösenord.
+      local_login_disabled: Lokal inloggning med lösenord är inaktiverad. Använd enkel inloggning (SSO).
+      account_deactivated: Det här kontot har inaktiverats. Kontakta en administratör.
+    destroy:
+      logout_successful: Du har loggats ut.
+    post_logout:
+      logout_successful: Du har loggats ut.
+    openid_connect:
+      account_linked: "Kontot har kopplats till %{provider}"
+      failed: Det gick inte att autentisera via OpenID Connect.
+    failure:
+      failed: Det gick inte att autentisera.
+      sso_provider_unavailable: "SSO-leverantören är för närvarande inte tillgänglig. Försök igen senare eller kontakta en administratör."
+      sso_invalid_response: "Fick ett ogiltigt svar från SSO-leverantören. Försök igen."
+      sso_failed: "Enkel inloggning (SSO) misslyckades. Försök igen."
+    mobile_sso_start:
+      redirecting_html: "Omdirigerar till inloggning... <a href=\"%{url}\">Klicka här</a> om du inte omdirigeras."
+    new:
+      email: E-postadress
+      email_placeholder: du@exempel.se
+      forgot_password: Glömt lösenordet?
+      password: Lösenord
+      submit: Logga in
+      title: Sure
+      password_placeholder: Ange ditt lösenord
+      openid_connect: Logga in med OpenID Connect
+      oidc: Logga in med OpenID Connect
+      google_auth_connect: Logga in med Google
+      local_login_admin_only: Lokal inloggning är begränsad till administratörer.
+      passkey_button: Logga in med en passkey
+      passkey_unsupported: Den här webbläsaren stöder inte passkeys.
+      no_auth_methods_enabled: Inga autentiseringsmetoder är för närvarande aktiverade. Kontakta en administratör.
+      demo_banner_title: "Demoläge aktivt"
+      demo_banner_message: "Detta är en demonstrationsmiljö. Inloggningsuppgifter har fyllts i i förväg för din bekvämlighet. Ange inte riktig eller känslig information."

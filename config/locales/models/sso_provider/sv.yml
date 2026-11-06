@@ -1,0 +1,12 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              saml_url_required: "Antingen IdP-metadata-URL eller IdP SSO-URL krävs för SAML-providrar"
+              saml_cert_required: "Antingen IdP-certifikat eller certifikatets fingeravtryck krävs när metadata-URL inte används"
+              metadata_url_invalid: "IdP-metadata-URL måste vara en giltig URL"
+              sso_url_invalid: "IdP SSO-URL måste vara en giltig URL"

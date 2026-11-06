@@ -1,0 +1,30 @@
+---
+sv:
+  credit_cards:
+    edit:
+      edit: Redigera %{account}
+    form:
+      annual_fee: Årsavgift
+      annual_fee_placeholder: '99'
+      apr: Effektiv ränta
+      apr_placeholder: '15.99'
+      available_credit: Tillgänglig kredit
+      available_credit_placeholder: '10000'
+      expiration_date: Utgångsdatum
+      minimum_payment: Minsta betalning
+      minimum_payment_placeholder: '100'
+      simplefin_balance_sign_auto: Automatisk
+      simplefin_balance_sign_credit: Tillgodohavande (banken är skyldig dig)
+      simplefin_balance_sign_debt: Skuld (du är skyldig banken)
+      simplefin_balance_sign_description: Använd en override endast när SimpleFIN
+        rapporterar ett tvetydigt tecken. Automatisk fortsätter använda
+        transaktionshistorik och leverantörens saldo.
+      simplefin_balance_sign_label: SimpleFIN-saldots betydelse
+      treat_balance_as_available_credit_description: Aktivera om din bank rapporterar
+        detta korts saldo som återstående tillgänglig kredit istället för
+        skuldbeloppet. Skulden härleds då från kreditgränsen som rapporteras av
+        din bank, eller från fältet Tillgänglig kredit om din bank inte
+        tillhandahåller en sådan.
+      treat_balance_as_available_credit_label: Saldot är tillgänglig kredit
+    new:
+      title: Ange kreditkortsuppgifter

@@ -1,0 +1,169 @@
+---
+sv:
+  UI:
+    period_picker:
+      aria_label: "Tidsperiod: %{period}"
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: Växla markering
+      balance_reconciliation:
+        labels:
+          adjustments: Justeringar
+          buys: Köp
+          change_in_brokerage_cash: Förändring i mäklarkontanter
+          change_in_holdings_market: Förändring i innehav (marknadsprisaktivitet)
+          change_in_holdings_trades: Förändring i innehav (köp/sälj)
+          charges: Avgifter
+          end_balance: Slutsaldo
+          end_principal: Slutkapital
+          end_value: Slutvärde
+          final_balance: Slutgiltigt saldo
+          final_principal: Slutgiltigt kapital
+          final_value: Slutgiltigt värde
+          market_changes: Marknadsförändringar
+          net_cash_flow: Nettokassaflöde
+          net_principal_change: Nettoförändring i kapital
+          net_value_change: Nettoförändring i värde
+          payments: Betalningar
+          sells: Försäljningar
+          start_balance: Startsaldo
+          start_principal: Startkapital
+          start_value: Startvärde
+        tooltips:
+          adjustments: Manuella avstämningar eller andra justeringar
+          adjustments_asset: Manuella värdejusteringar eller värderingar
+          buys: Kryptoköp under dagen
+          change_in_brokerage_cash: Nettoförändring i kontanter från insättningar, uttag och affärer
+          change_in_holdings_market: Förändring i innehavsvärde från marknadsprisrörelser
+          change_in_holdings_trades: Påverkan på innehav från köp och försäljning av värdepapper
+          charges: Nya avgifter under dagen
+          end_balance: Det beräknade saldot efter alla transaktioner
+          end_balance_investment: Det beräknade saldot efter all aktivitet
+          end_principal: Det beräknade kapitalet efter alla transaktioner
+          end_value: Det beräknade värdet efter alla förändringar
+          final_balance: Det slutgiltiga kontosaldot för dagen
+          final_balance_credit: Den slutgiltiga skulden för dagen
+          final_balance_crypto: Det slutgiltiga kryptoinnehavsvärdet för dagen
+          final_balance_investment: Det slutgiltiga portföljvärdet för dagen
+          final_principal: Det slutgiltiga kapitalsaldot för dagen
+          final_value: Det slutgiltiga tillgångsvärdet för dagen
+          market_changes: Värdeförändringar från marknadsprisrörelser
+          net_cash_flow: Nettoförändring i saldo från alla transaktioner under dagen
+          net_principal_change: Kapitalbetalningar och ny upplåning under dagen
+          net_value_change: Alla värdeförändringar inklusive förbättringar och värdeminskning
+          payments: Betalningar gjorda till kortet under dagen
+          sells: Kryptoförsäljningar under dagen
+          start_balance: Kontosaldot i början av dagen
+          start_balance_credit: Skulden i början av dagen
+          start_balance_crypto: Kryptoinnehavsvärdet i början av dagen
+          start_balance_investment: Det totala portföljvärdet i början av dagen
+          start_principal: Kapitalsaldot i början av dagen
+          start_value: Tillgångsvärdet i början av dagen
+      chart:
+        no_data_available: "Ingen data tillgänglig"
+        title:
+          balance: Saldo
+          cash_value: Kontantvärde
+          debt_balance: Skuldsaldo
+          estimated_property_value: Uppskattat fastighetsvärde
+          estimated_vehicle_value: Uppskattat fordonsvärde
+          holdings_value: Innehavsvärde
+          remaining_principal_balance: Återstående kapitalsaldo
+          total_account_value: Totalt kontovärde
+          total_gains: Total vinst
+        views:
+          cash: Kontanter
+          gains: Vinst/ROI
+          holdings: Innehav
+          total_value: Totalt värde
+        vs_available_history: jämfört med tillgänglig historik
+      activity_date:
+        balance_tooltip: "Dagens slutsaldo, efter alla transaktioner och justeringar"
+        no_balance_data: "Inga saldodata tillgängliga för detta datum"
+  ds:
+    alert:
+      variants:
+        info: Info
+        success: Lyckades
+        warning: Varning
+        error: Fel
+        destructive: Fel
+    pill:
+      aria_label: "%{label}"
+      default_label: Förhandsvisning
+    dialog:
+      close: Stäng
+    popover:
+      avatar_default_label: Öppna meny
+    tooltip:
+      trigger_label: Mer information
+    link:
+      opens_in_new_tab: (öppnas i ny flik)
+    icon_picker:
+      no_matching_icons: Inga matchande ikoner
+      search_placeholder: Sök ikoner...
+  provider_sync_summary:
+    title: Synksammanfattning
+    last_sync: "Senaste synk: för %{time_ago} sedan"
+    accounts:
+      title: Konton
+      total: "Totalt: %{count}"
+      linked: "Länkade: %{count}"
+      unlinked: "Ej länkade: %{count}"
+      institutions: "Institutioner: %{count}"
+    transactions:
+      title: Transaktioner
+      seen: "Sedda: %{count}"
+      imported: "Importerade: %{count}"
+      updated: "Uppdaterade: %{count}"
+      skipped: "Hoppade över: %{count}"
+      fetching: "Hämtar från mäklaren..."
+      protected:
+        one: "%{count} post skyddad (skrivs inte över)"
+        other: "%{count} poster skyddade (skrivs inte över)"
+      view_protected: Visa skyddade poster
+    skip_reasons:
+      excluded: Exkluderad
+      user_modified: Ändrad av användare
+      import_locked: CSV-import
+      protected: Skyddad
+    holdings:
+      title: Innehav
+      found: "Hittade: %{count}"
+      processed: "Bearbetade: %{count}"
+    trades:
+      title: Affärer
+      imported: "Importerade: %{count}"
+      skipped: "Hoppade över: %{count}"
+      fetching: "Hämtar aktiviteter från mäklaren..."
+    health:
+      title: Hälsa
+      view_error_details: Visa feldetaljer
+      rate_limited: "Hastighetsbegränsad för %{time_ago}"
+      recently: nyligen
+      errors: "Fel: %{count}"
+      pending_reconciled:
+        one: "%{count} dubblerad väntande transaktion avstämd"
+        other: "%{count} dubblerade väntande transaktioner avstämda"
+      view_reconciled: Visa avstämda transaktioner
+      duplicate_suggestions:
+        one: "%{count} möjlig dubblett behöver granskas"
+        other: "%{count} möjliga dubbletter behöver granskas"
+      view_duplicate_suggestions: Visa föreslagna dubbletter
+      stale_pending:
+        one: "%{count} inaktuell väntande transaktion (exkluderad från budgetar)"
+        other: "%{count} inaktuella väntande transaktioner (exkluderade från budgetar)"
+      view_stale_pending: Visa berörda konton
+      stale_pending_count:
+        one: "%{count} transaktion"
+        other: "%{count} transaktioner"
+      stale_unmatched:
+        one: "%{count} väntande transaktion behöver manuell granskning"
+        other: "%{count} väntande transaktioner behöver manuell granskning"
+      view_stale_unmatched: Visa transaktioner som behöver granskas
+      stale_unmatched_count:
+        one: "%{count} transaktion"
+        other: "%{count} transaktioner"
+      data_warnings: "Datavarningar: %{count}"
+      notices: "Meddelanden: %{count}"
+      view_data_quality: Visa detaljer om datakvalitet

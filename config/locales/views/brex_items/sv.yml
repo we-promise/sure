@@ -1,0 +1,277 @@
+---
+sv:
+  brex_items:
+    default_connection_name: Brex-anslutning
+    account_metadata:
+      provider: Brex
+      separator: " • "
+    kinds:
+      cash: Kontanter
+      card: Kort
+    statuses:
+      ACTIVE: Aktiv
+      active: Aktiv
+      CLOSED: Stängd
+      closed: Stängd
+      frozen: Fryst
+      FROZEN: Fryst
+    create:
+      success: Brex-anslutningen skapades
+    default_card_name: Brex-kort
+    default_cash_name: "Brex Kontanter %{id}"
+    destroy:
+      success: Brex-anslutningen togs bort
+    index:
+      title: Brex-anslutningar
+    institution_summary:
+      none: Inga institutioner anslutna
+      one: "%{name}"
+      count:
+        one: "%{count} institution"
+        other: "%{count} institutioner"
+    sync_status:
+      no_accounts: Inga konton hittades
+      all_synced:
+        one: "%{count} konto synkroniserat"
+        other: "%{count} konton synkroniserade"
+      partial_setup: "%{synced} synkroniserade, %{pending} behöver konfigureras"
+    api_error:
+      common_issues: "Vanliga problem:"
+      expired_credentials: Skapa en ny API-token från Brex.
+      expired_credentials_label: "Utgångna inloggningsuppgifter:"
+      heading: Kunde inte ansluta till Brex
+      invalid_token: Kontrollera din API-token i leverantörsinställningar.
+      invalid_token_label: "Ogiltig API-token:"
+      network: Kontrollera din internetanslutning.
+      network_label: "Nätverksproblem:"
+      permissions: Se till att din token har de nödvändiga skrivskyddade behörigheterna för konton och transaktioner.
+      permissions_label: "Otillräckliga behörigheter:"
+      service: Brex API kan vara tillfälligt otillgängligt.
+      service_label: "Tjänsten nere:"
+      settings_link: Kontrollera leverantörsinställningar
+      title: Fel i Brex-anslutning
+    errors:
+      unexpected_error: Ett oväntat fel uppstod. Försök igen senare.
+    entries:
+      default_name: Brex-transaktion
+    loading:
+      loading_message: Laddar Brex-konton...
+      loading_title: Laddar
+    link_accounts:
+      all_already_linked:
+        one: "Det valda kontot (%{names}) är redan länkat"
+        other: "Alla %{count} valda konton är redan länkade: %{names}"
+      api_error: "API-fel: %{message}"
+      invalid_account_names:
+        one: "Kan inte länka konto med tomt namn"
+        other: "Kan inte länka %{count} konton med tomma namn"
+      invalid_account_type: Icke stödd Brex-kontotyp
+      link_failed: Det gick inte att länka konton
+      no_accounts_selected: Välj minst ett konto
+      no_api_token: Brex API-token hittades inte. Konfigurera den i leverantörsinställningar.
+      partial_invalid: "Länkade %{created_count} konto(n). %{already_linked_count} konto(n) var redan länkade och %{invalid_count} konto(n) hade ogiltiga namn"
+      partial_success: "Länkade %{created_count} konto(n). %{already_linked_count} konto(n) var redan länkade: %{already_linked_names}"
+      select_connection: Välj en Brex-anslutning innan du länkar konton.
+      success:
+        one: "Länkade %{count} konto"
+        other: "Länkade %{count} konton"
+    brex_item:
+      accounts_need_setup: Konton behöver konfigureras
+      delete: Ta bort anslutning
+      deletion_in_progress: borttagning pågår...
+      error: Fel
+      no_accounts_description: Den här anslutningen har inga länkade konton ännu.
+      no_accounts_title: Inga konton
+      setup_action: Konfigurera nya konton
+      setup_description: "%{linked} av %{total} konton länkade. Välj kontotyper för dina nyligen importerade Brex-konton."
+      setup_needed: Nya konton redo att konfigureras
+      status: "Synkroniserat för %{timestamp} sedan"
+      status_never: Aldrig synkroniserat
+      status_with_summary: "Senast synkroniserat för %{timestamp} sedan - %{summary}"
+      syncing: Synkroniserar...
+      total: Totalt
+      unlinked: Olänkat
+    provider_panel:
+      accounts_link: Konton
+      add_connection: Lägg till Brex-anslutning
+      base_url_label: Bas-URL (valfritt)
+      base_url_placeholder: https://api.brex.com
+      configured_html: "Konfigurerad och redo att användas. Besök fliken %{accounts_link} för att hantera och konfigurera konton."
+      connection_name_label: Anslutningsnamn
+      connection_name_placeholder: Företagskonto
+      default_connection_name: Brex-anslutning
+      disconnect_label: "Koppla från %{name}"
+      disconnect_confirm: "Koppla från %{name}?"
+      encryption_warning:
+        title: Databaskryptering är inte konfigurerad
+        message: Konfigurera Active Record-krypteringsnycklar innan du lägger till Brex-token i produktion. Utan krypteringsnycklar lagrar Sure Brex-leverantörsuppgifter och ögonblicksbilder i klartext, som andra leverantörsposter.
+      instructions:
+        copy_token_html: "Kopiera token och lägg till den som en namngiven anslutning nedan. Sure lagrar token endast för att synkronisera denna familj."
+        create_token: "Skapa en API-token med dessa skrivskyddade behörigheter: accounts.cash.readonly, accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly"
+        open_tokens: Gå till Brex utvecklar-/API-tokeninställningar för företaget du vill ansluta
+        sign_in_html: "Besök %{link} och logga in på kontot du vill ansluta"
+      keep_token_placeholder: Lämna tomt för att behålla den aktuella token
+      not_configured: Inte konfigurerad
+      sandbox_note_html: "Använd en separat namngiven anslutning för varje Brex-företag/API-token du vill synkronisera. Lämna Bas-URL tomt för produktion. Staging är begränsat till Brex-godkänd testning och fungerar inte med kundtoken."
+      setup_accounts: Konfigurera konton
+      setup_title: "Instruktioner för konfiguration:"
+      sync: Synkronisera
+      token_label: Token
+      token_placeholder: Klistra in token här
+      update_connection: Uppdatera anslutning
+    provider_connection:
+      default_description: Anslut till ditt Brex-konto
+      default_name: Brex
+      description: "Anslut med %{name}"
+      name: "Brex - %{name}"
+    select_accounts:
+      accounts_selected: konton valda
+      api_error: "API-fel: %{message}"
+      cancel: Avbryt
+      configure_name_in_brex: Kan inte importera - konfigurera kontonamn i Brex
+      description: Välj de konton du vill länka till ditt %{product_name}-konto.
+      link_accounts: Länka markerade konton
+      no_accounts_found: Inga konton hittades. Kontrollera din API-tokenkonfiguration.
+      no_api_token: Brex API-token hittades inte. Konfigurera den i leverantörsinställningar.
+      no_credentials_configured: Konfigurera din Brex API-token först i leverantörsinställningar.
+      no_name_placeholder: "(Inget namn)"
+      select_connection: Välj en Brex-anslutning i leverantörsinställningar.
+      title: Välj Brex-konton
+      unexpected_error: Ett oväntat fel uppstod. Försök igen senare.
+    select_existing_account:
+      account_already_linked: Detta konto är redan länkat till en leverantör
+      all_accounts_already_linked: Alla Brex-konton är redan länkade
+      api_error: "API-fel: %{message}"
+      cancel: Avbryt
+      configure_name_in_brex: Kan inte importera - konfigurera kontonamn i Brex
+      description: Välj ett Brex-konto att länka till detta konto. Transaktioner synkroniseras och dubbletter tas bort automatiskt.
+      link_account: Länka konto
+      no_account_specified: Inget konto angivet
+      no_accounts_found: Inga Brex-konton hittades. Kontrollera din API-tokenkonfiguration.
+      no_api_token: Brex API-token hittades inte. Konfigurera den i leverantörsinställningar.
+      no_credentials_configured: Konfigurera din Brex API-token först i leverantörsinställningar.
+      no_name_placeholder: "(Inget namn)"
+      select_connection: Välj en Brex-anslutning i leverantörsinställningar.
+      title: "Länka %{account_name} med Brex"
+      unexpected_error: Ett oväntat fel uppstod. Försök igen senare.
+    setup_required:
+      description: Innan du kan länka Brex-konton måste du konfigurera din Brex API-token.
+      heading: API-token inte konfigurerad
+      settings_link: Gå till leverantörsinställningar
+      setup_steps: "Konfigurationssteg:"
+      steps:
+        enter_token: Ange din Brex API-token
+        find_section_html: "Hitta avsnittet <strong>Brex</strong>"
+        open_settings_html: "Gå till <strong>Inställningar > Leverantörer</strong>"
+        return_to_link: Kom tillbaka hit för att länka dina konton
+      title: Brex-konfiguration krävs
+    subtype_select:
+      placeholder:
+        subtype: Välj undertyp
+        type: Välj typ
+    link_existing_account:
+      account_already_linked: Detta konto är redan länkat till en leverantör
+      api_error: "API-fel: %{message}"
+      invalid_account_name: Kan inte länka konto med tomt namn
+      missing_parameters: Nödvändiga parametrar saknas
+      no_account_specified: Inget konto angivet
+      no_api_token: Brex API-token hittades inte. Konfigurera den i leverantörsinställningar.
+      provider_account_already_linked: Detta Brex-konto är redan länkat till ett annat konto
+      provider_account_not_found: Brex-kontot hittades inte
+      select_connection: Välj en Brex-anslutning innan du länkar konton.
+      success: "Länkade %{account_name} med Brex"
+    setup_accounts:
+      account_type_label: "Kontotyp:"
+      all_accounts_linked: "Alla dina Brex-konton har redan konfigurerats."
+      api_error: "API-fel: %{message}"
+      fetch_failed: "Det gick inte att hämta konton"
+      no_accounts_to_setup: "Inga konton att konfigurera"
+      no_api_token: Brex API-token hittades inte. Konfigurera den i leverantörsinställningar.
+      account_types:
+        skip: Hoppa över detta konto
+        depository: Check- eller sparkonto
+        credit_card: Kreditkort
+        investment: Investeringskonto
+        loan: Lån eller bolån
+        other_asset: Annan tillgång
+      subtype_labels:
+        depository: "Kontoundertyp:"
+        credit_card: ""
+        investment: "Investeringstyp:"
+        loan: "Lånetyp:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkort konfigureras automatiskt som kreditkortskonton."
+        other_asset: "Inga ytterligare alternativ behövs för Andra tillgångar."
+      subtypes:
+        depository:
+          checking: Checkkonto
+          savings: Sparkonto
+          hsa: Hälsosparkonto
+          cd: Certifikat med fast ränta
+          money_market: Penningmarknadskonto
+        investment:
+          brokerage: Depå
+          pension: Pension
+          retirement: Pensionssparande
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529 Plan"
+          hsa: Hälsosparkonto
+          mutual_fund: Fond
+          ira: Traditionell IRA
+          roth_ira: Roth IRA
+          angel: Ängelinvestering
+        loan:
+          mortgage: Bolån
+          student: Studielån
+          auto: Billån
+          other: Annat lån
+      balance: Saldo
+      cancel: Avbryt
+      choose_account_type: "Välj rätt kontotyp för varje Brex-konto:"
+      create_accounts: Skapa konton
+      creating_accounts: Skapar konton...
+      historical_data_range: "Historiskt dataintervall:"
+      subtitle: Välj rätt kontotyper för dina importerade konton
+      sync_start_date_help: Välj hur långt tillbaka du vill synkronisera transaktionshistorik. Maximalt 3 års historik tillgänglig.
+      sync_start_date_label: "Börja synkronisera transaktioner från:"
+      title: Konfigurera dina Brex-konton
+    complete_account_setup:
+      all_skipped: "Alla konton hoppades över. Inga konton skapades."
+      creation_failed: "Det gick inte att skapa konton: %{error}"
+      creation_failed_count: "Det gick inte att skapa %{count} konto(n)."
+      no_accounts: "Inga konton att konfigurera."
+      partial_skipped: "Skapade %{created_count} konto(n); %{skipped_count} konto(n) hoppades över."
+      partial_success: "Skapade %{created_count} konto(n), men %{failed_count} konto(n) misslyckades."
+      success: "Skapade %{count} konto(n)."
+      unexpected_error: Ett oväntat fel uppstod.
+    sync:
+      success: Synkronisering startad
+    syncer:
+      account_processing_failed:
+        one: "%{count} Brex-konto misslyckades vid bearbetning."
+        other: "%{count} Brex-konton misslyckades vid bearbetning."
+      account_sync_failed:
+        one: "%{count} Brex-kontosynkronisering kunde inte schemaläggas."
+        other: "%{count} Brex-kontosynkroniseringar kunde inte schemaläggas."
+      accounts_need_setup:
+        one: "%{count} konto behöver konfigureras..."
+        other: "%{count} konton behöver konfigureras..."
+      accounts_failed:
+        one: "%{count} Brex-konto misslyckades att importeras."
+        other: "%{count} Brex-konton misslyckades att importeras."
+      calculating_balances: Beräknar saldon...
+      checking_account_configuration: Kontrollerar kontokonfiguration...
+      credentials_invalid: Ogiltig Brex API-token eller kontobehörigheter
+      failed: Synkroniseringen misslyckades. Försök igen eller kontakta support.
+      import_failed: Brex-importen misslyckades.
+      importing_accounts: Importerar konton från Brex...
+      processing_transactions: Bearbetar transaktioner...
+      transactions_failed:
+        one: "%{count} Brex-konto hade fel vid import av transaktioner."
+        other: "%{count} Brex-konton hade fel vid import av transaktioner."
+    update:
+      success: Brex-anslutningen uppdaterades

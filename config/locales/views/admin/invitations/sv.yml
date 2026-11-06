@@ -1,0 +1,8 @@
+---
+sv:
+  admin:
+    invitations:
+      destroy:
+        success: "Inbjudan borttagen."
+      destroy_all:
+        success: "Alla inbjudningar för den här familjen har tagits bort."

@@ -1,0 +1,130 @@
+---
+sv:
+  rules:
+    no_action: Ingen åtgärd
+    no_condition: Inget villkor
+    rule:
+      edit: Redigera
+      re_apply_rule: Tillämpa regel igen
+      delete: Ta bort
+      then: DÅ
+      and_more_conditions:
+        one: och 1 villkor till
+        other: och %{count} villkor till
+      and_more_actions:
+        one: och 1 åtgärd till
+        other: och %{count} åtgärder till
+      action_label_to: "%{label} till %{value}"
+      all_past_and_future: Alla tidigare och framtida %{resource}
+      on_or_after: "%{resource} den %{date} eller senare"
+    form:
+      rule_name_label: Regelnamn (valfritt)
+      rule_name_placeholder: Ange ett namn för denna regel
+      add_condition: Lägg till villkor
+      add_condition_group: Lägg till villkorsgrupp
+      add_action: Lägg till åtgärd
+      all_past_and_future: Alla tidigare och framtida %{resource}
+      starting_from: Med start från
+      then: DÅ
+    index:
+      page_title: Regler
+      delete_all_rules: Ta bort alla regler
+      new_rule: Ny regel
+      ai_cost_warning: AI-baserade regelåtgärder kostar pengar. Se till att filtrera så snävt som möjligt för att undvika onödiga kostnader.
+      rules_heading: Regler
+      sort_by: "Sortera efter:"
+      sort_name: Namn
+      sort_updated_at: Senast uppdaterad
+      toggle_sort_direction: Växla sorteringsordning
+      no_rules_title: Inga regler än
+      no_rules_description: Skapa regler för att utföra åtgärder på dina transaktioner och annan data vid varje kontosynkronisering.
+    confirm:
+      title: Bekräfta ändringar
+      title_with_name: "Bekräfta ändringar av \"%{name}\""
+      apply_notice_html: "Du är på väg att tillämpa denna regel på <span class=\"text-primary font-medium\">%{count} %{resource}</span> som uppfyller de angivna regelkriterierna. Bekräfta om du vill fortsätta med denna ändring."
+      ai_cost_title: Uppskattad AI-kostnad
+      ai_cost_with_estimate_html: "Detta kommer använda AI för att kategorisera %{count} transaktion(er). Uppskattad kostnad: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate_html: "Detta kommer använda AI för att kategorisera %{count} transaktion(er)."
+      cost_unavailable_model: "Kostnadsuppskattning ej tillgänglig för modellen \"%{model}\"."
+      cost_unavailable_no_provider: Kostnadsuppskattning ej tillgänglig (ingen LLM-leverantör konfigurerad).
+      cost_warning: Du kan komma att drabbas av kostnader, kontrollera aktuella priser hos modellleverantören.
+      view_usage_history: Visa användningshistorik
+      confirm_changes: Bekräfta ändringar
+    actions:
+      to_label: till
+      value_placeholder: Ange ett värde
+    update:
+      success: Regel uppdaterad
+    destroy:
+      success: Regel borttagen
+    destroy_all:
+      success: Alla regler borttagna
+    apply_all:
+      button: Tillämpa alla
+      confirm_title: Tillämpa alla regler
+      confirm_message: Du är på väg att tillämpa %{count} regler som påverkar %{transactions} unika transaktioner. Bekräfta om du vill fortsätta.
+      confirm_button: Bekräfta och tillämpa alla
+      success: Alla regler har lagts i kö för körning
+      ai_cost_title: Uppskattad AI-kostnad
+      ai_cost_message: Detta kommer använda AI för att kategorisera upp till %{transactions} transaktioner.
+      estimated_cost: "Uppskattad kostnad: ~$%{cost}"
+      cost_unavailable_model: Kostnadsuppskattning ej tillgänglig för modellen "%{model}".
+      cost_unavailable_no_provider: Kostnadsuppskattning ej tillgänglig (ingen LLM-leverantör konfigurerad).
+      cost_warning: Du kan komma att drabbas av kostnader, kontrollera aktuella priser hos modellleverantören.
+      view_usage: Visa användningshistorik
+    recent_runs:
+      title: Senaste körningar
+      description: Visa körhistoriken för dina regler, inklusive status för lyckade/misslyckade körningar och antal transaktioner.
+      unnamed_rule: Namnlös regel
+      columns:
+        date_time: Datum/tid
+        execution_type: Typ
+        status: Status
+        rule_name: Regelnamn
+        transactions_counts:
+          queued: Köade
+          processed: Bearbetade
+          modified: Ändrade
+          blocked: Blockerade
+      execution_types:
+        manual: Manuell
+        scheduled: Schemalagd
+      statuses:
+        pending: Väntar
+        success: Lyckades
+        failed: Misslyckades
+    clear_ai_cache:
+      button: Återställ AI-cache
+      confirm_title: Återställa AI-cache?
+      confirm_body: Är du säker på att du vill återställa AI-cachen? Detta gör att AI-regler kan bearbeta om alla transaktioner. Det kan medföra ytterligare API-kostnader.
+      confirm_button: Återställ cache
+      success: AI-cachen rensas. Detta kan ta en stund.
+    condition_filters:
+      transaction_type:
+        income: Inkomst
+        expense: Utgift
+        transfer: Överföring
+        equal_to: Är lika med
+      operators:
+        contains: Innehåller
+        does_not_contain: Innehåller inte
+        equal_to: Är lika med
+        is_equal_to: Är lika med
+        not_equal_to: Är inte lika med
+        is_empty: Är tom
+        is_not_empty: Är inte tom
+        greater_than: Större än
+        greater_or_equal_to: Större än eller lika med
+        less_than: Mindre än
+        less_than_or_equal_to: Mindre än eller lika med
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: och
+        match: matcha
+        all: alla
+        any: någon
+        of_the_following_conditions: av följande villkor
+        add_condition: Lägg till villkor
+      condition:
+        value_placeholder: Ange ett värde

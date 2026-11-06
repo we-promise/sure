@@ -1,0 +1,158 @@
+sv:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: 'Namn'
+        redirect_uri: 'Omdirigerings-URI'
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: 'får inte innehålla ett fragment.'
+              invalid_uri: 'måste vara en giltig URI.'
+              unspecified_scheme: 'måste ange ett schema.'
+              relative_uri: 'måste vara en absolut URI.'
+              secured_uri: 'måste vara en HTTPS/SSL-URI.'
+              forbidden_uri: 'är förbjuden av servern.'
+            scopes:
+              not_match_configured: "matchar inte det som är konfigurerat på servern."
+
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: 'Är du säker?'
+      buttons:
+        edit: 'Redigera'
+        destroy: 'Ta bort'
+        submit: 'Skicka'
+        cancel: 'Avbryt'
+        authorize: 'Godkänn'
+      form:
+        error: 'Oj! Kontrollera formuläret för eventuella fel'
+      help:
+        confidential: 'Applikationen kommer att användas där klienthemligheten kan hållas konfidentiell. Native mobilappar och Single Page Apps anses vara icke-konfidentiella.'
+        redirect_uri: 'Använd en rad per URI'
+        blank_redirect_uri: "Lämna tomt om din leverantör är konfigurerad för Client Credentials, Resource Owner Password Credentials eller någon annan grant-typ som inte kräver omdirigerings-URI."
+        scopes: 'Separera scopes med mellanslag. Lämna tomt för att använda standardscopes.'
+      edit:
+        title: 'Redigera applikation'
+      index:
+        title: 'Dina applikationer'
+        new: 'Ny applikation'
+        name: 'Namn'
+        callback_url: 'Callback-URL'
+        confidential: 'Konfidentiell?'
+        actions: 'Åtgärder'
+        confidentiality:
+          'yes': 'Ja'
+          'no': 'Nej'
+      new:
+        title: 'Ny applikation'
+      show:
+        title: 'Applikation: %{name}'
+        application_id: 'UID'
+        secret: 'Hemlighet'
+        secret_hashed: 'Hemlighet (hashad)'
+        scopes: 'Scopes'
+        confidential: 'Konfidentiell'
+        callback_urls: 'Callback-URL:er'
+        actions: 'Åtgärder'
+        not_defined: 'Inte angivet'
+
+    authorizations:
+      buttons:
+        authorize: 'Godkänn'
+        deny: 'Neka'
+      error:
+        title: 'Ett fel har uppstått'
+        go_back: 'Gå tillbaka'
+      new:
+        title: 'Godkännande krävs'
+        prompt: 'Godkänn att %{client_name} får använda ditt konto?'
+        able_to: 'Denna applikation kommer att kunna'
+      show:
+        title: 'Auktoriseringskod'
+        authorization_code_label: 'Auktoriseringskod:'
+        copy_instructions: 'Kopiera denna kod och klistra in den i applikationen.'
+      form_post:
+        title: 'Skicka detta formulär'
+
+    authorized_applications:
+      confirmations:
+        revoke: 'Är du säker?'
+      buttons:
+        revoke: 'Återkalla'
+      index:
+        title: 'Dina godkända applikationer'
+        application: 'Applikation'
+        created_at: 'Skapad'
+        date_format: '%Y-%m-%d %H:%M:%S'
+
+    pre_authorization:
+      status: 'Förhandsgodkännande'
+
+    errors:
+      messages:
+        # Vanliga felmeddelanden
+        invalid_request:
+          unknown: 'Förfrågan saknar en obligatorisk parameter, innehåller ett parametervärde som inte stöds, eller är felformad på annat sätt.'
+          missing_param: 'Saknad obligatorisk parameter: %{value}.'
+          request_not_authorized: 'Förfrågan måste godkännas. Obligatorisk parameter för att godkänna förfrågan saknas eller är ogiltig.'
+          invalid_code_challenge: 'Code challenge krävs.'
+        invalid_redirect_uri: "Den begärda omdirigerings-URI:n är felformad eller matchar inte klientens omdirigerings-URI."
+        unauthorized_client: 'Klienten är inte behörig att utföra denna förfrågan med denna metod.'
+        access_denied: 'Resursägaren eller auktoriseringsservern nekade förfrågan.'
+        invalid_scope: 'Den begärda scopet är ogiltig, okänd eller felformad.'
+        invalid_code_challenge_method:
+          zero: 'Auktoriseringsservern stöder inte PKCE eftersom inga godkända code_challenge_method-värden finns.'
+          one: 'code_challenge_method måste vara %{challenge_methods}.'
+          other: 'code_challenge_method måste vara en av %{challenge_methods}.'
+        server_error: 'Auktoriseringsservern stötte på ett oväntat tillstånd som förhindrade den från att fullgöra förfrågan.'
+        temporarily_unavailable: 'Auktoriseringsservern kan för tillfället inte hantera förfrågan på grund av tillfällig överbelastning eller underhåll av servern.'
+
+        # Felmeddelanden för konfiguration
+        credential_flow_not_configured: 'Resource Owner Password Credentials-flödet misslyckades eftersom Doorkeeper.configure.resource_owner_from_credentials inte är konfigurerat.'
+        resource_owner_authenticator_not_configured: 'Sökning efter resursägare misslyckades eftersom Doorkeeper.configure.resource_owner_authenticator inte är konfigurerat.'
+        admin_authenticator_not_configured: 'Åtkomst till adminpanelen är förbjuden eftersom Doorkeeper.configure.admin_authenticator inte är konfigurerat.'
+
+        # Fel för åtkomsttillstånd
+        unsupported_response_type: 'Auktoriseringsservern stöder inte denna svarstyp.'
+        unsupported_response_mode: 'Auktoriseringsservern stöder inte detta svarsläge.'
+
+        # Fel för åtkomsttoken
+        invalid_client: 'Klientautentiseringen misslyckades på grund av okänd klient, ingen klientautentisering angiven, eller autentiseringsmetod som inte stöds.'
+        invalid_grant: 'Det angivna auktoriseringstillståndet är ogiltigt, har gått ut, återkallats, matchar inte omdirigerings-URI:n som användes i auktoriseringsförfrågan, eller utfärdades till en annan klient.'
+        unsupported_grant_type: 'Denna typ av auktoriseringstillstånd stöds inte av auktoriseringsservern.'
+
+        invalid_token:
+          revoked: "Åtkomsttoken har återkallats"
+          expired: "Åtkomsttoken har gått ut"
+          unknown: "Åtkomsttoken är ogiltig"
+        revoke:
+          unauthorized: "Du är inte behörig att återkalla denna token"
+
+        forbidden_token:
+          missing_scope: 'Åtkomst till denna resurs kräver scope "%{oauth_scopes}".'
+
+    flash:
+      applications:
+        create:
+          notice: 'Applikationen skapades.'
+        destroy:
+          notice: 'Applikationen togs bort.'
+        update:
+          notice: 'Applikationen uppdaterades.'
+      authorized_applications:
+        destroy:
+          notice: 'Applikationen återkallades.'
+
+    layouts:
+      admin:
+        title: 'Doorkeeper'
+        nav:
+          oauth2_provider: 'OAuth2-leverantör'
+          applications: 'Applikationer'
+          home: 'Hem'
+      application:
+        title: 'OAuth-godkännande krävs'

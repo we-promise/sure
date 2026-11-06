@@ -1,0 +1,16 @@
+---
+sv:
+  rule_notification_mailer:
+    digest:
+      subject:
+        one: "1 ny transaktion matchade din regel på %{product_name}"
+        other: "%{count} nya transaktioner matchade din regel på %{product_name}"
+      heading:
+        one: "1 ny transaktion matchade din regel"
+        other: "%{count} nya transaktioner matchade din regel"
+      intro: 'Dessa transaktioner matchade regeln "%{rule}":'
+      date: "Datum"
+      name: "Namn"
+      account: "Konto"
+      amount: "Belopp"
+      cta: "Visa transaktioner"

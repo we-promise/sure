@@ -1,0 +1,15 @@
+---
+sv:
+  password_resets:
+    disabled: Lösenordsåterställning via Sure är inaktiverad. Återställ ditt lösenord via din identitetsleverantör.
+    sso_only_user: Ditt konto använder SSO för autentisering. Kontakta din administratör för att hantera dina inloggningsuppgifter.
+    edit:
+      title: Återställ lösenord
+    new:
+      requested: Kolla din e-post för en länk för att återställa ditt lösenord.
+      submit: Återställ lösenord
+      title: Återställ lösenord
+      back: Tillbaka
+    update:
+      invalid_token: Ogiltig token.
+      success: Ditt lösenord har återställts.

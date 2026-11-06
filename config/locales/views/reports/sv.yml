@@ -1,0 +1,249 @@
+---
+sv:
+  reports:
+    index:
+      title: Rapporter
+      subtitle: Heltäckande insikt i din ekonomi
+      export: Exportera CSV
+      print_report: Skriv ut rapport
+      drag_to_reorder: "Dra för att ändra sektionens ordning"
+      toggle_section: "Visa eller dölj sektion"
+      periods:
+        monthly: Månadsvis
+        quarterly: Kvartalsvis
+        ytd: I år
+        last_6_months: Senaste 6 månaderna
+        custom: Anpassat intervall
+      date_range:
+        from: Från
+        to: Till
+      showing_period: "Visar data från %{start} till %{end}"
+      previous_period: "Föregående period"
+      next_period: "Nästa period"
+      today: "Idag"
+      period_label:
+        quarterly: "K%{quarter} %{year}"
+        ytd: "I år %{year}"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "K%{quarter} %{year}"
+        ytd: "I år %{year}"
+      previous_year: "Föregående år"
+      next_year: "Nästa år"
+      previous_decade: "Föregående decennium"
+      next_decade: "Nästa decennium"
+    invalid_date_range: "Slutdatum kan inte vara före startdatum. Datumen har bytts."
+    summary:
+      total_income: Total inkomst
+      total_expenses: Totala utgifter
+      net_savings: Nettosparande
+      budget_performance: Budgetutfall
+      vs_previous: jämfört med föregående period
+      income_minus_expenses: Inkomst minus utgifter
+      of_budget_used: av budgeten använd
+      no_budget_data: Ingen budgetdata för den här perioden
+    budget_performance:
+      title: Budgetutfall
+      spent: Spenderat
+      budgeted: Budgeterat
+      remaining: Kvar
+      over_by: Överskriden med
+      shared: delad
+      suggested_daily: "%{amount} rekommenderas per dag i %{days} återstående dagar"
+      no_budgets: Inga budgetkategorier inställda för denna månad
+      status:
+        good: Följer plan
+        warning: Nära gränsen
+        over: Över budget
+    trends:
+      title: Trender & insikter
+      monthly_breakdown: Månadsfördelning
+      month: Månad
+      income: Inkomst
+      expenses: Utgifter
+      net: Netto
+      savings_rate: Sparandegrad
+      current: nuvarande
+      avg_monthly_income: Genomsn. månadsinkomst
+      avg_monthly_expenses: Genomsn. månadsutgifter
+      avg_monthly_savings: Genomsn. månadssparande
+      no_data: Ingen trenddata tillgänglig
+      spending_patterns: Utgiftsmönster
+      weekday_spending: Utgifter vardagar
+      weekend_spending: Utgifter helger
+      total: Totalt
+      avg_per_transaction: Genomsn. per transaktion
+      transactions: Transaktioner
+      insight_title: Insikt
+      insight_higher_weekend: "Du spenderar %{percent} % mer per transaktion på helger än vardagar"
+      insight_higher_weekday: "Du spenderar %{percent} % mer per transaktion på vardagar än helger"
+      insight_similar: "Din utgift per transaktion är liknande på vardagar och helger"
+      no_spending_data: Ingen utgiftsdata tillgänglig för denna period
+    empty_state:
+      title: Ingen data tillgänglig
+      description: Börja följa din ekonomi genom att lägga till transaktioner eller ansluta dina konton för att se heltäckande rapporter
+      add_transaction: Lägg till transaktion
+      add_account: Lägg till konto
+    transactions_breakdown:
+      title: Aktivitetsöversikt
+      no_transactions: Ingen aktivitet hittades för vald period och filter
+      filters:
+        title: Filter
+        category: Kategori
+        account: Konto
+        tag: Tagg
+        amount_min: Min belopp
+        amount_max: Max belopp
+        date_range: Datumintervall
+        all_categories: Alla kategorier
+        all_accounts: Alla konton
+        all_tags: Alla taggar
+        apply: Använd filter
+        clear: Rensa filter
+      sort:
+        label: Sortera efter
+        date_desc: Datum (nyast)
+        amount_desc: Belopp (högst till lägst)
+        amount_asc: Belopp (lägst till högst)
+      export:
+        label: Exportera
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Öppna i Google Sheets
+      table:
+        category: Kategori
+        amount: Belopp
+        type: Typ
+        expense: Utgifter
+        income: Inkomst
+        uncategorized: Okategoriserat
+        entries:
+          one: "%{count} post"
+          other: "%{count} poster"
+        percentage: "% av totalt"
+      pagination:
+        showing:
+          one: Visar %{count} post
+          other: Visar %{count} poster
+        previous: Föregående
+        next: Nästa
+    net_worth:
+      title: Nettoförmögenhet
+      current_net_worth: Aktuell nettoförmögenhet
+      period_change: Förändring under perioden
+      assets_vs_liabilities: Tillgångar mot skulder
+      total_assets: Tillgångar
+      total_liabilities: Skulder
+      no_assets: Inga tillgångar
+      no_liabilities: Inga skulder
+    investment_performance:
+      title: Investeringsutveckling
+      portfolio_value: Portföljvärde
+      total_return: Total avkastning
+      period_return: Avkastning under perioden
+      contributions: Insättningar under perioden
+      withdrawals: Uttag under perioden
+      top_holdings: Största innehav
+      holding: Innehav
+      weight: Vikt
+      value: Värde
+      return: Avkastning
+      accounts: Investeringskonton
+      gains_by_tax_treatment: Vinster efter skattebehandling
+      unrealized_gains: Orealiserade vinster
+      realized_gains: Realiserade vinster
+      total_gains: Totala vinster
+      taxable_realized_note: Dessa vinster kan vara skattepliktiga
+      no_data: "-"
+      view_details: Visa detaljer
+      holdings_count:
+        one: "%{count} innehav"
+        other: "%{count} innehav"
+      sells_count:
+        one: "%{count} försäljning"
+        other: "%{count} försäljningar"
+      holdings: Innehav
+      sell_trades: Sälj-affärer
+      and_more: "+%{count} till"
+    investment_flows:
+      title: Investeringsflöden
+      description: Följ pengarna som flödar in och ut ur dina investeringskonton genom insättningar och uttag.
+      contributions: Insättningar
+      contributions_description: Pengar tillförda till investeringar
+      withdrawals: Uttag
+      withdrawals_description: Pengar uttagna från investeringar
+      net_flow: Nettoflöde
+      net_flow_description: Total nettoförändring
+    google_sheets_instructions:
+      title_with_key: "✅ Kopiera URL för Google Sheets"
+      title_no_key: "⚠️ API-nyckel krävs"
+      ready: Din CSV-URL (med API-nyckel) är klar.
+      steps: "Så importerar du till Google Sheets:\n1. Skapa ett nytt Google-kalkylblad\n2. I cell A1, ange formeln nedan\n3. Tryck Enter"
+      security_warning: "Denna URL innehåller din API-nyckel. Håll den säker!"
+      need_key: För att importera data till Google Sheets behöver du en API-nyckel.
+      step1: "Gå till Inställningar → API-nycklar"
+      step2: "Skapa en ny API-nyckel med behörigheten \"läs\""
+      step3: Kopiera API-nyckeln
+      step4: "Lägg till den i denna URL som: ?api_key=DIN_NYCKEL"
+      example: Exempel
+      then_use: Använd sedan hela URL:en med =IMPORTDATA() i Google Sheets.
+      open_sheets: Öppna Google Sheets
+      go_to_api_keys: Gå till API-nycklar
+      close: Förstått
+    print:
+      document_title: Ekonomisk rapport
+      title: Ekonomisk rapport
+      generated_on: "Genererad %{date}"
+      # Summary section
+      summary:
+        title: Sammanfattning
+        income: Inkomst
+        expenses: Utgifter
+        net_savings: Nettosparande
+        budget: Budget
+        vs_prior: "%{percent} % jämfört med tidigare"
+        of_income: "%{percent} % av inkomsten"
+        used: använt
+      # Net Worth section
+      net_worth:
+        title: Nettoförmögenhet
+        current_balance: Aktuellt saldo
+        this_period: denna period
+        assets: Tillgångar
+        liabilities: Skulder
+        no_liabilities: Inga skulder
+      # Monthly Trends section
+      trends:
+        title: Månadstrender
+        month: Månad
+        income: Inkomst
+        expenses: Utgifter
+        net: Netto
+        savings_rate: Sparandegrad
+        average: Genomsnitt
+        current_month_note: "* Aktuell månad (partiell data)"
+      # Investments section
+      investments:
+        title: Investeringar
+        portfolio_value: Portföljvärde
+        total_return: Total avkastning
+        period_return: Avkastning under perioden
+        contributions: Insättningar
+        withdrawals: Uttag
+        this_period: denna period
+        top_holdings: Största innehav
+        holding: Innehav
+        weight: Vikt
+        value: Värde
+        return: Avkastning
+      # Spending by Category section
+      spending:
+        title: Utgifter per kategori
+        income: Inkomst
+        expenses: Utgifter
+        category: Kategori
+        amount: Belopp
+        percent: "%"
+        more_categories: "+ %{count} fler kategorier"

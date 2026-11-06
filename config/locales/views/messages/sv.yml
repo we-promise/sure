@@ -1,0 +1,9 @@
+---
+sv:
+  messages:
+    create:
+      chat_not_found: Den här chatten är inte längre tillgänglig.
+    chat_form:
+      placeholder: "Fråga vad som helst …"
+      disclaimer: "AI-svar är endast informativa. Inte finansiell rådgivning!"
+      coming_soon: Kommer snart

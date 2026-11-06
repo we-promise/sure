@@ -1,0 +1,26 @@
+---
+sv:
+  tags:
+    create:
+      created: Tagg skapad
+      error: 'Fel vid skapande av tagg: %{error}'
+    destroy:
+      deleted: Tagg borttagen
+    destroy_all:
+      all_deleted: Alla taggar borttagna
+    edit:
+      edit: Redigera tagg
+    form:
+      placeholder: Taggnamn
+    index:
+      empty: Inga taggar ännu
+      new: Ny tagg
+      tags: Taggar
+      delete_all: Ta bort alla
+    new:
+      new: Ny tagg
+    tag:
+      delete: Ta bort
+      edit: Redigera
+    update:
+      updated: Tagg uppdaterad

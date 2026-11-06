@@ -1,0 +1,134 @@
+---
+sv:
+  providers:
+    monobank:
+      name: Monobank
+      description: Anslut ukrainska Monobank-kort och burkar med en personlig API-token
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Monobank-anslutning
+  monobank_account:
+    jar_fallback: Monobank-burk
+    card_types:
+      black: Black-kort
+      white: White-kort
+      platinum: Platinum-kort
+      iron: Iron-kort
+      yellow: Yellow-kort
+      eaid: eAid-kort
+      fop: Företagskonto
+      jar: Burk
+      unknown: Monobank-kort
+  monobank_item:
+    errors:
+      account_processing_failed: Kunde inte synka Monobank-kontot
+      account_sync_schedule_failed: Kunde inte schemalägga synk av Monobank-kontot
+      transactions_failed: Kunde inte hämta Monobank-utdraget
+      sync_failed: Kunde inte synka Monobank-anslutningen
+    sync:
+      status:
+        importing: Importerar konton från Monobank...
+        checking_setup: Kontrollerar kontokonfiguration...
+        needs_setup:
+          one: 1 konto behöver konfigureras...
+          other: "%{count} konton behöver konfigureras..."
+        processing: Bearbetar transaktioner...
+        calculating: Beräknar saldon...
+    sync_status:
+      no_accounts: Inga konton hittades
+      all_synced:
+        one: 1 konto synkat
+        other: "%{count} konton synkade"
+      partial: "%{linked} synkade, %{unlinked} behöver konfigureras"
+    institution_summary:
+      none: Ingen institution ansluten
+      one: 1 institution
+      count:
+        one: 1 institution
+        other: "%{count} institutioner"
+  monobank_items:
+    provider_panel:
+      default_connection_name: Monobank-anslutning
+      add_connection: Lägg till Monobank-anslutning
+      update_connection: Uppdatera anslutning
+      connection_name_label: Anslutningsnamn
+      connection_name_placeholder: Min Monobank
+      access_token_label: Personlig API-token
+      access_token_placeholder: Klistra in din personliga Monobank-token
+      keep_access_token_placeholder: Lämna tomt för att behålla befintlig token
+      setup_accounts: Konfigurera konton
+      syncing: Synkar...
+      sync: Synka
+      disconnect: Koppla från
+      disconnect_confirm: "Är du säker på att du vill koppla från %{name}?"
+      rate_limit_notice: Monobank tillåter en förfrågan per minut, så en synk hämtar några konton i taget och äldre historik kommer in via flera synkar.
+    create:
+      success: Monobank-anslutningen har sparats.
+    update:
+      success: Monobank-anslutningen har uppdaterats.
+    destroy:
+      success: Monobank-anslutningen är schemalagd för borttagning.
+      unlink_failed: Kunde inte koppla från Monobank-anslutningen
+    select_accounts:
+      title: Länka Monobank-konton
+      description: Välj vilka Monobank-kort eller burkar som ska läggas till.
+      no_accounts_found: Inga olänkade Monobank-konton hittades.
+      no_credentials_configured: Konfigurera Monobank i leverantörsinställningarna först.
+      cancel: Avbryt
+      link_accounts: Länka konton
+    link_accounts:
+      success:
+        one: Länkade 1 Monobank-konto.
+        other: "Länkade %{count} Monobank-konton."
+      no_accounts_selected: Välj minst ett konto.
+      no_credentials_configured: Konfigurera Monobank i leverantörsinställningarna först.
+      unsupported_account_type: Monobank stöder inte den kontotypen.
+      link_failed: Inga konton länkades.
+    select_existing_account:
+      title: "Länka Monobank-konto till %{account_name}"
+      description: Välj ett olänkat Monobank-konto att ansluta till det här kontot.
+      no_accounts_found: Inga olänkade Monobank-konton hittades.
+      no_credentials_configured: Konfigurera Monobank i leverantörsinställningarna först.
+      account_already_linked: Det här kontot är redan länkat till en leverantör.
+      cancel: Avbryt
+      link_account: Länka konto
+    link_existing_account:
+      success: "Länkade Monobank-konto till %{account_name}."
+      account_already_linked: Det här kontot är redan länkat till en leverantör.
+      monobank_account_already_linked: Det här Monobank-kontot är redan länkat.
+      no_account_selected: Välj ett Monobank-konto att länka.
+    setup_accounts:
+      title: Länka Monobank-konton
+      subtitle: Välj hur varje Monobank-kort eller burk ska visas i Sure.
+      no_credentials: Konfigurera Monobank-uppgifter först.
+      api_error: Kunde inte uppdatera konton från Monobank, så kontona som sparades vid senaste synken visas i stället.
+      no_accounts_to_setup: Inga konton att konfigurera
+      all_accounts_linked: Alla Monobank-konton är redan länkade.
+      choose_account_type: Välj en kontotyp
+      choose_account_type_description: Hoppa över konton du inte vill spåra.
+      account_type_label: Kontotyp
+      account_types:
+        skip: Hoppa över
+        depository: Kontanter
+      create_accounts: Skapa konton
+      cancel: Avbryt
+    complete_account_setup:
+      success:
+        one: Skapade 1 Monobank-konto.
+        other: "Skapade %{count} Monobank-konton."
+      all_skipped: Inga Monobank-konton skapades.
+      no_accounts: Inga Monobank-konton valdes.
+      creation_failed: Kunde inte skapa Monobank-konton.
+    monobank_item:
+      deletion_in_progress: Borttagning pågår
+      syncing: Synkar
+      error: Fel
+      status_with_summary: "Synkad %{timestamp} sedan · %{summary}"
+      status_never: Aldrig synkad
+      delete: Ta bort
+      setup_needed: Kontokonfiguration behövs
+      setup_description: "%{linked} av %{total} konton länkade."
+      setup_action: Konfigurera konton
+      no_accounts_title: Inga konton importerade ännu
+      no_accounts_description: Hämta Monobank-konton och välj vilka som ska länkas.

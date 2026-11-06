@@ -1,0 +1,181 @@
+---
+sv:
+  lunchflow_items:
+    api_error:
+      title: Anslutningsfel för Lunch Flow
+      unable_to_connect: Kan inte ansluta till Lunch Flow
+      common_issues: "Vanliga problem:"
+      invalid_api_key_label: Ogiltig API-nyckel
+      invalid_api_key_desc: Kontrollera din API-nyckel i leverantörsinställningarna
+      expired_credentials_label: Utgångna autentiseringsuppgifter
+      expired_credentials_desc: Generera en ny API-nyckel från Lunch Flow
+      network_issue_label: Nätverksproblem
+      network_issue_desc: Kontrollera din internetanslutning
+      service_down_label: Tjänsten är nedlagd
+      service_down_desc: Lunch Flows API kan vara tillfälligt otillgängligt
+      check_provider_settings: Kontrollera leverantörsinställningar
+      unexpected_error: Ett oväntat fel uppstod. Försök igen senare.
+    setup_required:
+      title: Konfiguration av Lunch Flow krävs
+      api_key_not_configured: API-nyckel ej konfigurerad
+      api_key_description: Innan du kan koppla Lunch Flow-konton måste du konfigurera din Lunch Flow API-nyckel.
+      setup_steps_title: "Konfigurationssteg:"
+      setup_step_1_html: "Gå till <strong>Inställningar → Leverantörer</strong>"
+      setup_step_2_html: "Hitta avsnittet <strong>Lunch Flow</strong>"
+      setup_step_3: Ange din Lunch Flow API-nyckel
+      setup_step_4: Kom tillbaka hit för att koppla dina konton
+      go_to_provider_settings: Gå till leverantörsinställningar
+    create:
+      success: Lunch Flow-anslutningen skapades
+    destroy:
+      success: Lunch Flow-anslutningen togs bort
+    index:
+      title: Lunch Flow-anslutningar
+    loading:
+      loading_message: Läser in Lunch Flow-konton...
+      loading_title: Läser in
+    link_accounts:
+      all_already_linked:
+        one: "Det valda kontot (%{names}) är redan kopplat"
+        other: "Alla %{count} valda konton är redan kopplade: %{names}"
+      api_error: "API-fel: %{message}"
+      invalid_account_names:
+        one: "Kan inte koppla konto med tomt namn"
+        other: "Kan inte koppla %{count} konton med tomma namn"
+      link_failed: Det gick inte att koppla konton
+      no_accounts_selected: Välj minst ett konto
+      partial_invalid: "%{created_count} konto/konton kopplades, %{already_linked_count} var redan kopplade, %{invalid_count} konto/konton hade ogiltiga namn"
+      partial_success: "%{created_count} konto/konton kopplades. %{already_linked_count} konto/konton var redan kopplade: %{already_linked_names}"
+      success:
+        one: "%{count} konto kopplades"
+        other: "%{count} konton kopplades"
+    lunchflow_item:
+      accounts_need_setup: Konton behöver konfigureras
+      delete: Ta bort anslutning
+      deletion_in_progress: borttagning pågår...
+      error: Fel
+      no_accounts_description: Denna anslutning har inga kopplade konton ännu.
+      no_accounts_title: Inga konton
+      setup_action: Konfigurera nya konton
+      setup_description: "%{linked} av %{total} konton kopplade. Välj kontotyper för dina nyligen importerade Lunch Flow-konton."
+      setup_needed: Nya konton redo att konfigureras
+      status: "Synkroniserad %{timestamp} sedan"
+      status_never: Aldrig synkroniserad
+      status_with_summary: "Senast synkroniserad %{timestamp} sedan • %{summary}"
+      syncing: Synkroniserar...
+      sync_status:
+        no_accounts: Inga konton hittades
+        synced:
+          one: "%{count} konto synkroniserat"
+          other: "%{count} konton synkroniserade"
+        partial_setup:
+          one: "%{linked} synkroniserat, %{unlinked} behöver konfigureras"
+          other: "%{linked} synkroniserade, %{unlinked} behöver konfigureras"
+      total: Totalt
+      unlinked: Ej kopplade
+    subtype_select:
+      placeholder:
+        subtype: Välj undertyp
+        type: Välj typ
+    select_accounts:
+      accounts_selected: konton valda
+      api_error: "API-fel: %{message}"
+      cancel: Avbryt
+      configure_name_in_lunchflow: Kan inte importera - konfigurera kontonamn i Lunchflow
+      description: Välj de konton du vill koppla till ditt %{product_name}-konto.
+      link_accounts: Koppla valda konton
+      no_accounts_found: Inga konton hittades. Kontrollera din API-nyckelkonfiguration.
+      no_api_key: Lunch Flow API-nyckel är inte konfigurerad. Konfigurera den i Inställningar.
+      no_name_placeholder: "(Inget namn)"
+      title: Välj Lunch Flow-konton
+    select_existing_account:
+      account_already_linked: Detta konto är redan kopplat till en leverantör
+      all_accounts_already_linked: Alla Lunch Flow-konton är redan kopplade
+      api_error: "API-fel: %{message}"
+      cancel: Avbryt
+      configure_name_in_lunchflow: Kan inte importera - konfigurera kontonamn i Lunchflow
+      description: Välj ett Lunch Flow-konto att koppla till detta konto. Transaktioner synkroniseras och dubbletter tas bort automatiskt.
+      link_account: Koppla konto
+      no_account_specified: Inget konto angivet
+      no_accounts_found: Inga Lunch Flow-konton hittades. Kontrollera din API-nyckelkonfiguration.
+      no_api_key: Lunch Flow API-nyckel är inte konfigurerad. Konfigurera den i Inställningar.
+      no_name_placeholder: "(Inget namn)"
+      title: "Koppla %{account_name} med Lunch Flow"
+    link_existing_account:
+      account_already_linked: Detta konto är redan kopplat till en leverantör
+      api_error: "API-fel: %{message}"
+      invalid_account_name: Kan inte koppla konto med tomt namn
+      lunchflow_account_already_linked: Detta Lunch Flow-konto är redan kopplat till ett annat konto
+      lunchflow_account_not_found: Lunch Flow-konto hittades inte
+      missing_parameters: Obligatoriska parametrar saknas
+      success: "%{account_name} kopplades med Lunch Flow"
+    setup_accounts:
+      account_type_label: "Kontotyp:"
+      all_accounts_linked: "Alla dina Lunch Flow-konton har redan konfigurerats."
+      api_error: "API-fel: %{message}"
+      fetch_failed: "Det gick inte att hämta konton"
+      no_accounts_to_setup: "Inga konton att konfigurera"
+      no_api_key: "Lunch Flow API-nyckel är inte konfigurerad. Kontrollera dina anslutningsinställningar."
+      page_title: Konfigurera Lunch Flow-konton
+      account_types:
+        skip: Hoppa över detta konto
+        depository: Betal- eller sparkonto
+        credit_card: Kreditkort
+        investment: Investeringskonto
+        loan: Lån eller bolån
+        other_asset: Övrig tillgång
+      subtype_labels:
+        depository: "Kontountertyp:"
+        credit_card: ""
+        investment: "Investeringstyp:"
+        loan: "Lånetyp:"
+        other_asset: ""
+      subtype_messages:
+        credit_card: "Kreditkort konfigureras automatiskt som kreditkortskonton."
+        other_asset: "Inga ytterligare alternativ behövs för övriga tillgångar."
+      subtypes:
+        depository:
+          checking: Betalkonto
+          savings: Sparkonto
+          hsa: Hälsosparkonto
+          cd: Insättningsbevis
+          money_market: Penningmarknadskonto
+        investment:
+          brokerage: Depå
+          pension: Pension
+          retirement: Pensionssparande
+          "401k": "401(k)"
+          roth_401k: "Roth 401(k)"
+          "403b": "403(b)"
+          tsp: Thrift Savings Plan
+          "529_plan": "529 Plan"
+          hsa: Hälsosparkonto
+          mutual_fund: Fond
+          ira: Traditionellt IRA
+          roth_ira: Roth IRA
+          angel: Angel
+        loan:
+          mortgage: Bolån
+          student: Studielån
+          auto: Billån
+          other: Annat lån
+      balance: Saldo
+      cancel: Avbryt
+      choose_account_type: "Välj rätt kontotyp för varje Lunch Flow-konto:"
+      create_accounts: Skapa konton
+      creating_accounts: Skapar konton...
+      historical_data_range: "Historiskt dataintervall:"
+      subtitle: Välj rätt kontotyper för dina importerade konton
+      sync_start_date_help: Välj hur långt tillbaka du vill synkronisera transaktionshistorik. Max 3 års historik tillgänglig.
+      sync_start_date_label: "Börja synkronisera transaktioner från:"
+      title: Konfigurera dina Lunch Flow-konton
+    complete_account_setup:
+      all_skipped: "Alla konton hoppades över. Inga konton skapades."
+      creation_failed: "Det gick inte att skapa konton: %{error}"
+      no_accounts: "Inga konton att konfigurera."
+      success: "%{count} konto/konton skapades."
+      unexpected_error: Ett oväntat fel uppstod
+    sync:
+      success: Synkronisering startad
+    update:
+      success: Lunch Flow-anslutningen uppdaterades

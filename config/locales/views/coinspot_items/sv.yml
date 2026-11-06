@@ -1,0 +1,92 @@
+---
+sv:
+  coinspot_items:
+    provider_connection:
+      default_name: CoinSpot
+      default_description: Länka till ett CoinSpot-börskonto
+      name: "CoinSpot - %{name}"
+      description: "Länka till %{name}"
+    create:
+      default_name: CoinSpot
+      success: Ansluten till CoinSpot. Ditt börskonto synkroniseras nu.
+    update:
+      success: CoinSpot-anslutningen har uppdaterats.
+    destroy:
+      success: CoinSpot-anslutningen är schemalagd för borttagning.
+      unlink_failed: Kunde inte koppla från CoinSpot-anslutningen
+    select_accounts:
+      select_connection: Välj en CoinSpot-anslutning under Leverantörsinställningar.
+      no_credentials_configured: Lägg till CoinSpot API-uppgifter innan du konfigurerar konton.
+    link_accounts:
+      select_connection: Välj en CoinSpot-anslutning innan du länkar konton.
+    select_existing_account:
+      title: Länka CoinSpot-konto
+      no_accounts_found: Inga CoinSpot-konton hittades.
+      wait_for_sync: Vänta tills CoinSpot har synkroniserat klart.
+      check_provider_health: Kontrollera att dina CoinSpot API-uppgifter är giltiga.
+      link: Länka
+      cancel: Avbryt
+    link_existing_account:
+      success: Länkat till CoinSpot-konto
+      select_connection: Välj en CoinSpot-anslutning innan du länkar konton.
+      errors:
+        only_manual: Endast manuella kryptobörskonton utan befintlig leverantörslänk kan länkas till CoinSpot
+        invalid_coinspot_account: Ogiltigt CoinSpot-konto
+        coinspot_account_already_linked: Detta CoinSpot-konto är redan länkat
+    setup_accounts:
+      title: Importera CoinSpot-konto
+      subtitle: Välj börskontot som ska spåras
+      instructions: CoinSpot importerar ett sammanslaget kryptobörskonto för denna anslutning, med saldon, AUD-värden, överföringar, insättningar, uttag och orderhistorik.
+      no_accounts: Alla CoinSpot-konton har importerats.
+      accounts_count:
+        one: "%{count} konto tillgängligt"
+        other: "%{count} konton tillgängliga"
+      select_all: Markera alla
+      import_selected: Importera valda
+      cancel: Avbryt
+      creating: Importerar...
+    complete_account_setup:
+      success:
+        one: "Importerade %{count} konto"
+        other: "Importerade %{count} konton"
+      none_selected: Inga konton valda
+      no_accounts: Inga konton att importera
+      setup_failed:
+        one: "Misslyckades med att importera %{count} konto"
+        other: "Misslyckades med att importera %{count} konton"
+    coinspot_item:
+      provider_name: CoinSpot
+      syncing: Synkroniserar...
+      reconnect: Autentiseringsuppgifterna behöver uppdateras
+      deletion_in_progress: Tar bort...
+      sync_status:
+        no_accounts: Inga konton hittades
+        all_synced:
+          one: "%{count} konto synkroniserat"
+          other: "%{count} konton synkroniserade"
+        partial_sync: "%{linked_count} synkroniserade, %{unlinked_count} behöver konfigureras"
+      status: "Senast synkroniserad för %{timestamp} sedan"
+      status_with_summary: "Senast synkroniserad för %{timestamp} sedan - %{summary}"
+      status_never: Aldrig synkroniserad
+      delete: Ta bort
+      no_accounts_title: Inga konton hittades
+      no_accounts_message: Ditt CoinSpot-börskonto visas här efter synkronisering.
+      setup_needed: Konto redo att importeras
+      setup_description: Importera denna CoinSpot-anslutning som ett kryptobörskonto.
+      setup_action: Importera konto
+      import_accounts_menu: Importera konto
+      stale_rate_warning: "Saldot är ungefärligt eftersom den exakta växelkursen för %{date} inte var tillgänglig. Uppdateras vid nästa synkronisering."
+  coinspot_item:
+    syncer:
+      checking_credentials: Kontrollerar autentiseringsuppgifter...
+      credentials_invalid: Ogiltiga CoinSpot API-uppgifter. Kontrollera din API-nyckel och hemlighet.
+      importing_accounts: Importerar konton från CoinSpot...
+      checking_configuration: Kontrollerar kontokonfiguration...
+      accounts_need_setup:
+        one: "%{count} konto behöver konfigureras"
+        other: "%{count} konton behöver konfigureras"
+      processing_accounts: Bearbetar kontodata...
+      processing_failed:
+        one: "%{count} CoinSpot-konto kunde inte bearbetas"
+        other: "%{count} CoinSpot-konton kunde inte bearbetas"
+      calculating_balances: Beräknar saldon...

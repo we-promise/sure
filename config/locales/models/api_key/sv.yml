@@ -1,0 +1,7 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: "Kan inte ta bort demo-API-nyckeln för övervakning"

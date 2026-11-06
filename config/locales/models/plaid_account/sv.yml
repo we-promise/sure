@@ -1,0 +1,7 @@
+---
+sv:
+  activerecord:
+    errors:
+      models:
+        plaid_account:
+          no_balance: "Plaid-konto måste ha antingen aktuellt eller tillgängligt saldo"

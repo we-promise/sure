@@ -1,0 +1,17 @@
+---
+sv:
+  providers:
+    property_valuation:
+      not_configured: Denna leverantör av fastighetsdata är inte konfigurerad.
+      missing_fields: Ange ett namn och en fullständig amerikansk adress (gata, stad, delstat och postnummer).
+      preview_expired: Denna fastighetsförhandsvisning har gått ut — sök upp adressen igen.
+    rentcast:
+      errors:
+        no_valuation: RentCast returnerade ingen värdeuppskattning för denna adress.
+        not_found: RentCast kunde inte hitta en fastighet som matchar denna adress.
+    realie:
+      errors:
+        no_property: Realie returnerade ingen fastighet för denna adress.
+        no_valuation: Realie returnerade ingen värdering för denna fastighet.
+        not_found: Realie kunde inte hitta en fastighet som matchar denna adress.
+        location_mismatch: Realie matchade en fastighet i en annan stad eller med ett annat postnummer. Kontrollera adressen igen.

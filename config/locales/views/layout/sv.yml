@@ -1,0 +1,42 @@
+---
+sv:
+  layouts:
+    application:
+      insights: Insikter
+      privacy_mode: Växla sekretessläge
+      resize_left_sidebar: Ändra storlek på kontosidopanelen
+      resize_right_sidebar: Ändra storlek på assistentsidopanelen
+      skip_to_main: Hoppa till huvudinnehåll
+      release_highlight:
+        title: Nyheter
+        done: Uppfattat
+      nav:
+        assistant: Assistent
+        bills: Räkningar
+        budgets: Budgetar
+        home: Hem
+        plan: Plan
+        reports: Rapporter
+        goals: Mål
+        transactions: Transaktioner
+    auth:
+      existing_account: Har du redan ett konto?
+      no_account: Ny hos %{product_name}?
+      sign_in: Logga in
+      sign_up: Skapa konto
+    shared:
+      footer:
+        privacy_policy: Sekretesspolicy
+        terms_of_service: Användarvillkor
+      confirm_dialog:
+        are_you_sure: Är du säker?
+        cannot_be_undone: Den här åtgärden kan inte ångras.
+        confirm: Bekräfta
+      notification_tray:
+        download_complete: Nedladdningen är klar
+        download_failed: Nedladdningen misslyckades. Försök igen.
+        download_location: Filen finns i din nedladdningsmapp.
+    trial:
+      open_demo: Öppna demo
+      data_deleted_in_days: Data raderas inom %{days} dagar
+      contribute: Bidra

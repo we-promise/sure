@@ -1,0 +1,29 @@
+---
+sv:
+  users:
+    destroy:
+      success: Ditt konto har tagits bort.
+    update:
+      email_change_failed: Det gick inte att ändra e-postadressen.
+      email_change_initiated: Kolla din nya e-postadress för bekräftelseinstruktioner.
+      success: Din profil har uppdaterats.
+    resend_confirmation_email:
+      success: Ett nytt bekräftelsemejl skickas snart.
+      no_pending_change: Det finns ingen väntande e-poständring!
+    reset:
+      success: Ditt konto har återställts. Data kommer att raderas i bakgrunden inom kort.
+      unauthorized: Du har inte behörighet att utföra den här åtgärden
+    reset_with_sample_data:
+      success: Ditt konto har återställts och exempeldata förbereds. Du ser demodata inom kort.
+    roles:
+      admin: Admin
+      member: Medlem
+      super_admin: Superadmin
+    user_menu:
+      aria_label: Öppna kontomenyn
+      version: Version
+      settings: Inställningar
+      changelog: Ändringslogg
+      feedback: Feedback
+      contact: Kontakt
+      log_out: Logga ut

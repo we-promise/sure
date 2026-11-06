@@ -1,0 +1,106 @@
+---
+sv:
+  holdings:
+    cash:
+      brokerage_cash: Mäklarkontanter
+    destroy:
+      success: Innehavet togs bort
+      cannot_delete: Du kan inte ta bort detta innehav
+    update:
+      success: Anskaffningsvärde sparat.
+      error: Ogiltigt anskaffningsvärde.
+    unlock_cost_basis:
+      success: Anskaffningsvärde upplåst. Det kan uppdateras vid nästa synk.
+    remap_security:
+      success: Värdepapper uppdaterat.
+      security_not_found: Kunde inte hitta det valda värdepapperet.
+    reset_security:
+      success: Värdepapper återställt till leverantörens värde.
+    sync_prices:
+      success: Marknadsdata synkad.
+      unavailable: Marknadsdatasynk är inte tillgänglig för offline-värdepapper.
+      provider_error: Kunde inte hämta senaste priser. Försök igen om några minuter.
+    errors:
+      security_collision: "Kan inte flytta: du har redan ett innehav för %{ticker} på %{date}."
+    cost_basis_sources:
+      manual: Angivet av användaren
+      calculated: Från affärer
+      provider: Från leverantör
+    cost_basis_cell:
+      unknown: "--"
+      set: Ange
+      set_cost_basis_header: "Ange anskaffningsvärde för %{ticker} (%{qty} aktier)"
+      total_cost_basis_label: Totalt anskaffningsvärde
+      or_per_share_label: "Eller ange per aktie:"
+      per_share: per aktie
+      cancel: Avbryt
+      save: Spara
+      overwrite_confirm_title: Skriva över anskaffningsvärde?
+      overwrite_confirm_body: "Detta ersätter det nuvarande anskaffningsvärdet på %{current}."
+    holding:
+      per_share: per aktie
+      shares: "%{qty} aktier"
+      unknown: "--"
+      no_cost_basis: Inget anskaffningsvärde
+    index:
+      average_cost: Genomsnittligt anskaffningsvärde
+      holdings: Innehav
+      name: Namn
+      new_holding: Ny aktivitet
+      no_holdings: Inga innehav att visa.
+      positions:
+        one: "%{count} position"
+        other: "%{count} positioner"
+      return: Total avkastning
+      weight: Vikt
+    missing_price_tooltip:
+      description: Denna investering har saknade värden och vi kunde inte beräkna
+        dess avkastning eller värde.
+      missing_data: Data saknas
+    show:
+      avg_cost_label: Genomsnittligt anskaffningsvärde
+      current_market_price_label: Aktuellt marknadspris
+      delete: Ta bort
+      delete_subtitle: Detta tar bort innehavet och alla dess associerade affärer
+        på detta konto. Detta går inte att ångra.
+      delete_title: Ta bort innehav
+      edit_security: Redigera värdepapper
+      history: Historik
+      no_trade_history: Ingen affärshistorik tillgänglig för detta innehav.
+      overview: Översikt
+      portfolio_weight_label: Portföljvikt
+      settings: Inställningar
+      security_label: Värdepapper
+      originally: "var %{ticker}"
+      search_security: Sök värdepapper
+      search_security_placeholder: Sök på ticker eller namn
+      cancel: Avbryt
+      remap_security: Spara
+      provider_disabled_warning: "Prisuppdateringar pausade — leverantören %{provider} är inaktiverad. Byt till en annan leverantör nedan eller aktivera den igen i Inställningar."
+      truncated_history_warning: "Prishistorik finns endast tillgänglig från %{date} och framåt. Tidigare datum saknar data från den valda leverantören — detta kan hända om tillgången listades efter ditt affärsdatum, eller om leverantören bara erbjuder ett begränsat historiskt fönster på sin nuvarande plan."
+      switch_provider_label: Byt leverantör
+      switch_provider_description: "%{provider} är inaktiverad. Sök efter detta värdepapper hos en annan aktiverad leverantör."
+      switch_provider_button: Byt
+      no_security_provider: Ingen värdepappersleverantör konfigurerad. Kan inte söka efter värdepapper.
+      security_remapped_label: Värdepapper omflyttat
+      provider_sent: "Leverantör skickade: %{ticker}"
+      reset_to_provider: Återställ till leverantör
+      reset_confirm_title: Återställ värdepapper till leverantör?
+      reset_confirm_body: "Detta ändrar värdepapperet från %{current} tillbaka till %{original} och flyttar alla associerade affärer."
+      ticker_label: Ticker
+      trade_history_entry: "%{qty} aktier av %{security} till %{price}"
+      total_return_label: Total avkastning
+      unknown: Okänt
+      cost_basis_locked_label: Anskaffningsvärdet är låst
+      cost_basis_locked_description: Ditt manuellt satta anskaffningsvärde ändras inte av synkar.
+      unlock_cost_basis: Lås upp
+      unlock_confirm_title: Lås upp anskaffningsvärde?
+      unlock_confirm_body: Detta tillåter att anskaffningsvärdet uppdateras av leverantörssynkar eller affärsberäkningar.
+      shares_label: Aktier
+      book_value_label: Bokfört värde
+      market_value_label: Marknadsvärde
+      market_data_label: Marknadsdata
+      market_data_sync_button: Uppdatera
+      last_price_update: Senaste prisuppdatering
+      syncing: Synkar...
+      never: Aldrig

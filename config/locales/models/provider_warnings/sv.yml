@@ -1,0 +1,11 @@
+---
+sv:
+  provider_warnings:
+    limited_investment_data: "Investeringsdata från denna leverantör är begränsad. Aktivitetsetiketter (Köp, Sälj, Utdelning) är inte tillgängliga, vilket kan påverka budgetens noggrannhet. Överväg att skapa regler för att exkludera eller kategorisera investeringstransaktioner."
+    lunchflow_accounts_failed:
+      one: "Lunchflow-import: %{count} konto kunde inte uppdateras"
+      other: "Lunchflow-import: %{count} konton kunde inte uppdateras"
+    lunchflow_transactions_failed:
+      one: "Lunchflow-import: hämtning av transaktioner misslyckades för %{count} konto"
+      other: "Lunchflow-import: hämtning av transaktioner misslyckades för %{count} konton"
+    lunchflow_import_error: "Lunchflow-import: %{error}"

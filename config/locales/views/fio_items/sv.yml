@@ -1,0 +1,141 @@
+---
+sv:
+  providers:
+    fio:
+      name: Fio banka
+      description: Synka ett Fio banka-konto med en skrivskyddad API-token
+  family:
+    fio:
+      create_fio_item:
+        default_name: Fio banka-anslutning
+  fio_item:
+    errors:
+      account_processing_failed: Kunde inte synka Fio-kontot
+      account_mismatch: Den här token hör till ett annat Fio-konto än det som denna anslutning redan synkar. Lägg till den som en separat anslutning istället.
+      account_sync_schedule_failed: Kunde inte schemalägga synk av Fio-kontot
+      statement_too_large: Kontoutdraget innehåller fler transaktioner än Fio levererar i en förfrågan. Flytta startdatumet för synken framåt och synka igen.
+      statement_fetch_failed: Kunde inte hämta kontoutdraget från Fio
+      history_locked: Fio nekade den här kontoutdragsperioden. Lås upp kontots fulla historik i internetbanken under Inställningar → API, och synka igen inom 10 minuter.
+      sync_failed: Kunde inte synka Fio-anslutningen
+    sync:
+      status:
+        importing: Importerar kontoutdrag från Fio...
+        checking_setup: Kontrollerar kontokonfiguration...
+        needs_setup:
+          one: 1 konto behöver konfigureras...
+          other: "%{count} konton behöver konfigureras..."
+        processing: Bearbetar transaktioner...
+        calculating: Beräknar saldon...
+    sync_status:
+      no_accounts: Inget konto hittades ännu
+      all_synced:
+        one: 1 konto synkat
+        other: "%{count} konton synkade"
+      partial: "%{linked} synkade, %{unlinked} behöver konfigureras"
+  fio_items:
+    account_types:
+      depository: Löne- eller sparkonto
+      loan: Lån, bolån eller kredit
+    provider_panel:
+      default_connection_name: Fio banka-anslutning
+      add_connection: Lägg till Fio banka-anslutning
+      update_connection: Uppdatera anslutning
+      connection_name_label: Anslutningsnamn
+      connection_name_placeholder: Mitt Fio-konto
+      token_label: API-token (skrivskyddad)
+      token_placeholder: Klistra in den 64 tecken långa token
+      keep_token_placeholder: Lämna tomt för att behålla den befintliga token
+      sync_start_date_label: Importera transaktioner från
+      sync_start_date_hint: Fio levererar de senaste 90 dagarna utan extra behörighet. För äldre data, lås upp kontots fulla historik i internetbanken under Inställningar → API (hänglåsikonen) — det öppnar ett 10-minutersfönster — och synka under det.
+      one_account_notice: En token når ett Fio-konto, så lägg till en anslutning för varje konto du vill följa. En token kan användas en gång var 30 sekunder; en synk som kommer tidigare tas om hand av nästa.
+      connected_account: Anslutet konto
+      no_account_yet: Inget konto ännu — den första synken upptäcker kontot som denna token når.
+      account_needs_setup: Inte kopplat till ett Sure-konto ännu.
+      requires_update: Ny token krävs
+      requires_update_notice: Fio avvisade den här token. Tokens är giltiga i upp till 180 dagar om de inte förlängs automatiskt vid varje bankinloggning, så skapa en ny skrivskyddad token under Inställningar → API och klistra in den nedan.
+      last_synced: Synkat %{timestamp} sedan
+      never_synced: Aldrig synkat
+      syncing: Synkar...
+      sync: Synka
+      setup_accounts: Konfigurera konto
+      disconnect: Koppla från
+      disconnect_confirm: "Är du säker på att du vill koppla från %{name}?"
+    create:
+      success: Fio banka-anslutning sparad.
+      token_required: Klistra in API-token från Fio internetbank.
+    update:
+      success: Fio banka-anslutning uppdaterad.
+    destroy:
+      success: Fio banka-anslutningen schemalagd för borttagning.
+      unlink_failed: Kunde inte koppla från Fio banka-anslutningen
+    select_accounts:
+      title: Koppla ditt Fio-konto
+      description: Den här token når ett konto. Välj hur det ska följas i Sure.
+      account_type_label: Kontotyp
+      awaiting_first_sync: Fio har inte rapporterat kontot för denna token ännu. Kör en synk och kom tillbaka.
+      already_linked: Den här anslutningens konto är redan kopplat till ett Sure-konto.
+      sync_now: Synka nu
+      no_credentials_configured: Konfigurera Fio banka i leverantörsinställningarna först.
+      cancel: Avbryt
+      link_account: Koppla konto
+    link_accounts:
+      success: "Kopplade ditt Fio-konto till %{account_name}."
+      no_account_found: Inget okopplat Fio-konto hittades för denna anslutning.
+      no_credentials_configured: Konfigurera Fio banka i leverantörsinställningarna först.
+      unsupported_account_type: Fio stöder inte den kontotypen.
+      link_failed: Kontot kunde inte kopplas.
+    select_existing_account:
+      title: "Koppla Fio-konto till %{account_name}"
+      description: Koppla kontot som denna token når till kontot du valde.
+      awaiting_first_sync: Fio har inte rapporterat kontot för denna token ännu. Kör en synk och kom tillbaka.
+      already_linked: Den här anslutningens konto är redan kopplat till ett Sure-konto.
+      sync_now: Synka nu
+      no_credentials_configured: Konfigurera Fio banka i leverantörsinställningarna först.
+      account_already_linked: Det här kontot är redan kopplat till en leverantör.
+      cancel: Avbryt
+      link_account: Koppla konto
+    link_existing_account:
+      success: "Kopplade ditt Fio-konto till %{account_name}."
+      account_already_linked: Det här kontot är redan kopplat till en leverantör.
+      fio_account_already_linked: Det här Fio-kontot är redan kopplat.
+      no_account_selected: Inget Fio-konto var tillgängligt att koppla.
+      unsupported_account_type: Fio kan bara synka kassa- och lånekonton.
+    setup_accounts:
+      title: Koppla ditt Fio-konto
+      subtitle: Välj hur kontot som denna token når ska visas i Sure.
+      choose_account_type: Välj en kontotyp
+      choose_account_type_description: Hoppa över om du inte vill följa det här kontot.
+      account_type_label: Kontotyp
+      account_types:
+        skip: Hoppa över
+      create_account: Skapa konto
+      awaiting_first_sync: Inget konto hittades ännu
+      awaiting_first_sync_description: Fio rapporterar kontot bara i ett kontoutdrag, så det dyker upp efter den första lyckade synken.
+      sync_now: Synka nu
+      nothing_to_setup: Inget att konfigurera
+      account_already_handled: Den här anslutningens konto är redan kopplat eller överhoppat.
+      close: Stäng
+      cancel: Avbryt
+    complete_account_setup:
+      success: "Skapade %{account_name}."
+      skipped: Fio-kontot hoppades över.
+      no_account: Inget Fio-konto behövde konfigureras.
+      unsupported_account_type: Fio stöder inte den kontotypen.
+      creation_failed: Kunde inte skapa Sure-kontot.
+    fio_item:
+      deletion_in_progress: Borttagning pågår
+      syncing: Synkar
+      requires_update: Ny token krävs
+      error: Fel
+      status_with_summary: "Synkat %{timestamp} sedan · %{summary}"
+      status_never: Aldrig synkat
+      delete: Ta bort
+      requires_update_title: Ny token krävs
+      requires_update_description: Fio avvisade token för den här anslutningen. Skapa en ny skrivskyddad token under Inställningar → API i internetbanken.
+      update_token: Uppdatera token
+      setup_needed: Kontokonfiguration behövs
+      setup_description: Kontot som denna token når är inte kopplat till ett Sure-konto ännu.
+      setup_action: Konfigurera konto
+      no_accounts_title: Inget konto importerat ännu
+      no_accounts_description: Fio rapporterar kontot bara i ett kontoutdrag, så det dyker upp efter den första lyckade synken.
+      sync_now: Synka nu
