@@ -62,6 +62,24 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert first_model(config, :chat).capable?(:tools)
   end
 
+  # A PDF as a file only where the provider reads one natively (2e plan); images as today.
+  test "documents only on OpenAI's own API and Anthropic, vision as today" do
+    openai = first_model(build("OPENAI_ACCESS_TOKEN" => "sk-test"), :extract_pdf)
+    assert openai.capable?(:vision, :documents)
+
+    custom = first_model(build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1",
+                               "OPENAI_MODEL" => "qwen3"), :extract_pdf)
+    assert custom.capable?(:vision)
+    assert_not custom.capable?(:documents)
+
+    off = first_model(build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1",
+                            "OPENAI_MODEL" => "qwen3", "OPENAI_SUPPORTS_PDF_PROCESSING" => "false"), :extract_pdf)
+    assert_not off.capable?(:vision)
+
+    claude = first_model(build("ANTHROPIC_API_KEY" => "sk-ant", "LLM_PROVIDER" => "anthropic"), :extract_pdf)
+    assert claude.capable?(:vision, :documents)
+  end
+
   test "a custom URL with no model gets an endpoint but no model or routes, as today's registry builds no client" do
     config = build("OPENAI_ACCESS_TOKEN" => "ollama", "OPENAI_URI_BASE" => "http://ollama:11434/v1")
 

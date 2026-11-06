@@ -4,17 +4,23 @@
 class Ai::Transport::Base
   # One structured-output request. `failed_ratio` (optional) takes the parsed JSON and returns
   # the share of items the model left blank or missed, for `auto` JSON mode's fallback; nil
-  # means blanks are a normal answer (bill setup).
+  # means blanks are a normal answer (bill setup). `attachments` are Ai::Attachment files sent
+  # after the input: a PDF or page images (2e).
   Request = Data.define(:feature, :family, :model, :instructions, :input, :schema, :schema_name, :max_tokens,
-                        :reasoning_effort, :json_mode, :failed_ratio) do
+                        :reasoning_effort, :json_mode, :failed_ratio, :attachments) do
     def initialize(feature:, model:, instructions:, input:, schema:, schema_name:, family: nil, max_tokens: nil,
-                   reasoning_effort: nil, json_mode: :auto, failed_ratio: nil)
+                   reasoning_effort: nil, json_mode: :auto, failed_ratio: nil, attachments: [])
       super(feature: feature.to_sym, family:, model:, instructions:, input:, schema:, schema_name: schema_name.to_s,
-            max_tokens:, reasoning_effort: reasoning_effort&.to_s, json_mode: json_mode.to_sym, failed_ratio:)
+            max_tokens:, reasoning_effort: reasoning_effort&.to_s, json_mode: json_mode.to_sym, failed_ratio:,
+            attachments: Array(attachments).freeze)
     end
 
-    # What the `.ai` event records: never the family's data beyond what the prompt holds.
-    def to_event = { instructions:, input:, schema_name:, json_mode:, reasoning_effort:, max_tokens: }.compact
+    # What the `.ai` event records: never the family's data beyond what the prompt holds, and
+    # files by name and size only.
+    def to_event
+      { instructions:, input:, schema_name:, json_mode:, reasoning_effort:, max_tokens:,
+        attachments: attachments.map(&:to_event).presence }.compact
+    end
   end
 
   # The parsed JSON (a Hash or an Array), the summed usage of every request the call made, and
@@ -68,6 +74,7 @@ class Ai::Transport::Base
   # whole call, with its retries and JSON-mode fallbacks, has one time budget: the endpoint's
   # timeout (section 7), so a slow model can't multiply it.
   def generate(request)
+    check_attachments!(request.model, request.attachments)
     Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family, budget: endpoint.timeout_seconds) do
       instrument("generate", model: request.model, request: request.to_event) { run_generate(request) }
     end
@@ -189,7 +196,20 @@ class Ai::Transport::Base
       end
     end
 
-    def event_attachments(attachments) = Array(attachments).map { { filename: _1.filename, bytes: _1.data.bytesize } }
+    # Refused before sending, not after: llama.cpp answers an image it can't read with a 500,
+    # which would count as an outage (spike: "Bank statements as PDFs"), and RubyLLM sends a PDF
+    # as a file part to every compatible server, which most refuse. A PDF over the preset's
+    # inline limits would make RubyLLM upload it to the provider's Files API, which is off.
+    def check_attachments!(model, attachments)
+      attachments.each do |file|
+        unless model.capable?(file.capability)
+          raise Ai::Error::Refused, "#{model.name} can't read #{file.pdf? ? "a PDF" : "images"} (needs #{file.capability})"
+        end
+
+        limit = endpoint.pdf_limits&.dig(:bytes)
+        raise Ai::Error::Refused, "#{file.filename} is over #{endpoint.name}'s PDF limit" if file.pdf? && limit && file.bytes > limit
+      end
+    end
 
     # The model that answered differs from the one asked for: LM Studio answers a request for a
     # model it doesn't have with whichever model is loaded, and a 200.

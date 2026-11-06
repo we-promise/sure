@@ -145,9 +145,11 @@ class AiTransportContractTest < ActiveSupport::TestCase
       RubyLLM::Chat => %i[generate add_message with_headers with_max_output_tokens with_tools with_instructions with_schema
                           with_thinking with_provider_options],
       RubyLLM::Message => %i[content model tokens cost tool_calls finish_reason raw], RubyLLM::Embedding => %i[vectors],
-      RubyLLM::Tokens => %i[input output cache_read cache_write reported_cost] }.each do |klass, methods|
+      RubyLLM::Tokens => %i[input output cache_read cache_write reported_cost],
+      RubyLLM::Attachment => %i[filename mime_type resolution] }.each do |klass, methods|
       methods.each { assert klass.public_method_defined?(_1), "#{klass}##{_1}" }
     end
+    assert_includes RubyLLM::Attachment::RESOLUTIONS, :high
     assert_kind_of RubyLLM::Error, RubyLLM::PaymentRequiredError.new
     assert_includes RubyLLM::Configuration.instance_methods, :typesafe_api_base=
     assert_includes RubyLLM::Configuration.instance_methods, :typesafe_api_key=

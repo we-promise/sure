@@ -41,10 +41,19 @@ module Ai::Transport::RubyLlmAdapter
       chat.with_thinking(effort:) if effort
       options = provider_options.merge(response_format ? { response_format: } : {})
       chat.with_provider_options(options) if options.any?
-      chat.add_message(role: :user, content: request.input)
+      chat.add_message(role: :user, content: request.input, attachments: ruby_llm_attachments(request.attachments).presence)
 
       message = mapping_errors { chat.generate }
       [ message.content.to_s, Ai::Tokens.from_ruby_llm(message.tokens), raw_id(message), message.finish_reason ]
+    end
+
+    # Files inline, page images at high detail: today's OpenAI path sent `detail: "low"`, which
+    # shrinks a page to 512 pixels (section 8.1). A fresh StringIO each time, because RubyLLM
+    # reads the source once per request and a retry sends it again.
+    def ruby_llm_attachments(attachments)
+      attachments.map do |file|
+        RubyLLM::Attachment.new(StringIO.new(file.data), filename: file.filename, resolution: (:high if file.image?))
+      end
     end
 
     def raw_id(message)
