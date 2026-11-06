@@ -1,132 +1,106 @@
 require "test_helper"
 
+# The OpenAI vector store adapter with the spike's fixes (2e plan, step 8), against WebMock: the
+# client from Ai::Transport::Http, the original filename, indexing status, deleting files with the
+# document and the store, and the score threshold.
 class VectorStore::OpenaiTest < ActiveSupport::TestCase
+  BASE = "https://api.openai.example.test/v1".freeze
+  JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
+
   setup do
-    @adapter = VectorStore::Openai.new(access_token: "sk-test-key")
+    @endpoint = ai_endpoint(name: "openai", base_url: BASE, api_key: "sk-test-key", vector_store: true,
+                            extra_headers: { "X-Team" => "finance" })
+    @adapter = VectorStore::Openai.new(endpoint: @endpoint)
   end
 
-  test "create_store wraps response" do
-    mock_client = mock("openai_client")
-    mock_vs = mock("vector_stores")
-    mock_vs.expects(:create).with(parameters: { name: "Test Store" }).returns({ "id" => "vs_abc123" })
-    mock_client.stubs(:vector_stores).returns(mock_vs)
-
-    @adapter.instance_variable_set(:@client, mock_client)
+  test "create_store goes through Ai::Transport::Http's client, with the endpoint's key and headers" do
+    stub_json(:post, "/vector_stores", { id: "vs_abc123" })
 
     response = @adapter.create_store(name: "Test Store")
+
     assert response.success?
     assert_equal "vs_abc123", response.data[:id]
+    assert_requested(:post, "#{BASE}/vector_stores", headers: { "Authorization" => "Bearer sk-test-key", "X-Team" => "finance" })
   end
 
-  test "delete_store wraps response" do
-    mock_client = mock("openai_client")
-    mock_vs = mock("vector_stores")
-    mock_vs.expects(:delete).with(id: "vs_abc123").returns(true)
-    mock_client.stubs(:vector_stores).returns(mock_vs)
+  test "upload_file uploads under the document's own filename and answers processing" do
+    upload = stub_request(:post, "#{BASE}/files").with { _1.body.include?('filename="bac statement.pdf"') }
+                                                  .to_return(status: 200, headers: JSON_HEADERS, body: { id: "file-xyz" }.to_json)
+    stub_json(:post, "/vector_stores/vs_abc123/files", { id: "file-xyz", status: "in_progress" })
 
-    @adapter.instance_variable_set(:@client, mock_client)
-
-    response = @adapter.delete_store(store_id: "vs_abc123")
-    assert response.success?
-  end
-
-  test "upload_file uploads and attaches to store" do
-    mock_client = mock("openai_client")
-    mock_files = mock("files")
-    mock_files.expects(:upload).returns({ "id" => "file-xyz" })
-    mock_vs_files = mock("vector_store_files")
-    mock_vs_files.expects(:create).with(
-      vector_store_id: "vs_abc123",
-      parameters: { file_id: "file-xyz" }
-    ).returns(true)
-
-    mock_client.stubs(:files).returns(mock_files)
-    mock_client.stubs(:vector_store_files).returns(mock_vs_files)
-
-    @adapter.instance_variable_set(:@client, mock_client)
-
-    response = @adapter.upload_file(
-      store_id: "vs_abc123",
-      file_content: "Hello world",
-      filename: "test.txt"
-    )
+    response = @adapter.upload_file(store_id: "vs_abc123", file_content: "%PDF-1.4", filename: "../bac statement.pdf")
 
     assert response.success?
-    assert_equal "file-xyz", response.data[:file_id]
+    assert_equal({ file_id: "file-xyz", status: "processing" }, response.data)
+    assert_requested upload
   end
 
-  test "remove_file deletes from store" do
-    mock_client = mock("openai_client")
-    mock_vs_files = mock("vector_store_files")
-    mock_vs_files.expects(:delete).with(
-      vector_store_id: "vs_abc123",
-      id: "file-xyz"
-    ).returns(true)
-    mock_client.stubs(:vector_store_files).returns(mock_vs_files)
+  test "a file that can't be attached to the store is deleted again" do
+    stub_json(:post, "/files", { id: "file-xyz" })
+    stub_request(:post, "#{BASE}/vector_stores/vs_abc123/files").to_return(status: 500, body: "boom")
+    delete = stub_json(:delete, "/files/file-xyz", { deleted: true })
 
-    @adapter.instance_variable_set(:@client, mock_client)
-
-    response = @adapter.remove_file(store_id: "vs_abc123", file_id: "file-xyz")
-    assert response.success?
+    assert_not @adapter.upload_file(store_id: "vs_abc123", file_content: "x", filename: "a.txt").success?
+    assert_requested delete
   end
 
-  test "search uses gem client and parses results" do
-    mock_client = mock("openai_client")
-    mock_vs = mock("vector_stores")
-    mock_vs.expects(:search).with(
-      id: "vs_abc123",
-      parameters: { query: "income", max_num_results: 5 }
-    ).returns({
-      "data" => [
-        {
-          "file_id" => "file-xyz",
-          "filename" => "tax_return.pdf",
-          "score" => 0.95,
-          "content" => [ { "type" => "text", "text" => "Total income: $85,000" } ]
-        }
-      ]
-    })
-    mock_client.stubs(:vector_stores).returns(mock_vs)
+  test "file_status: ready, unreadable for an empty index, processing, or error" do
+    { { status: "completed", usage_bytes: 2048 } => "ready", { status: "completed", usage_bytes: 0 } => "unreadable",
+      { status: "in_progress" } => "processing", { status: "failed", last_error: { message: "bad file" } } => "error" }.each do |file, expected|
+      WebMock.reset!
+      stub_json(:get, "/vector_stores/vs_abc123/files/file-xyz", { id: "file-xyz", **file })
 
-    @adapter.instance_variable_set(:@client, mock_client)
-
-    response = @adapter.search(store_id: "vs_abc123", query: "income", max_results: 5)
-    assert response.success?
-    assert_equal 1, response.data.size
-    assert_equal "Total income: $85,000", response.data.first[:content]
-    assert_equal "tax_return.pdf", response.data.first[:filename]
-    assert_equal 0.95, response.data.first[:score]
+      assert_equal expected, @adapter.file_status(store_id: "vs_abc123", file_id: "file-xyz").data[:status]
+    end
   end
 
-  test "search returns empty array when no results" do
-    mock_client = mock("openai_client")
-    mock_vs = mock("vector_stores")
-    mock_vs.expects(:search).returns({ "data" => [] })
-    mock_client.stubs(:vector_stores).returns(mock_vs)
+  test "remove_file detaches the file and deletes it from the Files API" do
+    detach = stub_json(:delete, "/vector_stores/vs_abc123/files/file-xyz", { deleted: true })
+    delete = stub_json(:delete, "/files/file-xyz", { deleted: true })
 
-    @adapter.instance_variable_set(:@client, mock_client)
-
-    response = @adapter.search(store_id: "vs_abc123", query: "nothing")
-    assert response.success?
-    assert_empty response.data
+    assert @adapter.remove_file(store_id: "vs_abc123", file_id: "file-xyz").success?
+    assert_requested detach
+    assert_requested delete
   end
 
-  test "wraps errors in failure response" do
-    mock_client = mock("openai_client")
-    mock_vs = mock("vector_stores")
-    mock_vs.expects(:create).raises(StandardError, "API error")
-    mock_client.stubs(:vector_stores).returns(mock_vs)
+  test "delete_store deletes every file it holds, then the store" do
+    stub_request(:get, "#{BASE}/vector_stores/vs_abc123/files?limit=100")
+      .to_return(status: 200, headers: JSON_HEADERS, body: { data: [ { id: "file-1" } ], has_more: true }.to_json)
+    stub_request(:get, "#{BASE}/vector_stores/vs_abc123/files?limit=100&after=file-1")
+      .to_return(status: 200, headers: JSON_HEADERS, body: { data: [ { id: "file-2" } ], has_more: false }.to_json)
+    deletes = %w[file-1 file-2].map { stub_json(:delete, "/files/#{_1}", { deleted: true }) }
+    store = stub_json(:delete, "/vector_stores/vs_abc123", { deleted: true })
 
-    @adapter.instance_variable_set(:@client, mock_client)
+    assert @adapter.delete_store(store_id: "vs_abc123").success?
+    deletes.each { assert_requested _1 }
+    assert_requested store
+  end
 
-    response = @adapter.create_store(name: "Broken Store")
+  test "search asks for a score threshold and drops anything under it" do
+    search = stub_request(:post, "#{BASE}/vector_stores/vs_abc123/search")
+               .with { JSON.parse(_1.body).dig("ranking_options", "score_threshold") == VectorStore::Openai::MIN_SCORE }
+               .to_return(status: 200, headers: JSON_HEADERS, body: { data: [
+                 { file_id: "file-1", filename: "bac.pdf", score: 0.84, content: [ { type: "text", text: "rent" } ] },
+                 { file_id: "file-2", filename: "impact.pdf", score: 0.14, content: [ { type: "text", text: "payroll" } ] }
+               ] }.to_json)
+
+    response = @adapter.search(store_id: "vs_abc123", query: "monthly apartment rent payment", max_results: 5)
+
+    assert_requested search
+    assert_equal [ { content: "rent", filename: "bac.pdf", score: 0.84, file_id: "file-1" } ], response.data
+  end
+
+  test "wraps errors in a failure response" do
+    stub_request(:post, "#{BASE}/vector_stores").to_return(status: 500, body: "boom")
+
+    response = @adapter.create_store(name: "x")
+
     assert_not response.success?
-    assert_equal "API error", response.error.message
+    assert_kind_of VectorStore::Error, response.error
   end
 
-  test "supported_extensions returns the default list" do
-    assert_includes @adapter.supported_extensions, ".pdf"
-    assert_includes @adapter.supported_extensions, ".docx"
-    assert_includes @adapter.supported_extensions, ".csv"
-  end
+  private
+    def stub_json(method, path, body)
+      stub_request(method, "#{BASE}#{path}").to_return(status: 200, headers: JSON_HEADERS, body: body.to_json)
+    end
 end

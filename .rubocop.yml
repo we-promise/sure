@@ -39,7 +39,6 @@ Sure/NoAiEnv:
     - "app/models/provider/openai.rb"                           # PR 6: chat
     - "app/models/provider/registry.rb"                         # 2e, PR 6
     - "app/models/setting.rb"                                   # PR 7: settings pages
-    - "app/models/vector_store/pgvector.rb"                     # 2e
 
 Layout/IndentationWidth:
   Enabled: true

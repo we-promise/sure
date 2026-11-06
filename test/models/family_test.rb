@@ -432,7 +432,8 @@ class FamilyTest < ActiveSupport::TestCase
     adapter.expects(:upload_file).with(
       store_id: "vs_test123",
       file_content: "hello",
-      filename: "notes.txt"
+      filename: "notes.txt",
+      family:
     ).returns(
       VectorStore::Response.new(success?: true, data: { file_id: "file-xyz" }, error: nil)
     )

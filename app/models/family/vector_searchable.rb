@@ -3,6 +3,9 @@ module Family::VectorSearchable
 
   included do
     has_many :family_documents, dependent: :destroy
+    # The store and its files go with the family: on OpenAI they would otherwise stay in the
+    # Files API (spike, 2e).
+    before_destroy :delete_vector_store
   end
 
   def ensure_vector_store!
@@ -35,7 +38,9 @@ module Family::VectorSearchable
     response = adapter.search(
       store_id: vector_store_id,
       query: query,
-      max_results: max_results
+      max_results: max_results,
+      family: self,
+      user: user
     )
 
     return [] unless response.success?
@@ -89,19 +94,22 @@ module Family::VectorSearchable
     response = adapter.upload_file(
       store_id: store_id,
       file_content: file_content,
-      filename: filename
+      filename: filename,
+      family: self
     )
 
     return nil unless response.success?
 
     metadata = metadata || {}
 
+    # An OpenAI store indexes in the background: the document is `processing` until
+    # VectorStore::IndexStatusJob records the outcome, not `ready` before it can be found.
     family_documents.create!(
       filename: filename,
       content_type: Marcel::MimeType.for(name: filename),
       file_size: file_content.bytesize,
       provider_file_id: response.data[:file_id],
-      status: "ready",
+      status: response.data[:status] || "ready",
       # Promoted out of metadata into a real column: a jsonb key cannot be
       # joined or indexed, and this one decides who may read the document.
       account_id: accounts.where(id: metadata["account_id"]).pick(:id),
@@ -122,6 +130,16 @@ module Family::VectorSearchable
 
     family_document.destroy
     true
+  end
+
+  def delete_vector_store
+    return if vector_store_id.blank?
+
+    adapter = vector_store_adapter
+    response = adapter&.delete_store(store_id: vector_store_id)
+    Rails.logger.warn("[Family] couldn't delete vector store for family #{id}") if response && !response.success?
+  rescue StandardError => error
+    Rails.logger.warn("[Family] couldn't delete vector store for family #{id}: #{error.class}")
   end
 
   private

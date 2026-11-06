@@ -36,10 +36,10 @@ class VectorStore::Qdrant < VectorStore::Base
     end
   end
 
-  def upload_file(store_id:, file_content:, filename:)
+  def upload_file(store_id:, file_content:, filename:, family: nil)
     with_response do
       # 1. chunk file → text chunks
-      # 2. embed each chunk
+      # 2. Ai::Embeddings.index(chunks, family:)
       # 3. PUT /collections/{store_id}/points { points: [...] }
       #    each point: { id: uuid, vector: [...], payload: { file_id, filename, content } }
       raise VectorStore::Error, "Qdrant adapter is not yet implemented"
@@ -54,9 +54,9 @@ class VectorStore::Qdrant < VectorStore::Base
     end
   end
 
-  def search(store_id:, query:, max_results: 10)
+  def search(store_id:, query:, max_results: 10, family: nil, user: nil)
     with_response do
-      # 1. embed(query) → vector
+      # 1. Ai::Embeddings.query(query, family:, user:) → vector
       # 2. POST /collections/{store_id}/points/search
       #    { vector: [...], limit: max_results, with_payload: true }
       # 3. map results → [{ content:, filename:, score:, file_id: }]
@@ -73,9 +73,5 @@ class VectorStore::Qdrant < VectorStore::Base
         f.adapter Faraday.default_adapter
         f.headers["api-key"] = @api_key if @api_key.present?
       end
-    end
-
-    def embed(text)
-      raise VectorStore::Error, "Embedding model not configured"
     end
 end

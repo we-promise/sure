@@ -95,7 +95,7 @@ class VectorStore::RegistryTest < ActiveSupport::TestCase
     VectorStore::Registry.stubs(:adapter).returns(nil)
     assert_not VectorStore.configured?
 
-    VectorStore::Registry.stubs(:adapter).returns(VectorStore::Openai.new(access_token: "sk-test"))
+    VectorStore::Registry.stubs(:adapter).returns(VectorStore::Openai.new(endpoint: ai_endpoint(name: "openai", vector_store: true)))
     assert VectorStore.configured?
   end
 

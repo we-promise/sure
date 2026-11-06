@@ -9,7 +9,9 @@ class FamilyDocument < ApplicationRecord
   SUPPORTED_EXTENSIONS = VectorStore::Base::SUPPORTED_EXTENSIONS
 
   validates :filename, presence: true
-  validates :status, inclusion: { in: %w[pending processing ready error] }
+  # unreadable: indexed with no text (a scan an OpenAI store's file search can't read).
+  STATUSES = %w[pending processing ready unreadable error].freeze
+  validates :status, inclusion: { in: STATUSES }
 
   # The account, when there is one, has to belong to the same family as the
   # document. Every write path today scopes its lookup, but the column is a
@@ -35,6 +37,9 @@ class FamilyDocument < ApplicationRecord
 
     unlinked.or(where(account_id: Account.accessible_by(user).select(:id)))
   }
+
+  # Watches an asynchronous index until it settles (VectorStore::IndexStatusJob).
+  after_create_commit -> { VectorStore::IndexStatusJob.perform_later(self) }, if: -> { status == "processing" }
 
   def mark_ready!
     update!(status: "ready")

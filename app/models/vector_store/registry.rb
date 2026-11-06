@@ -53,7 +53,7 @@ class VectorStore::Registry
         endpoint = Ai::Config.current.routes_for(:embed).map(&:endpoint).find(&:vector_store?)
         return nil unless endpoint&.api_key
 
-        VectorStore::Openai.new(access_token: endpoint.api_key, uri_base: endpoint.base_url)
+        VectorStore::Openai.new(endpoint:)
       end
 
       def build_pgvector
