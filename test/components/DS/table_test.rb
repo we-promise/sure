@@ -152,6 +152,16 @@ class DS::TableTest < ViewComponent::TestCase
     assert_no_selector "tbody tr[hidden]", visible: :all
   end
 
+  # Detail ids are prefixed with the table's id; two tables without one would
+  # hand out the same ids and a toggle would open the other table's row.
+  test "requires an id when given a row_detail proc" do
+    error = assert_raises(ArgumentError) { DS::Table.new(rows: ROWS, row_detail: ->(_row) { "x" }) }
+    assert_match "id:", error.message
+
+    assert_nothing_raised { DS::Table.new(rows: ROWS, id: "bills", row_detail: ->(_row) { "x" }) }
+    assert_nothing_raised { DS::Table.new(rows: ROWS) }
+  end
+
   private
     def render_table(**options)
       render_inline(DS::Table.new(rows: ROWS, **options)) do |table|

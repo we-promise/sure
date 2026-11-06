@@ -40,9 +40,12 @@ class DS::Table < DesignSystemComponent
   # @param row_detail [Proc, nil] called with each row, returns markup for a
   #   hidden row rendered straight after it and spanning every column, or nil
   #   for none. A control in the row reveals it by pointing aria-controls at
-  #   #row_detail_id, e.g. a holding's per-account positions
+  #   #row_detail_id, e.g. a holding's per-account positions. Requires an `id:`,
+  #   which prefixes the detail ids so two tables on a page cannot collide.
   # @param opts [Hash] forwarded to the outer element; :class merges with the base classes
   def initialize(rows:, inset: false, sticky_header: false, label: nil, row_class: nil, row_opts: nil, row_detail: nil, **opts)
+    raise ArgumentError, "DS::Table needs an id: when given row_detail" if row_detail && opts[:id].blank?
+
     @rows = rows
     @inset = inset
     @sticky_header = sticky_header
@@ -96,6 +99,6 @@ class DS::Table < DesignSystemComponent
   # The detail row's id, prefixed with the table's own id so two tables on a
   # page cannot collide.
   def row_detail_id(index)
-    "#{opts[:id] || "table"}-detail-#{index}"
+    "#{opts[:id]}-detail-#{index}"
   end
 end
