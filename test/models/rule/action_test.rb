@@ -292,6 +292,18 @@ class Rule::ActionTest < ActiveSupport::TestCase
     end
   end
 
+  test "set_as_transfer_or_payment leaves excluded transactions and the target's own transactions alone" do
+    @txn1.entry.update!(excluded: true)
+    @txn2.entry.update_column(:excluded, nil)
+    own = create_transaction(account: accounts(:other_asset), amount: 30, name: "Already on the target").transaction
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_as_transfer_or_payment", value: accounts(:other_asset).id)
+
+    assert_difference "Transfer.count", 1 do
+      assert_equal 1, action.apply(Transaction.where(id: [ @txn1.id, @txn2.id, own.id ]))
+    end
+    assert @txn2.reload.transfer.present?
+  end
+
   test "set_as_transfer_or_payment only lets a user pick an account they can edit and keeps a saved one" do
     unwritable = accounts(:other_asset)
     writable = accounts(:depository)
