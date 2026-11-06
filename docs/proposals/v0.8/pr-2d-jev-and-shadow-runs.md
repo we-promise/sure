@@ -498,7 +498,8 @@ The 2d commits on #4765 follow this plan, with these differences:
 - **Pipelock's diff scan** reads `JEV_API_KEY=<value>` in docs as a secret, so the examples show
   a placeholder.
 
-Checks at the last 2d commit (`fce7c6ff1`): the full suite, 14,920 runs, has the same 14
+Checks at the last 2d commit, before the branch was rebased onto `499bfd87b` (whose #4768 fixes
+the allocator test): the full suite, 14,920 runs, has the same 14
 failures as 2c, all also failing on `main`; the full system suite, 333 runs, has 2 failures, the
 combobox dark-theme colour checks, which fail the same way on `main`; RuboCop, erb_lint, Biome,
 Brakeman and Pipelock's diff scan are clean.
