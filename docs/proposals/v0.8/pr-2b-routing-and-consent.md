@@ -376,3 +376,29 @@ commits read for 2a changes them.
 - `git grep` shows no remaining non-chat `preferred_llm_provider.present?`,
   `get_provider(:openai).present?` or `resolved_categorization_provider.present?` availability
   checks.
+
+## As built
+
+Where the commits differ from the steps above, and why:
+
+- **The snapshot is rebuilt when an input changes.** `Ai::Config.current` keeps one snapshot per
+  request or job, keyed by a fingerprint of the AI ENV and `Setting` fields it reads
+  (`Ai::LegacyEnvConfig.fingerprint`). A value saved in the UI therefore applies on the next read,
+  as today, including later in the same request and in tests that change ENV.
+- **No `batch_size` on `Ai::Config::Model` yet.** It arrives with its first caller, 2c's batches.
+- **The uncategorized-transactions diagnostic asks for `detect_merchants`.** Its
+  `llm_provider_configured` field meant "an LLM provider" (`preferred_llm_provider`), which is
+  `detect_merchants`' route exactly. `categorize` also counts Jev.
+- **The health probes take the configured endpoint**, with the URL and key `AiHealth` resolved
+  and the probe's timeout. As a result they send only the static `OPENAI_EXTRA_HEADERS`; 2a's
+  probe sent a `{session_id}` header literally.
+- **`import_bank_statement` answers with the router's reason** (`reason:` beside today's
+  `error: "provider_not_configured"`) when it's called while `extract_pdf` is unavailable.
+- **The agreement test renders the merchants page and the import page**, and asks the rule
+  registry, the tool list, the diagnostic and chat's three entry points. The bills dialogs are
+  covered by their controller tests, which run on the router (`use_ai_routes`, `use_no_ai`).
+- **`Sure/NoAiEnv` checks `app/`, `config/` and `lib/`.** Tests set and read AI ENV on purpose,
+  and migrations are history, so neither is checked.
+- **One more failure on `main`:** `RecurringTransaction::AllocatorTest` "a payment fully linked to
+  an active bill cannot be re-linked to another active bill" fails on `origin/main` @ `3758cb8aa`
+  (from #3663) as on this branch.
