@@ -160,14 +160,9 @@ GPT-6.1 Sol and GPT-6 Sol use the native Responses API for assistant tools.
 Leave the custom Base URL setting empty when connecting directly to OpenAI.
 GPT-6.1 Sol does not support tool calling in Chat Completions, or the `none`
 and `minimal` reasoning efforts. See the [model documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol).
-Native GPT-6.1 Sol, GPT-6 Sol,
-`o1`, and `o3` PDF vision requests use `max_completion_tokens`, which includes
-reasoning and visible output, when an output limit is explicitly configured.
-Set `LLM_MAX_RESPONSE_TOKENS` to a positive value to bound each such request;
-the default 512-token context reserve is not sent as a provider limit.
-Text extraction keeps its existing request behavior. Custom endpoints retain
-their existing token parameters. Increase the LLM context budget for cloud
-reasoning models; the default 2048-token context is intended for small local models.
+Increase the LLM context budget for cloud reasoning models; the default 2048-token
+context is intended for small local models. PDF import is described in
+[PDF import](#pdf-import).
 
 ### Anthropic (native)
 
@@ -1638,7 +1633,63 @@ These are defined in `app/models/assistant/function/`. Preview tools
 (Statement Vault, `get_valuations`, `get_insights`) are listed in
 [mcp.md](mcp.md#preview-tools).
 
+### PDF import
+
+Sure reads an uploaded PDF in one of four ways, then checks what the model returned:
+
+| Way | When | Sent to the provider |
+|---|---|---|
+| **PDF** | The model reads PDFs natively (Anthropic, OpenAI's own API) and the file is within the provider's inline limit (32 MB or 100 pages) | The PDF file itself |
+| **Text** | The PDF has a text layer | The text layer, a batch of pages at a time |
+| **Images** | The model reads images (OpenAI's vision models, Anthropic, and any custom OpenAI-compatible server unless `OPENAI_SUPPORTS_PDF_PROCESSING=false`) | Each page as a 150 dpi image at high detail |
+| **OCR** | An OCR model is set up (from the next config release; see below) | Each page as an image to the OCR model, then its transcription to the text model |
+
+- **Auto, the default, tries them in that order**, skipping a way the model can't do. A scan
+  with no text layer is never sent as empty text. The next statement for the same account and
+  model starts from the way that last passed.
+- **"Read as"** on the upload form, and on the chat tool, picks one way. A way the model can't do
+  is greyed out with the reason. An import can be **read again** another way before anything is
+  published.
+- **Every page is read.** There's no five-page limit any more: pages are batched to fit the
+  model, so a long statement costs more requests, and a scan costs more image tokens than it did
+  at the old low detail.
+- **Checks.** Every statement extraction is checked without knowing the answer: the opening
+  balance plus every row makes the closing balance (using the balances printed in the text when
+  they're found), every amount appears in the text the model read, and most dates match the date
+  printed next to their amount. When Auto's extraction fails, it tries the next way. If none
+  passes, the best one is kept and flagged: the import shows which checks failed, and publishing
+  asks for confirmation. The date check is a heuristic tuned on two statements.
+- **Pages are rendered by `pdftoppm`** (poppler-utils, in the Docker image) in a child process
+  with an empty environment, a 30-second timeout, CPU and memory limits, and a page range; a page
+  over 25 million pixels is refused. A missing `pdftoppm` shows as such on the AI status page.
+- **OpenAI-compatible servers never get the PDF file itself**: llama.cpp and Gemini's compatible
+  API refuse it, and OpenRouter charges to parse it.
+
+**OCR.** OCR models (a local model such as Unlimited-OCR-2 on llama.cpp, read through chat with
+its own prompt, or Mistral and Cohere's OCR services) are supported in the code, but there is no
+setting for them yet: they become configurable with the AI settings tables. Until then "Read as:
+OCR" is greyed out, and a scan is read as images on a vision model. Mistral and Cohere OCR are
+untested against the live services. A llama.cpp OCR model needs `--special` so its table tags
+reach Sure.
+
 ### Vector Store (Document Search)
+
+**Since the AI plumbing's documents release:**
+
+- Embeddings go through the same HTTP stack as every other AI call (proxy, retries, usage rows
+  on the usage page under `embed` and `search_documents`). pgvector's column size comes from
+  `EMBEDDING_DIMENSIONS`, as before.
+- Searches drop matches scoring under 0.3, on pgvector and on OpenAI's vector store, so a
+  question about one statement no longer gets another as context. The threshold is a starting
+  point; embedding models score differently.
+- **OpenAI vector store:** documents show *processing* until OpenAI has indexed them, and
+  *unreadable* when the index is empty (a scan: OpenAI's file search reads text layers only).
+  Removing a document, or deleting the family, now deletes its files from OpenAI's Files API.
+  **Files that documents removed before this release left behind can't be traced to a row and
+  stay in your OpenAI account**: list them in OpenAI's dashboard (Storage → Files, purpose
+  `assistants`) and delete the ones you don't recognise from another app.
+- Statements stored in the vault are indexed for search only for users with AI turned on.
+
 
 Sure's AI assistant can search documents that have been uploaded to a family's vault. Under the hood, documents are indexed in a **vector store** so the assistant can retrieve relevant passages when answering questions (Retrieval-Augmented Generation).
 

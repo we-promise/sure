@@ -253,3 +253,59 @@ item. Nothing is applied.
 - `perform_enqueued_jobs` around `Ai::GenerationJob.perform_now(:categorize, …)` runs the shadow
   job too (`test/jobs/ai/shadow_job_test.rb`).
 
+
+## Documents (PR 2e)
+
+PDF import and document search on the plumbing: files on `generate`, `transport.embed` and
+`transport.ocr`, one input step for PDFs, and the vector stores on `Ai::Embeddings`.
+
+```mermaid
+flowchart LR
+  J["ProcessPdfJob / import_bank_statement"] --> R["Ai::PdfReading<br/>pdf · text · images · ocr"]
+  R --> G["ReadPdf / ExtractBankStatement<br/>Ai::Batch over units"]
+  R -. ocr .-> O["transport.ocr"]
+  G --> T["transport.generate<br/>with attachments"]
+  G --> C["checks: reconciles, amounts_in_source, dates_anchored"]
+  V["VectorStore::Pgvector"] --> E["Ai::Embeddings<br/>index (embed) · query (search_documents)"]
+  E --> TE["transport.embed"]
+```
+
+| Concern | File |
+|---|---|
+| A file on a request | `app/models/ai/attachment.rb`, `Request#attachments` in `transport/base.rb` |
+| Embeddings and OCR on the wire | `transport/base.rb` (`embed`, `ocr`), `transport/compatible.rb` |
+| The input step: ways of reading, Auto's order, fallback on failed checks | `app/models/ai/pdf_reading.rb`, `pdf_reading/unit.rb`, `pdf_reading/pages.rb` |
+| What a PDF is, and a statement's rows and checks | `app/models/ai/generations/read_pdf.rb`, `extract_bank_statement.rb` |
+| Page rendering | `app/models/pdf/page_images.rb` |
+| Embedding for the vector store | `app/models/ai/embeddings.rb`, `vector_store/pgvector.rb` |
+| OpenAI's vector store and its indexing status | `vector_store/openai.rb`, `app/jobs/vector_store/index_status_job.rb` |
+| OCR prompts, one folder per model family | `app/prompts/ocr_<name>/` (`Ai::Config::Model::OCR_PROMPTS`) |
+
+**Rules**
+
+- **Decide what to send from capabilities, before sending.** A transport refuses an image to a
+  model without `vision` and a PDF to one without `documents`, and a generation skips such a route
+  (`Ai::Generation#needs`). RubyLLM sends a PDF as a file part to every compatible server, and most
+  refuse it; llama.cpp answers an image it can't read with a 500.
+- **Files go inline.** `auto_upload_large_files` stays off, so a statement never stays in a
+  provider's Files API; the preset's inline limit (`Ai::Config::Endpoint::PDF_LIMITS`) sends a
+  bigger PDF another way.
+- **Files never enter a `.ai` event.** Events record each file's name and size.
+- **A new way of reading** is a key in `Ai::PdfReading::WAYS`, a reason in `reason_for`, units in
+  `units_for`, a "Read as" label in `config/locales/views/imports/en.yml`, and a row in
+  `test/models/ai/pdf_reading_test.rb`.
+- **Never drop an extraction.** One that fails its checks is kept and flagged for review.
+- **Embeddings come from the route's first embedding model, with no failover**: another model's
+  vectors don't compare with the stored ones.
+- **Render pages only through `Pdf::PageImages`**, which keeps poppler in a hardened child
+  process; don't call `pdftoppm` or libvips's PDF loader yourself.
+
+**Tests**
+
+- `stub_ai` answers `embed` (one stable vector per text unless the block returns vectors) and
+  `ocr` (a transcription per request) as well as `generate` and `judge`; a block can tell
+  `EmbedRequest`, `OcrRequest` and `Request` apart, and `request.attachments` holds the files.
+- `test/fixtures/files/statements/` holds the spike's two public sample statements: `bac_ocr.pdf`
+  (an OCR'd text layer with errors, 13 transactions) and `impact_scanned.pdf` (a two-page scan).
+- Live tests in `test/models/ai/live/`: `embed_live_test` (venus llama.cpp) and `ocr_live_test`
+  (Mistral, Cohere and a local OCR model), skipped without a cassette or key.
