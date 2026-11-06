@@ -137,7 +137,7 @@
                     selected_id: ef.object.merchant_id,
                     include_blank: t(".none"),
                     label: t(".merchant_label"),
-                    disabled: @entry.split_child? || !can_annotate_entry?,
+                    disabled: !can_annotate_entry?,
                     auto_submit: true
                   ) %>
               <%= render DS::TagSelect.new(
