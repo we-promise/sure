@@ -35,6 +35,7 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_equal 1, @security.reload.constituents.count
 
     second = capable_provider("provider")
+    second.stubs(:class).returns(Provider::TwelveData)
     second.expects(:fetch_security_info).never
     @security.stubs(:price_data_provider).returns(second)
     @security.import_provider_details(include_constituents: true)
@@ -51,10 +52,111 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_not_nil @security.constituents_fetched_at, "nothing recorded that we asked"
 
     provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
     provider.expects(:fetch_security_info).never
     @security.stubs(:price_data_provider).returns(provider)
 
     @security.import_provider_details(include_constituents: true)
+  end
+
+  # ------------------------------------------- the record belongs to a provider
+
+  test "the record names the provider that answered" do
+    import(info(constituents: [ constituent("MSFT", "Microsoft", 10) ]))
+
+    assert_equal "twelve_data", @security.reload.constituents_fetched_from
+  end
+
+  # Most importers leave `price_provider` blank, so the security is priced by
+  # whichever provider is first in the enabled list. Changing that list does
+  # not touch the row, and the provider now answering has not been asked.
+  test "a fund with no assigned provider is asked again when the default provider changes" do
+    @security.update!(price_provider: nil)
+    first = capable_provider("first")
+    first.stubs(:class).returns(Provider::Eodhd)
+    first.expects(:fetch_security_info).once.returns(
+      provider_success_response(info(constituents: [ constituent("MSFT", "Microsoft", 10) ]))
+    )
+    Security.stubs(:providers).returns([ first ])
+
+    @security.import_provider_details(include_constituents: true)
+    assert_equal %w[MSFT], @security.reload.constituents.pluck(:ticker), "precondition: the first answer was stored"
+
+    second = capable_provider("second")
+    second.stubs(:class).returns(Provider::YahooFinance)
+    second.expects(:fetch_security_info).once.returns(
+      provider_success_response(info(constituents: [ constituent("AAPL", "Apple", 20) ]))
+    )
+    Security.stubs(:providers).returns([ second ])
+
+    @security.import_provider_details(include_constituents: true)
+
+    assert_equal %w[AAPL], @security.reload.constituents.pluck(:ticker)
+    assert_equal "yahoo_finance", @security.constituents_fetched_from
+  end
+
+  test "a fund with no assigned provider is not asked again while the default stays the same" do
+    @security.update!(price_provider: nil)
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::Eodhd)
+    provider.expects(:fetch_security_info).once.returns(provider_success_response(info(constituents: nil)))
+    Security.stubs(:providers).returns([ provider ])
+
+    @security.import_provider_details(include_constituents: true)
+    @security.reload.import_provider_details(include_constituents: true)
+  end
+
+  test "a fund moved to another provider is asked again" do
+    @security.update_columns(price_provider: "eodhd", constituents_fetched_at: 1.day.ago,
+                             constituents_fetched_from: "eodhd")
+    @security.update!(price_provider: "yahoo_finance")
+
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::YahooFinance)
+    provider.expects(:fetch_security_info).once.returns(
+      provider_success_response(info(constituents: [ constituent("MSFT", "Microsoft", 10) ]))
+    )
+    @security.stubs(:price_data_provider).returns(provider)
+
+    @security.import_provider_details(include_constituents: true)
+
+    assert_equal %w[MSFT], @security.reload.constituents.pluck(:ticker)
+  end
+
+  # Recorded before the provider was: nothing says who answered, so the
+  # provider now pricing the security is asked once and the record completed.
+  test "a record that names no provider is asked once more" do
+    @security.update_columns(constituents_fetched_at: 1.day.ago, constituents_fetched_from: nil)
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::Eodhd)
+    provider.expects(:fetch_security_info).once.returns(provider_success_response(info(constituents: nil)))
+    @security.stubs(:price_data_provider).returns(provider)
+
+    @security.import_provider_details(include_constituents: true)
+    @security.reload.import_provider_details(include_constituents: true)
+
+    assert_equal "eodhd", @security.constituents_fetched_from
+  end
+
+  # The classification write re-reads the row under a lock. A set another
+  # import stored while this provider was answering must survive that, not
+  # be replaced because the re-read made its stamp look like this import's.
+  test "a fund's holdings stored by another import while the provider answers are kept" do
+    response = provider_success_response(info(constituents: [ constituent("BBB", "Second", 100) ]))
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
+    security_id = @security.id
+    provider.define_singleton_method(:fetch_security_info) do |**|
+      Security::Constituent.create!(security_id: security_id, ticker: "AAA", name: "First", weight: 100)
+      Security.where(id: security_id).update_all(constituents_fetched_at: Time.current, constituents_fetched_from: "twelve_data")
+      response
+    end
+    @security.stubs(:price_data_provider).returns(provider)
+
+    assert_nil @security.constituents_fetched_at
+    @security.import_provider_details(include_constituents: true)
+
+    assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker)
   end
 
   # A failed answer is not an answer. Stamping it would close the gate on a

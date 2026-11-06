@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_06_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_06_100001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2327,6 +2327,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_06_100000) do
     t.boolean "classification_locked", default: false, null: false
     t.string "classification_source"
     t.datetime "constituents_fetched_at"
+    t.string "constituents_fetched_from"
     t.string "country_code"
     t.datetime "created_at", null: false
     t.string "exchange_acronym"

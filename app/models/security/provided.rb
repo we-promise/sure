@@ -290,10 +290,10 @@ module Security::Provided
     #   retried. The stamp is compared with the provider resolved now, so an
     #   assigned provider changing and the enabled default changing (for a
     #   security with no `price_provider`) both open the gate.
-    classification_provider_key = self.class.provider_key_for(price_data_provider)
+    provider_key = self.class.provider_key_for(price_data_provider)
     wants_classification = include_classification && price_data_provider.supplies_classification? &&
       !classification_locked? && classification_source.blank? && sector.blank? && industry.blank? &&
-      (classification_fetched_at.nil? || classification_fetched_from != classification_provider_key)
+      (classification_fetched_at.nil? || classification_fetched_from != provider_key)
 
     # Keyed on the TIMESTAMP, not on whether constituents are present. Most
     # securities are not funds, so the provider returns nothing for them -- and a
@@ -307,8 +307,13 @@ module Security::Provided
     # so every security would be fetched on every sync. With the ask gated, a
     # nil stamp under an incapable provider is harmless, and the day a capable
     # one is configured the security is asked once and settles.
+    #
+    # The stamp names the provider that answered and is compared with the one
+    # resolved now, as the classification stamp is, so a different provider
+    # -- assigned, or the enabled default for a security with no
+    # `price_provider` -- is asked once.
     wants_constituents = include_constituents && price_data_provider.supplies_constituents? &&
-      constituents_fetched_at.nil?
+      (constituents_fetched_at.nil? || constituents_fetched_from != provider_key)
 
     unless has_metadata && !wants_classification && !wants_constituents && !clear_cache
       response = price_data_provider.fetch_security_info(
@@ -338,7 +343,7 @@ module Security::Provided
           # validations, and a row can hold a value they now refuse; stamping
           # anyway would close the gate on an answer that never landed.
           if wants_classification && stored
-            update_columns(classification_fetched_at: Time.current, classification_fetched_from: classification_provider_key)
+            update_columns(classification_fetched_at: Time.current, classification_fetched_from: provider_key)
           end
         end
       else
@@ -456,7 +461,8 @@ module Security::Provided
 
       Security::Constituent.where(security_id: id).delete_all
       Security::Constituent.insert_all!(rows.map { |row| row.merge(security_id: id) }) if rows.any?
-      update_column(:constituents_fetched_at, Time.current)
+      update_columns(constituents_fetched_at: Time.current,
+                     constituents_fetched_from: self.class.provider_key_for(price_data_provider))
       true
     end
 
