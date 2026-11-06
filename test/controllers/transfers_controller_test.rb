@@ -785,6 +785,20 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "cannot delete a split whose child is a confirmed transfer leg into an account that counts transfers" do
+    other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    parent = create_transaction(account: accounts(:depository), amount: 250)
+    child = parent.split!([ { name: "Payment", amount: 200 }, { name: "Groceries", amount: 50 } ]).first
+    child.transaction.update!(kind: "funds_movement")
+    inflow = create_transaction(account: other_liability, amount: -200, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: child.transaction, inflow_transaction: inflow.transaction, status: "confirmed")
+
+    assert_no_difference [ -> { Transfer.count }, -> { Entry.count } ] do
+      delete transaction_url(parent)
+      post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ parent.id ] } }
+    end
+  end
+
   test "editing the amount of a confirmed transfer resyncs both accounts" do
     transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: accounts(:other_liability), status: "confirmed")
     Sync.where(syncable: [ accounts(:depository), accounts(:other_liability) ]).delete_all

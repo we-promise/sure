@@ -32,6 +32,12 @@ class Rule::Action < ApplicationRecord
   validates_with DatabaseTextValidator, attributes: %i[action_type value]
   before_validation :build_split_value, if: -> { action_type == "split_transaction" && split_rows.present? }
   validate :split_config_valid, if: -> { action_type == "split_transaction" }
+  # Only for a target the user picks; one another member saved and that is
+  # resubmitted unchanged stays, and imports without a user are not affected.
+  validate :transfer_target_writable_by_user, if: -> {
+    action_type == "set_as_transfer_or_payment" && Current.user && value.present? &&
+      (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
+  }
 
   # Pre-seed (watermark): when an EMAIL_NOTIFICATION action is created — on a
   # new rule OR added to an existing one — record all currently-matching
@@ -94,7 +100,15 @@ class Rule::Action < ApplicationRecord
   end
 
   def options
-    rule.option_list([ :action, action_type ]) { executor.options }
+    list = rule.option_list([ :action, action_type ]) { executor.options }
+    return list unless action_type == "set_as_transfer_or_payment" && value.present?
+    return list if list.any? { |_, id| id.to_s == value.to_s }
+
+    # Keep showing a target another member saved, which this user can't pick.
+    saved = rule.option_list([ :saved_action_option, action_type, value.to_s ]) do
+      rule.family.accounts.where(id: value).pluck(:name, :id) if UuidFormat.valid?(value)
+    end
+    saved.present? ? list + saved : list
   end
 
   def claimed_attributes
@@ -127,6 +141,12 @@ class Rule::Action < ApplicationRecord
   end
 
   private
+    def transfer_target_writable_by_user
+      return if UuidFormat.valid?(value) && executor.target_accounts_for(Current.user).exists?(id: value)
+
+      errors.add(:value, :transfer_target_not_writable)
+    end
+
     def execution_value
       executor.type == "multi_select" ? value.to_s.split(",") : value
     end

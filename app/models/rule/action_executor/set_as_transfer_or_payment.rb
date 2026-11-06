@@ -3,8 +3,14 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     "select"
   end
 
+  # A confirmed transfer moves the target's balance when it counts transfers,
+  # so a user only picks accounts they can write to.
   def options
-    family.accounts.alphabetically.pluck(:name, :id)
+    target_accounts_for(Current.user).alphabetically.pluck(:name, :id)
+  end
+
+  def target_accounts_for(user)
+    user ? family.accounts.writable_by(user) : family.accounts
   end
 
   def claimed_attributes
@@ -22,6 +28,10 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
     count_modified_resources(scope) do |txn|
       entry = txn.entry
+      # Transfer::Matcher refuses these too: a split's amount is carried by its
+      # children, and a transfer on either would count the money twice.
+      next false if entry.excluded? || entry.split_child? || entry.split_parent?
+
       unless txn.transfer?
         transfer = build_transfer(target_account, entry)
         Transfer.transaction do

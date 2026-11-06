@@ -17,12 +17,13 @@ class Transactions::BulkDeletionsController < ApplicationController
       params.require(:bulk_delete).permit(entry_ids: [])
     end
 
-    # Deleting a transfer leg removes the transfer, which moves the balance of
-    # a counterpart that counts transfers; skip those the user cannot write.
+    # Deleting a transfer leg (or a split whose child is one) removes the
+    # transfer, which moves the balance of a counterpart that counts transfers;
+    # skip those the user cannot write.
     def entries_moving_unwritable_balances(scope, writable_account_ids)
       scope.where(id: bulk_delete_params[:entry_ids], entryable_type: "Transaction")
-           .includes(:entryable)
-           .select { |entry| entry.entryable.transfer&.transfer_counting_accounts&.any? { |account| !writable_account_ids.include?(account.id) } }
+           .includes(:entryable, child_entries: :entryable)
+           .select { |entry| entry.transfer_counting_accounts.any? { |account| !writable_account_ids.include?(account.id) } }
            .map(&:id)
     end
 

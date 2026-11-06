@@ -280,6 +280,39 @@ class Rule::ActionTest < ActiveSupport::TestCase
     assert_equal category, transfer.outflow_transaction.category
   end
 
+  test "set_as_transfer_or_payment leaves split parents and split children alone" do
+    entry = @txn1.entry
+    children = entry.split!([ { name: "Part A", amount: 60 }, { name: "Part B", amount: 40 } ])
+    transaction_ids = [ @txn1.id ] + children.map(&:entryable_id)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_as_transfer_or_payment", value: accounts(:other_asset).id)
+
+    assert_no_difference "Transfer.count" do
+      assert_equal 0, action.apply(Transaction.where(id: transaction_ids))
+    end
+  end
+
+  test "set_as_transfer_or_payment only lets a user pick an account they can edit and keeps a saved one" do
+    unwritable = accounts(:other_asset)
+    writable = accounts(:depository)
+    saved = @transaction_rule.actions.create!(action_type: "set_as_transfer_or_payment", value: unwritable.id)
+
+    Current.stubs(:user).returns(users(:family_member))
+
+    picked = @transaction_rule.actions.build(action_type: "set_as_transfer_or_payment", value: unwritable.id)
+    assert_not picked.valid?
+    assert picked.errors.of_kind?(:value, :transfer_target_not_writable)
+    assert @transaction_rule.actions.build(action_type: "set_as_transfer_or_payment", value: writable.id).valid?
+
+    option_ids = Rule::ActionExecutor::SetAsTransferOrPayment.new(@transaction_rule).options.map(&:last)
+    assert_includes option_ids, writable.id
+    assert_not_includes option_ids, unwritable.id
+
+    saved.reload
+    assert saved.valid?, "a target another member saved stays valid when resubmitted unchanged"
+    assert_includes saved.options, [ unwritable.name, unwritable.id ]
+  end
+
   test "set_investment_activity_label ignores invalid values" do
     action = Rule::Action.new(
       rule: @transaction_rule,
