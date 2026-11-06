@@ -315,6 +315,30 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_in_delta 60.0, top_weight, 0.01
   end
 
+  # Characterisation: every field the dashboard's investment summary, the
+  # Reports investment section and the printed report read from a top_holdings
+  # row, on a portfolio with account cash and one security in two accounts and
+  # two currencies. Allocation's own cash row must leave all of it unchanged.
+  test "top_holdings reports the same rows to its callers whatever allocation adds" do
+    usd = create_investment_account(balance: 3000, cash_balance: 1000, currency: "USD")
+    eur = create_investment_account(balance: 1000, cash_balance: 0, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    voo = Security.create!(ticker: "VOO", name: "Vanguard S&P 500")
+    nameless = Security.create!(ticker: "NONAME")
+    Holding.create!(account: usd, security: voo, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "USD")
+    Holding.create!(account: eur, security: voo, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "EUR")
+    Holding.create!(account: usd, security: nameless, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+
+    top = @statement.top_holdings(limit: 5)
+
+    # Portfolio 3000 + 1100 = 4100. VOO 1000 + 1100 = 2100 (51.22%); NONAME 1000 (24.39%).
+    assert_equal [ [ voo, "VOO", "Vanguard S&P 500", Money.new(2100, "USD"), BigDecimal("51.22") ],
+                   [ nameless, "NONAME", "NONAME", Money.new(1000, "USD"), BigDecimal("24.39") ] ],
+                 top.map { |row| [ row.security, row.ticker, row.name, row.amount_money, row.weight ] }
+    assert_equal top.map(&:weight), @statement.allocation.first(2).map(&:weight),
+                 "allocation's security rows carry the weights top_holdings reports"
+  end
+
   test "allocation weights sum to 100% with mixed currencies" do
     usd_account = create_investment_account(balance: 2100, currency: "USD")
     eur_account = create_investment_account(balance: 2000, currency: "EUR")
