@@ -13,24 +13,15 @@ class PortfoliosTest < ApplicationSystemTestCase
     original = ActionController::Base.allow_forgery_protection
     ActionController::Base.allow_forgery_protection = true
     visit portfolio_path
+    record_saved_section_order
 
     find("section[data-section-key='accounts'] button[data-reports-section-target='button']").click
 
     assert_selector "section[data-section-key='accounts'] button[aria-expanded='false']"
-    assert wait_for { @user.reload.preferences.dig("portfolio_collapsed_sections", "accounts") == true },
-      "the collapse was not saved under portfolio_collapsed_sections"
+    assert_selector "html[data-order-saved='200']"
+    assert_equal true, @user.reload.preferences.dig("portfolio_collapsed_sections", "accounts")
     assert_nil @user.preferences["reports_collapsed_sections"]
   ensure
     ActionController::Base.allow_forgery_protection = original
   end
-
-  private
-    def wait_for(timeout: Capybara.default_max_wait_time)
-      deadline = Time.current + timeout
-      until (result = yield)
-        break if Time.current > deadline
-        sleep 0.1
-      end
-      result
-    end
 end
