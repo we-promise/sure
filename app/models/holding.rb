@@ -91,9 +91,10 @@ class Holding < ApplicationRecord
   # (.avg_cost_rates_join, .avg_cost_totals_sql, .avg_cost_from_totals), so
   # the batch cannot answer differently from the holding on its own. Holdings
   # with a stored cost basis are skipped, since #avg_cost never reaches the
-  # fallback for them.
+  # fallback for them. So are holdings with unsaved changes, unsaved ones
+  # included: the query reads the stored row, which is not what they hold.
   def self.preload_avg_costs(holdings)
-    pending = holdings.reject(&:known_cost_basis)
+    pending = holdings.reject { |holding| holding.known_cost_basis || holding.changed? }
     return if pending.empty?
 
     rows = Holding.where(id: pending.map(&:id))
