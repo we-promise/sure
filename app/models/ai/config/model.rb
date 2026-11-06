@@ -1,10 +1,14 @@
-# A model on an endpoint, with what it can do (section 4.2).
+# A model on an endpoint, with what it can do (section 4.2), and its budgets:
+# - batch_size: at most this many items in one call (section 8.1);
+# - context_window: the tokens one request may use, nil when unknown (no token slicing);
+# - max_output_tokens: sent as the request's limit; nil sends none.
 class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :context_window, :max_output_tokens,
-                                      :embedding_dimensions, :input_cost_per_mtok, :output_cost_per_mtok)
+                                      :batch_size, :embedding_dimensions, :input_cost_per_mtok, :output_cost_per_mtok)
   CAPABILITIES = %w[tools vision documents ocr thinking streaming structured_output embedding judge calibrated_confidence].freeze
+  DEFAULT_BATCH_SIZE = 25   # today's LLM_MAX_ITEMS_PER_CALL default
 
-  def initialize(endpoint:, name:, capabilities: [], context_window: nil, max_output_tokens: nil, embedding_dimensions: nil,
-                 input_cost_per_mtok: nil, output_cost_per_mtok: nil)
+  def initialize(endpoint:, name:, capabilities: [], context_window: nil, max_output_tokens: nil,
+                 batch_size: DEFAULT_BATCH_SIZE, embedding_dimensions: nil, input_cost_per_mtok: nil, output_cost_per_mtok: nil)
     capabilities = Array(capabilities).map(&:to_s).uniq.freeze
     unknown = capabilities - CAPABILITIES
     raise ArgumentError, "unknown capabilities: #{unknown.join(", ")}" if unknown.any?

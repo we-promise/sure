@@ -41,9 +41,7 @@ Sure/NoAiEnv:
     - "app/models/provider/anthropic/pdf_processor.rb"          # 2e
     - "app/models/provider/anthropic/provider_merchant_enhancer.rb" # 2c
     - "app/models/provider/jev.rb"                              # 2d
-    - "app/models/provider/llm_concept.rb"                      # 2c
     - "app/models/provider/openai.rb"                           # PR 6: chat
-    - "app/models/provider/openai/concerns/json_mode.rb"        # 2c
     - "app/models/provider/registry.rb"                         # 2e, PR 6
     - "app/models/setting.rb"                                   # PR 7: settings pages
     - "app/models/vector_store/pgvector.rb"                     # 2e

@@ -8,7 +8,7 @@ class ProviderMerchant::Enhancer
   def batches
     return [] unless llm_provider
 
-    unenhanced_merchants.map(&:id).each_slice(Provider::LlmConcept.max_items_per_call).to_a
+    unenhanced_merchants.map(&:id).each_slice(batch_size).to_a
   end
 
   def enhance
@@ -24,7 +24,7 @@ class ProviderMerchant::Enhancer
     enhanced_count = 0
     deduplicated_count = 0
 
-    unenhanced_merchants.each_slice(Provider::LlmConcept.max_items_per_call) do |batch|
+    unenhanced_merchants.each_slice(batch_size) do |batch|
       result = llm_provider.enhance_provider_merchants(
         merchants: batch.map { |m| { id: m.id, name: m.name } },
         family: @family
@@ -86,6 +86,8 @@ class ProviderMerchant::Enhancer
     def llm_provider
       @llm_provider ||= Provider::Registry.preferred_llm_provider
     end
+
+    def batch_size = Ai.plan(:enhance_merchants, family: @family)&.model&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE
 
     def unenhanced_merchants
       @unenhanced_merchants ||= begin

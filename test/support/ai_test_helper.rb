@@ -65,6 +65,15 @@ module AiTestHelper
     AiTestHelper.build_ai_config(base.models, names.merge(routes.transform_keys(&:to_sym)), vector_store_backend:)
   end
 
+  # Runs the block with the test setup's openai/gpt-4.1-mini changed, for budgets and the like:
+  #   with_ai_model_settings(batch_size: 2) { ... }
+  def with_ai_model_settings(**attributes, &block)
+    base = AiTestHelper.test_config
+    models = base.models.map { _1.endpoint.name == "openai" ? _1.with(**attributes) : _1 }
+    names = base.routes.transform_values { |list| list.map { "#{_1.endpoint.name}/#{_1.model.name}" } }
+    Ai::Config.with(AiTestHelper.build_ai_config(models, names, vector_store_backend: base.vector_store_backend), &block)
+  end
+
   # Runs the block with no AI configured: every feature is :not_configured.
   def without_ai(&block)
     Ai::Config.with(Ai::Config.new, &block)

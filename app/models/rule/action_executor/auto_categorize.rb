@@ -52,7 +52,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
       return 0
     end
 
-    batch_size = Provider::LlmConcept.max_items_per_call
+    batch_size = Ai.plan(:categorize, family: rule.family)&.model&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE
     jobs_count = 0
 
     enrichable_transactions.in_batches(of: batch_size).each_with_index do |transactions, idx|

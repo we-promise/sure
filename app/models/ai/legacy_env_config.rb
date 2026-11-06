@@ -15,6 +15,15 @@ class Ai::LegacyEnvConfig
   # model on the OpenAI endpoint. PR 7's OpenAI preset names the store's embedding model.
   VECTOR_STORE_MODEL = "vector_store".freeze
   LLM_FEATURES = %i[bill_setup extract_pdf detect_merchants enhance_merchants].freeze
+  # Each generation feature's prompt folder (section 8.3). Today's code sends OpenAI's detailed
+  # prompt on native OpenAI, the simplified one on custom servers, and Anthropic's own.
+  PROMPTS = {
+    categorize: "categorize_transactions", detect_merchants: "detect_merchants",
+    enhance_merchants: "enhance_merchants", bill_setup: "bill_setup"
+  }.freeze
+  SIMPLE_PROMPTS = %i[categorize detect_merchants enhance_merchants].freeze   # bill setup has one OpenAI prompt
+  JSON_MODES = %w[strict json_object none auto].freeze   # Provider::Openai::Concerns::JsonMode's
+  ANTHROPIC_MAX_TOKENS = 4096
   EMBEDDING_TIMEOUT = 120         # VectorStore::Embeddable's client
   EXTERNAL_ASSISTANT_TIMEOUT = 120 # Assistant::External::Client::TIMEOUT_READ
 
@@ -23,7 +32,8 @@ class Ai::LegacyEnvConfig
   SETTING_FIELDS = %i[
     openai_access_token openai_uri_base openai_model openai_request_timeout anthropic_access_token anthropic_model
     anthropic_base_url llm_provider jev_api_key jev_endpoint jev_model external_assistant_url external_assistant_token
-    external_assistant_model external_assistant_agent_id
+    external_assistant_model external_assistant_agent_id openai_json_mode llm_context_window llm_max_response_tokens
+    llm_max_items_per_call
   ].freeze
 
   def self.build = new.build
@@ -41,9 +51,13 @@ class Ai::LegacyEnvConfig
     embed_route_model = embed_route(backend, llm[:openai], embed_model)
 
     llm_models = Provider::Registry.llm_provider_order.filter_map { |name| llm[name]&.last }
-    routes = LLM_FEATURES.index_with { |feature| route_list(feature, llm_models) }
+    # Generation routes list only the preferred LLM, as today's preferred_llm_provider picks one:
+    # failover never sends a family's data to the provider today's code wouldn't use (2c's plan,
+    # decision 2). Chat keeps both until PR 6, which resolves its own provider.
+    preferred = llm_models.first(1)
+    routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
     routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
-    routes[:categorize] = route_list(:categorize, [ jev_model, *llm_models ].compact, conditions: { jev_model => :jev_family })
+    routes[:categorize] = route_list(:categorize, [ jev_model, *preferred ].compact, conditions: { jev_model => :jev_family })
     routes[:embed] = route_list(:embed, [ embed_route_model ].compact)
 
     endpoints = (llm.values.map(&:first) + [ jev_model, agent_model, embed_model ].compact.map(&:endpoint)).uniq
@@ -65,9 +79,11 @@ class Ai::LegacyEnvConfig
         name: uri_base ? "openai_compatible" : "openai", protocol: :compatible, preset: (:openai unless uri_base),
         base_url: uri_base, api_key: token, extra_headers: static_openai_headers, location: location_for(uri_base),
         timeout_seconds: Provider::Openai.request_timeout, responses_api: provider&.supports_responses_endpoint? || false,
-        vector_store:
+        vector_store:, json_mode: openai_json_mode
       )
-      [ endpoint, provider && llm_model(endpoint, provider, Provider::Openai.effective_model) ]
+      model = provider && llm_model(endpoint, provider, Provider::Openai.effective_model, context_window: context_window,
+                                    max_output_tokens: positive(env("LLM_MAX_RESPONSE_TOKENS"), Setting.llm_max_response_tokens))
+      [ endpoint, model ]
     end
 
     def anthropic
@@ -80,17 +96,33 @@ class Ai::LegacyEnvConfig
         name: "anthropic", protocol: :anthropic, preset: (:anthropic unless base_url), base_url:, api_key: token,
         location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       )
-      [ endpoint, provider && llm_model(endpoint, provider, Provider::Anthropic.effective_model) ]
+      # Today's Anthropic batches aren't token-sliced, so its window is known only when set.
+      model = provider && llm_model(endpoint, provider, Provider::Anthropic.effective_model,
+                                    context_window: positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window),
+                                    max_output_tokens: positive(env("ANTHROPIC_MAX_TOKENS")) || ANTHROPIC_MAX_TOKENS)
+      [ endpoint, model ]
     end
 
     # What today's providers accept: chat's prefix allow-list decides `tools` and `streaming`, and
     # PDF support decides `vision` and `documents`. Every LLM model does structured output.
-    def llm_model(endpoint, provider, name)
+    def llm_model(endpoint, provider, name, context_window:, max_output_tokens:)
       capabilities = %i[structured_output]
       capabilities += %i[tools streaming] if provider.supports_model?(name)
       capabilities += %i[vision documents] if provider.supports_pdf_processing?(model: name)
-      Ai::Config::Model.new(endpoint:, name:, capabilities:)
+      Ai::Config::Model.new(endpoint:, name:, capabilities:, context_window:, max_output_tokens:, batch_size:)
     end
+
+    # Today's budgets: Assistant::TokenBudget's window (2048 by default), the response cap only
+    # when someone set one, and LLM_MAX_ITEMS_PER_CALL items per call.
+    def context_window = Assistant::TokenBudget.context_window
+
+    def batch_size = positive(env("LLM_MAX_ITEMS_PER_CALL"), Setting.llm_max_items_per_call) || Ai::Config::Model::DEFAULT_BATCH_SIZE
+
+    def openai_json_mode
+      [ env("LLM_JSON_MODE"), Setting.openai_json_mode.presence ].find { JSON_MODES.include?(_1) } || "auto"
+    end
+
+    def positive(*values) = values.map(&:to_i).find(&:positive?)
 
     # Jev serves only families that chose it (Ai::Route#serves?), and only when it can be built:
     # its constructor refuses a cleartext endpoint off localhost.
@@ -159,7 +191,17 @@ class Ai::LegacyEnvConfig
 
     def route_list(feature, models, conditions: {})
       models.each_with_index.map do |model, position|
-        Ai::Route.new(feature:, position:, model:, condition: conditions[model])
+        Ai::Route.new(feature:, position:, model:, condition: conditions[model], prompt: prompt_for(feature, model))
+      end
+    end
+
+    def prompt_for(feature, model)
+      base = PROMPTS[feature]
+      return unless base && model.endpoint.protocol != :jev
+
+      if model.endpoint.protocol == :anthropic then "#{base}_anthropic"
+      elsif model.endpoint.name == "openai_compatible" && SIMPLE_PROMPTS.include?(feature) then "#{base}_simple"
+      else base
       end
     end
 

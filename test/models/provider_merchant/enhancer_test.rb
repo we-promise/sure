@@ -10,6 +10,7 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     Provider::Registry.stubs(:get_provider).with(:openai).returns(@llm_provider)
     Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
     Setting.stubs(:brand_fetch_logo_size).returns(40)
+    use_ai_routes
   end
 
   test "batches holds one LLM call's worth of merchants each" do
@@ -19,7 +20,7 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     end
     unenhanced = @family.assigned_merchants.where(type: "ProviderMerchant", website_url: [ nil, "" ]).pluck(:id)
 
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "2") do
+    with_ai_model_settings(batch_size: 2) do
       batches = ProviderMerchant::Enhancer.new(@family).batches
 
       assert_equal (unenhanced.size / 2.0).ceil, batches.size

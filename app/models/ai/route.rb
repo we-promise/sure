@@ -3,12 +3,37 @@
 #
 # `condition` limits who an entry serves. Until 2d, a Jev entry serves only families that chose
 # Jev (`:jev_family`), which is today's rule; 2d deletes it with `families.categorization_provider`.
-Ai::Route = Data.define(:feature, :position, :model, :condition) do
-  def initialize(feature:, position:, model:, condition: nil)
-    super(feature: feature.to_sym, position:, model:, condition:)
+#
+# An entry's own settings, for that entry only (section 4.2):
+# - prompt: the app/prompts folder it runs; nil means the feature's default (section 8.3);
+# - json_mode: overrides the endpoint's;
+# - reasoning_effort: one lowercase word sent as the model's effort; nil sends nothing (#3605).
+Ai::Route = Data.define(:feature, :position, :model, :condition, :prompt, :json_mode, :reasoning_effort) do
+  def initialize(feature:, position:, model:, condition: nil, prompt: nil, json_mode: nil, reasoning_effort: nil)
+    json_mode = json_mode&.to_sym
+    if json_mode && !Ai::Config::Endpoint::JSON_MODES.include?(json_mode)
+      raise ArgumentError, "unknown JSON mode #{json_mode.inspect}"
+    end
+    if reasoning_effort && !reasoning_effort.to_s.match?(/\A[a-z]{1,16}\z/)
+      raise ArgumentError, "reasoning effort must be one lowercase word"
+    end
+
+    super(feature: feature.to_sym, position:, model:, condition:, prompt: prompt&.to_s, json_mode:,
+          reasoning_effort: reasoning_effort&.to_s)
   end
 
   def endpoint = model.endpoint
+
+  def effective_json_mode = json_mode || endpoint.json_mode
+
+  # Jev and other decision models: they judge, they don't generate (2d).
+  def judge? = model.capable?(:judge)
+
+  # The transport for this entry's endpoint.
+  def transport = Ai::Transport.for(endpoint)
+
+  # What instrumentation and Ai::Comparison record: endpoint, model and the entry's overrides.
+  def to_event = model.to_event.merge({ prompt:, json_mode:, reasoning_effort: }.compact)
 
   def agent? = endpoint.agent?
 
