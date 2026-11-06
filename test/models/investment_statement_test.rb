@@ -889,6 +889,91 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 1000, series.values.first.value.amount
   end
 
+  # The family series start where the earliest broker's history starts, not
+  # where the latest one's does: linking a new broker must not erase the
+  # history of one the family already had, open or closed.
+  test "a closed broker keeps its history before a newer broker's first activity" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+    older_start = 8.days.ago.to_date
+    newer_start = 2.days.ago.to_date
+
+    older = create_investment_account(balance: 500)
+    newer = create_investment_account(balance: 1000)
+    (0..10).each do |offset|
+      date = 10.days.ago.to_date + offset
+      create_balance(older, date: date, amount: date >= older_start ? 500 : 0)
+      create_balance(newer, date: date, amount: date >= newer_start ? 1000 : 0)
+    end
+    older.entries.create!(date: older_start, name: "Deposit", amount: -500, currency: "USD", source: "plaid", entryable: Transaction.new)
+    newer.entries.create!(date: newer_start, name: "Deposit", amount: -1000, currency: "USD", source: "plaid", entryable: Transaction.new)
+
+    # Closed before the newer broker's first activity: its cut-off is 4 days ago.
+    older.update!(status: "disabled", disabled_at: 3.days.ago)
+
+    [ :value_series, :holdings_value_series ].each do |kind|
+      series = InvestmentStatement.new(@family).public_send(kind, period: period)
+      by_date = series.values.index_by(&:date)
+
+      assert_equal older_start, series.values.first.date, "#{kind} starts at the closed broker's first history"
+      (older_start..4.days.ago.to_date).each do |date|
+        assert_in_delta 500, by_date.fetch(date).value.amount, 0.001, "#{kind} on #{date} keeps the closed broker"
+      end
+      assert_in_delta 0, by_date.fetch(3.days.ago.to_date).value.amount, 0.001, "#{kind} after the cut-off"
+      assert_in_delta 1000, by_date.fetch(Date.current).value.amount, 0.001
+      # Dates before any broker's history are still trimmed.
+      assert series.values.none? { |v| v.date < older_start }, "#{kind} charts no leading zeros"
+    end
+  end
+
+  test "an open older broker keeps its history when a newer broker links" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+    older_start = 6.days.ago.to_date
+    newer_start = 2.days.ago.to_date
+
+    older = create_investment_account(balance: 500)
+    newer = create_investment_account(balance: 1000)
+    (0..10).each do |offset|
+      date = 10.days.ago.to_date + offset
+      create_balance(older, date: date, amount: date >= older_start ? 500 : 0)
+      create_balance(newer, date: date, amount: date >= newer_start ? 1000 : 0)
+    end
+    older.entries.create!(date: older_start, name: "Deposit", amount: -500, currency: "USD", source: "plaid", entryable: Transaction.new)
+    newer.entries.create!(date: newer_start, name: "Deposit", amount: -1000, currency: "USD", source: "plaid", entryable: Transaction.new)
+
+    series = @statement.value_series(period: period)
+    by_date = series.values.index_by(&:date)
+
+    assert_equal older_start, series.values.first.date
+    assert_in_delta 500, by_date.fetch(3.days.ago.to_date).value.amount, 0.001, "before the newer broker linked"
+    assert_in_delta 1500, by_date.fetch(Date.current).value.amount, 0.001
+    assert series.values.none? { |v| v.date < older_start }
+  end
+
+  # Every family series goes through the same trim, so assert the rule on
+  # each kind, with the builder's output fixed so only the trim decides.
+  test "value, holdings value and gains series all trim at the earliest supported start" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+    older = create_investment_account(balance: 0)
+    newer = create_investment_account(balance: 0)
+    older.entries.create!(date: 6.days.ago.to_date, name: "Deposit", amount: -1, currency: "USD", source: "plaid", entryable: Transaction.new)
+    newer.entries.create!(date: 2.days.ago.to_date, name: "Deposit", amount: -1, currency: "USD", source: "plaid", entryable: Transaction.new)
+
+    values = (0..10).map do |offset|
+      date = 10.days.ago.to_date + offset
+      Series::Value.new(date: date, date_formatted: date.to_s, value: Money.new(offset, "USD"),
+        trend: Trend.new(current: Money.new(offset, "USD"), previous: Money.new(offset, "USD"), favorable_direction: "up"))
+    end
+    built = Series.new(start_date: values.first.date, end_date: values.last.date, interval: "1 day", values: values, favorable_direction: "up")
+    Balance::ChartSeriesBuilder.stubs(:new).returns(stub(balance_series: built, holdings_balance_series: built, gains_series: built))
+
+    [ :value_series, :holdings_value_series, :gains_series ].each do |kind|
+      series = InvestmentStatement.new(@family).public_send(kind, period: period)
+
+      assert_equal 6.days.ago.to_date, series.start_date, kind
+      assert_equal (6.days.ago.to_date..Date.current).to_a, series.values.map(&:date), kind
+    end
+  end
+
   test "series cache key changes when a share is revoked" do
     shared_user = users(:new_email)
     account = create_investment_account(balance: 1000)

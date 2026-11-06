@@ -86,6 +86,56 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal Money.new(500, "USD"), series.trend.current
   end
 
+  # The sparkline aggregate starts where every linked account has history;
+  # only the family investment series opt into the earliest start.
+  test "aggregate_account_ids keeps the latest common start across several brokers" do
+    older = families(:empty).accounts.create!(name: "Older Broker", balance: 0, currency: "USD", accountable: Investment.new)
+    newer = families(:empty).accounts.create!(name: "Newer Broker", balance: 0, currency: "USD", accountable: Investment.new)
+    (0..5).each do |offset|
+      date = 5.days.ago.to_date + offset
+      older.balances.create!(date: date, balance: 100, currency: "USD", start_non_cash_balance: 100)
+      newer.balances.create!(date: date, balance: 200, currency: "USD", start_non_cash_balance: 200)
+    end
+    older.entries.create!(date: 4.days.ago.to_date, name: "Deposit", amount: -100, currency: "USD", source: "plaid", entryable: Transaction.new)
+    newer.entries.create!(date: 2.days.ago.to_date, name: "Deposit", amount: -200, currency: "USD", source: "plaid", entryable: Transaction.new)
+    period = Period.custom(start_date: 5.days.ago.to_date, end_date: Date.current)
+
+    series = Balance::LinkedInvestmentSeriesNormalizer.aggregate_account_ids(
+      account_ids: [ older.id, newer.id ], currency: "USD", period: period, favorable_direction: "up"
+    )
+
+    assert_equal 2.days.ago.to_date, series.start_date
+    assert_equal (2.days.ago.to_date..Date.current).to_a, series.values.map(&:date)
+  end
+
+  test "trim_to_supported_history starts at the latest or the earliest broker's history" do
+    older = families(:empty).accounts.create!(name: "Older Broker", balance: 0, currency: "USD", accountable: Investment.new)
+    newer = families(:empty).accounts.create!(name: "Newer Broker", balance: 0, currency: "USD", accountable: Investment.new)
+    manual = families(:empty).accounts.create!(name: "Manual", balance: 0, currency: "USD", accountable: Investment.new)
+    older.entries.create!(date: 4.days.ago.to_date, name: "Deposit", amount: -100, currency: "USD", source: "plaid", entryable: Transaction.new)
+    newer.entries.create!(date: 2.days.ago.to_date, name: "Deposit", amount: -200, currency: "USD", source: "plaid", entryable: Transaction.new)
+    values = (0..5).map do |offset|
+      date = 5.days.ago.to_date + offset
+      Series::Value.new(date: date, date_formatted: date.to_s, value: Money.new(offset, "USD"),
+        trend: Trend.new(current: Money.new(offset, "USD"), previous: Money.new(offset, "USD"), favorable_direction: "up"))
+    end
+    series = Series.new(start_date: values.first.date, end_date: values.last.date, interval: "1 day", values: values, favorable_direction: "up")
+    ids = [ older.id, newer.id, manual.id ]
+
+    common = Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(series, account_ids: ids)
+    earliest = Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(series, account_ids: ids, history_start: :earliest)
+
+    assert_equal 2.days.ago.to_date, common.start_date
+    assert_equal 4.days.ago.to_date, earliest.start_date
+    assert_equal (4.days.ago.to_date..Date.current).to_a, earliest.values.map(&:date)
+    assert earliest.values.first.trend.direction.flat?
+
+    assert_same series, Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(series, account_ids: [ manual.id ], history_start: :earliest)
+    assert_raises(ArgumentError) do
+      Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(series, account_ids: ids, history_start: :bogus)
+    end
+  end
+
   test "common_supported_history_start_date ignores unlinked manual accounts in mixed portfolio" do
     linked_account = families(:empty).accounts.create!(
       name: "Linked Investment",

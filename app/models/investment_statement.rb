@@ -297,16 +297,19 @@ class InvestmentStatement
     # Rails.cache across requests, plus a per-instance memo so a single
     # dashboard render that asks for the same series twice runs one query.
     #
-    # Every series is trimmed to the date all linked accounts in the scope
-    # have history for, as the account charts are: the balance rows before a
-    # broker's first snapshot are zeros, and charting them shows a portfolio
-    # that appears from nothing on the day the connection was made.
+    # Every series is trimmed to the first date any linked account in the
+    # scope has history for: the balance rows before a broker's first snapshot
+    # are zeros, and charting them shows a portfolio that appears from nothing
+    # on the day the connection was made. The earliest start, not the common
+    # one, so linking a new broker does not erase the history of an older
+    # one, open or closed.
     def fetch_series(kind, period)
       @series_cache ||= {}
       @series_cache[[ kind, period.start_date, period.end_date ]] ||= Rails.cache.fetch(series_cache_key(kind, period)) do
         Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(
           yield(series_builder(period)),
-          account_ids: historical_scope.account_ids
+          account_ids: historical_scope.account_ids,
+          history_start: :earliest
         )
       end
     end
