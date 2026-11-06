@@ -389,6 +389,11 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-portfolio-holding='PARTIAL']", text: /#{eight}/,
       message: "a partly known basis still shows the average cost the row hint describes"
     assert_select "[data-portfolio-positions='PARTIAL'] span[title=?]", position_hint, count: 1
+    # AAPL stores no basis but has a buy trade, so its position shows the
+    # computed average cost rather than the missing-basis dash.
+    aapl_cost = statement_avg_cost("AAPL")
+    assert_select "[data-portfolio-positions='AAPL'] span[title=?]", position_hint, count: 0
+    assert_select "[data-portfolio-positions='AAPL'] td", text: ApplicationController.helpers.format_money(aapl_cost)
   end
 
   test "the page's query count is bounded and does not grow with holdings" do
@@ -430,6 +435,12 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
 
     def provider_queries(&block)
       capture_sql_queries(&block).count { |sql| sql.include?(%(FROM "lunchflow_accounts")) }
+    end
+
+    def statement_avg_cost(ticker)
+      row = InvestmentStatement.new(@family, user: @user).holdings_table_rows.find { |r| r.ticker == ticker }
+      assert_nil row.positions.sole.cost_basis, "the premise: #{ticker} stores no cost basis"
+      row.positions.sole.avg_cost
     end
 
     def create_second_aapl_account(qty:, price:)
