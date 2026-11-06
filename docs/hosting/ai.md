@@ -25,7 +25,7 @@ The interactive chat where users ask questions about their finances. Routes thro
 
 ### 2. Auto-Categorization and Merchant Detection (background)
 
-Background jobs that classify transactions and detect merchants. These use the LLM provider selected by `LLM_PROVIDER` (OpenAI-compatible or native Anthropic; categorization uses Jev instead when it's selected), regardless of what the chat assistant uses. They rely on structured function calling with JSON schemas, not conversational chat.
+Background jobs that classify transactions and detect merchants. These use the LLM provider selected by `LLM_PROVIDER` (OpenAI-compatible or native Anthropic; categorization uses [Jev](#jev-typesafe-for-categorization) instead when the instance chooses it), regardless of what the chat assistant uses. They rely on structured output with JSON schemas, not conversational chat.
 
 ### What this means in practice
 
@@ -259,6 +259,25 @@ OPENAI_MODEL=anthropic/claude-3.5-sonnet
 **Recommended Claude models:**
 - `anthropic/claude-sonnet-4.5` - Excellent reasoning, good with financial data
 - `anthropic/claude-haiku-4.5` - Fast and cost-effective
+
+### Jev (TypeSafe) for categorization
+
+Jev is a decision model: it picks each transaction's category from your list and reports a calibrated confidence, instead of generating text. It only categorizes; chat, merchant detection and PDF import keep using the LLM provider.
+
+```bash
+JEV_API_KEY=your-typesafe-key
+# JEV_ENDPOINT=https://api.typesafe.ai/v1/systemone   # the default
+# JEV_MODEL=jev-latest                                 # the default
+CATEGORIZATION_PROVIDER=jev                            # or choose it on the Self-Hosting page
+```
+
+- **One choice for the instance.** Since v0.7.7 the Jev choice applies to every family on the instance (it was per family before). On upgrade, an instance with one family keeps that family's choice; on an instance with several, every family goes back to the LLM provider until an admin chooses Jev again. Per-feature model lists come with the AI settings pages in a later release.
+- **Endpoints.** Only TypeSafe-style endpoints ending in `/v1/systemone` work, including a self-hosted server. Jev through OpenRouter (`https://openrouter.ai/api/alpha/decisions`) stops working in v0.7.7 and comes back with a later release; any other path isn't supported. Sure leaves an unsupported endpoint out, logs a warning and categorizes with the LLM provider, and the settings form refuses one.
+- **Self-hosted servers.** An `http://` endpoint is treated as a server on your own network, on any host (not only localhost). Sure sends it one request at a time; set `JEV_CONCURRENCY` to send more. Its answers aren't held back by the confidence threshold, since its confidence hasn't been checked.
+- **No failover.** When Jev is chosen and fails, the batch fails and is retried later; it's never sent to the LLM provider instead.
+- **Concurrency and timeout.** Jev answers one transaction per request, so a batch runs as parallel requests: 8 at a time on TypeSafe's API (`JEV_CONCURRENCY`), each with `JEV_REQUEST_TIMEOUT` seconds (default 30).
+- **Usage.** Each Jev request is a row on the LLM Usage page, grouped per batch.
+- **Shadow comparison.** With a shadow rate above 0, a sample of categorization batches also runs on the provider you didn't choose, as a separate background job, and the Self-Hosting page shows how often the two agree. Its answers are never applied.
 
 ### Other Providers
 

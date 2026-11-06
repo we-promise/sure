@@ -13,7 +13,7 @@ being changed. These guides hold the detailed conventions and procedures.
 | Add or modify an API v1 endpoint | [API endpoint consistency](api-endpoint-consistency.md) |
 | Change provider imports, pending/FX metadata or diagnostics | [Provider sync guidance](providers.md) |
 | Add a securities price provider | [Provider walkthrough](adding-a-securities-provider.md) |
-| Add a typed classification provider (Jev/TypeSafe) | [Classification provider walkthrough](adding-a-classification-provider.md) |
+| Answer a feature with a decision model (Jev/TypeSafe) | [Adding a judgement](adding-a-judgement.md) |
 | Change AI transports, AI HTTP clients, AI usage or tracing | [AI pipeline](ai-pipeline.md) |
 | Add a preview survey or usage event | [Feedback surveys](feedback-surveys.md) |
 | Gate or release a preview feature | [Preview-feature gating](gating-a-preview-feature.md) |

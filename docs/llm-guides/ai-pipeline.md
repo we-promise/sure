@@ -205,3 +205,51 @@ flowchart LR
   with `RECORD_CASSETTES=1` and the keys in ENV, or run them live with `AI_LIVE=1`.
 - CI: `ai-evals.yml` runs the eval datasets against recorded answers on any AI change; the
   `ai-live` label runs the live tests and evals with repository secrets.
+
+## Judgements and shadow runs (PR 2d)
+
+**Judgements.** A decision model (Jev) answers a feature through an `Ai::Judgement`, which the
+feature's generation declares with `judged_by`. The generation's loop builds it on a `judge`
+route with the same items, so failover from Jev to an LLM switches class, and both return one
+value shape. `Ai::Transport::Jev#judge` goes through RubyLLM's `typesafe` provider, fanning a batch
+out on the endpoint's `parallel_requests`. See [Adding a judgement](adding-a-judgement.md).
+
+**Shadow runs.** A generation that declares
+
+```ruby
+shadow subject: "Transaction",
+       compare: ->(value) { value[:categorizations].to_h { [ _1[:transaction_id].to_s, [ category_id_for(_1[:category_name]), _1[:confidence] ] ] } }
+```
+
+is sampled after each successful call at the family's rate (until PR 7). On a hit, `Ai::Shadow`
+enqueues `Ai::ShadowJob` with the items the call was sent and the primary's compared answer. The
+job runs the same class on the `shadow_<feature>` route; its calls are recorded under
+`shadow_<feature>` and tagged `shadow`, and its answer goes only to the `compare.ai_shadow`
+event, which `Ai::Instrumentation::ComparisonSubscriber` writes to `Ai::Comparison`, one row per
+item. Nothing is applied.
+
+| Concern | File |
+|---|---|
+| The judgement base and categorize's | `app/models/ai/judgement.rb`, `app/models/ai/judgements/` |
+| The Jev transport | `app/models/ai/transport/jev.rb` |
+| Sampling and the job | `app/models/ai/shadow.rb`, `app/jobs/ai/shadow_job.rb` |
+| Comparisons | `app/models/ai/comparison.rb`, `app/models/ai/instrumentation/comparison_subscriber.rb` |
+| The deprecated Jev settings | `app/models/ai/legacy_env_config/jev.rb` |
+
+**Rules**
+
+- `compare` maps a value to `{ item id => [value, confidence] }` with ids, not names, so renamed
+  categories still compare. An item both sides answered agrees when the values match (a shared
+  abstention included); an item only one side answered never agrees.
+- Only `ComparisonSubscriber` writes `Ai::Comparison`, and a shadow answer is never written to
+  the item (`test/architecture/ai_shadow_test.rb`).
+- A shadow job never retries: a failed diagnostic is skipped.
+
+**Tests**
+
+- `stub_ai` answers judge requests by item id (see the judgement guide); a block can tell
+  `Ai::Transport::Base::JudgeRequest` from `Request`, and `request.feature` is
+  `:shadow_categorize` on a shadow run.
+- `perform_enqueued_jobs` around `Ai::GenerationJob.perform_now(:categorize, …)` runs the shadow
+  job too (`test/jobs/ai/shadow_job_test.rb`).
+
