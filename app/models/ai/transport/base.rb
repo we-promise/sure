@@ -168,7 +168,8 @@ class Ai::Transport::Base
     def instrument(name, model:, request:)
       call = Ai::CallContext.current
       payload = { feature: call&.feature, call_id: call&.call_id, correlation_id: call&.correlation_id,
-                  family_id: call&.family_id, endpoint: endpoint.to_event, route: model.to_event, request: }
+                  family_id: call&.family_id, endpoint: endpoint.to_event, route: model.to_event, request:,
+                  shadow: call&.shadow? || false }
 
       ActiveSupport::Notifications.instrument("#{name}.ai", payload) do
         result = yield

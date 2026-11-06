@@ -56,15 +56,17 @@ class Settings::CategorizationProviderTest < ApplicationSystemTestCase
 
   test "shadow results summarise recorded comparisons" do
     set_preview_features(true)
-    @family.categorization_comparisons.create!(
-      applied_provider: "openai", applied_category_name: "Groceries",
-      shadow_provider: "jev", shadow_category_name: "Restaurants & Bars",
-      shadow_confidence: 0.52, agreed: false
+    groceries = @family.categories.find_or_create_by!(name: "Groceries")
+    restaurants = @family.categories.find_or_create_by!(name: "Restaurants & Bars")
+    coffee = @family.categories.find_or_create_by!(name: "Coffee")
+    route = ->(endpoint) { { endpoint:, model: "test-model" } }
+    @family.ai_comparisons.create!(
+      feature: "categorize", primary_route: route.("openai"), shadow_route: route.("jev"),
+      primary_value: groceries.id, shadow_value: restaurants.id, shadow_confidence: 0.52, agreed: false
     )
-    @family.categorization_comparisons.create!(
-      applied_provider: "openai", applied_category_name: "Coffee",
-      shadow_provider: "jev", shadow_category_name: "Coffee",
-      shadow_confidence: 0.97, agreed: true
+    @family.ai_comparisons.create!(
+      feature: "categorize", primary_route: route.("openai"), shadow_route: route.("jev"),
+      primary_value: coffee.id, shadow_value: coffee.id, shadow_confidence: 0.97, agreed: true
     )
 
     visit settings_hosting_path

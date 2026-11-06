@@ -11,6 +11,9 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   aliases categorizations: %w[results], transaction_id: %w[id txn_id], category_name: %w[category name]
   blank_item { _1[:category_name].nil? }
   judged_by Ai::Judgements::CategorizeTransaction
+  # Category ids, not names, so renamed or duplicate categories still compare (section 8.2).
+  shadow subject: "Transaction",
+         compare: ->(value) { value[:categorizations].to_h { [ _1[:transaction_id].to_s, [ category_id_for(_1[:category_name]), _1[:confidence] ] ] } }
 
   # Common ways a model names a category the family spells differently.
   NAME_VARIATIONS = [
@@ -61,6 +64,8 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   end
 
   private
+    def category_id_for(name) = name && @categories.find { _1[:name].to_s == name.to_s }&.dig(:id)&.to_s
+
     def category_name_for(name)
       names = @categories.map { _1[:name].to_s }
       names.find { _1 == name } || names.find { _1.casecmp?(name) } || fuzzy_match(name, names)

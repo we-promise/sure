@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_06_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_06_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -179,6 +179,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_06_140000) do
     t.string "region"
     t.datetime "updated_at", null: false
     t.index ["addressable_type", "addressable_id"], name: "index_addresses_on_addressable"
+  end
+
+  create_table "ai_comparisons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.boolean "agreed", null: false
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "feature", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.decimal "primary_confidence", precision: 5, scale: 4
+    t.jsonb "primary_route", default: {}, null: false
+    t.string "primary_value"
+    t.decimal "shadow_confidence", precision: 5, scale: 4
+    t.jsonb "shadow_route", default: {}, null: false
+    t.string "shadow_value"
+    t.uuid "subject_id"
+    t.string "subject_type"
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "feature", "agreed", "created_at"], name: "index_ai_comparisons_on_family_feature_agreement"
+    t.index ["subject_type", "subject_id"], name: "index_ai_comparisons_on_subject_type_and_subject_id"
   end
 
   create_table "akahu_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -416,23 +435,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_06_140000) do
     t.index ["family_id", "last_used_at"], name: "index_categories_on_family_id_and_last_used_at"
     t.index ["family_id", "name"], name: "index_categories_on_family_id_and_name", unique: true
     t.index ["family_id"], name: "index_categories_on_family_id"
-  end
-
-  create_table "categorization_comparisons", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.boolean "agreed", null: false
-    t.string "applied_category_name"
-    t.string "applied_provider", null: false
-    t.datetime "created_at", null: false
-    t.uuid "family_id", null: false
-    t.string "shadow_category_name"
-    t.decimal "shadow_confidence", precision: 5, scale: 4
-    t.jsonb "shadow_probabilities", default: {}, null: false
-    t.string "shadow_provider", null: false
-    t.uuid "transaction_id"
-    t.datetime "updated_at", null: false
-    t.index ["family_id", "agreed", "created_at"], name: "index_categorization_comparisons_on_family_agreement"
-    t.index ["family_id"], name: "index_categorization_comparisons_on_family_id"
-    t.index ["transaction_id"], name: "index_categorization_comparisons_on_transaction_id"
   end
 
   create_table "chats", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3042,6 +3044,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_06_140000) do
   add_foreign_key "accounts", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "ai_comparisons", "families"
   add_foreign_key "akahu_accounts", "akahu_items"
   add_foreign_key "akahu_items", "families"
   add_foreign_key "api_keys", "users"
@@ -3057,8 +3060,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_06_140000) do
   add_foreign_key "budgets", "families"
   add_foreign_key "budgets", "users", on_delete: :cascade
   add_foreign_key "categories", "families"
-  add_foreign_key "categorization_comparisons", "families"
-  add_foreign_key "categorization_comparisons", "transactions", on_delete: :nullify
   add_foreign_key "chats", "users"
   add_foreign_key "coinbase_accounts", "coinbase_items"
   add_foreign_key "coinbase_items", "families"

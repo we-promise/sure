@@ -5,7 +5,7 @@
 # Ai::Generations::CategorizeTransactions answers on an LLM, and its judgement
 # (Ai::Judgements::CategorizeTransaction) on Jev, in one shape. Answers from a model with
 # `calibrated_confidence` (cloud Jev) can be withheld by the family's threshold; the others
-# always apply (section 6).
+# always apply (section 6). Shadow runs are the generation's own (Ai::ShadowJob, section 8.2).
 class Family::AutoCategorizer
   include Ai::Requester
   ai_feature :categorize
@@ -43,7 +43,6 @@ class Family::AutoCategorizer
 
   def apply_ai(result)
     decisions = result.value[:categorizations]
-    shadow = run_shadow
     modified_count = 0
     categorized_transaction_ids = []
     withheld = []
@@ -67,8 +66,6 @@ class Family::AutoCategorizer
       modified_count += 1 if was_modified
     end
 
-    record_shadow_comparisons(result.route, decisions, shadow) if shadow
-
     DebugLogEntry.capture(
       category: "auto_categorization", level: "info", message: "AI categorization completed",
       source: self.class.name, family:, provider: result.route&.endpoint&.name,
@@ -79,8 +76,7 @@ class Family::AutoCategorizer
         blocked_transaction_ids: @blocked_ids,
         modified_count:,
         confidence_threshold: family.effective_categorization_confidence_threshold,
-        withheld_low_confidence: withheld,
-        shadow_compared_count: shadow ? shadow[:decisions].size : 0
+        withheld_low_confidence: withheld
       }.compact
     )
 
@@ -139,57 +135,6 @@ class Family::AutoCategorizer
     def withhold?(decision, route)
       threshold = family.effective_categorization_confidence_threshold
       threshold.positive? && route&.model&.capable?(:calibrated_confidence) && decision[:confidence].to_f < threshold
-    end
-
-    # Asks the shadow_categorize route (the model not in use) to categorize the same batch, so it
-    # can be judged on real data before anyone switches; its answers are never applied. Sampled
-    # per run, and any failure is swallowed: a diagnostic must never break the categorization it
-    # observes. Inline in the job until Ai::ShadowJob.
-    def run_shadow
-      rate = family.effective_categorization_shadow_rate
-      return unless rate.positive? && rand < rate
-
-      plan = Ai.plan(:shadow_categorize, family:)
-      return unless plan
-
-      result = generation.call(plan:)
-      { decisions: result.value[:categorizations], provider: result.route.endpoint.name } if result.success?
-    rescue => error
-      Rails.logger.warn("Shadow categorization failed for family #{family.id}: #{error.class}: #{error.message}")
-      nil
-    end
-
-    # Built from the decision lists rather than from `scope`, which is a fresh query: by now the
-    # applied answers have been written and locked, so re-running it would match nothing.
-    def record_shadow_comparisons(primary_route, applied_decisions, shadow)
-      shadow_decisions = shadow[:decisions]
-      ids = (applied_decisions.map { _1[:transaction_id] } + shadow_decisions.map { _1[:transaction_id] }).uniq
-
-      rows = ids.filter_map do |id|
-        applied = applied_decisions.find { _1[:transaction_id] == id }
-        shadowed = shadow_decisions.find { _1[:transaction_id] == id }
-        next if applied.nil? && shadowed.nil?
-
-        {
-          family_id: family.id,
-          transaction_id: id,
-          applied_provider: primary_route&.endpoint&.name,
-          applied_category_name: applied&.dig(:category_name),
-          shadow_provider: shadow[:provider],
-          shadow_category_name: shadowed&.dig(:category_name),
-          shadow_confidence: shadowed&.dig(:confidence),
-          shadow_probabilities: shadowed&.dig(:probabilities) || {},
-          # Both declining to guess counts as agreement — an abstention is an answer. A missing
-          # decision is not: comparing nil == nil would inflate the rate.
-          agreed: applied.present? && shadowed.present? && applied[:category_name] == shadowed[:category_name],
-          created_at: Time.current,
-          updated_at: Time.current
-        }
-      end
-
-      CategorizationComparison.insert_all(rows) if rows.any?
-    rescue => error
-      Rails.logger.warn("Recording shadow comparison failed for family #{family.id}: #{error.class}: #{error.message}")
     end
 
     def categories_input

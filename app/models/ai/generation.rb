@@ -12,14 +12,17 @@
 #      InvalidOutput, escalate to the next route. On ContextTooLong or an answer cut at the
 #      output limit, halve the batch on the same route; a single item that still can't fit
 #      escalates. Nothing else is retried here; the transport has retried 429s and 5xxs.
-#   5. Return an Ai::Result with the route that answered and the items not reached.
+#   5. Return an Ai::Result with the route that answered and the items not reached. When the
+#      feature declares `shadow` and the family's rate samples this call, enqueue Ai::ShadowJob
+#      with the items actually sent (section 8.2).
 #
 # `call(batches: 1)` runs one batch, which is what Ai::GenerationJob does (small batches,
 # section 11); plain `call` runs them all and merges the answers. `call!` returns the value or
 # raises the Ai::Error, for jobs.
 class Ai::Generation
   class_attribute :feature_key, :prompt_key, :static_schema, :schema_label, :batch_key, :merge_key, :merge_by,
-                  :blank_item_check, :key_aliases, :required_keys, :judgement_class, instance_writer: false
+                  :blank_item_check, :key_aliases, :required_keys, :judgement_class, :shadow_compare,
+                  :shadow_subject, instance_writer: false
 
   class << self
     def feature(key) = self.feature_key = key.to_sym
@@ -54,6 +57,14 @@ class Ai::Generation
     # The Ai::Judgement that answers this feature on a `judge` model (Jev). It takes #arguments
     # and returns the same value shape.
     def judged_by(klass) = self.judgement_class = klass
+
+    # Runs the feature on its `shadow_<feature>` route as its own job, compared and never applied
+    # (section 8.2). `compare` maps a value to { item id => [value, confidence] }, run on the
+    # generation, so it can turn names into ids; `subject` is the class each item id names.
+    def shadow(compare:, subject:)
+      self.shadow_compare = compare
+      self.shadow_subject = subject.to_s
+    end
   end
 
   attr_reader :family, :user, :locale
@@ -80,16 +91,24 @@ class Ai::Generation
 
   def call!(...) = call(...).value!
 
+  # The value as { item id => [value, confidence] }, for Ai::Comparison.
+  def compared(value) = instance_exec(value, &shadow_compare)
+
   def call(batches: nil, cancelled: nil, plan: nil)
     plan ||= Ai::Router.new(family:, user:).resolve(feature_key)
     return Ai::Result.unavailable(plan) unless plan.is_a?(Ai::Plan)
+
+    @plan_feature = plan.feature   # shadow_<feature> on a shadow run: its usage is its own
 
     routes = plan.routes.select { servable?(_1) }
     return Ai::Result.unavailable(Ai::Availability.unavailable(feature_key, :capability_missing)) if routes.empty?
 
     @usage = nil
     @failed_over_from = []
-    batch_key ? call_batched(routes, batches:, cancelled:) : call_single(routes, cancelled:)
+    @sent = []
+    result = batch_key ? call_batched(routes, batches:, cancelled:) : call_single(routes, cancelled:)
+    Ai::Shadow.enqueue(self, result, sent: @sent) if shadow_compare
+    result
   rescue Ai::Error::Base => error
     Ai::Result.failure(error, usage: @usage, failed_over_from: @failed_over_from.presence, correlation_id: Ai::CallContext.correlation_id)
   end
@@ -136,6 +155,7 @@ class Ai::Generation
           served = answered_by
           answered.concat(Array(value[merge_key]))
         end
+        @sent.concat(slice)
         remaining -= slice
         done += 1
       end
@@ -195,7 +215,7 @@ class Ai::Generation
 
       prompt = Ai::Prompt.for(feature_key, default: prompt_key, route:, family:, locale: prompt_locale, locals: generation.prompt_locals)
       request = Ai::Transport::Base::Request.new(
-        feature: feature_key, family:, model: route.model, instructions: prompt.instructions, input: prompt.input,
+        feature: request_feature, family:, model: route.model, instructions: prompt.instructions, input: prompt.input,
         schema: generation.schema, schema_name: schema_label || feature_key, reasoning_effort: route.reasoning_effort,
         json_mode: route.effective_json_mode, failed_ratio: (generation.method(:failed_ratio) if batch_key && blank_item_check)
       )
@@ -205,7 +225,7 @@ class Ai::Generation
     end
 
     def judge(route, generation)
-      value, usage = judgement_class.new(**generation.arguments, family:).run(route)
+      value, usage = judgement_class.new(**generation.arguments, family:).run(route, feature: request_feature)
       @usage = @usage && usage ? @usage + usage : (@usage || usage)
       value
     end
@@ -223,6 +243,9 @@ class Ai::Generation
           Assistant::TokenEstimator.estimate(empty.schema)
       end
     end
+
+    # The feature the call is recorded under: shadow_<feature> on a shadow run.
+    def request_feature = @plan_feature || feature_key
 
     # The user's locale when a user started the work, otherwise the family's (section 8.3).
     def prompt_locale = locale || user&.locale.presence || family&.locale.presence

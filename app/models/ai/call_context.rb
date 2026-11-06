@@ -19,7 +19,12 @@ module Ai::CallContext
 
     def expired? = !deadline.nil? && remaining <= 0
 
-    def metadata = { feature:, call_id:, correlation_id:, family_id:, endpoint:, model: }.compact.transform_values(&:to_s)
+    # A shadow run's calls carry `shadow`, so usage shows shadow spend apart (section 8.2).
+    def shadow? = Ai::Shadow.shadow?(feature)
+
+    def metadata
+      { feature:, call_id:, correlation_id:, family_id:, endpoint:, model:, shadow: (true if shadow?) }.compact.transform_values(&:to_s)
+    end
   end
 
   module_function

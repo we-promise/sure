@@ -23,9 +23,10 @@ class Ai::Judgement
   def states = raise(NotImplementedError)
   def value_from(answers) = raise(NotImplementedError)
 
-  # Judges every item on `route` and returns [value, usage].
-  def run(route)
-    request = Ai::Transport::Base::JudgeRequest.new(feature: feature_key, family:, model: route.model, states:, questions:)
+  # Judges every item on `route` and returns [value, usage]. `feature` is what the call is
+  # recorded under: shadow_<feature> on a shadow run.
+  def run(route, feature: feature_key)
+    request = Ai::Transport::Base::JudgeRequest.new(feature:, family:, model: route.model, states:, questions:)
     response = route.transport.judge(request)
     [ value_from(response.answers), response.usage ]
   end

@@ -43,6 +43,7 @@ class Ai::Instrumentation::UsageSubscriber
         metadata: {
           route: { endpoint: call["endpoint"], model: },
           correlation_id: call["correlation_id"],
+          shadow: (true if call["shadow"] == "true"),
           tokens_unknown: (true unless tokens.known?)
         }.compact
       )

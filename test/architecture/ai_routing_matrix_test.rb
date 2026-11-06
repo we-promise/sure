@@ -73,6 +73,23 @@ class AiRoutingMatrixTest < ActiveSupport::TestCase
     end
   end
 
+  # Section 8: a judgement answers its generation's feature on a judge model, in the same shape,
+  # so it declares the same feature, and the generation names it.
+  test "every judgement declares its generation's feature and has a test file" do
+    judgements = Rails.root.glob("app/models/ai/judgements/*.rb").map { "Ai::Judgements::#{_1.basename(".rb").to_s.camelize}".constantize }
+    generations = Rails.root.glob("app/models/ai/generations/*.rb").map { "Ai::Generations::#{_1.basename(".rb").to_s.camelize}".constantize }
+
+    assert_not_empty judgements
+    judgements.each do |judgement|
+      generation = generations.find { _1.judgement_class == judgement }
+      assert generation, "no generation declares judged_by #{judgement}"
+      assert_equal generation.feature_key, judgement.feature_key, judgement.name
+      assert MATRIX.fetch(judgement.feature_key)[:needs].is_a?(Hash), "#{judgement.feature_key} needs a judgement set of needs"
+      test_file = Rails.root.join("test/models/ai/judgements/#{judgement.name.demodulize.underscore}_test.rb")
+      assert test_file.exist?, "add #{test_file.relative_path_from(Rails.root)}"
+    end
+  end
+
   # Called on the web thread, not from Ai::GenerationJob, until PR 3 moves it into a job.
   NOT_YET_IN_A_JOB = %i[bill_setup].freeze
 

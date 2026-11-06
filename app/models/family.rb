@@ -56,7 +56,7 @@ class Family < ApplicationRecord
 
   has_many :tags, dependent: :destroy
   has_many :categories, dependent: :destroy
-  has_many :categorization_comparisons, dependent: :destroy
+  has_many :ai_comparisons, class_name: "Ai::Comparison", dependent: :delete_all
   has_many :merchants, dependent: :destroy, class_name: "FamilyMerchant"
 
   has_many :budgets, dependent: :destroy

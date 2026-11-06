@@ -330,103 +330,6 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal category, other.reload.category
   end
 
-  # Shadow mode runs the shadow_categorize route (the model not in use) and records the
-  # comparison without applying any of its answers.
-
-  test "does not run a shadow by default" do
-    txn = create_transaction(account: @account, name: "Coffee shop").transaction
-    category = @family.categories.create!(name: "Coffee")
-
-    assert_equal 0.0, @family.effective_categorization_shadow_rate
-    requests = stub_ai(:categorize, returns: { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] })
-
-    assert_no_difference "CategorizationComparison.count" do
-      categorize([ txn.id ])
-    end
-    assert_equal 1, requests.size
-  end
-
-  test "records a disagreement without applying the shadow answer" do
-    @family.update!(categorization_shadow_rate: 1.0)
-    txn = create_transaction(account: @account, name: "Blue Bottle Coffee").transaction
-    applied = @family.categories.create!(name: "Coffee")
-    shadowed = @family.categories.create!(name: "Groceries")
-    answer_both(llm: { txn.id => applied.name }, jev: { txn.id => [ shadowed.name, 0.88 ] })
-
-    assert_difference "CategorizationComparison.count", 1 do
-      categorize([ txn.id ])
-    end
-
-    assert_equal applied, txn.reload.category
-
-    comparison = CategorizationComparison.order(:created_at).last
-    assert_not comparison.agreed
-    assert_equal "openai", comparison.applied_provider
-    assert_equal "jev", comparison.shadow_provider
-    assert_equal applied.name, comparison.applied_category_name
-    assert_equal shadowed.name, comparison.shadow_category_name
-    assert_in_delta 0.88, comparison.shadow_confidence, 0.001
-  end
-
-  test "does not score a missing shadow answer as agreement" do
-    # The rows come from the union of both models' answers, so one side can be absent. When the
-    # other abstained, both names are nil, and comparing them would count it as agreement.
-    @family.update!(categorization_shadow_rate: 1.0)
-    txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
-    @family.categories.create!(name: "Coffee")
-    answer_both(llm: { txn.id => nil }, jev: {})
-
-    assert_difference "CategorizationComparison.count", 1 do
-      categorize([ txn.id ])
-    end
-
-    comparison = CategorizationComparison.order(:created_at).last
-    assert_not comparison.agreed
-    assert_nil comparison.shadow_category_name
-  end
-
-  test "counts a shared abstention as agreement" do
-    @family.update!(categorization_shadow_rate: 1.0)
-    txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
-    @family.categories.create!(name: "Coffee")
-    answer_both(llm: { txn.id => nil }, jev: { txn.id => [ Ai::Judgements::CategorizeTransaction::UNCATEGORIZED, 0.94 ] })
-
-    categorize([ txn.id ])
-
-    assert CategorizationComparison.order(:created_at).last.agreed
-  end
-
-  test "a failing shadow model does not break the run it observes" do
-    @family.update!(categorization_shadow_rate: 1.0)
-    txn = create_transaction(account: @account, name: "Coffee shop").transaction
-    category = @family.categories.create!(name: "Coffee")
-    stub_ai(:categorize) do |request|
-      raise Ai::Error::Upstream, "upstream down" if request.is_a?(Ai::Transport::Base::JudgeRequest)
-
-      { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] }
-    end
-
-    assert_nothing_raised do
-      categorize([ txn.id ])
-    end
-
-    assert_equal category, txn.reload.category
-    assert_equal 0, CategorizationComparison.count
-  end
-
-  test "no shadow route, no comparison" do
-    use_ai_routes(shadow_categorize: [])
-    @family.update!(categorization_shadow_rate: 1.0)
-    txn = create_transaction(account: @account, name: "Coffee shop").transaction
-    category = @family.categories.create!(name: "Coffee")
-    stub_ai(:categorize, returns: { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] })
-
-    assert_no_difference "CategorizationComparison.count" do
-      categorize([ txn.id ])
-    end
-    assert_equal category, txn.reload.category
-  end
-
   private
     def categorize(transaction_ids)
       Ai::GenerationJob.perform_now(:categorize, { ids: transaction_ids, family_id: @family.id })
@@ -436,15 +339,5 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     def jev_returning(transaction, answer)
       use_ai_routes(categorize: %w[jev/jev-latest])
       stub_ai(:categorize) { { transaction.id => { category: answer } } }
-    end
-
-    # The LLM (categorize) answers `llm` (id => name), the shadow's Jev answers `jev`
-    # (id => [name, confidence]).
-    def answer_both(llm:, jev:)
-      stub_ai(:categorize) do |request|
-        next jev.transform_values { { category: _1 } } if request.is_a?(Ai::Transport::Base::JudgeRequest)
-
-        { categorizations: llm.map { |id, name| { transaction_id: id, category_name: name } } }
-      end
     end
 end
