@@ -139,7 +139,7 @@
                       <% end %>
                     </label>
                   </div>
-                  <div class="mt-3 pl-7" onclick="event.stopPropagation();">
+                  <div class="mt-3 pl-7" data-controller="stop-propagation" data-action="click->stop-propagation#stop">
                     <%= render DS::Select.new(
                       form: form,
                       method: "account_types[#{snaptrade_account.id}]",
@@ -154,7 +154,7 @@
                            id="sync_start_<%= snaptrade_account.id %>"
                            name="sync_start_dates[<%= snaptrade_account.id %>]"
                            value="<%= snaptrade_account.sync_start_date %>"
-                           onclick="event.stopPropagation();"
+                           data-action="click->stop-propagation#stop"
                            autocomplete="off"
                            class="bg-container border border-primary rounded px-2 py-1 text-sm text-primary">
                     <p class="text-xs text-secondary mt-1">
