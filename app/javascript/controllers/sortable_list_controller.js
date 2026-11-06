@@ -11,6 +11,19 @@ import { Controller } from "@hotwired/stimulus";
 // controller events from inside a nested controller of the same name, and
 // the outer list needs the dragover and drop events over the inner one to
 // move a whole group. Each list handles only drags of its own items.
+// A second finger anywhere on the page means a pinch zoom, not a reorder,
+// also when it lands outside the items. One document listener serves every
+// connected list.
+const connectedLists = new Set();
+
+function cancelOnSecondFinger(event) {
+  if (event.touches.length < 2) return;
+
+  for (const list of connectedLists) {
+    if (list.pendingSection || list.isTouching) list.touchCancel();
+  }
+}
+
 export default class extends Controller {
   static targets = ["item"];
 
@@ -51,20 +64,13 @@ export default class extends Controller {
     // What the server has; a save that cannot reach it puts this back.
     this.savedOrder = this.currentOrder();
 
-    // A second finger anywhere on the page means a pinch zoom, not a
-    // reorder, also when it lands outside the items.
-    this.cancelOnSecondFinger = (event) => {
-      if (
-        event.touches.length > 1 &&
-        (this.pendingSection || this.isTouching)
-      ) {
-        this.touchCancel();
-      }
-    };
-    document.addEventListener("touchstart", this.cancelOnSecondFinger, {
-      capture: true,
-      passive: true,
-    });
+    if (connectedLists.size === 0) {
+      document.addEventListener("touchstart", cancelOnSecondFinger, {
+        capture: true,
+        passive: true,
+      });
+    }
+    connectedLists.add(this);
 
     // A morph (a page refresh, a broadcast) can reorder the items without
     // reconnecting this controller; the new order is what the server has.
@@ -78,9 +84,12 @@ export default class extends Controller {
   }
 
   disconnect() {
-    document.removeEventListener("touchstart", this.cancelOnSecondFinger, {
-      capture: true,
-    });
+    connectedLists.delete(this);
+    if (connectedLists.size === 0) {
+      document.removeEventListener("touchstart", cancelOnSecondFinger, {
+        capture: true,
+      });
+    }
     document.removeEventListener("turbo:morph", this.refreshSavedOrder);
     this.cancelHold();
   }
