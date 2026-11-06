@@ -41,6 +41,11 @@
 #
 # Or use explicit DNS servers that prefer IPv4 (already configured below).
 #
+# Services on the Docker host (e.g. a natively-run Ollama):
+# ---------------------------------------------------------
+# The public DNS servers below cannot resolve host.docker.internal, so it is
+# mapped to the host gateway with extra_hosts on web and worker.
+#
 
 x-db-env: &db_env
   POSTGRES_USER: ${POSTGRES_USER:-sure_user}
@@ -101,6 +106,8 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - sure_net
 
@@ -118,6 +125,8 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       <<: *rails_env
     networks:
