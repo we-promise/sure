@@ -801,7 +801,7 @@ class Family < ApplicationRecord
       id,
       key,
       currency,
-      (ExchangeRate.maximum(:updated_at)&.to_i if invalidate_on_data_updates),
+      (Current.exchange_rates_version if invalidate_on_data_updates),
       data_invalidation_key,
       accounts_status_version
     ].compact.join("_")
