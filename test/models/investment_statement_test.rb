@@ -1938,6 +1938,34 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     ], issues.map { |i| [ i.kind, i.security.ticker, i.detail ] }
   end
 
+  # Staleness is measured against as_of, so a price dated after as_of must not
+  # make a past check look fresh. The same statement asked about today does
+  # see the newer price, so the latest dates are not shared across as_of.
+  test "data_quality_issues ignores prices dated after as_of" do
+    account = create_investment_account(balance: 5000)
+    as_of = Date.current - 20.days
+    masked = Security.create!(ticker: "MASK", name: "Masked")
+    recent = Security.create!(ticker: "RCNT", name: "Recent")
+    later_only = Security.create!(ticker: "LATE", name: "Later only")
+
+    Security::Price.create!(security: masked, date: as_of - 6.days, price: 10, currency: "USD")
+    Security::Price.create!(security: masked, date: as_of + 3.days, price: 10, currency: "USD")
+    Security::Price.create!(security: recent, date: as_of - 1.day, price: 10, currency: "USD")
+    Security::Price.create!(security: recent, date: as_of + 3.days, price: 10, currency: "USD")
+    Security::Price.create!(security: later_only, date: Date.current, price: 10, currency: "USD")
+    [ masked, recent, later_only ].each do |security|
+      Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+    end
+
+    stale = @statement.data_quality_issues(as_of: as_of).select { |i| i.kind == :stale_price }
+    assert_equal [ [ "LATE", nil ], [ "MASK", as_of - 6.days ] ], stale.map { |i| [ i.security.ticker, i.detail ] },
+      "the price after as_of is ignored: MASK is stale from its earlier price, LATE has none on or before as_of, RCNT is fresh"
+
+    today = @statement.data_quality_issues(as_of: Date.current).select { |i| i.kind == :stale_price }
+    assert_equal [ [ "MASK", as_of + 3.days ], [ "RCNT", as_of + 3.days ] ], today.map { |i| [ i.security.ticker, i.detail ] },
+      "asked about today, the same statement reads the newer prices"
+  end
+
   private
     def materialize_two_parcel_example(first_parcel_label:)
       account = create_investment_account(balance: 1800)
