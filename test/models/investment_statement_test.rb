@@ -1366,18 +1366,25 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
   # A provider can report one security in two currencies in the same account on
   # the same day, and both rows are current. Each compares against its own
-  # currency's previous snapshot, as Holding#day_change does.
+  # currency's previous snapshot, as Holding#day_change does, and the portfolio
+  # day change counts both. Read through the real current_holdings, not a stub,
+  # so a selection that kept one row per account and security would fail here.
   test "a security held in two currencies in one account keeps a day change per currency" do
     account = create_investment_account(balance: 10_000)
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: account, provider: coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD"))
     security = Security.create!(ticker: "DUAL", name: "Dual listed")
+    ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: Date.current, rate: 0.5)
     # The USD snapshot is older than the CAD one, so a lookup that ignored
     # currency would hand the USD row the newer CAD snapshot.
     { "USD" => [ 100, 130, 2 ], "CAD" => [ 200, 210, 1 ] }.each do |currency, (before, now, days_ago)|
-      Holding.create!(account: account, security: security, date: days_ago.days.ago.to_date, qty: 1, price: before, amount: before, currency: currency)
-      Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: now, amount: now, currency: currency)
+      Holding.create!(account: account, account_provider: provider, security: security, date: days_ago.days.ago.to_date, qty: 1, price: before, amount: before, currency: currency)
+        .update_columns(updated_at: days_ago.days.ago) # imported that day, not today
+      Holding.create!(account: account, account_provider: provider, security: security, date: Date.current, qty: 1, price: now, amount: now, currency: currency)
     end
-    current = Holding.where(account: account, date: Date.current).order(:currency).to_a
-    @statement.stubs(:current_holdings).returns(current)
+
+    current = @statement.current_holdings.sort_by(&:currency)
+    assert_equal %w[CAD USD], current.map(&:currency), "both currencies' rows are current"
 
     changes = current.to_h { |holding| [ holding.currency, @statement.holding_day_change(holding) ] }
 
@@ -1388,6 +1395,10 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     current.each do |holding|
       assert_equal holding.day_change.value, @statement.holding_day_change(holding).value, "#{holding.currency} must match Holding#day_change"
     end
+
+    # 130 + 210 CAD at 0.5 against 100 + 200 CAD at 0.5
+    assert_equal Money.new(235), @statement.day_change.current
+    assert_equal Money.new(200), @statement.day_change.previous
   end
 
   test "holdings table rows with the same figure keep a fixed order in both directions" do
