@@ -41,14 +41,28 @@ module AiTestHelper
     Ai::Config.new(endpoints: models.map(&:endpoint).uniq, models:, routes: built, vector_store_backend:)
   end
 
+  def self.included(base)
+    base.teardown { Ai::Config.override = nil } if base.respond_to?(:teardown)
+  end
+
+  # The block forms below, for a whole test (integration tests, setup blocks):
+  #   use_ai_routes(bill_setup: %w[gpu/qwen3-8b])
+  #   use_no_ai
+  def use_ai_routes(**routes) = Ai::Config.override = ai_routes_config(**routes)
+
+  def use_no_ai = Ai::Config.override = Ai::Config.new
+
   # Runs the block with the test setup, its named features' routes replaced:
   #   with_ai_routes(categorize: ["gpu/qwen3-8b", "openai/gpt-4.1-mini"]) { ... }
   #   with_ai_routes(chat: []) { ... }   # chat :not_configured, everything else routed
-  def with_ai_routes(vector_store_backend: :pgvector, **routes, &block)
+  def with_ai_routes(**routes, &block)
+    Ai::Config.with(ai_routes_config(**routes), &block)
+  end
+
+  def ai_routes_config(vector_store_backend: :pgvector, **routes)
     base = AiTestHelper.test_config
     names = base.routes.transform_values { |list| list.map { "#{_1.endpoint.name}/#{_1.model.name}" } }
-    config = AiTestHelper.build_ai_config(base.models, names.merge(routes.transform_keys(&:to_sym)), vector_store_backend:)
-    Ai::Config.with(config, &block)
+    AiTestHelper.build_ai_config(base.models, names.merge(routes.transform_keys(&:to_sym)), vector_store_backend:)
   end
 
   # Runs the block with no AI configured: every feature is :not_configured.

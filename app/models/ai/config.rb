@@ -42,11 +42,21 @@ class Ai::Config
     ensure
       @override = previous
     end
+
+    # The same for the rest of a test; AiTestHelper resets it after each one.
+    attr_writer :override
   end
 
   def routes_for(feature) = routes.fetch(feature.to_sym, [])
 
   def endpoint(name) = endpoints.find { _1.name == name.to_s }
+
+  # The model pgvector and Qdrant embed with: the `embed` route's, or one no route uses yet
+  # (pgvector without its extension). Nil when documents go to a vector store endpoint.
+  def embedding_model
+    candidates = routes_for(:embed).map(&:model) + models.select { _1.capable?(:embedding) }
+    candidates.find { !_1.endpoint.vector_store? }
+  end
 
   def model(endpoint_name, name) = models.find { _1.endpoint.name == endpoint_name.to_s && _1.name == name.to_s }
 

@@ -25,7 +25,7 @@
       <%# Seeds a chat with the server-owned review prompt into the sidebar
           frame; the audit tool grounds the findings. Needs AI consent plus a
           configured provider, or the item leads to a dead chat. %>
-      <% if bills_one_shot_ai_available? %>
+      <% if bills_ai_chat_available? %>
         <% menu.with_item(
              variant: "button",
              text: t("bills.index.review_with_ai"),
