@@ -36,7 +36,8 @@ class Rule::Action < ApplicationRecord
   # they can see. Checked only when a user sets the value; a merchant another
   # member saved stays as it is (see #options).
   validate :merchant_assignable_by_user, if: -> {
-    action_type == "set_transaction_merchant" && Current.user && value.present? && (new_record? || will_save_change_to_value?)
+    action_type == "set_transaction_merchant" && Current.user && value.present? &&
+      (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
   }
 
   # Pre-seed (watermark): when an EMAIL_NOTIFICATION action is created — on a
@@ -141,7 +142,7 @@ class Rule::Action < ApplicationRecord
 
   private
     def merchant_assignable_by_user
-      return if rule&.family&.assignable_merchants_for(Current.user)&.exists?(id: value)
+      return if UuidFormat.valid?(value) && rule&.family&.assignable_merchants_for(Current.user)&.exists?(id: value)
 
       errors.add(:value, :invalid)
     end

@@ -307,6 +307,14 @@ class Rule::ActionTest < ActiveSupport::TestCase
     saved = @transaction_rule.actions.create!(action_type: "set_transaction_merchant", value: hidden.id)
     Current.stubs(:user).returns(users(:family_member))
     assert saved.reload.valid?, "a merchant another member saved stays valid while unchanged"
+
+    other = @transaction_rule.actions.create!(action_type: "set_transaction_name", value: hidden.id)
+    other.action_type = "set_transaction_merchant"
+    assert_not other.valid?, "switching an action to set the merchant checks the value too"
+
+    malformed = @transaction_rule.actions.build(action_type: "set_transaction_merchant", value: "not-a-uuid")
+    assert_not malformed.valid?
+    assert_not Rule::ActionExecutor::SetTransactionMerchant.new(@transaction_rule).actionable?("not-a-uuid")
   end
 
   test "set_transaction_merchant marks an unknown saved id like another family's merchant" do

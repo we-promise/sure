@@ -58,7 +58,7 @@ class Rule::ActionExecutor::SetTransactionMerchant < Rule::ActionExecutor
     # family: one of its own merchants, or a provider merchant that is still on
     # one of its transactions.
     def assignable_merchant(value)
-      return if value.blank?
+      return unless UuidFormat.valid?(value)
 
       family.merchants.find_by(id: value) ||
         (ProviderMerchant.find_by(id: value) if family.transactions.exists?(merchant_id: value))

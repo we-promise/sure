@@ -342,7 +342,9 @@ class RuleImport < Import
 
         case kind
         when :category then find_or_create_category(name).id
-        when :merchant then find_or_create_merchant(name).id
+        # A split child is set like a manual split, which only offers the
+        # family's own merchants.
+        when :merchant then find_or_create_family_merchant(name).id
         when :tag then find_or_create_tag(name).id
         end
       end
@@ -361,13 +363,19 @@ class RuleImport < Import
       @categories_by_name ||= family.categories.index_by(&:name)
     end
 
-    def merchants_by_name
-      # An exported rule may name a provider merchant (see
-      # Family::DataExporter); reuse it while it is still on the family's
-      # transactions, so the rule keeps matching them. The family's own
-      # merchant wins on a name clash.
-      @merchants_by_name ||= ProviderMerchant.where(id: family.transactions.select(:merchant_id)).index_by(&:name)
-        .merge(family.merchants.index_by(&:name))
+    def family_merchants_by_name
+      @family_merchants_by_name ||= family.merchants.index_by(&:name)
+    end
+
+    # An exported rule may name a provider merchant (see Family::DataExporter);
+    # reuse it while it is still on the family's transactions, so the rule
+    # keeps matching them. A name shared by several provider merchants is
+    # ambiguous and left out.
+    def provider_merchants_by_name
+      @provider_merchants_by_name ||= ProviderMerchant.where(id: family.transactions.select(:merchant_id))
+        .group_by(&:name)
+        .filter_map { |name, merchants| [ name, merchants.first ] if merchants.one? }
+        .to_h
     end
 
     def tags_by_name
@@ -382,8 +390,13 @@ class RuleImport < Import
       )
     end
 
+    # The family's own merchant wins on a name clash.
     def find_or_create_merchant(name)
-      merchants_by_name[name] ||= family.merchants.create!(name: name)
+      family_merchants_by_name[name] || provider_merchants_by_name[name] || find_or_create_family_merchant(name)
+    end
+
+    def find_or_create_family_merchant(name)
+      family_merchants_by_name[name] ||= family.merchants.create!(name: name)
     end
 
     def find_or_create_tag(name)
