@@ -470,3 +470,35 @@ flowchart LR
   - `shadow_categorization_provider`, `CategorizationComparison`;
   - `categorization_provider` outside the migration and `Setting`;
   - `:jev_family`, `JevCall`.
+
+## As built
+
+The 2d commits on #4765 follow this plan, with these differences:
+
+- **Steps 4 and 5 are one commit.** The instance-wide choice and the requester's move to the
+  judgement touch the same tests. In that commit the inline shadow already runs the generation on
+  the `shadow_categorize` plan, so it covers Jev through the judgement; step 6 moves it to the job.
+- **The selector is read-only for anyone who can't manage instance settings.** `update` already
+  required it; the select is now disabled for everyone else, and the system tests that switch it
+  sign in as a super admin.
+- **`shadow` takes `subject:` as well as `compare:`**, naming the class each item id belongs to,
+  for `Ai::Comparison#subject`.
+- **The legacy Jev endpoint keeps today's three retries** (`max_retries: 3`), since the
+  hand-written client retried 429s, 5xxs and dropped connections three times.
+- **The misconfigured-Jev debug entry records a `reason`** (`path`), not an error class: nothing
+  raises any more, because the config leaves an unreachable endpoint out.
+- **The transport's probe refuses** ("Jev has no health probe yet"); Jev was never probed, and
+  PR 3's probe jobs can add one.
+- **The live check was recorded, not left open**: OpenCode Zen's free Jev needs no funded key.
+  Its cassette matches on the body, because the fan-out's two requests arrive in either order.
+- **Evals refuse an unreachable Jev endpoint** with an error naming it, as the config leaves it
+  out.
+- **The classification provider walkthrough became "Adding a judgement"**
+  (`docs/llm-guides/adding-a-judgement.md`), keeping its rules on the new plumbing.
+- **Pipelock's diff scan** reads `JEV_API_KEY=<value>` in docs as a secret, so the examples show
+  a placeholder.
+
+Checks at the last 2d commit (`fce7c6ff1`): the full suite, 14,920 runs, has the same 14
+failures as 2c, all also failing on `main`; the full system suite, 333 runs, has 2 failures, the
+combobox dark-theme colour checks, which fail the same way on `main`; RuboCop, erb_lint, Biome,
+Brakeman and Pipelock's diff scan are clean.
