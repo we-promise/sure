@@ -404,6 +404,35 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
     assert_equal "Technology", @security.reload.sector
   end
 
+  # ------------------------------------------- the record belongs to a provider
+
+  # The stamp says "this provider was asked and had nothing". A different
+  # provider has not been asked, so a remap opens the gate again.
+  test "a security moved to another provider is asked again" do
+    @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
+    @security.update_columns(price_provider: "eodhd", classification_fetched_at: 1.day.ago)
+
+    @security.update!(price_provider: "yahoo_finance")
+    assert_nil @security.reload.classification_fetched_at, "the old provider's record was kept"
+
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::YahooFinance)
+    provider.expects(:fetch_security_info).once.returns(provider_success_response(info(sector: "Technology")))
+    @security.stubs(:price_data_provider).returns(provider)
+
+    @security.import_provider_details(include_classification: true)
+
+    assert_equal "Technology", @security.reload.sector
+  end
+
+  test "a save that keeps the provider keeps the record" do
+    @security.update_columns(price_provider: "eodhd", classification_fetched_at: 1.day.ago)
+
+    @security.update!(name: "Apple Inc.")
+
+    assert_not_nil @security.reload.classification_fetched_at
+  end
+
   private
     def info(sector: nil, industry: nil, kind: nil)
       Provider::SecurityConcept::SecurityInfo.new(
