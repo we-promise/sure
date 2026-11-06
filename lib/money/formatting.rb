@@ -8,28 +8,43 @@ module Money::Formatting
   SPACE_DELIMITER_SYMBOL_AFTER = %i[pl nb hu].freeze
   # European style: dot as thousands delimiter, comma as decimal separator, symbol before number
   EUROPEAN_SYMBOL_BEFORE = %i[nl pt-BR].freeze
+  # Currencies that use the South Asian / Indian numbering system (3,2,2 digit grouping)
+  INDIAN_GROUPING_CURRENCIES = %w[INR].freeze
+  INDIAN_DELIMITER_PATTERN = /(\d+?)(?=(\d\d)+(\d)(?!\d))/.freeze
 
   FAST_FORMAT_KEYS = %i[unit precision delimiter separator format].freeze
   DELIMITER_REGEX = /(\d)(?=(\d\d\d)+(?!\d))/
 
+  # Formats the monetary amount as a currency string, applying locale-specific
+  # formatting and Indian (3,2,2) digit grouping when applicable.
   def format(options = {})
     locale = options[:locale] || I18n.locale
-    opts = format_options(locale).merge(options.except(:locale))
+    opts = format_options(locale, indian_grouping: options[:indian_grouping]).merge(options.except(:locale, :indian_grouping))
 
     fast_format(opts) || number_to_currency(amount, opts)
   end
   alias_method :to_s, :format
 
-  def format_options(locale = nil)
+  # Builds the options hash for ActiveSupport::NumberHelper#number_to_currency,
+  # applying locale overrides and Indian (3,2,2) digit grouping when active.
+  def format_options(locale = nil, indian_grouping: nil)
     local_option_overrides = locale_options(locale)
 
-    {
+    opts = {
       unit: get_symbol,
       precision: currency.default_precision,
       delimiter: currency.delimiter,
       separator: currency.separator,
       format: currency.default_format
     }.merge(local_option_overrides)
+
+    if use_indian_grouping?(indian_grouping)
+      opts[:delimiter_pattern] = INDIAN_DELIMITER_PATTERN
+      opts[:delimiter] = ","
+      opts[:separator] = "."
+    end
+
+    opts
   end
 
   private
@@ -70,6 +85,14 @@ module Money::Formatting
       else
         currency.symbol
       end
+    end
+
+    # Returns whether to apply Indian (3,2,2) digit grouping based on an explicit
+    # :indian_grouping option or the currency ISO code.
+    def use_indian_grouping?(indian_grouping = nil)
+      return indian_grouping unless indian_grouping.nil?
+
+      INDIAN_GROUPING_CURRENCIES.include?(currency.iso_code)
     end
 
     def locale_options(locale)
