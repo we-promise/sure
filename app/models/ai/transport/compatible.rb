@@ -4,6 +4,14 @@ class Ai::Transport::Compatible < Ai::Transport::Base
   include Ai::Transport::RubyLlmAdapter
   include Ai::Transport::JsonMode
 
+  # Document OCR services RubyLLM reaches with its own providers (`RubyLLM.ocr`): one page image
+  # per request, because 2.1.1's Cohere call takes one image, and so both bill and record per
+  # page. Untested live: the spike had no key (2e plan, decision 2).
+  OCR_PRESETS = { mistral: "https://api.mistral.ai/v1", cohere: "https://api.cohere.com" }.freeze
+  # Tokens llama-server leaks when started with --special, which OCR models' table tags need
+  # (spike: "OCR on llama.cpp"): <｜end▁of▁sentence｜> and its kin.
+  SPECIAL_TOKENS = /<｜[^｜<>]{1,40}｜>|<\|(?:im_end|endoftext|end)\|>/
+
   private
     def run_generate(request) = generate_with_json_mode(request)
 
@@ -42,6 +50,43 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       EmbedResponse.new(vectors:, usage: Ai::Tokens.from_ruby_llm(embedding.tokens))
     end
 
+    def run_ocr(request) = OCR_PRESETS.key?(endpoint.preset) ? ocr_by_page(request) : ocr_through_chat(request)
+
+    def ocr_by_page(request)
+      texts = request.pages.map do |page|
+        result = attempt do
+          mapping_errors do
+            ruby_llm_context.ocr(RubyLLM::Attachment.new(StringIO.new(page.data), filename: page.filename),
+                                 model: request.model.name, provider: endpoint.preset, assume_model_exists: true)
+          end
+        end
+        result.markdown.to_s
+      end
+      OcrResponse.new(texts:, usage: Ai::Tokens.new)
+    end
+
+    # A vision model that transcribes, with its own prompt folder (Model#ocr_prompt): its
+    # `instructions` are the last user message; its `input`, when the model's chat template wants
+    # one message per page (Unlimited-OCR-2's "<PAGE>"), goes before each page. RubyLLM puts a
+    # message's text before its files, so per-page messages are the only way to get that order.
+    def ocr_through_chat(request)
+      prompt = Ai::Prompt.for(:extract_pdf, default: "ocr_#{request.model.ocr_prompt || "markdown"}", route: nil, family: nil,
+                                            locale: nil, locals: { pages: request.pages.size })
+      chat = ruby_llm_chat(request.model)
+      max_tokens = request.model.max_output_tokens
+      chat.with_max_output_tokens(max_tokens) if max_tokens
+      files = ruby_llm_attachments(request.pages)
+      if prompt.input.strip.present?
+        files.each { chat.add_message(role: :user, content: prompt.input.strip, attachments: [ _1 ]) }
+        chat.add_message(role: :user, content: prompt.instructions.strip)
+      else
+        chat.add_message(role: :user, content: prompt.instructions.strip, attachments: files)
+      end
+
+      message = attempt { mapping_errors { chat.generate } }
+      OcrResponse.new(texts: [ message.content.to_s.gsub(SPECIAL_TOKENS, "").strip ], usage: Ai::Tokens.from_ruby_llm(message.tokens))
+    end
+
     # One vector, with the model's dimensions.
     def probe_embedding(model)
       embedding = mapping_errors do
@@ -59,9 +104,17 @@ class Ai::Transport::Compatible < Ai::Transport::Base
     # other compatible servers.
     def ruby_llm_protocol = endpoint.responses_api ? :responses : :chat_completions
 
-    def ruby_llm_api_base = Ai::Transport::Http.compatible_base(endpoint.base_url)
+    def ruby_llm_api_base
+      return endpoint.base_url.presence || OCR_PRESETS[endpoint.preset] if OCR_PRESETS.key?(endpoint.preset)
+
+      Ai::Transport::Http.compatible_base(endpoint.base_url)
+    end
 
     def configure_provider(config)
+      if (base = OCR_PRESETS[endpoint.preset])
+        config.public_send(:"#{endpoint.preset}_api_key=", endpoint.api_key)
+        config.public_send(:"#{endpoint.preset}_api_base=", endpoint.base_url.presence || base)
+      end
       config.openai_use_system_role = true   # both providers read it; otherwise system prompts go as "developer"
       if ruby_llm_provider == :openrouter
         config.openrouter_api_key = endpoint.api_key

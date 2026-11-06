@@ -61,6 +61,22 @@ class Ai::Transport::Base
     def to_event = { vectors: vectors.size, dimensions: vectors.first&.size }
   end
 
+  # One transcription request (section 8.1): page images, in order, to an `ocr` model.
+  OcrRequest = Data.define(:feature, :family, :model, :pages) do
+    def initialize(feature:, model:, pages:, family: nil)
+      super(feature: feature.to_sym, family:, model:, pages: Array(pages).freeze)
+    end
+
+    def to_event = { attachments: pages.map(&:to_event) }
+  end
+
+  # The transcription, one text per request page when the server reads pages one at a time, or
+  # one text for them all, and the summed usage (RubyLLM 2.1.1 reports none for `ocr`).
+  OcrResponse = Data.define(:texts, :usage) do
+    def text = texts.join("\n\n")
+    def to_event = { texts: texts.size, characters: texts.sum(&:size) }
+  end
+
   # `auto` moves on when more than this share of items came back blank or missing (today's
   # AUTO_MODE_NULL_THRESHOLD).
   BLANK_RATIO_LIMIT = 0.5
@@ -107,6 +123,18 @@ class Ai::Transport::Base
     end
   end
 
+  # Transcribes an OcrRequest's pages and returns an OcrResponse, or raises an Ai::Error. A
+  # local OCR model takes ~45 s a page on CPU (spike), so the budget is the timeout per page.
+  def ocr(request)
+    raise Ai::Error::Refused, "#{request.model.name} isn't an OCR model" unless request.model.capable?(:ocr)
+    raise Ai::Error::Refused, "OCR reads page images" unless request.pages.all?(&:image?)
+
+    Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family,
+                         budget: endpoint.timeout_seconds * [ request.pages.size, 1 ].max) do
+      instrument("ocr", model: request.model, request: request.to_event) { run_ocr(request) }
+    end
+  end
+
   # How many requests one call may have in flight.
   def parallel_requests = endpoint.parallel_requests || 1
 
@@ -138,6 +166,7 @@ class Ai::Transport::Base
     def run_generate(request) = raise(NotImplementedError, "#{self.class.name} doesn't generate")
     def run_judge(request) = raise(NotImplementedError, "#{self.class.name} doesn't judge")
     def run_embed(request) = raise(NotImplementedError, "#{self.class.name} doesn't embed")
+    def run_ocr(request) = raise(NotImplementedError, "#{self.class.name} doesn't read pages")
 
     # RubyLLM 2.1.1 doesn't check the row count (#1269; 2.2 raises, #1297) and returns a flat
     # vector for a single text.
@@ -219,7 +248,7 @@ class Ai::Transport::Base
         result = yield
         payload[:output] = case result
         when Response then result.json
-        when JudgeResponse, EmbedResponse then result.to_event
+        when JudgeResponse, EmbedResponse, OcrResponse then result.to_event
         else result
         end
         payload[:usage] = result.usage if result.respond_to?(:usage)
