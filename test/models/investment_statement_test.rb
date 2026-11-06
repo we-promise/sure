@@ -1029,6 +1029,27 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_not_equal before, after
   end
 
+  # A series cached under one history trim must not be served under another:
+  # the trim decides the series' first point, and nothing else in the key
+  # moves when only the trim does.
+  test "every series cache key changes with the history trim, and the series is trimmed by it" do
+    create_investment_account(balance: 1000)
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    earliest = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    common_statement = InvestmentStatement.new(@family)
+    common_statement.stubs(:series_history_start).returns(:common)
+    common = kinds.index_with { |kind| common_statement.send(:series_cache_key, kind, period) }
+
+    kinds.each { |kind| assert_not_equal earliest[kind], common[kind], "#{kind} key must carry the trim" }
+
+    Balance::LinkedInvestmentSeriesNormalizer.expects(:trim_to_supported_history)
+      .with(anything, has_entries(history_start: :common)).returns(:trimmed)
+    Rails.cache.stubs(:fetch).yields
+    common_statement.send(:fetch_series, :value, period) { |builder| builder.balance_series }
+  end
+
   # Unlinking clears holdings.account_provider_id with update_all, which leaves
   # updated_at alone. The supported-history trim reads that column, so the
   # cached series must not outlive the link.

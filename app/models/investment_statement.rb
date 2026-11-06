@@ -309,9 +309,15 @@ class InvestmentStatement
         Balance::LinkedInvestmentSeriesNormalizer.trim_to_supported_history(
           yield(series_builder(period)),
           account_ids: historical_scope.account_ids,
-          history_start: :earliest
+          history_start: series_history_start
         )
       end
+    end
+
+    # The trim fetch_series applies, read by its cache key too, so a series
+    # cached under one trim is never served under another.
+    def series_history_start
+      :earliest
     end
 
     def series_builder(period)
@@ -344,9 +350,12 @@ class InvestmentStatement
     #   holdings that was not the most recently updated one leaves
     #   maximum(:updated_at), the sync time and the holdings version where
     #   they were before its deletion was scheduled; only the count moves.
+    # - the history trim (every kind): it decides the series' first point, and
+    #   nothing else in the key moves when only the trim does.
     def series_cache_key(kind, period)
       key = [
         "investment_statement_#{kind}_series",
+        "start-#{series_history_start}",
         user&.id,
         family.currency,
         accounts_version,
