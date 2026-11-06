@@ -2,7 +2,6 @@
 
 class CoinspotItem::Importer
   class OrderHistoryUnavailableError < StandardError; end
-  class MissingAssetPriceError < StandardError; end
 
   # CoinSpot's history endpoints default to the last 24 hours when `startdate`
   # is omitted, so an initial sync with no user-configured sync_start_date
@@ -219,17 +218,22 @@ class CoinspotItem::Importer
           amount_aud = balance * rate_aud if !amount_aud&.nonzero? && rate_aud&.positive?
         end
 
-        if !aud_asset && balance.nonzero? && !amount_aud&.nonzero?
+        # Delisted coins keep a balance but come back with no AUD balance or
+        # rate. Count them at zero and flag them in missing_prices instead of
+        # failing the whole sync; the blank amount_aud makes the holdings
+        # processor skip them rather than store a made-up value.
+        unpriced = !aud_asset && balance.nonzero? && !amount_aud&.nonzero?
+        if unpriced
           DebugLogEntry.capture(
             category: "provider_sync_error",
-            level: "error",
-            message: "CoinSpot returned #{symbol.to_s.upcase} without an AUD valuation",
+            level: "warn",
+            message: "CoinSpot returned #{symbol.to_s.upcase} without an AUD valuation; valuing it at zero",
             source: self.class.name,
             provider_key: "coinspot",
             family: coinspot_item.family,
             metadata: { coinspot_item_id: coinspot_item.id, symbol: symbol.to_s.upcase, balance: balance.to_s("F") }
           )
-          raise MissingAssetPriceError, "CoinSpot returned #{symbol.to_s.upcase} without an AUD balance or rate"
+          rate_aud = nil
         end
 
         amount_aud ||= 0.to_d
@@ -238,7 +242,7 @@ class CoinspotItem::Importer
         {
           symbol: symbol.to_s.upcase,
           balance: balance.to_s("F"),
-          amount_aud: amount_aud.to_s("F"),
+          amount_aud: unpriced ? nil : amount_aud.to_s("F"),
           price_aud: rate_aud&.to_s("F"),
           source: "spot"
         }

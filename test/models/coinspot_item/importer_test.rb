@@ -113,20 +113,34 @@ class CoinspotItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
-  test "fails rather than valuing a nonzero asset at zero when its AUD price is missing" do
+  # Delisted coins keep a balance but CoinSpot stops returning an AUD balance
+  # or rate for them; one such coin must not fail the whole sync.
+  test "values a nonzero asset with no AUD price at zero and flags it as missing a price" do
     @provider.stubs(:get_balances).returns(
-      "balances" => [ { "xyz" => { "balance" => "12.5" } } ]
+      "balances" => [
+        { "btc" => { "balance" => "0.5", "audbalance" => "50000.00", "rate" => "100000.00" } },
+        { "pay" => { "balance" => "12.5" } },
+        { "xyz" => { "balance" => "3", "audbalance" => "0", "rate" => "0" } }
+      ]
     )
 
-    error = nil
-    assert_difference -> { DebugLogEntry.count }, 1 do
-      error = assert_raises(CoinspotItem::Importer::MissingAssetPriceError) do
-        CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
-      end
+    result = nil
+    assert_difference -> { DebugLogEntry.count }, 2 do
+      result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
     end
 
-    assert_equal "CoinSpot returned XYZ without an AUD balance or rate", error.message
-    assert_empty @item.coinspot_accounts
+    assert result[:success]
+    assert_equal 3, result[:assets_imported]
+    assert_in_delta 50_000.00, result[:total_aud], 0.01
+
+    account = @item.coinspot_accounts.first
+    assert_in_delta 50_000.00, account.current_balance, 0.01
+    assert_equal %w[PAY XYZ], account.extra.dig("coinspot", "missing_prices")
+
+    pay = account.raw_payload["assets"].find { |asset| asset["symbol"] == "PAY" }
+    assert_equal "12.5", pay["balance"]
+    assert_nil pay["amount_aud"]
+    assert_nil pay["price_aud"]
   end
 
   test "preserves sell orders alongside buy orders from the primary endpoint" do
