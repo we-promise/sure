@@ -215,7 +215,7 @@ app/models/ai/
 config/ai/presets/                       # one YAML file per provider
   openai.yml  anthropic.yml  gemini.yml  openrouter.yml  llama_cpp.yml  ollama.yml  jev.yml  jev_local.yml  mistral.yml  cohere.yml
 config/ai.example.yml                    # documented example of the AI_CONFIG file
-app/prompts/                             # every prompt, one home; <name>.<locale>.txt.erb for translations
+app/prompts/                             # every prompt, one home: <name>/instructions.txt.erb + input.txt.erb; instructions.<locale>.txt.erb for translations
 app/jobs/ai/generation_job.rb            # generic, lane-aware, batch-yielding, cancellable
 app/jobs/ai/shadow_job.rb                # a shadow run, on ai_background
 app/jobs/ai/probe_job.rb                 # health probe for one model
@@ -613,7 +613,10 @@ generated config file. At boot, an AI worker that finds old AI ENV and no `AI_CO
    - **Routes.** One route per feature, using the model today's resolution would pick
      (`LLM_PROVIDER`, then `llm_provider_order`). `embed` uses the embedding endpoint, or the
      OpenAI vector store where today's adapter would use it. On an instance with one family that
-     chose Jev for categorization, `categorize` lists Jev first.
+     chose Jev for categorization, `categorize` lists Jev first. A generation route lists only
+     that model, never the other provider's, so failover (section 5.4) can't send a family's
+     data to a provider today's resolution wouldn't use (call by @josh-sanders during
+     development of PR #4440, in 2c's plan); `chat` keeps both until PR 6.
 3. It loads that through `Ai::ConfigFile`, with the same digest check and the same all-or-nothing
    rule. The instance AI pages are read-only and say "Set by the old AI environment variables
    (deprecated)".
@@ -650,7 +653,7 @@ migration (each variable's `Setting` field, where it has one, maps the same way)
 | `ANTHROPIC_MODEL` (`anthropic_model`) | A model on the Anthropic endpoint |
 | `ANTHROPIC_REQUEST_TIMEOUT` | `timeout_seconds` on the Anthropic endpoint |
 | `ANTHROPIC_MAX_TOKENS` | `max_output_tokens` on the Anthropic model |
-| `LLM_PROVIDER` (`llm_provider`) | Which endpoint's model comes first in each route (`llm_provider_order`) |
+| `LLM_PROVIDER` (`llm_provider`) | Which endpoint's model a generation route lists (only that one), and which comes first in `chat` (`llm_provider_order`) |
 | `LLM_CONTEXT_WINDOW` (`llm_context_window`) | `context_window` on each LLM model |
 | `LLM_MAX_RESPONSE_TOKENS` (`llm_max_response_tokens`) | `max_output_tokens` on each LLM model |
 | `LLM_MAX_ITEMS_PER_CALL` (`llm_max_items_per_call`) | `batch_size` on each LLM model |
@@ -1209,7 +1212,7 @@ end
 |---|---|
 | `Compatible` with `responses_api` | `responses.create` + `text.format = json_schema, strict: true` |
 | `Compatible` without it | chat completions with the route's `json_mode` (the entry's override, otherwise the endpoint's) (`strict` → `json_object` → `none`). `auto` falls back when the null ratio exceeds 50% or a 400 about the JSON mode comes back; a 400 about anything else (an unsupported attachment, a missing model) ends the chain, since the next mode would resend the same request. Tolerant parsing (`<think>`, fenced JSON); a schema example is appended in `none` mode. |
-| `Anthropic` | `messages.create` with one tool whose `input_schema` is the schema, `tool_choice: {type: "tool"}`. Models that reject a forced tool get `auto`, an instruction to call it, and one retry when they answer with text (#4513). |
+| `Anthropic` | RubyLLM's `with_schema`, which sends Anthropic's native structured output (`output_config`), so both transports make the same call (call by @josh-sanders during development of PR #4440, gated on a live check with a funded key). If a current Claude model refuses it, the fallback is today's: one tool whose `input_schema` is the schema, forced, or `auto` with one reminder retry for models that reject a forced tool (#4513). |
 | `Jev` | doesn't implement `generate`; implements `judge` |
 
 - **Reasoning effort.** `Compatible` sends the route entry's `reasoning_effort` as
@@ -1629,20 +1632,24 @@ Sure adds around it today (chat's session context) stay in the template. Today's
 no placeholders, so nothing is lost. @josh-sanders chose this during development of PR #4440, over `%{}`
 everywhere and over a logic-less template language for both.
 
-**Names.** A prompt file is `app/prompts/<name>.txt.erb`. The default for a feature is
-`<key>.txt.erb` (`categorize_transactions.txt.erb`). Any other name is just a name: a shorter prompt for a
+**Names.** A prompt is a folder, `app/prompts/<name>/`, holding `instructions.txt.erb` (the
+system prompt) and `input.txt.erb` (the user message), as RubyLLM's agents keep
+`app/prompts/<agent>/instructions.txt.erb` (call by @josh-sanders during development of PR
+#4440, in 2c's plan). The default for a feature is `<key>/` (`categorize_transactions/`). Any other name is just a name: a shorter prompt for a
 small model, or a trial prompt for a shadow run, is a file the route entry names
 (`prompt: categorize_transactions_short`). The only naming convention is the locale suffix.
 
 **Today's prompts, word for word** (call by @josh-sanders during development of PR #4440). Today one feature can have several prompts:
 categorization, merchant detection and merchant enhancement each have OpenAI's detailed prompt,
 a simplified one for custom OpenAI-compatible servers, and Anthropic's own. PR 2c moves each of
-them into its own file unchanged (`categorize_transactions.txt.erb` for OpenAI's,
-`categorize_transactions_simple.txt.erb`, `categorize_transactions_anthropic.txt.erb`, and so on
+them into its own folder unchanged (`categorize_transactions/` for OpenAI's,
+`categorize_transactions_simple/`, `categorize_transactions_anthropic/`, and so on
 for each feature that has variants), and the presets name the right one for each route entry:
 `openai` the detailed prompt, `anthropic` Anthropic's, every other `compatible` preset the
 simplified one. `Ai::LegacyEnvConfig` does the same for today's ENV, so every install sends
-exactly what it sends today. Merging the variants is a later PR of its own, gated by the
+exactly what it sends today. The one change is in Anthropic's prompts, which lose the sentence
+naming the tool they returned through once `with_schema` replaces the tool (section 7; a golden
+test lists it). Merging the variants is a later PR of its own, gated by the
 recorded evals (section 17).
 
 **Which prompt runs.** The first that applies:
@@ -1652,12 +1659,12 @@ recorded evals (section 17).
 2. the route entry's `prompt:`, set by the instance admin;
 3. the feature's default, `<key>.txt.erb`.
 
-**Locale.** For whichever file was chosen in steps 2–3, Sure looks for `<name>.<locale>.txt.erb` and
+**Locale.** For whichever folder was chosen in steps 2–3, Sure looks for `<name>/instructions.<locale>.txt.erb` (and `input.<locale>.txt.erb`) and
 falls back to `<name>.txt.erb`. The locale is the user's when a user started the work (chat, bill
 setup, PDF import, the dig-in prefill), otherwise the family's (background work). For a German
-user, `categorize_transactions.de.txt.erb` is used if it exists, otherwise `categorize_transactions.txt.erb`.
+user, `categorize_transactions/instructions.de.txt.erb` is used if it exists, otherwise `categorize_transactions/instructions.txt.erb`.
 Translations are optional files; today only the dig-in prefill has one
-(`insight_dig_in.de.txt.erb`, moved from `de.yml`). A family override isn't localised: the family
+(`insight_dig_in/instructions.de.txt.erb`, moved from `de.yml`). A family override isn't localised: the family
 wrote it in the language it wants.
 
 **Validation.** A route entry that names a prompt whose `<name>.txt.erb` doesn't exist fails
@@ -1977,7 +1984,7 @@ adding a feature never adds a queue.
 | Background | `ai_background` | `ai`, strict order | `categorize`, `shadow_categorize`, `detect_merchants`, `enhance_merchants`, and probes |
 
 They replace `ai_high_priority` and `ai_low_priority`. For one release the `ai` capsule also
-drains the old queues, and the old job classes stay as shims that enqueue `Ai::GenerationJob`.
+drains the old queues. The old AI job classes are gone since 2c, with no shims.
 
 - **Chat has its own thread.** In the spike, one `ai` capsule of four threads took four merchant
   jobs (three at the server, one waiting for the host), and the chat job sat in Sidekiq's queue
@@ -2455,7 +2462,7 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
   `shadow_<feature>` row; no `Ai::Conversation` declares `shadow`; only `ComparisonSubscriber`
   receives shadow results.
 - `ai_prompts_test.rb`: every `prompt` key has `<key>.txt.erb`; every `Family::AiPromptable` key maps
-  to a file; every `<name>.<locale>.txt.erb` has a base `<name>.txt.erb` and an available locale; no locale
+  to a file; every `<name>/<part>.<locale>.txt.erb` has a base `<name>/<part>.txt.erb` and an available locale; no locale
   YAML contains prompt text; no orphaned prompt files (a file is used by a key, a preset's default
   route or `config/ai.example.yml`).
 - `ai_schemas_test.rb`: every `schema` is valid JSON Schema and OpenAI-strict-compatible, so one
@@ -2576,8 +2583,8 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | Two-level consent (PR 7) | Background AI needs the family's consent per feature | Section 6 | Family admins review the AI features page; members get a notice |
 | Jev through RubyLLM (PR 2) | A Jev endpoint on OpenRouter stops working until PR 5 brings RubyLLM 2.2; an endpoint at any path other than TypeSafe's `/v1/systemone` isn't supported | Section 7 | OpenRouter users wait for PR 5 or switch to a TypeSafe-style endpoint; anyone who needs another path opens an issue |
 | Prompt overrides, one per feature | Overrides stored under provider keys | Section 8.3 | Shown only where an override was dropped |
-| Three lane queues and the `ai_chat` capsule | `ai_high_priority`, `ai_low_priority`, custom `sidekiq.yml`, `SidekiqHealth::AI_QUEUES` | The `ai` capsule drains the old queues for one release; old job classes are shims | Update a custom `sidekiq.yml`; with several workers on one local host, set `RAILS_AI_MAX_THREADS=0` on all but one |
-| `Ai::GenerationJob` and `Ai::ShadowJob` replace the AI job classes | Jobs queued in Redis | Shims for one release | — |
+| Three lane queues and the `ai_chat` capsule | `ai_high_priority`, `ai_low_priority`, custom `sidekiq.yml`, `SidekiqHealth::AI_QUEUES` | The `ai` capsule drains the old queues for one release | Update a custom `sidekiq.yml`; with several workers on one local host, set `RAILS_AI_MAX_THREADS=0` on all but one |
+| `Ai::GenerationJob` and `Ai::ShadowJob` replace the AI job classes | Jobs queued in Redis under the old classes go to Sidekiq's dead set | None (no shims; call by @josh-sanders during development of PR #4440) | Let the AI queues drain before upgrading |
 | `CategorizationComparison` → `Ai::Comparison` | A persisted table | Rows copied | — |
 | `llm_usages.operation` values become feature keys | Usage history under old names | Rows rewritten | The usage page sums per feature |
 | `llm_usages` has a row per request, grouped per call (PR 2a) | Queries that count rows as calls; the table grows with retries | Additive `call_id` and `status`; old rows count as one-request calls | The usage page still shows one row per call; a click shows its requests |
@@ -2595,7 +2602,7 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 ## 19. Delivery
 
 Eight PRs after the spike, the first of them in five parts (2a to 2e). Each PR, and each part,
-is its own PR into `main`, merged in order, except that 2a and 2b share one PR,
+is its own PR into `main`, merged in order, except that 2a, 2b and 2c share one PR,
 we-promise/sure#4765, because the maintainer wants fewer PRs (call by @josh-sanders during
 development of PR #4440). The spike branch (PR 1) is never merged; only its
 report is in PR #4440, which holds the proposal documents, no code, and stays a draft until the
@@ -2646,8 +2653,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    decisions register. PR 2c records live cassettes for Anthropic's and OpenAI's successful
    paths before relying on them: the spike's keys had no credits.
 2. **Generations: every AI call except chat**, in five parts, merged in order (2a to 2e). Each is
-   its own PR into `main`, except 2a and 2b, which share #4765. All five land in the same release, so today's AI job classes stay as
-   shims for that one release, not between parts. Each part replaces something whole, so `main`
+   its own PR into `main`, except 2a, 2b and 2c, which share #4765. All five land in the same release. Today's AI job classes are
+   deleted with no shims: the upgrade note says to let the AI queues drain first (call by @josh-sanders during development of
+   PR #4440). Each part replaces something whole, so `main`
    works between them, and each brings a transport call only with its first caller. The target
    release is v0.7.7 (call by @josh-sanders during development of PR #4440).
    #3422 (vault statements indexed and readable by chat tools) is on the same milestone and may
@@ -2681,8 +2689,15 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      credits). Adds the recorded-eval CI gate, the `ai-live` label, and the batch fairness and
      split tests.
      *Deletes:* the eight workers for those features (`AutoCategorizer`, `AutoMerchantDetector`,
-     `ProviderMerchantEnhancer` and `BillSetupSuggester`, for both providers) and
-     `Family#resolved_categorization_provider`.
+     `ProviderMerchantEnhancer` and `BillSetupSuggester`, for both providers), their three job
+     classes and `Family#resolved_categorization_provider`. On #4765 with 2a and 2b. Its calls
+     (by @josh-sanders during development of PR #4440): the deprecated ENV lists only the
+     preferred LLM in each generation route, so failover never sends data to a provider that
+     wasn't chosen; bill setup follows the same JSON policy as the other features; one folder per
+     prompt (`app/prompts/<name>/instructions.txt.erb` and `input.txt.erb`); and both transports
+     use `with_schema`, Anthropic through its native `output_config`, once a live check with a
+     funded key shows the current Claude models accept it.
+     Implementation plan: [`pr-2c-generations.md`](pr-2c-generations.md).
    - **2d. Jev and shadow runs.** The `jev` transport as a thin adapter over RubyLLM's `judge`, so
      Jev's requests pass the gate and the usage path like every other call; `Ai::Judgement` and
      `categorize`'s judgement; `Ai::ShadowJob` and `Ai::Comparison` for any feature;
@@ -2889,6 +2904,7 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`chatwoot-rubyllm-lessons-learned.md`](chatwoot-rubyllm-lessons-learned.md) | Chatwoot's move to RubyLLM |
 | [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md) | PR 2a's implementation plan, and the RubyLLM commits since 2.1.1 that matter for 2.2 |
 | [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md) | PR 2b's implementation plan (on #4765 with 2a), and the agreement test's setups |
+| [`pr-2c-generations.md`](pr-2c-generations.md) | PR 2c's implementation plan (on #4765 with 2a and 2b), with the JSON policy, prompt folders and batches |
 
 **Terms this plan defines**, for readers and coding agents:
 
