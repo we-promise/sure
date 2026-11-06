@@ -184,6 +184,26 @@
               data: { turbo_confirm: t("settings.providers.enable_banking_panel.remove_confirm") }
             ) %>
           </div>
+
+          <%= styled_form_with model: item,
+                               id: dom_id(item, :sync_preferences),
+                               namespace: dom_id(item),
+                               url: enable_banking_item_path(item),
+                               method: :patch,
+                               data: { turbo: true },
+                               class: "w-full space-y-3 border-t border-primary pt-3" do |form| %>
+            <div class="flex items-center justify-between gap-3">
+              <%= form.label :preserve_distinct_booked_references,
+                             t("settings.providers.enable_banking_panel.preserve_distinct_booked_references_label"),
+                             class: "text-sm font-medium text-primary" %>
+              <%= form.toggle :preserve_distinct_booked_references,
+                              aria: { describedby: "#{dom_id(item)}_booked_references_help" } %>
+            </div>
+            <p id="<%= dom_id(item) %>_booked_references_help" class="text-sm text-secondary">
+              <%= t("settings.providers.enable_banking_panel.preserve_distinct_booked_references_help") %>
+            </p>
+            <%= form.submit t("settings.providers.enable_banking_panel.save_sync_preferences") %>
+          <% end %>
         </div>
       <% end %>
 

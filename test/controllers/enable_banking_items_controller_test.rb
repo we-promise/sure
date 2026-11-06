@@ -87,6 +87,73 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renamed Connection", @item.reload.name
   end
 
+  test "an admin can enable and disable distinct booked references for one connection" do
+    other_item = @item.dup
+    other_item.save!
+
+    patch enable_banking_item_url(@item),
+          params: { enable_banking_item: { preserve_distinct_booked_references: "1" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "enable_banking-providers-panel"
+    assert @item.reload.preserve_distinct_booked_references?
+    assert_not other_item.reload.preserve_distinct_booked_references?
+
+    patch enable_banking_item_url(@item),
+          params: { enable_banking_item: { preserve_distinct_booked_references: "0" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "enable_banking-providers-panel"
+    assert_not @item.reload.preserve_distinct_booked_references?
+  end
+
+  test "members cannot change distinct booked reference preferences" do
+    sign_in users(:family_member)
+
+    patch enable_banking_item_url(@item),
+          params: { enable_banking_item: { preserve_distinct_booked_references: "1" } },
+          as: :turbo_stream
+
+    assert_response :forbidden
+    assert_not @item.reload.preserve_distinct_booked_references?
+  end
+
+  test "admins cannot change another family's distinct booked reference preferences" do
+    sign_in users(:empty)
+
+    patch enable_banking_item_url(@item),
+          params: { enable_banking_item: { preserve_distinct_booked_references: "1" } },
+          as: :turbo_stream
+
+    assert_response :not_found
+    assert_not @item.reload.preserve_distinct_booked_references?
+  end
+
+  test "the panel renders separately labelled sync preferences for each connection" do
+    other_item = @item.dup
+    other_item.update!(preserve_distinct_booked_references: true)
+
+    get connect_form_settings_providers_url(provider_key: "enable_banking")
+
+    assert_response :success
+    [ @item, other_item ].each do |item|
+      assert_select "form[id=?][action=?]", "sync_preferences_enable_banking_item_#{item.id}", enable_banking_item_path(item) do
+        field_id = nil
+        help_id = nil
+        assert_select "input[type=checkbox][name='enable_banking_item[preserve_distinct_booked_references]']", count: 1 do |fields|
+          field = fields.first
+          assert_equal item.preserve_distinct_booked_references?, field.key?("checked")
+          field_id = field["id"]
+          help_id = field["aria-describedby"]
+        end
+        assert_select "label[for=?]", field_id, text: I18n.t("settings.providers.enable_banking_panel.preserve_distinct_booked_references_label")
+        assert_select "p[id=?]", help_id
+      end
+    end
+    ids = css_select("input[type=checkbox][name='enable_banking_item[preserve_distinct_booked_references]']").map { |field| field["id"] }
+    assert_equal 2, ids.uniq.count
+  end
+
   # The panel never sends a stored certificate back to the browser, so a save
   # that leaves the field blank must keep the one already stored.
   test "an update with a blank certificate keeps the stored one" do
