@@ -1906,8 +1906,9 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    # The desktop All tab's frame; sidebar frame ids carry placement and version.
     def sidebar_sparkline_src(frame_id)
-      css_select("turbo-frame##{frame_id}").first["src"]
+      css_select("turbo-frame[id^='all_#{frame_id}_']").first["src"]
     end
 
     def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
