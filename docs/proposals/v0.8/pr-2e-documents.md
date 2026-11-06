@@ -550,7 +550,7 @@ Upstream PRs whose goals 2e keeps:
 
 Branch `feat/ai-documents` (josh-sanders/sure): #4765's head `35164876c` with #3422's head
 `3d2659c63` merged in (`825731239`, conflicts in `process_pdf_job.rb` and `search_family_files.rb`
-and its test), then 12 commits, 135 files, +3,219 −3,721 lines. Where the commits differ from the
+and its test), then 13 commits, 135 files, +3,219 −3,721 lines. Where the commits differ from the
 plan above:
 
 - **Mistral OCR reads page images, one per request, like Cohere,** not the PDF with a page range.
@@ -566,8 +566,12 @@ plan above:
 - **`extract_bank_statement`'s prompt is the spike's**, which produced the measured results, with
   today's rules (document order, last four digits, null rather than guesses) and a line for a
   batch that holds part of a statement. `read_pdf`'s instructions are today's OpenAI text.
-- **`OPENAI_SUPPORTS_PDF_PROCESSING=false` turns page images off**, as its comment always said;
-  a statement's text layer is still read. Today it turned PDF import off entirely. Upgrade note.
+- **`OPENAI_SUPPORTS_PDF_PROCESSING=false` keeps turning PDF import off** (call by @josh-sanders
+  during development of PR #4440: keep today's behaviour, simple until PR 7 exposes the setting to
+  the admin). The deprecated ENV lists the preferred LLM in `extract_pdf`'s route only when it has
+  `vision`, today's `supports_pdf_processing?`, so the flag, or an OpenAI model without vision,
+  leaves PDF import unavailable (`not_configured`) rather than failing after the upload. A first
+  build mapped the flag to `vision` alone, which read text layers with it off; that was reverted.
 - **`preferred_llm_provider`'s two chat callers** ("Dig in with AI", the bills AI review) ask
   `Assistant.builtin_provider`, the same lookup kept with chat until PR 6. `AiHealth` reads
   `extract_pdf`'s route for what the PDF probes can check; the probes run the synthetic statement

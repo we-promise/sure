@@ -2745,8 +2745,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      development of PR #4440): OCR ships as code and tests, configurable only from PR 7, so
      "Read as: OCR" is greyed out until then (no new ENV or settings fields); Mistral and Cohere
      OCR ship with stubbed tests, marked untested live until someone records them with a key;
-     and files that earlier removals left in OpenAI's Files API get a release note, not a
-     clean-up task.
+     files that earlier removals left in OpenAI's Files API get a release note, not a
+     clean-up task; and `OPENAI_SUPPORTS_PDF_PROCESSING=false` keeps turning PDF import off, as
+     today, until PR 7 makes it an admin's per-model setting.
      Implementation plan: [`pr-2e-documents.md`](pr-2e-documents.md).
 
    *Still on old code after 2e:* chat, through `Assistant`, `Provider::Openai` and
