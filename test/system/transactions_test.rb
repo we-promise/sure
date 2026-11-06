@@ -156,12 +156,12 @@ class TransactionsTest < ApplicationSystemTestCase
       amount = row.find("p.privacy-sensitive").evaluate_script("this.getBoundingClientRect().toJSON()")
       bounds = row.evaluate_script("this.getBoundingClientRect().toJSON()")
 
-      if width < 1024
-        assert_operator pill["top"], :>=, amount["bottom"], "Pending must sit below the amount at #{width}px"
-        assert_in_delta pill["right"], amount["right"], 1
-      else
+      if page.evaluate_script("window.matchMedia('(min-width: 64rem)').matches")
         assert_operator pill["right"], :<=, amount["left"], "Pending must precede the amount at #{width}px"
         assert_in_delta pill["y"] + pill["height"] / 2, amount["y"] + amount["height"] / 2, 0.5
+      else
+        assert_operator pill["top"], :>=, amount["bottom"], "Pending must sit below the amount at #{width}px"
+        assert_in_delta pill["right"], amount["right"], 1
       end
       assert_operator pill["left"], :>=, bounds["left"]
       columns = row.all(:xpath, "./div[contains(@class, 'col-span-5') or contains(@class, 'col-span-3')]", visible: true)
