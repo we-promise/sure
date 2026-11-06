@@ -124,11 +124,15 @@ class InvestmentStatement
   end
 
   # Allocation of the portfolio grouped by a classification column of the
-  # security. Each account's positive cash balance is placed where the grouping
-  # says cash belongs, so weights sum to 100 within rounding. Segments are
-  # sorted largest first. Amounts convert to the family currency at the latest
-  # rate; a currency with no rate counts 1:1 (`convert_to_family_currency`).
-  ALLOCATION_GROUPINGS = %w[asset_class asset_sub_class sector region].freeze
+  # security, or by :account, :currency or :kind (cash, crypto, standard).
+  # Each account's positive cash balance is placed where the grouping says
+  # cash belongs, so weights sum to 100 within rounding: the account grouping
+  # is measured against the account balances, the others against the holdings
+  # plus each account's positive cash balance, so a stale or negative cash
+  # balance never pushes a grouping past 100. Segments are sorted largest
+  # first. Amounts convert to the family currency at the latest rate; a
+  # currency with no rate counts 1:1 (`convert_to_family_currency`).
+  ALLOCATION_GROUPINGS = %w[asset_class asset_sub_class sector region account currency kind].freeze
 
   # The bucket a holding falls into when the column it is grouped by is empty.
   # It is a real segment, not a gap, so a portfolio of unclassified securities
@@ -136,7 +140,8 @@ class InvestmentStatement
   UNCLASSIFIED = "unclassified".freeze
 
   # One level down from a classification segment: asset class -> sub-class ->
-  # positions. Sector and region do not nest, so they return [].
+  # positions. Sector, region, account, currency and kind do not nest, so they
+  # return [].
   #
   # `parent` is the asset class the sub-class was reached through. A sub-class
   # name such as `unclassified` repeats across asset classes, so without it the
@@ -153,6 +158,9 @@ class InvestmentStatement
   # name taken from a query string cannot raise.
   def allocation_by(by)
     case by.to_s
+    when "account" then allocation_by_account
+    when "currency" then allocation_by_currency
+    when "kind" then allocation_by_kind
     when "asset_class" then allocation_by_classification(:asset_class, cash_bucket: "liquidity")
     when "asset_sub_class" then allocation_by_classification(:asset_sub_class, cash_bucket: "cash")
     when "sector" then allocation_by_classification(:sector)
@@ -355,6 +363,41 @@ class InvestmentStatement
     end
 
     AllocationSegment = Data.define(:id, :name, :amount, :weight)
+
+    def allocation_by_account
+      segments = investment_accounts.map do |account|
+        [ account.id, account.name, convert_to_family_currency(account.balance, account.currency) ]
+      end
+      build_segments(segments)
+    end
+
+    # Value by the currency each holding is priced in, plus each account's
+    # positive cash balance in the account's currency. Reads
+    # `allocatable_holdings` so a corrupt negative row cannot net against a good
+    # one here while the drill-down below drops it.
+    def allocation_by_currency
+      grouped = Hash.new(0)
+      allocatable_holdings.each { |holding| grouped[holding.currency] += convert_to_family_currency(holding.amount, holding.currency) }
+      positive_account_cash.each { |account, value| grouped[account.currency] += value }
+      build_segments(grouped.map { |currency, value| [ currency, currency, value ] })
+    end
+
+    # Value by what kind of instrument each holding is -- cash, crypto or a
+    # standard security -- from the security's own flags, with each account's
+    # positive cash balance under cash. Reads `allocatable_holdings` for the
+    # same reason as `allocation_by_currency`.
+    def allocation_by_kind
+      grouped = Hash.new(0)
+      allocatable_holdings.each do |holding|
+        kind = if holding.security.cash? then "cash"
+        elsif holding.security.crypto? then "crypto"
+        else "standard"
+        end
+        grouped[kind] += convert_to_family_currency(holding.amount, holding.currency)
+      end
+      grouped["cash"] += account_cash_total if account_cash_total.positive?
+      build_segments(grouped.map { |kind, value| [ kind, kind, value ] })
+    end
 
     # One shape for all four classification groupings: read the column off the
     # security, fall back to UNCLASSIFIED, and place each account's positive
