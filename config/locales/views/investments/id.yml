@@ -56,7 +56,7 @@ id:
         long: Akun Kustodian UGMA
       utma:
         short: UTMA
-        long: UTMA Custodial Account
+        long: Akun Kustodian UTMA
       # United Kingdom
       isa:
         short: ISA
