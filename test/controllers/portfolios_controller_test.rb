@@ -43,31 +43,172 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal "last_30_days", @user.reload.default_period
   end
 
+  test "a preview user's period pick is still saved as their default" do
+    @user.update!(default_period: "last_30_days")
+
+    get portfolio_path(period: "last_365_days")
+
+    assert_response :success
+    assert_equal "last_365_days", @user.reload.default_period
+  end
+
+  # The KPI row reads the family's income totals. Those used a ::boolean cast
+  # on provider pending flags, so one flag PostgreSQL cannot parse raised out
+  # of the aggregation and took the whole page down with it.
+  test "the hub renders when an income entry carries a non-boolean pending flag" do
+    accounts(:investment).entries.create!(
+      name: "Dividend", date: Date.current, amount: -12, currency: "USD",
+      entryable: Transaction.new(investment_activity_label: "Dividend", extra: { "plaid" => { "pending" => "maybe" } })
+    )
+
+    get portfolio_path
+
+    assert_response :success
+    assert_select "[data-section-key=?]", "kpis", count: 1
+  end
+
   # The fixture family holds AAPL in accounts(:investment), so both sections
   # have something to show.
-  test "renders the hub with its holdings and accounts sections" do
+  test "renders the hub, its turbo frame and every section the family has data for" do
     get portfolio_path
 
     assert_response :success
     assert_select "h1", text: I18n.t("portfolios.show.title")
-    assert_equal %w[holdings accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
-    assert_select "header + div[role=list]"
+    assert_select "turbo-frame#portfolio_sections"
+    assert_equal %w[kpis value_chart holdings accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
   end
 
-  # No section reads the period yet, so the page offers no control that
-  # would change nothing.
-  test "the page carries no period picker" do
+  test "the period picker reflects the requested period" do
     get portfolio_path(period: "last_5_years")
 
     assert_response :success
-    assert_select "button[aria-label=?]", I18n.t("UI.period_picker.aria_label", period: "5Y"), count: 0
-    assert_select "a[href^=?]", "#{portfolio_path}?period=", count: 0
+    # DS::MenuItem marks the current row with role=menuitemradio + aria-checked
+    # (not aria-current), so that is what the picker's selection looks like.
+    assert_select "a[href=?][aria-checked=?]", portfolio_path(period: "last_5_years"), "true"
+    assert_select "button[aria-label=?]", I18n.t("UI.period_picker.aria_label", period: "5Y")
+    assert_equal "last_5_years", @user.reload.default_period
+  end
+
+  # The picker shares the heading's row rather than taking one of its own
+  # between the heading and the first section, and that row is the frame's
+  # first child so the first section follows it.
+  test "the period picker shares the heading's row, directly above the sections" do
+    get portfolio_path(period: "last_5_years")
+
+    assert_response :success
+    assert_select "turbo-frame#portfolio_sections > div:first-child > header h1",
+      text: I18n.t("portfolios.show.title")
+    assert_select "turbo-frame#portfolio_sections > div:first-child > header + div[data-controller='DS--menu']" do
+      assert_select "button[aria-label=?]", I18n.t("UI.period_picker.aria_label", period: "5Y")
+    end
+    assert_select "turbo-frame#portfolio_sections > div:first-child + div[role=list]"
+  end
+
+  # Each picker link re-renders the frame, and the frame sends every other
+  # link inside it (an account card, say) to the whole page.
+  test "the picker links target the sections frame, and the frame breaks out for everything else" do
+    get portfolio_path(period: "last_5_years")
+
+    assert_response :success
+    assert_select "turbo-frame#portfolio_sections[target=_top]"
+    assert_select "a[href=?][data-turbo-frame=?]", portfolio_path(period: "last_30_days"), "portfolio_sections"
+  end
+
+  # A period pick keeps the holdings table's sort, so picking a period does
+  # not reset the order the user chose.
+  test "the picker links carry the holdings sort" do
+    get portfolio_path(period: "last_5_years", sort: "name", dir: "asc")
+
+    assert_response :success
+    assert_select "a[href=?][data-turbo-frame=?]", portfolio_path(dir: "asc", period: "last_30_days", sort: "name"), "portfolio_sections"
   end
 
   test "an unknown period falls back rather than erroring" do
     get portfolio_path(period: "not_a_period")
 
     assert_response :success
+    assert_select "button[aria-label=?]", I18n.t("UI.period_picker.aria_label", period: "30D")
+  end
+
+  test "the KPI row prints the statement's own figures" do
+    period = Period.last_30_days
+    statement = InvestmentStatement.new(@family, user: @user)
+    helpers = ApplicationController.helpers
+
+    expected = [
+      helpers.format_money(statement.portfolio_value_money),
+      helpers.format_money(statement.net_contributions(period: period)),
+      helpers.format_money(statement.totals(period: period).total_income)
+    ]
+    expected << helpers.format_money(statement.day_change.value) if statement.day_change
+    expected << helpers.format_money(statement.unrealized_gains_trend.value) if statement.unrealized_gains_trend
+    expected << helpers.format_money(statement.period_return_trend(period: period).value) if statement.period_return_trend(period: period)
+
+    get portfolio_path(period: "last_30_days")
+
+    assert_response :success
+    expected.each do |amount|
+      assert_match amount, response.body, "the KPI row should print #{amount}"
+    end
+  end
+
+  # An account whose currency has no rate is left out of the period return
+  # rather than converted at parity, and the card has to say so: a partial
+  # figure that does not announce itself reads as a whole one.
+  test "the period return card says how many accounts it left out" do
+    hint = I18n.t("portfolios.kpi_row.period_return_unconvertible", count: 2)
+
+    get portfolio_path(period: "last_30_days")
+    assert_response :success
+    assert_no_match hint, response.body, "the fixture must convert every account, or this proves nothing"
+
+    InvestmentStatement.any_instance.stubs(:period_return_unconvertible_count).returns(2)
+    get portfolio_path(period: "last_30_days")
+
+    assert_response :success
+    assert_select "[data-section-key=kpis] p", text: "#{Period.last_30_days.comparison_label} · #{hint}"
+  end
+
+  test "the value chart is mounted with the statement's series" do
+    seed_investment_balances
+
+    period = Period.last_30_days
+    series = InvestmentStatement.new(@family, user: @user).value_series(period: period)
+    assert_operator series.values.size, :>=, 2, "fixture setup should produce a chartable series"
+
+    get portfolio_path(period: "last_30_days")
+
+    assert_response :success
+    chart = css_select("#portfolioValueChart").first
+    assert chart, "the value chart should be mounted"
+    data = JSON.parse(chart["data-time-series-chart-data-value"])
+    assert_equal series.values.size, data["values"].size
+  end
+
+  # The chart reads the picked period, not the default one.
+  test "the value chart follows the picked period" do
+    seed_investment_balances
+
+    get portfolio_path(period: "last_7_days")
+    week = JSON.parse(css_select("#portfolioValueChart").first["data-time-series-chart-data-value"])["values"].size
+    get portfolio_path(period: "last_30_days")
+    month = JSON.parse(css_select("#portfolioValueChart").first["data-time-series-chart-data-value"])["values"].size
+
+    assert_equal InvestmentStatement.new(@family, user: @user).value_series(period: Period.last_7_days).values.size, week
+    assert_operator week, :<, month
+  end
+
+  test "renders sections in the saved order, collapsed where the user left them" do
+    @user.update_section_preferences("portfolio", order: %w[value_chart kpis], collapsed: { "kpis" => true })
+
+    get portfolio_path
+
+    assert_response :success
+    # The saved order places the chart first; sections it does not mention
+    # follow in declaration order.
+    assert_equal %w[value_chart kpis holdings accounts], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_select "[data-section-key=kpis][data-reports-section-collapsed-value=?]", "true"
+    assert_select "[data-section-key=value_chart][data-reports-section-collapsed-value=?]", "false"
   end
 
   test "shows an empty state with an add-account link when the family has no investment accounts" do
@@ -82,6 +223,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("portfolios.empty_state.title"), response.body
     assert_select "a[href=?]", new_account_path
     assert_select "[data-section-key]", count: 0
+    assert_select "turbo-frame#portfolio_sections", count: 0
   end
 
   test "saves the section order and collapsed set under the portfolio namespace only" do
@@ -106,17 +248,17 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_nil @user.reload.preferences["reports_section_order"]
   end
 
-  # `kpis` is a key not in Portfolio::SectionRegistry::KEYS, and is dropped
-  # like any other unknown key.
+  # `performance` is a key not in Portfolio::SectionRegistry::KEYS, and is
+  # dropped like any other unknown key.
   test "drops section keys the registry does not know, in both shapes" do
     patch update_preferences_portfolio_path,
-      params: { preferences: { portfolio_section_order: %w[kpis nonsense accounts], portfolio_collapsed_sections: { accounts: true, kpis: true, nonsense: true } } },
+      params: { preferences: { portfolio_section_order: %w[kpis performance nonsense value_chart accounts], portfolio_collapsed_sections: { kpis: true, performance: true, nonsense: true } } },
       as: :json
 
     assert_response :ok
     @user.reload
-    assert_equal %w[accounts], @user.preferences["portfolio_section_order"]
-    assert_equal({ "accounts" => true }, @user.preferences["portfolio_collapsed_sections"],
+    assert_equal %w[kpis value_chart accounts], @user.preferences["portfolio_section_order"]
+    assert_equal({ "kpis" => true }, @user.preferences["portfolio_collapsed_sections"],
       "an unknown key must not be written into the user's preferences")
   end
 
@@ -131,7 +273,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "holdings" => true }, @user.preferences["portfolio_collapsed_sections"])
 
     get portfolio_path
-    assert_equal %w[accounts holdings], css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[accounts holdings kpis value_chart], css_select("[data-section-key]").map { |node| node["data-section-key"] }
     assert_select "[data-section-key=holdings][data-reports-section-collapsed-value=?]", "true"
   end
 
@@ -258,6 +400,9 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal one, three, "loading the linked accounts' providers grew with the number of cards"
   end
 
+  # Two account lists, each read once: the current scope (the cards, the
+  # holdings and the KPI figures) and the historical scope the value chart
+  # reads, which also keeps a disabled account up to its cut-off.
   test "the investment accounts are queried once per page" do
     queries = capture_sql_queries { get portfolio_path }
 
@@ -268,7 +413,8 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     matching = queries.select do |sql|
       sql.match?(/\ASELECT (DISTINCT )?("accounts"\.\*|1 AS one) FROM "accounts"/) && sql.include?(%("accounts"."exclude_from_reports"))
     end
-    assert_equal 1, matching.size, matching.join("\n")
+    assert_equal 2, matching.size, matching.join("\n")
+    assert_equal 2, matching.uniq.size, "one scope was read twice:\n#{matching.join("\n")}"
   end
 
   # Without an id tiebreaker Postgres may return same-named accounts in any
@@ -453,7 +599,8 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
 
     # Measured: 42 queries for this page (layout included) with the holdings
     # and accounts sections, 10 accounts and 60 holdings, none of them per
-    # holding. The ceiling is that figure plus a little headroom, not a
+    # holding; 68 with the KPI row and the value chart, which read the
+    # family-wide figures and series once each. The ceiling is that figure plus a little headroom, not a
     # guess; the assertion below is the one that matters.
     assert_operator baseline.size, :<=, PORTFOLIO_QUERY_CEILING, "GET /portfolio issued #{baseline.size} queries"
 
@@ -464,7 +611,7 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal baseline.size, grown.size, "adding 20 holdings changed the query count:\n#{(grown - baseline).join("\n")}"
   end
 
-  PORTFOLIO_QUERY_CEILING = 50
+  PORTFOLIO_QUERY_CEILING = 72
 
   private
     def enable_preview(user)
@@ -517,6 +664,14 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
           Holding.create!(account: account, security: security, date: 1.day.ago.to_date, qty: 10, price: 95, amount: 950, currency: "USD", **basis)
           Holding.create!(account: account, security: security, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD", **basis)
         end
+      end
+    end
+
+    def seed_investment_balances
+      account = accounts(:investment)
+      (0..10).each do |days_ago|
+        date = days_ago.days.ago.to_date
+        account.balances.create!(date: date, balance: 10_000 + days_ago, cash_balance: 5_000, currency: "USD")
       end
     end
 end

@@ -1,7 +1,7 @@
 <%# Family-wide investment hub. Built on the Reports section framework, so the
     sections drag to reorder and collapse exactly as Reports' do -- only the
     preferences namespace and endpoint differ. %>
-<div class="@container space-y-6 pb-6 lg:pb-12">
+<% header = capture do %>
   <header>
     <div class="flex items-center gap-2">
       <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
@@ -9,15 +9,29 @@
     </div>
     <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
   </header>
+<% end %>
 
+<div class="@container space-y-6 pb-6 lg:pb-12">
   <% if @empty %>
+    <%= header %>
     <%= render "portfolios/empty_state" %>
   <% else %>
-    <%= render "shared/reorderable_sections",
-          sections: @sections,
-          namespace: "portfolio",
-          url: update_preferences_portfolio_path,
-          collapse_url: update_preferences_portfolio_path,
-          i18n_scope: "portfolios.show" %>
+    <%# The header shares a row with the period picker, so the first section
+        sits one gap below the heading. The row is inside the frame because the
+        picker's label has to re-render with the sections when a period is
+        picked. %>
+    <%= turbo_frame_tag "portfolio_sections", target: "_top", class: "block space-y-6" do %>
+      <div class="flex items-start justify-between gap-4">
+        <%= header %>
+        <%= render UI::PeriodPicker.new(selected: @period, url: portfolio_path, frame: "portfolio_sections", extra_params: { sort: @sort, dir: @dir }.compact) %>
+      </div>
+
+      <%= render "shared/reorderable_sections",
+            sections: @sections,
+            namespace: "portfolio",
+            url: update_preferences_portfolio_path,
+            collapse_url: update_preferences_portfolio_path,
+            i18n_scope: "portfolios.show" %>
+    <% end %>
   <% end %>
 </div>

@@ -1,0 +1,47 @@
+<%# locals: (statement:, period:, as_of:, kpis:) %>
+
+<%# The six numbers that answer "how is the portfolio doing" without scrolling.
+    The registry reads them from the statement for the one period and the one
+    `as_of` the controller captured; this partial only formats them. %>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  <%= render "portfolios/kpi_card",
+        icon: "briefcase",
+        label: t("portfolios.kpi_row.value"),
+        money: kpis[:value],
+        hint: t("portfolios.kpi_row.as_of", date: l(as_of, format: :long)) %>
+
+  <%= render "portfolios/kpi_card",
+        icon: "activity",
+        label: t("portfolios.kpi_row.day_change"),
+        money: nil,
+        trend: kpis[:day_change] %>
+
+  <%= render "portfolios/kpi_card",
+        icon: "trending-up",
+        label: t("portfolios.kpi_row.unrealized_pnl"),
+        money: nil,
+        trend: kpis[:unrealized] %>
+
+  <%# An account whose currency has no rate to the family currency is left
+      out of this figure rather than converted at parity, so the hint says how
+      many were. A partial number that does not announce itself reads as a
+      whole one. %>
+  <%= render "portfolios/kpi_card",
+        icon: "bar-chart-2",
+        label: t("portfolios.kpi_row.period_return"),
+        money: nil,
+        trend: kpis[:period_return],
+        hint: kpi_period_return_hint(period, kpis[:period_return_unconvertible]) %>
+
+  <%= render "portfolios/kpi_card",
+        icon: "wallet",
+        label: t("portfolios.kpi_row.net_contributions"),
+        money: kpis[:net_contributions],
+        hint: period.comparison_label %>
+
+  <%= render "portfolios/kpi_card",
+        icon: "coins",
+        label: t("portfolios.kpi_row.income"),
+        money: kpis[:income],
+        hint: t("portfolios.kpi_row.income_hint") %>
+</div>

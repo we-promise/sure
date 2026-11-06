@@ -1,0 +1,27 @@
+<%# locals: (statement:, period:, as_of:, series:) %>
+
+<div id="portfolio-value-chart">
+  <div class="space-y-2 px-4">
+    <% if series&.trend.present? %>
+      <p class="text-primary -space-x-0.5 text-3xl font-medium privacy-sensitive">
+        <%= format_money(series.trend.current) %>
+      </p>
+      <%= render partial: "shared/trend_change", locals: { trend: series.trend, comparison_label: period.comparison_label } %>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t("portfolios.value_chart.no_data") %></p>
+    <% end %>
+    <p class="text-xs text-secondary"><%= t("portfolios.value_chart.as_of", date: l(as_of, format: :long)) %></p>
+  </div>
+
+  <% if series && series.values.size >= 2 %>
+    <div
+      id="portfolioValueChart"
+      class="w-full h-52 privacy-sensitive"
+      data-controller="time-series-chart"
+      data-time-series-chart-data-value="<%= series.to_json %>"></div>
+  <% else %>
+    <div class="w-full flex items-center justify-center py-10">
+      <p class="text-secondary text-sm"><%= t("portfolios.value_chart.no_data") %></p>
+    </div>
+  <% end %>
+</div>

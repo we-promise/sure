@@ -26,11 +26,29 @@ de:
       position_missing_cost_basis_hint: Diese Position hat keine bekannte Kostenbasis, daher hat sie keine Durchschnittskosten und fließt nicht in die Rendite der Zeile ein.
       positions_caption: Positionen in %{ticker} nach Konto
       toggle_positions: Positionen in %{ticker} anzeigen
+    kpi_row:
+      as_of: Stand %{date}
+      day_change: Tagesveränderung
+      income: Erträge
+      income_hint: Dividenden und Zinsen
+      net_contributions: Nettoeinzahlungen
+      no_data: Nicht genug Daten
+      period_return: Rendite im Zeitraum
+      period_return_unconvertible:
+        one: 1 Konto ohne Wechselkurs ausgeschlossen
+        other: "%{count} Konten ohne Wechselkurs ausgeschlossen"
+      unrealized_pnl: Nicht realisiertes Ergebnis
+      value: Wert
     sections:
       accounts: Konten
       holdings: Bestände
+      kpis: Überblick
+      value_chart: Portfoliowert
     show:
       section_aria: "Abschnitt %{title}. Drücke Enter oder Leertaste, um ihn zum Umsortieren zu greifen, dann bewege ihn mit den Pfeiltasten."
       sections_aria: Portfolio-Abschnitte
       subtitle: Was du über deine Anlagekonten hinweg hältst, und was jedes Konto wert ist.
       title: Portfolio
+    value_chart:
+      as_of: Stand %{date}
+      no_data: Nicht genug Daten für ein Diagramm in diesem Zeitraum.

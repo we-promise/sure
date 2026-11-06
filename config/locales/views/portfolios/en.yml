@@ -26,11 +26,29 @@ en:
       position_missing_cost_basis_hint: This position has no known cost basis, so it has no average cost and is left out of the row's return.
       positions_caption: Positions in %{ticker} by account
       toggle_positions: Show positions in %{ticker}
+    kpi_row:
+      as_of: As of %{date}
+      day_change: Day change
+      income: Income
+      income_hint: Dividends and interest
+      net_contributions: Net contributions
+      no_data: Not enough data
+      period_return: Period return
+      period_return_unconvertible:
+        one: excludes 1 account with no exchange rate
+        other: excludes %{count} accounts with no exchange rate
+      unrealized_pnl: Unrealised P&L
+      value: Value
     sections:
       accounts: Accounts
       holdings: Holdings
+      kpis: Overview
+      value_chart: Portfolio value
     show:
       section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
       sections_aria: Portfolio sections
       subtitle: What you hold across your investment accounts, and what each account is worth.
       title: Portfolio
+    value_chart:
+      as_of: As of %{date}
+      no_data: Not enough data to chart this period.
