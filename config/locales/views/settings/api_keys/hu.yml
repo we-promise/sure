@@ -13,6 +13,7 @@ hu:
     api_keys:
       create:
         success: "Az API-kulcsod sikeresen létrehozva"
+        creation_failed: "Nem sikerült létrehozni az API-kulcsodat. Kérjük, próbáld újra."
       destroy:
         not_found: "Az API-kulcs nem található"
         cannot_revoke: "Ez az API-kulcs nem vonható vissza"
