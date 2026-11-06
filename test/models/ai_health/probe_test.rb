@@ -148,148 +148,53 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end
   end
 
-  test "PDF text-extraction probe exercises only the OpenAI text processor and validates its result" do
-    response = {
-      "choices" => [
-        {
-          "message" => {
-            "content" => {
-              document_type: "bank_statement",
-              summary: "A synthetic bank statement containing no customer data.",
-              extracted_data: {
-                institution_name: AiHealth::Probe::PDF_TEST_INSTITUTION
-              }
-            }.to_json
-          }
-        }
-      ]
-    }
-    client = mock("openai_client")
-    captured = nil
-    client.expects(:chat).with do |params|
-      captured = params
-      true
-    end.returns(response)
-    Ai::Transport::Http.stubs(:openai_client).returns(client)
-    Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).never
+  test "PDF text-extraction probe sends the synthetic text layer through ReadPdf and validates its result" do
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::PDF_TEST_INSTITUTION))
 
-    result = @probe.pdf_text_extraction(
-      provider: :openai,
-      endpoint: "https://api.cloudflare.example.test/v1",
-      access_token: "token",
-      model: "text-model",
-      openai_compatible: true
-    )
+    result = @probe.pdf_text_extraction(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                        model: "text-model", openai_compatible: true)
 
     assert result.passing?
-    instructions = captured.dig(:parameters, :messages, 0, :content)
-    document_text = captured.dig(:parameters, :messages, 1, :content)
-    assert_not_includes instructions, AiHealth::Probe::PDF_TEST_INSTITUTION
-    assert_includes document_text, AiHealth::Probe::PDF_TEST_INSTITUTION
+    request = requests.sole
+    assert_empty request.attachments
+    assert_not_includes request.instructions, AiHealth::Probe::PDF_TEST_INSTITUTION
+    assert_includes request.input, AiHealth::Probe::PDF_TEST_INSTITUTION
+    assert_equal "text-model", request.model.name
   end
 
-  test "PDF vision probe exercises only the OpenAI vision processor and validates its result" do
-    response = {
-      "choices" => [
-        {
-          "message" => {
-            "content" => {
-              document_type: "bank_statement",
-              summary: "A synthetic bank statement containing no customer data.",
-              extracted_data: {
-                institution_name: AiHealth::Probe::PDF_TEST_INSTITUTION
-              }
-            }.to_json
-          }
-        }
-      ]
-    }
-    client = mock("openai_client")
-    captured = nil
-    client.expects(:chat).with do |params|
-      captured = params
-      true
-    end.returns(response)
-    Ai::Transport::Http.stubs(:openai_client).returns(client)
-    Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).once.returns([ "encoded-page" ])
+  test "PDF vision probe sends the page as an image on a compatible server" do
+    skip "pdftoppm isn't installed (poppler-utils)" unless system("pdftoppm", "-v", out: File::NULL, err: File::NULL)
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::PDF_TEST_INSTITUTION))
 
-    result = @probe.pdf_vision_processing(
-      provider: :openai,
-      endpoint: "https://api.cloudflare.example.test/v1",
-      access_token: "token",
-      model: "vision-model",
-      openai_compatible: true
-    )
+    result = @probe.pdf_vision_processing(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                          model: "vision-model", openai_compatible: true)
 
     assert result.passing?
-    instructions = captured.dig(:parameters, :messages, 0, :content)
-    assert_not_includes instructions, AiHealth::Probe::PDF_TEST_INSTITUTION
+    assert_equal [ "image/png" ], requests.sole.attachments.map(&:content_type)
   end
 
   test "PDF processing probes require the expected institution in the standard result fields" do
-    response = {
-      "choices" => [
-        {
-          "message" => {
-            "content" => {
-              document_type: "bank_statement",
-              summary: "A different bank statement.",
-              extracted_data: { institution_name: "Another Bank" }
-            }.to_json
-          }
-        }
-      ]
-    }
-    client = stub(chat: response)
-    Ai::Transport::Http.stubs(:openai_client).returns(client)
-    Provider::Openai::PdfProcessor.any_instance.stubs(:convert_pdf_to_images).returns([ "encoded-page" ])
+    stub_ai(:extract_pdf, returns: probe_answer("Another Bank"))
     Rails.logger.stubs(:error)
     DebugLogEntry.stubs(:capture)
 
-    result = @probe.pdf_vision_processing(
-      provider: :openai,
-      endpoint: "https://api.cloudflare.example.test/v1",
-      access_token: "token",
-      model: "vision-model",
-      openai_compatible: true
-    )
+    result = @probe.pdf_text_extraction(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                        model: "text-model", openai_compatible: true)
 
     assert result.failing?
     assert_equal :invalid_response, result.failure_code
   end
 
-  test "PDF vision probe sends the synthetic PDF as an Anthropic document block" do
-    tool_use = Struct.new(:type, :input).new(
-      :tool_use,
-      {
-        "document_type" => "bank_statement",
-        "summary" => "A synthetic bank statement containing no customer data.",
-        "extracted_data" => {
-          "institution_name" => AiHealth::Probe::PDF_TEST_INSTITUTION
-        }
-      }
-    )
-    response = Struct.new(:content, :usage).new([ tool_use ], nil)
-    messages = mock("anthropic_messages")
-    messages.expects(:create).with do |params|
-      source = params.dig(:messages, 0, :content, 0, :source)
-      extracted_data_schema = params.dig(:tools, 0, :input_schema, :properties, :extracted_data)
-      source[:media_type] == "application/pdf" &&
-        Base64.strict_decode64(source[:data]) == @probe.send(:synthetic_pdf) &&
-        extracted_data_schema[:properties].key?(:institution_name) &&
-        extracted_data_schema[:required].empty? &&
-        !params[:system_].include?(AiHealth::Probe::PDF_TEST_INSTITUTION)
-    end.returns(response)
-    Ai::Transport::Http.stubs(:anthropic_client).returns(stub(messages: messages))
+  test "PDF vision probe sends the synthetic PDF itself to Anthropic" do
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::PDF_TEST_INSTITUTION))
 
-    result = @probe.pdf_vision_processing(
-      provider: :anthropic,
-      endpoint: "https://api.anthropic.com",
-      access_token: "token",
-      model: "claude-sonnet-4-6"
-    )
+    result = @probe.pdf_vision_processing(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "token",
+                                          model: "claude-sonnet-4-6")
 
     assert result.passing?
+    attachment = requests.sole.attachments.sole
+    assert attachment.pdf?
+    assert_equal @probe.send(:synthetic_pdf), attachment.data
   end
 
   test "failed LLM probe writes a system-wide debug entry and Rails log without secrets" do
@@ -634,5 +539,10 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     def stub_control_request(endpoint)
       stub_request(:post, "#{endpoint}/chat/completions").with { |request| !JSON.parse(request.body).key?("tools") }
+    end
+
+    def probe_answer(institution)
+      { document_type: "bank_statement", summary: "A synthetic bank statement containing no customer data.",
+        extracted_data: { institution_name: institution } }
     end
 end

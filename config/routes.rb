@@ -544,6 +544,7 @@ Rails.application.routes.draw do
       put :revert
       put :apply_template
       post :cancel
+      post :reread
       get :summary
     end
 

@@ -30,6 +30,19 @@ class Ai::PdfReading
 
   attr_reader :content, :filename, :family, :user
 
+  # What the route can do before a file is chosen, for the "Read as" options: each way with why
+  # the route can't, or nil. Text and Auto are always offered; the file decides the rest.
+  def self.route_reasons(family:, user: nil)
+    plan = Ai::Router.new(family:, user:).resolve(:extract_pdf)
+    return WAYS.index_with { :not_configured } unless plan.is_a?(Ai::Plan)
+
+    models = plan.routes.map(&:model)
+    readers = models.select { _1.capable?(:structured_output) }
+    { pdf: (:needs_documents unless readers.any? { _1.capable?(:documents) }), text: nil,
+      images: (:needs_vision unless readers.any? { _1.capable?(:vision) }),
+      ocr: (:needs_ocr_route unless models.any? { _1.capable?(:ocr) } && readers.any?) }
+  end
+
   def initialize(content:, family:, filename: "document.pdf", user: nil, plan: nil)
     @content, @filename, @family, @user, @plan = content, filename, family, user, plan
   end

@@ -78,7 +78,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
       assert_equal pdf_content, file_content
       assert_equal "sample_bank_statement.pdf", filename
-      assert_equal({ "type" => "financial_document" }, metadata)
+      assert_equal({ "type" => "financial_document", "pdf_import_id" => @import.id }, metadata)
       true
     end.returns(family_documents(:tax_return))
 
@@ -123,7 +123,7 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     @family.expects(:upload_document).with do |file_content:, filename:, metadata:|
       assert_equal pdf_content, file_content
       assert_equal "sample_bank_statement.pdf", filename
-      assert_equal({ "type" => "bank_statement" }, metadata)
+      assert_equal({ "type" => "bank_statement", "pdf_import_id" => @import.id }, metadata)
       true
     end.returns(family_documents(:tax_return))
 
@@ -132,16 +132,52 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal "complete", @import.reload.status
   end
 
-  test "discards permanently and marks failed on Provider::Error" do
+  test "discards permanently and marks failed with the reason when no model can read the PDF" do
     attach_pdf!(@import)
-    @import.expects(:process_with_ai).once.raises(Provider::Error, "Could not convert PDF to images")
+    use_no_ai
 
-    assert_nothing_raised do
-      ProcessPdfJob.perform_now(@import)
-    end
+    assert_nothing_raised { ProcessPdfJob.perform_now(@import) }
 
     assert_equal "failed", @import.reload.status
-    assert @import.error.present?
+    assert_equal I18n.t("imports.pdf_import.errors.unavailable.not_configured"), @import.error
+  end
+
+  test "a rendering failure keeps its concrete reason (#3275)" do
+    attach_pdf!(@import)
+    @import.expects(:process_with_ai).once.raises(Pdf::PageImages::Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary))
+
+    assert_nothing_raised { ProcessPdfJob.perform_now(@import) }
+
+    assert_equal "failed", @import.reload.status
+    assert_match "poppler-utils", @import.error
+  end
+
+  test "reads a statement end to end through the plumbing, recording how it was read and its checks" do
+    attach_pdf!(@import)
+    @import.stubs(:send_next_steps_email)
+    use_ai_routes(embed: [])
+    requests = stub_ai(:extract_pdf) do |request|
+      if request.schema_name == "document_analysis"
+        { document_type: "bank_statement", summary: "A statement", extracted_data: nil }
+      else
+        { bank_name: "Bank", account_holder: nil, account_number: nil, currency: "USD", opening_balance: 100.0, closing_balance: 90.0,
+          statement_period: { start_date: "2024-01-01", end_date: "2024-01-31" },
+          transactions: [ { date: "2024-01-05", description: "Coffee Shop", amount: -10.0, reference: nil, category: nil } ] }
+      end
+    end
+
+    events = capture_ai_events { ProcessPdfJob.perform_now(@import) }
+
+    @import.reload
+    assert_equal [ "pdf_import:#{@import.id}" ], events.map { _1.payload[:correlation_id] }.uniq
+    assert_equal "bank_statement", @import.document_type
+    assert_equal "A statement", @import.ai_summary
+    assert_equal "pdf", @import.read_with, "the test route's model reads PDFs"
+    assert_equal "gpt-4.1-mini", @import.read_model
+    assert_equal true, @import.extraction_checks["passed"]
+    assert_equal [ "Coffee Shop" ], @import.extracted_transactions.map { _1["name"] }
+    assert_equal 1, @import.rows_count
+    assert_equal %w[document_analysis bank_statement], requests.map(&:schema_name)
   end
 
   test "skips already failed import" do
