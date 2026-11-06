@@ -265,7 +265,7 @@ OPENAI_MODEL=anthropic/claude-3.5-sonnet
 Jev is a decision model: it picks each transaction's category from your list and reports a calibrated confidence, instead of generating text. It only categorizes; chat, merchant detection and PDF import keep using the LLM provider.
 
 ```bash
-JEV_API_KEY=your-typesafe-key
+JEV_API_KEY=...                                        # your TypeSafe key
 # JEV_ENDPOINT=https://api.typesafe.ai/v1/systemone   # the default
 # JEV_MODEL=jev-latest                                 # the default
 CATEGORIZATION_PROVIDER=jev                            # or choose it on the Self-Hosting page

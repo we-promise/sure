@@ -136,7 +136,7 @@ as incorrect and otherwise reads as a credible 0%.
   `stub_ai(:categorize) { |request| request.states.keys.index_with { { category: [ "Coffee", 0.9 ] } } }`.
 - `test/architecture/ai_transport_judge_test.rb` stubs the System One endpoint with WebMock.
 - `test/models/ai/live/judge_live_test.rb` replays OpenCode Zen's free Jev; record with
-  `RECORD_CASSETTES=1 JEV_LIVE_API_KEY=public`.
+  `RECORD_CASSETTES=1` and `JEV_LIVE_API_KEY` set to OpenCode Zen's anonymous key, `public`.
 
 ## Checklist
 

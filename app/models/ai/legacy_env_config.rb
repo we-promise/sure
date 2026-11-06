@@ -84,7 +84,7 @@ class Ai::LegacyEnvConfig
     routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
     routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
     # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM (2d plan,
-    # decision 3); the shadow route runs the other one, as today's shadow_categorization_provider.
+    # decision 3); the shadow route runs the other one, as the family's shadow provider did.
     jev_first = jev_model && self.class.categorization_provider == "jev"
     routes[:categorize] = route_list(:categorize, jev_first ? [ jev_model ] : preferred)
     routes[:shadow_categorize] = route_list(:shadow_categorize, jev_first ? preferred : [ jev_model ].compact)
