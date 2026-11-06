@@ -1,0 +1,202 @@
+---
+id:
+  investments:
+    edit:
+      edit: Edit %{account}
+    form:
+      none: Tidak ada
+      subtype_prompt: Pilih jenis investasi
+    new:
+      title: Masukkan saldo akun
+    show:
+      chart_title: Nilai total
+    subtypes:
+      # United States
+      brokerage:
+        short: Broker
+        long: Akun Pialang (Brokerage)
+      cash_management:
+        short: CMA
+        long: Akun Pengelolaan Kas (CMA)
+      "401k":
+        short: "401(k)"
+        long: "401(k)"
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      "403b":
+        short: "403(b)"
+        long: "403(b)"
+      "457b":
+        short: "457(b)"
+        long: "457(b)"
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan (TSP)
+      ira:
+        short: IRA
+        long: IRA Tradisional
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      "529_plan":
+        short: Rencana 529
+        long: Rencana Tabungan Pendidikan 529
+      hsa:
+        short: HSA
+        long: Akun Tabungan Kesehatan (HSA)
+      ugma:
+        short: UGMA
+        long: Akun Kustodian UGMA
+      utma:
+        short: UTMA
+        long: UTMA Custodial Account
+      # United Kingdom
+      isa:
+        short: ISA
+        long: Individual Savings Account (ISA)
+      lisa:
+        short: LISA
+        long: Lifetime ISA
+      sipp:
+        short: SIPP
+        long: Self-Invested Personal Pension (SIPP)
+      workplace_pension_uk:
+        short: Pensiun
+        long: Pensiun Tempat Kerja
+      # Canada
+      rrsp:
+        short: RRSP
+        long: Registered Retirement Savings Plan (RRSP)
+      tfsa:
+        short: TFSA
+        long: Tax-Free Savings Account (TFSA)
+      resp:
+        short: RESP
+        long: Registered Education Savings Plan (RESP)
+      lira:
+        short: LIRA
+        long: Locked-In Retirement Account (LIRA)
+      rrif:
+        short: RRIF
+        long: Registered Retirement Income Fund (RRIF)
+      # Australia
+      super:
+        short: Super
+        long: Superannuation
+      smsf:
+        short: SMSF
+        long: Self-Managed Super Fund (SMSF)
+      # Europe
+      pea:
+        short: PEA
+        long: Plan d'Épargne en Actions (PEA)
+      pillar_3a:
+        short: Pilar 3a
+        long: Pensiun Swasta (Pilar 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      # India
+      nps:
+        short: NPS
+        long: National Pension System (NPS)
+      apy:
+        short: APY
+        long: Atal Pension Yojana (APY)
+      indian_stocks:
+        short: Saham India
+        long: Saham India (Demat)
+      indian_equity:
+        short: Ekuitas India
+        long: Ekuitas India
+      indian_etf:
+        short: ETF India
+        long: ETF India
+      life_insurance:
+        short: Asuransi Jiwa
+        long: Asuransi Jiwa
+      epf:
+        short: EPF
+        long: Employees' Provident Fund (EPF)
+      ppf:
+        short: PPF
+        long: Public Provident Fund (PPF)
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana (SSY)
+      nsc:
+        short: NSC
+        long: National Savings Certificate (NSC)
+      scss:
+        short: SCSS
+        long: Senior Citizens' Savings Scheme (SCSS)
+      fd:
+        short: FD
+        long: Deposito Berjangka (Fixed Deposit)
+      rd:
+        short: RD
+        long: Setoran Berulang (Recurring Deposit)
+      pomis:
+        short: POMIS
+        long: Post Office Monthly Income Scheme (POMIS)
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra (KVP)
+      gold_etf:
+        short: ETF Emas
+        long: ETF Emas
+      gold_mf:
+        short: Reksadana Emas
+        long: Reksadana Emas
+      sgb:
+        short: SGB
+        long: Sovereign Gold Bond (SGB)
+      g_sec:
+        short: G-Sec
+        long: Surat Berharga Pemerintah (G-Secs)
+      sdl:
+        short: SDL
+        long: State Development Loans (SDLs)
+      corporate_bond:
+        short: Obligasi Korporasi
+        long: Obligasi Korporasi
+      infrastructure_bond:
+        short: Obligasi Infrastruktur
+        long: Obligasi Infrastruktur
+      tax_free_bond:
+        short: Obligasi Bebas Pajak
+        long: Obligasi Bebas Pajak
+      # Generic
+      pension:
+        short: Pensiun
+        long: Dana Pensiun
+      retirement:
+        short: Pensiun
+        long: Akun Pensiun
+      mutual_fund:
+        short: Reksadana
+        long: Reksadana
+      gold:
+        short: Emas
+        long: Emas (fisik atau digital)
+      angel:
+        short: Angel
+        long: Investasi Angel
+      trust:
+        short: Trust
+        long: Trust (Amanat)
+      other:
+        short: Lainnya
+        long: Investasi Lainnya
+    value_tooltip:
+      cash: Kas
+      holdings: Kepemilikan
+      total: Saldo portofolio
+      total_value_tooltip: Saldo total portofolio adalah jumlah kas pialang (tersedia untuk perdagangan) dan nilai pasar saat ini dari kepemilikan Anda.
