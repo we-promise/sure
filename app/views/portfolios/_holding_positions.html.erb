@@ -1,0 +1,25 @@
+<%# locals: (row:) %>
+
+<%# A holding's positions, one per account, each opening the holding drawer. %>
+<%= render DS::Table.new(rows: row.positions, inset: true, label: t("portfolios.holdings.positions_caption", ticker: row.ticker), data: { portfolio_positions: row.ticker }) do |table| %>
+  <% table.with_column(t("portfolios.holdings.columns.account")) { |holding| holding.account.name } %>
+
+  <% table.with_column(t("portfolios.holdings.columns.qty"), numeric: true, class: "text-secondary privacy-sensitive") { |holding| format_quantity(holding.qty, exact: holding.security.crypto?) } %>
+
+  <%# avg_cost, not the raw column: the statement preloads the trade-history
+      fallback for every holding, so a position whose basis is computed shows
+      it here too. %>
+  <% table.with_column(t("portfolios.holdings.columns.cost_basis"), numeric: true, class: "text-secondary privacy-sensitive") do |holding| %>
+    <% if holding.avg_cost %>
+      <%= format_money(holding.avg_cost) %>
+    <% else %>
+      <%= tag.span "—", title: t("portfolios.holdings.position_missing_cost_basis_hint") %>
+    <% end %>
+  <% end %>
+
+  <% table.with_column(t("portfolios.holdings.columns.value"), numeric: true, class: "privacy-sensitive") { |holding| format_money(holding.amount_money) } %>
+
+  <% table.with_column(tag.span(t("portfolios.holdings.open_position"), class: "sr-only"), align: :right) do |holding| %>
+    <%= link_to t("portfolios.holdings.open_position"), holding_path(holding), data: { turbo_frame: :drawer }, class: "text-link hover:underline text-xs" %>
+  <% end %>
+<% end %>

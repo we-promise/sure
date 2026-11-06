@@ -13,7 +13,7 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
     sections = registry.sections
 
     assert_equal Portfolio::SectionRegistry::KEYS, sections.map { |s| s[:key] }
-    assert_equal %w[portfolios/accounts], sections.map { |s| s[:partial] }
+    assert_equal %w[portfolios/holdings portfolios/accounts], sections.map { |s| s[:partial] }
     assert sections.all? { |s| s[:collapsible] }
 
     # Every partial gets its locals passed in: none of them reaches for
@@ -50,7 +50,7 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
   test "orders sections by the user's saved order, appending anything it omits" do
     @user.update_section_preferences("portfolio", order: %w[stub])
 
-    assert_equal %w[stub accounts], registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
+    assert_equal %w[stub holdings accounts], registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
   end
 
   test "a saved order that repeats a key renders that section once" do
@@ -58,19 +58,54 @@ class Portfolio::SectionRegistryTest < ActiveSupport::TestCase
 
     keys = registry(extra_sections: [ stub_section ]).sections.map { |s| s[:key] }
 
-    assert_equal %w[stub accounts], keys
+    assert_equal %w[stub accounts holdings], keys
   end
 
   test "ignores keys in the saved order that no longer exist" do
     @user.update_section_preferences("portfolio", order: %w[gone accounts])
 
-    assert_equal %w[accounts], registry.sections.map { |s| s[:key] }
+    assert_equal %w[accounts holdings], registry.sections.map { |s| s[:key] }
   end
 
   test "appends extra sections after the built-ins" do
     sections = registry(extra_sections: [ stub_section ]).sections
 
-    assert_equal %w[accounts stub], sections.map { |s| s[:key] }
+    assert_equal %w[holdings accounts stub], sections.map { |s| s[:key] }
+  end
+
+  # A family whose investment accounts hold nothing has no rows to list, so
+  # the section stays out rather than drawing an empty table.
+  test "the holdings section is visible only when the family holds a security" do
+    assert registry.sections.find { |s| s[:key] == "holdings" }[:visible]
+
+    Holding.where(account: @statement.investment_accounts).delete_all
+    @statement = InvestmentStatement.new(@family, user: @user)
+    sections = registry.sections
+
+    assert_not sections.find { |s| s[:key] == "holdings" }[:visible]
+    assert sections.find { |s| s[:key] == "accounts" }[:visible], "the accounts still list with nothing held"
+  end
+
+  test "passes the sort and direction through to the holdings locals" do
+    # Ticker order and name order disagree for this one: it sorts last by
+    # ticker and first by name, so a name sort that secretly ordered by
+    # ticker would put it in the wrong place.
+    zebra = Security.create!(ticker: "ZZZA", name: "Aardvark Holdings")
+    Holding.create!(
+      account: accounts(:investment), security: zebra, date: Date.current,
+      qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true
+    )
+
+    holdings = Portfolio::SectionRegistry.new(
+      statement: @statement, period: @period, as_of: @as_of, user: @user, sort: "name", dir: "asc"
+    ).sections.find { |s| s[:key] == "holdings" }
+
+    assert_equal "name", holdings[:locals][:sort]
+    assert_equal "asc", holdings[:locals][:dir]
+    rows = holdings[:locals][:rows]
+    names = rows.map { |row| row.name.downcase }
+    assert_equal names.sort, names, "sort: \"name\" must order by security name, not ticker"
+    assert_equal "ZZZA", rows.first.ticker, "the name sort must put Aardvark first despite its ticker"
   end
 
   private

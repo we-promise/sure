@@ -5,10 +5,31 @@ en:
       add_account: Add an investment account
       description: Brokerage, retirement and crypto accounts you include in your finances and reports are listed here with their balance.
       title: No investment accounts to show
+    holdings:
+      columns:
+        account: Account
+        accounts: Accounts
+        avg_cost: Avg cost
+        cost_basis: Cost basis
+        day_change: Day
+        qty: Qty
+        security: Security
+        unrealized: Unrealised P&L
+        value: Value
+        weight: Weight
+      label: Holdings
+      missing_cost_basis: No cost basis
+      missing_cost_basis_hint: At least one position has no known cost basis. The average cost and return cover only the positions that have one.
+      no_cost_basis: no cost basis
+      open_position: Open
+      position_missing_cost_basis_hint: This position has no known cost basis, so it has no average cost and is left out of the row's return.
+      positions_caption: Positions in %{ticker} by account
+      toggle_positions: Show positions in %{ticker}
     sections:
       accounts: Accounts
+      holdings: Holdings
     show:
       section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
       sections_aria: Portfolio sections
-      subtitle: Your investment accounts and what each one is worth.
+      subtitle: What you hold across your investment accounts, and what each account is worth.
       title: Portfolio

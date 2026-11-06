@@ -25,4 +25,34 @@ class PortfoliosTest < ApplicationSystemTestCase
   ensure
     ActionController::Base.allow_forgery_protection = original
   end
+
+  test "a holding's toggle reveals and hides its per-account positions" do
+    visit portfolio_path
+
+    toggle = find("#portfolio-holdings tr[data-portfolio-holding='AAPL'] button[aria-controls]")
+    detail_id = toggle["aria-controls"]
+    assert_no_selector "##{detail_id}"
+
+    toggle.click
+    assert_selector "##{detail_id} [data-portfolio-positions='AAPL'] a[href^='/holdings/']"
+    assert_equal "true", toggle["aria-expanded"]
+
+    toggle.click
+    assert_no_selector "##{detail_id}"
+    assert_equal "false", toggle["aria-expanded"]
+  end
+
+  test "a holdings column header sorts the table and flips on a second click" do
+    Holding.create!(account: accounts(:investment), security: Security.create!(ticker: "ZZZ", name: "Zeta"),
+                    date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    visit portfolio_path
+
+    find("#portfolio-holdings th a[href*='sort=name']").click
+    assert_selector "#portfolio-holdings th[aria-sort='ascending'] a[href*='sort=name']"
+    assert_equal %w[AAPL ZZZ], all("#portfolio-holdings tr[data-portfolio-holding]").map { |row| row["data-portfolio-holding"] }
+
+    find("#portfolio-holdings th a[href*='sort=name']").click
+    assert_selector "#portfolio-holdings th[aria-sort='descending'] a[href*='sort=name']"
+    assert_equal %w[ZZZ AAPL], all("#portfolio-holdings tr[data-portfolio-holding]").map { |row| row["data-portfolio-holding"] }
+  end
 end

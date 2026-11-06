@@ -17,18 +17,25 @@ class Portfolio::SectionRegistry
   # The built-in section keys, in declaration order. The preferences
   # endpoint accepts only these, so a saved order or collapsed set cannot
   # carry arbitrary strings into the user's preferences.
-  KEYS = %w[accounts].freeze
+  KEYS = %w[holdings accounts].freeze
 
-  attr_reader :statement, :period, :as_of, :user, :extra_sections
+  attr_reader :statement, :period, :as_of, :user, :sort, :dir, :extra_sections
 
+  # `sort` and `dir` are the holdings table's query-string state, passed
+  # through as given: the statement whitelists them
+  # (InvestmentStatement::HOLDINGS_SORT_KEYS, HOLDINGS_SORT_DIRECTIONS) and
+  # falls back to its defaults for anything else.
+  #
   # `extra_sections` are appended after the built-ins, in the order given. It
   # is the seam that keeps this list open: a section can be added (or a test
   # can add one) without editing the built-in list.
-  def initialize(statement:, period:, as_of:, user:, extra_sections: [])
+  def initialize(statement:, period:, as_of:, user:, sort: nil, dir: nil, extra_sections: [])
     @statement = statement
     @period = period
     @as_of = as_of
     @user = user
+    @sort = sort
+    @dir = dir
     @extra_sections = extra_sections || []
   end
 
@@ -65,6 +72,14 @@ class Portfolio::SectionRegistry
     def built_in_sections
       [
         {
+          key: "holdings",
+          title: "portfolios.sections.holdings",
+          partial: "portfolios/holdings",
+          locals: shared_locals.merge(rows: holdings_rows, sort: sort, dir: dir),
+          visible: holdings_rows.any?,
+          collapsible: true
+        },
+        {
           key: "accounts",
           title: "portfolios.sections.accounts",
           partial: "portfolios/accounts",
@@ -73,6 +88,10 @@ class Portfolio::SectionRegistry
           collapsible: true
         }
       ]
+    end
+
+    def holdings_rows
+      @holdings_rows ||= statement.holdings_table_rows(sort: sort, dir: dir)
     end
 
     # The accounts the cards show, in name order (id breaks ties, so

@@ -1,0 +1,89 @@
+<%# locals: (statement:, period:, as_of:, rows:, sort:, dir:) %>
+
+<%#
+  One row per security across every account, sorted by the statement. Every
+  figure on a row comes from HoldingsTableRow: nothing here calls
+  Holding#avg_cost, #trend or #day_change on a summary row, each of which
+  issues a query per holding, so the page's query count does not grow with
+  rows. Each row reveals its per-account positions, each with the existing
+  holding drawer, in a detail row of the table.
+%>
+<%
+  sorting = { active_sort: sort.presence || "value", active_dir: dir.presence || "desc" }
+  header = ->(label, key) { holdings_sort_header(label, key, **sorting) }
+%>
+
+<%= render DS::Table.new(
+      rows: rows,
+      inset: true,
+      id: "portfolio-holdings",
+      label: t("portfolios.holdings.label"),
+      row_class: ->(_row) { "hover:bg-container-hover" },
+      row_opts: ->(row) { { data: { portfolio_holding: row.ticker } } },
+      row_detail: ->(row) { render("portfolios/holding_positions", row: row) }
+    ) do |table| %>
+  <% table.with_column(header.call(t("portfolios.holdings.columns.security"), "name"), row_header: true, aria_sort: holdings_aria_sort("name", **sorting)) do |row, index| %>
+    <div class="flex items-center gap-3 min-w-0">
+      <%= render DS::Button.new(
+            variant: :icon,
+            size: :sm,
+            icon: "chevron-right",
+            class: "shrink-0 transition-transform",
+            data: { controller: "row-expander", action: "row-expander#toggle" },
+            aria: { expanded: false, controls: table.row_detail_id(index), label: t("portfolios.holdings.toggle_positions", ticker: row.ticker) }
+          ) %>
+      <% if (logo = row.security.display_logo_url).present? %>
+        <%= image_tag logo, class: "w-8 h-8 rounded-full shrink-0", loading: "lazy", alt: row.ticker %>
+      <% else %>
+        <%= render DS::FilledIcon.new(variant: :text, text: row.name, size: "md", rounded: true) %>
+      <% end %>
+      <div class="min-w-0 space-y-0.5 text-left">
+        <p class="truncate"><%= row.name %></p>
+        <div class="flex items-center gap-2">
+          <%= tag.p row.ticker, class: "text-secondary text-xs uppercase" %>
+          <% if row.missing_cost_basis %>
+            <%= render DS::Pill.new(label: t("portfolios.holdings.missing_cost_basis"), title: t("portfolios.holdings.missing_cost_basis_hint"), tone: :warning, icon: "info", marker: false) %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% table.with_column(t("portfolios.holdings.columns.accounts"), numeric: true, class: "text-secondary") { |row| row.accounts_count.to_s } %>
+
+  <% table.with_column(t("portfolios.holdings.columns.qty"), numeric: true, class: "privacy-sensitive") { |row| format_quantity(row.qty, exact: row.security.crypto?) } %>
+
+  <% table.with_column(t("portfolios.holdings.columns.avg_cost"), numeric: true, class: "privacy-sensitive") do |row| %>
+    <%= row.avg_cost ? format_money(row.avg_cost) : tag.span("—", class: "text-secondary") %>
+  <% end %>
+
+  <% table.with_column(header.call(t("portfolios.holdings.columns.value"), "value"), numeric: true, aria_sort: holdings_aria_sort("value", **sorting)) do |row| %>
+    <%= tag.span format_money(row.amount_money), class: "privacy-sensitive", data: { portfolio_value: true } %>
+  <% end %>
+
+  <% table.with_column(header.call(t("portfolios.holdings.columns.weight"), "weight"), numeric: true, aria_sort: holdings_aria_sort("weight", **sorting)) do |row| %>
+    <div class="flex justify-end items-center gap-2">
+      <%= render "shared/progress_circle", progress: row.weight %>
+      <%= number_to_percentage(row.weight, precision: 1) %>
+    </div>
+  <% end %>
+
+  <% table.with_column(header.call(t("portfolios.holdings.columns.unrealized"), "return"), numeric: true, aria_sort: holdings_aria_sort("return", **sorting)) do |row| %>
+    <% if row.unrealized %>
+      <%= tag.p format_money(row.unrealized.value), class: "privacy-sensitive", style: "color: #{row.unrealized.color};" %>
+      <%= tag.p "(#{row.unrealized.percent_formatted})", class: "text-xs privacy-sensitive", style: "color: #{row.unrealized.color};" %>
+    <% else %>
+      <p class="text-secondary">—</p>
+      <p class="text-xs text-secondary"><%= t("portfolios.holdings.no_cost_basis") %></p>
+    <% end %>
+  <% end %>
+
+  <% table.with_column(header.call(t("portfolios.holdings.columns.day_change"), "day_change"), numeric: true, aria_sort: holdings_aria_sort("day_change", **sorting)) do |row| %>
+    <% if row.day_change %>
+      <%= tag.p format_money(row.day_change.value), class: "privacy-sensitive", style: "color: #{row.day_change.color};" %>
+      <%= tag.p "(#{row.day_change.percent_formatted})", class: "text-xs privacy-sensitive", style: "color: #{row.day_change.color};" %>
+    <% else %>
+      <p class="text-secondary">—</p>
+    <% end %>
+  <% end %>
+<% end %>
