@@ -12,7 +12,7 @@ class Api::V1::VersionsController < Api::V1::BaseController
   private
     def public_version_request?
       Rails.configuration.public_version_endpoint &&
-        request.headers["Authorization"].blank? && request.headers["X-Api-Key"].blank?
+        request.headers["Authorization"].blank? && request.headers["X-Api-Key"].nil?
     end
 
     def prevent_version_caching

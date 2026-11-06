@@ -71,6 +71,25 @@ class Api::V1::VersionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil response.parsed_body.fetch("commit_sha")
   end
 
+  test "public opt in rejects empty and whitespace API keys" do
+    Rails.configuration.stubs(:public_version_endpoint).returns(true)
+
+    [ "", "   " ].each do |key|
+      get api_v1_version_url, headers: { "X-Api-Key" => key }
+      assert_response :unauthorized
+      assert_not response.parsed_body.key?("version")
+      assert_includes response.headers["Cache-Control"], "no-store"
+    end
+  end
+
+  test "public opt in still enforces read scope on supplied keys" do
+    Rails.configuration.stubs(:public_version_endpoint).returns(true)
+    @api_key.update_columns(scopes: [])
+
+    get api_v1_version_url, headers: api_headers(@api_key)
+    assert_response :forbidden
+  end
+
   private
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }
