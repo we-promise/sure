@@ -14,7 +14,7 @@ Ai::Result = Data.define(:value, :error, :availability, :usage, :route, :failed_
   def cancelled?   = error.is_a?(Ai::Error::Cancelled)
 
   # Items a batched call didn't reach (section 8.1).
-  def remaining_ids = remaining.map(&:id)
+  def remaining_ids = remaining.map { _1.is_a?(Hash) ? _1[:id] : _1.id }
 
   def value!
     raise error if error

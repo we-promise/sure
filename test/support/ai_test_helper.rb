@@ -42,7 +42,60 @@ module AiTestHelper
   end
 
   def self.included(base)
-    base.teardown { Ai::Config.override = nil } if base.respond_to?(:teardown)
+    return unless base.respond_to?(:teardown)
+
+    base.teardown do
+      Ai::Config.override = nil
+      AiTestHelper.transport_stub = nil
+    end
+  end
+
+  class << self
+    # Set by stub_ai: builds the transport for an endpoint instead of Ai::Transport.for.
+    attr_accessor :transport_stub
+  end
+
+  # Ai::Transport.for asks the stub first, so stub_ai covers every route, whatever its endpoint.
+  module TransportStub
+    def for(endpoint) = AiTestHelper.transport_stub ? AiTestHelper.transport_stub.call(endpoint) : super
+  end
+  Ai::Transport.singleton_class.prepend(TransportStub)
+
+  # A transport that answers `generate` from the test, through Ai::Transport::Base#generate, so
+  # the call context and the generate.ai event are the real ones.
+  class FakeTransport < Ai::Transport::Base
+    def initialize(endpoint, responder)
+      super(endpoint)
+      @responder = responder
+    end
+
+    private
+      def run_generate(request)
+        answer = @responder.call(request)
+        Response.new(json: JSON.parse(answer.to_json), usage: Ai::Tokens.new(input_tokens: 10, output_tokens: 5),
+                     raw_id: "stub", finish_reason: :stop, json_mode: request.json_mode)
+      end
+  end
+
+  # Makes `feature`'s generations answer `returns` (a value, or a proc taking the request), or
+  # raise `raises`, with no HTTP. Coercion, failover, instrumentation and the requester still
+  # run. Returns the requests sent, in order. A request for another feature fails the test.
+  #   requests = stub_ai(:categorize, returns: { categorizations: [ ... ] })
+  #   stub_ai(:bill_setup, raises: Ai::Error::Timeout)
+  #   stub_ai { |request| request.model.endpoint.name == "gpu" ? raise(Ai::Error::InvalidOutput) : { ... } }
+  def stub_ai(feature = nil, returns: nil, raises: nil, &block)
+    requests = []
+    responder = lambda do |request|
+      raise ArgumentError, "stub_ai(#{feature.inspect}) got a #{request.feature} request" if feature && request.feature != feature.to_sym
+
+      requests << request
+      raise raises if raises
+      next block.call(request) if block
+
+      returns.respond_to?(:call) ? returns.call(request) : returns
+    end
+    AiTestHelper.transport_stub = ->(endpoint) { FakeTransport.new(endpoint, responder) }
+    requests
   end
 
   # The block forms below, for a whole test (integration tests, setup blocks):
