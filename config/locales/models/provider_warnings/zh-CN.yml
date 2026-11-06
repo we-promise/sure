@@ -9,3 +9,21 @@ zh-CN:
       one: Lunchflow 导入：%{count} 个账户的交易获取失败
       other: Lunchflow 导入：%{count} 个账户的交易获取失败
     lunchflow_import_error: Lunchflow 导入：%{error}
+    truelayer_accounts_failed:
+      one: "TrueLayer 导入：%{count} 个账户更新失败"
+      other: "TrueLayer 导入：%{count} 个账户更新失败"
+    truelayer_transactions_failed:
+      one: "TrueLayer 导入：%{count} 个账户的交易获取失败"
+      other: "TrueLayer 导入：%{count} 个账户的交易获取失败"
+    truelayer_balances_failed:
+      one: "TrueLayer 导入：%{count} 个账户的余额获取失败"
+      other: "TrueLayer 导入：%{count} 个账户的余额获取失败"
+    truelayer_processing_failed:
+      one: "TrueLayer 导入：%{count} 个账户无法处理"
+      other: "TrueLayer 导入：%{count} 个账户无法处理"
+    truelayer_entries_failed:
+      one: "TrueLayer 导入：%{count} 笔交易无法导入"
+      other: "TrueLayer 导入：%{count} 笔交易无法导入"
+    truelayer_scheduling_failed:
+      one: "TrueLayer 导入：无法为 %{count} 个账户计划余额更新"
+      other: "TrueLayer 导入：无法为 %{count} 个账户计划余额更新"
