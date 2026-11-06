@@ -315,10 +315,11 @@ class Security::Price::Importer
       persisted_count == expected_count
     end
 
-    # Retry markers can predate the listing boundary; reuse the same dates for cache and fetch decisions.
+    # Explicit retries and unrecovered legacy currencies can predate the listing boundary.
+    # Reuse these dates for both cache and fetch decisions.
     def currency_retry_dates
       @currency_retry_dates ||= Security::Price.requiring_currency_retry
-        .where(security: security, date: start_date..end_date).distinct.pluck(:date).to_set
+        .where(security: security, date: start_date..end_date).distinct.pluck(:date).to_set | legacy_invalid_currency_dates
     end
 
     # Check only recognized-currency provisional quotes within the retry window.

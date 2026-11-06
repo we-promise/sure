@@ -114,6 +114,33 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert Security::Price.exists?(security: @security, date: valid_date, currency: "USD")
   end
 
+  test "retries an unrecovered legacy currency before a complete listing window" do
+    start_date = 30.days.ago.to_date
+    listed_date = start_date + 10.days
+    @security.update!(first_provider_price_on: listed_date)
+    legacy_price = @security.prices.create!(date: start_date, price: 100, currency: "USD")
+    legacy_price.update_column(:currency, "")
+    @security.prices.create!(date: listed_date, price: 110, currency: "USD")
+    @provider.expects(:fetch_security_prices)
+      .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+        start_date: get_provider_fetch_start_date(start_date), end_date: listed_date)
+      .returns(provider_success_response([
+        OpenStruct.new(date: start_date, price: 200, currency: "USD"),
+        OpenStruct.new(date: listed_date, price: 115, currency: "USD")
+      ]))
+
+    Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: start_date, end_date: listed_date).import_provider_prices
+
+    recovered_price = @security.prices.find_by(date: start_date, currency: "USD")
+    assert_not_nil recovered_price, "legacy invalid prices must be retried before the listing boundary"
+    assert_equal 200, recovered_price.price
+    assert_equal "", legacy_price.reload[:currency]
+    @provider.expects(:fetch_security_prices).never
+    assert_equal 0, Security::Price::Importer.new(security: @security, security_provider: @provider,
+      start_date: start_date, end_date: listed_date).import_provider_prices
+  end
+
   test "an invalid early quote invalidates an existing listing boundary so the missing date is retried" do
     start_date = 30.days.ago.to_date
     valid_date = start_date + 1.day
