@@ -470,6 +470,16 @@ For self-hosted deployments, you can configure AI settings through the web inter
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
 
+**Give the `web` and `worker` containers the same AI variables.** Each process reads its own
+environment: the web container decides which AI buttons and actions are offered, and the worker
+runs the AI jobs. When their AI variables differ, a feature can be offered that the worker can't
+run, or hidden although it would work. Settings saved in the UI are shared by both.
+
+**Which AI features are available** is decided in one place for every feature, from the same
+settings: a button, rule action or MCP tool appears only when a configured model can do the work.
+For example, **Enhance merchants** appears on an install with only an Anthropic key, as merchant
+enhancement runs on Anthropic too.
+
 ## External AI Assistant
 
 Instead of using the built-in LLM (which calls OpenAI or a local model directly), you can delegate chat to an **external AI agent**. The agent receives the conversation, can call back to Sure's financial data via MCP, and streams a response.
@@ -1649,9 +1659,13 @@ VECTOR_STORE_PROVIDER=pgvector
 # Embedding model configuration
 EMBEDDING_MODEL=mxbai-embed-large         # Default: mxbai-embed-large
 EMBEDDING_DIMENSIONS=1024                 # Default: 1024 (must match your model)
-EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to OPENAI_URI_BASE if not set
-EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN if not set
+EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to the OpenAI API Base URL (ENV or Settings) if not set
+EMBEDDING_ACCESS_TOKEN=                   # Falls back to the OpenAI Access Token (ENV or Settings) if not set
 ```
+
+The fallbacks include values saved in **Settings** → **Self-Hosting**. Before this release they
+read only `OPENAI_URI_BASE` and `OPENAI_ACCESS_TOKEN` from the environment, so an install that set
+its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key.
 
 Sure enables the `vector` extension when it first provisions the chunks table,
 provided the database user has permission. If the AI status page reports that

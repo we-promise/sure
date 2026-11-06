@@ -49,4 +49,17 @@ module Ai::Routes
           .flat_map { |feature, spec| spec[:sends] || fetch(spec[:shadow_of])[:sends] }
           .uniq
   end
+
+  # The routing and manifest table in docs/llm-guides/ai-pipeline.md (bin/rails ai:routes_doc).
+  def doc_table
+    rows = MATRIX.map do |feature, spec|
+      needs = Ai::Routes.needs_for(feature)
+      needs = needs.is_a?(Hash) ? needs.map { |kind, list| "#{kind}: #{list.join(", ")}" }.join("; ") : needs.join(", ")
+      row = I18n.t("ai.consent_rows.#{consent_key(spec[:shadow_of] || feature)}")
+      row += " (shadow runs)" if spec[:shadow_of]
+      sends = Array(spec[:sends] || fetch(spec[:shadow_of])[:sends]).map { I18n.t("ai.sends.#{_1}", locale: :en) }.join("; ")
+      "| `#{feature}` | #{spec[:lane]} | #{needs} | #{row} (#{spec[:consent]}) | #{sends} |"
+    end
+    ([ "| Feature | Lane | Needs | Consent row | Sends |", "|---|---|---|---|---|" ] + rows).join("\n")
+  end
 end
