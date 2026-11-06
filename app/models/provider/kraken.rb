@@ -68,6 +68,19 @@ class Provider::Kraken
     private_post("Ledgers", params)
   end
 
+  # Funds bonded/pending in Kraken's Earn program (staking, etc.) live in a
+  # separate sub-ledger from the regular spot wallet BalanceEx reads --
+  # confirmed against Kraken's own API docs for Earn/Allocations: these
+  # amounts are not part of any Balance/BalanceEx response. Without this,
+  # only Earn's reward payouts (ordinary Ledgers entries) are ever seen; the
+  # allocated principal itself is invisible. cursor/next_cursor paginate.
+  def get_earn_allocations(cursor: nil)
+    params = { "hide_zero_allocations" => "true" }
+    params["cursor"] = cursor if cursor.present?
+
+    private_post("Earn/Allocations", params)
+  end
+
   def get_asset_info(asset: nil)
     params = {}
     params["asset"] = asset if asset.present?
