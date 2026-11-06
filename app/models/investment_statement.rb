@@ -102,18 +102,22 @@ class InvestmentStatement
       end
   end
 
-  # Portfolio allocation by security (rolled up across accounts). Shares the
-  # weight denominator with top_holdings so the same security never reports two
-  # different percentages. Weights therefore sum to the invested share of the
-  # portfolio, not to 100 — cash is the residual.
+  # Portfolio allocation by security (rolled up across accounts), plus one
+  # cash row for the part of the portfolio no holding accounts for, so the
+  # weights sum to 100 and every security carries the same weight here as in
+  # #top_holdings.
+  #
+  # The cash row is a residual (portfolio value minus holdings total), not
+  # Account#cash_balance: when account balances are stale the residual is
+  # zero and the row is omitted, whereas the reported cash balance could push
+  # the sum past 100.
   def allocation
     rolled_up = holdings_rolled_up_by_security
     holdings_total = rolled_up.sum { |_, value, _| value }
-    return [] if holdings_total.zero?
-
     total = weight_denominator(holdings_total)
+    return [] if total.zero?
 
-    rolled_up.map do |security, value, holdings|
+    rows = rolled_up.map do |security, value, holdings|
       HoldingAllocation.new(
         security: security,
         amount: Money.new(value, family.currency),
@@ -121,10 +125,23 @@ class InvestmentStatement
         trend: combined_holding_trend(holdings)
       )
     end
+
+    cash = total - holdings_total
+    if cash.positive?
+      rows << HoldingAllocation.new(
+        security: nil,
+        amount: Money.new(cash, family.currency),
+        weight: (cash / total * 100).round(2),
+        trend: nil
+      )
+    end
+
+    rows
   end
 
   # Allocation of the portfolio grouped by a classification column of the
-  # security, or by :account, :currency or :kind (cash, crypto, standard).
+  # security, by :account, :currency or :kind (cash, crypto, standard), or by
+  # :security (the #allocation roll-up).
   # Each account's positive cash balance is placed where the grouping says
   # cash belongs, so weights sum to 100 within rounding: the account grouping
   # is measured against the account balances, the others against the holdings
@@ -132,7 +149,7 @@ class InvestmentStatement
   # balance never pushes a grouping past 100. Segments are sorted largest
   # first. Amounts convert to the family currency at the latest rate; a
   # currency with no rate counts 1:1 (`convert_to_family_currency`).
-  ALLOCATION_GROUPINGS = %w[asset_class asset_sub_class sector region account currency kind].freeze
+  ALLOCATION_GROUPINGS = %w[security asset_class asset_sub_class sector region account currency kind].freeze
 
   # The bucket a holding falls into when the column it is grouped by is empty.
   # It is a real segment, not a gap, so a portfolio of unclassified securities
@@ -140,8 +157,8 @@ class InvestmentStatement
   UNCLASSIFIED = "unclassified".freeze
 
   # One level down from a classification segment: asset class -> sub-class ->
-  # positions. Sector, region, account, currency and kind do not nest, so they
-  # return [].
+  # positions. Security, sector, region, account, currency and kind do not
+  # nest, so they return [].
   #
   # `parent` is the asset class the sub-class was reached through. A sub-class
   # name such as `unclassified` repeats across asset classes, so without it the
@@ -154,8 +171,9 @@ class InvestmentStatement
     end
   end
 
-  # A grouping outside ALLOCATION_GROUPINGS returns no segments, so a grouping
-  # name taken from a query string cannot raise.
+  # Anything that is not another grouping, a missing one included, is the
+  # security roll-up, so a grouping name taken from a query string cannot raise
+  # and a request without one shows the default.
   def allocation_by(by)
     case by.to_s
     when "account" then allocation_by_account
@@ -165,7 +183,10 @@ class InvestmentStatement
     when "asset_sub_class" then allocation_by_classification(:asset_sub_class, cash_bucket: "cash")
     when "sector" then allocation_by_classification(:sector)
     when "region" then allocation_by_classification(:region)
-    else []
+    else
+      allocation.map do |row|
+        AllocationSegment.new(id: row.cash? ? "cash" : row.security.id, name: row.name, amount: row.amount, weight: row.weight)
+      end
     end
   end
 
@@ -356,11 +377,15 @@ class InvestmentStatement
       end
     end
 
+    # `security` is nil only for the cash row #allocation appends.
     HoldingAllocation = Data.define(:security, :amount, :weight, :trend) do
-      def ticker = security.ticker
-      def name = security.name.presence || ticker
+      def cash? = security.nil?
+      def ticker = cash? ? CASH_TICKER : security.ticker
+      def name = cash? ? I18n.t("models.investment_statement.cash") : (security.name.presence || ticker)
       def amount_money = amount
     end
+
+    CASH_TICKER = "CASH".freeze
 
     AllocationSegment = Data.define(:id, :name, :amount, :weight)
 
