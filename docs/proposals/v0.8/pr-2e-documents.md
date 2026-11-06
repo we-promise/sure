@@ -545,3 +545,45 @@ Upstream PRs whose goals 2e keeps:
   - `UsageRecorder`, `JsonMode`, `StructuredOutput`;
   - `preferred_llm_provider`, `supports_pdf_processing`;
   - `EMBEDDING_DIMENSIONS` outside `legacy_env_config.rb`.
+
+## As built
+
+Branch `feat/ai-documents` (josh-sanders/sure): #4765's head `35164876c` with #3422's head
+`3d2659c63` merged in (`825731239`, conflicts in `process_pdf_job.rb` and `search_family_files.rb`
+and its test), then 12 commits, 135 files, +3,219 −3,721 lines. Where the commits differ from the
+plan above:
+
+- **Mistral OCR reads page images, one per request, like Cohere,** not the PDF with a page range.
+  One path for both services keeps the hardened `pdftoppm` as the only PDF parser on the way, and
+  makes each usage row one page.
+- **`PdfImport` isn't an `Ai::Requester`.** `ProcessPdfJob` stays the orchestrator (read, index,
+  extract, rows, email) and opens `Ai::CallContext.job("pdf_import:<id>")` for the correlation id.
+- **OCR prompt folders are `app/prompts/ocr_<name>/`** (`markdown`, `unlimited_ocr_2`), named by
+  `Ai::Config::Model::OCR_PROMPTS`; `extract_pdf`'s two generations run their own folders
+  (`read_pdf`, `extract_bank_statement`) and aren't in `LegacyEnvConfig::PROMPTS`, so a route
+  entry's `prompt:` doesn't apply to them. `extract_pdf`'s needs became
+  `{ generation: [structured_output], ocr: [ocr] }`, so a route can list an OCR model.
+- **`extract_bank_statement`'s prompt is the spike's**, which produced the measured results, with
+  today's rules (document order, last four digits, null rather than guesses) and a line for a
+  batch that holds part of a statement. `read_pdf`'s instructions are today's OpenAI text.
+- **`OPENAI_SUPPORTS_PDF_PROCESSING=false` turns page images off**, as its comment always said;
+  a statement's text layer is still read. Today it turned PDF import off entirely. Upgrade note.
+- **`preferred_llm_provider`'s two chat callers** ("Dig in with AI", the bills AI review) ask
+  `Assistant.builtin_provider`, the same lookup kept with chat until PR 6. `AiHealth` reads
+  `extract_pdf`'s route for what the PDF probes can check; the probes run the synthetic statement
+  through `ReadPdf`.
+- **Re-reading** clears the unpublished rows and resets the rows counter
+  (`Import::Row`'s counter cache makes `rows_count` read-only); a re-read import isn't uploaded to
+  the vector store twice (`pdf_import_id` in the document's metadata).
+- **`search_family_files` loses its own Langfuse trace**: the query's embedding is an `embed.ai`
+  call, traced like any other. Its fallback reason is the router's (`not_configured`,
+  `no_user_consent`, …), or `no_vector_store`.
+- **RubyLLM 2.1.1 keeps embedding rows in the server's order** (#1160 sorts by index after 2.1.1);
+  today's client sorted them. OpenAI-compatible servers answer in order; PR 5 brings the fix.
+- **Not run:** the migration `20261107090000_add_pdf_reading_to_imports` (schema.rb edited by
+  hand); the live embedding cassette (`embed_live_test`, venus llama.cpp) and a local OCR cassette,
+  which need the llama.cpp key; and the live statements through `ProcessPdfJob`.
+
+**Checks at `495fe315b`:** full suite 14,963 runs, 13 failures, all in 2d's baseline (Wise*,
+BinanceItems, Budget, Demo::FinancekitGenerator); the affected system tests (28 runs) pass with
+the pod's Selenium; RuboCop, erb_lint, Biome, Brakeman and Pipelock's diff scan are clean.
