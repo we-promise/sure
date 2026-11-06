@@ -1284,37 +1284,78 @@ class EnableBankingItem::Importer
     def pair_identifier_transitions!(account, leftover_old, leftover_new)
       return if @book_truncated
 
-      booked = leftover_old.reject { |tx| pending_row?(tx) }
-      return if booked.empty?
+      olds = leftover_old.reject { |tx| pending_row?(tx) }.select { |tx| replacement_key(tx) }
+      return if olds.empty?
 
-      incoming = leftover_new.reject { |tx| pending_row?(tx) }
-      shape = ->(tx) { EnableBankingEntry::Processor.identifierless?(tx) ? :identifierless : :identified }
+      news = leftover_new.reject { |tx| pending_row?(tx) }.select { |tx| replacement_key(tx) }
+      pairs = exact_date_transitions(olds, news)
 
-      old_groups = booked.group_by { |tx| [ replacement_key(tx), shape.(tx) ] }
-      new_groups = incoming.group_by { |tx| [ replacement_key(tx), shape.(tx) ] }
+      paired = pairs.flatten.map(&:object_id).to_set
+      pairs += shifted_date_transitions(olds.reject { |tx| paired.include?(tx.object_id) },
+                                        news.reject { |tx| paired.include?(tx.object_id) })
 
-      old_groups.each do |(key, old_shape), old_rows|
-        next if key.nil?
-
-        new_shape = old_shape == :identifierless ? :identified : :identifierless
-        new_rows = new_groups[[ key, new_shape ]] or next
-
-        if old_rows.size != new_rows.size
-          Rails.logger.warn(
-            "EnableBankingItem::Importer - Not pairing #{old_rows.size} vanished #{old_shape} " \
-            "row(s) with #{new_rows.size} new #{new_shape} row(s) on #{key.first}: ambiguous"
-          )
-          next
-        end
-
-        old_rows.zip(new_rows).each do |old_row, new_row|
-          if old_shape == :identifierless
-            adopt_identifier!(account, from: old_row, to: new_row)
-          else
-            alias_identifierless_shape!(account, entry_row: old_row, alias_row: new_row)
-          end
+      pairs.each do |old_row, new_row|
+        if EnableBankingEntry::Processor.identifierless?(old_row)
+          adopt_identifier!(account, from: old_row, to: new_row)
+        else
+          alias_identifierless_shape!(account, entry_row: old_row, alias_row: new_row)
         end
       end
+    end
+
+    # Some ASPSPs give the two shapes booking dates a day or two apart, the
+    # identifierless one usually later. Wide enough for that, narrow enough that
+    # a recurring charge of the same amount (weekly at the shortest) can't match.
+    SHAPE_TRANSITION_DATE_TOLERANCE = 3
+
+    # Same date: the groups pair one to one when both sides hold the same
+    # number of rows, so identical movements on one day keep their multiplicity.
+    # Any other shape is ambiguous here and left to the shifted-date pass.
+    def exact_date_transitions(olds, news)
+      new_groups = news.group_by { |tx| [ replacement_key(tx), transition_shape(tx) ] }
+
+      olds.group_by { |tx| [ replacement_key(tx), transition_shape(tx) ] }.flat_map do |(key, shape), old_rows|
+        new_rows = new_groups[[ key, opposite_shape(shape) ]]
+        next [] if new_rows.nil? || new_rows.size != old_rows.size
+
+        old_rows.zip(new_rows)
+      end
+    end
+
+    # Shifted date: a pair is taken only when each row is the other's sole
+    # candidate within the tolerance, the safest reading once dates disagree.
+    # Anything else is ambiguous and left alone, so the worst case is the
+    # duplicate that would have appeared anyway.
+    def shifted_date_transitions(olds, news)
+      candidates = ->(row, pool) {
+        key = replacement_key(row)
+        pool.select do |other|
+          other_key = replacement_key(other)
+          transition_shape(other) == opposite_shape(transition_shape(row)) &&
+            other_key.drop(1) == key.drop(1) &&
+            (Date.parse(other_key.first) - Date.parse(key.first)).abs <= SHAPE_TRANSITION_DATE_TOLERANCE
+        end
+      }
+
+      olds.filter_map do |old_row|
+        matches = candidates.(old_row, news)
+        next unless matches.one?
+
+        new_row = matches.first
+        next unless candidates.(new_row, olds).one?
+
+        [ old_row, new_row ]
+      end
+    rescue Date::Error
+      []
+    end
+
+    def transition_shape(transaction)
+      EnableBankingEntry::Processor.identifierless?(transaction) ? :identifierless : :identified
+    end
+
+    def opposite_shape(shape)
+      shape == :identifierless ? :identified : :identifierless
     end
 
     # Identifierless row replaced by an identified one: move the entry onto the

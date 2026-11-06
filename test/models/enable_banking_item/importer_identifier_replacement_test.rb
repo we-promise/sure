@@ -180,12 +180,12 @@ class EnableBankingItem::ImporterIdentifierReplacementTest < ActiveSupport::Test
     assert entries.exists?(external_id: external_id(first)), "pages never received are not evidence of removal"
   end
 
-  test "a different booking date, amount or direction is not a replacement" do
+  test "a date beyond the tolerance, another amount or another direction is not a replacement" do
     first = booked_tx(text: "VIR INST EXAMPLE CORP")
     sync_and_process([ first ])
 
     sync_and_process([
-      booked_tx(text: "VIR INST EXAMPLE CORP REF 1", ref: "r1", date: 2.days.ago.to_date.to_s),
+      booked_tx(text: "VIR INST EXAMPLE CORP REF 1", ref: "r1", date: 7.days.ago.to_date.to_s),
       booked_tx(text: "VIR INST EXAMPLE CORP REF 2", ref: "r2", amount: "1000.01"),
       booked_tx(text: "VIR INST EXAMPLE CORP REF 3", ref: "r3", direction: "DBIT")
     ])
@@ -209,5 +209,44 @@ class EnableBankingItem::ImporterIdentifierReplacementTest < ActiveSupport::Test
     assert_equal 2, entries.count
     assert stale.reload.excluded?
     assert_equal external_id(first), stale.external_id
+  end
+  test "a replacement booked a day later still pairs when it is the only candidate" do
+    short = booked_tx(text: "VIR INST MLE EXAMPLE", amount: "216.50", date: 2.days.ago.to_date.to_s)
+    sync_and_process([ short ])
+
+    detailed = booked_tx(text: "VIREMENT INSTANTANE\n\nVIR INST MLE EXAMPLE\n\nIPA000362837369",
+                         amount: "216.50", ref: "r-shift", date: 3.days.ago.to_date.to_s)
+    sync_and_process([ detailed ])
+    sync_and_process([ short ])
+
+    assert_equal 1, entries.count
+    assert_equal external_id(detailed), entries.sole.external_id
+  end
+
+  test "a shifted date with two candidates is ambiguous and left alone" do
+    short = booked_tx(text: "CB BAKERY", amount: "5.00", direction: "DBIT", date: 3.days.ago.to_date.to_s)
+    sync_and_process([ short ])
+
+    sync_and_process([
+      booked_tx(text: "CARTE CB BAKERY 1", amount: "5.00", direction: "DBIT", ref: "b1", date: 2.days.ago.to_date.to_s),
+      booked_tx(text: "CARTE CB BAKERY 2", amount: "5.00", direction: "DBIT", ref: "b2", date: 4.days.ago.to_date.to_s)
+    ])
+
+    assert_equal 3, entries.count, "no guess is made between two neighbours"
+    assert entries.exists?(external_id: external_id(short))
+  end
+
+  test "a same-day pair is preferred over a shifted neighbour" do
+    short = booked_tx(text: "CB BAKERY", amount: "5.00", direction: "DBIT")
+    sync_and_process([ short ])
+
+    same_day = booked_tx(text: "CARTE CB BAKERY", amount: "5.00", direction: "DBIT", ref: "b-same")
+    next_day = booked_tx(text: "CARTE CB BAKERY AGAIN", amount: "5.00", direction: "DBIT", ref: "b-next",
+                         date: 2.days.ago.to_date.to_s)
+    sync_and_process([ same_day, next_day ])
+
+    assert_equal 2, entries.count, "the same-day row claims the entry, the next-day purchase is its own"
+    assert entries.exists?(external_id: external_id(same_day))
+    assert entries.exists?(external_id: external_id(next_day))
   end
 end
