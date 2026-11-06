@@ -5,6 +5,7 @@ de:
         renewal: Dein Beitrag wird am %{date} fortgesetzt.
         cancellation: Dein Beitrag endet am %{date}.
   settings:
+    encryption_migration_guide: Anleitung zur Einrichtung der Verschlüsselung und zur Migration
     ai_prompts:
       show:
         page_title: KI-Eingabeaufforderungen
