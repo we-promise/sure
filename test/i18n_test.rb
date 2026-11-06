@@ -132,6 +132,22 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
+  # A reconcile that loses the same-date race shows this. Fallbacks would show
+  # the English message, so check each locale that already translates its
+  # sibling error.
+  def test_valuations_duplicate_date_error_exists_where_errors_are_translated
+    locales = Dir[File.expand_path("../config/locales/views/valuations/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    translated = locales.sort.select do |locale|
+      I18n.t("valuations.errors.amount_required", locale: locale, fallback: false, default: nil)
+    end
+    missing = translated.reject do |locale|
+      I18n.t("valuations.errors.duplicate_date", locale: locale, fallback: false, default: nil)
+    end
+
+    assert_includes translated, "de"
+    assert_empty missing, "valuations.errors.duplicate_date is missing for: #{missing.join(", ")}"
+  end
+
   # The All bills default status option. Every bills locale must translate it,
   # or the default filter falls back to English.
   def test_bills_current_bills_label_exists_for_each_bills_locale
