@@ -41,23 +41,6 @@ module Family::AiSettings
     effective_assistant_type != "mcp_only"
   end
 
-  # The provider that will actually categorize this family's transactions,
-  # falling back to the LLM path when Jev is unselected or unconfigured.
-  # Credentials alone never select Jev; the family has to choose it, because
-  # this decides whose transaction descriptions reach a third party.
-  #
-  # The categorization run calls this until it moves onto the router (2c); the
-  # router's `categorize` plan names the same provider first (Ai::LegacyEnvConfig).
-  # It writes nothing itself; a caller that runs categorization passes a block to
-  # hear why Jev could not be built.
-  def resolved_categorization_provider(&on_jev_error)
-    jev = configured_jev_provider(&on_jev_error) if effective_categorization_provider == "jev"
-
-    # Honors Setting.llm_provider (#2113); Provider::Anthropic gained
-    # auto_categorize in #1984, so either LLM provider can serve this.
-    jev || Provider::Registry.preferred_llm_provider
-  end
-
   # Answers below this confidence are not applied. Zero applies everything and
   # is the default. Only providers reporting calibrated confidence can be gated;
   # the LLM providers return a bare category name. Clamped because the ENV

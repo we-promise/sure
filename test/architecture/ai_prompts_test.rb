@@ -82,7 +82,7 @@ class AiPromptsTest < ActiveSupport::TestCase
 
   test "a family override replaces the instructions as plain text, never compiled" do
     family = families(:dylan_family)
-    family.stubs(:ai_prompt).with(:categorize_transactions).returns("Sort these. <%= ENV.keys %>")
+    family.stubs(:ai_prompt).with(:categorizer_openai).returns("Sort these. <%= ENV.keys %>")
 
     rendered = Ai::Prompt.for(:categorize, default: "categorize_transactions", route: nil, family:, locale: nil,
                                            locals: { transactions: TRANSACTIONS, categories: CATEGORIES })

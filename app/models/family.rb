@@ -405,13 +405,7 @@ class Family < ApplicationRecord
   end
 
   def auto_categorize_transactions_later(transactions, rule_run_id: nil)
-    AutoCategorizeJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
-  end
-
-  # The LLM only: Bayes is its own rule (Category classifier), so what it
-  # categorized is no longer uncategorized here.
-  def auto_categorize_transactions(transaction_ids)
-    AutoCategorizer.new(self, transaction_ids: transaction_ids).auto_categorize
+    Ai::GenerationJob.perform_later(:categorize, { ids: transactions.pluck(:id), family_id: id, rule_run_id: }.compact)
   end
 
   # Runs Bayes over the uncategorized transactions in scope the user hasn't
@@ -503,11 +497,7 @@ class Family < ApplicationRecord
   end
 
   def auto_detect_transaction_merchants_later(transactions, rule_run_id: nil)
-    AutoDetectMerchantsJob.perform_later(self, transaction_ids: transactions.pluck(:id), rule_run_id: rule_run_id)
-  end
-
-  def auto_detect_transaction_merchants(transaction_ids)
-    AutoMerchantDetector.new(self, transaction_ids: transaction_ids).auto_detect
+    Ai::GenerationJob.perform_later(:detect_merchants, { ids: transactions.pluck(:id), family_id: id, rule_run_id: }.compact)
   end
 
   # Memoized per user: the layout renders the account sidebar on every page

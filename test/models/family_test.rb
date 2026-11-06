@@ -676,22 +676,12 @@ class FamilyTest < ActiveSupport::TestCase
     "JEV_ENDPOINT" => "http://internal-gateway.example.com/v1/systemone"
   }.freeze
 
-  test "resolved_categorization_provider builds Jev when the endpoint is allowed" do
-    family = families(:dylan_family)
-    family.update!(categorization_provider: "jev")
-
-    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_ENDPOINT" => "https://api.typesafe.ai/v1/systemone") do
-      assert_instance_of Provider::Jev, family.resolved_categorization_provider
-    end
-  end
-
   test "the categorize plan names the Jev model when Jev will categorize" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
 
     with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_MODEL" => "~typesafe/jev-latest", "OPENAI_ACCESS_TOKEN" => "sk-test") do
       assert_equal "~typesafe/jev-latest", Ai.plan(:categorize, family:).model.name
-      assert_equal family.resolved_categorization_provider.class, Provider::Jev
     end
   end
 
@@ -703,26 +693,12 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "resolved_categorization_provider falls back to the LLM provider when the endpoint is rejected" do
+  test "the categorize plan falls back to the LLM when the Jev endpoint is rejected" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
-    llm = Provider::Openai.allocate
-    Provider::Registry.stubs(:preferred_llm_provider).returns(llm)
 
-    with_env_overrides(REJECTED_JEV_ENV) do
-      assert_same llm, family.resolved_categorization_provider
-    end
-  end
-
-  test "resolved_categorization_provider does not write diagnostics from view-time callers" do
-    family = families(:dylan_family)
-    family.update!(categorization_provider: "jev")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
-
-    assert_no_difference "DebugLogEntry.count" do
-      with_env_overrides(REJECTED_JEV_ENV) do
-        assert_nil family.resolved_categorization_provider
-      end
+    with_env_overrides(REJECTED_JEV_ENV.merge("OPENAI_ACCESS_TOKEN" => "sk-test")) do
+      assert_equal "openai", Ai.plan(:categorize, family:).route.endpoint.name
     end
   end
 
@@ -746,29 +722,8 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "resolved_categorization_provider hands the construction error to a caller that asks" do
-    family = families(:dylan_family)
-    family.update!(categorization_provider: "jev")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
-    errors = []
-
-    with_env_overrides(REJECTED_JEV_ENV) do
-      assert_nil family.resolved_categorization_provider { |error| errors << error }
-    end
-
-    assert_equal [ Provider::Jev::Error ], errors.map(&:class)
-  end
-
   # The rescue is deliberately narrow, so a registry bug still surfaces rather
   # than being reported to the operator as a Jev misconfiguration.
-  test "resolved_categorization_provider does not swallow non-provider errors" do
-    family = families(:dylan_family)
-    family.update!(categorization_provider: "jev")
-    Provider::Registry.stubs(:get_provider).with(:jev).raises(ArgumentError, "boom")
-
-    assert_raises(ArgumentError) { family.resolved_categorization_provider }
-  end
-
   test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
     family = families(:empty)
     account = family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)

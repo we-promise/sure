@@ -22,8 +22,21 @@ class AiConfigTest < ActiveSupport::TestCase
         today = Provider::Registry.preferred_llm_provider
         LLM_FEATURES.each { |feature| assert_same_route(today, Ai.plan(feature, family: @family, user: @user), "#{id} #{feature}") }
 
-        assert_same_route(@family.resolved_categorization_provider, Ai.plan(:categorize, family: @family), "#{id} categorize")
+        assert_same_route(jev_for(@family) || today, Ai.plan(:categorize, family: @family), "#{id} categorize")
+        LLM_FEATURES.each { |feature| assert_operator Ai::Config.current.routes_for(feature).size, :<=, 1, "#{id} #{feature} lists one model" }
       end
+    end
+  end
+
+  # Today's family-level rule (Family#resolved_categorization_provider until 2c): Jev for families
+  # that chose it, when it can be built; the preferred LLM otherwise.
+  test "a family that chose Jev categorizes on Jev; another on the preferred LLM" do
+    jev_family = families(:empty)
+    jev_family.update!(categorization_provider: "jev")
+
+    in_ai_setup("M1", family: jev_family) do
+      assert_equal "jev", Ai.plan(:categorize, family: jev_family).route.endpoint.name
+      assert_same_route(Provider::Registry.preferred_llm_provider, Ai.plan(:categorize, family: @family), "M1 categorize")
     end
   end
 
@@ -49,6 +62,15 @@ class AiConfigTest < ActiveSupport::TestCase
   end
 
   private
+    # Jev, for a family that chose it, when it can be built: today's resolution.
+    def jev_for(family)
+      return unless family.effective_categorization_provider == "jev"
+
+      Provider::Registry.get_provider(:jev)
+    rescue Provider::Error
+      nil
+    end
+
     def assert_same_route(provider, plan, message)
       if provider.nil?
         assert_nil plan, "#{message}: today nothing runs, the router planned #{plan&.route.inspect}"

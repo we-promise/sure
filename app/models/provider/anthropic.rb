@@ -97,66 +97,6 @@ class Provider::Anthropic < Provider
     @base_url.present?
   end
 
-  def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
-    with_provider_response do
-      if user_categories.blank?
-        family_id = family&.id || "unknown"
-        Rails.logger.error("Cannot auto-categorize transactions for family #{family_id}: no categories available")
-        raise Error, "No categories available for auto-categorization"
-      end
-
-      effective_model = model.presence || @default_model
-
-      trace = create_langfuse_trace(
-        name: "anthropic.auto_categorize",
-        input: { transactions: transactions, user_categories: user_categories }
-      )
-
-      result = AutoCategorizer.new(
-        client,
-        model: effective_model,
-        transactions: transactions,
-        user_categories: user_categories,
-        langfuse_trace: trace,
-        family: family
-      ).auto_categorize
-
-      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
-
-      result
-    rescue => error
-      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
-      raise
-    end
-  end
-
-  def auto_detect_merchants(transactions: [], user_merchants: [], model: "", family: nil, json_mode: nil)
-    with_provider_response do
-      effective_model = model.presence || @default_model
-
-      trace = create_langfuse_trace(
-        name: "anthropic.auto_detect_merchants",
-        input: { transactions: transactions, user_merchants: user_merchants }
-      )
-
-      result = AutoMerchantDetector.new(
-        client,
-        model: effective_model,
-        transactions: transactions,
-        user_merchants: user_merchants,
-        langfuse_trace: trace,
-        family: family
-      ).auto_detect_merchants
-
-      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
-
-      result
-    rescue => error
-      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
-      raise
-    end
-  end
-
   def supports_pdf_processing?(model: @default_model)
     return true if custom_endpoint?
 

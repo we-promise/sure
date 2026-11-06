@@ -26,10 +26,10 @@ module Family::AiPromptable
   # string is duplicated here.
   DEFAULTS = {
     chat_system: -> { Assistant::Configurable::STATIC_INSTRUCTIONS },
-    categorizer_openai: -> { Provider::Openai::AutoCategorizer.new(nil, custom_provider: custom_openai_provider?).instructions },
-    categorizer_anthropic: -> { Provider::Anthropic::AutoCategorizer.new(nil, model: "").instructions },
-    merchant_openai: -> { Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: [], custom_provider: custom_openai_provider?).instructions },
-    merchant_anthropic: -> { Provider::Anthropic::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions },
+    categorizer_openai: -> { RubyLLM.render_prompt(custom_openai_provider? ? "categorize_transactions_simple/instructions" : "categorize_transactions/instructions") },
+    categorizer_anthropic: -> { RubyLLM.render_prompt("categorize_transactions_anthropic/instructions") },
+    merchant_openai: -> { RubyLLM.render_prompt(custom_openai_provider? ? "detect_merchants_simple/instructions" : "detect_merchants/instructions") },
+    merchant_anthropic: -> { RubyLLM.render_prompt("detect_merchants_anthropic/instructions") },
     # The visible first chat message of "Dig in with AI", not instructions.
     insight_dig_in: -> { I18n.t("insights.dig_in.prompt") }
   }.freeze

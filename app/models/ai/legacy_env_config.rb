@@ -38,6 +38,18 @@ class Ai::LegacyEnvConfig
 
   def self.build = new.build
 
+  # The prompt variant today's code sends for `feature` to this kind of endpoint: Anthropic's own,
+  # the simplified one on a custom OpenAI-compatible server, otherwise OpenAI's detailed one.
+  def self.prompt_for(feature, endpoint)
+    base = PROMPTS[feature.to_sym]
+    return unless base && endpoint.protocol != :jev
+
+    if endpoint.protocol == :anthropic then "#{base}_anthropic"
+    elsif endpoint.name == "openai_compatible" && SIMPLE_PROMPTS.include?(feature.to_sym) then "#{base}_simple"
+    else base
+    end
+  end
+
   def self.fingerprint
     [ ENV.to_h.select { |name, _| name.start_with?(*ENV_PREFIXES) }.sort, SETTING_FIELDS.map { Setting.public_send(_1) } ].hash
   end
@@ -195,15 +207,7 @@ class Ai::LegacyEnvConfig
       end
     end
 
-    def prompt_for(feature, model)
-      base = PROMPTS[feature]
-      return unless base && model.endpoint.protocol != :jev
-
-      if model.endpoint.protocol == :anthropic then "#{base}_anthropic"
-      elsif model.endpoint.name == "openai_compatible" && SIMPLE_PROMPTS.include?(feature) then "#{base}_simple"
-      else base
-      end
-    end
+    def prompt_for(feature, model) = self.class.prompt_for(feature, model.endpoint)
 
     def openai_uri_base = env("OPENAI_URI_BASE") || Setting.openai_uri_base.presence
 

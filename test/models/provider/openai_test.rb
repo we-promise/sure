@@ -346,103 +346,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
-  test "auto categorizes transactions by various attributes" do
-    VCR.use_cassette("openai/auto_categorize") do
-      input_transactions = [
-        { id: "1", name: "McDonalds", amount: 20, classification: "expense", merchant: "McDonalds", hint: "Fast Food" },
-        { id: "2", name: "Amazon purchase", amount: 100, classification: "expense", merchant: "Amazon" },
-        { id: "3", name: "Netflix subscription", amount: 10, classification: "expense", merchant: "Netflix", hint: "Subscriptions" },
-        { id: "4", name: "paycheck", amount: 3000, classification: "income" },
-        { id: "5", name: "Italian dinner with friends", amount: 100, classification: "expense" },
-        { id: "6", name: "1212XXXBCaaa charge", amount: 2.99, classification: "expense" }
-      ]
-
-      response = @subject.auto_categorize(
-        transactions: input_transactions,
-        user_categories: [
-          { id: "shopping_id", name: "Shopping", is_subcategory: false, parent_id: nil, classification: "expense" },
-          { id: "subscriptions_id", name: "Subscriptions", is_subcategory: true, parent_id: nil, classification: "expense" },
-          { id: "restaurants_id", name: "Restaurants", is_subcategory: false, parent_id: nil, classification: "expense" },
-          { id: "fast_food_id", name: "Fast Food", is_subcategory: true, parent_id: "restaurants_id", classification: "expense" },
-          { id: "income_id", name: "Income", is_subcategory: false, parent_id: nil, classification: "income" }
-        ]
-      )
-
-      assert response.success?
-      assert_equal input_transactions.size, response.data.size
-
-      txn1 = response.data.find { |c| c.transaction_id == "1" }
-      txn2 = response.data.find { |c| c.transaction_id == "2" }
-      txn3 = response.data.find { |c| c.transaction_id == "3" }
-      txn4 = response.data.find { |c| c.transaction_id == "4" }
-      txn5 = response.data.find { |c| c.transaction_id == "5" }
-      txn6 = response.data.find { |c| c.transaction_id == "6" }
-
-      assert_equal "Fast Food", txn1.category_name
-      assert_equal "Shopping", txn2.category_name
-      assert_equal "Subscriptions", txn3.category_name
-      assert_equal "Income", txn4.category_name
-      assert_equal "Restaurants", txn5.category_name
-      assert_nil txn6.category_name
-    end
-  end
-
-  test "auto detects merchants" do
-    VCR.use_cassette("openai/auto_detect_merchants") do
-      input_transactions = [
-        { id: "1", name: "McDonalds", amount: 20, classification: "expense" },
-        { id: "2", name: "local pub", amount: 20, classification: "expense" },
-        { id: "3", name: "WMT purchases", amount: 20, classification: "expense" },
-        { id: "4", name: "amzn 123 abc", amount: 20, classification: "expense" },
-        { id: "5", name: "chaseX1231", amount: 2000, classification: "income" },
-        { id: "6", name: "check deposit 022", amount: 200, classification: "income" },
-        { id: "7", name: "shooters bar and grill", amount: 200, classification: "expense" },
-        { id: "8", name: "Microsoft Office subscription", amount: 200, classification: "expense" }
-      ]
-
-      response = @subject.auto_detect_merchants(
-        transactions: input_transactions,
-        user_merchants: [ { name: "Shooters" } ]
-      )
-
-      assert response.success?
-      assert_equal input_transactions.size, response.data.size
-
-      txn1 = response.data.find { |c| c.transaction_id == "1" }
-      txn2 = response.data.find { |c| c.transaction_id == "2" }
-      txn3 = response.data.find { |c| c.transaction_id == "3" }
-      txn4 = response.data.find { |c| c.transaction_id == "4" }
-      txn5 = response.data.find { |c| c.transaction_id == "5" }
-      txn6 = response.data.find { |c| c.transaction_id == "6" }
-      txn7 = response.data.find { |c| c.transaction_id == "7" }
-      txn8 = response.data.find { |c| c.transaction_id == "8" }
-
-      assert_equal "McDonald's", txn1.business_name
-      assert_equal "mcdonalds.com", txn1.business_url
-
-      assert_nil txn2.business_name
-      assert_nil txn2.business_url
-
-      assert_equal "Walmart", txn3.business_name
-      assert_equal "walmart.com", txn3.business_url
-
-      assert_equal "Amazon", txn4.business_name
-      assert_equal "amazon.com", txn4.business_url
-
-      assert_nil txn5.business_name
-      assert_nil txn5.business_url
-
-      assert_nil txn6.business_name
-      assert_nil txn6.business_url
-
-      assert_equal "Shooters", txn7.business_name
-      assert_nil txn7.business_url
-
-      assert_equal "Microsoft", txn8.business_name
-      assert_equal "microsoft.com", txn8.business_url
-    end
-  end
-
   test "basic chat response" do
     VCR.use_cassette("openai/chat/basic_response") do
       response = @subject.chat_response(
@@ -697,7 +600,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 512, subject.max_response_tokens
       assert_equal 256, subject.system_prompt_reserve
       assert_equal 2048 - 512 - 256, subject.max_history_tokens
-      assert_equal 2048 - 512 - 256, subject.max_input_tokens
     end
   end
 
@@ -714,7 +616,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 1024, subject.max_response_tokens
       assert_equal 512, subject.system_prompt_reserve
       assert_equal 4096, subject.max_history_tokens  # explicit overrides derived
-      assert_equal 8192 - 1024 - 512, subject.max_input_tokens
     end
   end
 
@@ -801,29 +702,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   ensure
     Setting.llm_context_window = nil
-  end
-
-  test "auto_categorize sends a batch that fits the context window as one call" do
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10", "LLM_CONTEXT_WINDOW" => "100000") do
-      subject = Provider::Openai.new("test-token")
-      transactions = Array.new(25) { |i| { id: i.to_s, name: "txn#{i}", amount: 10, classification: "expense" } }
-      user_categories = [ { id: "cat1", name: "Groceries", is_subcategory: false, parent_id: nil, classification: "expense" } ]
-
-      # Capture the batch size passed to each AutoCategorizer. `.new` is called
-      # once per sub-batch; we record each invocation's transactions count.
-      seen_sizes = []
-      fake_instance = mock
-      fake_instance.stubs(:auto_categorize).returns([])
-      Provider::Openai::AutoCategorizer.stubs(:new).with do |*_args, **kwargs|
-        seen_sizes << kwargs[:transactions].size
-        true
-      end.returns(fake_instance)
-
-      response = subject.auto_categorize(transactions: transactions, user_categories: user_categories)
-
-      assert response.success?
-      assert_equal [ 25 ], seen_sizes
-    end
   end
 
   test "streaming surfaces a useful error when the stream ends with response.failed and no completion" do

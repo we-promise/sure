@@ -3,8 +3,6 @@ require "test_helper"
 class SidekiqConfigTest < ActiveSupport::TestCase
   AI_JOBS = {
     AssistantResponseJob => "ai_high_priority",
-    AutoDetectMerchantsJob => "ai_low_priority",
-    AutoCategorizeJob => "ai_low_priority",
     ProcessPdfJob => "ai_low_priority"
   }.freeze
 

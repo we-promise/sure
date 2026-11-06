@@ -183,87 +183,6 @@ class Provider::Openai < Provider
     [ context_window - max_response_tokens - prompt_reserve, 256 ].max
   end
 
-  # Budget available for a one-shot (non-chat) request's full input,
-  # excluding reserved response tokens AND the system/instructions prompt.
-  # Drives the batch slicer for the auto_categorize / auto_detect_merchants /
-  # enhance_provider_merchants calls — each ships ~200–400 tokens of
-  # instructions + JSON schema that aren't counted in `fixed_tokens`.
-  def max_input_tokens
-    [ context_window - max_response_tokens - system_prompt_reserve, 256 ].max
-  end
-
-  def auto_categorize(transactions: [], user_categories: [], model: "", family: nil, json_mode: nil)
-    with_provider_response do
-      if user_categories.blank?
-        family_id = family&.id || "unknown"
-        Rails.logger.error("Cannot auto-categorize transactions for family #{family_id}: no categories available")
-        raise Error, "No categories available for auto-categorization"
-      end
-
-      effective_model = model.presence || @default_model
-
-      trace = create_langfuse_trace(
-        name: "openai.auto_categorize",
-        input: { transactions: transactions, user_categories: user_categories }
-      )
-
-      batches = slice_for_context(transactions, fixed: user_categories)
-
-      result = batches.flat_map do |batch|
-        AutoCategorizer.new(
-          client,
-          model: effective_model,
-          transactions: batch,
-          user_categories: user_categories,
-          custom_provider: custom_provider?,
-          langfuse_trace: trace,
-          family: family,
-          json_mode: json_mode
-        ).auto_categorize
-      end
-
-      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
-
-      result
-    rescue => error
-      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
-      raise
-    end
-  end
-
-  def auto_detect_merchants(transactions: [], user_merchants: [], model: "", family: nil, json_mode: nil)
-    with_provider_response do
-      effective_model = model.presence || @default_model
-
-      trace = create_langfuse_trace(
-        name: "openai.auto_detect_merchants",
-        input: { transactions: transactions, user_merchants: user_merchants }
-      )
-
-      batches = slice_for_context(transactions, fixed: user_merchants)
-
-      result = batches.flat_map do |batch|
-        AutoMerchantDetector.new(
-          client,
-          model: effective_model,
-          transactions: batch,
-          user_merchants: user_merchants,
-          custom_provider: custom_provider?,
-          langfuse_trace: trace,
-          family: family,
-          json_mode: json_mode
-        ).auto_detect_merchants
-      end
-
-      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
-
-      result
-    rescue => error
-      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
-      raise
-    end
-  end
-
   # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
   # Only vision-capable models (gpt-4o, gpt-4-turbo, gpt-4.1, etc.) support PDF input
   def supports_pdf_processing?(model: @default_model)
@@ -424,18 +343,6 @@ class Provider::Openai < Provider
       return from_env if from_env.positive?
       return setting_value.to_i if setting_value.to_i.positive?
       default
-    end
-
-    # Routes one-shot (non-chat) inputs through the BatchSlicer so large
-    # caller batches are split to fit the model's context window. `fixed` is
-    # the portion of the prompt that stays constant across every sub-batch
-    # (e.g. user_categories, user_merchants), used for fixed-tokens accounting.
-    def slice_for_context(items, fixed: nil)
-      BatchSlicer.call(
-        Array(items),
-        max_tokens: max_input_tokens,
-        fixed_tokens: fixed ? Assistant::TokenEstimator.estimate(fixed) : 0
-      )
     end
 
     def native_chat_response(

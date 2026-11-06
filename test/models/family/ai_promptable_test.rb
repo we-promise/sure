@@ -12,9 +12,9 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     end
   end
 
-  # The riskiest part of this feature is a mistyped key at one of the four
-  # provider resolution sites, which would silently keep serving the default.
-  test "each provider override reaches its instructions method" do
+  # The riskiest part of this feature is a mistyped key where a prompt is chosen, which would
+  # silently keep serving the default.
+  test "each provider override reaches the prompt its route sends" do
     @family.update!(
       ai_prompt_categorizer_openai: "CAT OPENAI",
       ai_prompt_categorizer_anthropic: "CAT ANTHROPIC",
@@ -22,22 +22,11 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
       ai_prompt_merchant_anthropic: "MERCHANT ANTHROPIC"
     )
 
-    assert_equal "CAT OPENAI",
-      Provider::Openai::AutoCategorizer.new(nil, family: @family).instructions
-    assert_equal "CAT ANTHROPIC",
-      Provider::Anthropic::AutoCategorizer.new(nil, model: "", family: @family).instructions
-    assert_equal "MERCHANT OPENAI",
-      Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: [], family: @family).instructions
-    assert_equal "MERCHANT ANTHROPIC",
-      Provider::Anthropic::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: [], family: @family).instructions
-  end
-
-  test "an override wins over the custom_provider variant, not just the detailed one" do
-    @family.update!(ai_prompt_categorizer_openai: "CAT OPENAI")
-
-    categorizer = Provider::Openai::AutoCategorizer.new(nil, custom_provider: true, family: @family)
-
-    assert_equal "CAT OPENAI", categorizer.instructions
+    assert_equal "CAT OPENAI", instructions(:categorize, "categorize_transactions", :compatible)
+    assert_equal "CAT OPENAI", instructions(:categorize, "categorize_transactions_simple", :compatible)
+    assert_equal "CAT ANTHROPIC", instructions(:categorize, "categorize_transactions_anthropic", :anthropic)
+    assert_equal "MERCHANT OPENAI", instructions(:detect_merchants, "detect_merchants_simple", :compatible)
+    assert_equal "MERCHANT ANTHROPIC", instructions(:detect_merchants, "detect_merchants_anthropic", :anthropic)
   end
 
   # One override key feeds both OpenAI variants, so the editor has to pre-fill
@@ -126,4 +115,12 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     assert_not @family.valid?
     assert_includes @family.errors.attribute_names, :ai_prompt_chat_system
   end
+
+  private
+    def instructions(feature, prompt, protocol)
+      endpoint = Ai::Config::Endpoint.new(name: protocol, protocol:, api_key: "test-key")
+      route = Ai::Route.new(feature:, position: 0, model: Ai::Config::Model.new(endpoint:, name: "m"), prompt:)
+      locals = { transactions: [], categories: [], merchants: [] }
+      Ai::Prompt.for(feature, default: prompt, route:, family: @family, locale: nil, locals:).instructions
+    end
 end

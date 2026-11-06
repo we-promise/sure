@@ -1,18 +1,6 @@
 module Provider::LlmConcept
   extend ActiveSupport::Concern
 
-  AutoCategorization = Data.define(:transaction_id, :category_name)
-
-  def auto_categorize(transactions)
-    raise NotImplementedError, "Subclasses must implement #auto_categorize"
-  end
-
-  AutoDetectedMerchant = Data.define(:transaction_id, :business_name, :business_url)
-
-  def auto_detect_merchants(transactions)
-    raise NotImplementedError, "Subclasses must implement #auto_detect_merchants"
-  end
-
   PdfProcessingResult = Data.define(:summary, :document_type, :extracted_data)
 
   def supports_pdf_processing?
