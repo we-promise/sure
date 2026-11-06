@@ -1,93 +1,85 @@
+# Fills in the website of a family's provider merchants that have none, so ProviderMerchant can
+# generate their logos, and merges duplicates that turn out to share a website. The requester of
+# :enhance_merchants: Ai::GenerationJob runs it one batch at a time.
 class ProviderMerchant::Enhancer
+  include Ai::Requester
+  ai_feature :enhance_merchants
+
+  # Set by FamilyMerchantsController#enhance so a second click doesn't queue the same merchants
+  # again; released when the run finishes or gives up.
+  LOCK_TTL = 10.minutes
+
+  def self.lock_key(family) = "enhance_provider_merchants:#{family.id}"
+
+  def self.enhance_later(family) = Ai::GenerationJob.perform_later(:enhance_merchants, { family_id: family.id })
+
+  # ids: the merchants left from an earlier batch; nil on the first job, which starts the run.
+  def self.from_ai_job(family_id:, ids: nil) = new(Family.find(family_id), merchant_ids: ids)
+
   def initialize(family, merchant_ids: nil)
     @family = family
     @merchant_ids = merchant_ids
   end
 
-  # The unenhanced merchant ids, one batch per LLM call.
-  def batches
-    return [] unless llm_provider
+  def ai_generation
+    # The run's first job backfills logos before any AI: generating a logo from a known website
+    # needs no model, and merchants that already have a website are never sent (issue #2925).
+    @family.backfill_provider_merchant_logos if @merchant_ids.nil?
+    return if unenhanced_merchants.empty?
 
-    unenhanced_merchants.map(&:id).each_slice(batch_size).to_a
+    Rails.logger.info("Enhancing #{unenhanced_merchants.size} provider merchants for family #{@family.id}")
+    Ai::Generations::EnhanceMerchants.new(merchants: unenhanced_merchants.map { { id: _1.id, name: _1.name } }, family: @family)
   end
 
-  def enhance
-    # Runs before the LLM checks: generating a logo from a known website needs no
-    # LLM, and merchants that already have a website are never sent to it (issue #2925).
-    logos = @family.backfill_provider_merchant_logos
+  def apply_ai(result)
+    merchants = unenhanced_merchants.index_by(&:id)
+    enhanced = 0
+    deduplicated = 0
 
-    return { enhanced: 0, deduplicated: 0, logos: logos } unless llm_provider
-    return { enhanced: 0, deduplicated: 0, logos: logos } if unenhanced_merchants.none?
+    result.value[:merchants].each do |enhancement|
+      url = enhancement[:business_url]
+      merchant = merchants[enhancement[:merchant_id]]
+      next if url.blank? || merchant.nil? || merchant.reload.website_url.present?   # reload: a race with another run
 
-    Rails.logger.info("Enhancing #{unenhanced_merchants.count} provider merchants for family #{@family.id}")
-
-    enhanced_count = 0
-    deduplicated_count = 0
-
-    unenhanced_merchants.each_slice(batch_size) do |batch|
-      result = llm_provider.enhance_provider_merchants(
-        merchants: batch.map { |m| { id: m.id, name: m.name } },
-        family: @family
-      )
-
-      next unless result.success?
-
-      result.data.each do |enhancement|
-        next unless enhancement.business_url.present?
-
-        merchant = batch.find { |m| m.id == enhancement.merchant_id }
-        next unless merchant
-        next if merchant.website_url.present? # Skip if already enhanced (race condition guard)
-
-        # Step 1: Update the provider merchant's website. ProviderMerchant generates
-        # the Brandfetch logo itself, keeping a logo the provider already supplied.
-        merchant.update!(website_url: enhancement.business_url)
-        enhanced_count += 1
-
-        # Step 2: Deduplicate — find other merchants with the same website_url
-        # and merge them INTO this provider merchant (prefer provider over AI)
-        deduplicated_count += deduplicate_by_website(merchant, enhancement.business_url)
-      rescue ActiveRecord::RecordInvalid => e
-        Rails.logger.error("Failed to enhance merchant #{merchant.id}: #{e.message}")
-      end
+      # ProviderMerchant generates the Brandfetch logo itself, keeping a provider-supplied one.
+      merchant.update!(website_url: url)
+      enhanced += 1
+      deduplicated += deduplicate_by_website(merchant, url)
+    rescue ActiveRecord::RecordInvalid => e
+      Rails.logger.error("Failed to enhance merchant #{merchant&.id}: #{e.message}")
     end
 
-    Rails.logger.info("Enhanced #{enhanced_count} merchants, deduplicated #{deduplicated_count} for family #{@family.id}")
-
-    { enhanced: enhanced_count, deduplicated: deduplicated_count, logos: logos }
+    Rails.logger.info("Enhanced #{enhanced} merchants, deduplicated #{deduplicated} for family #{@family.id}")
+    enhanced
   end
 
-  private
+  def ai_finished(_count) = Rails.cache.delete(self.class.lock_key(@family))
 
+  # Today's enhancer skipped a failed batch without a word (drift bug 3).
+  def ai_failed(error)
+    Rails.cache.delete(self.class.lock_key(@family))
+    DebugLogEntry.capture(
+      category: "merchant_enhancement", level: "error", message: "AI merchant enhancement failed",
+      source: self.class.name, family: @family,
+      metadata: { error_class: error.class.name, error_message: error.message.truncate(500), merchant_ids: @merchant_ids }.compact
+    )
+  end
+
+  def ai_correlation_id = "family:#{@family.id}:enhance_merchants"
+
+  private
     def deduplicate_by_website(target_merchant, website_url)
-      # Find duplicate provider merchants assigned to this family with the same website_url.
-      # Excludes FamilyMerchants — user-curated merchants should never be touched by dedup.
+      # Duplicate provider merchants assigned to this family with the same website. Family
+      # merchants are user-curated and never touched by dedup.
       duplicates = @family.assigned_merchants
                           .where(type: "ProviderMerchant")
                           .where(website_url: website_url)
                           .where.not(id: target_merchant.id)
 
-      return 0 if duplicates.none?
-
-      count = 0
       duplicates.each do |duplicate|
-        # Reassign family's transactions from duplicate to target
-        @family.transactions.where(merchant_id: duplicate.id)
-               .update_all(merchant_id: target_merchant.id)
-        count += 1
-      end
-      count
+        @family.transactions.where(merchant_id: duplicate.id).update_all(merchant_id: target_merchant.id)
+      end.size
     end
-
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # enhance_provider_merchants (PR #1984), so merchant enhancement routes to the
-    # configured provider, with fallback handled by
-    # Provider::Registry.preferred_llm_provider.
-    def llm_provider
-      @llm_provider ||= Provider::Registry.preferred_llm_provider
-    end
-
-    def batch_size = Ai.plan(:enhance_merchants, family: @family)&.model&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE
 
     def unenhanced_merchants
       @unenhanced_merchants ||= begin

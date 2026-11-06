@@ -157,32 +157,6 @@ class Provider::Anthropic < Provider
     end
   end
 
-  def enhance_provider_merchants(merchants: [], model: "", family: nil, json_mode: nil)
-    with_provider_response do
-      effective_model = model.presence || @default_model
-
-      trace = create_langfuse_trace(
-        name: "anthropic.enhance_provider_merchants",
-        input: { merchants: merchants }
-      )
-
-      result = ProviderMerchantEnhancer.new(
-        client,
-        model: effective_model,
-        merchants: merchants,
-        langfuse_trace: trace,
-        family: family
-      ).enhance_merchants
-
-      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
-
-      result
-    rescue => error
-      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
-      raise
-    end
-  end
-
   def supports_pdf_processing?(model: @default_model)
     return true if custom_endpoint?
 

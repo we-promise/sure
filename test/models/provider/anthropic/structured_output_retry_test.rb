@@ -24,14 +24,6 @@ class Provider::Anthropic::StructuredOutputRetryTest < ActiveSupport::TestCase
       },
       check: ->(test, result) { test.assert_equal "Amazon", result.first.business_name }
     },
-    "report_enhancements" => {
-      input: { "merchants" => [ { "merchant_id" => "m1", "business_url" => "walmart.com" } ] },
-      build: ->(client, family) {
-        Provider::Anthropic::ProviderMerchantEnhancer.new(client, model: AUTO_MODEL, family: family,
-          merchants: [ { id: "m1", name: "Walmart" } ]).enhance_merchants
-      },
-      check: ->(test, result) { test.assert_equal "walmart.com", result.first.business_url }
-    },
     "report_document_analysis" => {
       input: { "document_type" => "bank_statement", "summary" => "Statement" },
       build: ->(client, family) {

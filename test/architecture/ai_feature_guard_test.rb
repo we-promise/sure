@@ -23,7 +23,7 @@ class AiFeatureGuardTest < ActiveSupport::TestCase
   ].freeze
 
   # What a controller has to mention to start an AI feature. A new one needs its action above.
-  AI_STARTERS = /RecurringTransaction::AiSetupSuggester|EnhanceProviderMerchantsJob/
+  AI_STARTERS = /RecurringTransaction::AiSetupSuggester|ProviderMerchant::Enhancer\.enhance_later|Ai::GenerationJob/
 
   AI_ACTIONS.each do |action, feature|
     test "#{action} requires #{feature}" do

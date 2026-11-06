@@ -264,38 +264,6 @@ class Provider::Openai < Provider
     end
   end
 
-  def enhance_provider_merchants(merchants: [], model: "", family: nil, json_mode: nil)
-    with_provider_response do
-      effective_model = model.presence || @default_model
-
-      trace = create_langfuse_trace(
-        name: "openai.enhance_provider_merchants",
-        input: { merchants: merchants }
-      )
-
-      batches = slice_for_context(merchants)
-
-      result = batches.flat_map do |batch|
-        ProviderMerchantEnhancer.new(
-          client,
-          model: effective_model,
-          merchants: batch,
-          custom_provider: custom_provider?,
-          langfuse_trace: trace,
-          family: family,
-          json_mode: json_mode
-        ).enhance_merchants
-      end
-
-      finish_langfuse_trace(trace: trace, output: result.map(&:to_h))
-
-      result
-    rescue => error
-      finish_langfuse_trace(trace: trace, output: { error: error.message }, level: "ERROR")
-      raise
-    end
-  end
-
   # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
   # Only vision-capable models (gpt-4o, gpt-4-turbo, gpt-4.1, etc.) support PDF input
   def supports_pdf_processing?(model: @default_model)
