@@ -74,16 +74,18 @@ class Assistant::Function::UpdateTransaction < Assistant::Function
     return error("no_changes", "Provide at least one field to update.") if no_changes?(entry_attrs, params)
 
     Entry.transaction do
+      entry.reload_locked_attributes_for_update
       entry.update!(entry_attrs)
+      # Before the tag save below, which replaces the saved changes this reads.
+      entry.lock_saved_attributes!
 
       if params.key?("tag_ids")
-        transaction.tag_ids = tag_ids
+        transaction.reload.tag_ids = tag_ids
         transaction.save!
         transaction.lock_attr!(:tag_ids)
       end
 
       entry.sync_account_later
-      entry.lock_saved_attributes!
     end
 
     {
