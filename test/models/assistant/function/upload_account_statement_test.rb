@@ -39,6 +39,19 @@ class Assistant::Function::UploadAccountStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "re-uploading an unlinked statement to an account reports a duplicate and links it" do
+    first = @function.call(params(filename: "statement.csv"))
+
+    assert_no_difference "AccountStatement.count" do
+      second = @function.call(params(filename: "different-name.csv", account_id: @account.id))
+
+      assert second[:success]
+      assert second[:duplicate]
+      assert_equal first[:statement][:id], second[:statement][:id]
+      assert_equal @account.id, second[:statement][:account][:id]
+    end
+  end
+
   test "links to an account when one is given" do
     result = @function.call(params(filename: "statement.csv", account_id: @account.id))
 
