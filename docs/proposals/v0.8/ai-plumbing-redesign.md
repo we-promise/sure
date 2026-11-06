@@ -660,7 +660,7 @@ migration (each variable's `Setting` field, where it has one, maps the same way)
 | `LLM_MAX_HISTORY_TOKENS`, `LLM_SYSTEM_PROMPT_RESERVE` | Dropped: the chat history budget comes from the model's window (section 8.4) |
 | `JEV_API_KEY`, `JEV_ENDPOINT`, `JEV_MODEL` (`jev_*`) | The Jev endpoint (`jev` preset, or `jev_local` for an http URL) and its model. The URL loses its `/v1/systemone` path; an OpenRouter URL becomes RubyLLM's `openrouter` provider (from PR 5); an endpoint at any other path is left out, with a boot warning naming it, so `categorize` uses its next route |
 | `JEV_REQUEST_TIMEOUT`, `JEV_CONCURRENCY` | `timeout_seconds` and `parallel_requests` on the Jev endpoint |
-| `CATEGORIZATION_PROVIDER` | Dropped. On a single-family instance whose effective choice is Jev, `categorize` lists Jev first |
+| `CATEGORIZATION_PROVIDER` (`Setting.categorization_provider`, from 2d) | The instance's Jev choice until the deprecated ENV path goes: `categorize` lists Jev and `shadow_categorize` the LLM, or the other way round. 2d's migration copies a single-family instance's `families.categorization_provider` into the setting (call by @josh-sanders during development of PR #4440, in 2d's plan) |
 | `CATEGORIZATION_CONFIDENCE_THRESHOLD` | Dropped: it overrode a family setting, which ENV no longer does. Upgrade note: set it on the categorization page |
 | `CATEGORIZATION_SHADOW_RATE` | `Setting.ai_shadow_rates["categorize"]` from PR 7; until then it overrides the family's rate, as today |
 | `EMBEDDING_URI_BASE`, `EMBEDDING_ACCESS_TOKEN` | A `compatible` endpoint named `embed` and its key; `location: local` for http, `cloud` for https |
@@ -1184,7 +1184,8 @@ end
     `calibrated_confidence`.
 - **No family provider choice.** `categorization_provider` and the `ASSISTANT_TYPE` and
   `CATEGORIZATION_PROVIDER` ENV overrides are removed. Jev is an entry in a route like any other
-  model.
+  model. From 2d until PR 7 the choice is one instance-wide setting that the deprecated ENV path
+  reads (call by @josh-sanders during development of PR #4440, in 2d's plan).
 - **Known limitation:** family consent covers every account in the family, including accounts not
   shared with every member. Filtering each feature's input by account owner belongs to the domain
   workflows, not the plumbing.
@@ -1588,7 +1589,7 @@ end
 - **Same model allowed.** Nothing requires the shadow to use a different endpoint or model.
   Same-model experiments are first-class:
   - a different prompt: `{ model: gpu/qwen3-8b, prompt: categorize_transactions_trial }` runs
-    `app/prompts/categorize_transactions_trial.txt.erb` against the live prompt;
+    the `app/prompts/categorize_transactions_trial/` folder against the live prompt;
   - a different JSON mode: `{ model: gpu/qwen3-8b, json_mode: json_object }` against the
     endpoint's `strict`;
   - a different reasoning effort: `{ model: openai/gpt-5.4-nano, reasoning_effort: high }`
@@ -1599,7 +1600,9 @@ end
   the AI thread for the primary job (drift bug 8).
 - **Same pipeline, never applied.** The job emits the normal event with `shadow: true`, so usage,
   Langfuse and the debug log need no extra code, and the usage page shows shadow spend separately.
-  Only `ComparisonSubscriber` sees the result. It writes one `Ai::Comparison` row per item:
+  Only `ComparisonSubscriber` sees the result: the job emits one `compare.ai_shadow` event with
+  both sides' compared values (the `generate.ai` and `judge.ai` events carry the raw answer before
+  coercion, one per batch piece). It writes one `Ai::Comparison` row per item:
   `feature, family, subject (polymorphic: the transaction), primary_route, shadow_route,
   primary_value, shadow_value, primary_confidence, shadow_confidence, agreed`. Values are ids, and
   confidence is null when a model gives none. Each route is stored as jsonb with its endpoint,
@@ -1881,7 +1884,7 @@ These are subscribers to one event:
 ActiveSupport::Notifications.subscribe("usage.ruby_llm", Ai::Instrumentation::UsageSubscriber.new) # LlmUsage row per request, success AND failure (fixes drift bug 2)
 ActiveSupport::Notifications.subscribe(/\.ai\z/, Ai::Instrumentation::LangfuseSubscriber.new)    # trace + generation; no-op when Langfuse unset
 ActiveSupport::Notifications.subscribe(/\.ai\z/, Ai::Instrumentation::DebugLogSubscriber.new)    # DebugLogEntry on failure / unavailable / failover
-ActiveSupport::Notifications.subscribe(/\A(generate|judge)\.ai\z/, Ai::Instrumentation::ComparisonSubscriber.new) # shadow: true only
+ActiveSupport::Notifications.subscribe("compare.ai_shadow", Ai::Instrumentation::ComparisonSubscriber.new) # shadow runs only
 ```
 
 - Every event carries a **correlation id** (`sync_id`, `rule_run_id`, `chat_id`, `pdf_import_id`),
@@ -2586,6 +2589,9 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | Three lane queues and the `ai_chat` capsule | `ai_high_priority`, `ai_low_priority`, custom `sidekiq.yml`, `SidekiqHealth::AI_QUEUES` | The `ai` capsule drains the old queues for one release | Update a custom `sidekiq.yml`; with several workers on one local host, set `RAILS_AI_MAX_THREADS=0` on all but one |
 | `Ai::GenerationJob` and `Ai::ShadowJob` replace the AI job classes | Jobs queued in Redis under the old classes go to Sidekiq's dead set | None (no shims; call by @josh-sanders during development of PR #4440) | Let the AI queues drain before upgrading |
 | `CategorizationComparison` → `Ai::Comparison` | A persisted table | Rows copied | — |
+| The Jev choice becomes instance-wide (2d, until PR 7) | `families.categorization_provider` | A single-family instance's choice is copied to `Setting.categorization_provider`; several families: none | Multi-family instances: choosing Jev now applies to every family |
+| A self-hosted Jev on http (2d) | Http was allowed only on loopback | An http Jev endpoint is `jev_local`, on any local host, with one request at a time unless `JEV_CONCURRENCY` is set, and no `calibrated_confidence` | Its answers are no longer withheld by the threshold |
+| A malformed Jev answer (2d) | Withheld with a confidence of 0 | RubyLLM rejects it; that transaction is left uncategorized | — |
 | `llm_usages.operation` values become feature keys | Usage history under old names | Rows rewritten | The usage page sums per feature |
 | `llm_usages` has a row per request, grouped per call (PR 2a) | Queries that count rows as calls; the table grows with retries | Additive `call_id` and `status`; old rows count as one-request calls | The usage page still shows one row per call; a click shows its requests |
 | The `embed` route picks the vector adapter | `VECTOR_STORE_PROVIDER` defaulting from `LLM_PROVIDER` | The deprecated ENV path maps it | Check which adapter `embed` uses |
@@ -2602,7 +2608,7 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 ## 19. Delivery
 
 Eight PRs after the spike, the first of them in five parts (2a to 2e). Each PR, and each part,
-is its own PR into `main`, merged in order, except that 2a, 2b and 2c share one PR,
+is its own PR into `main`, merged in order, except that 2a, 2b, 2c and 2d share one PR,
 we-promise/sure#4765, because the maintainer wants fewer PRs (call by @josh-sanders during
 development of PR #4440). The spike branch (PR 1) is never merged; only its
 report is in PR #4440, which holds the proposal documents, no code, and stays a draft until the
@@ -2653,7 +2659,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    decisions register. PR 2c records live cassettes for Anthropic's and OpenAI's successful
    paths before relying on them: the spike's keys had no credits.
 2. **Generations: every AI call except chat**, in five parts, merged in order (2a to 2e). Each is
-   its own PR into `main`, except 2a, 2b and 2c, which share #4765. All five land in the same release. Today's AI job classes are
+   its own PR into `main`, except 2a to 2d, which share #4765. All five land in the same release. Today's AI job classes are
    deleted with no shims: the upgrade note says to let the AI queues drain first (call by @josh-sanders during development of
    PR #4440). Each part replaces something whole, so `main`
    works between them, and each brings a transport call only with its first caller. The target
@@ -2707,8 +2713,13 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      path isn't supported; the release notes say so, and an issue can bring a path back if
      someone needs it (call by @josh-sanders during development of PR #4440).
      *Deletes:* `Provider::Jev`, `Family#shadow_categorization_provider`,
-     `CategorizationComparison` and `families.categorization_provider` (a single-family Jev
-     choice moves into the `categorize` route).
+     `CategorizationComparison` and `families.categorization_provider`. On #4765 with 2a to 2c.
+     Its calls (by @josh-sanders during development of PR #4440): the Jev choice becomes one
+     instance-wide setting until PR 7, copied from a single-family instance's column, so the
+     deprecated ENV routes `categorize` to Jev or the LLM with no per-family condition and
+     `shadow_categorize` to the other; and the deprecated ENV's `categorize` route lists one
+     entry, so a Jev outage never sends a batch to the LLM.
+     Implementation plan: [`pr-2d-jev-and-shadow-runs.md`](pr-2d-jev-and-shadow-runs.md).
    - **2e. Documents.** `transport.embed`, `extract_pdf` with the per-upload "Read as" switch,
      Auto's input step tuning itself per account, pages batched by `Ai::Batch` with no page limit,
      the extraction checks offered for review, the hardened page rendering, and OCR route entries,
@@ -2905,6 +2916,7 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md) | PR 2a's implementation plan, and the RubyLLM commits since 2.1.1 that matter for 2.2 |
 | [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md) | PR 2b's implementation plan (on #4765 with 2a), and the agreement test's setups |
 | [`pr-2c-generations.md`](pr-2c-generations.md) | PR 2c's implementation plan (on #4765 with 2a and 2b), with the JSON policy, prompt folders and batches |
+| [`pr-2d-jev-and-shadow-runs.md`](pr-2d-jev-and-shadow-runs.md) | PR 2d's implementation plan (on #4765 with 2a to 2c): the Jev transport, judgements and shadow runs |
 
 **Terms this plan defines**, for readers and coding agents:
 
