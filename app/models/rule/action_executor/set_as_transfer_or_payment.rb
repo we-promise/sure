@@ -24,14 +24,12 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     target_account = family.accounts.find_by_id(value)
     return 0 unless target_account
-    scope = transaction_scope.with_entry
+    # Transfer::Matcher refuses splits too: a split's amount is carried by its
+    # children, and a transfer on either would count the money twice.
+    scope = transaction_scope.with_entry.where(entries: { parent_entry_id: nil }).merge(Entry.excluding_split_parents)
 
     count_modified_resources(scope) do |txn|
       entry = txn.entry
-      # Transfer::Matcher refuses these too: a split's amount is carried by its
-      # children, and a transfer on either would count the money twice.
-      next false if entry.excluded? || entry.split_child? || entry.split_parent?
-
       unless txn.transfer?
         transfer = build_transfer(target_account, entry)
         Transfer.transaction do

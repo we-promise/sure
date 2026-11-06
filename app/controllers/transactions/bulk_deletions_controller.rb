@@ -6,9 +6,10 @@ class Transactions::BulkDeletionsController < ApplicationController
     entries_scope = Current.family.entries
                       .where(account_id: writable_account_ids)
                       .where(parent_entry_id: nil)
-    entries_scope = entries_scope.where.not(id: entries_moving_unwritable_balances(entries_scope, writable_account_ids))
-    destroyed = entries_scope.destroy_by(id: bulk_delete_params[:entry_ids])
-    destroyed.map(&:account).uniq.each(&:sync_later)
+    changed_accounts = accounts_changed_by_transfer_removal(entries_scope)
+    blocked_ids = changed_accounts.filter_map { |entry_id, accounts| entry_id if accounts.any? { |account| !writable_account_ids.include?(account.id) } }
+    destroyed = entries_scope.where.not(id: blocked_ids).destroy_by(id: bulk_delete_params[:entry_ids])
+    (destroyed.map(&:account) + destroyed.flat_map { |entry| changed_accounts[entry.id] }).uniq.each(&:sync_later)
     redirect_back_or_to transactions_url, notice: "#{destroyed.count} transaction#{destroyed.count == 1 ? "" : "s"} deleted"
   end
 
@@ -19,12 +20,12 @@ class Transactions::BulkDeletionsController < ApplicationController
 
     # Deleting a transfer leg (or a split whose child is one) removes the
     # transfer, its fee transactions and, on a counterpart that counts
-    # transfers, the balance it moved; skip those the user cannot write.
-    def entries_moving_unwritable_balances(scope, writable_account_ids)
+    # transfers, the balance it moved. Returns those accounts by entry id;
+    # entries touching an account the user cannot write are skipped.
+    def accounts_changed_by_transfer_removal(scope)
       scope.where(id: bulk_delete_params[:entry_ids], entryable_type: "Transaction")
            .includes(:entryable, child_entries: :entryable)
-           .select { |entry| entry.accounts_changed_by_transfer_removal.any? { |account| !writable_account_ids.include?(account.id) } }
-           .map(&:id)
+           .to_h { |entry| [ entry.id, entry.accounts_changed_by_transfer_removal ] }
     end
 
     def writable_accounts

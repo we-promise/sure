@@ -83,8 +83,15 @@ class SplitsController < ApplicationController
       @entry = Current.accessible_entries.find(params[:transaction_id])
     end
 
+    # Unsplitting or resplitting deletes the children; a child that is a
+    # transfer leg takes its transfer along, like deleting the entry would.
     def require_split_write_permission!
-      require_account_permission!(@entry.account, redirect_path: transactions_path)
+      return unless require_account_permission!(@entry.account, redirect_path: transactions_path)
+
+      parent = @entry.split_child? ? @entry.parent_entry : @entry
+      parent.accounts_changed_by_transfer_removal.each do |account|
+        return unless require_account_permission!(account, redirect_path: transactions_path)
+      end
     end
 
     def resolve_to_parent!

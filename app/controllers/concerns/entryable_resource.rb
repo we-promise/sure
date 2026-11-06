@@ -35,12 +35,14 @@ module EntryableResource
     # Deleting a transfer leg (or a split whose child is one) removes the
     # transfer, its fee transactions and, on a counterpart that counts
     # transfers, the balance it moved.
-    @entry.accounts_changed_by_transfer_removal.each do |account|
+    changed_accounts = @entry.accounts_changed_by_transfer_removal
+    changed_accounts.each do |account|
       return unless require_account_permission!(account)
     end
 
     @entry.destroy!
     @entry.sync_account_later
+    changed_accounts.each(&:sync_later)
 
     redirect_back_or_to account_path(@entry.account), notice: t("account.entries.destroy.success")
   end

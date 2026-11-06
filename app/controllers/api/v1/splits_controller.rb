@@ -114,7 +114,9 @@ class Api::V1::SplitsController < Api::V1::BaseController
     # require_account_permission!.
     def ensure_account_write_permission
       return if performed?
-      return if @entry.account.permission_for(current_resource_owner).in?([ :owner, :full_control ])
+      # Unsplitting or resplitting also removes a transfer a child is a leg of.
+      accounts = [ @entry.account, *@entry.accounts_changed_by_transfer_removal ]
+      return if accounts.all? { |account| account.permission_for(current_resource_owner).in?([ :owner, :full_control ]) }
 
       render json: {
         error: "forbidden",

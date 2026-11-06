@@ -106,9 +106,10 @@ class Rule::ListFilter
       end
     end
 
+    # A transfer action adds its saved target when the viewer can't pick it,
+    # so its list depends on the value.
     def action_options_for(action)
-      @action_options.fetch(action.action_type) do
-        @action_options[action.action_type] = action.options
-      end
+      key = action.action_type == "set_as_transfer_or_payment" ? [ action.action_type, action.value ] : action.action_type
+      @action_options.fetch(key) { @action_options[key] = action.options }
     end
 end

@@ -796,6 +796,19 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference [ -> { Transfer.count }, -> { Entry.count } ] do
       delete transaction_url(parent)
       post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ parent.id ] } }
+      delete transaction_split_url(parent)
+      patch transaction_split_url(parent), params: { split: { splits: { "0" => { name: "All", amount: "250" } } } }
+    end
+    assert_equal accounts(:other_liability).name, Transfer.find_by!(outflow_transaction: child.transaction).to_account.name
+  end
+
+  test "deleting a transfer leg resyncs the account whose fee it removes" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: accounts(:credit_card), status: "confirmed")
+    attach_fee(transfer, account: accounts(:investment))
+    Sync.where(syncable: accounts(:investment)).delete_all
+
+    assert_difference -> { accounts(:investment).syncs.count }, 1 do
+      delete transaction_url(transfer.outflow_transaction.entry)
     end
   end
 
