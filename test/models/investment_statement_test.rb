@@ -1416,6 +1416,99 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       "the investment_accounts lookup backing current_holdings should only run once, even for the empty case"
   end
 
+  # A family whose month starts on the 15th: on 20 March its month runs from
+  # 15 March, not 1 March. The two portfolio entry points must default to that
+  # month, as the period picker does.
+  test "performance and return_scopes default to the family's custom month" do
+    @family.update!(month_start_day: 15)
+    account = create_investment_account(balance: 1000)
+
+    travel_to Date.new(2026, 3, 20) do
+      expected = Period.current_month_for(@family)
+      assert_equal Date.new(2026, 3, 15), expected.start_date, "the fixture must use a custom month, or this proves nothing"
+
+      assert_equal expected.start_date, @statement.performance.period.start_date
+      assert_equal expected.start_date, @statement.return_scopes.fetch(account.id).period.start_date
+    end
+  end
+
+  # Documented as keyed by account id; callers look scopes up by id.
+  test "return_scopes is keyed by account id" do
+    account = create_investment_account(balance: 1000)
+
+    scopes = @statement.return_scopes(period: Period.last_30_days)
+
+    assert_equal [ account.id ], scopes.keys
+    assert_instance_of Portfolio::ReturnScope, scopes.fetch(account.id)
+  end
+
+  # The per-account scopes must be resolved over the same days as the
+  # aggregate, which stops reading a disabled account at its cut-off. Without
+  # the cut-off the scope would count the rows after it too.
+  test "return_scopes counts a disabled account's balance days only up to its cut-off" do
+    account = create_investment_account(balance: 1000)
+    (1..6).each { |days_ago| create_balance(account, date: days_ago.days.ago.to_date, amount: 1000) }
+    account.update!(status: "disabled", disabled_at: 3.days.ago)
+    period = Period.last_30_days
+    cutoff = 4.days.ago.to_date
+
+    uncut = Portfolio::ReturnScope.new(account: account, period: period).balance_days
+    scope = @statement.return_scopes(period: period).fetch(account.id)
+
+    assert_equal 6, uncut, "the fixture must hold rows on both sides of the cut-off"
+    assert_equal account.balances.where(date: period.start_date..cutoff).count, scope.balance_days
+    assert_operator scope.balance_days, :<, uncut
+  end
+
+  # The aggregate return reads the same cut-off: a disabled account's value
+  # after its cut-off date is not part of the series the return chains, and
+  # its value up to that date still is.
+  test "performance reads a disabled account up to its cut-off and no further" do
+    account = create_investment_account(balance: 1000)
+    (1..6).each { |days_ago| create_balance(account, date: days_ago.days.ago.to_date, amount: 1000) }
+    account.update!(status: "disabled", disabled_at: 3.days.ago)
+    period = Period.custom(start_date: 6.days.ago.to_date, end_date: 1.day.ago.to_date)
+    cutoff = 4.days.ago.to_date
+    value = ->(performance, after:) { performance.daily_returns.rows.select { |row| (row.date > cutoff) == after }.sum(&:value_close) }
+
+    uncut = Portfolio::Performance.new(family: @family, account_ids: [ account.id ], period: period)
+    performance = @statement.performance(period: period)
+
+    assert_operator value.call(uncut, after: true), :>, 0, "the fixture must hold value after the cut-off"
+    assert_equal 0, value.call(performance, after: true)
+    assert_equal value.call(uncut, after: false), value.call(performance, after: false)
+    assert_operator value.call(performance, after: false), :>, 0
+  end
+
+  # A disabled account keeps the sales it made before its cut-off, and only
+  # those, as #return_scopes keeps its balance days.
+  test "realized_gains counts a disabled account's sales only up to its cut-off" do
+    account = create_investment_account(balance: 1000)
+    security = create_portfolio_security
+    [ 10, 2 ].each do |days_ago|
+      date = days_ago.days.ago.to_date
+      account.holdings.create!(security: security, date: date, qty: 5, price: 150, amount: 750, currency: "USD", cost_basis: 100)
+      create_portfolio_trade(account: account, security: security, qty: -2, price: 150, date: date, label: "Sell")
+    end
+    account.update!(status: "disabled", disabled_at: 5.days.ago)
+    period = Period.last_30_days
+
+    uncut = Portfolio::RealizedGains.new(accounts: [ account ], period: period, currency: @family.currency)
+    realized = @statement.realized_gains(period: period)
+
+    assert_equal 2, uncut.trade_count, "the fixture must hold sales on both sides of the cut-off"
+    assert_equal 1, realized.trade_count
+    assert_equal 100, realized.net
+  end
+
+  test "realized_gains defaults to the family's custom month" do
+    @family.update!(month_start_day: 15)
+
+    travel_to Date.new(2026, 3, 20) do
+      assert_equal Date.new(2026, 3, 15), @statement.realized_gains.period.start_date
+    end
+  end
+
   test "value_series sums the per-account balance series on every date of the period" do
     period = Period.custom(start_date: 10.days.ago.to_date, end_date: 5.days.ago.to_date)
 
