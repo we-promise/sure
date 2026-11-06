@@ -2657,6 +2657,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      tracing modes, and the proxy fix (with loopback skipped). `AiHealth::Probe` calls `transport.probe`, which fixes
      drift bug 6. Adds the transport contract test and the AI test helpers (section 17).
      *Deletes:* `AiHealth::Probe`'s own clients.
+     Implementation plan: [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md).
    - **2b. Routing and consent.** `Ai::Config`, built in memory in each process by
      `Ai::LegacyEnvConfig` from today's ENV and `Setting` fields with the table in section 4.5
      (so the web and the workers can disagree, as they do today, until PR 7);
@@ -2728,7 +2729,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    and Jev on OpenRouter working again (#1264). Then the chat-storage spike: 2.2's claims on
    RubyLLM's persistence, with the cases of Sure's own claim spike (two Retry requests at once, a
    lapsed claim, a message sent mid-turn, an approval clicked twice). Its result decides PR 6's
-   storage.
+   storage. The upgrade checklist is the table of RubyLLM commits since 2.1.1 in
+   [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md#rubyllm-from-211-to-main-what-lands-with-22).
 6. **Chat**, on RubyLLM 2.2, with the storage PR 5's spike picked: Sure's tables with Sure's
    claim on `chats` (section 8.4), or RubyLLM's persistence (section 20). `Ai::Conversation`'s
    driver around `ChatAgent` and `SureTool` (section 8.4), agent
@@ -2881,6 +2883,7 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`05-ai-breaking-change-option.md`](05-ai-breaking-change-option.md) | The refactor with breaking changes allowed, the menu this plan picked from |
 | [`06-ai-file-split-review.md`](06-ai-file-split-review.md) | Merge hotspots and files to split |
 | [`chatwoot-rubyllm-lessons-learned.md`](chatwoot-rubyllm-lessons-learned.md) | Chatwoot's move to RubyLLM |
+| [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md) | PR 2a's implementation plan, and the RubyLLM commits since 2.1.1 that matter for 2.2 |
 
 **Terms this plan defines**, for readers and coding agents:
 
