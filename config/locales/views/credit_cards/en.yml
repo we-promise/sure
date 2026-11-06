@@ -51,13 +51,24 @@ en:
       overview:
         above_minimum: This statement came to %{balance}, above the %{minimum} minimum.
           Paying only the minimum leaves the balance on the card at this APR.
+        annual_percentage_rate: Annual Percentage Rate
         apr: APR
+        balance_carried_label: Balance carried
+        charges: Charges
+        estimated_interest_label: Estimated interest
+        monthly_rate_label: Monthly rate
+        per_month: "%{amount}/month"
         closes_on: Next statement closes %{date}
         credit_toward_next: Credit toward the next statement
         due_on: "Due %{date}"
         edit_card_details: Edit card details
+        payments_credits: Payments/Credits
+        remaining_due: Remaining due %{amount}
+        scheduled_payment: Scheduled payment %{amount} on %{date}
         since_last_statement: Since Last Statement
         statement_balance: Statement Balance
+        status_paid: Paid
+        status_partial: Partially paid
         multi_currency_unavailable: This statement adds up entries recorded in more
           than one currency, which cannot be totalled here without a rate for every
           one of them. The balances are left blank rather than guessed.

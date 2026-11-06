@@ -68,6 +68,14 @@
           <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
+        <%# The accounts index preloads one stats row per item; a standalone render has to look it up itself. %>
+        <% stats = if defined?(@wise_sync_stats_map) && @wise_sync_stats_map
+             @wise_sync_stats_map[wise_item.id] || {}
+           else
+             wise_item.latest_sync_record&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: wise_item, show_account_details: visible_accounts.size == wise_item.accounts.size) %>
+
         <% unlinked = wise_item.unlinked_accounts_count %>
         <% total = wise_item.total_accounts_count %>
         <% linked = wise_item.linked_accounts_count %>

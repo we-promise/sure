@@ -113,11 +113,12 @@ module Security::Provided
       rank_search_results(all_results, symbol, country_code).first(MAX_SEARCH_RESULTS)
     end
 
-    private
-      def provider_key_for(provider_instance)
-        provider_instance.class.name.demodulize.underscore
-      end
+    # The registry key of a provider instance, e.g. "twelve_data".
+    def provider_key_for(provider_instance)
+      provider_instance.class.name.demodulize.underscore
+    end
 
+    private
       # Fetches (or reads from cache) search results for a single provider.
       # Designed to run inside a Concurrent::Promises.future.
       def fetch_provider_results(prov, symbol, params)
@@ -283,12 +284,16 @@ module Security::Provided
     # - No source and no sector or industry: an ETF the type map leaves without
     #   a source, or cash and crypto that carry a `default` source and no
     #   sector, are not asked again for an answer no provider has.
-    # - `classification_fetched_at` unset: an answer that holds nothing (a bond,
-    #   an ETF with no sector) is stamped, so it is asked once. A failed answer
-    #   is not stamped, so it is retried.
+    # - Not yet asked of this provider: an answer that holds nothing (a bond,
+    #   an ETF with no sector) is stamped with the provider that gave it, so
+    #   that provider is asked once. A failed answer is not stamped, so it is
+    #   retried. The stamp is compared with the provider resolved now, so an
+    #   assigned provider changing and the enabled default changing (for a
+    #   security with no `price_provider`) both open the gate.
+    classification_provider_key = self.class.provider_key_for(price_data_provider)
     wants_classification = include_classification && price_data_provider.supplies_classification? &&
       !classification_locked? && classification_source.blank? && sector.blank? && industry.blank? &&
-      classification_fetched_at.nil?
+      (classification_fetched_at.nil? || classification_fetched_from != classification_provider_key)
 
     # Keyed on the TIMESTAMP, not on whether constituents are present. Most
     # securities are not funds, so the provider returns nothing for them -- and a
@@ -312,19 +317,30 @@ module Security::Provided
       )
 
       if response.success?
-        # Only overwrite fields the provider actually returned, so providers that
-        # don't support metadata (e.g. Alpha Vantage) won't blank existing values.
-        attrs = {}
-        attrs[:name]        = response.data.name    if response.data.name.present?
-        attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
-        attrs[:website_url] = response.data.links   if response.data.links.present?
-        attrs.merge!(classification_attributes_from(response.data))
-        stored = attrs.empty? || update(attrs)
+        # Before the lock: `with_lock` reloads the row, and `store_constituents`
+        # compares the stamp under its own lock with the one this import read
+        # before asking. Reloading first would make another import's set look
+        # like this one's, and replace it.
         store_constituents(response.data.constituents) if wants_constituents
-        # Recorded only when the answer was stored. `update` runs the model's
-        # validations, and a row can hold a value they now refuse; stamping
-        # anyway would close the gate on an answer that never landed.
-        update_column(:classification_fetched_at, Time.current) if wants_classification && stored
+        # `with_lock` re-reads the row, so precedence is checked against what
+        # it holds now: a manual classification, a sector or a lock written
+        # while the provider was answering is not overwritten.
+        with_lock do
+          # Only overwrite fields the provider actually returned, so providers that
+          # don't support metadata (e.g. Alpha Vantage) won't blank existing values.
+          attrs = {}
+          attrs[:name]        = response.data.name    if response.data.name.present?
+          attrs[:logo_url]    = response.data.logo_url if response.data.logo_url.present?
+          attrs[:website_url] = response.data.links   if response.data.links.present?
+          attrs.merge!(classification_attributes_from(response.data))
+          stored = attrs.empty? || update(attrs)
+          # Recorded only when the answer was stored. `update` runs the model's
+          # validations, and a row can hold a value they now refuse; stamping
+          # anyway would close the gate on an answer that never landed.
+          if wants_classification && stored
+            update_columns(classification_fetched_at: Time.current, classification_fetched_from: classification_provider_key)
+          end
+        end
       else
         Rails.logger.warn("Failed to fetch security info for #{ticker} from #{price_data_provider.class.name}: #{response.error.message}")
         DebugLogEntry.capture(

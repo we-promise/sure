@@ -404,7 +404,143 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
     assert_equal "Technology", @security.reload.sector
   end
 
+  # ------------------------------------------- the record belongs to a provider
+
+  # The stamp says "this provider was asked and had nothing". A different
+  # provider has not been asked, so a remap opens the gate again.
+  test "a security moved to another provider is asked again" do
+    @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
+    @security.update_columns(price_provider: "eodhd", classification_fetched_at: 1.day.ago,
+                             classification_fetched_from: "eodhd")
+
+    @security.update!(price_provider: "yahoo_finance")
+
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::YahooFinance)
+    provider.expects(:fetch_security_info).once.returns(provider_success_response(info(sector: "Technology")))
+    @security.stubs(:price_data_provider).returns(provider)
+
+    @security.import_provider_details(include_classification: true)
+
+    assert_equal "Technology", @security.reload.sector
+  end
+
+  test "the record names the provider that answered" do
+    @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::Eodhd)
+    provider.stubs(:fetch_security_info).returns(provider_success_response(info))
+    @security.stubs(:price_data_provider).returns(provider)
+
+    assert_nil @security.classification_fetched_from
+    @security.import_provider_details(include_classification: true)
+
+    assert_equal "eodhd", @security.reload.classification_fetched_from
+  end
+
+  # Most importers leave `price_provider` blank, so the security is priced by
+  # whichever provider is first in the enabled list. Changing that list does
+  # not touch the row, and the provider now answering has not been asked.
+  test "a security with no assigned provider is asked again when the default provider changes" do
+    @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png", price_provider: nil)
+    first = capable_provider("first")
+    first.stubs(:class).returns(Provider::Eodhd)
+    first.expects(:fetch_security_info).once.returns(provider_success_response(info))
+    Security.stubs(:providers).returns([ first ])
+
+    @security.import_provider_details(include_classification: true)
+    assert_not_nil @security.reload.classification_fetched_at, "precondition: the empty answer was recorded"
+
+    second = capable_provider("second")
+    second.stubs(:class).returns(Provider::YahooFinance)
+    second.expects(:fetch_security_info).once.returns(provider_success_response(info(sector: "Technology")))
+    Security.stubs(:providers).returns([ second ])
+
+    @security.import_provider_details(include_classification: true)
+
+    assert_equal "Technology", @security.reload.sector
+    assert_equal "yahoo_finance", @security.classification_fetched_from
+  end
+
+  test "a security with no assigned provider is not asked again while the default stays the same" do
+    @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png", price_provider: nil)
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::Eodhd)
+    provider.expects(:fetch_security_info).once.returns(provider_success_response(info))
+    Security.stubs(:providers).returns([ provider ])
+
+    @security.import_provider_details(include_classification: true)
+    @security.reload.import_provider_details(include_classification: true)
+  end
+
+  # Recorded before the provider was: nothing says who answered, so the
+  # provider now pricing the security is asked once and the record completed.
+  test "a record that names no provider is asked once more" do
+    @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
+    @security.update_columns(classification_fetched_at: 1.day.ago, classification_fetched_from: nil)
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::Eodhd)
+    provider.expects(:fetch_security_info).once.returns(provider_success_response(info))
+    @security.stubs(:price_data_provider).returns(provider)
+
+    @security.import_provider_details(include_classification: true)
+    @security.reload.import_provider_details(include_classification: true)
+
+    assert_equal "eodhd", @security.classification_fetched_from
+  end
+
+  # --------------------------------------- a write made while the provider answers
+
+  # The provider is asked over the network, and the row can change before it
+  # answers. Precedence is decided against the row as it is when the answer is
+  # written, not as it was when this instance was loaded.
+  test "a manual classification written while the provider answers is kept" do
+    answer_after(-> { Security.where(id: @security.id).update_all(asset_class: "fixed_income", asset_sub_class: "bond", classification_source: "manual") },
+                 info(kind: "Common Stock"))
+
+    assert_nil @security.classification_source, "the instance must not know about the manual write"
+    @security.import_provider_details(include_classification: true)
+
+    @security.reload
+    assert_equal "fixed_income", @security.asset_class
+    assert_equal "bond", @security.asset_sub_class
+    assert_equal "manual", @security.classification_source
+  end
+
+  test "a sector written while the provider answers is kept" do
+    answer_after(-> { Security.where(id: @security.id).update_all(sector: "Hand-picked") },
+                 info(sector: "Technology"))
+
+    @security.import_provider_details(include_classification: true)
+
+    assert_equal "Hand-picked", @security.reload.sector
+  end
+
+  test "a lock set while the provider answers is honoured" do
+    answer_after(-> { Security.where(id: @security.id).update_all(classification_locked: true) },
+                 info(kind: "Common Stock", sector: "Technology"))
+
+    @security.import_provider_details(include_classification: true)
+
+    @security.reload
+    assert_nil @security.asset_class
+    assert_nil @security.sector
+  end
+
   private
+    # A provider whose answer arrives after `writer` has changed the row.
+    def answer_after(writer, data)
+      @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
+      response = provider_success_response(data)
+      provider = capable_provider("provider")
+      provider.stubs(:class).returns(Provider::TwelveData)
+      provider.define_singleton_method(:fetch_security_info) do |**|
+        writer.call
+        response
+      end
+      @security.stubs(:price_data_provider).returns(provider)
+    end
+
     def info(sector: nil, industry: nil, kind: nil)
       Provider::SecurityConcept::SecurityInfo.new(
         symbol: "AAPL", name: nil, links: nil, logo_url: nil, description: nil,

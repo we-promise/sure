@@ -12,6 +12,16 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   # Bills has always linked out to transactions. Until now nothing linked back,
   # so a transaction that settled a bill was a dead end. The link-back is part
   # of the preview-gated bills surface, so the viewer needs the flag.
+  test "index loads the merchant list on demand and keeps selected merchants in the form" do
+    get transactions_url(q: { merchants: [ "Amazon" ] })
+
+    assert_response :success
+    assert_select "#transactions-search turbo-frame#merchant_filter_options[loading=lazy][data-action=?]", "turbo:frame-load->list-filter#filter" do
+      assert_select "input[type=hidden][name='q[merchants][]'][value=?]", "Amazon"
+    end
+    assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
+  end
+
   test "a German transaction shows the bill it paid with localized copy" do
     @user.update!(locale: "de")
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
@@ -88,6 +98,32 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_no_match bill_path(series), response.body,
       "the preview-gated bill link must not render for a user without the flag"
+  end
+
+  test "index points an unmatched transaction with a counterpart to the transfer matcher" do
+    outflow = create_transaction(account: accounts(:depository), name: "Hint outflow", amount: 500, date: Date.current)
+    inflow = create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
+    lone = create_transaction(account: accounts(:depository), name: "Hint lone", amount: 77, date: Date.current)
+
+    get transactions_url
+
+    assert_response :success
+    [ outflow, inflow ].each do |entry|
+      assert_select "a[href='#{new_transaction_transfer_match_path(entry)}'][data-turbo-frame=modal]",
+                    text: I18n.t("transactions.transaction.transfer_hint")
+    end
+    assert_select "a[href='#{new_transaction_transfer_match_path(lone)}']", count: 0
+    assert_select "##{dom_id(outflow.transaction, :transfer_hint)} form[action='#{transaction_transfer_match_path(outflow)}'] input[name=_method][value=delete]"
+  end
+
+  test "index links a transaction's merchant to its page" do
+    merchant = merchants(:netflix)
+    create_transaction(account: accounts(:depository), name: "Netflix", merchant: merchant, date: Date.current)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "a[href='#{merchant_path(merchant)}'][data-turbo-frame=_top][title=?]", I18n.t("transactions.transaction.view_merchant")
   end
 
   test "the investment activity badge shows translated labels" do
@@ -728,6 +764,33 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     patch tags_transaction_url(read_only_entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
 
     assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
+  # The category and tag dropdowns are fetched when their popover opens, so
+  # rows carry no <turbo-frame> markup for them.
+  test "transaction rows defer the category and tag dropdown frames until opened" do
+    get transactions_url
+
+    assert_response :success
+    assert_select "turbo-frame#category_dropdown", count: 0
+    assert_select "turbo-frame#tag_dropdown", count: 0
+
+    transaction = @entry.entryable
+    %w[desktop mobile].each do |variant|
+      assert_select "##{dom_id(transaction, "category_menu_#{variant}")} [data-ds--popover-frame-id-value='category_dropdown'][data-ds--popover-frame-src-value=?]",
+        category_dropdown_path(category_id: transaction.category_id, transaction_id: transaction.id, grouped: false)
+    end
+    assert_select "[data-ds--popover-frame-id-value='tag_dropdown'][data-ds--popover-frame-src-value=?]",
+      tag_dropdown_path(entry_id: @entry.id), count: 2
+  end
+
+  test "the mobile category cell renders only the icon badge, the desktop cell both" do
+    get transactions_url
+
+    assert_response :success
+    transaction = @entry.entryable
+    assert_select "##{dom_id(transaction, "category_menu_mobile")} [data-testid='category-name']", count: 0
+    assert_select "##{dom_id(transaction, "category_menu_desktop")} [data-testid='category-name']", count: 1
   end
 
   test "transaction rows show tags" do
@@ -2131,6 +2194,22 @@ end
     assert_select "#entry_#{@entry.id}", count: 0
   end
 
+  test "index names the account on an account_ids filter chip" do
+    account = @entry.account
+
+    get transactions_url(q: { account_ids: [ account.id ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: account.name, count: 1
+    assert_select "#transaction-search-filters li p", text: account.id, count: 0
+  end
+
+  test "index renders a blank account filter value without failing" do
+    get transactions_url(q: { account_ids: [ "" ], accounts: [ "" ] })
+
+    assert_response :success
+  end
+
   test "index offers the attachment filter in the filter menu" do
     get transactions_url
 
@@ -2166,7 +2245,7 @@ end
     get transactions_url
 
     assert_response :success
-    assert_select "##{dom_id(outflow, "category_menu_desktop")} turbo-frame#category_dropdown"
+    assert_select "##{dom_id(outflow, "category_menu_desktop")} [data-ds--popover-frame-id-value='category_dropdown']"
   end
 
   test "update drops a category sent for a matched transfer's inflow leg" do
