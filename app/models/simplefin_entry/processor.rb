@@ -2,6 +2,38 @@ require "digest/md5"
 
 class SimplefinEntry::Processor
   include CurrencyNormalizable
+
+  # Institution-specific sign normalization. SimpleFIN reports some Fidelity transaction
+  # signs inconsistently, so descriptors with an unambiguous direction are normalized.
+  # Keyed by an org_data name pattern so another institution can add its own rules
+  # without changing how existing ones match.
+  FIDELITY_ORGANIZATION = /\AFidelity Investments\b/i
+  FIDELITY_AMOUNT_NORMALIZATION_RULES = {
+    direct_debit: { direction: :expense, pattern: /\ADIRECT\s+DEBIT\b/i },
+    eft_paid: { direction: :expense, pattern: /\A(?:EFT\s+PAID|ELECTRONIC\s+FUNDS\s+TRANSFER\s+PAID)\b/i },
+    direct_deposit: { direction: :income, pattern: /\ADIRECT\s+DEPOSIT\b/i },
+    rollover_check: { direction: :income, pattern: /\AROLLOVER\s+CASH\s+CHECK\s+RECEIVED\b/i },
+    check_received: { direction: :income, pattern: /\ACHECK\s+RECEIVED\b/i },
+    check_paid: { direction: :expense, pattern: /\ACHECK\s+PAID\b/i },
+    wire_out: { direction: :expense, pattern: /\AWIRE\s+TRANSFER\s+TO\s+BANK\b/i },
+    cash_advance: { direction: :expense, pattern: /\ACASH\s+ADVANCE\b/i },
+    fee_rebate: { direction: :income, pattern: /\A(?:ADJUST\s+)?FEE\s+CHARGED\s+ATM\s+FEE\s+REBATE\b/i },
+    fee: { direction: :expense, pattern: /\A(?:ADJUST\s+)?FEE\s+CHARGED\b/i },
+    core_purchase: { direction: :expense, pattern: /\APURCHASE\s+INTO\s+CORE\s+ACCOUNT\b/i },
+    core_redemption: { direction: :income, pattern: /\AREDEMPTION\s+FROM\s+CORE\s+ACCOUNT\b/i },
+    card_payment: { direction: :income, pattern: /\APAYMENT MADE BY ACCOUNT ENDING IN:\s*\d+\z/i },
+    interest: { direction: :income, pattern: /\AINTEREST\s+FULLY\s+PAID\b/i },
+    reinvestment: { direction: :expense, pattern: /\AREINVESTMENT\b/i },
+    cash_in_lieu: { direction: :income, pattern: /\AIN\s+LIEU\s+OF\s+FRX\s+SHARE\s+LEU\s+PAYOUT\b/i },
+    dividend: {
+      direction: :income,
+      pattern: /\A(?:DIVIDEND\s+RECEIVED\b(?!.*\b(?:TAX|WITHHOLDING)\b)|DIVIDEND(?:\s+(?:PAYMENT|INCOME|CREDIT))?\z)/i
+    }
+  }.freeze
+  INSTITUTION_AMOUNT_NORMALIZATION_RULES = {
+    FIDELITY_ORGANIZATION => FIDELITY_AMOUNT_NORMALIZATION_RULES
+  }.freeze
+  AMBIGUOUS_AMOUNT_TERMS = /\b(?:REVERS|RETURN|REFUND)/i
   # simplefin_transaction is the raw hash fetched from SimpleFin API and converted to JSONB
   # @param import_adapter [Account::ProviderImportAdapter, nil] Optional shared adapter for accumulating skipped entries
   def initialize(simplefin_transaction, simplefin_account:, import_adapter: nil)
@@ -42,7 +74,8 @@ class SimplefinEntry::Processor
       source: "simplefin",
       merchant: merchant,
       notes: notes,
-      extra: extra_metadata
+      extra: extra_metadata,
+      extra_keys_to_remove: amount_normalization_keys_to_remove
     )
   end
 
@@ -94,6 +127,11 @@ class SimplefinEntry::Processor
         sf["fx_date"] = fx_d&.to_s
       end
 
+      # Only institutions with normalization rules carry this key. For them it is always
+      # set (rule name or nil) so a resync whose descriptor becomes unmapped or ambiguous
+      # overwrites a stale value via deep_merge. Other institutions' metadata is unchanged.
+      sf["amount_normalization"] = amount_normalization if institution_amount_normalization_rules
+
       return nil if sf.empty?
       { "simplefin" => sf }
     end
@@ -144,6 +182,9 @@ class SimplefinEntry::Processor
         BigDecimal("0")
       end
 
+      return parsed_amount.abs if amount_normalization_direction == :expense
+      return -parsed_amount.abs if amount_normalization_direction == :income
+
       # SimpleFin uses banking convention (expenses negative, income positive)
       # Maybe expects opposite convention (expenses positive, income negative)
       # So we negate the amount to convert from SimpleFin to Maybe format
@@ -151,6 +192,51 @@ class SimplefinEntry::Processor
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse SimpleFin transaction amount: #{data[:amount].inspect} - #{e.message}"
       raise
+    end
+
+    def amount_normalization
+      amount_normalization_rule&.first&.to_s
+    end
+
+    # Remove a marker from a prior Fidelity sync when current institution metadata no
+    # longer selects Fidelity's rules. New unsupported-institution imports remain keyless.
+    def amount_normalization_keys_to_remove
+      institution_amount_normalization_rules ? [] : [ %w[simplefin amount_normalization] ]
+    end
+
+    def amount_normalization_direction
+      amount_normalization_rule&.last&.fetch(:direction)
+    end
+
+    def amount_normalization_rule
+      return @amount_normalization_rule if defined?(@amount_normalization_rule)
+
+      @amount_normalization_rule = find_amount_normalization_rule
+    end
+
+    def find_amount_normalization_rule
+      rules = institution_amount_normalization_rules
+      return if rules.nil?
+      return if amount_descriptor_fields.any? { |value| value.match?(AMBIGUOUS_AMOUNT_TERMS) }
+
+      rules.find do |_name, rule|
+        amount_descriptor_fields.any? { |value| value.match?(rule.fetch(:pattern)) }
+      end
+    end
+
+    def amount_descriptor_fields
+      @amount_descriptor_fields ||= [ data[:description] ].filter_map { |value| value.to_s.strip.presence }
+    end
+
+    # Rules for the account's institution, or nil when it has no sign normalization.
+    # org_data is raw provider JSON, so it may be nil, a non-Hash value, or lack a name.
+    def institution_amount_normalization_rules
+      return @institution_amount_normalization_rules if defined?(@institution_amount_normalization_rules)
+
+      org = simplefin_account.org_data
+      institution_name = org.is_a?(Hash) ? (org["name"] || org[:name]).to_s : ""
+      _organization, rules = INSTITUTION_AMOUNT_NORMALIZATION_RULES.find { |organization, _rules| institution_name.match?(organization) }
+      @institution_amount_normalization_rules = rules
     end
 
     def currency
