@@ -14,7 +14,7 @@ class OidcAccountsController < ApplicationController
     end
 
     @email = @pending_auth["email"]
-    @user_exists = User.exists?(email: @email) if @email.present?
+    @user_exists = User.find_by_email(@email).present? if @email.present?
 
     # Check for a pending invitation for this email
     @pending_invitation = Invitation.pending.find_by(email: @email) if @email.present?
@@ -33,7 +33,7 @@ class OidcAccountsController < ApplicationController
     end
 
     # Verify user's password to confirm identity
-    user = User.authenticate_by(email: params[:email], password: params[:password])
+    user = User.authenticate_by_email(email: params[:email], password: params[:password])
 
     if user&.active?
       linked = user.transaction do
@@ -77,7 +77,7 @@ class OidcAccountsController < ApplicationController
       end
     else
       @email = params[:email]
-      @user_exists = User.exists?(email: @email) if @email.present?
+      @user_exists = User.find_by_email(@email).present? if @email.present?
       flash.now[:alert] = "Invalid email or password"
       render :link, status: :unprocessable_entity
     end
