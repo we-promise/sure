@@ -393,6 +393,14 @@ OPENAI_URI_BASE=http://host.docker.internal:11434/v1
 
 Ollama must also listen on an address the containers can reach; on Linux hosts set `OLLAMA_HOST=0.0.0.0` for the Ollama service.
 
+**Security:** Ollama has no authentication, and `OLLAMA_HOST=0.0.0.0` makes its API reachable on every network interface, so anyone who can reach port `11434` can use it. Restrict that port with a host firewall so that only the Docker network can connect. Allow the subnet Docker assigned to the `sure_net` network used by `web` and `worker` (it is not a fixed subnet and is usually not `172.17.0.0/16`):
+
+```bash
+docker network inspect <project>_sure_net --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'
+```
+
+Replace `<project>` with your Compose project name (by default the name of the directory containing your compose file).
+
 ### Docker Compose Example
 
 ```yaml
