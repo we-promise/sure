@@ -1202,6 +1202,7 @@ class EnableBankingItem::Importer
       external_id = ->(tx) { EnableBankingEntry::Processor.compute_external_id(tx) }
 
       incoming_by_content = fetched_rows.group_by(&content_key)
+      paired = Set.new  # object_ids of rows settled by content, old and new alike
 
       superseded_rows.group_by(&content_key).each do |key, old_rows|
         next if key.blank?
@@ -1220,6 +1221,7 @@ class EnableBankingItem::Importer
           index = old_id.present? ? unpaired_new.index { |row| external_id.(row) == old_id } : nil
 
           if index
+            paired << old_row.object_id << unpaired_new[index].object_id
             unpaired_new.delete_at(index)  # identifier unchanged: nothing to carry over
           else
             rotated_old << old_row
@@ -1229,6 +1231,7 @@ class EnableBankingItem::Importer
         rotated_old.zip(unpaired_new).each do |old_row, new_row|
           next if new_row.nil?
 
+          paired << old_row.object_id << new_row.object_id
           old_id = external_id.(old_row)
           new_id = external_id.(new_row)
           next if old_id.blank? || new_id.blank? || old_id == new_id
@@ -1242,6 +1245,139 @@ class EnableBankingItem::Importer
           entry.update_column(:external_id, new_id)
         end
       end
+
+      pair_identifier_transitions!(
+        account,
+        superseded_rows.reject { |tx| paired.include?(tx.object_id) },
+        fetched_rows.reject { |tx| paired.include?(tx.object_id) }
+      )
+    end
+
+    # Tie a booked movement to its other shape when the ASPSP switches between
+    # returning it with and without an identifier, rewriting the remittance text
+    # as it does (#4652).
+    #
+    # Some ASPSPs describe one booked movement in two shapes: a short line with
+    # neither transaction_id nor entry_reference, and a detailed one with an
+    # entry_reference and multi-line remittance text. Successive responses can
+    # switch between them in either direction. rekey_rotated_identifiers! pairs
+    # by content, remittance included, so neither switch matches and the
+    # movement imports a second time.
+    #
+    # The evidence used here is not content similarity. In one complete booked
+    # fetch, a row we had stored is gone and a row of the other shape that we had
+    # not stored has appeared, on the same date for the same signed amount. A row
+    # the ASPSP still returns pairs with itself above and never reaches this
+    # method, so a charge coexisting with a same-day charge of the same amount
+    # stays separate. Rows are only paired across shapes, never identified with
+    # identified, so the loose key cannot merge distinct identified charges (the
+    # hazard described on #3464).
+    #
+    # The entry keeps, or takes, the ASPSP identifier. The identifierless shape
+    # is recorded as superseded on it, which
+    # EnableBankingAccount::Transactions::Processor reads into excluded_ids, so
+    # whichever shape the next response carries, the movement stays one entry.
+    #
+    # Groups are paired only when both sides hold the same number of rows. Any
+    # other shape is ambiguous and left alone, so the worst case is the
+    # duplicate that would have appeared anyway.
+    def pair_identifier_transitions!(account, leftover_old, leftover_new)
+      return if @book_truncated
+
+      booked = leftover_old.reject { |tx| pending_row?(tx) }
+      return if booked.empty?
+
+      incoming = leftover_new.reject { |tx| pending_row?(tx) }
+      shape = ->(tx) { EnableBankingEntry::Processor.identifierless?(tx) ? :identifierless : :identified }
+
+      old_groups = booked.group_by { |tx| [ replacement_key(tx), shape.(tx) ] }
+      new_groups = incoming.group_by { |tx| [ replacement_key(tx), shape.(tx) ] }
+
+      old_groups.each do |(key, old_shape), old_rows|
+        next if key.nil?
+
+        new_shape = old_shape == :identifierless ? :identified : :identifierless
+        new_rows = new_groups[[ key, new_shape ]] or next
+
+        if old_rows.size != new_rows.size
+          Rails.logger.warn(
+            "EnableBankingItem::Importer - Not pairing #{old_rows.size} vanished #{old_shape} " \
+            "row(s) with #{new_rows.size} new #{new_shape} row(s) on #{key.first}: ambiguous"
+          )
+          next
+        end
+
+        old_rows.zip(new_rows).each do |old_row, new_row|
+          if old_shape == :identifierless
+            adopt_identifier!(account, from: old_row, to: new_row)
+          else
+            alias_identifierless_shape!(account, entry_row: old_row, alias_row: new_row)
+          end
+        end
+      end
+    end
+
+    # Identifierless row replaced by an identified one: move the entry onto the
+    # ASPSP identifier, as EnableBankingEntry::Processor's own claim does for an
+    # unchanged description.
+    def adopt_identifier!(account, from:, to:)
+      old_id = EnableBankingEntry::Processor.compute_external_id(from)
+      new_id = EnableBankingEntry::Processor.compute_external_id(to)
+      return if old_id.blank? || new_id.blank?
+      return if account.entries.exists?(source: "enable_banking", external_id: new_id)
+
+      entry = account.entries.find_by(source: "enable_banking", external_id: old_id) or return
+
+      entry.lock!
+      return unless entry.external_id == old_id
+
+      entry.update_column(:external_id, new_id)
+      record_superseded_external_id!(entry, old_id)
+    end
+
+    # Identified row replaced by an identifierless one: keep the entry on the
+    # ASPSP identifier, which is the more durable of the two, and record the
+    # identifierless shape so the processor skips it instead of importing it.
+    def alias_identifierless_shape!(account, entry_row:, alias_row:)
+      entry_id = EnableBankingEntry::Processor.compute_external_id(entry_row)
+      alias_id = EnableBankingEntry::Processor.compute_external_id(alias_row)
+      return if entry_id.blank? || alias_id.blank?
+
+      entry = account.entries.find_by(source: "enable_banking", external_id: entry_id) or return
+      entry.lock!
+      record_superseded_external_id!(entry, alias_id)
+    end
+
+    # Date, amount, currency and direction: what a bank cannot rewrite without
+    # it being a different movement. Remittance and counterparty are left out on
+    # purpose, as they are what the ASPSP enriches when it assigns the identifier.
+    def replacement_key(transaction)
+      tx = transaction.with_indifferent_access
+      date = tx[:booking_date].presence || tx[:value_date].presence || tx[:transaction_date]
+      amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
+      currency = tx.dig(:transaction_amount, :currency).presence || tx[:currency]
+      direction = tx[:credit_debit_indicator]
+      return nil if [ date, amount, direction ].any?(&:blank?)
+
+      [ date.to_s, BigDecimal(amount.to_s).abs.to_s, currency.to_s.upcase, direction.to_s ]
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    # Same record EnableBankingEntry::Processor keeps when it claims a
+    # predecessor, which EnableBankingAccount::Transactions::Processor reads into
+    # excluded_ids. Keeps the retired id from importing again should the ASPSP
+    # ever return the identifierless row once more.
+    def record_superseded_external_id!(entry, retired_id)
+      transaction = entry.entryable
+      return unless transaction.is_a?(Transaction)
+
+      key = EnableBankingEntry::Processor::SUPERSEDED_IDS_KEY
+      extra = transaction.extra.presence || {}
+      recorded = Array(extra[key])
+      return if recorded.include?(retired_id)
+
+      transaction.update_column(:extra, extra.merge(key => recorded + [ retired_id ]))
     end
 
     # True when a stored row falls inside the window just fetched, so the fresh
