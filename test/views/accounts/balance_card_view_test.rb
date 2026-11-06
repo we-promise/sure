@@ -1,6 +1,8 @@
 require "test_helper"
 
 class AccountsBalanceCardViewTest < ActionView::TestCase
+  # The fixture holds 10000 USD, so a card that drops the amount or its
+  # currency, or shows zero, fails the text match.
   setup do
     @account = accounts(:investment)
   end
@@ -17,7 +19,7 @@ class AccountsBalanceCardViewTest < ActionView::TestCase
           assert_select "p[class=?]", "text-xs text-secondary", text: @account.short_subtype_label
         end
       end
-      assert_select "> p[class=?]", "font-medium text-primary privacy-sensitive"
+      assert_select "> p[class=?]", "font-medium text-primary privacy-sensitive", text: "$10,000.00"
     end
   end
 
@@ -28,7 +30,7 @@ class AccountsBalanceCardViewTest < ActionView::TestCase
       assert_select "> div.min-w-0 > div.min-w-0" do
         assert_select "p.truncate", count: 2
       end
-      assert_select "> p.whitespace-nowrap"
+      assert_select "> p.whitespace-nowrap", text: "$10,000.00"
     end
   end
 end
