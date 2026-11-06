@@ -233,6 +233,46 @@ class InvestmentStatement
     sort_holdings_table_rows(rows, sort: sort, dir: dir)
   end
 
+  # Holdings the user should look at before trusting the figures: no cost
+  # basis anywhere (Holding#avg_cost is nil: nothing stored and nothing the
+  # trades can compute, by the same rules the holdings tab applies), a price
+  # older than STALE_PRICE_AFTER_DAYS or no price at all, or a provider link
+  # that is not healthy. Cash securities are never flagged. The cost bases
+  # come from the batched preload and the price dates from one query, so
+  # the list is bounded regardless of the number of holdings.
+  STALE_PRICE_AFTER_DAYS = 5
+
+  def data_quality_issues(as_of: Date.current)
+    holdings = holdings_with_avg_costs
+    return [] if holdings.empty?
+
+    issues = []
+
+    holdings.each do |holding|
+      next if holding.security.cash?
+
+      if holding.avg_cost.nil?
+        issues << DataQualityIssue.new(kind: :missing_cost_basis, holding: holding, security: holding.security, detail: nil)
+      end
+    end
+
+    holdings.map(&:security).uniq.each do |security|
+      next if security.cash?
+
+      latest = latest_price_dates[security.id]
+      if latest.nil? || latest < as_of - STALE_PRICE_AFTER_DAYS
+        issues << DataQualityIssue.new(kind: :stale_price, holding: nil, security: security, detail: latest)
+      end
+
+      status = security.provider_status
+      issues << DataQualityIssue.new(kind: :provider, holding: nil, security: security, detail: status) unless status == :ok
+    end
+
+    issues.sort_by { |issue| [ DATA_QUALITY_KINDS.index(issue.kind), issue.security.ticker.to_s ] }
+  end
+
+  DATA_QUALITY_KINDS = %i[missing_cost_basis stale_price provider].freeze
+
   # Unrealized gains across all holdings, summed in family currency
   def unrealized_gains
     holdings_with_avg_costs.sum do |holding|
@@ -686,6 +726,8 @@ class InvestmentStatement
       def amount_money = amount
     end
 
+    DataQualityIssue = Data.define(:kind, :holding, :security, :detail)
+
     # Builds one rolled-up row of the holdings table for `security`: the summed
     # quantity across `positions`, its average cost and unrealised return over
     # the positions whose basis is known, and its weight against the caller's
@@ -815,6 +857,13 @@ class InvestmentStatement
           [ security, value, positive_holdings ]
         end
         .sort_by { |_, value, _| -value }
+    end
+
+    def latest_price_dates
+      @latest_price_dates ||= Security::Price
+        .where(security_id: current_holdings.map(&:security_id).uniq)
+        .group(:security_id)
+        .maximum(:date)
     end
 
     def combined_holding_trend(holdings)

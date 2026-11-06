@@ -1851,6 +1851,93 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal expected + [ [ "CASH", 4300, 47.78, nil, nil ] ], figures.call(InvestmentStatement.new(@family, user: nil).allocation)
   end
 
+  test "data_quality_issues flags missing cost basis, stale prices and unhealthy providers" do
+    account = create_investment_account(balance: 5000)
+    as_of = Date.current
+    fresh = Security.create!(ticker: "FRESH", name: "Fresh")
+    stale = Security.create!(ticker: "STALE", name: "Stale")
+    unpriced = Security.create!(ticker: "NOPX", name: "Unpriced")
+    offline = Security.create!(ticker: "OFFL", name: "Offline", offline: true)
+    cash = Security.cash_for(account)
+
+    Security::Price.create!(security: fresh, date: as_of - 2.days, price: 10, currency: "USD")
+    Security::Price.create!(security: stale, date: as_of - 6.days, price: 10, currency: "USD")
+    Security::Price.create!(security: offline, date: as_of, price: 10, currency: "USD")
+
+    # fresh: stored basis. stale: no stored basis but a buy trade computes one.
+    # unpriced: nothing. moved: a buy plus a Transfer, which makes the cost
+    # unknown by Holding#calculate_avg_cost's rule.
+    moved = Security.create!(ticker: "MOVED", name: "Moved in")
+    Security::Price.create!(security: moved, date: as_of, price: 10, currency: "USD")
+    Holding.create!(account: account, security: fresh, date: as_of, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+    Holding.create!(account: account, security: stale, date: as_of, qty: 1, price: 10, amount: 10, currency: "USD")
+    create_portfolio_trade(account: account, security: stale, qty: 1, price: 9, date: as_of - 10.days)
+    Holding.create!(account: account, security: unpriced, date: as_of, qty: 1, price: 10, amount: 10, currency: "USD")
+    Holding.create!(account: account, security: moved, date: as_of, qty: 2, price: 10, amount: 20, currency: "USD")
+    create_portfolio_trade(account: account, security: moved, qty: 1, price: 9, date: as_of - 10.days)
+    create_portfolio_trade(account: account, security: moved, qty: 1, price: 9, date: as_of - 9.days, label: "Transfer")
+    Holding.create!(account: account, security: offline, date: as_of, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+    Holding.create!(account: account, security: cash, date: as_of, qty: 100, price: 1, amount: 100, currency: "USD")
+
+    issues = @statement.data_quality_issues(as_of: as_of)
+    by_kind = issues.group_by(&:kind).transform_values { |list| list.map { |i| i.security.ticker } }
+
+    assert_equal %w[MOVED NOPX], by_kind[:missing_cost_basis],
+      "a buy trade means the basis is computable (STALE is not flagged); a Transfer makes it unknown (MOVED is)"
+    assert_equal %w[NOPX STALE], by_kind[:stale_price]
+    assert_includes by_kind[:provider], "OFFL"
+    assert_not_includes issues.map { |i| i.security.ticker }, cash.ticker
+    assert_equal as_of - 6.days, issues.find { |i| i.kind == :stale_price && i.security == stale }.detail
+    assert_equal :offline, issues.find { |i| i.kind == :provider && i.security == offline }.detail
+  end
+
+  test "data_quality_issues issues a bounded number of queries" do
+    account = create_investment_account(balance: 5000)
+    6.times do |i|
+      security = Security.create!(ticker: "Q#{i}", name: "Q #{i}")
+      Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 10, amount: 10, currency: "USD")
+    end
+    @statement.current_holdings.to_a
+
+    queries = capture_sql_queries { @statement.data_quality_issues(as_of: Date.current) }
+    # Three: the cost-basis preload, the latest prices, and one settings read
+    # for the enabled securities providers, which is cached after the first.
+    assert_operator queries.size, :<=, 3, "expected the cost-basis preload, latest prices and settings queries only, got:\n#{queries.join("\n")}"
+  end
+
+  # With a securities provider configured, a healthy link is not flagged, so
+  # the provider kind lists exactly the unhealthy ones. A price exactly
+  # STALE_PRICE_AFTER_DAYS old is still fresh; one day older is stale.
+  test "data_quality_issues flags only unhealthy providers, from the staleness boundary, in kind order" do
+    Security.stubs(:providers).returns([ mock("securities_provider") ])
+    account = create_investment_account(balance: 5000)
+    as_of = Date.current
+    edge = Security.create!(ticker: "EDGE", name: "Edge")
+    older = Security.create!(ticker: "OLDER", name: "Older")
+    failing = Security.create!(ticker: "FAIL", name: "Failing", failed_fetch_count: 2)
+    offline = Security.create!(ticker: "OFFL", name: "Offline", offline: true)
+    unbased = Security.create!(ticker: "UNB", name: "Unbased")
+
+    Security::Price.create!(security: edge, date: as_of - InvestmentStatement::STALE_PRICE_AFTER_DAYS.days, price: 10, currency: "USD")
+    Security::Price.create!(security: older, date: as_of - (InvestmentStatement::STALE_PRICE_AFTER_DAYS + 1).days, price: 10, currency: "USD")
+    [ failing, offline, unbased ].each do |security|
+      Security::Price.create!(security: security, date: as_of, price: 10, currency: "USD")
+    end
+    [ edge, older, failing, offline ].each do |security|
+      Holding.create!(account: account, security: security, date: as_of, qty: 1, price: 10, amount: 10, currency: "USD", cost_basis: 8, cost_basis_locked: true)
+    end
+    Holding.create!(account: account, security: unbased, date: as_of, qty: 1, price: 10, amount: 10, currency: "USD")
+
+    issues = @statement.data_quality_issues(as_of: as_of)
+
+    assert_equal [
+      [ :missing_cost_basis, "UNB", nil ],
+      [ :stale_price, "OLDER", as_of - (InvestmentStatement::STALE_PRICE_AFTER_DAYS + 1).days ],
+      [ :provider, "FAIL", :stale ],
+      [ :provider, "OFFL", :offline ]
+    ], issues.map { |i| [ i.kind, i.security.ticker, i.detail ] }
+  end
+
   private
     def materialize_two_parcel_example(first_parcel_label:)
       account = create_investment_account(balance: 1800)
