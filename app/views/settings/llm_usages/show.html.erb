@@ -25,9 +25,12 @@
     <div class="bg-container-inset rounded-lg p-4">
       <div class="flex items-center gap-2 mb-2">
         <%= icon "activity", class: "w-5 h-5 text-secondary" %>
-        <p class="text-xs font-medium text-secondary uppercase"><%= t(".total_requests") %></p>
+        <p class="text-xs font-medium text-secondary uppercase"><%= t(".total_calls") %></p>
       </div>
-      <p class="text-2xl font-semibold text-primary"><%= number_with_delimiter(@statistics[:total_requests]) %></p>
+      <p class="text-2xl font-semibold text-primary"><%= number_with_delimiter(@statistics[:total_calls]) %></p>
+      <% if @statistics[:total_requests] > @statistics[:total_calls] %>
+        <p class="text-xs text-secondary mt-1"><%= t(".requests_in_calls", count: @statistics[:total_requests]) %></p>
+      <% end %>
     </div>
 
     <div class="bg-container-inset rounded-lg p-4">
@@ -53,14 +56,14 @@
     <div class="bg-container-inset rounded-lg p-4">
       <div class="flex items-center gap-2 mb-2">
         <%= icon "trending-up", class: "w-5 h-5 text-secondary" %>
-        <p class="text-xs font-medium text-secondary uppercase"><%= t(".avg_cost_per_request") %></p>
+        <p class="text-xs font-medium text-secondary uppercase"><%= t(".avg_cost_per_call") %></p>
       </div>
       <p class="text-2xl font-semibold text-primary">
         $<%= sprintf("%.4f", @statistics[:avg_cost]) %>
       </p>
-      <% if @statistics[:requests_with_cost] < @statistics[:total_requests] %>
+      <% if @statistics[:calls_with_cost] < @statistics[:total_calls] %>
         <p class="text-xs text-secondary mt-1">
-          <%= t(".based_on_requests", with_cost: number_with_delimiter(@statistics[:requests_with_cost]), total: number_with_delimiter(@statistics[:total_requests])) %>
+          <%= t(".based_on_calls", with_cost: number_with_delimiter(@statistics[:calls_with_cost]), total: number_with_delimiter(@statistics[:total_calls])) %>
         </p>
       <% end %>
     </div>
@@ -104,7 +107,7 @@
   <div>
     <h2 class="text-lg font-semibold text-primary mb-3"><%= t(".recent_usage") %></h2>
     <div class="table-scroll rounded-lg" tabindex="0" role="region" aria-label="<%= t(".recent_usage") %>">
-      <% if @llm_usages.any? %>
+      <% if @llm_calls.any? %>
         <table class="w-full">
           <thead class="bg-surface border-b border-primary">
             <tr>
@@ -116,13 +119,16 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-alpha-black-200 theme-dark:divide-alpha-white-200">
-            <% @llm_usages.each do |usage| %>
+            <% @llm_calls.each do |usage| %>
               <tr class="<%= "bg-red-tint-5 theme-dark:bg-red-tint-10" if usage.failed? %>">
                 <td class="px-4 py-3 text-sm text-primary whitespace-nowrap">
                   <%= usage.created_at.strftime("%b %d, %Y %I:%M %p") %>
                 </td>
                 <td class="px-4 py-3 text-sm text-primary">
                   <%= usage.operation.humanize %>
+                  <% if usage.multiple_requests? %>
+                    <%= render "settings/llm_usages/requests", call: usage %>
+                  <% end %>
                 </td>
                 <td class="px-4 py-3 text-sm text-primary font-mono">
                   <%= usage.model %>
