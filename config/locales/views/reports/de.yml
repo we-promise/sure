@@ -8,7 +8,6 @@ de:
       export: CSV exportieren
       print_report: Bericht drucken
       sections_aria: Berichtsbereiche
-      toggle_section: "Sichtbarkeit des Bereichs umschalten"
       periods:
         monthly: Monatlich
         quarterly: Vierteljährlich

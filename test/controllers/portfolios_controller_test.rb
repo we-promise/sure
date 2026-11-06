@@ -150,13 +150,14 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
   test "renders sections collapsed where the user left them" do
     get portfolio_path
     assert_select "[data-section-key=accounts][data-reports-section-collapsed-value=?]", "false"
+    assert_select "[data-section-key=accounts] > details[open] > summary"
 
     @user.update_section_preferences("portfolio", collapsed: { "accounts" => true })
     get portfolio_path
 
     assert_response :success
     assert_select "[data-section-key=accounts][data-reports-section-collapsed-value=?]", "true"
-    assert_select "[data-section-key=accounts] button[aria-expanded=?]", "false"
+    assert_select "[data-section-key=accounts] > details:not([open]) > summary"
   end
 
   test "the sortable container posts to the portfolio endpoint under its own namespace" do

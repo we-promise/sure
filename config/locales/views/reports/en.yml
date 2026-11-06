@@ -8,7 +8,6 @@ en:
       print_report: Print Report
       section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
       sections_aria: Reports sections
-      toggle_section: "Toggle section visibility"
       periods:
         monthly: Monthly
         quarterly: Quarterly
