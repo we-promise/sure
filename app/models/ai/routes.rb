@@ -11,7 +11,9 @@ module Ai::Routes
                          sends: %i[chat_messages looked_up_financial_data stored_document_text] },
     bill_setup:        { lane: :interactive, needs: %i[structured_output],      consent: :user,
                          sends: %i[transaction_dates transaction_amounts transaction_names category_names bill_configuration] },
-    extract_pdf:       { lane: :prompt,      needs: %i[structured_output],      consent: :user,   # vision, documents, ocr: per way of reading (2e)
+    # A route entry reads (a model with structured output; vision or documents per way of reading)
+    # or transcribes (an OCR model, read before the text model extracts), section 8.1.
+    extract_pdf:       { lane: :prompt,      needs: { generation: %i[structured_output], ocr: %i[ocr] }, consent: :user,
                          sends: %i[uploaded_document] },
     embed:             { lane: :prompt,      needs: %i[embedding],              consent: :user,
                          sends: %i[depends_on_vector_store] },

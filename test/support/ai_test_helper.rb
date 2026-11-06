@@ -61,7 +61,7 @@ module AiTestHelper
   end
   Ai::Transport.singleton_class.prepend(TransportStub)
 
-  # A transport that answers `generate`, `judge` and `embed` from the test, through Ai::Transport::Base,
+  # A transport that answers `generate`, `judge`, `embed` and `ocr` from the test, through Ai::Transport::Base,
   # so the call context and the `.ai` events are the real ones.
   class FakeTransport < Ai::Transport::Base
     def initialize(endpoint, responder)
@@ -84,6 +84,12 @@ module AiTestHelper
           [ id, given[id]&.to_h { |name, answer| [ name.to_sym, AiTestHelper.judge_answer(answer) ] } ]
         end
         JudgeResponse.new(answers:, usage: Ai::Tokens.new(input_tokens: 10 * answers.size, output_tokens: 0))
+      end
+
+      # The test answers the transcription, or nil for "page N" per page.
+      def run_ocr(request)
+        text = @responder.call(request) || request.pages.map { "transcribed #{_1.filename}" }.join("\n")
+        OcrResponse.new(texts: [ text ], usage: Ai::Tokens.new(input_tokens: 100, output_tokens: 20))
       end
 
       # The test answers the vectors, or nil for one vector per text of the model's dimensions
@@ -167,7 +173,8 @@ module AiTestHelper
   def without_ai(&block)
     Ai::Config.with(Ai::Config.new, &block)
   end
-  AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY].freeze
+  AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY
+                        MISTRAL_LIVE_API_KEY COHERE_LIVE_API_KEY].freeze
 
   def ai_endpoint(name: "test", protocol: :compatible, base_url: "https://llm.example.test/v1", api_key: "test-key", **attributes)
     Ai::Config::Endpoint.new(name:, protocol:, base_url:, api_key:, **attributes)

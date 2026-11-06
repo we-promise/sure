@@ -83,6 +83,23 @@ class Ai::Generation
 
   def items = batch_key ? Array(instance_variable_get(:"@#{batch_key}")) : nil
 
+  # What one item costs a request, in tokens, for Ai::Batch: its text by default. A page image
+  # costs a fixed estimate (PDF import, 2e).
+  def item_cost(item) = Assistant::TokenEstimator.estimate(item)
+
+  # Files sent with this request's input (Ai::Attachment): a PDF or page images (2e).
+  def attachments = []
+
+  # Capabilities this call needs beyond the feature's own, such as `vision` for page images: a
+  # route whose model lacks them is skipped, not sent a request it would refuse.
+  def needs = []
+
+  # How the answers of each batch combine: the merge list's items, one per id. A feature whose
+  # items have no id (statement rows) merges its own way.
+  def merge_values(values)
+    { merge_key => values.flat_map { Array(_1[merge_key]) }.index_by { _1[merge_by] }.values }
+  end
+
   # The initializer's arguments other than the family, for the judgement and the shadow job.
   def arguments = raise(NotImplementedError, "#{self.class.name} defines no arguments")
 
@@ -130,7 +147,9 @@ class Ai::Generation
 
   private
     def servable?(route)
-      route.judge? ? judgement_class.present? && route.model.capable?(:judge) : route.model.capable?(:structured_output)
+      return judgement_class.present? && route.model.capable?(:judge) if route.judge?
+
+      route.model.capable?(:structured_output, *needs)
     end
 
     def call_single(routes, cancelled:)
@@ -142,7 +161,7 @@ class Ai::Generation
 
     def call_batched(routes, batches:, cancelled:)
       remaining = items.dup
-      answered = []
+      values = []
       served = nil
       done = 0
 
@@ -150,17 +169,17 @@ class Ai::Generation
         raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
 
         route = routes.find { !Ai::DownMarks.down?(_1) } || routes.first
-        slice = Ai::Batch.first_slice(remaining, model: route.model, fixed_tokens: fixed_tokens(route))
+        slice = Ai::Batch.first_slice(remaining, model: route.model, fixed_tokens: fixed_tokens(route), cost: method(:item_cost))
         on_routes(routes, slice).each do |answered_by, value|
           served = answered_by
-          answered.concat(Array(value[merge_key]))
+          values << value
         end
         @sent.concat(slice)
         remaining -= slice
         done += 1
       end
 
-      result(value: { merge_key => answered.index_by { _1[merge_by] }.values }, route: served, remaining:)
+      result(value: merge_values(values), route: served, remaining:)
     end
 
     # Runs `slice` (nil for a feature without items) down the routes: failover and escalation
@@ -217,7 +236,8 @@ class Ai::Generation
       request = Ai::Transport::Base::Request.new(
         feature: request_feature, family:, model: route.model, instructions: prompt.instructions, input: prompt.input,
         schema: generation.schema, schema_name: schema_label || feature_key, reasoning_effort: route.reasoning_effort,
-        json_mode: route.effective_json_mode, failed_ratio: (generation.method(:failed_ratio) if batch_key && blank_item_check)
+        json_mode: route.effective_json_mode, failed_ratio: (generation.method(:failed_ratio) if batch_key && blank_item_check),
+        attachments: generation.attachments
       )
       response = route.transport.generate(request)
       @usage = @usage ? @usage + response.usage : response.usage
