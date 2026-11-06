@@ -433,7 +433,58 @@ class Security::ClassificationIngestionTest < ActiveSupport::TestCase
     assert_not_nil @security.reload.classification_fetched_at
   end
 
+  # --------------------------------------- a write made while the provider answers
+
+  # The provider is asked over the network, and the row can change before it
+  # answers. Precedence is decided against the row as it is when the answer is
+  # written, not as it was when this instance was loaded.
+  test "a manual classification written while the provider answers is kept" do
+    answer_after(-> { Security.where(id: @security.id).update_all(asset_class: "fixed_income", asset_sub_class: "bond", classification_source: "manual") },
+                 info(kind: "Common Stock"))
+
+    assert_nil @security.classification_source, "the instance must not know about the manual write"
+    @security.import_provider_details(include_classification: true)
+
+    @security.reload
+    assert_equal "fixed_income", @security.asset_class
+    assert_equal "bond", @security.asset_sub_class
+    assert_equal "manual", @security.classification_source
+  end
+
+  test "a sector written while the provider answers is kept" do
+    answer_after(-> { Security.where(id: @security.id).update_all(sector: "Hand-picked") },
+                 info(sector: "Technology"))
+
+    @security.import_provider_details(include_classification: true)
+
+    assert_equal "Hand-picked", @security.reload.sector
+  end
+
+  test "a lock set while the provider answers is honoured" do
+    answer_after(-> { Security.where(id: @security.id).update_all(classification_locked: true) },
+                 info(kind: "Common Stock", sector: "Technology"))
+
+    @security.import_provider_details(include_classification: true)
+
+    @security.reload
+    assert_nil @security.asset_class
+    assert_nil @security.sector
+  end
+
   private
+    # A provider whose answer arrives after `writer` has changed the row.
+    def answer_after(writer, data)
+      @security.update!(name: "Apple", logo_url: "https://example.com/aapl.png")
+      response = provider_success_response(data)
+      provider = capable_provider("provider")
+      provider.stubs(:class).returns(Provider::TwelveData)
+      provider.define_singleton_method(:fetch_security_info) do |**|
+        writer.call
+        response
+      end
+      @security.stubs(:price_data_provider).returns(provider)
+    end
+
     def info(sector: nil, industry: nil, kind: nil)
       Provider::SecurityConcept::SecurityInfo.new(
         symbol: "AAPL", name: nil, links: nil, logo_url: nil, description: nil,
