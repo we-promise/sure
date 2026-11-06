@@ -109,6 +109,9 @@ gem "after_commit_everywhere", "~> 1.0"
 # AI
 gem "ruby-openai"
 gem "anthropic", "~> 1.0"
+# AI transports (app/models/ai/transport). "~> 2.1" during the AI plumbing work; the lock
+# fixes the version each PR is tested with, and PR 9 pins it.
+gem "ruby_llm", "~> 2.1"
 gem "opentelemetry-sdk", "~> 1.13"
 gem "opentelemetry-exporter-otlp", "~> 0.36"
 
