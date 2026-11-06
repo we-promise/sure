@@ -7,7 +7,7 @@
 [`rubyllm-spike-report.md`](rubyllm-spike-report.md).
 **Base:** 2c's head on `feat/ai-transports-instrumentation`, rebased on `we-promise/sure`
 `origin/main`, RubyLLM 2.1.1.
-**PR:** we-promise/sure#4765, shared with 2a–2c.
+**PR:** we-promise/sure#4765 (`feat/ai-transports-instrumentation`), part of the stack 2a #4773 → 2b #4774 → 2c #4775 → 2d #4765 → 2e #4771. 2a–2d were first built on one PR, #4765, and split at their commit boundaries (call by @josh-sanders during development of PR #4440); the delivery notes below describe the one-PR build.
 **Status:** the plan the 2d commits are built from. Like every product decision here, it stays
 open to evidence. Calls by @josh-sanders during development of PR #4440 are marked.
 

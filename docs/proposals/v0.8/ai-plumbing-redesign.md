@@ -999,7 +999,7 @@ end
 - **Statements in the vault are indexed too (#3422, open).**
   #3422 queues `IndexAccountStatementJob` after every statement upload (the web vault, MCP's
   `upload_account_statement` and `/imports`), so `search_family_files` finds them. #3422 lands
-  after #4765 (2a–2d) and before 2e, whose PR is stacked on both and moves #3422's pieces onto
+  after 2d (#4765) and before 2e, whose PR is stacked on both and moves #3422's pieces onto
   the plumbing (call by @josh-sanders during development of PR #4440). The recommendation posted
   on #3422, which it took, was three changes: the job runs on `ai_low_priority`, inside #4237's AI capsule; it's queued only
   when `VectorStore.configured?` and the uploading user has `ai_enabled?`, because a vault upload
@@ -2617,8 +2617,10 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 ## 19. Delivery
 
 Eight PRs after the spike, the first of them in five parts (2a to 2e). Each PR, and each part,
-is its own PR into `main`, merged in order, except that 2a, 2b, 2c and 2d share one PR,
-we-promise/sure#4765, because the maintainer wants fewer PRs (call by @josh-sanders during
+is its own PR into `main`, merged in order: 2a #4773, 2b #4774, 2c #4775, 2d #4765 and 2e #4771,
+each stacked on the one before. 2a to 2d first shared #4765, because the maintainer wanted fewer
+PRs; at about 18,000 changed lines that was too big to review, so they were split back at the
+parts' existing commit boundaries, and #4765 now holds 2d (calls by @josh-sanders during
 development of PR #4440). The spike branch (PR 1) is never merged; only its
 report is in PR #4440, which holds the proposal documents, no code, and stays a draft until the
 whole plan is done. These are calls by @josh-sanders during development of
@@ -2668,13 +2670,13 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    decisions register. PR 2c records live cassettes for Anthropic's and OpenAI's successful
    paths before relying on them: the spike's keys had no credits.
 2. **Generations: every AI call except chat**, in five parts, merged in order (2a to 2e). Each is
-   its own PR into `main`, except 2a to 2d, which share #4765; 2e is its own PR. All five land in the same release. Today's AI job classes are
+   its own PR into `main`, stacked in order (2a #4773, 2b #4774, 2c #4775, 2d #4765, 2e #4771). All five land in the same release. Today's AI job classes are
    deleted with no shims: the upgrade note says to let the AI queues drain first (call by @josh-sanders during development of
    PR #4440). Each part replaces something whole, so `main`
    works between them, and each brings a transport call only with its first caller. The target
    release is v0.7.7 (call by @josh-sanders during development of PR #4440).
    #3422 (vault statements indexed and readable by chat tools) lands before 2e: 2e's PR is
-   stacked on #4765 and #3422, and moves #3422's pieces onto the plumbing (call by @josh-sanders
+   stacked on 2d (#4765) and #3422, and moves #3422's pieces onto the plumbing (call by @josh-sanders
    during development of PR #4440; section 5.5).
    - **2a. Transports and instrumentation.** The `compatible` and `anthropic` transports with
      `probe`, `Http`, `Ai::Result`, `Ai::Error` (with `NoCredit` and `ModelMissing`), the
@@ -2683,7 +2685,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      tracing modes, and the proxy fix (with loopback skipped). `AiHealth::Probe` calls `transport.probe`, which fixes
      drift bug 6. Adds the transport contract test and the AI test helpers (section 17).
      *Deletes:* `AiHealth::Probe`'s own clients.
-     Implementation plan: [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md).
+     PR #4773. Implementation plan: [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md).
    - **2b. Routing and consent.** `Ai::Config`, built in memory in each process by
      `Ai::LegacyEnvConfig` from today's ENV and `Setting` fields with the table in section 4.5
      (so the web and the workers can disagree, as they do today, until PR 7);
@@ -2693,7 +2695,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      today's checks until PR 7 (section 6). #3422's indexing job, if it has landed, asks
      `Ai.available?(:embed)` with the uploader's switch (section 5.5). Adds the agreement test, with chat's entry points on its allowlist until PR 6.
      *Deletes:* the non-chat availability checks and their test stubs.
-     Implementation plan: [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md).
+     PR #4774. Implementation plan: [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md).
    - **2c. Generations.** `transport.generate` with the JSON-mode policy, `Ai::Generation`,
      `Ai::Requester`, `Ai::Batch` with per-item costs and splitting on overflow,
      `Ai::GenerationJob` with small batches, failover and escalation down the list (section 5.4), the ERB prompt files with the key collapse (section
@@ -2706,7 +2708,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      split tests.
      *Deletes:* the eight workers for those features (`AutoCategorizer`, `AutoMerchantDetector`,
      `ProviderMerchantEnhancer` and `BillSetupSuggester`, for both providers), their three job
-     classes and `Family#resolved_categorization_provider`. On #4765 with 2a and 2b. Its calls
+     classes and `Family#resolved_categorization_provider`. PR #4775. Its calls
      (by @josh-sanders during development of PR #4440): the deprecated ENV lists only the
      preferred LLM in each generation route, so failover never sends data to a provider that
      wasn't chosen; bill setup follows the same JSON policy as the other features; one folder per
@@ -2723,7 +2725,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      path isn't supported; the release notes say so, and an issue can bring a path back if
      someone needs it (call by @josh-sanders during development of PR #4440).
      *Deletes:* `Provider::Jev`, `Family#shadow_categorization_provider`,
-     `CategorizationComparison` and `families.categorization_provider`. On #4765 with 2a to 2c.
+     `CategorizationComparison` and `families.categorization_provider`. PR #4765.
      Its calls (by @josh-sanders during development of PR #4440): the Jev choice becomes one
      instance-wide setting until PR 7, copied from a single-family instance's column, so the
      deprecated ENV routes `categorize` to Jev or the LLM with no per-family condition and
@@ -2741,7 +2743,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `preferred_llm_provider`, and their test stubs. `llm_provider_order` stays while today's chat
      uses it (`Assistant::Provided#get_model_provider`) and goes with it in PR 6, and so does
      `Provider::Openai::UsageCost`, which chat's usage rows still use.
-     A new PR, #4771, after #4765 and #3422, branched on both. Its calls (by @josh-sanders during
+     PR #4771, after 2d (#4765) and #3422, branched on both. Its calls (by @josh-sanders during
      development of PR #4440): OCR ships as code and tests, configurable only from PR 7, so
      "Read as: OCR" is greyed out until then (no new ENV or settings fields); Mistral and Cohere
      OCR ship with stubbed tests, marked untested live until someone records them with a key;
@@ -2932,11 +2934,11 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`05-ai-breaking-change-option.md`](05-ai-breaking-change-option.md) | The refactor with breaking changes allowed, the menu this plan picked from |
 | [`06-ai-file-split-review.md`](06-ai-file-split-review.md) | Merge hotspots and files to split |
 | [`chatwoot-rubyllm-lessons-learned.md`](chatwoot-rubyllm-lessons-learned.md) | Chatwoot's move to RubyLLM |
-| [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md) | PR 2a's implementation plan, and the RubyLLM commits since 2.1.1 that matter for 2.2 |
-| [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md) | PR 2b's implementation plan (on #4765 with 2a), and the agreement test's setups |
-| [`pr-2c-generations.md`](pr-2c-generations.md) | PR 2c's implementation plan (on #4765 with 2a and 2b), with the JSON policy, prompt folders and batches |
-| [`pr-2d-jev-and-shadow-runs.md`](pr-2d-jev-and-shadow-runs.md) | PR 2d's implementation plan (on #4765 with 2a to 2c): the Jev transport, judgements and shadow runs |
-| [`pr-2e-documents.md`](pr-2e-documents.md) | PR 2e's implementation plan (a new PR after #4765 and #3422): attachments, `embed`, `ocr`, PDF reading with its checks, and the vector store fixes |
+| [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md) | PR 2a's implementation plan (#4773), and the RubyLLM commits since 2.1.1 that matter for 2.2 |
+| [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md) | PR 2b's implementation plan (#4774), and the agreement test's setups |
+| [`pr-2c-generations.md`](pr-2c-generations.md) | PR 2c's implementation plan (#4775), with the JSON policy, prompt folders and batches |
+| [`pr-2d-jev-and-shadow-runs.md`](pr-2d-jev-and-shadow-runs.md) | PR 2d's implementation plan (#4765): the Jev transport, judgements and shadow runs |
+| [`pr-2e-documents.md`](pr-2e-documents.md) | PR 2e's implementation plan (#4771, after 2d and #3422): attachments, `embed`, `ocr`, PDF reading with its checks, and the vector store fixes |
 
 **Terms this plan defines**, for readers and coding agents:
 

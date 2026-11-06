@@ -6,7 +6,7 @@
 [`rubyllm-spike-report.md`](rubyllm-spike-report.md).
 **Base:** #4765's head (2a–2d) on `feat/ai-transports-instrumentation`, with #3422
 (`Holdner:mcp/document-vault`) merged in, RubyLLM 2.1.1.
-**PR:** we-promise/sure#4771 (`feat/ai-documents`), after #4765 and #3422.
+**PR:** we-promise/sure#4771 (`feat/ai-documents`), after 2d (#4765, which contains 2a–2c) and #3422. 2a–2d are now their own stacked PRs: 2a #4773, 2b #4774, 2c #4775, 2d #4765.
 **Status:** the plan the 2e commits are built from. Like every product decision here, it stays
 open to evidence. Calls by @josh-sanders during development of PR #4440 are marked.
 
