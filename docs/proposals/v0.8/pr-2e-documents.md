@@ -766,3 +766,21 @@ the credit error), so decision 7 and the PDF document block stay unchecked. What
 - **Checks:** every branch's full suite shows only the 13 known failures. On 2d,
   `MoveCategorizationComparisonsToAiComparisonsMigrationTest` raised a prepared-statement error
   once (another worker's schema change) and passes alone.
+
+**The migrations and llama.cpp's thinking switch (2026-11-07, at `2e0026f74`).**
+
+- **Migrations:** run on a throwaway copy of `main` (schema, demo data, and a row per case),
+  never a real database.
+  - **Up:** all six migrations do what they say, and the app reads the result through its models.
+  - **Down:** only the documented losses (the dropped override text; the Jev setting stays behind).
+  - **Up again:** identical to the first time.
+  - **#3422's migration** is dated before `main`'s latest, so `db:rollback STEP=n` across the stack
+    reverts a `main` migration instead (worth a note on #3422). `db:migrate` is unaffected.
+  - **The dump** matched `schema.rb` apart from the `imports` columns' order, fixed in `2e0026f74`,
+    and `main`'s newer `sync_schedules` table.
+- **llama.cpp's thinking switch** (Qwen3.6 in the dev pod, llama.cpp server built 2026-11-06):
+  - the `llama_cpp` preset's `enable_thinking: false` turns thinking off (15 tokens in 1.5 s against
+    995 tokens in 90 s);
+  - this build also honours `reasoning_effort: "none"`, which the spike's didn't, so the preset
+    mapping is a safeguard for older servers;
+  - `low` and `high` aren't distinct on this model.
