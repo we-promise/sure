@@ -18,6 +18,9 @@ class AddCallIdAndStatusToLlmUsagesMigrationTest < ActiveSupport::TestCase
     false => "succeeded",
     " " => "succeeded",
     "\t\n" => "succeeded",
+    "\u00a0" => "succeeded",
+    "\u3000\u2003" => "succeeded",
+    "\u00a0busy" => "failed",
     nil => "succeeded"
   }.freeze
 
