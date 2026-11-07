@@ -626,3 +626,43 @@ Anthropic key was refused.
 `Settings::HostingsControllerTest`'s market-data cron check, which races other workers on the
 shared Redis and passes on a re-run. 46 system tests pass. RuboCop, Brakeman and Pipelock's
 diff scan are clean.
+
+**Live testing, second round (2026-11-07, at `9973b4bb7`).** venus llama.cpp served
+`unlimited-ocr-2` (:8180) and `openjev-27b` (:8182); the dev pod gained Ollama 0.40.12 with
+gpt-oss-20b from a local GGUF, and OpenClaw 2026.10.8. One model ran at a time.
+
+- **Local OCR:**
+  - **Recorded:** `ocr_live_test` on the scan's first page.
+  - **"Read as: OCR"** then a text model read BAC 13/13, and the checks passed.
+  - **The scan's second page loops** on this server's conversion of the model (empty table cells,
+    or a numbered run, to the token limit, at temperature 0 too), so its extraction was flagged.
+    The spike read it on another conversion with both pages in one request. That's server-side,
+    to revisit with PR 7's OCR configuration.
+- **Ollama, through the deprecated `OPENAI_URI_BASE`:**
+  - categorize, merchant detection and bill setup answer in the schema;
+  - BAC imports 13/13 through the text layer;
+  - the scan gets the `no_text_layer` message.
+  - As on `main`, the embed route then points at an OpenAI vector store on Ollama's URL (404).
+- **OpenClaw over Sure's MCP server** (Sure booted inside a test):
+  - accounts and net worth through `get_accounts`, on Gemini and on Ollama's gpt-oss-20b;
+  - `import_bank_statement` driven by the agent, 13 rows with the checks passed;
+  - document search through the metadata fallback;
+  - Sure's external assistant mode round trip (chat → OpenClaw → `get_balance_sheet` → reply).
+- **Fixed after this round:**
+  - **An outage on a later way** dropped the extraction in hand; it's now kept and flagged.
+  - **The image 500 from servers without a vision projector** is `Refused`, not `Upstream`.
+  - **AI cassettes** record `<FILE>` for inline files, after a base64 page image tripped
+    Pipelock's AWS key pattern.
+- **Found, not fixed here:**
+  - **Sure answers MCP notifications with 204** (on `main` too). MCP's Streamable HTTP transport
+    says 202. Pipelock 3.6.0 rejects 204, so OpenClaw through Pipelock's MCP proxy, the compose
+    example's setup, fails at the handshake. With 202 (tried by patching it in a test) it lists
+    the 35 tools.
+  - **`DELETE /mcp` is a 404**; the spec suggests 405.
+  - **Sure's MCP tools carry no safety annotations,** so OpenClaw would ask for approval for every
+    call in its prompting modes.
+  - **OpenJev isn't a System One server** (`/v1/systemone` is a 501 "not a decision model"); it
+    would need a lettered-options adapter.
+
+**Checks at `9973b4bb7`:** full suite 14,971 runs, the 13 baseline failures only; the PDF, imports
+and chats system tests pass; RuboCop and Pipelock's diff scan are clean.
