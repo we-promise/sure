@@ -222,10 +222,10 @@ class OnboardingsTest < ApplicationSystemTestCase
   test "starting tools are searchable and nothing yet is exclusive" do
     visit goals_onboarding_path
     find("details summary").click
-    fill_in I18n.t("onboardings.goals.search_label"), with: "ynab"
+    fill_in I18n.t("onboardings.goals.search_label"), with: "ynab", enable_aria_label: true
     check "YNAB"
     assert_no_selector "label", text: "Quicken Classic"
-    fill_in I18n.t("onboardings.goals.search_label"), with: ""
+    fill_in I18n.t("onboardings.goals.search_label"), with: "", enable_aria_label: true
     check "Other"
     fill_in I18n.t("onboardings.goals.other_label"), with: "My ledger"
     check I18n.t("onboardings.goals.tools.nothing_yet")
