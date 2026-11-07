@@ -73,7 +73,8 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     @user.update!(locale: "fr")
     visit transactions_url
     assign_category category
-    assert_selector "#cta form a"
+    assert_selector "#cta form button", text: "Masquer pour aujourd'hui"
+    assert_selector "#cta form a", text: "Créer une règle"
 
     overflow = page.evaluate_script(<<~JS)
       (() => {
