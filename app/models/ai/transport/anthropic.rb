@@ -10,8 +10,8 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
     def run_probe(model, check, timeout:)
       case check
       when :models then probe_models(model, timeout:)
-      when :chat then probe_chat(model)
-      when :tools then probe_tools(model)
+      when :chat then probe_chat(model, timeout:)
+      when :tools then probe_tools(model, timeout:)
       when :embedding then raise Ai::Error::Refused, "Anthropic has no embedding models"
       end
     end
@@ -28,12 +28,25 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
           request.headers["x-api-key"] = endpoint.api_key.to_s
           request.headers["anthropic-version"] = API_VERSION
         end
-        body = JSON.parse(response.body.to_s) rescue {}
-        raise Ai::Error.from_status(response.status, body.dig("error", "message"), body:) unless response.success?
+        body = JSON.parse(response.body.to_s) rescue nil
+        raise models_error(response.status, body) unless response.success?
+        raise Ai::Error::InvalidOutput, "the model lookup didn't answer with JSON" unless body.is_a?(Hash)
         raise Ai::Error::ModelMissing, "#{model.name} isn't listed" if body["id"].blank?
 
         body["id"]
       end
+    end
+
+    # Anthropic answers an unknown model with a 404 `not_found_error` whose message is
+    # "model: <name>"; any other 404 (a wrong base URL, a gateway's own page) maps by its status.
+    # A body that isn't Anthropic's error shape still maps by its status.
+    def models_error(status, body)
+      error = body.is_a?(Hash) ? body["error"] : nil
+      type, message = error.is_a?(Hash) ? error.values_at("type", "message") : [ nil, error&.to_s ]
+      message = message.presence || "HTTP #{status}"
+      return Ai::Error::ModelMissing.new(message, status:) if status == 404 && type == "not_found_error" && message.start_with?("model:")
+
+      Ai::Error.from_status(status, message, body:)
     end
 
     def ruby_llm_provider = :anthropic

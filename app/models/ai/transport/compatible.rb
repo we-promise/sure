@@ -7,9 +7,9 @@ class Ai::Transport::Compatible < Ai::Transport::Base
     def run_probe(model, check, timeout:)
       case check
       when :models then probe_models(model, timeout:)
-      when :chat then probe_chat(model)
-      when :tools then probe_tools(model)
-      when :embedding then probe_embedding(model)
+      when :chat then probe_chat(model, timeout:)
+      when :tools then probe_tools(model, timeout:)
+      when :embedding then probe_embedding(model, timeout:)
       end
     end
 
@@ -27,9 +27,9 @@ class Ai::Transport::Compatible < Ai::Transport::Base
 
     # One vector per text, with the model's dimensions. RubyLLM 2.1.1 doesn't check the row
     # count itself (2.2 does, #1297).
-    def probe_embedding(model)
+    def probe_embedding(model, timeout:)
       embedding = mapping_errors do
-        ruby_llm_context.embed(Ai::Transport::Base::PROBE_EMBEDDING_INPUT, model: model.name, provider: ruby_llm_provider,
+        ruby_llm_context(timeout:).embed(Ai::Transport::Base::PROBE_EMBEDDING_INPUT, model: model.name, provider: ruby_llm_provider,
                                                                        assume_model_exists: true)
       end
       vectors = embedding.vectors
