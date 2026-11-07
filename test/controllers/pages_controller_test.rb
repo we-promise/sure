@@ -1252,6 +1252,19 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_cashflow_preview_opt_in checked: true
   end
 
+  test "dashboard passes the chosen currency to the experimental Sankey comparison" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+    @user.update!(preferences: (@user.preferences || {}).merge(
+      "preview_features_enabled" => true,
+      "cashflow_preview_enabled" => true
+    ))
+
+    get root_path(currency: "EUR")
+
+    assert_response :ok
+    assert_select "#cashflow-preview [data-cash-flow-url-value*='currency=EUR']"
+  end
+
   test "dashboard hides the Sankey comparison opt-in without preview features" do
     @user.update!(preferences: (@user.preferences || {}).merge(
       "preview_features_enabled" => false,
@@ -1289,6 +1302,45 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_url(period: "last_30_days")
     assert_equal false, @user.reload.cashflow_preview_enabled?
+  end
+
+  test "dashboard offers a currency picker only when the family has additional currencies" do
+    get root_path
+
+    assert_response :ok
+    assert_select "button[aria-label^='Currency:']", count: 0
+
+    @family.update!(enabled_currencies: [ "EUR" ])
+    get root_path
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: #{@family.currency}']"
+    # A whole-page visit, so the header's links pick the currency up as well.
+    assert_select "a[role='menuitemradio'][href*='currency=EUR']:not([data-turbo-frame])"
+  end
+
+  test "dashboard shows a requested additional currency and keeps it across period picks" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+
+    get root_path(currency: "EUR")
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: EUR']"
+    assert_select "a[role='menuitemradio'][href*='period='][href*='currency=EUR']"
+  end
+
+  test "dashboard falls back to the primary currency when the requested one is not enabled" do
+    @family.update!(enabled_currencies: [ "EUR" ])
+
+    get root_path(currency: "GBP")
+
+    assert_response :ok
+    assert_select "button[aria-label='Currency: #{@family.currency}']"
+    assert_select "a[href*='currency=GBP']", count: 0
+
+    get root_path(currency: "not-a-currency")
+
+    assert_response :ok
   end
 
   private

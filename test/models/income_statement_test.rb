@@ -963,6 +963,19 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 1, totals_query_calls
   end
 
+  test "reports in a requested currency, converting each entry at its day's rate" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+    period = Period.last_30_days
+
+    statement = IncomeStatement.new(@family, currency: "EUR")
+
+    assert_equal "EUR", statement.currency
+    assert_equal 450, statement.expense_totals(period: period).total
+    assert_equal "EUR", statement.expense_totals(period: period).currency
+    assert_equal Money.new(500, "EUR"), statement.totals(date_range: period.date_range).income_money
+    assert_equal Money.new(450, "EUR"), statement.totals(date_range: period.date_range).expense_money
+  end
+
   private
     # Adds a 250 grocery expense whose pending flag is +flag+ and asserts every
     # figure is the one without it: totals (Transaction.excluding_pending), the

@@ -335,6 +335,27 @@ class Family < ApplicationRecord
     enabled_currency_objects(extra:).reject { |currency| currency.iso_code == primary_currency_code }
   end
 
+  # Currencies a report (the dashboard) can be shown in: the primary currency
+  # first, then the additional currencies chosen in preferences. A family that
+  # has not narrowed its currency list reports in its primary currency only,
+  # rather than being offered every currency there is.
+  def reporting_currency_codes
+    return [ primary_currency_code ] unless custom_enabled_currencies?
+
+    enabled_currency_codes
+  end
+
+  def reporting_currency_objects
+    reporting_currency_codes.map { |code| Money::Currency.new(code) }
+  end
+
+  # The reporting currency for a requested code; anything not offered (unknown,
+  # blank, or not enabled) falls back to the primary currency.
+  def reporting_currency_code(requested)
+    code = self.class.normalize_currency_code(requested)
+    reporting_currency_codes.include?(code) ? code : primary_currency_code
+  end
+
   def capture_plaid_refresh_enqueue_failure(source:, error_class:)
     DebugLogEntry.capture(
       category: "provider_sync",
@@ -620,13 +641,13 @@ class Family < ApplicationRecord
   # (mobile + desktop, each with 3 tabs), so a single request can ask for the
   # balance sheet many times. Rebuilding it repeats the account/sync/exchange-
   # rate queries it depends on.
-  def balance_sheet(user: Current.user)
+  def balance_sheet(user: Current.user, currency: nil)
     @balance_sheets ||= {}
-    @balance_sheets[user&.id] ||= BalanceSheet.new(self, user: user)
+    @balance_sheets[[ user&.id, currency ]] ||= BalanceSheet.new(self, user: user, currency: currency)
   end
 
-  def income_statement(user: Current.user, accounts: nil)
-    IncomeStatement.new(self, user: user, accounts: accounts)
+  def income_statement(user: Current.user, accounts: nil, currency: nil)
+    IncomeStatement.new(self, user: user, accounts: accounts, currency: currency)
   end
 
   # Returns the Investment Contributions category for this family, creating it if it doesn't exist.
@@ -706,9 +727,9 @@ class Family < ApplicationRecord
   end
 
   # Memoized per user for the same reason as #balance_sheet above.
-  def investment_statement(user: Current.user)
+  def investment_statement(user: Current.user, currency: nil)
     @investment_statements ||= {}
-    @investment_statements[user&.id] ||= InvestmentStatement.new(self, user: user)
+    @investment_statements[[ user&.id, currency ]] ||= InvestmentStatement.new(self, user: user, currency: currency)
   end
 
   def eu?

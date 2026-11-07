@@ -738,6 +738,30 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     InvestmentStatement.new(@family.reload).totals(period: period)
   end
 
+  test "period totals convert each trade at its day's rate into the requested currency" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+    create_trade(account: account, qty: 2, amount: 120, date: period.start_date)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: period.start_date, rate: 0.5)
+
+    totals = InvestmentStatement.new(@family, user: nil, currency: "EUR").totals(period: period)
+
+    assert_equal Money.new(60, "EUR"), totals.contributions
+    assert_equal "EUR", totals.currency
+  end
+
+  test "portfolio_value and cash_balance convert to a requested currency" do
+    create_investment_account(balance: 1000, cash_balance: 100, currency: "USD")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    statement = InvestmentStatement.new(@family, user: nil, currency: "EUR")
+
+    assert_equal "EUR", statement.currency
+    assert_equal 500, statement.portfolio_value
+    assert_equal 50, statement.cash_balance
+    assert_equal Money.new(500, "EUR"), statement.portfolio_value_money
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(

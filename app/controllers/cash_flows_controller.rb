@@ -13,7 +13,10 @@ class CashFlowsController < ApplicationController
       return render json: { error: "invalid_group_by" }, status: :unprocessable_entity
     end
 
-    statement = IncomeStatement.new(Current.family, user: Current.user)
+    # The dashboard's currency picker passes its choice along; anything not
+    # enabled for the family falls back to the primary currency, as it does there.
+    currency = Current.family.reporting_currency_code(params[:currency])
+    statement = IncomeStatement.new(Current.family, user: Current.user, currency: currency)
     period = Period.custom(start_date: start_date, end_date: end_date)
     # Resolve reporting dates after ordinary session authentication has set Current.
     Time.use_zone(resolved_timezone) do

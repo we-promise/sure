@@ -1,8 +1,9 @@
 class InvestmentStatement::Totals
-  def initialize(family, account_ids:, date_range:)
+  def initialize(family, account_ids:, date_range:, currency: nil)
     @family = family
     @account_ids = account_ids
     @date_range = date_range
+    @currency = currency || family.currency
   end
 
   def call
@@ -112,7 +113,7 @@ class InvestmentStatement::Totals
 
     def sql_params
       {
-        target_currency: @family.currency,
+        target_currency: @currency,
         account_ids: @account_ids,
         start_date: @date_range.begin,
         end_date: @date_range.end

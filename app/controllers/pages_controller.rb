@@ -30,7 +30,7 @@ class PagesController < ApplicationController
   # anywhere. Customize mode, the period picker and each widget's own month
   # links and filter forms carry them along, so changing one control doesn't
   # jump the other widgets back to their defaults.
-  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
+  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :currency, :money_flow_month, :spending_month, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -44,8 +44,9 @@ class PagesController < ApplicationController
       redirect_to chats_path and return
     end
 
-    @balance_sheet = Current.family.balance_sheet
-    @investment_statement = Current.family.investment_statement
+    @reporting_currencies = Current.family.reporting_currency_objects
+    @balance_sheet = Current.family.balance_sheet(currency: dashboard_currency)
+    @investment_statement = Current.family.investment_statement(currency: dashboard_currency)
     @accounts = Current.user.accessible_accounts.visible.with_attached_logo
 
     @dashboard_view_params = dashboard_view_params
@@ -154,6 +155,7 @@ class PagesController < ApplicationController
     # against the family's categories, so its queries still never run.
     def dashboard_view_params
       view_params = params.permit(*DASHBOARD_VIEW_PARAMS).to_h
+      view_params[:currency] = dashboard_currency if view_params.key?(:currency)
       if view_params.key?(:spending_category_ids)
         category_ids = Current.user.dashboard_hidden_sections.include?("spending_trend") ? spending_trend_category_ids_param : spending_trend_filter.category_ids
         category_ids ? view_params[:spending_category_ids] = category_ids : view_params.delete(:spending_category_ids)
@@ -281,9 +283,16 @@ class PagesController < ApplicationController
       @accounts.any? && @investment_statement.investment_accounts.any?
     end
 
+    # The currency every dashboard figure is shown in: the family's primary
+    # currency unless ?currency= names one of its additional currencies.
+    def dashboard_currency
+      @dashboard_currency ||= Current.family.reporting_currency_code(params[:currency])
+    end
+    helper_method :dashboard_currency
+
     # Use IncomeStatement for all cashflow data (now includes categorized trades)
     def dashboard_income_statement
-      @dashboard_income_statement ||= Current.family.income_statement
+      @dashboard_income_statement ||= Current.family.income_statement(currency: dashboard_currency)
     end
 
     def dashboard_net_totals
@@ -295,7 +304,7 @@ class PagesController < ApplicationController
         dashboard_net_totals,
         dashboard_income_statement.income_totals(period: @period),
         dashboard_income_statement.expense_totals(period: @period),
-        Current.family.currency,
+        dashboard_income_statement.currency,
         invested_total: dashboard_income_statement.invested_total(period: @period)
       )
     end
@@ -674,7 +683,7 @@ class PagesController < ApplicationController
       end
       previous_total = comparison_days.positive? ? previous_header_series[comparison_days - 1][:value] : 0
       previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_header_series.size
-      currency = income_statement.family.currency
+      currency = income_statement.currency
 
 
       {
@@ -686,6 +695,7 @@ class PagesController < ApplicationController
         axis_labels: spending_trend_axis_labels(month_start, axis_days),
         current: current_series,
         previous: previous_series,
+        currency: currency,
         current_total: Money.new(current_total, currency),
         previous_total: Money.new(previous_total, currency),
         delta: Money.new(current_total - previous_total, currency),
@@ -792,6 +802,7 @@ class PagesController < ApplicationController
 
       {
         bars: bars,
+        currency: income_statement.currency,
         period: selected_period,
         month: selected_month,
         income: selected_totals.income_money,
