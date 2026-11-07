@@ -27,7 +27,7 @@
           </div>
         <% end %>
         <% if (first_on = @holding.security.first_provider_price_on).present? &&
-              (earliest_trade_date = @holding.trades.minimum(:date)) &&
+              (earliest_trade_date = @trade_entries.map(&:date).min) &&
               earliest_trade_date < first_on %>
           <div class="px-3 pt-2">
             <%= render DS::Alert.new(
@@ -154,13 +154,13 @@
     <% dialog.with_section(title: t(".history"), open: true) do %>
       <div class="space-y-2">
         <div class="px-3 py-4">
-          <% if @holding.trades.any? %>
+          <% if @trade_entries.any? %>
             <ul class="space-y-2">
-              <% @holding.trades.each_with_index do |trade_entry, index| %>
+              <% @trade_entries.each_with_index do |trade_entry, index| %>
                 <li class="flex gap-4 text-sm space-y-1">
                   <div class="flex flex-col items-center gap-1.5 pt-2">
                     <div class="rounded-full h-1.5 w-1.5 bg-gray-300"></div>
-                    <% unless index == @holding.trades.length - 1 %>
+                    <% unless index == @trade_entries.length - 1 %>
                       <div class="h-12 w-px bg-alpha-black-200"></div>
                     <% end %>
                   </div>
@@ -169,7 +169,7 @@
                     <p class="text-primary"><%= t(
                       ".trade_history_entry",
                       qty: trade_entry.trade.qty,
-                      security: trade_entry.trade.security.ticker,
+                      security: @holding.ticker,
                       price: trade_entry.trade.price_money.format
                     ) %></p>
                   </div>

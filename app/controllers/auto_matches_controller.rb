@@ -87,11 +87,14 @@ class AutoMatchesController < ApplicationController
   end
 
   private
+    # Account ids are materialized once so each transfer leg's subquery stays
+    # a plain entries lookup, without joining accounts and shares again.
     def accessible_transaction_ids
-      Current.family.transactions
-        .joins(entry: :account)
-        .merge(Account.accessible_by(Current.user))
-        .select(:id)
+      Entry.where(entryable_type: "Transaction", account_id: accessible_account_ids).select(:entryable_id)
+    end
+
+    def accessible_account_ids
+      @match_account_ids ||= Current.user.accessible_accounts.ids
     end
 
     def auto_match_settings_params

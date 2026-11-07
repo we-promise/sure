@@ -367,7 +367,7 @@ class Entry < ApplicationRecord
     # Checked across every supported locale, not just the current one -- a
     # name generated (or saved by a background job) under one locale must
     # still read as generic when this is later checked under another.
-    return true if LanguagesHelper::SUPPORTED_LOCALES.any? { |locale| normalized.casecmp?(I18n.t("transactions.unknown_name", locale: locale)) }
+    return true if LanguagesHelper.folded_translations("transactions.unknown_name").include?(normalized.downcase(:fold))
     return false unless entryable_type == "Transaction"
 
     category = entryable&.category
