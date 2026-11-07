@@ -134,9 +134,10 @@ class SessionsController < ApplicationController
     redirect_to new_session_path, notice: t(".logout_successful")
   end
 
+  # Start the mobile OIDC flow using the currently enabled provider route.
   def mobile_sso_start
     provider = params[:provider].to_s
-    configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
+    configured_providers = AuthConfig.sso_providers.map { |p| p[:name].to_s }
 
     unless configured_providers.include?(provider)
       mobile_sso_redirect(error: "invalid_provider", message: "SSO provider not configured")
@@ -167,7 +168,7 @@ class SessionsController < ApplicationController
   # like the mobile flow (reusing its auto-submitting form).
   def desktop_sso_start
     provider = params[:provider].to_s
-    configured_providers = Rails.configuration.x.auth.sso_providers.map { |p| p[:name].to_s }
+    configured_providers = AuthConfig.sso_providers.map { |p| p[:name].to_s }
 
     unless configured_providers.include?(provider)
       redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
@@ -240,6 +241,7 @@ class SessionsController < ApplicationController
     end
   end
 
+  # Validate live provider and issuer settings before completing web or mobile login.
   def openid_connect
     auth = request.env["omniauth.auth"]
 
@@ -250,7 +252,20 @@ class SessionsController < ApplicationController
     end
 
     if SsoIdentityBlock.blocked?(provider: auth.provider, uid: auth.uid)
-      reject_removed_sso_identity(auth.provider)
+      reject_sso_login(auth.provider, reason: "removed_identity")
+      return
+    end
+
+    provider_config = OidcIdentity.provider_config_for(auth.provider)
+    unless provider_config
+      reject_sso_login(auth.provider, reason: "provider_not_configured")
+      return
+    end
+
+    begin
+      verified_issuer = OidcIdentity.verified_issuer_for!(auth, provider_config)
+    rescue OidcIdentity::IssuerMismatch
+      reject_sso_login(auth.provider, reason: "issuer_mismatch")
       return
     end
 
@@ -258,6 +273,16 @@ class SessionsController < ApplicationController
     oidc_identity = OidcIdentity.find_by(provider: auth.provider, uid: auth.uid)
 
     if oidc_identity
+      if OidcIdentity.oidc_provider_config?(provider_config, auth.provider) && oidc_identity.issuer.blank?
+        require_legacy_oidc_relink(auth, verified_issuer)
+        return
+      end
+
+      unless oidc_identity.issuer_matches_config?(provider_config)
+        reject_sso_login(auth.provider, reason: "issuer_mismatch")
+        return
+      end
+
       # Existing OIDC identity found - authenticate the user
       user = oidc_identity.user
 
@@ -325,7 +350,7 @@ class SessionsController < ApplicationController
       # Mobile SSO with no linked identity - cache pending auth and redirect
       # back to the app with a linking code so the user can link or create an account
       if session[:mobile_sso].present?
-        handle_mobile_sso_onboarding(auth)
+        handle_mobile_sso_onboarding(auth, issuer: verified_issuer)
         return
       end
 
@@ -338,20 +363,15 @@ class SessionsController < ApplicationController
         return
       end
 
-      # No existing OIDC identity - need to link to account
-      # Store auth data in session and redirect to linking page
-      session[:pending_oidc_auth] = {
-        provider: auth.provider,
-        uid: auth.uid,
-        email: auth.info&.email,
-        name: auth.info&.name,
-        first_name: auth.info&.first_name,
-        last_name: auth.info&.last_name
-      }
+      # No existing OIDC identity - need to link to account.
+      # Preserve the verified issuer across the local-password step.
+      session[:pending_oidc_auth] = pending_oidc_auth(auth, verified_issuer)
+      session.delete(:pending_oidc_legacy_relink)
       redirect_to link_oidc_account_path
     end
   end
 
+  # Normalize provider failures and return to the matching web or mobile login flow.
   def failure
     # Sanitize reason to known values only
     known_reasons = %w[sso_provider_unavailable sso_invalid_response sso_failed]
@@ -392,11 +412,47 @@ class SessionsController < ApplicationController
   end
 
   private
-    def reject_removed_sso_identity(provider)
+    # Store the provider identity and trusted issuer for deferred account linking.
+    def pending_oidc_auth(auth, issuer)
+      {
+        "provider" => auth.provider,
+        "uid" => auth.uid,
+        "email" => auth.info&.email,
+        "name" => auth.info&.name,
+        "first_name" => auth.info&.first_name,
+        "last_name" => auth.info&.last_name,
+        "issuer" => issuer
+      }
+    end
+
+    # Require explicit relinking when a legacy identity has no trusted issuer.
+    def require_legacy_oidc_relink(auth, issuer)
+      SsoAuditLog.log_login_failed!(
+        provider: auth.provider,
+        request: request,
+        reason: "issuer_unverified"
+      )
+
+      if session.delete(:mobile_sso).present?
+        mobile_sso_redirect(
+          error: "issuer_relink_required",
+          message: t("sessions.openid_connect.legacy_issuer_relink_required")
+        )
+      elsif session.delete(:desktop_sso).present?
+        redirect_to "sure://sso/callback?error=issuer_relink_required", allow_other_host: true
+      else
+        session[:pending_oidc_auth] = pending_oidc_auth(auth, issuer)
+        session[:pending_oidc_legacy_relink] = true
+        redirect_to link_oidc_account_path, alert: t("sessions.openid_connect.legacy_issuer_relink_required")
+      end
+    end
+
+    # Reject the login and record its provider-specific diagnostic reason.
+    def reject_sso_login(provider, reason:)
       SsoAuditLog.log_login_failed!(
         provider: provider,
         request: request,
-        reason: "removed_identity"
+        reason: reason
       )
 
       if session.delete(:mobile_sso).present?
@@ -408,6 +464,7 @@ class SessionsController < ApplicationController
       end
     end
 
+    # Issue mobile credentials behind a short-lived, single-use exchange code.
     def handle_mobile_sso_callback(user)
       # openid_connect already checked user.active? before dispatching here,
       # but record_authentication!/sync_user_attributes!/audit logging run in
@@ -463,6 +520,7 @@ class SessionsController < ApplicationController
       mobile_sso_redirect(code: authorization_code)
     end
 
+    # Hand the desktop app a short-lived authorization code bound to its PKCE challenge.
     def handle_desktop_sso_callback(user)
       context = (session.delete(:desktop_sso) || {}).with_indifferent_access
       code_challenge = context[:code_challenge]
@@ -484,7 +542,8 @@ class SessionsController < ApplicationController
       redirect_to "sure://sso/callback?code=#{code}", allow_other_host: true
     end
 
-    def handle_mobile_sso_onboarding(auth)
+    # Start mobile account onboarding with the authenticated provider and issuer.
+    def handle_mobile_sso_onboarding(auth, issuer:)
       device_info = session.delete(:mobile_sso)
       email = auth.info&.email
 
@@ -501,7 +560,7 @@ class SessionsController < ApplicationController
           first_name: auth.info&.first_name,
           last_name: auth.info&.last_name,
           name: auth.info&.name,
-          issuer: auth.extra&.raw_info&.iss || auth.extra&.raw_info&.[]("iss"),
+          issuer: issuer,
           device_info: device_info,
           allow_account_creation: allow_creation
         },
@@ -519,6 +578,7 @@ class SessionsController < ApplicationController
       )
     end
 
+    # Return a mobile SSO result through the application callback URI.
     def mobile_sso_redirect(params = {})
       redirect_to "sureapp://oauth/callback?#{params.to_query}", allow_other_host: true
     end
@@ -533,10 +593,12 @@ class SessionsController < ApplicationController
       false
     end
 
+    # Scope session management to the currently authenticated user.
     def set_session
       @session = Current.user.sessions.find(params[:id])
     end
 
+    # Record use of the emergency local-login override for a super administrator.
     def log_super_admin_override_login(user)
       # Only log when local login is globally disabled but an emergency
       # super-admin override is enabled.
@@ -553,6 +615,7 @@ class SessionsController < ApplicationController
       demo["hosts"].include?(request.host)
     end
 
+    # Resolve the linked provider logout endpoint and build its logout redirect.
     def build_idp_logout_url(oidc_identity, id_token)
       # Find the provider configuration using unified loader (supports both YAML and DB providers)
       provider_config = ProviderLoader.load_providers.find do |p|
@@ -594,6 +657,7 @@ class SessionsController < ApplicationController
       end
     end
 
+    # Build the standard discovery URL while preserving an issuer trailing slash.
     def discovery_url_for(issuer)
       if issuer.end_with?("/")
         "#{issuer}.well-known/openid-configuration"
