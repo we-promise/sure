@@ -478,6 +478,28 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
   end
 
+  test "merge_tag_changes! keeps a tag written after the picker's copy was loaded" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+    stale_copy = Transaction.find(transaction.id)
+    stale_copy.tag_ids # load the tags the picker saw
+    rule_tag = transaction.entry.account.family.tags.create!(name: "Added by a rule")
+
+    transaction.update!(tag_ids: [ tags(:one).id, rule_tag.id ])
+    stale_copy.merge_tag_changes!([ tags(:two).id ], [], available_tags: Tag.where(id: [ tags(:two).id, tags(:one).id, rule_tag.id ]))
+
+    assert_equal [ tags(:one).id, tags(:two).id, rule_tag.id ].sort, transaction.reload.tag_ids.sort
+  end
+
+  test "merge_tag_changes! removes only the tags the picker took off" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id, tags(:two).id ])
+
+    transaction.merge_tag_changes!([ tags(:two).id ], [ tags(:one).id, tags(:two).id ], available_tags: Tag.all)
+
+    assert_equal [ tags(:two).id ], transaction.reload.tag_ids
+  end
+
   test "name_suggestions_for ranks names and each name's category by frequency" do
     family = families(:dylan_family)
     account = accounts(:depository)

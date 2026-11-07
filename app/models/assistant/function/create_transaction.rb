@@ -203,6 +203,8 @@ class Assistant::Function::CreateTransaction < Assistant::Function
       sync_warning = "Transaction created, but the post-create account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync."
     end
 
+    entry.apply_immediate_rules_later
+
     transaction = entry.transaction
     response = {
       success: true,

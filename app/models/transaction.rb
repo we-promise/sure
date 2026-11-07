@@ -413,6 +413,20 @@ class Transaction < ApplicationRecord
     tags.reset
   end
 
+  # Applies a tag picker's changes (selected_ids against previous_ids, the set
+  # it last saved) to the tags stored now, so tags another writer added in the
+  # meantime stay. Takes the same row lock as toggle_tag! and the rule tag
+  # action and reads the tags after it, so no concurrent write is lost.
+  def merge_tag_changes!(selected_ids, previous_ids, available_tags:)
+    selected_ids = selected_ids.map(&:to_s)
+    previous_ids = previous_ids.map(&:to_s)
+
+    with_lock do
+      wanted_ids = tag_ids.map(&:to_s) - (previous_ids - selected_ids) | (selected_ids - previous_ids)
+      self.tag_ids = available_tags.where(id: wanted_ids).pluck(:id)
+    end
+  end
+
   # Marks a category as recently used. Called explicitly from the manual
   # category-assignment controllers (picker, edit form, categorization
   # wizard, create-and-assign) after a successful save — not wired to a

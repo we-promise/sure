@@ -116,6 +116,19 @@ class Api::V1::RuleRunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ @failed_rule_run.id ], response_data["data"].map { |rule_run| rule_run["id"] }
   end
 
+  test "filters immediate rule runs" do
+    immediate_run = @rule.rule_runs.create!(
+      rule_name: @rule.name, execution_type: "immediate", status: "success",
+      transactions_queued: 1, transactions_processed: 1, transactions_modified: 1,
+      pending_jobs_count: 0, executed_at: Time.zone.parse("2024-01-17 12:00:00")
+    )
+
+    get api_v1_rule_runs_url, params: { execution_type: "immediate" }, headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal [ immediate_run.id ], JSON.parse(response.body)["data"].map { |rule_run| rule_run["id"] }
+  end
+
   test "rejects invalid filters" do
     get api_v1_rule_runs_url, params: { status: "unknown" }, headers: api_headers(@api_key)
 

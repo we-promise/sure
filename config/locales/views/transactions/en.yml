@@ -56,6 +56,7 @@ en:
       submit: Add transaction
       tag_search_placeholder: Search or create tag
       tags_label: Tags
+      tags_save_error: Tags couldn't be saved. Change them again to retry, or reload the page.
       transfer: Transfer
     create:
       created: Transaction created

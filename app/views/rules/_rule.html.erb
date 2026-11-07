@@ -1,5 +1,5 @@
 <%# locals: (rule:) %>
-<% has_title = rule.name.present? || rule.stop_processing? %>
+<% has_title = rule.name.present? || rule.stop_processing? || rule.apply_immediately? %>
 <div id="<%= dom_id(rule) %>" class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-0.5 p-3 text-sm sm:items-center sm:p-4 <%= rule.active? ? "text-primary" : "text-secondary" %>">
   <% if has_title %>
     <div class="col-start-1 row-start-1 flex min-w-0 flex-wrap items-center gap-2 self-center">
@@ -8,6 +8,9 @@
       <% end %>
       <% if rule.stop_processing? %>
         <%= render DS::Pill.new(label: t(".stop_processing"), tone: :neutral, marker: false, title: t(".stop_processing_hint")) %>
+      <% end %>
+      <% if rule.apply_immediately? %>
+        <%= render DS::Pill.new(label: t(".apply_immediately"), tone: :info, marker: false, title: t(".apply_immediately_hint")) %>
       <% end %>
     </div>
   <% end %>

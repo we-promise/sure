@@ -30,6 +30,7 @@ de:
       submit: Transaktion hinzufügen
       tag_search_placeholder: Tag suchen oder erstellen
       tags_label: Tags
+      tags_save_error: Tags konnten nicht gespeichert werden. Ändere sie erneut oder lade die Seite neu.
       transfer: Überweisung
       category_label: Kategorie
       details: Details
