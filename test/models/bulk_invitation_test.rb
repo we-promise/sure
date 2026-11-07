@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BulkInvitationTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @admin = users(:family_admin)
     @family = @admin.family
