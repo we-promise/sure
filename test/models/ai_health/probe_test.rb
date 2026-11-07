@@ -135,6 +135,30 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_requested request
   end
 
+  test "the Anthropic models probe takes its proxy from Sure's resolver, as the calls it checks do" do
+    url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
+    Ai::Transport::Http.stubs(:proxy_for).returns(nil)
+    Ai::Transport::Http.expects(:proxy_for).with(url).returns("http://proxy.example.test:3128").at_least_once
+    stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-sonnet-4-6" }.to_json)
+
+    result = @probe.llm(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "anthropic-token", model: "claude-sonnet-4-6")
+
+    assert result.passing?
+  end
+
+  test "an Anthropic model the API doesn't have fails the models probe" do
+    stub_request(:get, "https://api.anthropic.com/v1/models/claude-nope")
+      .to_return(status: 404, headers: { "Content-Type" => "application/json" },
+                 body: { type: "error", error: { type: "not_found_error", message: "model: claude-nope" } }.to_json)
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.llm(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "anthropic-token", model: "claude-nope")
+
+    assert_not result.passing?
+    assert_equal 404, result.http_status
+  end
+
   test "synthetic PDF is valid and contains no customer data" do
     pdf = @probe.send(:synthetic_pdf)
     reader = PDF::Reader.new(StringIO.new(pdf))

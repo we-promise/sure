@@ -72,6 +72,12 @@ module Ai::Transport::Http
       ::Anthropic::Client.new(**options)
     end
 
+    # A plain Faraday connection for a request no client library makes (Anthropic's model lookup),
+    # with the resolved proxy and TLS options.
+    def faraday(url, timeout:)
+      Faraday.new(request: { timeout:, open_timeout: timeout }, &faraday_options(url))
+    end
+
     # A Faraday block for a client built elsewhere (ruby-openai): the resolved proxy, which
     # also stops Faraday's own ENV lookup when the resolver says direct, and TLS options.
     def faraday_options(url)
