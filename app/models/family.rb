@@ -59,6 +59,7 @@ class Family < ApplicationRecord
   has_many :entries, through: :accounts
   has_many :transactions, through: :accounts
   has_many :rules, dependent: :destroy
+  has_many :rule_groups, dependent: :destroy
   has_many :trades, through: :accounts
   has_many :holdings, through: :accounts
 
@@ -257,6 +258,14 @@ class Family < ApplicationRecord
   validates :auto_generate_transaction_names, inclusion: { in: [ true, false ] }
   validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
+  # The searchable timezone select submits "" while no zone is saved yet;
+  # store nil so provider date parsing keeps its default instead of raising.
+  # Rails' friendly names (e.g. "Pacific Time (US & Canada)") are stored as
+  # their IANA identifier, the value the timezone select offers.
+  normalizes :timezone, with: ->(timezone) {
+    timezone = timezone.strip
+    ActiveSupport::TimeZone::MAPPING[timezone] || timezone.presence
+  }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
   validate :currency_must_be_known, if: :currency_changed?
 
@@ -572,11 +581,13 @@ class Family < ApplicationRecord
   end
 
   # A rule with no conditions at the top of the order, the others moving
-  # down one.
+  # down one. Rule groups share the rules' positions (see Rule::Layout), so
+  # they move too.
   def add_classifier_rule!(action_type, active: true)
     Rule.transaction do
       Rule.lock_positions!(self)
       rules.update_all("position = position + 1")
+      rule_groups.update_all("position = position + 1")
       rules.create!(name: self.class.classifier_rule_name(action_type), resource_type: "transaction", active: active, position: 1,
                     actions_attributes: [ { action_type: action_type } ])
     end

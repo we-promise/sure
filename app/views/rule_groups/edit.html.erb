@@ -1,0 +1,6 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title", name: @rule_group.name_was)) %>
+  <% dialog.with_body do %>
+    <%= render "rule_groups/form", rule_group: @rule_group %>
+  <% end %>
+<% end %>
