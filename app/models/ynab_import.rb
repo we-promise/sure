@@ -97,7 +97,7 @@ class YnabImport < Import
   # when present, takes precedence (some hand-built exports use one).
   def signed_csv_amount(csv_row)
     explicit = csv_value(csv_row, amount_col_label.presence || "Amount")
-    return sanitize_number(explicit).to_d if explicit.present?
+    return sanitize_number(explicit, parentheses_negative: true).to_d if explicit.present?
 
     # If the file exposes no recognizable amount source (wrong file or renamed
     # headers), leave the amount blank so the required-column validation blocks the
