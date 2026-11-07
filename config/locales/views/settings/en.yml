@@ -470,6 +470,7 @@ en:
       sync_provider_in_progress: Sync started.
       recently_synced: Synced recently. Try again in a moment.
       taglines:
+        gocardless: Connect using your existing Bank Account Data credentials
         financekit: Sync (some) FinanceKit accounts through the Sure iOS app.
         akahu: Sync New Zealand financial institutions via Akahu.
         simplefin: Connect US bank accounts via the open SimpleFIN protocol.

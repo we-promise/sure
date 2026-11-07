@@ -1,0 +1,89 @@
+<% content_for :title, t("gocardless_items.setup_accounts.title") %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t("gocardless_items.setup_accounts.title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "settings", class: "text-primary" %>
+      <span class="text-primary"><%= t("gocardless_items.setup_accounts.subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with url: complete_account_setup_gocardless_item_path(@gocardless_item),
+                  method: :post,
+                  local: true,
+                  id: "gocardless-setup-form",
+                  data: {
+                    controller: "loading-button",
+                    action: "submit->loading-button#showLoading",
+                    loading_button_loading_text_value: t("gocardless_items.setup_accounts.creating"),
+                    turbo_frame: "_top"
+                  },
+                  class: "space-y-6" do |form| %>
+
+      <div class="space-y-4">
+        <div class="bg-surface border border-primary p-4 rounded-lg">
+          <div class="flex items-start gap-3">
+            <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+            <div>
+              <p class="text-sm text-primary">
+                <%= t("gocardless_items.setup_accounts.instructions") %>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <% if @unlinked_accounts.empty? %>
+          <div class="text-center py-8">
+            <%= icon "alert-circle", class: "text-warning mx-auto mb-4", size: "lg" %>
+            <p class="text-secondary"><%= t("gocardless_items.setup_accounts.no_accounts") %></p>
+          </div>
+        <% else %>
+          <span class="text-sm text-secondary">
+            <%= t("gocardless_items.setup_accounts.accounts_count", count: @unlinked_accounts.count) %>
+          </span>
+
+          <div class="space-y-2 max-h-96 overflow-y-auto">
+            <% @unlinked_accounts.each do |gocardless_account| %>
+              <% default_type = GocardlessAccount.accountable_type_for(gocardless_account.account_type) == "CreditCard" ? "credit_card" : "depository" %>
+              <div class="flex items-center gap-3 p-3 border border-primary rounded-lg">
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-primary truncate">
+                    <%= gocardless_account.name %>
+                  </p>
+                  <p class="text-sm text-secondary">
+                    <%= number_to_currency(gocardless_account.current_balance || 0, unit: Money::Currency.new(gocardless_account.currency || "USD").symbol) %>
+                    <%= gocardless_account.currency || "USD" %>
+                  </p>
+                </div>
+                <%= select_tag "accounts[#{gocardless_account.id}][account_type]",
+                      options_for_select(
+                        %w[skip depository credit_card].map { |type| [ t("gocardless_items.setup_accounts.account_types.#{type}"), type ] },
+                        default_type
+                      ),
+                      class: "form-field__input flex-shrink-0",
+                      "aria-label": t("gocardless_items.setup_accounts.account_type_label") %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="flex gap-3">
+        <%= render DS::Button.new(
+          text: t("gocardless_items.setup_accounts.import_selected"),
+          variant: "primary",
+          icon: "plus",
+          type: "submit",
+          class: "flex-1",
+          data: { loading_button_target: "button" }
+        ) %>
+        <%= render DS::Link.new(
+          text: t("gocardless_items.setup_accounts.cancel"),
+          variant: "secondary",
+          href: accounts_path
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>
