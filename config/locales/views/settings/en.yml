@@ -396,6 +396,11 @@ en:
       appearance_label: Appearance
       bank_sync_label: Bank sync
       debug_label: Debug
+    settings_search:
+      aria_label: Search settings
+      no_results: No settings match your search.
+      placeholder: Search settings
+      results_label: Matching settings
     settings_nav_link_large:
       next: Next
       previous: Back
