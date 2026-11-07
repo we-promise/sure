@@ -1,5 +1,5 @@
-# A model on an endpoint, with what it can do (section 4.2), and its budgets:
-# - batch_size: at most this many items in one call (section 8.1);
+# A model on an endpoint, with what it can do, and its budgets:
+# - batch_size: at most this many items in one call;
 # - context_window: the tokens one request may use, nil when unknown (no token slicing);
 # - max_output_tokens: sent as the request's limit; nil sends none;
 # - ocr_prompt: for an `ocr` model read through chat, its prompt folder (app/prompts/ocr_<name>),
@@ -29,8 +29,8 @@ class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :context_
 
   def capable?(*needed) = needed.flatten.all? { capabilities.include?(_1.to_s) }
 
-  # The cost from this model's own prices, or nil when it has none (local models, and every
-  # model until presets carry prices in PR 7).
+  # The cost from this model's own prices, or nil when it has none (local models, and any
+  # model configured without prices).
   def cost_for(tokens)
     return if input_cost_per_mtok.nil? || output_cost_per_mtok.nil? || !tokens&.known?
 

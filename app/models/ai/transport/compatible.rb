@@ -1,4 +1,4 @@
-# The OpenAI API, whoever runs it (section 4.2): OpenAI, Gemini's compatible API, OpenRouter,
+# The OpenAI API, whoever runs it: OpenAI, Gemini's compatible API, OpenRouter,
 # LiteLLM, llama.cpp, Ollama, vLLM, LM Studio, embedding servers and the external assistant.
 class Ai::Transport::Compatible < Ai::Transport::Base
   include Ai::Transport::RubyLlmAdapter

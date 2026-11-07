@@ -1,5 +1,5 @@
 # One AI call on the usage page: its requests (retries, JSON-mode resends) summed into one row,
-# which opens to show each request (section 10).
+# which opens to show each request.
 class LlmUsage::Call
   attr_reader :requests
 

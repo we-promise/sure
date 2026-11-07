@@ -1,5 +1,5 @@
-# Helpers for testing AI code (ai-plumbing-redesign.md, section 17). 2a brings the transport
-# level, 2b the routing (with_ai_routes, without_ai); 2c adds stub_ai, PR 3 with_ai_capsule.
+# Helpers for testing AI code: the transport level (endpoints, models, call contexts, captured
+# events, cassettes) and routing (with_ai_routes, without_ai).
 module AiTestHelper
   LLM_CAPABILITIES = %i[tools vision documents streaming structured_output].freeze
 

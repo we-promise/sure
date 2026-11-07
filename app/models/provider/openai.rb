@@ -85,7 +85,6 @@ class Provider::Openai < Provider
 
     # The proxy and TLS settings come from Ai::Transport::Http, the one resolver every AI client
     # uses (loopback never proxied, HTTPS_PROXY then HTTP_PROXY, NO_PROXY with CIDR blocks).
-    # This client goes when its features move onto the transports (PRs 2c-2e, 6).
     @client = ::OpenAI::Client.new(**client_options, &Ai::Transport::Http.faraday_options(llm_uri_base || Ai::Transport::Http::OPENAI_BASE))
     @uri_base = llm_uri_base
     if custom_provider? && llm_model.blank?

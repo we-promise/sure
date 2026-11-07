@@ -1,6 +1,6 @@
-# The transport interface (section 7). A transport call arrives with its first caller: 2a
-# implements `probe` (AiHealth::Probe), 2c `generate` (Ai::Generation), 2d `judge`
-# (Ai::Judgement), 2e `embed` (Ai::Embeddings) and `ocr` (PDF reading); `converse` comes in PR 6.
+# The transport interface: `probe` (AiHealth::Probe), `generate` (Ai::Generation), `judge`
+# (Ai::Judgement), `embed` (Ai::Embeddings) and `ocr` (PDF reading). A call a transport doesn't
+# implement raises NotImplementedError.
 class Ai::Transport::Base
   # One structured-output request. `failed_ratio` (optional) takes the parsed JSON and returns
   # the share of items the model left blank or missed, for `auto` JSON mode's fallback; nil
@@ -106,7 +106,7 @@ class Ai::Transport::Base
 
   # Sends one structured-output request and returns a Response, or raises an Ai::Error. The
   # whole call, with its retries and JSON-mode fallbacks, has one time budget: the endpoint's
-  # timeout (section 7), so a slow model can't multiply it.
+  # timeout, so a slow model can't multiply it.
   def generate(request)
     check_attachments!(request.model, request.attachments)
     Ai::CallContext.call(feature: request.feature, model: request.model, family: request.family, budget: endpoint.timeout_seconds) do
@@ -114,7 +114,7 @@ class Ai::Transport::Base
     end
   end
 
-  def converse(request, &on_chunk) = raise NotImplementedError, "#{self.class.name}#converse arrives in PR 6"
+  def converse(request, &on_chunk) = raise NotImplementedError, "#{self.class.name}#converse isn't implemented"
   # Answers a JudgeRequest and returns a JudgeResponse, or raises an Ai::Error. The budget covers
   # every round of the fan-out: the endpoint's timeout per round of `parallel_requests`.
   def judge(request)
@@ -148,7 +148,7 @@ class Ai::Transport::Base
     end
   end
 
-  # Health probes reuse the production path (fixes drift bug 6): the same client settings,
+  # Health probes reuse the production path, so they can't drift from it: the same client settings,
   # headers, timeout, proxy and error mapping. Returns what the check found, or raises an
   # Ai::Error:
   #   :models    -> the model's id, when the server lists it (no chat call);
@@ -238,7 +238,7 @@ class Ai::Transport::Base
 
     def retry_delay(tries, _error) = [ 0.5 * (2**(tries - 1)), 8 ].min * (0.75 + rand * 0.5)
 
-    # One `.ai` event per call (section 10), carrying what subscribers need: the route, the
+    # One `.ai` event per call, carrying what subscribers need: the route, the
     # request (files by name and size, never their bytes), the output, usage and error class.
     def instrument(name, model:, request:)
       call = Ai::CallContext.current
