@@ -7,7 +7,8 @@ import { Controller } from "@hotwired/stimulus"
 // controller connects, or never, so the frame declares when to start:
 //
 //   data-action="turbo:before-fetch-request->turbo-frame-timeout#startTimeout
-//                turbo:before-frame-render->turbo-frame-timeout#clearTimeout"
+//                turbo:before-frame-render->turbo-frame-timeout#clearTimeout
+//                turbo:fetch-request-error->turbo-frame-timeout#handleError"
 //
 // It stops when Turbo is about to render a matching frame, not on
 // turbo:frame-load: Turbo inserts the new content several repaints before
@@ -21,7 +22,9 @@ export default class extends Controller {
   connect() {
     // Turbo keeps a frame busy for the length of its request. An eager frame
     // can start fetching before Stimulus connects, and the attribute is what
-    // tells us the event has already been and gone.
+    // tells us the event has already been and gone. A data-turbo-permanent
+    // frame reconnects on every Turbo visit; once loaded it is not busy, so
+    // nothing restarts.
     if (this.element.hasAttribute("busy")) {
       this.startTimeout()
     }
@@ -47,6 +50,18 @@ export default class extends Controller {
   }
 
   handleTimeout() {
+    this.timeoutId = null
+    this.showBadge()
+  }
+
+  // A failed request (network error, dropped connection) will never render,
+  // so there is nothing to wait for: show the badge right away.
+  handleError() {
+    this.clearTimeout()
+    this.showBadge()
+  }
+
+  showBadge() {
     // Replace loading content with error state
     this.element.innerHTML = `
       <div class="flex items-center justify-end gap-1">
