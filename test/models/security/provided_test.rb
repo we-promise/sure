@@ -387,4 +387,79 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_equal "TSLA", ranked[0].ticker
     assert_equal "US", ranked[0].country_code, "US Tesla should rank first for US user"
   end
+
+  # --- import_provider_splits ---
+
+  def split_value(ex_date, numerator, denominator)
+    Provider::SecurityConcept::Split.new(
+      symbol: "AAPL", ex_date: ex_date, numerator: numerator, denominator: denominator, exchange_operating_mic: nil
+    )
+  end
+
+  def stub_split_provider(response)
+    provider = mock("splits_provider")
+    provider.stubs(:supports_splits?).returns(true)
+    provider.stubs(:class).returns(Provider::YahooFinance)
+    provider.stubs(:fetch_security_splits).returns(response)
+    @security.stubs(:price_data_provider).returns(provider)
+    provider
+  end
+
+  test "import_provider_splits records each split once per ex-date" do
+    @cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(@cache)
+    ex_date = Date.new(2026, 10, 9)
+    stub_split_provider(provider_success_response([ split_value(ex_date, 2, 1) ]))
+
+    assert_difference -> { @security.splits.count }, 1 do
+      assert_equal 1, @security.import_provider_splits(start_date: ex_date - 30, end_date: ex_date, clear_cache: true)
+    end
+    assert_equal 0, @security.import_provider_splits(start_date: ex_date - 30, end_date: ex_date, clear_cache: true)
+
+    split = @security.splits.sole
+    assert_equal [ ex_date, 2, 1, "yahoo_finance" ], [ split.ex_date, split.numerator, split.denominator, split.source ]
+  end
+
+  test "import_provider_splits keeps a split entered by hand" do
+    @cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(@cache)
+    ex_date = Date.new(2026, 10, 9)
+    @security.splits.create!(ex_date: ex_date, numerator: 4, denominator: 1, source: "manual")
+    stub_split_provider(provider_success_response([ split_value(ex_date, 2, 1) ]))
+
+    assert_equal 0, @security.import_provider_splits(start_date: ex_date - 30, end_date: ex_date, clear_cache: true)
+
+    split = @security.splits.sole
+    assert_equal [ 4, "manual" ], [ split.numerator, split.source ]
+  end
+
+  test "import_provider_splits asks the provider at most once per interval" do
+    @cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(@cache)
+    provider = stub_split_provider(provider_success_response([]))
+    provider.expects(:fetch_security_splits).once.returns(provider_success_response([]))
+
+    2.times { @security.import_provider_splits(start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 10, 9)) }
+  end
+
+  test "import_provider_splits does nothing for a provider without split support" do
+    provider = mock("plain_provider")
+    provider.stubs(:supports_splits?).returns(false)
+    provider.expects(:fetch_security_splits).never
+    @security.stubs(:price_data_provider).returns(provider)
+
+    assert_equal 0, @security.import_provider_splits(start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 10, 9))
+  end
+
+  test "import_provider_splits logs a failed fetch, adds nothing and allows a retry" do
+    @cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(@cache)
+    stub_split_provider(provider_error_response(StandardError.new("rate limited")))
+    DebugLogEntry.expects(:capture).with(has_entries(category: "security_split_fetch"))
+
+    assert_no_difference -> { @security.splits.count } do
+      assert_equal 0, @security.import_provider_splits(start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 10, 9))
+    end
+    assert_nil @cache.read("security_split_check:#{@security.id}")
+  end
 end

@@ -16,6 +16,7 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     Security.delete_all
 
     @provider = mock("provider")
+    @provider.stubs(:supports_splits?).returns(false)
     Provider::Registry.any_instance
                       .stubs(:get_provider)
                       .with(:twelve_data)
@@ -129,6 +130,29 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     MarketDataImporter.new(mode: :snapshot).import_security_prices
 
     assert_equal 1, Security::Price.where(security: security, date: snapshot_start_date).count
+  end
+
+  test "records the splits the price provider reports for held securities" do
+    security = Security.create!(ticker: "DXJ", exchange_operating_mic: "ARCX")
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Brokerage", currency: "USD", balance: 0, accountable: Investment.new)
+    trade = Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy")
+    account.entries.create!(name: "Buy DXJ", date: 40.days.ago.to_date, amount: 100, currency: "USD", entryable: trade)
+    account.holdings.create!(security: security, date: Date.current, qty: 2, price: 50, amount: 100, currency: "USD")
+    ex_date = 10.days.ago.to_date
+
+    @provider.stubs(:supports_splits?).returns(true)
+    @provider.stubs(:fetch_security_prices).returns(provider_success_response([]))
+    @provider.stubs(:fetch_security_info).returns(provider_success_response(OpenStruct.new(name: "DXJ", logo_url: "logo")))
+    @provider.expects(:fetch_security_splits)
+             .with(has_entries(symbol: "DXJ", exchange_operating_mic: "ARCX"))
+             .returns(provider_success_response([
+               Provider::SecurityConcept::Split.new(symbol: "DXJ", ex_date: ex_date, numerator: 2, denominator: 1, exchange_operating_mic: "ARCX")
+             ]))
+
+    MarketDataImporter.new(mode: :full, clear_cache: true).import_security_prices
+
+    assert_equal [ [ ex_date, 2, 1 ] ], security.splits.pluck(:ex_date, :numerator, :denominator)
   end
 
   test "fetches no prices for online securities without holdings or trades" do

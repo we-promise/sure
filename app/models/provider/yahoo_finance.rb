@@ -380,6 +380,44 @@ class Provider::YahooFinance < Provider
     end
   end
 
+  def supports_splits?
+    true
+  end
+
+  def fetch_security_splits(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
+    with_provider_response do
+      symbol = normalize_symbol(symbol, exchange_operating_mic)
+      validate_date_params!(start_date, end_date)
+
+      throttle_request
+      data = fetch_authenticated_chart(symbol, {
+        "period1" => start_date.to_time.utc.to_i,
+        "period2" => end_date.end_of_day.to_time.utc.to_i,
+        "interval" => "1d",
+        "events" => "split"
+      })
+
+      chart_data = data.dig("chart", "result", 0)
+      raise Error, "No chart data found for #{symbol}" unless chart_data
+
+      (chart_data.dig("events", "splits") || {}).values.filter_map do |event|
+        numerator = event["numerator"].to_i
+        denominator = event["denominator"].to_i
+        next unless numerator.positive? && denominator.positive? && numerator != denominator
+
+        Split.new(
+          symbol: symbol,
+          ex_date: Time.at(event["date"].to_i).utc.to_date,
+          numerator: numerator,
+          denominator: denominator,
+          exchange_operating_mic: exchange_operating_mic
+        )
+      end.sort_by(&:ex_date)
+    rescue JSON::ParserError => e
+      raise Error, "Invalid response format: #{e.message}"
+    end
+  end
+
   private
 
     HealthCacheError = Class.new(StandardError)

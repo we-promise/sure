@@ -329,6 +329,56 @@ module Security::Provided
     nil
   end
 
+  SPLIT_CHECK_INTERVAL = 12.hours
+
+  # Records the stock splits the price provider reports with an ex-date in the
+  # range, one per ex-date. A split already on file is left as it is, so one
+  # entered by hand wins over the provider's. Checked at most once per
+  # SPLIT_CHECK_INTERVAL per security, because every account holding it syncs
+  # through here. Returns the number of splits added.
+  def import_provider_splits(start_date:, end_date:, clear_cache: false)
+    provider = price_data_provider
+    return 0 unless provider&.supports_splits?
+
+    if !clear_cache && !Rails.cache.write("security_split_check:#{id}", true, expires_in: SPLIT_CHECK_INTERVAL, unless_exist: true)
+      return 0
+    end
+
+    response = provider.fetch_security_splits(
+      symbol: ticker,
+      exchange_operating_mic: exchange_operating_mic,
+      start_date: start_date,
+      end_date: end_date
+    )
+
+    unless response.success?
+      Rails.cache.delete("security_split_check:#{id}")
+      DebugLogEntry.capture(
+        category: "security_split_fetch",
+        level: "warn",
+        message: "Split fetch failed",
+        source: self.class.name,
+        provider: provider,
+        metadata: { security_id: id, ticker: ticker, provider_error: response.error&.message }
+      )
+      return 0
+    end
+
+    known_ex_dates = splits.where(ex_date: start_date..end_date).pluck(:ex_date).to_set
+    response.data.count do |split|
+      next false if known_ex_dates.include?(split.ex_date)
+
+      splits.create!(
+        ex_date: split.ex_date,
+        numerator: split.numerator,
+        denominator: split.denominator,
+        source: provider.class.name.demodulize.underscore
+      )
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+      false
+    end
+  end
+
   def import_provider_prices(start_date:, end_date:, clear_cache: false)
     unless price_data_provider.present?
       Rails.logger.warn("No provider configured for Security.import_provider_prices")

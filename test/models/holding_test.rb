@@ -56,6 +56,40 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(expected_nvda), @nvda.avg_cost
   end
 
+  test "the average cost is per share after a split, on the single and the batch path" do
+    security = @amzn.security
+    create_trade(security, account: @account, qty: 10, price: 100.00, date: 10.days.ago.to_date)
+    create_trade(security, account: @account, qty: 10, price: 60.00, date: 2.days.ago.to_date)
+    security.splits.create!(ex_date: 5.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+
+    # Cost 1,600 over 20 pre-split shares restated to 30 current ones.
+    expected = Money.new(BigDecimal("1600") / 30)
+    assert_cost expected, Holding.find(@amzn.id).avg_cost, "single"
+
+    batch = Holding.where(id: @amzn.id).includes(:security).to_a
+    Holding.preload_avg_costs(batch)
+    assert_cost expected, batch.first.avg_cost, "batch"
+  end
+
+  test "a split after the holding's date or on the purchase's own day leaves the average alone" do
+    security = @amzn.security
+    create_trade(security, account: @account, qty: 10, price: 100.00, date: 3.days.ago.to_date)
+    security.splits.create!(ex_date: 3.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+    security.splits.create!(ex_date: 1.day.from_now.to_date, numerator: 2, denominator: 1, source: "manual")
+
+    assert_cost Money.new(BigDecimal("100")), Holding.find(@amzn.id).avg_cost, "unchanged"
+  end
+
+  test "splits compound across the purchase's later ex-dates" do
+    security = @amzn.security
+    create_trade(security, account: @account, qty: 6, price: 90.00, date: 10.days.ago.to_date)
+    security.splits.create!(ex_date: 8.days.ago.to_date, numerator: 3, denominator: 2, source: "manual")
+    security.splits.create!(ex_date: 4.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+
+    # 540 spent on 6 * 3/2 * 2 = 18 shares.
+    assert_cost Money.new(BigDecimal("30")), Holding.find(@amzn.id).avg_cost, "compound"
+  end
+
   test "calculates average cost basis from another currency" do
     [ 1.day.ago.to_date, Date.current ].each do |date|
       ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: date, rate: 1)

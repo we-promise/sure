@@ -11,6 +11,8 @@ module Provider::SecurityConcept
   end
   SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic)
   Price = Data.define(:symbol, :date, :price, :currency, :exchange_operating_mic)
+  # `numerator` new shares for every `denominator` old ones, as in Security::Split.
+  Split = Data.define(:symbol, :ex_date, :numerator, :denominator, :exchange_operating_mic)
 
   def search_securities(symbol, country_code: nil, exchange_operating_mic: nil)
     raise NotImplementedError, "Subclasses must implement #search_securities"
@@ -26,6 +28,17 @@ module Provider::SecurityConcept
 
   def fetch_security_prices(symbol:, exchange_operating_mic:, start_date:, end_date:)
     raise NotImplementedError, "Subclasses must implement #fetch_security_prices"
+  end
+
+  # Whether the provider can report stock splits. Providers that can override
+  # this and #fetch_security_splits.
+  def supports_splits?
+    false
+  end
+
+  # Returns Split values with an ex-date in start_date..end_date.
+  def fetch_security_splits(symbol:, exchange_operating_mic:, start_date:, end_date:)
+    raise NotImplementedError, "Subclasses that support splits must implement #fetch_security_splits"
   end
 
   # Maximum number of calendar days of historical data the provider can return.
