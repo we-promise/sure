@@ -1,0 +1,11 @@
+Detect business names and websites from transaction descriptions. Return JSON only.
+
+Rules:
+1. Match transaction_id exactly from input
+2. Return business_name and business_url for known businesses
+3. Return "null" for both if uncertain or generic (e.g. "Paycheck", "Local diner")
+4. Don't include "www." in URLs (use "amazon.com" not "www.amazon.com")
+5. Favor "null" over guessing - only return values if 80%+ confident
+
+Example output format:
+{"merchants": [{"transaction_id": "txn_001", "business_name": "Amazon", "business_url": "amazon.com"}]}

@@ -17,22 +17,24 @@ class Rule::ActionExecutor::AutoCategorizeTest < ActiveSupport::TestCase
 
   test "self-hosted label estimates against the resolved categorization model" do
     @family.stubs(:self_hoster?).returns(true)
-    @family.stubs(:categorization_model_name).returns("~typesafe/jev-latest")
     LlmUsage.expects(:estimate_auto_categorize_cost).with(
       transaction_count: 20,
       category_count: @family.categories.count,
-      model: "~typesafe/jev-latest"
+      model: "jev-latest"
     ).returns(nil)
 
-    assert_equal "Auto-categorize transactions with AI (cost: N/A)", @executor.label
+    with_ai_routes(categorize: %w[jev/jev-latest]) do
+      assert_equal "Auto-categorize transactions with AI (cost: N/A)", @executor.label
+    end
   end
 
   test "self-hosted label reports missing categorization provider" do
     @family.stubs(:self_hoster?).returns(true)
-    @family.stubs(:categorization_model_name).returns(nil)
     LlmUsage.expects(:estimate_auto_categorize_cost).never
 
-    assert_equal "Auto-categorize transactions with AI (no categorization provider configured)", @executor.label
+    without_ai do
+      assert_equal "Auto-categorize transactions with AI (no categorization provider configured)", @executor.label
+    end
   end
 
   test "logs when categorization is blocked by category enrichment protection" do

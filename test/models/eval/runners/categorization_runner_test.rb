@@ -41,15 +41,18 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
       status: "pending"
     )
 
-    mock_response = provider_success_response([
-      Provider::LlmConcept::AutoCategorization.new(transaction_id: sample1.id, category_name: "Fast Food"),
-      Provider::LlmConcept::AutoCategorization.new(transaction_id: sample2.id, category_name: "null")
-    ])
-
-    Provider::Openai.any_instance.stubs(:auto_categorize).returns(mock_response)
+    # The run's own model answers, through the production generation and prompt.
+    requests = stub_ai(:categorize, returns: { categorizations: [
+      { transaction_id: sample1.id, category_name: "Fast Food" }, { transaction_id: sample2.id, category_name: "null" }
+    ] })
 
     runner = Eval::Runners::CategorizationRunner.new(eval_run)
     result = runner.run
+
+    assert_equal "gpt-4.1", requests.first.model.name
+    assert_equal "openai", requests.first.model.endpoint.name
+    assert_includes requests.first.instructions, "You are an assistant to a consumer personal finance app."
+    assert_equal [ "Fast Food", nil ], result.results.order(:created_at).map { _1.actual_output["category_name"] }
 
     assert_equal "completed", result.status
     assert_equal 2, result.results.count
@@ -80,10 +83,10 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
     )
 
     mock_response = provider_success_response([
-      Provider::LlmConcept::AutoCategorization.new(transaction_id: sample.id, category_name: "Fast Food")
+      Eval::GenerationClient::Categorization.new(transaction_id: sample.id, category_name: "Fast Food")
     ])
 
-    Provider::Openai.any_instance.stubs(:auto_categorize).returns(mock_response)
+    Eval::GenerationClient.any_instance.stubs(:auto_categorize).returns(mock_response)
 
     runner = Eval::Runners::CategorizationRunner.new(eval_run)
     runner.run
@@ -120,10 +123,10 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
 
     # Model returns parent category instead of subcategory
     mock_response = provider_success_response([
-      Provider::LlmConcept::AutoCategorization.new(transaction_id: sample.id, category_name: "Food & Drink")
+      Eval::GenerationClient::Categorization.new(transaction_id: sample.id, category_name: "Food & Drink")
     ])
 
-    Provider::Openai.any_instance.stubs(:auto_categorize).returns(mock_response)
+    Eval::GenerationClient.any_instance.stubs(:auto_categorize).returns(mock_response)
 
     runner = Eval::Runners::CategorizationRunner.new(eval_run)
     runner.run
@@ -158,10 +161,10 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
     )
 
     mock_response = provider_success_response([
-      Provider::LlmConcept::AutoCategorization.new(transaction_id: sample.id, category_name: "null")
+      Eval::GenerationClient::Categorization.new(transaction_id: sample.id, category_name: "null")
     ])
 
-    Provider::Openai.any_instance.stubs(:auto_categorize).returns(mock_response)
+    Eval::GenerationClient.any_instance.stubs(:auto_categorize).returns(mock_response)
 
     runner = Eval::Runners::CategorizationRunner.new(eval_run)
     runner.run
@@ -196,7 +199,7 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
       status: "pending"
     )
 
-    Provider::Openai.any_instance.stubs(:auto_categorize).raises(StandardError.new("API Error"))
+    Eval::GenerationClient.any_instance.stubs(:auto_categorize).raises(StandardError.new("API Error"))
 
     runner = Eval::Runners::CategorizationRunner.new(eval_run)
     result = runner.run
@@ -208,5 +211,28 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
     error_result = result.results.find_by(eval_sample_id: sample.id)
     assert_not error_result.correct
     assert_includes error_result.actual_output["error"], "API Error"
+  end
+
+  # Jev runs through the generation's judgement (2d) and keeps each answer's calibrated confidence.
+  test "a Jev run records each answer's confidence" do
+    dataset = Eval::Dataset.create!(name: "test_cat_jev_#{SecureRandom.hex(4)}", eval_type: "categorization", version: "1.0")
+    dataset.samples.create!(
+      input_data: { "id" => "txn_1", "amount" => 10, "classification" => "expense", "description" => "McDonalds" },
+      expected_output: { "category_name" => "Fast Food" }, context_data: { "categories" => @categories }, difficulty: "easy"
+    )
+    eval_run = Eval::Run.create!(dataset:, provider: "jev", model: "jev-latest", name: "jev_run", provider_config: { "api_key" => "test-key" },
+                                 status: "pending")
+    stub_request(:post, "https://api.typesafe.ai/v1/systemone").to_return(
+      status: 200, headers: { "Content-Type" => "application/json" },
+      body: { model: "jev-latest", usage: { input_tokens: 90, output_tokens: 0 },
+              answers: { category: { type: "choice", choice: "Fast Food", confidence: 0.91,
+                                     probabilities: { "Food & Drink" => 0.05, "Fast Food" => 0.91, "__uncategorized__" => 0.04 } } } }.to_json
+    )
+
+    Eval::Runners::CategorizationRunner.new(eval_run).run
+
+    result = eval_run.reload.results.sole
+    assert result.correct
+    assert_in_delta 0.91, result.metadata["confidence"], 0.0001
   end
 end

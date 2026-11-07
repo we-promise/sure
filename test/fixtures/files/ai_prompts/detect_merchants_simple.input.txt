@@ -1,0 +1,22 @@
+USER'S KNOWN MERCHANTS: Acme
+
+TRANSACTIONS TO ANALYZE:
+- ID: txn_1, Description: "STARBUCKS 1234 SEATTLE"
+- ID: txn_2, Description: "Acme - ACME CORP PAYROLL"
+
+EXAMPLES of correct merchant detection:
+- "AMAZON.COM*1A2B3C" → business_name: "Amazon", business_url: "amazon.com"
+- "STARBUCKS STORE #9876" → business_name: "Starbucks", business_url: "starbucks.com"
+- "NETFLIX.COM" → business_name: "Netflix", business_url: "netflix.com"
+- "UBER *TRIP" → business_name: "Uber", business_url: "uber.com"
+- "ACH WITHDRAWAL" → business_name: "null", business_url: "null" (generic)
+- "LOCAL DINER" → business_name: "null", business_url: "null" (generic/unknown)
+- "POS DEBIT 12345" → business_name: "null", business_url: "null" (generic)
+
+IMPORTANT:
+- Return "null" (as a string) for BOTH name and URL if you cannot confidently identify the business
+- Don't include "www." in URLs
+- Generic descriptions like "Paycheck", "Transfer", "ATM" should return "null"
+
+Respond with ONLY this JSON format (no other text):
+{"merchants": [{"transaction_id": "...", "business_name": "...", "business_url": "..."}]}

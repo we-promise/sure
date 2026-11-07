@@ -131,6 +131,7 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
   end
 
   test "extract_transactions stores string keys so rows can actually be generated" do
+    use_ai_routes
     provider = mock("llm_provider")
     Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
     provider.stubs(:extract_bank_statement).returns(

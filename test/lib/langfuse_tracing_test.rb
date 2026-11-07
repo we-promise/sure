@@ -113,9 +113,8 @@ class LangfuseTracingTest < ActiveSupport::TestCase
     Rails.configuration.x.stubs(:langfuse).returns(@client)
     with_env_overrides("LANGFUSE_PUBLIC_KEY" => "pk-test", "LANGFUSE_SECRET_KEY" => "sk-test") do
       [ Provider::Openai, Provider::Anthropic ].each do |provider_class|
-        provider_class::AutoCategorizer.any_instance.stubs(:auto_categorize).raises(StandardError, "LLM unavailable")
-        response = provider_class.new("test-token").auto_categorize(
-          transactions: [ { id: "transaction", description: "Coffee" } ], user_categories: [ { id: "category", name: "Dining" } ])
+        provider_class::PdfProcessor.any_instance.stubs(:process).raises(StandardError, "LLM unavailable")
+        response = provider_class.new("test-token").process_pdf(pdf_content: "%PDF-1.4 fake")
         refute response.success?
         assert_equal "LLM unavailable", response.error.message
       end
@@ -141,15 +140,14 @@ class LangfuseTracingTest < ActiveSupport::TestCase
   test "tracing finalization failures preserve the original provider error" do
     [ Provider::Openai, Provider::Anthropic ].each do |provider_class|
       original_error = provider_class::Error.new("LLM unavailable", failure_code: :provider_unavailable)
-      provider_class::AutoCategorizer.any_instance.stubs(:auto_categorize).raises(original_error)
+      provider_class::PdfProcessor.any_instance.stubs(:process).raises(original_error)
       trace = mock
       trace.expects(:end).with(output: { error: "LLM unavailable" }, level: "ERROR").raises(StandardError, "Tracing unavailable")
       provider = provider_class.new("test-token")
       provider.stubs(:create_langfuse_trace).returns(trace)
       Rails.logger.expects(:warn).with("Langfuse trace finalization failed: StandardError: Tracing unavailable")
 
-      response = provider.auto_categorize(transactions: [ { id: "transaction", description: "Coffee" } ],
-        user_categories: [ { id: "category", name: "Dining" } ])
+      response = provider.process_pdf(pdf_content: "%PDF-1.4 fake")
 
       refute response.success?
       assert_equal original_error.message, response.error.message

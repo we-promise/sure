@@ -1,6 +1,8 @@
 require "csv"
 
 class Assistant::Function::ImportBankStatement < Assistant::Function
+  ai_feature :extract_pdf
+
   class << self
     def name
       "import_bank_statement"
@@ -92,17 +94,19 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       }
     end
 
-    # Extract transactions from the PDF using the configured LLM provider.
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # extract_bank_statement (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
-    unless provider
+    availability = Ai.availability(:extract_pdf, family:, user:)
+    unless availability.available?
       return {
         success: false,
         error: "provider_not_configured",
-        message: "AI provider is not configured"
+        reason: availability.reason.to_s,
+        message: availability.message_for(user)
       }
     end
+
+    # Extract transactions from the PDF using the configured LLM provider, the
+    # first in extract_pdf's route, until the call itself moves onto it (2e).
+    provider = Provider::Registry.preferred_llm_provider
 
     response = provider.extract_bank_statement(
       pdf_content: pdf_import.pdf_file_content,

@@ -1,0 +1,13 @@
+Here are the user's available merchants in JSON format:
+
+```json
+[{"id":"mer_1","name":"Acme"}]
+```
+
+Use BOTH your knowledge AND the user-generated merchants to auto-detect the following transactions:
+
+```json
+[{"id":"txn_1","amount":12.5,"classification":"expense","description":"STARBUCKS 1234 SEATTLE","merchant":null},{"id":"txn_2","amount":2500,"classification":"income","description":"ACME CORP PAYROLL","merchant":"Acme"}]
+```
+
+Return "null" if you are not 80%+ confident in your answer.
