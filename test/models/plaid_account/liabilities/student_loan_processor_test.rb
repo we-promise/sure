@@ -68,28 +68,6 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
     assert_equal Date.new(2019, 3, 4), @plaid_account.current_account.loan.start_date
   end
 
-  # The processor writes to the loan cached on the account, which can predate
-  # another writer's change. The schedule lock reloads it first; without that,
-  # a payload matching the stale copy makes update! a no-op, and the other
-  # writer's rate is left in place of what Plaid reported.
-  test "a loan loaded before another write still receives Plaid's rate" do
-    loan = @plaid_account.current_account.loan
-    loan.update!(rate_type: "fixed", interest_rate: 5, initial_balance: 20000, term_months: 24, start_date: Date.new(2020, 1, 1))
-    Loan.find(loan.id).update!(interest_rate: 7)
-    @plaid_account.update!(raw_liabilities_payload: {
-      student: {
-        interest_rate_percentage: 5,
-        origination_principal_amount: 20000,
-        origination_date: Date.new(2020, 1, 1),
-        expected_payoff_date: Date.new(2022, 1, 1)
-      }
-    })
-
-    PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account).process
-
-    assert_equal 5, Loan.find(loan.id).interest_rate, "Plaid's rate was compared against a stale loan"
-  end
-
   # A payoff less than a month after origination is zero months. Stored
   # as nil, because a term of no months is not a term -- and the rest of the
   # payload must still land rather than being lost with it.

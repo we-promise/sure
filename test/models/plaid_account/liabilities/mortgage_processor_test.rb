@@ -55,21 +55,20 @@ class PlaidAccount::Liabilities::MortgageProcessorTest < ActiveSupport::TestCase
     assert_not_empty loan.amortization_schedule.payments
   end
 
-  # The processor writes to the loan cached on the account, which can predate
-  # another writer's change. The schedule lock reloads it first; without that,
-  # Plaid's rate matches the stale copy, update! sees no change, and the other
-  # writer's rate is left in place of what Plaid reported.
-  test "a loan loaded before another write still receives Plaid's rate" do
-    loan = @plaid_account.current_account.loan
-    loan.update!(rate_type: "fixed", interest_rate: 5)
-    Loan.find(loan.id).update!(interest_rate: 7)
-    @plaid_account.update!(raw_liabilities_payload: {
-      mortgage: { interest_rate: { type: "fixed", percentage: 5 } }
-    })
+  # The processor's loan is cached on the account and can predate another
+  # writer's change. LoanTermWriter's schedule lock reloads it before the rate
+  # is judged. The payload has no rate type, so no terms save takes the lock
+  # first and only that wrapper stands between the stale copy and a second row
+  # for a rate already in force.
+  test "a rate another writer recorded after the loan was loaded is not dated again" do
+    loan = loan_with(interest_rate: 6, rate_type: "variable", start_date: ORIGINATED)
+    Loan.find(loan.id).update!(variable_rate_schedule: { "2026-02-01" => "7" })
+    payload(percentage: 7)
 
-    PlaidAccount::Liabilities::MortgageProcessor.new(@plaid_account).process
+    PlaidAccount::Liabilities::MortgageProcessor.new(@plaid_account, as_of: Date.new(2026, 3, 1)).process
 
-    assert_equal 5, Loan.find(loan.id).interest_rate, "Plaid's rate was compared against a stale loan"
+    assert_equal({ "2026-02-01" => 7.0 }, rates(loan.reload),
+                 "the rate was judged against a loan loaded before the other write")
   end
 
   test "does nothing when mortgage data absent" do
