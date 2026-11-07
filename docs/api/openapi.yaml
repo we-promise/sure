@@ -32,6 +32,20 @@ components:
             read: Read access
             read_write: Read and write access
   schemas:
+    Version:
+      type: object
+      additionalProperties: false
+      required:
+      - version
+      - commit_sha
+      properties:
+        version:
+          type: string
+          description: Running Sure version, without a v prefix.
+        commit_sha:
+          type: string
+          nullable: true
+          description: Build commit SHA, or null when unavailable.
     SplitRequest:
       type: object
       required:
@@ -8352,6 +8366,46 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/insights/{id}/acknowledge":
+    patch:
+      summary: Acknowledge a proactive insight
+      tags:
+      - Insights
+      description: Marks a visible family insight read and acknowledged, removing
+        it from the feed. Requires read_write scope and preview access. Repeated requests
+        are idempotent.
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      parameters:
+      - name: id
+        in: path
+        schema:
+          type: string
+          format: uuid
+        required: true
+      responses:
+        '204':
+          description: insight acknowledged
+        '401':
+          description: authentication required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: write scope, member access or preview features required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: insight not found or not visible to the family
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/merchants":
     get:
       summary: List merchants
@@ -10843,3 +10897,26 @@ paths:
                       type: string
                       description: Additional notes
         required: true
+  "/api/v1/version":
+    get:
+      summary: Get the running Sure version
+      tags:
+      - Version
+      description: Requires read or read_write access. Operators may explicitly enable
+        anonymous access with PUBLIC_VERSION_ENDPOINT=true. Responses are not cacheable.
+        Supplied credentials are still validated in public mode.
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          description: running version
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Version"
+        '401':
+          description: missing or invalid credentials (default configuration)
+        '403':
+          description: insufficient scope
