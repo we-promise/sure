@@ -210,6 +210,31 @@ for implementation and tests. Reuse project routing, while giving the new featur
 its own questions and explicit event contract. Extending the browser client must
 preserve the same routing, privacy, and opt-out behavior for both features.
 
+## Initial onboarding AI intent
+
+`initial_family_ai_mode_selected` records successful onboarding by the earliest
+family user (ordered by creation time, then ID), who must be an administrator
+without an accepted invitation. The choice is `none`, `builtin`, or `external`. It is stated intent,
+not configuration readiness, provider use, or an agent connection. `none` and
+`external` disable that user's in-app assistant; `builtin` enables it subject to
+existing provider availability. Family automation and provider settings are unchanged.
+
+The completion transaction stores a nullable, immutable-in-this-flow family claim,
+serialized with a family row lock. Existing households, invited members, failed
+validation, repeated submissions, and later preference changes do not produce an
+initial event. The claim is consumed even if collection is disabled or unavailable;
+there is no historical backfill or delivery retry. SDK acceptance is not guaranteed
+delivery. The family claim survives deletion or movement of the original user.
+The migration adds only this nullable field and a value constraint, without backfill.
+
+This server event uses the existing shared feedback destination, operator opt-out
+(`POSTHOG_FEEDBACK_ENABLED`), and production/development gates. As with other server
+events, browser opt-outs cannot control it. Its isolated HMAC identity is derived
+from the family ID and deployment secret; raw family/user IDs are not sent. Properties
+are only AI mode, Sure version, disabled person profiles, and disabled GeoIP. It
+includes no IP, starting tools, free text, provider details, credentials, or financial
+data. Initial intent is separate from all daily usage events below.
+
 ## Daily installation activity
 
 `Usage` captures all daily events through the same shared feedback

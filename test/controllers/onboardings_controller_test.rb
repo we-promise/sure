@@ -92,7 +92,10 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
   test "should get goals" do
     get goals_onboarding_url
     assert_response :success
-    assert_select "h1", text: /What brings you here/i
+    assert_select "h1", text: /Make yourself at home/i
+    assert_select "input[name='user[starting_tools][]'][type='checkbox']", count: User::STARTING_TOOLS.size
+    assert_select "input[name='user[onboarding_ai_mode]'][type='radio']", count: 3
+    assert_select "input[name='user[onboarding_ai_mode]'][value='none'][checked]"
   end
 
   test "should get trial" do

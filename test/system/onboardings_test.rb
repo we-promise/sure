@@ -45,7 +45,7 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     # Should redirect to goals page
     assert_current_path goals_onboarding_path
-    assert_text I18n.t("onboardings.goals.title")
+    assert_text I18n.t("onboardings.goals.welcome_title")
   end
 
   test "browser locale defaults onboarding country and currency" do
@@ -177,7 +177,7 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     visit goals_onboarding_path
 
-    assert_text I18n.t("onboardings.goals.title")
+    assert_text I18n.t("onboardings.goals.welcome_title")
     assert_button I18n.t("onboardings.goals.submit")
   end
 
@@ -217,6 +217,53 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     # Should have logout option (rendered as a button component)
     assert_text I18n.t("onboardings.logout.sign_out")
+  end
+
+  test "starting tools are searchable and nothing yet is exclusive" do
+    visit goals_onboarding_path
+    find("details summary").click
+    fill_in I18n.t("onboardings.goals.search_label"), with: "ynab"
+    check "YNAB"
+    assert_no_selector "label", text: "Quicken Classic"
+    fill_in I18n.t("onboardings.goals.search_label"), with: ""
+    check "Other"
+    fill_in I18n.t("onboardings.goals.other_label"), with: "My ledger"
+    check I18n.t("onboardings.goals.tools.nothing_yet")
+    assert_unchecked_field "YNAB"
+    assert_unchecked_field "Other"
+    assert_no_field I18n.t("onboardings.goals.other_label")
+    check "YNAB"
+    assert_unchecked_field I18n.t("onboardings.goals.tools.nothing_yet")
+    click_button I18n.t("onboardings.goals.done")
+    assert_no_selector "details[open]"
+    assert_selector "details summary", text: "YNAB"
+    click_button I18n.t("onboardings.goals.submit")
+    assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
+    assert_equal [ "ynab" ], @user.reload.starting_tools
+    assert_nil @user.starting_tool_other
+  end
+
+  test "AI modes reveal truthful setup panels without connecting providers" do
+    visit goals_onboarding_path
+    assert_checked_field "user_onboarding_ai_mode_none"
+    assert_selector "#ai-panel-none", text: "Other LLM-powered features"
+    assert_selector "#user_onboarding_ai_mode_none[aria-expanded='true']"
+    assert_no_selector "#ai-panel-builtin"
+    assert_no_selector "#ai-panel-external"
+    choose "user_onboarding_ai_mode_builtin"
+    assert_selector "#ai-panel-builtin", text: "No provider is configured or validated here"
+    assert_no_selector "#ai-panel-none"
+    assert_selector "#user_onboarding_ai_mode_none[aria-expanded='false']"
+    assert_selector "#user_onboarding_ai_mode_builtin[aria-expanded='true']"
+    assert_no_selector "input[type='password']"
+    choose "user_onboarding_ai_mode_external"
+    assert_selector "#ai-panel-external"
+    assert_no_selector "#ai-panel-builtin"
+    assert_field I18n.t("onboardings.goals.agent_instructions_label"), readonly: true
+    click_button I18n.t("onboardings.goals.submit")
+    assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
+    assert_equal "external", @user.reload.onboarding_ai_mode
+    assert_not @user.ai_enabled?
   end
 
   private

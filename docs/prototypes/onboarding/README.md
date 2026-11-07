@@ -1,8 +1,9 @@
 # Onboarding clickable prototype
 
-This is the unchanged October 23, 2026 onboarding concept, included for feedback
-before any Rails implementation. It is a standalone HTML file with embedded
-styles, font, logo, and JavaScript. It is not wired into the application.
+This is the October 23, 2026 onboarding concept, revised after review to replace
+the existing Goals step. It is a standalone HTML file with embedded styles, font,
+and JavaScript. It is not wired into the application; the Rails implementation
+uses the existing wizard at `/onboarding/goals`.
 
 ## Try it
 
@@ -20,29 +21,41 @@ Then open `http://127.0.0.1:8000/`.
 
 ## Review the flow
 
+- The header retains Setup → Preferences → Goals. The title is "Make yourself
+  at home." Only "Your starting point" and "Your AI preference" remain.
 - Choose previous finance tools, search the list, and try the exclusive
-  "Nothing yet" option. The suggested next step changes with the selection.
+  "Nothing yet" option and optional Other tool name.
 - Switch between No AI (the default), Built-in AI, and an external AI agent.
-- Preview the built-in provider success and error states. The key field is a
-  read-only placeholder; no provider is contacted.
+- Read each mode's conditional explanation. No AI turns off the current user's
+  in-app assistant, not every LLM-powered feature. Built-in AI enables the user's
+  assistant preference; existing instance/household settings still determine
+  availability and type. This step does not configure or validate a provider.
 - Copy the proposed external-agent instructions. Selecting this mode does not
-  connect an agent or grant access.
-- Expand the optional goals selector. Whether to keep it remains a design
+  connect an agent or grant access, and leaves the in-app assistant off.
+- Click Next repeatedly, or try Back and Sign out. These buttons show preview
+  status messages only. The Rails form uses the existing completion/navigation
+  paths. There is no transaction column, connect/import modal, or optional goals
   question.
-- Continue to the connect/import preview, then return to preferences.
 
 Nothing is connected, uploaded, or persisted. Do not enter real credentials or
 financial data. The listed products and provider options illustrate the design;
 they do not promise importer compatibility or supported integrations.
 
-The original October/v0.7.6 labels are retained to preserve the reviewed
-artifact. They are historical concept labels, not a release commitment.
-
 Related future work: [control-plane onboarding](https://github.com/we-promise/sure/issues/4573)
 and [onboarding playbooks](https://github.com/we-promise/sure/issues/4574).
+[Remaining No AI enforcement](https://github.com/we-promise/sure/issues/4779)
+tracks LLM-powered features beyond the assistant.
 
 ## Scope
 
-This directory is review material only. It adds no Rails routes, views, models,
-migrations, provider integrations, authentication, analytics, or production
-assets. Feedback on the draft PR comes before implementation.
+This directory is review material only. It makes no network or storage calls.
+The accompanying Rails changes persist choices and capture the first family's
+AI-mode response as anonymized stated intent under existing telemetry controls;
+they do not add transaction onboarding, provider credential entry, or agent
+authorization. This prototype itself sends no analytics.
+
+## Static preview
+
+The screenshot below shows the standalone concept, not the rendered Rails page.
+
+![Static Goals-step prototype](preview.png)

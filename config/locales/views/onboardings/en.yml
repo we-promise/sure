@@ -39,16 +39,66 @@ en:
       date_format: Date format
       submit: Complete
     goals:
-      title: What brings you here?
-      subtitle: Select one or more goals that you have with using %{product_name} as your personal finance tool.
-      unified_accounts: See all my accounts in one place
-      cashflow: Understand cashflow and expenses
-      budgeting: Manage financial plans and budgeting
-      partner: Manage finances with a partner
-      investments: Track investments
-      ai_insights: Let AI help me understand my finances
-      optimization: Analyze and optimize accounts
-      reduce_stress: Reduce financial stress or anxiety
+      welcome_title: Make yourself at home.
+      welcome_subtitle: A couple of choices to help you get started with %{product_name}.
+      errors_title: Please review your choices
+      starting_point: Your starting point
+      tools_question: What have you been using?
+      tools_description: Choose the tools you use to manage your household finances.
+      select_tools: Select your tools
+      search_label: Search finance tools
+      search_placeholder: Search tools, spreadsheets, or other…
+      no_results: No matching tools. Try another search or choose Other.
+      done: Done
+      other_label: Other tool (optional)
+      other_placeholder: Name of your tool
+      tools_help: Choose all that apply. This helps us suggest a starting point, not assume import compatibility.
+      ai_preference: Your AI preference
+      ai_question: How would you like to use %{product_name}?
+      ai_description: You’re in control. Choose what feels right for you.
+      ai_modes:
+        none:
+          label: No AI
+          description: Default. Manage your finances without the in-app assistant.
+          title: Continue without the AI assistant
+          help: This turns off the in-app assistant for your user account. Other LLM-powered features, household automation, and provider settings are unchanged.
+        builtin:
+          label: Built-in AI
+          description: Use the assistant available inside Sure.
+          title: Enable your in-app assistant preference
+          help: This enables the in-app assistant preference for your user account. Its availability and type depend on existing instance and household assistant and provider settings. This choice does not change those settings. Review them after onboarding if setup is needed. No provider is configured or validated here, and this step does not send financial data to a provider.
+        external:
+          label: Bring your own AI agent
+          description: Let your preferred assistant guide setup, with your permission.
+          title: Give your agent a starting point
+          help: Copy these instructions into your assistant. Selecting this option does not connect an agent or grant access to your instance. Your in-app assistant stays off. Other LLM-powered features and provider settings are unchanged.
+      agent_instructions_label: Agent instructions
+      agent_instructions: Help me get started with %{product_name}. First discover the supported connection method for my instance. Explain the access you need and ask for my permission before connecting or changing anything. Guide me to connect an account or import supported transaction data, using the tools or browser available. Hand control back to me for credentials and consent. Do not request secrets in chat. Do not assume an MCP endpoint or CLI exists.
+      copy: Copy instructions
+      copied: Instructions copied.
+      copy_fallback: Copy was unavailable. The instructions are selected so you can copy them manually.
+      tools:
+        quicken_classic: Quicken Classic
+        quicken_simplifi: Quicken Simplifi
+        monarch_money: Monarch Money
+        ynab: YNAB
+        firefly_iii: Firefly III
+        actual_budget: Actual Budget
+        maybe: Maybe
+        lunch_money: Lunch Money
+        copilot_money: Copilot Money
+        pocketsmith: PocketSmith
+        gnucash: GnuCash
+        money_manager_ex: Money Manager Ex
+        banktivity: Banktivity
+        moneywiz: MoneyWiz
+        empower: Empower / Personal Capital
+        mint: Mint (previously)
+        spreadsheets: Spreadsheets (Excel, Google Sheets, etc.)
+        bank_app: My bank’s app or website only
+        paper: Paper / notebook
+        nothing_yet: Nothing yet—Sure will be my first personal finance tool
+        other: Other
       submit: Next
     trial:
       title: Try Sure for 45 days
