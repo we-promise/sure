@@ -402,8 +402,12 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # A client re-sends the ids it read back, so the category or merchant a
     # transaction already holds is not refused: no new link is made.
     def unknown_category_id?
-      id = transaction_params[:category_id].presence
-      return false if id.nil? || id == @entry&.transaction&.category_id
+      raw = transaction_params[:category_id].presence
+      return false if raw.nil?
+
+      id = canonical_uuid(raw)
+      return true if id.nil?
+      return false if id == @entry&.transaction&.category_id
 
       !current_resource_owner.family.categories.exists?(id: id)
     end
@@ -412,12 +416,22 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # A family merchant on a reachable transaction isn't enough: it may be
     # another family's, linked before this check.
     def unknown_merchant_id?
-      id = transaction_params[:merchant_id].presence
-      return false if id.nil? || id == @entry&.transaction&.merchant_id
+      raw = transaction_params[:merchant_id].presence
+      return false if raw.nil?
+
+      id = canonical_uuid(raw)
+      return true if id.nil?
+      return false if id == @entry&.transaction&.merchant_id
 
       family = current_resource_owner.family
       !family.merchants.exists?(id: id) &&
         !family.available_merchants_for(current_resource_owner).where(type: "ProviderMerchant").exists?(id: id)
+    end
+
+    # The lowercase hyphenated form Postgres stores, so an id resent in another
+    # case still matches the one a transaction holds. Nil for a non-UUID.
+    def canonical_uuid(value)
+      Category.type_for_attribute(:id).cast(value)
     end
 
     # The request's tag ids in canonical UUID form, each once. Postgres matches

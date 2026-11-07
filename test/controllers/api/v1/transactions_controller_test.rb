@@ -1105,6 +1105,29 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Still editable", @transaction.entry.reload.name
   end
 
+  test "update re-sending a held foreign category or merchant in upper case still saves" do
+    @transaction.update_columns(category_id: foreign_category.id, merchant_id: foreign_merchant.id)
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { name: "Still editable", category_id: foreign_category.id.upcase,
+                                 merchant_id: foreign_merchant.id.upcase } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal "Still editable", @transaction.entry.reload.name
+  end
+
+  test "a category or merchant id that is not a UUID is refused" do
+    { category_id: "not-a-uuid", merchant_id: "not-a-uuid" }.each do |key, value|
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { name: "Renamed", key => value } },
+          headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, "#{key} was accepted"
+    end
+    assert_not_equal "Renamed", @transaction.entry.reload.name
+  end
+
   test "update re-sending a foreign merchant the transaction already holds still saves" do
     @transaction.update_columns(merchant_id: foreign_merchant.id)
 
