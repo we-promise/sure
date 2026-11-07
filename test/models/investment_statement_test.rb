@@ -723,6 +723,427 @@ class InvestmentStatementTest < ActiveSupport::TestCase
       "the investment_accounts lookup backing current_holdings should only run once, even for the empty case"
   end
 
+  test "value_series sums the per-account balance series on every date of the period" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: 5.days.ago.to_date)
+
+    usd = create_investment_account(balance: 1000, currency: "USD")
+    eur = create_investment_account(balance: 500, currency: "EUR")
+    closed = create_investment_account(balance: 300, currency: "USD")
+
+    create_balance(usd, date: 12.days.ago.to_date, amount: 1000)
+    create_balance(usd, date: 7.days.ago.to_date, amount: 1200)
+    create_balance(eur, date: 12.days.ago.to_date, amount: 500, currency: "EUR")
+    create_balance(closed, date: 12.days.ago.to_date, amount: 300)
+
+    closed.update!(status: "disabled", disabled_at: 7.days.ago)
+
+    (12.days.ago.to_date..Date.current).each do |date|
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 1.2)
+    end
+
+    scope = @statement.historical_scope
+    assert_equal 3, scope.account_ids.size
+
+    # Expected windows are derived here, independently of HistoricalScope, so
+    # this asserts the cut-off as well as the summation.
+    expected_windows = { closed.id => closed.disabled_at.to_date - 1.day }
+
+    expected = Hash.new(0)
+    [ usd.id, eur.id, closed.id ].each do |account_id|
+      series = Balance::ChartSeriesBuilder.new(
+        account_ids: [ account_id ],
+        account_active_until_dates: expected_windows.slice(account_id),
+        currency: "USD",
+        period: period,
+        favorable_direction: "up"
+      ).balance_series
+
+      series.values.each { |v| expected[v.date] += v.value.amount }
+    end
+
+    actual = @statement.value_series(period: period)
+
+    assert_equal expected.keys.sort, actual.values.map(&:date).sort
+    actual.values.each do |value|
+      assert_in_delta expected[value.date], value.value.amount, 0.001,
+        "portfolio value on #{value.date} should equal the sum of the per-account series"
+    end
+
+    # The comparison above shares Balance::ChartSeriesBuilder with the code
+    # under test, so pin the totals by hand as well: 1000 USD + 500 EUR at 1.2
+    # + 300 USD until the disabled account's cut-off, then 1200 USD + 600.
+    by_date = actual.values.index_by(&:date)
+    { 10 => 1900, 9 => 1900, 8 => 1900, 7 => 1800, 6 => 1800, 5 => 1800 }.each do |days_ago, total|
+      assert_in_delta total, by_date.fetch(days_ago.days.ago.to_date).value.amount, 0.001,
+        "portfolio value #{days_ago} days ago"
+    end
+  end
+
+  test "a disabled account stops contributing to value_series after its cut-off date" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+
+    open_account = create_investment_account(balance: 1000, currency: "USD")
+    closed = create_investment_account(balance: 300, currency: "USD")
+
+    create_balance(open_account, date: 12.days.ago.to_date, amount: 1000)
+    create_balance(closed, date: 12.days.ago.to_date, amount: 300)
+
+    closed.update!(status: "disabled", disabled_at: 7.days.ago)
+    cutoff = 8.days.ago.to_date
+
+    by_date = @statement.value_series(period: period).values.index_by(&:date)
+
+    assert_in_delta 1300, by_date[cutoff].value.amount, 0.001,
+      "on the cut-off date the disabled account still counts"
+    assert_in_delta 1000, by_date[cutoff + 1.day].value.amount, 0.001,
+      "after the cut-off date the disabled account no longer counts"
+    assert_in_delta 1000, by_date[Date.current].value.amount, 0.001
+  end
+
+  test "value_series memoizes the builder per period on the instance" do
+    create_investment_account(balance: 1000, currency: "USD")
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+
+    series = Series.new(
+      start_date: period.start_date, end_date: period.end_date,
+      interval: period.interval, values: [], favorable_direction: "up"
+    )
+    builder = stub(balance_series: series)
+    Balance::ChartSeriesBuilder.expects(:new).once.returns(builder)
+
+    assert_same series, @statement.value_series(period: period)
+    assert_same series, @statement.value_series(period: period)
+  end
+
+  test "holdings_value_series delegates to the builder's holdings balance series" do
+    create_investment_account(balance: 1000, currency: "USD")
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+
+    series = Series.new(
+      start_date: period.start_date, end_date: period.end_date,
+      interval: period.interval, values: [], favorable_direction: "up"
+    )
+    builder = mock
+    builder.expects(:holdings_balance_series).once.returns(series)
+    Balance::ChartSeriesBuilder.expects(:new).once.returns(builder)
+
+    assert_same series, @statement.holdings_value_series(period: period)
+  end
+
+  test "gains_series delegates to the builder's gains series" do
+    create_investment_account(balance: 1000, currency: "USD")
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+
+    series = Series.new(
+      start_date: period.start_date, end_date: period.end_date,
+      interval: period.interval, values: [], favorable_direction: "up"
+    )
+    builder = mock
+    builder.expects(:gains_series).once.returns(series)
+    Balance::ChartSeriesBuilder.expects(:new).once.returns(builder)
+
+    assert_same series, @statement.gains_series(period: period)
+  end
+
+  test "value_series is historical where portfolio_value is live, so a closed account diverges" do
+    # The series is charted from the historical scope, so a disabled broker
+    # keeps its balance up to its cut-off; portfolio_value only sees visible
+    # accounts and drops it immediately.
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: 5.days.ago.to_date)
+
+    open_account = create_investment_account(balance: 1000, currency: "USD")
+    closed = create_investment_account(balance: 300, currency: "USD")
+
+    create_balance(open_account, date: 12.days.ago.to_date, amount: 1000)
+    create_balance(closed, date: 12.days.ago.to_date, amount: 300)
+
+    closed.update!(status: "disabled", disabled_at: 2.days.ago)
+
+    assert_equal 1000, @statement.portfolio_value
+    assert_in_delta 1300, @statement.value_series(period: period).values.last.value.amount, 0.001
+  end
+
+  test "value_series returns a zero series when there are no investment accounts" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+
+    series = @statement.value_series(period: period)
+
+    assert_predicate series.values, :any?
+    assert series.values.all? { |v| v.value.amount.zero? }
+  end
+
+  test "value_series does not chart leading zeros before a linked account's first supported history" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+    account = create_investment_account(balance: 1000)
+    first_synced = 4.days.ago.to_date
+
+    # Balance rows exist for every day (zeros before the connection), and the
+    # first provider-sourced entry dates the real history.
+    (0..10).each { |offset| create_balance(account, date: 10.days.ago.to_date + offset, amount: offset >= 6 ? 1000 : 0) }
+    account.entries.create!(date: first_synced, name: "Deposit", amount: -1000, currency: "USD", source: "plaid", entryable: Transaction.new)
+
+    series = @statement.value_series(period: period)
+
+    assert_equal first_synced, series.values.first.date
+    assert series.values.none? { |v| v.date < first_synced }
+    assert_equal 1000, series.values.first.value.amount
+  end
+
+  # The family series start where the earliest broker's history starts, not
+  # where the latest one's does: linking a new broker must not erase the
+  # history of one the family already had, open or closed.
+  test "a closed broker keeps its history before a newer broker's first activity" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+    older_start = 8.days.ago.to_date
+    newer_start = 2.days.ago.to_date
+
+    older = create_investment_account(balance: 500)
+    newer = create_investment_account(balance: 1000)
+    (0..10).each do |offset|
+      date = 10.days.ago.to_date + offset
+      create_balance(older, date: date, amount: date >= older_start ? 500 : 0)
+      create_balance(newer, date: date, amount: date >= newer_start ? 1000 : 0)
+    end
+    older.entries.create!(date: older_start, name: "Deposit", amount: -500, currency: "USD", source: "plaid", entryable: Transaction.new)
+    newer.entries.create!(date: newer_start, name: "Deposit", amount: -1000, currency: "USD", source: "plaid", entryable: Transaction.new)
+
+    # Closed before the newer broker's first activity: its cut-off is 4 days ago.
+    older.update!(status: "disabled", disabled_at: 3.days.ago)
+
+    [ :value_series, :holdings_value_series ].each do |kind|
+      series = InvestmentStatement.new(@family).public_send(kind, period: period)
+      by_date = series.values.index_by(&:date)
+
+      assert_equal older_start, series.values.first.date, "#{kind} starts at the closed broker's first history"
+      (older_start..4.days.ago.to_date).each do |date|
+        assert_in_delta 500, by_date.fetch(date).value.amount, 0.001, "#{kind} on #{date} keeps the closed broker"
+      end
+      assert_in_delta 0, by_date.fetch(3.days.ago.to_date).value.amount, 0.001, "#{kind} after the cut-off"
+      assert_in_delta 1000, by_date.fetch(Date.current).value.amount, 0.001
+      # Dates before any broker's history are still trimmed.
+      assert series.values.none? { |v| v.date < older_start }, "#{kind} charts no leading zeros"
+    end
+  end
+
+  test "an open older broker keeps its history when a newer broker links" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+    older_start = 6.days.ago.to_date
+    newer_start = 2.days.ago.to_date
+
+    older = create_investment_account(balance: 500)
+    newer = create_investment_account(balance: 1000)
+    (0..10).each do |offset|
+      date = 10.days.ago.to_date + offset
+      create_balance(older, date: date, amount: date >= older_start ? 500 : 0)
+      create_balance(newer, date: date, amount: date >= newer_start ? 1000 : 0)
+    end
+    older.entries.create!(date: older_start, name: "Deposit", amount: -500, currency: "USD", source: "plaid", entryable: Transaction.new)
+    newer.entries.create!(date: newer_start, name: "Deposit", amount: -1000, currency: "USD", source: "plaid", entryable: Transaction.new)
+
+    series = @statement.value_series(period: period)
+    by_date = series.values.index_by(&:date)
+
+    assert_equal older_start, series.values.first.date
+    assert_in_delta 500, by_date.fetch(3.days.ago.to_date).value.amount, 0.001, "before the newer broker linked"
+    assert_in_delta 1500, by_date.fetch(Date.current).value.amount, 0.001
+    assert series.values.none? { |v| v.date < older_start }
+  end
+
+  # Every family series goes through the same trim, so assert the rule on
+  # each kind, with the builder's output fixed so only the trim decides.
+  test "value, holdings value and gains series all trim at the earliest supported start" do
+    period = Period.custom(start_date: 10.days.ago.to_date, end_date: Date.current)
+    older = create_investment_account(balance: 0)
+    newer = create_investment_account(balance: 0)
+    older.entries.create!(date: 6.days.ago.to_date, name: "Deposit", amount: -1, currency: "USD", source: "plaid", entryable: Transaction.new)
+    newer.entries.create!(date: 2.days.ago.to_date, name: "Deposit", amount: -1, currency: "USD", source: "plaid", entryable: Transaction.new)
+
+    values = (0..10).map do |offset|
+      date = 10.days.ago.to_date + offset
+      Series::Value.new(date: date, date_formatted: date.to_s, value: Money.new(offset, "USD"),
+        trend: Trend.new(current: Money.new(offset, "USD"), previous: Money.new(offset, "USD"), favorable_direction: "up"))
+    end
+    built = Series.new(start_date: values.first.date, end_date: values.last.date, interval: "1 day", values: values, favorable_direction: "up")
+    Balance::ChartSeriesBuilder.stubs(:new).returns(stub(balance_series: built, holdings_balance_series: built, gains_series: built))
+
+    [ :value_series, :holdings_value_series, :gains_series ].each do |kind|
+      series = InvestmentStatement.new(@family).public_send(kind, period: period)
+
+      assert_equal 6.days.ago.to_date, series.start_date, kind
+      assert_equal (6.days.ago.to_date..Date.current).to_a, series.values.map(&:date), kind
+    end
+  end
+
+  test "series cache key changes when a share is revoked" do
+    shared_user = users(:new_email)
+    account = create_investment_account(balance: 1000)
+    share = account.share_with!(shared_user, permission: "read_only", include_in_finances: true)
+    period = Period.last_30_days
+
+    before = InvestmentStatement.new(@family, user: shared_user).send(:series_cache_key, :value, period)
+    share.destroy!
+    after = InvestmentStatement.new(@family, user: shared_user).send(:series_cache_key, :value, period)
+
+    assert_not_equal before, after, "a revoked share must not keep serving the series it was part of"
+  end
+
+  test "gains series cache key changes when a holding's cost basis is edited by hand" do
+    account = create_investment_account(balance: 1000)
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+    holding = Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD"
+    )
+    period = Period.last_30_days
+
+    gains_before = InvestmentStatement.new(@family).send(:series_cache_key, :gains, period)
+
+    # HoldingsController#update writes the holding alone: no sync completes
+    # and the account row is untouched, so the family key does not move.
+    travel 1.second do
+      holding.set_manual_cost_basis!(90)
+    end
+
+    gains_after = InvestmentStatement.new(@family).send(:series_cache_key, :gains, period)
+
+    # The value series reads balances, but every series is trimmed by
+    # provider holdings, so every key carries the holdings version, and a
+    # manual cost-basis edit, rare and made by hand, costs the value charts
+    # one cache miss.
+    assert_not_equal gains_before, gains_after, "a cost-basis edit must not keep serving the gains built before it"
+  end
+
+  test "gains series cache key changes when a holding is deleted" do
+    account = create_investment_account(balance: 1000)
+    security = Security.create!(ticker: "AAPL", name: "Apple")
+    holding = Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD"
+    )
+    period = Period.last_30_days
+
+    before = InvestmentStatement.new(@family).send(:series_cache_key, :gains, period)
+    holding.destroy!
+    after = InvestmentStatement.new(@family).send(:series_cache_key, :gains, period)
+
+    assert_not_equal before, after
+  end
+
+  # A series cached under one history trim must not be served under another:
+  # the trim decides the series' first point, and nothing else in the key
+  # moves when only the trim does.
+  test "every series cache key changes with the history trim, and the series is trimmed by it" do
+    create_investment_account(balance: 1000)
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    earliest = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    common_statement = InvestmentStatement.new(@family)
+    common_statement.stubs(:series_history_start).returns(:common)
+    common = kinds.index_with { |kind| common_statement.send(:series_cache_key, kind, period) }
+
+    kinds.each { |kind| assert_not_equal earliest[kind], common[kind], "#{kind} key must carry the trim" }
+
+    Balance::LinkedInvestmentSeriesNormalizer.expects(:trim_to_supported_history)
+      .with(anything, has_entries(history_start: :common)).returns(:trimmed)
+    Rails.cache.stubs(:fetch).yields
+    common_statement.send(:fetch_series, :value, period) { |builder| builder.balance_series }
+  end
+
+  # Unlinking clears holdings.account_provider_id with update_all, which leaves
+  # updated_at alone. The supported-history trim reads that column, so the
+  # cached series must not outlive the link.
+  test "every series cache key changes when a provider link is removed" do
+    account = create_investment_account(balance: 1000)
+    provider = AccountProvider.create!(account: account, provider: plaid_accounts(:one))
+    security = Security.create!(ticker: "NVDA", name: "Nvidia")
+    Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD", account_provider_id: provider.id
+    )
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    before = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    account.holdings.where(account_provider_id: provider.id).update_all(account_provider_id: nil)
+    after = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+
+    kinds.each do |kind|
+      assert_not_equal before[kind], after[kind], "#{kind} series key survived the unlink"
+    end
+  end
+
+  test "every series cache key changes when a holding is deleted" do
+    # Every series is trimmed to the supported-history start, which provider
+    # holdings decide, so the value and holdings-value charts depend on
+    # holding rows too, not only the gains series.
+    account = create_investment_account(balance: 1000)
+    security = Security.create!(ticker: "MSFT", name: "Microsoft")
+    holding = Holding.create!(
+      account: account, security: security, date: Date.current,
+      qty: 10, price: 100, amount: 1000, currency: "USD"
+    )
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    before = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    holding.destroy!
+    after = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+
+    kinds.each do |kind|
+      assert_not_equal before[kind], after[kind], "the #{kind} series must not keep its pre-deletion start date"
+    end
+  end
+
+  # The negative case for the key tests below: a key that moved on every
+  # request would pass all of them and never hit the cache.
+  test "every series cache key is reused while nothing it reads changes" do
+    create_investment_account(balance: 1000)
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    first = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    second = kinds.index_with { |kind| InvestmentStatement.new(@family.reload).send(:series_cache_key, kind, period) }
+
+    assert_equal first, second
+  end
+
+  # Every series is built in family.currency. A profile currency change
+  # neither syncs nor writes an account, so nothing else in the key moves.
+  test "every series cache key changes when the family currency changes" do
+    create_investment_account(balance: 1000)
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    before = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    @family.update!(currency: "EUR")
+    after = kinds.index_with { |kind| InvestmentStatement.new(@family.reload).send(:series_cache_key, kind, period) }
+
+    kinds.each do |kind|
+      assert_not_equal before[kind], after[kind], "the #{kind} series must not keep serving amounts in the old currency"
+    end
+  end
+
+  # An account with no holdings that is not the most recently updated one
+  # leaves the holdings version, the sync time and accounts.maximum(:updated_at)
+  # where they were before it existed in the cache, so only the account count
+  # can tell the post-deletion key from the one that still includes it.
+  test "every series cache key changes when an account without holdings is deleted" do
+    create_investment_account(balance: 1000)
+    cash_only = create_investment_account(balance: 500)
+    cash_only.update_column(:updated_at, 1.year.ago)
+    period = Period.last_30_days
+    kinds = %i[value holdings_value gains]
+
+    before = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+    cash_only.destroy!
+    after = kinds.index_with { |kind| InvestmentStatement.new(@family).send(:series_cache_key, kind, period) }
+
+    kinds.each do |kind|
+      assert_not_equal before[kind], after[kind], "the #{kind} series must not keep counting the deleted account"
+    end
+  end
+
   test "totals cache invalidates when family currency changes" do
     create_investment_account(balance: 500)
     period = Period.last_30_days
@@ -746,6 +1167,17 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         cash_balance: cash_balance,
         currency: currency,
         accountable: Investment.new
+      )
+    end
+
+    # end_balance is a stored virtual column; with no flows, start_non_cash_balance
+    # drives it.
+    def create_balance(account, date:, amount:, currency: "USD")
+      account.balances.create!(
+        date: date,
+        balance: amount,
+        currency: currency,
+        start_non_cash_balance: amount
       )
     end
 

@@ -22,19 +22,56 @@ class Balance::LinkedInvestmentSeriesNormalizer
         interval: interval
       ).balance_series
 
-      common_start_date = common_supported_history_start_date(account_ids)
-      return series unless common_start_date.present?
+      trim_to_supported_history(series, account_ids: account_ids)
+    end
 
-      trimmed_values = series.values.select { |value| value.date >= common_start_date }
+    # Drops the points before linked accounts in `account_ids` have real
+    # history, so a series built from balances alone does not chart flat
+    # zeros before a broker's first snapshot. A series the caller built itself
+    # (with cut-off dates, or from holdings or gains) gets the same trim as
+    # #aggregate_account_ids applies to its own.
+    #
+    # `history_start: :common` (the default) starts where every linked account
+    # has history. `:earliest` starts where any linked account does, so a
+    # broker's history survives a later broker being linked -- for a series
+    # whose accounts did not all exist at once, such as one that keeps
+    # disabled accounts up to their cut-off.
+    def trim_to_supported_history(series, account_ids:, history_start: :common)
+      start_date = supported_history_start_for(Array(account_ids).compact, history_start)
+      return series unless start_date.present?
+
+      trimmed_values = series.values.select { |value| value.date >= start_date }
       return series if trimmed_values.blank? || trimmed_values.length == series.values.length
 
       Series.new(
         start_date: trimmed_values.first.date,
         end_date: series.end_date,
         interval: series.interval,
-        values: trimmed_values,
+        values: flatten_first_trend(trimmed_values),
         favorable_direction: series.favorable_direction
       )
+    end
+
+    # The first point of a series has nothing before it to compare against --
+    # the builders already emit it flat. After a trim the new first point
+    # still carries the change against the point that was just removed, so a
+    # tooltip would report a move out of history the chart no longer draws.
+    def flatten_first_trend(values)
+      first = values.first
+      return values unless first&.trend
+
+      flat = Series::Value.new(
+        date: first.date,
+        date_formatted: first.date_formatted,
+        value: first.value,
+        trend: Trend.new(
+          current: first.value,
+          previous: first.value,
+          favorable_direction: first.trend.favorable_direction
+        )
+      )
+
+      [ flat, *values.drop(1) ]
     end
 
     def supported_history_start_date(account)
@@ -42,9 +79,23 @@ class Balance::LinkedInvestmentSeriesNormalizer
     end
 
     private
+      def supported_history_start_for(account_ids, history_start)
+        case history_start
+        when :common then common_supported_history_start_date(account_ids)
+        when :earliest then supported_history_start_dates(account_ids).min
+        else raise ArgumentError, "unknown history_start: #{history_start.inspect}"
+        end
+      end
+
       def common_supported_history_start_date(account_ids)
+        supported_history_start_dates(account_ids).max
+      end
+
+      # Each linked account's first supported date; accounts without provider
+      # history are left out.
+      def supported_history_start_dates(account_ids)
         account_ids = Array(account_ids).compact
-        return if account_ids.empty?
+        return [] if account_ids.empty?
 
         activity_dates = Entry.where(account_id: account_ids)
           .excluding_pending
@@ -57,7 +108,7 @@ class Balance::LinkedInvestmentSeriesNormalizer
 
         account_ids.filter_map do |account_id|
           [ activity_dates[account_id], stable_holding_dates[account_id] ].compact.min
-        end.max
+        end
       end
 
       def stable_provider_holding_start_dates(account_ids)
