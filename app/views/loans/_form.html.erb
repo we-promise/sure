@@ -2,6 +2,7 @@
 
 <%= render "accounts/form", account: account, url: url do |form| %>
   <%= form.fields_for :accountable do |loan_form| %>
+    <%= loan_form.hidden_field :rate_schedule_snapshot %>
     <%# What kind of loan it is sits with the account's own fields, straight
         after the balance, above the divider and the loan's terms. %>
     <div>

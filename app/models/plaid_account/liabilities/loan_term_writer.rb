@@ -35,14 +35,20 @@ module PlaidAccount::Liabilities::LoanTermWriter
       # loan is applied before its rate is judged, then the rate. They land
       # together or not at all, as the single save did.
       #
+      # Both run under the loan's schedule lock, which reloads the loan, so
+      # the rate is judged against the schedule a concurrent form or provider
+      # write left rather than the one this sync loaded.
+      #
       # Enrichable logs the DataEnrichment before it saves, and a refused save
       # does not roll that row back. This transaction does, so provenance never
       # says Plaid supplied a value the loan rejected. `requires_new`, so the
       # rollback holds even when a caller has a transaction open.
       refusal = nil
-      loan.transaction(requires_new: true) do
-        refusal = enrich(loan, terms) || (rate.nil? ? nil : enrich(loan, rate_update(loan, rate)))
-        raise ActiveRecord::Rollback if refusal
+      loan.with_schedule_lock do
+        loan.transaction(requires_new: true) do
+          refusal = enrich(loan, terms) || (rate.nil? ? nil : enrich(loan, rate_update(loan, rate)))
+          raise ActiveRecord::Rollback if refusal
+        end
       end
       return if refusal.nil?
 
