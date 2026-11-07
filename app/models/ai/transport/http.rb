@@ -65,13 +65,6 @@ module Ai::Transport::Http
       ::OpenAI::Client.new(**options, &faraday_options(endpoint.base_url.presence || OPENAI_BASE))
     end
 
-    # The anthropic gem's client: model listing and the Anthropic PDF probe. It takes no proxy.
-    def anthropic_client(endpoint, timeout: endpoint.timeout_seconds)
-      options = { api_key: endpoint.api_key.to_s, max_retries: 0, timeout: }
-      options[:base_url] = endpoint.base_url if endpoint.base_url.present?
-      ::Anthropic::Client.new(**options)
-    end
-
     # A plain Faraday connection for a request no client library makes (Anthropic's model lookup),
     # with the resolved proxy and TLS options.
     def faraday(url, timeout:)
