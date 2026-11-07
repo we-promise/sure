@@ -80,7 +80,9 @@ class Provider::YourProvider < Provider
         logo_url:               parsed["logo"],
         description:            parsed["description"],
         kind:                   parsed["type"],       # e.g. "common stock", "etf"
-        exchange_operating_mic: exchange_operating_mic
+        exchange_operating_mic: exchange_operating_mic,
+        sector:                 parsed["sector"],     # optional, free text
+        industry:               parsed["industry"]    # optional, free text
       )
     end
   end
@@ -118,6 +120,13 @@ class Provider::YourProvider < Provider
         )
       end
     end
+  end
+
+  # Required if fetch_security_info returns sector or industry: the importers
+  # only ask a provider for a classification when it declares it can answer.
+  # Defaults to false.
+  def supplies_classification?
+    true
   end
 
   # Optional: limit how far back the importer fetches history.
@@ -180,7 +189,8 @@ All methods must return these exact types (wrapped in `with_provider_response`):
 
 ```ruby
 SecurityConcept::Security    = Data.define(:symbol, :name, :logo_url, :exchange_operating_mic, :country_code, :currency)
-SecurityConcept::SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic)
+SecurityConcept::SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
+                                            :sector, :industry) # sector and industry default to nil
 SecurityConcept::Price       = Data.define(:symbol, :date, :price, :currency, :exchange_operating_mic)
 ```
 
