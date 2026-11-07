@@ -8376,13 +8376,15 @@ paths:
         are idempotent.
       security:
       - apiKeyAuth: []
+      - oauth2:
+        - read_write
       parameters:
       - name: id
         in: path
-        format: uuid
-        required: true
         schema:
           type: string
+          format: uuid
+        required: true
       responses:
         '204':
           description: insight acknowledged

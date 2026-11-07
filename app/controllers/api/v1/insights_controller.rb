@@ -19,6 +19,9 @@ class Api::V1::InsightsController < Api::V1::BaseController
 
     insight = current_resource_owner.family.insights.about_shared_accounts.find(params[:id])
     insight.with_lock do
+      # Account access can change while this request waits for the row lock.
+      raise ActiveRecord::RecordNotFound unless current_resource_owner.family.insights.about_shared_accounts.exists?(id: insight.id)
+
       # Replays must not overwrite timestamps or revive expired insights.
       if insight.active? || insight.read?
         insight.mark_read!

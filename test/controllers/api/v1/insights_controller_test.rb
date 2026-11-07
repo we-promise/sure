@@ -115,6 +115,29 @@ class Api::V1::InsightsControllerTest < ActionDispatch::IntegrationTest
     assert @insight.reload.active?
   end
 
+  test "rechecks account visibility after acquiring the insight lock" do
+    @api_key.update!(scopes: [ "read_write" ])
+    account = accounts(:depository)
+    account.family.users.where(active: true).where.not(id: account.owner_id).find_each do |member|
+      account.account_shares.find_or_create_by!(user: member) { |share| share.permission = "read_only" }
+    end
+    @insight.update!(metadata: { account_id: account.id })
+    assert @user.family.insights.about_shared_accounts.exists?(@insight.id)
+
+    # Simulate visibility changing after the scoped lookup, at lock acquisition.
+    Insight.any_instance.expects(:lock!).with do |lock|
+      account.update!(status: :disabled)
+      lock == true
+    end
+
+    patch acknowledge_api_v1_insight_url(@insight), headers: api_headers(@api_key)
+
+    assert_response :not_found
+    assert @insight.reload.active?
+    assert_nil @insight.read_at
+    assert_nil @insight.dismissed_at
+  end
+
   test "rejects missing and malformed insight IDs" do
     @api_key.update!(scopes: [ "read_write" ])
     [ SecureRandom.uuid, "invalid" ].each do |id|

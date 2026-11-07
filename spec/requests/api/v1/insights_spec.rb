@@ -49,23 +49,36 @@ RSpec.describe "API V1 Insights", type: :request do
     patch "Acknowledge a proactive insight" do
       tags "Insights"
       description "Marks a visible family insight read and acknowledged, removing it from the feed. Requires read_write scope and preview access. Repeated requests are idempotent."
-      security [ { apiKeyAuth: [] } ]
+      security [ { apiKeyAuth: [] }, { oauth2: %w[read_write] } ]
       produces "application/json"
-      parameter name: :id, in: :path, type: :string, format: :uuid, required: true
-      let(:id) { SecureRandom.uuid }
+      parameter name: :id, in: :path, schema: { type: :string, format: :uuid }, required: true
+      let(:insight) do
+        family.insights.create!(
+          insight_type: "idle_cash", priority: "medium", status: "active",
+          title: "Idle cash", body: "Review available cash.",
+          generated_at: Time.current, dedup_key: "api-docs-acknowledgment"
+        )
+      end
+      let(:id) { insight.id }
 
       response "204", "insight acknowledged" do
         run_test!
       end
       response "401", "authentication required" do
+        let(:"X-Api-Key") { "invalid-api-key" }
         schema "$ref" => "#/components/schemas/ErrorResponse"
         run_test!
       end
       response "403", "write scope, member access or preview features required" do
+        let(:api_key) do
+          key = ApiKey.generate_secure_key
+          ApiKey.create!(user: user, name: "API Docs Read Key", key: key, scopes: %w[read], source: "web")
+        end
         schema "$ref" => "#/components/schemas/ErrorResponse"
         run_test!
       end
       response "404", "insight not found or not visible to the family" do
+        let(:id) { SecureRandom.uuid }
         schema "$ref" => "#/components/schemas/ErrorResponse"
         run_test!
       end
