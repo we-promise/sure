@@ -48,6 +48,9 @@ class FamilyAiConsumersTest < ActiveSupport::TestCase
 
     @openai_family.ai_configuration.update_column(:encrypted_api_key, "invalid-ciphertext")
     assert_not @openai_user.ai_available?
+    # chat.user.family caches its own copy of the configuration; reload so the
+    # assistant reads the corrupted ciphertext from the database.
+    chat.reload
     assert_nil assistant.get_model_provider(chat.messages.first.ai_model)
   end
 

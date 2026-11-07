@@ -14,6 +14,7 @@ class Family::AiConfiguration < ApplicationRecord
   validate :valid_openrouter_model
 
   before_validation :assign_default_model
+  before_validation :encrypt_pending_api_key
 
   def self.default_model(provider)
     case provider.to_s
@@ -22,13 +23,16 @@ class Family::AiConfiguration < ApplicationRecord
     end
   end
 
+  # Encryption is deferred to validation because Rails assigns the family foreign
+  # key only after mass-assignment when building through the association (e.g.
+  # `family.create_ai_configuration!`), and the family-scoped purpose requires it.
   def api_key=(value)
-    raise InvalidCredential, "Family is required before assigning credentials" if family_id.blank?
-
-    self.encrypted_api_key = value.present? ? encryptor.encrypt_and_sign(value.to_s, purpose: credential_purpose) : nil
+    @pending_api_key = value.present? ? value.to_s : nil
+    @api_key_pending = true
   end
 
   def api_key
+    return @pending_api_key if @api_key_pending
     return if encrypted_api_key.blank?
 
     encryptor.decrypt_and_verify(encrypted_api_key, purpose: credential_purpose).tap do |value|
@@ -58,6 +62,13 @@ class Family::AiConfiguration < ApplicationRecord
     nil
   end
 
+  def reload(*)
+    super.tap do
+      @pending_api_key = nil
+      @api_key_pending = false
+    end
+  end
+
   def serializable_hash(options = nil)
     options = (options || {}).dup
     options[:except] = Array(options[:except]) + PRIVATE_ATTRIBUTES
@@ -66,6 +77,16 @@ class Family::AiConfiguration < ApplicationRecord
   end
 
   private
+    def encrypt_pending_api_key
+      return unless @api_key_pending
+
+      raise InvalidCredential, "Family is required before assigning credentials" if family_id.blank?
+
+      self.encrypted_api_key = @pending_api_key.present? ? encryptor.encrypt_and_sign(@pending_api_key, purpose: credential_purpose) : nil
+      @pending_api_key = nil
+      @api_key_pending = false
+    end
+
     def valid_openrouter_model
       if provider == "openrouter" && !Provider::Openrouter.valid_model_id?(model)
         errors.add(:model, :invalid)

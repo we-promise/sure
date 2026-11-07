@@ -39,7 +39,7 @@ class Family::AiConfigurationTest < ActiveSupport::TestCase
 
     assert_not_includes output, "synthetic-family-key"
     assert_not_includes output, configuration.encrypted_api_key
-    assert_match(/encrypted_api_key: "\[FILTERED\]"/, configuration.inspect)
+    assert_match(/encrypted_api_key: \[FILTERED\]/, configuration.inspect)
   end
 
   test "financial exports contain neither credentials nor their ciphertext" do

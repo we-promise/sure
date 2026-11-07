@@ -104,7 +104,7 @@ class Settings::AiProviderConfigurationTest < ActionDispatch::IntegrationTest
 
   test "admin and super admin cannot target another family with forged identifiers" do
     other = families(:empty).create_ai_configuration!(provider: "openai", api_key: "other-family-key")
-    configuration = mock("configuration", save: true, provider: "anthropic")
+    configuration = stub("configuration", save: true, provider: "anthropic")
     OnboardingAiConfiguration.expects(:new).with(family: @user.family, provider: "anthropic", api_key: "synthetic-key", model: "untrusted-model").twice.returns(configuration)
 
     with_self_hosting do
@@ -130,7 +130,7 @@ class Settings::AiProviderConfigurationTest < ActionDispatch::IntegrationTest
     family_preferences = family.attributes.slice("assistant_type", "ai_prompt_chat_system")
     user_preferences = @user.attributes.slice("ai_enabled", "onboarded_at", "set_onboarding_preferences_at", "onboarding_ai_mode")
     global_settings = Setting.order(:var).pluck(:var, :value)
-    AiHealth::Probe.any_instance.stubs(:llm).returns(mock("passing probe", passing?: true))
+    AiHealth::Probe.any_instance.stubs(:llm).returns(stub("passing probe", passing?: true))
 
     with_self_hosting do
       2.times do |attempt|

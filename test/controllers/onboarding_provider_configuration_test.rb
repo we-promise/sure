@@ -77,7 +77,7 @@ class OnboardingProviderConfigurationTest < ActionDispatch::IntegrationTest
   test "forged family and configuration identifiers cannot redirect an admin or super admin save" do
     other = families(:empty).create_ai_configuration!(provider: "openai", api_key: "other-family-key")
     other_attributes = other.attributes
-    configuration = mock("configuration", save: true, provider: "anthropic")
+    configuration = stub("configuration", save: true, provider: "anthropic")
     OnboardingAiConfiguration.expects(:new).with(family: @user.family, provider: "anthropic", api_key: "synthetic-key", model: "untrusted-model").twice.returns(configuration)
 
     with_self_hosting do
