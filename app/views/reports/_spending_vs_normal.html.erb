@@ -8,12 +8,12 @@
   <p class="text-sm text-secondary">
     <% if comparison.comparable? %>
       <%= t(comparison.in_progress? ? "reports.spending_vs_normal.summary_so_far_html" : "reports.spending_vs_normal.summary_html",
-            total: tag.span(whole.call(comparison.total), class: "privacy-sensitive"),
-            normal: tag.span(whole.call(comparison.normal_total), class: "privacy-sensitive"),
+            total: tag.span(whole.call(comparison.total), class: "whitespace-nowrap privacy-sensitive"),
+            normal: tag.span(whole.call(comparison.normal_total), class: "whitespace-nowrap privacy-sensitive"),
             baseline_start: l(comparison.baseline_period.start_date, format: :long),
             baseline_end: l(comparison.baseline_period.end_date, format: :long)) %>
     <% else %>
-      <%= t("reports.spending_vs_normal.no_history_html", total: tag.span(whole.call(comparison.total), class: "privacy-sensitive")) %>
+      <%= t("reports.spending_vs_normal.no_history_html", total: tag.span(whole.call(comparison.total), class: "whitespace-nowrap privacy-sensitive")) %>
     <% end %>
   </p>
 

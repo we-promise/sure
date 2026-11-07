@@ -130,7 +130,7 @@
 <div class="w-full space-y-6 lg:pb-6">
   <% if Current.family.transactions.any? %>
     <%# Summary Dashboard - Always visible, not collapsible %>
-    <section>
+    <section class="@container">
       <%= render partial: "reports/summary_dashboard", locals: {
         metrics: @summary_metrics,
         period_type: @period_type
