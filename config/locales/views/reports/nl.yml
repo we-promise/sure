@@ -83,7 +83,7 @@ nl:
       no_spending_data: "Geen bestedingsgegevens beschikbaar voor deze periode"
     empty_state:
       title: "Geen gegevens beschikbaar"
-      description: "Begin met het bijhouden van uw financiën door transacties toe te voegen of uw accounts te verbinden om uitgebreide rapporten te zien"
+      description: "Begin met het bijhouden van uw financiën door transacties toe te voegen of uw accounts te koppelen om uitgebreide rapporten te zien"
       add_transaction: "Transactie toevoegen"
       add_account: "Account toevoegen"
     transactions_breakdown:

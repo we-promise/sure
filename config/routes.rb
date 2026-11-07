@@ -411,6 +411,7 @@ Rails.application.routes.draw do
     end
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
+      delete :reset_market_data, on: :collection
       delete :disconnect_external_assistant, on: :collection
     end
     resource :payment, only: :show
@@ -577,6 +578,7 @@ Rails.application.routes.draw do
 
   namespace :transactions do
     resource :bulk_deletion, only: :create
+    resource :merchant_filter, only: :show
     resource :bulk_update, only: %i[new create]
     resource :categorize, only: %i[show create] do
       patch :assign_entry, on: :collection
@@ -702,6 +704,13 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :rule_groups, only: %i[new create edit update destroy] do
+    member do
+      patch :reorder
+      patch :activation
+    end
+  end
+
   resources :accounts, only: %i[index new show destroy], shallow: true do
     member do
       post :sync
@@ -772,6 +781,7 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
+      resource :version, only: :show
       namespace :financekit do
         get "capabilities", to: "connections#capabilities"
         resources :connections, only: [ :create, :show, :destroy ] do
