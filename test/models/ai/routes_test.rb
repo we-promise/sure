@@ -14,6 +14,13 @@ class Ai::RoutesTest < ActiveSupport::TestCase
     assert_equal %i[chat bill_setup extract_pdf embed categorize detect_merchants], Ai::Routes.consent_keys
   end
 
+  test "a shadow shows under its primary's row; routing through another feature doesn't move a row" do
+    assert_equal :categorize, Ai::Routes.row_key(:shadow_categorize)
+    assert_equal :embed, Ai::Routes.row_key(:search_documents)
+    assert_equal :detect_merchants, Ai::Routes.row_key(:enhance_merchants)
+    assert_equal :chat, Ai::Routes.row_key(:chat)
+  end
+
   test "a consent row's manifest is everything its group sends" do
     assert_equal %i[transaction_names merchant_names], Ai::Routes.sends_for(:detect_merchants)
     assert_equal %i[depends_on_vector_store search_query], Ai::Routes.sends_for(:embed)

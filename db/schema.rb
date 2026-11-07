@@ -2638,6 +2638,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_06_150000) do
     t.index ["family_id"], name: "index_subscriptions_on_family_id", unique: true
   end
 
+  create_table "sync_schedules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "interval_minutes", null: false
+    t.datetime "next_run_at", null: false
+    t.uuid "syncable_id", null: false
+    t.string "syncable_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["next_run_at"], name: "index_sync_schedules_on_next_run_at"
+    t.index ["syncable_type", "syncable_id"], name: "index_sync_schedules_on_syncable", unique: true
+  end
+
   create_table "syncs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "cancel_requested_at"
     t.datetime "completed_at"
