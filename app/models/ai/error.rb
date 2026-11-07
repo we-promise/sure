@@ -1,4 +1,4 @@
-# The AI layer's error taxonomy (docs/proposals/v0.8/ai-plumbing-redesign.md, section 9).
+# The AI layer's error taxonomy.
 # Transports map client-library and HTTP errors onto these classes, so code above a transport
 # never rescues a provider's own errors.
 module Ai::Error

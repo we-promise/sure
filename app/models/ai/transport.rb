@@ -1,4 +1,4 @@
-# Thin adapters over RubyLLM, one per protocol (section 7). Everything above a transport sees
+# Thin adapters over RubyLLM, one per protocol. Everything above a transport sees
 # Ai::Config values, Ai::Tokens and Ai::Error, never a client library's types.
 module Ai::Transport
   def self.for(endpoint)

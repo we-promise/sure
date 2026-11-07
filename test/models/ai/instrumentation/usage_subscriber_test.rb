@@ -103,7 +103,7 @@ class Ai::Instrumentation::UsageSubscriberTest < ActiveSupport::TestCase
   private
     def json = { "Content-Type" => "application/json" }
 
-    # A call as 2c's generations will make it: a call context with the family, the transport's
+    # A call as a generation makes it: a call context with the family, the transport's
     # retries, one .ai event.
     def run_call(feature:)
       Ai::CallContext.call(feature:, model: @model, family: @family, budget: 30) do |call|

@@ -1,8 +1,8 @@
 # Token counts and cost for one request or a whole call, named after RubyLLM::Tokens, which
-# holds the same counts (section 10). `Usage` is taken twice already: installation telemetry
-# (`Usage`, #4295) and the `llm_usages` table (`LlmUsage`).
+# holds the same counts. `Usage` is taken twice already: installation telemetry
+# (`Usage`) and the `llm_usages` table (`LlmUsage`).
 #
-# Counts a provider didn't report stay nil rather than 0, as RubyLLM 2.2 does (#1099, #1126).
+# Counts a provider didn't report stay nil rather than 0, as RubyLLM 2.2 does (RubyLLM #1099, #1126).
 # RubyLLM's `input` excludes cached tokens, unlike the raw APIs, so the prompt's size is
 # input plus cache reads and cache writes (Anthropic reports writes apart from input).
 Ai::Tokens = Data.define(:input_tokens, :output_tokens, :cache_read_tokens, :cache_write_tokens, :cost) do

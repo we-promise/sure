@@ -1,12 +1,12 @@
 require "opentelemetry/sdk"
 require "opentelemetry-exporter-otlp"
 
-# The `metadata` tracing mode (section 10): RubyLLM's own OpenTelemetry spans (model, settings,
+# The `metadata` tracing mode: RubyLLM's own OpenTelemetry spans (model, settings,
 # finish reason, tokens, latency, error class) go to any OTLP backend at OTLP_ENDPOINT, with no
 # prompt, tool result or answer. It loses the route, the prompt key, Sure's error class and
 # errors raised before RubyLLM is called.
 #
-# RubyLLM 2.1.1 has no code to put content on spans. 2.2 adds `enable(content: true)` (#1333),
+# RubyLLM 2.1.1 has no code to put content on spans. 2.2 adds `enable(content: true)` (RubyLLM #1333),
 # off by default; `content: false` is passed explicitly whenever the gem accepts it, and
 # test/models/ai/instrumentation/metadata_tracing_test.rb fails if any span carries content.
 module Ai::Instrumentation::MetadataTracing

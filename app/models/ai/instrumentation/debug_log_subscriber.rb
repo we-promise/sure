@@ -1,4 +1,4 @@
-# A DebugLogEntry for every AI call that fails (section 10), so an operator sees it on the
+# A DebugLogEntry for every AI call that fails, so an operator sees it on the
 # debug page with its feature, route and error, never its key or prompt. Health probes are
 # skipped: AiHealth::Probe logs its own failures, with its failure codes.
 class Ai::Instrumentation::DebugLogSubscriber

@@ -6,12 +6,12 @@ module Ai::Transport::RubyLlmAdapter
   OPENROUTER_APP_URL = "https://sure.am".freeze
 
   private
-    # Settings RubyLLM would otherwise choose (spike: "Small fixes in Sure's adapter"):
+    # Settings RubyLLM would otherwise choose:
     # - request_timeout from the endpoint, or the probe's own (RubyLLM's default is 300 s per read);
     # - max_retries 0: Sure retries itself (Ai::Transport::Base#attempt);
     # - the proxy and TLS settings from Ai::Transport::Http, for every provider;
     # - no upload of large files to a provider's Files API, where a statement would stay;
-    # - Sure's instrumenter, which every request passes (the attempt budget; PR 4's gate).
+    # - Sure's instrumenter, which every request passes (the attempt budget, each failed request's error).
     def ruby_llm_context(timeout: endpoint.timeout_seconds)
       @ruby_llm_contexts ||= {}
       @ruby_llm_contexts[timeout] ||= RubyLLM.context do |config|
@@ -82,7 +82,7 @@ module Ai::Transport::RubyLlmAdapter
       tool_calls(message).any? { _1.name == Ai::Transport::Base::PROBE_TOOL_NAME }
     end
 
-    # A Hash keyed by call id on 2.1.1, a collection of ToolCall on 2.2 (#1380).
+    # A Hash keyed by call id on 2.1.1, a collection of ToolCall on 2.2 (RubyLLM #1380).
     def tool_calls(message)
       calls = message.tool_calls
       calls = calls.values if calls.is_a?(Hash)
@@ -96,7 +96,7 @@ module Ai::Transport::RubyLlmAdapter
     rescue Ai::Error::Base => error
       raise scrubbed(error)
     rescue ArgumentError => error
-      # RubyLLM 2.2 raises ArgumentError for an option a protocol can't carry (#1379, #1382):
+      # RubyLLM 2.2 raises ArgumentError for an option a protocol can't carry (RubyLLM #1379, #1382):
       # a request Sure built wrong, which every model would refuse.
       raise scrubbed(Ai::Error::Refused.new(error.message))
     rescue StandardError => error
@@ -141,7 +141,7 @@ module Ai::Transport::RubyLlmAdapter
     end
 
     # RubyLLM 2.2 raises RubyLLM::ConnectionError (with `timeout?`) where 2.1.1 lets Faraday's
-    # errors through (#1407); Ai::Error.from_exception handles the 2.1.1 ones.
+    # errors through (RubyLLM #1407); Ai::Error.from_exception handles the 2.1.1 ones.
     def connection_error_class(error)
       return unless defined?(RubyLLM::ConnectionError) && error.is_a?(RubyLLM::ConnectionError)
 
