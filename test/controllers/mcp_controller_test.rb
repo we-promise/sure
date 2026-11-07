@@ -222,12 +222,12 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   # -- Notifications (requests without id) --
 
-  test "notifications receive no response body" do
+  test "notifications are accepted with 202 and no body, as MCP's Streamable HTTP transport requires" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_notification("notifications/initialized").to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
+      assert_response :accepted
       assert response.body.blank?, "Notification must not produce a response body"
     end
   end
@@ -238,17 +238,17 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       post "/mcp", params: jsonrpc_notification("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
+      assert_response :accepted
       assert response.body.blank?, "Notification-style tools/call must not execute or respond"
     end
   end
 
-  test "unknown notification method still returns no content" do
+  test "an unknown notification method is accepted with no body too" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_notification("notifications/unknown").to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
+      assert_response :accepted
       assert response.body.blank?
     end
   end
