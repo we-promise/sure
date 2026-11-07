@@ -308,6 +308,51 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "text extraction sends the configured reasoning effort" do
+    client = mock
+    client.expects(:chat).with do |request|
+      request[:parameters][:reasoning_effort] == "low"
+    end.returns(pdf_chat_response)
+
+    Setting.stubs(:openai_reasoning_effort).returns("low")
+    processor = build_processor_for(client)
+    processor.stubs(:extract_text_from_pdf).returns("Statement text")
+
+    with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+      processor.process
+    end
+  end
+
+  test "vision processing sends the configured reasoning effort" do
+    client = mock
+    client.expects(:chat).with do |request|
+      request[:parameters][:reasoning_effort] == "low"
+    end.returns(pdf_chat_response)
+
+    Setting.stubs(:openai_reasoning_effort).returns("low")
+    processor = build_processor_for(client, processing_mode: :vision)
+    processor.stubs(:convert_pdf_to_images).returns([ "synthetic-image" ])
+
+    with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+      processor.process
+    end
+  end
+
+  test "text extraction omits reasoning_effort when no effort is configured" do
+    client = mock
+    client.expects(:chat).with do |request|
+      !request[:parameters].key?(:reasoning_effort)
+    end.returns(pdf_chat_response)
+
+    Setting.stubs(:openai_reasoning_effort).returns(nil)
+    processor = build_processor_for(client)
+    processor.stubs(:extract_text_from_pdf).returns("Statement text")
+
+    with_env_overrides("OPENAI_REASONING_EFFORT" => nil) do
+      processor.process
+    end
+  end
+
   test "auto mode falls back to vision when the provider rejects the text request" do
     client = mock
     client.expects(:chat).returns(pdf_chat_response)
