@@ -684,3 +684,15 @@ gpt-oss-20b from a local GGUF, and OpenClaw 2026.10.8. One model ran at a time.
 
 **Checks at `9973b4bb7`:** full suite 14,971 runs, the 13 baseline failures only; the PDF, imports
 and chats system tests pass; RuboCop and Pipelock's diff scan are clean.
+
+**Anthropic with a key that has no credit (2026-11-07, at `d69281531`).** Anthropic checks credit
+before validating a request (an unknown model, a missing `max_tokens` and `count_tokens` all get
+the credit error), so decision 7 and the PDF document block stay unchecked. What ran:
+
+- the model-list probe passes and the chat probe is `NoCredit`;
+- `generate` is `NoCredit` after one request, though the endpoint allows two retries, on Haiku
+  4.5 and 5.5, Sonnet 5.5, Opus 5.5 and Fable 5.1; a wrong key is `Unauthorized`;
+- a [Claude, Gemini] route fails over to Gemini;
+- PDF import on `ANTHROPIC_API_KEY` alone routes to `claude-sonnet-4-6` with `documents`.
+- **Fixed:** the failed import showed "Processing failed: NoCredit"; it shows the provider's message
+  again, as `Provider::Error` did.
