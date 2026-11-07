@@ -419,37 +419,67 @@ export default class extends Controller {
       this.#measureLabels(svg, nodes, labelOnRight),
     );
 
-    nodeGroups
-      .append("text")
-      .attr(
-        "class",
-        "text-xs font-medium text-primary fill-current select-none",
-      )
-      .style("cursor", "default")
-      .style("opacity", (d) => (hiddenLabels.has(d.index) ? 0 : 1))
-      // A hidden label can sit over another node's bar; it must not take
-      // that bar's hovers and clicks, even while hover reveals it.
-      .style("pointer-events", (d) =>
-        hiddenLabels.has(d.index) ? "none" : null,
-      )
-      .style("transition", "opacity 0.2s ease")
-      .each(function (d) {
-        controller.#writeLabel(d3.select(this), d, labelOnRight);
-      });
+    // Hidden labels stay in the DOM so hover can reveal them, but must not
+    // take another node's bar's hovers and clicks while invisible.
+    const hideable = (selection) =>
+      selection
+        .style("cursor", "default")
+        .style("opacity", (d) => (hiddenLabels.has(d.index) ? 0 : 1))
+        .style("pointer-events", (d) =>
+          hiddenLabels.has(d.index) ? "none" : null,
+        )
+        .style("transition", "opacity 0.2s ease");
+
+    // Name and amount are separate elements, so Privacy Mode can blur the
+    // amount on its own: a CSS filter applies to a <text>, not to a <tspan>.
+    hideable(
+      nodeGroups
+        .append("text")
+        .attr(
+          "class",
+          "text-xs font-medium text-primary fill-current select-none",
+        ),
+    ).each(function (d) {
+      controller
+        .#placeLabel(d3.select(this), d, labelOnRight, "-0.2em")
+        .text(d.name);
+    });
+
+    hideable(
+      nodeGroups
+        .append("text")
+        // font-medium matches the weight the amount inherited as a tspan of
+        // the name. Interactive: blurred in Privacy Mode but still part of
+        // the node's hover and click target, like the name above it.
+        .attr(
+          "class",
+          "font-mono font-medium text-secondary fill-current select-none privacy-sensitive privacy-sensitive-interactive",
+        )
+        .style("font-size", "0.65rem"),
+    ).each(function (d) {
+      controller
+        .#placeLabel(d3.select(this), d, labelOnRight, "1em")
+        .text(controller.#formatCurrency(d.value));
+    });
 
     return hiddenLabels;
   }
 
-  // Name above amount, beside the bar on the side the label rule picks.
-  #writeLabel(textEl, d, labelOnRight) {
+  // Beside the bar, on the side the label rule picks.
+  #placeLabel(textEl, d, labelOnRight, dy) {
     const right = labelOnRight(d);
-    const x = right ? d.x1 + 6 : d.x0 - 6;
-
-    textEl
-      .attr("x", x)
+    return textEl
+      .attr("x", right ? d.x1 + 6 : d.x0 - 6)
       .attr("y", (d.y1 + d.y0) / 2)
-      .attr("dy", "-0.2em")
+      .attr("dy", dy)
       .attr("text-anchor", right ? "start" : "end");
+  }
+
+  // Both lines in one element: the measuring probe for the label rule.
+  #writeLabel(textEl, d, labelOnRight) {
+    const x = labelOnRight(d) ? d.x1 + 6 : d.x0 - 6;
+
+    this.#placeLabel(textEl, d, labelOnRight, "-0.2em");
 
     textEl.selectAll("tspan").remove();
     textEl.append("tspan").text(d.name);
