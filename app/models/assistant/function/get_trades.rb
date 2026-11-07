@@ -1,13 +1,16 @@
 # frozen_string_literal: true
 
-# Lists the security trades (buys/sells) recorded on the user's investment and
-# crypto accounts, newest first, with optional filters by account, security,
+# Lists the security trades (buys and sells) recorded on the user's investment
+# and crypto accounts, newest first, with optional filters by account, security,
 # side and date range.
 #
-# Read-only companion to CreateTrade: same scoping (accounts the user can
-# access), same underlying Trade rows the app's account activity feed shows.
+# Dividends, interest, fees, sweeps, reinvestments and other cash or internal
+# movements live in the same table. They are excluded here: a buy or sell is a
+# row labeled Buy or Sell, or an unlabeled legacy row with a nonzero quantity.
+# Read-only companion to CreateTrade, scoped to accounts the user can access.
 class Assistant::Function::GetTrades < Assistant::Function
   SUPPORTED_SIDES = %w[buy sell].freeze
+  BUY_SELL_LABELS = %w[Buy Sell].freeze
 
   class << self
     # The tool's stable name; this is the MCP function identifier callers use.
@@ -23,7 +26,8 @@ class Assistant::Function::GetTrades < Assistant::Function
     def description
       <<~INSTRUCTIONS
         Returns the security trades (buys and sells) recorded on the user's
-        investment and crypto accounts, newest first. Use it to answer "what did
+        investment and crypto accounts, newest first. Dividends, interest, fees,
+        sweeps and reinvestments are not included. Use it to answer "what did
         I buy/sell", to review activity for a period, or to check a position's
         trade history before suggesting a change.
 
@@ -145,8 +149,24 @@ class Assistant::Function::GetTrades < Assistant::Function
     # Scoped to accounts the user can access (owned or shared), not the whole
     # family, mirroring GetHoldings. Trade is an Entryable, so the account lives
     # on the entry (trades has no entry_id column) — `visible` already joins it.
+    #
+    # Quantity sign is not enough. A dividend, interest payment or fee is stored
+    # with qty 0, and a sweep or reinvestment has a nonzero qty, so both would
+    # otherwise be reported as an ordinary buy or sell.
     def trades_scope
-      Trade.visible.where(entries: { account_id: accessible_accounts.select(:id) })
+      Trade.visible
+        .where(entries: { account_id: accessible_accounts.select(:id) })
+        .where(genuine_buy_sell_sql, BUY_SELL_LABELS)
+    end
+
+    # Labeled buys and sells, plus unlabeled rows from before activity labels
+    # existed. Those legacy rows are buys or sells only when the quantity is
+    # nonzero; a zero quantity with no label is cash activity, not a trade.
+    def genuine_buy_sell_sql
+      <<~SQL.squish
+        trades.investment_activity_label IN (?)
+        OR (trades.investment_activity_label IS NULL AND trades.qty <> 0)
+      SQL
     end
 
     def filtered_trades(params, start_date, end_date, side)
@@ -162,8 +182,7 @@ class Assistant::Function::GetTrades < Assistant::Function
         trades = trades.where(security_id: security_ids)
       end
 
-      trades = trades.where(qty: ...0) if side == "sell"
-      trades = trades.where(qty: 0...) if side == "buy"
+      trades = filter_by_side(trades, side) if side
 
       if start_date || end_date
         range = start_date..end_date
@@ -173,6 +192,29 @@ class Assistant::Function::GetTrades < Assistant::Function
       trades
     end
 
+    # Side follows the activity label. Quantity sign is only the fallback for
+    # an unlabeled legacy row, and it never classifies a dividend or a sweep.
+    def filter_by_side(trades, side)
+      if side == "sell"
+        trades.where(
+          "trades.investment_activity_label = ? OR (trades.investment_activity_label IS NULL AND trades.qty < 0)",
+          "Sell"
+        )
+      else
+        trades.where(
+          "trades.investment_activity_label = ? OR (trades.investment_activity_label IS NULL AND trades.qty > 0)",
+          "Buy"
+        )
+      end
+    end
+
+    def trade_side(trade)
+      return "buy" if trade.investment_activity_label == "Buy"
+      return "sell" if trade.investment_activity_label == "Sell"
+
+      trade.qty.to_d.negative? ? "sell" : "buy"
+    end
+
     def serialize(trade)
       entry = trade.entry
 
@@ -180,7 +222,7 @@ class Assistant::Function::GetTrades < Assistant::Function
         id: trade.id,
         date: entry.date,
         name: entry.name,
-        side: trade.qty.to_d.negative? ? "sell" : "buy",
+        side: trade_side(trade),
         qty: trade.qty.to_d.abs.to_f,
         price: trade.price.to_d.to_f,
         fee: trade.fee.to_d.to_f,

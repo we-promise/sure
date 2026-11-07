@@ -4,9 +4,11 @@
 #
 # It writes through the same Trade::CreateForm that the app's own "New trade"
 # form and the public API (Api::V1::TradesController#create) use, so the signed
-# quantity, the entry amount (qty * price + fee), the saved-attribute lock and
-# the post-create account sync behave exactly as they do for a trade entered by
-# hand.
+# quantity, the entry amount (qty * price + fee) and the saved-attribute lock
+# behave exactly as they do for a trade entered by hand. Like those controllers,
+# it then marks the entry user-modified so a later provider sync will not
+# overwrite it. The account sync is enqueued after the trade is saved; if that
+# enqueue fails, the trade is still returned and the response carries a warning.
 #
 # Exposed on the shared Assistant.function_classes registry, so it is callable
 # from both the /mcp endpoint and the in-app assistant.
@@ -26,7 +28,8 @@ class Assistant::Function::CreateTrade < Assistant::Function
         crypto-exchange accounts. The entry is created through the same path the
         app's trade form uses, so the quantity sign, the entry amount
         (qty * price + fee), the cost-basis lock and the account sync all behave
-        as they do for a trade entered by hand.
+        as they do for a trade entered by hand, including protection from a
+        later provider sync.
 
         Ticker: prefer the combobox form "TICKER|MIC" (e.g. "AAPL|XNAS",
         "PETR4|BVMF") so the security resolves to the right listing. A plain
@@ -95,7 +98,7 @@ class Assistant::Function::CreateTrade < Assistant::Function
         },
         fee: {
           type: "number",
-          description: "Optional brokerage fee, added to the entry amount."
+          description: "Optional brokerage fee, added to the entry amount. Omit it, or leave it blank, to record no fee. A present value must be a non-negative finite number."
         },
         currency: {
           type: "string",
@@ -121,8 +124,8 @@ class Assistant::Function::CreateTrade < Assistant::Function
 
     qty = parse_decimal(params["qty"])
     price = parse_decimal(params["price"])
-    return error("invalid_quantity", "qty must be a positive number.") unless qty&.positive?
-    return error("invalid_price", "price must be a positive number.") unless price&.positive?
+    return error("invalid_quantity", "qty must be a positive finite number.") unless qty&.finite? && qty.positive?
+    return error("invalid_price", "price must be a positive finite number.") unless price&.finite? && price.positive?
 
     ticker = params["ticker"].to_s.strip.presence
     manual_ticker = params["manual_ticker"].to_s.strip.presence
@@ -131,12 +134,13 @@ class Assistant::Function::CreateTrade < Assistant::Function
     currency = (params["currency"].to_s.strip.presence || account.currency.presence || family.primary_currency_code).to_s.upcase
     return error("invalid_currency", "currency must be a valid ISO 4217 code.") unless valid_currency?(currency)
 
-    fee = parse_decimal(params["fee"])
-    fee = BigDecimal(0) if fee.nil?
-    return error("invalid_fee", "fee must be a non-negative number.") if fee.negative?
+    fee = normalize_fee(params["fee"])
+    return error("invalid_fee", "fee must be a non-negative finite number.") if fee.nil?
 
     # Mirrors Api::V1::TradesController#create: the form signs the quantity from
     # `type` and builds the entry, resolving/creating the security on the way.
+    # Sync is deferred so a queue failure after the row is saved can be reported
+    # as a warning. CreateForm still locks the saved attributes.
     entry = Trade::CreateForm.new(
       account: account,
       date: date,
@@ -146,7 +150,8 @@ class Assistant::Function::CreateTrade < Assistant::Function
       fee: fee,
       ticker: ticker,
       manual_ticker: manual_ticker,
-      type: type
+      type: type,
+      skip_account_sync: true
     ).create
 
     unless entry&.persisted?
@@ -154,12 +159,22 @@ class Assistant::Function::CreateTrade < Assistant::Function
       return error("validation_failed", messages.presence || "Trade could not be created.")
     end
 
-    {
+    # Same protection the trade form and the public API apply after a manual
+    # create. Without it, the next provider sync can overwrite the trade.
+    entry.mark_user_modified!
+
+    response = {
       success: true,
       created: true,
       trade: serialize(entry),
       message: "Recorded #{entry.name} (#{format_money(entry)} on #{date.iso8601})."
     }
+    warning = enqueue_account_sync(account)
+    response[:warning] = warning if warning
+    response
+  # Security::Resolver and lock_saved_attributes! / mark_user_modified! persist
+  # with save! / update! and can raise RecordInvalid. CreateForm's own entry
+  # save does not: that failure is handled above, when nothing was persisted.
   rescue ActiveRecord::RecordInvalid => e
     error("validation_failed", e.record.errors.full_messages.join("; "))
   end
@@ -204,12 +219,31 @@ class Assistant::Function::CreateTrade < Assistant::Function
       nil
     end
 
+    # Omitted and blank fees mean "no fee". Anything else must parse to a
+    # non-negative finite number; a present value that does not is nil so the
+    # caller can return invalid_fee instead of recording a zero fee.
+    def normalize_fee(value)
+      return BigDecimal(0) if value.nil? || value.to_s.strip.empty?
+
+      fee = parse_decimal(value)
+      return nil unless fee&.finite? && fee >= 0
+
+      fee
+    end
+
     def parse_decimal(value)
       return nil if value.nil? || value.to_s.strip.empty?
 
       BigDecimal(value.to_s)
     rescue ArgumentError, TypeError
       nil
+    end
+
+    def enqueue_account_sync(account)
+      account.sync_later
+      nil
+    rescue StandardError => e
+      "Trade recorded, but the post-create account sync could not be enqueued (#{e.class}). The balance will recalculate on the next sync."
     end
 
     def valid_currency?(code)

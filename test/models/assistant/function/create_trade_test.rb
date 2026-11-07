@@ -8,6 +8,8 @@ class Assistant::Function::CreateTradeTest < ActiveSupport::TestCase
   end
 
   test "records a buy and computes the entry amount from qty, price and fee" do
+    Account.any_instance.expects(:sync_later).once
+
     assert_difference [ "Trade.count", "Entry.count" ], 1 do
       @result = @function.call(
         "account_id" => @account.id,
@@ -35,6 +37,8 @@ class Assistant::Function::CreateTradeTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 10, 10), entry.date
     assert_equal BigDecimal("2149.9"), entry.amount
     assert_equal "Trade", entry.entryable_type
+    assert entry.user_modified?
+    assert entry.protected_from_sync?
   end
 
   test "records a sell with a negative quantity and amount" do
@@ -125,6 +129,59 @@ class Assistant::Function::CreateTradeTest < ActiveSupport::TestCase
     assert_equal "invalid_type", @result[:error]
   end
 
+  test "rejects a present fee that is unparsable or not a non-negative finite number" do
+    [ "4.90 USD", "N/A", true, "Infinity", "NaN", -1 ].each do |fee|
+      assert_no_difference "Trade.count" do
+        result = @function.call(trade_params("fee" => fee))
+        assert_equal "invalid_fee", result[:error], fee.inspect
+      end
+    end
+  end
+
+  test "defaults a blank or omitted fee to zero" do
+    omitted = @function.call(trade_params)
+    assert_equal true, omitted[:success]
+    assert_equal 0.0, omitted[:trade][:fee]
+
+    [ nil, "", "   ", 0 ].each do |fee|
+      result = @function.call(trade_params("fee" => fee))
+      assert_equal true, result[:success], fee.inspect
+      assert_equal 0.0, result[:trade][:fee]
+    end
+  end
+
+  test "rejects a non-finite quantity or price" do
+    [ "Infinity", "NaN" ].each do |qty|
+      assert_no_difference "Trade.count" do
+        result = @function.call(trade_params("qty" => qty))
+        assert_equal "invalid_quantity", result[:error], qty.inspect
+      end
+    end
+
+    [ "Infinity", "NaN" ].each do |price|
+      assert_no_difference "Trade.count" do
+        result = @function.call(trade_params("price" => price))
+        assert_equal "invalid_price", result[:error], price.inspect
+      end
+    end
+  end
+
+  test "returns the recorded trade with a warning when account sync cannot be enqueued" do
+    Account.any_instance.stubs(:sync_later).raises(StandardError, "job backend unavailable")
+
+    assert_difference "Trade.count", 1 do
+      @result = @function.call(trade_params("manual_ticker" => "SYNC-WARN"))
+    end
+
+    assert_equal true, @result[:success]
+    assert_equal true, @result[:created]
+    assert_match(/could not be enqueued \(StandardError\)/, @result[:warning])
+
+    entry = Entry.find(@result[:trade][:entry_id])
+    assert entry.user_modified?
+    assert entry.persisted?
+  end
+
   test "rejects a non positive quantity or price" do
     quantity = @function.call(
       "account_id" => @account.id,
@@ -190,4 +247,16 @@ class Assistant::Function::CreateTradeTest < ActiveSupport::TestCase
     assert_equal %w[account_id date type qty price], definition[:params_schema][:required]
     assert_equal %w[buy sell], definition[:params_schema][:properties][:type][:enum]
   end
+
+  private
+    def trade_params(overrides = {})
+      {
+        "account_id" => @account.id,
+        "date" => "2026-10-10",
+        "type" => "buy",
+        "manual_ticker" => "OFFLINE-FUND",
+        "qty" => 1,
+        "price" => 10
+      }.merge(overrides)
+    end
 end
