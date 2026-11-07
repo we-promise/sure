@@ -7,6 +7,7 @@ de:
       subtitle: Umfassende Einblicke in deine finanzielle Situation
       export: CSV exportieren
       print_report: Bericht drucken
+      section_aria: "Abschnitt %{title}. Drücke Enter oder Leertaste, um ihn zum Umsortieren zu greifen, dann bewege ihn mit den Pfeiltasten."
       sections_aria: Berichtsbereiche
       periods:
         monthly: Monatlich
