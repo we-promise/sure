@@ -1,6 +1,5 @@
-# The transport interface (section 7). A transport call arrives with its first caller: 2a
-# implements `probe` (AiHealth::Probe); `generate` comes in 2c, `judge` in 2d, `embed` in 2e
-# and `converse` in PR 6.
+# The transport interface. Every transport implements `probe` (AiHealth::Probe); a call a
+# transport doesn't implement raises NotImplementedError.
 class Ai::Transport::Base
   # Health checks a probe can make. Which one AiHealth runs for "is the model up" is the
   # endpoint's `probe_check`; tools and embedding are their own probes.
@@ -26,12 +25,12 @@ class Ai::Transport::Base
     @endpoint = endpoint
   end
 
-  def generate(request)            = raise NotImplementedError, "#{self.class.name}#generate arrives in PR 2c"
-  def converse(request, &on_chunk) = raise NotImplementedError, "#{self.class.name}#converse arrives in PR 6"
-  def judge(state:, questions:)    = raise NotImplementedError, "#{self.class.name}#judge arrives in PR 2d"
-  def embed(texts, model:)         = raise NotImplementedError, "#{self.class.name}#embed arrives in PR 2e"
+  def generate(request)            = raise NotImplementedError, "#{self.class.name}#generate isn't implemented"
+  def converse(request, &on_chunk) = raise NotImplementedError, "#{self.class.name}#converse isn't implemented"
+  def judge(state:, questions:)    = raise NotImplementedError, "#{self.class.name}#judge isn't implemented"
+  def embed(texts, model:)         = raise NotImplementedError, "#{self.class.name}#embed isn't implemented"
 
-  # Health probes reuse the production path (fixes drift bug 6): the same client settings,
+  # Health probes reuse the production path, so they can't drift from it: the same client settings,
   # headers, timeout, proxy and error mapping. Returns what the check found, or raises an
   # Ai::Error:
   #   :models    -> the model's id, when the server lists it (no chat call);
@@ -68,7 +67,7 @@ class Ai::Transport::Base
 
     def retry_delay(tries, _error) = [ 0.5 * (2**(tries - 1)), 8 ].min * (0.75 + rand * 0.5)
 
-    # One `.ai` event per call (section 10), carrying what subscribers need: the route, the
+    # One `.ai` event per call, carrying what subscribers need: the route, the
     # request (files by name and size, never their bytes), the output, usage and error class.
     def instrument(name, model:, request:)
       call = Ai::CallContext.current

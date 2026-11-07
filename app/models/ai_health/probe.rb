@@ -11,9 +11,8 @@ class AiHealth
   #
   # The checks go through the AI transports (Ai::Transport#probe) and the
   # clients Ai::Transport::Http builds, so a probe exercises the same client
-  # settings, headers, proxy and error mapping as production calls (drift bug 6
-  # in docs/proposals/v0.8/ai-plumbing-redesign.md). The probe builds no client
-  # of its own.
+  # settings, headers, proxy and error mapping as production calls, and can't
+  # drift from them. The probe builds no client of its own.
   class Probe
     CACHE_NAMESPACE = "ai_health/probes/v2"
     DEFAULT_CACHE_TTL = 60.seconds
@@ -80,8 +79,8 @@ class AiHealth
 
     # Whether the model is up, by the endpoint's probe check: :models lists the
     # server's models and makes no chat call (the default for every endpoint);
-    # :chat sends one tiny request. Which one is the endpoint admin's setting
-    # from PR 7; until then every probe lists models.
+    # :chat sends one tiny request. Which one is the endpoint's
+    # `probe_check`, :models unless the endpoint asks for a chat request.
     def llm(provider:, endpoint:, access_token:, model:)
       probe_endpoint = config_endpoint(provider:, base_url: endpoint, api_key: access_token)
 

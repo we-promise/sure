@@ -1,21 +1,19 @@
-# One connection a transport talks to (section 4.2): protocol, URL, key and tuning. Transports
-# take these values and never read ENV, Setting or ActiveRecord themselves. Ai::Config holds
-# them (built by Ai::LegacyEnvConfig until PR 7 copies `ai_endpoints` rows into them).
+# One connection a transport talks to: protocol, URL, key and tuning. Transports take these
+# values and never read ENV, Setting or ActiveRecord themselves. Ai::Config holds them, built by
+# Ai::LegacyEnvConfig from the current settings.
 #
-# - vector_store: the endpoint offers OpenAI-style vector stores, which the `embed` route uses
-#   (section 5.5).
+# - vector_store: the endpoint offers OpenAI-style vector stores, which the `embed` route uses.
 # - agent: the endpoint is an external assistant, which serves only `chat`, for families whose
-#   chat mode is external (section 5.6). agent_settings holds its allowed emails, agent id and
-#   session key.
+#   chat mode is external. agent_settings holds its allowed emails, agent id and session key.
 class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :api_key, :extra_headers, :location,
                                          :timeout_seconds, :max_retries, :responses_api, :probe_check, :vector_store,
                                          :agent, :agent_settings)
   PROTOCOLS = %i[compatible anthropic jev].freeze
   LOCATIONS = %i[local cloud].freeze
-  # What a health probe checks (decision 4 in pr-2a-transports-and-instrumentation.md):
+  # What a health probe checks:
   # :models lists the server's models and makes no chat call; :chat sends a tiny chat request,
   # which also catches a spent balance and a server that answers for a model it hasn't loaded.
-  # The admin who configures the endpoint chooses, from PR 7; until then it's always :models.
+  # :models is the default, so a probe makes no chat call unless its endpoint asks for one.
   PROBE_CHECKS = %i[models chat].freeze
 
   def initialize(name:, protocol:, preset: nil, base_url: nil, api_key: nil, extra_headers: {}, location: :cloud,

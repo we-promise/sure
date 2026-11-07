@@ -1,4 +1,4 @@
-# One llm_usages row per request (section 10). RubyLLM publishes `usage.ruby_llm` for every
+# One llm_usages row per request. RubyLLM publishes `usage.ruby_llm` for every
 # HTTP attempt, retries and failures included, in the caller's process, so this reads the
 # family from the usage owner and the call from the workflow Ai::CallContext opened:
 # `workflow_id` is the call id, and `workflow_metadata` names the feature and route.
