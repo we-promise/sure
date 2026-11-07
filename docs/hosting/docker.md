@@ -49,12 +49,11 @@ This command will do the following:
 
 At this point, you should have `compose.yml` in your directory. It includes an optional `backup` service; see [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks).
 
-### Step 3 (optional): Configure your environment
+### Step 3 (required): Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
-That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
+`compose.yml` requires a `SECRET_KEY_BASE` you provide yourself — there is no built-in default. This isn't just a Rails formality: `SECRET_KEY_BASE` also seeds the automatic generation of your Active Record encryption keys (used to encrypt provider API tokens/keys and other sensitive data at rest) when you don't set `ACTIVE_RECORD_ENCRYPTION_*` explicitly. A shared or guessable value would mean session cookies can be forged **and** your encryption keys can be computed by anyone. Follow the steps below before starting the app.
 
-If you're running the app locally and don't care much about security, you can skip this step.
+> **Upgrading an existing install?** Keep the `SECRET_KEY_BASE` it already runs with; generating a new one makes already-encrypted data unreadable. See [Upgrading an install that is already running](#upgrading-an-install-that-is-already-running-keep-your-secret_key_base).
 
 #### Create your environment file
 
@@ -452,6 +451,28 @@ cd ~/docker-apps/sure # Navigate to whatever directory you configured the app in
 docker compose run --rm backup create # Back up the current version (optional, recommended)
 docker compose pull web worker # Pull the newest image for your tag
 docker compose up -d # Restart on the new version; database migrations run automatically
+```
+
+### Upgrading an install that is already running: keep your `SECRET_KEY_BASE`
+
+Older example compose files shipped a built-in `SECRET_KEY_BASE` default. Current ones don't, so after refreshing `compose.yml` from the example, `docker compose up` stops with "Set SECRET_KEY_BASE in your .env file". **Do not generate a new value for an existing install.** Put the value your install already runs with into `.env` first (if you never set one, it is the `SECRET_KEY_BASE` default in your previous `compose.yml`).
+
+Why: unless `ACTIVE_RECORD_ENCRYPTION_*` are set explicitly, your encryption keys are derived from `SECRET_KEY_BASE`. Changing it makes everything already encrypted under the old keys (provider tokens, API keys in settings, user emails and other encrypted fields) impossible to decrypt, which breaks logins and syncs. It also signs everyone out.
+
+If the value you have been running with is that old public default, the app logs a `[SECURITY]` warning at boot. Rotate as that warning describes: keep the keys derived from the old value as a `previous` encryption scheme ([key rotation](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)), make new keys from `bin/rails db:encryption:init` the current scheme, then run the backfill task below. Only after that is it safe to change `SECRET_KEY_BASE`. Generating a fresh value right away is only safe for a new install.
+
+### Re-encrypting data after an encryption-related update
+
+If a release note mentions a fix to Active Record encryption configuration, any data written before you updated may still be stored as plaintext even though it's supposed to be encrypted. After updating, run the backfill task once to encrypt it in place:
+
+```bash
+docker compose exec web bin/rails security:backfill_encryption
+```
+
+This is idempotent (safe to re-run) and defaults to a dry run — pass `dry_run=0` to actually write changes:
+
+```bash
+docker compose exec web bin/rails "security:backfill_encryption[100,0]"
 ```
 
 ### Upgrade note: instance-wide settings need a super admin
