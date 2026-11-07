@@ -9,9 +9,10 @@ class AddCallIdAndStatusToLlmUsages < ActiveRecord::Migration[8.1]
     add_index :llm_usages, :call_id
     add_check_constraint :llm_usages, "status IN (#{STATUSES.map { "'#{_1}'" }.join(", ")})", name: "chk_llm_usages_status"
 
-    # Today's recorders mark a failed request by putting its error in metadata; a null or blank
-    # error was never shown as a failure, and isn't one now (LlmUsage checks `present?`).
-    execute "UPDATE llm_usages SET status = 'failed' WHERE NULLIF(BTRIM(metadata->>'error'), '') IS NOT NULL"
+    # The per-provider recorders mark a failed request by putting its error in metadata. An error
+    # that's missing, null or only whitespace was never shown as a failure and isn't one now, as
+    # LlmUsage's `present?` check has it.
+    execute "UPDATE llm_usages SET status = 'failed' WHERE COALESCE(metadata->>'error', '') ~ '[^[:space:]]'"
   end
 
   def down
