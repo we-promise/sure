@@ -61,6 +61,7 @@ nl:
         compact: "Compact"
         auto: "Automatisch"
         tall: "Hoog"
+        gridlines_label: "Rasterlijnen"
       net_worth_chart:
         data_not_available: "Gegevens niet beschikbaar voor de geselecteerde periode"
         title: "Netto vermogen"

@@ -52,6 +52,7 @@ it:
         compact: "Compatta"
         auto: "Auto"
         tall: "Alta"
+        gridlines_label: "Linee della griglia"
       net_worth_chart:
         data_not_available: Dati non disponibili per il periodo selezionato
         title: Patrimonio Netto

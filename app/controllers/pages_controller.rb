@@ -18,7 +18,7 @@ class PagesController < ApplicationController
     "spending_trend"     => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
-    "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
+    "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true, gridlines_toggle: true },
     "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
   }.freeze
 
@@ -241,7 +241,7 @@ class PagesController < ApplicationController
             title: "pages.dashboard.net_worth_chart.title",
             partial: "pages/dashboard/net_worth_chart",
             layout: section_layout("net_worth_chart"),
-            locals: { balance_sheet: @balance_sheet, period: @period },
+            locals: { balance_sheet: @balance_sheet, period: @period, gridlines: Current.user.dashboard_section_gridlines?("net_worth_chart") },
             visible: @accounts.any?,
             collapsible: true
           }
@@ -358,7 +358,12 @@ class PagesController < ApplicationController
         col_span = user_span if %w[single full].include?(user_span)
       end
 
-      base.merge(col_span: col_span, height_preset: preset, height_px: DASHBOARD_HEIGHT_PRESETS.fetch(preset))
+      base.merge(
+        col_span: col_span,
+        height_preset: preset,
+        height_px: DASHBOARD_HEIGHT_PRESETS.fetch(preset),
+        gridlines: Current.user.dashboard_section_gridlines?(key)
+      )
     end
 
     def github_provider
