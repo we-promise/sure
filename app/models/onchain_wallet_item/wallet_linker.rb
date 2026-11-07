@@ -112,8 +112,15 @@ class OnchainWalletItem::WalletLinker
         .each(&:destroy!)
     end
 
+    # Claim legacy addresses under the same lock used by grouped wallet discovery.
     def create_asset!(asset)
-      OnchainWalletAccount.transaction do
+      onchain_wallet_item.family.with_onchain_address_lock(chain, address) do
+        if BitcoinWalletAddress.tracks?(family: onchain_wallet_item.family, chain: chain, address: address)
+          record = OnchainWalletAccount.new
+          record.errors.add(:wallet_address, :taken)
+          raise ActiveRecord::RecordInvalid, record
+        end
+
         # A row left behind by a deleted account still holds this asset's slot in
         # the partial unique index while displaying nowhere, so creating beside
         # it raises. It tracks nothing, so it is the one that goes.

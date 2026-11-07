@@ -1,0 +1,13 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        bitcoin_wallet_account:
+          attributes:
+            account:
+              linked: is linked to another provider. Bitcoin wallets can be tracked only on manual crypto accounts.
+        bitcoin_wallet_source:
+          attributes:
+            extended_public_key:
+              encryption_unavailable: requires configured Active Record encryption
