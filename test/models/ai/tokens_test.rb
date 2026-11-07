@@ -9,6 +9,13 @@ class Ai::TokensTest < ActiveSupport::TestCase
     assert_equal 12_497, tokens.total_tokens
   end
 
+  test "the prompt counts cache writes too" do
+    tokens = Ai::Tokens.from_ruby_llm(RubyLLM::Tokens.new(input: 20, output: 10, cache_read: 100, cache_write: 1_000))
+
+    assert_equal 1_120, tokens.prompt_tokens
+    assert_equal 1_130, tokens.total_tokens
+  end
+
   test "counts a provider didn't report stay unknown" do
     tokens = Ai::Tokens.from_ruby_llm(nil)
 

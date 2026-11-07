@@ -18,7 +18,7 @@ module Ai::Transport::RubyLlmAdapter
         config.max_retries = 0
         config.http_proxy = Ai::Transport::Http.proxy_for(ruby_llm_api_base)
         config.auto_upload_large_files = false
-        config.instrumenter = Ai::Transport::Instrumenter.new(config.instrumenter)
+        config.instrumenter = Ai::Transport::Instrumenter.new(config.instrumenter, map_error: method(:mapped_error))
         configure_provider(config)
       end
     end
@@ -68,8 +68,14 @@ module Ai::Transport::RubyLlmAdapter
       raise mapped ? scrubbed(mapped) : error
     end
 
+    # A raised error as mapping_errors would raise it, or nil when it has no Ai::Error.
+    def mapped_error(error)
+      mapped = error.is_a?(Ai::Error::Base) ? error : ruby_llm_error(error)
+      scrubbed(mapped) if mapped
+    end
+
     def scrubbed(error)
-      message = Ai::Instrumentation::Redactor.scrub(error.message, secrets: [ endpoint.api_key ])
+      message = Ai::Instrumentation::Redactor.scrub(error.message, secrets: endpoint.secrets)
       return error if message == error.message
 
       error.class.new(message, status: error.status).tap { _1.set_backtrace(error.backtrace) if error.backtrace }

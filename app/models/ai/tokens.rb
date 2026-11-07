@@ -4,7 +4,7 @@
 #
 # Counts a provider didn't report stay nil rather than 0, as RubyLLM 2.2 does (#1099, #1126).
 # RubyLLM's `input` excludes cached tokens, unlike the raw APIs, so the prompt's size is
-# input plus cache reads.
+# input plus cache reads and cache writes (Anthropic reports writes apart from input).
 Ai::Tokens = Data.define(:input_tokens, :output_tokens, :cache_read_tokens, :cache_write_tokens, :cost) do
   def initialize(input_tokens: nil, output_tokens: nil, cache_read_tokens: nil, cache_write_tokens: nil, cost: nil)
     super
@@ -27,7 +27,7 @@ Ai::Tokens = Data.define(:input_tokens, :output_tokens, :cache_read_tokens, :cac
 
   def known? = [ input_tokens, output_tokens, cache_read_tokens, cache_write_tokens ].any?
 
-  def prompt_tokens = sum(input_tokens, cache_read_tokens)
+  def prompt_tokens = sum(sum(input_tokens, cache_read_tokens), cache_write_tokens)
 
   def total_tokens = sum(prompt_tokens, output_tokens)
 
