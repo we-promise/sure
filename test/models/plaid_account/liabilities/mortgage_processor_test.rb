@@ -52,6 +52,23 @@ class PlaidAccount::Liabilities::MortgageProcessorTest < ActiveSupport::TestCase
     assert_not_empty loan.amortization_schedule.payments
   end
 
+  # The processor writes to the loan cached on the account, which can predate
+  # another writer's change. The schedule lock reloads it first; without that,
+  # Plaid's rate matches the stale copy, update! sees no change, and the other
+  # writer's rate is left in place of what Plaid reported.
+  test "a loan loaded before another write still receives Plaid's rate" do
+    loan = @plaid_account.current_account.loan
+    loan.update!(rate_type: "fixed", interest_rate: 5)
+    Loan.find(loan.id).update!(interest_rate: 7)
+    @plaid_account.update!(raw_liabilities_payload: {
+      mortgage: { interest_rate: { type: "fixed", percentage: 5 } }
+    })
+
+    PlaidAccount::Liabilities::MortgageProcessor.new(@plaid_account).process
+
+    assert_equal 5, Loan.find(loan.id).interest_rate, "Plaid's rate was compared against a stale loan"
+  end
+
   test "does nothing when mortgage data absent" do
     @plaid_account.update!(raw_liabilities_payload: {})
 
