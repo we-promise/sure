@@ -5,6 +5,12 @@ class PlaidAccount::Investments::HoldingsProcessor
   end
 
   def process
+    # Every holding of one sync goes on one date, the snapshot's, whatever its
+    # own price date: the quantities are all as of this sync, and the readers
+    # of current holdings take the provider rows on a single date.
+    snapshot_date = plaid_account.holdings_snapshot_date
+    capture_unparseable_price_dates(snapshot_date)
+
     holdings.each do |plaid_holding|
       resolved_security_result = security_resolver.resolve(plaid_security_id: plaid_holding["security_id"])
 
@@ -22,25 +28,61 @@ class PlaidAccount::Investments::HoldingsProcessor
       # Compute amount using BigDecimal arithmetic to avoid floating point drift
       amount_bd = quantity_bd * price_bd
 
-      # Normalize date - handle string, Date, or nil
-      holding_date = parse_date(plaid_holding["institution_price_as_of"]) || Date.current
-
       import_adapter.import_holding(
         security: security,
         quantity: quantity_bd,
         amount: amount_bd,
         currency: plaid_holding["iso_currency_code"] || account.currency,
-        date: holding_date,
+        date: snapshot_date,
         price: price_bd,
         account_provider_id: plaid_account.account_provider&.id,
         source: "plaid",
         delete_future_holdings: false  # Plaid doesn't allow holdings deletion
       )
     end
+
+    retire_rows_after(snapshot_date)
   end
 
   private
     attr_reader :plaid_account, :security_resolver
+
+    # A snapshot can be dated before the last one (that sync had no usable
+    # price date and landed on today). Plaid's own rows after it would stay the
+    # newest provider date and hide this snapshot, so they go once it is
+    # written. A correction the user made on one moves to the snapshot row
+    # first, oldest row first so the latest wins. Other providers' rows, and
+    # rows with no provider, are kept.
+    def retire_rows_after(snapshot_date)
+      account_provider_id = plaid_account.account_provider&.id
+      return if account.nil? || account_provider_id.nil?
+
+      later = account.holdings.where(account_provider_id: account_provider_id).where("date > ?", snapshot_date)
+      later.where("security_locked OR cost_basis_locked").order(:date, :id).each do |holding|
+        import_adapter.carry_corrections_back(from: holding, date: snapshot_date)
+      end
+      later.delete_all
+    end
+
+    # A price date that cannot be read is left out of the snapshot date, and
+    # with nothing else usable the sync lands on today. Recorded once per sync,
+    # where support can see why.
+    def capture_unparseable_price_dates(snapshot_date)
+      unparseable = plaid_account.unparseable_holding_price_dates
+      return if unparseable.empty?
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Plaid holdings carried unparseable price dates; they were left out of the snapshot date",
+        source: self.class.name,
+        provider_key: "plaid",
+        family: account&.family,
+        account: account,
+        account_provider: plaid_account.account_provider,
+        metadata: { unparseable_dates: unparseable.first(5).map(&:to_s), count: unparseable.size, snapshot_date: snapshot_date.iso8601 }
+      )
+    end
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
@@ -69,24 +111,6 @@ class PlaidAccount::Investments::HoldingsProcessor
       end
     rescue ArgumentError => e
       Rails.logger.error("Failed to parse Plaid holding decimal value: #{value.inspect} - #{e.message}")
-      nil
-    end
-
-    def parse_date(date_value)
-      return nil if date_value.nil?
-
-      case date_value
-      when Date
-        date_value
-      when String
-        Date.parse(date_value)
-      when Time, DateTime
-        date_value.to_date
-      else
-        nil
-      end
-    rescue ArgumentError, TypeError => e
-      Rails.logger.error("Failed to parse Plaid holding date: #{date_value.inspect} - #{e.message}")
       nil
     end
 end
