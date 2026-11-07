@@ -276,14 +276,29 @@ class Loan < ApplicationRecord
     end
   end
 
+  # Applies a submitter's edits to the schedule as it is now, given the
+  # baseline the submitter saw. A submitted row equal to its baseline rate is
+  # unchanged and does not overwrite the current value. A baseline date left
+  # out of the submission deletes only the rate the submitter saw: if someone
+  # else has changed that date since, their rate is kept. Any other submitted
+  # row wins.
   private def merge_rate_schedule(submitted, baseline:, current: variable_rate_schedule)
     baseline = (baseline || {}).stringify_keys
     submitted = (submitted || {}).stringify_keys
-    changed = submitted.reject do |date, rate|
-      previous = BigDecimal(baseline[date].to_s, exception: false)
-      baseline.key?(date) && previous && previous == BigDecimal(rate.to_s, exception: false)
+    current = (current || {}).stringify_keys
+    changed = submitted.reject { |date, rate| baseline.key?(date) && same_rate?(baseline[date], rate) }
+    removed = (baseline.keys - submitted.keys).select do |date|
+      current.key?(date) && same_rate?(current[date], baseline[date])
     end
-    (current || {}).stringify_keys.except(*(baseline.keys - submitted.keys)).merge(changed)
+    current.except(*removed).merge(changed)
+  end
+
+  # Compares rates by value, so "6", "6.0" and "0.6e1" are the same rate.
+  # Values that do not parse as numbers compare as text.
+  private def same_rate?(left, right)
+    left_rate = BigDecimal(left.to_s, exception: false)
+    right_rate = BigDecimal(right.to_s, exception: false)
+    left_rate && right_rate ? left_rate == right_rate : left.to_s == right.to_s
   end
 
   private def clear_rate_submission

@@ -64,6 +64,27 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "2026-02-01" => "7", "2026-03-01" => "8.0" }, @account.loan.reload.variable_rate_schedule)
   end
 
+  {
+    "deleting" => [ [ "" ], { "2026-01-01" => "7" } ],
+    "moving" => [ [ "", { effective_date: "2026-01-15", rate: "6" } ], { "2026-01-01" => "7", "2026-01-15" => "6.0" } ]
+  }.each do |action, (rate_changes, expected)|
+    test "a stale form #{action} a rendered row keeps the provider's correction of it" do
+      @account.loan.update!(rate_type: "variable", start_date: Date.new(2024, 1, 1),
+                            variable_rate_schedule: { "2026-01-01" => "6" })
+      get edit_loan_path(@account)
+      assert_response :success
+      snapshot = css_select("input[name='account[accountable_attributes][rate_schedule_snapshot]']").first["value"]
+
+      @account.loan.enrich_attributes({ variable_rate_schedule: { "2026-01-01" => "7" } }, source: "redbark")
+      patch loan_path(@account), params: { account: { accountable_attributes: {
+        rate_schedule_snapshot: snapshot, rate_changes: rate_changes
+      } } }
+
+      assert_response :redirect
+      assert_equal expected, @account.loan.reload.variable_rate_schedule
+    end
+  end
+
   test "an invalid schedule snapshot is rejected even with no changed rate rows" do
     @account.loan.update!(rate_type: "variable", variable_rate_schedule: {})
     patch loan_path(@account), params: { account: { accountable_attributes: {

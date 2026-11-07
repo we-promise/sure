@@ -68,6 +68,51 @@ class Loan::ScheduleLockTest < ActiveSupport::TestCase
     assert_equal({ "2026-02-01" => "7", "2026-03-01" => "8.0" }, @loan.reload.variable_rate_schedule)
   end
 
+  test "a form deleting a rendered date keeps a provider correction made after rendering" do
+    @loan.update!(variable_rate_schedule: { "2026-01-01" => "6" })
+    snapshot = @loan.rate_schedule_snapshot
+    Loan.find(@loan.id).enrich_attributes({ variable_rate_schedule: { "2026-01-01" => "7" } }, source: "redbark")
+
+    @loan.with_schedule_lock do
+      @loan.update!(rate_schedule_snapshot: snapshot, rate_changes: [])
+    end
+
+    assert_equal({ "2026-01-01" => "7" }, @loan.reload.variable_rate_schedule)
+  end
+
+  test "a form moving a rendered date keeps a provider correction made after rendering" do
+    @loan.update!(variable_rate_schedule: { "2026-01-01" => "6" })
+    snapshot = @loan.rate_schedule_snapshot
+    Loan.find(@loan.id).enrich_attributes({ variable_rate_schedule: { "2026-01-01" => "7" } }, source: "redbark")
+
+    @loan.with_schedule_lock do
+      @loan.update!(rate_schedule_snapshot: snapshot, rate_changes: [ { effective_date: "2026-01-15", rate: "6" } ])
+    end
+
+    assert_equal({ "2026-01-01" => "7", "2026-01-15" => "6.0" }, @loan.reload.variable_rate_schedule)
+  end
+
+  test "a form deletes a rendered date whose stored rate was rewritten in another format" do
+    @loan.update!(variable_rate_schedule: { "2026-01-01" => "0.6e1" })
+    snapshot = @loan.rate_schedule_snapshot
+    Loan.find(@loan.id).update!(variable_rate_schedule: { "2026-01-01" => "6.0" })
+
+    @loan.with_schedule_lock do
+      @loan.update!(rate_schedule_snapshot: snapshot, rate_changes: [])
+    end
+
+    assert_empty @loan.reload.variable_rate_schedule
+  end
+
+  test "a stale provider schedule that omits a date keeps a correction made since it loaded" do
+    @loan.update!(variable_rate_schedule: { "2026-01-01" => "6" })
+    stale = Loan.find(@loan.id)
+    @loan.enrich_attributes({ variable_rate_schedule: { "2026-01-01" => "7" } }, source: "redbark")
+    stale.enrich_attributes({ variable_rate_schedule: { "2026-02-01" => "8" } }, source: "plaid")
+
+    assert_equal({ "2026-01-01" => "7", "2026-02-01" => "8" }, @loan.reload.variable_rate_schedule)
+  end
+
   test "an invalid form snapshot refuses the save" do
     assert_not @loan.update(rate_schedule_snapshot: "[]", rate_changes: [])
     assert @loan.errors.any?
