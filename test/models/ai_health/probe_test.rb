@@ -27,6 +27,14 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_requested request
   end
 
+  test "an unsupported provider is a failing result, not an exception" do
+    result = @probe.llm(provider: :mistral, endpoint: "https://api.mistral.example.test/v1", access_token: "token", model: "small")
+
+    assert result.failing?
+    assert_equal "unsupported_provider", result.failure_code.to_s
+    assert_not_requested :any, /mistral/
+  end
+
   test "timeout honors AI_HEALTH_PROBE_TIMEOUT and falls back for missing or non-positive values" do
     ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "42") do
       assert_equal 42, AiHealth::Probe.timeout

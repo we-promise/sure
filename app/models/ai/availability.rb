@@ -19,7 +19,7 @@ Ai::Availability = Data.define(:feature, :reason) do
     return if available?
 
     audience = user&.manages_instance_settings? ? :admin : :member
-    feature_name = I18n.t("ai.consent_rows.#{Ai::Routes.consent_key(Ai::Routes.fetch(feature)[:shadow_of] || feature)}")
+    feature_name = I18n.t("ai.consent_rows.#{Ai::Routes.row_key(feature)}")
     I18n.t("ai.availability.#{reason}.#{audience}", feature: feature_name, default: I18n.t("ai.availability.#{reason}.member", feature: feature_name))
   end
 end
