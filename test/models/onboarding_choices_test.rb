@@ -79,6 +79,17 @@ class OnboardingChoicesTest < ActiveSupport::TestCase
     assert_equal "none", @user.family.reload.initial_onboarding_ai_mode
   end
 
+  test "initial intent does not revalidate unrelated legacy family preferences" do
+    @user.family.users.update_all(onboarded_at: nil, set_onboarding_goals_at: nil)
+    @user.family.update_columns(locale: "legacy-unsupported", date_format: "legacy-format")
+    Usage.expects(:capture_onboarding_ai_intent).with(family_id: @user.family_id, mode: "none").once
+
+    assert @user.update_onboarding_choices(completion("none"))
+    assert_equal "none", @user.family.reload.initial_onboarding_ai_mode
+    assert_equal "legacy-unsupported", @user.family.locale
+    assert_equal "legacy-format", @user.family.date_format
+  end
+
   test "invalid completion does not consume initial intent" do
     @user.family.users.update_all(onboarded_at: nil, set_onboarding_goals_at: nil)
     Usage.expects(:capture_onboarding_ai_intent).never

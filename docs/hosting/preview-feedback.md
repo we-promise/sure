@@ -217,7 +217,9 @@ family user (ordered by creation time, then ID), who must be an administrator
 without an accepted invitation. The choice is `none`, `builtin`, or `external`. It is stated intent,
 not configuration readiness, provider use, or an agent connection. `none` and
 `external` disable that user's in-app assistant; `builtin` enables it subject to
-existing provider availability. Family automation and provider settings are unchanged.
+existing provider availability. Submitting the AI-mode answer does not change family
+automation or provider settings. The separate Save and test action changes the
+instance's selected provider and encrypted key; it does not emit this intent event.
 
 The completion transaction stores a nullable, immutable-in-this-flow family claim,
 serialized with a family row lock. Existing households, invited members, failed

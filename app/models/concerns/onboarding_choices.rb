@@ -41,7 +41,9 @@ module OnboardingChoices
         begin
           @applying_onboarding_choice = true
           saved = save
-          family.update!(initial_onboarding_ai_mode: intent) if saved && intent
+          # The locked, constrained telemetry claim must not revalidate unrelated
+          # legacy household preferences or prevent a valid user from onboarding.
+          family.update_columns(initial_onboarding_ai_mode: intent) if saved && intent
         ensure
           @applying_onboarding_choice = false
         end

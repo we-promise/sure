@@ -236,7 +236,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_unchecked_field I18n.t("onboardings.tools.tools.nothing_yet")
     click_button I18n.t("onboardings.tools.done")
     assert_no_selector "details[open]"
-    assert_selector "details summary", text: "YNAB"
+    assert_selector "details summary", text: "1 selected"
+    assert_selector "[data-onboarding-tools-target='chip']", text: "YNAB"
     click_button I18n.t("onboardings.tools.submit")
     assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
     assert_equal [ "ynab" ], @user.reload.starting_tools
@@ -251,11 +252,11 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_no_selector "#ai-panel-builtin"
     assert_no_selector "#ai-panel-external"
     choose "user_onboarding_ai_mode_builtin"
-    assert_selector "#ai-panel-builtin", text: "No provider is configured or validated here"
+    assert_selector "#ai-panel-builtin", text: "Set up AI without leaving onboarding"
     assert_no_selector "#ai-panel-none"
     assert_selector "#user_onboarding_ai_mode_none[aria-expanded='false']"
     assert_selector "#user_onboarding_ai_mode_builtin[aria-expanded='true']"
-    assert_no_selector "input[type='password']"
+
     choose "user_onboarding_ai_mode_external"
     assert_selector "#ai-panel-external"
     assert_no_selector "#ai-panel-builtin"
@@ -264,6 +265,106 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
     assert_equal "external", @user.reload.onboarding_ai_mode
     assert_not @user.ai_enabled?
+  end
+
+  test "long selected tool chips stay inside the card padding on mobile" do
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 390, height: 844, deviceScaleFactor: 1, mobile: true)
+    visit tools_onboarding_path
+    find("details summary").click
+    check I18n.t("onboardings.tools.tools.spreadsheets")
+    click_button I18n.t("onboardings.tools.done")
+    assert_selector "[data-onboarding-tools-target='chip'][data-value='spreadsheets']"
+
+    bounds = page.evaluate_script <<~JS
+      (() => {
+        const card = document.querySelector('[aria-labelledby="starting-point-title"]');
+        const chip = card.querySelector('[data-onboarding-tools-target="chip"][data-value="spreadsheets"] > span');
+        const cardRect = card.getBoundingClientRect();
+        const chipRect = chip.getBoundingClientRect();
+        const style = getComputedStyle(card);
+        return {
+          viewport: window.innerWidth,
+          contentLeft: cardRect.left + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth),
+          contentRight: cardRect.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth),
+          chipLeft: chipRect.left,
+          chipRight: chipRect.right,
+          title: chip.title
+        };
+      })()
+    JS
+    assert_equal 390, bounds.fetch("viewport")
+    assert_operator bounds.fetch("chipLeft"), :>=, bounds.fetch("contentLeft") - 1
+    assert_operator bounds.fetch("chipRight"), :<=, bounds.fetch("contentRight") + 1
+    assert_equal I18n.t("onboardings.tools.tools.spreadsheets"), bounds.fetch("title")
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  test "numbered cards and provider inputs match the selected provider" do
+    OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
+    OnboardingAiConfiguration.stubs(:configuration_locked?).returns(false)
+    visit tools_onboarding_path
+    assert_selector "[role='region'].bg-container[aria-labelledby='starting-point-title']", text: /01 · Your starting point/i
+    assert_selector "[role='region'].bg-container[aria-labelledby='ai-preference-title']", text: /02 · Your AI preference/i
+    choose "user_onboarding_ai_mode_builtin"
+    select "OpenAI", from: "Provider"
+    assert_field "OpenAI API key", type: "password", with: ""
+    assert_selector "input[type='password']:not([name])"
+    assert_selector "select:not([name])"
+    fill_in "OpenAI API key", with: "test-placeholder-not-a-real-key"
+    select "Anthropic", from: "Provider"
+    assert_field "Anthropic API key", type: "password", with: ""
+    assert_selector "input[placeholder='Enter your Anthropic API key']"
+    click_button "Save and test connection"
+    assert_text "Enter an API key for the selected provider."
+    choose "user_onboarding_ai_mode_none"
+    assert_no_selector "input[type='password']"
+    assert_selector "#ai-panel-builtin fieldset[disabled]", visible: :all
+  end
+
+  test "provider response shows errors and clears the key after each attempt" do
+    OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
+    OnboardingAiConfiguration.stubs(:configuration_locked?).returns(false)
+    visit tools_onboarding_path
+    choose "user_onboarding_ai_mode_builtin"
+    select "OpenAI", from: "Provider"
+    page.execute_script <<~JS
+      const originalFetch = window.fetch;
+      window.fetch = (url, options) => {
+        if (url !== "#{configure_provider_onboarding_path}") return originalFetch(url, options);
+        return Promise.resolve(new Response(JSON.stringify({status: "failed", error: "connection_failed"}), {status: 422, headers: {"Content-Type": "application/json"}}));
+      };
+    JS
+    fill_in "OpenAI API key", with: "test-placeholder-not-a-real-key"
+    find_field("OpenAI API key").send_keys(:enter)
+    assert_current_path tools_onboarding_path
+    assert_text "Provider access could not be confirmed."
+    assert_field "OpenAI API key", with: ""
+    assert_button I18n.t("onboardings.tools.submit"), disabled: false
+
+    page.execute_script <<~JS
+      const fetchBeforePending = window.fetch;
+      window.fetch = (url, options) => {
+        if (url !== "#{configure_provider_onboarding_path}") return fetchBeforePending(url, options);
+        return new Promise((resolve) => { window.resolveProvider = resolve; });
+      };
+    JS
+    fill_in "OpenAI API key", with: "test-placeholder-not-a-real-key"
+    click_button "Save and test connection"
+    assert_button I18n.t("onboardings.tools.submit"), disabled: true
+    find("nav a[href='#{preferences_onboarding_path}']").click
+    assert_current_path preferences_onboarding_path
+    page.go_back
+    assert_current_path tools_onboarding_path
+    assert_field "OpenAI API key", with: "", disabled: true
+    assert_button I18n.t("onboardings.tools.submit"), disabled: true
+    page.execute_script <<~JS
+      window.resolveProvider(new Response(JSON.stringify({status: "saved", provider: "openai"}), {status: 200, headers: {"Content-Type": "application/json"}}));
+    JS
+    assert_button I18n.t("onboardings.tools.submit"), disabled: false
+    assert_field "OpenAI API key", with: "", disabled: false
+    assert_selector "#provider_configuration_provider:not([disabled])"
+    assert_text "The result could not be confirmed."
   end
 
   private

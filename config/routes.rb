@@ -399,6 +399,7 @@ Rails.application.routes.draw do
     collection do
       get :preferences
       get :tools
+      post "tools/provider", to: "onboardings#configure_provider", as: :configure_provider
       get :trial
     end
   end
@@ -844,7 +845,9 @@ Rails.application.routes.draw do
       resource :cash_flow, only: [ :show ], controller: :cash_flows
       resource :spending_vs_normal, only: [ :show ], controller: :spending_vs_normal
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
-      resources :insights, only: [ :index ]
+      resources :insights, only: [ :index ] do
+        patch :acknowledge, on: :member
+      end
       resources :push_subscriptions, only: [ :create, :destroy ]
       resource :family_settings, only: [ :show ], controller: :family_settings
       post :sync, to: "sync#create", as: :sync_job
