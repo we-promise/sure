@@ -148,16 +148,19 @@ class Ai::Transport::Base
     # Sure retries, not RubyLLM (whose contexts all have max_retries 0): RubyLLM retries inside
     # one `request.ruby_llm`, with no hook before a retry, so only here can a spent balance
     # (OpenAI's 429 insufficient_quota) stop the retries and the attempt budget be checked
-    # between tries. Each try is one HTTP request and one `usage.ruby_llm` event.
+    # between tries, wait included: no retry starts after the budget runs out. Each try is one
+    # HTTP request and one `usage.ruby_llm` event.
     def attempt
       tries = 0
       begin
         tries += 1
         yield
       rescue *Ai::Error::RETRYABLE => error
-        raise if tries > endpoint.max_retries || Ai::CallContext.current&.expired?
+        delay = retry_delay(tries, error)
+        remaining = Ai::CallContext.current&.remaining
+        raise if tries > endpoint.max_retries || (remaining && remaining <= delay)
 
-        sleep(retry_delay(tries, error))
+        sleep(delay)
         retry
       end
     end
@@ -170,7 +173,7 @@ class Ai::Transport::Base
       call = Ai::CallContext.current
       payload = { feature: call&.feature, call_id: call&.call_id, correlation_id: call&.correlation_id,
                   family_id: call&.family_id, endpoint: endpoint.to_event, route: model.to_event, request:,
-                  shadow: call&.shadow? || false }
+                  shadow: call&.shadow? || false, scrub: scrubber }
 
       ActiveSupport::Notifications.instrument("#{name}.ai", payload) do
         result = yield
@@ -188,6 +191,13 @@ class Ai::Transport::Base
         payload[:http_status] = error.status
         raise
       end
+    end
+
+    # Scrubs a string of this endpoint's key and header values, for a subscriber that sends
+    # content elsewhere. A function, so the payload never holds the secrets themselves.
+    def scrubber
+      secrets = endpoint.secrets
+      ->(text) { Ai::Instrumentation::Redactor.scrub(text, secrets:) }
     end
 
     def event_attachments(attachments) = Array(attachments).map { { filename: _1.filename, bytes: _1.data.bytesize } }

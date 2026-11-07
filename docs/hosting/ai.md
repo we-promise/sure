@@ -495,10 +495,15 @@ environment: the web container decides which AI buttons and actions are offered,
 runs the AI jobs. When their AI variables differ, a feature can be offered that the worker can't
 run, or hidden although it would work. Settings saved in the UI are shared by both.
 
-**Which AI features are available** is decided in one place for every feature, from the same
-settings: a button, rule action or MCP tool appears only when a configured model can do the work.
-For example, **Enhance merchants** appears on an install with only an Anthropic key, as merchant
-enhancement runs on Anthropic too.
+**Which AI features are available** is decided in one place for every feature except chat, from
+the same settings: a button, rule action or MCP tool appears only when a configured model can do
+the work. For example, **Enhance merchants** appears on an install with only an Anthropic key, as
+merchant enhancement runs on Anthropic too.
+
+Chat, and the buttons that open it (the Bills AI review and prompt chips, **Review with AI** and
+**Dig in with AI**), keep their own check: the user's AI switch and a configured provider. They can
+appear when a custom endpoint has no model, or when chat doesn't accept the configured model, and
+then every chat turn fails with an error.
 
 ## External AI Assistant
 
@@ -1107,8 +1112,9 @@ All LLM operations will now be logged to Langfuse, including:
 
 ### Tracing modes: content or metadata
 
-AI calls made through Sure's AI transports (the health probes today; more features as they move
-over) are traced in one of two modes, never both. The mode follows the variables you already set:
+AI calls made through Sure's AI transports are traced in one of two modes, never both. Health
+probes aren't traced in either: they carry no family data and run each time an admin opens the
+health page. The mode follows the variables you already set:
 
 | You set | Mode | What leaves the server |
 |---|---|---|
