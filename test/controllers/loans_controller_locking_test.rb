@@ -1,11 +1,11 @@
 require "test_helper"
 
-class LoanRenderingLockTest < ActionDispatch::IntegrationTest
+class LoansControllerLockingTest < ActionDispatch::IntegrationTest
   self.use_transactional_tests = false
 
   setup do
     @user = users(:family_admin).dup
-    @user.email = "loan-render-#{SecureRandom.uuid}@example.com"
+    @user.email = "loan-locking-#{SecureRandom.uuid}@example.com"
     @user.password = user_password_test
     @user.save!
     sign_in @user
@@ -158,13 +158,23 @@ class LoanRenderingLockTest < ActionDispatch::IntegrationTest
   end
 
   private
+    # Commits a provider-style update from another connection just before the
+    # request takes its account row lock, after it has loaded the account and
+    # loan it will update. The hook is a notification subscription scoped to
+    # the block, so it cannot outlive the test.
     def with_concurrent_account_update(attributes)
       account_id = @account.id
-      test_case = self
-      callback = lambda do |controller|
-        loaded = controller.instance_variable_get(:@account)
-        test_case.assert_equal 100_000, loaded.balance
-        loaded.accountable
+      request_thread = Thread.current
+      loaded_before_lock = []
+      fired = 0
+      failure = nil
+
+      hook = Object.new
+      hook.define_singleton_method(:start) do |_name, _id, payload|
+        next unless Thread.current == request_thread && fired.zero?
+        next unless payload[:sql].match?(/FROM "accounts".*FOR UPDATE/m)
+
+        fired += 1
         Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do
             account = Account.find(account_id)
@@ -173,11 +183,19 @@ class LoanRenderingLockTest < ActionDispatch::IntegrationTest
               { variable_rate_schedule: { "2026-01-01" => "7", "2026-02-01" => "8" } }, source: "redbark"
             )
           end
-        end.value
+        rescue StandardError => e
+          failure = e
+        end.join
       end
-      LoansController.before_action(callback, only: :update)
-      yield
-    ensure
-      LoansController.skip_before_action(callback)
+      hook.define_singleton_method(:finish) do |_name, _id, payload|
+        loaded_before_lock << payload[:name] if Thread.current == request_thread && fired.zero?
+      end
+
+      ActiveSupport::Notifications.subscribed(hook, "sql.active_record") { yield }
+
+      raise failure if failure
+      assert_equal 1, fired, "the concurrent update should run once, before the request locks the account"
+      assert_includes loaded_before_lock, "Account Load"
+      assert_includes loaded_before_lock, "Loan Load"
     end
 end
