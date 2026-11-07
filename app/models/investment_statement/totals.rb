@@ -62,7 +62,9 @@ class InvestmentStatement::Totals
     # relying on qty: 0 to keep the buckets disjoint. Without this guard such
     # a row would be counted twice: once by direction and once as income.
     #
-    # Missing FX rates preserve InvestmentStatement's existing 1:1 fallback.
+    # A row in a currency with no rate at all is left out, not counted at 1
+    # (#3640), as in InvestmentStatement; ExchangeRate.rate_sql gives the
+    # nearest stored rate otherwise.
     #
     # account_ids is already scoped to the family's visible (draft/active)
     # investment accounts, so the query trusts that input and skips a join back
@@ -73,21 +75,18 @@ class InvestmentStatement::Totals
     end
 
     def aggregation_sql
+      rate = ExchangeRate.rate_sql(from: "entries.currency", to: ":target_currency", on: "entries.date")
+
       <<~SQL
         SELECT
-          COALESCE(SUM(CASE WHEN trades.qty > 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as contributions,
-          COALESCE(SUM(CASE WHEN trades.qty < 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * COALESCE(er.rate, 1)) ELSE 0 END), 0) as withdrawals,
-          COALESCE(-SUM(CASE WHEN #{label_sql} = 'Dividend' THEN entries.amount * COALESCE(er.rate, 1) ELSE 0 END), 0) as dividends,
-          COALESCE(-SUM(CASE WHEN #{label_sql} = 'Interest' THEN entries.amount * COALESCE(er.rate, 1) ELSE 0 END), 0) as interest,
+          COALESCE(SUM(CASE WHEN trades.qty > 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as contributions,
+          COALESCE(SUM(CASE WHEN trades.qty < 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as withdrawals,
+          COALESCE(-SUM(CASE WHEN #{label_sql} = 'Dividend' THEN entries.amount * #{rate} ELSE 0 END), 0) as dividends,
+          COALESCE(-SUM(CASE WHEN #{label_sql} = 'Interest' THEN entries.amount * #{rate} ELSE 0 END), 0) as interest,
           COUNT(trades.id) as trades_count
         FROM entries
         LEFT JOIN trades ON trades.id = entries.entryable_id AND entries.entryable_type = 'Trade'
         LEFT JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'
-        LEFT JOIN exchange_rates er ON (
-          er.date = entries.date AND
-          er.from_currency = entries.currency AND
-          er.to_currency = :target_currency
-        )
         WHERE entries.account_id IN (:account_ids)
           AND entries.date BETWEEN :start_date AND :end_date
           AND entries.excluded = false

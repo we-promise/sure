@@ -1,0 +1,30 @@
+<%# locals: (family:, classes: nil) %>
+<% missing = family.currencies_without_exchange_rate %>
+<% stale = family.stale_exchange_rate_dates %>
+<% if missing.any? || stale.any? %>
+  <div class="space-y-2 <%= classes %>">
+    <% if missing.any? %>
+      <div data-testid="missing-exchange-rates">
+        <%= render DS::Alert.new(
+          variant: :warning,
+          message: t("shared.exchange_rate_notes.missing",
+                     count: missing.size,
+                     currencies: missing.sort.to_sentence,
+                     currency: family.currency)
+        ) %>
+      </div>
+    <% end %>
+
+    <% if stale.any? %>
+      <div data-testid="stale-exchange-rates">
+        <%= render DS::Alert.new(
+          variant: :info,
+          message: t("shared.exchange_rate_notes.stale",
+                     count: stale.size,
+                     currency: family.currency,
+                     rates: stale.sort.map { |from, date| t("shared.exchange_rate_notes.stale_rate", from: from, date: l(date, format: :long)) }.to_sentence)
+        ) %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

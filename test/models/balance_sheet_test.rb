@@ -36,6 +36,25 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 50000 - 1000, BalanceSheet.new(@family).net_worth
   end
 
+  # Counted at 1, ¥1,000,000 added $1,000,000 to net worth (#3640).
+  test "an account in a currency with no rate at all is left out of totals" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    create_account(balance: 50000, accountable: Depository.new)
+    create_account(balance: 1_000_000, currency: "JPY", accountable: Depository.new)
+
+    assert_equal 50000, BalanceSheet.new(@family).net_worth
+    assert_equal 50000, BalanceSheet.new(@family).assets.total
+  end
+
+  test "an account converts at the latest stored rate however old" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 60.days.ago.to_date, rate: 0.007)
+    create_account(balance: 50000, accountable: Depository.new)
+    create_account(balance: 1_000_000, currency: "JPY", accountable: Depository.new)
+
+    assert_equal 57000, BalanceSheet.new(@family).net_worth
+  end
+
   test "disabled accounts do not affect totals" do
     create_account(balance: 1000, accountable: CreditCard.new)
     create_account(balance: 10000, accountable: Depository.new)

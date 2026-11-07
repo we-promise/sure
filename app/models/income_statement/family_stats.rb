@@ -43,7 +43,6 @@ class IncomeStatement::FamilyStats
           FROM transactions t
           #{entries_join_sql("t")}
           #{accounts_join_sql}
-          #{exchange_rates_join_sql}
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
             AND ae.excluded = false
