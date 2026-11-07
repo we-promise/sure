@@ -36,7 +36,7 @@ class Ai::ConfigTest < ActiveSupport::TestCase
     assert model.capable?(:tools)
     assert model.capable?(%w[tools streaming])
     assert_not model.capable?(:vision)
-    assert_in_delta 0.000014, model.cost_for(Ai::Tokens.new(input_tokens: 2, cache_read_tokens: 4, output_tokens: 2))
+    assert_in_delta 0.000014, model.cost_for(Ai::Tokens.new(input_tokens: 2, cache_read_tokens: 4, output_tokens: 2)), 1e-12
     assert_nil ai_model.cost_for(Ai::Tokens.new(input_tokens: 2))
     assert_raises(ArgumentError) { ai_model(capabilities: [ :telepathy ]) }
   end
