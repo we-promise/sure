@@ -897,6 +897,31 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal before_ids, @transaction.reload.tag_ids
   end
 
+  # With only invalid ids the cast list is [nil], which is not "any?", and the
+  # collection writer drops the nil, so this would clear every tag.
+  test "update with only ids that are not UUIDs is refused and keeps the tags" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ "not-a-uuid" ] } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal before_ids, @transaction.reload.tag_ids
+  end
+
+  test "create with only ids that are not UUIDs is refused and creates nothing" do
+    assert_no_difference [ "@account.entries.count", "Tagging.count" ] do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Tagged", amount: 25.00, date: Date.current,
+                                    currency: "USD", nature: "expense", tag_ids: [ "not-a-uuid" ] } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   # Strong parameters drops a tag_ids of any other shape, which would otherwise
   # read as "no tags" and clear them.
   [
