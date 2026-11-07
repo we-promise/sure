@@ -13,7 +13,10 @@ export default class extends Controller {
     if (selected.checked) {
       for (const tool of this.toolTargets) {
         const input = tool.querySelector("input");
-        if (input !== selected && (selected.value === "nothing_yet" || input.value === "nothing_yet")) {
+        if (
+          input !== selected &&
+          (selected.value === "nothing_yet" || input.value === "nothing_yet")
+        ) {
           input.checked = false;
         }
       }
@@ -22,9 +25,15 @@ export default class extends Controller {
   }
 
   updateTools() {
-    const selected = this.toolTargets.filter((tool) => tool.querySelector("input").checked);
-    this.summaryTarget.textContent = selected.map((tool) => tool.dataset.label).join(", ") || this.summaryTarget.dataset.placeholder;
-    this.otherTarget.hidden = !selected.some((tool) => tool.querySelector("input").value === "other");
+    const selected = this.toolTargets.filter(
+      (tool) => tool.querySelector("input").checked,
+    );
+    this.summaryTarget.textContent =
+      selected.map((tool) => tool.dataset.label).join(", ") ||
+      this.summaryTarget.dataset.placeholder;
+    this.otherTarget.hidden = !selected.some(
+      (tool) => tool.querySelector("input").value === "other",
+    );
     this.otherTarget.querySelector("input").disabled = this.otherTarget.hidden;
   }
 
@@ -42,7 +51,9 @@ export default class extends Controller {
   }
 
   selectMode() {
-    const radios = this.element.querySelectorAll('input[name="user[onboarding_ai_mode]"]');
+    const radios = this.element.querySelectorAll(
+      'input[name="user[onboarding_ai_mode]"]',
+    );
     const selected = Array.from(radios).find((radio) => radio.checked);
     for (const radio of radios) {
       radio.setAttribute("aria-expanded", String(radio.checked));

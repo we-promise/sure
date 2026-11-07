@@ -70,18 +70,19 @@ export default class extends Controller {
 
   // Rows can only be dragged in sort mode, so outside it a press on an
   // account link or a text selection behaves as usual. In sort mode the link
-  // inside a row is not draggable on its own, so dragging it moves the row.
+  // and the logo inside a row are not draggable on their own, so dragging
+  // them moves the row.
   renderHandle(handle) {
     handle.style.display = this.sorting ? "" : "none";
     const item = handle.closest("[data-sortable-list-target='item']");
     if (!item) return;
 
     item.draggable = this.sorting;
-    item.querySelectorAll("a").forEach((link) => {
+    item.querySelectorAll("a, img").forEach((element) => {
       if (this.sorting) {
-        link.setAttribute("draggable", "false");
+        element.setAttribute("draggable", "false");
       } else {
-        link.removeAttribute("draggable");
+        element.removeAttribute("draggable");
       }
     });
   }
