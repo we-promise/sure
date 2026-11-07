@@ -60,6 +60,20 @@ class AiTransportAttachmentsTest < ActiveSupport::TestCase
     assert_not_requested stub
   end
 
+  test "a server without a vision projector answering images with a 500 is Refused, after one request" do
+    stub_request(:post, CHAT_URL).to_return(
+      status: 500, headers: JSON_HEADERS,
+      body: { error: { code: 500, message: "image input is not supported - hint: if this is unexpected, you may need to provide the mmproj",
+                       type: "server_error" } }.to_json
+    )
+
+    assert_raises(Ai::Error::Refused) do
+      generate(attachments: [ Ai::Attachment.png(PNG, filename: "page-1.png") ], capabilities: %i[structured_output vision],
+               endpoint: ai_endpoint(name: "llm", base_url: "https://llm.example.test/v1", max_retries: 2))
+    end
+    assert_requested :post, CHAT_URL, times: 1
+  end
+
   test "a PDF to a model without documents is refused before anything is sent" do
     stub = stub_request(:post, CHAT_URL)
 

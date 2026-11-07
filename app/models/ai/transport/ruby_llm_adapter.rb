@@ -128,7 +128,8 @@ module Ai::Transport::RubyLlmAdapter
         when RubyLLM::UnauthorizedError, RubyLLM::ForbiddenError then Ai::Error::Unauthorized
         when RubyLLM::RateLimitError then Ai::Error::NO_CREDIT.any? { text.match?(_1) } ? Ai::Error::NoCredit : Ai::Error::RateLimited
         when RubyLLM::ContextLengthExceededError then Ai::Error::ContextTooLong
-        when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError then Ai::Error::Upstream
+        when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError
+          Ai::Error::UNSUPPORTED_INPUT.any? { text.match?(_1) } ? Ai::Error::Refused : Ai::Error::Upstream
         when RubyLLM::CancelledError then Ai::Error::Cancelled
         when RubyLLM::ModelNotFoundError then Ai::Error::ModelMissing   # not a RubyLLM::Error
         end
