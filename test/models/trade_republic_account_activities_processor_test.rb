@@ -1132,8 +1132,10 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal 0, @account.entries.sum(:amount)
 
     log = DebugLogEntry.where(message: SETTLEMENT_MISMATCH_MESSAGE).order(:created_at).last
-    assert_equal "81.33", log.metadata["timeline_amount"]
-    assert_equal "80.87", log.metadata["detail_amount"]
+    assert_equal "evt_net_sell", log.metadata["event_id"]
+    # Figures in debug metadata are redacted (DebugLogEntry::MONETARY_METADATA_KEY_PATTERN).
+    assert_equal "[REDACTED]", log.metadata["timeline_amount"]
+    assert_equal "[REDACTED]", log.metadata["detail_amount"]
 
     assert_no_difference -> { DebugLogEntry.where(message: SETTLEMENT_MISMATCH_MESSAGE).count } do
       TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process

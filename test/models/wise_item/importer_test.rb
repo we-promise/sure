@@ -776,7 +776,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     entry = DebugLogEntry.where(provider_key: "wise", category: "provider_sync").recent.first
     assert_equal @wise_item.id, entry.metadata["wise_item_id"]
     assert_equal "access_forbidden", entry.metadata["error_type"]
-    assert_equal 2, entry.metadata["balance_count"]
+    assert_equal DebugLogEntry::REDACTED, entry.metadata["balance_count"]
     assert_equal false, entry.metadata["sca_challenged"]
   end
 
@@ -800,7 +800,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ 1 ], @wise_item.wise_accounts.find_by(currency: "EUR").raw_transactions_payload.map { |t| t["id"] }
 
     entry = DebugLogEntry.where(provider_key: "wise", category: "provider_sync").recent.first
-    assert_equal({ "operation" => "balance_statement", "error_type" => "access_forbidden", "balance_count" => 2,
+    assert_equal({ "operation" => "balance_statement", "error_type" => "access_forbidden", "balance_count" => DebugLogEntry::REDACTED,
                    "sca_challenged" => true, "sca_private_key_configured" => false },
                  entry.metadata.slice("operation", "error_type", "balance_count", "sca_challenged", "sca_private_key_configured"))
   end
@@ -850,7 +850,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert result[:complete]
     assert_equal 0, result[:fetch_failures]
     note = DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "balance_statement").sole
-    assert_equal 2, note.metadata["balance_count"]
+    assert_equal DebugLogEntry::REDACTED, note.metadata["balance_count"]
   end
 
   test "a statement failure counts against the import for a balance that holds statement rows" do

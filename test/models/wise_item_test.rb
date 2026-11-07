@@ -174,7 +174,8 @@ class WiseItemTest < ActiveSupport::TestCase
     # needs a real one.
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
     @family.update_column(:timezone, "Invalid/Timezone")
-    notes = -> { DebugLogEntry.where(provider_key: "wise").where("metadata ->> 'operation' = ?", "time_zone") }
+    # Filtered in Ruby: with encryption on, the metadata column holds ciphertext.
+    notes = -> { DebugLogEntry.where(provider_key: "wise").select { |note| note.metadata["operation"] == "time_zone" } }
 
     assert_difference -> { notes.call.count }, 1 do
       2.times { assert_equal ActiveSupport::TimeZone["UTC"], WiseItem.find(@wise_item.id).time_zone }
