@@ -1,8 +1,8 @@
-# One entry in a feature's ordered model list (section 5.2): a model on an endpoint. The first
-# entry is the normal choice; later ones are for failover and escalation (2c).
+# One entry in a feature's ordered model list: a model on an endpoint. The first entry is the
+# normal choice; later ones are for failover and escalation.
 #
-# `condition` limits who an entry serves. Until 2d, a Jev entry serves only families that chose
-# Jev (`:jev_family`), which is today's rule; 2d deletes it with `families.categorization_provider`.
+# `condition` limits who an entry serves: a Jev entry serves only families that chose Jev
+# (`:jev_family`).
 Ai::Route = Data.define(:feature, :position, :model, :condition) do
   def initialize(feature:, position:, model:, condition: nil)
     super(feature: feature.to_sym, position:, model:, condition:)

@@ -1,4 +1,4 @@
-# Deprecated: reads today's AI ENV and `Setting` fields as an AI configuration (section 4.5), so
+# Deprecated: reads the AI ENV and `Setting` fields as an AI configuration, so
 # installs configured either way keep working while the router replaces today's lookups.
 #
 # Each value resolves the way today's code resolves it. Wherever today's code has a resolver
@@ -7,12 +7,10 @@
 # checks that over every documented setup. The one deliberate difference is drift bug 5:
 # embeddings fall back to the OpenAI values saved in Settings, as every other AI setting does.
 #
-# Until PR 7 it's built in every process. PR 7 loads the same structure into the `ai_*` tables
-# instead, with a deprecation warning, and the release that stops reading the old variables
-# deletes this file.
+# It's built in every process. The release that stops reading the old variables deletes this file.
 class Ai::LegacyEnvConfig
   # OpenAI's vector store embeds files on its own side, so the `embed` route names this stand-in
-  # model on the OpenAI endpoint. PR 7's OpenAI preset names the store's embedding model.
+  # model on the OpenAI endpoint.
   VECTOR_STORE_MODEL = "vector_store".freeze
   LLM_FEATURES = %i[bill_setup extract_pdf detect_merchants enhance_merchants].freeze
   EMBEDDING_TIMEOUT = 120         # VectorStore::Embeddable's client

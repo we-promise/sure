@@ -1,7 +1,7 @@
 require "test_helper"
 
 # Every controller action that starts an AI feature declares `requires_ai` for it, and the guard
-# reads nothing but Ai.availability (ai-plumbing-redesign.md, section 17).
+# reads nothing but Ai.availability.
 class AiFeatureGuardTest < ActiveSupport::TestCase
   # "Controller#action" => the feature it starts.
   AI_ACTIONS = {
@@ -10,8 +10,7 @@ class AiFeatureGuardTest < ActiveSupport::TestCase
     "FamilyMerchantsController#enhance" => :enhance_merchants
   }.freeze
 
-  # Chat's entry points keep today's checks until PR 6 moves them to `requires_ai :chat`. The list
-  # may only shrink.
+  # Chat's entry points keep chat's own checks, not `requires_ai :chat`. The list may only shrink.
   CHAT_ALLOWLIST = %w[
     ChatsController#create
     ChatsController#retry

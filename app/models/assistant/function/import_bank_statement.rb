@@ -105,7 +105,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     end
 
     # Extract transactions from the PDF using the configured LLM provider, the
-    # first in extract_pdf's route, until the call itself moves onto it (2e).
+    # first in extract_pdf's route.
     provider = Provider::Registry.preferred_llm_provider
 
     response = provider.extract_bank_statement(

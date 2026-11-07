@@ -215,7 +215,7 @@ class PdfImport < Import
 
   def process_with_ai
     require_ai_for_extraction!
-    # The first provider in extract_pdf's route, until the call moves onto it (2e).
+    # The first provider in extract_pdf's route.
     provider = Provider::Registry.preferred_llm_provider
     raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
 

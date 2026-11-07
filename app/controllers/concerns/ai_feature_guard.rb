@@ -1,4 +1,4 @@
-# One guard for controller actions that start an AI feature (ai-plumbing-redesign.md, section 15).
+# One guard for controller actions that start an AI feature.
 # It answers only "is this AI feature available for this family and user?", through the router:
 #
 #   requires_ai :bill_setup

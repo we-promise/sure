@@ -1,9 +1,7 @@
-# Why a feature can or can't run for a family and user (section 16). The router returns one
-# with a reason when nothing may run, and Ai.availability returns an available one otherwise.
+# Why a feature can or can't run for a family and user. The router returns one with a reason
+# when nothing may run, and Ai.availability returns an available one otherwise.
 #
-# Reasons in 2b: :not_configured, :capability_missing and :user_disabled. PR 7 adds
-# :no_family_consent and :consent_outdated; PR 9 :endpoint_not_allowed, :key_missing,
-# :cost_cap_reached and :blocked_by_admin.
+# Reasons: :not_configured, :capability_missing and :user_disabled.
 Ai::Availability = Data.define(:feature, :reason) do
   def self.available(feature) = new(feature: feature.to_sym, reason: nil)
 
