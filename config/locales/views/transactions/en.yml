@@ -168,8 +168,8 @@ en:
     split_parent_row:
       split_label: "Split"
     transfer_match:
-      auto_matched: Auto-matched
-      auto_matched_short: Auto
+      auto_matched: Match?
+      auto_matched_short: Match?
       confirm_match: Confirm match
       payment_confirmed: Payment is confirmed
       reject_match: Reject match
