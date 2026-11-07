@@ -34,6 +34,9 @@ pl:
       holdings: Pozycje
       name: Nazwa
       new_holding: Nowa aktywność
+      negative_position: "%{name} (%{ticker}): poniżej zera od %{date}, najniżej %{qty}."
+      negative_positions_hint: "Prawdopodobnie brakuje zakupu lub przeniesienia. Dodaj je albo popraw transakcje, które sprowadziły pozycję poniżej zera."
+      negative_positions_title: "Niektóre pozycje spadły poniżej zera"
       no_holdings: Brak pozycji do wyświetlenia.
       positions:
         few: "%{count} pozycje"

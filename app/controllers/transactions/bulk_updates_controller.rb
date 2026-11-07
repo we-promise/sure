@@ -22,6 +22,8 @@ class Transactions::BulkUpdatesController < ApplicationController
     end
 
     redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back_or_to transactions_path, alert: e.record.errors.full_messages.to_sentence
   end
 
   private

@@ -99,7 +99,9 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     updatable = build_entry_params_for_update
 
-    if @entry.update(updatable.except(:nature))
+    @entry.assign_attributes(updatable.except(:nature))
+
+    if Trade::SaleLimit.save(@entry)
       @entry.lock_saved_attributes!
       @entry.mark_user_modified!
       @entry.sync_account_later

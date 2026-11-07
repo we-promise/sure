@@ -1,6 +1,9 @@
 ---
 ca:
   trades:
+    sale_limit:
+      exceeds_holding: "No pots vendre %{qty} %{ticker}: el compte només en té %{available} el %{date}."
+      exceeds_later_holding: "No pots vendre %{qty} %{ticker}: en aquesta data se'n poden vendre com a màxim %{available}, si no la posició queda per sota de zero el %{date}."
     form:
       account: Compte de transferència (opcional)
       account_prompt: Cerca compte
@@ -21,6 +24,9 @@ ca:
       type_sell: Venda
       type_withdrawal: Retirada
       trade_requires_security: Cal un valor (símbol) per a les operacions de compra i venda
+      held_security: "%{name} (%{ticker}), %{qty} en cartera"
+      held_security_prompt: "Tria una posició"
+      held_security_hint: "No hi és? Afegeix primer la compra."
     header:
       buy: Compra
       current_market_price_label: Preu de mercat actual

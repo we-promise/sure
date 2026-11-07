@@ -79,7 +79,8 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create sell trade returns 201" do
-    security = Security.create!(ticker: "TEST", name: "Test Security", country_code: "US")
+    # The investment account holds 10 AAPL (fixture trade), so selling 10 is allowed.
+    security = securities(:aapl)
 
     post "/api/v1/trades",
       params: { trade: {
@@ -97,6 +98,48 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     body = JSON.parse(response.body)
     assert body["id"].present?
     assert_equal "Sell", body["investment_activity_label"]
+  end
+
+  test "create sell trade larger than the holding returns 422" do
+    assert_no_difference [ "Entry.count", "Trade.count" ] do
+      post "/api/v1/trades",
+        params: { trade: {
+          account_id: @investment_account.id,
+          type: "sell",
+          date: Date.current,
+          qty: 11,
+          price: 100.00,
+          currency: "USD",
+          security_id: securities(:aapl).id
+        } },
+        headers: api_headers(read_write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_match "holds only 10", body["errors"].join
+  end
+
+  test "updating a sell beyond the holding returns 422" do
+    post "/api/v1/trades",
+      params: { trade: {
+        account_id: @investment_account.id,
+        type: "sell",
+        date: Date.current,
+        qty: 4,
+        price: 100,
+        security_id: securities(:aapl).id
+      } },
+      headers: api_headers(read_write_api_key)
+    assert_response :created
+    trade_id = JSON.parse(response.body).fetch("id")
+
+    patch api_v1_trade_url(trade_id),
+      params: { trade: { qty: 11 } },
+      headers: api_headers(read_write_api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal(-4, Trade.find(trade_id).qty)
   end
 
   test "create sweep in trade returns 201" do
@@ -121,7 +164,8 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create sweep out trade returns 201" do
-    security = Security.create!(ticker: "SWOUT", name: "Sweep Out Security", country_code: "US")
+    # Units moving out need units to move: the account holds 10 AAPL.
+    security = securities(:aapl)
 
     post "/api/v1/trades",
       params: { trade: {
@@ -654,7 +698,9 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "updates a security trade to sweep out with matching sign and label" do
-    security = Security.create!(ticker: "UPDSWEEP", name: "Update Sweep Security", country_code: "US")
+    # Turning the buy into an outflow removes its own units, so the account
+    # needs others to cover it: it already holds 10 AAPL.
+    security = securities(:aapl)
     post "/api/v1/trades",
       params: { trade: {
         account_id: @investment_account.id,

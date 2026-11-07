@@ -590,6 +590,15 @@ RSpec.describe 'API V1 Trades', type: :request do
 
         run_test!
       end
+
+      response '422', 'sale larger than the holding' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:id) { trade.id }
+        let(:body) { { trade: { qty: 150, type: 'sell' } } }
+
+        run_test!
+      end
     end
 
     delete 'Delete trade' do

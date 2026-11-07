@@ -36,6 +36,9 @@ fr:
       holdings: Holdings
       name: Nom
       new_holding: Nouvelle activité
+      negative_position: "%{name} (%{ticker}) : sous zéro depuis le %{date}, au plus bas %{qty}."
+      negative_positions_hint: "Il manque probablement un achat ou un transfert. Ajoutez-le ou corrigez les opérations qui ont fait passer la position sous zéro."
+      negative_positions_title: "Certaines positions sont passées sous zéro"
       no_holdings: Aucun holding à afficher.
       return: Rendement total
       weight: Poids
