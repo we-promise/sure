@@ -97,6 +97,33 @@ class CoinspotAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.5"), holdings.first.qty
   end
 
+  test "keeps a remapped holding whose provider security is still in the snapshot" do
+    chosen = Security.create!(ticker: "CRYPTO:XBT", name: "XBT", exchange_operating_mic: "XCSO", offline: true)
+    @account.holdings.create!(
+      security: chosen,
+      provider_security: @security,
+      security_locked: true,
+      qty: 0.5,
+      amount: 50_000,
+      currency: "AUD",
+      date: Date.current - 1.day,
+      price: 100_000,
+      account_provider_id: @account_provider.id,
+      external_id: "coinspot_BTC_spot_#{Date.current - 1.day}"
+    )
+    @coinspot_account.update!(raw_payload: {
+      "assets" => [ { "symbol" => "BTC", "balance" => "0.5", "amount_aud" => nil, "price_aud" => nil, "source" => "spot" } ]
+    })
+    CoinspotAccount::SecurityResolver.stubs(:resolve).with("BTC").returns(@security)
+
+    result = CoinspotAccount::HoldingsProcessor.new(@coinspot_account).process
+
+    assert_equal true, result[:success], result.inspect
+    today = @account.holdings.where(date: Date.current)
+    assert_equal [ chosen.id ], today.pluck(:security_id)
+    assert_equal BigDecimal("0.5"), today.first.qty
+  end
+
   test "preserves an eight-decimal asset quantity from the balance snapshot" do
     @coinspot_account.update!(raw_payload: {
       "assets" => [

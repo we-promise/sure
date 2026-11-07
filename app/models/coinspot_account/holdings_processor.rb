@@ -156,11 +156,15 @@ class CoinspotAccount::HoldingsProcessor
         CoinspotAccount::SecurityResolver.resolve(symbol)&.id
       end.to_set
 
+      # A holding the user remapped sits on their chosen security, with the
+      # resolved one kept as provider_security, so check both before treating
+      # it as absent.
       previously_seen = account.holdings
         .where(account_provider_id: provider_link.id)
         .where.not(security_id: present_security_ids.to_a)
         .includes(:security)
         .to_a
+        .reject { |holding| present_security_ids.include?(holding.provider_security_id) }
         .uniq(&:security_id)
 
       previously_seen.each do |holding|
