@@ -220,8 +220,8 @@ class CoinspotItem::Importer
 
         # Delisted coins keep a balance but come back with no AUD balance or
         # rate. Count them at zero and flag them in missing_prices instead of
-        # failing the whole sync; the blank amount_aud makes the holdings
-        # processor skip them rather than store a made-up value.
+        # failing the whole sync; the holdings processor stores a blank
+        # amount_aud as a zero-valued holding.
         unpriced = !aud_asset && balance.nonzero? && !amount_aud&.nonzero?
         if unpriced
           DebugLogEntry.capture(

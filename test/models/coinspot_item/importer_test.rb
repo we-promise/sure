@@ -129,6 +129,14 @@ class CoinspotItem::ImporterTest < ActiveSupport::TestCase
       result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
     end
 
+    warnings = DebugLogEntry.where(source: "CoinspotItem::Importer").sort_by { |entry| entry.metadata["symbol"] }
+    assert_equal %w[PAY XYZ], warnings.map { |entry| entry.metadata["symbol"] }
+    assert_equal [ "warn", "warn" ], warnings.map(&:level)
+    assert_equal [
+      "CoinSpot returned PAY without an AUD valuation; valuing it at zero",
+      "CoinSpot returned XYZ without an AUD valuation; valuing it at zero"
+    ], warnings.map(&:message)
+
     assert result[:success]
     assert_equal 3, result[:assets_imported]
     assert_in_delta 50_000.00, result[:total_aud], 0.01
@@ -141,6 +149,10 @@ class CoinspotItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "12.5", pay["balance"]
     assert_nil pay["amount_aud"]
     assert_nil pay["price_aud"]
+
+    xyz = account.raw_payload["assets"].find { |asset| asset["symbol"] == "XYZ" }
+    assert_nil xyz["amount_aud"]
+    assert_nil xyz["price_aud"]
   end
 
   test "preserves sell orders alongside buy orders from the primary endpoint" do

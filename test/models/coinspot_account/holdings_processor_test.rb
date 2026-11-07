@@ -53,6 +53,50 @@ class CoinspotAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_empty @account.current_holdings
   end
 
+  test "replaces a priced holding with a zero-valued one when the asset loses its AUD price" do
+    pay = Security.create!(ticker: "CRYPTO:PAY", name: "PAY", exchange_operating_mic: "XCSO", offline: true)
+    @account.holdings.create!(
+      security: pay,
+      provider_security: pay,
+      qty: 12.5,
+      amount: 25,
+      currency: "AUD",
+      date: Date.current - 1.day,
+      price: 2,
+      account_provider_id: @account_provider.id,
+      external_id: "coinspot_PAY_spot_#{Date.current - 1.day}"
+    )
+    @coinspot_account.update!(raw_payload: {
+      "assets" => [ { "symbol" => "PAY", "balance" => "12.5", "amount_aud" => nil, "price_aud" => nil, "source" => "spot" } ]
+    })
+    CoinspotAccount::SecurityResolver.stubs(:resolve).with("PAY").returns(pay)
+
+    result = CoinspotAccount::HoldingsProcessor.new(@coinspot_account).process
+
+    assert_equal true, result[:success], result.inspect
+    holding = @account.current_holdings.find_by!(security: pay)
+    assert_equal Date.current, holding.date
+    assert_equal BigDecimal("12.5"), holding.qty
+    assert_equal 0.to_d, holding.amount
+    assert_equal 0.to_d, holding.price
+  end
+
+  test "overwrites a same-day priced holding when the asset loses its AUD price" do
+    priced = { "symbol" => "BTC", "balance" => "0.5", "amount_aud" => "50000", "price_aud" => "100000", "source" => "spot" }
+    @coinspot_account.update!(raw_payload: { "assets" => [ priced ] })
+    CoinspotAccount::SecurityResolver.stubs(:resolve).with("BTC").returns(@security)
+    CoinspotAccount::HoldingsProcessor.new(@coinspot_account).process
+
+    @coinspot_account.update!(raw_payload: { "assets" => [ priced.merge("amount_aud" => nil, "price_aud" => nil) ] })
+    result = CoinspotAccount::HoldingsProcessor.new(@coinspot_account).process
+
+    assert_equal true, result[:success], result.inspect
+    holdings = @account.holdings.where(security: @security, date: Date.current)
+    assert_equal 1, holdings.count
+    assert_equal 0.to_d, holdings.first.amount
+    assert_equal BigDecimal("0.5"), holdings.first.qty
+  end
+
   test "preserves an eight-decimal asset quantity from the balance snapshot" do
     @coinspot_account.update!(raw_payload: {
       "assets" => [
