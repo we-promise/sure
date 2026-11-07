@@ -60,6 +60,20 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
     ends.each { assert_equal({ name: "Netflix", notes: [ "billed with [REDACTED]" ] }, _1[:output]) }
   end
 
+  test "Langfuse content is scrubbed of the endpoint's own secrets, whatever their shape" do
+    log = []
+    subscriber = Ai::Instrumentation::LangfuseSubscriber.new(client: FakeLangfuse.new(log))
+    scrub = ->(text) { Ai::Instrumentation::Redactor.scrub(text, secrets: [ "opaque-gateway-token" ]) }
+    payload = { feature: "bill_setup", call_id: "c1", route: { endpoint: "gateway", model: "m" }, scrub:,
+                request: { input: "use opaque-gateway-token" }, output: { text: "echo opaque-gateway-token" } }
+
+    subscriber.call(event("generate.ai", payload))
+
+    trace = log.find { _1.first == :trace }.last
+    assert_equal({ input: "use [REDACTED]" }, trace[:input])
+    assert_equal({ text: "echo [REDACTED]" }, log.find { _1.first == :end }.last[:output])
+  end
+
   test "a failed call writes a debug log entry with its route and error, never its key" do
     payload = { feature: "categorize", call_id: "c1", correlation_id: "rule_run:7", family_id: families(:dylan_family).id,
                 endpoint: { name: "gpu", protocol: :compatible, location: :local }, route: { endpoint: "gpu", model: "qwen3-8b" },
