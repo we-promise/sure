@@ -653,6 +653,15 @@ gpt-oss-20b from a local GGUF, and OpenClaw 2026.10.8. One model ran at a time.
   - **The image 500 from servers without a vision projector** is `Refused`, not `Upstream`.
   - **AI cassettes** record `<FILE>` for inline files, after a base64 page image tripped
     Pipelock's AWS key pattern.
+- **pgvector search** (Gemini `gemini-embedding-001` at 3,072 and venus granite at 384, the test
+  database's column resized for each):
+  - **It works:** the vault statement is indexed, `search_family_files` finds it, and the OpenClaw
+    agent answers a question about it over MCP.
+  - **A dimension mismatch** (asked for 1,024, got 3,072) fails as `InvalidOutput`. Sure sends no
+    `dimensions`, as today.
+  - **`MIN_SCORE` 0.3 doesn't filter on pgvector:** unrelated text scored 0.47 (Gemini) and 0.77
+    (granite), against 0.63 and 0.85 for relevant text. The 0.3 comes from the OpenAI store's
+    scores.
 - **Found, not fixed here:**
   - **Sure answers MCP notifications with 204** (on `main` too). MCP's Streamable HTTP transport
     says 202. Pipelock 3.6.0 rejects 204, so OpenClaw through Pipelock's MCP proxy, the compose
