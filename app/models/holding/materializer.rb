@@ -132,8 +132,9 @@ class Holding::Materializer
           # calculated figure standing — which is the stale number reporting a
           # transferred coin as if it had been bought on arrival. Cleared, so
           # the read path falls through and answers "unknown" rather than
-          # confidently wrong. A manual or provider figure is somebody's
-          # assertion about what the position cost, and stays.
+          # confidently wrong. A provider figure, or a manual one the user
+          # still locks, is somebody's assertion about what the position cost,
+          # and stays. A manual figure the user has unlocked is no longer one.
           holdings_buffer_to_upsert_with_cost << base_attrs.merge(
             "cost_basis" => nil,
             "cost_basis_source" => nil
@@ -221,12 +222,15 @@ class Holding::Materializer
         .each_with_object(Hash.new { |h, k| h[k] = [] }) { |(security_id, date), dates| dates[security_id] << date }
     end
 
-    # Nothing to clear, or a figure somebody asserted rather than one this app
-    # worked out.
+    # Clearable unless there is nothing to clear or somebody still asserts the
+    # figure: a provider's, or a manual one the user keeps locked. Unlocking
+    # (`Holding#unlock_cost_basis!`) leaves the figure and its "manual" source
+    # on the released rows, so without the last clause they kept it.
     def clearable_calculated_basis?(existing)
       return false if existing.nil? || existing.cost_basis.blank?
 
-      existing.cost_basis_source.nil? || existing.cost_basis_source == "calculated"
+      existing.cost_basis_source.nil? || existing.cost_basis_source == "calculated" ||
+        (existing.cost_basis_source == "manual" && !existing.cost_basis_locked?)
     end
 
     def load_existing_holdings_map

@@ -836,6 +836,25 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
 
     assert_nil latest_holding.avg_cost, "the user's figure stayed on a row nobody had locked"
     assert_nil @account.holdings.find_by!(security: @aapl, date: 2.days.ago.to_date).avg_cost
+
+    anchor = @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date)
+    assert_not anchor.cost_basis_locked?, "precondition: the unlock released the original lock too"
+    assert_nil anchor.avg_cost, "the released lock row kept the user's figure unlocked"
+  end
+
+  test "unlocking the lock row itself on a transferred-in position leaves it unknown" do
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    @account.trades.each { |t| t.update!(investment_activity_label: Trade::TRANSFER_LABEL) }
+    materialize
+    anchor = @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date)
+    anchor.set_manual_cost_basis!(150)
+    materialize
+
+    anchor.reload.unlock_cost_basis!
+    materialize
+
+    assert_nil anchor.reload.avg_cost, "the unlocked row kept the user's figure"
+    assert_nil latest_holding.avg_cost
   end
 
   # The lock covers the units held at the end of its date, so a trade entered
