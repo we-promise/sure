@@ -1,0 +1,34 @@
+---
+en:
+  liquidity:
+    buckets:
+      within_3_months: Within 3 months
+      within_12_months: In 3 to 12 months
+      within_36_months: In 1 to 3 years
+      later: Later
+      no_date: Locked, no date set
+      long_term: Locked long-term
+    remaining:
+      today: Today
+      days:
+        one: in 1 day
+        other: "in %{count} days"
+    levels:
+      level: Availability
+      share: Share
+      value: Value
+      short_term_liabilities: Short-term debts
+    release_timeline:
+      title: When locked money is released
+      empty: No locked money.
+      no_date: No release date set
+      renews: renews automatically
+    releases_table:
+      caption: Locked accounts by release date
+      account: Account
+      released_on: Released on
+      remaining: Remaining
+      amount: Amount
+      renews: Renews automatically
+      year_total: "Total %{year}"
+      empty: No locked accounts with a release date.

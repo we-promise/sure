@@ -1,6 +1,15 @@
 ---
 en:
   reports:
+    liquidity:
+      title: Availability
+      available_net_worth: Available net worth
+      period_change: "%{change} in this period"
+      bound_assets: Locked
+      share_of_assets: "%{share} of assets"
+      next_release: Next release
+      by_level: By availability
+      maturities: Release dates
     index:
       title: Reports
       subtitle: Comprehensive insights into your financial health

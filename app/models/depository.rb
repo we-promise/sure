@@ -9,7 +9,19 @@ class Depository < ApplicationRecord
     "savings" => { short: "Savings", long: "Savings" },
     "hsa" => { short: "HSA", long: "Health Savings Account" },
     "cd" => { short: "CD", long: "Certificate of Deposit" },
-    "money_market" => { short: "MM", long: "Money Market" }
+    "money_market" => { short: "MM", long: "Money Market" },
+    "notice_savings" => { short: "Notice Savings", long: "Notice Savings Account" },
+    "building_savings" => { short: "Building Savings", long: "Building Savings Contract" }
+  }.freeze
+
+  # Default availability per subtype (Account::Liquidity). Subtypes not listed
+  # are immediate.
+  LIQUIDITY_BY_SUBTYPE = {
+    "money_market" => "short_term",
+    "notice_savings" => "short_term",
+    "cd" => "locked",
+    "building_savings" => "locked",
+    "hsa" => "long_term"
   }.freeze
 
   # Depository subtypes that carry tax-advantaged treatment in the budget /
@@ -35,6 +47,14 @@ class Depository < ApplicationRecord
   end
 
   class << self
+    def default_liquidity_for(subtype)
+      LIQUIDITY_BY_SUBTYPE.fetch(subtype.to_s, "immediate")
+    end
+
+    def default_tax_treatment_for(subtype)
+      :tax_advantaged if TAX_ADVANTAGED_SUBTYPES.include?(subtype)
+    end
+
     def color
       "#875BF7"
     end

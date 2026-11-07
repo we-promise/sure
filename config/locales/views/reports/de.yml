@@ -1,6 +1,15 @@
 ---
 de:
   reports:
+    liquidity:
+      title: Verfügbarkeit
+      available_net_worth: Verfügbares Vermögen
+      period_change: "%{change} in diesem Zeitraum"
+      bound_assets: Gebunden
+      share_of_assets: "%{share} des Vermögens"
+      next_release: Nächste Freigabe
+      by_level: Nach Verfügbarkeit
+      maturities: Freigabetermine
     index:
       period_aria: Berichtszeitraum
       title: Berichte

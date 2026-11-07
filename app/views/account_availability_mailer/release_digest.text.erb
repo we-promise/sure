@@ -1,0 +1,11 @@
+<%= t(".heading", count: @reminders.size) %>
+
+<%= t(".intro") %>
+
+<% @reminders.each do |reminder| %>
+- <%= reminder.account.name %> | <%= account_release_line(reminder) %> | <%= Money.new(reminder.account.balance, reminder.account.currency).format %>
+<% end %>
+
+<%= t(".cta") %>: <%= @accounts_url %>
+
+<%= t(".settings_hint") %>

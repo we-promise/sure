@@ -462,6 +462,19 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_not bridge.short?, "an unknown balance is not evidence of a shortfall"
   end
 
+  test "with preview on, a locked term deposit does not count as cash on hand" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    set_cash(500)
+    @family.accounts.create!(name: "Term deposit", balance: 10_000, currency: "USD", owner: @user,
+                             accountable: Depository.new(subtype: "cd"), available_on: Date.current + 90)
+    create_series(name: "Paycheck", amount: -1840, due: Date.current + 5, preset: "weekly", income: true)
+    create_series(name: "Water", amount: 64, due: Date.current + 2)
+
+    bridge = Planner.new(@family, user: @user).plan(periods_limit: 3).first
+
+    assert_equal 500, bridge.cash_on_hand
+  end
+
   private
     # The family fixture carries more than one deposit account, and the plan
     # sums all of them, so a test that means to pin the cash has to set them all.

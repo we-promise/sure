@@ -15,6 +15,9 @@
             <% if account.tax_treatment.present? %>
               <%= render partial: "accounts/tax_treatment_badge", locals: { account: account } %>
             <% end %>
+            <% if preview_features_enabled? && account.asset? && (liquidity_label = liquidity_badge_label(account)) %>
+              <%= render DS::Pill.new(label: liquidity_label, tone: :amber, marker: false, show_dot: false) %>
+            <% end %>
             <% if account.draft? %>
               <%= render DS::Link.new(
                   text: t(".complete_setup"),
