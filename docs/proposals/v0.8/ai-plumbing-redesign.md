@@ -2816,7 +2816,11 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    statements not yet indexed (section 5.5). Each embedding model carries its search score
    threshold, for the OpenAI store and pgvector alike (default 0.3), and PR 7 resolves an
    embedding model whose dimensions don't match the chunks table, where 2e fails with
-   `InvalidOutput` (calls by @josh-sanders during development of PR #4440). That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
+   `InvalidOutput` (calls by @josh-sanders during development of PR #4440). Presets carry their
+   provider's JSON-schema dialect, so Sure drops what a provider's strict mode refuses (Cohere
+   refuses nullable objects and integer `minimum`; 2c's `auto` then falls to `none`), rather than
+   2c's fallback changing (call by @josh-sanders during development of PR #4440, after 2e's live
+   testing). That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
    The test helpers switch to the new fixtures. Adds the config and consent tests.
    *Still on old code:* nothing; from here every process reads the same rows.
 8. **Health and settings pages.** The health page (lanes, down marks, AI threads per worker,

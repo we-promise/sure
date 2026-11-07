@@ -96,6 +96,9 @@ flowchart LR
 6. **Embedding dimensions** (after live testing): PR 7 resolves a model whose dimensions don't
    match the chunks table. 2e keeps today's request (no `dimensions`) and fails a mismatch as
    `InvalidOutput`.
+7. **Narrower strict-schema dialects** (after the Cohere run): left for PR 7, where each preset
+   carries its provider's dialect. 2c's `auto` fallback (#3605: one retry in `none` after a schema
+   400) stays as it is.
 
 **Already decided in #4440, which 2e follows (§5.5, §8.1, §14, the register):**
 
@@ -710,8 +713,8 @@ the credit error), so decision 7 and the PDF document block stay unchecked. What
 - **Cohere's strict schemas are narrower.** It refuses `type: ["object", "null"]` and an integer
   `minimum`. 2c's `auto` then retries once in `none` (#3605), and BAC's text layer came back as
   non-JSON (`InvalidOutput`, reported, not imported). Trying `json_object` before `none` after a
-  schema-validation 400, or a per-preset schema dialect in PR 7, would cover it; that's for
-  @josh-sanders to decide.
+  schema-validation 400, or a per-preset schema dialect in PR 7, would cover it. Decided: PR 7's
+  per-preset dialect (decision 7).
 - **pgvector on `embed-v4.0`** (1,536 dimensions): relevant text scored 0.52 and 0.38, and
   unrelated text had no hits, so 0.3 filters on this model. That's more evidence for decision 5's
   per-model threshold.
