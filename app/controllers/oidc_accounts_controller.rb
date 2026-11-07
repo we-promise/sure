@@ -17,11 +17,13 @@ class OidcAccountsController < ApplicationController
     @user_exists = User.exists?(email: @email) if @email.present?
 
     # Check for a pending invitation for this email
-    @pending_invitation = Invitation.pending.find_by(email: @email) if @email.present?
+    @pending_invitation = Invitation.pending.find_by(email: @email) if pending_email_verified?
 
     # Determine whether we should offer JIT account creation for this
     # pending auth, based on JIT mode and allowed domains.
-    @allow_account_creation = @pending_invitation.present? || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(@email))
+    @email_unverified = @email.present? && !pending_email_verified?
+    @allow_account_creation = pending_email_verified? &&
+      (@pending_invitation.present? || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(@email)))
   end
 
   def create_link
@@ -109,6 +111,18 @@ class OidcAccountsController < ApplicationController
     end
 
     email = @pending_auth["email"]
+
+    # JIT creation and invitation redemption trust the IdP's email, so they
+    # require the IdP to have verified it (see docs/hosting/oidc.md).
+    unless pending_email_verified?
+      SsoAuditLog.log_jit_blocked!(
+        provider: @pending_auth["provider"],
+        request: request,
+        reason: "email_not_verified"
+      )
+      redirect_to new_session_path, alert: t(".email_not_verified")
+      return
+    end
 
     # Check for a pending invitation for this email
     invitation = Invitation.pending.find_by(email: email)
@@ -216,6 +230,10 @@ class OidcAccountsController < ApplicationController
   end
 
   private
+
+    def pending_email_verified?
+      @pending_auth["email"].present? && @pending_auth["email_verified"] == true
+    end
 
     def reject_removed_identity_after_lock
       session.delete(:pending_oidc_auth)

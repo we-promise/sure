@@ -340,10 +340,13 @@ class SessionsController < ApplicationController
 
       # No existing OIDC identity - need to link to account
       # Store auth data in session and redirect to linking page
+      email_verified = SsoEmailVerification.verified?(auth)
+      log_unverified_jit_block(auth, email_verified)
       session[:pending_oidc_auth] = {
         provider: auth.provider,
         uid: auth.uid,
         email: auth.info&.email,
+        email_verified: email_verified,
         name: auth.info&.name,
         first_name: auth.info&.first_name,
         last_name: auth.info&.last_name
@@ -487,9 +490,14 @@ class SessionsController < ApplicationController
     def handle_mobile_sso_onboarding(auth)
       device_info = session.delete(:mobile_sso)
       email = auth.info&.email
+      # JIT creation and invitation redemption trust the IdP's email, so they
+      # require it to be verified. Linking an existing account does not.
+      email_verified = SsoEmailVerification.verified?(auth)
+      log_unverified_jit_block(auth, email_verified)
 
-      has_pending_invitation = email.present? && Invitation.pending.exists?(email: email)
-      allow_creation = has_pending_invitation || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email))
+      has_pending_invitation = email_verified && Invitation.pending.exists?(email: email)
+      allow_creation = email_verified &&
+        (has_pending_invitation || (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email)))
 
       linking_code = SecureRandom.urlsafe_base64(32)
       Rails.cache.write(
@@ -498,6 +506,7 @@ class SessionsController < ApplicationController
           provider: auth.provider,
           uid: auth.uid,
           email: email,
+          email_verified: email_verified,
           first_name: auth.info&.first_name,
           last_name: auth.info&.last_name,
           name: auth.info&.name,
@@ -517,6 +526,19 @@ class SessionsController < ApplicationController
         allow_account_creation: allow_creation,
         has_pending_invitation: has_pending_invitation
       )
+    end
+
+    # Record a sign-in that would have been offered account creation or an
+    # invitation if the IdP had verified the email. Users who already have an
+    # account can still link it, so they are not a blocked attempt.
+    def log_unverified_jit_block(auth, email_verified)
+      email = auth.info&.email
+      return if email.blank? || email_verified
+      return if User.exists?(email: email)
+      return unless Invitation.pending.exists?(email: email) ||
+        (!AuthConfig.jit_link_only? && AuthConfig.allowed_oidc_domain?(email))
+
+      SsoAuditLog.log_jit_blocked!(provider: auth.provider, request: request, reason: "email_not_verified")
     end
 
     def mobile_sso_redirect(params = {})

@@ -348,7 +348,8 @@ RSpec.describe 'API V1 Auth', type: :request do
       produces 'application/json'
       description 'Creates a new user and family from a previously issued linking code. Links the SSO identity ' \
                   'via OidcIdentity, logs the JIT account creation via SsoAuditLog, and issues mobile OAuth tokens. ' \
-                  'The linking code must have allow_account_creation enabled. The first user on a fresh instance is ' \
+                  'The linking code must have allow_account_creation enabled and an email address the identity provider ' \
+                  'reported as verified. The first user on a fresh instance is ' \
                   'assigned the super_admin role; later family creators are assigned an admin-capable role.'
       parameter name: :body, in: :body, required: true, schema: {
         type: :object,
@@ -393,7 +394,7 @@ RSpec.describe 'API V1 Auth', type: :request do
         run_test!
       end
 
-      response '403', 'SSO identity removed or account creation disabled' do
+      response '403', 'SSO identity removed, account creation disabled or email not verified by the identity provider' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
