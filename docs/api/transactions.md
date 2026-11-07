@@ -32,6 +32,7 @@ All transaction endpoints require an OAuth2 access token or API key that grants 
 | `POST /api/v1/transactions` | `write` | Create a new transaction. |
 | `PATCH /api/v1/transactions/{id}` | `write` | Update an existing transaction. |
 | `DELETE /api/v1/transactions/{id}` | `write` | Permanently delete a transaction. |
+| `POST /api/v1/transactions/auto_categorize` | `write` | Queue AI auto-categorization for uncategorized transactions. |
 
 Refer to the generated [`openapi.yaml`](openapi.yaml) for request/response schemas, reusable components (pagination, errors, accounts, categories, merchants, tags), and security definitions.
 
@@ -146,6 +147,44 @@ Example request body:
   }
 }
 ```
+
+## Auto-categorizing transactions
+
+`POST /api/v1/transactions/auto_categorize` queues AI categorization in the background, the same work the "Auto-categorize transactions with AI" rule action does. It uses the family's configured categorization provider and confidence threshold, and picks from the family's existing categories. It returns `422 validation_failed` when no provider is configured, the family has no categories, or the request is malformed (`transaction_ids` that is not a non-empty array of transaction IDs or has more than 1,000 entries, an invalid `after_transaction_id`, or both fields sent together).
+
+Send `transaction_ids` (up to 1,000 entries, duplicates included) to categorize specific transactions. IDs are matched case-insensitively and returned in lowercase:
+
+```json
+{
+  "transaction_ids": ["uuid", "uuid"]
+}
+```
+
+Omit `transaction_ids` to queue eligible transactions in pages of at most 1,000, ordered by ID. When more were eligible, `truncated` is `true` and `next_after_transaction_id` holds the last ID considered: send it back as `after_transaction_id` to queue the next page. Paging matters because a transaction the provider finds no confident match for stays uncategorized and eligible, so repeating the request without the cursor would pick the same page again.
+
+```json
+{
+  "after_transaction_id": "uuid"
+}
+```
+
+Only uncategorized transactions on accounts the key's user may annotate are queued. Transactions whose category is locked (set or cleared by hand), transfers between the family's own accounts, and split parents are skipped; the job checks this again when it runs, so a transaction that has since become a transfer or split parent, been categorized, or moved out of the user's reach (an account share revoked) is not categorized. The response is `202 Accepted`:
+
+```json
+{
+  "queued_count": 1,
+  "transaction_ids": ["uuid"],
+  "skipped_transaction_ids": ["uuid"],
+  "truncated": false,
+  "next_after_transaction_id": null
+}
+```
+
+`skipped_transaction_ids` lists requested IDs that were not queued, for any of the reasons above (it is always empty when `transaction_ids` is omitted).
+
+A `202` means the jobs were queued, not that categories were assigned. A job can fail, or the provider can find no match above the confidence threshold, so a queued transaction may stay uncategorized. Read the results back with `GET /api/v1/transactions/{id}` once the jobs have run.
+
+If the job queue refuses a batch, the response is `503` with `error` (`service_unavailable`), `message`, `queued_count`, `transaction_ids` (the ones that were queued), `unqueued_transaction_ids`, `skipped_transaction_ids`, `truncated` and `next_after_transaction_id`. Retry with `unqueued_transaction_ids` as the new `transaction_ids`; repeating the original request would queue the already accepted transactions a second time, since they stay uncategorized until their jobs run.
 
 ## Transfer transactions
 
