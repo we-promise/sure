@@ -15,11 +15,11 @@ class Rule::ActionExecutor::AutoDetectMerchantsTest < ActiveSupport::TestCase
     @executor = Rule::ActionExecutor::AutoDetectMerchants.new(@rule)
   end
 
-  test "queues one job per LLM call, sized by LLM_MAX_ITEMS_PER_CALL" do
+  test "queues one job per LLM call, sized by the route model's batch size" do
     5.times { |i| create_transaction(account: @account, name: "Coffee #{i}") }
     Family.any_instance.expects(:auto_detect_transaction_merchants_later).times(3)
 
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "2") do
+    with_ai_model_settings(batch_size: 2) do
       assert_equal 3, @executor.execute(@account.transactions)[:jobs_count]
     end
   end

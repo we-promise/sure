@@ -35,18 +35,22 @@ class Eval::ProviderFactory
   private
     attr_reader :provider, :model, :config
 
+    # The run's OpenAI-compatible endpoint: its own token and URL, else the install's (Ai::Config,
+    # from the deprecated ENV or Settings until PR 7). Categorization and merchant detection run
+    # through the generations; chat through Provider::Openai until PR 6.
     def build_openai
-      access_token = config[:access_token].presence ||
-                     ENV["OPENAI_ACCESS_TOKEN"].presence ||
-                     Setting.openai_access_token
-
+      installed = Ai::Config.current.endpoints.find { _1.protocol == :compatible && _1.name.start_with?("openai") }
+      access_token = config[:access_token].presence || installed&.api_key
       raise Error, "OpenAI access token not configured" unless access_token.present?
 
-      uri_base = config[:uri_base].presence ||
-                 ENV["OPENAI_URI_BASE"].presence ||
-                 Setting.openai_uri_base
-
-      Provider::Openai.new(access_token, uri_base: uri_base, model: model)
+      uri_base = config[:uri_base].presence || installed&.base_url
+      endpoint = Ai::Config::Endpoint.new(
+        name: uri_base ? "openai_compatible" : "openai", protocol: :compatible, preset: (:openai unless uri_base),
+        base_url: uri_base, api_key: access_token, responses_api: uri_base.nil?,
+        location: uri_base.to_s.start_with?("http:") ? :local : :cloud, timeout_seconds: installed&.timeout_seconds || 60,
+        json_mode: installed&.json_mode || :auto
+      )
+      Eval::GenerationClient.new(endpoint:, model:, chat_provider: Provider::Openai.new(access_token, uri_base:, model:))
     end
 
     def build_jev

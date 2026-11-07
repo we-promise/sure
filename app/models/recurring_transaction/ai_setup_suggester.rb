@@ -1,6 +1,6 @@
 class RecurringTransaction
-  # Turns charge history into a reviewed bill-configuration proposal via the
-  # family's configured LLM provider. Two modes:
+  # Turns charge history into a reviewed bill-configuration proposal through
+  # Ai::Generations::SuggestBillSetup, the requester of :bill_setup. Two modes:
   #
   #   suggest_from_entries  -- from candidate entries (the add dialog's
   #                            smart-fill; nothing exists yet)
@@ -12,6 +12,9 @@ class RecurringTransaction
   # ranges, category resolved to this family's own id -- so callers can trust
   # the shape without re-validating LLM output.
   class AiSetupSuggester
+    include Ai::Requester
+    ai_feature :bill_setup
+
     Error = Class.new(StandardError)
     MAX_CHARGES = 40
 
@@ -45,24 +48,18 @@ class RecurringTransaction
     end
 
     private
+      # On the web thread until PR 3 moves smart-fill and smart-configure into a job.
       def run(charges:, current_config:)
-        raise Error, "No LLM provider configured" unless llm_provider
+        raise Error, "No LLM provider configured" unless Ai.available?(:bill_setup, family:, user:)
         raise Error, "No charge history to analyze" if charges.empty?
 
-        result = llm_provider.suggest_bill_setup(
-          charges: charges,
-          categories: family.categories.pluck(:name),
-          current_config: current_config,
-          family: family
-        )
+        result = Ai::Generations::SuggestBillSetup.new(
+          charges:, categories: family.categories.pluck(:name), current_config:, family:, user:
+        ).call
 
-        raise Error, "Provider failed: #{result.error&.message}" unless result.success?
+        raise Error, "Provider failed: #{result.error&.message || result.availability&.reason}" unless result.success?
 
-        normalize(result.data)
-      end
-
-      def llm_provider
-        Provider::Registry.preferred_llm_provider
+        normalize(result.value)
       end
 
       def charges_from(entries)
@@ -88,22 +85,24 @@ class RecurringTransaction
         }.compact
       end
 
+      # Ai::Schema has already turned nulls, numeric strings and values outside the presets
+      # into nil; this resolves the category to the family's own and keeps today's clamps.
       def normalize(raw)
-        category = resolve_category(raw.category_name)
+        category = resolve_category(raw[:category_name])
 
         Suggestion.new(
-          name: raw.name,
-          amount: positive_or_nil(raw.amount),
-          frequency: raw.frequency.presence_in(FrequencyPreset::PRESETS),
-          day_of_month: in_range(raw.day_of_month, 1..31),
-          weekday: in_range(raw.weekday, 0..6),
-          month_of_year: in_range(raw.month_of_year, 1..12),
+          name: raw[:name],
+          amount: positive_or_nil(raw[:amount]),
+          frequency: raw[:frequency].presence_in(FrequencyPreset::PRESETS),
+          day_of_month: in_range(raw[:day_of_month], 1..31),
+          weekday: in_range(raw[:weekday], 0..6),
+          month_of_year: in_range(raw[:month_of_year], 1..12),
           category_id: category&.id,
           category_name: category&.name,
-          bill_type: raw.bill_type.presence_in(%w[bill subscription installment]),
-          autopay: [ true, false ].include?(raw.autopay) ? raw.autopay : nil,
-          confidence: raw.confidence.is_a?(Numeric) ? raw.confidence.to_f.clamp(0.0, 1.0) : nil,
-          rationale: raw.rationale
+          bill_type: raw[:bill_type].presence_in(%w[bill subscription installment]),
+          autopay: [ true, false ].include?(raw[:autopay]) ? raw[:autopay] : nil,
+          confidence: raw[:confidence].is_a?(Numeric) ? raw[:confidence].to_f.clamp(0.0, 1.0) : nil,
+          rationale: raw[:rationale]
         )
       end
 

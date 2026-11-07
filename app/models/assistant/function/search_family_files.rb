@@ -66,10 +66,10 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       }
     end
 
-    adapter = VectorStore.adapter
+    adapter = VectorStore.adapter if Ai.available?(:search_documents, family:, user:)
 
     unless adapter
-      Rails.logger.debug("[SearchFamilyFiles] no VectorStore adapter configured")
+      Rails.logger.debug("[SearchFamilyFiles] search_documents unavailable")
       return {
         success: false,
         error: "provider_not_configured",

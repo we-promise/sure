@@ -71,6 +71,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   test "bills page shell is localized in German" do
     @user.update!(locale: "de")
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    use_ai_routes
 
     get bills_url
 
@@ -1200,6 +1201,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # the missing chips can't pass for want of AI.
   test "the paycheck view offers its AI chips only with a plan" do
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    use_ai_routes
     chips = %w[due_before_paycheck safe_to_spend].map { |key| ERB::Util.html_escape(I18n.t("bills.ai_prompts.#{key}")) }
 
     get bills_url(view: "paycheck")
@@ -1910,6 +1912,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
 
   test "a page without bill rows shows the empty state, not the month pulse or the AI prompts" do
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    use_ai_routes
 
     get bills_url
     assert_response :success
@@ -2411,6 +2414,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
   # a card of zeros and chips asking about bills nobody is paying.
   test "a page of only paused bills shows the dormant section without the month pulse or the AI prompts" do
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    use_ai_routes
     overdue_day = 5.days.ago.to_date
     bill = create_bill(name: "Paused gym", amount: 40,
                        expected_day_of_month: overdue_day.day,
@@ -2468,6 +2472,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # The chips only render over bill rows.
     create_bill(name: "Power Co", amount: 80)
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+    use_ai_routes
     get bills_url
     assert_response :success
     # Apostrophe-free fragment: response bodies HTML-escape apostrophes.
@@ -2488,6 +2493,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     # Consent without a configured provider is a button to a dead chat.
     @user.update!(ai_enabled: true)
     Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+    use_no_ai
     get bills_url
     assert_response :success
     assert_no_match "due before my next paycheck", response.body
@@ -2498,11 +2504,15 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     bill = create_bill(name: "Power Co", amount: 80)
 
     Provider::Registry.stubs(:preferred_llm_provider).returns(Object.new)
+
+    use_ai_routes
     get_bill_drawer(bill)
     assert_response :success
     assert_match smart_configuration_bill_path(bill), response.body
 
     Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    use_no_ai
     get_bill_drawer(bill)
     assert_response :success
     assert_no_match smart_configuration_bill_path(bill), response.body

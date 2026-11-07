@@ -214,10 +214,9 @@ class PdfImport < Import
   end
 
   def process_with_ai
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # process_pdf (PR #1985).
+    require_ai_for_extraction!
+    # The first provider in extract_pdf's route, until the call moves onto it (2e).
     provider = Provider::Registry.preferred_llm_provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
     raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
 
     response = provider.process_pdf(
@@ -242,10 +241,8 @@ class PdfImport < Import
   def extract_transactions
     return unless statement_with_transactions?
 
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # extract_bank_statement (PR #1985).
+    require_ai_for_extraction!
     provider = Provider::Registry.preferred_llm_provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
 
     response = provider.extract_bank_statement(
       pdf_content: pdf_file_content,
@@ -454,6 +451,12 @@ class PdfImport < Import
   end
 
   private
+    # Asks the router whether a statement can be read, before the job calls a model.
+    def require_ai_for_extraction!
+      return if Ai.available?(:extract_pdf, family:)
+
+      raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured")
+    end
 
     # A statement's posting date routinely differs by a day or two from the date
     # a provider recorded for the same transaction, so matching allows a small

@@ -1,36 +1,37 @@
+# Fills in the merchant of a family's transactions from their descriptions: a merchant the family
+# already has, a shared provider merchant with the same website, or a new family merchant. The
+# requester of :detect_merchants: Ai::GenerationJob runs it one batch at a time.
 class Family::AutoMerchantDetector
-  Error = Class.new(StandardError)
+  include Ai::Requester
+  ai_feature :detect_merchants
 
-  def initialize(family, transaction_ids: [])
-    @family = family
-    @transaction_ids = transaction_ids
+  def self.from_ai_job(ids:, family_id:, rule_run_id: nil)
+    new(Family.find(family_id), transaction_ids: ids, rule_run: (RuleRun.find_by(id: rule_run_id) if rule_run_id))
   end
 
-  def auto_detect
-    raise "No LLM provider for auto-detecting merchants" unless llm_provider
+  def initialize(family, transaction_ids: [], rule_run: nil)
+    @family = family
+    @transaction_ids = transaction_ids
+    @rule_run = rule_run
+  end
 
+  def ai_generation
     if scope.none?
       Rails.logger.info("No transactions to auto-detect merchants for family #{family.id}")
-      return 0
-    else
-      Rails.logger.info("Auto-detecting merchants for #{scope.count} transactions for family #{family.id}")
+      return
     end
 
-    result = llm_provider.auto_detect_merchants(
-      transactions: transactions_input,
-      user_merchants: user_merchants_input,
-      family: family
-    )
+    Rails.logger.info("Auto-detecting merchants for #{scope.count} transactions for family #{family.id}")
+    Ai::Generations::DetectMerchants.new(transactions: transactions_input, merchants: user_merchants_input, family:)
+  end
 
-    unless result.success?
-      Rails.logger.error("Failed to auto-detect merchants for family #{family.id}: #{result.error.message}")
-      return 0
-    end
-
+  def apply_ai(result)
+    detections = result.value[:merchants].index_by { _1[:transaction_id] }
     modified_count = 0
+
     scope.each do |transaction|
-      auto_detection = result.data.find { |c| c.transaction_id == transaction.id }
-      next unless auto_detection&.business_name.present? && auto_detection&.business_url.present?
+      auto_detection = detections[transaction.id]
+      next unless auto_detection&.dig(:business_name).present? && auto_detection&.dig(:business_url).present?
 
       existing_merchant = transaction.merchant
 
@@ -58,16 +59,22 @@ class Family::AutoMerchantDetector
     modified_count
   end
 
+  def ai_finished(count) = @rule_run&.complete_job!(modified_count: count)
+
+  # Today's detector returned 0 on a provider failure without a trace (drift bug 3).
+  def ai_failed(error)
+    @rule_run&.fail_job!(error:, source: self.class.name, transaction_ids:)
+    DebugLogEntry.capture(
+      category: "merchant_detection", level: "error", message: "AI merchant detection failed",
+      source: self.class.name, family:,
+      metadata: { error_class: error.class.name, error_message: error.message.truncate(500), requested_transaction_ids: transaction_ids }
+    )
+  end
+
+  def ai_correlation_id = @rule_run ? "rule_run:#{@rule_run.id}" : nil
+
   private
     attr_reader :family, :transaction_ids
-
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # auto_detect_merchants (PR #1984), so batch merchant detection routes to the
-    # configured provider, with fallback handled by
-    # Provider::Registry.preferred_llm_provider.
-    def llm_provider
-      Provider::Registry.preferred_llm_provider
-    end
 
     def user_merchants_input
       family.merchants.map do |merchant|
@@ -97,7 +104,7 @@ class Family::AutoMerchantDetector
     end
 
     def find_matching_user_merchant(auto_detection)
-      user_merchants_input.find { |m| m[:name] == auto_detection.business_name }&.dig(:id)
+      user_merchants_input.find { |m| m[:name] == auto_detection[:business_name] }&.dig(:id)
     end
 
     def find_or_create_ai_merchant(auto_detection)
@@ -107,14 +114,14 @@ class Family::AutoMerchantDetector
       # created from some family's own transaction text (before #3842), so
       # they're only reused when already assigned to this family — otherwise
       # another family's crafted name/logo would surface here.
-      if auto_detection.business_url.present?
-        existing = reusable_provider_merchants.find_by(website_url: auto_detection.business_url)
+      if auto_detection[:business_url].present?
+        existing = reusable_provider_merchants.find_by(website_url: auto_detection[:business_url])
         return existing if existing
       end
 
       # Strategy 2: Find an AI-sourced merchant by exact name match, limited
       # to the ones this family already uses (see Strategy 1).
-      existing = family_ai_provider_merchants.find_by(name: auto_detection.business_name)
+      existing = family_ai_provider_merchants.find_by(name: auto_detection[:business_name])
       return existing if existing
 
       # Strategy 3: no shared merchant to reuse. Create a merchant scoped to
@@ -124,8 +131,8 @@ class Family::AutoMerchantDetector
       # (issue #3842).
       merchant, _created = FamilyMerchant.find_or_create_with_name(
         family,
-        auto_detection.business_name,
-        website_url: auto_detection.business_url
+        auto_detection[:business_name],
+        website_url: auto_detection[:business_url]
       )
       merchant
     rescue ActiveRecord::RecordInvalid => e
@@ -150,8 +157,8 @@ class Family::AutoMerchantDetector
 
       # Add website_url if missing. ProviderMerchant fills a blank logo from it
       # and keeps a provider-supplied one (issue #2925).
-      if merchant.website_url.blank? && auto_detection.business_url.present?
-        updates[:website_url] = auto_detection.business_url
+      if merchant.website_url.blank? && auto_detection[:business_url].present?
+        updates[:website_url] = auto_detection[:business_url]
       end
 
       return false if updates.empty?

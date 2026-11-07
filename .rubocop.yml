@@ -3,9 +3,43 @@ inherit_gem:
 
 require:
   - ./lib/rubocop/cop/sure/sorted_list
+  - ./lib/rubocop/cop/sure/no_ai_env
+  - ./lib/rubocop/cop/sure/no_prompt_heredoc
 
 Sure/SortedList:
   Enabled: true
+
+# AI configuration isn't read from ENV (docs/proposals/v0.8/ai-plumbing-redesign.md, section 4.7).
+# Ai::LegacyEnvConfig reads the deprecated variables until they're removed; migrations are history.
+# The rest is today's code, which still reads them until the part named beside it replaces it.
+# This list only shrinks: test/lib/rubocop/cop/sure/no_ai_env_test.rb fails on an entry with
+# nothing left to flag.
+Sure/NoAiEnv:
+  Enabled: true
+  Include:
+    - "app/**/*.rb"
+    - "config/**/*.rb"
+    - "lib/**/*.rb"
+  Exclude:
+    - "app/models/ai/legacy_env_config.rb"
+    - "db/migrate/**/*"
+    # allowlist
+    - "app/controllers/settings/hostings_controller.rb"        # PR 7: settings pages
+    - "app/models/ai_health.rb"                                 # PR 8: health page
+    - "app/models/ai_health/probe.rb"                           # PR 3: probes as jobs
+    - "app/models/assistant/external.rb"                        # PR 6: chat
+    - "app/models/assistant/responder.rb"                       # PR 6: chat
+    - "app/models/assistant/token_budget.rb"                    # PR 6: chat
+    - "app/models/chat.rb"                                      # PR 6: chat
+    - "app/models/family/ai_settings.rb"                        # PR 7: family settings
+    - "app/models/provider/anthropic.rb"                        # PR 6: chat
+    - "app/models/provider/anthropic/bank_statement_extractor.rb" # 2e
+    - "app/models/provider/anthropic/pdf_processor.rb"          # 2e
+    - "app/models/provider/jev.rb"                              # 2d
+    - "app/models/provider/openai.rb"                           # PR 6: chat
+    - "app/models/provider/registry.rb"                         # 2e, PR 6
+    - "app/models/setting.rb"                                   # PR 7: settings pages
+    - "app/models/vector_store/pgvector.rb"                     # 2e
 
 Layout/IndentationWidth:
   Enabled: true
@@ -23,3 +57,12 @@ Layout/SpaceInsidePercentLiteralDelimiters:
 Layout/SpaceInsideArrayLiteralBrackets:
   Exclude:
     - "db/schema.rb"
+
+# Prompts live in app/prompts, not in heredocs (docs/proposals/v0.8/ai-plumbing-redesign.md,
+# section 17). Nothing is allowlisted; test/lib/rubocop/cop/sure/no_prompt_heredoc_test.rb keeps
+# it that way.
+Sure/NoPromptHeredoc:
+  Enabled: true
+  Include:
+    - "app/models/ai/**/*.rb"
+    - "app/controllers/**/*.rb"

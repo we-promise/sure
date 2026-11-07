@@ -1,12 +1,11 @@
 require "test_helper"
 
 class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
-  RawSuggestion = Provider::LlmConcept::BillSetupSuggestion
-
   setup do
     sign_in @user = users(:family_admin)
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family = @user.family
+    use_ai_routes
     @family.recurring_transactions.destroy_all
     @series = @family.recurring_transactions.create!(
       name: "Gym", account: accounts(:depository), amount: 40, currency: "USD",
@@ -55,12 +54,13 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 45.0, @series.reload.amount.to_f
   end
 
-  test "forbidden without an LLM provider" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+  test "sent back with the reason when no model is set up for bills" do
+    use_no_ai
 
     get smart_configuration_bill_url(@series)
 
-    assert_response :forbidden
+    assert_redirected_to root_path
+    assert_equal Ai::Availability.unavailable(:bill_setup, :not_configured).message_for(@user), flash[:alert]
   end
 
   test "another family's bill is not found" do
@@ -78,19 +78,14 @@ class Bills::SmartConfigurationsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
+    # The model's answer, as JSON.
     def raw(**overrides)
-      RawSuggestion.new(**{
+      {
         name: nil, amount: nil, frequency: nil, day_of_month: nil, weekday: nil,
         month_of_year: nil, category_name: nil, bill_type: nil, autopay: nil,
         confidence: nil, rationale: nil
-      }.merge(overrides))
+      }.merge(overrides)
     end
 
-    def stub_provider(suggestion)
-      provider = Object.new
-      provider.define_singleton_method(:suggest_bill_setup) do |**|
-        Provider::Response.new(success?: true, data: suggestion, error: nil)
-      end
-      Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    end
+    def stub_provider(suggestion) = stub_ai(:bill_setup, returns: suggestion)
 end
