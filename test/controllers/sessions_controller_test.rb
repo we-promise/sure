@@ -174,6 +174,32 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "normalized email login creates a persisted session" do
+    @user.family.update!(auto_sync_on_login: false)
+    @user.update!(email: "normalized-login@example.com")
+
+    storage_modes = [ :current ]
+    storage_modes << :legacy_plaintext if ActiveRecord::Encryption.config.support_unencrypted_data
+
+    storage_modes.each do |storage_mode|
+      if storage_mode == :legacy_plaintext
+        User.connection.execute(
+          "UPDATE users SET email = #{User.connection.quote('normalized-login@example.com')} WHERE id = #{User.connection.quote(@user.id)}"
+        )
+      end
+
+      reset!
+      assert_difference -> { @user.sessions.count }, 1 do
+        post sessions_url, params: { email: "  NORMALIZED-Login@EXAMPLE.COM  ", password: user_password_test }
+      end
+      assert_redirected_to root_url
+      assert cookies[:session_token].present?
+
+      get root_url
+      assert_response :success
+    end
+  end
+
   test "does not issue a session when user is deleted before row locking" do
     @user.stubs(:with_lock).raises(ActiveRecord::RecordNotFound)
     User.stubs(:authenticate_by).returns(@user)

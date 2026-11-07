@@ -3,6 +3,33 @@
 require "test_helper"
 
 class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
+  test "fresh application boot installs normalized encryption compatibility" do
+    assert_includes $LOADED_FEATURES, Rails.root.join("lib/normalized_encryption_compatibility.rb").to_s
+    assert_equal NormalizedEncryptionCompatibility::SUPPORTED_VERSION, ActiveRecord.version.to_s
+    assert_equal NormalizedEncryptionCompatibility::NormalizedCast,
+      ActiveModel::Attributes::Normalization::NormalizedValueType.instance_method(:cast).owner
+
+    configured = ActiveRecordEncryptionConfig.explicitly_configured?
+    assert_equal configured, User.encryption_ready?
+    assert_equal configured, Array(User.encrypted_attributes).include?(:email)
+
+    case ENV["SURE_ENCRYPTION_TEST_MODE"]
+    when "off"
+      assert_not configured
+      assert_not ActiveRecordEncryptionConfig.complete_env?
+    when "encrypted", "compatible"
+      assert ActiveRecordEncryptionConfig.complete_env?
+      assert configured
+      compatible = ENV["SURE_ENCRYPTION_TEST_MODE"] == "compatible"
+      assert_equal compatible, ActiveRecord::Encryption.config.support_unencrypted_data
+      assert_equal compatible, ActiveRecord::Encryption.config.extend_queries
+    when nil
+      # Ordinary suite runs verify the actual booted attribute configuration.
+    else
+      flunk "Unknown SURE_ENCRYPTION_TEST_MODE"
+    end
+  end
+
   test "detects complete encryption environment" do
     env = {
       "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" => "primary",
