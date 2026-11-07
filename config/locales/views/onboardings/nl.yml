@@ -5,7 +5,7 @@ nl:
       sign_out: "Uitloggen"
       setup: "Instellen"
       preferences: "Voorkeuren"
-      goals: "Doelen"
+      tools: Tools/AI
       start: "Start"
     logout:
       sign_out: "Uitloggen"
@@ -38,17 +38,7 @@ nl:
       currency: "Valuta"
       date_format: "Datumformaat"
       submit: "Voltooien"
-    goals:
-      title: "Wat brengt u hier?"
-      subtitle: "Selecteer een of meer doelen die u hebt met %{product_name} als uw persoonlijke financiële tool."
-      unified_accounts: "Al mijn rekeningen op één plek zien"
-      cashflow: "Cashflow en uitgaven begrijpen"
-      budgeting: "Financiële plannen en budgetten beheren"
-      partner: "Financiën samen met een partner beheren"
-      investments: "Beleggingen volgen"
-      ai_insights: "AI laten helpen om mijn financiën te begrijpen"
-      optimization: "Rekeningen analyseren en optimaliseren"
-      reduce_stress: "Financiële stress of angst verminderen"
+    tools:
       submit: "Volgende"
     trial:
       title: "Probeer Sure 45 dagen"

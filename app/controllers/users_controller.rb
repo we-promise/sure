@@ -53,7 +53,7 @@ class UsersController < ApplicationController
         respond_to do |format|
           format.html do
             if attributes.key?(:onboarding_ai_mode)
-              render "onboardings/goals", layout: "wizard", status: :unprocessable_entity
+              render "onboardings/tools", layout: "wizard", status: :unprocessable_entity
             else
               redirect_to settings_profile_path, alert: @user.errors.full_messages.to_sentence
             end
@@ -97,8 +97,8 @@ class UsersController < ApplicationController
         redirect_to root_path
       when "preferences"
         redirect_to settings_preferences_path, notice: notice
-      when "goals"
-        redirect_to goals_onboarding_path
+      when "tools"
+        redirect_to tools_onboarding_path
       when "trial"
         redirect_to trial_onboarding_path
       when "appearance"

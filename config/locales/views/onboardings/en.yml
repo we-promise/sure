@@ -5,7 +5,7 @@ en:
       sign_out: Sign out
       setup: Setup
       preferences: Preferences
-      goals: Goals
+      tools: Tools/AI
       start: Start
     logout:
       sign_out: Sign out
@@ -38,7 +38,7 @@ en:
       currency: Currency
       date_format: Date format
       submit: Complete
-    goals:
+    tools:
       welcome_title: Make yourself at home.
       welcome_subtitle: A couple of choices to help you get started with %{product_name}.
       errors_title: Please review your choices

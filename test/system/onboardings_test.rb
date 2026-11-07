@@ -43,9 +43,9 @@ class OnboardingsTest < ApplicationSystemTestCase
     # Submit preferences
     click_button I18n.t("onboardings.preferences.submit")
 
-    # Should redirect to goals page
-    assert_current_path goals_onboarding_path
-    assert_text I18n.t("onboardings.goals.welcome_title")
+    # Should redirect to tools page
+    assert_current_path tools_onboarding_path
+    assert_text I18n.t("onboardings.tools.welcome_title")
   end
 
   test "browser locale defaults onboarding country and currency" do
@@ -62,7 +62,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_equal "CAD", find("#user_family_attributes_currency").value
 
     click_button I18n.t("onboardings.preferences.submit")
-    assert_current_path goals_onboarding_path
+    assert_current_path tools_onboarding_path
 
     @family.reload
     assert_equal "CA", @family.country
@@ -157,8 +157,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     # Button text is in Spanish due to locale preview
     click_button I18n.t("onboardings.preferences.submit", locale: :es)
 
-    # Wait for redirect to goals page to ensure form was submitted
-    assert_current_path goals_onboarding_path
+    # Wait for redirect to tools page to ensure form was submitted
+    assert_current_path tools_onboarding_path
 
     # Verify data was saved
     @family.reload
@@ -171,14 +171,14 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_not_nil @user.set_onboarding_preferences_at
   end
 
-  test "goals page renders correctly" do
+  test "tools page renders correctly" do
     # Complete preferences first
     @user.update!(set_onboarding_preferences_at: Time.current)
 
-    visit goals_onboarding_path
+    visit tools_onboarding_path
 
-    assert_text I18n.t("onboardings.goals.welcome_title")
-    assert_button I18n.t("onboardings.goals.submit")
+    assert_text I18n.t("onboardings.tools.welcome_title")
+    assert_button I18n.t("onboardings.tools.submit")
   end
 
   test "trial page renders correctly" do
@@ -201,8 +201,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "MM/DD/YYYY", from: "user_family_attributes_date_format"
     click_button I18n.t("onboardings.preferences.submit")
 
-    # Should be at goals
-    assert_current_path goals_onboarding_path
+    # Should be at tools
+    assert_current_path tools_onboarding_path
   end
 
   test "onboarding nav shows correct steps" do
@@ -220,31 +220,31 @@ class OnboardingsTest < ApplicationSystemTestCase
   end
 
   test "starting tools are searchable and nothing yet is exclusive" do
-    visit goals_onboarding_path
+    visit tools_onboarding_path
     find("details summary").click
-    fill_in I18n.t("onboardings.goals.search_label"), with: "ynab", enable_aria_label: true
+    fill_in I18n.t("onboardings.tools.search_label"), with: "ynab", enable_aria_label: true
     check "YNAB"
     assert_no_selector "label", text: "Quicken Classic"
-    fill_in I18n.t("onboardings.goals.search_label"), with: "", enable_aria_label: true
+    fill_in I18n.t("onboardings.tools.search_label"), with: "", enable_aria_label: true
     check "Other"
-    fill_in I18n.t("onboardings.goals.other_label"), with: "My ledger"
-    check I18n.t("onboardings.goals.tools.nothing_yet")
+    fill_in I18n.t("onboardings.tools.other_label"), with: "My ledger"
+    check I18n.t("onboardings.tools.tools.nothing_yet")
     assert_unchecked_field "YNAB"
     assert_unchecked_field "Other"
-    assert_no_field I18n.t("onboardings.goals.other_label")
+    assert_no_field I18n.t("onboardings.tools.other_label")
     check "YNAB"
-    assert_unchecked_field I18n.t("onboardings.goals.tools.nothing_yet")
-    click_button I18n.t("onboardings.goals.done")
+    assert_unchecked_field I18n.t("onboardings.tools.tools.nothing_yet")
+    click_button I18n.t("onboardings.tools.done")
     assert_no_selector "details[open]"
     assert_selector "details summary", text: "YNAB"
-    click_button I18n.t("onboardings.goals.submit")
+    click_button I18n.t("onboardings.tools.submit")
     assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
     assert_equal [ "ynab" ], @user.reload.starting_tools
     assert_nil @user.starting_tool_other
   end
 
   test "AI modes reveal truthful setup panels without connecting providers" do
-    visit goals_onboarding_path
+    visit tools_onboarding_path
     assert_checked_field "user_onboarding_ai_mode_none"
     assert_selector "#ai-panel-none", text: "Other LLM-powered features"
     assert_selector "#user_onboarding_ai_mode_none[aria-expanded='true']"
@@ -259,8 +259,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     choose "user_onboarding_ai_mode_external"
     assert_selector "#ai-panel-external"
     assert_no_selector "#ai-panel-builtin"
-    assert_field I18n.t("onboardings.goals.agent_instructions_label"), readonly: true
-    click_button I18n.t("onboardings.goals.submit")
+    assert_field I18n.t("onboardings.tools.agent_instructions_label"), readonly: true
+    click_button I18n.t("onboardings.tools.submit")
     assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
     assert_equal "external", @user.reload.onboarding_ai_mode
     assert_not @user.ai_enabled?

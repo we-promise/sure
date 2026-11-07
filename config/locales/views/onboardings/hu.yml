@@ -5,7 +5,7 @@ hu:
       sign_out: Kijelentkezés
       setup: Beállítás
       preferences: Beállítások
-      goals: Célok
+      tools: Eszközök/MI
       start: Kezdés
     logout:
       sign_out: Kijelentkezés
@@ -38,17 +38,7 @@ hu:
       currency: Pénznem
       date_format: Dátumformátum
       submit: Befejezés
-    goals:
-      title: Mi hozott ide?
-      subtitle: Válassz ki egy vagy több célt, amelyet el szeretnél érni a %{product_name} személyes pénzügyi eszközzel.
-      unified_accounts: Lássam az összes számlámat egy helyen
-      cashflow: Megértsem a pénzforgalmat és a kiadásokat
-      budgeting: Pénzügyi tervek és költségvetés kezelése
-      partner: Pénzügyek kezelése partnerrel együtt
-      investments: Befektetések nyomon követése
-      ai_insights: Hadd segítsen az AI a pénzügyeim megértésében
-      optimization: Számlák elemzése és optimalizálása
-      reduce_stress: Pénzügyi stressz vagy szorongás csökkentése
+    tools:
       submit: Tovább
     trial:
       title: Próbáld ki a Sure-t 45 napig

@@ -37,6 +37,7 @@ class OnboardingChoicesControllerTest < ActionDispatch::IntegrationTest
     } }
     assert_response :unprocessable_entity
     assert_select "h1", text: /Make yourself at home/i
+    assert_select "nav a[href='#{tools_onboarding_path}']", text: /Tools\/AI/
     assert_select "[role='alert']", text: /too long/i
     assert_select "input[name='user[onboarding_ai_mode]'][value='external'][checked]"
     assert_select "input[name='user[starting_tool_other]'][value='#{'x' * 61}']"

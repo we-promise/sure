@@ -1,21 +1,10 @@
 ---
 fr:
   onboardings:
-    goals:
-      ai_insights: Laisser l'IA m'aider à comprendre mes finances
-      budgeting: Gérer les plans financiers et les budgets
-      cashflow: Comprendre les flux de trésorerie et les dépenses
-      investments: Suivre les investissements
-      optimization: Analyser et optimiser les comptes
-      partner: Gérer les finances avec un partenaire
-      reduce_stress: Réduire le stress financier ou l'anxiété
+    tools:
       submit: Suivant
-      subtitle: Sélectionnez un ou plusieurs objectifs que vous souhaitez atteindre
-        avec %{product_name} comme outil de finances personnelles.
-      title: Qu'est-ce qui vous amène ici ?
-      unified_accounts: Voir tous mes comptes en un seul endroit
     header:
-      goals: Objectifs
+      tools: Outils/IA
       preferences: Préférences
       setup: Configuration
       sign_out: Se déconnecter

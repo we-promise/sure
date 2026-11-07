@@ -398,7 +398,7 @@ Rails.application.routes.draw do
   resource :onboarding, only: :show do
     collection do
       get :preferences
-      get :goals
+      get :tools
       get :trial
     end
   end

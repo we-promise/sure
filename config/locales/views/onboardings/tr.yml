@@ -1,21 +1,10 @@
 ---
 tr:
   onboardings:
-    goals:
-      ai_insights: AI'ın finanslarımı anlamama yardım etmesini sağlamak
-      budgeting: Finansal planları ve bütçeleri yönetmek
-      cashflow: Nakit akışını ve harcamaları anlamak
-      investments: Yatırımları takip etmek
-      optimization: Hesapları analiz etmek ve optimize etmek
-      partner: Bir partnerle birlikte finansları yönetmek
-      reduce_stress: Finansal stresi veya kaygıyı azaltmak
+    tools:
       submit: Sonraki
-      subtitle: "%{product_name}'i kişisel finans aracınız olarak kullanmak için bir
-        veya daha fazla hedef seçin."
-      title: Sizi buraya ne getirdi?
-      unified_accounts: Tüm hesaplarımı tek bir yerde görmek
     header:
-      goals: Hedefler
+      tools: Araçlar/YZ
       preferences: Tercihler
       setup: Kurulum
       sign_out: Çıkış yap
