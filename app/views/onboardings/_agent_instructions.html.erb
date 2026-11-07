@@ -1,0 +1,6 @@
+<div data-controller="onboarding-handoff" data-onboarding-handoff-copied-value="<%= t("onboardings.tools.copied") %>" data-onboarding-handoff-fallback-value="<%= t("onboardings.tools.copy_fallback") %>" class="space-y-3">
+  <%= label_tag :agent_instructions, t("onboardings.tools.agent_instructions_label"), class: "sr-only" %>
+  <%= text_area_tag :agent_instructions, onboarding_agent_instructions, readonly: true, name: nil, rows: 7, class: "form-field__input w-full text-sm focus-ring rounded-md", data: { onboarding_handoff_target: "source" } %>
+  <%= render DS::Button.new(text: t("onboardings.tools.copy"), variant: :secondary, data: { action: "onboarding-handoff#copy" }) %>
+  <p role="status" class="text-xs text-secondary" data-onboarding-handoff-target="status"></p>
+</div>

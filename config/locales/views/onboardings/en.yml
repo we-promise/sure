@@ -107,7 +107,18 @@ en:
           unauthorized: You do not have permission to configure your family’s provider.
           request_failed: The result could not be confirmed. Reload to review your family’s selected provider and model before trying again.
       agent_instructions_label: Agent instructions
-      agent_instructions: Help me get started with %{product_name}. First discover the supported connection method for my instance. Explain the access you need and ask for my permission before connecting or changing anything. Guide me to connect an account or import supported transaction data, using the tools or browser available. Hand control back to me for credentials and consent. Do not request secrets in chat. Do not assume an MCP endpoint or CLI exists.
+      agent_instructions: |-
+        Help me get started with %{product_name} at %{instance_url}.
+
+        You can connect using either of these supported tools:
+
+        • MCP: Connect your MCP client to %{mcp_url}. Connection settings are at %{mcp_settings_url}. Use the client’s OAuth flow and let me sign in and approve access. The connection requests read/write access, so explain that before I approve it. Once connected, discover the available tools.
+
+        • Sure CLI: If you have terminal access, see https://github.com/we-promise/sure-cli. With my permission, install it with `brew install we-promise/tap/sure-cli`, then set the instance with `sure-cli config set api_url %{cli_instance_url}`. Have me run `sure-cli login` in my own terminal, then use `sure-cli --help` to explore the available commands.
+
+        Start by reviewing what’s already in Sure and ask what I want to bring in. Help me connect an account or import supported transactions, checking for duplicates first. Explain proposed changes and get my approval before importing, editing, or deleting data. Use dry-run previews where available.
+
+        Let me handle bank sign-in and consent. Never ask me to paste passwords, API keys, or tokens into chat.
       copy: Copy instructions
       copied: Instructions copied.
       copy_fallback: Copy was unavailable. The instructions are selected so you can copy them manually.

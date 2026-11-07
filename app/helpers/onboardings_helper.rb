@@ -1,3 +1,5 @@
+require "shellwords"
+
 module OnboardingsHelper
   def onboarding_starting_tools
     User::STARTING_TOOLS.map { |value| [ value, t("onboardings.tools.tools.#{value}") ] }
@@ -25,5 +27,16 @@ module OnboardingsHelper
 
   def onboarding_ai_modes
     %w[none builtin external]
+  end
+
+  def onboarding_agent_instructions
+    instance_url = root_url.delete_suffix("/")
+
+    t("onboardings.tools.agent_instructions",
+      product_name: product_name,
+      instance_url: instance_url,
+      cli_instance_url: Shellwords.escape(instance_url),
+      mcp_url: mcp_url,
+      mcp_settings_url: settings_mcp_url)
   end
 end
