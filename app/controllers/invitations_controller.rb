@@ -34,6 +34,33 @@ class InvitationsController < ApplicationController
     redirect_to settings_profile_path
   end
 
+  def bulk_new
+    unless Current.user.admin?
+      flash[:alert] = t("invitations.create.failure")
+      redirect_to settings_profile_path
+      return
+    end
+  end
+
+  def bulk_create
+    unless Current.user.admin?
+      flash[:alert] = t("invitations.create.failure")
+      redirect_to settings_profile_path
+      return
+    end
+
+    @bulk = BulkInvitation.new(
+      family: Current.family,
+      inviter: Current.user,
+      role: bulk_invitation_params[:role],
+      emails: bulk_invitation_params[:emails],
+      self_hosted: self_hosted?
+    ).process
+
+    @report_text = bulk_report_text(@bulk)
+    render :bulk_create
+  end
+
   def accept
     @invitation = Invitation.find_by!(token: params[:id])
 
@@ -66,6 +93,28 @@ class InvitationsController < ApplicationController
 
     def invitation_params
       params.require(:invitation).permit(:email, :role)
+    end
+
+    def bulk_invitation_params
+      params.require(:bulk_invitation).permit(:emails, :role)
+    end
+
+    def bulk_report_text(bulk)
+      header = t(
+        "invitations.bulk_create.summary",
+        sent: bulk.sent,
+        added: bulk.added,
+        skipped: bulk.skipped,
+        invalid: bulk.invalid
+      )
+
+      lines = bulk.results.map do |result|
+        label = t("invitations.bulk_create.status.#{result.status}")
+        detail = result.detail.present? ? " (#{result.detail})" : ""
+        "#{result.email} - #{label}#{detail}"
+      end
+
+      ([ header, "" ] + lines).join("\n")
     end
 
     # Persist the invitation, treating a raced partial-unique-index violation as

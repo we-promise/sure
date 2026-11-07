@@ -779,6 +779,10 @@ Rails.application.routes.draw do
 
   resources :invitations, only: [ :new, :create, :destroy ] do
     get :accept, on: :member
+    collection do
+      get  :bulk_new,    path: "bulk"
+      post :bulk_create, path: "bulk"
+    end
   end
 
   # API routes

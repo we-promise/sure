@@ -187,6 +187,90 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("invitations.create.failure"), flash[:alert]
   end
 
+  test "should get bulk_new" do
+    get bulk_new_invitations_url
+    assert_response :success
+    assert_select "option[value=?]", "member"
+    assert_select "option[value=?]", "admin"
+  end
+
+  test "non-admin cannot get bulk_new" do
+    sign_in users(:family_member)
+    get bulk_new_invitations_url
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.create.failure"), flash[:alert]
+  end
+
+  test "bulk_create sends invitations to multiple new emails" do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
+
+    assert_difference("Invitation.count", 2) do
+      assert_enqueued_jobs 2, only: ActionMailer::MailDeliveryJob do
+        post bulk_create_invitations_url, params: {
+          bulk_invitation: {
+            emails: "one@example.com, two@example.com",
+            role: "member"
+          }
+        }
+      end
+    end
+
+    assert_response :success
+    assert @admin.family.invitations.pending.where(email: "one@example.com").exists?
+    assert @admin.family.invitations.pending.where(email: "two@example.com").exists?
+  end
+
+  test "bulk_create de-duplicates emails within the batch" do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
+
+    assert_difference("Invitation.count", 1) do
+      post bulk_create_invitations_url, params: {
+        bulk_invitation: {
+          emails: "dup@example.com\ndup@example.com\n DUP@example.com ",
+          role: "member"
+        }
+      }
+    end
+
+    assert_response :success
+    assert_equal 1, @admin.family.invitations.where(email: "dup@example.com").count
+  end
+
+  test "bulk_create adds existing user and skips blank entries" do
+    Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
+    existing_user = users(:empty)
+    assert existing_user.family_id != @admin.family_id
+
+    assert_difference("Invitation.count", 2) do
+      post bulk_create_invitations_url, params: {
+        bulk_invitation: {
+          emails: "#{existing_user.email}, , new-person@example.com",
+          role: "member"
+        }
+      }
+    end
+
+    assert_response :success
+    existing_user.reload
+    assert_equal @admin.family_id, existing_user.family_id
+  end
+
+  test "non-admin cannot bulk_create invitations" do
+    sign_in users(:family_member)
+
+    assert_no_difference("Invitation.count") do
+      post bulk_create_invitations_url, params: {
+        bulk_invitation: {
+          emails: "new@example.com",
+          role: "admin"
+        }
+      }
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal I18n.t("invitations.create.failure"), flash[:alert]
+  end
+
   test "should accept invitation and show choice between sign in and create account" do
     get accept_invitation_url(@invitation.token)
     assert_response :success
