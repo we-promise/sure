@@ -136,7 +136,11 @@ class Loan < ApplicationRecord
   # place the column is parsed: RateResolver and the form rows read these
   # pairs rather than the raw JSON, so every reader agrees on what a row means.
   def variable_rates
-    (variable_rate_schedule || {})
+    parse_rate_schedule(variable_rate_schedule)
+  end
+
+  private def parse_rate_schedule(schedule)
+    (schedule || {})
       .map { |date, rate| [ Date.iso8601(date.to_s), BigDecimal(rate.to_s) ] }
       .sort_by(&:first)
   end
@@ -256,25 +260,39 @@ class Loan < ApplicationRecord
     self.variable_rate_schedule = parsed
   end
 
+  # Assigns the reconciled schedule once per submission. Later validations
+  # leave the attribute alone, so a value assigned after the first one stays.
   private def merge_submitted_rate_changes
+    reconciliation = rate_schedule_reconciliation
+    return if reconciliation.nil? || reconciliation[:applied]
+
+    self.variable_rate_schedule = reconciliation[:schedule]
+    reconciliation[:applied] = true
+  end
+
+  # The submitted rows applied to the schedule read from the database, or that
+  # schedule unchanged when the snapshot is malformed. Computed once per
+  # submission without assigning attributes, so the form can render it before
+  # validations run. Nil when there is no snapshot to reconcile against.
+  private def rate_schedule_reconciliation
     return unless @submitted_rate_changes && @rate_schedule_snapshot
-    return if @rate_schedule_reconciliation
 
-    baseline = JSON.parse(@rate_schedule_snapshot)
-    raise JSON::ParserError unless baseline.is_a?(Hash)
+    @rate_schedule_reconciliation ||= begin
+      baseline = JSON.parse(@rate_schedule_snapshot)
+      raise JSON::ParserError unless baseline.is_a?(Hash)
 
-    self.variable_rate_schedule = merge_rate_schedule(
-      @submitted_rate_changes, baseline: baseline,
-      current: variable_rate_schedule_in_database
-    )
-    @rate_schedule_reconciliation = :valid
-  rescue JSON::ParserError, TypeError
-    self.variable_rate_schedule = variable_rate_schedule_in_database || {}
-    @rate_schedule_reconciliation = :invalid
+      schedule = merge_rate_schedule(
+        @submitted_rate_changes, baseline: baseline,
+        current: variable_rate_schedule_in_database
+      )
+      { valid: true, schedule: schedule, applied: false }
+    rescue JSON::ParserError, TypeError
+      { valid: false, schedule: variable_rate_schedule_in_database || {}, applied: false }
+    end
   end
 
   private def rate_schedule_snapshot_must_be_valid
-    errors.add(:base, :invalid_rate_schedule_snapshot) if @rate_schedule_reconciliation == :invalid
+    errors.add(:base, :invalid_rate_schedule_snapshot) if rate_schedule_reconciliation&.dig(:valid) == false
   end
 
   # Applies a submitter's edits to the schedule as it is now, given the
@@ -333,11 +351,12 @@ class Loan < ApplicationRecord
   #
   # Invalid rows come back too, so a rejected save redisplays what was typed.
   def rate_change_rows
-    # A balance failure can render before validations run. Reconcile the rows
-    # once per submission, so the rendered snapshot never contains unseen dates.
-    # Validation owns errors; repeated reads must not add them to the record.
-    merge_submitted_rate_changes
-    variable_rates.map { |date, rate| { effective_date: date.iso8601, rate: rate.to_s("F") } } +
+    # A balance failure can render before validations run, so rows come from
+    # the pending reconciliation until it is assigned. Reading them assigns
+    # nothing and adds no errors; validation owns both.
+    reconciliation = rate_schedule_reconciliation
+    schedule = reconciliation && !reconciliation[:applied] ? reconciliation[:schedule] : variable_rate_schedule
+    parse_rate_schedule(schedule).map { |date, rate| { effective_date: date.iso8601, rate: rate.to_s("F") } } +
       Array(invalid_rate_changes)
   end
 

@@ -62,14 +62,44 @@ class Loan::VariableRateScheduleTest < ActiveSupport::TestCase
     end
   end
 
+  test "reading form rows shows the reconciled schedule without assigning it" do
+    loan = build_loan(rate_type: "variable", start_date: Date.new(2024, 1, 1),
+                      variable_rate_schedule: { "2026-01-01" => "7" })
+    snapshot = loan.rate_schedule_snapshot
+    Loan.find(loan.id).enrich_attributes(
+      { variable_rate_schedule: { "2026-01-01" => "7", "2026-02-01" => "8" } }, source: "redbark"
+    )
+    loan.reload
+    loan.assign_attributes(rate_schedule_snapshot: snapshot, rate_changes: [
+      { effective_date: "2026-01-01", rate: "7" }, { effective_date: "2026-03-01", rate: "9" }
+    ])
+    changes = loan.changes.deep_dup
+    schedule = loan.variable_rate_schedule.deep_dup
+    reconciled = [
+      { effective_date: "2026-01-01", rate: "7.0" },
+      { effective_date: "2026-02-01", rate: "8.0" },
+      { effective_date: "2026-03-01", rate: "9.0" }
+    ]
+
+    2.times { assert_equal reconciled, loan.rate_change_rows }
+
+    assert_equal changes, loan.changes
+    assert_equal schedule, loan.variable_rate_schedule
+    assert_not_includes loan.variable_rate_schedule.keys, "2026-02-01"
+    assert loan.valid?
+    assert_equal({ "2026-01-01" => "7", "2026-02-01" => "8", "2026-03-01" => "9.0" }, loan.variable_rate_schedule)
+    assert_equal reconciled, loan.rate_change_rows
+  end
+
   test "reconciliation is reused until the snapshot or submitted rows change" do
     loan = build_loan(rate_type: "variable", start_date: Date.new(2024, 1, 1))
     loan.assign_attributes(rate_schedule_snapshot: "{}", rate_changes: [ { effective_date: "2026-01-01", rate: "7" } ])
     rows = loan.rate_change_rows
-    schedule = loan.variable_rate_schedule
 
     assert loan.valid?
+    schedule = loan.variable_rate_schedule
     assert_equal rows, loan.rate_change_rows
+    assert loan.valid?
     assert_same schedule, loan.variable_rate_schedule
 
     loan.rate_changes = [ { effective_date: "2026-02-01", rate: "8" } ]
