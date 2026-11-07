@@ -748,3 +748,21 @@ the credit error), so decision 7 and the PDF document block stay unchecked. What
   into 60 + 60 on the same route, all answered once. `Unreachable` and `Timeout` work live.
 - **Ollama embeddings** match venus's for the same GGUF (cosine 1.0).
 - **Not run:** LM Studio (not in the pod), and anything needing funded OpenAI or Anthropic keys.
+
+**Fixed where they started (call by @josh-sanders: in their own PRs, merged forward).**
+
+- **2a (#4773):**
+  - **Anthropic's models probe** is a GET built by `Ai::Transport::Http`, so it takes the resolved
+    proxy (`cad0f8518`).
+  - **Metadata tracing** shuts its tracer provider down at exit (`f63d10d06`).
+- **2c (#4775):** a 400 to a request that sent a reasoning effort is retried once without it
+  (`75397512f`), which covers Gemini's unnamed refusal of `none`.
+- **Merged forward:** 2a into 2b, 2b into 2c, 2c into 2d and 2d into 2e, as merge commits. 2e then
+  removes `Http.anthropic_client`, which had no callers left (`be385fa05`).
+- **Re-run live on 2e:**
+  - the probe goes through the proxy under every setting;
+  - metadata spans arrive with no explicit flush;
+  - Gemini's `none` succeeds on the retry.
+- **Checks:** every branch's full suite shows only the 13 known failures. On 2d,
+  `MoveCategorizationComparisonsToAiComparisonsMigrationTest` raised a prepared-statement error
+  once (another worker's schema change) and passes alone.
