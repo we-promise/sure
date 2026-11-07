@@ -34,7 +34,9 @@ class Entry < ApplicationRecord
   accepts_nested_attributes_for :entryable
 
   validates :date, :name, :amount, :currency, presence: true
-  validates :date, uniqueness: { scope: [ :account_id, :entryable_type ] }, if: -> { valuation? }
+  validates :date, uniqueness: { scope: [ :account_id, :entryable_type ],
+    conditions: -> { excluding_cash_anchors } },
+    if: -> { valuation? && !entryable.cash_anchor? }
   validates :date, comparison: { greater_than: -> { min_supported_date } }
   validates :external_id, uniqueness: { scope: [ :account_id, :source ] }, if: -> { external_id.present? && source.present? }
 
@@ -58,7 +60,9 @@ class Entry < ApplicationRecord
   }
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
+  before_validation :reactivate_changed_valuation
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
+  after_destroy :remove_holdings_of_last_trade, if: -> { trade? && entryable.qty.nonzero? }
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -114,6 +118,9 @@ class Entry < ApplicationRecord
       )
     SQL
   }
+
+  # Cash anchors are internal accounting baselines, not user valuations.
+  scope :excluding_cash_anchors, -> { where.not(entryable_id: Valuation.cash_anchor.select(:id)) }
 
   # Find stale pending transactions (pending for more than X days with no matching posted version)
   scope :stale_pending, ->(days: 8) {
@@ -335,9 +342,12 @@ class Entry < ApplicationRecord
   # Starting the window after the old date would seed the incremental balance
   # calculation from a balance that still includes this entry.
   #
+  # A delete normally rebuilds everything. A cash-anchored account only
+  # rebuilds from a given date, so its deleted entry still names its own.
+  #
   # @return [void]
   def sync_account_later
-    sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed?
+    sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed? && !account.accounting_start_date
     @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
   end
@@ -706,6 +716,24 @@ class Entry < ApplicationRecord
         lock!
         yield txn
       end
+    end
+
+    # A monetary or dated edit explicitly restores a superseded total valuation.
+    def reactivate_changed_valuation
+      return unless valuation? && !entryable.cash_anchor? && (amount_changed? || date_changed?)
+
+      entryable.superseded_at = nil
+    end
+
+    # A cash-anchored account carries holdings of securities it has no
+    # quantity-changing trades for. Once a security's last such trade is gone,
+    # the rows calculated from it would be carried too, so they go from the
+    # trade's date on.
+    def remove_holdings_of_last_trade
+      return unless account.accounting_start_date
+      return if account.trades.where.not(qty: 0).exists?(security_id: entryable.security_id)
+
+      account.holdings.where(security_id: entryable.security_id, account_provider_id: nil, date: date..).delete_all
     end
 
     # Remembers the earliest date this entry had before any save that changed
