@@ -301,6 +301,32 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_empty security.prices
   end
 
+  # At 12:00 UTC on 7 Nov it is already 8 Nov in Auckland (UTC+13), so the
+  # family's today is importable and its tomorrow is not. Judged in UTC, the
+  # first row would be rejected as a future date.
+  test "the future-date check uses the family's time zone" do
+    @family.update!(timezone: "Pacific/Auckland")
+    security = offline_security_held_by(@account)
+    Account.any_instance.stubs(:sync_later)
+
+    travel_to Time.utc(2026, 11, 7, 12) do
+      with_self_hosting do
+        post api_v1_security_prices_url,
+             params: { security_id: security.id, prices: [ close(Date.new(2026, 11, 8), "21") ] },
+             headers: api_headers(write_key), as: :json
+        assert_response :ok
+
+        post api_v1_security_prices_url,
+             params: { security_id: security.id, prices: [ close(Date.new(2026, 11, 9), "22") ] },
+             headers: api_headers(write_key), as: :json
+        assert_response :unprocessable_entity
+        assert_equal [ { "index" => 0, "message" => "date must not be in the future" } ], JSON.parse(response.body)["errors"]
+      end
+    end
+
+    assert_equal [ [ Date.new(2026, 11, 8), 21 ] ], security.prices.pluck(:date, :price)
+  end
+
   test "prices must be a list" do
     security = offline_security_held_by(@account)
 
