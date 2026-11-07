@@ -322,13 +322,14 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_selector "#ai-panel-builtin fieldset[disabled]", visible: :all
   end
 
-  test "provider response shows errors and clears the key after each attempt" do
+  test "provider response without CSRF metadata shows errors and clears the key after each attempt" do
     OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
     OnboardingAiConfiguration.stubs(:configuration_locked?).returns(false)
     visit tools_onboarding_path
     choose "user_onboarding_ai_mode_builtin"
     select "OpenAI", from: "Provider"
     page.execute_script <<~JS
+      document.querySelector('meta[name="csrf-token"]')?.remove();
       const originalFetch = window.fetch;
       window.fetch = (url, options) => {
         if (url !== "#{configure_provider_onboarding_path}") return originalFetch(url, options);

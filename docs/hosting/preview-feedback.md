@@ -222,18 +222,22 @@ automation or provider settings. The separate Save and test action changes the
 instance's selected provider and encrypted key; it does not emit this intent event.
 
 The completion transaction stores a nullable, immutable-in-this-flow family claim,
-serialized with a family row lock. Existing households, invited members, failed
+serialized with a family row lock. Eligibility requires no existing family claim,
+neither onboarding timestamp set for the earliest user, and no other user already
+onboarded; the household's creation date is not checked. Accepted invitees, failed
 validation, repeated submissions, and later preference changes do not produce an
 initial event. The claim is consumed even if collection is disabled or unavailable;
-there is no historical backfill or delivery retry. SDK acceptance is not guaranteed
+Sure does not backfill or re-enqueue the event. The PostHog SDK can retry transport
+failures, including HTTP 429 and server errors. SDK acceptance is not guaranteed
 delivery. The family claim survives deletion or movement of the original user.
 The migration adds only this nullable field and a value constraint, without backfill.
 
 This server event uses the existing shared feedback destination, operator opt-out
 (`POSTHOG_FEEDBACK_ENABLED`), and production/development gates. As with other server
 events, browser opt-outs cannot control it. Its isolated HMAC identity is derived
-from the family ID and deployment secret; raw family/user IDs are not sent. Properties
-are only AI mode, Sure version, disabled person profiles, and disabled GeoIP. It
+from the family ID and deployment secret; raw family/user IDs are not sent. Sure's
+properties are AI mode, Sure version, disabled person profiles, and disabled GeoIP;
+the PostHog SDK also adds `$lib` and `$lib_version`. The event
 includes no IP, starting tools, free text, provider details, credentials, or financial
 data. Initial intent is separate from all daily usage events below.
 

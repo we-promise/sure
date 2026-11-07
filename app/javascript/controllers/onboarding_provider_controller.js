@@ -103,6 +103,9 @@ export default class extends Controller {
     let timeout;
     let timedOut = false;
     try {
+      const csrfToken = document.querySelector(
+        'meta[name="csrf-token"]',
+      )?.content;
       const request = fetch(this.urlValue, {
         method: "POST",
         signal: abortController.signal,
@@ -110,8 +113,7 @@ export default class extends Controller {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')
-            .content,
+          ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
         },
         body: JSON.stringify({
           ai_configuration: {
