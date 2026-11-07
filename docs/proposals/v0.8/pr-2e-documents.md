@@ -696,3 +696,22 @@ the credit error), so decision 7 and the PDF document block stay unchecked. What
 - PDF import on `ANTHROPIC_API_KEY` alone routes to `claude-sonnet-4-6` with `documents`.
 - **Fixed:** the failed import showed "Processing failed: NoCredit"; it shows the provider's message
   again, as `Provider::Error` did.
+
+**Cohere with a trial key (2026-11-07, at `61b9a1222`).**
+
+- **Cohere OCR runs live:** `parse-v5.0` through `RubyLLM.ocr`, one page image per request, and
+  `ocr_live_test` is recorded. The test's default model was `cohere-parse-v1`, which Cohere doesn't
+  have. Decision 2 now covers Mistral only.
+- **The scan through Auto:** Cohere OCR, then `command-a-03-2025` on Cohere's OpenAI-compatible
+  API, read 21/21 rows, and the checks passed. It's the first OCR read of the scan that passed;
+  venus's OCR model loops on page 2.
+- **BAC read as OCR:** 13/13 exact, and the checks passed. The three generations also answer on
+  `command-a`.
+- **Cohere's strict schemas are narrower.** It refuses `type: ["object", "null"]` and an integer
+  `minimum`. 2c's `auto` then retries once in `none` (#3605), and BAC's text layer came back as
+  non-JSON (`InvalidOutput`, reported, not imported). Trying `json_object` before `none` after a
+  schema-validation 400, or a per-preset schema dialect in PR 7, would cover it; that's for
+  @josh-sanders to decide.
+- **pgvector on `embed-v4.0`** (1,536 dimensions): relevant text scored 0.52 and 0.38, and
+  unrelated text had no hits, so 0.3 filters on this model. That's more evidence for decision 5's
+  per-model threshold.
