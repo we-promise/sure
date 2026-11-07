@@ -173,6 +173,9 @@ module AiTestHelper
   def without_ai(&block)
     Ai::Config.with(Ai::Config.new, &block)
   end
+  # A data URI's payload, as RubyLLM sends page images and PDFs.
+  INLINE_FILE = %r{(data:[a-z]+/[a-z0-9.+-]+;base64,)[A-Za-z0-9+/=]+}
+
   AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY
                         MISTRAL_LIVE_API_KEY COHERE_LIVE_API_KEY].freeze
 
@@ -247,5 +250,12 @@ end
 VCR.configure do |config|
   AiTestHelper::AI_CASSETTE_KEYS.each do |key|
     config.filter_sensitive_data("<#{key}>") { ENV[key].presence }
+  end
+
+  # Page images and PDFs sent inline are kept out of cassettes: AI cassettes match on method and
+  # URI, so the bytes add nothing on replay, and base64 can look like a credential to secret scans.
+  config.before_record do |interaction|
+    body = interaction.request.body
+    interaction.request.body = body.gsub(AiTestHelper::INLINE_FILE, '\\1<FILE>') if body&.match?(AiTestHelper::INLINE_FILE)
   end
 end
