@@ -1,7 +1,6 @@
 require "test_helper"
 
-# The routing table's invariants (ai-plumbing-redesign.md, section 17). 2c adds the check that
-# every generation declares a feature in the table.
+# The routing table's invariants.
 class AiRoutingMatrixTest < ActiveSupport::TestCase
   MATRIX = Ai::Routes::MATRIX
   LANES = %i[interactive prompt background].freeze

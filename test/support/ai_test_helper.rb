@@ -3,9 +3,8 @@
 module AiTestHelper
   LLM_CAPABILITIES = %i[tools vision documents streaming structured_output].freeze
 
-  # One configured setup for every test (section 17): a cloud `openai` endpoint, a local `gpu`, an
-  # `embed` server, a cloud `jev` and an external assistant (`agent`), with every feature routed.
-  # PR 7 replaces it with table fixtures.
+  # One configured setup for every test: a cloud `openai` endpoint, a local `gpu`, an `embed`
+  # server, a cloud `jev` and an external assistant (`agent`), with every feature routed.
   def self.test_config
     @test_config ||= begin
       endpoint = ->(name, **attributes) { Ai::Config::Endpoint.new(name:, protocol: :compatible, api_key: "test-key", **attributes) }

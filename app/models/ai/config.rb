@@ -1,10 +1,9 @@
 # Every instance-wide AI value a process uses: endpoints, their models, and one ordered list of
-# routes per feature (sections 4.1, 4.6). Every AI feature reads it through Ai::Router; nothing
-# else reads AI ENV or AI `Setting` fields (cop Sure/NoAiEnv).
+# routes per feature. Every AI feature reads it through Ai::Router; nothing else reads AI ENV or
+# AI `Setting` fields (cop Sure/NoAiEnv).
 #
-# Until PR 7 it's built in each process by Ai::LegacyEnvConfig from today's ENV and `Setting`
-# fields, so the web and the workers can disagree, as they do today. PR 7 builds it from the
-# `ai_*` tables instead.
+# Ai::LegacyEnvConfig builds it in each process from the AI ENV and `Setting` fields, so the web
+# and the workers can disagree when their ENV differs.
 class Ai::Config
   attr_reader :endpoints, :models, :routes, :vector_store_backend
 
