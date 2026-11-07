@@ -398,7 +398,8 @@ Rails.application.routes.draw do
   resource :onboarding, only: :show do
     collection do
       get :preferences
-      get :goals
+      get :tools
+      post "tools/provider", to: "onboardings#configure_provider", as: :configure_provider
       get :trial
     end
   end

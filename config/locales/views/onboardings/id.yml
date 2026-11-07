@@ -5,7 +5,7 @@ id:
       sign_out: Keluar
       setup: Penyiapan
       preferences: Preferensi
-      goals: Tujuan
+      tools: Alat/AI
       start: Mulai
     logout:
       sign_out: Keluar
@@ -38,17 +38,7 @@ id:
       currency: Mata uang
       date_format: Format tanggal
       submit: Selesai
-    goals:
-      title: Apa tujuan utama Anda?
-      subtitle: Pilih satu atau lebih tujuan Anda dalam menggunakan %{product_name} sebagai alat keuangan pribadi Anda.
-      unified_accounts: Melihat semua rekening saya di satu tempat
-      cashflow: Memahami arus kas dan pengeluaran
-      budgeting: Mengelola rencana keuangan dan anggaran
-      partner: Mengelola keuangan bersama pasangan
-      investments: Memantau investasi
-      ai_insights: Memanfaatkan AI untuk membantu memahami keuangan saya
-      optimization: Menganalisis dan mengoptimalkan rekening
-      reduce_stress: Mengurangi stres atau kecemasan finansial
+    tools:
       submit: Berikutnya
     trial:
       title: Coba Sure selama 45 hari

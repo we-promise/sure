@@ -5,7 +5,7 @@ pt-PT:
       sign_out: Terminar sessão
       setup: Configuração
       preferences: Preferências
-      goals: Objetivos
+      tools: Ferramentas/IA
       start: Iniciar
     logout:
       sign_out: Terminar sessão
@@ -38,17 +38,7 @@ pt-PT:
       currency: Moeda
       date_format: Formato de data
       submit: Concluir
-    goals:
-      title: O que o traz aqui?
-      subtitle: Selecione um ou mais objetivos que tem com a utilização do %{product_name} como a sua ferramenta de finanças pessoais.
-      unified_accounts: Ver todas as minhas contas num só lugar
-      cashflow: Compreender o fluxo de caixa e as despesas
-      budgeting: Gerir planos financeiros e orçamentos
-      partner: Gerir as finanças com um parceiro
-      investments: Acompanhar investimentos
-      ai_insights: Deixar a IA ajudar-me a compreender as minhas finanças
-      optimization: Analisar e otimizar contas
-      reduce_stress: Reduzir o stresse ou a ansiedade financeiros
+    tools:
       submit: Seguinte
     trial:
       title: Experimente o Sure durante 45 dias

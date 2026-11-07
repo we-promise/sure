@@ -4,12 +4,29 @@ class Usage
 
   def self.enabled?(event)
     return false unless EVENTS.include?(event)
-
-    config = Rails.configuration.x.posthog
-    return false unless Rails.env.production? || (Rails.env.development? && config.development_enabled)
-    return false unless config.feedback_enabled && $posthog_feedback
+    return false unless feedback_enabled?
 
     event != "web_ui_served_daily" || !Rails.cache.is_a?(ActiveSupport::Cache::NullStore)
+  end
+
+  # A stated preference at first family onboarding, never evidence of AI use.
+  # The caller consumes a durable claim with the successful onboarding save.
+  def self.capture_onboarding_ai_intent(family_id:, mode:)
+    return unless %w[none builtin external].include?(mode) && family_id.present?
+    return unless feedback_enabled?
+
+    key = Rails.application.key_generator.generate_key("initial-family-onboarding-ai-intent")
+    anonymous_id = OpenSSL::HMAC.hexdigest("SHA256", key, family_id.to_s)
+    $posthog_feedback.capture(
+      distinct_id: anonymous_id,
+      event: "initial_family_ai_mode_selected",
+      properties: {
+        ai_mode: mode, sure_version: Sure.version.to_s,
+        "$process_person_profile" => false, "$geoip_disable" => true
+      }
+    )
+  rescue StandardError => error
+    Rails.logger.debug("Onboarding AI intent capture skipped: #{error.class}")
   end
 
   def self.capture(event, user: nil, date: nil, ip: nil)
@@ -41,6 +58,12 @@ class Usage
     $posthog_feedback.capture(distinct_id: daily_id, event: event, properties: properties)
   rescue StandardError => error
     Rails.logger.debug("Daily usage capture skipped: #{error.class}")
+  end
+
+  private_class_method def self.feedback_enabled?
+    config = Rails.configuration.x.posthog
+    (Rails.env.production? || (Rails.env.development? && config.development_enabled)) &&
+      config.feedback_enabled && $posthog_feedback.present?
   end
 
   private_class_method def self.claim(event, daily_id)

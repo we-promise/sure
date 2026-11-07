@@ -89,10 +89,37 @@ class OnboardingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "should get goals" do
-    get goals_onboarding_url
+  test "tools route replaces the former onboarding goals route" do
+    assert_equal "/onboarding/tools", tools_onboarding_path
+    assert_recognizes({ controller: "onboardings", action: "tools" }, "/onboarding/tools")
+    assert_raises(ActionController::RoutingError) do
+      Rails.application.routes.recognize_path("/onboarding/goals", method: :get)
+    end
+  end
+
+  test "preferences continues to tools and trial links back to tools" do
+    get preferences_onboarding_url
+    assert_select "input[name='user[redirect_to]'][value='tools']"
+    assert_select "nav a[href='#{tools_onboarding_path}']", text: /Tools\/AI/
+    assert_select "a[href='/onboarding/goals']", count: 0
+
+    patch user_url(@user), params: { user: { redirect_to: "tools", set_onboarding_preferences_at: Time.current } }
+    assert_redirected_to tools_onboarding_url
+
+    get trial_onboarding_url
+    assert_select "header > a[href='#{tools_onboarding_path}']"
+  end
+
+  test "should get tools" do
+    get tools_onboarding_url
     assert_response :success
-    assert_select "h1", text: /What brings you here/i
+    assert_select "h1", text: /Make yourself at home/i
+    assert_select "nav a[href='#{tools_onboarding_path}']", text: /Tools\/AI/
+    assert_select "nav", text: /Goals/, count: 0
+    assert_select "input[name='user[set_onboarding_goals_at]']"
+    assert_select "input[name='user[starting_tools][]'][type='checkbox']", count: User::STARTING_TOOLS.size
+    assert_select "input[name='user[onboarding_ai_mode]'][type='radio']", count: 3
+    assert_select "input[name='user[onboarding_ai_mode]'][value='none'][checked]"
   end
 
   test "should get trial" do
@@ -184,7 +211,7 @@ end
     get preferences_onboarding_url
     assert_response :success
 
-    get goals_onboarding_url
+    get tools_onboarding_url
     assert_response :success
 
     get trial_onboarding_url
@@ -200,7 +227,7 @@ end
   get preferences_onboarding_url
   assert_redirected_to new_session_url
 
-  get goals_onboarding_url
+  get tools_onboarding_url
   assert_redirected_to new_session_url
 
   get trial_onboarding_url

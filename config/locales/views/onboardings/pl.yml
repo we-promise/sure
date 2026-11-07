@@ -1,21 +1,10 @@
 ---
 pl:
   onboardings:
-    goals:
-      ai_insights: Korzystać z AI do lepszego zrozumienia moich finansów
-      budgeting: Zarządzać planami finansowymi i budżetem
-      cashflow: Lepiej rozumieć przepływy pieniężne i wydatki
-      investments: Śledzić inwestycje
-      optimization: Analizować i optymalizować konta
-      partner: Zarządzać finansami z partnerem
-      reduce_stress: Zmniejszyć stres lub niepokój związany z finansami
+    tools:
       submit: Dalej
-      subtitle: Wybierz jeden lub więcej celów, które chcesz osiągnąć, używając %{product_name}
-        do zarządzania finansami osobistymi.
-      title: Co Cię tutaj sprowadza?
-      unified_accounts: Widzieć wszystkie moje konta w jednym miejscu
     header:
-      goals: Cele
+      tools: Narzędzia/AI
       preferences: Preferencje
       setup: Konfiguracja
       sign_out: Wyloguj się

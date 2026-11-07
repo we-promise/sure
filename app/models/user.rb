@@ -2,6 +2,7 @@ class User < ApplicationRecord
   has_many :financekit_items, dependent: :destroy
 
   include Encryptable
+  include OnboardingChoices
 
   # Allow nil password for SSO-only users (JIT provisioning).
   # Custom validation ensures password is present for non-SSO registration.
@@ -824,7 +825,7 @@ class User < ApplicationRecord
         if guest?
           self.show_sidebar = false
           self.show_ai_sidebar = false
-          self.ai_enabled = true
+          self.ai_enabled = true unless preferences&.key?("onboarding_ai_mode")
         else
           self.ui_layout = "dashboard"
         end
@@ -832,7 +833,7 @@ class User < ApplicationRecord
         self.ui_layout = "intro"
         self.show_sidebar = false
         self.show_ai_sidebar = false
-        self.ai_enabled = true
+        self.ai_enabled = true unless preferences&.key?("onboarding_ai_mode")
       end
 
       if leaving_guest_role?
