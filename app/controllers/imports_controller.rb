@@ -252,11 +252,11 @@ class ImportsController < ApplicationController
     end
 
     def create_document_import(file)
-      adapter = VectorStore.adapter
-      unless adapter
+      unless Ai.available?(:embed, family: Current.family, user: Current.user)
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
         return
       end
+      adapter = VectorStore.adapter
 
       if file.size > Import::MAX_PDF_SIZE
         redirect_to new_import_path, alert: t("imports.create.document_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte)
@@ -295,6 +295,8 @@ class ImportsController < ApplicationController
     end
 
     def document_upload_supported_extensions
+      return [] unless Ai.available?(:embed, family: Current.family, user: Current.user)
+
       adapter = VectorStore.adapter
       return [] unless adapter
 

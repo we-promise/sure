@@ -255,7 +255,7 @@ class Assistant::Function::GetUncategorizedTransactions < Assistant::Function
     def enrichment_diagnostic
       categorize = rule_state("auto_categorize")
       detect_merchants = rule_state("auto_detect_merchants")
-      llm_configured = Provider::Registry.preferred_llm_provider.present?
+      llm_configured = Ai.available?(:detect_merchants, family:)
 
       {
         auto_categorize_rule: categorize,

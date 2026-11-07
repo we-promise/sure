@@ -7,6 +7,13 @@ class Assistant::Function
     def description
       raise NotImplementedError, "Subclasses must implement the description class method"
     end
+
+    # The AI feature (a key in Ai::Routes::MATRIX) a tool calls a model for, if any. A tool that
+    # declares one is listed only while that feature is available (ai-plumbing-redesign.md,
+    # section 14), so chat and MCP clients never see a tool that can't work by setup.
+    def ai_feature(feature = nil)
+      feature ? @ai_feature = feature : @ai_feature
+    end
   end
 
   MAX_PAGE_SIZE = 100

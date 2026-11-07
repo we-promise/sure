@@ -22,6 +22,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     get new_import_url
 
@@ -181,6 +182,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.csv .pdf])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     family_document = family_documents(:tax_return)
     Family.any_instance.expects(:upload_document).with do |file_content:, filename:, **|
@@ -219,6 +221,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     @user.family.expects(:upload_document).never
 
@@ -465,6 +468,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     assert_no_difference "Import.count" do
       post imports_url, params: {

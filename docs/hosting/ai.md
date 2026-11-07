@@ -470,6 +470,16 @@ For self-hosted deployments, you can configure AI settings through the web inter
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
 
+**Give the `web` and `worker` containers the same AI variables.** Each process reads its own
+environment: the web container decides which AI buttons and actions are offered, and the worker
+runs the AI jobs. When their AI variables differ, a feature can be offered that the worker can't
+run, or hidden although it would work. Settings saved in the UI are shared by both.
+
+**Which AI features are available** is decided in one place for every feature, from the same
+settings: a button, rule action or MCP tool appears only when a configured model can do the work.
+For example, **Enhance merchants** appears on an install with only an Anthropic key, as merchant
+enhancement runs on Anthropic too.
+
 ## External AI Assistant
 
 Instead of using the built-in LLM (which calls OpenAI or a local model directly), you can delegate chat to an **external AI agent**. The agent receives the conversation, can call back to Sure's financial data via MCP, and streams a response.
@@ -1075,6 +1085,48 @@ All LLM operations will now be logged to Langfuse, including:
 
 **For maximum privacy:** Self-host Langfuse on your own infrastructure.
 
+### Tracing modes: content or metadata
+
+AI calls made through Sure's AI transports (the health probes today; more features as they move
+over) are traced in one of two modes, never both. The mode follows the variables you already set:
+
+| You set | Mode | What leaves the server |
+|---|---|---|
+| `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | `content` | Prompts, outputs, token usage, the model and endpoint, Sure's error class, and the job's correlation id as the Langfuse session |
+| Only `OTLP_ENDPOINT` (and `OTLP_HEADERS` for authentication) | `metadata` | Model, settings, finish reason, token counts and latency, as OpenTelemetry spans to any OTLP backend (Langfuse, Tempo, Jaeger, OpenObserve). No prompts, tool results or answers |
+| Both | `content`, with a warning in the log | As `content` |
+| Neither | off | Nothing |
+
+```bash
+# metadata mode: cost and latency without sending financial data to a tracing backend
+OTLP_ENDPOINT=https://otel.example.com/v1/traces
+OTLP_HEADERS=Authorization=Basic%20${OTLP_BASIC_AUTH}
+```
+
+`OTLP_HEADERS` uses the OpenTelemetry form, `key=value` pairs separated by commas, with values
+URL-encoded. In `metadata` mode traces lose the endpoint name, Sure's error class and errors
+raised before a request is sent. Health probes are never traced: they carry no family data.
+
+### Usage: one row per request, shown per call
+
+The LLM usage page shows one row per AI call. A call that took several requests (a retried
+`429` or `503`, for example) opens to show each request with its status, tokens, cost and error,
+and the totals count calls. If you query the `llm_usages` table yourself, group by
+`COALESCE(call_id, id)` to count calls: rows written before this change, and rows from features
+not yet moved onto the transports, have no `call_id` and are calls of one request.
+
+### Outbound proxy
+
+Sure resolves the proxy once for its AI clients: `HTTPS_PROXY`, then `HTTP_PROXY`, whatever the
+scheme of the server it calls, honouring `NO_PROXY` (CIDR blocks such as `10.0.0.0/8` included).
+Loopback addresses (`127.0.0.0/8`, `::1`, `localhost`) never go through the proxy. `NO_PROXY`
+matches a host exactly as written: `127.0.0.1` doesn't cover `localhost`.
+
+This covers the OpenAI and OpenAI-compatible clients, the external assistant, and the AI health
+probes. Anthropic's client library takes no proxy setting, so native Anthropic calls go direct
+until they move onto the new transports, unless `HTTP_PROXY` is set (the only variable that
+library reads).
+
 ## Testing and Evaluation
 
 ### Manual Testing
@@ -1607,9 +1659,13 @@ VECTOR_STORE_PROVIDER=pgvector
 # Embedding model configuration
 EMBEDDING_MODEL=mxbai-embed-large         # Default: mxbai-embed-large
 EMBEDDING_DIMENSIONS=1024                 # Default: 1024 (must match your model)
-EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to OPENAI_URI_BASE if not set
-EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN if not set
+EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to the OpenAI API Base URL (ENV or Settings) if not set
+EMBEDDING_ACCESS_TOKEN=                   # Falls back to the OpenAI Access Token (ENV or Settings) if not set
 ```
+
+The fallbacks include values saved in **Settings** → **Self-Hosting**. Before this release they
+read only `OPENAI_URI_BASE` and `OPENAI_ACCESS_TOKEN` from the environment, so an install that set
+its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key.
 
 Sure enables the `vector` extension when it first provisions the chunks table,
 provided the database user has permission. If the AI status page reports that
