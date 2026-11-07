@@ -1,14 +1,16 @@
 # Onboarding clickable prototype
 
 This is the October 23, 2026 onboarding concept, revised after review to replace
-the existing Goals step. It is a standalone HTML file with embedded styles, font,
-and JavaScript. It is not wired into the application; the Rails implementation
-uses the existing wizard at `/onboarding/goals`.
+the existing Goals step. It is a standalone HTML prototype with embedded styles
+and JavaScript, plus a local `geist.woff2` font asset. It is not wired into the
+application; the Rails implementation uses the existing wizard at
+`/onboarding/goals`.
 
 ## Try it
 
-Download [`index.html`](index.html) and open the file in a modern browser. No
-installation, Rails server, account, or API key is needed. GitHub's file view
+Download [`index.html`](index.html) and [`geist.woff2`](geist.woff2) into the same
+folder and open the HTML in a modern browser. No installation, Rails server,
+account, or API key is needed. GitHub's file view
 shows the source rather than running the prototype.
 
 For a localhost preview, from the repository root run:
@@ -48,7 +50,8 @@ tracks LLM-powered features beyond the assistant.
 
 ## Scope
 
-This directory is review material only. It makes no network or storage calls.
+This directory is review material only. It loads its local font asset but makes
+no external network or storage calls.
 The accompanying Rails changes persist choices and capture the first family's
 AI-mode response as anonymized stated intent under existing telemetry controls;
 they do not add transaction onboarding, provider credential entry, or agent
