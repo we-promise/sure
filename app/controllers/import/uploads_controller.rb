@@ -24,6 +24,7 @@ class Import::UploadsController < ApplicationController
     elsif csv_valid?(csv_str)
       @import.account = import_account_id.present? ? accessible_accounts.find(import_account_id) : nil
       @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
+      @import.preset_for_uploaded_csv
       @import.save!(validate: false)
 
       redirect_to import_configuration_path(@import, template_hint: true), notice: t("imports.create.csv_uploaded")
