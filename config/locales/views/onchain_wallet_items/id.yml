@@ -50,7 +50,7 @@ id:
     new_wallet:
       address_label: Alamat dompet
       address_placeholder: bc1..., 0x..., atau alamat Solana
-      bitcoin_single_address_note: Bitcoin dilacak satu alamat pada satu waktu. Kunci lanjutan (xpub/ypub/zpub) tidak didukung, sehingga dompet yang menyebarkan dana ke berbagai alamat turunan hanya akan menampilkan saldo alamat yang Anda masukkan.
+      bitcoin_single_address_note: Bitcoin dilacak satu alamat pada satu waktu. Extended key (xpub/ypub/zpub) tidak didukung, sehingga dompet yang menyebarkan dana ke berbagai alamat turunan hanya akan menampilkan saldo alamat yang Anda masukkan.
       chain_auto_detect: Deteksi secara otomatis
       chain_label: Jaringan
       continue: Lanjutkan
