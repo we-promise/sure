@@ -165,6 +165,22 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     assert_not result.passing?
     assert_equal 404, result.http_status
+    assert_equal "model_not_available", result.failure_code.to_s
+  end
+
+  test "an Anthropic lookup maps by status whatever the body, and a garbled 200 is invalid output" do
+    url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
+    transport = Ai::Transport.for(Ai::Config::Endpoint.new(name: "anthropic", protocol: :anthropic, api_key: "anthropic-token"))
+    model = Ai::Config::Model.new(endpoint: transport.endpoint, name: "claude-sonnet-4-6")
+    {
+      { status: 503, body: { error: "busy" }.to_json } => Ai::Error::Upstream,
+      { status: 404, body: "<html>not here</html>" } => Ai::Error::Refused,
+      { status: 200, body: "<html>sign in</html>" } => Ai::Error::InvalidOutput
+    }.each do |response, error|
+      stub_request(:get, url).to_return(**response, headers: { "Content-Type" => "application/json" })
+
+      assert_raises(error, response.inspect) { transport.probe(model, :models) }
+    end
   end
 
   test "synthetic PDF is valid and contains no customer data" do
@@ -430,7 +446,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   test "embedding probe sends a small request and verifies dimensions" do
     request = stub_request(:post, "http://ollama.example.test:11434/v1/embeddings")
               .with(
-                body: hash_including(model: "nomic-embed-text")
+                body: hash_including(model: "nomic-embed-text", input: Ai::Transport::Base::PROBE_EMBEDDING_INPUT)
               )
               .to_return(
                 status: 200,
