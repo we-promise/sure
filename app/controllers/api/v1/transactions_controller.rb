@@ -157,7 +157,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         # Handle tags separately - only when explicitly provided in the request
         # This allows clearing tags with tag_ids: [] while preserving tags when not specified
         if tags_provided?
-          @entry.transaction.tag_ids = transaction_params[:tag_ids] || []
+          @entry.transaction.tag_ids = requested_tag_ids
           @entry.transaction.save!
           @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
         end
@@ -340,7 +340,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         entryable_attributes: {
           category_id: transaction_params[:category_id],
           merchant_id: transaction_params[:merchant_id],
-          tag_ids: transaction_params[:tag_ids] || []
+          tag_ids: requested_tag_ids
         }
       }
       if idempotency_key_requested?
@@ -388,9 +388,20 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     # Tags belong to a family: ids are resolved through the caller's own, so
     # another family's tag is refused like one that does not exist.
+    # An id that is not a UUID casts to nil, which matches no tag, so the
+    # count falls short and it is unknown too.
     def unknown_tag_ids?
-      ids = Array(transaction_params[:tag_ids]).compact_blank.uniq
+      ids = requested_tag_ids
       ids.any? && current_resource_owner.family.tags.where(id: ids).count != ids.size
+    end
+
+    # The request's tag ids in canonical UUID form, each once. Postgres matches
+    # a UUID in any case, so one tag spelled two ways is one tag, and writing
+    # the raw list would store it twice.
+    def requested_tag_ids
+      @requested_tag_ids ||= Array(transaction_params[:tag_ids]).compact_blank
+        .map { |id| Tag.type_for_attribute(:id).cast(id) }
+        .uniq
     end
 
     def split_financial_fields_changed?

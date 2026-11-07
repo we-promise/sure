@@ -858,6 +858,45 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal tags.map(&:id).sort, @transaction.reload.tag_ids.sort
   end
 
+  # One tag named in two spellings is one tag: Postgres matches a UUID in any
+  # case, so counting raw strings would call it unknown.
+  test "create with one tag spelled in two cases tags it once" do
+    tag = @family.tags.first
+
+    assert_difference "Tagging.count", 1 do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Tagged", amount: 25.00, date: Date.current,
+                                    currency: "USD", nature: "expense", tag_ids: [ tag.id, tag.id.upcase ] } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :success
+  end
+
+  test "update with one tag spelled in two cases assigns it once" do
+    tag = @family.tags.first
+    @transaction.update!(tag_ids: [])
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ tag.id, tag.id.upcase ] } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal [ tag.id ], @transaction.reload.tag_ids
+  end
+
+  test "update with a tag id that is not a UUID is refused and changes nothing" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ @family.tags.first.id, "not-a-uuid" ] } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal before_ids, @transaction.reload.tag_ids
+  end
+
   # Strong parameters drops a tag_ids of any other shape, which would otherwise
   # read as "no tags" and clear them.
   [
