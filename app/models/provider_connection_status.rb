@@ -2,6 +2,7 @@
 
 class ProviderConnectionStatus
   PROVIDERS = [
+    { key: "saxo", type: "SaxoItem", association: :saxo_items, accounts: :saxo_accounts },
     { key: "financekit", type: "FinancekitItem", association: :financekit_items, accounts: :financekit_account_lineages },
     { key: "akahu", type: "AkahuItem", association: :akahu_items, accounts: :akahu_accounts },
     { key: "up", type: "UpItem", association: :up_items, accounts: :up_accounts },

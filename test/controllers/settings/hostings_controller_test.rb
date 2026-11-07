@@ -30,6 +30,8 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   teardown do
+    Setting.saxo_app_key = nil
+    Setting.saxo_app_secret = nil
     # These tests persist global Setting.* values; reset them so state can't
     # leak into later (order-dependent) tests.
     %i[anthropic_access_token anthropic_base_url anthropic_model jev_api_key jev_endpoint jev_model llm_provider twelve_data_api_key openai_access_token openai_request_timeout ai_response_timeout ai_health_probe_timeout external_assistant_url external_assistant_token external_assistant_model external_assistant_agent_id rentcast_api_key realie_api_key chimnie_api_key demo_family_refresh_enabled demo_family_refresh_family_id
@@ -378,6 +380,34 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
 
       assert_equal "1234567890", Setting.twelve_data_api_key
+    end
+  end
+
+  test "can save Saxo credentials and preserve masked values" do
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { saxo_app_key: "test-key", saxo_app_secret: "test-secret" } }
+
+      assert_redirected_to settings_hosting_path
+      assert_equal "test-key", Setting.saxo_app_key
+      assert_equal "test-secret", Setting.saxo_app_secret
+
+      patch settings_hosting_url, params: { setting: { saxo_app_key: "********", saxo_app_secret: "********" } }
+
+      assert_equal "test-key", Setting.saxo_app_key
+      assert_equal "test-secret", Setting.saxo_app_secret
+    end
+  end
+
+  test "can clear Saxo credentials" do
+    Setting.saxo_app_key = "test-key"
+    Setting.saxo_app_secret = "test-secret"
+
+    with_self_hosting do
+      patch settings_hosting_url, params: { setting: { saxo_app_key: "", saxo_app_secret: "" } }
+
+      assert_redirected_to settings_hosting_path
+      assert_nil Setting.saxo_app_key
+      assert_nil Setting.saxo_app_secret
     end
   end
 

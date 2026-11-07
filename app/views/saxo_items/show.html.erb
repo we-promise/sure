@@ -1,0 +1,28 @@
+<%= content_for :page_title, t("saxo.title") %>
+<div class="space-y-6">
+  <h1 class="text-primary text-xl font-medium"><%= t("saxo.title") %></h1>
+  <%= render DS::Pill.new(label: t("saxo.preview")) %>
+  <%= render "saxo_items/saxo_item", saxo_item: @saxo_item, visible_accounts: @saxo_item.accounts.accessible_by(Current.user) %>
+  <p class="text-secondary"><%= t("saxo.setup_help") %></p>
+  <% @provider_accounts.each do |provider_account| %>
+    <div class="space-y-3">
+      <h2 class="text-primary font-medium"><%= provider_account.name %> (<%= provider_account.currency %>)</h2>
+      <p class="text-secondary"><%= t("saxo.recommended_type", subtype: Investment.long_subtype_label_for(provider_account.subtype)) %></p>
+      <% if provider_account.account %>
+        <% if @visible_account_ids.include?(provider_account.account.id) %>
+          <%= link_to provider_account.account.name, account_path(provider_account.account), class: "text-link" %>
+        <% end %>
+      <% else %>
+        <%= styled_form_with url: link_account_saxo_item_path(@saxo_item), method: :post do |form| %>
+          <%= form.hidden_field :saxo_account_id, value: provider_account.id %>
+          <%= form.select :account_id,
+                @manual_accounts.select { |account| account.currency == provider_account.currency }.map { |account| [account.name, account.id] },
+                { include_blank: t("saxo.create_account"), label: t("saxo.target_account") } %>
+          <%= form.submit t("saxo.link_account") %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+  <%= render DS::Button.new(text: t("saxo.sync"), href: sync_saxo_item_path(@saxo_item), method: :post, variant: :secondary) %>
+  <%= render DS::Button.new(text: t("saxo.full_history"), href: sync_saxo_item_path(@saxo_item, full_history: "1"), method: :post, variant: :secondary) %>
+</div>

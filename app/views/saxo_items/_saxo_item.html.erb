@@ -1,0 +1,26 @@
+<%# locals: (saxo_item:, visible_accounts:) %>
+
+<div id="<%= dom_id(saxo_item) %>" class="space-y-3">
+  <div class="flex items-center gap-2">
+    <%= render ProviderLogo.new(provider_key: :saxo) %>
+    <span class="font-medium text-primary"><%= saxo_item.name %></span>
+    <% if saxo_item.requires_update? %>
+      <%= render DS::Pill.new(label: t("saxo.reconnect_required")) %>
+    <% end %>
+  </div>
+  <% if saxo_item.sync_error.present? %>
+    <% error_message = saxo_item.sync_error == "Saxo market data may be unavailable" ? t("saxo.market_data_unavailable") : t("saxo.sync_failed") %>
+    <%= render DS::Alert.new(variant: :error, message: error_message) %>
+  <% end %>
+  <% if visible_accounts.any? %>
+    <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+  <% end %>
+  <% if Current.user.admin? && preview_features_enabled? %>
+    <div class="flex flex-wrap gap-2">
+      <%= render DS::Link.new(text: t("saxo.manage"), href: saxo_item_path(saxo_item), variant: :secondary) %>
+      <%= render DS::Button.new(text: t("saxo.reconnect"), href: reconnect_saxo_item_path(saxo_item), method: :post, variant: :secondary, data: { turbo: false }) %>
+      <%= render DS::Button.new(text: t("saxo.disconnect"), href: saxo_item_path(saxo_item), method: :delete,
+            variant: :destructive, data: { turbo_confirm: t("saxo.disconnect_confirmation") }) %>
+    </div>
+  <% end %>
+</div>

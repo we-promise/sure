@@ -1,4 +1,5 @@
 class User < ApplicationRecord
+  has_many :saxo_authorizations, dependent: :destroy
   has_many :financekit_items, dependent: :destroy
 
   include Encryptable

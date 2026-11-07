@@ -97,6 +97,7 @@ class Settings::ProvidersController < ApplicationController
   end
 
   def sync
+    return require_preview_features! if params[:provider_key] == "saxo" && !preview_features_enabled?
     provider_key  = params[:provider_key]
     syncable_type = PANEL_SYNCABLE_TYPES[provider_key]
     return redirect_to settings_providers_path unless syncable_type
@@ -111,6 +112,7 @@ class Settings::ProvidersController < ApplicationController
 
   def connect_form
     provider_key = params[:provider_key]
+    return require_preview_features! if provider_key == "saxo" && !preview_features_enabled?
 
     # Not FAMILY_PANELS_BY_KEY[provider_key]: Brakeman reads that as the param
     # choosing the partial to render.
@@ -203,6 +205,7 @@ class Settings::ProvidersController < ApplicationController
     # status display, and sync actions. The configuration registry excludes
     # them (see prepare_show_context).
     FAMILY_PANELS = [
+      { key: "saxo",           title: "Saxo Bank",       turbo_id: "saxo",           partial: "saxo_panel" },
       { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
       { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
       { key: "monobank",       title: "Monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
@@ -235,6 +238,7 @@ class Settings::ProvidersController < ApplicationController
 
     # Maps panel key → ActiveRecord model name for sync health queries
     PANEL_SYNCABLE_TYPES = {
+      "saxo"           => "SaxoItem",
       "akahu"          => "AkahuItem",
       "up"             => "UpItem",
       "monobank"       => "MonobankItem",
@@ -264,6 +268,9 @@ class Settings::ProvidersController < ApplicationController
 
     def load_provider_items(provider_key)
       case provider_key
+      when "saxo"
+        return require_preview_features! unless preview_features_enabled?
+        @saxo_items = Current.family.saxo_items.active.ordered
       when "akahu"
         @akahu_items = Current.family.akahu_items.active.ordered
       when "up"
@@ -354,6 +361,7 @@ class Settings::ProvidersController < ApplicationController
       @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
       @fio_items = Current.family.fio_items.active.ordered
+      @saxo_items = Current.family.saxo_items.active.ordered
 
       # Wallet uploads are managed on iOS. Only expose linked accounts the
       # current admin can access, including connections that need repair.
@@ -381,6 +389,7 @@ class Settings::ProvidersController < ApplicationController
     # on instance_variable_get for control flow.
     def family_panel_items
       {
+        "saxo"           => @saxo_items,
         "akahu"          => @akahu_items,
         "up"             => @up_items,
         "monobank"       => @monobank_items,
@@ -456,7 +465,7 @@ class Settings::ProvidersController < ApplicationController
         }
       end
 
-      family_entries = FAMILY_PANELS.map do |panel|
+      family_entries = FAMILY_PANELS.reject { |panel| panel[:key] == "saxo" && !preview_features_enabled? }.map do |panel|
         {
           provider_key: panel[:key],
           title: panel[:title],

@@ -31,6 +31,19 @@ class Api::V1::ProviderConnectionsControllerTest < ActionDispatch::IntegrationTe
     redis.del("api_rate_limit:#{@read_write_key.id}")
   end
 
+  test "Saxo connections are visible only with preview enabled" do
+    @family.saxo_items.create!
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => false))
+    get api_v1_provider_connections_url, headers: api_headers(@api_key)
+    assert_response :success
+    assert_not_includes JSON.parse(response.body)["data"].map { |item| item["provider"] }, "saxo"
+
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    get api_v1_provider_connections_url, headers: api_headers(@api_key)
+    assert_response :success
+    assert_includes JSON.parse(response.body)["data"].map { |item| item["provider"] }, "saxo"
+  end
+
   test "lists provider connection status for current family" do
     failed_sync = @mercury_item.syncs.create!(
       status: "failed",

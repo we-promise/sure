@@ -282,6 +282,8 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   # Saves and errors from a row or the drawer re-render the panel by replacing
   # "<turbo_id>-providers-panel". SnapTrade never streams to it.
   test "every streamed panel renders the root its streams replace" do
+    user = users(:family_admin)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
     Settings::ProvidersController::FAMILY_PANELS.reject { |panel| panel[:key] == "snaptrade" }.each do |panel|
       get connect_form_settings_providers_url(provider_key: panel[:key])
 

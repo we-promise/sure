@@ -2319,6 +2319,60 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.index ["rule_group_id"], name: "index_rules_on_rule_group_id"
   end
 
+  create_table "saxo_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_id", null: false
+    t.string "account_type"
+    t.decimal "cash_balance", precision: 24, scale: 8
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.decimal "current_balance", precision: 24, scale: 8
+    t.date "history_synced_on"
+    t.string "name", null: false
+    t.date "opening_date"
+    t.text "raw_holdings_payload"
+    t.text "raw_payload"
+    t.text "raw_transactions_payload"
+    t.uuid "saxo_item_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["saxo_item_id", "account_id"], name: "index_saxo_accounts_on_saxo_item_id_and_account_id", unique: true
+    t.index ["saxo_item_id"], name: "index_saxo_accounts_on_saxo_item_id"
+  end
+
+  create_table "saxo_authorizations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "application_key_digest", null: false
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.uuid "family_id", null: false
+    t.string "redirect_uri", null: false
+    t.uuid "saxo_item_id"
+    t.string "state_digest", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["expires_at"], name: "index_saxo_authorizations_on_expires_at"
+    t.index ["family_id"], name: "index_saxo_authorizations_on_family_id"
+    t.index ["saxo_item_id"], name: "index_saxo_authorizations_on_saxo_item_id"
+    t.index ["state_digest"], name: "index_saxo_authorizations_on_state_digest", unique: true
+    t.index ["user_id"], name: "index_saxo_authorizations_on_user_id"
+  end
+
+  create_table "saxo_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "access_expires_at"
+    t.text "access_token"
+    t.string "application_key_digest"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "name", default: "Saxo", null: false
+    t.boolean "pending_account_setup", default: true, null: false
+    t.string "redirect_uri"
+    t.datetime "refresh_expires_at"
+    t.text "refresh_token"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.date "sync_start_date", default: "2010-01-01", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_saxo_items_on_family_id"
+  end
+
   create_table "securities", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "asset_class"
     t.string "asset_sub_class"
@@ -3193,6 +3247,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
   add_foreign_key "rules", "rule_groups", on_delete: :nullify
+  add_foreign_key "saxo_accounts", "saxo_items"
+  add_foreign_key "saxo_authorizations", "families"
+  add_foreign_key "saxo_authorizations", "saxo_items", on_delete: :cascade
+  add_foreign_key "saxo_authorizations", "users"
+  add_foreign_key "saxo_items", "families"
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify

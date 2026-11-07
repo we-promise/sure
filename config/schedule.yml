@@ -115,3 +115,10 @@ backfill_account_logos:
   active_job: true
   queue: "scheduled"
   description: "Fetches icons for accounts with an institution domain and no logo"
+
+refresh_saxo_sessions:
+  cron: "*/5 * * * *"
+  class: "RefreshSaxoSessionsJob"
+  active_job: true
+  queue: "high_priority"
+  description: "Renews OAuth sessions for connected Saxo accounts"
