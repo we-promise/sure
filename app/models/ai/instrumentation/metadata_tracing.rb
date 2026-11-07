@@ -19,6 +19,24 @@ module Ai::Instrumentation::MetadataTracing
     end
   end
 
+  # Health probes carry no family data and aren't traced (docs/hosting/ai.md), so every span
+  # started inside a probe call is dropped; any other span is sampled as the SDK's default does.
+  class ProbeSampler
+    DEFAULT = OpenTelemetry::SDK::Trace::Samplers.parent_based(root: OpenTelemetry::SDK::Trace::Samplers::ALWAYS_ON)
+
+    def should_sample?(trace_id:, parent_context:, links:, name:, kind:, attributes:)
+      return DEFAULT.should_sample?(trace_id:, parent_context:, links:, name:, kind:, attributes:) unless probe?
+
+      OpenTelemetry::SDK::Trace::Samplers::Result.new(decision: OpenTelemetry::SDK::Trace::Samplers::Decision::DROP,
+                                                      tracestate: OpenTelemetry::Trace.current_span(parent_context).context.tracestate)
+    end
+
+    def description = "SureProbeSampler"
+
+    private
+      def probe? = Ai::CallContext.current&.feature == "probe"
+  end
+
   module_function
 
   # The app owns the tracer provider and exporter, as RubyLLM's OpenTelemetry docs ask.
@@ -26,7 +44,7 @@ module Ai::Instrumentation::MetadataTracing
     processor ||= OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor.new(
       OpenTelemetry::Exporter::OTLP::Exporter.new(endpoint:, headers: parse_headers(headers))
     )
-    provider = OpenTelemetry::SDK::Trace::TracerProvider.new
+    provider = OpenTelemetry::SDK::Trace::TracerProvider.new(sampler: ProbeSampler.new)
     provider.add_span_processor(CorrelationProcessor.new)
     provider.add_span_processor(processor)
     OpenTelemetry.tracer_provider = provider
