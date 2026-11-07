@@ -7,7 +7,7 @@ class Ai::RubyLlmSetupTest < ActiveSupport::TestCase
   end
 
   # Sure records usage in llm_usages; RubyLLM's ledger writes a row per attempt only once its
-  # table exists, so the table must never be created (spike: "RubyLLM's usage ledger").
+  # table exists, so the table must never be created.
   test "RubyLLM's usage ledger has no table to write to" do
     assert_not ActiveRecord::Base.connection.table_exists?("ruby_llm_usages")
   end

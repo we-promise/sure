@@ -3,7 +3,7 @@
 # request passes, streamed or not: generations, probes, embeddings and a chat tool's nested call.
 #
 # It enforces the attempt budget: a request that would start after the call's deadline raises
-# Ai::Error::Timeout instead of being sent. PR 4 adds the host's gate here (section 11).
+# Ai::Error::Timeout instead of being sent.
 #
 # When a request fails, it puts the error, mapped and scrubbed by the transport, on the
 # `request.ruby_llm` payload as `:ai_error` before the event finishes. RubyLLM has written the

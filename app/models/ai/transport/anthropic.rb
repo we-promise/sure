@@ -1,4 +1,4 @@
-# Claude through the native Messages API (section 4.2); its OpenAI-compatible layer drops
+# Claude through the native Messages API; its OpenAI-compatible layer drops
 # features.
 class Ai::Transport::Anthropic < Ai::Transport::Base
   include Ai::Transport::RubyLlmAdapter

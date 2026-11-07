@@ -1,7 +1,7 @@
 require "test_helper"
 
 # `metadata` mode must never send content: no prompt, answer, tool result or error body on any
-# span. RubyLLM 2.2 can put content on spans when asked (#1333), so this test guards upgrades.
+# span. RubyLLM 2.2 can put content on spans when asked (RubyLLM #1333), so this test guards upgrades.
 class Ai::Instrumentation::MetadataTracingTest < ActiveSupport::TestCase
   URL = "https://llm.example.test/v1/chat/completions".freeze
   SECRET_PROMPT = "Reply with OK.".freeze
@@ -67,7 +67,7 @@ class Ai::Instrumentation::MetadataTracingTest < ActiveSupport::TestCase
   end
 
   private
-    # A chat request inside a feature's call, as 2c's generations make them.
+    # A chat request inside a feature's call, as a generation makes it.
     def chat_call
       Ai::CallContext.call(feature: :bill_setup, model: @model) { Ai::Transport.for(@model.endpoint).send(:probe_chat, @model) }
     end

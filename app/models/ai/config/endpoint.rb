@@ -1,15 +1,14 @@
-# One connection a transport talks to (section 4.2): protocol, URL, key and tuning. Transports
-# take these values and never read ENV, Setting or ActiveRecord themselves. In 2a, AiHealth's
-# probes build them from today's settings; 2b's Ai::Config holds them for every feature, and
-# PR 7 copies `ai_endpoints` rows into them.
+# One connection a transport talks to: protocol, URL, key and tuning. Transports take these
+# values and never read ENV, Setting or ActiveRecord themselves; AiHealth's probes build them
+# from the current settings.
 class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :api_key, :extra_headers, :location,
                                          :timeout_seconds, :max_retries, :responses_api, :probe_check)
   PROTOCOLS = %i[compatible anthropic jev].freeze
   LOCATIONS = %i[local cloud].freeze
-  # What a health probe checks (decision 4 in pr-2a-transports-and-instrumentation.md):
+  # What a health probe checks:
   # :models lists the server's models and makes no chat call; :chat sends a tiny chat request,
   # which also catches a spent balance and a server that answers for a model it hasn't loaded.
-  # The admin who configures the endpoint chooses, from PR 7; until then it's always :models.
+  # :models is the default, so a probe makes no chat call unless its endpoint asks for one.
   PROBE_CHECKS = %i[models chat].freeze
 
   def initialize(name:, protocol:, preset: nil, base_url: nil, api_key: nil, extra_headers: {}, location: :cloud,
