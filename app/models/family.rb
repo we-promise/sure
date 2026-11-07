@@ -385,8 +385,8 @@ class Family < ApplicationRecord
   #
   # This is the single entry point for "a member just joined, give them the
   # accounts the family shares by default." It self-guards on the sharing policy
-  # and family membership so every membership path (invitation accept, SSO JIT
-  # sign-up, token registration, mobile SSO) can call it without reintroducing
+  # and family membership so every membership path (SSO JIT sign-up, token
+  # registration, mobile SSO) can call it without reintroducing
   # the "member joined but sees nothing" bug. No-op when sharing is disabled or
   # there is nothing to share, and idempotent on re-run.
   def auto_share_existing_accounts_with(user)
