@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1790,6 +1790,67 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.index ["status"], name: "index_monobank_items_on_status"
   end
 
+  create_table "moomoo_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "acc_type"
+    t.string "account_kind", default: "securities", null: false
+    t.string "account_number_mask"
+    t.decimal "cash_balance", precision: 19, scale: 4
+    t.datetime "cash_logs_backfilled_from"
+    t.datetime "cash_logs_gap_from"
+    t.datetime "cash_logs_gap_until"
+    t.datetime "cash_logs_synced_through"
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.jsonb "enable_markets", default: [], null: false
+    t.jsonb "history_cursors", default: {}, null: false
+    t.datetime "last_positions_sync"
+    t.datetime "last_seen_at"
+    t.string "moomoo_account_id"
+    t.uuid "moomoo_item_id", null: false
+    t.string "name"
+    t.uuid "primary_moomoo_account_id"
+    t.jsonb "raw_account_payload", default: {}, null: false
+    t.jsonb "raw_cash_logs_payload", default: [], null: false
+    t.jsonb "raw_fills_payload", default: [], null: false
+    t.jsonb "raw_funds_payload", default: {}, null: false
+    t.jsonb "raw_orders_payload", default: {}, null: false
+    t.jsonb "raw_positions_payload", default: [], null: false
+    t.string "role", default: "combined", null: false
+    t.string "security_firm"
+    t.datetime "updated_at", null: false
+    t.index ["moomoo_item_id", "moomoo_account_id", "currency", "role"], name: "index_moomoo_accounts_on_item_account_id_currency_and_role", unique: true, where: "(moomoo_account_id IS NOT NULL)"
+    t.index ["moomoo_item_id", "moomoo_account_id"], name: "index_moomoo_accounts_on_item_and_account_id", unique: true, where: "((moomoo_account_id IS NOT NULL) AND (primary_moomoo_account_id IS NULL))"
+    t.index ["moomoo_item_id"], name: "index_moomoo_accounts_on_moomoo_item_id"
+    t.index ["primary_moomoo_account_id"], name: "index_moomoo_accounts_on_primary_moomoo_account_id"
+  end
+
+  create_table "moomoo_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.text "access_token"
+    t.datetime "access_token_expires_at"
+    t.datetime "accounts_listed_at"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.datetime "last_authorized_at"
+    t.datetime "last_token_refresh_at"
+    t.string "name"
+    t.string "oauth_client_id"
+    t.string "oauth_redirect_uri"
+    t.string "oauth_registered_scope"
+    t.text "oauth_registration_access_token"
+    t.string "oauth_registration_client_uri"
+    t.text "oauth_scope"
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "pending_oauth_client"
+    t.string "reauth_reason"
+    t.text "refresh_token"
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_moomoo_items_on_family_id"
+    t.index ["status"], name: "index_moomoo_items_on_status"
+  end
+
   create_table "notification_deliveries", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.uuid "rule_id", null: false
@@ -3153,6 +3214,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
   add_foreign_key "mobile_devices", "users"
   add_foreign_key "monobank_accounts", "monobank_items"
   add_foreign_key "monobank_items", "families"
+  add_foreign_key "moomoo_accounts", "moomoo_accounts", column: "primary_moomoo_account_id"
+  add_foreign_key "moomoo_accounts", "moomoo_items"
+  add_foreign_key "moomoo_items", "families"
   add_foreign_key "notification_deliveries", "rules", on_delete: :cascade
   add_foreign_key "notification_deliveries", "transactions", on_delete: :cascade
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"

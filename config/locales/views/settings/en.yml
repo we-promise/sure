@@ -491,6 +491,7 @@ en:
         onchain_wallet: Track self-custody Bitcoin, EVM, Solana, Cosmos and Polkadot wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
+        moomoo: Sync your moomoo brokerage holdings and trades via moomoo OpenAPI (read-only).
         trade_republic: Sync your Trade Republic investment account via secure read-only web login.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         questrade: Sync your Questrade investment accounts directly via the Questrade API.
@@ -798,6 +799,24 @@ en:
           other: "%{count} Trade Republic accounts discovered."
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
+      moomoo_panel:
+        steps:
+          step_1: Click Connect moomoo. Sure registers itself with moomoo for this address.
+          step_2: Sign in to moomoo, tick only the trade:read permission, and choose the trading accounts to share.
+          step_3: Confirm. You return here to choose which accounts to add.
+          step_4: moomoo ends access after 14 days without use; Sure's automatic syncs keep it active.
+        callback_hint: "Sure's callback address:"
+        connect: Connect moomoo
+        reconnect: Reconnect
+        reconnect_required: Reconnect required
+        change_accounts: Change accounts
+        waiting_for_authorization: Waiting for authorization
+        inactivity_warning: Not synced for over 10 days. Sync soon, or moomoo will ask you to reconnect.
+        backfill_pending: Older history still importing
+        sync: Sync
+        syncing: Syncing...
+        remove: Remove
+        remove_confirm: Remove this moomoo connection? Linked accounts keep their data.
       trading212_panel:
         steps:
           step_1: Go to Trading 212 → Settings → API (web or mobile app).

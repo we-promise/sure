@@ -60,6 +60,7 @@ namespace :security do
     results[:lunchflow_items] = backfill_model(LunchflowItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
     results[:enable_banking_items] = backfill_model(EnableBankingItem, %i[client_certificate session_id raw_payload raw_institution_payload], batch_size, dry_run)
     results[:truelayer_items] = backfill_model(TruelayerItem, %i[client_secret access_token refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:moomoo_items] = backfill_model(MoomooItem, %i[access_token refresh_token oauth_registration_access_token oauth_scope pending_oauth_client], batch_size, dry_run)
 
     # Provider accounts
     results[:plaid_accounts] = backfill_model(PlaidAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload], batch_size, dry_run)
@@ -71,6 +72,7 @@ namespace :security do
     results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:moomoo_accounts] = backfill_model(MoomooAccount, %i[raw_account_payload raw_funds_payload raw_positions_payload raw_fills_payload raw_orders_payload raw_cash_logs_payload], batch_size, dry_run)
 
     puts({
       ok: true,

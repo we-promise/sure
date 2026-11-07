@@ -1,0 +1,213 @@
+<% content_for :title, t(".page_title") %>
+
+<%= render DS::Dialog.new(disable_click_outside: true) do |dialog| %>
+  <% dialog.with_header(title: t(".dialog_title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "chart-line", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-6">
+      <%= render DS::Note.new(title: t(".info_box.title")) do %>
+        <ul class="list-disc list-inside space-y-1">
+          <li><%= t(".info_box.items.item_1") %></li>
+          <li><%= t(".info_box.items.item_2") %></li>
+          <li><%= t(".info_box.items.item_3") %></li>
+          <li><%= t(".info_box.items.item_4") %></li>
+        </ul>
+      <% end %>
+
+      <%# A sync discovers the accounts, and splits them by currency as it goes.
+          While one runs, the browser re-fetches this frame on its own request
+          until the server renders it without a polling element. The family's
+          sync toast can't do it: it holds its refresh while a dialog is open,
+          and a morph would close this one. %>
+      <%= turbo_frame_tag "moomoo-setup-accounts", target: "_top" do %>
+      <% if @waiting_for_sync %>
+        <%= tag.div class: "flex flex-col items-center justify-center py-6 space-y-3",
+                    data: { controller: "polling",
+                            polling_frame_id_value: "moomoo-setup-accounts",
+                            polling_url_value: setup_accounts_moomoo_item_path(@moomoo_item),
+                            polling_interval_value: 5000 } do %>
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          <p class="text-secondary text-center"><%= t(".status.fetching_accounts") %></p>
+        <% end %>
+        <div class="flex gap-3 justify-center">
+          <%= render DS::Link.new(
+            text: t(".buttons.refresh"),
+            variant: "secondary",
+            icon: "refresh-cw",
+            href: setup_accounts_moomoo_item_path(@moomoo_item),
+            frame: "_top"
+          ) %>
+          <%= render DS::Link.new(
+            text: t(".buttons.cancel"),
+            variant: "ghost",
+            href: accounts_path,
+            frame: "_top"
+          ) %>
+        </div>
+      <% elsif @sync_failed %>
+        <div id="moomoo-setup-sync-failed" class="flex flex-col items-center justify-center py-6 space-y-3">
+          <%= icon "alert-circle", size: "lg", class: "text-warning" %>
+          <p class="text-primary text-center font-medium"><%= t(".status.sync_failed_title") %></p>
+          <p class="text-secondary text-center text-sm"><%= t(".status.sync_failed_description") %></p>
+        </div>
+        <div class="flex gap-3 justify-center">
+          <%= render DS::Link.new(
+            text: t(".buttons.try_again"),
+            variant: "secondary",
+            icon: "refresh-cw",
+            href: setup_accounts_moomoo_item_path(@moomoo_item),
+            frame: "_top"
+          ) %>
+          <%= render DS::Link.new(
+            text: t(".buttons.cancel"),
+            variant: "ghost",
+            href: accounts_path,
+            frame: "_top"
+          ) %>
+        </div>
+      <% elsif @no_accounts_found %>
+        <div class="flex flex-col items-center justify-center py-6 space-y-3">
+          <%= icon "alert-circle", size: "lg", class: "text-warning" %>
+          <p class="text-primary text-center font-medium"><%= t(".status.no_accounts_found_title") %></p>
+          <p class="text-secondary text-center text-sm"><%= t(".status.no_accounts_found_description") %></p>
+        </div>
+        <div class="flex gap-3 justify-center">
+          <%= render DS::Link.new(
+            text: t(".buttons.back_to_settings"),
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
+        </div>
+      <% else %>
+        <% if @syncing %>
+          <%# Setup waits for the sync, which may still add rows. %>
+          <%= tag.div id: "moomoo-setup-still-syncing", class: "mb-4",
+                      data: { controller: "polling",
+                              polling_frame_id_value: "moomoo-setup-accounts",
+                              polling_url_value: setup_accounts_moomoo_item_path(@moomoo_item),
+                              polling_interval_value: 5000 } do %>
+            <%= render DS::Alert.new(message: t(".status.still_syncing"), variant: :info, live: :polite) %>
+          <% end %>
+        <% end %>
+
+        <% if @unlinked_accounts.any? %>
+          <%= form_with url: complete_account_setup_moomoo_item_path(@moomoo_item), method: :post, data: { turbo_frame: "_top" } do %>
+            <div class="space-y-4">
+              <h3 class="font-medium text-primary"><%= t(".available_accounts.title") %></h3>
+
+              <% @unlinked_accounts.each do |moomoo_account| %>
+                <div class="border border-primary rounded-lg p-4 hover:bg-surface transition-colors">
+                  <div class="flex items-center gap-3">
+                    <input type="checkbox"
+                           id="account_<%= moomoo_account.id %>"
+                           name="account_ids[]"
+                           value="<%= moomoo_account.id %>"
+                           checked
+                           class="checkbox checkbox--light cursor-pointer">
+                    <label for="account_<%= moomoo_account.id %>" class="flex-1 cursor-pointer">
+                      <h4 class="font-medium text-primary"><%= moomoo_account.name %></h4>
+                      <p class="text-sm text-secondary">
+                        <%= t(".available_accounts.account_summary", details: moomoo_account_details(moomoo_account), balance: moomoo_account_balance(moomoo_account)) %>
+                      </p>
+                    </label>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6">
+              <%= render DS::Link.new(
+                text: t(".buttons.cancel"),
+                variant: :secondary,
+                href: accounts_path,
+                frame: "_top"
+              ) %>
+              <%= render DS::Button.new(
+                text: t(".buttons.create_selected_accounts"),
+                icon: "plus",
+                type: :submit,
+                disabled: @syncing
+              ) %>
+            </div>
+          <% end %>
+        <% end %>
+
+        <% if @unlinked_accounts.any? && @linkable_accounts.any? %>
+          <div class="border-t border-secondary pt-4 mt-2">
+            <p class="text-xs text-secondary mb-3"><%= t(".link_existing.description") %></p>
+            <div class="space-y-2">
+              <% @linkable_accounts.each do |moomoo_account, linkable_accounts| %>
+                <%# The namespace keeps each select's id, and so its label, unique. %>
+                <%= styled_form_with url: link_existing_account_moomoo_items_path, method: :post, namespace: "link_moomoo_account_#{moomoo_account.id}",
+                                     data: { turbo_frame: "_top" }, class: "space-y-2" do |link_form| %>
+                  <%= link_form.hidden_field :moomoo_account_id, value: moomoo_account.id %>
+                  <%= link_form.select :account_id,
+                        options_for_select(linkable_accounts.map { |a| [ t(".link_existing.manual_account_option", name: a.name, balance: Money.new(a.balance, a.currency).format), a.id ] }),
+                        { label: moomoo_account.name, prompt: t(".link_existing.select_prompt") },
+                        { required: true } %>
+                  <div class="flex justify-end">
+                    <%= render DS::Button.new(
+                      text: t(".buttons.link"),
+                      variant: :secondary,
+                      type: :submit,
+                      disabled: @syncing
+                    ) %>
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <% if @linked_accounts.any? %>
+          <div class="<%= "border-t border-primary pt-6 mt-4" if @unlinked_accounts.any? %>">
+            <h3 class="font-medium text-primary mb-4"><%= t(".linked_accounts.title") %></h3>
+            <% @linked_accounts.each do |moomoo_account| %>
+              <div class="border border-success/20 bg-success/5 rounded-lg p-4 mb-2">
+                <div class="flex items-center gap-3">
+                  <%= icon "check-circle", class: "text-success" %>
+                  <div>
+                    <h4 class="font-medium text-primary"><%= moomoo_account.name %></h4>
+                    <p class="text-sm text-secondary"><%= t(".linked_accounts.linked_to_html", account: link_to(moomoo_account.current_account.name, account_path(moomoo_account.current_account), class: "link")) %></p>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if @unsupported_accounts.any? %>
+          <div id="moomoo-unsupported-accounts" class="border-t border-secondary pt-4 mt-2">
+            <h3 class="font-medium text-primary mb-1"><%= t(".unsupported.title") %></h3>
+            <p class="text-xs text-secondary mb-3"><%= t(".unsupported.description") %></p>
+            <ul class="space-y-1">
+              <% @unsupported_accounts.each do |moomoo_account| %>
+                <li class="text-sm text-secondary">
+                  <%= moomoo_account.name %> • <%= t(".unsupported.kinds.#{moomoo_account.account_kind}") %>
+                </li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <% if @unlinked_accounts.blank? %>
+          <div class="flex justify-end mt-4">
+            <%= render DS::Link.new(
+              text: t(".buttons.done"),
+              variant: "primary",
+              href: accounts_path,
+              frame: "_top"
+            ) %>
+          </div>
+        <% end %>
+      <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

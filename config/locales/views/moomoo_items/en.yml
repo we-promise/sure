@@ -1,0 +1,166 @@
+---
+en:
+  providers:
+    moomoo:
+      name: moomoo
+      connection_description: Connect a moomoo brokerage account with read-only OAuth
+      institution_name: moomoo
+  moomoo_items:
+    default_name: moomoo
+    redirect_blocked: moomoo returned an unexpected authorization address, so Sure did not follow it.
+    defaults:
+      account_name: "moomoo %{firm} %{mask}"
+      cash_account_name: "%{name} (%{currency} cash)"
+      stocks_account_name: "%{name} (%{currency} stocks)"
+      firms:
+        FUTUSG: SG
+        FUTUSECURITIES: HK
+        FUTUINC: US
+        FUTUCA: CA
+        FUTUMY: MY
+        FUTUAU: AU
+        FUTUJP: JP
+    settlements:
+      buy: "Buy %{symbol}"
+      sell: "Sell %{symbol}"
+    acc_types:
+      cash: Cash
+      margin: Margin
+      derivative: Derivative
+    reauth_reasons:
+      invalid_grant: moomoo no longer accepts this connection. It expires after 14 days without use, or when access is revoked.
+      invalid_client: moomoo no longer knows Sure's registration. Reconnecting registers Sure again.
+      token_rejected: moomoo refused a freshly issued access token.
+      scope_missing: The trade:read permission or a trading account was not granted.
+    moomoo_item:
+      deletion_in_progress: Deletion in progress
+      syncing: Syncing
+      requires_update: Reconnect required
+      reconnect: Reconnect
+      change_accounts: Change accounts
+      error: Error
+      synced: Synced %{time} ago. %{summary}.
+      never_synced: Never synced.
+      setup_accounts: Set up accounts
+      delete: Delete
+      accounts_need_setup: Accounts need setup
+      accounts_need_setup_description: Link your moomoo trading accounts to Sure accounts.
+      no_accounts_discovered: No moomoo trading account discovered yet.
+      no_accounts_discovered_description: Sync after authorizing to discover your accounts.
+      backfill_pending: Older trade history is still importing and continues on the next sync.
+    setup_accounts:
+      page_title: Set Up moomoo Accounts
+      dialog_title: Set Up Your moomoo Accounts
+      subtitle: Choose the moomoo trading accounts to add to Sure.
+      info_box:
+        title: moomoo OpenAPI import (read-only)
+        items:
+          item_1: Current holdings, each in the currency it trades in
+          item_2: Buys and sells from up to the last 2 years, without fees for now
+          item_3: Total assets and cash, as an account per currency when it holds more than one
+          item_4: Deposits, withdrawals, dividends, taxes, fees and currency exchanges from the cash log
+      status:
+        fetching_accounts: Fetching accounts from moomoo...
+        no_accounts_found_title: No account found.
+        no_accounts_found_description: moomoo returned no authorized trading account. Reconnect and tick at least one account.
+        sync_failed_title: Sure couldn't fetch your accounts.
+        sync_failed_description: The last sync with moomoo didn't finish. Try again, or check the connection under Settings → Providers.
+        still_syncing: moomoo is still syncing. This list updates when it finishes, and the accounts can be set up then.
+      available_accounts:
+        title: Available accounts
+        account_summary: "%{details} • Balance: %{balance}"
+      unsupported:
+        title: Not supported yet
+        description: Futures, crypto, and moomoo Japan margin or derivative accounts are not imported in this version.
+        kinds:
+          futures: Futures
+          crypto: Crypto
+          jp_margin: Japan margin or derivative
+          other: Other
+      link_existing:
+        description: Or link a discovered moomoo account to an existing manual account in its currency, a cash account for moomoo cash and an investment account for the others.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: Select an account...
+      linked_accounts:
+        title: Already linked
+        linked_to_html: "Linked to: %{account}"
+      buttons:
+        refresh: Refresh
+        try_again: Try again
+        cancel: Cancel
+        back_to_settings: Back to Settings
+        create_selected_accounts: Create selected accounts
+        link: Link
+        done: Done
+    sync:
+      reconnect_first: Reconnect moomoo before syncing.
+      status:
+        checking_connection: Checking moomoo connection...
+        importing_accounts: Importing moomoo accounts...
+        checking_configuration: Checking account configuration...
+        accounts_need_setup:
+          one: 1 moomoo account needs setup...
+          other: "%{count} moomoo accounts need setup..."
+        processing_activity: Processing holdings and trades...
+        calculating_balances: Calculating balances...
+        history_backfill_pending: Older history will continue on the next sync.
+      notices:
+        currency_not_linked: "%{name} is not imported until you set up its account."
+      failures:
+        balances_and_positions: Balance and positions
+        today_fills: "Today's fills (%{market})"
+        recent_trade_history: "Recent trade history (%{market})"
+        trade_history_backfill: "Older trade history (%{market})"
+        recent_cash_logs: Recent cash logs
+        cash_log_backfill: Older cash logs
+        trade_history_skipped: "Part of the trade history (%{market}), cut short by moomoo"
+        cash_logs_skipped: Part of the cash logs, cut short by moomoo
+    sync_status:
+      no_accounts: No moomoo account discovered yet
+      all_linked:
+        one: 1 account linked
+        other: "%{count} accounts linked"
+      partial: "%{linked} linked, %{unlinked} need setup"
+    select_existing_account:
+      title: Link moomoo account
+      no_accounts_available: No unlinked moomoo accounts are available yet.
+      run_sync_hint: Connect and sync moomoo from Settings > Bank sync first.
+      wait_for_sync: Wait for the account discovery sync to finish.
+      account_summary: "%{details} • Balance: %{balance}"
+      link: Link
+      cancel: Cancel
+    connect:
+      registration_failed: "Could not register Sure with moomoo: %{message}"
+    reauthorize:
+      registration_failed: "Could not register Sure with moomoo: %{message}"
+    callback:
+      success: moomoo connected. Choose the accounts to add.
+      invalid_callback: The moomoo authorization link was invalid or has expired. Please connect again.
+      access_denied: Authorization was cancelled on moomoo.
+      authorization_error: "moomoo reported an error: %{error}"
+      authorization_failed: "moomoo authorization failed: %{message}"
+      scope_missing: Sure needs the trade:read permission and at least one trading account, so nothing was saved. Try again and tick them.
+      write_scope_granted: The consent granted order placing (trade:write), which Sure never uses, so nothing was saved. Try again and leave trade:write unticked; tick only trade:read and the accounts to share.
+      already_connected: This moomoo connection was completed in another window. To add another moomoo login, click Connect moomoo again.
+    destroy:
+      success: moomoo connection scheduled for deletion. You can also revoke Sure's access in the moomoo OpenAPI dashboard.
+      unlink_failed: A moomoo account could not be unlinked, so the connection was kept. Try removing it again.
+    select_accounts:
+      not_configured: Connect moomoo first.
+    link_existing_account:
+      not_found: Account or moomoo connection not found.
+      currency_mismatch: This moomoo account is in %{currency}. Link it to a manual account in %{currency}.
+      only_matching_manual_account: A moomoo cash account can only be linked to a manual cash account, and any other moomoo account to a manual investment account.
+      already_linked: This moomoo account is already linked.
+      not_shared: moomoo no longer shares this account with Sure. Share it again with Change accounts, then link it.
+      unsupported_kind: This kind of moomoo account is not supported yet.
+      success: Successfully linked to moomoo account.
+      failed: Failed to link moomoo account.
+      syncing: Wait for the moomoo sync to finish before linking the account.
+    complete_account_setup:
+      success:
+        one: Successfully created %{count} moomoo account.
+        other: Successfully created %{count} moomoo accounts.
+      none_selected: No accounts were selected.
+      none_created: No accounts were created.
+      syncing: Wait for the sync to finish before setting up accounts.

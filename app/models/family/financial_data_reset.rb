@@ -55,6 +55,7 @@ class Family::FinancialDataReset
     lunchflow_items
     mercury_items
     monobank_items
+    moomoo_items
     onchain_wallet_items
     plaid_items
     questrade_items
