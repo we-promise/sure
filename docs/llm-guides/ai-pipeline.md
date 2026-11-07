@@ -36,8 +36,10 @@ flowchart LR
   and an `Ai::Config::Model`. Configuration reaches them through `Ai::Config` (2b) and the
   `ai_*` tables (PR 7).
 - **Build clients only in `Ai::Transport::Http`.** It applies the endpoint's timeout and
-  headers, TLS options and the proxy. The contract test fails on `OpenAI::Client.new`,
-  `Anthropic::Client.new` or `Faraday.new` anywhere else under `app/models/ai/`.
+  headers, TLS options and the proxy. RubyLLM builds its own connections and takes no TLS
+  options, so its contexts use `Http.ruby_llm_adapter`, a Net::HTTP adapter that adds them. The
+  contract test fails on `OpenAI::Client.new`, `Anthropic::Client.new` or `Faraday.new`
+  anywhere else under `app/models/ai/`.
 - **Use RubyLLM's public API only**: `RubyLLM.context`, `Context#chat`/`#embed`,
   `Chat#generate`, the `with_*` setters, `RubyLLM::Tool`, `RubyLLM.workflow`,
   `RubyLLM.with_usage_owner`, `RubyLLM::OpenTelemetry.enable`. Nothing marked `:nodoc:`.
@@ -47,10 +49,12 @@ flowchart LR
   inside one request with no hook before a retry, so only Sure can stop on a spent balance and
   check the time budget between tries.
 - **Raise only `Ai::Error`.** Map client errors in the transport (`mapping_errors`). Mapped
-  messages are scrubbed of keys before anything logs them.
+  messages are scrubbed of the endpoint's secrets (`Endpoint#secrets`: the key and long static
+  header values) before anything logs them.
 - **Wrap every call in `Ai::CallContext.call`.** RubyLLM's `usage.ruby_llm` event then carries
   the family (the usage owner) and the call (the workflow), and `UsageSubscriber` writes one
-  `llm_usages` row per request. A job opens `Ai::CallContext.job(correlation_id)` first, with
+  `llm_usages` row per request. A failed request's row takes its own error from the
+  `request.ruby_llm` event (`Ai::Transport::Instrumenter`). A job opens `Ai::CallContext.job(correlation_id)` first, with
   the id from its arguments.
 - **Never create `ruby_llm_usages`.** RubyLLM's ledger would then record every call a second time.
 
