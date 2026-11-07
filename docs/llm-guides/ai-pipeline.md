@@ -313,4 +313,5 @@ flowchart LR
 - `test/fixtures/files/statements/` holds the spike's two public sample statements: `bac_ocr.pdf`
   (an OCR'd text layer with errors, 13 transactions) and `impact_scanned.pdf` (a two-page scan).
 - Live tests in `test/models/ai/live/`: `embed_live_test` (venus llama.cpp) and `ocr_live_test`
-  (Mistral, Cohere and a local OCR model), skipped without a cassette or key.
+  (Cohere `parse-v5.0` and a local OCR model recorded; Mistral skipped without a key), skipped
+  without a cassette or key.

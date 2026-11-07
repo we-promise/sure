@@ -1671,9 +1671,9 @@ Sure reads an uploaded PDF in one of four ways, then checks what the model retur
 **OCR.** OCR models (a local model such as Unlimited-OCR-2 on llama.cpp, read through chat with
 its own prompt, or Mistral and Cohere's OCR services) are supported in the code, but there is no
 setting for them yet: they become configurable with the AI settings tables. Until then "Read as:
-OCR" is greyed out, and a scan is read as images on a vision model. Mistral and Cohere OCR are
-untested against the live services. A llama.cpp OCR model needs `--special` so its table tags
-reach Sure.
+OCR" is greyed out, and a scan is read as images on a vision model. Cohere's OCR (`parse-v5.0`,
+one page image per request) has been tested live; Mistral's hasn't. A llama.cpp OCR model needs
+`--special` so its table tags reach Sure.
 
 ### Vector Store (Document Search)
 

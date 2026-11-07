@@ -58,7 +58,7 @@ class AiTransportOcrTest < ActiveSupport::TestCase
                                                             meta: { billed_units: { pages: 1 } } })
     endpoint = ai_endpoint(name: "cohere", preset: :cohere, base_url: nil)
 
-    response = ocr(ai_model(name: "cohere-parse", endpoint:, capabilities: %i[ocr]))
+    response = ocr(ai_model(name: "parse-v5.0", endpoint:, capabilities: %i[ocr]))
 
     assert_equal %w[markdown markdown], bodies.map { _1["output_format"] }
     assert_equal [ "Impact page", "Impact page" ], response.texts

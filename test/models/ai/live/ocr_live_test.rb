@@ -8,7 +8,7 @@ require "test_helper"
 class AiOcrLiveTest < ActiveSupport::TestCase
   SERVERS = {
     mistral: { key: "MISTRAL_LIVE_API_KEY", model: ENV.fetch("MISTRAL_LIVE_OCR_MODEL", "mistral-ocr-latest"), preset: :mistral },
-    cohere: { key: "COHERE_LIVE_API_KEY", model: ENV.fetch("COHERE_LIVE_OCR_MODEL", "cohere-parse-v1"), preset: :cohere },
+    cohere: { key: "COHERE_LIVE_API_KEY", model: ENV.fetch("COHERE_LIVE_OCR_MODEL", "parse-v5.0"), preset: :cohere },
     llama_cpp: { key: "LLAMA_CPP_API_KEY", model: ENV.fetch("OCR_LIVE_MODEL", "Unlimited-OCR-2-Q4_K_M"), preset: nil,
                  base_url: ENV.fetch("OCR_LIVE_BASE_URL", "http://10.72.200.61:8180/v1"), ocr_prompt: "unlimited_ocr_2" }
   }.freeze
