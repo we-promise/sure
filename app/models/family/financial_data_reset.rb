@@ -62,6 +62,7 @@ class Family::FinancialDataReset
     simplefin_items
     snaptrade_items
     sophtron_items
+    stashaway_items
     truelayer_items
     up_items
   ].freeze
