@@ -1,6 +1,7 @@
 ---
 pl:
   settings:
+    encryption_migration_guide: Przewodnik po konfiguracji szyfrowania i migracji
     ai_prompts:
       prompt_field:
         format_risk: 'Twoje polecenie dla %{provider} usunęło przykład {"%{key}":

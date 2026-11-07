@@ -9,7 +9,8 @@ pl:
       safe_to_spend: Ile mogę bezpiecznie wydać w tym okresie?
       subscriptions_up: Które subskrypcje podrożały w tym roku?
     all:
-      any_status: Dowolny status
+      current_bills: Bieżące rachunki
+      dismissed_hidden_description: Zakończone rachunki są ukryte.
       any_type: Dowolny typ
       col_actions: Akcje
       col_amount: Kwota

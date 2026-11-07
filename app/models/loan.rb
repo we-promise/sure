@@ -197,6 +197,49 @@ class Loan < ApplicationRecord
     @rate_schedule_reconciliation = nil
   end
 
+  # What a provider should write when it reports this variable loan's rate on
+  # `as_of`, or nil when there is nothing to write. Writes nothing itself, so
+  # the provider's own writer keeps locks, provenance and refusal handling.
+  #
+  # - A first sighting (no base rate yet) sets the base rate: a first reading
+  #   is not evidence that the rate moved on any particular day.
+  # - A rate equal to the one in force on `as_of` is not a change. A row
+  #   already dated `as_of` is the rate in force on `as_of`, so this also
+  #   covers a second sync on the same day.
+  # - Otherwise the change is a row dated `as_of`. The base rate stays, since
+  #   replacing it would re-price every period before the change.
+  # - A loan that is not variable gets nil; what a fixed loan does with a
+  #   reported rate is the caller's decision.
+  #
+  # Rounded to three places, the precision of `interest_rate`, so a reading a
+  # hair off the stored rate is not taken for a change on every sync.
+  #
+  # A rate outside 0..MAX_INTEREST_RATE gets nil. The form rejects one, and
+  # nothing checks a schedule written any other way, so a provider reporting
+  # -1% or 150% has sent something other than a rate. So has one that is not
+  # a number at all, which gets nil too rather than raising out of the sync.
+  # The bound is checked before rounding, which would otherwise carry -0.0004
+  # or 100.0004 onto 0 or 100.
+  def variable_rate_update_for(reported_rate, as_of:)
+    return nil if reported_rate.nil? || !variable_rate_type?
+
+    rate = begin
+      BigDecimal(reported_rate.to_s)
+    rescue ArgumentError, TypeError, FloatDomainError
+      nil
+    end
+    return nil unless rate&.finite? && rate.between?(0, MAX_INTEREST_RATE)
+
+    rate = rate.round(3)
+    return { interest_rate: rate } if interest_rate.blank?
+
+    in_force = current_variable_rate(as_of)
+    return nil if in_force.present? && BigDecimal(in_force.to_s) == rate
+
+    schedule = (variable_rate_schedule || {}).stringify_keys
+    { variable_rate_schedule: schedule.merge(as_of.to_date.iso8601 => rate.to_s("F")) }
+  end
+
   # Rows the form submitted that could not be parsed. Kept so the save can be
   # rejected and the form re-rendered with what the user actually typed --
   # dropping them silently loses a typo'd row between submit and redisplay,
@@ -557,10 +600,11 @@ class Loan < ApplicationRecord
     LEVERAGE_BANDS.find { |_band, range| range.cover?(ratio) }&.first
   end
 
-  # Where the loan is heading from today's balance. Not memoised: `as_of`
-  # makes each call a different question.
-  def payoff_projection(as_of: Date.current)
-    PayoffProjection.new(self, as_of: as_of)
+  # Where the loan is heading from today's balance, optionally with an extra
+  # amount paid weekly, fortnightly or with every repayment. Not memoised:
+  # each argument makes each call a different question.
+  def payoff_projection(as_of: Date.current, extra: nil, extra_frequency: "monthly")
+    PayoffProjection.new(self, as_of: as_of, extra: extra, extra_frequency: extra_frequency)
   end
 
   # The date the loan was drawn down. Recorded explicitly when the borrower
