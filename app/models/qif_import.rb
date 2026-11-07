@@ -364,7 +364,7 @@ class QifImport < Import
       children = entry.split!(split_rows)
       children.zip(split_rows).each do |child, row|
         child.update!(notes: row[:notes]) if row[:notes].present?
-        row[:tags].each { |tag| child.entryable.taggings.create!(tag: tag) }
+        row[:tags].uniq.each { |tag| child.entryable.taggings.create!(tag: tag) }
       end
     end
 
