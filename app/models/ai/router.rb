@@ -14,11 +14,11 @@ class Ai::Router
   def resolve(feature)
     feature = feature.to_sym
     spec = Ai::Routes.fetch(feature)
-    listed = @config.routes_for(Ai::Routes.fetch(feature)[:route_of] || feature)
+    listed = @config.routes_for(spec[:route_of] || feature)
                     .select { |route| route.agent? == agent_chat?(feature) && route.serves_user?(@user) && route.serves?(@family) }
     return Ai::Availability.unavailable(feature, :not_configured) if listed.empty?   # first: nothing to consent to
 
-    if (reason = Ai::Consent.denial(feature, spec, family: @family, user: @user))
+    if (reason = Ai::Consent.denial(feature, family: @family, user: @user))
       return Ai::Availability.unavailable(feature, reason)
     end
 

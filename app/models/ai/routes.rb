@@ -40,6 +40,10 @@ module Ai::Routes
   # A shadow has its own consent (section 8.2); `consent_as:` puts a feature under another's row.
   def consent_key(feature) = fetch(feature)[:consent_as] || feature.to_sym
 
+  # The consent row a person sees the feature under: a shadow shows under its primary's row.
+  # Routing (`route_of:`) doesn't move a feature to another row; only `consent_as:` does.
+  def row_key(feature) = consent_key(fetch(feature)[:shadow_of] || feature)
+
   # The consent rows on the AI features page (PR 7), one per thing a person recognises.
   def consent_keys = features.reject { fetch(_1)[:shadow_of] }.map { consent_key(_1) }.uniq
 
@@ -55,7 +59,7 @@ module Ai::Routes
     rows = MATRIX.map do |feature, spec|
       needs = Ai::Routes.needs_for(feature)
       needs = needs.is_a?(Hash) ? needs.map { |kind, list| "#{kind}: #{list.join(", ")}" }.join("; ") : needs.join(", ")
-      row = I18n.t("ai.consent_rows.#{consent_key(spec[:shadow_of] || feature)}")
+      row = I18n.t("ai.consent_rows.#{row_key(feature)}")
       row += " (shadow runs)" if spec[:shadow_of]
       sends = Array(spec[:sends] || fetch(spec[:shadow_of])[:sends]).map { I18n.t("ai.sends.#{_1}", locale: :en) }.join("; ")
       "| `#{feature}` | #{spec[:lane]} | #{needs} | #{row} (#{spec[:consent]}) | #{sends} |"
