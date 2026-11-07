@@ -95,6 +95,8 @@ class Ai::Transport::Base
   PROBE_EMBEDDING_INPUT = "Sure AI health check".freeze
   PROBE_MAX_OUTPUT_TOKENS = 16
   PROBE_TOOL_MAX_OUTPUT_TOKENS = 256
+  # What a provider may add to a model's name for a dated snapshot of it.
+  SNAPSHOT_SUFFIX = /\A-(?:\d{4}-\d{2}-\d{2}|\d{8}|\d{4})\z/
 
   attr_reader :endpoint
 
@@ -256,7 +258,7 @@ class Ai::Transport::Base
         result
       rescue Ai::Error::Base => error
         payload[:error] = error.class.name
-        payload[:error_message] = Ai::Instrumentation::Redactor.scrub(error.message, secrets: [ endpoint.api_key ])
+        payload[:error_message] = Ai::Instrumentation::Redactor.scrub(error.message, secrets: endpoint.secrets)
         payload[:http_status] = error.status
         raise
       end
@@ -285,10 +287,13 @@ class Ai::Transport::Base
       raise Ai::Error::ModelMissing, "asked for #{asked}, but #{answered} answered"
     end
 
-    # Providers add dates and vendor prefixes (gpt-4.1 -> gpt-4.1-2025-04-14, openai/gpt-4.1).
+    # The same model under a vendor prefix (openai/gpt-4.1), a snapshot date (gpt-4.1-2025-04-14,
+    # claude-sonnet-4-5-20250929, gpt-4-0613) or for a `latest` alias. Any other difference is
+    # another model: gpt-4.1-mini isn't gpt-4.1, nor gpt-4o gpt-4.
     def same_model?(asked, answered)
-      a = asked.to_s.downcase.split("/").last
-      b = answered.to_s.downcase.split("/").last
-      a.start_with?(b) || b.start_with?(a)
+      short, long = [ asked, answered ].map { model_stem(_1) }.minmax_by(&:length)
+      short == long || (long.start_with?(short) && long.delete_prefix(short).match?(SNAPSHOT_SUFFIX))
     end
+
+    def model_stem(name) = name.to_s.downcase.split("/").last.to_s.delete_suffix(":latest").delete_suffix("-latest")
 end

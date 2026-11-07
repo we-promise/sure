@@ -33,8 +33,8 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
     content = Ai::Instrumentation.subscribe!(env: { "LANGFUSE_PUBLIC_KEY" => "pk", "LANGFUSE_SECRET_KEY" => "sk" })
     off = Ai::Instrumentation.subscribe!(env: {})
 
-    assert_equal 5, content.size
-    assert_equal 4, off.size, "usage (two), the debug log and shadow comparisons run in every mode"
+    assert_equal 6, content.size
+    assert_equal 5, off.size, "usage (three), the debug log and shadow comparisons run in every mode"
   ensure
     [ *content, *off ].each { ActiveSupport::Notifications.unsubscribe(_1) }
   end
@@ -43,7 +43,7 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
     log = []
     subscriber = Ai::Instrumentation::LangfuseSubscriber.new(client: FakeLangfuse.new(log))
     payload = { feature: "bill_setup", correlation_id: "rule_run:7", call_id: "c1", route: { endpoint: "openai", model: "gpt-4.1" },
-                request: { input: "charges" }, output: { name: "Netflix" },
+                request: { input: "charges" }, output: { name: "Netflix", notes: [ "billed with sk-live-abcdef123456" ] },
                 usage: Ai::Tokens.new(input_tokens: 512, cache_read_tokens: 11_945, output_tokens: 20) }
 
     subscriber.call(event("generate.ai", payload))
@@ -55,6 +55,9 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
     generation_end = log.select { _1.first == :end }.first.last
     assert_equal({ input_tokens: 12_457, output_tokens: 20, prompt_tokens_details: { cached_tokens: 11_945 } }, generation_end[:usage])
     assert_equal 1, log.count { _1.first == :trace }, "probe.ai is skipped"
+    ends = log.select { _1.first == :end }.map(&:last)
+    assert_equal 2, ends.size, "the generation and the trace"
+    ends.each { assert_equal({ name: "Netflix", notes: [ "billed with [REDACTED]" ] }, _1[:output]) }
   end
 
   test "a failed call writes a debug log entry with its route and error, never its key" do

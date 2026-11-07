@@ -343,11 +343,13 @@ class LlmUsage < ApplicationRecord
     }
   end
 
-  # The most recent calls in scope, newest first, each with its requests in order.
+  # The most recent calls in scope, newest first, each with all its requests in order, even one
+  # outside the date range (a retry just after midnight).
   # @return [Array<LlmUsage::Call>]
   def self.recent_calls(limit: 100)
     keys = group(Arel.sql(CALL_KEY)).order(Arel.sql("MAX(llm_usages.created_at) DESC")).limit(limit).pluck(Arel.sql(CALL_KEY))
-    requests = where(id: keys).or(where(call_id: keys)).order(:created_at).group_by { _1.call_id || _1.id }
+    history = unscope(where: :created_at)
+    requests = history.where(id: keys).or(history.where(call_id: keys)).order(:created_at).group_by { _1.call_id || _1.id }
 
     keys.filter_map { requests[_1] }.map { LlmUsage::Call.new(_1) }
   end

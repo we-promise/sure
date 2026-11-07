@@ -105,6 +105,41 @@ class AiTransportContractTest < ActiveSupport::TestCase
       assert_raises(Ai::Error::ModelMissing) { probe(protocol, :chat) }
     end
 
+    test "#{protocol}: a dated snapshot of the model passes the probe; a sibling model doesn't" do
+      { "test-model-2025-04-14" => true, "vendor/test-model-20250929" => true, "test-model-mini" => false, "test-model2" => false }.each do |answered, same|
+        stub_request(:post, spec[:url]).to_return(status: 200, headers: JSON_HEADERS, body: spec[:ok].merge(model: answered).to_json)
+
+        if same
+          assert_equal "OK", probe(protocol, :chat), answered
+        else
+          assert_raises(Ai::Error::ModelMissing, answered) { probe(protocol, :chat) }
+        end
+      end
+    end
+
+    test "#{protocol}: a tool probe answered by another model is ModelMissing" do
+      stub_request(:post, spec[:url]).to_return(status: 200, headers: JSON_HEADERS, body: spec[:ok].merge(model: "loaded-model").to_json)
+
+      assert_raises(Ai::Error::ModelMissing) { probe(protocol, :tools) }
+    end
+
+    test "#{protocol}: a probe's own timeout applies to its RubyLLM requests" do
+      transport = Ai::Transport.for(endpoint(protocol, timeout_seconds: 60))
+
+      assert_equal 1, transport.send(:ruby_llm_context, timeout: 1).config.request_timeout
+      assert_equal 60, transport.send(:ruby_llm_context).config.request_timeout
+    end
+
+    test "#{protocol}: RubyLLM's requests get Sure's TLS settings" do
+      Ai::Transport::Http.stubs(:faraday_ssl_options).returns(verify: false)
+      adapter = Ai::Transport.for(endpoint(protocol)).send(:ruby_llm_context).config.faraday_adapter
+      env = Faraday::Env.from(url: URI("https://self-hosted.example.test/v1"), request: Faraday::RequestOptions.new, ssl: Faraday::SSLOptions.new)
+
+      http = adapter.new.build_connection(env)
+
+      assert_equal OpenSSL::SSL::VERIFY_NONE, http.verify_mode
+    end
+
     test "#{protocol}: one probe.ai event per call, with the route and the error class but never the key" do
       stub_request(:post, spec[:url]).to_return(status: 401, headers: JSON_HEADERS, body: spec[:error].call("Invalid key test-secret-value-1").to_json)
 
@@ -122,6 +157,11 @@ class AiTransportContractTest < ActiveSupport::TestCase
       with_env_overrides("HTTPS_PROXY" => "http://proxy.internal:8888", "HTTP_PROXY" => nil) do
         transport = Ai::Transport.for(endpoint(protocol))
         assert_equal "http://proxy.internal:8888", transport.send(:ruby_llm_context).config.http_proxy
+
+        host = URI(spec[:url]).host
+        with_env_overrides("NO_PROXY" => host) do
+          assert_nil Ai::Transport.for(endpoint(protocol)).send(:ruby_llm_context).config.http_proxy, "NO_PROXY goes direct"
+        end
       end
     end
   end
