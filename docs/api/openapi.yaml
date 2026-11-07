@@ -8366,6 +8366,44 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/insights/{id}/acknowledge":
+    patch:
+      summary: Acknowledge a proactive insight
+      tags:
+      - Insights
+      description: Marks a visible family insight read and acknowledged, removing
+        it from the feed. Requires read_write scope and preview access. Repeated requests
+        are idempotent.
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: id
+        in: path
+        format: uuid
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: insight acknowledged
+        '401':
+          description: authentication required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: write scope, member access or preview features required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: insight not found or not visible to the family
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/merchants":
     get:
       summary: List merchants

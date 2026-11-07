@@ -45,4 +45,30 @@ RSpec.describe "API V1 Insights", type: :request do
       end
     end
   end
+  path "/api/v1/insights/{id}/acknowledge" do
+    patch "Acknowledge a proactive insight" do
+      tags "Insights"
+      description "Marks a visible family insight read and acknowledged, removing it from the feed. Requires read_write scope and preview access. Repeated requests are idempotent."
+      security [ { apiKeyAuth: [] } ]
+      produces "application/json"
+      parameter name: :id, in: :path, type: :string, format: :uuid, required: true
+      let(:id) { SecureRandom.uuid }
+
+      response "204", "insight acknowledged" do
+        run_test!
+      end
+      response "401", "authentication required" do
+        schema "$ref" => "#/components/schemas/ErrorResponse"
+        run_test!
+      end
+      response "403", "write scope, member access or preview features required" do
+        schema "$ref" => "#/components/schemas/ErrorResponse"
+        run_test!
+      end
+      response "404", "insight not found or not visible to the family" do
+        schema "$ref" => "#/components/schemas/ErrorResponse"
+        run_test!
+      end
+    end
+  end
 end

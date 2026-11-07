@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 class Api::V1::InsightsController < Api::V1::BaseController
-  before_action :ensure_read_scope
+  before_action :ensure_read_scope, only: :index
+  before_action -> { authorize_scope!(:write) }, only: :acknowledge
+  before_action :reject_guest_writes!, only: :acknowledge
   before_action :require_preview_features_for_api
 
   def index
@@ -10,6 +12,20 @@ class Api::V1::InsightsController < Api::V1::BaseController
     render json: {
       insights: insights.map { |insight| serialize(insight) }
     }
+  end
+
+  def acknowledge
+    raise ActiveRecord::RecordNotFound unless valid_uuid?(params[:id])
+
+    insight = current_resource_owner.family.insights.about_shared_accounts.find(params[:id])
+    insight.with_lock do
+      # Replays must not overwrite timestamps or revive expired insights.
+      if insight.active? || insight.read?
+        insight.mark_read!
+        insight.acknowledge!
+      end
+    end
+    head :no_content
   end
 
   private
