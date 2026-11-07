@@ -228,7 +228,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
            headers: mcp_headers(@token)
 
       assert_response :accepted
-      assert response.body.blank?, "Notification must not produce a response body"
+      assert_equal "", response.body, "Notification must not produce a response body"
     end
   end
 
@@ -239,7 +239,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
            headers: mcp_headers(@token)
 
       assert_response :accepted
-      assert response.body.blank?, "Notification-style tools/call must not execute or respond"
+      assert_equal "", response.body, "Notification-style tools/call must not execute or respond"
     end
   end
 
@@ -249,7 +249,23 @@ class McpControllerTest < ActionDispatch::IntegrationTest
            headers: mcp_headers(@token)
 
       assert_response :accepted
-      assert response.body.blank?
+      assert_equal "", response.body
+    end
+  end
+
+  test "the handshake's notifications/initialized, sent with the negotiated session, is accepted" do
+    with_mcp_cache do
+      with_mcp_env do
+        post "/mcp", params: jsonrpc_request("initialize").to_json, headers: mcp_headers(@token)
+        assert_response :ok
+        session_id = response.headers["Mcp-Session-Id"]
+
+        post "/mcp", params: jsonrpc_notification("notifications/initialized").to_json,
+             headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => MCP_PROTOCOL_VERSION, "Mcp-Session-Id" => session_id)
+
+        assert_response :accepted
+        assert_equal "", response.body
+      end
     end
   end
 
