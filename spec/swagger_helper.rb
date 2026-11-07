@@ -53,6 +53,15 @@ RSpec.configure do |config|
           }
         },
         schemas: {
+          Version: {
+            type: :object,
+            additionalProperties: false,
+            required: %w[version commit_sha],
+            properties: {
+              version: { type: :string, description: 'Running Sure version, without a v prefix.' },
+              commit_sha: { type: :string, nullable: true, description: 'Build commit SHA, or null when unavailable.' }
+            }
+          },
           SplitRequest: {
             type: :object,
             required: %w[split],

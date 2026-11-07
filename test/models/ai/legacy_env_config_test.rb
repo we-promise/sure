@@ -237,6 +237,15 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     end
   end
 
+  test "one answer to whether a Jev endpoint can be reached" do
+    jev = Ai::LegacyEnvConfig::Jev
+
+    assert_nil jev.unreachable_reason("https://api.typesafe.ai/v1/systemone")
+    assert_equal :openrouter, jev.unreachable_reason("https://openrouter.ai/api/alpha/decisions")
+    assert_equal :path, jev.unreachable_reason("https://gw.example.test/v1/jev")
+    assert_equal :path, jev.unreachable_reason("ftp://jev.example.test/v1/systemone")
+  end
+
   test "the external assistant is an agent endpoint at the end of chat's list" do
     config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "EXTERNAL_ASSISTANT_URL" => "https://agent.example.test/v1",
                    "EXTERNAL_ASSISTANT_TOKEN" => "agent-token", "EXTERNAL_ASSISTANT_ALLOWED_EMAILS" => " A@example.com ,b@example.com")

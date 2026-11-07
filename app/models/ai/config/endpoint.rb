@@ -34,13 +34,15 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
     raise ArgumentError, "unknown location #{location.inspect}" unless LOCATIONS.include?(location)
     raise ArgumentError, "unknown probe check #{probe_check.inspect}" unless PROBE_CHECKS.include?(probe_check)
     raise ArgumentError, "unknown JSON mode #{json_mode.inspect}" unless JSON_MODES.include?(json_mode)
+    parallel_requests = parallel_requests && Integer(parallel_requests)
+    raise ArgumentError, "parallel_requests must be at least 1, got #{parallel_requests}" if parallel_requests&.< 1
 
     super(name: name.to_s, protocol:, preset: preset&.to_sym, base_url: base_url.presence, api_key: api_key.presence,
           extra_headers: extra_headers.to_h.transform_keys(&:to_s).freeze, location:, timeout_seconds: Integer(timeout_seconds),
           max_retries: Integer(max_retries), responses_api: responses_api ? true : false, probe_check:,
           vector_store: vector_store ? true : false, agent: agent ? true : false,
           agent_settings: agent_settings.to_h.transform_keys(&:to_sym).freeze, json_mode:,
-          parallel_requests: parallel_requests && Integer(parallel_requests))
+          parallel_requests:)
   end
 
   # What a provider takes inline as a PDF, by preset (section 8.1), until PR 7's preset files
