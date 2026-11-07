@@ -11,6 +11,9 @@ class Entry < ApplicationRecord
   DESCRIPTIVE_ATTRIBUTES = %w[name notes updated_at].freeze
   DESCRIPTIVE_TRANSACTION_ATTRIBUTES = %w[category_id merchant_id updated_at].freeze
 
+  # Key in transactions.extra marking a stale pending the sync excluded on its own.
+  AUTO_EXCLUDED_PENDING_KEY = "auto_excluded_stale_pending".freeze
+
   attr_accessor :unsplitting
 
   monetize :amount
@@ -59,6 +62,13 @@ class Entry < ApplicationRecord
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
+
+  # Any other write of `excluded` (a user toggling it, a reconciliation) ends the
+  # "excluded automatically" state, so a later booking cannot override it. This
+  # also covers a write of the same value, e.g. a user excluding the entry from a
+  # page loaded before the sync excluded it.
+  before_save :clear_auto_excluded_pending_mark, if: -> { @excluded_assigned }
+  after_save -> { @excluded_assigned = false }
 
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
@@ -172,17 +182,45 @@ class Entry < ApplicationRecord
   # Called during sync to clean up pending transactions that never posted
   # @param account [Account] The account to clean up
   # @param days [Integer] Number of days after which pending is considered stale (default: 8)
+  # @param mark [Boolean] Remember on the transaction that the exclusion was automatic,
+  #   so an import that later books the same bank id can re-activate the entry
+  #   (see Account::ProviderImportAdapter). Entries excluded by the user carry no mark.
   # @return [Integer] Number of entries excluded
-  def self.auto_exclude_stale_pending(account:, days: 8)
+  def self.auto_exclude_stale_pending(account:, days: 8, mark: false)
     stale_entries = account.entries.stale_pending(days: days).where(excluded: false)
     count = stale_entries.count
 
     if count > 0
-      stale_entries.update_all(excluded: true, updated_at: Time.current)
-      Rails.logger.info("Auto-excluded #{count} stale pending transaction(s) for account #{account.id} (#{account.name})")
+      if mark
+        transaction do
+          # Re-check under a row lock: an entry the user excluded, or the import
+          # claimed, since the query above keeps its state and gets no mark.
+          # Transactions first, then entries: the same order as a Transaction
+          # save, which touches its entry, so the two cannot deadlock.
+          transaction_ids = Transaction.where(id: stale_entries.select(:entryable_id)).order(:id).lock.pluck(:id)
+          ids = stale_entries.where(entryable_id: transaction_ids).order(:id).lock("FOR UPDATE OF entries").pluck(:id)
+
+          Transaction.where(id: Entry.where(id: ids).select(:entryable_id))
+            .update_all([ "extra = COALESCE(extra, '{}'::jsonb) || jsonb_build_object(?::text, true)", AUTO_EXCLUDED_PENDING_KEY ])
+          count = Entry.where(id: ids).update_all(excluded: true, updated_at: Time.current)
+        end
+      else
+        stale_entries.update_all(excluded: true, updated_at: Time.current)
+      end
+      Rails.logger.info("Auto-excluded #{count} stale pending transaction(s) for account #{account.id} (#{account.name})") if count > 0
     end
 
     count
+  end
+
+  def excluded=(value)
+    @excluded_assigned = true
+    super
+  end
+
+  # True for a pending entry that auto_exclude_stale_pending(mark: true) excluded.
+  def auto_excluded_pending?
+    excluded? && entryable.is_a?(Transaction) && entryable.extra&.dig(AUTO_EXCLUDED_PENDING_KEY) == true
   end
 
   # Retroactively reconcile pending transactions that have a matching posted version
@@ -213,6 +251,7 @@ class Entry < ApplicationRecord
         .where.not(id: pending_entry.id)
         .where(currency: pending_entry.currency)
         .where(amount: pending_entry.amount)
+        .where(source: pending_entry.source) # one provider's pending is never another provider's duplicate
         .where(date: pending_entry.date..(pending_entry.date + date_window.days)) # Posted must be ON or AFTER pending date
         .where(not_pending_sql)
         .limit(2) # Only need to know if 0, 1, or 2+ candidates
@@ -220,7 +259,13 @@ class Entry < ApplicationRecord
 
       # Handle exact match - auto-exclude only if exactly ONE candidate (high confidence)
       # Multiple candidates = ambiguous = skip to avoid excluding wrong entry
+      # The posted match must also be unambiguous the other way round: two
+      # same-amount pendings would otherwise both be excluded against one booking,
+      # hiding the one that has not booked yet (#2013).
       if exact_candidates.size == 1
+        # Also no fuzzy suggestion then: it would point every pending at the same booking.
+        next unless sole_pending_for?(exact_candidates.first, date_window: date_window)
+
         posted_match = exact_candidates.first
         detail = {
           pending_id: pending_entry.id,
@@ -243,6 +288,8 @@ class Entry < ApplicationRecord
         end
         next
       end
+      # Two exact bookings: a name match would just pick one of them at random.
+      next if exact_candidates.size > 1
 
       # PRIORITY 2: If no exact match, try fuzzy amount match for tip adjustments
       # Store as SUGGESTION instead of auto-excluding (medium confidence)
@@ -255,6 +302,7 @@ class Entry < ApplicationRecord
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id AND entries.entryable_type = 'Transaction'")
         .where.not(id: pending_entry.id)
         .where(currency: pending_entry.currency)
+        .where(source: pending_entry.source)
         .where(date: pending_entry.date..(pending_entry.date + fuzzy_date_window.days)) # Posted ON or AFTER pending
         .where("ABS(entries.amount) BETWEEN ? AND ?", min_amount, max_amount)
         .where(not_pending_sql)
@@ -316,6 +364,21 @@ class Entry < ApplicationRecord
 
     stats
   end
+
+  # True when no other live pending could claim this posted entry: the same
+  # amount/currency lookup Account::ProviderImportAdapter#find_pending_transaction
+  # runs at import time, seen from the posted side.
+  def self.sole_pending_for?(posted_entry, date_window:)
+    posted_entry.account.entries.pending
+      .where(excluded: false)
+      .where(currency: posted_entry.currency)
+      .where(amount: posted_entry.amount)
+      .where(source: posted_entry.source)
+      .where(date: (posted_entry.date - date_window.days)..posted_entry.date)
+      .limit(2)
+      .count == 1
+  end
+  private_class_method :sole_pending_for?
 
   def classification
     amount.negative? ? "income" : "expense"
@@ -693,6 +756,19 @@ class Entry < ApplicationRecord
   end
 
   private
+    # Works on the stored row: the loaded transaction may predate the sync
+    # that wrote the mark.
+    def clear_auto_excluded_pending_mark
+      return unless entryable_type == "Transaction" && entryable_id
+
+      Transaction.where(id: entryable_id).where("transactions.extra ->> ? IS NOT NULL", AUTO_EXCLUDED_PENDING_KEY)
+        .update_all([ "extra = extra - ?::text", AUTO_EXCLUDED_PENDING_KEY ])
+
+      if association(:entryable).loaded? && entryable.extra&.key?(AUTO_EXCLUDED_PENDING_KEY)
+        entryable.extra = entryable.extra.except(AUTO_EXCLUDED_PENDING_KEY)
+      end
+    end
+
     # Takes FOR UPDATE on the transaction row, then on this entry (lock! also reloads both), always
     # in that order so the split methods can't deadlock each other. Yields the transaction, or nil
     # for other entryables.
