@@ -79,7 +79,7 @@ class Ai::Transport::Base
         result
       rescue Ai::Error::Base => error
         payload[:error] = error.class.name
-        payload[:error_message] = Ai::Instrumentation::Redactor.scrub(error.message, secrets: [ endpoint.api_key ])
+        payload[:error_message] = Ai::Instrumentation::Redactor.scrub(error.message, secrets: endpoint.secrets)
         payload[:http_status] = error.status
         raise
       end
