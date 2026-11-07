@@ -136,15 +136,15 @@ class Balance::ChartSeriesBuilder
   # withdrawal. No direction is computed, since several unvalued flows of
   # either sign have no known net. The returns engine reads the same
   # two conditions: a flow in a currency with no rate (`rate_missing`)
-  # and a journal with no price for its date. The second is read off
-  # `suppressed`, which DailyReturns also sets for a non-positive
-  # denominator, so a suppressed day with a positive denominator is the
-  # unpriced journal.
+  # and a journal with no price for its date (`unvalued_journal`). Not
+  # `suppressed`: DailyReturns also sets that for a non-positive
+  # denominator, which an empty opening day has with nothing missing, and
+  # an unpriced journal into an account opening at zero has too.
   def net_contributions_incomplete?(anchor_date: nil, dates: nil)
     dates = (dates || query_data.map(&:date))
     # Every row the line adds is read, the anchor day's included.
     net_contribution_rows(anchor_date: anchor_date, through: dates.max).any? do |row|
-      row.rate_missing || (row.suppressed && row.denominator.positive?)
+      row.rate_missing || row.unvalued_journal
     end
   end
 
