@@ -141,12 +141,12 @@
             <span class="inline-block w-5 border-t-2 border-dashed" style="border-color: <%= projection_color %>" aria-hidden="true"></span>
             <%= t("goals.show.projection.legend_projection") %>
           </span>
-          <% if show_required_legend? %>
-            <span class="inline-flex items-center gap-1.5">
-              <span class="inline-block w-5 border-t-2 border-dotted border-current text-secondary opacity-50" aria-hidden="true"></span>
-              <%= t("goals.show.projection.legend_required") %>
-            </span>
-          <% end %>
+        <% end %>
+        <% if show_required_legend? %>
+          <span class="inline-flex items-center gap-1.5">
+            <span class="inline-block w-5 border-t-2 border-dotted border-current text-secondary opacity-50" aria-hidden="true"></span>
+            <%= t("goals.show.projection.legend_required") %>
+          </span>
         <% end %>
       </div>
     </div>
