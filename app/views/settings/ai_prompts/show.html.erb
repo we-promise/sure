@@ -1,5 +1,11 @@
 <%= content_for :page_title, t(".page_title") %>
 
+<% if OnboardingAiConfiguration.allowed_for?(Current.user) %>
+  <%= settings_section title: t(".provider_title", default: "Family AI provider"), subtitle: t(".provider_description", default: "Update or rotate your family’s provider key here. Saving does not change anyone’s assistant preference or your household assistant mode.") do %>
+    <%= render "shared/ai_provider_configuration", url: configure_provider_settings_ai_prompts_path, enabled: true %>
+  <% end %>
+<% end %>
+
 <% if Current.user.ai_enabled? %>
   <div class="mb-4 flex justify-end">
     <%= render DS::Button.new(

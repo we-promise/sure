@@ -17,6 +17,8 @@ class Provider::Openai < Provider
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 gpt-6 o1 o3].freeze
   PDF_COMPLETION_LIMIT_MODEL_PREFIXES = %w[gpt-6 o1 o3].freeze
 
+  attr_reader :default_model
+
   # Keep the provider's response budget and the PDF request parameter in sync.
   # @return [Boolean] whether native PDF vision uses max_completion_tokens
   def self.native_pdf_completion_limit?(model:, custom_provider:)
@@ -33,6 +35,17 @@ class Provider::Openai < Provider
 
   def self.configured?
     ENV["OPENAI_ACCESS_TOKEN"].present? || Setting.openai_access_token.present?
+  end
+
+  # The SDK treats nil options as requests to inherit its global configuration.
+  # Empty credentials and explicit transport options isolate family requests;
+  # the nil extra header removes even the empty organization header on the wire.
+  def self.family_client_options
+    {
+      uri_base: "https://api.openai.com/v1", api_type: "openai", api_version: "v1",
+      organization_id: "", admin_token: "", log_errors: false,
+      extra_headers: { "OpenAI-Organization" => nil }
+    }
   end
 
   # Effective per-request HTTP timeout for OpenAI-compatible calls.
@@ -78,23 +91,25 @@ class Provider::Openai < Provider
   # @param uri_base [String, nil] custom endpoint base URL (OpenAI when nil)
   # @param model [String, nil] default model; required when uri_base is set
   # @return [void]
-  def initialize(access_token, uri_base: nil, model: nil)
+  def initialize(access_token, uri_base: nil, model: nil, use_global_settings: true)
+    @use_global_settings = use_global_settings
     client_options = { access_token: access_token }
-    llm_uri_base = uri_base.presence
+    llm_uri_base = use_global_settings ? uri_base.presence : nil
     llm_model = model.presence
     client_options[:uri_base] = llm_uri_base if llm_uri_base.present?
     client_options[:request_timeout] = self.class.request_timeout
-    parsed_headers = self.class.extra_headers
+    parsed_headers = use_global_settings ? self.class.extra_headers : {}
     @session_extra_headers = parsed_headers.select { |_, value| value.include?("{session_id}") }
     static_headers = parsed_headers.except(*@session_extra_headers.keys)
     client_options[:extra_headers] = static_headers if static_headers.present?
+    client_options.merge!(self.class.family_client_options) unless use_global_settings
 
     @client = ::OpenAI::Client.new(**client_options)
     @uri_base = llm_uri_base
     if custom_provider? && llm_model.blank?
       raise Error, "Model is required when using a custom OpenAI‑compatible provider"
     end
-    @default_model = llm_model.presence || self.class.effective_model
+    @default_model = llm_model.presence || (use_global_settings ? self.class.effective_model : DEFAULT_MODEL)
   end
 
   def supports_model?(model)
@@ -106,6 +121,9 @@ class Provider::Openai < Provider
   end
 
   def supports_responses_endpoint?
+    # Family credentials can rotate independently of saved response IDs. Replay
+    # chat history through Chat Completions rather than reusing account-bound IDs.
+    return false if @use_global_settings == false
     return @supports_responses_endpoint if defined?(@supports_responses_endpoint)
 
     env_override = ENV["OPENAI_SUPPORTS_RESPONSES_ENDPOINT"]
@@ -324,7 +342,7 @@ class Provider::Openai < Provider
   # Can be disabled via ENV for OpenAI-compatible endpoints that don't support vision
   # Only vision-capable models (gpt-4o, gpt-4-turbo, gpt-4.1, etc.) support PDF input
   def supports_pdf_processing?(model: @default_model)
-    return false unless ENV.fetch("OPENAI_SUPPORTS_PDF_PROCESSING", "true").to_s.downcase.in?(%w[true 1 yes])
+    return false if @use_global_settings != false && !ENV.fetch("OPENAI_SUPPORTS_PDF_PROCESSING", "true").to_s.downcase.in?(%w[true 1 yes])
 
     # Custom providers manage their own model capabilities
     return true if custom_provider?

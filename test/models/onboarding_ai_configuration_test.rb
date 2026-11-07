@@ -1,133 +1,152 @@
 require "test_helper"
 
 class OnboardingAiConfigurationTest < ActiveSupport::TestCase
-  ENV_KEYS = %w[LLM_PROVIDER OPENAI_ACCESS_TOKEN OPENAI_URI_BASE ANTHROPIC_ACCESS_TOKEN ANTHROPIC_API_KEY ANTHROPIC_BASE_URL].freeze
-
   setup do
-    @settings = OnboardingAiConfiguration::CONFIGURATION_KEYS.index_with { |key| Setting.public_send(key) }
-    Setting.openai_uri_base = nil
-    Setting.anthropic_base_url = nil
+    @family = families(:dylan_family)
+    @other_family = families(:empty)
     @probe = mock("provider probe")
     AiHealth::Probe.stubs(:new).returns(@probe)
   end
 
-  teardown do
-    @settings.each { |key, value| Setting.public_send("#{key}=", value) }
-  end
-
-  test "each provider is checked at its official endpoint before its encrypted key is saved" do
-    with_env_overrides(ENV_KEYS.index_with { nil }) do
-      %w[openai anthropic].each do |provider|
-        key = "synthetic-#{provider}-test-key"
-        endpoint = provider == "openai" ? AiHealth::OPENAI_DEFAULT_ENDPOINT : AiHealth::ANTHROPIC_DEFAULT_ENDPOINT
-        model = provider == "openai" ? Provider::Openai.effective_model : Provider::Anthropic.effective_model
-        @probe.expects(:llm).with(provider: provider.to_sym, endpoint: endpoint, access_token: key, model: model).returns(stub(passing?: true))
-        assert OnboardingAiConfiguration.new(provider: provider, api_key: key).save
-        assert_equal key, Setting.public_send("#{provider}_access_token")
-        assert_equal provider, Setting.llm_provider
-        assert_not_includes Setting.find_by!(var: "#{provider}_access_token").value.to_s, key
-      end
+  test "each provider is checked at its official endpoint before the family key is saved" do
+    %w[openai anthropic].each do |provider|
+      key = "synthetic-#{provider}-test-key"
+      endpoint = provider == "openai" ? AiHealth::OPENAI_DEFAULT_ENDPOINT : AiHealth::ANTHROPIC_DEFAULT_ENDPOINT
+      model = Family::AiConfiguration.default_model(provider)
+      @probe.expects(:llm).with(provider: provider.to_sym, endpoint: endpoint, access_token: key, model: model).returns(stub(passing?: true))
+      assert OnboardingAiConfiguration.new(family: @family, provider: provider, api_key: key).save
+      configuration = @family.reload.ai_configuration
+      assert_equal key, configuration.api_key
+      assert_equal provider, configuration.provider
+      assert_equal model, configuration.model
+      assert_not_includes configuration.encrypted_api_key, key
+      assert_nil @other_family.reload.ai_configuration
     end
   end
 
-  test "failed checks do not replace saved credentials or provider selection" do
-    with_env_overrides(ENV_KEYS.index_with { nil }) do
-      @probe.expects(:llm).returns(stub(passing?: false))
-      configuration = OnboardingAiConfiguration.new(provider: "anthropic", api_key: "synthetic-invalid-key")
-      assert_not configuration.save
-      assert_equal "connection_failed", configuration.error
-      %w[openai_access_token anthropic_access_token llm_provider].each do |key|
-        assert_equal @settings[key], Setting.public_send(key)
-      end
+  test "family configuration ignores and does not change installation credentials endpoints and models" do
+    setting_snapshot = Setting.where(var: %w[openai_access_token anthropic_access_token llm_provider]).pluck(:var, :value)
+    with_env_overrides(
+      "LLM_PROVIDER" => "anthropic", "OPENAI_ACCESS_TOKEN" => "operator-token",
+      "OPENAI_URI_BASE" => "https://operator.example/v1", "OPENAI_MODEL" => "local-model",
+      "OPENAI_EXTRA_HEADERS" => '{"Authorization":"Bearer operator-secret"}',
+      "ANTHROPIC_BASE_URL" => "https://operator.example/anthropic", "ANTHROPIC_MODEL" => "custom-model"
+    ) do
+      @probe.expects(:llm).with(
+        provider: :openai, endpoint: AiHealth::OPENAI_DEFAULT_ENDPOINT,
+        access_token: "synthetic-family-key", model: Provider::Openai::DEFAULT_MODEL
+      ).returns(stub(passing?: true))
+
+      assert OnboardingAiConfiguration.new(family: @family, provider: "openai", api_key: "synthetic-family-key").save
+      assert_equal setting_snapshot, Setting.where(var: %w[openai_access_token anthropic_access_token llm_provider]).pluck(:var, :value)
     end
   end
 
-  test "custom endpoints and environment overrides reject before any key is sent" do
+  test "OpenRouter saves a checked family-selected model without changing another family" do
+    @probe.expects(:llm).with(
+      provider: :openrouter, endpoint: Provider::Openrouter::ENDPOINT,
+      access_token: "synthetic-router-key", model: "openai/gpt-4.1-mini"
+    ).returns(stub(passing?: true))
+
+    assert OnboardingAiConfiguration.new(family: @family, provider: "openrouter", api_key: "synthetic-router-key", model: "openai/gpt-4.1-mini").save
+    configuration = @family.reload.ai_configuration
+    assert_equal "openrouter", configuration.provider
+    assert_equal "openai/gpt-4.1-mini", configuration.model
+    assert_equal "synthetic-router-key", configuration.api_key
+    assert_nil @other_family.reload.ai_configuration
+  end
+
+  test "OpenRouter missing or malformed models fail before probing or saving" do
     @probe.expects(:llm).never
-    with_env_overrides(ENV_KEYS.index_with { nil }) do
-      Setting.openai_uri_base = "https://custom.example/v1"
-      configuration = OnboardingAiConfiguration.new(provider: "openai", api_key: "synthetic-key")
+    [ [ "", "missing_model" ], [ "https://private.example/model", "invalid_model" ], [ "openai/model\nheader", "invalid_model" ] ].each do |model, error|
+      configuration = OnboardingAiConfiguration.new(family: @family, provider: "openrouter", api_key: "synthetic-key", model: model)
       assert_not configuration.save
-      assert_equal "configuration_locked", configuration.error
-      Setting.openai_uri_base = nil
-      ENV_KEYS.each do |env_key|
-        with_env_overrides(env_key => "operator-managed") do
-          provider = env_key.start_with?("ANTHROPIC") ? "anthropic" : "openai"
-          configuration = OnboardingAiConfiguration.new(provider: provider, api_key: "synthetic-key")
-          assert_not configuration.save
-          assert_equal "configuration_locked", configuration.error
-        end
-      end
+      assert_equal error, configuration.error
     end
+    assert_nil @family.reload.ai_configuration
   end
 
-  test "invalid provider or empty key never reaches provider or settings" do
+  test "failed OpenRouter validation preserves the previous provider model and credential" do
+    saved = @family.create_ai_configuration!(provider: "openai", api_key: "synthetic-original-key")
+    @probe.expects(:llm).returns(stub(passing?: false))
+    configuration = OnboardingAiConfiguration.new(family: @family, provider: "openrouter", api_key: "synthetic-invalid-key", model: "openai/gpt-4.1-mini")
+
+    assert_not configuration.save
+    assert_equal "connection_failed", configuration.error
+    assert_equal "synthetic-original-key", saved.reload.api_key
+    assert_equal "openai", saved.provider
+    assert_equal Provider::Openai::DEFAULT_MODEL, saved.model
+  end
+
+  test "failed checks do not replace the family's saved configuration" do
+    saved = @family.create_ai_configuration!(provider: "openai", api_key: "synthetic-original-key")
+    @probe.expects(:llm).returns(stub(passing?: false))
+    configuration = OnboardingAiConfiguration.new(family: @family, provider: "anthropic", api_key: "synthetic-invalid-key")
+
+    assert_not configuration.save
+    assert_equal "connection_failed", configuration.error
+    assert_equal "synthetic-original-key", saved.reload.api_key
+    assert_equal "openai", saved.provider
+  end
+
+  test "invalid provider or empty key never reaches provider or persistence" do
     @probe.expects(:llm).never
-    assert_not OnboardingAiConfiguration.new(provider: "other", api_key: "synthetic-key").save
-    assert_not OnboardingAiConfiguration.new(provider: "openai", api_key: " ").save
-    assert_not OnboardingAiConfiguration.new(provider: "openai", api_key: "bad\nkey").save
+    assert_not OnboardingAiConfiguration.new(family: @family, provider: "other", api_key: "synthetic-key").save
+    assert_not OnboardingAiConfiguration.new(family: @family, provider: "openai", api_key: " ").save
+    assert_not OnboardingAiConfiguration.new(family: @family, provider: "openai", api_key: "bad\nkey").save
+    assert_nil @family.reload.ai_configuration
   end
 
-  test "request logging filters the submitted API key" do
+  test "request logging filters the submitted API key and ciphertext" do
     filtered = ActiveSupport::ParameterFilter.new(Rails.application.config.filter_parameters).filter(
-      "ai_configuration" => { "provider" => "openai", "api_key" => "synthetic-key" }
+      "ai_configuration" => { "provider" => "openai", "api_key" => "synthetic-key", "encrypted_api_key" => "ciphertext" }
     )
     assert_equal "[FILTERED]", filtered.dig("ai_configuration", "api_key")
+    assert_equal "[FILTERED]", filtered.dig("ai_configuration", "encrypted_api_key")
   end
 
-  test "a settings failure rolls back the key and returns no exception details" do
-    with_env_overrides(ENV_KEYS.index_with { nil }) do
-      @probe.expects(:llm).returns(stub(passing?: true))
-      Setting.expects(:llm_provider=).with("openai").raises(StandardError, "synthetic-private-detail")
-      configuration = OnboardingAiConfiguration.new(provider: "openai", api_key: "synthetic-replacement-key")
-      assert_not configuration.save
-      assert_equal "save_failed", configuration.error
-      assert_equal @settings["openai_access_token"], Setting.openai_access_token
-    end
-  ensure
-    Setting.unstub(:llm_provider=)
+  test "a persistence failure returns no exception details and keeps saved credentials" do
+    saved = @family.create_ai_configuration!(provider: "openai", api_key: "synthetic-original-key")
+    @probe.expects(:llm).returns(stub(passing?: true))
+    Family::AiConfiguration.any_instance.expects(:update!).raises(StandardError, "synthetic-private-detail")
+    configuration = OnboardingAiConfiguration.new(family: @family, provider: "openai", api_key: "synthetic-replacement-key")
+
+    assert_not configuration.save
+    assert_equal "save_failed", configuration.error
+    assert_equal "synthetic-original-key", saved.reload.api_key
   end
 
-  test "a later saved configuration wins over an older successful probe" do
-    with_env_overrides(ENV_KEYS.index_with { nil }) do
-      @probe.expects(:llm).with do
-        Setting.anthropic_access_token = "synthetic-newer-key"
-        Setting.llm_provider = "anthropic"
-        true
-      end.returns(stub(passing?: true))
+  test "a later saved family configuration wins over an older successful probe" do
+    @probe.expects(:llm).with do
+      @family.create_ai_configuration!(provider: "anthropic", api_key: "synthetic-newer-key")
+      true
+    end.returns(stub(passing?: true))
+    configuration = OnboardingAiConfiguration.new(family: @family, provider: "openai", api_key: "synthetic-older-key")
 
-      configuration = OnboardingAiConfiguration.new(provider: "openai", api_key: "synthetic-older-key")
-      assert_not configuration.save
-      assert_equal "configuration_changed", configuration.error
-      assert_equal "synthetic-newer-key", Setting.anthropic_access_token
-      assert_equal "anthropic", Setting.llm_provider
-      assert_equal @settings["openai_access_token"], Setting.openai_access_token
-    end
+    assert_not configuration.save
+    assert_equal "configuration_changed", configuration.error
+    assert_equal "synthetic-newer-key", @family.reload.ai_configuration.api_key
+    assert_equal "anthropic", @family.ai_configuration.provider
   end
 
-  test "uncached endpoint changes during the probe prevent saving the key" do
-    with_env_overrides(ENV_KEYS.index_with { nil }) do
-      Setting.openai_uri_base # Populate the normal settings cache with nil.
-      @probe.expects(:llm).with do
-        Setting.find_by!(var: "openai_uri_base").update_columns(value: "https://custom.example/v1".to_yaml)
-        true
-      end.returns(stub(passing?: true))
+  test "another family's configuration change does not block this family's save" do
+    @probe.expects(:llm).with do
+      @other_family.create_ai_configuration!(provider: "anthropic", api_key: "synthetic-other-family-key")
+      true
+    end.returns(stub(passing?: true))
 
-      configuration = OnboardingAiConfiguration.new(provider: "openai", api_key: "synthetic-older-key")
-      assert_not configuration.save
-      assert_equal "configuration_changed", configuration.error
-      assert_equal @settings["openai_access_token"], Setting.openai_access_token
-    end
+    assert OnboardingAiConfiguration.new(family: @family, provider: "openai", api_key: "synthetic-this-family-key").save
+    assert_equal "synthetic-this-family-key", @family.reload.ai_configuration.api_key
+    assert_equal "synthetic-other-family-key", @other_family.reload.ai_configuration.api_key
   end
 
-  test "security checks do not trust a stale request settings cache" do
-    with_env_overrides(ENV_KEYS.index_with { nil }) do
-      Setting.openai_uri_base
-      Setting.find_by!(var: "openai_uri_base").update_columns(value: "https://custom.example/v1".to_yaml)
-      @probe.expects(:llm).never
-      configuration = OnboardingAiConfiguration.new(provider: "openai", api_key: "synthetic-key")
-      assert_not configuration.save
-      assert_equal "configuration_locked", configuration.error
-    end
+  test "probes are isolated and their debug entries belong to the configuring family" do
+    AiHealth::Probe.unstub(:new)
+    AiHealth::Probe.expects(:new).with do |options|
+      options[:force] && options[:cache].is_a?(ActiveSupport::Cache::NullStore) && options[:family] == @family
+    end.returns(@probe)
+    @probe.expects(:llm).returns(stub(passing?: true))
+
+    assert OnboardingAiConfiguration.new(family: @family, provider: "openai", api_key: "synthetic-key").save
   end
 end

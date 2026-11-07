@@ -252,7 +252,21 @@ class ImportsController < ApplicationController
     end
 
     def create_document_import(file)
-      adapter = VectorStore.adapter
+      filename = file.original_filename.to_s
+      ext = File.extname(filename).downcase
+
+      # PDF analysis uses the family's LLM and does not require document search.
+      if ext == ".pdf"
+        unless valid_pdf_file?(file)
+          redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
+          return
+        end
+
+        create_pdf_import(file)
+        return
+      end
+
+      adapter = VectorStore.adapter(family: Current.family)
       unless adapter
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
         return
@@ -263,22 +277,10 @@ class ImportsController < ApplicationController
         return
       end
 
-      filename = file.original_filename.to_s
-      ext = File.extname(filename).downcase
       supported_extensions = adapter.supported_extensions.map(&:downcase)
 
       unless supported_extensions.include?(ext)
         redirect_to new_import_path, alert: t("imports.create.invalid_document_file_type")
-        return
-      end
-
-      if ext == ".pdf"
-        unless valid_pdf_file?(file)
-          redirect_to new_import_path, alert: t("imports.create.invalid_pdf")
-          return
-        end
-
-        create_pdf_import(file)
         return
       end
 
@@ -295,10 +297,13 @@ class ImportsController < ApplicationController
     end
 
     def document_upload_supported_extensions
-      adapter = VectorStore.adapter
-      return [] unless adapter
+      adapter = VectorStore.adapter(family: Current.family)
+      @document_search_available = adapter.present?
+      extensions = adapter ? adapter.supported_extensions : []
+      provider = Provider::Registry.preferred_llm_provider(family: Current.family)
+      extensions += [ ".pdf" ] if provider&.supports_pdf_processing?
 
-      adapter.supported_extensions.map(&:downcase).uniq.sort
+      extensions.map(&:downcase).uniq.sort
     end
 
     def document_upload_request?

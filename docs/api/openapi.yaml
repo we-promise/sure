@@ -6015,7 +6015,10 @@ paths:
                   description: Optional initial message in the chat
                 model:
                   type: string
-                  description: Optional OpenAI model identifier
+                  description: Optional AI model identifier. When omitted or blank,
+                    uses the chat owner family's configured model, or the installation
+                    default when the family has no AI configuration. An explicit model
+                    overrides this default.
               required:
               - title
         required: true
@@ -6137,6 +6140,10 @@ paths:
                   type: string
                 model:
                   type: string
+                  description: Optional AI model identifier. When omitted or blank,
+                    uses the chat owner family's configured model, or the installation
+                    default when the family has no AI configuration. An explicit model
+                    overrides this default.
               required:
               - content
         required: true

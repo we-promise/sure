@@ -42,6 +42,29 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  test "family-owned clients pin official routing and ignore installation model and headers" do
+    with_env_overrides(
+      "OPENAI_URI_BASE" => "https://operator.example/v1", "OPENAI_MODEL" => "operator-model",
+      "OPENAI_EXTRA_HEADERS" => '{"Authorization":"Bearer operator-secret"}',
+      "OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => "true", "OPENAI_SUPPORTS_PDF_PROCESSING" => "false"
+    ) do
+      Provider::Openai.expects(:effective_model).never
+      Provider::Openai.expects(:extra_headers).never
+      ::OpenAI::Client.expects(:new).with(
+        access_token: "synthetic-family-key", uri_base: "https://api.openai.com/v1",
+        request_timeout: Provider::Openai.request_timeout, api_type: "openai", api_version: "v1",
+        organization_id: "", admin_token: "", log_errors: false, extra_headers: { "OpenAI-Organization" => nil }
+      ).returns(mock)
+
+      provider = Provider::Openai.new("synthetic-family-key", use_global_settings: false)
+
+      assert_equal Provider::Openai::DEFAULT_MODEL, provider.default_model
+      assert_not provider.custom_provider?
+      assert_not provider.supports_responses_endpoint?
+      assert provider.supports_pdf_processing?
+    end
+  end
+
   test "GPT-6.1 Sol sends assistant tools through Responses with supported request parameters" do
     with_env_overrides("OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil) do
       fake_responses = mock
@@ -585,6 +608,50 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
 
       assert_includes response_chunks.first.data.messages.first.output_text, "$10,000"
     end
+  end
+
+  test "family chat uses official completions with history and tool rounds instead of saved response IDs" do
+    ::OpenAI.configuration.stubs(:organization_id).returns("synthetic-operator-org")
+    ::OpenAI.configuration.stubs(:admin_token).returns("synthetic-operator-admin")
+    ::OpenAI.configuration.stubs(:api_type).returns("azure")
+    ::OpenAI.configuration.stubs(:api_version).returns("operator-version")
+    ::OpenAI.configuration.stubs(:log_errors).returns(true)
+    ::OpenAI.configuration.stubs(:extra_headers).returns("X-Operator-Secret" => "synthetic-operator-secret")
+    history = [
+      { role: "user", content: "Earlier question" },
+      { role: "assistant", content: "", tool_calls: [ { id: "old_call", type: "function", function: { name: "get_accounts", arguments: "{}" } } ] },
+      { role: "tool", tool_call_id: "old_call", content: "{\"accounts\":[]}" },
+      { role: "assistant", content: "Earlier answer" },
+      { role: "user", content: "Follow-up question" }
+    ]
+    rounds = [
+      { call_id: "call_a", name: "get_accounts", arguments: "{}", output: { accounts: [] }, round: 1 },
+      { call_id: "call_b", name: "get_categories", arguments: "{}", output: { categories: [] }, round: 2 }
+    ]
+    request_body = nil
+    request = stub_request(:post, "https://api.openai.com/v1/chat/completions")
+      .with(headers: { "Authorization" => "Bearer synthetic-family-key" }) do |outbound|
+        request_body = JSON.parse(outbound.body)
+        outbound.headers["Openai-Organization"].blank? && !outbound.headers.to_json.include?("synthetic-operator")
+      end.to_return(
+        status: 200, headers: { "Content-Type" => "application/json" },
+        body: { id: "chatcmpl-family", model: Provider::Openai::DEFAULT_MODEL,
+                choices: [ { message: { role: "assistant", content: "Answer" } } ] }.to_json
+      )
+    provider = Provider::Openai.new("synthetic-family-key", use_global_settings: false)
+    provider.stubs(:max_history_tokens).returns(10_000)
+
+    result = provider.chat_response(
+      "Follow-up question", model: provider.default_model, messages: history,
+      function_results: rounds, previous_response_id: "response-from-old-account"
+    )
+
+    assert result.success?
+    assert_requested request
+    assert_equal history.as_json, request_body["messages"].first(history.size)
+    assert_equal %w[call_a call_b], request_body["messages"].drop(history.size).filter_map { |message| message["tool_call_id"] }
+    assert_not request_body.key?("previous_response_id")
+    assert_not_includes request_body.to_json, "response-from-old-account"
   end
 
   test "provider_name returns OpenAI for standard provider" do

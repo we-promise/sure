@@ -14,10 +14,12 @@ module Family::AiPromptable
 
   # A custom OpenAI-compatible endpoint gets `simple_instructions`; native
   # OpenAI gets `detailed_instructions`. One override key replaces both, so the
-  # editor has to pre-fill the variant this deployment sends. Otherwise editing
+  # editor has to pre-fill the variant this family sends. Otherwise editing
   # it swaps a small local model's terse rules for a prompt written for GPT-4.
   # Mirrors how Provider::Registry picks the endpoint.
-  def self.custom_openai_provider?
+  def self.custom_openai_provider?(family: nil)
+    return family.ai_configuration.provider == "openrouter" if family&.ai_configuration
+
     (ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base).present?
   end
 
@@ -25,13 +27,13 @@ module Family::AiPromptable
   # `family: nil` is exactly what returns the hardcoded default, so no prompt
   # string is duplicated here.
   DEFAULTS = {
-    chat_system: -> { Assistant::Configurable::STATIC_INSTRUCTIONS },
-    categorizer_openai: -> { Provider::Openai::AutoCategorizer.new(nil, custom_provider: custom_openai_provider?).instructions },
-    categorizer_anthropic: -> { Provider::Anthropic::AutoCategorizer.new(nil, model: "").instructions },
-    merchant_openai: -> { Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: [], custom_provider: custom_openai_provider?).instructions },
-    merchant_anthropic: -> { Provider::Anthropic::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions },
+    chat_system: ->(_family = nil) { Assistant::Configurable::STATIC_INSTRUCTIONS },
+    categorizer_openai: ->(family = nil) { Provider::Openai::AutoCategorizer.new(nil, custom_provider: custom_openai_provider?(family: family)).instructions },
+    categorizer_anthropic: ->(_family = nil) { Provider::Anthropic::AutoCategorizer.new(nil, model: "").instructions },
+    merchant_openai: ->(family = nil) { Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: [], custom_provider: custom_openai_provider?(family: family)).instructions },
+    merchant_anthropic: ->(_family = nil) { Provider::Anthropic::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: []).instructions },
     # The visible first chat message of "Dig in with AI", not instructions.
-    insight_dig_in: -> { I18n.t("insights.dig_in.prompt") }
+    insight_dig_in: ->(_family = nil) { I18n.t("insights.dig_in.prompt") }
   }.freeze
 
   KEYS = DEFAULTS.keys.freeze
@@ -73,14 +75,14 @@ module Family::AiPromptable
   end
 
   def ai_prompt_default(key)
-    DEFAULTS.fetch(key.to_sym).call
+    DEFAULTS.fetch(key.to_sym).call(self)
   end
 
-  # True when this deployment sends a prompt variant carrying a wrapper key and
+  # True when this family sends a prompt variant carrying a wrapper key and
   # the family's override dropped it. Advisory only, never a validation error.
   def ai_prompt_format_risk?(key)
     wrapper = WRAPPER_KEYS[key.to_sym]
-    return false unless wrapper && Family::AiPromptable.custom_openai_provider?
+    return false unless wrapper && Family::AiPromptable.custom_openai_provider?(family: self)
 
     override = ai_prompt(key)
     override.present? && override.exclude?(wrapper)

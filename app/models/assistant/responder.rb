@@ -130,7 +130,7 @@ class Assistant::Responder
         messages: openai_messages_payload,
         conversation_history: chat_message_records,
         streamer: streamer,
-        previous_response_id: previous_response_id,
+        previous_response_id: provider_preserves_response_context? ? previous_response_id : nil,
         session_id: chat_session_id,
         user_identifier: chat_user_identifier,
         family: message.chat&.user&.family

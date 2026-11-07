@@ -3,48 +3,31 @@ module Family::VectorSearchable
 
   included do
     has_many :family_documents, dependent: :destroy
+    has_many :document_stores, class_name: "Family::DocumentStore", dependent: :destroy
+  end
+
+  def document_store_context
+    VectorStore.context(family: self)
   end
 
   def ensure_vector_store!
-    return vector_store_id if vector_store_id.present?
-
-    adapter = vector_store_adapter
-    return nil unless adapter
-
-    response = adapter.create_store(name: "Family #{id} Documents")
-    return nil unless response.success?
-
-    if update(vector_store_id: response.data[:id])
-      vector_store_id
-    else
-      adapter.delete_store(store_id: response.data[:id]) rescue nil
-      nil
-    end
+    document_store_context.ensure_store!
   end
 
   def search_documents(query, max_results: 10)
-    return [] unless vector_store_id.present?
+    context = document_store_context
+    return [] unless context.adapter && context.store_id.present?
 
-    adapter = vector_store_adapter
-    return [] unless adapter
-
-    response = adapter.search(
-      store_id: vector_store_id,
-      query: query,
-      max_results: max_results
-    )
-
+    response = context.adapter.search(store_id: context.store_id, query: query, max_results: max_results)
     response.success? ? response.data : []
   end
 
   def upload_document(file_content:, filename:, metadata: {})
-    adapter = vector_store_adapter
-    return nil unless adapter
-
-    store_id = ensure_vector_store!
+    context = document_store_context
+    store_id = context.ensure_store!
     return nil unless store_id
 
-    response = adapter.upload_file(
+    response = context.adapter.upload_file(
       store_id: store_id,
       file_content: file_content,
       filename: filename
@@ -53,6 +36,7 @@ module Family::VectorSearchable
     return nil unless response.success?
 
     family_documents.create!(
+      family_document_store: context.family_document_store,
       filename: filename,
       content_type: Marcel::MimeType.for(name: filename),
       file_size: file_content.bytesize,
@@ -63,23 +47,16 @@ module Family::VectorSearchable
   end
 
   def remove_document(family_document)
-    adapter = vector_store_adapter
-    return false unless adapter && vector_store_id.present? && family_document.provider_file_id.present?
+    document = family_documents.find_by(id: family_document.id)
+    return false unless document&.provider_file_id.present?
 
-    response = adapter.remove_file(
-      store_id: vector_store_id,
-      file_id: family_document.provider_file_id
-    )
+    context = document_store_context
+    return false unless context.owns_document?(document)
 
+    response = context.adapter.remove_file(store_id: context.store_id, file_id: document.provider_file_id)
     return false unless response.success?
 
-    family_document.destroy
+    document.destroy!
     true
   end
-
-  private
-
-    def vector_store_adapter
-      VectorStore.adapter
-    end
 end

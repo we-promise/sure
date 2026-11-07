@@ -34,6 +34,18 @@ class ApplicationHelperTest < ActionView::TestCase
     singleton_class.send(:remove_method, :lucide_icon) if singleton_class.method_defined?(:lucide_icon)
   end
 
+  test "#default_ai_model uses this family's OpenRouter model without inferring its provider" do
+    user = users(:family_admin)
+    configuration = user.family.create_ai_configuration!(provider: "openrouter", model: "anthropic/claude-sonnet-4", api_key: "synthetic-family-key")
+    families(:empty).create_ai_configuration!(provider: "openrouter", model: "openai/gpt-4.1", api_key: "synthetic-other-key")
+    Current.stubs(:user).returns(user)
+    Setting.stubs(:llm_provider).returns("openai")
+
+    assert_equal "anthropic/claude-sonnet-4", default_ai_model
+    configuration.update!(model: "openai/gpt-4.1-mini")
+    assert_equal "openai/gpt-4.1-mini", default_ai_model
+  end
+
   test "#title(page_title)" do
     title("Test Title")
     assert_equal "Test Title", content_for(:title)

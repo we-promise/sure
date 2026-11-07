@@ -302,7 +302,6 @@ class OnboardingsTest < ApplicationSystemTestCase
 
   test "numbered cards and provider inputs match the selected provider" do
     OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
-    OnboardingAiConfiguration.stubs(:configuration_locked?).returns(false)
     visit tools_onboarding_path
     assert_selector "[role='region'].bg-container[aria-labelledby='starting-point-title']", text: /01 · Your starting point/i
     assert_selector "[role='region'].bg-container[aria-labelledby='ai-preference-title']", text: /02 · Your AI preference/i
@@ -317,6 +316,19 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_selector "input[placeholder='Enter your Anthropic API key']"
     click_button "Save and test connection"
     assert_text "Enter an API key for the selected provider."
+    select "OpenRouter", from: "Provider"
+    assert_field "OpenRouter API key", type: "password", with: ""
+    assert_field "OpenRouter model ID (required)", with: ""
+    assert_text "OpenRouter document search is not configured here."
+    fill_in "OpenRouter API key", with: "test-placeholder-not-a-real-key"
+    click_button "Save and test connection"
+    assert_text "Enter an OpenRouter model ID before saving."
+    fill_in "OpenRouter model ID (required)", with: "openai/gpt-4.1-mini"
+    select "Anthropic", from: "Provider"
+    assert_no_selector "input#provider_configuration_model"
+    select "OpenRouter", from: "Provider"
+    assert_field "OpenRouter model ID (required)", with: "openai/gpt-4.1-mini"
+    assert_field "OpenRouter API key", with: ""
     choose "user_onboarding_ai_mode_none"
     assert_no_selector "input[type='password']"
     assert_selector "#ai-panel-builtin fieldset[disabled]", visible: :all
@@ -324,7 +336,6 @@ class OnboardingsTest < ApplicationSystemTestCase
 
   test "provider response without CSRF metadata shows errors and clears the key after each attempt" do
     OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
-    OnboardingAiConfiguration.stubs(:configuration_locked?).returns(false)
     visit tools_onboarding_path
     choose "user_onboarding_ai_mode_builtin"
     select "OpenAI", from: "Provider"
@@ -366,6 +377,69 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_field "OpenAI API key", with: "", disabled: false
     assert_selector "#provider_configuration_provider:not([disabled])"
     assert_text "The result could not be confirmed."
+  end
+
+  test "Next does not save a typed provider key" do
+    OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
+    OnboardingAiConfiguration.expects(:new).never
+    saved = @family.create_ai_configuration!(provider: "anthropic", api_key: "original-family-key")
+    visit tools_onboarding_path
+    choose "user_onboarding_ai_mode_builtin"
+    assert_equal "anthropic", find("#provider_configuration_provider").value
+    fill_in "Anthropic API key", with: "unsaved-family-key"
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
+    assert_equal "original-family-key", saved.reload.api_key
+  end
+
+  test "a missing OpenRouter model does not block continuing without a provider" do
+    OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
+    OnboardingAiConfiguration.expects(:new).never
+    visit tools_onboarding_path
+    choose "user_onboarding_ai_mode_builtin"
+    select "OpenRouter", from: "Provider"
+    assert_field "OpenRouter model ID (required)", with: ""
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
+    assert_nil @family.reload.ai_configuration
+  end
+
+  test "family provider settings support explicit repeated saves outside onboarding" do
+    OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
+    @family.create_ai_configuration!(provider: "openrouter", model: "anthropic/claude-sonnet-4", api_key: "original-family-key")
+    visit settings_ai_prompts_path
+    assert_text "Family AI provider"
+    assert_field "OpenRouter API key", with: ""
+    assert_field "OpenRouter model ID (required)", with: "anthropic/claude-sonnet-4"
+    assert_selector "textarea#family_ai_prompt_chat_system"
+    page.execute_script <<~JS
+      window.providerRequests = 0;
+      const originalFetch = window.fetch;
+      window.fetch = (url, options) => {
+        if (url !== "#{configure_provider_settings_ai_prompts_path}") return originalFetch(url, options);
+        window.providerRequests += 1;
+        return new Promise((resolve) => { window.resolveProvider = resolve; });
+      };
+    JS
+
+    %w[openai/gpt-4.1-mini anthropic/claude-sonnet-4].each do |model|
+      fill_in "OpenRouter model ID (required)", with: model
+      assert_text "Not checked here. Any existing saved key is hidden."
+      fill_in "OpenRouter API key", with: "replacement-family-key"
+      click_button "Save and test connection"
+      assert_button "Save and test connection", disabled: true
+      assert_field "OpenRouter model ID (required)", disabled: true
+      page.execute_script <<~JS
+        document.querySelector('[data-onboarding-provider-target="button"]').dispatchEvent(new MouseEvent("click", {bubbles: true}));
+        window.resolveProvider(new Response(JSON.stringify({status: "saved", provider: "openrouter"}), {status: 200, headers: {"Content-Type": "application/json"}}));
+      JS
+      assert_text "Provider access checked and encrypted key saved for your family."
+      assert_field "OpenRouter API key", with: "", disabled: false
+      assert_field "OpenRouter model ID (required)", with: model, disabled: false
+      assert_button "Save and test connection", disabled: false
+    end
+    assert_equal 2, page.evaluate_script("window.providerRequests")
+    assert_current_path settings_ai_prompts_path
   end
 
   private

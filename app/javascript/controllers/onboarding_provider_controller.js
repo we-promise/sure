@@ -5,7 +5,15 @@ let pendingRequest = null;
 const REQUEST_TIMEOUT_MS = 30_000;
 
 export default class extends Controller {
-  static targets = ["provider", "key", "keyLabel", "button", "status"];
+  static targets = [
+    "provider",
+    "key",
+    "keyLabel",
+    "model",
+    "modelFields",
+    "button",
+    "status",
+  ];
   static values = { url: String, options: Object, messages: Object };
 
   connect() {
@@ -34,7 +42,7 @@ export default class extends Controller {
     this.requestId += 1;
     this.clearKey();
     this.resetControls();
-    if (pending) this.showStatus("request_failed", true);
+    this.showStatus(pending ? "request_failed" : "unchecked", pending);
   }
 
   disconnect() {
@@ -54,12 +62,10 @@ export default class extends Controller {
   resetControls() {
     this.saving = false;
     this.providerTarget.disabled = false;
-    const locked = this.optionsValue[this.providerTarget.value].locked;
-    this.keyTarget.disabled = locked;
-    this.buttonTarget.disabled = locked;
-    this.element
-      .closest("form")
-      .querySelector('[type="submit"]').disabled = false;
+    this.keyTarget.disabled = false;
+    this.buttonTarget.disabled = false;
+    this.updateModelField();
+    this.setContinueDisabled(false);
   }
 
   lockControls() {
@@ -67,9 +73,15 @@ export default class extends Controller {
     this.buttonTarget.disabled = true;
     this.providerTarget.disabled = true;
     this.keyTarget.disabled = true;
-    this.element
+    this.updateModelField();
+    this.setContinueDisabled(true);
+  }
+
+  setContinueDisabled(disabled) {
+    const button = this.element
       .closest("form")
-      .querySelector('[type="submit"]').disabled = true;
+      ?.querySelector('[type="submit"]');
+    if (button) button.disabled = disabled;
   }
 
   changeProvider() {
@@ -77,9 +89,18 @@ export default class extends Controller {
     const option = this.optionsValue[this.providerTarget.value];
     this.keyLabelTarget.textContent = option.label;
     this.keyTarget.placeholder = option.placeholder;
-    this.keyTarget.disabled = option.locked;
-    this.buttonTarget.disabled = option.locked;
-    this.showStatus(option.locked ? "configuration_locked" : "unchecked");
+    this.updateModelField();
+    this.showStatus("unchecked");
+  }
+
+  updateModelField() {
+    const openrouter = this.providerTarget.value === "openrouter";
+    this.modelFieldsTarget.hidden = !openrouter;
+    this.modelTarget.disabled = this.saving || !openrouter;
+  }
+
+  editModel() {
+    this.showStatus("unchecked");
   }
 
   editKey() {
@@ -88,10 +109,18 @@ export default class extends Controller {
 
   async save(event) {
     event.preventDefault();
-    if (pendingRequest || this.saving || this.buttonTarget.disabled) return;
+    if (pendingRequest || this.saving || this.buttonTarget.matches(":disabled"))
+      return;
     if (!this.keyTarget.value.trim()) {
       this.showStatus("missing_key", true);
       this.keyTarget.focus();
+      return;
+    }
+
+    const openrouter = this.providerTarget.value === "openrouter";
+    if (openrouter && !this.modelTarget.value.trim()) {
+      this.showStatus("missing_model", true);
+      this.modelTarget.focus();
       return;
     }
 
@@ -119,6 +148,7 @@ export default class extends Controller {
           ai_configuration: {
             provider: this.providerTarget.value,
             api_key: this.keyTarget.value,
+            ...(openrouter ? { model: this.modelTarget.value.trim() } : {}),
           },
         }),
       }).then(async (response) => ({

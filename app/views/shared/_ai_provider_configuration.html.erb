@@ -1,0 +1,36 @@
+<div data-controller="onboarding-provider"
+     data-onboarding-provider-url-value="<%= url %>"
+     data-onboarding-provider-options-value="<%= onboarding_provider_options.to_json %>"
+     data-onboarding-provider-messages-value="<%= t("onboardings.tools.provider_setup.messages").to_json %>"
+     data-action="turbo:before-cache@document->onboarding-provider#beforeCache change@document->onboarding-provider#modeChanged"
+     class="space-y-3">
+  <p class="text-xs text-secondary"><%= t("onboardings.tools.provider_setup.scope") %></p>
+  <p class="text-xs text-secondary"><%= t("onboardings.tools.provider_setup.document_index_notice") %></p>
+  <%= tag.fieldset disabled: !enabled, class: "space-y-3" do %>
+    <%= fields_for :provider_configuration, nil, builder: StyledFormBuilder do |provider_form| %>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <%= provider_form.select :provider,
+              OnboardingAiConfiguration::PROVIDERS.map { |provider| [ t("onboardings.tools.provider_setup.providers.#{provider}"), provider ] },
+              { selected: onboarding_provider, label: t("onboardings.tools.provider_setup.provider_label") },
+              { name: nil, data: { onboarding_provider_target: "provider", action: "change->onboarding-provider#changeProvider" } } %>
+        <%= provider_form.password_field :api_key,
+              name: nil, value: nil, autocomplete: "new-password", maxlength: 8192,
+              label: tag.span(onboarding_provider_options.fetch(onboarding_provider)[:label], data: { onboarding_provider_target: "keyLabel" }),
+              placeholder: onboarding_provider_options.fetch(onboarding_provider)[:placeholder],
+              data: { onboarding_provider_target: "key", action: "input->onboarding-provider#editKey keydown.enter->onboarding-provider#save" } %>
+      </div>
+      <%= tag.div hidden: onboarding_provider != "openrouter", data: { onboarding_provider_target: "modelFields" }, class: "space-y-2" do %>
+        <%= provider_form.text_field :model,
+              name: nil, value: onboarding_openrouter_model, autocomplete: "off", maxlength: 255,
+              disabled: onboarding_provider != "openrouter", aria: { required: true },
+              label: t("onboardings.tools.provider_setup.model_label"),
+              placeholder: t("onboardings.tools.provider_setup.model_placeholder"),
+              help_text: t("onboardings.tools.provider_setup.model_help"),
+              data: { onboarding_provider_target: "model", action: "input->onboarding-provider#editModel keydown.enter->onboarding-provider#save" } %>
+        <p class="text-xs text-secondary"><%= t("onboardings.tools.provider_setup.openrouter_document_search") %></p>
+      <% end %>
+    <% end %>
+    <%= render DS::Button.new(text: t("onboardings.tools.provider_setup.save_and_test"), variant: :primary, data: { onboarding_provider_target: "button", action: "onboarding-provider#save" }) %>
+  <% end %>
+  <p role="status" aria-live="polite" class="text-sm text-secondary" data-onboarding-provider-target="status"><%= t("onboardings.tools.provider_setup.messages.unchecked") %></p>
+</div>

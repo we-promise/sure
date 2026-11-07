@@ -127,7 +127,7 @@ module InsightsHelper
     family = insight.family
     return false unless family.assistant_enabled?
 
-    family.effective_assistant_type == "external" ? Assistant::External.configured? : Provider::Registry.preferred_llm_provider.present?
+    family.effective_assistant_type == "external" ? Assistant::External.configured? : Provider::Registry.preferred_llm_provider(family: family).present?
   end
 
   # Fills only these placeholders, so a mistyped one in an override stays as typed.

@@ -216,16 +216,24 @@ class User < ApplicationRecord
     when "external"
       Assistant::External.available_for?(self)
     else
-      openai_configured? || anthropic_configured?
+      if family&.ai_configuration
+        Provider::Registry.preferred_llm_provider(family: family).present?
+      else
+        openai_configured? || anthropic_configured?
+      end
     end
   end
 
   def openai_configured?
-    Provider::Openai.configured?
+    return Provider::Openai.configured? unless family&.ai_configuration
+
+    Provider::Registry.get_provider(:openai, family: family).present?
   end
 
   def anthropic_configured?
-    Provider::Anthropic.configured?
+    return Provider::Anthropic.configured? unless family&.ai_configuration
+
+    Provider::Registry.get_provider(:anthropic, family: family).present?
   end
 
   def ai_enabled?

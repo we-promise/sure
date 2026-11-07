@@ -92,10 +92,8 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       }
     end
 
-    # Extract transactions from the PDF using the configured LLM provider.
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # extract_bank_statement (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
+    # Use the tool user's family, including when called from a background job.
+    provider = Provider::Registry.preferred_llm_provider(family: family)
     unless provider
       return {
         success: false,
@@ -184,9 +182,9 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       end
     end
 
-    # Only OpenAI takes the OpenAI model setting; other providers (Anthropic)
-    # resolve their own default when given nil.
+    # Read the instantiated OpenAI model so a family override cannot inherit
+    # the installation's model. Other providers resolve their default from nil.
     def model_for(provider)
-      Provider::Openai.effective_model if provider.is_a?(Provider::Openai)
+      provider.default_model if provider.is_a?(Provider::Openai)
     end
 end

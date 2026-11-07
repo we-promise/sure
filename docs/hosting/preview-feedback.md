@@ -218,8 +218,10 @@ without an accepted invitation. The choice is `none`, `builtin`, or `external`. 
 not configuration readiness, provider use, or an agent connection. `none` and
 `external` disable that user's in-app assistant; `builtin` enables it subject to
 existing provider availability. Submitting the AI-mode answer does not change family
-automation or provider settings. The separate Save and test action changes the
-instance's selected provider and encrypted key; it does not emit this intent event.
+automation or provider settings. The separate Save and test action checks and saves
+the current family's OpenAI, Anthropic, or OpenRouter provider and encrypted key. It is available
+to self-hosted family administrators during onboarding and under AI settings; it
+does not change installation credentials or emit this intent event.
 
 The completion transaction stores a nullable, immutable-in-this-flow family claim,
 serialized with a family row lock. Eligibility requires no existing family claim,

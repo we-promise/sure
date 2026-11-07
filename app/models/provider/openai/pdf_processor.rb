@@ -149,7 +149,10 @@ class Provider::Openai::PdfProcessor
     def extract_text_from_pdf
       return nil if pdf_content.blank?
 
-      Pdf::TextExtractor.pages(pdf_content).each_with_index.flat_map do |text, index|
+      pages = Pdf::TextExtractor.pages(pdf_content)
+      return nil if pages.all?(&:blank?)
+
+      pages.each_with_index.flat_map do |text, index|
         [ "--- Page #{index + 1} ---", text ]
       end.join("\n\n")
     rescue => e

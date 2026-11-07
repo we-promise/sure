@@ -16,7 +16,7 @@ class ProcessPdfJob < ApplicationJob
     begin
       process_result = pdf_import.process_with_ai
       document_type = resolve_document_type(pdf_import, process_result)
-      upload_to_vector_store(pdf_import, document_type: document_type)
+      family_document = upload_to_vector_store(pdf_import, document_type: document_type)
 
       # For statements with transactions (bank/credit card), extract and generate import rows
       if statement_with_transactions?(document_type)
@@ -33,7 +33,7 @@ class ProcessPdfJob < ApplicationJob
       user = pdf_import.family.users.find_by(role: :admin) || pdf_import.family.users.first
 
       if user
-        pdf_import.send_next_steps_email(user)
+        pdf_import.send_next_steps_email(user, document_uploaded_for_search: family_document.present?)
       end
 
       # Statements with extracted rows go to pending for user review/publish
@@ -68,15 +68,11 @@ class ProcessPdfJob < ApplicationJob
     def upload_to_vector_store(pdf_import, document_type:)
       file_content = pdf_import.pdf_file_content
 
-      family_document = pdf_import.family.upload_document(
+      pdf_import.family.upload_document(
         file_content: file_content,
         filename: pdf_import.pdf_filename,
         metadata: { "type" => document_type }
       )
-
-      return if family_document
-
-      Rails.logger.warn("ProcessPdfJob: Vector store upload failed for import #{pdf_import.id}")
     end
 
     def resolve_document_type(pdf_import, process_result)

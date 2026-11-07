@@ -32,6 +32,34 @@ class Assistant::ResponderTest < ActiveSupport::TestCase
     assert_raises(IOError) { @responder.respond }
   end
 
+  test "stateless providers receive prior messages and tool results without old response IDs" do
+    earlier_reply = @chat.messages.create!(
+      type: "AssistantMessage", content: "Earlier findings", ai_model: "gpt-4.1",
+      status: "complete", created_at: @message.created_at - 1.second
+    )
+    earlier_reply.tool_calls.create!(
+      type: "ToolCall::Function", provider_id: "old-function", provider_call_id: "old-call",
+      function_name: "echo", function_arguments: { value: "earlier input" }, function_result: "earlier result"
+    )
+    @llm.stubs(:supports_responses_endpoint?).returns(false)
+    reply = Provider::LlmConcept::ChatResponse.new(
+      id: "new-response", model: "gpt-4.1",
+      messages: [ Provider::LlmConcept::ChatMessage.new(id: "new-message", output_text: "Continuing") ],
+      function_requests: []
+    )
+    @llm.expects(:chat_response).with do |_prompt, **options|
+      assert_nil options[:previous_response_id]
+      assert_includes options[:conversation_history], earlier_reply
+      history = options[:messages]
+      assert history.any? { |item| item[:role] == "assistant" && item[:tool_calls]&.any? { |call| call[:id] == "old-call" } }
+      assert history.any? { |item| item[:role] == "tool" && item[:tool_call_id] == "old-call" && item[:content] == "earlier result" }
+      assert history.any? { |item| item[:role] == "user" && item[:content] == @message.content }
+      true
+    end.returns(provider_success_response(reply))
+
+    @responder.respond(previous_response_id: "old-account-response")
+  end
+
   test "group_by_round splits consecutive results by round and keeps untagged results together" do
     a = { call_id: "a", round: 1 }
     b = { call_id: "b", round: 2 }

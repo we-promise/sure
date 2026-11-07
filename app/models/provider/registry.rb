@@ -8,22 +8,25 @@ class Provider::Registry
   validates :concept, inclusion: { in: CONCEPTS }
 
   class << self
-    def for_concept(concept)
-      new(concept.to_sym)
+    def for_concept(concept, family: nil)
+      new(concept.to_sym, family: family)
     end
 
-    def get_provider(name)
+    def get_provider(name, family: nil)
+      if name.to_s.in?(Family::AiConfiguration::PROVIDERS) && (configuration = family&.ai_configuration)
+        return configuration.provider_instance(name)
+      end
+
       send(name)
     rescue NoMethodError
       raise Error.new("Provider '#{name}' not found in registry")
     end
 
-    # Resolves the LLM provider for batch/PDF flows, honoring Setting.llm_provider
-    # the way chat does: prefer the configured provider, but fall back to whichever
-    # one actually has credentials so an install that swaps providers (or has only
-    # one configured) keeps working. Returns nil when neither is configured —
-    # callers guard on that.
-    def preferred_llm_provider
+    # Explicit family configuration never falls back to installation credentials.
+    # Families without an override keep the installation's legacy provider order.
+    def preferred_llm_provider(family: nil)
+      return family.ai_configuration.provider_instance if family&.ai_configuration
+
       llm_provider_order.each do |name|
         provider = get_provider(name)
         return provider if provider
@@ -31,8 +34,28 @@ class Provider::Registry
       nil
     end
 
-    def llm_provider_order
+    def llm_provider_order(family: nil)
+      if (configuration = family&.ai_configuration)
+        return Family::AiConfiguration::PROVIDERS.include?(configuration.provider) ? [ configuration.provider.to_sym ] : []
+      end
+
       Setting.llm_provider == "anthropic" ? %i[anthropic openai] : %i[openai anthropic]
+    end
+
+    def default_llm_model(family: nil)
+      if (configuration = family&.ai_configuration)
+        return configuration.model.presence || Family::AiConfiguration.default_model(configuration.provider)
+      end
+
+      if Setting.llm_provider == "anthropic" && Provider::Anthropic.configured?
+        Provider::Anthropic.effective_model
+      elsif Provider::Openai.configured?
+        Provider::Openai.effective_model
+      elsif Provider::Anthropic.configured?
+        Provider::Anthropic.effective_model
+      else
+        Provider::Openai.effective_model
+      end
     end
 
     def plaid_provider_for_region(region)
@@ -106,6 +129,12 @@ class Provider::Registry
         model = ENV["ANTHROPIC_MODEL"].presence || Setting.anthropic_model
 
         Provider::Anthropic.new(access_token, base_url: base_url, model: model)
+      end
+
+      # OpenRouter is a family-only choice. Legacy installation-wide compatible
+      # endpoints remain configured through the existing OpenAI settings.
+      def openrouter
+        nil
       end
 
       def jev
@@ -205,13 +234,14 @@ class Provider::Registry
       end
   end
 
-  def initialize(concept)
+  def initialize(concept, family: nil)
     @concept = concept
+    @family = family
     validate!
   end
 
   def providers
-    available_providers.map { |p| self.class.send(p) }.compact
+    available_providers.map { |name| get_provider(name) }.compact
   end
 
   # Returns the list of provider key names (symbols) registered for this concept.
@@ -224,11 +254,11 @@ class Provider::Registry
 
     raise Error.new("Provider '#{name}' not found for concept: #{concept}") unless provider_method.present?
 
-    self.class.send(provider_method)
+    self.class.get_provider(provider_method, family: family)
   end
 
   private
-    attr_reader :concept
+    attr_reader :concept, :family
 
     def available_providers
       case concept
@@ -237,7 +267,7 @@ class Provider::Registry
       when :securities
         %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest mansa]
       when :llm
-        %i[openai anthropic]
+        family&.ai_configuration ? Family::AiConfiguration::PROVIDERS.map(&:to_sym) : %i[openai anthropic]
       when :classification
         # Only providers implementing Provider::ClassificationConcept#decide
         # belong here. OpenAI and Anthropic can auto-categorize but cannot

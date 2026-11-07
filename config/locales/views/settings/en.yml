@@ -125,7 +125,9 @@ en:
         status_default: Using the built-in default
         format_risk: 'Your %{provider} prompt dropped the {"%{key}": ...} example. Each request still asks for that shape, so parsing usually holds, but an override that asks for a different output format will break it.'
       show:
-        page_title: AI Prompts
+        page_title: AI settings
+        provider_title: Family AI provider
+        provider_description: Update or rotate your family’s provider key here. Saving does not change anyone’s assistant preference or your household assistant mode.
         disable_ai: Disable AI Assistant
         save: Save prompts
         save_confirm:
@@ -361,7 +363,7 @@ en:
     settings_nav:
       accounts_label: Accounts
       advanced_section_title: Advanced
-      ai_prompts_label: AI Prompts
+      ai_prompts_label: AI settings
       auto_matches_label: Auto Matches
       classifier_label: Classifier
       background_jobs_label: Background jobs

@@ -112,7 +112,7 @@ RSpec.describe 'API V1 Chats', type: :request do
         properties: {
           title: { type: :string, example: 'Monthly budget review' },
           message: { type: :string, description: 'Optional initial message in the chat' },
-          model: { type: :string, description: 'Optional OpenAI model identifier' }
+          model: { type: :string, description: "Optional AI model identifier. When omitted or blank, uses the chat owner family's configured model, or the installation default when the family has no AI configuration. An explicit model overrides this default." }
         },
         required: %w[title]
       }
@@ -240,7 +240,7 @@ RSpec.describe 'API V1 Chats', type: :request do
         type: :object,
         properties: {
           content: { type: :string },
-          model: { type: :string }
+          model: { type: :string, description: "Optional AI model identifier. When omitted or blank, uses the chat owner family's configured model, or the installation default when the family has no AI configuration. An explicit model overrides this default." }
         },
         required: %w[content]
       }

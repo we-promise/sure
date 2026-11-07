@@ -6,6 +6,108 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     @probe = AiHealth::Probe.new(cache: @cache)
   end
 
+  test "OpenRouter authenticates the key then checks user-filtered text and tool model metadata without generation" do
+    key_request = stub_request(:get, "https://openrouter.ai/api/v1/key")
+      .with(headers: { "Authorization" => "Bearer synthetic-router-key" })
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: { label: "synthetic-key", is_management_key: false } }.to_json)
+    model_request = stub_request(:get, "https://openrouter.ai/api/v1/models/user")
+      .with(headers: { "Authorization" => "Bearer synthetic-router-key" })
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: [ {
+        id: "openai/gpt-4.1-mini", architecture: { input_modalities: [ "text" ], output_modalities: [ "text" ] },
+        supported_parameters: [ "tools" ], endpoints: [ "/api/v1/chat/completions" ]
+      } ] }.to_json)
+
+    result = @probe.llm(provider: :openrouter, endpoint: Provider::Openrouter::ENDPOINT,
+                        access_token: "synthetic-router-key", model: "openai/gpt-4.1-mini")
+
+    assert result.passing?
+    assert_requested key_request
+    assert_requested model_request
+    assert_not_requested :get, "https://openrouter.ai/api/v1/models"
+    assert_not_requested :post, %r{https://openrouter.ai/}
+  end
+
+  test "OpenRouter key rejection cannot pass because the public models catalog is available" do
+    stub_request(:get, "https://openrouter.ai/api/v1/key")
+      .to_return(status: 401, headers: { "Content-Type" => "application/json" }, body: { error: { message: "synthetic-router-key" } }.to_json)
+    stub_request(:get, "https://openrouter.ai/api/v1/models")
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: [ { id: "openai/gpt-4.1-mini" } ] }.to_json)
+    DebugLogEntry.expects(:capture).with do |attributes|
+      !attributes.to_json.include?("synthetic-router-key") && attributes[:metadata][:http_status] == 401
+    end
+
+    result = @probe.llm(provider: :openrouter, endpoint: Provider::Openrouter::ENDPOINT,
+                        access_token: "synthetic-router-key", model: "openai/gpt-4.1-mini")
+
+    assert result.failing?
+    assert_equal 401, result.http_status
+    assert_not_requested :get, "https://openrouter.ai/api/v1/models"
+    assert_not_requested :get, "https://openrouter.ai/api/v1/models/user"
+    assert_not_requested :post, %r{https://openrouter.ai/}
+  end
+
+  test "OpenRouter rejects missing or unsuitable selected models" do
+    DebugLogEntry.stubs(:capture)
+    stub_request(:get, "https://openrouter.ai/api/v1/key")
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: { label: "synthetic-key" } }.to_json)
+    valid = { id: "openai/gpt-4.1-mini", architecture: { input_modalities: [ "text" ], output_modalities: [ "text" ] },
+              supported_parameters: [ "tools" ], endpoints: [ "/api/v1/chat/completions" ] }
+    [ [], [ valid.merge(id: "other/model") ], [ valid.merge(supported_parameters: []) ],
+      [ valid.merge(architecture: { input_modalities: [ "image" ], output_modalities: [ "text" ] }) ],
+      [ valid.merge(endpoints: [ "/api/v1/responses" ]) ] ].each do |models|
+      stub_request(:get, "https://openrouter.ai/api/v1/models/user")
+        .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: models }.to_json)
+      probe = AiHealth::Probe.new(cache: ActiveSupport::Cache::NullStore.new)
+      result = probe.llm(provider: :openrouter, endpoint: Provider::Openrouter::ENDPOINT,
+                         access_token: "synthetic-router-key", model: "openai/gpt-4.1-mini")
+      assert result.failing?
+      assert_equal :model_not_available, result.failure_code
+    end
+  end
+
+  test "OpenRouter metadata checks do not follow redirects or accept alternate endpoints" do
+    DebugLogEntry.stubs(:capture)
+    stub_request(:get, "https://openrouter.ai/api/v1/key")
+      .to_return(status: 302, headers: { "Location" => "http://127.0.0.1/key", "Content-Type" => "application/json" }, body: { data: { label: "key" } }.to_json)
+    [ Provider::Openrouter::ENDPOINT, "http://127.0.0.1/api/v1" ].each do |endpoint|
+      result = @probe.llm(provider: :openrouter, endpoint: endpoint, access_token: "synthetic-router-key", model: "openai/gpt-4.1-mini")
+      assert result.failing?
+    end
+    assert_not_requested :any, %r{http://127\.0\.0\.1}
+    assert_not_requested :get, "https://openrouter.ai/api/v1/models/user"
+  end
+
+  test "OpenRouter management keys are not accepted as inference credentials" do
+    DebugLogEntry.stubs(:capture)
+    stub_request(:get, "https://openrouter.ai/api/v1/key")
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: { label: "key", is_management_key: true } }.to_json)
+    result = @probe.llm(provider: :openrouter, endpoint: Provider::Openrouter::ENDPOINT,
+                        access_token: "synthetic-router-key", model: "openai/gpt-4.1-mini")
+    assert result.failing?
+    assert_equal :invalid_credential, result.failure_code
+    assert_not_requested :get, "https://openrouter.ai/api/v1/models/user"
+  end
+
+  test "family probes isolate Anthropic SDK headers and scope failures to the family" do
+    family = families(:dylan_family)
+    probe = AiHealth::Probe.new(cache: @cache, family: family)
+    with_env_overrides("ANTHROPIC_CUSTOM_HEADERS" => "Authorization: Bearer synthetic-operator-secret") do
+      request = stub_request(:get, "https://api.anthropic.com/v1/models/#{Provider::Anthropic::DEFAULT_MODEL}")
+        .with(headers: { "X-Api-Key" => "synthetic-family-key" }) do |outbound|
+          !outbound.headers.to_json.include?("synthetic-operator-secret")
+        end.to_return(status: 401, headers: { "Content-Type" => "application/json" }, body: { error: { type: "authentication_error", message: "Invalid API key" } }.to_json)
+      DebugLogEntry.expects(:capture).with do |attributes|
+        attributes[:family] == family && attributes[:category] == "ai_health" && !attributes.to_json.include?("synthetic-family-key")
+      end
+
+      result = probe.llm(provider: :anthropic, endpoint: AiHealth::ANTHROPIC_DEFAULT_ENDPOINT,
+                         access_token: "synthetic-family-key", model: Provider::Anthropic::DEFAULT_MODEL)
+
+      assert result.failing?
+      assert_requested request
+    end
+  end
+
   test "OpenAI LLM probe calls the models endpoint and verifies the configured model" do
     request = stub_request(:get, "https://api.openai.example.test/v1/models")
               .with(headers: { "Authorization" => "Bearer local-token" })

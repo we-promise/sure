@@ -79,12 +79,9 @@ class ProviderMerchant::Enhancer
       count
     end
 
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # enhance_provider_merchants (PR #1984), so merchant enhancement routes to the
-    # configured provider, with fallback handled by
-    # Provider::Registry.preferred_llm_provider.
+    # Keep merchant enhancement on the credentials owned by the requesting family.
     def llm_provider
-      @llm_provider ||= Provider::Registry.preferred_llm_provider
+      @llm_provider ||= Provider::Registry.preferred_llm_provider(family: @family)
     end
 
     def unenhanced_merchants

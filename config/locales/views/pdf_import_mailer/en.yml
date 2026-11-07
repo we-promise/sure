@@ -8,10 +8,13 @@ en:
       summary_label: AI Summary
       transactions_note: This document appears to contain transactions. You can extract and review them now.
       document_stored_note: This document has been stored for your reference. It can be used to provide context in future AI conversations.
+      document_search_upload_note: This document was uploaded for document search. Indexing may still be in progress.
+      document_reference_only_note: Your document and analysis are saved with this import. The document was not added to document search.
       next_steps_label: What's Next?
       next_steps_intro: "You have several options:"
       option_extract_transactions: Extract transactions from this statement
       option_keep_reference: Keep this document for reference in future AI conversations
+      option_keep_import_reference: Keep this import and analysis for your reference
       option_delete: Delete this import if you no longer need it
       view_import_button: View Import Details
       footer_note: This is an automated message. Please do not reply directly to this email.

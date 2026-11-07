@@ -32,7 +32,10 @@ class Assistant::Builtin < Assistant::Base
       llm: llm_provider
     )
 
-    latest_response_id = chat.latest_assistant_response_id
+    # Provider response IDs belong to the credential account that created them.
+    # Family overrides rebuild conversation history, so a rotated key/provider must
+    # never reuse an ID written by a request that finished before or after a save.
+    latest_response_id = chat.latest_assistant_response_id unless chat.user.family.ai_configuration
 
     responder.on(:output_text) do |text|
       if assistant_message.content.blank?

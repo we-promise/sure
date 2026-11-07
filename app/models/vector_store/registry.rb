@@ -11,15 +11,37 @@ class VectorStore::Registry
     # Anthropic installs (Setting.llm_provider == "anthropic") default to
     # :pgvector, and anything else falls back to :openai when OpenAI
     # credentials are present.
-    def adapter
+    def adapter(family: nil)
+      return context(family: family).adapter if family
+
       name = adapter_name
       return nil unless name
 
       build_adapter(name)
     end
 
-    def configured?
-      adapter.present?
+    def configured?(family: nil)
+      adapter(family: family).present?
+    end
+
+    def context(family:)
+      # Do not trust an association cached before another request saved settings.
+      configuration = Family::AiConfiguration.uncached { Family::AiConfiguration.find_by(family_id: family.id) }
+      return VectorStore::Context.new(family: family, adapter: adapter) unless configuration
+
+      family_adapter = nil
+      fingerprint = nil
+      if configuration.provider == "openai"
+        token = configuration.api_key
+        if token.present?
+          fingerprint = Family::DocumentStore.fingerprint(family_id: family.id, provider: "openai", api_key: token)
+          family_adapter = VectorStore::Openai.new(access_token: token, use_global_settings: false)
+        end
+      end
+      VectorStore::Context.new(family: family, adapter: family_adapter, family_configured: true, credential_fingerprint: fingerprint)
+    rescue Family::AiConfiguration::InvalidCredential
+      Rails.logger.warn("Family document credential could not be read for family #{family.id}")
+      VectorStore::Context.new(family: family, adapter: nil, family_configured: true)
     end
 
     def adapter_name

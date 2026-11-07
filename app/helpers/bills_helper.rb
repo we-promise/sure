@@ -44,7 +44,7 @@ module BillsHelper
   # install renders no AI affordances at all, following the Rules registry's
   # conditional-executor precedent.
   def bills_one_shot_ai_available?
-    Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider.present?
+    Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider(family: Current.user.family).present?
   end
 
   # Pay-period markers keyed by the id of the FIRST occurrence inside each

@@ -4,7 +4,13 @@ module OnboardingsHelper
   end
 
   def onboarding_provider
-    Setting.llm_provider.in?(OnboardingAiConfiguration::PROVIDERS) ? Setting.llm_provider : "openai"
+    provider = Current.family.ai_configuration&.provider.presence || Setting.llm_provider
+    provider.in?(OnboardingAiConfiguration::PROVIDERS) ? provider : "openai"
+  end
+
+  def onboarding_openrouter_model
+    configuration = Current.family.ai_configuration
+    configuration.model if configuration&.provider == "openrouter"
   end
 
   def onboarding_provider_options
@@ -12,8 +18,7 @@ module OnboardingsHelper
       label = t("onboardings.tools.provider_setup.providers.#{provider}")
       [ provider, {
         label: t("onboardings.tools.provider_setup.key_label", provider: label),
-        placeholder: t("onboardings.tools.provider_setup.key_placeholder", provider: label),
-        locked: OnboardingAiConfiguration.configuration_locked?(provider)
+        placeholder: t("onboardings.tools.provider_setup.key_placeholder", provider: label)
       } ]
     end
   end

@@ -156,4 +156,93 @@ class Provider::RegistryTest < ActiveSupport::TestCase
 
     assert_nil Provider::Registry.preferred_llm_provider
   end
+
+  test "family provider selection is isolated from other families and installation defaults" do
+    family = families(:dylan_family)
+    other_family = families(:empty)
+    family.create_ai_configuration!(provider: "anthropic", api_key: "synthetic-family-a-key")
+    other_family.create_ai_configuration!(provider: "openai", api_key: "synthetic-family-b-key")
+    family_provider = mock("family A provider")
+    other_provider = mock("family B provider")
+    Provider::Anthropic.expects(:new).with(
+      "synthetic-family-a-key", model: Provider::Anthropic::DEFAULT_MODEL, use_global_settings: false
+    ).returns(family_provider)
+    Provider::Openai.expects(:new).with(
+      "synthetic-family-b-key", model: Provider::Openai::DEFAULT_MODEL, use_global_settings: false
+    ).returns(other_provider)
+    Provider::Registry.expects(:openai).never
+    Provider::Registry.expects(:anthropic).never
+
+    assert_same family_provider, Provider::Registry.preferred_llm_provider(family: family)
+    assert_same other_provider, Provider::Registry.get_provider(:openai, family: other_family)
+    assert_nil Provider::Registry.get_provider(:openai, family: family)
+    assert_equal [ :anthropic ], Provider::Registry.llm_provider_order(family: family)
+    assert_equal Provider::Anthropic::DEFAULT_MODEL, Provider::Registry.default_llm_model(family: family)
+  end
+
+  test "families without an override retain installation provider fallback" do
+    family = families(:dylan_family)
+    openai = mock("installation provider")
+    Provider::Registry.stubs(:openai).returns(openai)
+    Provider::Registry.stubs(:anthropic).returns(nil)
+    Setting.stubs(:llm_provider).returns("anthropic")
+
+    assert_same openai, Provider::Registry.preferred_llm_provider(family: family)
+    assert_same openai, Provider::Registry.get_provider(:openai, family: family)
+  end
+
+  test "an unreadable family override does not fall back to global or alternate providers" do
+    family = families(:dylan_family)
+    configuration = family.create_ai_configuration!(provider: "anthropic", api_key: "synthetic-key")
+    configuration.update_column(:encrypted_api_key, "corrupt-ciphertext")
+    Provider::Registry.expects(:openai).never
+    Provider::Registry.expects(:anthropic).never
+
+    assert_nil Provider::Registry.preferred_llm_provider(family: family)
+    assert_nil Provider::Registry.get_provider(:openai, family: family)
+    assert_equal [], Provider::Registry.for_concept(:llm, family: family).providers
+    assert_equal Provider::Anthropic::DEFAULT_MODEL, Provider::Registry.default_llm_model(family: family)
+  end
+
+  test "concept registries preserve the family for individual and available providers" do
+    family = families(:dylan_family)
+    family.create_ai_configuration!(provider: "anthropic", api_key: "synthetic-key")
+    provider = mock("family provider")
+    Provider::Anthropic.stubs(:new).with(
+      "synthetic-key", model: Provider::Anthropic::DEFAULT_MODEL, use_global_settings: false
+    ).returns(provider)
+    registry = Provider::Registry.for_concept(:llm, family: family)
+
+    assert_equal [ provider ], registry.providers
+    assert_same provider, registry.get_provider(:anthropic)
+    assert_nil registry.get_provider(:openai)
+  end
+
+  test "OpenRouter belongs only to the explicitly configured family" do
+    family = families(:dylan_family)
+    family.create_ai_configuration!(provider: "openrouter", model: "openai/gpt-4.1-mini", api_key: "synthetic-router-key")
+    Provider::Registry.expects(:openai).never
+    Provider::Registry.expects(:anthropic).never
+    registry = Provider::Registry.for_concept(:llm, family: family)
+
+    assert_equal [ Provider::Openrouter ], registry.providers.map(&:class)
+    assert_instance_of Provider::Openrouter, registry.get_provider(:openrouter)
+    assert_nil registry.get_provider(:openai)
+    assert_nil registry.get_provider(:anthropic)
+    assert_nil Provider::Registry.get_provider(:openrouter, family: families(:empty))
+    assert_equal [ :openrouter ], Provider::Registry.llm_provider_order(family: family)
+    assert_equal "openai/gpt-4.1-mini", Provider::Registry.default_llm_model(family: family)
+    assert_equal %i[openai anthropic], Provider::Registry.for_concept(:llm).provider_keys
+  end
+
+  test "an unreadable OpenRouter credential never falls back to global providers" do
+    family = families(:dylan_family)
+    family.create_ai_configuration!(provider: "openrouter", model: "openai/gpt-4.1-mini", api_key: "synthetic-key")
+    family.ai_configuration.update_column(:encrypted_api_key, "corrupt-ciphertext")
+    Provider::Registry.expects(:openai).never
+    Provider::Registry.expects(:anthropic).never
+
+    assert_nil Provider::Registry.preferred_llm_provider(family: family)
+    assert_equal [], Provider::Registry.for_concept(:llm, family: family).providers
+  end
 end
