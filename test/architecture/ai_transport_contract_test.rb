@@ -1,8 +1,7 @@
 require "test_helper"
 
-# One contract every transport passes (ai-plumbing-redesign.md, section 17): error mapping,
-# retries, usage normalisation, the proxy, and that clients are built only by
-# Ai::Transport::Http. 2c adds generate's JSON-mode and bad-output cases, 2d judge, 2e embed.
+# One contract every transport passes: error mapping, retries, usage normalisation, the
+# proxy, and that clients are built only by Ai::Transport::Http.
 class AiTransportContractTest < ActiveSupport::TestCase
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
 
@@ -52,8 +51,8 @@ class AiTransportContractTest < ActiveSupport::TestCase
       end
     end
 
-    # No response came back for the first two, so they're Unreachable (section 5.4: a connect
-    # timeout marks the server); a server that accepted the request and went quiet is Timeout.
+    # No response came back for the first two, so they're Unreachable (a connect timeout
+    # marks the server down); a server that accepted the request and went quiet is Timeout.
     test "#{protocol}: a refused connection or connect timeout is Unreachable; a read timeout is Timeout" do
       stub_request(:post, spec[:url]).to_raise(Errno::ECONNREFUSED)
       assert_raises(Ai::Error::Unreachable) { probe(protocol, :chat) }
@@ -174,7 +173,7 @@ class AiTransportContractTest < ActiveSupport::TestCase
                  "Build clients in app/models/ai/transport/http.rb, so every client gets the timeout, headers, TLS settings and proxy"
   end
 
-  # RubyLLM hides internal helpers from its documented API between releases (#1438). These are
+  # RubyLLM hides internal helpers from its documented API between releases (RubyLLM #1438). These are
   # the public methods Sure relies on; an upgrade that drops one fails here, not in production.
   test "the RubyLLM surface Sure uses is still public" do
     { RubyLLM => %i[context workflow with_usage_owner render_prompt], RubyLLM::OpenTelemetry => %i[enable] }.each do |owner, methods|

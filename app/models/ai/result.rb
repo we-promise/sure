@@ -1,5 +1,5 @@
-# What every AI call returns (section 9). `call` returns one; `call!` returns its value or
-# raises its Ai::Error. Generations use it from 2c; 2a defines it with the error taxonomy.
+# What every AI call returns. `call` returns one; `call!` returns its value or
+# raises its Ai::Error.
 Ai::Result = Data.define(:value, :error, :availability, :usage, :route, :failed_over_from, :remaining, :correlation_id) do
   def initialize(value: nil, error: nil, availability: nil, usage: nil, route: nil, failed_over_from: nil, remaining: [], correlation_id: nil)
     super
@@ -13,7 +13,7 @@ Ai::Result = Data.define(:value, :error, :availability, :usage, :route, :failed_
   def unavailable? = !availability.nil?
   def cancelled?   = error.is_a?(Ai::Error::Cancelled)
 
-  # Items a batched call didn't reach (section 8.1).
+  # Items a batched call didn't reach.
   def remaining_ids = remaining.map { _1.is_a?(Hash) ? _1[:id] : _1.id }
 
   def value!

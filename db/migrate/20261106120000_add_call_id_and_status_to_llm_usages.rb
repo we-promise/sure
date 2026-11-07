@@ -1,6 +1,5 @@
-# One llm_usages row per request, grouped per call (ai-plumbing-redesign.md, section 10).
-# Rows written before this, and rows today's usage recorders keep writing until their features
-# move onto the transports, have no call_id: each counts as a call of one request.
+# One llm_usages row per request, grouped per call. Rows written before this, and rows the
+# per-provider usage recorders write, have no call_id: each counts as a call of one request.
 class AddCallIdAndStatusToLlmUsages < ActiveRecord::Migration[8.1]
   STATUSES = %w[succeeded failed cancelled].freeze
 
