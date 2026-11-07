@@ -54,6 +54,11 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     assert_equal 8, Ai::Transport.for(jev_endpoint).parallel_requests
   end
 
+  test "an endpoint can't be built with fewer than one request in flight" do
+    error = assert_raises(ArgumentError) { jev_endpoint(parallel_requests: 0) }
+    assert_match "parallel_requests must be at least 1", error.message
+  end
+
   test "an http base on a local endpoint is used as given" do
     stub_request(:post, "http://jev:8080/v1/systemone").to_return(status: 200, headers: JSON_HEADERS, body: answer("Salary", 0.7).to_json)
 
