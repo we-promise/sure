@@ -924,6 +924,269 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Other", remove_entry.entryable.investment_activity_label
   end
 
+  test "imports OTHER and JOURNAL share movements that carry no cash as zero-cash Transfer trades preserving signed units" do
+    process_activities(
+      # Shaped like a stock-plan vest: the shares arrive with price and amount both 0.0
+      build_trade_activity(id: "other_shares_in", type: "OTHER", symbol: "RSUCO", units: 10.0, price: 0.0, amount: 0.0),
+      build_trade_activity(id: "journal_shares_out", type: "JOURNAL", symbol: "RSUCO", units: -4.0, price: 25.0)
+    )
+
+    shares_in = snaptrade_entry("other_shares_in")
+    shares_out = snaptrade_entry("journal_shares_out")
+
+    assert_not_nil shares_in, "units with no cash are shares moving in"
+    assert_not_nil shares_out, "negative units with no cash are shares moving out"
+    assert shares_in.entryable.is_a?(Trade)
+    assert shares_out.entryable.is_a?(Trade)
+    assert_equal BigDecimal("10"), shares_in.entryable.qty
+    assert_equal BigDecimal("-4"), shares_out.entryable.qty
+    assert_equal BigDecimal("0"), shares_in.amount
+    assert_equal BigDecimal("0"), shares_out.amount
+    assert_equal BigDecimal("0"), shares_in.entryable.price
+    assert_equal BigDecimal("25"), shares_out.entryable.price, "a reported price is kept"
+    assert_equal "Transfer", shares_in.entryable.investment_activity_label, "shares that arrive at no known cost leave the cost basis unknown"
+    assert_equal "Transfer", shares_out.entryable.investment_activity_label, "shares that leave without cash are not a sale"
+  end
+
+  test "resyncing an OTHER share movement updates its trade rather than adding another" do
+    activity = build_trade_activity(id: "other_resync", type: "OTHER", symbol: "RSUCO", units: 10.0, price: 0.0, amount: 0.0)
+    process_activities(activity)
+    first_import = snaptrade_entry("other_resync")
+    assert_not_nil first_import
+
+    assert_no_difference -> { @account.entries.count } do
+      process_activities(activity)
+    end
+
+    entry = snaptrade_entry("other_resync")
+    assert_equal first_import.id, entry.id
+    assert_equal first_import.entryable_id, entry.entryable_id
+    assert_equal BigDecimal("10"), entry.entryable.qty
+    assert_equal BigDecimal("0"), entry.amount
+  end
+
+  test "keeps OTHER and JOURNAL rows that carry cash on the cash path, with or without units" do
+    process_activities(
+      build_trade_activity(id: "other_units_and_cash", type: "OTHER", symbol: "RSUCO", units: 5.0, price: 50.0, amount: -250.0),
+      build_cash_activity(id: "journal_cash", type: "JOURNAL", amount: 100.0, settlement_date: Date.current.to_s)
+    )
+
+    with_units = snaptrade_entry("other_units_and_cash")
+    cash_only = snaptrade_entry("journal_cash")
+
+    assert with_units.entryable.is_a?(Transaction), "beside cash, what the units mean is unknown, so only the cash is booked"
+    assert cash_only.entryable.is_a?(Transaction)
+    assert_equal BigDecimal("-250"), with_units.amount
+    assert_equal BigDecimal("100"), cash_only.amount
+    assert_equal "Other", with_units.entryable.investment_activity_label
+    assert_equal "Other", cash_only.entryable.investment_activity_label
+  end
+
+  test "skips OTHER and JOURNAL rows that carry neither units nor cash" do
+    assert_no_difference -> { @account.entries.count } do
+      process_activities(
+        build_cash_activity(id: "other_no_units", type: "OTHER", amount: 0.0, settlement_date: Date.current.to_s),
+        build_trade_activity(id: "journal_zero_units", type: "JOURNAL", symbol: "RSUCO", units: 0, price: 0.0)
+      )
+    end
+
+    assert_nil snaptrade_debug_log("journal_zero_units"), "a row without units never reaches the trade path"
+  end
+
+  test "replaces a Transaction stored under the same id when the row arrives as a share movement" do
+    stale_entry = @account.entries.create!(
+      external_id: "other_reclass",
+      source: "snaptrade",
+      amount: 250.0,
+      currency: "USD",
+      date: Date.current,
+      name: "OTHER RSUCO",
+      entryable: Transaction.new(investment_activity_label: "Other")
+    )
+
+    process_activities(
+      build_trade_activity(id: "other_reclass", type: "OTHER", symbol: "RSUCO", units: 5.0, price: 0.0, amount: 0.0)
+    )
+
+    entry = snaptrade_entry("other_reclass")
+    assert_not_equal stale_entry.id, entry.id, "the stale transaction is replaced"
+    assert entry.entryable.is_a?(Trade)
+    assert_equal BigDecimal("5"), entry.entryable.qty
+    assert_equal BigDecimal("0"), entry.amount
+    assert_nil snaptrade_debug_log("other_reclass", category: "provider_sync_error", level: "error")
+  end
+
+  test "skips an OTHER share movement without a symbol and creates debug log" do
+    assert_no_difference -> { @account.entries.count } do
+      process_activities(
+        build_trade_activity(id: "other_no_symbol", type: "OTHER", symbol: nil, units: 3.0, price: 0.0, amount: 0.0)
+      )
+    end
+
+    assert_equal "missing_symbol", snaptrade_debug_log("other_no_symbol")&.metadata&.dig("reason")
+  end
+
+  test "imports TRANSFER rows that move shares without cash as Transfer trades signed by direction" do
+    process_activities(
+      build_trade_activity(id: "transfer_shares_in", type: "TRANSFER", symbol: "RSUCO", units: 10.0, price: 0.0),
+      build_trade_activity(id: "transfer_shares_out", type: "TRANSFER", symbol: "RSUCO", units: -4.0, price: 0.0, amount: 0.0),
+      build_trade_activity(id: "transfer_in_shares", type: "TRANSFER_IN", symbol: "RSUCO", units: 5.0, price: 0.0),
+      build_trade_activity(id: "transfer_out_shares", type: "TRANSFER_OUT", symbol: "RSUCO", units: 3.0, price: 0.0)
+    )
+
+    expected = { "transfer_shares_in" => 10, "transfer_shares_out" => -4, "transfer_in_shares" => 5, "transfer_out_shares" => -3 }
+    expected.each do |id, qty|
+      entry = snaptrade_entry(id)
+      assert entry&.entryable.is_a?(Trade), "#{id}: a transfer of shares with no cash moves shares"
+      assert_equal BigDecimal(qty.to_s), entry.entryable.qty, id
+      assert_equal BigDecimal("0"), entry.amount, id
+      assert_equal "Transfer", entry.entryable.investment_activity_label, id
+    end
+  end
+
+  test "does not import share movements that cancel each other out on the same day" do
+    process_activities(
+      build_trade_activity(id: "journal_out", type: "JOURNAL", symbol: "RSUCO", units: -100.0, price: 110.0, amount: 0.0),
+      build_trade_activity(id: "journal_in", type: "JOURNAL", symbol: "RSUCO", units: 100.0, price: 110.0, amount: 0.0),
+      build_trade_activity(id: "journal_in_later", type: "JOURNAL", symbol: "RSUCO", units: 100.0, price: 110.0, amount: 0.0,
+                           settlement_date: Date.yesterday.to_s),
+      build_trade_activity(id: "journal_out_settles_later", type: "JOURNAL", symbol: "RSUCO", units: -7.0, price: 0.0, amount: 0.0,
+                           settlement_date: Date.yesterday.to_s).merge("trade_date" => 2.days.ago.to_date.to_s),
+      build_trade_activity(id: "journal_in_settles_later", type: "JOURNAL", symbol: "RSUCO", units: 7.0, price: 0.0, amount: 0.0,
+                           settlement_date: Date.yesterday.to_s).merge("trade_date" => 2.days.ago.to_date.to_s)
+    )
+
+    assert_nil snaptrade_entry("journal_out"), "moved out and back in the same day, the shares never left"
+    assert_nil snaptrade_entry("journal_in")
+    assert_equal BigDecimal("100"), snaptrade_entry("journal_in_later")&.entryable&.qty, "a movement on another day is not a counterpart"
+    assert_nil snaptrade_entry("journal_out_settles_later"), "legs with the same dates are a pair, though a leg out is booked on the later"
+    assert_nil snaptrade_entry("journal_in_settles_later")
+  end
+
+  test "a row the share-movement matching cannot read does not stop the other rows" do
+    process_activities(
+      build_trade_activity(id: "odd_type", type: "JOURNAL", symbol: "RSUCO", units: 5.0, price: 0.0, amount: 0.0).merge("type" => 123),
+      build_trade_activity(id: "journal_alone", type: "JOURNAL", symbol: "RSUCO", units: 100.0, price: 0.0, amount: 0.0)
+    )
+
+    assert_equal BigDecimal("100"), snaptrade_entry("journal_alone")&.entryable&.qty
+  end
+
+  test "share movements that cancel but for a float's rounding are not imported" do
+    process_activities(
+      build_trade_activity(id: "rounded_out", type: "JOURNAL", symbol: "RSUCO", units: -99.99999999999999, price: 0.0, amount: 0.0),
+      build_trade_activity(id: "rounded_in", type: "JOURNAL", symbol: "RSUCO", units: 100.0, price: 0.0, amount: 0.0)
+    )
+
+    assert_nil snaptrade_entry("rounded_out")
+    assert_nil snaptrade_entry("rounded_in")
+  end
+
+  test "share movements of one ticker cancel though their symbol data differs" do
+    out_leg = build_trade_activity(id: "shape_out", type: "JOURNAL", symbol: "RSUCO", units: -40.0, price: 0.0, amount: 0.0)
+    in_leg = build_trade_activity(id: "shape_in", type: "JOURNAL", symbol: "RSUCO", units: 40.0, price: 0.0, amount: 0.0)
+    in_leg["symbol"] = in_leg["symbol"].merge("description" => "RSU Co (vested)", "id" => "sym-2")
+
+    process_activities(out_leg, in_leg)
+
+    assert_nil snaptrade_entry("shape_out")
+    assert_nil snaptrade_entry("shape_in")
+  end
+
+  test "removes a share movement once the leg that cancels it arrives" do
+    out_leg = build_trade_activity(id: "journal_late_pair_out", type: "JOURNAL", symbol: "RSUCO", units: -100.0, price: 0.0)
+    process_activities(out_leg)
+    assert_not_nil snaptrade_entry("journal_late_pair_out")
+
+    process_activities(out_leg, build_trade_activity(id: "journal_late_pair_in", type: "JOURNAL", symbol: "RSUCO", units: 100.0, price: 0.0))
+
+    assert_nil snaptrade_entry("journal_late_pair_out")
+    assert_nil snaptrade_entry("journal_late_pair_in")
+  end
+
+  test "imports the counterpart of a share movement protected from sync rather than cancelling the pair" do
+    out_leg = build_trade_activity(id: "journal_kept_out", type: "JOURNAL", symbol: "RSUCO", units: -100.0, price: 0.0)
+    process_activities(out_leg)
+    snaptrade_entry("journal_kept_out").mark_user_modified!
+
+    process_activities(out_leg, build_trade_activity(id: "journal_kept_in", type: "JOURNAL", symbol: "RSUCO", units: 100.0, price: 0.0))
+
+    assert_equal BigDecimal("-100"), snaptrade_entry("journal_kept_out")&.entryable&.qty, "a protected entry is not removed"
+    assert_equal BigDecimal("100"), snaptrade_entry("journal_kept_in")&.entryable&.qty, "so its counterpart is imported too, and together they move nothing"
+  end
+
+  test "cancels a share movement against a leg that is not protected from sync" do
+    kept_in = build_trade_activity(id: "transfer_in_kept", type: "TRANSFER_IN", symbol: "RSUCO", units: 100.0, price: 0.0)
+    cancelled_in = build_trade_activity(id: "transfer_in_cancelled", type: "TRANSFER_IN", symbol: "RSUCO", units: 100.0, price: 0.0)
+    process_activities(kept_in, cancelled_in)
+    snaptrade_entry("transfer_in_kept").update!(excluded: true)
+
+    process_activities(kept_in, cancelled_in, build_trade_activity(id: "transfer_out_cancelling", type: "TRANSFER_OUT", symbol: "RSUCO", units: 100.0, price: 0.0))
+
+    assert_not_nil snaptrade_entry("transfer_in_kept")
+    assert_nil snaptrade_entry("transfer_in_cancelled"), "the leg out pairs with the inbound leg that can go"
+    assert_nil snaptrade_entry("transfer_out_cancelling")
+  end
+
+  test "removes a cash entry stored for a share movement that its counterpart cancels" do
+    process_activities(
+      build_trade_activity(id: "journal_was_cash", type: "JOURNAL", symbol: "RSUCO", units: -100.0, price: 110.0, amount: -11000.0)
+    )
+    assert snaptrade_entry("journal_was_cash").entryable.is_a?(Transaction)
+
+    process_activities(
+      build_trade_activity(id: "journal_was_cash", type: "JOURNAL", symbol: "RSUCO", units: -100.0, price: 110.0, amount: 0.0),
+      build_trade_activity(id: "journal_was_cash_in", type: "JOURNAL", symbol: "RSUCO", units: 100.0, price: 110.0, amount: 0.0)
+    )
+
+    assert_nil snaptrade_entry("journal_was_cash"), "the cash the row no longer reports goes too"
+    assert_nil snaptrade_entry("journal_was_cash_in")
+  end
+
+  test "books the cash of an OTHER row whose net amount carries it" do
+    process_activities(
+      build_trade_activity(id: "other_net_cash", type: "OTHER", symbol: "RSUCO", units: 10.0, price: 5.0, amount: 0.0).merge("net_amount" => 50.0)
+    )
+
+    entry = snaptrade_entry("other_net_cash")
+    assert entry&.entryable.is_a?(Transaction), "a row that names cash anywhere is not a share movement"
+    assert_equal BigDecimal("50"), entry.amount
+  end
+
+  test "records a debug entry the first time a row is imported as a share movement" do
+    activity = build_trade_activity(id: "other_logged", type: "OTHER", symbol: "RSUCO", units: 10.0, price: 0.0, amount: 0.0)
+
+    process_activities(activity)
+    process_activities(activity)
+
+    logs = DebugLogEntry.where(provider_key: "snaptrade", level: "info").select { |log| log.metadata["activity_id"] == "other_logged" }
+    assert_equal 1, logs.size, "logged once, not on every sync"
+    assert_equal "share_movement", logs.first.metadata["reason"]
+    assert_equal "10.0", logs.first.metadata["quantity"]
+    assert_equal "RSUCO", logs.first.metadata["ticker"]
+  end
+
+  test "dates a share movement in by the earlier of its trade and settlement dates, and one out by the later" do
+    process_activities(
+      build_trade_activity(id: "other_settles_late", type: "OTHER", symbol: "RSUCO", units: 10.0, price: 0.0, amount: 0.0,
+                           settlement_date: 1.day.ago.to_date.to_s).merge("trade_date" => 3.days.ago.to_date.to_s),
+      build_trade_activity(id: "other_settles_early", type: "OTHER", symbol: "RSUCO", units: 10.0, price: 0.0, amount: 0.0,
+                           settlement_date: 5.days.ago.to_date.to_s).merge("trade_date" => 2.days.ago.to_date.to_s),
+      build_trade_activity(id: "transfer_out_settles_late", type: "TRANSFER_OUT", symbol: "RSUCO", units: 4.0, price: 0.0,
+                           settlement_date: 2.days.ago.to_date.to_s).merge("trade_date" => 4.days.ago.to_date.to_s),
+      build_trade_activity(id: "other_out_settles_early", type: "OTHER", symbol: "RSUCO", units: -3.0, price: 0.0, amount: 0.0,
+                           settlement_date: 6.days.ago.to_date.to_s).merge("trade_date" => 4.days.ago.to_date.to_s),
+      build_trade_activity(id: "sell_settles_late", type: "SELL", symbol: "RSUCO", units: -10.0, price: 100.0, amount: 1000.0,
+                           settlement_date: 1.day.ago.to_date.to_s).merge("trade_date" => 3.days.ago.to_date.to_s)
+    )
+
+    assert_equal 3.days.ago.to_date, snaptrade_entry("other_settles_late").date, "shares are never sold before they arrive"
+    assert_equal 5.days.ago.to_date, snaptrade_entry("other_settles_early").date
+    assert_equal 2.days.ago.to_date, snaptrade_entry("transfer_out_settles_late").date, "nor moved out before the buy that delivered them"
+    assert_equal 4.days.ago.to_date, snaptrade_entry("other_out_settles_early").date
+    assert_equal 1.day.ago.to_date, snaptrade_entry("sell_settles_late").date, "a trade keeps its settlement date"
+  end
+
   test "ignores cash activities with zero or nil amount" do
     assert_no_difference -> { @account.entries.count } do
       process_activities(
