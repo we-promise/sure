@@ -2,6 +2,7 @@
 fr:
   transfer_matches:
     create:
+      already_matched: "L'une de ces transactions fait déjà partie d'un autre transfert."
       success: Transfert créé
     matching_fields:
       create_new_transaction: Créer une nouvelle transaction

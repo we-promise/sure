@@ -2,6 +2,7 @@
 zh-CN:
   transfer_matches:
     create:
+      already_matched: "其中一笔交易已属于另一笔转账。"
       success: 转账已创建
     new:
       header:

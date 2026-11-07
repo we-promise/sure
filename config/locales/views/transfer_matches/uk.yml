@@ -1,6 +1,7 @@
 uk:
   transfer_matches:
     create:
+      already_matched: "Одна з цих транзакцій уже входить до іншого переказу."
       success: Переказ створено
     new:
       header:

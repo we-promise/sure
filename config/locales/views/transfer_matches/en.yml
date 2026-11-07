@@ -2,6 +2,7 @@
 en:
   transfer_matches:
     create:
+      already_matched: "One of these transactions is already part of another transfer."
       success: Transfer created
     new:
       header:

@@ -2,6 +2,7 @@
 it:
   transfer_matches:
     create:
+      already_matched: "Una di queste transazioni fa già parte di un altro bonifico."
       success: Bonifico creato
     new:
       header:
