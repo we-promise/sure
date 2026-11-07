@@ -591,3 +591,38 @@ plan above:
 **Checks at `495fe315b`:** full suite 14,963 runs, 13 failures, all in 2d's baseline (Wise*,
 BinanceItems, Budget, Demo::FinancekitGenerator); the affected system tests (28 runs) pass with
 the pod's Selenium; RuboCop, erb_lint, Biome, Brakeman and Pipelock's diff scan are clean.
+
+**Live testing (2026-11-07, at `3ebdc4931`).** Keys: venus llama.cpp, Gemini (`gemini-3.5-flash-lite`
+on its OpenAI-compatible API) and OpenRouter's free models; the OpenAI key had expired and the
+Anthropic key was refused.
+
+- **Recorded:** `embed_live_test` (granite, 384 dimensions) on 2e, and 2c's `generate_live_test` on
+  qwen3.6, committed to #4775 and merged forward to 2d and 2e.
+- **The sample statements read right:**
+  - **BAC:** 13/13 exact on qwen3.6 (text) and on Gemini (Auto chose text; Images also 13/13).
+  - **Impact scan:** 21/21 on Gemini (Auto chose images); `Unavailable` (`no_text_layer`) on qwen3.6,
+    with nothing sent.
+  - **OpenRouter's free vision models** (Nemotron VL, dots) added the row the scan's two pages
+    disagree on. `reconciles` failed and both were flagged, as the checks are meant to do.
+- **`ProcessPdfJob` on the deprecated ENV** (an OpenAI-compatible URL pointed at Gemini): 21 rows
+  in two of three runs; the third added the disputed row and was flagged.
+  `OPENAI_SUPPORTS_PDF_PROCESSING=false` shows `not_configured`.
+- **Fixed after live testing:**
+  - **Text chunking** built `/.{1,N}/m`, which Onigmo refuses above 100,000, so the text layer
+    failed on any window above about 57k tokens. It now slices the string (`62671e238`).
+  - **The deprecated ENV's 2,048-token baseline** made a scan go one page per request, and the
+    scan's second page, the same rows by type, doubled them. Today's PDF import ignores that
+    baseline, so `extract_pdf`'s model has no window unless `LLM_CONTEXT_WINDOW` is set, and text
+    with an unknown window is chunked at today's 3,000 characters (`3ebdc4931`).
+  - **The `pdftoppm` hang test** counted an unreaped zombie as alive under a parallel run
+    (`235399afe`).
+- **Still not run:**
+  - **OpenAI and Anthropic:** the PDF-file way, 2c's decision 7 and the OpenAI vector store.
+  - **Local OCR:** Unlimited-OCR-2 isn't loaded on venus.
+  - **Mistral and Cohere:** decision 2.
+  - **The migration.**
+
+**Checks at `3ebdc4931`:** full suite 14,967 runs, 14 failures: the 13 in the baseline and
+`Settings::HostingsControllerTest`'s market-data cron check, which races other workers on the
+shared Redis and passes on a re-run. 46 system tests pass. RuboCop, Brakeman and Pipelock's
+diff scan are clean.
