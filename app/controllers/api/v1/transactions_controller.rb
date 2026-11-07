@@ -392,10 +392,13 @@ class Api::V1::TransactionsController < Api::V1::BaseController
 
     # Tags belong to a family: ids are resolved through the caller's own, so
     # another family's tag is refused like one that does not exist.
-    # An id that is not a UUID casts to nil, which matches no tag, so the
-    # count falls short and it is unknown too.
+    # An id that is not a UUID casts to nil and is unknown. It has to be refused
+    # here: with only such ids the list is [nil], and the collection writer
+    # would drop the nil and clear every tag.
     def unknown_tag_ids?
       ids = requested_tag_ids
+      return true if ids.include?(nil)
+
       ids.any? && current_resource_owner.family.tags.where(id: ids).count != ids.size
     end
 
