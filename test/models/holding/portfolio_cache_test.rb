@@ -39,6 +39,18 @@ class Holding::PortfolioCacheTest < ActiveSupport::TestCase
     assert_equal @trade.price, cache.get_price(@security.id, @trade.entry.date).price
   end
 
+  test "ignores a legacy price with an unknown currency and uses the trade price" do
+    bad_price = Security::Price.create!(
+      security: @security, date: @trade.entry.date, price: 999, currency: "USD"
+    )
+    bad_price.update_column(:currency, "")
+
+    assert_difference "DebugLogEntry.count", 1 do
+      cache = Holding::PortfolioCache.new(@account)
+      assert_equal @trade.price, cache.get_price(@security.id, @trade.entry.date).price
+    end
+  end
+
   test "if no price from db or trades, search holdings" do
     Security::Price.delete_all
     Entry.delete_all
