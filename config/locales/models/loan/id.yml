@@ -5,4 +5,5 @@ id:
       models:
         loan:
           invalid_rate_change: Baris perubahan suku bunga memerlukan tanggal berlaku dan suku bunga.
+          invalid_rate_schedule_snapshot: Perubahan suku bunga tidak dapat dibandingkan dengan jadwal yang tersimpan. Muat ulang pinjaman dan terapkan kembali perubahan Anda.
           rate_change_before_origination: Perubahan suku bunga tidak dapat berlaku sebelum pinjaman dimulai.
