@@ -27,6 +27,14 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_requested request
   end
 
+  test "an unsupported provider is a failing result, not an exception" do
+    result = @probe.llm(provider: :mistral, endpoint: "https://api.mistral.example.test/v1", access_token: "token", model: "small")
+
+    assert result.failing?
+    assert_equal "unsupported_provider", result.failure_code.to_s
+    assert_not_requested :any, /mistral/
+  end
+
   test "timeout honors AI_HEALTH_PROBE_TIMEOUT and falls back for missing or non-positive values" do
     ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "42") do
       assert_equal 42, AiHealth::Probe.timeout
@@ -72,42 +80,57 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end
   end
 
-  test "OpenAI-compatible LLM probe calls chat completions instead of the models endpoint" do
+  test "OpenAI-compatible LLM probe lists models too, making no chat call" do
     endpoint = "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1"
-    request = stub_request(:post, "#{endpoint}/chat/completions")
-              .with(
-                headers: { "Authorization" => "Bearer cf-token" },
-                body: {
-                  model: "@cf/zai-org/glm-5.2",
-                  messages: [ { role: "user", content: AiHealth::Probe::CHAT_TEST_INPUT } ]
-                }
-              )
-              .to_return(
-                status: 200,
-                headers: { "Content-Type" => "application/json" },
-                body: { choices: [ { message: { content: "OK" } } ] }.to_json
-              )
+    request = stub_request(:get, "#{endpoint}/models")
+              .with(headers: { "Authorization" => "Bearer cf-token" })
+              .to_return(status: 200, headers: { "Content-Type" => "application/json" },
+                         body: { data: [ { id: "@cf/zai-org/glm-5.2" } ] }.to_json)
+    chat = stub_request(:post, "#{endpoint}/chat/completions")
 
     result = @probe.llm(
       provider: :openai,
       endpoint: endpoint,
       access_token: "cf-token",
-      model: "@cf/zai-org/glm-5.2",
-      openai_compatible: true
+      model: "@cf/zai-org/glm-5.2"
     )
 
     assert result.passing?
-    assert result.checked_at
+    assert_requested request
+    assert_not_requested chat
+  end
+
+  test "LLM probe sends OPENAI_EXTRA_HEADERS, as production calls do" do
+    request = stub_request(:get, "https://llm.example.test/v1/models")
+              .with(headers: { "X-Team" => "home" })
+              .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: [ { id: "qwen3" } ] }.to_json)
+
+    ClimateControl.modify(OPENAI_EXTRA_HEADERS: { "X-Team" => "home" }.to_json) do
+      assert @probe.llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "qwen3").passing?
+    end
     assert_requested request
   end
 
+  test "LLM probe reports a spent balance and a wrong key by name" do
+    stub_request(:get, "https://llm.example.test/v1/models").to_return(
+      { status: 429, headers: { "Content-Type" => "application/json" }, body: { error: { message: "no credits", code: "insufficient_quota" } }.to_json },
+      { status: 401, headers: { "Content-Type" => "application/json" }, body: { error: { message: "Invalid API key" } }.to_json }
+    )
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    spent = AiHealth::Probe.new(cache: @cache, force: true).llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "m")
+    wrong = AiHealth::Probe.new(cache: @cache, force: true).llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "m")
+
+    assert_equal [ :no_credit, 429 ], [ spent.failure_code, spent.http_status ]
+    assert_equal [ :unauthorized, 401 ], [ wrong.failure_code, wrong.http_status ]
+  end
+
   test "Anthropic LLM probe calls the models endpoint and verifies the configured model" do
-    model_info = Struct.new(:id).new("claude-sonnet-4-6")
-    models = mock("models")
-    models.expects(:retrieve).with("claude-sonnet-4-6").returns(model_info)
-    client = mock("anthropic_client")
-    client.expects(:models).returns(models)
-    @probe.stubs(:anthropic_client).returns(client)
+    request = stub_request(:get, "https://api.anthropic.com/v1/models/claude-sonnet-4-6")
+              .with(headers: { "X-Api-Key" => "anthropic-token" })
+              .to_return(status: 200, headers: { "Content-Type" => "application/json" },
+                         body: { id: "claude-sonnet-4-6", type: "model", display_name: "Claude Sonnet 4.6", created_at: "2026-01-01T00:00:00Z" }.to_json)
 
     result = @probe.llm(
       provider: :anthropic,
@@ -117,6 +140,47 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     )
 
     assert result.passing?
+    assert_requested request
+  end
+
+  test "the Anthropic models probe takes its proxy from Sure's resolver, as the calls it checks do" do
+    url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
+    Ai::Transport::Http.stubs(:proxy_for).returns(nil)
+    Ai::Transport::Http.expects(:proxy_for).with(url).returns("http://proxy.example.test:3128").at_least_once
+    stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-sonnet-4-6" }.to_json)
+
+    result = @probe.llm(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "anthropic-token", model: "claude-sonnet-4-6")
+
+    assert result.passing?
+  end
+
+  test "an Anthropic model the API doesn't have fails the models probe" do
+    stub_request(:get, "https://api.anthropic.com/v1/models/claude-nope")
+      .to_return(status: 404, headers: { "Content-Type" => "application/json" },
+                 body: { type: "error", error: { type: "not_found_error", message: "model: claude-nope" } }.to_json)
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.llm(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "anthropic-token", model: "claude-nope")
+
+    assert_not result.passing?
+    assert_equal 404, result.http_status
+    assert_equal "model_not_available", result.failure_code.to_s
+  end
+
+  test "an Anthropic lookup maps by status whatever the body, and a garbled 200 is invalid output" do
+    url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
+    transport = Ai::Transport.for(Ai::Config::Endpoint.new(name: "anthropic", protocol: :anthropic, api_key: "anthropic-token"))
+    model = Ai::Config::Model.new(endpoint: transport.endpoint, name: "claude-sonnet-4-6")
+    {
+      { status: 503, body: { error: "busy" }.to_json } => Ai::Error::Upstream,
+      { status: 404, body: "<html>not here</html>" } => Ai::Error::Refused,
+      { status: 200, body: "<html>sign in</html>" } => Ai::Error::InvalidOutput
+    }.each do |response, error|
+      stub_request(:get, url).to_return(**response, headers: { "Content-Type" => "application/json" })
+
+      assert_raises(error, response.inspect) { transport.probe(model, :models) }
+    end
   end
 
   test "synthetic PDF is valid and contains no customer data" do
@@ -151,7 +215,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       captured = params
       true
     end.returns(response)
-    @probe.stubs(:openai_client).returns(client)
+    Ai::Transport::Http.stubs(:openai_client).returns(client)
     Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).never
 
     result = @probe.pdf_text_extraction(
@@ -191,7 +255,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       captured = params
       true
     end.returns(response)
-    @probe.stubs(:openai_client).returns(client)
+    Ai::Transport::Http.stubs(:openai_client).returns(client)
     Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).once.returns([ "encoded-page" ])
 
     result = @probe.pdf_vision_processing(
@@ -222,7 +286,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       ]
     }
     client = stub(chat: response)
-    @probe.stubs(:openai_client).returns(client)
+    Ai::Transport::Http.stubs(:openai_client).returns(client)
     Provider::Openai::PdfProcessor.any_instance.stubs(:convert_pdf_to_images).returns([ "encoded-page" ])
     Rails.logger.stubs(:error)
     DebugLogEntry.stubs(:capture)
@@ -261,7 +325,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
         extracted_data_schema[:required].empty? &&
         !params[:system_].include?(AiHealth::Probe::PDF_TEST_INSTITUTION)
     end.returns(response)
-    @probe.stubs(:anthropic_client).returns(stub(messages: messages))
+    Ai::Transport::Http.stubs(:anthropic_client).returns(stub(messages: messages))
 
     result = @probe.pdf_vision_processing(
       provider: :anthropic,
@@ -275,7 +339,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
   test "failed LLM probe writes a system-wide debug entry and Rails log without secrets" do
     models = stub(list: { "data" => [ { "id" => "another-model" } ] })
-    @probe.stubs(:openai_client).returns(stub(models: models))
+    Ai::Transport::Http.stubs(:openai_client).returns(stub(models: models))
     endpoint = URI::HTTP.build(
       userinfo: "operator:uri-secret",
       host: "ollama",
@@ -320,7 +384,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     models = mock("models")
     models.expects(:list).once.returns({ "data" => [ { "id" => "gpt-4.1" } ] })
     client = stub(models: models)
-    @probe.stubs(:openai_client).returns(client)
+    Ai::Transport::Http.stubs(:openai_client).returns(client)
 
     2.times do
       result = @probe.llm(
@@ -337,7 +401,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     models = mock("models")
     models.expects(:list).twice.returns({ "data" => [ { "id" => "gpt-4.1" } ] })
     client = stub(models: models)
-    @probe.stubs(:openai_client).returns(client)
+    Ai::Transport::Http.stubs(:openai_client).returns(client)
 
     arguments = {
       provider: :openai,
@@ -348,7 +412,6 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     @probe.llm(**arguments)
 
     forced_probe = AiHealth::Probe.new(cache: @cache, force: true)
-    forced_probe.stubs(:openai_client).returns(client)
     assert forced_probe.llm(**arguments).passing?
   end
 
@@ -383,15 +446,12 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   test "embedding probe sends a small request and verifies dimensions" do
     request = stub_request(:post, "http://ollama.example.test:11434/v1/embeddings")
               .with(
-                body: {
-                  model: "nomic-embed-text",
-                  input: AiHealth::Probe::EMBEDDING_TEST_INPUT
-                }
+                body: hash_including(model: "nomic-embed-text", input: Ai::Transport::Base::PROBE_EMBEDDING_INPUT)
               )
               .to_return(
                 status: 200,
                 headers: { "Content-Type" => "application/json" },
-                body: { data: [ { embedding: [ 0.1, 0.2, 0.3 ] } ] }.to_json
+                body: { data: [ { embedding: [ 0.1, 0.2, 0.3 ] } ], model: "nomic-embed-text", usage: { prompt_tokens: 4, total_tokens: 4 } }.to_json
               )
 
     result = @probe.embedding(
@@ -406,10 +466,10 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   end
 
   test "embedding probe fails when returned dimensions do not match configuration" do
-    response = Struct.new(:body).new({ "data" => [ { "embedding" => [ 0.1, 0.2 ] } ] })
-    client = stub
-    client.stubs(:post).yields(Struct.new(:body).new).returns(response)
-    @probe.stubs(:embedding_client).returns(client)
+    stub_request(:post, "http://ollama:11434/v1/embeddings").to_return(
+      status: 200, headers: { "Content-Type" => "application/json" },
+      body: { data: [ { embedding: [ 0.1, 0.2 ] } ], model: "nomic-embed-text", usage: { prompt_tokens: 4, total_tokens: 4 } }.to_json
+    )
     Rails.logger.stubs(:error)
     DebugLogEntry.stubs(:capture)
 
@@ -432,17 +492,22 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
                 tool = body.dig("tools", 0, "function")
 
                 body["model"] == "tools-model" &&
-                  body.dig("messages", 0, "content") == AiHealth::Probe::FUNCTION_CALL_TEST_INPUT &&
-                  tool["name"] == AiHealth::Probe::FUNCTION_CALL_TEST_TOOL[:name] &&
-                  tool["strict"] == true
+                  body.dig("messages", 0, "content") == Ai::Transport::Base::PROBE_TOOL_PROMPT &&
+                  tool["name"] == Ai::Transport::Base::PROBE_TOOL_NAME &&
+                  tool["parameters"] == Ai::Transport::Base::PROBE_TOOL_SCHEMA.deep_stringify_keys
               }
               .to_return(
                 status: 200,
                 headers: { "Content-Type" => "application/json" },
                 body: {
+                  id: "chatcmpl-1",
+                  model: "tools-model",
                   choices: [
                     {
+                      index: 0,
+                      finish_reason: "tool_calls",
                       message: {
+                        role: "assistant",
                         tool_calls: [
                           { id: "call_1", type: "function", function: { name: "sure_health_check", arguments: "{}" } }
                         ]
@@ -560,12 +625,13 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
               .with { |req|
                 tool = JSON.parse(req.body).dig("tools", 0)
 
-                tool["type"] == "function" && tool["name"] == AiHealth::Probe::FUNCTION_CALL_TEST_TOOL[:name]
+                tool["type"] == "function" && tool["name"] == Ai::Transport::Base::PROBE_TOOL_NAME
               }
               .to_return(
                 status: 200,
                 headers: { "Content-Type" => "application/json" },
-                body: { output: [ { type: "function_call", name: "sure_health_check", arguments: "{}" } ] }.to_json
+                body: { id: "resp_1", model: "gpt-4.1", status: "completed",
+                        output: [ { type: "function_call", id: "fc_1", call_id: "call_1", name: "sure_health_check", arguments: "{}" } ] }.to_json
               )
 
     result = @probe.function_calling(
@@ -581,13 +647,13 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   end
 
   test "function-calling probe reads an Anthropic tool_use block" do
-    response = Struct.new(:content).new([ Struct.new(:type, :name).new(:tool_use, "sure_health_check") ])
-    messages = mock("anthropic_messages")
-    messages.expects(:create).with do |params|
-      params[:tools].first[:input_schema] == AiHealth::Probe::FUNCTION_CALL_TEST_TOOL[:schema] &&
-        !params[:tools].first.key?(:strict)
-    end.returns(response)
-    @probe.stubs(:anthropic_client).returns(stub(messages: messages))
+    request = stub_request(:post, "https://api.anthropic.com/v1/messages")
+              .with { |req| JSON.parse(req.body).dig("tools", 0, "input_schema") == Ai::Transport::Base::PROBE_TOOL_SCHEMA.deep_stringify_keys }
+              .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: {
+                id: "msg_1", type: "message", role: "assistant", model: "claude-sonnet-4-6", stop_reason: "tool_use",
+                content: [ { type: "tool_use", id: "toolu_1", name: "sure_health_check", input: { status: "ok" } } ],
+                usage: { input_tokens: 20, output_tokens: 10 }
+              }.to_json)
 
     result = @probe.function_calling(
       provider: :anthropic,
@@ -597,6 +663,13 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     )
 
     assert result.passing?
+    assert_requested request
+  end
+
+  test "probes build no clients of their own" do
+    source = Rails.root.join("app/models/ai_health/probe.rb").read
+
+    assert_no_match(/(OpenAI::Client|Anthropic::Client|Faraday)\.new\b/, source)
   end
 
   private

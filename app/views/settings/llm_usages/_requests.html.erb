@@ -1,0 +1,23 @@
+<%# locals: (call:) %>
+<%= render DS::Disclosure.new(variant: :inline, body_class: "mt-2") do |disclosure| %>
+  <% disclosure.with_summary_content do %>
+    <span class="flex items-center gap-1 text-xs text-secondary hover:text-primary">
+      <%= t(".summary", count: call.requests_count) %>
+      <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+    </span>
+  <% end %>
+
+  <ol class="space-y-1 text-xs text-secondary">
+    <% call.requests.each_with_index do |request, index| %>
+      <li class="flex flex-wrap gap-x-3">
+        <span><%= t(".request", number: index + 1) %></span>
+        <span class="<%= request.failed? ? "text-destructive" : "text-primary" %>"><%= t(".status.#{request.status}") %></span>
+        <span><%= t(".tokens", prompt: number_with_delimiter(request.prompt_tokens), completion: number_with_delimiter(request.completion_tokens)) %></span>
+        <span><%= request.formatted_cost %></span>
+        <% if request.failed? && request.error_message.present? %>
+          <span class="break-words"><%= request.error_message %></span>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+<% end %>

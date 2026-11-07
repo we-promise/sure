@@ -8,26 +8,15 @@ class AiHealth
   # by Sure. Results are cached briefly because this runs in an admin request,
   # and a failed check is recorded once per cache fill in both operator-facing
   # debug logs and the application log.
+  #
+  # The checks go through the AI transports (Ai::Transport#probe) and the
+  # clients Ai::Transport::Http builds, so a probe exercises the same client
+  # settings, headers, proxy and error mapping as production calls, and can't
+  # drift from them. The probe builds no client of its own.
   class Probe
-    CACHE_NAMESPACE = "ai_health/probes/v1"
+    CACHE_NAMESPACE = "ai_health/probes/v2"
     DEFAULT_CACHE_TTL = 60.seconds
     DEFAULT_TIMEOUT = 5
-    EMBEDDING_TEST_INPUT = "Sure AI health check"
-    CHAT_TEST_INPUT = "Reply with OK."
-    FUNCTION_CALL_TEST_INPUT = "Call the sure_health_check tool with status set to ok."
-    FUNCTION_CALL_TEST_TOOL = {
-      name: "sure_health_check",
-      description: "Records the result of a Sure health check. Always call this tool.",
-      schema: {
-        type: "object",
-        properties: {
-          status: { type: "string", description: "Always the literal string \"ok\"." }
-        },
-        required: [ "status" ],
-        additionalProperties: false
-      }
-    }.freeze
-    FUNCTION_CALL_MAX_RESPONSE_TOKENS = 256
     # 4xx statuses that mean "not now" or "not you" rather than "not this
     # request": a retry, a payment, or a fixed credential clears them, so they
     # are never worth re-asking without the tools.
@@ -88,8 +77,12 @@ class AiHealth
       @cache = cache
     end
 
-    def llm(provider:, endpoint:, access_token:, model:, openai_compatible: false)
-      verification = openai_compatible ? :chat_completion : :models
+    # Whether the model is up, by the endpoint's probe check: :models lists the
+    # server's models and makes no chat call (the default for every endpoint);
+    # :chat sends one tiny request. Which one is the endpoint's
+    # `probe_check`, :models unless the endpoint asks for a chat request.
+    def llm(provider:, endpoint:, access_token:, model:)
+      probe_endpoint = config_endpoint(provider:, base_url: endpoint, api_key: access_token)
 
       run(
         component: "llm",
@@ -97,24 +90,10 @@ class AiHealth
         endpoint: endpoint,
         model: model,
         credential: access_token,
-        verification: verification
+        verification: probe_endpoint.probe_check
       ) do
-        model_available = case provider
-        when :openai
-          if openai_compatible
-            openai_chat_completion_available?(access_token:, endpoint:, model:)
-          else
-            response = openai_client(access_token:, endpoint:).models.list
-            openai_model_ids(response).include?(model)
-          end
-        when :anthropic
-          model_info = anthropic_client(access_token:, endpoint:).models.retrieve(model)
-          model_info.respond_to?(:id) && model_info.id.present?
-        else
-          raise Failure, :unsupported_provider
-        end
-
-        raise Failure, :model_not_available unless model_available
+        raise_unsupported_provider!(provider)
+        transport_for(probe_endpoint).probe(config_model(probe_endpoint, model), probe_endpoint.probe_check, timeout:)
       end
     end
 
@@ -134,18 +113,15 @@ class AiHealth
         credential: access_token,
         verification: use_responses_endpoint ? :responses_tool_call : :chat_tool_call
       ) do
-        tool_called = case provider
-        when :openai
-          if use_responses_endpoint
-            openai_responses_tool_call?(access_token:, endpoint:, model:)
-          else
-            openai_chat_tool_call?(access_token:, endpoint:, model:)
-          end
-        when :anthropic
-          anthropic_tool_call?(access_token:, endpoint:, model:)
-        else
-          raise Failure, :unsupported_provider
-        end
+        raise_unsupported_provider!(provider)
+        probe_endpoint = config_endpoint(provider:, base_url: endpoint, api_key: access_token, responses_api: use_responses_endpoint)
+        transport = transport_for(probe_endpoint)
+        probe_model = config_model(probe_endpoint, model)
+
+        tool_called = confirming_tools_refusal(
+          tools: -> { transport.probe(probe_model, :tools, timeout:) },
+          control: -> { transport.probe(probe_model, :chat, timeout:) }
+        )
 
         raise Failure, :no_tool_call unless tool_called
       end
@@ -184,7 +160,8 @@ class AiHealth
         endpoint: endpoint,
         credential: access_token
       ) do
-        response = openai_client(access_token:, endpoint:).vector_stores.list(parameters: { limit: 1 })
+        client = Ai::Transport::Http.openai_client(config_endpoint(provider: :openai, base_url: endpoint, api_key: access_token), timeout:)
+        response = client.vector_stores.list(parameters: { limit: 1 })
         raise Failure, :invalid_response unless response.is_a?(Hash) && response["data"].is_a?(Array)
       end
     end
@@ -208,13 +185,9 @@ class AiHealth
         credential: access_token,
         dimensions: dimensions
       ) do
-        response = embedding_client(endpoint:, access_token:).post("embeddings") do |request|
-          request.body = { model: model, input: EMBEDDING_TEST_INPUT }
-        end
-
-        vector = response.body.dig("data", 0, "embedding") if response.body.is_a?(Hash)
-        raise Failure, :invalid_response unless vector.is_a?(Array)
-        raise Failure, :dimensions_mismatch unless vector.length == dimensions
+        probe_endpoint = config_endpoint(provider: :openai_compatible, base_url: endpoint, api_key: access_token, extra_headers: {})
+        returned = transport_for(probe_endpoint).probe(config_model(probe_endpoint, model), :embedding, timeout:)
+        raise Failure, :dimensions_mismatch unless returned == dimensions
       end
     end
 
@@ -235,7 +208,7 @@ class AiHealth
             case provider
             when :openai
               Provider::Openai::PdfProcessor.new(
-                openai_client(access_token:, endpoint:),
+                Ai::Transport::Http.openai_client(config_endpoint(provider:, base_url: endpoint, api_key: access_token), timeout:),
                 model: model,
                 pdf_content: synthetic_pdf,
                 custom_provider: openai_compatible,
@@ -246,7 +219,7 @@ class AiHealth
               raise Failure, :unsupported_provider unless processing_mode == :vision
 
               Provider::Anthropic::PdfProcessor.new(
-                anthropic_client(access_token:, endpoint:),
+                Ai::Transport::Http.anthropic_client(config_endpoint(provider:, base_url: endpoint, api_key: access_token), timeout:),
                 model: model,
                 pdf_content: synthetic_pdf
               ).process
@@ -286,94 +259,26 @@ class AiHealth
         result
       end
 
-      def openai_client(access_token:, endpoint:)
-        options = { access_token: access_token, request_timeout: timeout }
-        options[:uri_base] = endpoint if endpoint.present?
-        ::OpenAI::Client.new(**options)
-      end
+      # The endpoint value the transports take, built from what AiHealth resolved.
+      # OpenAI-compatible LLM endpoints send the static OPENAI_EXTRA_HEADERS, as
+      # Provider::Openai does; the embedding endpoint sends none, as
+      # VectorStore::Embeddable doesn't.
+      def config_endpoint(provider:, base_url:, api_key:, responses_api: false, extra_headers: nil)
+        protocol = provider.to_sym == :anthropic ? :anthropic : :compatible
+        extra_headers ||= protocol == :compatible ? Provider::Openai.extra_headers : {}
 
-      def anthropic_client(access_token:, endpoint:)
-        options = { api_key: access_token, max_retries: 0, timeout: timeout }
-        options[:base_url] = endpoint if endpoint.present?
-        ::Anthropic::Client.new(**options)
-      end
-
-      def embedding_client(endpoint:, access_token:)
-        Faraday.new(url: endpoint) do |faraday|
-          faraday.request :json
-          faraday.response :json
-          faraday.response :raise_error
-          faraday.headers["Authorization"] = "Bearer #{access_token}" if access_token.present?
-          faraday.options.timeout = timeout
-          faraday.options.open_timeout = [ timeout, 3 ].min
-        end
-      end
-
-      def openai_model_ids(response)
-        raise Failure, :invalid_response unless response.is_a?(Hash) && response["data"].is_a?(Array)
-
-        response["data"].filter_map { |item| item["id"] || item[:id] }
-      end
-
-      def openai_chat_completion_available?(access_token:, endpoint:, model:)
-        response = openai_client(access_token:, endpoint:).chat(
-          parameters: {
-            model: model,
-            messages: [ { role: "user", content: CHAT_TEST_INPUT } ]
-          }
+        Ai::Config::Endpoint.new(
+          name: provider.to_s, protocol:, base_url:, api_key:, extra_headers:,
+          timeout_seconds: timeout, max_retries: 0, responses_api:
         )
-
-        response.is_a?(Hash) && response["choices"].is_a?(Array) && response["choices"].any?
       end
 
-      def openai_chat_tool_call?(access_token:, endpoint:, model:)
-        client = openai_client(access_token:, endpoint:)
-        parameters = {
-          model: model,
-          messages: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ]
-        }
+      def config_model(endpoint, name) = Ai::Config::Model.new(endpoint:, name:)
 
-        response = confirming_tools_refusal(
-          tools: -> { client.chat(parameters: parameters.merge(tools: [ { type: "function", function: openai_test_tool } ])) },
-          control: -> { client.chat(parameters: parameters) }
-        )
+      def transport_for(endpoint) = Ai::Transport.for(endpoint)
 
-        raise Failure, :invalid_response unless response.is_a?(Hash) && response["choices"].is_a?(Array)
-
-        response.dig("choices", 0, "message", "tool_calls").present?
-      end
-
-      def openai_responses_tool_call?(access_token:, endpoint:, model:)
-        client = openai_client(access_token:, endpoint:)
-        parameters = {
-          model: model,
-          input: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ]
-        }
-
-        response = confirming_tools_refusal(
-          tools: -> { client.responses.create(parameters: parameters.merge(tools: [ { type: "function" }.merge(openai_test_tool) ])) },
-          control: -> { client.responses.create(parameters: parameters) }
-        )
-
-        raise Failure, :invalid_response unless response.is_a?(Hash) && response["output"].is_a?(Array)
-
-        response["output"].any? { |item| item["type"] == "function_call" }
-      end
-
-      def anthropic_tool_call?(access_token:, endpoint:, model:)
-        client = anthropic_client(access_token:, endpoint:)
-        parameters = {
-          model: model,
-          max_tokens: FUNCTION_CALL_MAX_RESPONSE_TOKENS,
-          messages: [ { role: "user", content: FUNCTION_CALL_TEST_INPUT } ]
-        }
-
-        message = confirming_tools_refusal(
-          tools: -> { client.messages.create(**parameters, tools: [ anthropic_test_tool ]) },
-          control: -> { client.messages.create(**parameters) }
-        )
-
-        Array(message.content).any? { |block| block_type(block) == "tool_use" }
+      def raise_unsupported_provider!(provider)
+        raise Failure, :unsupported_provider unless provider.to_sym.in?(%i[openai anthropic])
       end
 
       # A client error can mean "your tools payload" or "your request, tools or
@@ -401,37 +306,6 @@ class AiHealth
         status = http_status(error).to_i
 
         status.between?(400, 499) && !status.in?(TRANSIENT_HTTP_STATUSES)
-      end
-
-      # Mirrors the tool payload `Provider::Openai` sends for assistant
-      # functions, `strict` included, so an endpoint that only chokes on strict
-      # schemas is caught here rather than in chat.
-      def openai_test_tool
-        {
-          name: FUNCTION_CALL_TEST_TOOL[:name],
-          description: FUNCTION_CALL_TEST_TOOL[:description],
-          parameters: FUNCTION_CALL_TEST_TOOL[:schema],
-          strict: true
-        }
-      end
-
-      # Anthropic names the schema differently and rejects OpenAI's `strict`.
-      def anthropic_test_tool
-        {
-          name: FUNCTION_CALL_TEST_TOOL[:name],
-          description: FUNCTION_CALL_TEST_TOOL[:description],
-          input_schema: FUNCTION_CALL_TEST_TOOL[:schema]
-        }
-      end
-
-      def block_type(block)
-        raw = if block.respond_to?(:type)
-          block.type
-        elsif block.is_a?(Hash)
-          block[:type] || block["type"]
-        end
-
-        raw.to_s
       end
 
       def valid_pdf_result?(result)
@@ -494,7 +368,15 @@ class AiHealth
         code = error.failure_code if error.respond_to?(:failure_code)
         return code if code
 
-        error.is_a?(Faraday::TimeoutError) || error.is_a?(Timeout::Error) ? :timeout : :request_failed
+        case error
+        when Ai::Error::ModelMissing then :model_not_available
+        when Ai::Error::NoCredit then :no_credit
+        when Ai::Error::Unauthorized then :unauthorized
+        when Ai::Error::Unreachable then :unreachable
+        when Ai::Error::InvalidOutput then :invalid_response
+        when Ai::Error::Timeout, Faraday::TimeoutError, Timeout::Error then :timeout
+        else :request_failed
+        end
       end
 
       def http_status(error)
