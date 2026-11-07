@@ -751,6 +751,24 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert contributions_builder(account).net_contributions_incomplete?
   end
 
+  # The common in-kind case: a new account funded by a transfer from another
+  # broker on a day with no price. The journal adds 0 to the flows, so the
+  # day's denominator is 0 and the day is suppressed for that too. The row
+  # still says it was an unvalued journal, and that is what counts.
+  test "an unpriced journal into an account that opens at zero makes net contributions incomplete" do
+    account = create_portfolio_account(family: families(:empty))
+    lay_balance account: account, date: @day_one, opening: 0, closing: 0
+    lay_balance account: account, date: @day_one + 1, opening: 0, closing: 500, market_flow: 500
+    security_journal account: account, date: @day_one + 1, qty: 5 # no price that day
+
+    row = Portfolio::DailyReturns.new(account_ids: [ account.id ], currency: account.currency,
+                                      period: Period.custom(start_date: @day_one, end_date: @day_one + 1)).rows.last
+    assert row.unvalued_journal, "precondition: the engine flags the journal"
+    assert_not row.denominator.positive?, "precondition: the day's denominator is not positive"
+
+    assert contributions_builder(account).net_contributions_incomplete?
+  end
+
   # An unvalued withdrawal is left out like an unvalued deposit, but it
   # leaves the line too high, not too low. The check reports both, so it is
   # named for what it knows (a flow is missing), not for a direction.
