@@ -45,6 +45,10 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
   def agent? = agent
   def vector_store? = vector_store
 
+  # What scrubbing removes from any text about this endpoint: the key, and every static header
+  # value long enough to be a credential, since a gateway can take one in a header.
+  def secrets = [ api_key, *extra_headers.values.map(&:to_s).select { _1.length >= 8 } ].compact_blank
+
   # Never shows the key or header values, which can carry credentials.
   def inspect
     "#<Ai::Config::Endpoint #{name} #{protocol} #{location} #{Ai::Instrumentation::Redactor.url(base_url).inspect}>"
