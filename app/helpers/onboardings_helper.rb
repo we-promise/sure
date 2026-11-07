@@ -18,9 +18,10 @@ module OnboardingsHelper
   def onboarding_provider_options
     OnboardingAiConfiguration::PROVIDERS.to_h do |provider|
       label = t("onboardings.tools.provider_setup.providers.#{provider}")
+      key_name = t("onboardings.tools.provider_setup.key_names.#{provider}", default: label)
       [ provider, {
-        label: t("onboardings.tools.provider_setup.key_label", provider: label),
-        placeholder: t("onboardings.tools.provider_setup.key_placeholder", provider: label)
+        label: t("onboardings.tools.provider_setup.key_label", provider: key_name),
+        placeholder: t("onboardings.tools.provider_setup.key_placeholder", provider: key_name)
       } ]
     end
   end

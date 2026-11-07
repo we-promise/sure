@@ -63,8 +63,9 @@ class OnboardingProviderConfigurationTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       get tools_onboarding_url
       assert_response :success
-      assert_select "[role='region'].bg-container", count: 2
-      assert_select "select#provider_configuration_provider option[selected][value='openrouter']", text: "OpenRouter"
+      assert_select "p", text: I18n.t("onboardings.tools.tools_question")
+      assert_select "legend", text: I18n.t("onboardings.tools.ai_question", product_name: Rails.configuration.x.product_name)
+      assert_select "select#provider_configuration_provider option[selected][value='openrouter']", text: "OpenRouter/OpenAI-compatible API"
       assert_select "input#provider_configuration_model:not([name]):not([required])[value='openai/gpt-4.1-mini'][aria-required='true']"
       assert_select "label[for='provider_configuration_model']", text: I18n.t("onboardings.tools.provider_setup.model_label")
       assert_select "[data-onboarding-provider-target='modelFields']:not([hidden])"

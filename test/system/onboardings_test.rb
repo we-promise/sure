@@ -316,19 +316,19 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_selector "input[placeholder='Enter your Anthropic API key']"
     click_button "Save and test connection"
     assert_text "Enter an API key for the selected provider."
-    select "OpenRouter", from: "Provider"
-    assert_field "OpenRouter API key", type: "password", with: ""
-    assert_field "OpenRouter model ID (required)", with: ""
-    assert_text "OpenRouter document search is not configured here."
-    fill_in "OpenRouter API key", with: "test-placeholder-not-a-real-key"
+    select "OpenRouter/OpenAI-compatible API", from: "Provider"
+    assert_field "OpenRouter/OpenAI-compatible API key", type: "password", with: ""
+    assert_field "OpenRouter/OpenAI-compatible API model ID (required)", with: ""
+    assert_text "OpenRouter/OpenAI-compatible API document search is not configured here."
+    fill_in "OpenRouter/OpenAI-compatible API key", with: "test-placeholder-not-a-real-key"
     click_button "Save and test connection"
-    assert_text "Enter an OpenRouter model ID before saving."
-    fill_in "OpenRouter model ID (required)", with: "openai/gpt-4.1-mini"
+    assert_text "Enter an OpenRouter/OpenAI-compatible API model ID before saving."
+    fill_in "OpenRouter/OpenAI-compatible API model ID (required)", with: "openai/gpt-4.1-mini"
     select "Anthropic", from: "Provider"
     assert_no_selector "input#provider_configuration_model"
-    select "OpenRouter", from: "Provider"
-    assert_field "OpenRouter model ID (required)", with: "openai/gpt-4.1-mini"
-    assert_field "OpenRouter API key", with: ""
+    select "OpenRouter/OpenAI-compatible API", from: "Provider"
+    assert_field "OpenRouter/OpenAI-compatible API model ID (required)", with: "openai/gpt-4.1-mini"
+    assert_field "OpenRouter/OpenAI-compatible API key", with: ""
     choose "user_onboarding_ai_mode_none"
     assert_no_selector "input[type='password']"
     assert_selector "#ai-panel-builtin fieldset[disabled]", visible: :all
@@ -397,8 +397,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     OnboardingAiConfiguration.expects(:new).never
     visit tools_onboarding_path
     choose "user_onboarding_ai_mode_builtin"
-    select "OpenRouter", from: "Provider"
-    assert_field "OpenRouter model ID (required)", with: ""
+    select "OpenRouter/OpenAI-compatible API", from: "Provider"
+    assert_field "OpenRouter/OpenAI-compatible API model ID (required)", with: ""
     click_button I18n.t("onboardings.tools.submit")
     assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
     assert_nil @family.reload.ai_configuration
@@ -409,9 +409,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     @family.create_ai_configuration!(provider: "openrouter", model: "anthropic/claude-sonnet-4", api_key: "original-family-key")
     visit settings_ai_prompts_path
     assert_text "Family AI provider"
-    assert_field "OpenRouter API key", with: ""
-    assert_field "OpenRouter model ID (required)", with: "anthropic/claude-sonnet-4"
-    find("summary", text: I18n.t("settings.ai_prompts.show.main_system_prompt.title")).click
+    assert_field "OpenRouter/OpenAI-compatible API key", with: ""
+    assert_field "OpenRouter/OpenAI-compatible API model ID (required)", with: "anthropic/claude-sonnet-4"
     assert_selector "textarea#family_ai_prompt_chat_system"
     page.execute_script <<~JS
       window.providerRequests = 0;
@@ -424,19 +423,19 @@ class OnboardingsTest < ApplicationSystemTestCase
     JS
 
     %w[openai/gpt-4.1-mini anthropic/claude-sonnet-4].each do |model|
-      fill_in "OpenRouter model ID (required)", with: model
+      fill_in "OpenRouter/OpenAI-compatible API model ID (required)", with: model
       assert_text "Not checked here. Any existing saved key is hidden."
-      fill_in "OpenRouter API key", with: "replacement-family-key"
+      fill_in "OpenRouter/OpenAI-compatible API key", with: "replacement-family-key"
       click_button "Save and test connection"
       assert_button "Save and test connection", disabled: true
-      assert_field "OpenRouter model ID (required)", disabled: true
+      assert_field "OpenRouter/OpenAI-compatible API model ID (required)", disabled: true
       page.execute_script <<~JS
         document.querySelector('[data-onboarding-provider-target="button"]').dispatchEvent(new MouseEvent("click", {bubbles: true}));
         window.resolveProvider(new Response(JSON.stringify({status: "saved", provider: "openrouter"}), {status: 200, headers: {"Content-Type": "application/json"}}));
       JS
       assert_text "Provider access checked and encrypted key saved for your family."
-      assert_field "OpenRouter API key", with: "", disabled: false
-      assert_field "OpenRouter model ID (required)", with: model, disabled: false
+      assert_field "OpenRouter/OpenAI-compatible API key", with: "", disabled: false
+      assert_field "OpenRouter/OpenAI-compatible API model ID (required)", with: model, disabled: false
       assert_button "Save and test connection", disabled: false
     end
     assert_equal 2, page.evaluate_script("window.providerRequests")

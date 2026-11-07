@@ -37,10 +37,8 @@
       <% end %>
 
       <div class="space-y-4">
-        <%= render DS::Card.new(class: "p-6 space-y-3", role: :region, aria: { labelledby: "starting-point-title" }, data: { controller: "onboarding-tools" }) do %>
-          <h2 id="starting-point-title" class="text-xs font-medium text-secondary uppercase tracking-wider"><%= t(".numbered_section", number: "01", title: t(".starting_point")) %></h2>
+        <%= render DS::Card.new(class: "p-6 space-y-3", data: { controller: "onboarding-tools" }) do %>
           <p class="text-primary font-medium"><%= t(".tools_question") %></p>
-          <p class="text-sm text-secondary"><%= t(".tools_description") %></p>
           <%= form.hidden_field :starting_tools, multiple: true, value: "" %>
           <%= render DS::Disclosure.new(title: t(".select_tools"), summary_class: "px-3 py-3 rounded-lg border border-primary cursor-pointer flex items-center justify-between bg-container focus-ring min-h-11", data: { onboarding_tools_target: "picker" }) do |disclosure| %>
             <% disclosure.with_summary_content do %>
@@ -71,14 +69,11 @@
           <%= tag.div id: "other-tool-field", data: { onboarding_tools_target: "other" }, hidden: !Array(@user.starting_tools).include?("other") do %>
             <%= form.text_field :starting_tool_other, label: t(".other_label"), placeholder: t(".other_placeholder"), maxlength: 60 %>
           <% end %>
-          <p class="text-xs text-secondary"><%= t(".tools_help") %></p>
         <% end %>
 
-        <%= render DS::Card.new(class: "p-6 space-y-3", role: :region, aria: { labelledby: "ai-preference-title" }) do %>
-          <h2 id="ai-preference-title" class="text-xs font-medium text-secondary uppercase tracking-wider"><%= t(".numbered_section", number: "02", title: t(".ai_preference")) %></h2>
+        <%= render DS::Card.new(class: "p-6 space-y-3") do %>
           <fieldset class="space-y-3">
             <legend class="text-primary font-medium"><%= t(".ai_question", product_name: product_name) %></legend>
-            <p class="text-sm text-secondary"><%= t(".ai_description") %></p>
             <% onboarding_ai_modes.each do |mode| %>
               <label class="flex items-start gap-3 p-4 rounded-lg border border-primary cursor-pointer hover:bg-surface has-[:checked]:bg-surface has-[:checked]:border-solid">
                 <%= form.radio_button :onboarding_ai_mode, mode, checked: (@user.onboarding_ai_mode.presence || "none") == mode, aria: { expanded: (@user.onboarding_ai_mode.presence || "none") == mode, controls: "ai-panel-#{mode}", describedby: "ai-description-#{mode}" }, data: { action: "change->onboarding-choices#selectMode" } %>

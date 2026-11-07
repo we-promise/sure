@@ -29,7 +29,7 @@ class Settings::AiProviderConfigurationTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       get settings_ai_prompts_path
       assert_response :success
-      assert_select "select#provider_configuration_provider option[selected][value='openrouter']", text: "OpenRouter"
+      assert_select "select#provider_configuration_provider option[selected][value='openrouter']", text: "OpenRouter/OpenAI-compatible API"
       assert_select "input#provider_configuration_model:not([name])[value='anthropic/claude-sonnet-4']:not([disabled])"
       assert_select "label[for='provider_configuration_model']", text: I18n.t("onboardings.tools.provider_setup.model_label")
       assert_select "input#provider_configuration_api_key" do |inputs|

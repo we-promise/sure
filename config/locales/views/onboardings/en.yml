@@ -42,11 +42,8 @@ en:
       welcome_title: Make yourself at home.
       welcome_subtitle: A couple of choices to help you get started with %{product_name}.
       errors_title: Please review your choices
-      numbered_section: "%{number} · %{title}"
       selected_count: "%{number} selected"
-      starting_point: Your starting point
-      tools_question: What have you been using?
-      tools_description: Choose the tools you use to manage your household finances.
+      tools_question: What tool(s) do you use to manage your finances?
       select_tools: Select your tools
       search_label: Search finance tools
       search_placeholder: Search tools, spreadsheets, or other…
@@ -54,10 +51,7 @@ en:
       done: Done
       other_label: Other tool (optional)
       other_placeholder: Name of your tool
-      tools_help: Choose all that apply. This helps us suggest a starting point, not assume import compatibility.
-      ai_preference: Your AI preference
       ai_question: How would you like to use %{product_name}?
-      ai_description: You’re in control. Choose what feels right for you.
       default_badge: Default
       ai_modes:
         none:
@@ -80,26 +74,28 @@ en:
         providers:
           openai: OpenAI
           anthropic: Anthropic
-          openrouter: OpenRouter
+          openrouter: OpenRouter/OpenAI-compatible API
+        key_names:
+          openrouter: OpenRouter/OpenAI-compatible
         key_label: "%{provider} API key"
         key_placeholder: "Enter your %{provider} API key"
-        model_label: OpenRouter model ID (required)
+        model_label: OpenRouter/OpenAI-compatible API model ID (required)
         model_placeholder: "For example, openai/gpt-4.1-mini"
-        model_help: Enter the exact model ID from OpenRouter. No model is selected automatically. Model capabilities vary.
-        openrouter_document_search: OpenRouter document search is not configured here. PDF analysis can use extracted text with the selected model; native PDF and vision support are not assumed.
+        model_help: Enter the exact model ID from OpenRouter/OpenAI-compatible API. No model is selected automatically. Model capabilities vary.
+        openrouter_document_search: OpenRouter/OpenAI-compatible API document search is not configured here. PDF analysis can use extracted text with the selected model; native PDF and vision support are not assumed.
         document_index_notice: Document search is available here only with OpenAI. A different OpenAI API key starts a separate index. Existing files and indexes are kept, storage charges may continue, and you may need to upload originals again. Documents are not migrated automatically.
         save_and_test: Save and test connection
-        scope: Saving changes the provider, model, and encrypted API key only for your family, including its LLM-powered features. Other families and installation defaults are unchanged. The access check sends your key to the selected provider’s official API (OpenAI, Anthropic, or OpenRouter). No financial data is sent for this check.
+        scope: Saving changes the provider, model, and encrypted API key only for your family, including its LLM-powered features. Other families and installation defaults are unchanged. The access check sends your key to the selected provider’s official API (OpenAI, Anthropic, or OpenRouter/OpenAI-compatible API). No financial data is sent for this check.
         continue_help: Saving is separate from Next. You can continue without configuring a provider. Existing household assistant settings are not changed.
         unavailable: A family administrator can configure your family’s provider key on a self-hosted installation. Ask your family administrator for help.
         messages:
           unchecked: Not checked here. Any existing saved key is hidden.
           checking: Checking provider access…
           saved: Provider access checked and encrypted key saved for your family.
-          invalid_provider: Choose OpenAI, Anthropic, or OpenRouter.
+          invalid_provider: Choose OpenAI, Anthropic, or OpenRouter/OpenAI-compatible API.
           missing_key: Enter an API key for the selected provider.
-          missing_model: Enter an OpenRouter model ID before saving.
-          invalid_model: Enter a valid OpenRouter model ID, such as openai/gpt-4.1-mini.
+          missing_model: Enter an OpenRouter/OpenAI-compatible API model ID before saving.
+          invalid_model: Enter a valid OpenRouter/OpenAI-compatible API model ID, such as openai/gpt-4.1-mini.
           configuration_changed: Your family’s provider settings changed while this check was running. Review the current settings and try again.
           timed_out: The request timed out. Your family’s provider settings may still have been saved. Reload to review the selected provider and model before trying again.
           connection_failed: Provider access could not be confirmed. The new key was not saved. Check the key and provider model access, then try again.
