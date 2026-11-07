@@ -12,8 +12,9 @@ class LlmUsage < ApplicationRecord
 
   enum :status, { succeeded: "succeeded", failed: "failed", cancelled: "cancelled" }, validate: true
 
-  # The per-provider usage recorders mark a failed request by its error in metadata.
-  before_validation -> { self.status = "failed" }, if: -> { succeeded? && metadata.is_a?(Hash) && metadata["error"].present? }
+  # The per-provider usage recorders mark a failed request by its error in metadata, under a
+  # symbol key until the row is saved and read back.
+  before_validation -> { self.status = "failed" }, if: -> { succeeded? && metadata.is_a?(Hash) && metadata.with_indifferent_access[:error].present? }
 
   scope :for_family, ->(family) { where(family: family) }
   scope :for_operation, ->(operation) { where(operation: operation) }
