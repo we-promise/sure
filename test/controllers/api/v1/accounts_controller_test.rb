@@ -14,7 +14,7 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
       name: "Test Read Key",
       scopes: [ "read" ],
       source: "web",
-      display_key: "test_read_#{SecureRandom.hex(8)}"
+      key: "test_read_#{SecureRandom.hex(8)}"
     )
 
     @other_family_user.api_keys.active.destroy_all
@@ -23,7 +23,7 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
       name: "Other Family Read Key",
       scopes: [ "read" ],
       source: "web",
-      display_key: "other_family_read_#{SecureRandom.hex(8)}"
+      key: "other_family_read_#{SecureRandom.hex(8)}"
     )
   end
 
@@ -41,7 +41,7 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
       name: "No Read Key",
       scopes: [],
       source: "web",
-      display_key: "no_read_#{SecureRandom.hex(8)}"
+      key: "no_read_#{SecureRandom.hex(8)}"
     )
     # Valid persisted API keys can only be read/read_write; this intentionally
     # bypasses validations to exercise the runtime insufficient-scope guard.
@@ -166,7 +166,7 @@ class Api::V1::AccountsControllerTest < ActionDispatch::IntegrationTest
       name: "No Read Show Key",
       scopes: [],
       source: "web",
-      display_key: "no_read_show_#{SecureRandom.hex(8)}"
+      key: "no_read_show_#{SecureRandom.hex(8)}"
     )
     # Valid persisted API keys can only be read/read_write; this intentionally
     # bypasses validations to exercise the runtime insufficient-scope guard.

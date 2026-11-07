@@ -18,14 +18,14 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
       user: @user,
       name: "Test Read-Write Key",
       scopes: [ "read_write" ],
-      display_key: "test_rw_#{SecureRandom.hex(8)}"
+      key: "test_rw_#{SecureRandom.hex(8)}"
     )
 
     @read_only_api_key = ApiKey.create!(
       user: @user,
       name: "Test Read-Only Key",
       scopes: [ "read" ],
-      display_key: "test_ro_#{SecureRandom.hex(8)}",
+      key: "test_ro_#{SecureRandom.hex(8)}",
       source: "mobile"
     )
 
@@ -191,7 +191,7 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     AccountShare.create!(account: @account, user: other, permission: "read_only")
     other.api_keys.active.destroy_all
     key = ApiKey.create!(user: other, name: "Viewer RW", scopes: [ "read_write" ],
-                         display_key: "test_v_#{SecureRandom.hex(8)}")
+                         key: "test_v_#{SecureRandom.hex(8)}")
     Redis.new.del("api_rate_limit:#{key.id}")
 
     post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(key), as: :json

@@ -19,7 +19,7 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     @api_key = ApiKey.create!(
       user: @user,
       name: "Test API Key",
-      display_key: @plain_api_key,
+      key: @plain_api_key,
       scopes: [ "read_write" ]
     )
 
@@ -35,14 +35,14 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
   test "uses each authenticated family's timezone in callbacks and actions without leaking it" do
     other_user = users(:empty)
     other_key = ApiKey.create!(user: other_user, name: "Timezone Read", scopes: [ "read" ],
-      display_key: "timezone_#{SecureRandom.hex(8)}")
+      key: "timezone_#{SecureRandom.hex(8)}")
     @user.family.update!(timezone: "America/Los_Angeles")
     other_user.family.update!(timezone: "Asia/Tokyo")
 
     Time.use_zone("UTC") do
       travel_to Time.utc(2024, 3, 1, 1) do
         [ [ @plain_api_key, "America/Los_Angeles", "2024-02-29" ],
-          [ other_key.display_key, "Asia/Tokyo", "2024-03-01" ] ].each do |key, zone, date|
+          [ other_key.plain_key, "Asia/Tokyo", "2024-03-01" ] ].each do |key, zone, date|
           get "/api/v1/test", headers: { "X-Api-Key" => key }
           assert_response :success
           assert_equal zone, response.parsed_body["time_zone"]
@@ -218,12 +218,12 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     limited_api_key = ApiKey.create!(
       user: @user,
       name: "Limited API Key",
-      display_key: "limited_key_#{SecureRandom.hex(8)}",
+      key: "limited_key_#{SecureRandom.hex(8)}",
       scopes: [ "read" ]  # Only read scope
     )
 
     get "/api/v1/test_scope_required", params: {}, headers: {
-      "X-Api-Key" => limited_api_key.display_key
+      "X-Api-Key" => limited_api_key.plain_key
     }
 
     assert_response :forbidden
@@ -253,13 +253,13 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     read_only_key = ApiKey.create!(
       user: @user,
       name: "Read Only API Key",
-      display_key: "read_only_key_#{SecureRandom.hex(8)}",
+      key: "read_only_key_#{SecureRandom.hex(8)}",
       scopes: [ "read" ]  # Only read scope, no write
     )
 
     # Try to access the write-requiring endpoint with read-only key
     get "/api/v1/test_scope_required", params: {}, headers: {
-      "X-Api-Key" => read_only_key.display_key
+      "X-Api-Key" => read_only_key.plain_key
     }
 
     assert_response :forbidden
@@ -352,13 +352,13 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     other_user_api_key = ApiKey.create!(
       user: other_user,
       name: "Other User API Key",
-      display_key: "other_user_key_#{SecureRandom.hex(8)}",
+      key: "other_user_key_#{SecureRandom.hex(8)}",
       scopes: [ "read" ]
     )
 
     # Try to access data from a different family
     get "/api/v1/test_family_access", params: {}, headers: {
-      "X-Api-Key" => other_user_api_key.display_key
+      "X-Api-Key" => other_user_api_key.plain_key
     }
 
     assert_response :forbidden
@@ -446,7 +446,7 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
       user: other_user,
       name: "Other Test API Key",
       scopes: [ "read" ],
-      display_key: "other_rate_test_#{SecureRandom.hex(8)}"
+      key: "other_rate_test_#{SecureRandom.hex(8)}"
     )
 
     begin
@@ -457,7 +457,7 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
       end
 
       # Should still be able to make requests with second API key
-      get "/api/v1/test", headers: { "X-Api-Key" => other_api_key.display_key }
+      get "/api/v1/test", headers: { "X-Api-Key" => other_api_key.plain_key }
       assert_response :success
       assert_equal "99", response.headers["X-RateLimit-Remaining"]
     ensure

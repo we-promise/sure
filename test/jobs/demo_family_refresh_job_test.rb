@@ -47,7 +47,7 @@ class DemoFamilyRefreshJobTest < ActiveJob::TestCase
 
       generator = mock
       generator.expects(:generate_default_data!).with(skip_clear: true, email: @demo_email) do
-        assert ApiKey.find_by(display_key: ApiKey::DEMO_MONITORING_KEY)
+        assert ApiKey.demo_monitoring.first
       end
       Demo::Generator.expects(:new).returns(generator)
 

@@ -108,7 +108,7 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     assert_equal @admin_user, monitoring_key.user
     assert_equal "monitoring", monitoring_key.source
     assert_equal [ "read" ], monitoring_key.scopes
-    assert_equal 1, ApiKey.where(display_key: ApiKey::DEMO_MONITORING_KEY).count
+    assert_equal 1, ApiKey.demo_monitoring.count
   end
 
   test "monitoring api key creation reuses the current admin user's key" do
@@ -122,7 +122,7 @@ class Demo::GeneratorTest < ActiveSupport::TestCase
     monitoring_key = Demo::Generator.new.send(:create_monitoring_api_key!, @family)
 
     assert_equal existing_key, monitoring_key
-    assert_equal 1, ApiKey.where(display_key: ApiKey::DEMO_MONITORING_KEY).count
+    assert_equal 1, ApiKey.demo_monitoring.count
   end
 
   test "sample rules come in groups and are all switched off" do

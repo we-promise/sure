@@ -14,7 +14,17 @@ class Settings::ApiKeysController < ApplicationController
   end
 
   def show
-    @newly_created = params[:newly_created].present?
+    # The secret is never stored, so it is only available on the request right
+    # after creation (see #create). Tie the secret to the specific key ID so
+    # concurrent requests or viewing another key does not leak or consume it.
+    if flash[:api_key_secret_id] == @api_key.id
+      @plain_key = flash[:api_key_secret]
+    elsif flash[:api_key_secret_id].present?
+      flash.keep(:api_key_secret)
+      flash.keep(:api_key_secret_id)
+    end
+
+    @newly_created = @plain_key.present?
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.api_keys"), settings_api_keys_path ],
@@ -33,7 +43,9 @@ class Settings::ApiKeysController < ApplicationController
 
     if @api_key.save
       flash[:notice] = t(".success")
-      redirect_to settings_api_key_path(@api_key, newly_created: true)
+      flash[:api_key_secret] = @plain_key
+      flash[:api_key_secret_id] = @api_key.id
+      redirect_to settings_api_key_path(@api_key)
     else
       render :new, status: :unprocessable_entity
     end
