@@ -5,4 +5,5 @@ zh-CN:
       models:
         loan:
           invalid_rate_change: 利率变更行需要同时填写生效日期和利率。
+          invalid_rate_schedule_snapshot: 无法将利率变更与已保存的利率表进行比对。请重新加载贷款后再次应用你的修改。
           rate_change_before_origination: 利率变更不能在贷款发放日之前生效。
