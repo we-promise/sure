@@ -109,10 +109,11 @@ class Balance::BaseCalculator
       income_inflow_sum = income_trades.select { |e| e.amount < 0 }.sum(&:amount)
       income_outflow_sum = income_trades.select { |e| e.amount >= 0 }.sum(&:amount)
 
-      if account.balance_type == :non_cash && account.accountable_type == "Loan"
-        non_cash_inflows = txn_inflow_sum.abs
-        non_cash_outflows = txn_outflow_sum
-      elsif account.balance_type != :non_cash
+      if account.balance_type == :non_cash
+        non_cash_txns = non_cash_balance_transactions(entries)
+        non_cash_inflows = non_cash_txns.select { |e| e.amount < 0 }.sum(&:amount).abs
+        non_cash_outflows = non_cash_txns.select { |e| e.amount >= 0 }.sum(&:amount)
+      else
         cash_inflows = txn_inflow_sum.abs + trade_cash_inflow_sum.abs + income_inflow_sum.abs
         cash_outflows = txn_outflow_sum + trade_cash_outflow_sum + income_outflow_sum
 
@@ -141,15 +142,43 @@ class Balance::BaseCalculator
 
     def derive_non_cash_balance(non_cash_balance, date, direction: :forward)
       entries = sync_cache.get_entries(date)
-      # Loans are a special case (loan payment reducing principal, which is non-cash)
-      if account.balance_type == :non_cash && account.accountable_type == "Loan"
-        non_cash_balance + signed_entry_flows(entries)
+      if account.balance_type == :non_cash
+        non_cash_balance + signed_entry_flows(non_cash_balance_transactions(entries))
       elsif account.balance_type == :investment
         # For reverse calculations, we need the previous day's holdings
         target_date = direction == :forward ? date : date.prev_day
         holdings_value_for_date(target_date)
       else
         non_cash_balance
+      end
+    end
+
+    # Non-cash accounts are valued, so their transactions normally leave the balance alone.
+    # Loans are the exception (a payment reduces the principal). Accounts that count transfers
+    # keep their transfer legs and transfer fees: money moved in or out of them would otherwise
+    # leave the source account and vanish from net worth.
+    def non_cash_balance_transactions(entries)
+      if account.accountable_type == "Loan"
+        entries.select(&:transaction?)
+      elsif account.balance_counts_transfers?
+        entries.select { |e| e.transaction? && confirmed_transfer_transaction_ids.include?(e.entryable_id) }
+      else
+        []
+      end
+    end
+
+    # Legs and fees of confirmed transfers only: a transfer kind alone (a pending
+    # match, an unmatched provider leg) is no money moved from another account.
+    def confirmed_transfer_transaction_ids
+      @confirmed_transfer_transaction_ids ||= begin
+        transaction_ids = account.entries.where(entryable_type: "Transaction").select(:entryable_id)
+        confirmed = Transfer.confirmed
+
+        Set.new(
+          confirmed.where(inflow_transaction_id: transaction_ids).pluck(:inflow_transaction_id) +
+          confirmed.where(outflow_transaction_id: transaction_ids).pluck(:outflow_transaction_id) +
+          Transaction.where(id: transaction_ids, transfer_id: confirmed.select(:id)).pluck(:id)
+        )
       end
     end
 

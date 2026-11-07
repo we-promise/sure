@@ -15,6 +15,7 @@ de:
         rule/action:
           attributes:
             value:
+              transfer_target_not_writable: "muss ein Konto sein, das du bearbeiten darfst"
               invalid_config: "muss eine gültige Split-Konfiguration sein"
               invalid_split_count: "muss zwischen %{min} und %{max} Splits enthalten"
               split_name_required: "Split #%{index} hat keinen Namen"

@@ -3,7 +3,7 @@ hu:
   other_assets:
     edit:
       edit: '%{account} szerkesztése'
-      balance_tracking_info: 'Az egyéb vagyonelemek értékét manuális értékelésekkel lehet követni az „Új egyenleg” funkcióval, nem tranzakciókkal. A pénzforgalom nem befolyásolja a számlaegyenleget.'
+      balance_tracking_info: 'Az egyéb vagyonelemek értékét manuális értékelésekkel lehet követni az „Új egyenleg” funkcióval, nem tranzakciókkal. A többi számládról érkező vagy oda küldött átutalások viszont módosítják az egyenleget.'
     new:
       title: Add meg a vagyonelem adatait
-      balance_tracking_info: 'Az egyéb vagyonelemek értékét manuális értékelésekkel lehet követni az „Új egyenleg” funkcióval, nem tranzakciókkal. A pénzforgalom nem befolyásolja a számlaegyenleget.'
+      balance_tracking_info: 'Az egyéb vagyonelemek értékét manuális értékelésekkel lehet követni az „Új egyenleg” funkcióval, nem tranzakciókkal. A többi számládról érkező vagy oda küldött átutalások viszont módosítják az egyenleget.'

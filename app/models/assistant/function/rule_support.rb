@@ -248,6 +248,9 @@ module Assistant::Function::RuleSupport
     # nil means free text (no fixed list of values).
     def allowed_values(key)
       case key
+      # A confirmed transfer moves the target's balance, so like the rule form
+      # only accounts the user can write to.
+      when "set_as_transfer_or_payment" then family.accounts.writable_by(user).pluck(:id).map(&:to_s)
       when *ACCOUNT_KEYS then accessible_accounts.pluck(:id).map(&:to_s)
       when *CATEGORY_KEYS then family.categories.pluck(:id).map(&:to_s)
       when *TAG_KEYS then family.tags.pluck(:id).map(&:to_s)
@@ -260,6 +263,7 @@ module Assistant::Function::RuleSupport
 
     def value_hint(key)
       case key
+      when "set_as_transfer_or_payment" then "Use an account id from get_accounts that you can edit (not a read-only share)."
       when *ACCOUNT_KEYS then "Use an account id from get_accounts."
       when *CATEGORY_KEYS then "Use a category id from get_categories."
       when *TAG_KEYS then "Use tag ids from get_tags."

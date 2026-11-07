@@ -3,11 +3,11 @@ ca:
   other_assets:
     edit:
       balance_tracking_info: Els altres actius es segueixen mitjançant valoracions
-        manuals utilitzant 'Nou saldo', no transaccions. El flux de caixa no afectarà
-        el saldo del compte.
+        manuals utilitzant 'Nou saldo', no transaccions. Les transferències des de o cap als
+        teus altres comptes sí que canvien el saldo.
       edit: Edita %{account}
     new:
       balance_tracking_info: Els altres actius es segueixen mitjançant valoracions
-        manuals utilitzant 'Nou saldo', no transaccions. El flux de caixa no afectarà
-        el saldo del compte.
+        manuals utilitzant 'Nou saldo', no transaccions. Les transferències des de o cap als
+        teus altres comptes sí que canvien el saldo.
       title: Introdueix els detalls de l'actiu

@@ -762,6 +762,88 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "cannot unlink a confirmed transfer from one side when the other side's balance counts transfers" do
+    other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: other_liability, status: "confirmed")
+
+    assert_no_difference -> { Transfer.count } do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+      delete transfer_url(transfer)
+    end
+
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "cannot delete a confirmed transfer leg when the other side's balance counts transfers" do
+    other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: other_liability, status: "confirmed")
+    leg = transfer.outflow_transaction.entry
+
+    assert_no_difference [ -> { Transfer.count }, -> { Entry.count } ] do
+      delete transaction_url(leg)
+      post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ leg.id ] } }
+    end
+  end
+
+  test "cannot delete a split whose child is a confirmed transfer leg into an account that counts transfers" do
+    other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    parent = create_transaction(account: accounts(:depository), amount: 250)
+    child = parent.split!([ { name: "Payment", amount: 200 }, { name: "Groceries", amount: 50 } ]).first
+    child.transaction.update!(kind: "funds_movement")
+    inflow = create_transaction(account: other_liability, amount: -200, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: child.transaction, inflow_transaction: inflow.transaction, status: "confirmed")
+
+    assert_no_difference [ -> { Transfer.count }, -> { Entry.count } ] do
+      delete transaction_url(parent)
+      post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ parent.id ] } }
+      delete transaction_split_url(parent)
+      patch transaction_split_url(parent), params: { split: { splits: { "0" => { name: "All", amount: "250" } } } }
+    end
+    assert_equal accounts(:other_liability).name, Transfer.find_by!(outflow_transaction: child.transaction).to_account.name
+  end
+
+  test "deleting a transfer leg resyncs the account whose fee it removes" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: accounts(:credit_card), status: "confirmed")
+    attach_fee(transfer, account: accounts(:investment))
+    Sync.where(syncable: accounts(:investment)).delete_all
+
+    assert_difference -> { accounts(:investment).syncs.count }, 1 do
+      delete transaction_url(transfer.outflow_transaction.entry)
+    end
+  end
+
+  test "cannot delete a transfer leg whose fee sits on an account the user can't write" do
+    member_loan = accounts(:loan).tap { |account| account.update!(owner: users(:family_member)) }
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: accounts(:credit_card), status: "confirmed")
+    fee = attach_fee(transfer, account: member_loan)
+    leg = transfer.outflow_transaction.entry
+
+    assert_no_difference [ -> { Transfer.count }, -> { Entry.count } ] do
+      delete transaction_url(leg)
+      post transactions_bulk_deletion_url, params: { bulk_delete: { entry_ids: [ leg.id ] } }
+    end
+    assert Transaction.exists?(fee.id)
+  end
+
+  test "editing the amount of a confirmed transfer resyncs both accounts" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: accounts(:other_liability), status: "confirmed")
+    Sync.where(syncable: [ accounts(:depository), accounts(:other_liability) ]).delete_all
+
+    assert_difference [ -> { accounts(:depository).syncs.count }, -> { accounts(:other_liability).syncs.count } ], 1 do
+      patch transfer_url(transfer), params: { transfer: { amount: 300 } }
+    end
+    assert_equal 300, transfer.outflow_transaction.entry.reload.amount
+  end
+
+  test "can reject a pending match from one side when the other side's balance counts transfers" do
+    other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: other_liability)
+
+    assert_difference -> { Transfer.count }, -1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+  end
+
   test "cannot unlink a match from one side when a fee sits in the other account" do
     transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
     writable_fee = attach_fee(transfer, account: accounts(:depository))

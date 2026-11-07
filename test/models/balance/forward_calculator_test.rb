@@ -473,7 +473,121 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
-  test "non cash accounts can only use valuations and transactions will be recorded but ignored for balance calculation" do
+  # Other assets and liabilities are valued, but a transfer leg moves money that left (or reached) another
+  # account. Ignoring it would make that money vanish from net worth.
+  test "other asset and other liability transfers affect non cash balance, other transactions and unmatched transfer kinds do not" do
+    { OtherLiability => 2000, OtherAsset => 3000 }.each do |account_type, expected_balance|
+      account = create_account_with_ledger(
+        account: { type: account_type, currency: "USD" },
+        entries: [
+          { type: "opening_anchor", date: 2.days.ago.to_date, balance: 2500 },
+          { type: "transaction", date: 1.day.ago.to_date, amount: -500, kind: "funds_movement", transfer: true },
+          { type: "transaction", date: 1.day.ago.to_date, amount: -100 },
+          { type: "transaction", date: 1.day.ago.to_date, amount: -200, kind: "funds_movement" }
+        ]
+      )
+
+      calculated = Balance::ForwardCalculator.new(account).calculate
+
+      assert_calculated_ledger_balances(
+        calculated_data: calculated,
+        expected_data: [
+          {
+            date: 2.days.ago.to_date,
+            legacy_balances: { balance: 2500, cash_balance: 0 },
+            balances: { start: 2500, start_cash: 0, start_non_cash: 2500, end_cash: 0, end_non_cash: 2500, end: 2500 },
+            flows: 0,
+            adjustments: 0
+          },
+          {
+            date: 1.day.ago.to_date,
+            legacy_balances: { balance: expected_balance, cash_balance: 0 },
+            balances: { start: 2500, start_cash: 0, start_non_cash: 2500, end_cash: 0, end_non_cash: expected_balance, end: expected_balance },
+            flows: { non_cash_inflows: 500, non_cash_outflows: 0, cash_inflows: 0, cash_outflows: 0 },
+            adjustments: 0
+          }
+        ]
+      )
+    end
+  end
+
+  test "a pending transfer match leaves other asset and other liability balances unchanged" do
+    [ OtherLiability, OtherAsset ].each do |account_type|
+      account = create_account_with_ledger(
+        account: { type: account_type, currency: "USD" },
+        entries: [
+          { type: "opening_anchor", date: 2.days.ago.to_date, balance: 2500 },
+          { type: "transaction", date: 1.day.ago.to_date, amount: -500, kind: "funds_movement", transfer: :pending }
+        ]
+      )
+
+      calculated = Balance::ForwardCalculator.new(account).calculate
+      day = calculated.find { |b| b.date == 1.day.ago.to_date }
+
+      assert_equal 2500, day.balance, account_type.name
+      assert_equal 0, day.non_cash_inflows, account_type.name
+    end
+  end
+
+  test "a transfer paying off an other liability brings its balance to zero" do
+    account = create_account_with_ledger(
+      account: { type: OtherLiability, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 2.days.ago.to_date, balance: 2500 } ]
+    )
+    source = families(:empty).accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+
+    Transfer::Creator.new(
+      family: families(:empty),
+      source_account_id: source.id,
+      destination_account_id: account.id,
+      date: 1.day.ago.to_date,
+      amount: 2500
+    ).create
+
+    calculated = Balance::ForwardCalculator.new(account.reload).calculate
+
+    assert_equal 0, calculated.find { |b| b.date == 1.day.ago.to_date }.balance
+  end
+
+  test "a destination fee on a transfer into an other asset lowers its balance" do
+    account = create_account_with_ledger(
+      account: { type: OtherAsset, currency: "USD" },
+      entries: [ { type: "opening_anchor", date: 2.days.ago.to_date, balance: 2500 } ]
+    )
+    source = families(:empty).accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+
+    Transfer::Creator.new(
+      family: families(:empty),
+      source_account_id: source.id,
+      destination_account_id: account.id,
+      date: 1.day.ago.to_date,
+      amount: 500,
+      destination_fee_amount: 10
+    ).create
+
+    calculated = Balance::ForwardCalculator.new(account.reload).calculate
+
+    assert_equal 2990, calculated.find { |b| b.date == 1.day.ago.to_date }.balance
+  end
+
+  test "property and vehicle accounts ignore transfers for balance calculation" do
+    [ Property, Vehicle ].each do |account_type|
+      account = create_account_with_ledger(
+        account: { type: account_type, currency: "USD" },
+        entries: [
+          { type: "opening_anchor", date: 2.days.ago.to_date, balance: 500000 },
+          { type: "transaction", date: 1.day.ago.to_date, amount: -10000, kind: "funds_movement" },
+          { type: "transaction", date: 1.day.ago.to_date, amount: -20000, kind: "funds_movement", transfer: true }
+        ]
+      )
+
+      calculated = Balance::ForwardCalculator.new(account).calculate
+
+      assert_equal 500000, calculated.find { |b| b.date == 1.day.ago.to_date }.balance, account_type.name
+    end
+  end
+
+  test "non cash accounts ignore standard transactions for balance calculation" do
     [ Property, Vehicle, OtherAsset, OtherLiability ].each do |account_type|
       account = create_account_with_ledger(
         account: { type: account_type, currency: "USD" },

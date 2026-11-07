@@ -57,13 +57,14 @@ module LedgerTestingHelper
         # Use account currency if not specified
         currency = entry_data[:currency] || created_account.currency
 
-        created_account.entries.create!(
+        entry = created_account.entries.create!(
           name: "Transaction",
           date: entry_data[:date],
           amount: entry_data[:amount],
           currency: currency,
-          entryable: Transaction.new
+          entryable: Transaction.new(**entry_data.slice(:kind))
         )
+        link_confirmed_transfer(entry, status: entry_data[:transfer] == :pending ? "pending" : "confirmed") if entry_data[:transfer]
       when "trade"
         # Find or create security
         security = Security.find_or_create_by!(ticker: entry_data[:ticker]) do |s|
@@ -329,5 +330,18 @@ module LedgerTestingHelper
       assert_includes calculated_dates, date,
         "Expected balance for #{date} was not in calculated data"
     end
+  end
+
+  # Pairs the entry with an opposite leg in a separate cash account, as a confirmed transfer.
+  def link_confirmed_transfer(entry, status: "confirmed")
+    counterpart_account = entry.account.family.accounts.create!(
+      name: "Transfer counterpart", balance: 0, currency: entry.currency, accountable: Depository.new
+    )
+    counterpart = counterpart_account.entries.create!(
+      name: "Transfer", date: entry.date, amount: -entry.amount, currency: entry.currency,
+      entryable: Transaction.new(kind: "funds_movement")
+    )
+    inflow, outflow = entry.amount.negative? ? [ entry, counterpart ] : [ counterpart, entry ]
+    Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction, status: status)
   end
 end
