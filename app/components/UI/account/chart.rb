@@ -210,9 +210,10 @@ class UI::Account::Chart < ApplicationComponent
   end
 
   # The legend names a dashed line, so it shows only when there is one to
-  # draw: the controller skips the line when the comparison has no points.
+  # draw: the chart controller draws lines only from two points. Comparison
+  # points sit on the value series' dates, so two of them means two values.
   def show_net_contributions_legend?
-    show_net_contributions? && series.any? && net_contributions_comparison[:values].any?
+    show_net_contributions? && series.any? && net_contributions_comparison[:values].size >= 2
   end
 
   # A flow the line counts could not be valued (no exchange rate, or a

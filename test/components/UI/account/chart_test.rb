@@ -360,6 +360,20 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     refute_selector "[data-net-contributions-incomplete]"
   end
 
+  # The chart draws a line only from two points, so a one-day range draws
+  # neither, and a legend naming them would describe nothing on screen.
+  test "a one-day range shows no net contributions legend" do
+    day_one = Date.new(2026, 3, 2)
+    account = create_portfolio_account(families(:empty), balance: 10_000)
+    create_balance(account: account, date: day_one, balance: 10_000, start_cash_balance: 10_000)
+
+    render_inline(UI::Account::Chart.new(account: account, period: Period.custom(start_date: day_one, end_date: day_one), view: "balance"))
+
+    comparison = JSON.parse(page.find("#lineChart")["data-time-series-chart-comparison-value"])
+    assert_equal 1, comparison["values"].size, "precondition: one comparison point"
+    refute_selector "[data-net-contributions-legend]"
+  end
+
   # Zero net contributions under a non-zero value make the difference's
   # percentage infinite. ActiveSupport writes a non-finite Float as null,
   # so the attribute stays valid JSON and the controller leaves the
