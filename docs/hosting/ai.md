@@ -1682,9 +1682,18 @@ reach Sure.
 - Embeddings go through the same HTTP stack as every other AI call (proxy, retries, usage rows
   on the usage page under `embed` and `search_documents`). pgvector's column size comes from
   `EMBEDDING_DIMENSIONS`, as before.
-- Searches drop matches scoring under 0.3, on pgvector and on OpenAI's vector store, so a
-  question about one statement no longer gets another as context. The threshold is a starting
-  point; embedding models score differently.
+- Searches drop matches scoring under 0.3, the default threshold, on OpenAI's vector store and
+  on pgvector, so a question about one statement no longer gets another as context on OpenAI's
+  store. **The threshold is calibrated on OpenAI's store** (a relevant hit scored 0.84, wrong ones
+  0.14–0.17). pgvector's scores depend on the embedding model: in testing, unrelated text scored
+  0.47 on Gemini's `gemini-embedding-001` and 0.77 on `granite-embedding-small-english-r2`, so
+  0.3 rarely filters there. **From a later release the threshold is a setting per embedding
+  model**, for both stores, with 0.3 as the default.
+- **Embedding dimensions must still match the chunks table.** Sure doesn't ask the model for a
+  size (some models refuse it). A model that returns a different size fails clearly
+  (`expected 1024 dimensions, got 3072` in the debug log) and nothing is stored. Resolving a
+  model whose size doesn't match the database comes in a later release; until then, see
+  [Troubleshooting pgvector and embeddings](#troubleshooting-pgvector-and-embeddings) below.
 - **OpenAI vector store:** documents show *processing* until OpenAI has indexed them, and
   *unreadable* when the index is empty (a scan: OpenAI's file search reads text layers only).
   Removing a document, or deleting the family, now deletes its files from OpenAI's Files API.

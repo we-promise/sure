@@ -297,6 +297,11 @@ flowchart LR
 - **Never drop an extraction.** One that fails its checks is kept and flagged for review.
 - **Embeddings come from the route's first embedding model, with no failover**: another model's
   vectors don't compare with the stored ones.
+- **`MIN_SCORE` (0.3) is a default, not a constant to tune in code.** It's calibrated on OpenAI's
+  vector store; pgvector's scores depend on the embedding model, and 0.3 rarely filters there. PR 7
+  makes the threshold a setting per embedding model for both stores, and resolves a model whose
+  dimensions don't match the chunks table. Until then a mismatch is `InvalidOutput`, and Sure
+  sends no `dimensions` (calls by @josh-sanders during development of PR #4440).
 - **Render pages only through `Pdf::PageImages`**, which keeps poppler in a hardened child
   process; don't call `pdftoppm` or libvips's PDF loader yourself.
 

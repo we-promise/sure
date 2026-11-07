@@ -18,7 +18,9 @@ class VectorStore::Pgvector < VectorStore::Base
 
   TABLE_NAME = "vector_store_chunks"
   # Cosine similarity under which a chunk isn't a match: every search used to return something
-  # (spike). A starting point, not a rule; embedding models differ.
+  # (spike). The default, calibrated on OpenAI's store; embedding models score differently
+  # (unrelated text: 0.47 on gemini-embedding-001, 0.77 on granite), so it becomes a setting per
+  # embedding model in PR 7 (call by @josh-sanders during development of PR #4440).
   MIN_SCORE = 0.3
 
   # True when this adapter can actually operate: the chunks table already

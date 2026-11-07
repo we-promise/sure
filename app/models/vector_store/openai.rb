@@ -11,8 +11,8 @@
 #   stay after the document or the family is gone;
 # - a search drops results under MIN_SCORE: every search used to return the one indexed file.
 class VectorStore::Openai < VectorStore::Base
-  # The spike's relevant hit scored 0.84 and the wrong ones 0.14-0.17: a starting point, not a
-  # rule.
+  # The spike's relevant hit scored 0.84 and the wrong ones 0.14-0.17. The default; a setting per
+  # embedding model from PR 7 (call by @josh-sanders during development of PR #4440).
   MIN_SCORE = 0.3
 
   def initialize(endpoint:)
