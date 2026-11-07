@@ -1,0 +1,47 @@
+<%
+  status_tones = {
+    sent: :success,
+    added: :info,
+    skipped_has_family_data: :warning,
+    invalid: :error
+  }
+%>
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <p class="text-primary text-sm">
+        <%= t(".summary", sent: @bulk.sent, added: @bulk.added, skipped: @bulk.skipped, invalid: @bulk.invalid) %>
+      </p>
+
+      <% if @bulk.results.any? %>
+        <div class="space-y-2 max-h-72 overflow-y-auto">
+          <% @bulk.results.each do |result| %>
+            <div class="flex items-center justify-between gap-2 bg-container p-3 shadow-border-xs rounded-lg">
+              <p class="text-primary text-sm truncate"><%= result.email %></p>
+              <%= render DS::Pill.new(
+                label: t(".status.#{result.status}"),
+                tone: status_tones.fetch(result.status, :neutral),
+                marker: false,
+                size: :sm
+              ) %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="flex items-center gap-2">
+        <%= link_to t(".download"),
+          "data:text/plain;charset=utf-8,#{u(@report_text)}",
+          download: "invitation-report.txt",
+          class: "bg-container-inset flex-1 flex items-center justify-center gap-2 text-secondary hover:bg-container-inset-hover rounded-lg px-4 py-2 text-center text-sm" %>
+
+        <%= link_to t(".invite_more"),
+          new_bulk_invitation_path,
+          data: { turbo_frame: :modal },
+          class: "bg-inverse text-inverse flex-1 rounded-lg px-4 py-2 text-center text-sm" %>
+      </div>
+    </div>
+  <% end %>
+<% end %>
