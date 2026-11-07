@@ -151,6 +151,9 @@ class Loan < ApplicationRecord
 
   # Account updates can save their nested loan, and loan saves touch the account.
   # Always lock the account first so both paths acquire rows in the same order.
+  # A bare save of a persisted loan takes the reverse order (Loan, then Account
+  # through Accountable's `touch: true`), so write existing loans through this
+  # helper or two writers can deadlock.
   # Nested provider writes share the locks without reloading assigned values.
   def with_schedule_lock
     return yield if new_record? || @schedule_lock_held
@@ -271,9 +274,7 @@ class Loan < ApplicationRecord
   end
 
   private def rate_schedule_snapshot_must_be_valid
-    if @rate_schedule_reconciliation == :invalid
-      errors.add(:base, I18n.t("activerecord.errors.models.loan.invalid_rate_change"))
-    end
+    errors.add(:base, :invalid_rate_schedule_snapshot) if @rate_schedule_reconciliation == :invalid
   end
 
   # Applies a submitter's edits to the schedule as it is now, given the

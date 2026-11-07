@@ -115,7 +115,7 @@ class Loan::ScheduleLockTest < ActiveSupport::TestCase
 
   test "an invalid form snapshot refuses the save" do
     assert_not @loan.update(rate_schedule_snapshot: "[]", rate_changes: [])
-    assert @loan.errors.any?
+    assert_equal [ { error: :invalid_rate_schedule_snapshot } ], @loan.errors.details[:base]
   end
 
   test "a committed loan retries after a real rollback by explicitly reloading the same instance" do

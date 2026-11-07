@@ -92,6 +92,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     } } }
 
     assert_response :unprocessable_entity
+    assert_match I18n.t("activerecord.errors.models.loan.invalid_rate_schedule_snapshot"), response.body
     assert_empty @account.loan.reload.variable_rate_schedule
   end
 
@@ -104,6 +105,8 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
       } } }
 
       assert_response :unprocessable_entity
+      assert_match I18n.t("activerecord.errors.models.loan.invalid_rate_schedule_snapshot"), response.body
+      assert_no_match I18n.t("activerecord.errors.models.loan.invalid_rate_change"), response.body
       assert_select "input[name='account[accountable_attributes][rate_changes][][effective_date]'][value='2026-02-01']", count: 1
       snapshot = css_select("input[name='account[accountable_attributes][rate_schedule_snapshot]']").first["value"]
       rows = css_select("[data-rate-change-row]").filter_map do |row|

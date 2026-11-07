@@ -8,6 +8,7 @@ class Loan::VariableRateScheduleTest < ActiveSupport::TestCase
   end
 
   test "repeated form reads do not duplicate snapshot validation errors" do
+    message = I18n.t("activerecord.errors.models.loan.invalid_rate_schedule_snapshot")
     [ "{broken", "[]", "null", "5" ].each do |snapshot|
       account = build_loan(rate_type: "variable").account
       account.assign_attributes(accountable_attributes: { rate_schedule_snapshot: snapshot, rate_changes: [] })
@@ -15,7 +16,7 @@ class Loan::VariableRateScheduleTest < ActiveSupport::TestCase
 
       2.times do
         assert_not account.valid?
-        assert_equal 1, loan.errors[:base].size
+        assert_equal [ message ], loan.errors[:base]
         assert_equal 1, account.errors[:"accountable.base"].size
         errors_before_render = loan.errors.objects.dup
 
@@ -46,14 +47,18 @@ class Loan::VariableRateScheduleTest < ActiveSupport::TestCase
     assert_not loan.changed_for_autosave?
   end
 
-  test "invalid rows and an invalid snapshot report their shared error once" do
+  test "invalid rows and an invalid snapshot each report their own error once" do
     loan = build_loan(rate_type: "variable")
     loan.assign_attributes(rate_schedule_snapshot: "[]", rate_changes: [ { effective_date: "", rate: "9" } ])
+    expected = {
+      I18n.t("activerecord.errors.models.loan.invalid_rate_change") => 1,
+      I18n.t("activerecord.errors.models.loan.invalid_rate_schedule_snapshot") => 1
+    }
 
     2.times do
       assert_not loan.valid?
       2.times { loan.rate_change_rows }
-      assert_equal 1, loan.errors[:base].size
+      assert_equal expected, loan.errors[:base].tally
     end
   end
 
