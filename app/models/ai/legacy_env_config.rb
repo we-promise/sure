@@ -85,7 +85,7 @@ class Ai::LegacyEnvConfig
     # Today's rule for PDF import: only a provider whose PDF support is on (supports_pdf_processing?,
     # which `vision` carries), so OPENAI_SUPPORTS_PDF_PROCESSING=false keeps it off (2e plan;
     # editable per model from PR 7).
-    routes[:extract_pdf] = route_list(:extract_pdf, preferred.select { _1.capable?(:vision) })
+    routes[:extract_pdf] = route_list(:extract_pdf, preferred.select { _1.capable?(:vision) }.map { pdf_model(_1) })
     routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
     # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM (2d plan,
     # decision 3); the shadow route runs the other one, as the family's shadow provider did.
@@ -162,6 +162,14 @@ class Ai::LegacyEnvConfig
     # Today's budgets: Assistant::TokenBudget's window (2048 by default), the response cap only
     # when someone set one, and LLM_MAX_ITEMS_PER_CALL items per call.
     def context_window = Assistant::TokenBudget.context_window
+
+    # Today's PDF import ignores the 2,048-token baseline chat and categorization assume: it sends
+    # the pages in one request and the text in 3,000-character chunks. So unless the operator set
+    # LLM_CONTEXT_WINDOW, extract_pdf's model has no window, which Ai::PdfReading reads the same
+    # way, splitting a batch only when the server says it's too long.
+    def pdf_model(model)
+      positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window) ? model : model.with(context_window: nil)
+    end
 
     def batch_size = positive(env("LLM_MAX_ITEMS_PER_CALL"), Setting.llm_max_items_per_call) || Ai::Config::Model::DEFAULT_BATCH_SIZE
 

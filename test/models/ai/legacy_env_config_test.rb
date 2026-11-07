@@ -85,9 +85,17 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "qwen3", first_model(config, :bill_setup).name, "only PDF import is off"
   end
 
+  test "PDF import ignores the 2,048-token baseline, as today, unless LLM_CONTEXT_WINDOW is set" do
+    compatible = { "OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1", "OPENAI_MODEL" => "qwen3-vl" }
+    config = build(compatible)
+
+    assert_nil first_model(config, :extract_pdf).context_window, "pages go in one request, as today"
+    assert_equal 2048, first_model(config, :categorize).context_window, "other features keep the baseline"
+    assert_equal 8192, first_model(build(compatible.merge("LLM_CONTEXT_WINDOW" => "8192")), :extract_pdf).context_window
+  end
+
   test "an OpenAI model without vision doesn't import PDFs, as today" do
     assert_empty build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_MODEL" => "o4-mini").routes_for(:extract_pdf)
-
   end
 
   test "a custom URL with no model gets an endpoint but no model or routes, as today's registry builds no client" do

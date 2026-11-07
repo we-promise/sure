@@ -22,6 +22,8 @@ class Ai::PdfReading
   # Characters per text unit: a page longer than this is split, so a small local model's window
   # (2,048 tokens by default) still takes one unit (#808).
   MIN_CHUNK_CHARS = 2_000
+  # Today's BankStatementExtractor chunk, for a model whose window isn't known.
+  UNKNOWN_WINDOW_CHUNK_CHARS = 3_000
 
   Outcome = Data.define(:value, :way, :model, :checks, :usage, :attempts) do
     def passed? = checks.nil? || checks.passed?
@@ -189,7 +191,7 @@ class Ai::PdfReading
     # Half the model's window for one unit, so the prompt and the answer still fit.
     def chunk_chars
       budget = model && Ai::Batch.budget_for(model, 0)
-      budget ? [ budget * 2, MIN_CHUNK_CHARS ].max : 12_000
+      budget ? [ budget * 2, MIN_CHUNK_CHARS ].max : UNKNOWN_WINDOW_CHUNK_CHARS
     end
 
     # One OCR request per page: a local OCR model takes ~45 s a page on CPU, so each request
