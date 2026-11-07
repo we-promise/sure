@@ -804,6 +804,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal 42, next_day.cost_basis
     assert_equal "manual", next_day.cost_basis_source
     assert next_day.cost_basis_locked?
+    assert next_day.cost_basis_carried?, "a copy of the user's lock, not a lock of their own"
   end
 
   test "does not revive a correction the user has since undone" do

@@ -157,7 +157,21 @@ class Holding::ReverseCalculator
         end
       end
 
-      events.each do |event|
+      with_manual_cost_bases(events).each do |event|
+        if event.is_a?(ManualCostBasis)
+          security_id = event.security_id
+          next unless positions[security_id].positive?
+
+          trackers[security_id].open_at(event.cost, positions[security_id])
+          @cost_basis_snapshots[security_id] << [ event.date, trackers[security_id].average_cost ]
+          # The user costed every unit held, transferred-in ones included.
+          if open_unknown_start[security_id]
+            @unknown_spans[security_id] << [ open_unknown_start[security_id], event.date ]
+            open_unknown_start.delete(security_id)
+          end
+          next
+        end
+
         if event.is_a?(Security::Split)
           security_id = event.security_id
           next unless positions.key?(security_id)
@@ -216,6 +230,21 @@ class Holding::ReverseCalculator
       events = trades.each_with_index.map { |entry, index| [ entry.date, 1, index, entry ] }
       events += portfolio_cache.get_splits.map { |split| [ split.ex_date, 0, 0, split ] }
       events.sort_by { |date, kind, index, _| [ date, kind, index ] }.map(&:last)
+    end
+
+    ManualCostBasis = Data.define(:security_id, :date, :cost)
+
+    # The replay's events with each locked figure placed after its date's
+    # trades, as the basis of the units held at the end of that day.
+    def with_manual_cost_bases(events)
+      locks = manual_cost_bases.flat_map do |security_id, by_date|
+        by_date.map { |date, cost| ManualCostBasis.new(security_id: security_id, date: date, cost: cost) }
+      end
+      return events if locks.empty?
+
+      keyed = events.each_with_index.map { |event, index| [ event.is_a?(Security::Split) ? event.ex_date : event.date, 0, index, event ] }
+      keyed += locks.map { |lock| [ lock.date, 1, 0, lock ] }
+      keyed.sort_by { |date, kind, index, _| [ date, kind, index ] }.map(&:last)
     end
 
     def transferred_by?(security_id, date)

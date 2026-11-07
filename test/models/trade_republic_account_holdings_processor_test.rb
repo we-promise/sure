@@ -372,6 +372,7 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
       cost_basis: 38,
       cost_basis_source: "manual",
       cost_basis_locked: true,
+      cost_basis_carried: true,
       currency: "EUR",
       external_id: "stale-isin-holding",
       provider_security_id: prior_provider_security.id,
@@ -404,6 +405,7 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("38"), exchange_holding.cost_basis
     assert_equal "manual", exchange_holding.cost_basis_source
     assert exchange_holding.cost_basis_locked
+    assert exchange_holding.cost_basis_carried, "a carried lock arrived as the user's own"
     assert_equal prior_provider_security.id, exchange_holding.provider_security_id
   end
 
