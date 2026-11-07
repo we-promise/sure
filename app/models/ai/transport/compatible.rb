@@ -21,6 +21,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
     def probe_models(model, timeout:)
       response = mapping_errors { Ai::Transport::Http.openai_client(endpoint, timeout:).models.list }
       raise Ai::Error::InvalidOutput, "the models list has no data" unless response.is_a?(Hash) && response["data"].is_a?(Array)
+      raise Ai::Error::InvalidOutput, "the models list has entries that aren't objects" unless response["data"].all?(Hash)
 
       ids = response["data"].filter_map { _1["id"] || _1[:id] }
       raise Ai::Error::ModelMissing, "#{model.name} isn't listed" unless ids.include?(model.name)
@@ -38,6 +39,9 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       vectors = embedding.vectors
       vectors = [ vectors ] if vectors.first.is_a?(Numeric)
       raise Ai::Error::InvalidOutput, "expected 1 vector, got #{vectors.size}" unless vectors.size == 1
+      unless vectors.first.is_a?(Array) && vectors.first.all? { _1.is_a?(Numeric) && _1.finite? }
+        raise Ai::Error::InvalidOutput, "the embedding has components that aren't finite numbers"
+      end
 
       dimensions = vectors.first.size
       expected = model.embedding_dimensions
@@ -54,7 +58,11 @@ class Ai::Transport::Compatible < Ai::Transport::Base
     # other compatible servers.
     def ruby_llm_protocol = endpoint.responses_api ? :responses : :chat_completions
 
-    def ruby_llm_api_base = Ai::Transport::Http.compatible_base(endpoint.base_url)
+    # An OpenRouter endpoint without a URL is OpenRouter's, as for ruby-openai's client.
+    def ruby_llm_api_base
+      base = endpoint.base_url.presence || (Ai::Transport::Http::OPENROUTER_BASE if ruby_llm_provider == :openrouter)
+      Ai::Transport::Http.compatible_base(base)
+    end
 
     def configure_provider(config)
       config.openai_use_system_role = true   # both providers read it; otherwise system prompts go as "developer"

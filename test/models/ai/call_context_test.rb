@@ -49,6 +49,20 @@ class Ai::CallContextTest < ActiveSupport::TestCase
     assert_not_requested :post, "https://llm.example.test/v1/chat/completions"
   end
 
+  test "a retry whose wait would outlast the attempt's budget isn't made" do
+    model = ai_model(name: "test-model", endpoint: ai_endpoint(name: "test", base_url: "https://llm.example.test/v1", max_retries: 3))
+    transport = Ai::Transport.for(model.endpoint)
+    transport.stubs(:retry_delay).returns(5)
+    transport.expects(:sleep).never
+    tries = 0
+
+    with_ai_call_context(model:, budget: 2) do
+      assert_raises(Ai::Error::Upstream) { transport.send(:attempt) { tries += 1; raise Ai::Error::Upstream, "busy" } }
+    end
+
+    assert_equal 1, tries
+  end
+
   test "the instrumenter forwards every event to RubyLLM's own instrumenter" do
     delegate = mock
     delegate.expects(:instrument).with("chat.ruby_llm", { a: 1 }).yields.returns(:done)

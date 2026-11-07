@@ -262,9 +262,11 @@ class AiHealth
       # The endpoint the feature's own calls use, from Ai::Config, with the URL and key AiHealth
       # resolved and the probe's timeout. Only a probe of a server Ai::Config doesn't know (an
       # admin's ad-hoc check, or a test) builds one from those values alone.
-      def config_endpoint(provider:, base_url:, api_key:, responses_api: false, extra_headers: nil)
+      # The endpoint's own API choice stands unless the caller picks one (the tool-call probe).
+      def config_endpoint(provider:, base_url:, api_key:, responses_api: nil, extra_headers: nil)
         configured = configured_endpoint(provider.to_sym)
-        overrides = { base_url:, api_key:, timeout_seconds: timeout, max_retries: 0, responses_api: }
+        overrides = { base_url:, api_key:, timeout_seconds: timeout, max_retries: 0 }
+        overrides[:responses_api] = responses_api unless responses_api.nil?
         overrides[:extra_headers] = extra_headers if extra_headers
         return configured.with(**overrides) if configured
 
@@ -351,9 +353,12 @@ class AiHealth
         @synthetic_pdf = pdf.freeze
       end
 
+      # The configured endpoint's static headers count too, so a changed gateway credential
+      # header isn't answered from the cache.
       def cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
+        headers = configured_endpoint(provider_key.to_s.to_sym)&.extra_headers.to_h.sort.to_json
         fingerprint = Digest::SHA256.hexdigest(
-          [ component, provider_key, endpoint, model, credential, dimensions, verification ].join("\0")
+          [ component, provider_key, endpoint, model, credential, dimensions, verification, headers ].join("\0")
         )
         "#{CACHE_NAMESPACE}/#{fingerprint}"
       end

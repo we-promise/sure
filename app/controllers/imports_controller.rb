@@ -256,7 +256,12 @@ class ImportsController < ApplicationController
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
         return
       end
+      # The route can be configured while the store can't be built (pgvector without its extension).
       adapter = VectorStore.adapter
+      unless adapter
+        redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
+        return
+      end
 
       if file.size > Import::MAX_PDF_SIZE
         redirect_to new_import_path, alert: t("imports.create.document_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte)

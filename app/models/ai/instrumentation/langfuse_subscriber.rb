@@ -14,8 +14,9 @@ class Ai::Instrumentation::LangfuseSubscriber
     return if @client.nil? || SKIPPED.include?(event.name)
 
     payload = event.payload
-    input = plain(payload[:request])
-    output = payload[:error] ? { error: payload[:error], message: payload[:error_message] } : plain(payload[:output])
+    scrub = payload[:scrub] || Ai::Instrumentation::Redactor.method(:scrub)
+    input = plain(payload[:request], scrub)
+    output = payload[:error] ? { error: payload[:error], message: payload[:error_message] } : plain(payload[:output], scrub)
     level = payload[:error] ? "ERROR" : nil
 
     trace = @client.trace(name: "#{payload[:feature] || "ai"}.#{event.name.delete_suffix(".ai")}", input:,
@@ -43,13 +44,14 @@ class Ai::Instrumentation::LangfuseSubscriber
       Time.current
     end
 
-    # Value objects become plain hashes, all the way down; keys are scrubbed from strings.
-    def plain(value)
+    # Value objects become plain hashes, all the way down; the endpoint's key and header values,
+    # and anything shaped like a key, are scrubbed from strings.
+    def plain(value, scrub)
       case value
-      when Data then plain(value.to_h)
-      when Hash then value.transform_values { plain(_1) }
-      when Array then value.map { plain(_1) }
-      when String then Ai::Instrumentation::Redactor.scrub(value)
+      when Data then plain(value.to_h, scrub)
+      when Hash then value.transform_values { plain(_1, scrub) }
+      when Array then value.map { plain(_1, scrub) }
+      when String then scrub.call(value)
       else value
       end
     end
