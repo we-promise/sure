@@ -47,6 +47,7 @@ class Family::FinancialDataReset
     coinbase_items
     coinstats_items
     enable_banking_items
+    etoro_items
     financekit_items
     fio_items
     ibkr_items

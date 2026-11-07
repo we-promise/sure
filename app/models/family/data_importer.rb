@@ -1,6 +1,10 @@
 require "set"
 
 class Family::DataImporter
+  # Entries an import session creates carry this source, followed by the
+  # session id.
+  SESSION_SOURCE_PREFIX = "sure_import_session:".freeze
+
   MissingReferenceError = Class.new(StandardError) do
     attr_reader :code, :details
 
@@ -266,7 +270,7 @@ class Family::DataImporter
     def session_entry_source
       return unless @import_session
 
-      "sure_import_session:#{@import_session.id}"
+      "#{SESSION_SOURCE_PREFIX}#{@import_session.id}"
     end
 
     def session_entry_external_id(record_type, source_id)
