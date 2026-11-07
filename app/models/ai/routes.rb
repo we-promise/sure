@@ -1,4 +1,4 @@
-# THE routing table (section 5.1): each AI feature's lane, what its models need, its consent
+# THE routing table: each AI feature's lane, what its models need, its consent
 # level and the data it sends. Changing any of these changes what data leaves the box, so it
 # goes through review and the architecture tests and can't be changed at runtime.
 #
@@ -12,7 +12,7 @@ module Ai::Routes
     bill_setup:        { lane: :interactive, needs: %i[structured_output],      consent: :user,
                          sends: %i[transaction_dates transaction_amounts transaction_names category_names bill_configuration] },
     # A route entry reads (a model with structured output; vision or documents per way of reading)
-    # or transcribes (an OCR model, read before the text model extracts), section 8.1.
+    # or transcribes (an OCR model, read before the text model extracts).
     extract_pdf:       { lane: :prompt,      needs: { generation: %i[structured_output], ocr: %i[ocr] }, consent: :user,
                          sends: %i[uploaded_document] },
     embed:             { lane: :prompt,      needs: %i[embedding],              consent: :user,
@@ -45,14 +45,14 @@ module Ai::Routes
 
   def needs_for(feature) = fetch(source_of(feature)).fetch(:needs)
 
-  # A shadow has its own consent (section 8.2); `consent_as:` puts a feature under another's row.
+  # A shadow has its own consent; `consent_as:` puts a feature under another's row.
   def consent_key(feature) = fetch(feature)[:consent_as] || feature.to_sym
 
   # The consent row a person sees the feature under: a shadow shows under its primary's row.
   # Routing (`route_of:`) doesn't move a feature to another row; only `consent_as:` does.
   def row_key(feature) = consent_key(fetch(feature)[:shadow_of] || feature)
 
-  # The consent rows on the AI features page (PR 7), one per thing a person recognises.
+  # The consent rows a person sees, one per thing they recognise.
   def consent_keys = features.reject { fetch(_1)[:shadow_of] }.map { consent_key(_1) }.uniq
 
   # Everything sent under one consent key, so a row's manifest covers its whole group.

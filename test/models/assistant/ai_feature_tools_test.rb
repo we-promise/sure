@@ -1,7 +1,7 @@
 require "test_helper"
 
-# An AI-dependent tool is listed only while its feature is available (ai-plumbing-redesign.md,
-# section 14), for chat and MCP alike, since both list Assistant.function_classes.
+# An AI-dependent tool is listed only while its feature is available, for chat and MCP alike,
+# since both list Assistant.function_classes.
 class Assistant::AiFeatureToolsTest < ActiveSupport::TestCase
   setup { @user = users(:family_admin) }
 

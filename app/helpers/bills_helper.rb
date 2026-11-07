@@ -39,10 +39,9 @@ module BillsHelper
     date == Date.current ? t("bills.row_today") : bills_upcoming_date(date)
   end
 
-  # The bills buttons that start a chat (the AI review, the prompt chips) keep
-  # today's check until chat moves onto the router in PR 6, which replaces this
-  # with `requires_ai :chat`. Smart-fill and smart-configure ask the router for
-  # `bill_setup` (ai_feature_available?).
+  # The bills buttons that start a chat (the AI review, the prompt chips) use
+  # chat's own check, since chat doesn't go through the router. Smart-fill and
+  # smart-configure ask the router for `bill_setup` (ai_feature_available?).
   def bills_ai_chat_available?
     Current.user&.ai_enabled? && Assistant.builtin_provider.present?
   end
