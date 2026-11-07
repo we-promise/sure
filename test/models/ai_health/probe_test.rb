@@ -400,6 +400,24 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end
   end
 
+  test "a probe keeps the configured endpoint's API choice unless the caller picks one" do
+    @probe.stubs(:configured_endpoint).returns(ai_endpoint(name: "openai", responses_api: true, probe_check: :chat))
+    build = ->(**choice) { @probe.send(:config_endpoint, provider: :openai, base_url: "https://llm.example.test/v1", api_key: "t", **choice) }
+
+    assert build.().responses_api, "the endpoint's Responses API stands"
+    assert_not build.(responses_api: false).responses_api, "the tool-call probe picks Chat Completions"
+  end
+
+  test "a changed static header isn't answered from the cache" do
+    key = lambda do |headers|
+      @probe.stubs(:configured_endpoint).returns(ai_endpoint(name: "openai", extra_headers: headers))
+      @probe.send(:cache_key, component: "llm", provider_key: :openai, endpoint: "https://llm.example.test/v1", model: "m",
+                              credential: "t", dimensions: nil, verification: :models)
+    end
+
+    assert_not_equal key.({ "X-Gateway-Key" => "old" }), key.({ "X-Gateway-Key" => "new" })
+  end
+
   test "forced probe bypasses the cached result" do
     models = mock("models")
     models.expects(:list).twice.returns({ "data" => [ { "id" => "gpt-4.1" } ] })
