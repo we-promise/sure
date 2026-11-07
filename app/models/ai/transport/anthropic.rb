@@ -4,6 +4,7 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
   include Ai::Transport::RubyLlmAdapter
 
   DEFAULT_BASE = "https://api.anthropic.com".freeze
+  API_VERSION = "2023-06-01".freeze
 
   private
     # One request with the schema as Anthropic's native structured output (`output_config`),
@@ -24,23 +25,24 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
       end
     end
 
-    # Through the anthropic gem, built by Ai::Transport::Http (RubyLLM 2.1.1 has no public
-    # per-context model listing). The gem takes no proxy.
+    # RubyLLM 2.1.1 has no public per-context model listing, so this is a plain GET through
+    # Faraday with Ai::Transport::Http's proxy and TLS options, as every other call gets. The
+    # anthropic gem, used here before, reads only HTTP_PROXY: live, it went direct when only
+    # HTTPS_PROXY was set, so the probe checked a different path from the calls it vouches for.
     def probe_models(model, timeout:)
-      info = mapping_errors { anthropic_errors { Ai::Transport::Http.anthropic_client(endpoint, timeout:).models.retrieve(model.name) } }
-      raise Ai::Error::ModelMissing, "#{model.name} isn't listed" unless info.respond_to?(:id) && info.id.present?
+      url = "#{ruby_llm_api_base.delete_suffix("/")}/v1/models/#{ERB::Util.url_encode(model.name)}"
+      mapping_errors do
+        response = Ai::Transport::Http.faraday(url, timeout:).get(url) do |request|
+          request.headers.update(Ai::Transport::Http.headers(endpoint))
+          request.headers["x-api-key"] = endpoint.api_key.to_s
+          request.headers["anthropic-version"] = API_VERSION
+        end
+        body = JSON.parse(response.body.to_s) rescue {}
+        raise Ai::Error.from_status(response.status, body.dig("error", "message"), body:) unless response.success?
+        raise Ai::Error::ModelMissing, "#{model.name} isn't listed" if body["id"].blank?
 
-      info.id
-    end
-
-    def anthropic_errors
-      yield
-    rescue ::Anthropic::Errors::APITimeoutError => error
-      raise Ai::Error::Timeout, error.message
-    rescue ::Anthropic::Errors::APIStatusError => error
-      raise Ai::Error.from_status(error.status, error.message, body: error.body)
-    rescue ::Anthropic::Errors::APIConnectionError => error
-      raise Ai::Error::Unreachable, error.message
+        body["id"]
+      end
     end
 
     def ruby_llm_provider = :anthropic
