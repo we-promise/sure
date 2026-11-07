@@ -443,9 +443,6 @@ pl:
       delete_import: Usuń import
       document_type_label: Typ dokumentu
       email_sent_notice: Wysłano do Ciebie wiadomość e-mail z dalszymi krokami.
-      errors:
-        provider_no_pdf_support: Dostawca AI nie obsługuje przetwarzania PDF
-        provider_not_configured: Dostawca AI nie jest skonfigurowany
       failed_description: Nie udało się przetworzyć dokumentu PDF. Spróbuj ponownie
         lub skontaktuj się ze wsparciem.
       failed_title: Przetwarzanie nie powiodło się

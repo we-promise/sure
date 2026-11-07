@@ -1,0 +1,7 @@
+CHARGE HISTORY (date amount description):
+<%= charges.map { |charge| "- #{charge[:date]} #{charge[:amount]} #{charge[:name]}" }.join("\n") %>
+
+AVAILABLE CATEGORIES: <%= categories.join(", ") %><% if current_config.present? %>
+
+CURRENT CONFIGURATION:
+<%= current_config.to_json %><% end %>

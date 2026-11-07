@@ -546,8 +546,44 @@ en:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Processing failed: %{error}"
       errors:
-        provider_not_configured: AI provider not configured
-        provider_no_pdf_support: AI provider does not support PDF processing
+        unavailable:
+          default: No model set up on this instance can read this PDF.
+          not_configured: PDF import needs an AI provider. Ask your administrator to set one up.
+          capability_missing: The AI model set up on this instance can't read documents.
+          no_text_layer: This PDF is a scan with no text, and no model set up here can read scanned pages. Read it as images with a vision model, or as OCR once an OCR model is set up.
+          needs_documents: The AI model set up here can't read a PDF file itself. Read it as text or images instead.
+          needs_vision: The AI model set up here can't read page images. Read it as text instead.
+          needs_ocr_route: No OCR model is set up on this instance.
+          too_large: This PDF is over what the AI provider accepts as one file. Read it as text or images instead.
+          unreadable: This file couldn't be opened as a PDF.
+      read_as:
+        label: Read PDFs as
+        options:
+          auto: Auto
+          pdf: PDF
+          images: Images
+          ocr: OCR
+          text: Text
+        unavailable: "%{option} (%{reason})"
+        reasons:
+          needs_documents: needs a model that reads PDFs
+          needs_vision: needs a vision model
+          needs_ocr_route: needs an OCR model
+      reread:
+        label: Read again as
+        submit: Read again
+        success: Reading the statement again.
+        not_allowed: This import can't be read again once its transactions are published.
+      review_flag:
+        title: Check these transactions before publishing
+        description: The statement was read as %{way}, and the extraction failed these checks, so some rows may be wrong or missing.
+        checks:
+          reconciles: The opening balance plus every transaction doesn't make the closing balance.
+          amounts_in_source: Some amounts don't appear in the statement's text.
+          dates_anchored: Many dates don't match the dates printed next to their amounts.
+        confirm_title: Publish transactions that failed their checks?
+        confirm_body: Some rows may be wrong or missing. Review them first, or read the statement again another way.
+        confirm_button: Publish anyway
       ready_for_review_title: Ready for Review
       ready_for_review_description:
         one: "%{count} transaction from your statement isn't in this account yet. Review and publish it to add it."

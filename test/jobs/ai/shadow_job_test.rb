@@ -1,0 +1,157 @@
+require "test_helper"
+
+# Shadow runs (section 8.2): a categorize batch that the family's rate samples enqueues
+# Ai::ShadowJob, which runs the same generation on shadow_categorize with the input actually sent.
+# Its answer reaches only Ai::Comparison, never the transaction. Moved from the inline shadow run
+# in Family::AutoCategorizer's tests.
+class Ai::ShadowJobTest < ActiveJob::TestCase
+  include EntriesTestHelper
+
+  setup do
+    @family = families(:dylan_family)
+    @account = @family.accounts.create!(name: "Shadow test", balance: 100, currency: "USD", accountable: Depository.new)
+    use_ai_routes   # categorize on openai/gpt-4.1-mini, shadow_categorize on jev/jev-latest
+  end
+
+  test "does not run a shadow by default" do
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+    requests = answer_both(llm: { txn.id => category.name }, jev: {})
+
+    assert_equal 0.0, @family.effective_categorization_shadow_rate
+    assert_no_enqueued_jobs(only: Ai::ShadowJob) { categorize([ txn.id ]) }
+    assert_equal [ :categorize ], requests.map(&:feature)
+  end
+
+  test "records a disagreement without applying the shadow answer" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "Blue Bottle Coffee").transaction
+    applied = @family.categories.create!(name: "Coffee")
+    shadowed = @family.categories.create!(name: "Groceries")
+    requests = answer_both(llm: { txn.id => applied.name }, jev: { txn.id => [ shadowed.name, 0.88 ] })
+
+    assert_difference "Ai::Comparison.count", 1 do
+      perform_enqueued_jobs { categorize([ txn.id ]) }
+    end
+
+    assert_equal applied, txn.reload.category
+    assert_equal %i[categorize shadow_categorize], requests.map(&:feature)
+
+    comparison = Ai::Comparison.sole
+    assert_equal "categorize", comparison.feature
+    assert_equal txn, comparison.subject
+    assert_not comparison.agreed
+    assert_equal [ "openai", "jev" ], [ comparison.primary_endpoint, comparison.shadow_endpoint ]
+    assert_equal "gpt-4.1-mini", comparison.primary_route["model"]
+    assert_equal [ applied.id, shadowed.id ], [ comparison.primary_value, comparison.shadow_value ]
+    assert_nil comparison.primary_confidence
+    assert_in_delta 0.88, comparison.shadow_confidence, 0.001
+  end
+
+  test "the shadow gets the batch the primary was sent, not the rest of the job's ids" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    category = @family.categories.create!(name: "Coffee")
+    txns = Array.new(3) { create_transaction(account: @account, name: "Coffee #{_1}").transaction }
+    requests = answer_both(llm: txns.to_h { [ _1.id, category.name ] }, jev: txns.to_h { [ _1.id, [ category.name, 0.9 ] ] })
+
+    with_ai_model_settings(batch_size: 2) do
+      perform_enqueued_jobs(only: Ai::ShadowJob) { categorize(txns.map(&:id)) }
+    end
+
+    shadow = requests.select { _1.feature == :shadow_categorize }.sole
+    assert_equal 2, shadow.states.size
+    assert_equal 2, Ai::Comparison.where(agreed: true).count
+  end
+
+  test "does not score a missing shadow answer as agreement" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
+    @family.categories.create!(name: "Coffee")
+    answer_both(llm: { txn.id => nil }, jev: {})
+
+    perform_enqueued_jobs { categorize([ txn.id ]) }
+
+    comparison = Ai::Comparison.sole
+    assert_not comparison.agreed
+    assert_nil comparison.shadow_value
+  end
+
+  test "counts a shared abstention as agreement" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
+    @family.categories.create!(name: "Coffee")
+    answer_both(llm: { txn.id => nil }, jev: { txn.id => [ Ai::Judgements::CategorizeTransaction::UNCATEGORIZED, 0.94 ] })
+
+    perform_enqueued_jobs { categorize([ txn.id ]) }
+
+    assert Ai::Comparison.sole.agreed
+  end
+
+  test "a failing shadow model breaks nothing and records nothing" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+    stub_ai do |request|
+      raise Ai::Error::Upstream, "upstream down" if request.is_a?(Ai::Transport::Base::JudgeRequest)
+
+      { categorizations: [ { transaction_id: txn.id, category_name: category.name } ] }
+    end
+
+    assert_nothing_raised do
+      perform_enqueued_jobs { categorize([ txn.id ]) }
+    end
+
+    assert_equal category, txn.reload.category
+    assert_equal 0, Ai::Comparison.count
+  end
+
+  test "no shadow route, no job" do
+    use_ai_routes(shadow_categorize: [])
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+    answer_both(llm: { txn.id => category.name }, jev: {})
+
+    assert_no_enqueued_jobs(only: Ai::ShadowJob) { categorize([ txn.id ]) }
+    assert_equal category, txn.reload.category
+  end
+
+  test "the shadow's usage rows are its own, tagged shadow" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+    events = []
+    subscription = ActiveSupport::Notifications.subscribe("judge.ai") { events << _1.payload }
+    answer_both(llm: { txn.id => category.name }, jev: { txn.id => [ category.name, 0.9 ] })
+
+    perform_enqueued_jobs { categorize([ txn.id ]) }
+
+    assert_equal [ [ "shadow_categorize", true ] ], events.map { [ _1[:feature], _1[:shadow] ] }
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscription)
+  end
+
+  test "runs on the background lane's queue" do
+    assert_equal Ai::Routes.queue_for(:shadow_categorize),
+                 Ai::ShadowJob.new("Ai::Generations::CategorizeTransactions", @family.id, {}, {}).queue_name
+  end
+
+  test "refuses a class that declares no shadow" do
+    assert_raises(ArgumentError) { Ai::ShadowJob.perform_now("Ai::Generations::DetectMerchants", @family.id, {}, {}) }
+  end
+
+  private
+    def categorize(transaction_ids)
+      Ai::GenerationJob.perform_now(:categorize, { ids: transaction_ids, family_id: @family.id })
+    end
+
+    # The LLM answers categorize (`llm`: id => name); the shadow's Jev answers shadow_categorize
+    # (`jev`: id => [name, confidence]).
+    def answer_both(llm:, jev:)
+      stub_ai do |request|
+        next jev.transform_values { { category: _1 } } if request.is_a?(Ai::Transport::Base::JudgeRequest)
+
+        { categorizations: llm.map { |id, name| { transaction_id: id, category_name: name } } }
+      end
+    end
+end

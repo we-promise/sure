@@ -493,9 +493,6 @@ pt-PT:
       unknown_state_description: Esta importação está num estado inesperado. Volte às importações.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "O processamento falhou: %{error}"
-      errors:
-        provider_not_configured: Serviço de IA não configurado
-        provider_no_pdf_support: O serviço de IA não suporta o processamento de PDF
       ready_for_review_title: Pronto para Revisão
       ready_for_review_description:
         one: "%{count} transação do seu extrato ainda não está nesta conta. Reveja-a e publique-a para a adicionar."

@@ -157,7 +157,7 @@ class AiHealth
       @selected_llm_provider = selected_provider_name(@selected_llm_protocol)
       @openai_credentials_configured = safely(false) { Provider::Openai.configured? }
       @anthropic_credentials_configured = safely(false) { Provider::Anthropic.configured? }
-      @llm_provider = safely(nil) { Provider::Registry.preferred_llm_provider }
+      @llm_provider = safely(nil) { Assistant.builtin_provider }
       @effective_llm_protocol = protocol_name(@llm_provider)
       @effective_llm_provider = effective_provider_name(@effective_llm_protocol)
 
@@ -168,11 +168,12 @@ class AiHealth
       @probe_request_timeout = probe_request_timeout_value
       @openai_uses_responses_endpoint = @effective_llm_protocol == :openai &&
         safely(false) { @llm_provider.supports_responses_endpoint? }
-      @pdf_processing_capable = safely(false) do
-        @llm_provider&.supports_pdf_processing?(model: llm_model)
-      end
+      # What extract_pdf's first model can read (2e): every model reads a text layer; images need
+      # vision, and Anthropic's check sends the PDF itself.
+      pdf_model = safely(nil) { Ai::Config.current.routes_for(:extract_pdf).map(&:model).find { _1.capable?(:structured_output) } }
+      @pdf_processing_capable = pdf_model.present?
       @pdf_text_extraction_capable = @pdf_processing_capable && @effective_llm_protocol == :openai
-      @pdf_vision_processing_capable = @pdf_processing_capable
+      @pdf_vision_processing_capable = pdf_model.present? && pdf_model.capable?(:vision)
 
       @openai_endpoint = redact_endpoint(openai_uri_base.presence || OPENAI_DEFAULT_ENDPOINT)
       @llm_access_token = access_token(@effective_llm_protocol)
@@ -211,8 +212,7 @@ class AiHealth
           provider: @effective_llm_protocol,
           endpoint: @llm_raw_endpoint,
           access_token: @llm_access_token,
-          model: llm_model,
-          openai_compatible: @effective_llm_protocol == :openai && openai_compatible_endpoint?
+          model: llm_model
         )
         @function_calling_probe = probe.function_calling(
           provider: @effective_llm_protocol,

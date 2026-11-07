@@ -7,7 +7,8 @@
 #
 # Requirements:
 #   - PostgreSQL with the `vector` extension enabled (use pgvector/pgvector Docker image)
-#   - An embedding model endpoint (EMBEDDING_URI_BASE / EMBEDDING_MODEL)
+#   - An embedding model on the `embed` route (EMBEDDING_URI_BASE / EMBEDDING_MODEL until PR 7),
+#     called through Ai::Embeddings, so its requests get the proxy, retries and usage rows (2e)
 #   - Migration: CreateVectorStoreChunks (run with VECTOR_STORE_PROVIDER=pgvector)
 #
 class VectorStore::Pgvector < VectorStore::Base
@@ -16,6 +17,11 @@ class VectorStore::Pgvector < VectorStore::Base
   PGVECTOR_SUPPORTED_EXTENSIONS = (VectorStore::Embeddable::TEXT_EXTENSIONS + [ ".pdf" ]).uniq.freeze
 
   TABLE_NAME = "vector_store_chunks"
+  # Cosine similarity under which a chunk isn't a match: every search used to return something
+  # (spike). The default, calibrated on OpenAI's store; embedding models score differently
+  # (unrelated text: 0.47 on gemini-embedding-001, 0.77 on granite), so it becomes a setting per
+  # embedding model in PR 7 (call by @josh-sanders during development of PR #4440).
+  MIN_SCORE = 0.3
 
   # True when this adapter can actually operate: the chunks table already
   # exists, or the server has the pgvector extension available so
@@ -55,7 +61,7 @@ class VectorStore::Pgvector < VectorStore::Base
     end
   end
 
-  def upload_file(store_id:, file_content:, filename:)
+  def upload_file(store_id:, file_content:, filename:, family: nil)
     with_response do
       ensure_schema!
       text = extract_text(file_content, filename)
@@ -64,7 +70,7 @@ class VectorStore::Pgvector < VectorStore::Base
       chunks = chunk_text(text)
       raise VectorStore::Error, "No chunks produced from #{filename}" if chunks.empty?
 
-      vectors = embed_batch(chunks)
+      vectors = Ai::Embeddings.index(chunks, family:)
       file_id = SecureRandom.uuid
       now = Time.current
 
@@ -96,7 +102,7 @@ class VectorStore::Pgvector < VectorStore::Base
         end
       end
 
-      { file_id: file_id }
+      { file_id: file_id, status: "ready" }
     end
   end
 
@@ -114,10 +120,10 @@ class VectorStore::Pgvector < VectorStore::Base
     end
   end
 
-  def search(store_id:, query:, max_results: 10)
+  def search(store_id:, query:, max_results: 10, family: nil, user: nil)
     with_response do
       ensure_schema!
-      query_vector = embed(query)
+      query_vector = Ai::Embeddings.query(query, family:, user:)
       vector_literal = "[#{query_vector.join(',')}]"
 
       results = connection.exec_query(
@@ -137,7 +143,7 @@ class VectorStore::Pgvector < VectorStore::Base
         ]
       )
 
-      results.map do |row|
+      results.select { _1["score"].to_f >= MIN_SCORE }.map do |row|
         {
           content: row["content"],
           filename: row["filename"],
@@ -175,7 +181,7 @@ class VectorStore::Pgvector < VectorStore::Base
         t.string :filename
         t.integer :chunk_index, null: false, default: 0
         t.text :content, null: false
-        t.column :embedding, "vector(#{ENV.fetch('EMBEDDING_DIMENSIONS', '1024')})", null: false
+        t.column :embedding, "vector(#{VectorStore.embedding_dimensions})", null: false
         t.jsonb :metadata, null: false, default: {}
         t.timestamps null: false
       end

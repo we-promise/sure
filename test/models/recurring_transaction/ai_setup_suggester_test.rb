@@ -2,21 +2,38 @@ require "test_helper"
 
 class RecurringTransaction::AiSetupSuggesterTest < ActiveSupport::TestCase
   Suggester = RecurringTransaction::AiSetupSuggester
-  RawSuggestion = Provider::LlmConcept::BillSetupSuggestion
 
   setup do
     @user = users(:family_admin)
     @family = @user.family
     @family.recurring_transactions.destroy_all
     @entries = [ create_entry(name: "GYM MEMBERSHIP", amount: 40, date: Date.current) ]
+    use_ai_routes
   end
 
-  test "raises when no LLM provider is configured" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+  test "raises when bill setup isn't available" do
+    use_no_ai
 
     assert_raises(Suggester::Error) do
       Suggester.new(@family, user: @user).suggest_from_entries(@entries)
     end
+  end
+
+  test "raises with the error when every route fails" do
+    stub_ai(:bill_setup, raises: Ai::Error::InvalidOutput.new("no JSON"))
+
+    error = assert_raises(Suggester::Error) { Suggester.new(@family, user: @user).suggest_from_entries(@entries) }
+    assert_includes error.message, "no JSON"
+  end
+
+  test "sends the charges and the family's categories through the bill_setup prompt" do
+    requests = stub_ai(:bill_setup, returns: raw(name: "Gym"))
+
+    Suggester.new(@family, user: @user).suggest_from_entries(@entries)
+
+    assert_includes requests.first.input, "#{Date.current.iso8601} 40.0 GYM MEMBERSHIP"
+    assert_includes requests.first.input, "AVAILABLE CATEGORIES: #{@family.categories.pluck(:name).join(", ")}"
+    assert_not_includes requests.first.instructions, "A current configuration is provided"
   end
 
   test "raises on empty charge history instead of asking the model to guess" do
@@ -92,21 +109,12 @@ class RecurringTransaction::AiSetupSuggesterTest < ActiveSupport::TestCase
     # scoped, so a drifting date would give the suggester no history.
     create_entry(name: "Gym", amount: 40, date: Date.current.beginning_of_month + 8.days - 1.month)
 
-    captured = nil
-    provider = Object.new
-    provider.define_singleton_method(:suggest_bill_setup) do |**kwargs|
-      captured = kwargs
-      Provider::Response.new(success?: true, data: RawSuggestion.new(
-        name: nil, amount: nil, frequency: nil, day_of_month: nil, weekday: nil,
-        month_of_year: nil, category_name: nil, bill_type: nil, autopay: nil,
-        confidence: 0.9, rationale: "already right"
-      ), error: nil)
-    end
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    requests = stub_ai(:bill_setup, returns: raw(confidence: 0.9, rationale: "already right"))
 
     suggestion = Suggester.new(@family, user: @user).suggest_configuration(series)
 
-    assert_equal "Gym", captured[:current_config][:name]
+    assert_equal "Gym", current_config_sent(requests.first)["name"]
+    assert_includes requests.first.instructions, "A current configuration is provided"
     refute suggestion.any_proposal?, "all-null fields mean the configuration is already right"
   end
 
@@ -124,40 +132,27 @@ class RecurringTransaction::AiSetupSuggesterTest < ActiveSupport::TestCase
     series.save!
     create_entry(name: "Water", amount: 60, date: Date.current.beginning_of_month + 8.days - 2.months)
 
-    captured = nil
-    provider = Object.new
-    provider.define_singleton_method(:suggest_bill_setup) do |**kwargs|
-      captured = kwargs
-      Provider::Response.new(success?: true, data: RawSuggestion.new(
-        name: nil, amount: nil, frequency: nil, day_of_month: nil, weekday: nil,
-        month_of_year: nil, category_name: nil, bill_type: nil, autopay: nil,
-        confidence: 0.9, rationale: "already right"
-      ), error: nil)
-    end
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    requests = stub_ai(:bill_setup, returns: raw(confidence: 0.9, rationale: "already right"))
 
     Suggester.new(@family, user: @user).suggest_configuration(series)
 
-    assert_equal "custom", captured[:current_config][:frequency]
+    assert_equal "custom", current_config_sent(requests.first)["frequency"]
   end
 
   private
 
+    # The model's answer, as JSON.
     def raw(**overrides)
-      RawSuggestion.new(**{
+      {
         name: nil, amount: nil, frequency: nil, day_of_month: nil, weekday: nil,
         month_of_year: nil, category_name: nil, bill_type: nil, autopay: nil,
         confidence: nil, rationale: nil
-      }.merge(overrides))
+      }.merge(overrides)
     end
 
-    def stub_provider(suggestion)
-      provider = Object.new
-      provider.define_singleton_method(:suggest_bill_setup) do |**|
-        Provider::Response.new(success?: true, data: suggestion, error: nil)
-      end
-      Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-    end
+    def stub_provider(suggestion) = stub_ai(:bill_setup, returns: suggestion)
+
+    def current_config_sent(request) = JSON.parse(request.input.split("CURRENT CONFIGURATION:\n").last)
 
     def create_entry(name:, amount:, date:)
       accounts(:depository).entries.create!(

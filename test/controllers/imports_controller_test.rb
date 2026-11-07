@@ -22,6 +22,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     get new_import_url
 
@@ -181,6 +182,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.csv .pdf])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     family_document = family_documents(:tax_return)
     Family.any_instance.expects(:upload_document).with do |file_content:, filename:, **|
@@ -219,6 +221,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     @user.family.expects(:upload_document).never
 
@@ -258,6 +261,66 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_not created_import.pdf_file.attached?
     assert_redirected_to import_url(created_import)
     assert_equal I18n.t("imports.create.pdf_processing"), flash[:notice]
+  end
+
+  test "the upload offers Read as, greying out what the route can't do" do
+    adapter = mock("vector_store_adapter")
+    adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
+    VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes(extract_pdf: %w[gpu/qwen3-8b])
+
+    get new_import_url
+
+    assert_select "select[name='import[read_as]'] option[value=auto]:not([disabled])"
+    assert_select "select[name='import[read_as]'] option[value=text]:not([disabled])"
+    assert_select "select[name='import[read_as]'] option[value=images][disabled]", text: /needs a vision model/
+    assert_select "select[name='import[read_as]'] option[value=ocr][disabled]"
+  end
+
+  test "a PDF upload keeps its Read as" do
+    use_ai_routes
+
+    post imports_url, params: { import: { import_file: file_fixture_upload("imports/sample_bank_statement.pdf", "application/pdf"),
+                                          read_as: "images" } }
+
+    assert_equal "images", PdfImport.order(:created_at).last.read_as
+  end
+
+  test "reads a PDF import again another way" do
+    use_ai_routes
+    import = imports(:pdf_with_rows)
+    PdfImport.any_instance.stubs(:pdf_uploaded?).returns(true)
+
+    assert_enqueued_with(job: ProcessPdfJob) do
+      post reread_import_url(import), params: { import: { read_as: "text" } }
+    end
+
+    assert_redirected_to import_url(import)
+    assert_equal "text", import.reload.read_as
+    assert_equal 0, import.rows_count
+  end
+
+  test "reading again needs extract_pdf" do
+    use_no_ai
+    import = imports(:pdf_with_rows)
+
+    post reread_import_url(import), params: { import: { read_as: "text" } }
+
+    assert_no_enqueued_jobs only: ProcessPdfJob
+    assert_nil import.reload.read_as
+  end
+
+  test "a flagged extraction shows its failed checks and asks before publishing" do
+    use_ai_routes
+    import = imports(:pdf_with_rows)
+    import.update!(read_with: "text", extraction_checks: { "passed" => false, "reconciles" => false })
+    PdfImport.any_instance.stubs(uploaded?: true, publishable?: true)
+
+    get import_url(import)
+
+    assert_includes response.body, I18n.t("imports.pdf_import.review_flag.title")
+    assert_includes response.body, CGI.escapeHTML(I18n.t("imports.pdf_import.review_flag.checks.reconciles"))
+    assert_select "[data-turbo-confirm]"
   end
 
   test "guest cannot create statement backed pdf import" do
@@ -465,6 +528,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     assert_no_difference "Import.count" do
       post imports_url, params: {

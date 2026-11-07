@@ -1,13 +1,13 @@
 <%# locals: form:, family:, prompts: [{ key:, label: (single-prompt only) }], textarea_id:
     Shared textarea for provider prompts. Pre-fills with the family override
     or built-in default. Saving an unedited default acts as a reset in the controller.
-    Provider labels are derived from the key suffix (_openai / _anthropic). %>
+    A format warning names OpenAI: only the simplified prompt for OpenAI-compatible servers carries a wrapper key. %>
 <% multi = prompts.size > 1 %>
 <% initial = prompts.find { |p| family.errors[:"ai_prompt_#{p[:key]}"].present? } || prompts.first %>
 <% initial_value = family.ai_prompt(initial[:key]) || family.ai_prompt_default(initial[:key]) %>
 <% initial_length = initial_value.to_s.length %>
 <% over_limit = initial_length > Family::AiPromptable::MAX_LENGTH %>
-<% provider_label = ->(key) { key.to_s.end_with?("openai") ? t(".provider_openai") : t(".provider_anthropic") } %>
+<% provider_label = ->(key) { key.to_s.end_with?("anthropic") ? t(".provider_anthropic") : t(".provider_openai") } %>
 <% reset_confirm = { title: t(".reset_confirm_title"), body: t(".reset_confirm_body") }.to_json %>
 <div class="space-y-2"
      data-controller="ai-prompt-editor"

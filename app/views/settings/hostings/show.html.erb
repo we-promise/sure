@@ -29,9 +29,9 @@
           credential fields once Jev is selected.
 
           Preview gates the entry point only — see
-          docs/llm-guides/gating-a-preview-feature.md. Resolution reads the family
-          column, so a family that opts in and then picks the LLM provider keeps
-          the LLM provider. %>
+          docs/llm-guides/gating-a-preview-feature.md. Routing reads the
+          instance's setting (Ai::LegacyEnvConfig.categorization_provider), never
+          the preview flag. %>
       <% if preview_features_enabled? %>
         <%= render "settings/hostings/categorization_provider_selector", manages_instance_settings: manages_instance_settings %>
       <% end %>

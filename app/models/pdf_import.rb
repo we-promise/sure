@@ -1,7 +1,13 @@
 class PdfImport < Import
   has_one_attached :pdf_file, dependent: :purge_later
 
+  # "Read as", per upload (section 8.1): Auto, or one way of reading the PDF.
+  READ_AS = Ai::PdfReading::READ_AS.map(&:to_s).freeze
+  # What ReadPdf says the document is.
+  Analysis = Data.define(:summary, :document_type, :extracted_data)
+
   validates :document_type, inclusion: { in: DOCUMENT_TYPES }, allow_nil: true
+  validates :read_as, inclusion: { in: READ_AS }, allow_nil: true
   validate :account_statement_matches_import
 
   class << self
@@ -60,27 +66,31 @@ class PdfImport < Import
       family.sync_later if needs_sync
     end
 
-    def create_from_upload!(family:, file:, user:)
+    def create_from_upload!(family:, file:, user:, read_as: nil)
       statement = AccountStatement.create_from_prepared_upload!(
         family: family,
         account: nil,
         prepared_upload: AccountStatement.prepare_upload!(file)
       )
 
-      create_from_statement!(statement: statement)
+      create_from_statement!(statement: statement, read_as:)
     rescue AccountStatement::DuplicateUploadError => e
       raise unless e.statement.manageable_by?(user)
 
-      create_from_statement!(statement: e.statement)
+      create_from_statement!(statement: e.statement, read_as:)
     end
 
-    def create_from_statement!(statement:)
+    def create_from_statement!(statement:, read_as: nil)
+      read_as = read_as.presence_in(PdfImport::READ_AS)
       reusable_import = statement.latest_reusable_pdf_import
-      return reusable_import if reusable_import &&
-                                reusable_import.account_id == statement.account_id &&
-                                reusable_import.date_format == statement.family.date_format
+      if reusable_import && reusable_import.account_id == statement.account_id &&
+         reusable_import.date_format == statement.family.date_format
+        reusable_import.update!(read_as:) if read_as && !reusable_import.ai_processed?
+        return reusable_import
+      end
 
-      create!(family: statement.family, account: statement.account, account_statement: statement, date_format: statement.family.date_format, status: :pending)
+      create!(family: statement.family, account: statement.account, account_statement: statement, date_format: statement.family.date_format,
+              status: :pending, read_as:)
     end
   end
 
@@ -213,58 +223,73 @@ class PdfImport < Import
     end
   end
 
+  # What the document is (Ai::Generations::ReadPdf), read the way the upload asked for.
   def process_with_ai
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # process_pdf (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
-
-    response = provider.process_pdf(
-      pdf_content: pdf_file_content,
-      family: family
-    )
-
-    unless response.success?
-      error_message = response.error&.message || "Unknown PDF processing error"
-      raise Provider::Error, error_message
-    end
-
-    result = response.data
-    update!(
-      ai_summary: result.summary,
-      document_type: result.document_type
-    )
-
-    result
+    outcome = pdf_reading.read(read_as: requested_way)
+    analysis = Analysis.new(summary: outcome.value[:summary], document_type: outcome.value[:document_type] || "other",
+                            extracted_data: outcome.value[:extracted_data])
+    update!(ai_summary: analysis.summary, document_type: analysis.document_type)
+    analysis
   end
 
+  # The statement's rows (Ai::Generations::ExtractBankStatement), read the way the upload asked
+  # for, or by Auto starting from the way that last passed for this account and model. A failing
+  # extraction is kept and flagged for review, never dropped (section 8.1).
   def extract_transactions
     return unless statement_with_transactions?
 
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # extract_bank_statement (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
-
-    response = provider.extract_bank_statement(
-      pdf_content: pdf_file_content,
-      family: family
-    )
-
-    unless response.success?
-      error_message = response.error&.message || "Unknown extraction error"
-      raise Provider::Error, error_message
-    end
-
-    # BankStatementExtractor returns symbol keys, but every reader here (and in
-    # generate_rows_from_extracted_data) digs with strings. jsonb keeps the hash
-    # exactly as assigned until the record is reloaded, so without this the
-    # in-memory read comes back empty and the import produces no rows at all.
-    data = response.data.deep_stringify_keys
-    update!(extracted_data: data)
+    reading = pdf_reading
+    outcome = reading.extract(read_as: requested_way, start: self.class.last_passing_way(account:, model: reading.model&.name))
+    # String keys: every reader here digs with strings, and jsonb keeps the hash as assigned
+    # until the record is reloaded.
+    data = Ai::Generations::ExtractBankStatement.statement(outcome.value).deep_stringify_keys
+    update!(extracted_data: data, read_with: outcome.way.to_s, read_model: outcome.model,
+            extraction_checks: (outcome.checks&.to_h || {}).merge(attempts: outcome.attempts).deep_stringify_keys)
     data
   end
+
+  # Auto tunes itself per account (section 8.1): the way the last passing extraction for this
+  # account and model used. A lookup, not a model.
+  def self.last_passing_way(account:, model:)
+    return if account.nil? || model.blank?
+
+    where(account:, read_model: model).where.not(read_with: nil).where("extraction_checks ->> 'passed' = 'true'")
+                                      .order(updated_at: :desc).pick(:read_with)
+  end
+
+  # The checks a kept extraction failed, for the review flag.
+  def failed_checks
+    return [] unless extraction_flagged?
+
+    checks = extraction_checks
+    failed = []
+    failed << "reconciles" unless checks["reconciles"]
+    failed << "amounts_in_source" if checks["amounts_in_source"] == false
+    failed << "dates_anchored" if checks["dates_anchored"] && checks["dates_anchored"] < Ai::Generations::ExtractBankStatement::MIN_DATES_ANCHORED
+    failed
+  end
+
+  def extraction_flagged? = extraction_checks.present? && extraction_checks["passed"] == false
+
+  # "Read again as…": a badly read statement, read another way without changing the config.
+  # Only before anything is published.
+  def reread!(read_as)
+    read_as = read_as.to_s
+    raise ArgumentError, "unknown way #{read_as}" unless READ_AS.include?(read_as)
+
+    with_lock do
+      return false unless (pending? || failed?) && imported_count.zero?
+
+      rows.delete_all
+      self.class.reset_counters(id, :rows)
+      update!(read_as:, ai_summary: nil, document_type: nil, extracted_data: nil, extraction_checks: nil, read_with: nil,
+              read_model: nil, error: nil, status: :pending)
+    end
+    reload
+    process_with_ai_later
+  end
+
+  def pdf_reading = Ai::PdfReading.new(content: pdf_file_content, filename: pdf_filename, family:)
 
   def bank_statement?
     document_type == "bank_statement"
@@ -454,6 +479,7 @@ class PdfImport < Import
   end
 
   private
+    def requested_way = read_as.presence&.to_sym || :auto
 
     # A statement's posting date routinely differs by a day or two from the date
     # a provider recorded for the same transaction, so matching allows a small

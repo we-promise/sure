@@ -7,6 +7,7 @@ en:
       document_type_label: Document Type
       summary_label: AI Summary
       transactions_note: This document appears to contain transactions. You can extract and review them now.
+      review_flag_note: Some of the extracted transactions failed their checks, so some rows may be wrong or missing. Review them before publishing.
       document_stored_note: This document has been stored for your reference. It can be used to provide context in future AI conversations.
       next_steps_label: What's Next?
       next_steps_intro: "You have several options:"

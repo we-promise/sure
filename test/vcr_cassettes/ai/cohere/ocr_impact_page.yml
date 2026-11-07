@@ -1,0 +1,104 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.cohere.com/v2/parse
+    body:
+      encoding: UTF-8
+      string: '{"model":"parse-v5.0","document":{"type":"image_url","image_url":"data:image/png;base64,<FILE>"},"output_format":"markdown"}'
+    headers:
+      User-Agent:
+      - Faraday v2.14.3
+      Authorization:
+      - Bearer <COHERE_LIVE_API_KEY>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Access-Control-Expose-Headers:
+      - X-Debug-Trace-ID
+      Cache-Control:
+      - no-cache, no-store, no-transform, must-revalidate, private, max-age=0
+      Content-Type:
+      - application/json
+      Expires:
+      - Thu, 01 Jan 1970 00:00:00 GMT
+      Num-Tokens:
+      - '1'
+      Pragma:
+      - no-cache
+      Vary:
+      - Origin,Accept-Encoding
+      X-Accel-Expires:
+      - '0'
+      X-Debug-Trace-Id:
+      - 7d55f1a914300bbd60d880395c7570b4
+      X-Endpoint-Monthly-Call-Limit:
+      - '1000'
+      X-Trial-Endpoint-Call-Limit:
+      - '100'
+      X-Trial-Endpoint-Call-Remaining:
+      - '96'
+      Date:
+      - Sat, 07 Nov 2026 03:38:41 GMT
+      X-Envoy-Upstream-Service-Time:
+      - '13282'
+      Server:
+      - envoy
+      Via:
+      - 1.1 google
+      Alt-Svc:
+      - h3=":443"; ma=2592000
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: ASCII-8BIT
+      string: '{"id":"9ae912a3-56fa-4bcb-8057-537b83a14c51","pages":[{"index":0,"type":"markdown","markdown":{"content":"SAMPLE\nStatement
+        of Account\n12345678\n\nJAMES C. MORRISON\n1765 SHERIDAN DRIVE\nYOUR CITY,
+        USA 03087\n\nPage 1 of 2\n\nYou have successfully opened a sample statement
+        in PDF format.\nPlease continue with your e-Statement enrollment.\n\n**Summary
+        of Your Account**\n\n\u003ctable\u003e\u003ctr\u003e\u003ctd\u003eBeginning
+        balance on October 10\u003c/td\u003e\u003ctd\u003e$69.96\u003c/td\u003e\u003ctd\u003eAverage
+        Balance\u003c/td\u003e\u003ctd\u003e$645.24\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e+
+        Deposits and other credits\u003c/td\u003e\u003ctd\u003e$1,876.02\u003c/td\u003e\u003ctd\u003eAvg
+        Collected Balance\u003c/td\u003e\u003ctd\u003e$643.24\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e+
+        Interest paid\u003c/td\u003e\u003ctd\u003e$0.26\u003c/td\u003e\u003ctd\u003eInterest
+        Paid YTD\u003c/td\u003e\u003ctd\u003e$3.13\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e-
+        Withdrawals and other debits\u003c/td\u003e\u003ctd\u003e$1,320.02\u003c/td\u003e\u003ctd\u003eInterest-bearing
+        Days\u003c/td\u003e\u003ctd\u003e30\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e-
+        Service Charges and Fees\u003c/td\u003e\u003ctd\u003e$12.00\u003c/td\u003e\u003ctd\u003eAverage
+        Balance for APY\u003c/td\u003e\u003ctd\u003e$643.24\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003eEnding
+        balance on November 9\u003c/td\u003e\u003ctd\u003e$586.71\u003c/td\u003e\u003ctd\u003eInterest
+        Earned\u003c/td\u003e\u003ctd\u003e$0.26\u003c/td\u003e\u003c/tr\u003e\u003c/table\u003e\n\n**Activity
+        for Relationship Checking - Account #12345678**\n\n**Account Transactions
+        by date with daily balance information**\n\n\u003ctable\u003e\u003cthead\u003e\u003ctr\u003e\u003ctd\u003eDate\u003c/td\u003e\u003ctd\u003eDescription\u003c/td\u003e\u003ctd\u003eDebit\u003c/td\u003e\u003ctd\u003eCredit\u003c/td\u003e\u003ctd\u003eBalance\u003c/td\u003e\u003c/tr\u003e\u003c/thead\u003e\u003ctbody\u003e\u003ctr\u003e\u003ctd\u003e10/02\u003c/td\u003e\u003ctd\u003ePOS
+        PURCHASE\u003c/td\u003e\u003ctd\u003e4.23\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e65.73\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/03\u003c/td\u003e\u003ctd\u003ePREAUTHORIZED
+        CREDIT\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e763.01\u003c/td\u003e\u003ctd\u003e828.74\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/04\u003c/td\u003e\u003ctd\u003ePOS
+        PURCHASE\u003c/td\u003e\u003ctd\u003e11.68\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e817.06\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/05\u003c/td\u003e\u003ctd\u003eCHECK
+        1234\u003c/td\u003e\u003ctd\u003e9.98\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e807.08\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/05\u003c/td\u003e\u003ctd\u003ePOS
+        PURCHASE\u003c/td\u003e\u003ctd\u003e25.50\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e781.58\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/08\u003c/td\u003e\u003ctd\u003ePOS
+        PURCHASE\u003c/td\u003e\u003ctd\u003e59.08\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e722.50\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/12\u003c/td\u003e\u003ctd\u003eCHECK
+        1236\u003c/td\u003e\u003ctd\u003e69.00\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e653.50\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/14\u003c/td\u003e\u003ctd\u003eCHECK
+        1237\u003c/td\u003e\u003ctd\u003e180.63\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e472.87\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/14\u003c/td\u003e\u003ctd\u003ePOS
+        PURCHASE\u003c/td\u003e\u003ctd\u003e18.96\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e453.91\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/16\u003c/td\u003e\u003ctd\u003ePREAUTHORIZED
+        CREDIT\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e763.01\u003c/td\u003e\u003ctd\u003e1216.92\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/22\u003c/td\u003e\u003ctd\u003eATM
+        WITHDRAWAL\u003c/td\u003e\u003ctd\u003e140.00\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e1076.92\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/28\u003c/td\u003e\u003ctd\u003eCHECK
+        1238\u003c/td\u003e\u003ctd\u003e91.06\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e985.86\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/30\u003c/td\u003e\u003ctd\u003eCHECK
+        1239\u003c/td\u003e\u003ctd\u003e451.20\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e534.66\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/30\u003c/td\u003e\u003ctd\u003eCHECK
+        1246\u003c/td\u003e\u003ctd\u003e37.07\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e497.59\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/30\u003c/td\u003e\u003ctd\u003ePOS
+        PURCHASE\u003c/td\u003e\u003ctd\u003e18.67\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e478.92\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/31\u003c/td\u003e\u003ctd\u003eCHECK
+        1247\u003c/td\u003e\u003ctd\u003e100.00\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e378.92\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/31\u003c/td\u003e\u003ctd\u003eCHECK
+        1248\u003c/td\u003e\u003ctd\u003e78.24\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e300.68\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e10/31\u003c/td\u003e\u003ctd\u003ePREAUTHORIZED
+        CREDIT\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e350.00\u003c/td\u003e\u003ctd\u003e650.68\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e11/02\u003c/td\u003e\u003ctd\u003eCHECK
+        1249\u003c/td\u003e\u003ctd\u003e52.23\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e598.45\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e11/09\u003c/td\u003e\u003ctd\u003eINTEREST
+        CREDIT\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e.26\u003c/td\u003e\u003ctd\u003e598.71\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd\u003e11/09\u003c/td\u003e\u003ctd\u003eSERVICE
+        CHARGE\u003c/td\u003e\u003ctd\u003e12.00\u003c/td\u003e\u003ctd\u003e\u003c/td\u003e\u003ctd\u003e586.71\u003c/td\u003e\u003c/tr\u003e\u003c/tbody\u003e\u003c/table\u003e"}}],"meta":{"api_version":{"version":"2"},"billed_units":{"pages":1}},"finish_reason":"COMPLETE"}'
+  recorded_at: Sat, 07 Nov 2026 03:38:41 GMT
+recorded_with: VCR 6.3.1

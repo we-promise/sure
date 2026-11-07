@@ -21,8 +21,9 @@ class VectorStore::Base
   # @param store_id [String]
   # @param file_content [String] raw file bytes
   # @param filename [String] original filename with extension
-  # @return [Hash] { file_id: "file-identifier" }
-  def upload_file(store_id:, file_content:, filename:)
+  # @param family [Family] whose `embed` route embeds the chunks, and whose usage it is
+  # @return [Hash] { file_id: "file-identifier", status: "ready" | "processing" }
+  def upload_file(store_id:, file_content:, filename:, family: nil)
     raise NotImplementedError
   end
 
@@ -33,13 +34,20 @@ class VectorStore::Base
     raise NotImplementedError
   end
 
-  # Semantic search across indexed files
+  # Semantic search across indexed files, dropping weak matches
   # @param store_id [String]
   # @param query [String] natural-language search query
   # @param max_results [Integer]
+  # @param family, user [Family, User] whose `search_documents` route embeds the query
   # @return [Array<Hash>] each { content:, filename:, score:, file_id: }
-  def search(store_id:, query:, max_results: 10)
+  def search(store_id:, query:, max_results: 10, family: nil, user: nil)
     raise NotImplementedError
+  end
+
+  # Where indexing of a file stands, for adapters that index asynchronously.
+  # @return [Hash] { status: "ready" | "processing" | "unreadable" | "error", error: }
+  def file_status(store_id:, file_id:)
+    success(status: "ready")
   end
 
   # Which file extensions this adapter can ingest

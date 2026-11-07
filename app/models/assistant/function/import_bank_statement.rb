@@ -1,6 +1,8 @@
 require "csv"
 
 class Assistant::Function::ImportBankStatement < Assistant::Function
+  ai_feature :extract_pdf
+
   class << self
     def name
       "import_bank_statement"
@@ -28,6 +30,9 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         ```
 
         If account_id is not provided, you should ask the user which account to import to.
+
+        read_as is optional: leave it out (Auto) unless the user asks for a way, or a statement came
+        out badly and should be read again another way (pdf, images, ocr or text).
       INSTRUCTIONS
     end
   end
@@ -47,6 +52,11 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
         account_id: {
           type: "string",
           description: "The ID of the account to import transactions into. If not provided, will return available accounts."
+        },
+        read_as: {
+          type: "string",
+          enum: PdfImport::READ_AS,
+          description: "How to read the PDF: auto (the default), pdf, images, ocr or text."
         }
       }
     )
@@ -92,34 +102,20 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       }
     end
 
-    # Extract transactions from the PDF using the configured LLM provider.
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # extract_bank_statement (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
-    unless provider
+    availability = Ai.availability(:extract_pdf, family:, user:)
+    unless availability.available?
       return {
         success: false,
         error: "provider_not_configured",
-        message: "AI provider is not configured"
+        reason: availability.reason.to_s,
+        message: availability.message_for(user)
       }
     end
 
-    response = provider.extract_bank_statement(
-      pdf_content: pdf_import.pdf_file_content,
-      model: model_for(provider),
-      family: family
-    )
-
-    unless response.success?
-      error_message = response.error&.message || "Unknown extraction error"
-      return {
-        success: false,
-        error: "extraction_failed",
-        message: "Failed to extract transactions: #{error_message}"
-      }
-    end
-
-    result = response.data
+    read_as = params["read_as"].presence_in(PdfImport::READ_AS) || pdf_import.read_as || "auto"
+    reading = Ai::PdfReading.new(content: pdf_import.pdf_file_content, filename: pdf_import.pdf_filename, family:, user:)
+    outcome = reading.extract(read_as: read_as.to_sym, start: PdfImport.last_passing_way(account:, model: reading.model&.name))
+    result = Ai::Generations::ExtractBankStatement.statement(outcome.value)
 
     if result[:transactions].blank?
       return {
@@ -155,9 +151,16 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       transactions_preview: result[:transactions].first(5),
       statement_period: result[:period],
       account_holder: result[:account_holder],
-      message: "Successfully extracted #{result[:transactions].size} transactions. Import created with ID: #{import.id}. Review and publish when ready."
+      read_as: outcome.way.to_s,
+      checks_passed: outcome.passed?,
+      message: "Successfully extracted #{result[:transactions].size} transactions. Import created with ID: #{import.id}. " \
+               "#{outcome.passed? ? "" : "The extraction failed its checks, so some rows may be wrong or missing; tell the user. "}" \
+               "Review and publish when ready."
     }
-  rescue Provider::Error, Faraday::Error, Timeout::Error, RuntimeError => e
+  rescue Ai::Error::Unavailable => e
+    { success: false, error: "unavailable", reason: e.reason.to_s,
+      message: I18n.t("imports.pdf_import.errors.unavailable.#{e.reason}", default: I18n.t("imports.pdf_import.errors.unavailable.default")) }
+  rescue Ai::Error::Base, Pdf::PageImages::Error, Timeout::Error, RuntimeError => e
     Rails.logger.error("ImportBankStatement error: #{e.class.name} - #{e.message}")
     Rails.logger.error(e.backtrace.first(10).join("\n"))
     {
@@ -182,11 +185,5 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
           ]
         end
       end
-    end
-
-    # Only OpenAI takes the OpenAI model setting; other providers (Anthropic)
-    # resolve their own default when given nil.
-    def model_for(provider)
-      Provider::Openai.effective_model if provider.is_a?(Provider::Openai)
     end
 end

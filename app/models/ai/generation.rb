@@ -1,0 +1,277 @@
+# The base class of every structured-output feature (section 8.1). A feature is declared, not
+# implemented: its key, its prompt folder, its schema and, when it takes a list, how the list is
+# batched and merged. `call` is the only place that does the rest, in this order:
+#
+#   1. Ai::Router#resolve(feature); unavailable returns Ai::Result.unavailable(reason).
+#   2. Stop if `cancelled` returns true, here and before every batch.
+#   3. Take the first route not marked down (Ai::DownMarks). Render its prompt (Ai::Prompt), take
+#      the next batch sized for its model (Ai::Batch), call its transport's `generate`, and
+#      coerce the answer (Ai::Schema). On a `judge` model, the feature's judgement (`judged_by`)
+#      answers the same batch instead (section 8). PR 4's sequencer takes this step's route choice.
+#   4. On a failover error (Ai::DownMarks::FAILOVER), mark it down and take the next route. On
+#      InvalidOutput, escalate to the next route. On ContextTooLong or an answer cut at the
+#      output limit, halve the batch on the same route; a single item that still can't fit
+#      escalates. Nothing else is retried here; the transport has retried 429s and 5xxs.
+#   5. Return an Ai::Result with the route that answered and the items not reached. When the
+#      feature declares `shadow` and the family's rate samples this call, enqueue Ai::ShadowJob
+#      with the items actually sent (section 8.2).
+#
+# `call(batches: 1)` runs one batch, which is what Ai::GenerationJob does (small batches,
+# section 11); plain `call` runs them all and merges the answers. `call!` returns the value or
+# raises the Ai::Error, for jobs.
+class Ai::Generation
+  class_attribute :feature_key, :prompt_key, :static_schema, :schema_label, :batch_key, :merge_key, :merge_by,
+                  :blank_item_check, :key_aliases, :required_keys, :judgement_class, :shadow_compare,
+                  :shadow_subject, instance_writer: false
+
+  class << self
+    def feature(key) = self.feature_key = key.to_sym
+
+    # The default prompt folder in app/prompts (section 8.3); a route entry can name another.
+    def prompt(name) = self.prompt_key = name.to_s
+
+    # A constant schema; features whose enum depends on the input define #schema instead.
+    def schema(hash) = self.static_schema = hash
+
+    # The schema's name in a strict response_format.
+    def schema_name(name) = self.schema_label = name.to_s
+
+    # The initializer keyword that holds the items, which are batched (section 8.1).
+    def batch(key) = self.batch_key = key.to_sym
+
+    # How batch answers combine: the list key in the schema, and the id each item carries.
+    def merge(key, by:)
+      self.merge_key = key.to_sym
+      self.merge_by = by.to_sym
+    end
+
+    # An item the model left blank, for `auto` JSON mode's fallback (today's null heuristics).
+    def blank_item(&check) = self.blank_item_check = check
+
+    # Field names models use instead of the schema's, as today's parsers accept them.
+    def aliases(map) = self.key_aliases = map
+
+    # Item fields without which an answer can't be matched to its input.
+    def required(*keys) = self.required_keys = keys.map(&:to_sym)
+
+    # The Ai::Judgement that answers this feature on a `judge` model (Jev). It takes #arguments
+    # and returns the same value shape.
+    def judged_by(klass) = self.judgement_class = klass
+
+    # Runs the feature on its `shadow_<feature>` route as its own job, compared and never applied
+    # (section 8.2). `compare` maps a value to { item id => [value, confidence] }, run on the
+    # generation, so it can turn names into ids; `subject` is the class each item id names.
+    def shadow(compare:, subject:)
+      self.shadow_compare = compare
+      self.shadow_subject = subject.to_s
+    end
+  end
+
+  attr_reader :family, :user, :locale
+
+  def initialize(family:, user: nil, locale: nil)
+    @family, @user, @locale = family, user, locale
+  end
+
+  def schema = static_schema
+
+  # Locals for the prompt templates; a batched feature includes its items.
+  def prompt_locals = {}
+
+  # Fields the feature matches itself instead of by the schema's enum (Ai::Schema's `match:`).
+  def matchers = {}
+
+  def items = batch_key ? Array(instance_variable_get(:"@#{batch_key}")) : nil
+
+  # What one item costs a request, in tokens, for Ai::Batch: its text by default. A page image
+  # costs a fixed estimate (PDF import, 2e).
+  def item_cost(item) = Assistant::TokenEstimator.estimate(item)
+
+  # Files sent with this request's input (Ai::Attachment): a PDF or page images (2e).
+  def attachments = []
+
+  # Capabilities this call needs beyond the feature's own, such as `vision` for page images: a
+  # route whose model lacks them is skipped, not sent a request it would refuse.
+  def needs = []
+
+  # How the answers of each batch combine: the merge list's items, one per id. A feature whose
+  # items have no id (statement rows) merges its own way.
+  def merge_values(values)
+    { merge_key => values.flat_map { Array(_1[merge_key]) }.index_by { _1[merge_by] }.values }
+  end
+
+  # The initializer's arguments other than the family, for the judgement and the shadow job.
+  def arguments = raise(NotImplementedError, "#{self.class.name} defines no arguments")
+
+  # A copy holding only `slice`, so prompt_locals only ever sees one batch.
+  def with_items(slice) = dup.tap { _1.instance_variable_set(:"@#{batch_key}", slice) }
+
+  def call!(...) = call(...).value!
+
+  # The value as { item id => [value, confidence] }, for Ai::Comparison.
+  def compared(value) = instance_exec(value, &shadow_compare)
+
+  def call(batches: nil, cancelled: nil, plan: nil)
+    plan ||= Ai::Router.new(family:, user:).resolve(feature_key)
+    return Ai::Result.unavailable(plan) unless plan.is_a?(Ai::Plan)
+
+    @plan_feature = plan.feature   # shadow_<feature> on a shadow run: its usage is its own
+
+    routes = plan.routes.select { servable?(_1) }
+    return Ai::Result.unavailable(Ai::Availability.unavailable(feature_key, :capability_missing)) if routes.empty?
+
+    @usage = nil
+    @failed_over_from = []
+    @sent = []
+    result = batch_key ? call_batched(routes, batches:, cancelled:) : call_single(routes, cancelled:)
+    Ai::Shadow.enqueue(self, result, sent: @sent) if shadow_compare
+    result
+  rescue Ai::Error::Base => error
+    Ai::Result.failure(error, usage: @usage, failed_over_from: @failed_over_from.presence, correlation_id: Ai::CallContext.correlation_id)
+  end
+
+  # The share of this batch's items the model left blank or missed.
+  def failed_ratio(json)
+    return 0.0 unless blank_item_check && items.any?
+
+    answered = Array(coerce(json)[merge_key])
+    blank = answered.count { blank_item_check.call(_1) }
+    (blank + [ items.size - answered.size, 0 ].max) / items.size.to_f
+  rescue Ai::Error::InvalidOutput
+    1.0
+  end
+
+  def coerce(json)
+    Ai::Schema.coerce(json, schema, aliases: key_aliases || {}, match: matchers, required: required_keys || [])
+  end
+
+  private
+    def servable?(route)
+      return judgement_class.present? && route.model.capable?(:judge) if route.judge?
+
+      route.model.capable?(:structured_output, *needs)
+    end
+
+    def call_single(routes, cancelled:)
+      raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
+
+      route, value = on_routes(routes, nil).first
+      result(value:, route:)
+    end
+
+    def call_batched(routes, batches:, cancelled:)
+      remaining = items.dup
+      values = []
+      served = nil
+      done = 0
+
+      while remaining.any? && (batches.nil? || done < batches)
+        raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
+
+        route = routes.find { !Ai::DownMarks.down?(_1) } || routes.first
+        slice = Ai::Batch.first_slice(remaining, model: route.model, fixed_tokens: fixed_tokens(route), cost: method(:item_cost))
+        on_routes(routes, slice).each do |answered_by, value|
+          served = answered_by
+          values << value
+        end
+        @sent.concat(slice)
+        remaining -= slice
+        done += 1
+      end
+
+      result(value: merge_values(values), route: served, remaining:)
+    end
+
+    # Runs `slice` (nil for a feature without items) down the routes: failover and escalation
+    # move on, an overflow is split on the same route. Returns [[route, value], ...], one pair
+    # per piece the slice was split into.
+    def on_routes(routes, slice)
+      pending = slice
+      answers = []
+      last_error = nil
+
+      routes.each do |route|
+        next if Ai::DownMarks.down?(route)
+
+        begin
+          done, pending = split_on(route, pending)
+          answers.concat(done.map { [ route, _1 ] })
+          return answers if pending.empty?
+        rescue *Ai::DownMarks::FAILOVER => error
+          Ai::DownMarks.mark(route, error)
+          @failed_over_from << route
+          last_error = error
+        rescue Ai::Error::InvalidOutput, Ai::Error::ContextTooLong => error
+          last_error = error
+        end
+      end
+
+      raise last_error || Ai::Error::Unreachable.new("every route for #{feature_key} is marked down")
+    end
+
+    # Answers `slice` on one route, halving it on overflow. Returns [values, items that can't
+    # fit on their own], or raises when nothing in the slice could be answered here.
+    def split_on(route, slice)
+      [ [ run(route, slice) ], [] ]
+    rescue Ai::Error::ContextTooLong
+      raise if slice.nil? || slice.size <= 1
+
+      values, unfit = Ai::Batch.halves(slice).each_with_object([ [], [] ]) do |half, (done, left)|
+        answered, rest = split_on(route, half)
+        done.concat(answered)
+        left.concat(rest)
+      rescue Ai::Error::ContextTooLong
+        left.concat(half)   # a single item that can't fit here
+      end
+      raise Ai::Error::ContextTooLong, "no item of the batch fits #{route.model.name}" if values.empty?
+
+      [ values, unfit ]
+    end
+
+    def run(route, slice)
+      generation = slice ? with_items(slice) : self
+      return judge(route, generation) if route.judge?
+
+      prompt = Ai::Prompt.for(feature_key, default: prompt_key, route:, family:, locale: prompt_locale, locals: generation.prompt_locals)
+      request = Ai::Transport::Base::Request.new(
+        feature: request_feature, family:, model: route.model, instructions: prompt.instructions, input: prompt.input,
+        schema: generation.schema, schema_name: schema_label || feature_key, reasoning_effort: route.reasoning_effort,
+        json_mode: route.effective_json_mode, failed_ratio: (generation.method(:failed_ratio) if batch_key && blank_item_check),
+        attachments: generation.attachments
+      )
+      response = route.transport.generate(request)
+      @usage = @usage ? @usage + response.usage : response.usage
+      generation.coerce(response.json)
+    end
+
+    def judge(route, generation)
+      value, usage = judgement_class.new(**generation.arguments, family:).run(route, feature: request_feature)
+      @usage = @usage && usage ? @usage + usage : (@usage || usage)
+      value
+    end
+
+    # The tokens the prompt takes before any item: rendered once per route with no items. A judge
+    # model has no prompt.
+    def fixed_tokens(route)
+      return 0 if route.judge?
+
+      @fixed_tokens ||= {}
+      @fixed_tokens[route] ||= begin
+        empty = with_items([])
+        prompt = Ai::Prompt.for(feature_key, default: prompt_key, route:, family:, locale: prompt_locale, locals: empty.prompt_locals)
+        Assistant::TokenEstimator.estimate(prompt.instructions) + Assistant::TokenEstimator.estimate(prompt.input) +
+          Assistant::TokenEstimator.estimate(empty.schema)
+      end
+    end
+
+    # The feature the call is recorded under: shadow_<feature> on a shadow run.
+    def request_feature = @plan_feature || feature_key
+
+    # The user's locale when a user started the work, otherwise the family's (section 8.3).
+    def prompt_locale = locale || user&.locale.presence || family&.locale.presence
+
+    def result(value:, route:, remaining: [])
+      Ai::Result.new(value:, usage: @usage, route:, failed_over_from: @failed_over_from.presence, remaining:,
+                     correlation_id: Ai::CallContext.correlation_id)
+    end
+end

@@ -24,7 +24,7 @@ class Eval::LangfuseExperimentRunnerTest < ActiveSupport::TestCase
     client.expects(:shutdown)
     provider = mock
     provider.expects(:auto_categorize).returns(Provider::Response.new(success?: true, error: nil,
-      data: [ Provider::LlmConcept::AutoCategorization.new(transaction_id: "item-id", category_name: "Dining") ]))
+      data: [ Eval::GenerationClient::Categorization.new(transaction_id: "item-id", category_name: "Dining") ]))
     runner = Eval::Langfuse::ExperimentRunner.new(dataset, model: "gpt-4.1", client: client)
     runner.stubs(:llm_provider).returns(provider)
 
@@ -66,7 +66,7 @@ class Eval::LangfuseExperimentRunnerTest < ActiveSupport::TestCase
       client.expects(:shutdown)
       provider = mock
       provider.expects(:auto_categorize).twice.returns(Provider::Response.new(success?: true, error: nil,
-        data: items.map { |item| Provider::LlmConcept::AutoCategorization.new(transaction_id: item["id"], category_name: "Dining") }))
+        data: items.map { |item| Eval::GenerationClient::Categorization.new(transaction_id: item["id"], category_name: "Dining") }))
       runner = Eval::Langfuse::ExperimentRunner.new(dataset, model: "gpt-4.1", client: client)
       runner.stubs(:llm_provider).returns(provider)
 
@@ -102,10 +102,10 @@ class Eval::LangfuseExperimentRunnerTest < ActiveSupport::TestCase
       client.expects(:shutdown)
       provider = mock
       if eval_type == "categorization"
-        data = items.map { |item| Provider::LlmConcept::AutoCategorization.new(transaction_id: item["id"], category_name: "Dining") }
+        data = items.map { |item| Eval::GenerationClient::Categorization.new(transaction_id: item["id"], category_name: "Dining") }
         provider.expects(:auto_categorize).twice.returns(Provider::Response.new(success?: true, error: nil, data: data))
       else
-        data = items.map { |item| Provider::LlmConcept::AutoDetectedMerchant.new(transaction_id: item["id"], business_name: "Cafe", business_url: "https://cafe.test") }
+        data = items.map { |item| Eval::GenerationClient::DetectedMerchant.new(transaction_id: item["id"], business_name: "Cafe", business_url: "https://cafe.test") }
         provider.expects(:auto_detect_merchants).twice.returns(Provider::Response.new(success?: true, error: nil, data: data))
       end
       runner = Eval::Langfuse::ExperimentRunner.new(dataset, model: "gpt-4.1", client: client)

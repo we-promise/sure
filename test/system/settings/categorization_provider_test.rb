@@ -10,7 +10,7 @@ class Settings::CategorizationProviderTest < ApplicationSystemTestCase
   end
 
   teardown do
-    @family.update!(categorization_provider: "llm")
+    Setting.categorization_provider = nil
   end
 
   test "the panel is hidden until a user opts into preview features" do
@@ -21,23 +21,26 @@ class Settings::CategorizationProviderTest < ApplicationSystemTestCase
     assert_no_text "Transaction Categorization"
   end
 
-  test "an opted-in user switches the family onto Jev and back" do
+  # One choice for the instance until PR 7 lists routes per feature (2d).
+  test "an opted-in super admin switches the instance onto Jev and back" do
+    @user.update!(role: :super_admin)
     set_preview_features(true)
 
     visit settings_hosting_path
 
     assert_text "Transaction Categorization"
-    assert_equal "llm", @family.reload.categorization_provider
+    assert_text "for every family on this instance"
+    assert_equal "llm", Ai::LegacyEnvConfig.categorization_provider
 
     # The select auto-submits on change, so choosing an option is the whole
     # interaction — there is no save button to press.
     select "Jev (TypeSafe)", from: "Categorization provider"
     assert_text "Data sharing"
-    assert_equal "jev", @family.reload.categorization_provider
+    assert_equal "jev", Setting.categorization_provider
 
     select "AI provider (OpenAI or Anthropic)", from: "Categorization provider"
     assert_no_text "Data sharing"
-    assert_equal "llm", @family.reload.categorization_provider
+    assert_equal "llm", Setting.categorization_provider
   end
 
   test "shadow results say there is no data rather than showing zero agreement" do
@@ -53,15 +56,17 @@ class Settings::CategorizationProviderTest < ApplicationSystemTestCase
 
   test "shadow results summarise recorded comparisons" do
     set_preview_features(true)
-    @family.categorization_comparisons.create!(
-      applied_provider: "openai", applied_category_name: "Groceries",
-      shadow_provider: "jev", shadow_category_name: "Restaurants & Bars",
-      shadow_confidence: 0.52, agreed: false
+    groceries = @family.categories.find_or_create_by!(name: "Groceries")
+    restaurants = @family.categories.find_or_create_by!(name: "Restaurants & Bars")
+    coffee = @family.categories.find_or_create_by!(name: "Coffee")
+    route = ->(endpoint) { { endpoint:, model: "test-model" } }
+    @family.ai_comparisons.create!(
+      feature: "categorize", primary_route: route.("openai"), shadow_route: route.("jev"),
+      primary_value: groceries.id, shadow_value: restaurants.id, shadow_confidence: 0.52, agreed: false
     )
-    @family.categorization_comparisons.create!(
-      applied_provider: "openai", applied_category_name: "Coffee",
-      shadow_provider: "jev", shadow_category_name: "Coffee",
-      shadow_confidence: 0.97, agreed: true
+    @family.ai_comparisons.create!(
+      feature: "categorize", primary_route: route.("openai"), shadow_route: route.("jev"),
+      primary_value: coffee.id, shadow_value: coffee.id, shadow_confidence: 0.97, agreed: true
     )
 
     visit settings_hosting_path
@@ -71,7 +76,17 @@ class Settings::CategorizationProviderTest < ApplicationSystemTestCase
     assert_text "confidence 0.52"
   end
 
+  test "a family admin sees the instance's choice but can't change it" do
+    Setting.categorization_provider = "jev"
+    set_preview_features(true)
+
+    visit settings_hosting_path
+
+    assert_select "Categorization provider", selected: "Jev (TypeSafe)", disabled: true
+  end
+
   test "the tuning controls state what they cost" do
+    @user.update!(role: :super_admin)
     set_preview_features(true)
 
     visit settings_hosting_path
@@ -109,8 +124,9 @@ class Settings::CategorizationProviderTest < ApplicationSystemTestCase
   end
 
   test "selecting Jev without an API key warns that categorization will not switch" do
+    @user.update!(role: :super_admin)
     set_preview_features(true)
-    Provider::Jev.stubs(:configured?).returns(false)
+    Ai::LegacyEnvConfig::Jev.stubs(:configured?).returns(false)
 
     visit settings_hosting_path
     select "Jev (TypeSafe)", from: "Categorization provider"

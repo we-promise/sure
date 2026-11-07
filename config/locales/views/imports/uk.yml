@@ -502,9 +502,6 @@ uk:
       review_transactions: "Переглянути транзакції"
       select_account_to_continue: "Будь ласка, виберіть рахунок вище, щоб продовжити."
       unknown_document_type: "Невідомо"
-      errors:
-        provider_not_configured: Постачальника ШІ не налаштовано
-        provider_no_pdf_support: Постачальник ШІ не підтримує обробку PDF
       view_summary: Переглянути підсумок імпорту
       already_recorded_note:
         one: '%{count} транзакція вже була на цьому рахунку й була зіставлена з випискою.'
