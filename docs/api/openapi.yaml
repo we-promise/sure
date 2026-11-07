@@ -3360,8 +3360,8 @@ components:
           type: string
           format: uuid
           description: An offline security no provider has ever matched (no offline_reason
-            or price_provider), held or traded in an account the caller can write
-            to
+            or price_provider), traded in an account the caller can write to, or held
+            in a linked one
         prices:
           type: array
           minItems: 1
@@ -9503,11 +9503,11 @@ paths:
       summary: Import closing prices for a security no provider tracks
       description: Self-hosted instances only. Stores daily closes for an offline
         security no provider has ever matched (no offline_reason, no price_provider)
-        that is held or traded in an account the caller can write to. All rows are
-        validated first and stored together, or none are. A date already stored is
-        replaced. Security prices are shared, so the closes also value any other family
-        holding the same security. The caller's affected accounts are synced afterwards.
-        Requires the read_write scope.
+        that is traded in an account the caller can write to, or held in a linked
+        one. All rows are validated first and stored together, or none are. A date
+        already stored is replaced. Security prices are shared, so the closes also
+        value any other family holding the same security. The caller's affected accounts
+        are synced afterwards. Requires the read_write scope.
       tags:
       - Security Prices
       security:
@@ -9521,7 +9521,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/SecurityPriceImportResult"
         '403':
-          description: insufficient scope, or a managed instance
+          description: insufficient scope, a guest, or a managed instance
           content:
             application/json:
               schema:

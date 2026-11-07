@@ -17,9 +17,9 @@ class Security::ManualPriceImport
     end
   end
 
-  # `accounts` are the caller's accounts holding or trading the security. A
-  # security with no prices yet takes its currency from their trades, or
-  # failing that their holdings.
+  # `accounts` are the caller's accounts trading the security, or holding it
+  # in a linked account. A security with no prices yet takes its currency from
+  # their trades, or failing that their holdings.
   def initialize(security:, rows:, accounts:)
     @security = security
     @rows = rows
@@ -27,16 +27,25 @@ class Security::ManualPriceImport
   end
 
   def import!
-    raise Invalid.new([ error(nil, "prices cannot be imported for a cash position") ]) if security.cash?
-    raise Invalid.new([ error(nil, "prices can only be imported for a security no provider tracks") ]) unless untracked?
     raise Invalid.new([ error(nil, "prices must contain at least one row") ]) if rows.empty?
     raise Invalid.new([ error(nil, "a request can carry at most #{MAX_ROWS} prices") ]) if rows.size > MAX_ROWS
 
     parsed, errors = parse_rows
-    errors.concat(currency_errors(parsed)) if errors.empty?
-    raise Invalid.new(errors) if errors.any?
 
-    write(parsed)
+    # The unique key includes currency, so two first imports in different
+    # currencies would not conflict. The security's row lock is held from the
+    # eligibility and currency checks through the upsert, so a resolver that
+    # assigns a provider, or another import, cannot slip in between.
+    security.with_lock do
+      raise Invalid.new([ error(nil, "prices cannot be imported for a cash position") ]) if security.cash?
+      raise Invalid.new([ error(nil, "prices can only be imported for a security no provider tracks") ]) unless untracked?
+      raise Invalid.new(errors) if errors.any?
+
+      errors = currency_errors(parsed)
+      raise Invalid.new(errors) if errors.any?
+
+      write(parsed)
+    end
   end
 
   private
@@ -134,6 +143,9 @@ class Security::ManualPriceImport
       end
 
       currencies, source = position_currencies
+      if currencies.empty?
+        return { error: "no trade or holding of this security records a currency, so none can be chosen for its prices" }
+      end
       if currencies.many?
         return { error: "this security's #{source} are in more than one currency (#{currencies.join(', ')}); none can be chosen for its prices" }
       end

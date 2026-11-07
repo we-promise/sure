@@ -181,6 +181,38 @@ class Security::ManualPriceImportTest < ActiveSupport::TestCase
     assert_equal "AUD", import([ row(1.day.ago, "20") ]).currency
   end
 
+  # holdings.currency is NOT NULL but trades.currency is not, so only a
+  # trade-backed position with no holding yet can leave nothing to choose.
+  test "a position with no recorded currency is refused with a reason" do
+    @account.holdings.where(security: @security).delete_all
+    entry = @account.entries.create!(
+      date: 3.days.ago.to_date, name: "Buy", amount: 100, currency: "AUD",
+      entryable: Trade.new(security: @security, qty: 5, price: 20, currency: "AUD")
+    )
+    entry.entryable.update_column(:currency, nil)
+
+    error = assert_raises(Security::ManualPriceImport::Invalid) { import([ row(1.day.ago, "20") ]) }
+
+    assert_equal [ { index: nil, message: "no trade or holding of this security records a currency, so none can be chosen for its prices" } ], error.errors
+    assert_empty @security.prices
+  end
+
+  # A resolver assigning a provider while this import waits for the lock: the
+  # eligibility check has to see it, or the closes outlast the provider's own.
+  test "eligibility is checked under the security's lock" do
+    @security.singleton_class.prepend(Module.new do
+      def with_lock(*)
+        Security.where(id: id).update_all(price_provider: "tiingo")
+        super
+      end
+    end)
+
+    error = assert_raises(Security::ManualPriceImport::Invalid) { import([ row(1.day.ago, "20") ]) }
+
+    assert_equal [ { index: nil, message: "prices can only be imported for a security no provider tracks" } ], error.errors
+    assert_empty @security.prices
+  end
+
   test "only calendar dates are accepted" do
     error = assert_raises(Security::ManualPriceImport::Invalid) do
       import([ row(1.day.ago, "5").merge("date" => "2026-001"), row(1.day.ago, "5").merge("date" => "20260101"),
@@ -226,6 +258,24 @@ class Security::ManualPriceImportTest < ActiveSupport::TestCase
     Security::Price::Importer.new(security: @security, security_provider: provider, start_date: date, end_date: date).import_provider_prices
 
     assert_equal BigDecimal("31"), @security.prices.find_by!(date: date, currency: "AUD").price
+  end
+
+  # Another first import that commits an NZD close while this one waits for
+  # the lock. The currency check has to see it, so it must run under the lock:
+  # checked before, AUD would pass against an empty history and both
+  # currencies would be stored.
+  test "the currency check runs under the security's lock" do
+    @security.singleton_class.prepend(Module.new do
+      def with_lock(*)
+        Security::Price.create!(security: self, date: 5.days.ago.to_date, price: 9, currency: "NZD")
+        super
+      end
+    end)
+
+    error = assert_raises(Security::ManualPriceImport::Invalid) { import([ row(1.day.ago, "20") ]) }
+
+    assert_equal [ { index: 0, message: "currency must be NZD, the currency of this security's prices" } ], error.errors
+    assert_equal %w[NZD], @security.prices.distinct.pluck(:currency)
   end
 
   private

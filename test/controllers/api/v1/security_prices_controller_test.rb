@@ -247,7 +247,10 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
   test "a security the caller cannot write to is not found, however it is named" do
     other_offline = Security.create!(ticker: "OTHER#{SecureRandom.hex(3).upcase}", offline: true)
     other_account = families(:empty).accounts.create!(name: "Theirs", accountable: Investment.new, balance: 1, currency: "AUD")
-    other_account.holdings.create!(security: other_offline, date: 3.days.ago.to_date, qty: 1, price: 1, amount: 1, currency: "AUD")
+    other_account.entries.create!(
+      date: 3.days.ago.to_date, name: "Buy", amount: 1, currency: "AUD",
+      entryable: Trade.new(security: other_offline, qty: 1, price: 1, currency: "AUD")
+    )
     shared_read_only = offline_security_held_by(@account)
     @account.update_columns(owner_id: users(:family_member).id)
     AccountShare.create!(account: @account, user: @user, permission: "read_only")
@@ -327,6 +330,75 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ [ Date.new(2026, 11, 8), 21 ] ], security.prices.pluck(:date, :price)
   end
 
+  # An unlinked account's sync rebuilds its holdings from trades and deletes
+  # the rest, so accepting this import would queue a sync that removes the
+  # position being priced.
+  test "an unlinked account's holding with no trade behind it is not found" do
+    security = offline_security_held_without_trade(@account)
+    Account.any_instance.expects(:sync_later).never
+
+    with_self_hosting do
+      post api_v1_security_prices_url, params: { security_id: security.id, prices: [ close(1.day.ago, "20") ] },
+           headers: api_headers(write_key), as: :json
+    end
+
+    assert_response :not_found
+    assert_empty security.prices
+  end
+
+  # A linked account's holdings come from its provider, and its (reverse) sync
+  # keeps them, so a holding there is enough.
+  test "a linked account's holding is enough, with no trade" do
+    linked = @family.accounts.create!(name: "Linked", owner: @user, accountable: Investment.new, balance: 200, currency: "AUD")
+    AccountProvider.create!(account: linked, provider: lunchflow_accounts(:investment_account))
+    security = offline_security_held_without_trade(linked)
+    Account.any_instance.expects(:sync_later).once
+
+    with_self_hosting do
+      post api_v1_security_prices_url, params: { security_id: security.id, prices: [ close(1.day.ago, "21") ] },
+           headers: api_headers(write_key), as: :json
+    end
+
+    assert_response :ok
+    assert_equal [ BigDecimal("21") ], security.prices.pluck(:price)
+  end
+
+  # The sync the import queues, run for real: the trade-backed holding is
+  # rebuilt at the imported close rather than purged.
+  test "the queued sync revalues the position at the imported close" do
+    security = offline_security_held_by(@account)
+
+    with_self_hosting do
+      post api_v1_security_prices_url, params: { security_id: security.id, prices: [ close(1.day.ago, "35") ] },
+           headers: api_headers(write_key), as: :json
+    end
+    assert_response :ok
+
+    Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+    holding = @account.holdings.find_by(security: security, date: 1.day.ago.to_date)
+
+    assert_not_nil holding, "the sync removed the priced position"
+    assert_equal BigDecimal("35"), holding.price
+    assert_equal BigDecimal("350"), holding.amount
+  end
+
+  # Security prices are shared across families, so a guest's read_write key
+  # must not write them, even through an account the guest could write to.
+  test "a guest cannot import prices" do
+    guest = users(:intro_user)
+    account = guest.family.accounts.create!(name: "Guest's", owner: guest, accountable: Investment.new, balance: 200, currency: "AUD")
+    security = offline_security_held_by(account)
+    key = ApiKey.create!(user: guest, name: "Guest Key", scopes: [ "read_write" ], source: "mobile", display_key: "guest_#{SecureRandom.hex(8)}")
+
+    with_self_hosting do
+      post api_v1_security_prices_url, params: { security_id: security.id, prices: [ close(1.day.ago, "20") ] },
+           headers: api_headers(key), as: :json
+    end
+
+    assert_response :forbidden
+    assert_empty security.prices
+  end
+
   test "prices must be a list" do
     security = offline_security_held_by(@account)
 
@@ -355,8 +427,20 @@ class Api::V1::SecurityPricesControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
+    # A manual-ticker security as it arises: bought by a trade, which the
+    # account's holdings are built from.
     def offline_security_held_by(account)
       Security.create!(ticker: "MYFUND#{SecureRandom.hex(3).upcase}", name: "My Fund", offline: true).tap do |security|
+        account.entries.create!(
+          date: 3.days.ago.to_date, name: "Buy", amount: 200, currency: "AUD",
+          entryable: Trade.new(security: security, qty: 10, price: 20, currency: "AUD")
+        )
+        account.holdings.create!(security: security, date: 3.days.ago.to_date, qty: 10, price: 20, amount: 200, currency: "AUD")
+      end
+    end
+
+    def offline_security_held_without_trade(account)
+      Security.create!(ticker: "HELD#{SecureRandom.hex(3).upcase}", name: "Held Fund", offline: true).tap do |security|
         account.holdings.create!(security: security, date: 3.days.ago.to_date, qty: 10, price: 20, amount: 200, currency: "AUD")
       end
     end

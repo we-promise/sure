@@ -147,7 +147,7 @@ RSpec.describe 'API V1 Security Prices', type: :request do
     post 'Import closing prices for a security no provider tracks' do
       description <<~DESC.squish
         Self-hosted instances only. Stores daily closes for an offline security no provider has
-        ever matched (no offline_reason, no price_provider) that is held or traded in an account the caller can write to. All rows
+        ever matched (no offline_reason, no price_provider) that is traded in an account the caller can write to, or held in a linked one. All rows
         are validated first and stored together, or none are. A date already stored is replaced.
         Security prices are shared, so the closes also value any other family holding the same
         security. The caller's affected accounts are synced afterwards. Requires the read_write scope.
@@ -160,7 +160,10 @@ RSpec.describe 'API V1 Security Prices', type: :request do
 
       let(:offline_security) do
         Security.create!(ticker: 'MYFUND', name: 'Private fund', offline: true).tap do |offline|
-          Holding.create!(account: account, security: offline, date: Date.current, qty: 10, price: 12, amount: 120, currency: 'USD')
+          account.entries.create!(
+            date: Date.current, name: 'Buy', amount: 120, currency: 'USD',
+            entryable: Trade.new(security: offline, qty: 10, price: 12, currency: 'USD')
+          )
         end
       end
       let(:body) do
@@ -178,7 +181,7 @@ RSpec.describe 'API V1 Security Prices', type: :request do
         run_test!
       end
 
-      response '403', 'insufficient scope, or a managed instance' do
+      response '403', 'insufficient scope, a guest, or a managed instance' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         before { allow(Rails.application.config).to receive(:app_mode).and_return('managed'.inquiry) }

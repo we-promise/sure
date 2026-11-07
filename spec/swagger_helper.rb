@@ -1827,7 +1827,7 @@ RSpec.configure do |config|
             type: :object,
             required: %w[security_id prices],
             properties: {
-              security_id: { type: :string, format: :uuid, description: 'An offline security no provider has ever matched (no offline_reason or price_provider), held or traded in an account the caller can write to' },
+              security_id: { type: :string, format: :uuid, description: 'An offline security no provider has ever matched (no offline_reason or price_provider), traded in an account the caller can write to, or held in a linked one' },
               prices: {
                 type: :array,
                 minItems: 1,
