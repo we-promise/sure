@@ -64,6 +64,29 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     assert_no_text "Updated to #{@categories.second.name}"
   end
 
+  test "the prompt's buttons stay inside the toast when their labels are long" do
+    # French has the longest labels of the shipped locales, and the desktop tray
+    # is only 20rem wide, so the button row has to wrap rather than overflow.
+    # A user-named category: system names such as "Income" are shown
+    # translated, so assign_category could not search for them in French.
+    category = @user.family.categories.create!(name: "Layout check", color: "#123456")
+    @user.update!(locale: "fr")
+    visit transactions_url
+    assign_category category
+    assert_selector "#cta form button", text: "Masquer pour aujourd'hui"
+    assert_selector "#cta form a", text: "Créer une règle"
+
+    overflow = page.evaluate_script(<<~JS)
+      (() => {
+        const toast = document.querySelector("#cta > div").getBoundingClientRect();
+        return [...document.querySelectorAll("#cta form a, #cta form button")]
+          .map((el) => el.getBoundingClientRect())
+          .filter((r) => r.left < toast.left - 0.5 || r.right > toast.right + 0.5).length;
+      })()
+    JS
+    assert_equal 0, overflow, "every button must stay inside the toast"
+  end
+
   test "a prompt from the transaction drawer waits until the drawer closes" do
     visit transactions_url
     open_drawer @entry
