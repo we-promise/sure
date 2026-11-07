@@ -60,12 +60,13 @@ class ProcessPdfJob < ApplicationJob
     end
 
     # What the import page shows: why no model could read it (the router's reason or the way's),
-    # a rendering failure's concrete reason (#3275), or the error class.
+    # the provider's own message (scrubbed of keys by Ai::Error), as today's Provider::Error
+    # showed, a rendering failure's concrete reason (#3275), or the error class.
     def sanitize_error_message(error)
       case error
       when Ai::Error::Unavailable
         I18n.t("imports.pdf_import.errors.unavailable.#{error.reason}", default: I18n.t("imports.pdf_import.errors.unavailable.default"))
-      when Pdf::PageImages::Error, RuntimeError, ArgumentError
+      when Ai::Error::Base, Pdf::PageImages::Error, RuntimeError, ArgumentError
         I18n.t("imports.pdf_import.processing_failed_with_message",
                message: error.message.truncate(500))
       else

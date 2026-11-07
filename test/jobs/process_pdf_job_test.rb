@@ -142,6 +142,16 @@ class ProcessPdfJobTest < ActiveJob::TestCase
     assert_equal I18n.t("imports.pdf_import.errors.unavailable.not_configured"), @import.error
   end
 
+  test "a provider's error shows its own message, as Provider::Error did, not the class name" do
+    attach_pdf!(@import)
+    @import.expects(:process_with_ai).once.raises(Ai::Error::NoCredit.new("Your credit balance is too low to access the Anthropic API.", status: 400))
+
+    assert_nothing_raised { ProcessPdfJob.perform_now(@import) }
+
+    assert_equal "failed", @import.reload.status
+    assert_equal "Your credit balance is too low to access the Anthropic API.", @import.error
+  end
+
   test "a rendering failure keeps its concrete reason (#3275)" do
     attach_pdf!(@import)
     @import.expects(:process_with_ai).once.raises(Pdf::PageImages::Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary))
