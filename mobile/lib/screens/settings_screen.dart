@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/categories_provider.dart';
 import '../providers/merchants_provider.dart';
 import '../providers/tags_provider.dart';
+import '../providers/transaction_splits_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/privacy_provider.dart';
 import '../services/offline_storage_service.dart';
@@ -250,6 +251,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Provider.of<CategoriesProvider>(context, listen: false).clear();
           Provider.of<MerchantsProvider>(context, listen: false).clear();
           Provider.of<TagsProvider>(context, listen: false).clear();
+          Provider.of<TransactionSplitsProvider>(context, listen: false)
+              .clear();
         }
         log.info('Settings', 'Local data cleared successfully');
 
@@ -342,6 +345,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Provider.of<CategoriesProvider>(context, listen: false).clear();
           Provider.of<MerchantsProvider>(context, listen: false).clear();
           Provider.of<TagsProvider>(context, listen: false).clear();
+          Provider.of<TransactionSplitsProvider>(context, listen: false)
+              .clear();
         }
 
         if (!context.mounted) return;

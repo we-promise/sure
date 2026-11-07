@@ -9,9 +9,15 @@ import '../services/connectivity_service.dart';
 import '../services/log_service.dart';
 
 class TransactionsProvider with ChangeNotifier {
+  TransactionsProvider({
+    OfflineStorageService? offlineStorage,
+    SyncService? syncService,
+  })  : _offlineStorage = offlineStorage ?? OfflineStorageService(),
+        _syncService = syncService ?? SyncService();
+
   final TransactionsService _transactionsService = TransactionsService();
-  final OfflineStorageService _offlineStorage = OfflineStorageService();
-  final SyncService _syncService = SyncService();
+  final OfflineStorageService _offlineStorage;
+  final SyncService _syncService;
   final LogService _log = LogService.instance;
 
   List<OfflineTransaction> _transactions = [];
@@ -23,6 +29,19 @@ class TransactionsProvider with ChangeNotifier {
   bool _isAutoSyncing = false;
   bool _isListenerAttached = false;
   bool _isDisposed = false;
+
+  /// Split children the server destroyed (by a split replace or unsplit) in
+  /// this session. Account sync only upserts and a sync that started before
+  /// the split change can still return them, so they are dropped again after
+  /// every sync. Server ids are never reused, so keeping them is safe.
+  final Set<String> _destroyedSplitChildIds = {};
+
+  /// Accounts whose post-split refresh has not completed (offline or failed);
+  /// the next fetch for them syncs even when not forced.
+  final Set<String> _accountsNeedingResync = {};
+
+  /// Tail of the post-split refresh chain, so refreshes run one at a time.
+  Future<void> _splitRefreshTail = Future<void>.value();
 
   List<Transaction> get transactions =>
       UnmodifiableListView(_transactions.map((t) => t.toTransaction()));
@@ -118,7 +137,11 @@ class TransactionsProvider with ChangeNotifier {
       _log.debug('TransactionsProvider',
           'Online: $isOnline, ForceSync: $forceSync, LocalEmpty: ${localTransactions.isEmpty}');
 
-      if (isOnline && (forceSync || localTransactions.isEmpty)) {
+      final needsResync = accountId == null
+          ? _accountsNeedingResync.isNotEmpty
+          : _accountsNeedingResync.contains(accountId);
+      if (isOnline &&
+          (forceSync || needsResync || localTransactions.isEmpty)) {
         _log.debug(
           'TransactionsProvider',
           'Syncing transactions from server${accountId != null ? " with account filter" : ""}',
@@ -131,6 +154,12 @@ class TransactionsProvider with ChangeNotifier {
         if (result.success) {
           _log.info('TransactionsProvider',
               'Sync successful, synced ${result.syncedCount} transactions');
+          await _dropDestroyedSplitChildren();
+          if (accountId == null) {
+            _accountsNeedingResync.clear();
+          } else {
+            _accountsNeedingResync.remove(accountId);
+          }
           // Reload from local storage after sync
           final updatedTransactions = await _offlineStorage.getTransactions(
             accountId: accountId,
@@ -362,6 +391,56 @@ class TransactionsProvider with ChangeNotifier {
     }
   }
 
+  /// Refresh the cache after a split was created, replaced or removed on the
+  /// server. Children the server destroyed are dropped locally (now and after
+  /// every later sync), because an account-scoped sync only upserts and would
+  /// leave them behind. Refreshes are serialized, and an account whose
+  /// refresh could not sync is synced again on its next fetch.
+  Future<void> refreshAfterSplitChange({
+    required String accessToken,
+    required String accountId,
+    List<String> removedChildIds = const [],
+  }) {
+    _destroyedSplitChildIds.addAll(removedChildIds);
+    _accountsNeedingResync.add(accountId);
+    final run = _splitRefreshTail.catchError((Object _) {}).then(
+          (_) => _refreshAfterSplitChange(
+            accessToken: accessToken,
+            accountId: accountId,
+          ),
+        );
+    _splitRefreshTail = run;
+    return run;
+  }
+
+  Future<void> _refreshAfterSplitChange({
+    required String accessToken,
+    required String accountId,
+  }) async {
+    if (_isDisposed) return;
+    await _dropDestroyedSplitChildren();
+    await fetchTransactions(
+      accessToken: accessToken,
+      accountId: accountId,
+      forceSync: true,
+    );
+  }
+
+  /// Removes every known-destroyed split child from local storage. Each id is
+  /// handled on its own, so one failure does not leave the rest behind.
+  Future<void> _dropDestroyedSplitChildren() async {
+    for (final id in _destroyedSplitChildIds.toList()) {
+      try {
+        await _offlineStorage.deleteTransactionByServerId(id);
+      } catch (e) {
+        _log.error(
+          'TransactionsProvider',
+          'Failed to drop a removed split child with ${e.runtimeType}',
+        );
+      }
+    }
+  }
+
   /// Delete a transaction
   Future<bool> deleteTransaction({
     required String accessToken,
@@ -545,6 +624,7 @@ class TransactionsProvider with ChangeNotifier {
 
   void clearTransactions() {
     _transactions = [];
+    _accountsNeedingResync.clear();
     _error = null;
     notifyListeners();
   }
