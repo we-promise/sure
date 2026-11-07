@@ -6,7 +6,7 @@ class Current < ActiveSupport::CurrentAttributes
 
   delegate :family, to: :user, allow_nil: true
 
-  resets { @accessible_accounts = @finance_accounts = nil }
+  resets { @accessible_accounts = @finance_accounts = @exchange_rates_version = nil }
 
   def user
     impersonated_user || session&.user
@@ -26,6 +26,10 @@ class Current < ActiveSupport::CurrentAttributes
 
   def finance_accounts
     @finance_accounts ||= (user ? user.finance_accounts : family&.accounts)&.load
+  end
+
+  def exchange_rates_version
+    @exchange_rates_version ||= ExchangeRate.maximum(:updated_at)&.to_f
   end
 
   def accessible_entries
