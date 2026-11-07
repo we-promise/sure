@@ -39,9 +39,9 @@ class Security::ManualPriceImport
     security.with_lock do
       raise Invalid.new([ error(nil, "prices cannot be imported for a cash position") ]) if security.cash?
       raise Invalid.new([ error(nil, "prices can only be imported for a security no provider tracks") ]) unless untracked?
-      raise Invalid.new(errors) if errors.any?
-
-      errors = currency_errors(parsed)
+      # Every bad row is reported at once: a row that parsed can still carry
+      # the wrong currency beside one that did not parse.
+      errors = (errors + currency_errors(parsed)).sort_by { |e| e[:index] || -1 }
       raise Invalid.new(errors) if errors.any?
 
       write(parsed)
@@ -119,6 +119,8 @@ class Security::ManualPriceImport
     end
 
     def currency_errors(parsed)
+      return [] if parsed.empty?
+
       allowed = allowed_currencies
       return [ error(nil, allowed[:error]) ] if allowed[:error]
 

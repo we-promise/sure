@@ -44,6 +44,20 @@ class Security::ManualPriceImportTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal("19") ], @security.prices.pluck(:price)
   end
 
+  test "a currency mismatch is reported beside a row that did not parse" do
+    before = Security::Price.count
+
+    error = assert_raises(Security::ManualPriceImport::Invalid) do
+      import([ row(2.days.ago, "0"), row(1.day.ago, "20", currency: "NZD") ])
+    end
+
+    assert_equal [
+      { index: 0, message: "price must be greater than 0" },
+      { index: 1, message: "currency must be AUD, the currency of your holdings in this security" }
+    ], error.errors
+    assert_equal before, Security::Price.count
+  end
+
   test "rejects each malformed row by its index" do
     error = assert_raises(Security::ManualPriceImport::Invalid) do
       import([
