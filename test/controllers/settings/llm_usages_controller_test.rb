@@ -26,6 +26,16 @@ class Settings::LlmUsagesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("settings.llm_usages.show.total_calls")
   end
 
+  test "a cancelled call of one request says so" do
+    users(:family_admin).family.llm_usages.create!(provider: "openai", model: "gpt-4.1", operation: "bill_setup", prompt_tokens: 100,
+                                                   completion_tokens: 0, total_tokens: 100, status: "cancelled")
+
+    sign_in users(:family_admin)
+    get settings_llm_usage_path
+
+    assert_select "tbody tr td", text: /#{I18n.t("settings.llm_usages.show.cancelled")}/
+  end
+
   test "non-admin member cannot view family LLM usage" do
     sign_in users(:family_member)
     get settings_llm_usage_path
