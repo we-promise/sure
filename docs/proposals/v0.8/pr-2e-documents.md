@@ -784,3 +784,8 @@ the credit error), so decision 7 and the PDF document block stay unchecked. What
   - this build also honours `reasoning_effort: "none"`, which the spike's didn't, so the preset
     mapping is a safeguard for older servers;
   - `low` and `high` aren't distinct on this model.
+- **venus's Gemma 4** (26B-A4B with an MTP draft, `LLAMA_ARG_REASONING=off`, text only, 16k window):
+  - every effort is accepted and the server's off setting wins;
+  - strict JSON works;
+  - BAC reads 13/13 through the text layer, and the checks passed;
+  - the scan is `no_text_layer`.
