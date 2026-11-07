@@ -1,4 +1,4 @@
-# The OpenAI API, whoever runs it (section 4.2): OpenAI, Gemini's compatible API, OpenRouter,
+# The OpenAI API, whoever runs it: OpenAI, Gemini's compatible API, OpenRouter,
 # LiteLLM, llama.cpp, Ollama, vLLM, LM Studio, embedding servers and the external assistant.
 class Ai::Transport::Compatible < Ai::Transport::Base
   include Ai::Transport::RubyLlmAdapter
@@ -26,7 +26,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
     end
 
     # One vector per text, with the model's dimensions. RubyLLM 2.1.1 doesn't check the row
-    # count itself (2.2 does, #1297).
+    # count itself (2.2 does, RubyLLM #1297).
     def probe_embedding(model, timeout:)
       embedding = mapping_errors do
         ruby_llm_context(timeout:).embed(Ai::Transport::Base::PROBE_EMBEDDING_INPUT, model: model.name, provider: ruby_llm_provider,

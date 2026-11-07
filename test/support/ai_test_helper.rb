@@ -1,5 +1,5 @@
-# Helpers for testing AI code (ai-plumbing-redesign.md, section 17). 2a brings the transport
-# level; 2b adds with_ai_routes and without_ai, 2c stub_ai, PR 3 with_ai_capsule.
+# Helpers for testing AI code at the transport level: endpoints, models, call contexts,
+# captured events and cassettes.
 module AiTestHelper
   AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY].freeze
 

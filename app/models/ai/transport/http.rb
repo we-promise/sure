@@ -1,11 +1,11 @@
-# Every AI HTTP client is built here (section 7): the endpoint's timeout and headers, TLS
+# Every AI HTTP client is built here: the endpoint's timeout and headers, TLS
 # settings, and the proxy, resolved once. A contract test checks that nothing under
 # app/models/ai/ builds a client anywhere else.
 #
-# Proxy coverage in PR 2a: RubyLLM's contexts, the ruby-openai clients built below (health
+# Proxy coverage: RubyLLM's contexts, the ruby-openai clients built below (health
 # probes, Provider::Openai) and Assistant::External::Client. The anthropic gem takes no proxy
 # option (Net::HTTP reads only HTTP_PROXY, even for HTTPS), so Anthropic's own client goes
-# direct until its calls move onto RubyLLM (2c, PR 6).
+# direct.
 module Ai::Transport::Http
   extend SslConfigurable
 
@@ -41,7 +41,7 @@ module Ai::Transport::Http
     end
 
     # One base URL rule for every OpenAI-compatible server, the same as ruby-openai's, so an
-    # endpoint configured today keeps its URL: a URL that contains "v1" is used as given
+    # endpoint configured for ruby-openai keeps its URL: a URL that contains "v1" is used as given
     # (`/v1`, Gemini's `/v1beta/openai`, Cloudflare's `/ai/v1`); any other gets `/v1`. Agent
     # URLs are stored whole, so a trailing `/chat/completions` goes.
     def compatible_base(base_url)

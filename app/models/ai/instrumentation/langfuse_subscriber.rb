@@ -1,4 +1,4 @@
-# The `content` tracing mode (section 10): each `.ai` event becomes a Langfuse trace with one
+# The `content` tracing mode: each `.ai` event becomes a Langfuse trace with one
 # generation holding the request, the output, usage and the error. The correlation id is the
 # Langfuse session, so a job's calls group together. Health probes aren't traced: they carry
 # no family data and run every time an admin opens the health page.

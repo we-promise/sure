@@ -1,4 +1,4 @@
-# A model on an endpoint, with what it can do (section 4.2).
+# A model on an endpoint, with what it can do.
 class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :context_window, :max_output_tokens,
                                       :embedding_dimensions, :input_cost_per_mtok, :output_cost_per_mtok)
   CAPABILITIES = %w[tools vision documents ocr thinking streaming structured_output embedding judge calibrated_confidence].freeze
@@ -14,8 +14,8 @@ class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :context_
 
   def capable?(*needed) = needed.flatten.all? { capabilities.include?(_1.to_s) }
 
-  # The cost from this model's own prices, or nil when it has none (local models, and every
-  # model until presets carry prices in PR 7).
+  # The cost from this model's own prices, or nil when it has none (local models, and any
+  # model configured without prices).
   def cost_for(tokens)
     return if input_cost_per_mtok.nil? || output_cost_per_mtok.nil? || !tokens&.known?
 

@@ -1,4 +1,4 @@
-# AI instrumentation as subscribers to one set of events (section 10). Usage rows and the debug
+# AI instrumentation as subscribers to one set of events. Usage rows and the debug
 # log run in every mode; tracing has two modes, never at once, or Langfuse would get each
 # generation twice:
 #
@@ -9,8 +9,8 @@
 #             data to a tracing backend.
 #   off       Neither.
 #
-# The mode follows from the variables an operator already sets, so no AI variable is added
-# (section 4.7): Langfuse keys mean content, OTLP_ENDPOINT alone means metadata.
+# The mode follows from the variables an operator already sets, so no AI variable is added:
+# Langfuse keys mean content, OTLP_ENDPOINT alone means metadata.
 module Ai::Instrumentation
   MODES = %i[content metadata off].freeze
 

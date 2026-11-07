@@ -5,7 +5,7 @@ class LlmUsage < ApplicationRecord
   validates :prompt_tokens, :completion_tokens, :total_tokens, presence: true, numericality: { greater_than_or_equal_to: 0 }
   validates :estimated_cost, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
 
-  # One row per request; a call's requests share a call_id (section 10). Rows from before
+  # One row per request; a call's requests share a call_id. Rows from before
   # call_id existed, and rows the per-provider usage recorders still write, have none: each is a
   # call of one request.
   CALL_KEY = "COALESCE(llm_usages.call_id, llm_usages.id)".freeze

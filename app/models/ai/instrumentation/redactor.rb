@@ -1,4 +1,4 @@
-# The one place AI instrumentation scrubs secrets (section 10). Every subscriber, and every
+# The one place AI instrumentation scrubs secrets. Every subscriber, and every
 # `inspect` of an endpoint, goes through it, so a key never reaches a log, the debug log or a
 # trace. Providers often quote the request back in an error, so error text is scrubbed too.
 module Ai::Instrumentation::Redactor
