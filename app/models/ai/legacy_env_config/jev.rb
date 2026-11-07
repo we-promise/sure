@@ -44,6 +44,10 @@ module Ai::LegacyEnvConfig::Jev
     :path
   end
 
+  # Why the endpoint can't be used, or nil: :path for a URL that isn't http(s) with a host, else
+  # unsupported_reason. The config, the categorizer's fallback log and the eval runner all ask this.
+  def unreachable_reason(url) = endpoint_allowed?(url) ? unsupported_reason(url) : :path
+
   # The base RubyLLM appends `/v1/systemone` to.
   def base_url(url)
     uri = URI.parse(url.to_s)

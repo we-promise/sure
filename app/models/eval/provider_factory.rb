@@ -62,7 +62,7 @@ class Eval::ProviderFactory
       raise Error, "Jev API key not configured" unless api_key.present?
 
       url = config[:endpoint].presence || jev.effective_endpoint
-      unless jev.endpoint_allowed?(url) && jev.unsupported_reason(url).nil?
+      if jev.unreachable_reason(url)
         raise Error, "Jev endpoint not supported: #{jev.redacted_endpoint(url)} (only …/v1/systemone until RubyLLM 2.2)"
       end
 

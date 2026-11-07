@@ -110,7 +110,7 @@ class Family::AutoCategorizer
       return unless Ai::LegacyEnvConfig.categorization_provider == "jev" && Ai::LegacyEnvConfig::Jev.configured?
 
       endpoint = Ai::LegacyEnvConfig::Jev.effective_endpoint
-      reason = Ai::LegacyEnvConfig::Jev.endpoint_allowed?(endpoint) ? Ai::LegacyEnvConfig::Jev.unsupported_reason(endpoint) : :path
+      reason = Ai::LegacyEnvConfig::Jev.unreachable_reason(endpoint)
       return unless reason
 
       DebugLogEntry.capture(

@@ -161,7 +161,7 @@ class Ai::LegacyEnvConfig
       return unless Jev.configured?
 
       url = Jev.effective_endpoint
-      reason = Jev.endpoint_allowed?(url) ? Jev.unsupported_reason(url) : :path
+      reason = Jev.unreachable_reason(url)
       if reason
         Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{JEV_UNSUPPORTED.fetch(reason)}")
         return
