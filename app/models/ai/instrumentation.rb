@@ -42,7 +42,11 @@ module Ai::Instrumentation
   def start_tracing!(env: ENV)
     case mode(env:)
     when :content then warn_both_tracing_modes if env["OTLP_ENDPOINT"].present?
-    when :metadata then MetadataTracing.enable(endpoint: env["OTLP_ENDPOINT"], headers: env["OTLP_HEADERS"])
+    when :metadata
+      provider = MetadataTracing.enable(endpoint: env["OTLP_ENDPOINT"], headers: env["OTLP_HEADERS"])
+      # The batch processor exports on a timer; without a shutdown a process loses its last batch
+      # at exit, which for a rake task or `rails runner` is every span (seen live against Langfuse).
+      at_exit { provider.shutdown }
     end
   end
 

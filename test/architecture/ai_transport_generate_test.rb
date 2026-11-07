@@ -84,6 +84,22 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
     assert_equal 1, requests.size
   end
 
+  test "a 400 that names neither, to a request with an effort, retries once without the effort (Gemini)" do
+    requests = stub_chat(error(400, "Request contains an invalid argument."), answer(FULL))
+
+    response = generate(json_mode: :strict, reasoning_effort: "none")
+
+    assert_equal [ "none", nil ], requests.map { _1["reasoning_effort"] }
+    assert_equal :none, response.json_mode
+  end
+
+  test "the same 400 without an effort ends the call" do
+    requests = stub_chat(error(400, "Request contains an invalid argument."))
+
+    assert_raises(Ai::Error::Refused) { generate(json_mode: :strict) }
+    assert_equal 1, requests.size
+  end
+
   test "OpenRouter's reasoning-is-mandatory 400 isn't read as a JSON-mode rejection" do
     stub_chat(error(400, "Reasoning is mandatory for this endpoint and cannot be disabled"))
 

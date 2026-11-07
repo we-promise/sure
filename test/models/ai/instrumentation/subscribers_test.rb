@@ -20,6 +20,15 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
     assert_equal :off, Ai::Instrumentation.mode(env: { "LANGFUSE_PUBLIC_KEY" => "pk" })
   end
 
+  test "metadata mode shuts its tracer provider down at exit, so the last batch is exported" do
+    provider = mock("tracer provider")
+    Ai::Instrumentation::MetadataTracing.expects(:enable).with(endpoint: "https://otlp.example.test/v1/traces", headers: nil).returns(provider)
+    provider.expects(:shutdown)
+    Ai::Instrumentation.expects(:at_exit).yields
+
+    Ai::Instrumentation.start_tracing!(env: { "OTLP_ENDPOINT" => "https://otlp.example.test/v1/traces" })
+  end
+
   test "content mode subscribes Langfuse; the other modes don't" do
     content = Ai::Instrumentation.subscribe!(env: { "LANGFUSE_PUBLIC_KEY" => "pk", "LANGFUSE_SECRET_KEY" => "sk" })
     off = Ai::Instrumentation.subscribe!(env: {})

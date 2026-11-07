@@ -7,9 +7,11 @@
 #   items came back blank or missing, keeping the reasoning effort. An explicit mode stays,
 #   apart from the 400 retry below.
 # - A 400 about the JSON mode or the effort is retried once in `none` mode without the effort
-#   (#3605). A 400 about anything else (an attachment, a missing model) ends the call: the next
-#   mode would resend the same request. OpenRouter's "reasoning is mandatory" isn't a JSON-mode
-#   rejection.
+#   (#3605). So is any 400 to a request that sent an effort: Gemini refuses an effort it doesn't
+#   take with "Request contains an invalid argument", which names neither (live, 2e). A 400 about
+#   anything else (an attachment, a missing model) ends the call, after that one retry if an
+#   effort was sent: the next mode would resend the same request. OpenRouter's "reasoning is
+#   mandatory" isn't a JSON-mode rejection.
 # - No schema example is appended in `none` mode: today's prompts for custom servers already
 #   show the shape, and the prompts stay word for word (section 8.3).
 module Ai::Transport::JsonMode
@@ -40,7 +42,7 @@ module Ai::Transport::JsonMode
         begin
           text, tokens, raw_id, finish_reason = attempt { complete_in_mode(request, mode, effort) }
         rescue Ai::Error::Refused => error
-          raise unless rejection?(error) && !retried && (mode != :none || effort)
+          raise unless rejection?(error, effort) && !retried && (mode != :none || effort)
 
           retried = true
           effort = nil
@@ -74,7 +76,7 @@ module Ai::Transport::JsonMode
       begin
         text, usage, raw_id, finish_reason = attempt { complete_in_mode(request, :strict, effort) }
       rescue Ai::Error::Refused => error
-        raise unless effort && rejection?(error)
+        raise unless effort && rejection?(error, effort)
 
         effort = nil
         retry
@@ -92,8 +94,8 @@ module Ai::Transport::JsonMode
       end
     end
 
-    def rejection?(error)
-      error.status == 400 && error.message.match?(REJECTION) && !error.message.match?(NOT_A_REJECTION)
+    def rejection?(error, effort)
+      error.status == 400 && !error.message.match?(NOT_A_REJECTION) && (effort.present? || error.message.match?(REJECTION))
     end
 
     def blank_ratio(request, json) = request.failed_ratio ? request.failed_ratio.call(json).to_f : 0.0
