@@ -139,6 +139,12 @@ class InvestmentStatement
   # is told it has nothing classified yet rather than handed an empty list.
   UNCLASSIFIED = "unclassified".freeze
 
+  # Where account cash and cash securities are filed: the asset class and the
+  # sub-class a cash balance belongs to. Values from Security::ASSET_CLASSES
+  # and Security::ASSET_SUB_CLASSES.
+  CASH_ASSET_CLASS = "liquidity".freeze
+  CASH_SUB_CLASS = "cash".freeze
+
   # One level down from a classification segment: asset class -> sub-class ->
   # positions. Sector, region, account, currency and kind do not nest, so they
   # return [].
@@ -149,7 +155,7 @@ class InvestmentStatement
   def allocation_children(by, bucket, parent: nil)
     case by.to_s
     when "asset_class" then allocation_sub_classes_within(bucket)
-    when "asset_sub_class" then allocation_holdings_within(:asset_sub_class, bucket, "cash", parent: parent)
+    when "asset_sub_class" then allocation_holdings_within(:asset_sub_class, bucket, CASH_SUB_CLASS, parent: parent)
     else []
     end
   end
@@ -161,8 +167,8 @@ class InvestmentStatement
     when "account" then allocation_by_account
     when "currency" then allocation_by_currency
     when "kind" then allocation_by_kind
-    when "asset_class" then allocation_by_classification(:asset_class, cash_bucket: "liquidity")
-    when "asset_sub_class" then allocation_by_classification(:asset_sub_class, cash_bucket: "cash")
+    when "asset_class" then allocation_by_classification(:asset_class, cash_bucket: CASH_ASSET_CLASS)
+    when "asset_sub_class" then allocation_by_classification(:asset_sub_class, cash_bucket: CASH_SUB_CLASS)
     when "sector" then allocation_by_classification(:sector)
     when "region" then allocation_by_classification(:region)
     else []
@@ -432,12 +438,12 @@ class InvestmentStatement
     def allocation_sub_classes_within(asset_class)
       grouped = Hash.new(0)
 
-      holdings_classified_as(:asset_class, asset_class, "liquidity").each do |holding|
-        bucket = classification_bucket(holding.security, :asset_sub_class, "cash")
+      holdings_classified_as(:asset_class, asset_class, CASH_ASSET_CLASS).each do |holding|
+        bucket = classification_bucket(holding.security, :asset_sub_class, CASH_SUB_CLASS)
         grouped[bucket] += convert_to_family_currency(holding.amount, holding.currency)
       end
 
-      grouped["cash"] += account_cash_total if asset_class == "liquidity" && account_cash_total.positive?
+      grouped[CASH_SUB_CLASS] += account_cash_total if asset_class == CASH_ASSET_CLASS && account_cash_total.positive?
 
       build_segments(grouped.map { |bucket, value| [ bucket, bucket, value ] })
     end
@@ -470,7 +476,7 @@ class InvestmentStatement
     # class, gets none.
     def account_cash_rows(bucket, cash_bucket, parent)
       return [] unless cash_bucket.present? && bucket == cash_bucket
-      return [] unless parent.nil? || parent == "liquidity"
+      return [] unless parent.nil? || parent == CASH_ASSET_CLASS
 
       [ [ "cash", I18n.t("models.investment_statement.cash"), account_cash_total ] ]
     end
@@ -529,7 +535,7 @@ class InvestmentStatement
     def holdings_classified_as(column, bucket, cash_bucket = nil, parent: nil)
       allocatable_holdings.select do |holding|
         classification_bucket(holding.security, column, cash_bucket) == bucket &&
-          (parent.nil? || classification_bucket(holding.security, :asset_class, "liquidity") == parent)
+          (parent.nil? || classification_bucket(holding.security, :asset_class, CASH_ASSET_CLASS) == parent)
       end
     end
 
