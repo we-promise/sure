@@ -1,6 +1,6 @@
-# The AI setups today's code supports, for the tests that compare Ai::LegacyEnvConfig and the
-# router with today's resolution (test/architecture/ai_config_test, ai_agreement_test). C1-C9 are
-# PR #4440's E2 experiment; M1-M5 mix them.
+# The supported AI setups, for the tests that compare Ai::LegacyEnvConfig and the router with the
+# resolution of the code not yet on the router (test/architecture/ai_config_test,
+# ai_agreement_test). C1-C9 are one setup each; M1-M5 mix them.
 module AiLegacySetups
   # Cleared in every setup, so the host's environment can't leak in.
   CONTROLLED = %w[

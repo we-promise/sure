@@ -944,7 +944,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
 
 
   test "the client takes its proxy from Ai::Transport::Http, never proxying loopback" do
-    ClimateControl.modify(HTTPS_PROXY: "http://proxy.internal:8888", HTTP_PROXY: nil) do
+    ClimateControl.modify(HTTPS_PROXY: "http://proxy.internal:8888", HTTP_PROXY: nil, NO_PROXY: nil, no_proxy: nil) do
       cloud = Faraday.new.tap { Provider::Openai.new("token").send(:client).faraday_middleware.call(_1) }
       local = Faraday.new.tap { Provider::Openai.new("token", uri_base: "http://127.0.0.1:8080/v1", model: "qwen3").send(:client).faraday_middleware.call(_1) }
 

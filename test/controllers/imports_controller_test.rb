@@ -524,6 +524,18 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
+  test "a document upload says no store is configured when the embed route is set but the store can't be built" do
+    VectorStore::Registry.stubs(:adapter).returns(nil)
+    use_ai_routes
+
+    assert_no_difference "Import.count" do
+      post imports_url, params: { import: { type: "DocumentImport", import_file: file_fixture_upload("imports/valid.csv", "text/csv") } }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.document_provider_not_configured"), flash[:alert]
+  end
+
   test "rejects unsupported document type for DocumentImport option" do
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])

@@ -9,7 +9,13 @@ class AddCallIdAndStatusToLlmUsagesMigrationTest < ActiveSupport::TestCase
   ERRORS = {
     "HTTP 500" => "failed",
     { "message" => "busy" } => "failed",
+    [ "busy" ] => "failed",
+    true => "failed",
+    429 => "failed",
     "" => "succeeded",
+    {} => "succeeded",
+    [] => "succeeded",
+    false => "succeeded",
     " " => "succeeded",
     "\t\n" => "succeeded",
     nil => "succeeded"

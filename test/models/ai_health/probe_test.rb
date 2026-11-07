@@ -305,6 +305,24 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end
   end
 
+  test "a probe keeps the configured endpoint's API choice unless the caller picks one" do
+    @probe.stubs(:configured_endpoint).returns(ai_endpoint(name: "openai", responses_api: true, probe_check: :chat))
+    build = ->(**choice) { @probe.send(:config_endpoint, provider: :openai, base_url: "https://llm.example.test/v1", api_key: "t", **choice) }
+
+    assert build.().responses_api, "the endpoint's Responses API stands"
+    assert_not build.(responses_api: false).responses_api, "the tool-call probe picks Chat Completions"
+  end
+
+  test "a changed static header isn't answered from the cache" do
+    key = lambda do |headers|
+      @probe.stubs(:configured_endpoint).returns(ai_endpoint(name: "openai", extra_headers: headers))
+      @probe.send(:cache_key, component: "llm", provider_key: :openai, endpoint: "https://llm.example.test/v1", model: "m",
+                              credential: "t", dimensions: nil, verification: :models)
+    end
+
+    assert_not_equal key.({ "X-Gateway-Key" => "old" }), key.({ "X-Gateway-Key" => "new" })
+  end
+
   test "forced probe bypasses the cached result" do
     models = mock("models")
     models.expects(:list).twice.returns({ "data" => [ { "id" => "gpt-4.1" } ] })
@@ -371,6 +389,20 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     assert result.passing?
     assert_requested request
+  end
+
+  test "embedding probe fails on a vector with a component that isn't a finite number" do
+    stub_request(:post, "http://ollama:11434/v1/embeddings").to_return(
+      status: 200, headers: { "Content-Type" => "application/json" },
+      body: { data: [ { embedding: [ 0.1, nil, 0.3 ] } ], model: "nomic-embed-text", usage: { prompt_tokens: 4, total_tokens: 4 } }.to_json
+    )
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.embedding(endpoint: "http://ollama:11434/v1", access_token: nil, model: "nomic-embed-text", dimensions: 3)
+
+    assert result.failing?
+    assert_equal :invalid_response, result.failure_code
   end
 
   test "embedding probe fails when returned dimensions do not match configuration" do

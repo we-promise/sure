@@ -165,6 +165,37 @@ class AiTransportContractTest < ActiveSupport::TestCase
     end
   end
 
+  # Faraday's own ENV lookup drops the port before matching NO_PROXY, so it would proxy a
+  # request Sure's resolver sends direct. RubyLLM's adapter applies Sure's decision instead.
+  test "RubyLLM's adapter connects as Sure's proxy resolver decides, port-qualified NO_PROXY included" do
+    with_env_overrides("HTTP_PROXY" => "http://proxy.internal:8888", "HTTPS_PROXY" => nil, "NO_PROXY" => "10.0.0.5:8080") do
+      adapter = Ai::Transport::Http::TlsNetHttp.new(->(_env) { })
+      connect = ->(url) { adapter.send(:build_connection, Faraday::Env.from(url: URI(url), request: Faraday::RequestOptions.new)) }
+
+      assert_not connect.("http://10.0.0.5:8080/v1/chat/completions").proxy?, "NO_PROXY's host:port goes direct"
+      proxied = connect.("http://10.0.0.6:8080/v1/chat/completions")
+      assert_equal [ "proxy.internal", 8888 ], [ proxied.proxy_address, proxied.proxy_port ]
+      assert_not connect.("http://127.0.0.1:8080/v1/chat/completions").proxy?, "loopback goes direct"
+    end
+  end
+
+  test "an OpenRouter endpoint without a URL resolves its proxy against OpenRouter" do
+    model_endpoint = ai_endpoint(name: "router", preset: :openrouter, base_url: nil, api_key: "k")
+    with_env_overrides("HTTPS_PROXY" => "http://proxy.internal:8888", "HTTP_PROXY" => nil, "NO_PROXY" => "openrouter.ai") do
+      transport = Ai::Transport.for(model_endpoint)
+
+      assert_equal "https://openrouter.ai/api/v1", transport.send(:ruby_llm_api_base)
+      assert_nil transport.send(:ruby_llm_context).config.http_proxy
+    end
+  end
+
+  test "a models list with an entry that isn't an object is InvalidOutput" do
+    Ai::Transport::Http.stubs(:openai_client).returns(stub(models: stub(list: { "data" => [ nil ] })))
+    model_endpoint = ai_endpoint(name: "listing", base_url: "https://llm.example.test/v1")
+
+    assert_raises(Ai::Error::InvalidOutput) { Ai::Transport.for(model_endpoint).probe(ai_model(endpoint: model_endpoint), :models) }
+  end
+
   test "only Ai::Transport::Http builds HTTP clients under app/models/ai" do
     offenders = Dir[Rails.root.join("app/models/ai/**/*.rb")].reject { _1.end_with?("ai/transport/http.rb") }.select do |path|
       File.read(path).match?(/(OpenAI::Client|Anthropic::Client|Faraday)\.new\b/)

@@ -105,13 +105,18 @@ module Ai::Transport::Http
       end
   end
 
-  # Net::HTTP with Sure's TLS settings (SSL_VERIFY, SSL_CA_FILE) on every https request.
-  # RubyLLM 2.1.1 builds its own Faraday connections and takes only an adapter, so this is how
-  # a self-hosted server with its own certificate is reached by RubyLLM as by every other client.
+  # Net::HTTP with Sure's TLS settings (SSL_VERIFY, SSL_CA_FILE) and Sure's proxy decision on
+  # every request. RubyLLM 2.1.1 builds its own Faraday connections and takes only an adapter,
+  # so this is how a self-hosted server with its own certificate is reached by RubyLLM as by every
+  # other client. RubyLLM sets a proxy only when given one; without this, a request
+  # Ai::Transport::Http.proxy_for sends direct would fall back to Faraday's own ENV lookup, which
+  # ignores the port in a NO_PROXY entry such as `10.0.0.5:8080`.
   class TlsNetHttp < Faraday::Adapter::NetHttp
     def build_connection(env)
       ssl = Ai::Transport::Http.faraday_ssl_options
       env[:ssl] = env[:ssl] ? env[:ssl].merge(ssl) : Faraday::SSLOptions.from(ssl) if ssl.present?
+      proxy = Ai::Transport::Http.proxy_for(env[:url].to_s)
+      env[:request][:proxy] = proxy && Faraday::ProxyOptions.from(proxy)
       super
     end
   end
