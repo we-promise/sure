@@ -436,4 +436,99 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal new_start, sync.window_start_date
     assert_equal new_end,   sync.window_end_date
   end
+
+  test "a completed sync queues a full follow-up when requested" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, full_resync_requested: true)
+
+    account.expects(:perform_sync).with(sync).once
+    # The sync reloads its syncable, so these run on a different instance.
+    Account.any_instance.expects(:perform_post_sync).once
+    Account.any_instance.expects(:broadcast_sync_complete).once
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      sync.perform
+    end
+
+    assert sync.reload.completed?
+    assert_not sync.full_resync_requested?
+
+    follow_up = Sync.where(syncable: account).order(:created_at).last
+    assert_nil follow_up.window_start_date
+    assert_nil follow_up.window_end_date
+    assert_equal "pending", follow_up.status
+    assert_enqueued_with(job: SyncJob)
+  end
+
+  test "a post-sync failure still queues the full follow-up" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, full_resync_requested: true)
+
+    account.expects(:perform_sync).with(sync).once
+    Account.any_instance.expects(:perform_post_sync).raises(StandardError.new("post-sync failed"))
+    Account.any_instance.expects(:broadcast_sync_complete).never
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      sync.perform
+    end
+
+    assert sync.reload.completed?
+    assert_not sync.full_resync_requested?
+    assert_enqueued_with(job: SyncJob)
+  end
+
+  test "a follow-up marks a running partial sync instead of reusing it" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, full_resync_requested: true)
+    running = Sync.create!(syncable: account, status: :syncing)
+
+    account.expects(:perform_sync).with(sync).once
+    Account.any_instance.expects(:perform_post_sync).once
+    Account.any_instance.expects(:broadcast_sync_complete).once
+
+    assert_no_difference -> { Sync.where(syncable: account).count } do
+      sync.perform
+    end
+
+    assert sync.reload.completed?
+    assert_not sync.full_resync_requested?
+    assert running.reload.full_resync_requested?
+    assert_equal "syncing", running.status
+  end
+
+  test "a stale sync still queues the full follow-up" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, status: :syncing, full_resync_requested: true)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      sync.mark_stale!
+    end
+
+    assert sync.reload.stale?
+    assert_not sync.full_resync_requested?
+    assert_enqueued_with(job: SyncJob)
+  end
+
+  test "a cancelled sync still queues the full follow-up" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, status: :syncing, full_resync_requested: true)
+    sync.update!(cancel_requested_at: Time.current)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      sync.finalize_if_all_children_finalized
+    end
+
+    assert sync.reload.stale?
+    assert_not sync.full_resync_requested?
+    assert_enqueued_with(job: SyncJob)
+  end
+
+  test "a stale sync without a request queues nothing" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, status: :syncing)
+
+    assert_no_difference -> { Sync.where(syncable: account).count } do
+      sync.mark_stale!
+    end
+  end
 end

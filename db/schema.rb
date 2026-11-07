@@ -1600,6 +1600,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.string "insurance_rate_type"
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
+    t.boolean "principal_only_transfers", default: false, null: false
     t.string "rate_type"
     t.date "start_date"
     t.string "subtype"
@@ -2652,6 +2653,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.jsonb "data"
     t.string "error"
     t.datetime "failed_at"
+    t.boolean "full_resync_requested", default: false, null: false
     t.uuid "parent_id"
     t.datetime "pending_at"
     t.string "status", default: "pending"

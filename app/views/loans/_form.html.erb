@@ -91,6 +91,15 @@
       </div>
       <p class="text-xs text-secondary"><%= t("loans.form.insurance_rate_hint") %></p>
 
+      <div class="flex items-center justify-between gap-4">
+        <div class="space-y-1">
+          <p class="text-sm" id="principal_only_transfers_label"><%= t("loans.form.principal_only_transfers") %></p>
+          <p class="text-secondary text-sm"><%= t("loans.form.principal_only_transfers_hint") %></p>
+        </div>
+        <%= loan_form.toggle :principal_only_transfers,
+                            "aria-labelledby": "principal_only_transfers_label" %>
+      </div>
+
       <%# Rate changes only mean something for a loan whose rate can move. The
           section is rendered for every rate type, retained rows included, and
           for fixed it is hidden AND its inputs disabled -- here, server-side,

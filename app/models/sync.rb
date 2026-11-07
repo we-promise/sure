@@ -50,7 +50,7 @@ class Sync < ApplicationRecord
     end
 
     # Marks a sync that never completed within the expected time window
-    event :mark_stale do
+    event :mark_stale, after_commit: :handle_stale_transition do
       transitions from: %i[pending syncing], to: :stale
     end
   end
@@ -346,6 +346,30 @@ class Sync < ApplicationRecord
     rescue => e
       Rails.logger.error("Error performing post-sync for #{syncable_type} (#{syncable.id}): #{e.message}")
       report_error(e)
+    ensure
+      # A resync request outlives a post-sync failure.
+      queue_full_resync
+    end
+
+    # A loan input can change while this sync runs. The running sync cannot
+    # widen its own window, so run a fresh full sync now that this one is done.
+    def queue_full_resync
+      # A fresh read sees a request the web process wrote after this sync
+      # loaded its own row.
+      return unless Sync.where(id: id).pick(:full_resync_requested)
+
+      # Another partial sync can already be running. Mark it instead of
+      # reusing it through sync_later, which cannot widen a running window.
+      if (running = syncable.syncs.visible.where(status: "syncing").first)
+        running.update!(full_resync_requested: true)
+      else
+        syncable.sync_later
+      end
+
+      update_column(:full_resync_requested, false)
+    rescue => e
+      Rails.logger.error("Error queueing full resync for #{syncable_type} (#{syncable_id}): #{e.message}")
+      report_error(e)
     end
 
     def report_error(error)
@@ -375,6 +399,11 @@ class Sync < ApplicationRecord
 
     def handle_completion_transition
       family.touch(:latest_sync_completed_at)
+    end
+
+    # A stale sync skips post-sync, so a resync request must be processed here.
+    def handle_stale_transition
+      queue_full_resync
     end
 
     def window_valid
