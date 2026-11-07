@@ -88,6 +88,15 @@ flowchart LR
    - From 2e on, files are deleted when a document is removed and when the family is deleted.
    - The note says older removals may have left files, and how to find them in OpenAI's dashboard.
 
+4. **`OPENAI_SUPPORTS_PDF_PROCESSING=false` keeps turning PDF import off,** as today; an admin
+   sets it per model from PR 7 (see "As built").
+5. **The search score threshold** (after live testing): 0.3 stays the default, calibrated on
+   OpenAI's vector store. From PR 7 it's a setting per embedding model for both stores; 2e
+   documents that now.
+6. **Embedding dimensions** (after live testing): PR 7 resolves a model whose dimensions don't
+   match the chunks table. 2e keeps today's request (no `dimensions`) and fails a mismatch as
+   `InvalidOutput`.
+
 **Already decided in #4440, which 2e follows (§5.5, §8.1, §14, the register):**
 
 - **Auto's order:**

@@ -994,7 +994,10 @@ end
   - it uploads under the document's own filename, not a `Tempfile`'s, which search results
     otherwise show the model;
   - `search_documents` drops results below a score threshold: every search returned the one
-    indexed statement, relevant or not;
+    indexed statement, relevant or not. 2e ships 0.3 for both stores, calibrated on OpenAI's
+    store; live, pgvector's unrelated matches scored 0.47 (`gemini-embedding-001`) and 0.77
+    (granite), so from PR 7 the threshold is a setting per embedding model, for both stores, with
+    0.3 as the default (call by @josh-sanders during development of PR #4440);
   - its client is built by `Ai::Transport::Http`, so it gets the proxy, TLS settings and headers.
 - **Statements in the vault are indexed too (#3422, open).**
   #3422 queues `IndexAccountStatementJob` after every statement upload (the web vault, MCP's
@@ -2810,7 +2813,10 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    switched off, and PR 6's `mcp_only` line goes), member emails, `:no_family_consent` and
    `:consent_outdated`, and the shadow comparison switch with `Setting.ai_shadow_rates` replacing
    `families.categorization_shadow_rate` (section 8.2). Turning Documents on indexes the stored
-   statements not yet indexed (section 5.5). That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
+   statements not yet indexed (section 5.5). Each embedding model carries its search score
+   threshold, for the OpenAI store and pgvector alike (default 0.3), and PR 7 resolves an
+   embedding model whose dimensions don't match the chunks table, where 2e fails with
+   `InvalidOutput` (calls by @josh-sanders during development of PR #4440). That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
    The test helpers switch to the new fixtures. Adds the config and consent tests.
    *Still on old code:* nothing; from here every process reads the same rows.
 8. **Health and settings pages.** The health page (lanes, down marks, AI threads per worker,
