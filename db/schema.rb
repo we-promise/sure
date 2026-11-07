@@ -825,6 +825,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_31_120000) do
     t.datetime "created_at", null: false
     t.date "first_provider_rate_on"
     t.string "from_currency", null: false
+    t.date "provider_history_checked_from"
     t.string "provider_name"
     t.string "to_currency", null: false
     t.datetime "updated_at", null: false
