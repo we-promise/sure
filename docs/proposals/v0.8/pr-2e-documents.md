@@ -718,3 +718,33 @@ the credit error), so decision 7 and the PDF document block stay unchecked. What
 - **pgvector on `embed-v4.0`** (1,536 dimensions): relevant text scored 0.52 and 0.38, and
   unrelated text had no hits, so 0.3 filters on this model. That's more evidence for decision 5's
   per-model threshold.
+
+**The spike's remaining live checks, run on 2e (2026-11-07, at `61b9a1222`).**
+
+- **OpenAI without credit:**
+  - generation and embeddings are `NoCredit` after one request;
+  - PDF import on `OPENAI_ACCESS_TOKEN` routes to `gpt-4.1` (Responses API, PDF sent as a file);
+  - **the vector store fixes, all live** (Files and vector stores work without credit): processing
+    then ready, the scan unreadable, original filenames, search 0.908 against no hits for an
+    unrelated query, removal deleting the file, the store's deletion deleting its files.
+- **Proxy** (`proxy_check`): every client follows Sure's resolver under `HTTPS_PROXY`,
+  `HTTP_PROXY`, a `NO_PROXY` CIDR and a `NO_PROXY` host, and loopback is never proxied, **except
+  Anthropic's model-list probe** (2a). It uses the `anthropic` gem, which follows `HTTP_PROXY`
+  only, so the probe can fail behind an HTTPS-only egress proxy while the calls it checks go
+  through.
+- **Tracing** (`langfuse_check`, `langfuse_otel_check`) against Langfuse v4 (events-only, read
+  through `/api/public/v2/observations`):
+  - content mode works;
+  - metadata mode works, with no content, **only when the tracer provider is flushed**. 2a
+    registers no shutdown, so a process's last batch is lost at exit: all of a rake task's spans,
+    and up to the batch delay on Puma or Sidekiq.
+- **Reasoning effort** (`reasoning_switches_live_test`):
+  - gpt-oss on Ollama honours `low`/`high`;
+  - OpenRouter's preset turns reasoning off with `none`;
+  - **Gemini refuses `none` with a 400 that doesn't name the effort**, so 2c's #3605 retry (which
+    matches the wording) doesn't run and the call fails.
+  - The `llama_cpp` preset's `enable_thinking: false` wasn't run: venus had no chat model loaded.
+- **Overflow:** a real `ContextTooLong` from Ollama (4,096-token window) splits 120 transactions
+  into 60 + 60 on the same route, all answered once. `Unreachable` and `Timeout` work live.
+- **Ollama embeddings** match venus's for the same GGUF (cosine 1.0).
+- **Not run:** LM Studio (not in the pod), and anything needing funded OpenAI or Anthropic keys.
