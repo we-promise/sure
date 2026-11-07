@@ -38,10 +38,11 @@ class LlmUsage::CallTest < ActiveSupport::TestCase
   end
 
   test "a row the old recorders write with an error in metadata is a failed request" do
-    row = usage(metadata: { "error" => "HTTP 500", "http_status_code" => 500 })
+    row = usage(metadata: { error: "HTTP 500", http_status_code: 500 })
 
-    assert row.failed?
-    assert_equal "HTTP 500", row.error_message
+    assert row.failed?, "the recorders write symbol keys"
+    assert_equal "HTTP 500", row.reload.error_message
+    assert usage(metadata: { "error" => "busy" }).failed?
     row.status = "exploded"
     assert_not row.valid?
   end
