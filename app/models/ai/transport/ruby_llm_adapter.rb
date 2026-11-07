@@ -7,24 +7,26 @@ module Ai::Transport::RubyLlmAdapter
 
   private
     # Settings RubyLLM would otherwise choose (spike: "Small fixes in Sure's adapter"):
-    # - request_timeout from the endpoint (RubyLLM's default is 300 s per read);
+    # - request_timeout from the endpoint, or the probe's own (RubyLLM's default is 300 s per read);
     # - max_retries 0: Sure retries itself (Ai::Transport::Base#attempt);
-    # - the proxy from Ai::Transport::Http, for every provider;
+    # - the proxy and TLS settings from Ai::Transport::Http, for every provider;
     # - no upload of large files to a provider's Files API, where a statement would stay;
     # - Sure's instrumenter, which every request passes (the attempt budget; PR 4's gate).
-    def ruby_llm_context
-      @ruby_llm_context ||= RubyLLM.context do |config|
-        config.request_timeout = endpoint.timeout_seconds
+    def ruby_llm_context(timeout: endpoint.timeout_seconds)
+      @ruby_llm_contexts ||= {}
+      @ruby_llm_contexts[timeout] ||= RubyLLM.context do |config|
+        config.request_timeout = timeout
         config.max_retries = 0
         config.http_proxy = Ai::Transport::Http.proxy_for(ruby_llm_api_base)
+        config.faraday_adapter = Ai::Transport::Http.ruby_llm_adapter
         config.auto_upload_large_files = false
-        config.instrumenter = Ai::Transport::Instrumenter.new(config.instrumenter)
+        config.instrumenter = Ai::Transport::Instrumenter.new(config.instrumenter, map_error: method(:mapped_error))
         configure_provider(config)
       end
     end
 
-    def ruby_llm_chat(model)
-      ruby_llm_context
+    def ruby_llm_chat(model, timeout: endpoint.timeout_seconds)
+      ruby_llm_context(timeout:)
         .chat(model: model.name, provider: ruby_llm_provider, protocol: ruby_llm_protocol, assume_model_exists: true)
         .with_headers(Ai::Transport::Http.headers(endpoint))
     end
@@ -62,20 +64,21 @@ module Ai::Transport::RubyLlmAdapter
       raise Ai::Error::InvalidOutput, "the answer isn't JSON (#{json_mode})"
     end
 
-    def probe_chat(model)
-      chat = ruby_llm_chat(model).with_max_output_tokens(Ai::Transport::Base::PROBE_MAX_OUTPUT_TOKENS)
+    def probe_chat(model, timeout: endpoint.timeout_seconds)
+      chat = ruby_llm_chat(model, timeout:).with_max_output_tokens(Ai::Transport::Base::PROBE_MAX_OUTPUT_TOKENS)
       chat.add_message(role: :user, content: Ai::Transport::Base::PROBE_PROMPT)
       message = mapping_errors { chat.generate }
       check_answering_model!(model.name, message.model)
       message.content.to_s
     end
 
-    def probe_tools(model)
-      chat = ruby_llm_chat(model)
+    def probe_tools(model, timeout: endpoint.timeout_seconds)
+      chat = ruby_llm_chat(model, timeout:)
                .with_max_output_tokens(Ai::Transport::Base::PROBE_TOOL_MAX_OUTPUT_TOKENS)
                .with_tools(ProbeTool.new)
       chat.add_message(role: :user, content: Ai::Transport::Base::PROBE_TOOL_PROMPT)
       message = mapping_errors { chat.generate }
+      check_answering_model!(model.name, message.model)
       tool_calls(message).any? { _1.name == Ai::Transport::Base::PROBE_TOOL_NAME }
     end
 
@@ -101,8 +104,14 @@ module Ai::Transport::RubyLlmAdapter
       raise mapped ? scrubbed(mapped) : error
     end
 
+    # A raised error as mapping_errors would raise it, or nil when it has no Ai::Error.
+    def mapped_error(error)
+      mapped = error.is_a?(Ai::Error::Base) ? error : ruby_llm_error(error)
+      scrubbed(mapped) if mapped
+    end
+
     def scrubbed(error)
-      message = Ai::Instrumentation::Redactor.scrub(error.message, secrets: [ endpoint.api_key ])
+      message = Ai::Instrumentation::Redactor.scrub(error.message, secrets: endpoint.secrets)
       return error if message == error.message
 
       error.class.new(message, status: error.status).tap { _1.set_backtrace(error.backtrace) if error.backtrace }

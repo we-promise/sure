@@ -10,6 +10,7 @@ module Ai::Transport::Http
   extend SslConfigurable
 
   OPENAI_BASE = "https://api.openai.com/v1".freeze
+  OPENROUTER_BASE = "https://openrouter.ai/api/v1".freeze
   PROXY_VARIABLES = %w[HTTPS_PROXY https_proxy HTTP_PROXY http_proxy].freeze
 
   class << self
@@ -56,13 +57,16 @@ module Ai::Transport::Http
 
     # The ruby-openai client for an endpoint: vector stores, the PDF probes and model listing
     # stay on ruby-openai (RubyLLM has no vector store calls).
+    # Its base follows compatible_base, as RubyLLM's does, so the models list and the chat calls
+    # it checks reach the same server; an OpenRouter endpoint without a URL is OpenRouter's.
     def openai_client(endpoint, timeout: endpoint.timeout_seconds)
+      base = endpoint.base_url.presence || (OPENROUTER_BASE if endpoint.preset == :openrouter)
       options = { access_token: endpoint.api_key.to_s, request_timeout: timeout }
-      options[:uri_base] = endpoint.base_url if endpoint.base_url.present?
+      options[:uri_base] = compatible_base(base) if base
       static = headers(endpoint)
       options[:extra_headers] = static if static.any?
 
-      ::OpenAI::Client.new(**options, &faraday_options(endpoint.base_url.presence || OPENAI_BASE))
+      ::OpenAI::Client.new(**options, &faraday_options(base || OPENAI_BASE))
     end
 
     # The anthropic gem's client: model listing and the Anthropic PDF probe. It takes no proxy.
@@ -77,6 +81,9 @@ module Ai::Transport::Http
     def faraday(url, timeout:)
       Faraday.new(request: { timeout:, open_timeout: timeout }, &faraday_options(url))
     end
+
+    # The Faraday adapter for RubyLLM's contexts, which take no TLS options of their own.
+    def ruby_llm_adapter = TlsNetHttp
 
     # A Faraday block for a client built elsewhere (ruby-openai): the resolved proxy, which
     # also stops Faraday's own ENV lookup when the resolver says direct, and TLS options.
@@ -103,5 +110,16 @@ module Ai::Transport::Http
       rescue IPAddr::InvalidAddressError
         false
       end
+  end
+
+  # Net::HTTP with Sure's TLS settings (SSL_VERIFY, SSL_CA_FILE) on every https request.
+  # RubyLLM 2.1.1 builds its own Faraday connections and takes only an adapter, so this is how
+  # a self-hosted server with its own certificate is reached by RubyLLM as by every other client.
+  class TlsNetHttp < Faraday::Adapter::NetHttp
+    def build_connection(env)
+      ssl = Ai::Transport::Http.faraday_ssl_options
+      env[:ssl] = env[:ssl] ? env[:ssl].merge(ssl) : Faraday::SSLOptions.from(ssl) if ssl.present?
+      super
+    end
   end
 end

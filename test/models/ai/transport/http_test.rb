@@ -28,6 +28,20 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
     assert_equal PROXY, Http.proxy_for("http://other.lan:8080", env:)
   end
 
+  test "the models list goes to the same server as the chat calls it checks" do
+    full = Ai::Config::Endpoint.new(name: "gw", protocol: :compatible, base_url: "https://gw.example.test/v1/chat/completions", api_key: "k")
+    openrouter = Ai::Config::Endpoint.new(name: "or", protocol: :compatible, preset: :openrouter, api_key: "or-key")
+    stub_request(:get, "https://gw.example.test/v1/models").to_return(status: 200, body: { data: [] }.to_json, headers: { "Content-Type" => "application/json" })
+    stub_request(:get, "https://openrouter.ai/api/v1/models").to_return(status: 200, body: { data: [] }.to_json, headers: { "Content-Type" => "application/json" })
+
+    Http.openai_client(full).models.list
+    Http.openai_client(openrouter).models.list
+
+    assert_requested :get, "https://gw.example.test/v1/models"
+    assert_requested :get, "https://openrouter.ai/api/v1/models", headers: { "Authorization" => "Bearer or-key" }
+    assert_not_requested :get, %r{api\.openai\.com}
+  end
+
   test "net_http_proxy returns a URI for Net::HTTP" do
     uri = Http.net_http_proxy("https://agent.example.test", env: { "HTTPS_PROXY" => "http://user:pw@proxy.internal:8888" })
 

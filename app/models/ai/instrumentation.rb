@@ -30,6 +30,7 @@ module Ai::Instrumentation
     usage = UsageSubscriber.new
     subscriptions = [
       ActiveSupport::Notifications.subscribe("usage.ruby_llm", usage),
+      ActiveSupport::Notifications.subscribe("request.ruby_llm", usage),
       ActiveSupport::Notifications.subscribe(/\.ai\z/, usage),
       ActiveSupport::Notifications.subscribe(/\.ai\z/, DebugLogSubscriber.new),
       ActiveSupport::Notifications.subscribe(Ai::Shadow::EVENT, ComparisonSubscriber.new)

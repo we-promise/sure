@@ -24,6 +24,17 @@ class LlmUsage::CallTest < ActiveSupport::TestCase
     assert_not calls.first.multiple_requests?
   end
 
+  test "a call shows all its requests when one falls outside the date range" do
+    call_id = SecureRandom.uuid
+    usage(call_id:, status: "failed", created_at: 2.days.ago.end_of_day - 1.second, metadata: { "error" => "busy" })
+    usage(call_id:, status: "succeeded", created_at: 1.day.ago.beginning_of_day + 1.second)
+
+    call = @family.llm_usages.for_date_range(1.day.ago.beginning_of_day, Time.current).recent_calls.sole
+
+    assert_equal 2, call.requests_count
+    assert_equal "succeeded", call.status
+  end
+
   test "statistics count calls, not requests" do
     call_id = SecureRandom.uuid
     2.times { usage(call_id:, estimated_cost: 0.01) }
