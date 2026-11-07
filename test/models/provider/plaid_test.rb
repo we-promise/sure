@@ -177,6 +177,17 @@ class Provider::PlaidTest < ActiveSupport::TestCase
     end
   end
 
+  test "requests the full history window when syncing transactions" do
+    response = stub(added: [], modified: [], removed: [], has_more: false, next_cursor: "cursor")
+
+    @plaid.client.expects(:transactions_sync).with { |request|
+      request.options[:days_requested] == Provider::Plaid::MAX_HISTORY_DAYS &&
+        request.options[:include_original_description] == true
+    }.returns(response)
+
+    @plaid.get_transactions("access-token")
+  end
+
   private
     def get_access_token
       VCR.use_cassette("plaid/access_token") do
