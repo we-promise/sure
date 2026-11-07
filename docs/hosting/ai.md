@@ -1087,8 +1087,9 @@ All LLM operations will now be logged to Langfuse, including:
 
 ### Tracing modes: content or metadata
 
-AI calls made through Sure's AI transports (the health probes today; more features as they move
-over) are traced in one of two modes, never both. The mode follows the variables you already set:
+AI calls made through Sure's AI transports are traced in one of two modes, never both. Health
+probes aren't traced in either: they carry no family data and run each time an admin opens the
+health page. The mode follows the variables you already set:
 
 | You set | Mode | What leaves the server |
 |---|---|---|

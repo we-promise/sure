@@ -468,6 +468,20 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_requested request
   end
 
+  test "embedding probe fails on a vector with a component that isn't a finite number" do
+    stub_request(:post, "http://ollama:11434/v1/embeddings").to_return(
+      status: 200, headers: { "Content-Type" => "application/json" },
+      body: { data: [ { embedding: [ 0.1, nil, 0.3 ] } ], model: "nomic-embed-text", usage: { prompt_tokens: 4, total_tokens: 4 } }.to_json
+    )
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.embedding(endpoint: "http://ollama:11434/v1", access_token: nil, model: "nomic-embed-text", dimensions: 3)
+
+    assert result.failing?
+    assert_equal :invalid_response, result.failure_code
+  end
+
   test "embedding probe fails when returned dimensions do not match configuration" do
     stub_request(:post, "http://ollama:11434/v1/embeddings").to_return(
       status: 200, headers: { "Content-Type" => "application/json" },
