@@ -34,10 +34,12 @@ nl:
         danger_zone: "Gevarenzone"
         instance_settings_restricted: "Inloggegevens van providers, de gedeelde AI-koppeling en synchronisatie-instellingen gelden voor elk huishouden op deze instantie, dus alleen een superbeheerder kan ze wijzigen. Welke assistent uw huishouden gebruikt, wordt nog steeds per huishouden ingesteld. Iemand met toegang tot de server kan een gebruiker tot superbeheerder maken; de handleiding voor zelfhosting met Docker toont de opdracht in de upgrade-opmerkingen."
         clear_cache: "Datacache wissen"
-        clear_cache_warning: "Het wissen van de datacache verwijdert alle wisselkoersen, effectenprijzen, accountsaldo's en andere gegevens. Dit verwijdert geen accounts, transacties, categorieën of andere gegevens van gebruikers."
+        clear_cache_warning: "Het wissen van de datacache berekent de saldo's en posities van de accounts van je familie opnieuw en laadt de wisselkoersen en effectenprijzen die ze gebruiken opnieuw. Alleen de saldo's en posities van je familie worden verwijderd; wisselkoersen en effectenprijzen worden gedeeld met de andere families op deze instantie en worden ook voor hen bijgewerkt. Dit verwijdert geen accounts, transacties, categorieën of andere gegevens van gebruikers."
         confirm_clear_cache:
           title: "Datacache wissen?"
-          body: "Weet u zeker dat u de datacache wilt wissen? Dit verwijdert alle wisselkoersen, effectenprijzen, accountsaldo's en andere gegevens. Deze actie kan niet ongedaan worden gemaakt."
+          body: "Weet u zeker dat u de datacache wilt wissen? De saldo's en posities van de accounts van uw familie worden opnieuw berekend en de wisselkoersen en effectenprijzen die ze gebruiken worden opnieuw geladen. Alleen de saldo's en posities van uw familie worden verwijderd; wisselkoersen en effectenprijzen worden gedeeld met de andere families op deze instantie en worden ook voor hen bijgewerkt. Deze actie kan niet ongedaan worden gemaakt."
+          body_without_provider: "Weet u zeker dat u de datacache wilt wissen? De saldo's en posities van de accounts van uw familie worden opnieuw berekend. Er is geen aanbieder van wisselkoersen of effectenprijzen ingesteld, dus de opgeslagen wisselkoersen en effectenprijzen blijven behouden. Deze actie kan niet ongedaan worden gemaakt."
+        clear_cache_warning_without_provider: "Het wissen van de datacache berekent de saldo's en posities van de accounts van je familie opnieuw. Er is geen aanbieder van wisselkoersen of effectenprijzen ingesteld, dus de opgeslagen wisselkoersen en effectenprijzen blijven behouden. Dit verwijdert geen accounts, transacties, categorieën of andere gegevens van gebruikers."
       provider_selection:
         exchange_rate_title: "Wisselkoersprovider"
         exchange_rate_description: "Selecteer één provider voor het ophalen van wisselkoersen."

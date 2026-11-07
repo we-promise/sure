@@ -16,6 +16,19 @@ class Account::MarketDataImporter
     return unless needs_exchange_rates?
     return unless ExchangeRate.provider
 
+    exchange_rate_pair_dates.each do |(source, target), start_date|
+      ExchangeRate.import_provider_rates(
+        from: source,
+        to: target,
+        start_date: start_date,
+        end_date: Date.current
+      )
+    end
+  end
+
+  # The currency pairs this account converts through, each with the earliest
+  # date a rate is needed. Empty when the account needs no rates.
+  def exchange_rate_pair_dates
     pair_dates = {}
     family_currency = account.family.primary_currency_code
 
@@ -49,14 +62,7 @@ class Account::MarketDataImporter
       pair_dates[key] = [ pair_dates[key], date ].compact.min
     end
 
-    pair_dates.each do |(source, target), start_date|
-      ExchangeRate.import_provider_rates(
-        from: source,
-        to: target,
-        start_date: start_date,
-        end_date: Date.current
-      )
-    end
+    pair_dates
   end
 
   def import_security_prices
@@ -75,11 +81,11 @@ class Account::MarketDataImporter
     end
   end
 
-  private
-    def price_windows
-      @price_windows ||= Security::Price::ImportWindows.new(account).to_h
-    end
+  def price_windows
+    @price_windows ||= Security::Price::ImportWindows.new(account).to_h
+  end
 
+  private
     def security_ids
       price_windows.keys
     end

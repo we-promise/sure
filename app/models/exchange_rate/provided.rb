@@ -8,6 +8,15 @@ module ExchangeRate::Provided
       registry.get_provider(provider.to_sym)
     end
 
+    # Like provider, but nil instead of an error when no provider or an unknown one is set
+    def configured_provider
+      return if (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).blank?
+
+      provider
+    rescue Provider::Registry::Error
+      nil
+    end
+
     # Maximum number of days to look back for a cached rate before calling the provider.
     NEAREST_RATE_LOOKBACK_DAYS = 5
 
