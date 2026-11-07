@@ -45,7 +45,8 @@ module Family::AutoTransferMatchable
     transaction_ids: nil,
     include_rejected: true,
     restrict_cross_currency_to_linked_accounts: false,
-    require_common_writer: false
+    require_common_writer: false,
+    exclude_same_wise_item: false
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -65,6 +66,7 @@ module Family::AutoTransferMatchable
         include_rejected:,
         restrict_cross_currency_to_linked_accounts:,
         require_common_writer:,
+        exclude_same_wise_item:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
@@ -115,7 +117,13 @@ module Family::AutoTransferMatchable
       restrict_cross_currency_to_linked_accounts: true,
       # Only pair accounts that at least one member can write to on both sides, so
       # someone can always confirm or reject the match.
-      require_common_writer: true
+      require_common_writer: true,
+      # Two balances of one Wise connection move money between each other only
+      # through conversions and Jar moves, which WiseItem#link_jar_transfers!
+      # links from Wise's own activity feed. Any other pair across them is a
+      # coincidence (a GBP top-up "matching" a USD payout), so it is never
+      # suggested here; the manual dialog still offers it.
+      exclude_same_wise_item: true
     )
 
     # Track which transactions we've already matched to avoid duplicates
@@ -249,6 +257,30 @@ module Family::AutoTransferMatchable
       SQL
     end
 
+    # With :exclude_same_wise_item, drops pairs whose two accounts are linked to
+    # balances (WiseAccounts) of the same WiseItem. Applied in both UNION branches,
+    # since two balances of one item may share a currency (a balance and its Jar)
+    # or not. Only auto_match_transfers! sets it (see the comment there); the
+    # manual "match as transfer" dialog leaves it off.
+    def same_wise_item_condition_sql
+      <<~SQL.squish
+        (:exclude_same_wise_item = FALSE OR NOT EXISTS (
+          SELECT 1
+          FROM account_providers inflow_wise_links
+          JOIN wise_accounts inflow_wise_accounts ON inflow_wise_accounts.id = inflow_wise_links.provider_id
+          JOIN account_providers outflow_wise_links ON (
+            outflow_wise_links.account_id = outflow_accounts.id AND
+            outflow_wise_links.provider_type = 'WiseAccount'
+          )
+          JOIN wise_accounts outflow_wise_accounts ON outflow_wise_accounts.id = outflow_wise_links.provider_id
+          WHERE
+            inflow_wise_links.account_id = inflow_accounts.id AND
+            inflow_wise_links.provider_type = 'WiseAccount' AND
+            outflow_wise_accounts.wise_item_id = inflow_wise_accounts.wise_item_id
+        ))
+      SQL
+    end
+
     # Mirrors Account.writable_by for the `writers` row: owner or full_control share.
     def writer_can_write_sql(accounts_alias)
       <<~SQL.squish
@@ -344,6 +376,7 @@ module Family::AutoTransferMatchable
             (:outflow_transaction_id IS NULL OR outflow_candidates.entryable_id = :outflow_transaction_id) AND
             (:filter_transaction_ids = FALSE OR inflow_candidates.entryable_id IN (:transaction_ids) OR outflow_candidates.entryable_id IN (:transaction_ids)) AND
             (:include_rejected = TRUE OR rejected_transfers.id IS NULL) AND
+            #{same_wise_item_condition_sql} AND
             #{common_writer_condition_sql}
           UNION ALL
           SELECT
@@ -433,6 +466,7 @@ module Family::AutoTransferMatchable
               (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")}) OR
               confirmed_routes.outflow_account_id IS NOT NULL
             ) AND
+            #{same_wise_item_condition_sql} AND
             #{common_writer_condition_sql}
         ) transfer_match_candidates
         ORDER BY transfer_match_candidates.match_rank ASC, transfer_match_candidates.date_diff ASC

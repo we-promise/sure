@@ -41,6 +41,11 @@ en:
           title: Clear data cache?
           body: "Are you sure you want to clear the data cache? Your family's account balances and holdings will be recalculated, and the exchange rates and security prices they use will be reloaded. Only your family's balances and holdings are deleted; exchange rates and security prices are shared with the other families on this instance and are updated for them too. This action cannot be undone."
           body_without_provider: "Are you sure you want to clear the data cache? Your family's account balances and holdings will be recalculated. No exchange rate or security price provider is configured, so the stored exchange rates and security prices are kept. This action cannot be undone."
+        reset_market_data: Reset market data for all families
+        reset_market_data_warning: Deletes the exchange rates and security prices your providers can load again, re-imports them, and then syncs every account. Foreign-currency totals may show unconverted until the import finishes.
+        confirm_reset_market_data:
+          title: Reset market data for all families?
+          body: This deletes the exchange rates and security prices your providers can load again, for every family on this instance, and re-imports them. Until the import finishes, foreign-currency amounts may be shown unconverted. This action cannot be undone.
       provider_selection:
         exchange_rate_title: Exchange Rate Provider
         exchange_rate_description: Select a single provider for fetching currency exchange rates.
@@ -336,6 +341,10 @@ en:
         external_assistant_disconnected: External assistant disconnected
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
+      reset_market_data:
+        market_data_reset: Market data reset queued. Rates and prices will be re-imported, then all accounts will sync.
+        market_data_reset_already_queued: A market data reset is already queued or running.
+        market_data_reset_failed: The market data reset could not be queued. Nothing was deleted; please try again.
       not_authorized: You are not authorized to perform this action
       ensure_admin:
         not_authorized: You are not authorized to perform this action
