@@ -150,6 +150,9 @@
                       </div>
                     </div>
                   <% else %>
+                    <% if usage.cancelled? %>
+                      <span class="text-secondary font-medium"><%= t(".cancelled") %></span>
+                    <% end %>
                     <%= number_with_delimiter(usage.total_tokens) %>
                     <span class="text-xs text-secondary">
                       (<%= number_with_delimiter(usage.prompt_tokens) %>/<%= number_with_delimiter(usage.completion_tokens) %>)
