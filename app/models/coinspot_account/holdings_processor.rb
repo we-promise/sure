@@ -68,8 +68,11 @@ class CoinspotAccount::HoldingsProcessor
 
     # Resolves one raw balance-snapshot asset to a Security and imports it as
     # a holding for today. Skips AUD (cash, not a holding) and anything
-    # missing a symbol, balance, or AUD amount. A single asset's failure is
-    # logged and returned while the rest of the snapshot is still attempted.
+    # missing a symbol or balance. An asset with no AUD amount (CoinSpot
+    # stopped pricing it, e.g. delisted) is imported at zero value so it
+    # supersedes any earlier priced row instead of leaving it current. A
+    # single asset's failure is logged and returned while the rest of the
+    # snapshot is still attempted.
     def process_asset(asset)
       symbol = asset["symbol"] || asset[:symbol]
       return if symbol.to_s.upcase == "AUD"
@@ -79,18 +82,22 @@ class CoinspotAccount::HoldingsProcessor
       price_aud = asset["price_aud"] || asset[:price_aud]
       source = asset["source"] || asset[:source] || "spot"
 
-      return if symbol.blank? || total.zero? || amount_aud.blank?
+      return if symbol.blank? || total.zero?
 
       security = CoinspotAccount::SecurityResolver.resolve(symbol)
       return unless security
 
-      amount, amount_stale, amount_rate_date = convert_from_aud(amount_aud.to_d, date: Date.current)
-      price = if price_aud.present?
-        converted_price, price_stale, price_rate_date = convert_from_aud(price_aud.to_d, date: Date.current)
-        log_stale_rate(symbol, "price", price_rate_date) if price_stale
-        converted_price
+      if amount_aud.blank?
+        amount = price = 0.to_d
+      else
+        amount, amount_stale, amount_rate_date = convert_from_aud(amount_aud.to_d, date: Date.current)
+        price = if price_aud.present?
+          converted_price, price_stale, price_rate_date = convert_from_aud(price_aud.to_d, date: Date.current)
+          log_stale_rate(symbol, "price", price_rate_date) if price_stale
+          converted_price
+        end
+        log_stale_rate(symbol, "amount", amount_rate_date) if amount_stale
       end
-      log_stale_rate(symbol, "amount", amount_rate_date) if amount_stale
 
       import_adapter.import_holding(
         security: security,
@@ -149,11 +156,15 @@ class CoinspotAccount::HoldingsProcessor
         CoinspotAccount::SecurityResolver.resolve(symbol)&.id
       end.to_set
 
+      # A holding the user remapped sits on their chosen security, with the
+      # resolved one kept as provider_security, so check both before treating
+      # it as absent.
       previously_seen = account.holdings
         .where(account_provider_id: provider_link.id)
         .where.not(security_id: present_security_ids.to_a)
         .includes(:security)
         .to_a
+        .reject { |holding| present_security_ids.include?(holding.provider_security_id) }
         .uniq(&:security_id)
 
       previously_seen.each do |holding|
