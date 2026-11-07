@@ -30,7 +30,10 @@ class PagesController < ApplicationController
   # anywhere. Customize mode, the period picker and each widget's own month
   # links and filter forms carry them along, so changing one control doesn't
   # jump the other widgets back to their defaults.
-  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
+  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, :spending_compare_months, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
+
+  # How many earlier months the spending chart can overlay.
+  SPENDING_COMPARE_MONTHS = (1..5).freeze
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -158,6 +161,8 @@ class PagesController < ApplicationController
         category_ids = Current.user.dashboard_hidden_sections.include?("spending_trend") ? spending_trend_category_ids_param : spending_trend_filter.category_ids
         category_ids ? view_params[:spending_category_ids] = category_ids : view_params.delete(:spending_category_ids)
       end
+      compare_months = spending_trend_compare_months_param
+      compare_months == SPENDING_COMPARE_MONTHS.min ? view_params.delete(:spending_compare_months) : view_params[:spending_compare_months] = compare_months.to_s
       view_params
     end
 
@@ -601,6 +606,13 @@ class PagesController < ApplicationController
       current_month
     end
 
+    # Earlier months overlaid on the chart; anything outside the offered range
+    # falls back to just the previous month.
+    def spending_trend_compare_months_param
+      months = Integer(params[:spending_compare_months], exception: false)
+      SPENDING_COMPARE_MONTHS.include?(months) ? months : SPENDING_COMPARE_MONTHS.min
+    end
+
     # Category ids (and the uncategorized sentinel) from the family's own
     # categories. Not narrowed to the categories with spending this month, so
     # a selection survives switching to a month where some of it is empty.
@@ -613,16 +625,19 @@ class PagesController < ApplicationController
       ids.presence
     end
 
-    # The selected month (capped at today while it's in progress) and the
-    # month before it, which the widget compares against. Memoized: the
+    # The selected month (capped at today while it's in progress) followed by
+    # the full months before it that the chart overlays, newest first; the
+    # first of those is the month the header compares against. Memoized: the
     # filter and the widget both need them.
     def spending_trend_periods(selected_month)
       month_start = selected_month.beginning_of_month
       (@spending_trend_periods ||= {})[month_start] ||= begin
         current_period = Period.custom(start_date: month_start, end_date: [ month_start.end_of_month, Date.current ].min)
-        previous_month_start = (month_start - 1.month).beginning_of_month
-        previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
-        [ current_period, previous_period ]
+        comparison_periods = (1..spending_trend_compare_months_param).map do |i|
+          comparison_month_start = (month_start - i.months).beginning_of_month
+          Period.custom(start_date: comparison_month_start, end_date: comparison_month_start.end_of_month)
+        end
+        [ current_period, *comparison_periods ]
       end
     end
 
@@ -637,34 +652,43 @@ class PagesController < ApplicationController
     end
 
     # Cumulative daily spending for the selected month (capped at today while
-    # the month is in progress) against the previous month's full curve, so
-    # the two lines share one day-of-month axis. The header totals compare the
-    # same number of elapsed days; only the chart draws the previous month out
-    # to its final day.
+    # the month is in progress) against each compared month's full curve, so
+    # the lines share one day-of-month axis. The header compares only the
+    # previous month, over the same number of elapsed days; only the chart
+    # draws compared months out to their final day.
     #
     # The category filter (an IncomeStatement::ExpenseCategoryFilter) narrows
-    # both months to the same categories, so the comparison stays
+    # every month to the same categories, so the comparison stays
     # like-for-like.
     def build_spending_trend_data(income_statement, selected_month, category_filter)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
-      current_period, previous_period = spending_trend_periods(month_start)
+      current_period, *comparison_periods = spending_trend_periods(month_start)
+      previous_period = comparison_periods.first
       previous_month_start = previous_period.start_date
       category_ids = category_filter.category_ids
 
-      current_daily = income_statement.daily_expense_series(period: current_period, category_ids: category_ids).index_by(&:date)
-      previous_daily = income_statement.daily_expense_series(period: previous_period, category_ids: category_ids).index_by(&:date)
+      cumulative_series = ->(period) do
+        daily = income_statement.daily_expense_series(period: period, category_ids: category_ids).index_by(&:date)
+        cumulative_spending_series(period, daily)
+      end
 
-      # The selected month always owns the axis: when the previous month is
+      # The selected month always owns the axis: when a compared month is
       # longer, its extra days fold into the final visible point so the curve
       # still ends at the full-month total without the axis rolling into
-      # previous-month dates (e.g. a September view ends at "Sep 30", not
+      # that month's dates (e.g. a September view ends at "Sep 30", not
       # "Aug 31").
       axis_days = month_end.day
 
-      current_series = cumulative_spending_series(current_period, current_daily)
-      previous_header_series = cumulative_spending_series(previous_period, previous_daily)
-      previous_series = fold_extra_days(previous_header_series, axis_days)
+      current_series = cumulative_series.call(current_period)
+      comparison_series = comparison_periods.map { |period| cumulative_series.call(period) }
+      previous_header_series = comparison_series.first
+      comparisons = comparison_periods.zip(comparison_series).map do |period, series|
+        {
+          label: I18n.l(period.start_date, format: :month_year).capitalize,
+          series: fold_extra_days(series, axis_days)
+        }
+      end
 
       current_total = current_series.last&.fetch(:value) || 0
       comparison_days = if month_start == Date.current.beginning_of_month
@@ -685,7 +709,8 @@ class PagesController < ApplicationController
         current_days: month_end.day,
         axis_labels: spending_trend_axis_labels(month_start, axis_days),
         current: current_series,
-        previous: previous_series,
+        comparisons: comparisons,
+        compare_months: comparisons.size,
         current_total: Money.new(current_total, currency),
         previous_total: Money.new(previous_total, currency),
         delta: Money.new(current_total - previous_total, currency),
