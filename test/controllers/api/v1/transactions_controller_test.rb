@@ -803,6 +803,121 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_tags.map(&:id).sort, @transaction.tag_ids.sort
   end
 
+  test "should store a repeated tag id once in update" do
+    tag = @family.tags.first
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ tag.id, tag.id ] } },
+        headers: api_headers(@api_key)
+    assert_response :success
+
+    assert_equal [ tag.id ], @transaction.reload.taggings.pluck(:tag_id)
+  end
+
+  test "update with a malformed tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ "not-a-uuid" ] } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "create with a malformed tag id is refused and creates nothing" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Tagged", amount: 25.00, date: Date.current,
+                                    currency: "USD", nature: "expense", tag_ids: [ "not-a-uuid" ] } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  # Strong parameters drop a scalar where a list is permitted, so a check made
+  # after `permit` saw no tags, and the update cleared every tag it held.
+  test "update with a scalar tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: "not-a-uuid" } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "update with a tag id that is not a string leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ { id: @family.tags.first.id } ] } }.to_json,
+        headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+    assert_response :unprocessable_entity
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  # `compact_blank` would drop an empty object or `false` before the check,
+  # and then `permit` drops the whole list, or the id writer drops `false`:
+  # either way the tags were cleared.
+  test "update with a blank non-string tag id leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    [ [ @family.tags.first.id, {} ], [ false ] ].each do |tag_ids|
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { tag_ids: tag_ids } }.to_json,
+          headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+      assert_response :unprocessable_entity, "tag_ids: #{tag_ids.inspect}"
+      assert_equal before_ids, @transaction.reload.tag_ids.sort, "tag_ids: #{tag_ids.inspect}"
+    end
+  end
+
+  test "update with an object for its tag ids leaves the tags unchanged" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+    before_ids = @transaction.reload.tag_ids.sort
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: {} } }.to_json,
+        headers: api_headers(@api_key).merge("Content-Type" => "application/json")
+
+    assert_response :unprocessable_entity
+    assert_equal before_ids, @transaction.reload.tag_ids.sort
+  end
+
+  test "create with a scalar tag id is refused and creates nothing" do
+    assert_no_difference("@account.entries.count") do
+      post api_v1_transactions_url,
+           params: { transaction: { account_id: @account.id, name: "Tagged", amount: 25.00, date: Date.current,
+                                    currency: "USD", nature: "expense", tag_ids: "not-a-uuid" } },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "update with a blank tag id list still clears the tags" do
+    @transaction.update!(tag_ids: [ @family.tags.first.id ])
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { tag_ids: [ "" ] } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_empty @transaction.reload.tag_ids
+  end
+
   test "should clear tags when empty tag_ids explicitly provided in update" do
     # Set up transaction with existing tags
     @transaction.tags = [ Tag.first, Tag.second ]

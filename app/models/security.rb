@@ -89,6 +89,14 @@ class Security < ApplicationRecord
   has_many :trades, dependent: :nullify, class_name: "Trade"
   has_many :prices, dependent: :destroy
   has_many :splits, dependent: :destroy
+  # A security row is shared by every family that holds the instrument, but a
+  # Tag belongs to one family, so a tagging is reachable only through its
+  # owning family's tags. Read one family's with #tags_for and write them with
+  # #set_tags_for. There is deliberately no `has_many :tags, through:`: its
+  # generated `tags=`, `tag_ids=` and `tags <<` know nothing about families,
+  # and would delete other families' taggings or attach a tag the family does
+  # not own.
+  has_many :taggings, as: :taggable, dependent: :destroy
 
   validates :ticker, presence: true
   validates :ticker, uniqueness: { scope: :exchange_operating_mic, case_sensitive: false }
@@ -124,6 +132,47 @@ class Security < ApplicationRecord
 
   def cash?
     kind == "cash"
+  end
+
+  # `family`'s tags on this security, and no other family's.
+  def tags_for(family)
+    family.tags.where(id: taggings.select(:tag_id))
+  end
+
+  # Replaces only `family`'s tags on this security.
+  #
+  # A wholesale replace would delete other families' taggings on the same
+  # instrument, because the row is shared. Ids are resolved through
+  # `family.tags` rather than `Tag`, so a tag this family does not own is
+  # never attached: that would show its name to every family holding the
+  # security.
+  #
+  # Lock order is security (FOR UPDATE), then tags (FOR SHARE), then taggings.
+  # `Tag#replace_and_destroy!` takes taggings then the tag, so the two can
+  # deadlock on the same security and tag, and PostgreSQL then aborts one of
+  # them with a deadlock error. A new writer should take the locks in this
+  # order.
+  def set_tags_for(family, tag_ids)
+    # `with_lock` reloads the row, which an unsaved security does not have.
+    raise ArgumentError, "save the security before tagging it" unless persisted?
+
+    mine = family.tags.select(:id)
+
+    # A check-then-insert on a row every family shares. The unique index on
+    # taggings refuses a duplicate, so without the lock two concurrent saves
+    # of the same tag would fail one of them rather than both succeed. The
+    # lock also reloads the record, so no stale association survives.
+    with_lock do
+      # Read inside the lock and FOR SHARE: the security's row lock does not
+      # cover the tags, so without it a tag deleted between this read and the
+      # insert below would fail the insert. A concurrent delete of a wanted
+      # tag now waits for this write to commit.
+      wanted = family.tags.where(id: Array(tag_ids).reject(&:blank?)).lock("FOR SHARE").pluck(:id)
+
+      taggings.where(tag_id: mine).where.not(tag_id: wanted).destroy_all
+      already = taggings.where(tag_id: wanted).pluck(:tag_id)
+      (wanted - already).each { |id| taggings.create!(tag_id: id) }
+    end
   end
 
   # True when this security represents a crypto asset. Today the only signal

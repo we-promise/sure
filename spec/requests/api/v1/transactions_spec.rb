@@ -253,7 +253,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - missing required fields' do
+      response '422', 'validation error - missing required fields or a malformed tag id' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) do
@@ -347,6 +347,14 @@ RSpec.describe 'API V1 Transactions', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
+
+        run_test!
+      end
+
+      response '422', 'validation error - malformed tag id' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { transaction: { tag_ids: [ 'not-a-uuid' ] } } }
 
         run_test!
       end

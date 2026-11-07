@@ -99,6 +99,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return render_existing_idempotent_entry(existing_entry)
     end
 
+    return render_validation_error("Malformed tag id") if malformed_tag_ids?
+
     @entry = account.entries.new(entry_params_for_create)
 
     if @entry.save
@@ -143,6 +145,8 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       render json: { error: "validation_failed", message: "Split parent amount, date, and type cannot be changed directly. Use the split editor." }, status: :unprocessable_entity
       return
     end
+
+    return render_validation_error("Malformed tag id") if tags_provided? && malformed_tag_ids?
 
     Entry.transaction do
       if @entry.update(entry_params_for_update)
@@ -371,6 +375,23 @@ class Api::V1::TransactionsController < Api::V1::BaseController
     # This distinguishes between "user wants to update tags" vs "user didn't specify tags".
     def tags_provided?
       params[:transaction].key?(:tag_ids)
+    end
+
+    UUID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+    private_constant :UUID_FORMAT
+
+    # Assigning an id that is not a uuid raises RecordNotFound, which the
+    # actions' broad rescue answers with a 500. It is bad input.
+    #
+    # Read before `permit`, which drops anything but a list of strings where a
+    # list is permitted: the update would then clear every tag. `null`, `""`,
+    # `[]` and `[""]` still mean "no tags".
+    def malformed_tag_ids?
+      raw = params.dig(:transaction, :tag_ids)
+      return false if raw.nil? || raw == ""
+      return true unless raw.is_a?(Array)
+
+      raw.any? { |id| !id.is_a?(String) || (id.present? && !id.match?(UUID_FORMAT)) }
     end
 
     def split_financial_fields_changed?
