@@ -131,6 +131,33 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
+  test "an outage on a later way keeps the extraction in hand, flagged" do
+    skip_without_pdftoppm
+    missing = BAC_ROWS.drop(1)
+    stub_ai(:extract_pdf) do |request|
+      raise Ai::Error::Upstream, "server error" if request.attachments.any?
+
+      statement(missing)
+    end
+
+    with_reading_routes(vision_model) do
+      outcome = reading(@bac).extract
+
+      assert outcome.flagged?
+      assert_equal :text, outcome.way
+      assert_equal [ :text, :images ], outcome.attempts.map { _1[:way] }
+      assert_equal "Upstream", outcome.attempts.last[:error]
+    end
+  end
+
+  test "an outage with nothing in hand fails the reading, so the job's retries apply" do
+    stub_ai(:extract_pdf) { raise Ai::Error::Upstream, "server error" }
+
+    with_reading_routes(text_model) do
+      assert_raises(Ai::Error::Upstream) { reading(@bac).extract }
+    end
+  end
+
   test "pages are batched by cost with no page limit" do
     skip_without_pdftoppm
     requests = stub_ai(:extract_pdf, returns: statement([]))

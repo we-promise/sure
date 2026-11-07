@@ -78,7 +78,7 @@ class Ai::PdfReading
   def extract(read_as: :auto, start: nil, cancelled: nil)
     attempts = []
     best = nil
-    each_way(read_as, start:, attempts:) do |way, units, source|
+    each_way(read_as, start:, attempts:, keep: -> { best }) do |way, units, source|
       result = Ai::Generations::ExtractBankStatement.new(units:, content:, filename:, family:, user:).call(plan:, cancelled:)
       result.value!
 
@@ -123,7 +123,10 @@ class Ai::PdfReading
   end
 
   private
-    def each_way(read_as, attempts:, start: nil)
+    # `keep` answers whether an extraction is already in hand: an outage on a later way (a 5xx, a
+    # timeout, an unreachable server) then ends the search with that extraction, flagged, rather
+    # than failing the import. With nothing in hand the outage is raised, so the job's retries apply.
+    def each_way(read_as, attempts:, start: nil, keep: -> { nil })
       order(read_as, start:).each do |way|
         reason = reason_for(way)
         if reason
@@ -136,6 +139,11 @@ class Ai::PdfReading
           yield way, units, source
         rescue *NEXT_WAY => error
           attempts << { way:, error: error.is_a?(Ai::Error::Unavailable) ? error.reason : error.class.name.demodulize }
+        rescue Ai::Error::Base => error
+          raise unless keep.call
+
+          attempts << { way:, error: error.class.name.demodulize }
+          break
         end
       end
     end

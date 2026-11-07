@@ -56,6 +56,10 @@ module Ai::Error
   # Ollama: 404 "model 'x' not found". OpenAI: 404 model_not_found, "The model `x` does not exist".
   MODEL_MISSING = [ /model_not_found/i, /model\b.{0,120}\bnot found/im, /model\b.{0,120}\bdoes not exist/im ].freeze
 
+  # llama.cpp and Ollama: 500 "image input is not supported" from a model without a vision
+  # projector. The model can't do it, so it's a refusal, not an outage to retry or mark down.
+  UNSUPPORTED_INPUT = [ /image input is not supported/i ].freeze
+
   module_function
 
   def for_status(status, message = nil, body: nil)
@@ -72,7 +76,7 @@ module Ai::Error
       elsif matches?(text, NO_CREDIT) then NoCredit
       else Refused
       end
-    when 500..599 then Upstream
+    when 500..599 then matches?(text, UNSUPPORTED_INPUT) ? Refused : Upstream
     else Refused
     end
   end
