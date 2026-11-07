@@ -83,7 +83,6 @@ class AiHealth
     # :chat sends one tiny request. Which one is the endpoint admin's setting
     # from PR 7; until then every probe lists models.
     def llm(provider:, endpoint:, access_token:, model:)
-      raise_unsupported_provider!(provider)
       probe_endpoint = config_endpoint(provider:, base_url: endpoint, api_key: access_token)
 
       run(
@@ -94,6 +93,7 @@ class AiHealth
         credential: access_token,
         verification: probe_endpoint.probe_check
       ) do
+        raise_unsupported_provider!(provider)
         transport_for(probe_endpoint).probe(config_model(probe_endpoint, model), probe_endpoint.probe_check, timeout:)
       end
     end
