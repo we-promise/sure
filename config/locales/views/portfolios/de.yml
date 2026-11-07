@@ -1,0 +1,14 @@
+---
+de:
+  portfolios:
+    empty_state:
+      add_account: Anlagekonto hinzufügen
+      description: Verbinde oder ergänze ein Depot-, Vorsorge- oder Krypto-Konto, dann erscheint es hier mit seinem Saldo.
+      title: Noch keine Anlagekonten
+    sections:
+      accounts: Konten
+    show:
+      section_aria: "Abschnitt %{title}. Drücke Enter oder Leertaste, um ihn zum Umsortieren zu greifen, dann bewege ihn mit den Pfeiltasten."
+      sections_aria: Portfolio-Abschnitte
+      subtitle: Deine Anlagekonten und was jedes davon wert ist.
+      title: Portfolio

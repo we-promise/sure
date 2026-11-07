@@ -1,0 +1,23 @@
+<%# Family-wide investment hub. Built on the Reports section framework, so the
+    sections drag to reorder and collapse exactly as Reports' do -- only the
+    preferences namespace and endpoint differ. %>
+<div class="@container space-y-6 pb-6 lg:pb-12">
+  <header>
+    <div class="flex items-center gap-2">
+      <h1 class="text-2xl font-semibold text-primary"><%= t(".title") %></h1>
+      <%= render DS::Pill.new(label: t("shared.preview"), size: :md) %>
+    </div>
+    <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
+  </header>
+
+  <% if @statement.investment_accounts.empty? %>
+    <%= render "portfolios/empty_state" %>
+  <% else %>
+    <%= render "shared/reorderable_sections",
+          sections: @sections,
+          namespace: "portfolio",
+          url: update_preferences_portfolio_path,
+          collapse_url: update_preferences_portfolio_path,
+          i18n_scope: "portfolios.show" %>
+  <% end %>
+</div>
