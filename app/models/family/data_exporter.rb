@@ -804,7 +804,7 @@ class Family::DataExporter
 
       # Map merchant UUIDs to names for portability
       if condition.condition_type == "transaction_merchant"
-        return rule_operand(condition.value, type: "Merchant", relation: :merchants)
+        return rule_operand(condition.value, type: "Merchant", relation: :available_merchants)
       end
 
       # Map tag UUIDs to names for portability
@@ -825,7 +825,7 @@ class Family::DataExporter
 
       # Map merchant UUIDs to names for portability
       if action.action_type == "set_transaction_merchant"
-        return rule_operand(action.value, type: "Merchant", relation: :merchants, fallback_to_name: true)
+        return rule_operand(action.value, type: "Merchant", relation: :available_merchants, fallback_to_name: true)
       end
 
       # Map tag UUIDs to names for portability. Stored as a comma-separated

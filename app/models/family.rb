@@ -486,6 +486,17 @@ class Family < ApplicationRecord
     Merchant.where(id: merchant_ids)
   end
 
+  # Merchants a rule can set on transactions: the family's own plus the
+  # provider merchants already on transactions the user can see. Unlike
+  # available_merchants_for, recently unlinked merchants are left out, since a
+  # rule that set one again would undo the unlink.
+  def assignable_merchants_for(user)
+    assigned_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
+      .select(:merchant_id)
+    Merchant.where(id: merchants.select(:id)).or(Merchant.where(type: "ProviderMerchant", id: assigned_ids))
+  end
+
   def available_merchants_for(user)
     assigned_ids = Transaction.joins(:entry)
       .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
