@@ -1,7 +1,7 @@
-# Every family AI setting and the methods that read them (ai-plumbing-redesign.md, section 6), kept
-# out of family.rb, which many open PRs touch. Family::AiPromptable keeps the prompt overrides.
+# Every family AI setting and the methods that read them, kept out of family.rb.
+# Family::AiPromptable keeps the prompt overrides.
 #
-# Until PR 7, the ENV overrides here still win over the family's columns, as they always have.
+# The ENV overrides here win over the family's columns.
 module Family::AiSettings
   extend ActiveSupport::Concern
 
@@ -68,8 +68,7 @@ module Family::AiSettings
     end
   end
 
-  # An external assistant answers this family's chats. Reads today's assistant type until chat
-  # mode gets its own column (PR 7).
+  # An external assistant answers this family's chats, read from the assistant type.
   def chat_mode_external?
     effective_assistant_type == "external"
   end

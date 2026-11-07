@@ -1,11 +1,11 @@
-# One entry in a feature's ordered model list (section 5.2): a model on an endpoint. The first
-# entry is the normal choice; later ones are for failover and escalation (2c).
+# One entry in a feature's ordered model list: a model on an endpoint. The first entry is the
+# normal choice; later ones are for failover and escalation.
 #
-# `condition` limits who an entry serves. Until 2d, a Jev entry serves only families that chose
-# Jev (`:jev_family`), which is today's rule; 2d deletes it with `families.categorization_provider`.
+# `condition` limits who an entry serves: a Jev entry serves only families that chose Jev
+# (`:jev_family`).
 #
-# An entry's own settings, for that entry only (section 4.2):
-# - prompt: the app/prompts folder it runs; nil means the feature's default (section 8.3);
+# An entry's own settings, for that entry only:
+# - prompt: the app/prompts folder it runs; nil means the feature's default;
 # - json_mode: overrides the endpoint's;
 # - reasoning_effort: one lowercase word sent as the model's effort; nil sends nothing (#3605).
 Ai::Route = Data.define(:feature, :position, :model, :condition, :prompt, :json_mode, :reasoning_effort) do

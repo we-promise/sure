@@ -1,4 +1,4 @@
-# THE routing table (section 5.1): each AI feature's lane, what its models need, its consent
+# THE routing table: each AI feature's lane, what its models need, its consent
 # level and the data it sends. Changing any of these changes what data leaves the box, so it
 # goes through review and the architecture tests and can't be changed at runtime.
 #
@@ -11,7 +11,7 @@ module Ai::Routes
                          sends: %i[chat_messages looked_up_financial_data stored_document_text] },
     bill_setup:        { lane: :interactive, needs: %i[structured_output],      consent: :user,
                          sends: %i[transaction_dates transaction_amounts transaction_names category_names bill_configuration] },
-    extract_pdf:       { lane: :prompt,      needs: %i[structured_output],      consent: :user,   # vision, documents, ocr: per way of reading (2e)
+    extract_pdf:       { lane: :prompt,      needs: %i[structured_output],      consent: :user,   # vision, documents, ocr: per way of reading
                          sends: %i[uploaded_document] },
     embed:             { lane: :prompt,      needs: %i[embedding],              consent: :user,
                          sends: %i[depends_on_vector_store] },
@@ -43,14 +43,14 @@ module Ai::Routes
 
   def needs_for(feature) = fetch(source_of(feature)).fetch(:needs)
 
-  # A shadow has its own consent (section 8.2); `consent_as:` puts a feature under another's row.
+  # A shadow has its own consent; `consent_as:` puts a feature under another's row.
   def consent_key(feature) = fetch(feature)[:consent_as] || feature.to_sym
 
   # The consent row a person sees the feature under: a shadow shows under its primary's row.
   # Routing (`route_of:`) doesn't move a feature to another row; only `consent_as:` does.
   def row_key(feature) = consent_key(fetch(feature)[:shadow_of] || feature)
 
-  # The consent rows on the AI features page (PR 7), one per thing a person recognises.
+  # The consent rows a person sees, one per thing they recognise.
   def consent_keys = features.reject { fetch(_1)[:shadow_of] }.map { consent_key(_1) }.uniq
 
   # Everything sent under one consent key, so a row's manifest covers its whole group.

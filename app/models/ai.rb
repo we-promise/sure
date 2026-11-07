@@ -1,4 +1,4 @@
-# The AI layer's façade (ai-plumbing-redesign.md, PR #4440). Ask it whether a feature can run
+# The AI layer's façade. Ask it whether a feature can run
 # instead of looking for a provider:
 #
 #   Ai.available?(:enhance_merchants, family: Current.family, user: Current.user)

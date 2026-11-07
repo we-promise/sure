@@ -1,9 +1,7 @@
 require "test_helper"
 
-# The deprecated ENV path resolves every setup today's code supports to the routes today's code
-# would use (ai-plumbing-redesign.md, section 17), so moving a feature onto the router changes
-# nothing until a PR means it to. PR 7 adds the halves for the tables, the config file and
-# ai:export_config.
+# The deprecated ENV path resolves every supported setup to the routes the code not yet on the
+# router would use, so moving a feature onto the router changes nothing unless it means to.
 class AiConfigTest < ActiveSupport::TestCase
   include AiLegacySetups
 

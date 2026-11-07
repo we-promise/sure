@@ -3,9 +3,9 @@
 module RuboCop
   module Cop
     module Sure
-      # Flags ENV reads of AI configuration (ai-plumbing-redesign.md, section 4.7). ENV variables
-      # are permanent once released and differ between containers, so AI configuration lives in
-      # the `ai_*` tables and the AI config file instead. Only the loaders read the old variables.
+      # Flags ENV reads of AI configuration. ENV variables are permanent once released and differ
+      # between containers, so AI code reads its configuration through Ai::Config instead. Only the
+      # loaders read the old variables.
       #
       #   # bad
       #   ENV["OPENAI_MODEL"]

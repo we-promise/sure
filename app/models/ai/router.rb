@@ -1,10 +1,9 @@
-# THE resolution path (section 5.3): for this feature, family and user, what may run, and if
+# THE resolution path: for this feature, family and user, what may run, and if
 # nothing may, why. Every feature asks it, through Ai.available? and Ai.availability, instead of
 # looking for a provider itself.
 #
 # It reads only Ai::Config, Ai::Routes and Ai::Consent, and never looks at liveness: down
-# endpoints are the caller's concern at run time (2c), so availability doesn't flicker. PR 7 adds
-# the family's consent to Ai::Consent; PR 9 adds the family's allowed endpoints and own keys here.
+# endpoints are the caller's concern at run time, so availability doesn't flicker.
 class Ai::Router
   def initialize(family:, user: nil, config: Ai::Config.current)
     @family, @user, @config = family, user, config

@@ -1,25 +1,25 @@
 require "test_helper"
 
-# PR #4440's E2, kept: in every setup today's code supports, each place that shows or starts an AI
-# feature gives the same answer as Ai.available? (ai-plumbing-redesign.md, section 17).
+# In every supported setup, each place that shows or starts an AI feature gives the same answer
+# as Ai.available?.
 #
-# Chat's entry points are asked too, but they move onto the router only in PR 6, so their known
+# Chat's entry points are asked too, but chat doesn't go through the router, so their known
 # disagreements are on CHAT_ALLOWLIST. The list may only shrink: an entry that no longer
-# disagrees fails the test, and PR 6 empties it.
+# disagrees fails the test.
 class AiAgreementTest < ActionDispatch::IntegrationTest
   include AiLegacySetups
   include BillsHelper
   include InsightsHelper
 
-  # [setup, entry point] => why chat's entry point and the router disagree until PR 6.
+  # [setup, entry point] => why chat's entry point and the router disagree.
   CHAT_ALLOWLIST = {
     %w[C6 chat_page] => "the chat page is offered, but no model is set, so every turn fails",
     %w[C8 chat_page] => "the chat page is offered, but chat's allow-list refuses o4-mini, so every turn fails",
     %w[C8 dig_in] => "Dig in asks for the batch provider, which takes o4-mini; chat refuses it",
     %w[C8 bills_chat] => "the bills chat buttons ask for the batch provider, which takes o4-mini; chat refuses it",
-    %w[M5 chat_page] => "mcp_only turns chat off through User#ai_available?; Ai::Consent gets that line in PR 6",
-    %w[M5 bills_chat] => "mcp_only turns the bills chat buttons off; Ai::Consent gets that line in PR 6",
-    %w[M5 dig_in] => "mcp_only turns Dig in off; Ai::Consent gets that line in PR 6"
+    %w[M5 chat_page] => "mcp_only turns chat off through User#ai_available?, which Ai::Consent doesn't check",
+    %w[M5 bills_chat] => "mcp_only turns the bills chat buttons off, which Ai::Consent doesn't check",
+    %w[M5 dig_in] => "mcp_only turns Dig in off, which Ai::Consent doesn't check"
   }.freeze
 
   setup do
