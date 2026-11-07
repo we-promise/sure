@@ -10,6 +10,15 @@ class GoalPledge::Reconciler
     @valuation_delta = valuation_delta
   end
 
+  # For an entry booked in the app, where the caller may already hold a
+  # transaction (the API wraps trade creation in one). Waits for every open
+  # transaction to commit, so a rolled-back entry never resolves a pledge
+  # and a database error rescued in #run can't leave the caller's
+  # transaction aborted. Runs at once when no transaction is open.
+  def self.run_after_commit(entry)
+    ActiveRecord.after_all_transactions_commit { new(entry).run }
+  end
+
   def run
     return unless eligible_entry?
     return if already_stamped?

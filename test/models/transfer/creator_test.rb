@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Transfer::CreatorTest < ActiveSupport::TestCase
+  include GoalPledgeTestHelper
+
   setup do
     @family = families(:dylan_family)
     @source_account = accounts(:depository)
@@ -336,5 +338,97 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
 
     assert_equal [ tag.id ], transfer.outflow_transaction.tag_ids
     assert_equal [ tag.id ], transfer.inflow_transaction.tag_ids
+  end
+
+  # we-promise/sure#4226: a transfer pledge resolved only from provider
+  # imports, so a deposit booked in the app never matched it.
+  test "a transfer into an account with an open transfer pledge resolves it" do
+    pledge = goal_pledges(:open_transfer)
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+
+    transfer = Transfer::Creator.new(
+      family: @family, source_account_id: source.id, destination_account_id: pledge.account_id,
+      date: Date.current, amount: 200
+    ).create
+
+    pledge.reload
+    assert_equal "matched", pledge.status
+    assert_equal transfer.inflow_transaction.id, pledge.matched_transaction_id
+    assert_equal pledge.id, transfer.inflow_transaction.reload.extra.dig("goal", "pledge_id")
+  end
+
+  test "a transfer into a goal-linked investment account resolves its pledge" do
+    pledge = open_transfer_pledge(@destination_account, amount: 150)
+
+    transfer = Transfer::Creator.new(
+      family: @family, source_account_id: @source_account.id, destination_account_id: @destination_account.id,
+      date: Date.current, amount: 150
+    ).create
+
+    assert_equal transfer.inflow_transaction.id, pledge.reload.matched_transaction_id
+  end
+
+  test "a transfer out of the pledged account does not resolve it" do
+    pledge = goal_pledges(:open_transfer)
+
+    transfer = Transfer::Creator.new(
+      family: @family, source_account_id: pledge.account_id, destination_account_id: @destination_account.id,
+      date: Date.current, amount: 200
+    ).create
+
+    assert_equal "open", pledge.reload.status
+    assert_nil transfer.outflow_transaction.reload.extra.dig("goal", "pledge_id")
+  end
+
+  # The API wraps trade creation, and so this, in its own transaction. The
+  # pledge must wait for that to commit: resolving it inside would let a
+  # rescued database error in the reconciler abort the caller's transaction.
+  test "pledge reconciliation waits for the caller's transaction to commit" do
+    pledge = goal_pledges(:open_transfer)
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+
+    ApplicationRecord.transaction do
+      Transfer::Creator.new(
+        family: @family, source_account_id: source.id, destination_account_id: pledge.account_id,
+        date: Date.current, amount: 200
+      ).create
+
+      assert_equal "open", pledge.reload.status
+    end
+
+    assert_equal "matched", pledge.reload.status
+  end
+
+  test "a rolled-back caller transaction leaves the pledge open" do
+    pledge = goal_pledges(:open_transfer)
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+
+    ApplicationRecord.transaction do
+      Transfer::Creator.new(
+        family: @family, source_account_id: source.id, destination_account_id: pledge.account_id,
+        date: Date.current, amount: 200
+      ).create
+      raise ActiveRecord::Rollback
+    end
+
+    assert_equal "open", pledge.reload.status
+    assert_nil pledge.matched_transaction_id
+  end
+
+  test "a reconcile failure does not undo the transfer" do
+    pledge = goal_pledges(:open_transfer)
+    source = @family.accounts.create!(name: "Savings source", balance: 1000, currency: "USD", accountable: Depository.new)
+    GoalPledge.any_instance.stubs(:resolve_with!).raises(StandardError, "boom")
+
+    transfer = nil
+    assert_difference "Transfer.count", 1 do
+      transfer = Transfer::Creator.new(
+        family: @family, source_account_id: source.id, destination_account_id: pledge.account_id,
+        date: Date.current, amount: 200
+      ).create
+    end
+
+    assert transfer.persisted?
+    assert_equal "open", pledge.reload.status
   end
 end

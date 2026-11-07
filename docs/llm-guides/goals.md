@@ -28,6 +28,13 @@ Account::ProviderImportAdapter#import_transaction
 Account::ReconciliationManager#reconcile
   → GoalPledge::Reconciler.new(prepared_valuation).run  (manual_save path)
 
+In-app transfer deposits (transfer-kind path, after the caller's transaction
+commits, via GoalPledge::Reconciler.run_after_commit):
+Transfer::Creator#create                           → inflow leg
+TransferMatchesController#create                   → inflow leg
+Rule::ActionExecutor::SetAsTransferOrPayment       → inflow leg (goal-linked accounts only)
+Trade::CreateForm (unlinked cash deposit)          → the deposit entry
+
 SweepExpiredGoalPledgesJob (cron, every 15 minutes)
   → GoalPledge.open_and_expired_now.find_each(&:expire!)
 ```
@@ -38,7 +45,7 @@ Model layer:
 
 - `app/models/goal.rb` — balance, pace, status, projection, color map.
 - `app/models/goal_pledge.rb` — pledge, match policy, lifecycle.
-- `app/models/goal_pledge/reconciler.rb` — entry-to-pledge resolver, called from the import adapters.
+- `app/models/goal_pledge/reconciler.rb` — entry-to-pledge resolver, called from the import adapters and, through `run_after_commit`, from in-app transfer deposits.
 - `app/models/account.rb` — `#manual?` instance method (mirrors the `Account.manual` scope) drives pledge kind detection.
 - `app/models/family.rb` — `#savings_inflow_velocity` powers the KPI strip.
 
