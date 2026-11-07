@@ -35,6 +35,47 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "bulk update clears the merchant when merchant_id is blank" do
+    transaction_entry = @user.family.entries.transactions.first
+    transaction_entry.transaction.update!(merchant: merchants(:netflix))
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ transaction_entry.id ],
+        merchant_id: ""
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "1 transactions updated", flash[:notice]
+    assert_nil transaction_entry.reload.transaction.merchant
+  end
+
+  test "bulk update preserves the merchant when merchant_id is not provided" do
+    transaction_entry = @user.family.entries.transactions.first
+    transaction_entry.transaction.update!(merchant: merchants(:netflix))
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ transaction_entry.id ],
+        category_id: categories(:food_and_drink).id
+      }
+    }
+
+    transaction = transaction_entry.reload.transaction
+    assert_equal categories(:food_and_drink), transaction.category
+    assert_equal merchants(:netflix), transaction.merchant
+  end
+
+  test "new renders a selectable none option for the merchant" do
+    get new_transactions_bulk_update_url
+
+    assert_response :success
+    assert_select "input[type='hidden'][name='bulk_update[merchant_id]'][disabled]"
+    assert_includes response.body, 'data-filter-name="(none)"'
+    assert_includes response.body, I18n.t("transactions.bulk_updates.new.merchant_prompt")
+  end
+
   test "bulk update preloads transaction records" do
     transaction_ids = @user.family.entries.transactions.limit(4).pluck(:id)
 
@@ -199,6 +240,20 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal Date.new(2026, 1, 5), entry.date
     assert_equal "annotated", entry.notes
     assert_equal categories(:food_and_drink), entry.transaction.category
+  end
+
+  test "bulk update lets a read_write share clear the merchant" do
+    account = accounts(:credit_card)
+    account.account_shares.find_by!(user: users(:family_member)).update!(permission: "read_write")
+    entry = create_transaction(account: account, merchant: merchants(:netflix))
+
+    sign_in users(:family_member)
+    post transactions_bulk_update_url, params: {
+      bulk_update: { entry_ids: [ entry.id ], merchant_id: "" }
+    }
+
+    assert_equal "1 transactions updated", flash[:notice]
+    assert_nil entry.reload.transaction.merchant
   end
 
   test "bulk update skips entries from accounts the user can only read" do
