@@ -413,7 +413,8 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     shadowed = []
     jev.stubs(:auto_categorize).with { |transactions:, **| shadowed << transactions.map { _1[:id] } }.returns(provider_success_response([]))
 
-    with_ai_model_settings(batch_size: 2) { categorize(txns.map(&:id)) }
+    use_ai_model_settings(batch_size: 2)
+    categorize(txns.map(&:id))
 
     assert_equal [ 2 ], shadowed.map(&:size), "the first job's batch only"
   end

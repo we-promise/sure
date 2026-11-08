@@ -1,7 +1,7 @@
 require "csv"
 
 class Assistant::Function::ImportBankStatement < Assistant::Function
-  ai_feature :extract_pdf
+  self.ai_feature = :extract_pdf
 
   class << self
     def name
@@ -98,7 +98,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     unless availability.available?
       return {
         success: false,
-        error: "provider_not_configured",
+        error: "ai_unavailable",
         reason: availability.reason.to_s,
         message: availability.message_for(user)
       }

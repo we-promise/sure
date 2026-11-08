@@ -124,9 +124,9 @@ flowchart LR
 
 **Tests**
 
-- `with_ai_routes(categorize: %w[gpu/qwen3-8b openai/gpt-4.1-mini]) { }` runs the block with the
-  test setup (`AiTestHelper.test_config`), the named features' routes replaced; `without_ai { }`
-  with nothing configured. `use_ai_routes` and `use_no_ai` do the same for the rest of a test.
+- `use_ai_routes(categorize: %w[gpu/qwen3-8b openai/gpt-4.1-mini])` routes the rest of the test
+  through the test setup (`AiTestHelper.test_config`), the named features' routes replaced;
+  `use_no_ai` configures nothing.
 - `test/architecture/ai_agreement_test.rb` asks every entry point in each setup today's code
   supports (`test/support/ai_legacy_setups.rb`) and fails when one disagrees with the router.
   Chat's entry points are on its allowlist until PR 6.
@@ -201,7 +201,7 @@ flowchart LR
 - `stub_ai(:categorize, returns: { categorizations: [...] })` answers the feature's generations
   without HTTP, still running coercion, failover, instrumentation and the requester; it returns
   the requests sent. `raises: Ai::Error::Timeout` fails them; a block answers per request.
-- `with_ai_model_settings(batch_size: 2) { }` changes the test setup's OpenAI model.
+- `use_ai_model_settings(batch_size: 2)` changes the test setup's OpenAI model for the rest of the test.
 - `test/models/ai/live/` replays cassettes with `with_ai_cassette(preset, name)` under
   `test/vcr_cassettes/ai/<preset>/`; record them
   with `RECORD_CASSETTES=1` and the keys in ENV, or run them live with `AI_LIVE=1`.

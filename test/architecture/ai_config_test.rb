@@ -77,6 +77,6 @@ class AiConfigTest < ActiveSupport::TestCase
 
       assert plan, "#{message}: today #{provider.class.name} runs, the router has no route"
       assert_includes ENDPOINTS_BY_PROVIDER.fetch(provider.class), plan.route.endpoint.name, message
-      assert_equal provider.instance_variable_get(:@default_model), plan.model.name, message
+      assert_equal provider.default_model, plan.model.name, message
     end
 end

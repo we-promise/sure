@@ -42,10 +42,9 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     3.times { |i| provider_merchant("Shop #{i}") }
     requests = nil
 
-    with_ai_model_settings(batch_size: 2) do
-      requests = stub_websites({})
-      enhance
-    end
+    use_ai_model_settings(batch_size: 2)
+    requests = stub_websites({})
+    enhance
 
     assert_equal [ 2, 1 ], requests.map { _1.schema.dig(:properties, :merchants, :items, :properties, :merchant_id, :enum).size }
   end

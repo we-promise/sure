@@ -29,8 +29,7 @@ class Ai::Config
       Current.config
     end
 
-    # Uses `config` instead of the built snapshot inside the block, across requests and jobs.
-    # For tests (AiTestHelper#with_ai_routes, #without_ai).
+    # Uses `config` instead of the built snapshot inside the block (Eval::GenerationClient).
     def with(config)
       previous, @override = @override, config
       yield
@@ -38,7 +37,8 @@ class Ai::Config
       @override = previous
     end
 
-    # The same for the rest of a test; AiTestHelper resets it after each one.
+    # A fixed snapshot used instead of the built one, in every request and job until reset.
+    # For tests (AiTestHelper#use_ai_routes, #use_no_ai).
     attr_writer :override
   end
 

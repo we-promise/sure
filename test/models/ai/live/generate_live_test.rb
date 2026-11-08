@@ -66,7 +66,7 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
       endpoint = Ai::Config::Endpoint.new(name: preset, api_key: ENV[spec[:key]].presence || "recorded",
                                           **spec.slice(:protocol, :preset, :responses_api, :json_mode, :base_url, :location))
       model = Ai::Config::Model.new(endpoint:, name: model_name, capabilities: %i[structured_output], max_output_tokens: 1024)
-      route = Ai::Route.new(feature:, position: 0, model:, prompt: Ai::LegacyEnvConfig.prompt_for(feature, endpoint))
+      route = Ai::Route.new(feature:, model:, prompt: Ai::LegacyEnvConfig.prompt_for(feature, endpoint))
       Ai::Plan.new(feature:, lane: Ai::Routes.fetch(feature)[:lane], routes: [ route ])
     end
 end

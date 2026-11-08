@@ -27,7 +27,7 @@ class Assistant::AiFeatureToolsTest < ActiveSupport::TestCase
     result = Assistant::Function::ImportBankStatement.new(@user)
                                                      .call("pdf_import_id" => imports(:pdf_with_rows).id, "account_id" => accounts(:depository).id)
 
-    assert_equal "provider_not_configured", result[:error]
+    assert_equal "ai_unavailable", result[:error]
     assert_equal "not_configured", result[:reason]
   end
 end

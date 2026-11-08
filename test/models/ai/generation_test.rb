@@ -26,42 +26,39 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "batches by the model's batch size; call(batches: 1) leaves the rest as remaining" do
-    with_ai_model_settings(batch_size: 2) do
-      requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    use_ai_model_settings(batch_size: 2)
+    requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
 
-      one = generation(5).call(batches: 1)
-      assert_equal %w[t0 t1], one.value[:merchants].map { _1[:transaction_id] }
-      assert_equal %w[t2 t3 t4], one.remaining_ids
+    one = generation(5).call(batches: 1)
+    assert_equal %w[t0 t1], one.value[:merchants].map { _1[:transaction_id] }
+    assert_equal %w[t2 t3 t4], one.remaining_ids
 
-      all = generation(5).call
-      assert_equal 5, all.value[:merchants].size
-      assert_empty all.remaining
-      assert_equal 4, requests.size
-    end
+    all = generation(5).call
+    assert_equal 5, all.value[:merchants].size
+    assert_empty all.remaining
+    assert_equal 4, requests.size
   end
 
   test "a model's context window caps a batch by tokens, the rendered prompt included" do
-    with_ai_model_settings(context_window: 1_000, max_output_tokens: 100) do
-      requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    use_ai_model_settings(context_window: 1_000, max_output_tokens: 100)
+    requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
 
-      result = generation(30).call
+    result = generation(30).call
 
-      assert_equal 30, result.value[:merchants].size
-      assert_operator requests.size, :>, 1
-      sizes = requests.map { _1.input.scan("- ID:").size }
-      assert_operator sizes.max, :<, 25
-      assert_operator sizes.max, :>, 1
-    end
+    assert_equal 30, result.value[:merchants].size
+    assert_operator requests.size, :>, 1
+    sizes = requests.map { _1.input.scan("- ID:").size }
+    assert_operator sizes.max, :<, 25
+    assert_operator sizes.max, :>, 1
   end
 
   test "an unavailable feature returns its reason, and call! raises it" do
-    without_ai do
-      result = generation(1).call
+    use_no_ai
+    result = generation(1).call
 
-      assert result.unavailable?
-      assert_equal :not_configured, result.availability.reason
-      assert_raises(Ai::Error::Unavailable) { generation(1).call! }
-    end
+    assert result.unavailable?
+    assert_equal :not_configured, result.availability.reason
+    assert_raises(Ai::Error::Unavailable) { generation(1).call! }
   end
 
   test "cancelled stops before the next batch" do

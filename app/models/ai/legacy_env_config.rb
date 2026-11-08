@@ -2,7 +2,7 @@
 # installs configured either way keep working while the router replaces today's lookups.
 #
 # Each value resolves the way the provider code resolves it. Wherever that code has a resolver
-# (Provider::Registry, Provider::*.effective_*, Assistant::External.config), this calls it, so
+# (Provider::Registry and the providers it builds, Assistant::External.config), this calls it, so
 # the router and the calls not yet on the router can't disagree. test/architecture/ai_config_test
 # checks that over every documented setup. The one deliberate difference: embeddings fall back
 # to the OpenAI values saved in Settings, as every other AI setting does.
@@ -96,7 +96,7 @@ class Ai::LegacyEnvConfig
         timeout_seconds: Provider::Openai.request_timeout, responses_api: provider&.supports_responses_endpoint? || false,
         vector_store:, json_mode: openai_json_mode
       )
-      model = provider && llm_model(endpoint, provider, Provider::Openai.effective_model, context_window: context_window,
+      model = provider && llm_model(endpoint, provider, context_window: context_window,
                                     max_output_tokens: positive(env("LLM_MAX_RESPONSE_TOKENS"), Setting.llm_max_response_tokens))
       [ endpoint, model ]
     end
@@ -112,7 +112,7 @@ class Ai::LegacyEnvConfig
         location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       )
       # Anthropic batches were never token-sliced, so its window is known only when set.
-      model = provider && llm_model(endpoint, provider, Provider::Anthropic.effective_model,
+      model = provider && llm_model(endpoint, provider,
                                     context_window: positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window),
                                     max_output_tokens: positive(env("ANTHROPIC_MAX_TOKENS")) || ANTHROPIC_MAX_TOKENS)
       [ endpoint, model ]
@@ -120,7 +120,8 @@ class Ai::LegacyEnvConfig
 
     # What the providers accept: chat's prefix allow-list decides `tools` and `streaming`, and
     # PDF support decides `vision` and `documents`. Every LLM model does structured output.
-    def llm_model(endpoint, provider, name, context_window:, max_output_tokens:)
+    def llm_model(endpoint, provider, context_window:, max_output_tokens:)
+      name = provider.default_model
       capabilities = %i[structured_output]
       capabilities += %i[tools streaming] if provider.supports_model?(name)
       capabilities += %i[vision documents] if provider.supports_pdf_processing?(model: name)
@@ -140,7 +141,8 @@ class Ai::LegacyEnvConfig
     # Jev serves only families that chose it (Ai::Route#serves?), and only when it can be built:
     # its constructor refuses a cleartext endpoint off localhost.
     def jev
-      return unless buildable { Provider::Registry.get_provider(:jev) }
+      provider = buildable { Provider::Registry.get_provider(:jev) }
+      return unless provider
 
       base_url = Provider::Jev.effective_endpoint
       cloud = URI.parse(base_url).scheme == "https"
@@ -148,7 +150,7 @@ class Ai::LegacyEnvConfig
         name: "jev", protocol: :jev, preset: cloud ? :jev : :jev_local, base_url:, api_key: Provider::Jev.api_key,
         location: location_for(base_url), timeout_seconds: ENV.fetch("JEV_REQUEST_TIMEOUT", 30).to_i
       )
-      Ai::Config::Model.new(endpoint:, name: Provider::Jev.effective_model,
+      Ai::Config::Model.new(endpoint:, name: provider.default_model,
                             capabilities: cloud ? %i[judge calibrated_confidence] : %i[judge])
     end
 
@@ -203,9 +205,7 @@ class Ai::LegacyEnvConfig
     end
 
     def route_list(feature, models, conditions: {})
-      models.each_with_index.map do |model, position|
-        Ai::Route.new(feature:, position:, model:, condition: conditions[model], prompt: prompt_for(feature, model))
-      end
+      models.map { |model| Ai::Route.new(feature:, model:, condition: conditions[model], prompt: prompt_for(feature, model)) }
     end
 
     def prompt_for(feature, model) = self.class.prompt_for(feature, model.endpoint)

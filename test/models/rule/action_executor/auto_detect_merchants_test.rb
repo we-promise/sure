@@ -19,8 +19,7 @@ class Rule::ActionExecutor::AutoDetectMerchantsTest < ActiveSupport::TestCase
     5.times { |i| create_transaction(account: @account, name: "Coffee #{i}") }
     Family.any_instance.expects(:auto_detect_transaction_merchants_later).times(3)
 
-    with_ai_model_settings(batch_size: 2) do
-      assert_equal 3, @executor.execute(@account.transactions)[:jobs_count]
-    end
+    use_ai_model_settings(batch_size: 2)
+    assert_equal 3, @executor.execute(@account.transactions)[:jobs_count]
   end
 end

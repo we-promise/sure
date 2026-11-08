@@ -464,6 +464,17 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
+  test "a document upload is refused with the router's reason when embed isn't available" do
+    use_no_ai
+
+    assert_no_difference "Import.count" do
+      post imports_url, params: { import: { type: "DocumentImport", import_file: file_fixture_upload("imports/valid.csv", "text/csv") } }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal Ai::Availability.unavailable(:embed, :not_configured).message_for(@user), flash[:alert]
+  end
+
   test "a document upload says no store is configured when the embed route is set but the store can't be built" do
     VectorStore::Registry.stubs(:adapter).returns(nil)
     use_ai_routes
