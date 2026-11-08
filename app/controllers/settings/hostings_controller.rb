@@ -19,6 +19,7 @@ class Settings::HostingsController < ApplicationController
   before_action :ensure_admin, only: [ :update, :clear_cache, :disconnect_external_assistant ]
   before_action :ensure_instance_settings_manager, only: [ :update, :disconnect_external_assistant ]
   before_action :ensure_super_admin_for_onboarding, only: :update
+  before_action :ensure_super_admin, only: :reset_market_data
 
   def show
     @breadcrumbs = [
@@ -346,6 +347,14 @@ class Settings::HostingsController < ApplicationController
     redirect_to settings_hosting_path, notice: t(".cache_cleared")
   end
 
+  def reset_market_data
+    case MarketDataResetJob.enqueue_once
+    when :queued then redirect_to settings_hosting_path, notice: t(".market_data_reset")
+    when :already_queued then redirect_to settings_hosting_path, notice: t(".market_data_reset_already_queued")
+    else redirect_to settings_hosting_path, alert: t(".market_data_reset_failed")
+    end
+  end
+
   def disconnect_external_assistant
     Setting.external_assistant_url = nil
     Setting.external_assistant_token = nil
@@ -521,6 +530,10 @@ class Settings::HostingsController < ApplicationController
     def ensure_instance_settings_manager
       return unless action_name == "disconnect_external_assistant" || params.key?(:setting)
       redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.manages_instance_settings?
+    end
+
+    def ensure_super_admin
+      redirect_to settings_hosting_path, alert: t("settings.hostings.not_authorized") unless Current.user.super_admin?
     end
 
     def ensure_super_admin_for_onboarding

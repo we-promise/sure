@@ -1,0 +1,30 @@
+---
+id:
+  activerecord:
+    attributes:
+      account_statement:
+        account: Rekening
+        account_last4_hint: 4 digit terakhir rekening
+        account_name_hint: Petunjuk nama rekening
+        closing_balance: Saldo akhir
+        content_sha256: Digest konten
+        currency: Mata uang
+        filename: Nama berkas
+        institution_name_hint: Petunjuk institusi
+        opening_balance: Saldo awal
+        original_file: Berkas rekening koran
+        period_end_on: Akhir periode
+        period_start_on: Awal periode
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: sudah diunggah untuk keluarga ini
+            content_sha256:
+              duplicate_statement_file: sudah diunggah untuk keluarga ini
+            original_file:
+              invalid_format: harus berupa berkas PDF, CSV, atau XLSX
+              too_large: terlalu besar. Ukuran maksimum adalah %{max_mb}MB
+            period_end_on:
+              on_or_after_start: harus pada atau setelah awal periode
