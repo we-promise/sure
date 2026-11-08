@@ -159,7 +159,10 @@ class Ai::Generation
 
       # Part of the slice was answered and the rest fits no route: keep the answers, and leave the
       # rest unanswered rather than lose both.
-      return answers if answers.any?
+      if answers.any?
+        log_unfit(pending)
+        return answers
+      end
 
       raise last_error || Ai::Error::Unreachable.new("every route for #{feature_key} is marked down")
     end
@@ -194,6 +197,14 @@ class Ai::Generation
       response = route.transport.generate(request)
       @usage = @usage ? @usage + response.usage : response.usage
       generation.coerce(response.json)
+    end
+
+    # Ids only: the items themselves hold the family's data.
+    def log_unfit(items)
+      DebugLogEntry.capture(
+        category: "ai_generation", level: "warn", message: "Items too large for every route were left unanswered",
+        source: self.class.name, family:, metadata: { feature: feature_key.to_s, item_ids: items.map { _1[:id] } }
+      )
     end
 
     # The tokens the prompt takes before any item: rendered once per route with no items.

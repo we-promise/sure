@@ -120,18 +120,6 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_empty requests
   end
 
-  test "a job queued under an old class is handed to Ai::GenerationJob" do
-    assert_enqueued_with(job: Ai::GenerationJob, args: [ :categorize, { ids: %w[a], family_id: @family.id, rule_run_id: "r1" } ]) do
-      AutoCategorizeJob.perform_now(@family, transaction_ids: %w[a], rule_run_id: "r1")
-    end
-    assert_enqueued_with(job: Ai::GenerationJob, args: [ :detect_merchants, { ids: %w[b], family_id: @family.id } ]) do
-      AutoDetectMerchantsJob.perform_now(@family, transaction_ids: %w[b])
-    end
-    assert_enqueued_with(job: Ai::GenerationJob, args: [ :enhance_merchants, { family_id: @family.id, ids: %w[m] } ]) do
-      EnhanceProviderMerchantsJob.perform_now(@family, merchant_ids: %w[m])
-    end
-  end
-
   test "an interactive feature's job goes to today's high-priority queue" do
     assert_equal "ai_high_priority", Ai::Routes.queue_for(:bill_setup)
     assert_equal "ai_low_priority", Ai::Routes.queue_for(:categorize)

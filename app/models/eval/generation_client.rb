@@ -35,7 +35,7 @@ class Eval::GenerationClient
   # of endpoint.
   def ai_config(feature, json_mode: nil)
     model = Ai::Config::Model.new(endpoint: @endpoint, name: @model_name, capabilities: %i[structured_output],
-                                  context_window: @budget&.context_window || Assistant::TokenBudget.context_window,
+                                  context_window: @budget ? @budget.context_window : (Assistant::TokenBudget.context_window if @endpoint.base_url),
                                   max_output_tokens: @budget&.max_output_tokens,
                                   batch_size: @budget&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE)
     route = Ai::Route.new(feature:, model:, json_mode: json_mode.presence,

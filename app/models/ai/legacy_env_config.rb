@@ -96,7 +96,7 @@ class Ai::LegacyEnvConfig
         timeout_seconds: Provider::Openai.request_timeout, responses_api: provider&.supports_responses_endpoint? || false,
         vector_store:, json_mode: openai_json_mode
       )
-      model = provider && llm_model(endpoint, provider, context_window: context_window,
+      model = provider && llm_model(endpoint, provider, context_window: uri_base ? context_window : explicit_context_window,
                                     max_output_tokens: positive(env("LLM_MAX_RESPONSE_TOKENS"), Setting.llm_max_response_tokens))
       [ endpoint, model ]
     end
@@ -111,9 +111,8 @@ class Ai::LegacyEnvConfig
         name: "anthropic", protocol: :anthropic, preset: (:anthropic unless base_url), base_url:, api_key: token,
         location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       )
-      # Anthropic batches were never token-sliced, so its window is known only when set.
       model = provider && llm_model(endpoint, provider,
-                                    context_window: positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window),
+                                    context_window: explicit_context_window,
                                     max_output_tokens: positive(env("ANTHROPIC_MAX_TOKENS")) || ANTHROPIC_MAX_TOKENS)
       [ endpoint, model ]
     end
@@ -128,9 +127,14 @@ class Ai::LegacyEnvConfig
       Ai::Config::Model.new(endpoint:, name:, capabilities:, context_window:, max_output_tokens:, batch_size:)
     end
 
-    # The deprecated budgets: Assistant::TokenBudget's window (2048 by default), the response cap only
-    # when someone set one, and LLM_MAX_ITEMS_PER_CALL items per call.
+    # The deprecated budgets: on a custom server, Assistant::TokenBudget's window (2048 by default,
+    # a guard for small local models); the response cap only when someone set one; and
+    # LLM_MAX_ITEMS_PER_CALL items per call.
     def context_window = Assistant::TokenBudget.context_window
+
+    # A cloud model's real window is far larger than the 2048 guard, which would split its batches
+    # into several calls, so native OpenAI and Anthropic are token-sliced only when one is set.
+    def explicit_context_window = positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window)
 
     def batch_size = positive(env("LLM_MAX_ITEMS_PER_CALL"), Setting.llm_max_items_per_call) || Ai::Config::Model::DEFAULT_BATCH_SIZE
 

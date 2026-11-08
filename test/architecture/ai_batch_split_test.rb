@@ -50,7 +50,7 @@ class AiBatchSplitTest < ActiveSupport::TestCase
     assert_equal [ %w[t2] ], requests.select { _1.model.endpoint.name == "openai" }.map { ids_in(_1) }
   end
 
-  test "items that fit no route are left unanswered, and the ones answered are kept" do
+  test "items that fit no route are left unanswered and logged, and the ones answered are kept" do
     stub_ai do |request|
       raise Ai::Error::ContextTooLong, "too long" if ids_in(request).include?("t2")
 
@@ -61,5 +61,8 @@ class AiBatchSplitTest < ActiveSupport::TestCase
 
     assert result.success?
     assert_equal %w[t0 t1 t3], result.value[:merchants].map { _1[:transaction_id] }.sort
+    entry = DebugLogEntry.find_by!(category: "ai_generation", family: @family)
+    assert_equal "warn", entry.level
+    assert_equal({ "feature" => "detect_merchants", "item_ids" => %w[t2] }, entry.metadata.slice("feature", "item_ids"))
   end
 end

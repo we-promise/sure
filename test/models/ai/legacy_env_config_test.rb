@@ -105,12 +105,14 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_nil native.routes_for(:chat).first.prompt
   end
 
-  test "today's budgets: OpenAI's window and caps, Anthropic's window only when set" do
+  test "budgets: a custom server's window defaults to 2048; cloud windows only when set" do
     defaults = build("OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test")
     openai = defaults.model(:openai, "gpt-4.1")
     anthropic = defaults.model(:anthropic, "claude-sonnet-4-6")
+    custom = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://localhost:8080/v1", "OPENAI_MODEL" => "qwen")
 
-    assert_equal 2048, openai.context_window
+    assert_equal 2048, custom.routes_for(:categorize).first.model.context_window
+    assert_nil openai.context_window
     assert_nil openai.max_output_tokens
     assert_equal 25, openai.batch_size
     assert_nil anthropic.context_window

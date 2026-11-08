@@ -64,7 +64,7 @@ flowchart LR
   status maps onto `Ai::Error`, retries follow the endpoint, usage counts cached tokens, and the
   proxy is resolved by `Http`.
 
-## Routing and consent (PR 2b)
+## Routing and consent
 
 ```mermaid
 flowchart LR

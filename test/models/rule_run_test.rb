@@ -22,7 +22,7 @@ class RuleRunTest < ActiveSupport::TestCase
     transaction_id = SecureRandom.uuid
 
     assert_difference "DebugLogEntry.count", 1 do
-      rule_run.fail_job!(error: error, source: "AutoCategorizeJob", transaction_ids: [ transaction_id ])
+      rule_run.fail_job!(error: error, source: "Family::AutoCategorizer", transaction_ids: [ transaction_id ])
     end
 
     rule_run.reload
@@ -33,7 +33,7 @@ class RuleRunTest < ActiveSupport::TestCase
     entry = DebugLogEntry.order(:created_at).last
     assert_equal "rule_run", entry.category
     assert_equal "error", entry.level
-    assert_equal "AutoCategorizeJob", entry.source
+    assert_equal "Family::AutoCategorizer", entry.source
     assert_equal @family, entry.family
     assert_equal rule_run.id, entry.metadata["rule_run_id"]
     assert_equal @rule.id, entry.metadata["rule_id"]
@@ -49,8 +49,8 @@ class RuleRunTest < ActiveSupport::TestCase
     error = RuntimeError.new("retrying same failed batch")
 
     assert_difference "DebugLogEntry.count", 1 do
-      rule_run.fail_job!(error: error, source: "AutoCategorizeJob")
-      rule_run.fail_job!(error: error, source: "AutoCategorizeJob")
+      rule_run.fail_job!(error: error, source: "Family::AutoCategorizer")
+      rule_run.fail_job!(error: error, source: "Family::AutoCategorizer")
     end
 
     rule_run.reload
@@ -61,9 +61,9 @@ class RuleRunTest < ActiveSupport::TestCase
   test "fail_job deduplicates repeated error messages individually" do
     rule_run = create_rule_run(pending_jobs_count: 3)
 
-    rule_run.fail_job!(error: RuntimeError.new("first failed batch"), source: "AutoCategorizeJob")
-    rule_run.fail_job!(error: RuntimeError.new("second failed batch"), source: "AutoCategorizeJob")
-    rule_run.fail_job!(error: RuntimeError.new("second failed batch"), source: "AutoCategorizeJob")
+    rule_run.fail_job!(error: RuntimeError.new("first failed batch"), source: "Family::AutoCategorizer")
+    rule_run.fail_job!(error: RuntimeError.new("second failed batch"), source: "Family::AutoCategorizer")
+    rule_run.fail_job!(error: RuntimeError.new("second failed batch"), source: "Family::AutoCategorizer")
 
     rule_run.reload
     assert_equal "RuntimeError: first failed batch\nRuntimeError: second failed batch", rule_run.error_message
@@ -85,7 +85,7 @@ class RuleRunTest < ActiveSupport::TestCase
     rule_run = create_rule_run(pending_jobs_count: 2)
     error = RuntimeError.new("LLM provider returned HTTP 503")
 
-    rule_run.fail_job!(error: error, source: "AutoCategorizeJob")
+    rule_run.fail_job!(error: error, source: "Family::AutoCategorizer")
     rule_run.complete_job!(modified_count: 1)
 
     rule_run.reload

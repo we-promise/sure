@@ -44,6 +44,10 @@ class Ai::Config
 
   def routes_for(feature) = routes.fetch(feature.to_sym, [])
 
+  # How many items the feature's first route takes in one call, for callers that slice a list
+  # before it reaches a generation (the eval runners).
+  def batch_size_for(feature) = routes_for(feature).first&.model&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE
+
   def endpoint(name) = endpoints.find { _1.name == name.to_s }
 
   # The model pgvector and Qdrant embed with: the `embed` route's, or one no route uses yet
