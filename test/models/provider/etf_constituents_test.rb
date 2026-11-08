@@ -42,6 +42,25 @@ class Provider::EtfConstituentsTest < ActiveSupport::TestCase
     assert_nil fetch(body).constituents
   end
 
+  test "a fund with an empty holdings list yields no constituents" do
+    body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => [] } }.to_json
+
+    assert_nil fetch(body).constituents
+  end
+
+  # Anything else in the holdings block is a response this parser cannot read.
+  # Answered as "no holdings", it would delete the fund's stored set and stamp
+  # the fund, and the gate would not ask again.
+  test "a holdings block that is not a map fails the request" do
+    [ "unavailable", [ { "Code" => "AAPL" } ], 5 ].each do |holdings|
+      body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => holdings } }.to_json
+      response = fetch_response(body)
+
+      assert_not response.success?, "for #{holdings.inspect}"
+      assert_kind_of Provider::Eodhd::Error, response.error
+    end
+  end
+
   # The ticker EODHD keys the hash by carries its exchange suffix; `Code` is the
   # bare ticker. Keying on the hash key would store "AAPL.US", which matches
   # nothing in `securities`.
@@ -68,12 +87,16 @@ class Provider::EtfConstituentsTest < ActiveSupport::TestCase
 
   private
     def fetch(body)
+      fetch_response(body).data
+    end
+
+    def fetch_response(body)
       provider = Provider::Eodhd.new("test_api_key")
       provider.stubs(:enforce_daily_limit!)
       provider.stubs(:throttle_request)
       provider.stubs(:client).returns(client = mock)
       client.stubs(:get).returns(stub(body: body))
 
-      provider.fetch_security_info(symbol: "VWRA", exchange_operating_mic: "XLON").data
+      provider.fetch_security_info(symbol: "VWRA", exchange_operating_mic: "XLON")
     end
 end

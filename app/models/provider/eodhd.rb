@@ -213,9 +213,14 @@ class Provider::Eodhd < Provider
   # EODHD keys the holdings hash by a suffixed ticker ("AAPL.US") and carries the
   # bare one in `Code`. The bare ticker is what matches anything in `securities`,
   # so the key is used only as a fallback for a malformed entry.
+  #
+  # An absent or empty block means the fund lists nothing. Any other shape is
+  # a response this cannot read, and raises: answered as "no holdings", it
+  # would replace the fund's stored set with nothing and stamp it as asked.
   def etf_constituents(parsed)
     holdings = parsed.dig("ETF_Data", "Holdings")
-    return nil unless holdings.is_a?(Hash) && holdings.any?
+    return nil if holdings.blank?
+    raise Error, "Unexpected holdings format from fundamentals API" unless holdings.is_a?(Hash)
 
     holdings.filter_map do |key, holding|
       next unless holding.is_a?(Hash)
