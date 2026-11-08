@@ -40,7 +40,7 @@ module Ai::Instrumentation::MetadataTracing
   module_function
 
   # The app owns the tracer provider and exporter, as RubyLLM's OpenTelemetry docs ask.
-  def enable(endpoint: ENV["OTLP_ENDPOINT"], headers: ENV["OTLP_HEADERS"], processor: nil)
+  def enable(endpoint: nil, headers: nil, processor: nil)
     processor ||= OpenTelemetry::SDK::Trace::Export::BatchSpanProcessor.new(
       OpenTelemetry::Exporter::OTLP::Exporter.new(endpoint:, headers: parse_headers(headers))
     )
