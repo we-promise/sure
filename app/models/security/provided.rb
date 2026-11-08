@@ -543,6 +543,8 @@ module Security::Provided
       }
     )
   end
+  private :store_constituents, :constituent_rows_from, :constituent_weight_limit,
+    :constituent_weight_scale, :log_skipped_constituent
 
   # A provider's type says what the wrapper is, not what it holds. "Common
   # stock" is an equity whatever else is true of it, so it maps. An ETF or a
