@@ -157,6 +157,18 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert result.passing?
   end
 
+  test "an Anthropic lookup answered for another model fails; a dated snapshot of an alias passes" do
+    url = "https://api.anthropic.com/v1/models/claude-sonnet-4-6"
+    transport = Ai::Transport.for(Ai::Config::Endpoint.new(name: "anthropic", protocol: :anthropic, api_key: "anthropic-token"))
+    model = Ai::Config::Model.new(endpoint: transport.endpoint, name: "claude-sonnet-4-6")
+
+    stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-haiku-4-5" }.to_json)
+    assert_raises(Ai::Error::ModelMissing) { transport.probe(model, :models) }
+
+    stub_request(:get, url).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { id: "claude-sonnet-4-6-20260101" }.to_json)
+    assert_equal "claude-sonnet-4-6-20260101", transport.probe(model, :models)
+  end
+
   test "an Anthropic model the API doesn't have fails the models probe" do
     stub_request(:get, "https://api.anthropic.com/v1/models/claude-nope")
       .to_return(status: 404, headers: { "Content-Type" => "application/json" },
