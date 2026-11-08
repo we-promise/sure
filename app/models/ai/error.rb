@@ -11,16 +11,6 @@ module Ai::Error
     end
   end
 
-  # Raised by `call!` on a feature that resolves unavailable.
-  class Unavailable < Base
-    attr_reader :reason
-
-    def initialize(reason)
-      @reason = reason
-      super("AI unavailable: #{reason}")
-    end
-  end
-
   Cancelled      = Class.new(Base)
   Unreachable    = Class.new(Base)   # connection refused, DNS, TLS: no response came back
   Timeout        = Class.new(Base)

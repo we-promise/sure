@@ -1,4 +1,4 @@
-# Token counts and cost for one request or a whole call, named after RubyLLM::Tokens, which
+# Token counts and cost for one request, named after RubyLLM::Tokens, which
 # holds the same counts. `Usage` is taken twice already: installation telemetry
 # (`Usage`) and the `llm_usages` table (`LlmUsage`).
 #
@@ -30,18 +30,6 @@ Ai::Tokens = Data.define(:input_tokens, :output_tokens, :cache_read_tokens, :cac
   def prompt_tokens = sum(sum(input_tokens, cache_read_tokens), cache_write_tokens)
 
   def total_tokens = sum(prompt_tokens, output_tokens)
-
-  def +(other)
-    return self if other.nil?
-
-    with(
-      input_tokens: sum(input_tokens, other.input_tokens),
-      output_tokens: sum(output_tokens, other.output_tokens),
-      cache_read_tokens: sum(cache_read_tokens, other.cache_read_tokens),
-      cache_write_tokens: sum(cache_write_tokens, other.cache_write_tokens),
-      cost: sum(cost, other.cost)
-    )
-  end
 
   private
     # Unknown plus unknown stays unknown; unknown plus a count is the count.

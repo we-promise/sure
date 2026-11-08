@@ -1,7 +1,6 @@
 # The `content` tracing mode: each `.ai` event becomes a Langfuse trace with one
-# generation holding the request, the output, usage and the error. The correlation id is the
-# Langfuse session, so a job's calls group together. Health probes aren't traced: they carry
-# no family data and run every time an admin opens the health page.
+# generation holding the request, the output, usage and the error. Health probes aren't traced:
+# they carry no family data and run every time an admin opens the health page.
 class Ai::Instrumentation::LangfuseSubscriber
   SKIPPED = %w[probe.ai].freeze
 
@@ -20,7 +19,7 @@ class Ai::Instrumentation::LangfuseSubscriber
     level = payload[:error] ? "ERROR" : nil
 
     trace = @client.trace(name: "#{payload[:feature] || "ai"}.#{event.name.delete_suffix(".ai")}", input:,
-                          session_id: payload[:correlation_id], environment: @environment, start_time: event_start(event),
+                          environment: @environment, start_time: event_start(event),
                           metadata: { route: payload[:route], call_id: payload[:call_id], error: payload[:error] }.compact)
     generation = trace&.generation(name: event.name, input:, model: payload.dig(:route, :model), start_time: event_start(event))
     generation&.end(output:, usage: usage(payload[:usage]), level:)
