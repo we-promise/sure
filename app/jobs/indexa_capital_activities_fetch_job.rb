@@ -30,11 +30,9 @@ class IndexaCapitalActivitiesFetchJob < ApplicationJob
 
     def broadcast_updates
       @indexa_capital_account.current_account&.broadcast_sync_complete
-      @indexa_capital_account.indexa_capital_item&.broadcast_replace_to(
-        @indexa_capital_account.indexa_capital_item.family,
-        target: "indexa_capital_item_#{@indexa_capital_account.indexa_capital_item.id}",
-        partial: "indexa_capital_items/indexa_capital_item"
-      )
+      # Not the rendered card, which lists every account on the connection and
+      # has no viewer to filter for here (#3630); the toast re-fetches per viewer.
+      @indexa_capital_account.indexa_capital_item&.family&.broadcast_sync_complete
     rescue => e
       Rails.logger.warn("IndexaCapitalActivitiesFetchJob - Broadcast failed: #{e.message}")
     end

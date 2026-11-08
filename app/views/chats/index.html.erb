@@ -23,6 +23,12 @@
           <div class="space-y-2 px-0.5">
             <%= render @chats %>
           </div>
+          <%# The mobile "Assistant" nav item lands here and the layout's
+              consent prompt only lives in the desktop sidebar, so an
+              AI-disabled user with existing chats needs it shown here too. %>
+          <% unless Current.user.ai_enabled? %>
+            <%= render "chats/chat_composer" %>
+          <% end %>
         </div>
       <% else %>
         <div class="grow flex flex-col">
@@ -30,7 +36,7 @@
           <div class="mt-auto py-8">
             <%= render "chats/ai_greeting" %>
           </div>
-          <%= render "messages/chat_form" %>
+          <%= render "chats/chat_composer" %>
         </div>
       <% end %>
     </div>

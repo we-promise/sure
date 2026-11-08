@@ -22,7 +22,7 @@
         <%# Its own row on wide screens, so the three fields line up with each
             other rather than with the bottom of this hint. Stacked, it still
             follows the file field it describes. %>
-        <p class="text-xs text-secondary -mt-1 lg:col-start-1 lg:row-start-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %></p>
+        <p class="text-xs text-secondary -mt-1 lg:col-start-1 lg:row-start-2"><%= t("account_statements.form.files_hint", max_size: AccountStatement::MAX_FILE_SIZE / 1.megabyte) %> <%= t("account_statements.form.period_hint") %></p>
         <%= form.collection_select :account_id,
                                    @accounts,
                                    :id,
@@ -70,6 +70,8 @@
                         <p class="text-sm font-medium text-primary"><%= statement.suggested_account.name %></p>
                         <p class="text-xs text-secondary"><%= t(".confidence", confidence: number_to_percentage(statement.match_confidence.to_d * 100, precision: 0)) %></p>
                       </div>
+                    <% elsif statement.rejected? %>
+                      <%= account_statement_status_badge(statement) %>
                     <% else %>
                       <span class="text-sm text-secondary"><%= t(".no_suggestion") %></span>
                     <% end %>

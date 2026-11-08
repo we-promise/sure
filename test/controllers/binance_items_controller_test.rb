@@ -48,6 +48,82 @@ class BinanceItemsControllerTest < ActionDispatch::IntegrationTest
     assert @binance_item.reload.syncing?
   end
 
+  # Add Account -> Crypto -> Binance used to bounce back to Settings even when
+  # the connection's sync had already found accounts waiting to be set up.
+  test "select_accounts opens the account setup of the family's Binance connection" do
+    only_binance_item(@binance_item)
+
+    get select_accounts_binance_items_url
+
+    assert_redirected_to setup_accounts_binance_item_path(@binance_item)
+    assert_response :see_other
+  end
+
+  test "select_accounts sends the user to Settings when no connection has credentials" do
+    @family.binance_items.update_all(scheduled_for_deletion: true)
+
+    get select_accounts_binance_items_url
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("binance_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
+
+  test "select_accounts leaves the Add Account modal for Settings at the top level" do
+    @family.binance_items.update_all(scheduled_for_deletion: true)
+
+    get select_accounts_binance_items_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("binance_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
+
+  test "select_accounts asks which connection when there are several, unless one is named" do
+    only_binance_item(@binance_item)
+    other_item = BinanceItem.create!(family: @family, name: "Second Binance", api_key: "key_2", api_secret: "secret_2")
+
+    get select_accounts_binance_items_url
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("binance_items.select_accounts.select_connection"), flash[:alert]
+
+    get select_accounts_binance_items_url(binance_item_id: other_item.id)
+
+    assert_redirected_to setup_accounts_binance_item_path(other_item)
+  end
+
+  test "select_accounts says the named connection is unavailable when another one exists" do
+    only_binance_item(@binance_item)
+    get select_accounts_binance_items_url(binance_item_id: SecureRandom.uuid)
+
+    assert_redirected_to settings_providers_path
+    assert_equal I18n.t("binance_items.select_accounts.connection_unavailable"), flash[:alert]
+  end
+
+  test "select_accounts carries a safe return_to into setup and drops an unsafe one" do
+    only_binance_item(@binance_item)
+    get select_accounts_binance_items_url(return_to: "/imports/123/confirm")
+    assert_redirected_to setup_accounts_binance_item_path(@binance_item, return_to: "/imports/123/confirm")
+
+    get select_accounts_binance_items_url(return_to: "//evil.example")
+    assert_redirected_to setup_accounts_binance_item_path(@binance_item)
+  end
+
+  test "setup_accounts keeps return_to for finishing and cancelling" do
+    get setup_accounts_binance_item_url(@binance_item, return_to: "/imports/123/confirm")
+
+    assert_response :success
+    assert_select "input[type=hidden][name=return_to][value=?]", "/imports/123/confirm"
+    assert_select "a[href=?]", "/imports/123/confirm", text: I18n.t("binance_items.setup_accounts.cancel")
+  end
+
+  test "complete_account_setup returns to return_to" do
+    post complete_account_setup_binance_item_url(@binance_item), params: { return_to: "/imports/123/confirm" }
+
+    assert_redirected_to "/imports/123/confirm"
+  end
+
   test "should show setup_accounts page" do
     get setup_accounts_binance_item_url(@binance_item)
     assert_response :success
@@ -255,4 +331,10 @@ class BinanceItemsControllerTest < ActionDispatch::IntegrationTest
     get select_existing_account_binance_items_url, params: { account_id: account.id }
     assert_response :success
   end
+
+  private
+    # The binance_items fixtures add two more credentialed connections.
+    def only_binance_item(item)
+      @family.binance_items.where.not(id: item.id).update_all(scheduled_for_deletion: true)
+    end
 end

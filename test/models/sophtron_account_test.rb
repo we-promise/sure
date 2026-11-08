@@ -21,4 +21,48 @@ class SophtronAccountTest < ActiveSupport::TestCase
     assert_equal "Apple / Goldman Sachs", account.institution_metadata["name"]
     assert_equal "ui-apple", account.institution_metadata["user_institution_id"]
   end
+
+  test "database rejects an unsupported balance sign override" do
+    account = build_sophtron_account
+    account.balance_sign_override = "unsupported"
+
+    assert_raises ActiveRecord::StatementInvalid do
+      account.save!(validate: false)
+    end
+  end
+
+  test "failed sync scheduling rolls back the override and applied balance" do
+    sophtron_account = build_sophtron_account
+    account = accounts(:credit_card)
+    AccountProvider.create!(account: account, provider: sophtron_account)
+    original_balance = account.balance
+    original_cash_balance = account.cash_balance
+    original_anchor = account.current_anchor_balance
+    Account.any_instance.stubs(:sync_later).raises(StandardError, "sync scheduling failed")
+
+    assert_raises StandardError do
+      sophtron_account.apply_balance_sign_override!("credit")
+    end
+
+    assert_nil sophtron_account.reload.balance_sign_override
+    assert_equal original_balance, account.reload.balance
+    assert_equal original_cash_balance, account.cash_balance
+    assert_equal original_anchor, account.current_anchor_balance
+  end
+
+  private
+    def build_sophtron_account
+      item = families(:dylan_family).sophtron_items.create!(
+        name: "Sophtron Connection",
+        user_id: "developer-user",
+        access_key: Base64.strict_encode64("secret-key")
+      )
+
+      item.sophtron_accounts.create!(
+        account_id: "card-override",
+        name: "Card",
+        currency: "USD",
+        balance: 25
+      )
+    end
 end

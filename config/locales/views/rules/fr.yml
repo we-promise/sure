@@ -13,6 +13,23 @@ fr:
         of_the_following_conditions: des conditions suivantes
   rules:
     actions:
+      split:
+        add_split: Ajouter une division
+        category_label: Catégorie de la division
+        fixed_summary_label: fixe
+        hint: Les divisions à montant fixe sont déduites en premier, comme montants exacts. Les divisions en pourcentage se partagent ensuite le reste. Si toutes les divisions utilisent un montant fixe, ajoutez aussi une condition correspondant à un montant de transaction exact (par ex. Montant = 42.00), car chaque transaction correspondante doit avoir le même total pour que les montants fixes tombent juste. Une règle de division ne peut pas avoir d'autres actions.
+        merchant_label: Marchand de la division
+        name_placeholder: Nom de la division
+        remove_split: Supprimer la division
+        share_label: Montant ou pourcentage de la division
+        summary:
+          one: "%{count} division"
+          other: "%{count} divisions"
+        tags_label: Étiquettes de la division
+        type_fixed: Montant fixe
+        type_label: Type de division
+        type_percentage: Pourcentage
+      to_label: sur
       value_placeholder: Entrez une valeur
     apply_all:
       ai_cost_message: Cela utilisera l'IA pour catégoriser jusqu'à %{transactions}
@@ -32,6 +49,17 @@ fr:
       estimated_cost: 'Coût estimé : ~%{cost} $'
       success: Toutes les règles ont été mises en file d'attente pour exécution
       view_usage: Voir l'historique d'utilisation
+    category_rule_cta:
+      close: Fermer
+      create_rule: Créer une règle
+      description: Vous pouvez créer une règle pour catégoriser automatiquement les transactions comme celle-ci
+      dont_show_again: Ne plus afficher
+      hide_for_today: Masquer pour aujourd'hui
+      hide_for_today_hint: Masquer pour aujourd'hui suspend ces suggestions pendant 24 heures.
+      message: Catégorie changée en %{category_name}
+    classifier_rules:
+      category_classifier: Classifieur de catégories
+      merchant_matcher: Rapprochement des marchands
     clear_ai_cache:
       button: Réinitialiser le cache IA
       confirm_body: Êtes-vous sûr de vouloir réinitialiser le cache IA ? Cela permettra
@@ -45,6 +73,7 @@ fr:
       operators:
         contains: Contient
         does_not_contain: Ne contient pas
+        ends_with: Se termine par
         equal_to: Égal à
         greater_or_equal_to: Supérieur ou égal à
         greater_than: Supérieur à
@@ -53,7 +82,9 @@ fr:
         is_not_empty: N'est pas vide
         less_than: Inférieur à
         less_than_or_equal_to: Inférieur ou égal à
+        matches_regex: Correspond à l'expression régulière
         not_equal_to: Différent de
+        starts_with: Commence par
       transaction_type:
         equal_to: Égal à
         expense: Dépense
@@ -76,6 +107,9 @@ fr:
         LLM configuré).
       cost_warning: Vous pouvez encourir des frais, veuillez vérifier auprès du fournisseur
         de modèles pour connaître les prix les plus récents.
+      rules_above_notice:
+        one: 'La règle active située au-dessus s''exécute en premier : le résultat est donc le même que lors de l''exécution complète.'
+        other: 'Les %{count} règles actives situées au-dessus s''exécutent en premier : le résultat est donc le même que lors de l''exécution complète.'
       title: Confirmer les modifications
       title_with_name: Confirmez les modifications apportées à "%{name}"
       view_usage_history: Afficher l'historique d'utilisation
@@ -91,6 +125,8 @@ fr:
       rule_name_label: Nom de la règle (facultatif)
       rule_name_placeholder: Entrez un nom pour cette règle
       starting_from: À partir de
+      stop_processing_description: Les règles situées plus bas dans la liste ne modifient pas les transactions correspondant à cette règle.
+      stop_processing_label: Arrêter le traitement des règles suivantes
       then: ALORS
     index:
       ai_cost_warning: Les actions de règles basées sur l’IA coûteront de l’argent. Assurez-vous
@@ -100,14 +136,13 @@ fr:
       no_rules_description: Configurez des règles pour effectuer des actions sur vos
         transactions et autres données à chaque synchronisation de compte.
       no_rules_title: Pas encore de règles
+      order_hint: Les règles s'exécutent de haut en bas. Dès qu'une règle définit un champ d'une transaction, les règles situées plus bas ne modifient plus ce champ. Les étiquettes sont ajoutées par chaque règle correspondante. Faites glisser les règles pour changer leur ordre.
       page_title: Règles
+      reorder_rule: Déplacer la règle %{name}. Appuyez sur Entrée ou Espace pour la saisir, puis utilisez les flèches pour la déplacer.
       rules_heading: Règles
-      sort_by: 'Trier par :'
-      sort_name: Nom
-      sort_updated_at: Mis à jour à
-      toggle_sort_direction: Changer le sens du tri
     no_action: Aucune action
     no_condition: Aucune condition
+    notification_baseline_timed_out: Cette règle est toujours désactivée. La vérification des transactions auxquelles elle correspond déjà a pris trop de temps, et sans cette vérification elle enverrait un e-mail pour chacune d'elles. Simplifiez ses conditions, puis réactivez-la.
     recent_runs:
       columns:
         date_time: Date/Heure
@@ -143,6 +178,8 @@ fr:
       edit: Modifier
       on_or_after: "%{resource} le %{date} ou après"
       re_apply_rule: Réappliquer la règle
+      stop_processing: Arrêt
+      stop_processing_hint: Les règles situées plus bas ne modifient pas les transactions correspondant à cette règle.
       then: ALORS
     update:
       success: Règle mise à jour

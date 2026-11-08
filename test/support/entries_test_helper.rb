@@ -60,7 +60,8 @@ module EntriesTestHelper
     transfer = Transfer.create!(
       outflow_transaction: outflow_transaction,
       inflow_transaction: inflow_transaction,
-      amount: amount.abs
+      amount: amount.abs,
+      status: "confirmed" # like Transfer::Creator; only a confirmed transfer carries transfer kinds
     )
 
     from_account.entries.create!(

@@ -44,7 +44,7 @@ class BrexItems::AccountSetupsController < ApplicationController
     end
 
     def render_accounts_update_after_setup
-      @manual_accounts = Account.uncached { Current.family.accounts.visible_manual.order(:name).to_a }
+      @manual_accounts = Account.uncached { Current.family.accounts.visible_manual_for(Current.user).order(:name).to_a }
       @brex_items = Current.family.brex_items.ordered
 
       manual_accounts_stream = if @manual_accounts.any?
@@ -59,10 +59,11 @@ class BrexItems::AccountSetupsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@brex_item),
           partial: "brex_items/brex_item",
-          locals: { brex_item: @brex_item }
+          locals: { brex_item: @brex_item, visible_accounts: @brex_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     end

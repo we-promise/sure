@@ -21,6 +21,38 @@ class CategoryTest < ActiveSupport::TestCase
     assert_nil transactions.map { |t| t.reload.category }.uniq.first
   end
 
+  test "replacing and destroying invalidates entries_cache_version" do
+    before = @family.entries_cache_version
+
+    travel 1.second do
+      categories(:food_and_drink).replace_and_destroy!(categories(:income))
+    end
+
+    assert_not_equal before, @family.entries_cache_version
+  end
+
+  test "replacing with nil invalidates entries_cache_version" do
+    before = @family.entries_cache_version
+
+    travel 1.second do
+      categories(:food_and_drink).replace_and_destroy!(nil)
+    end
+
+    assert_not_equal before, @family.entries_cache_version
+  end
+
+  test "destroy nullifies transaction categories and bumps entries_cache_version" do
+    transaction = transactions(:one)
+    before = @family.entries_cache_version
+
+    travel 1.second do
+      categories(:food_and_drink).destroy!
+    end
+
+    assert_nil transaction.reload.category_id
+    assert_not_equal before, @family.entries_cache_version
+  end
+
   test "destroying parent category preserves subcategory transaction assignments" do
     parent = @family.categories.create!(
       name: "Parent With Child Transactions",
@@ -73,6 +105,20 @@ class CategoryTest < ActiveSupport::TestCase
 
     assert_equal parent, category.parent
     assert_equal parent.color, category.color, "subcategories inherit their parent's color"
+  end
+
+  test "changing a parent's color updates its subcategories" do
+    parent = categories(:food_and_drink)
+    subcategory = @family.categories.create!(name: "Color Child", color: "#000000", parent: parent)
+    previous_updated_at = subcategory.updated_at
+
+    travel 1.second do
+      parent.update!(color: "#123456")
+    end
+
+    subcategory.reload
+    assert_equal "#123456", subcategory.color
+    assert_operator subcategory.updated_at, :>, previous_updated_at
   end
 
   test "subcategory can only be one level deep" do

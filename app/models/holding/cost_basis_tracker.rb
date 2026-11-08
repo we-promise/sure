@@ -10,10 +10,14 @@
 #
 # Prices are expected in the account's currency (callers convert before
 # applying), so the tracker itself is currency-agnostic.
+#
+# A buy whose price is unknown (nil, e.g. no exchange rate for its day) makes
+# the average unknown until the position is fully closed. Skipping it instead
+# would average the known buys over fewer units than are held -- a figure that
+# looks measured and is not.
 class Holding::CostBasisTracker
   def initialize
-    @total_cost = BigDecimal("0")
-    @total_qty = BigDecimal("0")
+    reset
   end
 
   # Applies a trade by its signed quantity: positive is a buy, negative a sell.
@@ -27,11 +31,11 @@ class Holding::CostBasisTracker
   end
 
   def buy(price, qty)
-    price = price&.to_d
     qty = qty&.to_d
-    return if price.nil? || qty.nil? || !qty.positive?
+    return if qty.nil? || !qty.positive?
 
-    @total_cost += price * qty
+    @unknown = true if price.nil?
+    @total_cost += price.to_d * qty unless price.nil?
     @total_qty += qty
   end
 
@@ -42,7 +46,7 @@ class Holding::CostBasisTracker
     # Relieve at the current average cost so the per-share average is unchanged.
     # Guard against over-selling more than is currently held.
     relieved_qty = [ qty.abs, @total_qty ].min
-    @total_cost -= average_cost * relieved_qty
+    @total_cost -= (@total_cost / @total_qty) * relieved_qty
     @total_qty -= relieved_qty
 
     # Coercing to BigDecimal keeps arithmetic exact, so a full liquidation lands
@@ -56,9 +60,10 @@ class Holding::CostBasisTracker
     @total_qty = Security::Split.scale(@total_qty, ratio)
   end
 
-  # Current weighted-average cost per share, or nil when nothing is held.
+  # Current weighted-average cost per share, or nil when nothing is held or
+  # the cost of what is held is unknown.
   def average_cost
-    return nil if @total_qty.zero?
+    return nil if @total_qty.zero? || @unknown
 
     @total_cost / @total_qty
   end
@@ -67,5 +72,6 @@ class Holding::CostBasisTracker
     def reset
       @total_cost = BigDecimal("0")
       @total_qty = BigDecimal("0")
+      @unknown = false
     end
 end

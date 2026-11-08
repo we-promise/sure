@@ -18,7 +18,7 @@ class DS::Table < DesignSystemComponent
     DS::Table::Column.new(header, cell: cell, sticky: sticky_header, **options)
   end
 
-  attr_reader :rows, :inset, :sticky_header, :label, :row_class, :opts
+  attr_reader :rows, :inset, :sticky_header, :label, :row_class, :row_opts, :opts
 
   # @param rows [Enumerable] the records, one table row each
   # @param inset [Boolean] frame the table in container-inset, for a table that
@@ -32,13 +32,17 @@ class DS::Table < DesignSystemComponent
   #   screen.
   # @param row_class [Proc, nil] called with each row, returns extra classes for
   #   its <tr>, e.g. the tint on a loan's past payments
+  # @param row_opts [Proc, nil] called with each row, returns extra attributes for
+  #   its <tr>, e.g. a `clickable-row` controller so a click anywhere on the row
+  #   opens the link in its name cell
   # @param opts [Hash] forwarded to the outer element; :class merges with the base classes
-  def initialize(rows:, inset: false, sticky_header: false, label: nil, row_class: nil, **opts)
+  def initialize(rows:, inset: false, sticky_header: false, label: nil, row_class: nil, row_opts: nil, **opts)
     @rows = rows
     @inset = inset
     @sticky_header = sticky_header
     @label = label
     @row_class = row_class
+    @row_opts = row_opts
     @opts = opts
   end
 
@@ -72,5 +76,9 @@ class DS::Table < DesignSystemComponent
 
   def row_classes(row)
     row_class&.call(row)
+  end
+
+  def row_attributes(row)
+    row_opts&.call(row) || {}
   end
 end

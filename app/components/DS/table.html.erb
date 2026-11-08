@@ -13,7 +13,7 @@
       </thead>
       <tbody>
         <% rows.each_with_index do |row, index| %>
-          <%= tag.tr class: row_classes(row) do %>
+          <%= tag.tr class: row_classes(row), **row_attributes(row) do %>
             <% columns.each do |column| %>
               <%= column.cell(row, index) %>
             <% end %>

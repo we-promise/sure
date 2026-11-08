@@ -283,7 +283,9 @@ class PlaidItemsController < ApplicationController
       alert = friendly_link_token_alert(error_code, error_body["error_message"])
 
       respond_to do |format|
-        format.html { redirect_to accounts_path, alert: alert }
+        format.html do
+          frame_redirect_to(accounts_path, alert: alert)
+        end
         format.turbo_stream { stream_redirect_to(accounts_path, alert: alert) }
       end
     end

@@ -97,10 +97,6 @@ ru:
       no_rules_title: Пока нет правил
       page_title: Правила
       rules_heading: Правила
-      sort_by: 'Сортировать по:'
-      sort_name: Имя
-      sort_updated_at: Обновлено
-      toggle_sort_direction: Изменить направление сортировки
     no_action: Нет действия
     no_condition: Нет условия
     recent_runs:

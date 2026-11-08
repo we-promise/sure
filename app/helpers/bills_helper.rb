@@ -1,10 +1,34 @@
 module BillsHelper
+  # Bills the covered bridge strip lists before folding the rest behind a
+  # disclosure. A month-long window holds dozens; five keeps the strip a strip.
+  PAYCHECK_BRIDGE_VISIBLE_ITEMS = 5
+
   # A bill's next due date reads "Oct 5" when it falls this year and gains the
   # year otherwise, so an every-2-years bill never shows "Sep 1" for a date
   # that is years out. Same rule as Period#label. Payment dates are historical
   # and always carry the year instead.
   def bills_upcoming_date(date)
     l(date, format: date.year == Date.current.year ? :short : :short_with_year)
+  end
+
+  # What an All bills row says under the name: its schedule, led by its kind
+  # when the kind is not the plain "bill" that most rows are, so a subscription
+  # or an income still reads as one now that the list has no Type column.
+  def bills_series_subline(series)
+    kind = t("bills.all.types.#{series.bill_type}") unless series.typed_bill?
+    [ kind, frequency_label(series) ].compact.join(" · ")
+  end
+
+  # Only a live series is owed or expected, so only a live one carries full
+  # weight. A paused or dismissed one recedes through the text, as an autopaying
+  # bill does on the overview: opacity on the row would sink the secondary text
+  # below 3:1.
+  def bills_series_tone(series)
+    series.active? ? "text-primary" : "text-secondary"
+  end
+
+  def bills_series_amount_tone(series)
+    series.active? && series.typed_income? ? "text-success" : bills_series_tone(series)
   end
 
   # The date a bill row is about. The subline leads with it below @lg, and the
@@ -70,7 +94,8 @@ module BillsHelper
   def bills_matcher_hints(series)
     {
       aliases: Array(series.matcher_hints["name_aliases"]).compact_blank,
-      learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f
+      learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f,
+      detected_name: series.merchant_id.blank? ? series.matcher_hints["detected_name"].presence : nil
     }
   end
 
@@ -141,6 +166,25 @@ module BillsHelper
 
       [ key, percent ]
     end
+  end
+
+  # The bridge's bar: what is due before payday against the cash on hand.
+  # Empty when the balance is unknown, since the bar would state a figure the
+  # planner deliberately does not claim.
+  def paycheck_bridge_segments(period)
+    return [] if period.cash_on_hand.nil?
+
+    normalize_segments([
+      [ :due, period.obligation_total ],
+      [ :left, period.cash_after_obligations ]
+    ], period.cash_on_hand)
+  end
+
+  def paycheck_bridge_aria(period, currency)
+    t("bills.paycheck.bridge_allocation_aria",
+      cash: format_money(Money.new(period.cash_on_hand, currency)),
+      due: format_money(Money.new(period.obligation_total, currency)),
+      left: format_money(Money.new(period.cash_after_obligations, currency)))
   end
 
   # The bar in words, in the same terms the card states in text.

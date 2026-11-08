@@ -64,7 +64,77 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     assert_no_text "Updated to #{@categories.second.name}"
   end
 
+  test "a prompt from the transaction drawer waits until the drawer closes" do
+    visit transactions_url
+    open_drawer @entry
+    assign_category_in_drawer @categories.first
+
+    # The drawer sits in the browser's top layer: a prompt rendered now would be hidden behind it.
+    assert_no_selector "#cta *", visible: :all
+
+    close_drawer
+    assert_selector "#cta", text: "Updated to #{@categories.first.name}"
+  end
+
+  test "a held prompt survives the drawer being replaced by another one" do
+    other_entry = @user.family.entries.transactions.where.not(id: @entry.id).order(date: :desc).first
+
+    visit transactions_url
+    open_drawer @entry
+    assign_category_in_drawer @categories.first
+
+    # Swapping the drawer's content removes the open dialog without a close event.
+    open_drawer other_entry
+    assert_no_selector "#cta *", visible: :all
+
+    close_drawer
+    assert_selector "#cta", text: "Updated to #{@categories.first.name}"
+  end
+
+  test "a held prompt shows when the open dialog is removed without closing" do
+    visit transactions_url
+    open_drawer @entry
+    assign_category_in_drawer @categories.first
+    assert_no_selector "#cta *", visible: :all
+
+    # Like a stream replacing the modal frame with an empty one: no close event fires.
+    page.execute_script(%(document.querySelector("turbo-frame#drawer").replaceChildren()))
+
+    assert_selector "#cta", text: "Updated to #{@categories.first.name}"
+  end
+
+  test "a held prompt shows when the open attribute is removed from the dialog" do
+    visit transactions_url
+    open_drawer @entry
+    assign_category_in_drawer @categories.first
+    assert_no_selector "#cta *", visible: :all
+
+    page.execute_script(%(document.querySelector("turbo-frame#drawer dialog[open]").removeAttribute("open")))
+
+    assert_selector "#cta", text: "Updated to #{@categories.first.name}"
+  end
+
   private
+    def open_drawer(entry)
+      page.execute_script <<~JS
+        document.querySelector("turbo-frame#drawer").src = "#{transaction_url(entry)}"
+      JS
+      assert_selector "turbo-frame#drawer dialog[open] ##{dom_id(entry, :header)}"
+    end
+
+    def assign_category_in_drawer(category)
+      within "turbo-frame#drawer [data-controller='category-select']" do
+        find("button", match: :first).click
+        find("button[data-category-id='#{category.id}']").click
+      end
+      assert_selector "##{dom_id(@entry)}", text: category.name
+    end
+
+    def close_drawer
+      find("turbo-frame#drawer dialog[open]").send_keys(:escape)
+      assert_no_selector "turbo-frame#drawer dialog[open]"
+    end
+
     def assign_category(category)
       within "##{dom_id(@entry.entryable, 'category_menu_desktop')}" do
         find("button", match: :first).click

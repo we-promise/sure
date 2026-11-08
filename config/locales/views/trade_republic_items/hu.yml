@@ -15,6 +15,7 @@ hu:
     trade_republic_item:
       syncing: "Szinkronizálás"
       requires_update: "Újrahitelesítés szükséges"
+      session_expires_in: "A bejelentkezés %{time} múlva lejár (%{at})."
       error: "Hiba"
       synced: "Szinkronizálva: %{time}. %{summary}."
       setup_accounts: "Fiókok beállítása"

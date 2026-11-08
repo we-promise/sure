@@ -40,6 +40,9 @@ class Import < ApplicationRecord
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
   TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport YnabImport CategoryImport RuleImport MerchantImport PdfImport QifImport SureImport].freeze
+  # Imports that write family-wide configuration (categories, tags, rules,
+  # merchants), which guests may view but not change.
+  FAMILY_CONFIG_TYPES = %w[CategoryImport MerchantImport RuleImport SureImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
@@ -472,6 +475,24 @@ class Import < ApplicationRecord
     complete? || revert_failed?
   end
 
+  def family_config?
+    FAMILY_CONFIG_TYPES.include?(type)
+  end
+
+  # Guests may view family configuration but not change it, so they may only
+  # edit an import that doesn't write family configuration and isn't being
+  # (or already) published.
+  def editable_by?(user)
+    return true unless user&.guest?
+
+    (pending? || failed?) && !family_config?
+  end
+
+  # Whether publishing would add new categories or tags to the family.
+  def creates_categories_or_tags?
+    mappings.creational.where(type: %w[Import::CategoryMapping Import::TagMapping]).where.not(key: [ nil, "" ]).exists?
+  end
+
   # Whether the user may write to every pre-existing account this import
   # targets (its own account, account mappings) or has already written into
   # (entries). Accounts the import created itself are excluded.
@@ -501,6 +522,10 @@ class Import < ApplicationRecord
     family.accounts.empty? && has_unassigned_account?
   end
 
+  # Hook for subclasses that recognise a known file format on upload
+  def preset_for_uploaded_csv
+  end
+
   # Used to optionally pre-fill the configuration for the current import
   def suggested_template
     family.imports
@@ -511,16 +536,18 @@ class Import < ApplicationRecord
   end
 
   def apply_template!(import_template)
-    update!(
-      import_template.attributes.slice(
-        "date_col_label", "amount_col_label", "name_col_label",
-        "category_col_label", "tags_col_label", "account_col_label",
-        "qty_col_label", "ticker_col_label", "price_col_label",
-        "entity_type_col_label", "notes_col_label", "currency_col_label",
-        "date_format", "signage_convention", "number_format",
-        "exchange_operating_mic_col_label",
-        "rows_to_skip"
-      )
+    update!(template_attributes(import_template))
+  end
+
+  def template_attributes(import_template)
+    import_template.attributes.slice(
+      "date_col_label", "amount_col_label", "name_col_label",
+      "category_col_label", "tags_col_label", "account_col_label",
+      "qty_col_label", "ticker_col_label", "price_col_label",
+      "entity_type_col_label", "notes_col_label", "currency_col_label",
+      "date_format", "signage_convention", "number_format",
+      "exchange_operating_mic_col_label",
+      "rows_to_skip"
     )
   end
 

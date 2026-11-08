@@ -1,0 +1,397 @@
+require "test_helper"
+
+# A lender accrues interest on a stated basis, and `actual/365` -- standard for
+# UK and Australian mortgages -- charges by the length of the month. Charging
+# every period as a flat 1/12 cannot express that, so a borrower's statement
+# and the app disagree on every row.
+#
+# The load-bearing test here is not any of the `actual/365` figures. It is that
+# the DEFAULT still charges exactly what it charged before: this engine is the
+# single accrual point for every loan figure in the product, so a default that
+# moved would silently restate every schedule.
+class Loan::DayCountConventionTest < ActiveSupport::TestCase
+  BALANCE = 300_000
+  RATE = 6
+
+  # 300,000 at 6% is 18,000 a year, so each figure below is 18,000 x days/denominator.
+  # Computed by hand from the convention, not read back out of the engine.
+  test "actual/365 charges by the length of the month" do
+    assert_equal BigDecimal("1528.77"), interest_for(Date.new(2026, 1, 1), Date.new(2026, 2, 1), :actual_365),
+                 "January is 31 days: 18000 x 31/365"
+    assert_equal BigDecimal("1380.82"), interest_for(Date.new(2026, 2, 1), Date.new(2026, 3, 1), :actual_365),
+                 "February is 28 days: 18000 x 28/365"
+    assert_equal BigDecimal("1479.45"), interest_for(Date.new(2026, 4, 1), Date.new(2026, 5, 1), :actual_365),
+                 "April is 30 days: 18000 x 30/365"
+  end
+
+  # The leap day is the residue that does not cancel over a year, and the two
+  # actual conventions part company on it: actual/365 charges a 366th day at
+  # the same daily rate, actual/actual spreads the year over 366.
+  test "the two actual conventions differ on a leap February" do
+    assert_equal BigDecimal("1430.14"), interest_for(Date.new(2028, 2, 1), Date.new(2028, 3, 1), :actual_365),
+                 "29 days over 365"
+    assert_equal BigDecimal("1426.23"), interest_for(Date.new(2028, 2, 1), Date.new(2028, 3, 1), :actual_actual),
+                 "29 days over 366"
+  end
+
+  # 30/360 reduces to 1/12 exactly, which is the whole reason it is the default.
+  test "the default charges a flat twelfth, whatever the month holds" do
+    %w[2026-01-01 2026-02-01 2026-04-01 2028-02-01].each do |iso|
+      from = Date.parse(iso)
+      assert_equal BigDecimal("1500"), interest_for(from, from >> 1, :thirty_360),
+                   "#{iso} should charge 18000/12 regardless of month length"
+    end
+  end
+
+  test "an unspecified convention is the default one" do
+    from = Date.new(2026, 2, 1)
+
+    assert_equal interest_for(from, from >> 1, :thirty_360), interest_for(from, from >> 1, nil)
+  end
+
+  # The negative test the whole change rests on. `Loan::Simulator` is the single
+  # accrual point upstream -- `Loan::AmortizationSchedule` runs through it -- so
+  # a default that charged anything other than a flat 1/12 would restate every
+  # existing schedule. Row for row, not merely in total.
+  test "a default loan produces the schedule it produced before, row for row" do
+    schedule = (1..12).map { |n| Date.new(2026, 1, 1) >> n }
+
+    baseline = simulate(schedule: schedule, convention: nil)
+    explicit = simulate(schedule: schedule, convention: :thirty_360)
+
+    assert_equal 12, baseline.payments.length
+    baseline.payments.zip(explicit.payments).each_with_index do |(was, now), index|
+      assert_equal was, now, "period #{index + 1} moved between the implicit and explicit default"
+    end
+
+    # And against the arithmetic itself, so the test does not merely compare the
+    # engine with itself: every period is the flat twelfth on its opening balance.
+    baseline.payments.each_with_index do |payment, index|
+      opening = index.zero? ? BigDecimal(BALANCE.to_s) : baseline.payments[index - 1][:ending_balance]
+      assert_equal (opening * BigDecimal(RATE.to_s) / 100 / 12).round(2), payment[:interest_payment],
+                   "period #{index + 1} is not a flat twelfth of the opening balance"
+    end
+  end
+
+  # A rate change INSIDE a period, on a day count: the period accrues at the
+  # opening rate for its actual days and the payment is re-sized at the new
+  # rate, told what that period really charged. Every other row keeps its
+  # payment -- the day count varies the charge, never the sizing.
+  test "a rate change inside a period re-sizes once, on the period's day-counted charge" do
+    schedule = (1..120).map { |n| Date.new(2026, 1, 1) >> n }
+    change = Date.new(2026, 6, 15)
+    result = Loan::Simulator.new(
+      starting_balance: BALANCE,
+      accrual_start_date: Date.new(2026, 1, 1),
+      payment_schedule: schedule,
+      accrual_rate_for: ->(date) { date < change ? RATE : 8 },
+      currency_precision: 2,
+      day_count_convention: :actual_365
+    ).run
+    rows = result.payments
+    straddle = rows.index { |row| row[:payment_date] == Date.new(2026, 7, 1) }
+    opening = rows[straddle][:beginning_balance]
+
+    assert_equal Loan::AmortizationMath.level_payment(balance: BigDecimal(BALANCE.to_s), monthly_rate: BigDecimal(RATE.to_s) / 100 / 12,
+                                                     remaining_payments: 120, currency_precision: 2),
+                 rows.first[:payment_amount], "the opening payment is the plain level payment: no rate moved in period 1"
+    assert_equal (opening * BigDecimal(RATE.to_s) / 100 * 30 / 365).round(2), rows[straddle][:interest_payment],
+                 "June accrues 30 days at the opening 6%, on actual/365"
+    assert_equal Loan::AmortizationMath.level_payment(balance: opening, monthly_rate: BigDecimal("8") / 100 / 12,
+                                                     remaining_payments: 120 - straddle, currency_precision: 2,
+                                                     first_period_interest: rows[straddle][:interest_payment]),
+                 rows[straddle][:payment_amount], "the re-sized payment covers what June actually charged"
+    assert_equal [ rows.first[:payment_amount] ], rows[0...straddle].map { |row| row[:payment_amount] }.uniq,
+                 "no row before the change is re-sized"
+    assert_equal [ rows[straddle][:payment_amount] ], rows[straddle...-1].map { |row| row[:payment_amount] }.uniq,
+                 "no row after the change is re-sized again"
+  end
+
+  # A decreasing-life premium is charged on each period's opening balance, so it
+  # follows the schedule's day count. Reassigning the convention must restate it
+  # at once, as it restates the schedule -- not answer from a memo built on the
+  # old basis.
+  test "changing the convention restates a decreasing premium without a reload" do
+    loan = insured_loan(:actual_365)
+    on_actual = loan.total_insurance
+
+    loan.day_count_convention = "thirty_360"
+
+    assert_equal insured_loan(:thirty_360).total_insurance, loan.total_insurance
+    assert_not_equal on_actual, loan.total_insurance, "the two conventions should charge different premiums on this loan"
+  end
+
+  # A period that ends before it starts is a caller's mistake. Under an actual
+  # convention it would charge negative interest, so it is refused instead.
+  test "a period that ends before it starts is refused on an actual convention" do
+    assert_raises(ArgumentError) { interest_for(Date.new(2026, 2, 1), Date.new(2026, 1, 1), :actual_365) }
+    assert_raises(ArgumentError) { interest_for(Date.new(2026, 2, 1), Date.new(2026, 1, 1), :actual_actual) }
+  end
+
+  # The design decision that keeps the payment level. `level_payment` is an
+  # annuity formula over one constant periodic rate; if the day count reached
+  # the sizing, the rate would differ every month and :reamortize would rebuild
+  # the payment every period. The charge varies, the contracted payment does not.
+  test "a varying day count does not resize the payment every period" do
+    schedule = (1..12).map { |n| Date.new(2026, 1, 1) >> n }
+
+    result = simulate(schedule: schedule, convention: :actual_365)
+    # The final period settles the balance, so its amount legitimately differs;
+    # every period before it is the contracted payment.
+    contracted = result.payments[0...-1].map { |p| p[:payment_amount] }.uniq
+
+    assert_equal 1, contracted.length,
+                 "the payment was resized as the month length changed: #{contracted.inspect}"
+
+    # And it is the SAME payment the default sizes, because sizing never sees
+    # the day count. If the straddle correction (`first_period_interest`) were
+    # keyed on the derived factors rather than on the rates, a constant-rate
+    # loan would look like a rate change every month and this would move.
+    default_payment = simulate(schedule: schedule, convention: :thirty_360).payments.first[:payment_amount]
+    assert_equal default_payment, contracted.first,
+                 "the day count reached the payment sizing"
+  end
+
+  test "an unsupported convention is refused rather than silently defaulted" do
+    error = assert_raises(ArgumentError) do
+      simulate(schedule: [ Date.new(2026, 2, 1) ], convention: :actual_360)
+    end
+
+    assert_match(/unsupported day-count convention/, error.message)
+  end
+
+  # The column is worthless if it does not reach the engine. This walks the
+  # whole path a real loan takes -- Loan -> AmortizationSchedule.for ->
+  # Simulator -- rather than constructing the engine directly, because the
+  # wiring between them is the part that can silently not be done.
+  test "a loan's stored convention reaches the schedule it produces" do
+    loan = loans(:one)
+    loan.account.update!(currency: "USD")
+    loan.update!(day_count_convention: "thirty_360")
+
+    default_first = loan.amortization_schedule.payments.first.interest.amount
+
+    loan.update!(day_count_convention: "actual_365")
+    actual_first = loan.amortization_schedule.payments.first.interest.amount
+
+    assert_not_equal default_first, actual_first,
+                     "changing the loan's convention did not change its schedule"
+  end
+
+  test "the column refuses a convention the engine does not implement" do
+    loan = loans(:one)
+
+    loan.day_count_convention = "actual_360"
+    assert_not loan.valid?
+    assert_includes loan.errors[:day_count_convention], "is not included in the list"
+  end
+
+  test "a loan defaults to the convention that preserves today's arithmetic" do
+    assert_equal "thirty_360", Loan.new.day_count_convention
+    assert_equal "thirty_360", Loan::DEFAULT_DAY_COUNT_CONVENTION
+  end
+
+  # actual/actual measures each calendar year against its own length, so a
+  # period crossing New Year is two fractions. 15 Dec 2027 to 15 Jan 2028 is
+  # 17 days of 2027 over 365 plus 14 days of 2028 over 366 -- taking the
+  # opening year's denominator for all 31 would put the 2028 days over 365.
+  test "an actual/actual period crossing New Year uses each year's own denominator" do
+    from = Date.new(2027, 12, 15)
+    to = Date.new(2028, 1, 15)
+
+    expected = (BigDecimal("300000") * BigDecimal("0.06") *
+      ((BigDecimal("17") / 365) + (BigDecimal("14") / 366))).round(2)
+    naive = (BigDecimal("300000") * BigDecimal("0.06") * BigDecimal("31") / 365).round(2)
+
+    assert_not_equal naive, expected, "the two approaches must differ, or this test proves nothing"
+    assert_equal expected, interest_for(from, to, :actual_actual)
+  end
+
+  # The same period on actual/365 is unaffected: that convention has one
+  # denominator by definition, so the year boundary is not a boundary for it.
+  test "actual/365 is indifferent to the year boundary" do
+    expected = (BigDecimal("300000") * BigDecimal("0.06") * BigDecimal("31") / 365).round(2)
+
+    assert_equal expected, interest_for(Date.new(2027, 12, 15), Date.new(2028, 1, 15), :actual_365)
+  end
+
+  # The same boundary with the leap year on the OPENING side: 15 Dec 2028 to
+  # 15 Jan 2029 is 17 days of 2028 over 366 plus 14 days of 2029 over 365. The
+  # test above has the leap year closing the period; this one catches an
+  # implementation that takes either end's denominator for the whole span.
+  test "an actual/actual period leaving a leap year uses each year's own denominator" do
+    from = Date.new(2028, 12, 15)
+    to = Date.new(2029, 1, 15)
+
+    expected = (BigDecimal("300000") * BigDecimal("0.06") *
+      ((BigDecimal("17") / 366) + (BigDecimal("14") / 365))).round(2)
+    opening_year_only = (BigDecimal("300000") * BigDecimal("0.06") * BigDecimal("31") / 366).round(2)
+    closing_year_only = (BigDecimal("300000") * BigDecimal("0.06") * BigDecimal("31") / 365).round(2)
+
+    assert_not_equal opening_year_only, expected, "must differ from the opening year's denominator alone"
+    assert_not_equal closing_year_only, expected, "must differ from the closing year's denominator alone"
+    assert_equal expected, interest_for(from, to, :actual_actual)
+  end
+
+  # The payment is sized on the nominal monthly rate, so on actual/365 the
+  # periods charge a little more or a little less than that sizing assumed and
+  # the last row absorbs the difference. Both directions are pinned: February
+  # and March (59 days) charge less than two flat twelfths, so the final
+  # payment falls BELOW the contracted one; December and January (62 days)
+  # charge more, so it rises ABOVE it. Either way the loan closes at zero.
+  test "the settling row absorbs an actual/365 shortfall below the contracted payment" do
+    result = simulate(schedule: [ Date.new(2026, 3, 1), Date.new(2026, 4, 1) ], convention: :actual_365,
+                      accrual_start: Date.new(2026, 2, 1))
+    contracted, final = result.payments.map { |p| p[:payment_amount] }
+
+    assert_operator final, :<, contracted, "59 days of actual/365 charge less than two flat twelfths"
+    assert_final_row_settles(result)
+  end
+
+  test "the settling row absorbs an actual/365 excess above the contracted payment" do
+    result = simulate(schedule: [ Date.new(2026, 1, 1), Date.new(2026, 2, 1) ], convention: :actual_365,
+                      accrual_start: Date.new(2025, 12, 1))
+    contracted, final = result.payments.map { |p| p[:payment_amount] }
+
+    assert_operator final, :>, contracted, "62 days of actual/365 charge more than two flat twelfths"
+    assert_final_row_settles(result)
+  end
+
+  # The stored-loan test above walks actual/365 only, which would pass if the
+  # column reached the engine as "any actual convention". A leap January is
+  # where the two actual conventions part, so the first row names which one ran.
+  test "a loan stored on actual/actual is scheduled on actual/actual" do
+    loan = Account.create!(
+      family: families(:dylan_family), name: "Actual/actual #{SecureRandom.hex(3)}", balance: BALANCE, currency: "USD",
+      accountable: Loan.create!(subtype: "mortgage", interest_rate: RATE, term_months: 12, rate_type: "fixed",
+                                start_date: Date.new(2024, 1, 1), initial_balance: BALANCE,
+                                day_count_convention: "actual_actual")
+    ).loan
+    stored = Loan.find(loan.id)
+
+    first = stored.amortization_schedule.payments.first.interest.amount
+
+    assert_equal "actual_actual", stored.day_count_convention
+    assert_equal BigDecimal("1524.59"), first, "January 2024 is 31 days over 366: 18000 x 31/366"
+    assert_not_equal BigDecimal("1528.77"), first, "31/365 would mean the loan ran on actual/365"
+    assert_not_equal BigDecimal("1500"), first, "a flat twelfth would mean the convention never arrived"
+  end
+
+  # A loan written on the last day of January pays on each month's last day,
+  # because the schedule steps every date from the start: 29 February, then
+  # 31 March, not 29 March. Under an actual convention those clamped dates ARE
+  # the charge, so each row must count the days between its own two dates.
+  test "a schedule from the last day of January charges each month's own days" do
+    schedule = Loan::AmortizationSchedule.new(
+      principal: BALANCE, annual_rate: RATE, term_months: 4, start_date: Date.new(2028, 1, 31),
+      currency: "USD", day_count_convention: :actual_365
+    )
+    rows = schedule.payments
+
+    assert_equal [ Date.new(2028, 2, 29), Date.new(2028, 3, 31), Date.new(2028, 4, 30), Date.new(2028, 5, 31) ],
+                 rows.map(&:date)
+
+    opening = BigDecimal(BALANCE.to_s)
+    [ 29, 31, 30, 31 ].zip(rows).each do |days, row|
+      assert_equal (opening * BigDecimal(RATE.to_s) / 100 * days / 365).round(2), row.interest.amount,
+                   "the period ending #{row.date} should charge #{days} days over 365"
+      opening = row.ending_balance.amount
+    end
+  end
+
+  # :hold and :scheduled take their payment from the caller, not from sizing,
+  # so a day count reaching them is a separate path from :reamortize. Each row
+  # must still be charged its own days while the payment stays what was asked.
+  test ":hold keeps its seeded repayment while actual/365 varies the charge" do
+    rows = simulate_strategy(:hold, BigDecimal("2000")).payments
+
+    assert_equal [ BigDecimal("2000") ], rows[0...-1].map { |row| row[:payment_amount] }.uniq,
+                 "the seeded repayment was re-sized"
+    assert_day_counted(rows)
+  end
+
+  test ":scheduled pays what it is asked each period while actual/365 varies the charge" do
+    asked = ->(index:, **) { BigDecimal("2000") + index }
+    rows = simulate_strategy(:scheduled, asked).payments
+
+    assert_equal rows[0...-1].each_index.map { |index| BigDecimal("2000") + index },
+                 rows[0...-1].map { |row| row[:payment_amount] },
+                 "a period paid something other than what the callable asked"
+    assert_day_counted(rows)
+  end
+
+  private
+    def simulate_strategy(strategy, payment_amount)
+      Loan::Simulator.new(
+        starting_balance: BALANCE,
+        accrual_start_date: Date.new(2025, 12, 1),
+        payment_schedule: (1..12).map { |n| Date.new(2025, 12, 1) >> n },
+        accrual_rate_for: ->(_date) { RATE },
+        currency_precision: 2,
+        payment_strategy: strategy,
+        payment_amount: payment_amount,
+        day_count_convention: :actual_365
+      ).run
+    end
+
+    # Every row charges its opening balance for the days since the previous
+    # payment over 365, and February (28 days) charges less than a flat
+    # twelfth would -- so a run that fell back to 1/12 cannot pass.
+    def assert_day_counted(rows)
+      previous = Date.new(2025, 12, 1)
+      rows.each do |row|
+        days = (row[:payment_date] - previous).to_i
+        assert_equal (row[:beginning_balance] * BigDecimal(RATE.to_s) / 100 * days / 365).round(2), row[:interest_payment],
+                     "the period ending #{row[:payment_date]} should charge #{days} days over 365"
+        previous = row[:payment_date]
+      end
+
+      february = rows.find { |row| row[:payment_date] == Date.new(2026, 3, 1) }
+      assert_operator february[:interest_payment], :<, (february[:beginning_balance] * BigDecimal(RATE.to_s) / 1200).round(2)
+    end
+
+    def insured_loan(convention)
+      Account.create!(
+        family: families(:dylan_family), name: "Insured #{SecureRandom.hex(3)}", balance: BALANCE, currency: "USD",
+        accountable: Loan.create!(subtype: "mortgage", interest_rate: RATE, term_months: 360, rate_type: "fixed",
+                                  start_date: Date.new(2026, 1, 1), insurance_rate: 1.2,
+                                  insurance_rate_type: "decreasing_life", day_count_convention: convention.to_s)
+      ).loan
+    end
+
+    def simulate(schedule:, convention:, balance: BALANCE, rate: RATE, accrual_start: schedule.first - 31)
+      Loan::Simulator.new(
+        starting_balance: balance,
+        accrual_start_date: accrual_start,
+        payment_schedule: schedule,
+        accrual_rate_for: ->(_date) { rate },
+        currency_precision: 2,
+        day_count_convention: convention
+      ).run
+    end
+
+    # The final row pays exactly its opening balance plus its own charge, hand
+    # computed on actual/365 from the row's own dates, and leaves nothing owing.
+    def assert_final_row_settles(result)
+      assert result.converged?
+      final = result.payments.last
+      days = (final[:payment_date] - result.payments[-2][:payment_date]).to_i
+      charge = (final[:beginning_balance] * BigDecimal(RATE.to_s) / 100 * days / 365).round(2)
+
+      assert_equal charge, final[:interest_payment]
+      assert_equal final[:beginning_balance] + charge, final[:payment_amount]
+      assert_equal BigDecimal("0"), final[:ending_balance]
+    end
+
+    # One period, so the figure asserted is the charge for exactly that span.
+    def interest_for(from, to, convention)
+      Loan::Simulator.new(
+        starting_balance: BALANCE,
+        accrual_start_date: from,
+        payment_schedule: [ to ],
+        accrual_rate_for: ->(_date) { RATE },
+        currency_precision: 2,
+        day_count_convention: convention
+      ).run.payments.first[:interest_payment]
+    end
+end

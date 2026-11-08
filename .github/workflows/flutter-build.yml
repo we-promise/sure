@@ -2,6 +2,11 @@ name: Flutter Mobile Build
 
 on:
   workflow_call:
+    inputs:
+      app_version:
+        description: Selected mobile release version (v-prefix allowed)
+        required: false
+        type: string
     outputs:
       has_app_release_aab:
         description: "Whether a signed release AAB artifact was produced"
@@ -16,6 +21,11 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Shared across all callers, not scoped to the tag or caller workflow.
+    concurrency:
+      group: android-build-number
+      cancel-in-progress: false
+      queue: max
     outputs:
       has_app_release_aab: ${{ steps.check_secrets.outputs.has_keystore }}
 
@@ -37,6 +47,38 @@ jobs:
           flutter-version: '3.32.4'
           channel: 'stable'
           cache: true
+
+      - name: Resolve app version
+        shell: bash
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$APP_VERSION_INPUT" ]]; then
+            version="${APP_VERSION_INPUT#v}"
+          elif [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(sed -n 's/^version: *//p' mobile/pubspec.yaml)"
+            version="${version%%+*}"
+          fi
+          printf '%s\n' "$version" > .sure-version
+          echo "SURE_BUILD_NAME=$version" >> "$GITHUB_ENV"
+
+      - name: Resolve Android build number
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Seconds since 2020-01-01 UTC: newer than the legacy 20260402 code,
+          # with room below Google Play's limit until 2086. Allocate once per
+          # build attempt, not from the tag date or workflow-specific run number.
+          build_number=$(( $(date -u +%s) - 1577836800 ))
+          if (( build_number <= 20260402 || build_number > 2100000000 )); then
+            echo "::error::Android build number outside the supported range: $build_number"
+            exit 1
+          fi
+          echo "SURE_BUILD_NUMBER=$build_number" >> "$GITHUB_ENV"
+          echo "Android version code: $build_number"
 
       - name: Get dependencies
         working-directory: mobile
@@ -88,10 +130,10 @@ jobs:
         run: |
           if [ "${{ steps.check_secrets.outputs.has_keystore }}" == "true" ]; then
             echo "Building signed release APK..."
-            flutter build apk --release
+            flutter build apk --release --build-name="$SURE_BUILD_NAME" --build-number="$SURE_BUILD_NUMBER"
           else
             echo "Building debug-signed APK..."
-            flutter build apk --debug
+            flutter build apk --debug --build-name="$SURE_BUILD_NAME" --build-number="$SURE_BUILD_NUMBER"
           fi
 
       - name: Upload APK artifact
@@ -107,7 +149,7 @@ jobs:
       - name: Build App Bundle (Release)
         if: steps.check_secrets.outputs.has_keystore == 'true'
         working-directory: mobile
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --build-name="$SURE_BUILD_NAME" --build-number="$SURE_BUILD_NUMBER"
 
       - name: Upload AAB artifact
         if: steps.check_secrets.outputs.has_keystore == 'true'
@@ -135,6 +177,23 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Resolve app version
+        shell: bash
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$APP_VERSION_INPUT" ]]; then
+            version="${APP_VERSION_INPUT#v}"
+          elif [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" == v* ]]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(sed -n 's/^version: *//p' mobile/pubspec.yaml)"
+            version="${version%%+*}"
+          fi
+          printf '%s\n' "$version" > .sure-version
+          echo "SURE_BUILD_NAME=${version%%-*}" >> "$GITHUB_ENV"
+
       - name: Get dependencies
         working-directory: mobile
         run: flutter pub get
@@ -160,7 +219,8 @@ jobs:
 
       - name: Build iOS (No Code Signing)
         working-directory: mobile
-        run: flutter build ios --release --no-codesign
+        # Unsigned validation artifact, not a store upload; do not inherit the +0 placeholder.
+        run: flutter build ios --release --no-codesign --build-name="$SURE_BUILD_NAME" --build-number=1
 
       - name: Create IPA archive info
         working-directory: mobile

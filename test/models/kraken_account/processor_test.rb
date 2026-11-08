@@ -86,6 +86,163 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  # ---------------------------------------------------------------------------
+  # the ledger is the source of truth for what actually moved
+  # ---------------------------------------------------------------------------
+
+  # `vol` is gross. When Kraken takes the fee in the base asset -- an order-level
+  # choice it makes per fill -- fewer units arrive, and TradesHistory cannot say
+  # so: it reports every fee converted to the quote currency, with no
+  # fee-currency field. The ledger nets it, because Kraken applies
+  # `balance = previous + amount - fee` there.
+  test "takes a buy's quantity from the ledger, net of a base-asset fee" do
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000200"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00", fee: "0.00")
+    )
+
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 0.000998.to_d, buy.trade.qty
+  end
+
+  # `cost` is what the fill was worth, not what left the account: a fee charged
+  # in the quote currency comes out on top of it.
+  test "takes a sell's cash movement from the ledger, net of a quote-currency fee" do
+    set_ledgers(
+      "l3" => ledger_row("sell_tx", "XXBT", amount: "-0.00200000", fee: "0.00000000"),
+      "l4" => ledger_row("sell_tx", "ZUSD", amount: "120.00", fee: "0.20")
+    )
+
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    sell = @account.entries.find_by!(external_id: "kraken_trade_sell_tx", source: "kraken")
+    assert_equal(-119.80.to_d, sell.amount)
+  end
+
+  test "falls back to the reported volume and cost when the trade has no ledger rows" do
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 0.001.to_d, buy.trade.qty
+    assert_equal 50.to_d, buy.amount
+  end
+
+  # A trade imported before the ledger permission was granted holds the gross
+  # `vol` and `cost`. When its rows arrive, the next sync corrects it rather
+  # than skipping it as already imported.
+  test "corrects a trade imported without ledger rows once they arrive" do
+    KrakenAccount::Processor.new(@kraken_account).process
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 0.001.to_d, buy.trade.qty
+
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000200"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00", fee: "0.10")
+    )
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy.reload
+    assert_equal 0.000998.to_d, buy.trade.reload.qty
+    assert_equal 50.10.to_d, buy.amount
+
+    assert_no_changes -> { buy.reload.updated_at } do
+      KrakenAccount::Processor.new(@kraken_account).process
+    end
+  end
+
+  test "leaves a trade the user edited alone when its ledger rows arrive" do
+    KrakenAccount::Processor.new(@kraken_account).process
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    buy.update!(user_modified: true)
+
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000200"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00", fee: "0.10")
+    )
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    assert_equal 0.001.to_d, buy.trade.reload.qty
+    assert_equal 50.to_d, buy.reload.amount
+  end
+
+  # A fill whose units all went on its fee nets to zero in the ledger. That is
+  # the ledger's answer, not a missing row: the cash still left the account.
+  test "records a buy whose whole quantity went on the fee" do
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00100000"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00", fee: "0.00")
+    )
+
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 0.to_d, buy.trade.qty
+    assert_equal 50.to_d, buy.amount
+  end
+
+  # `entries.amount` keeps four decimals and a ledger can carry eight. Compared
+  # unrounded, the stored figure would never match, and every sync would take
+  # the update path for a trade that has not changed.
+  test "rounds ledger cash to the stored precision and leaves it alone afterwards" do
+    set_ledgers(
+      "l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000000"),
+      "l2" => ledger_row("buy_tx", "ZUSD", amount: "-50.00123456", fee: "0.00000000")
+    )
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+    assert_equal 50.0012.to_d, buy.amount
+
+    Entry.any_instance.expects(:update!).never
+    KrakenAccount::Processor.new(@kraken_account).process
+  end
+
+  # Each row is right on its own: a fee taken in the base asset leaves the quote
+  # row equal to `cost`, so taking the quantity before the cash row arrives
+  # makes the trade no less correct. The half-ledger trade is logged for support,
+  # once, when it is written.
+  test "corrects the quantity from a base row alone and logs the missing quote row" do
+    KrakenAccount::Processor.new(@kraken_account).process
+    buy = @account.entries.find_by!(external_id: "kraken_trade_buy_tx", source: "kraken")
+
+    set_ledgers("l1" => ledger_row("buy_tx", "XXBT", amount: "0.00100000", fee: "0.00000200"))
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "kraken").count }, 1 do
+      KrakenAccount::Processor.new(@kraken_account).process
+    end
+    assert_equal 0.000998.to_d, buy.trade.reload.qty
+    assert_equal 50.to_d, buy.reload.amount
+
+    assert_no_difference -> { DebugLogEntry.where(provider_key: "kraken").count } do
+      KrakenAccount::Processor.new(@kraken_account).process
+    end
+  end
+
+  # A repeat sync can carry thousands of fills. Their entries and trades load
+  # in one go rather than in two queries per fill.
+  test "loads the existing trades once, not once per fill" do
+    KrakenAccount::Processor.new(@kraken_account).process
+
+    queries = capture_sql_queries { KrakenAccount::Processor.new(@kraken_account).send(:process_trades) }
+
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "entries"') }
+    assert_equal 1, queries.count { |sql| sql.include?('FROM "trades"') }
+  end
+
+  # The entry uniqueness check would stop a duplicate, but each trade would then
+  # fail its insert and log an error on every pass after the first.
+  test "a second pass of the same processor sees the trades the first one imported" do
+    processor = KrakenAccount::Processor.new(@kraken_account)
+    processor.send(:process_trades)
+
+    Rails.logger.expects(:error).never
+    assert_no_difference -> { @account.entries.where(source: "kraken").count } do
+      processor.send(:process_trades)
+    end
+  end
+
   test "trade import is idempotent by txid" do
     assert_difference -> { @account.entries.where(source: "kraken").count }, 2 do
       KrakenAccount::Processor.new(@kraken_account).process
@@ -178,6 +335,21 @@ class KrakenAccount::ProcessorTest < ActiveSupport::TestCase
   end
 
   private
+
+    def set_ledgers(ledgers)
+      @kraken_account.update!(
+        raw_transactions_payload: @kraken_account.raw_transactions_payload.merge("ledgers" => ledgers)
+      )
+    end
+
+    # A trade's ledger rows carry its txid in `refid`, one row per asset moved.
+    def ledger_row(refid, asset, amount:, fee:)
+      {
+        "refid" => refid, "time" => Time.current.to_f, "type" => "trade",
+        "subtype" => "", "aclass" => "currency", "asset" => asset,
+        "amount" => amount, "fee" => fee, "balance" => "0.00000000"
+      }
+    end
 
     def trade_payload(type, volume, cost, fee)
       price = volume.to_d.zero? ? 0.to_d : cost.to_d / volume.to_d

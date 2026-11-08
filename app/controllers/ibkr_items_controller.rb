@@ -53,7 +53,7 @@ class IbkrItemsController < ApplicationController
   def select_accounts
     ibkr_item = current_ibkr_item
     unless ibkr_item
-      redirect_to settings_providers_path, alert: t(".not_configured")
+      frame_redirect_to settings_providers_path, alert: t(".not_configured")
       return
     end
 
