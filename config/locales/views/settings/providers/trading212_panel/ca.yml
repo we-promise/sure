@@ -1,0 +1,33 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        trading212: Sincronitza la teva cartera d'inversió de Trading 212 amb una clau API de només lectura.
+      trading212_panel:
+        steps:
+          step_1: Ves a Trading 212 → Settings → API (web o aplicació mòbil).
+          step_2: 'Genera una clau API nova: Trading 212 et mostrarà un API ID i una Secret Key.'
+          step_3: Enganxa'ls tots dos a continuació, selecciona l'entorn i la divisa del compte i desa.
+        api_key_label: API ID
+        api_key_placeholder_new: Enganxa el teu API ID de Trading 212
+        api_key_placeholder_existing: Deixa-ho en blanc per mantenir l'API ID actual
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Enganxa la teva Secret Key de Trading 212
+        api_secret_placeholder_existing: Deixa-ho en blanc per mantenir la Secret Key actual
+        environment_label: Entorn
+        environment_live: Compte real
+        environment_demo: Compte de demostració
+        currency_label: Divisa del compte
+        save_configuration: Desa la configuració
+        update_configuration: Actualitza la configuració
+        sync: Sincronitza
+        syncing: Sincronitzant...
+        disconnect: Desconnecta el compte de Trading 212
+        disconnect_confirm: Vols desconnectar Trading 212?
+        default_account_name: Compte de Trading 212
+        add_account: Afegeix un altre compte
+        status_configured_prefix: Configurat. Ves a la pestanya
+        accounts_tab: Comptes
+        status_configured_suffix: per gestionar els comptes descoberts.
+        not_configured: No configurat.

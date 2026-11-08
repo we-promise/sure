@@ -1,0 +1,11 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        akahu: Akahu üzerinden Yeni Zelanda finans kurumlarını senkronize edin.
+      akahu_panel:
+        step_1_html: "%{link} adresine gidin ve kişisel bir uygulama oluşturun."
+        step_2: Uygulama token'ınızı ve kullanıcı token'ınızı kopyalayın.
+        step_3: Token'ları aşağıya yapıştırın, kaydedin, ardından senkronize hesaplarınızı
+          bağlayın.

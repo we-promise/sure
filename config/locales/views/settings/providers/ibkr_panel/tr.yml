@@ -1,0 +1,80 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        ibkr: Flex Query içe aktarmaları yoluyla Interactive Brokers yatırım hesaplarınızı
+          senkronize edin.
+      ibkr_panel:
+        accounts_tab: Hesaplar
+        configuration:
+          all_other_options: 'Diğer tüm yapılandırma seçenekleri: "No"'
+          date_format: 'Tarih Formatı: yyyy-MM-dd'
+          date_time_separator: 'Tarih/Saat Ayırıcı: ; (noktalı virgül)'
+          format: 'Format: XML'
+          models: 'Modeller: İsteğe Bağlı'
+          period: 'Dönem: Son 365 Takvim Günü'
+          profit_and_loss: 'Kar ve Zarar: Varsayılan'
+          time_format: 'Saat Formatı: HH:mm:ss'
+        disconnect_confirm: Interactive Brokers bağlantısı kesilsin mi?
+        flex_query_details:
+          configuration_heading: Bu sorgu seçeneklerini ayarlayın
+          eyebrow: Flex Query
+          sections_heading: Bu bölümleri ve alanları etkinleştirin
+          summary: IBKR Activity Flex Query'nizin içermesi gereken tam bölümleri,
+            alanları ve ayarları görmek için genişletin.
+          title: Bölümler, alanlar ve yapılandırma
+        not_configured: Yapılandırılmadı.
+        query_id_label: Sorgu ID
+        query_id_placeholder_existing: Mevcut Sorgu ID'sini korumak için boş bırakın
+        query_id_placeholder_new: IBKR Flex Query ID'nizi girin
+        report_window_note: IBKR Flex raporları, IBKR'de yapılandırdığınız sorgu penceresiyle
+          sınırlıdır. Sure, bu rapordan mevcut tüm varlıkları ve son 365 güne kadar
+          olan işlem geçmişini içe aktaracaktır.
+        save_configuration: Yapılandırmayı Kaydet
+        sections:
+          account_information: 'Hesap Bilgileri: Account ID, Currency'
+          cash_report: 'Nakit Raporu:'
+          cash_report_fields: 'Alanlar: Currency, Ending Cash'
+          cash_report_options: 'Seçenekler: None'
+          cash_transactions: 'Nakit İşlemleri:'
+          cash_transactions_fields: 'Alanlar: Amount, Conid, Currency, FX Rate To
+            Base, Report Date, Transaction ID, Type'
+          cash_transactions_options: 'Seçenekler: Dividends, Deposits & Withdrawals,
+            Detail'
+          change_in_position_value_summary: 'Pozisyon Değeri Değişim Özeti: Currency,
+            End Of Period Value'
+          net_asset_value: 'Ana Para Biriminde Net Varlık Değeri (NAV):'
+          net_asset_value_fields: 'Alanlar: Currency, Report Date, Total'
+          net_asset_value_options: 'Seçenekler: None'
+          open_positions: 'Açık Pozisyonlar:'
+          open_positions_fields: 'Alanlar: Asset Class, Conid, Cost Basis Price, Currency,
+            FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security
+            ID Type, Side, Symbol'
+          open_positions_options: 'Seçenekler: Summary'
+          trades: 'İşlemler:'
+          trades_fields: 'Alanlar: Asset Class, Buy/Sell, Conid, Currency, FX Rate
+            To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
+            Date, Trade ID, TradePrice, Transaction ID'
+          trades_options: 'Seçenekler: Execution'
+        status_configured_prefix: "%{summary}. Şuraya gidin:"
+        status_configured_suffix: sekmesine giderek keşfedilen hesapları yönetin.
+        steps:
+          step_1: IBKR Client Portal'ınızda "Performance & Reports" > "Flex Queries"
+            bölümüne gidin.
+          step_2: Yeni bir sorgu oluşturmak için "Activity Flex Query" bölümündeki
+            "+" simgesine tıklayın.
+          step_3: Sorgunuza bir ad verin (ör. "Sure Sync"), ardından aşağıdaki Flex
+            Query ayrıntılarını inceleyin ve listelenen bölümleri, alanları ve yapılandırma
+            seçeneklerini etkinleştirin.
+          step_4: Sorguyu kaydedin, "Query ID"nizi not edin, ardından bir erişim Token'ı
+            oluşturmak için "Flex Web Service Configuration" bölümündeki dişli simgesini
+            kullanın.
+          step_5: Sorgu ID'nizi ve Token'ınızı aşağıya yapıştırın, yapılandırmayı
+            kaydedin, ardından keşfedilen IBKR hesaplarını bağlamak için Hesaplar'a
+            gidin.
+        sync: Senkronize et
+        token_label: Token
+        token_placeholder_existing: Mevcut Token'ı korumak için boş bırakın
+        token_placeholder_new: IBKR Flex Web Service Token'ınızı girin
+        update_configuration: Yapılandırmayı Güncelle

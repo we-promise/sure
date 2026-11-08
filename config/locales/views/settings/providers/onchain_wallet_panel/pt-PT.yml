@@ -1,0 +1,21 @@
+---
+pt-PT:
+  settings:
+    providers:
+      taglines:
+        onchain_wallet: Acompanhe carteiras Bitcoin, EVM, Solana, Cosmos e Polkadot de autocustódia a partir dos seus endereços públicos.
+      onchain_wallet_panel:
+        add_wallet: Adicionar carteira
+        advanced: Avançado
+        disconnect_all: Desligar todas as carteiras
+        disconnect_all_confirm: Isto remove todos os endereços monitorizados e as respetivas contas. Continuar?
+        etherscan_api_key_label: Chave de API Etherscan (opcional)
+        etherscan_api_key_placeholder: Cole uma chave de API Etherscan
+        etherscan_hint: As leituras do Ethereum funcionam sem chave. Adicionar uma chave Etherscan apenas aumenta o limite de frequência para o Ethereum.
+        keep_etherscan_api_key: Deixe em branco para manter a chave existente
+        manage_wallets: Gerir carteiras
+        keyless_body: O Sure apenas lê dados públicos da cadeia. Não estão envolvidas chaves, frases-semente ou assinaturas, e nada pode ser gasto.
+        keyless_title: Apenas leitura, sem necessidade de chaves
+        save: Guardar
+        sync_start_date_hint: As transferências anteriores a esta data são ignoradas. Deixe em branco para importar tudo o que o explorador reportar.
+        sync_start_date_label: Ignorar transferências anteriores a

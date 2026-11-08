@@ -1,0 +1,10 @@
+---
+zh-TW:
+  settings:
+    providers:
+      taglines:
+        akahu: 透過 Akahu 同步紐西蘭的金融機構。
+      akahu_panel:
+        step_1_html: 前往 %{link} 並建立一個個人應用程式。
+        step_2: 複製您的 app token 與 user token。
+        step_3: 將 Token 貼到下方並儲存，然後連結您已同步的帳戶。

@@ -1,0 +1,17 @@
+---
+zh-TW:
+  settings:
+    providers:
+      taglines:
+        lunchflow: 連結來自 40 多個國家（英國、歐盟、美國等）的 2 萬多家銀行！
+      lunchflow_panel:
+        step_1_html: 前往 %{link} 並建立一組 API 金鑰。
+        step_2: 將您的金鑰貼到下方並連線。
+        step_3: 接著前往「帳戶」連結您已同步的帳戶。
+        api_key_label: API 金鑰
+        api_key_placeholder_new: 在此貼上 API 金鑰
+        api_key_placeholder_update: 輸入新的 API 金鑰以更新
+        base_url_label: Base URL（選填）
+        base_url_placeholder: https://lunchflow.app/api/v1（預設）
+        save_and_connect: 儲存並連線
+        update_connection: 更新連線

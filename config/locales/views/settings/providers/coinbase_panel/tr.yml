@@ -1,0 +1,25 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        coinbase: Coinbase kripto varlıklarınızı içe aktarın ve performansı takip
+          edin.
+      coinbase_panel:
+        api_key_label: API Anahtarı
+        api_key_placeholder: Coinbase API anahtarınızı girin
+        api_secret_label: API Gizli Anahtarı
+        api_secret_placeholder: Coinbase API gizli anahtarınızı girin
+        connect_button: Coinbase'e Bağlan
+        disconnect: Bağlantıyı kes
+        disconnect_confirm: Bu Coinbase bağlantısını kesmek istediğinizden emin misiniz?
+          Senkronize hesaplarınız manuel hesaplara dönüşecektir.
+        setup_instructions: 'Coinbase''i bağlamak için:'
+        step1_html: <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase
+          API Ayarları</a> sayfasına gidin
+        step2: Salt okunur izinlerle (hesapları görüntüleme, işlemleri görüntüleme)
+          yeni bir API anahtarı oluşturun
+        step3: API anahtarınızı ve API gizli anahtarınızı kopyalayıp aşağıya yapıştırın
+        sync: Senkronize et
+        syncing: Senkronize ediliyor...

@@ -1,0 +1,28 @@
+---
+pt-PT:
+  settings:
+    providers:
+      taglines:
+        binance: Sincronize os seus saldos à vista Binance utilizando uma chave de API apenas de leitura.
+      binance_panel:
+        setup_instructions: "Para ligar a Binance, crie uma chave de API apenas de leitura:"
+        step1_html: 'Aceda a <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestão de API Binance</a>'
+        step2: "Crie uma nova chave de API apenas com a permissão Ativar Leitura"
+        step3: "Cole abaixo a sua Chave de API e Segredo"
+        no_withdraw_title: "Apenas chave de leitura"
+        no_withdraw_body: "Não ative as permissões de levantamento ao criar a sua chave de API Binance. O Sure precisa apenas de acesso de leitura."
+        ip_hint_title: "Lista de permissões de IP necessária"
+        ip_hint_body: "Adicione o IP de saída do servidor da aplicação à lista de permissões da Chave de API Binance:"
+        ip_hint_contact_admin: "Contacte o seu administrador para obter o endereço IP de saída do servidor da aplicação."
+        api_key_label: Chave de API
+        api_key_placeholder: Cole a sua Chave de API Binance
+        api_secret_label: Segredo de API
+        api_secret_placeholder: Cole o seu Segredo de API Binance
+        connect_button: Ligar Binance
+        syncing: A sincronizar...
+        sync: Sincronizar
+        historical_import: "Definições de Importação Histórica"
+        sync_start_date_label: "Importar dados desde"
+        sync_start_date_help: "Selecione até que ponto no passado pretende obter as negociações históricas."
+        disconnect: Desligar
+        disconnect_confirm: "Tem a certeza de que pretende desligar a Binance?"

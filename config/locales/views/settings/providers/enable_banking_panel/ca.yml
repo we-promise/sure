@@ -1,0 +1,40 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        enable_banking: Sincronitza comptes bancaris europeus mitjançant l'open banking
+          PSD2.
+      enable_banking_panel:
+        add_connection: Afegeix connexió
+        application_id_label: ID d'aplicació
+        application_id_placeholder_new: Introdueix l'ID d'aplicació
+        application_id_placeholder_update: Introdueix el nou ID per actualitzar
+        callback_url_instruction: Per a l'URL de retorn de trucada, fes servir %{callback_url}.
+        client_certificate_label: Certificat de client (amb clau privada)
+        keep_client_certificate_hint: "Deixa-ho en blanc per mantenir el certificat actual"
+        config_locked_message: Desconnecta tots els bancs vinculats abans de canviar
+          aquestes credencials.
+        config_locked_title: Configuració bloquejada
+        configured: Configurat
+        connect_bank: Connecta banc
+        connected_bank: Banc connectat
+        connection: Connexió
+        connection_error: Error de connexió
+        country_label: País
+        ready_to_link: Llest per enllaçar comptes
+        reconnect: Reconnecta
+        remove: Elimina
+        remove_confirm: Segur que vols eliminar aquesta connexió?
+        save_and_connect: Desa i connecta
+        select_country: Selecciona país...
+        session_expired_reconnect: Sessió expirada — reconnecta
+        session_expires: 'La sessió expira: %{date}'
+        step_1_html: Ves a %{link} i obtén les teves credencials de desenvolupador.
+        step_2: Tria el teu país i enganxa l'ID d'aplicació + certificat de client
+          a sota.
+        step_3: Desa, després utilitza Afegeix connexió per enllaçar el teu banc.
+        sync: Sincronitza
+        syncing: Sincronitzant
+        unknown: Desconegut
+        update_connection: Actualitza connexió

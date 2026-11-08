@@ -1,0 +1,37 @@
+---
+zh-TW:
+  settings:
+    providers:
+      taglines:
+        enable_banking: 透過 PSD2 開放銀行同步歐洲的銀行帳戶。
+      enable_banking_panel:
+        callback_url_instruction: 回呼網址請使用 %{callback_url}。
+        connection_error: 連線錯誤
+        step_1_html: 前往 %{link} 取得您的開發者憑證。
+        step_2: 選擇您的國家，並將 Application ID 與 Client Certificate 貼到下方。
+        step_3: 儲存後，用「新增連線」連結您的銀行。
+        config_locked_title: 設定已鎖定
+        config_locked_message: 變更這些憑證前，請先中斷所有已連結的銀行。
+        application_id_label: Application ID
+        application_id_placeholder_new: 輸入 Application ID
+        application_id_placeholder_update: 輸入新的 ID 以更新
+        client_certificate_label: Client Certificate（含私密金鑰）
+        keep_client_certificate_hint: "留空以保留目前的憑證"
+        save_and_connect: 儲存並連線
+        update_connection: 更新連線
+        connected_bank: 已連結的銀行
+        session_expires: 工作階段到期時間：%{date}
+        unknown: 未知
+        connection: 連線
+        session_expired_reconnect: 工作階段已過期 - 請重新連線
+        configured: 已設定
+        ready_to_link: 可以開始連結帳戶了
+        sync: 同步
+        reconnect: 重新連線
+        connect_bank: 連結銀行
+        remove: 移除
+        remove_confirm: 確定要移除這個連線嗎？
+        add_connection: 新增連線
+        syncing: 正在同步
+        select_country: 選擇國家...
+        country_label: 國家/地區

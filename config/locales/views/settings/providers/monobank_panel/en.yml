@@ -1,0 +1,10 @@
+---
+en:
+  settings:
+    providers:
+      taglines:
+        monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
+      monobank_panel:
+        step_1_html: "Go to %{link}, sign in with the Monobank app and generate a personal token."
+        step_2: "Copy the token — it is shown only once."
+        step_3: "Paste the token below, save, then link the cards and jars you want to track."

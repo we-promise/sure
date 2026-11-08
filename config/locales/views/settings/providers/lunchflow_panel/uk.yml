@@ -1,0 +1,17 @@
+---
+uk:
+  settings:
+    providers:
+      taglines:
+        lunchflow: Підключайте 20 тис.+ банків з 40+ країн (Великобританія, ЄС, США та інші!)
+      lunchflow_panel:
+        step_1_html: "Перейдіть до %{link} і створіть ключ API."
+        step_2: "Вставте свій ключ нижче та підключіться."
+        step_3: "Потім перейдіть до розділу «Рахунки», щоб пов'язати свої синхронізовані рахунки."
+        api_key_label: "Ключ API"
+        api_key_placeholder_new: "Вставте ключ API тут"
+        api_key_placeholder_update: "Введіть новий ключ API для оновлення"
+        base_url_label: "Базова URL-адреса (необов'язково)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (за замовчуванням)"
+        save_and_connect: "Зберегти та підключити"
+        update_connection: "Оновити з'єднання"

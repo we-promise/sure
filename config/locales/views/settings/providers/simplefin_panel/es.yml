@@ -1,0 +1,13 @@
+---
+es:
+  settings:
+    providers:
+      taglines:
+        simplefin: Conecta cuentas bancarias de EE. UU. mediante el protocolo abierto SimpleFIN.
+      simplefin_panel:
+        step_1_html: Ve a %{link} para obtener un token de configuración de un solo uso.
+        step_2: Pega el token abajo y conecta.
+        step_3: Después ve a Cuentas para vincular tus cuentas sincronizadas.
+        setup_token_label: Token de configuración
+        setup_token_placeholder: Pega el token de configuración de SimpleFIN
+        save_and_connect: Guardar y conectar

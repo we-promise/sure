@@ -1,0 +1,8 @@
+---
+pl:
+  settings:
+    providers:
+      up_panel:
+        step_1_html: Przejdź do %{link} i wygeneruj osobisty token dostępu.
+        step_2: Skopiuj swój osobisty token dostępu.
+        step_3: Wklej token poniżej, zapisz, a następnie połącz zsynchronizowane konta.

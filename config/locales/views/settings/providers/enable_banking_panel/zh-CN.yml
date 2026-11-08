@@ -1,0 +1,37 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        enable_banking: 通过 PSD2 开放银行连接欧洲银行账户。
+      enable_banking_panel:
+        callback_url_instruction: 回调 URL 请使用 %{callback_url}。
+        connection_error: 连接错误
+        step_1_html: 前往 %{link} 并获取您的开发者凭据。
+        step_2: 选择您的国家/地区，并将 Application ID + Client Certificate 粘贴到下方。
+        step_3: 保存后使用“添加连接”链接您的银行。
+        config_locked_title: 配置已锁定
+        config_locked_message: 在更改这些凭据之前，请先断开所有已连接的银行。
+        application_id_label: Application ID
+        application_id_placeholder_new: 输入 application ID
+        application_id_placeholder_update: 输入新 ID 以更新
+        client_certificate_label: Client Certificate（包含 Private Key）
+        keep_client_certificate_hint: "留空以保留当前证书"
+        save_and_connect: 保存并连接
+        update_connection: 更新连接
+        connected_bank: 已连接的银行
+        session_expires: 会话过期时间：%{date}
+        unknown: 未知
+        connection: 连接
+        session_expired_reconnect: 会话已过期 - 重新连接
+        configured: 已配置
+        ready_to_link: 准备链接账户
+        sync: 同步
+        reconnect: 重新连接
+        connect_bank: 连接银行
+        remove: 移除
+        remove_confirm: 确定要移除此连接吗？
+        add_connection: 添加连接
+        syncing: 正在同步
+        select_country: 选择国家/地区...
+        country_label: 国家/地区

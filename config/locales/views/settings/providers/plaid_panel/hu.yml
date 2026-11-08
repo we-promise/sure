@@ -1,0 +1,10 @@
+---
+hu:
+  settings:
+    providers:
+      taglines:
+        plaid: Ezernyi US pénzintézet csatlakoztatása Plaid-en keresztül.
+      plaid_panel:
+        step_1_html: "Nyisd meg a(z) %{link} oldalt, és másold ki az ügyfél-azonosítódat és titkos kulcsodat."
+        step_2: "Válassz környezetet. Teszteléshez sandbox, éles számlákhoz production."
+        step_3: "Illeszd be a hitelesítő adataidat alább és csatlakozz."

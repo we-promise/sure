@@ -1,0 +1,13 @@
+---
+it:
+  settings:
+    providers:
+      taglines:
+        simplefin: Connetti conti bancari USA tramite il protocollo aperto SimpleFIN.
+      simplefin_panel:
+        step_1_html: "Vai su %{link} per un token di configurazione una tantum."
+        step_2: "Incolla il token qui sotto e connetti."
+        step_3: "Poi vai su Conti per collegare i tuoi conti sincronizzati."
+        setup_token_label: "Token di configurazione"
+        setup_token_placeholder: "Incolla token di configurazione SimpleFIN"
+        save_and_connect: "Salva e connetti"

@@ -1,0 +1,11 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        plaid: Connecta milers d'entitats financeres dels EUA mitjançant Plaid.
+      plaid_panel:
+        step_1_html: Obre el %{link} i copia el teu Client ID i Secret Key.
+        step_2: Tria un entorn. Fes servir sandbox per a proves i production per a
+          comptes reals.
+        step_3: Enganxa les teves credencials a sota i connecta.

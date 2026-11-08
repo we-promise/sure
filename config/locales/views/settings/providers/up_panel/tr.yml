@@ -1,0 +1,9 @@
+---
+tr:
+  settings:
+    providers:
+      up_panel:
+        step_1_html: "%{link} adresine gidin ve kişisel bir erişim token'ı oluşturun."
+        step_2: Kişisel erişim token'ınızı kopyalayın.
+        step_3: Token'ı aşağıya yapıştırın, kaydedin, ardından senkronize hesaplarınızı
+          bağlayın.

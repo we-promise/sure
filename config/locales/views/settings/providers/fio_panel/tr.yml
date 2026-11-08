@@ -1,0 +1,10 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        fio: Bir Fio banka hesabını salt okunur bir API token ile senkronize edin.
+      fio_panel:
+        step_1_html: '%{link} internet bankacılığına giriş yapın ve Settings → API bölümünü açın.'
+        step_2: Salt okunur erişimli bir token oluşturun ("Sledování účtu"). Bu işlem güçlü kimlik doğrulama gerektirir ve token en fazla 180 gün geçerlidir.
+        step_3: Token'ı aşağıya yapıştırıp kaydedin. Bir token yalnızca bir hesaba erişir; bu nedenle her Fio hesabı için ayrı bir bağlantı ekleyin.

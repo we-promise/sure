@@ -1,0 +1,37 @@
+---
+hu:
+  settings:
+    providers:
+      taglines:
+        enable_banking: Európai bankszámlák szinkronizálása PSD2 open banking révén.
+      enable_banking_panel:
+        callback_url_instruction: "A visszahívási URL-hez használd a következőt: %{callback_url}."
+        connection_error: Kapcsolódási hiba
+        step_1_html: "Menj a(z) %{link} oldalra, és szerezd meg a fejlesztői hitelesítő adataidat."
+        step_2: "Válaszd ki az országodat, és illeszd be az alkalmazásazonosítót és az ügyfél-tanúsítványt alább."
+        step_3: "Mentsd el, majd a Kapcsolat hozzáadása gombbal csatlakoztasd a bankod."
+        config_locked_title: "Konfiguráció zárolva"
+        config_locked_message: "Válassz le minden csatlakoztatott bankot a hitelesítő adatok módosítása előtt."
+        application_id_label: "Alkalmazásazonosító"
+        application_id_placeholder_new: "Add meg az alkalmazásazonosítót"
+        application_id_placeholder_update: "Add meg az új azonosítót a frissítéshez"
+        client_certificate_label: "Ügyfél-tanúsítvány (privát kulccsal)"
+        keep_client_certificate_hint: "Hagyd üresen az aktuális tanúsítvány megtartásához"
+        save_and_connect: "Mentés és csatlakozás"
+        update_connection: "Kapcsolat frissítése"
+        connected_bank: "Csatlakoztatott bank"
+        session_expires: "Munkamenet lejárata: %{date}"
+        unknown: "Ismeretlen"
+        connection: "Kapcsolat"
+        session_expired_reconnect: "Munkamenet lejárt – csatlakozz újra"
+        configured: "Konfigurálva"
+        ready_to_link: "Kész számlák összekapcsolására"
+        sync: "Szinkronizálás"
+        reconnect: "Újracsatlakozás"
+        connect_bank: "Bank csatlakoztatása"
+        remove: "Eltávolítás"
+        remove_confirm: "Biztosan el szeretnéd távolítani ezt a kapcsolatot?"
+        add_connection: "Kapcsolat hozzáadása"
+        syncing: "Szinkronizálás"
+        select_country: "Ország kiválasztása..."
+        country_label: "Ország"

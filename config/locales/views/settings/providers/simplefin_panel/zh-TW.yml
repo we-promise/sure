@@ -1,0 +1,13 @@
+---
+zh-TW:
+  settings:
+    providers:
+      taglines:
+        simplefin: 透過開放的 SimpleFIN 協定連結美國銀行帳戶。
+      simplefin_panel:
+        step_1_html: 前往 %{link} 取得一次性的 Setup Token。
+        step_2: 將 Token 貼到下方並連線。
+        step_3: 接著前往「帳戶」連結您已同步的帳戶。
+        setup_token_label: 設定權杖 (Setup Token)
+        setup_token_placeholder: 貼上 SimpleFIN Setup Token
+        save_and_connect: 儲存並連線

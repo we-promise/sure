@@ -1,0 +1,10 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        monobank: Sincronitza targetes i guardioles (jars) de Monobank amb un token API personal.
+      monobank_panel:
+        step_1_html: Ves a %{link}, inicia sessió amb l'aplicació de Monobank i genera un token personal.
+        step_2: 'Copia el token: només es mostra una vegada.'
+        step_3: Enganxa el token a continuació, desa i després enllaça les targetes i guardioles (jars) que vulguis seguir.

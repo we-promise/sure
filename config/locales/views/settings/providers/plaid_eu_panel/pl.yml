@@ -1,0 +1,10 @@
+---
+pl:
+  settings:
+    providers:
+      taglines:
+        plaid_eu: Połącz europejskie instytucje finansowe przez Plaid (PSD2 / otwarta
+          bankowość).
+      plaid_eu_panel:
+        step_1_html: Otwórz %{link} i skopiuj swój europejski Client ID oraz Secret
+          Key.

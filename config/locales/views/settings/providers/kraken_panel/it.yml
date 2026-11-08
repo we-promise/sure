@@ -1,0 +1,28 @@
+---
+it:
+  settings:
+    providers:
+      taglines:
+        kraken: Sincronizza saldi e operazioni spot Kraken usando una chiave API in sola lettura.
+      kraken_panel:
+        step1_html: 'Vai alle <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">impostazioni API Kraken</a>'
+        step2: "Crea una chiave API con solo Query Funds e Query Closed Orders & Trades."
+        step3: "Incolla la chiave API e la chiave privata qui sotto."
+        read_only_title: "Solo sincronizzazione exchange in sola lettura"
+        read_only_body: "Non concedere permessi di trading, annullamento, prelievo, esportazione, ledger, Earn, staking o trasferimento. Sure importa solo saldi, posizioni e operazioni spot."
+        default_connection_name: Kraken
+        add_connection: Aggiungi connessione Kraken
+        update_connection: Aggiorna connessione
+        connection_name_label: Nome connessione
+        connection_name_placeholder: Kraken principale
+        api_key_label: Chiave API
+        api_key_placeholder: Incolla la tua chiave API Kraken
+        keep_api_key_placeholder: Lascia vuoto per mantenere la chiave API esistente
+        api_secret_label: Chiave privata
+        api_secret_placeholder: Incolla la tua chiave privata Kraken
+        keep_api_secret_placeholder: Lascia vuoto per mantenere la chiave privata esistente
+        setup_accounts: Configura conto
+        syncing: Sincronizzazione...
+        sync: Sincronizza
+        disconnect: Disconnetti
+        disconnect_confirm: "Sei sicuro di voler disconnettere %{name}?"

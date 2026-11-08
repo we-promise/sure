@@ -1,0 +1,39 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        enable_banking: PSD2 açık bankacılığı üzerinden Avrupa banka hesaplarınızı
+          senkronize edin.
+      enable_banking_panel:
+        add_connection: Bağlantı Ekle
+        application_id_label: Uygulama ID
+        application_id_placeholder_new: Uygulama ID girin
+        application_id_placeholder_update: Güncellemek için yeni ID girin
+        callback_url_instruction: Geri çağırma URL'si için %{callback_url} kullanın.
+        client_certificate_label: İstemci Sertifikası (Özel Anahtar ile)
+        keep_client_certificate_hint: "Mevcut sertifikayı korumak için boş bırakın"
+        config_locked_message: Bu kimlik bilgilerini değiştirmeden önce bağlı tüm
+          bankaların bağlantısını kesin.
+        config_locked_title: Yapılandırma kilitli
+        configured: Yapılandırıldı
+        connect_bank: Banka bağla
+        connected_bank: Bağlı Banka
+        connection: Bağlantı
+        connection_error: Bağlantı Hatası
+        country_label: Ülke
+        ready_to_link: Hesapları bağlamaya hazır
+        reconnect: Yeniden bağlan
+        remove: Kaldır
+        remove_confirm: Bu bağlantıyı kaldırmak istediğinizden emin misiniz?
+        save_and_connect: Kaydet ve bağlan
+        select_country: Ülke seçin...
+        session_expired_reconnect: Oturum süresi doldu - yeniden bağlan
+        session_expires: 'Oturum sona eriyor: %{date}'
+        step_1_html: "%{link} adresine gidin ve geliştirici kimlik bilgilerinizi alın."
+        step_2: Ülkenizi seçin ve Uygulama ID + İstemci Sertifikasını aşağıya yapıştırın.
+        step_3: Kaydedin, ardından bankanızı bağlamak için Bağlantı Ekle'yi kullanın.
+        sync: Senkronize et
+        syncing: Senkronize ediliyor
+        unknown: Bilinmiyor
+        update_connection: Bağlantıyı güncelle

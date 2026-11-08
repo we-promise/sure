@@ -1,0 +1,10 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        monobank: 使用个人 API 令牌同步乌克兰 Monobank 银行卡和存钱罐。
+      monobank_panel:
+        step_1_html: 前往 %{link}，使用 Monobank 应用程序扫码登录并生成个人令牌。
+        step_2: 复制该令牌 — 它只会显示一次。
+        step_3: 将令牌粘贴在下方并保存，然后关联您要追踪的卡片和存钱罐。

@@ -1,0 +1,13 @@
+---
+fr:
+  settings:
+    providers:
+      taglines:
+        simplefin: Connectez des comptes bancaires américains via le protocole ouvert SimpleFIN.
+      simplefin_panel:
+        save_and_connect: Enregistrer et connecter
+        setup_token_label: Jeton de configuration (Setup Token)
+        setup_token_placeholder: Collez le jeton de configuration SimpleFIN
+        step_1_html: Allez sur %{link} pour obtenir un jeton de configuration à usage unique.
+        step_2: Collez le jeton ci-dessous et connectez-vous.
+        step_3: Ensuite, allez dans Comptes pour lier vos comptes synchronisés.

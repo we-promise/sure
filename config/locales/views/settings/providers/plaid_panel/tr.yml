@@ -1,0 +1,12 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        plaid: Plaid üzerinden binlerce ABD finans kurumunu bağlayın.
+      plaid_panel:
+        step_1_html: "%{link} sayfasını açın ve İstemci ID'nizi ve Gizli Anahtarınızı
+          kopyalayın."
+        step_2: Bir ortam seçin. Test için sandbox, gerçek hesaplar için production
+          kullanın.
+        step_3: Kimlik bilgilerinizi aşağıya yapıştırın ve bağlanın.

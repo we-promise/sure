@@ -1,0 +1,35 @@
+---
+pl:
+  settings:
+    providers:
+      taglines:
+        binance: Synchronizuj swoje salda spot z Binance za pomocą klucza API tylko
+          do odczytu.
+      binance_panel:
+        api_key_label: Klucz API
+        api_key_placeholder: Wklej swój klucz API Binance
+        api_secret_label: Sekret API
+        api_secret_placeholder: Wklej swój sekret API Binance
+        connect_button: Połącz Binance
+        disconnect: Rozłącz
+        disconnect_confirm: Na pewno rozłączyć Binance?
+        historical_import: Ustawienia importu historycznego
+        ip_hint_body: 'Dodaj adres IP wyjściowy serwera aplikacji do białej listy
+          klucza API Binance:'
+        ip_hint_contact_admin: Skontaktuj się z administratorem, aby uzyskać adres
+          IP wyjściowy serwera aplikacji.
+        ip_hint_title: Wymagane dodanie do białej listy IP
+        no_withdraw_body: Nie włączaj uprawnień do wypłat podczas tworzenia klucza
+          API Binance. Sure potrzebuje tylko dostępu do odczytu.
+        no_withdraw_title: Tylko klucz do odczytu
+        setup_instructions: 'Aby połączyć Binance, utwórz klucz API tylko do odczytu:'
+        step1_html: Przejdź do <a href="https://www.binance.com/en/my/settings/api-management"
+          target="_blank" rel="noopener noreferrer" class="underline">Binance API
+          Management</a>
+        step2: Utwórz nowy klucz API z zaznaczonym wyłącznie uprawnieniem odczytu
+          (Enable Reading)
+        step3: Wklej poniżej swój klucz API i sekret
+        sync: Synchronizuj
+        sync_start_date_help: Wybierz, jak daleko wstecz pobrać historyczne transakcje.
+        sync_start_date_label: Importuj dane od
+        syncing: Synchronizowanie...

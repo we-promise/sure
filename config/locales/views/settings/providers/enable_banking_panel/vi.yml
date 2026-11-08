@@ -1,0 +1,37 @@
+---
+vi:
+  settings:
+    providers:
+      taglines:
+        enable_banking: Đồng bộ tài khoản ngân hàng châu Âu qua ngân hàng mở PSD2.
+      enable_banking_panel:
+        callback_url_instruction: "Đối với URL callback, sử dụng %{callback_url}."
+        connection_error: Lỗi kết nối
+        step_1_html: "Vào %{link} và lấy thông tin xác thực nhà phát triển."
+        step_2: "Chọn quốc gia và dán ID ứng dụng + Chứng chỉ khách hàng vào bên dưới."
+        step_3: "Lưu, rồi dùng Thêm kết nối để liên kết ngân hàng."
+        config_locked_title: "Cấu hình đã bị khóa"
+        config_locked_message: "Ngắt kết nối tất cả ngân hàng đã liên kết trước khi thay đổi thông tin xác thực này."
+        application_id_label: "ID ứng dụng"
+        application_id_placeholder_new: "Nhập ID ứng dụng"
+        application_id_placeholder_update: "Nhập ID mới để cập nhật"
+        client_certificate_label: "Chứng chỉ khách hàng (kèm khóa riêng)"
+        keep_client_certificate_hint: "Để trống để giữ chứng chỉ hiện tại"
+        save_and_connect: "Lưu và kết nối"
+        update_connection: "Cập nhật kết nối"
+        connected_bank: "Ngân hàng đã kết nối"
+        session_expires: "Phiên hết hạn: %{date}"
+        unknown: "Không xác định"
+        connection: "Kết nối"
+        session_expired_reconnect: "Phiên hết hạn - kết nối lại"
+        configured: "Đã cấu hình"
+        ready_to_link: "Sẵn sàng liên kết tài khoản"
+        sync: "Đồng bộ"
+        reconnect: "Kết nối lại"
+        connect_bank: "Kết nối ngân hàng"
+        remove: "Xóa"
+        remove_confirm: "Bạn có chắc muốn xóa kết nối này?"
+        add_connection: "Thêm kết nối"
+        syncing: "Đang đồng bộ"
+        select_country: "Chọn quốc gia..."
+        country_label: "Quốc gia"

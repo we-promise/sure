@@ -1,0 +1,10 @@
+---
+en:
+  settings:
+    providers:
+      taglines:
+        plaid: Connect thousands of US financial institutions via Plaid.
+      plaid_panel:
+        step_1_html: "Open the %{link} and copy your Client ID and Secret Key."
+        step_2: "Pick an environment. Use sandbox for testing and production for real accounts."
+        step_3: "Paste your credentials below and connect."

@@ -1,0 +1,33 @@
+---
+en:
+  settings:
+    providers:
+      taglines:
+        trading212: Sync your Trading 212 investment portfolio using a read-only API key.
+      trading212_panel:
+        steps:
+          step_1: Go to Trading 212 → Settings → API (web or mobile app).
+          step_2: Generate a new API key — Trading 212 will show you an API ID and a Secret Key.
+          step_3: Paste both below, select your environment and account currency, then save.
+        api_key_label: API ID
+        api_key_placeholder_new: Paste your Trading 212 API ID
+        api_key_placeholder_existing: Leave blank to keep the current API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Paste your Trading 212 Secret Key
+        api_secret_placeholder_existing: Leave blank to keep the current Secret Key
+        environment_label: Environment
+        environment_live: Live account
+        environment_demo: Demo account
+        currency_label: Account currency
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        sync: Sync
+        syncing: Syncing...
+        disconnect: Disconnect Trading 212 account
+        disconnect_confirm: Disconnect Trading 212?
+        default_account_name: Trading 212 Account
+        add_account: Add another account
+        status_configured_prefix: "Configured. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to manage discovered accounts.
+        not_configured: Not configured.

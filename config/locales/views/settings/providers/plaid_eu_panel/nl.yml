@@ -1,0 +1,8 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        plaid_eu: "Koppel Europese financiële instellingen via Plaid (PSD2 / Open Banking)."
+      plaid_eu_panel:
+        step_1_html: "Open het %{link} en kopieer uw EU Client ID en Secret Key."

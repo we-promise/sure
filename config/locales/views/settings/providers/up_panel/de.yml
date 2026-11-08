@@ -1,0 +1,8 @@
+---
+de:
+  settings:
+    providers:
+      up_panel:
+        step_1_html: Geh zu %{link} und erzeug einen persönlichen Zugriffstoken.
+        step_2: Kopier deinen persönlichen Zugriffstoken.
+        step_3: Füg den Token unten ein, speichere und verknüpf dann deine synchronisierten Konten.

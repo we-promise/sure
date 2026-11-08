@@ -1,0 +1,28 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        coinspot: Sincronitza saldos, valors en AUD, transferències, dipòsits, retirades i historial d'ordres de CoinSpot amb una clau API de només lectura.
+      coinspot_panel:
+        step1_html: Ves a la <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">configuració de l'API de CoinSpot</a>
+        step2: Crea una clau API amb accés de només lectura a saldos i historial.
+        step3: Enganxa la clau API i el secret a continuació.
+        read_only_title: Només sincronització de lectura amb l'exchange
+        read_only_body: No atorguis permisos d'enviament, retirada, trading ni transferència. Sure només importa saldos, valors en AUD, transferències, dipòsits, retirades i l'historial d'ordres executades.
+        default_connection_name: CoinSpot
+        add_connection: Afegeix una connexió de CoinSpot
+        update_connection: Actualitza la connexió
+        connection_name_label: Nom de la connexió
+        connection_name_placeholder: CoinSpot principal
+        api_key_label: Clau API
+        api_key_placeholder: Enganxa la teva clau API de CoinSpot
+        keep_api_key_placeholder: Deixa-ho en blanc per mantenir la clau API existent
+        api_secret_label: Secret de l'API
+        api_secret_placeholder: Enganxa el teu secret de l'API de CoinSpot
+        keep_api_secret_placeholder: Deixa-ho en blanc per mantenir el secret de l'API existent
+        setup_accounts: Configura el compte
+        syncing: Sincronitzant...
+        sync: Sincronitza
+        disconnect: Desconnecta
+        disconnect_confirm: Segur que vols desconnectar %{name}?

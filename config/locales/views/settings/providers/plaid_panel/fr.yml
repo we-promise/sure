@@ -1,0 +1,10 @@
+---
+fr:
+  settings:
+    providers:
+      taglines:
+        plaid: Connectez des milliers d'institutions financières américaines via Plaid.
+      plaid_panel:
+        step_1_html: Ouvrez %{link} et copiez votre Client ID et Secret Key.
+        step_2: Choisissez un environnement. Utilisez sandbox pour les tests et production pour les comptes réels.
+        step_3: Collez vos identifiants ci-dessous et connectez-vous.

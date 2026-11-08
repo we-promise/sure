@@ -1,0 +1,32 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        kraken: Sincronitza saldos i operacions spot de Kraken utilitzant una clau
+          API de només lectura.
+      kraken_panel:
+        add_connection: Afegeix connexió Kraken
+        api_key_label: Clau API
+        api_key_placeholder: Enganxa la teva clau API de Kraken
+        api_secret_label: Clau privada
+        api_secret_placeholder: Enganxa la teva clau privada de Kraken
+        connection_name_label: Nom de la connexió
+        connection_name_placeholder: Kraken principal
+        default_connection_name: Kraken
+        disconnect: Desconnecta
+        disconnect_confirm: Segur que vols desconnectar %{name}?
+        keep_api_key_placeholder: Deixa en blanc per mantenir la clau API existent
+        keep_api_secret_placeholder: Deixa en blanc per mantenir la clau privada existent
+        read_only_body: No atorguis permisos de trading, cancel·lació, retirada, exportació,
+          llibre major, Earn, staking o transferència. Sure només importa saldos,
+          posicions i operacions spot.
+        read_only_title: Sincronització només de lectura amb l'exchange
+        setup_accounts: Configura compte
+        step1_html: Ves a <a href="https://pro.kraken.com/app/settings/api" target="_blank"
+          rel="noopener noreferrer" class="underline">Kraken API settings</a>
+        step2: Crea una clau API només amb Query Funds i Query Closed Orders & Trades.
+        step3: Enganxa la clau API i la clau privada a sota.
+        sync: Sincronitza
+        syncing: Sincronitzant...
+        update_connection: Actualitza connexió

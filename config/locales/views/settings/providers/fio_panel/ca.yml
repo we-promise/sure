@@ -1,0 +1,10 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        fio: Sincronitza un compte de Fio banka amb un token API de només lectura.
+      fio_panel:
+        step_1_html: Inicia sessió a la banca en línia de %{link} i obre Settings → API.
+        step_2: Crea un token amb accés de només lectura ("Sledování účtu"). Requereix autenticació reforçada i és vàlid fins a 180 dies.
+        step_3: Enganxa el token a continuació i desa. Cada token dona accés a un sol compte, així que afegeix una connexió per cada compte de Fio.

@@ -1,0 +1,33 @@
+---
+zh-TW:
+  settings:
+    providers:
+      taglines:
+        trading212: 使用唯讀 API 金鑰同步您的 Trading 212 投資組合。
+      trading212_panel:
+        steps:
+          step_1: 前往 Trading 212 → Settings → API（網頁版或行動應用程式）。
+          step_2: 產生新的 API 金鑰 — Trading 212 會顯示 API ID 與 Secret Key。
+          step_3: 將兩者貼到下方，選擇環境與帳戶幣別，然後儲存。
+        api_key_label: API ID
+        api_key_placeholder_new: 貼上您的 Trading 212 API ID
+        api_key_placeholder_existing: 留白則沿用目前的 API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: 貼上您的 Trading 212 Secret Key
+        api_secret_placeholder_existing: 留白則沿用目前的 Secret Key
+        environment_label: 環境
+        environment_live: 正式帳戶
+        environment_demo: 模擬帳戶
+        currency_label: 帳戶幣別
+        save_configuration: 儲存設定
+        update_configuration: 更新設定
+        sync: 同步
+        syncing: 同步中...
+        disconnect: 中斷 Trading 212 帳戶連線
+        disconnect_confirm: 要中斷 Trading 212 連線嗎？
+        default_account_name: Trading 212 帳戶
+        add_account: 新增其他帳戶
+        status_configured_prefix: 已設定。請前往
+        accounts_tab: 帳戶管理
+        status_configured_suffix: 分頁管理已偵測到的帳戶。
+        not_configured: 尚未設定。

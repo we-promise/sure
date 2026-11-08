@@ -1,0 +1,13 @@
+---
+pl:
+  settings:
+    providers:
+      taglines:
+        monobank: Synchronizuj ukraińskie karty i skarbonki Monobank za pomocą osobistego
+          tokenu API.
+      monobank_panel:
+        step_1_html: Przejdź do %{link}, zaloguj się aplikacją Monobank i wygeneruj
+          token osobisty.
+        step_2: Skopiuj token — jest pokazywany tylko raz.
+        step_3: Wklej token poniżej, zapisz, a następnie połącz karty i skarbonki,
+          które chcesz śledzić.

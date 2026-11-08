@@ -1,0 +1,18 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        lunchflow: Connecta més de 20.000 bancs de més de 40 països (Regne Unit, UE,
+          EUA i més!).
+      lunchflow_panel:
+        api_key_label: Clau API
+        api_key_placeholder_new: Enganxa la clau API aquí
+        api_key_placeholder_update: Introdueix la nova clau API per actualitzar
+        base_url_label: URL base (opcional)
+        base_url_placeholder: https://lunchflow.app/api/v1 (per defecte)
+        save_and_connect: Desa i connecta
+        step_1_html: Ves a %{link} i crea una clau API.
+        step_2: Enganxa la teva clau a sota i connecta.
+        step_3: Després ves a Comptes per enllaçar els teus comptes sincronitzats.
+        update_connection: Actualitza connexió

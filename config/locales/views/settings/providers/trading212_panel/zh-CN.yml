@@ -1,0 +1,33 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        trading212: 使用只读 API 密钥同步您的 Trading 212 投资组合。
+      trading212_panel:
+        accounts_tab: 账户管理
+        add_account: 添加其他账户
+        api_key_label: API ID
+        api_key_placeholder_existing: 留空以保留当前 API ID
+        api_key_placeholder_new: 粘贴您的 Trading 212 API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_existing: 留空以保留当前 Secret Key
+        api_secret_placeholder_new: 粘贴您的 Trading 212 Secret Key
+        currency_label: 账户货币
+        default_account_name: Trading 212 账户
+        disconnect: 断开 Trading 212 账户连接
+        disconnect_confirm: 确定要断开 Trading 212 吗？
+        environment_demo: 模拟账户
+        environment_label: 环境
+        environment_live: 真实账户
+        not_configured: 尚未配置。
+        save_configuration: 保存配置
+        status_configured_prefix: 已配置。请访问
+        status_configured_suffix: 标签页以管理已发现的账户。
+        steps:
+          step_1: 前往 Trading 212 → 设置 → API（网页端或移动应用程序）。
+          step_2: 生成新的 API 密钥 — Trading 212 将向您显示 API ID 和 Secret Key。
+          step_3: 将两者粘贴至下方，选择您的环境和账户货币，然后保存。
+        sync: 同步
+        syncing: 同步中...
+        update_configuration: 更新配置

@@ -1,0 +1,10 @@
+---
+de:
+  settings:
+    providers:
+      taglines:
+        akahu: Synchronisiert neuseeländische Banken über Akahu.
+      akahu_panel:
+        step_1_html: Geh zu %{link} und leg eine persönliche App an.
+        step_2: Kopier deinen App-Token und deinen User-Token.
+        step_3: Füg die Tokens unten ein, speichere und verknüpf dann deine synchronisierten Konten.

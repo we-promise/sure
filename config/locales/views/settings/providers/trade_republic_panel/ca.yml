@@ -1,0 +1,66 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        trade_republic: Sincronitza el teu compte d'inversió de Trade Republic mitjançant un inici de sessió web segur de només lectura.
+      trade_republic_panel:
+        encryption_warning:
+          title: El xifratge no està configurat
+          message: Les credencials i les dades de sessió de Trade Republic no es poden desar de manera segura fins que es configuri Active Record Encryption.
+        steps:
+          step_1: Introdueix el número de telèfon i el PIN que fas servir a l'aplicació de Trade Republic i desa.
+          step_2: Introdueix el codi de la teva aplicació d'autenticació quan se't demani.
+          step_3: Aprova l'inici de sessió a l'aplicació de Trade Republic quan se't demani.
+        phone_number_label: Número de telèfon
+        phone_number_placeholder_new: +49 170 1234567
+        phone_number_placeholder_existing: Deixa-ho en blanc per mantenir el número de telèfon actual
+        pin_label: PIN
+        pin_placeholder_new: El PIN de l'aplicació de Trade Republic
+        pin_placeholder_existing: Deixa-ho en blanc per mantenir el PIN actual
+        currency_label: Divisa del compte
+        connect: Inicia sessió
+        confirm_login: Comprova l'inici de sessió
+        complete_login: Continua
+        authenticator_code_label: Codi d'autenticació (si se't demana)
+        authenticator_code_placeholder: Codi de 6 dígits
+        push_login_notice: Aprova ara l'inici de sessió a l'aplicació de Trade Republic. Sure ho comprova automàticament en segon pla. També pots comprovar-ne l'estat tu mateix.
+        check_login_status: Comprova l'estat ara
+        authenticator_code_notice: Introdueix el codi de la teva aplicació d'autenticació.
+        approval_pending: Inici de sessió en curs. Aprova'l a l'aplicació de Trade Republic; Sure ho comprova automàticament.
+        awaiting_confirmation: L'aprovació a l'aplicació de Trade Republic està pendent.
+        awaiting_authenticator_code: Cal el codi d'autenticació.
+        login_expired: La sol·licitud d'aprovació ha caducat.
+        restart_login: Torna a iniciar sessió
+        connection_success:
+          title: Trade Republic s'ha connectat correctament
+          message: La teva connexió de Trade Republic està a punt.
+          description: Sure està sincronitzant les teves dades de Trade Republic en segon pla.
+          close: Fet
+        qr_login: Inicia sessió amb codi QR
+        qr_cancel: Cancel·la l'inici de sessió amb QR
+        qr_back_to_credentials: Torna al número de telèfon i PIN
+        qr_loading: Preparant el codi QR…
+        qr_instruction: Escaneja el codi QR amb la càmera del telèfon i després aprova l'inici de sessió a l'aplicació de Trade Republic.
+        qr_success: Inici de sessió aprovat. Sure està actualitzant la pàgina del proveïdor.
+        qr_error: No s'ha pogut iniciar la sessió amb QR. Torna-ho a provar.
+        requires_update: "Torna a iniciar sessió per reprendre la sincronització."
+        session_expires_in: "La sessió caduca d'aquí a %{time} (%{at})."
+        add_account: "Afegeix una altra connexió"
+        save_configuration: Desa i inicia sessió
+        update_configuration: Actualitza la configuració
+        sync: Sincronitza
+        syncing: "Sincronitzant..."
+        disconnect: Desconnecta Trade Republic
+        disconnect_confirm: Vols desconnectar Trade Republic? Els comptes sincronitzats passaran a ser comptes manuals.
+        disconnect_confirm_with_identifier: "Vols desconnectar la connexió de Trade Republic acabada en %{last4}? Els comptes sincronitzats passaran a ser comptes manuals."
+        identifier_phone: Telèfon
+        identifier_account: Compte
+        status_configured_prefix: Connectat. Ves a la pestanya
+        accounts_tab: Comptes
+        setup_accounts: Configura els comptes
+        accounts_discovered:
+          one: S'ha descobert %{count} compte de Trade Republic.
+          other: S'han descobert %{count} comptes de Trade Republic.
+        status_configured_suffix: per gestionar els comptes descoberts.
+        not_configured: No configurat.

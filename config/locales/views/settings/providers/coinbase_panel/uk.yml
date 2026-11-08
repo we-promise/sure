@@ -1,0 +1,20 @@
+---
+uk:
+  settings:
+    providers:
+      taglines:
+        coinbase: Імпортуйте свої криптовалютні активи Coinbase та відстежуйте ефективність.
+      coinbase_panel:
+        setup_instructions: "Щоб підключити Coinbase:"
+        step1_html: Перейдіть до <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Налаштування API Coinbase</a>
+        step2: Створіть новий ключ API з правами лише для читання (перегляд рахунків, перегляд транзакцій)
+        step3: Скопіюйте свій ключ API та секрет API та вставте їх нижче
+        api_key_label: Ключ API
+        api_key_placeholder: Введіть свій ключ API Coinbase
+        api_secret_label: Секрет API
+        api_secret_placeholder: Введіть свій секрет API Coinbase
+        connect_button: Підключити Coinbase
+        syncing: Синхронізація...
+        sync: Синхронізувати
+        disconnect: Відключити
+        disconnect_confirm: Ви впевнені, що хочете відключити це з'єднання Coinbase? Ваші синхронізовані рахунки стануть ручними.

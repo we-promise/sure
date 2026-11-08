@@ -1,0 +1,61 @@
+---
+it:
+  settings:
+    providers:
+      taglines:
+        ibkr: Sincronizza conti di investimento Interactive Brokers tramite importazioni Flex Query.
+      ibkr_panel:
+        steps:
+          step_1: 'Nel tuo portale clienti IBKR, vai su "Performance e rapporti" > "Flex Queries".'
+          step_2: 'Clicca sull''icona "+" nella sezione "Activity Flex Query" per creare una nuova query.'
+          step_3: 'Assegna un nome alla query (es. "Sure Sync"), poi esamina i dettagli della Flex Query qui sotto e abilita le sezioni, i campi e le opzioni di configurazione elencati.'
+          step_4: 'Salva la query, annota il tuo "Query ID", poi usa l''icona ingranaggio nella sezione "Flex Web Service Configuration" per generare un token di accesso.'
+          step_5: "Incolla il tuo Query ID e Token qui sotto, salva la configurazione, poi vai su Conti per collegare i conti IBKR scoperti."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Sezioni, campi e configurazione
+          summary: Espandi per vedere le esatte sezioni, campi e impostazioni che la tua IBKR Activity Flex Query deve includere.
+          sections_heading: Abilita queste sezioni e campi
+          configuration_heading: Imposta queste opzioni di query
+        sections:
+          account_information: "Informazioni conto: Account ID, Valuta"
+          cash_report: "Rapporto liquidità:"
+          cash_report_options: "Opzioni: Nessuna"
+          cash_report_fields: "Campi: Valuta, Liquidità finale"
+          cash_transactions: "Transazioni liquidità:"
+          cash_transactions_options: "Opzioni: Dividendi, Depositi e prelievi, Dettaglio"
+          cash_transactions_fields: "Campi: Importo, Conid, Valuta, Tasso FX alla base, Data rapporto, ID transazione, Tipo"
+          change_in_position_value_summary: "Riepilogo variazione valore posizione: Valuta, Valore fine periodo"
+          net_asset_value: "Valore patrimoniale netto (NAV) in base:"
+          net_asset_value_options: "Opzioni: Nessuna"
+          net_asset_value_fields: "Campi: Valuta, Data rapporto, Totale"
+          open_positions: "Posizioni aperte:"
+          open_positions_options: "Opzioni: Riepilogo"
+          open_positions_fields: "Campi: Classe asset, Conid, Prezzo base costo, Valuta, Tasso FX alla base, Prezzo mark, Quantità, Data rapporto, ID titolo, Tipo ID titolo, Lato, Simbolo"
+          trades: "Operazioni:"
+          trades_options: "Opzioni: Esecuzione"
+          trades_fields: "Campi: Classe asset, Acquisto/Vendita, Conid, Valuta, Tasso FX alla base, Commissione IB, Valuta commissione IB, Quantità, Simbolo, Data operazione, ID operazione, Prezzo operazione, ID transazione"
+        configuration:
+          models: "Modelli: Opzionale"
+          format: "Formato: XML"
+          period: "Periodo: Ultimi 365 giorni di calendario"
+          date_format: "Formato data: yyyy-MM-dd"
+          time_format: "Formato ora: HH:mm:ss"
+          date_time_separator: "Separatore data/ora: ; (punto e virgola)"
+          profit_and_loss: "Profitti e perdite: Predefinito"
+          all_other_options: 'Tutte le altre opzioni: "No"'
+        report_window_note: "I rapporti IBKR Flex sono limitati alla finestra di query configurata in IBKR. Sure importerà le posizioni attuali complete più fino agli ultimi 365 giorni di attività da questo rapporto."
+        sync: Sincronizza
+        disconnect_confirm: Disconnettere Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Inserisci il tuo IBKR Flex Query ID
+        query_id_placeholder_existing: Lascia vuoto per mantenere il Query ID attuale
+        token_label: Token
+        token_placeholder_new: Inserisci il tuo IBKR Flex Web Service Token
+        token_placeholder_existing: Lascia vuoto per mantenere il Token attuale
+        save_configuration: Salva configurazione
+        update_configuration: Aggiorna configurazione
+        status_configured_prefix: "%{summary}. Visita la scheda"
+        accounts_tab: Conti
+        status_configured_suffix: per gestire i conti scoperti.
+        not_configured: Non configurato.

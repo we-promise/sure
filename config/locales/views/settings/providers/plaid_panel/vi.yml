@@ -1,0 +1,10 @@
+---
+vi:
+  settings:
+    providers:
+      taglines:
+        plaid: Kết nối hàng ngàn tổ chức tài chính Mỹ qua Plaid.
+      plaid_panel:
+        step_1_html: "Mở %{link} và sao chép ID khách hàng và Khóa bí mật."
+        step_2: "Chọn môi trường. Dùng sandbox để kiểm tra và production cho tài khoản thực."
+        step_3: "Dán thông tin xác thực vào bên dưới và kết nối."

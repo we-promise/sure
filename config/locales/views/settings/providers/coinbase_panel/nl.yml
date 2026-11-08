@@ -1,0 +1,20 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        coinbase: "Importeer uw Coinbase-cryptoposities en volg het rendement."
+      coinbase_panel:
+        setup_instructions: "Coinbase koppelen:"
+        step1_html: "Ga naar <a href=\"https://portal.cdp.coinbase.com/projects/api-keys\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-primary underline\">Coinbase API Settings</a>"
+        step2: "Maak een nieuwe API-sleutel aan met alleen-lezenrechten (accounts bekijken, transacties bekijken)"
+        step3: "Kopieer uw API-sleutel en API-geheim en plak ze hieronder"
+        api_key_label: "API-sleutel"
+        api_key_placeholder: "Voer uw Coinbase-API-sleutel in"
+        api_secret_label: "API-geheim"
+        api_secret_placeholder: "Voer uw Coinbase-API-geheim in"
+        connect_button: "Coinbase koppelen"
+        syncing: "Synchroniseren..."
+        sync: "Synchroniseren"
+        disconnect: "Loskoppelen"
+        disconnect_confirm: "Weet u zeker dat u deze Coinbase-koppeling wilt loskoppelen? Uw gesynchroniseerde accounts worden handmatige accounts."

@@ -1,0 +1,13 @@
+---
+de:
+  settings:
+    providers:
+      taglines:
+        simplefin: Verbindet US-Bankkonten über das offene SimpleFIN-Protokoll.
+      simplefin_panel:
+        save_and_connect: Speichern und verbinden
+        setup_token_label: Einrichtungstoken
+        setup_token_placeholder: SimpleFIN-Einrichtungstoken einfügen
+        step_1_html: Geh zu %{link} und hol dir einen einmaligen Einrichtungstoken.
+        step_2: Füg den Token unten ein und verbinde.
+        step_3: Geh danach zu den Konten, um deine synchronisierten Konten zu verknüpfen.

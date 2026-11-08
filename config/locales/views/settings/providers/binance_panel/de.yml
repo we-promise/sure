@@ -1,0 +1,28 @@
+---
+de:
+  settings:
+    providers:
+      taglines:
+        binance: Synchronisiert deine Spot-Guthaben bei Binance über einen API-Key mit Lesezugriff.
+      binance_panel:
+        api_key_label: API-Key
+        api_key_placeholder: Binance-API-Key einfügen
+        api_secret_label: API-Secret
+        api_secret_placeholder: Binance-API-Secret einfügen
+        connect_button: Binance verbinden
+        disconnect: Trennen
+        disconnect_confirm: Verbindung zu Binance wirklich trennen?
+        historical_import: Einstellungen für den Verlaufsimport
+        ip_hint_body: 'Trag die ausgehende IP-Adresse des App-Servers in die Whitelist des Binance-API-Keys ein:'
+        ip_hint_contact_admin: Frag deine Administration nach der ausgehenden IP-Adresse des App-Servers.
+        ip_hint_title: IP-Freigabe erforderlich
+        no_withdraw_body: Erlaube beim Anlegen des Binance-API-Keys keine Auszahlungen. Sure braucht nur Lesezugriff.
+        no_withdraw_title: Nur Lesezugriff
+        setup_instructions: 'Erstelle einen API-Key mit Lesezugriff, um Binance zu verbinden:'
+        step1_html: Öffne die <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance-API-Verwaltung</a>
+        step2: Lege einen neuen API-Key an, der ausschließlich die Leseberechtigung hat
+        step3: Füge API-Key und Secret unten ein
+        sync: Sync
+        sync_start_date_help: Wähle, wie weit zurück Trades geholt werden sollen.
+        sync_start_date_label: Daten importieren ab
+        syncing: Sync läuft…

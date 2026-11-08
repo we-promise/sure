@@ -1,0 +1,10 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        up: "Synchroniseer Australische Up-bankrekeningen met een persoonlijk toegangstoken."
+      up_panel:
+        step_1_html: "Ga naar %{link} en genereer een persoonlijk toegangstoken."
+        step_2: "Kopieer uw persoonlijke toegangstoken."
+        step_3: "Plak het token hieronder, sla op en koppel daarna uw gesynchroniseerde accounts."

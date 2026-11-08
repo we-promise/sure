@@ -1,0 +1,28 @@
+---
+de:
+  settings:
+    providers:
+      taglines:
+        kraken: Synchronisiert Guthaben und ausgeführte Spot-Trades bei Kraken über einen API-Key mit Lesezugriff.
+      kraken_panel:
+        add_connection: Kraken-Verbindung hinzufügen
+        api_key_label: API-Key
+        api_key_placeholder: Kraken-API-Key einfügen
+        api_secret_label: Private Key
+        api_secret_placeholder: Kraken Private Key einfügen
+        connection_name_label: Name der Verbindung
+        connection_name_placeholder: Kraken Haupt
+        default_connection_name: Kraken
+        disconnect: Trennen
+        disconnect_confirm: "%{name} wirklich trennen?"
+        keep_api_key_placeholder: Leer lassen, um den bisherigen API-Key zu behalten
+        keep_api_secret_placeholder: Leer lassen, um den bisherigen Private Key zu behalten
+        read_only_body: Erteile keine Rechte für Handel, Stornierung, Auszahlung, Export, Ledger, Earn, Staking oder Überträge. Sure importiert ausschließlich Guthaben, Bestände und ausgeführte Spot-Trades.
+        read_only_title: Nur lesender Börsen-Sync
+        setup_accounts: Konto einrichten
+        step1_html: Öffne die <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken-API-Einstellungen</a>
+        step2: Lege einen API-Key an, der ausschließlich „Query Funds“ sowie „Query Closed Orders & Trades“ erlaubt.
+        step3: Füge API-Key und Private Key unten ein.
+        sync: Sync
+        syncing: Sync läuft …
+        update_connection: Verbindung aktualisieren

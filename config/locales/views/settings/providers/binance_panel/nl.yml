@@ -1,0 +1,28 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        binance: "Synchroniseer uw Binance-spotsaldi met een alleen-lezen API-sleutel."
+      binance_panel:
+        setup_instructions: "Maak een alleen-lezen API-sleutel aan om Binance te koppelen:"
+        step1_html: "Ga naar <a href=\"https://www.binance.com/en/my/settings/api-management\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">Binance API Management</a>"
+        step2: "Maak een nieuwe API-sleutel aan met alleen de machtiging Enable Reading"
+        step3: "Plak hieronder uw API-sleutel en API-geheim"
+        no_withdraw_title: "Uitsluitend een alleen-lezensleutel"
+        no_withdraw_body: "Schakel geen opnamerechten in bij het aanmaken van uw Binance-API-sleutel. Sure heeft alleen leestoegang nodig."
+        ip_hint_title: "IP-whitelisting vereist"
+        ip_hint_body: "Voeg het uitgaande IP-adres van de appserver toe aan de whitelist van de Binance-API-sleutel:"
+        ip_hint_contact_admin: "Neem contact op met uw beheerder voor het uitgaande IP-adres van de appserver."
+        api_key_label: "API-sleutel"
+        api_key_placeholder: "Plak uw Binance-API-sleutel"
+        api_secret_label: "API-geheim"
+        api_secret_placeholder: "Plak uw Binance-API-geheim"
+        connect_button: "Binance koppelen"
+        syncing: "Synchroniseren..."
+        sync: "Synchroniseren"
+        historical_import: "Instellingen voor historische import"
+        sync_start_date_label: "Gegevens importeren vanaf"
+        sync_start_date_help: "Kies hoe ver terug historische trades moeten worden opgehaald."
+        disconnect: "Loskoppelen"
+        disconnect_confirm: "Weet u zeker dat u Binance wilt loskoppelen?"

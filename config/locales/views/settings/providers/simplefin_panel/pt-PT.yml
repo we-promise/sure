@@ -1,0 +1,13 @@
+---
+pt-PT:
+  settings:
+    providers:
+      taglines:
+        simplefin: Ligue contas bancárias dos EUA através do protocolo aberto SimpleFIN.
+      simplefin_panel:
+        step_1_html: "Aceda a %{link} para obter um token de configuração de utilização única."
+        step_2: "Cole abaixo o token e ligue."
+        step_3: "Depois, aceda a Contas para ligar as suas contas sincronizadas."
+        setup_token_label: "Token de Configuração"
+        setup_token_placeholder: "Cole o token de configuração SimpleFIN"
+        save_and_connect: "Guardar e ligar"

@@ -1,0 +1,20 @@
+---
+hu:
+  settings:
+    providers:
+      taglines:
+        coinbase: Coinbase kriptoeszközök importálása és teljesítmény nyomon követése.
+      coinbase_panel:
+        setup_instructions: "A Coinbase csatlakoztatásához:"
+        step1_html: Nyisd meg a <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API beállításait</a>
+        step2: Hozz létre egy új, csak olvasási jogosultsággal rendelkező API-kulcsot (számlák és tranzakciók megtekintése)
+        step3: Másold ki az API-kulcsot és az API-titkot, majd illeszd be az alábbiakba
+        api_key_label: API-kulcs
+        api_key_placeholder: Add meg a Coinbase API-kulcsodat
+        api_secret_label: API-titok
+        api_secret_placeholder: Add meg a Coinbase API-titkodat
+        connect_button: Coinbase csatlakoztatása
+        syncing: Szinkronizálás...
+        sync: Szinkronizálás
+        disconnect: Lecsatlakozás
+        disconnect_confirm: Biztosan le szeretnéd választani ezt a Coinbase-kapcsolatot? A szinkronizált számlák manuális számlákká válnak.

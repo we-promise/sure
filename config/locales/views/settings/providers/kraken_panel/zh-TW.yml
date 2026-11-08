@@ -1,0 +1,28 @@
+---
+zh-TW:
+  settings:
+    providers:
+      taglines:
+        kraken: 使用唯讀 API 金鑰同步 Kraken 的餘額與現貨成交紀錄。
+      kraken_panel:
+        step1_html: 前往 <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>
+        step2: 建立一組 API 金鑰，只勾選 Query Funds 與 Query Closed Orders & Trades。
+        step3: 將 API 金鑰與私密金鑰貼到下方。
+        read_only_title: 只做唯讀的交易所同步
+        read_only_body: 請不要授予交易、取消、提領、匯出、帳本、Earn、質押或轉帳權限。Sure 只會匯入餘額、持倉與現貨成交紀錄。
+        default_connection_name: Kraken
+        add_connection: 新增 Kraken 連線
+        update_connection: 更新連線
+        connection_name_label: 連線名稱
+        connection_name_placeholder: 主要 Kraken
+        api_key_label: API 金鑰
+        api_key_placeholder: 貼上您的 Kraken API 金鑰
+        keep_api_key_placeholder: 留白即維持現有的 API 金鑰
+        api_secret_label: 私密金鑰
+        api_secret_placeholder: 貼上您的 Kraken 私密金鑰
+        keep_api_secret_placeholder: 留白即維持現有的私密金鑰
+        setup_accounts: 設定帳戶
+        syncing: 同步中...
+        sync: 同步
+        disconnect: 中斷連線
+        disconnect_confirm: 確定要中斷 %{name} 嗎？

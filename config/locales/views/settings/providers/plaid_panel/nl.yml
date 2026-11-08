@@ -1,0 +1,10 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        plaid: "Koppel duizenden Amerikaanse financiële instellingen via Plaid."
+      plaid_panel:
+        step_1_html: "Open het %{link} en kopieer uw Client ID en Secret Key."
+        step_2: "Kies een omgeving. Gebruik sandbox om te testen en production voor echte accounts."
+        step_3: "Plak hieronder uw gegevens en koppel."

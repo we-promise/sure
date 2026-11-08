@@ -1,0 +1,61 @@
+---
+zh-TW:
+  settings:
+    providers:
+      taglines:
+        ibkr: 透過 Flex Query 匯入同步 Interactive Brokers 的投資帳戶。
+      ibkr_panel:
+        steps:
+          step_1: 在您的 IBKR Client Portal 中，前往「Performance & Reports」>「Flex Queries」。
+          step_2: 點選「Activity Flex Query」區塊中的「+」圖示，建立一個新查詢。
+          step_3: 為查詢命名（例如「Sure Sync」），然後對照下方的 Flex Query 明細，啟用列出的區塊、欄位與設定選項。
+          step_4: 儲存查詢並記下您的「Query ID」，再用「Flex Web Service Configuration」區塊中的齒輪圖示產生 Access Token。
+          step_5: 將您的 Query ID 與 Token 貼到下方，儲存設定後前往「帳戶」連結已偵測到的 IBKR 帳戶。
+        flex_query_details:
+          eyebrow: Flex Query
+          title: 區塊、欄位與設定
+          summary: 展開即可看到您的 IBKR Activity Flex Query 必須包含哪些區塊、欄位與設定。
+          sections_heading: 請啟用這些區塊與欄位
+          configuration_heading: 請設定這些查詢選項
+        sections:
+          account_information: Account Information：Account ID, Currency
+          cash_report: Cash Report：
+          cash_report_options: 選項：None
+          cash_report_fields: 欄位：Currency, Ending Cash
+          cash_transactions: Cash Transactions：
+          cash_transactions_options: 選項：Dividends, Deposits & Withdrawals, Detail
+          cash_transactions_fields: 欄位：Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type
+          change_in_position_value_summary: Change In Position Value Summary：Currency, End Of Period Value
+          net_asset_value: Net Asset Value (NAV) in Base：
+          net_asset_value_options: 選項：None
+          net_asset_value_fields: 欄位：Currency, Report Date, Total
+          open_positions: Open Positions：
+          open_positions_options: 選項：Summary
+          open_positions_fields: 欄位：Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol
+          trades: Trades：
+          trades_options: 選項：Execution
+          trades_fields: 欄位：Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID
+        configuration:
+          models: Models：Optional
+          format: Format：XML
+          period: Period：Last 365 Calendar Days
+          date_format: Date Format：yyyy-MM-dd
+          time_format: Time Format：HH:mm:ss
+          date_time_separator: Date/Time Separator：; (semi-colon)
+          profit_and_loss: Profit and Loss：Default
+          all_other_options: 其他所有設定選項：「No」
+        report_window_note: IBKR Flex 報表的範圍受限於您在 IBKR 設定的查詢區間。Sure 會從這份報表匯入完整的目前持股，以及最多近 365 天的活動。
+        sync: 同步
+        disconnect_confirm: 要中斷 Interactive Brokers 連線嗎？
+        query_id_label: Query ID
+        query_id_placeholder_new: 輸入您的 IBKR Flex Query ID
+        query_id_placeholder_existing: 留白即維持目前的 Query ID
+        token_label: 權杖 (Token)
+        token_placeholder_new: 輸入您的 IBKR Flex Web Service Token
+        token_placeholder_existing: 留白即維持目前的 Token
+        save_configuration: 儲存設定
+        update_configuration: 更新設定
+        status_configured_prefix: '%{summary}。請前往'
+        accounts_tab: 帳戶管理
+        status_configured_suffix: 分頁管理已偵測到的帳戶。
+        not_configured: 尚未設定。

@@ -1,0 +1,28 @@
+---
+en:
+  settings:
+    providers:
+      taglines:
+        binance: Sync your Binance spot balances using a read-only API key.
+      binance_panel:
+        setup_instructions: "To connect Binance, create a read-only API key:"
+        step1_html: 'Go to <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>'
+        step2: "Create a new API key with Enable Reading permission only"
+        step3: "Paste your API Key and Secret below"
+        no_withdraw_title: "Read-only key only"
+        no_withdraw_body: "Don't enable withdrawal permissions when creating your Binance API key. Sure only needs read access."
+        ip_hint_title: "IP whitelisting required"
+        ip_hint_body: "Add the app server's egress IP to the Binance API Key whitelist:"
+        ip_hint_contact_admin: "Contact your administrator to obtain the app server's egress IP address."
+        api_key_label: API Key
+        api_key_placeholder: Paste your Binance API Key
+        api_secret_label: API Secret
+        api_secret_placeholder: Paste your Binance API Secret
+        connect_button: Connect Binance
+        syncing: Syncing...
+        sync: Sync
+        historical_import: "Historical Import Settings"
+        sync_start_date_label: "Import data from"
+        sync_start_date_help: "Select how far back to fetch historical trades."
+        disconnect: Disconnect
+        disconnect_confirm: "Are you sure you want to disconnect Binance?"

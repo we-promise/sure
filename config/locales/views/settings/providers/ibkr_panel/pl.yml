@@ -1,0 +1,78 @@
+---
+pl:
+  settings:
+    providers:
+      taglines:
+        ibkr: Synchronizuj konta inwestycyjne Interactive Brokers przez import Flex
+          Query.
+      ibkr_panel:
+        accounts_tab: Konta
+        configuration:
+          all_other_options: 'Wszystkie pozostałe opcje konfiguracji: "Nie"'
+          date_format: 'Format daty: yyyy-MM-dd'
+          date_time_separator: 'Separator daty/godziny: ; (średnik)'
+          format: 'Format: XML'
+          models: 'Modele: Opcjonalne'
+          period: 'Okres: Ostatnie 365 dni kalendarzowych'
+          profit_and_loss: 'Zysk i strata: Domyślne'
+          time_format: 'Format godziny: HH:mm:ss'
+        disconnect_confirm: Rozłączyć Interactive Brokers?
+        flex_query_details:
+          configuration_heading: Ustaw te opcje zapytania
+          eyebrow: Flex Query
+          sections_heading: Włącz te sekcje i pola
+          summary: Rozwiń, aby zobaczyć dokładne sekcje, pola i ustawienia, które
+            musi zawierać Twoje IBKR Activity Flex Query.
+          title: Sekcje, pola i konfiguracja
+        not_configured: Nie skonfigurowano.
+        query_id_label: ID zapytania
+        query_id_placeholder_existing: Zostaw puste, aby zachować bieżący Query ID
+        query_id_placeholder_new: Wpisz swój Query ID z IBKR Flex
+        report_window_note: Raporty IBKR Flex są ograniczone do okresu zapytania skonfigurowanego
+          w IBKR. Sure zaimportuje pełny bieżący stan posiadania oraz do 365 ostatnich
+          dni aktywności z tego raportu.
+        save_configuration: Zapisz konfigurację
+        sections:
+          account_information: 'Account Information: Account ID, Currency'
+          cash_report: 'Cash Report:'
+          cash_report_fields: 'Fields: Currency, Ending Cash'
+          cash_report_options: 'Options: None'
+          cash_transactions: 'Cash Transactions:'
+          cash_transactions_fields: 'Fields: Amount, Conid, Currency, FX Rate To Base,
+            Report Date, Transaction ID, Type'
+          cash_transactions_options: 'Options: Dividends, Deposits & Withdrawals,
+            Detail'
+          change_in_position_value_summary: 'Change In Position Value Summary: Currency,
+            End Of Period Value'
+          net_asset_value: 'Net Asset Value (NAV) in Base:'
+          net_asset_value_fields: 'Fields: Currency, Report Date, Total'
+          net_asset_value_options: 'Options: None'
+          open_positions: 'Open Positions:'
+          open_positions_fields: 'Fields: Asset Class, Conid, Cost Basis Price, Currency,
+            FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security
+            ID Type, Side, Symbol'
+          open_positions_options: 'Options: Summary'
+          trades: 'Trades:'
+          trades_fields: 'Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate
+            To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
+            Date, Trade ID, TradePrice, Transaction ID'
+          trades_options: 'Options: Execution'
+        status_configured_prefix: "%{summary}. Przejdź do zakładki"
+        status_configured_suffix: aby zarządzać wykrytymi kontami.
+        steps:
+          step_1: W IBKR Client Portal przejdź do "Performance & Reports" > "Flex
+            Queries".
+          step_2: Kliknij ikonę "+" w sekcji "Activity Flex Query", aby utworzyć nowe
+            zapytanie.
+          step_3: Nadaj zapytaniu nazwę (np. "Sure Sync"), a następnie sprawdź poniższe
+            szczegóły Flex Query i włącz wymienione sekcje, pola oraz opcje konfiguracji.
+          step_4: Zapisz zapytanie, zanotuj swój "Query ID", a następnie użyj ikony
+            koła zębatego w sekcji "Flex Web Service Configuration", aby wygenerować
+            Token dostępu.
+          step_5: Wklej swój Query ID i Token poniżej, zapisz konfigurację, a następnie
+            przejdź do Kont, aby połączyć wykryte konta IBKR.
+        sync: Synchronizuj
+        token_label: Token
+        token_placeholder_existing: Zostaw puste, aby zachować bieżący Token
+        token_placeholder_new: Wpisz swój Token z IBKR Flex Web Service
+        update_configuration: Zaktualizuj konfigurację

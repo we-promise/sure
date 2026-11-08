@@ -1,0 +1,19 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        lunchflow: "Koppel meer dan 20.000 banken uit meer dan 40 landen (VK, EU, VS en meer!)"
+      lunchflow_panel:
+        step_1_html: "Ga naar %{link} en maak een API-sleutel aan."
+        step_2: "Plak hieronder uw sleutel en koppel."
+        step_3: "Ga daarna naar Accounts om uw gesynchroniseerde accounts te koppelen."
+        api_key_label: "API-sleutel"
+        api_key_placeholder_new: "Plak hier de API-sleutel"
+        api_key_placeholder_update: "Voer een nieuwe API-sleutel in om bij te werken"
+        base_url_label: "Basis-URL (optioneel)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (standaard)"
+        sync_start_date_label: "Transacties importeren vanaf"
+        sync_start_date_help: "Laat leeg om alles te importeren wat Lunch Flow heeft. Als u de datum vervroegt, wordt de ontbrekende periode bij de volgende synchronisatie geïmporteerd. Een latere datum heeft geen invloed op al geïmporteerde transacties."
+        save_and_connect: "Opslaan en koppelen"
+        update_connection: "Koppeling bijwerken"

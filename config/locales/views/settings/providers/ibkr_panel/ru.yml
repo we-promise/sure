@@ -1,0 +1,78 @@
+---
+ru:
+  settings:
+    providers:
+      taglines:
+        ibkr: Синхронизируйте инвестиционные счета Interactive Brokers через Flex
+          Query импорт.
+      ibkr_panel:
+        accounts_tab: Счета
+        configuration:
+          all_other_options: 'Все остальные параметры конфигурации: "Нет"'
+          date_format: 'Формат даты: yyyy-MM-dd'
+          date_time_separator: 'Разделитель даты/времени: ; (точка с запятой)'
+          format: 'Формат: XML'
+          models: 'Модели: Необязательно'
+          period: 'Период: Последние 365 календарных дней'
+          profit_and_loss: 'Прибыль и убытки: По умолчанию'
+          time_format: 'Формат времени: HH:mm:ss'
+        disconnect_confirm: Отключить Interactive Brokers?
+        flex_query_details:
+          configuration_heading: Установите эти параметры запроса
+          eyebrow: Flex Query
+          sections_heading: Включите эти разделы и поля
+          summary: Разверните, чтобы увидеть точные разделы, поля и настройки, которые
+            должен включать ваш запрос активности IBKR Flex.
+          title: Разделы, поля и конфигурация
+        not_configured: Не настроено.
+        query_id_label: Query ID
+        query_id_placeholder_existing: Оставьте пустым, чтобы сохранить текущий ID
+          запроса
+        query_id_placeholder_new: Введите ваш ID запроса IBKR Flex
+        report_window_note: Отчёты IBKR Flex ограничены окном запроса, которое вы
+          настроили в IBKR. Sure импортирует полные текущие активы плюс до последних
+          365 дней активности из этого отчёта.
+        save_configuration: Сохранить конфигурацию
+        sections:
+          account_information: 'Информация о счёте: ID счёта, Валюта'
+          cash_report: 'Отчёт о наличных:'
+          cash_report_fields: 'Поля: Валюта, Конечный остаток наличных'
+          cash_report_options: 'Опции: Нет'
+          cash_transactions: 'Операции с наличными:'
+          cash_transactions_fields: 'Поля: Сумма, Conid, Валюта, Курс к базовой валюте,
+            Дата отчёта, ID операции, Тип'
+          cash_transactions_options: 'Опции: Дивиденды, Депозиты и снятия, Детали'
+          change_in_position_value_summary: 'Изменение стоимости позиции: Валюта,
+            Стоимость на конец периода'
+          net_asset_value: 'Чистая стоимость активов (NAV) в базовой валюте:'
+          net_asset_value_fields: 'Поля: Валюта, Дата отчёта, Всего'
+          net_asset_value_options: 'Опции: Нет'
+          open_positions: 'Открытые позиции:'
+          open_positions_fields: 'Поля: Класс активов, Conid, Цена по себестоимости,
+            Валюта, Курс к базовой валюте, Рыночная цена, Количество, Дата отчёта,
+            ID ценной бумаги, Тип ID ценной бумаги, Сторона, Символ'
+          open_positions_options: 'Опции: Сводка'
+          trades: 'Сделки:'
+          trades_fields: 'Поля: Класс активов, Покупка/Продажа, Conid, Валюта, Курс
+            к базовой валюте, Комиссия IB, Валюта комиссии IB, Количество, Символ,
+            Дата сделки, ID сделки, Цена сделки, ID операции'
+          trades_options: 'Опции: Исполнение'
+        status_configured_prefix: "%{summary}. Перейдите на"
+        status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
+        steps:
+          step_1: В вашем клиентском портале IBKR перейдите в "Performance & Reports"
+            > "Flex Queries".
+          step_2: Нажмите на значок "+" в разделе "Activity Flex Query", чтобы создать
+            новый запрос.
+          step_3: Назовите ваш запрос (например, "Sure Sync"), затем просмотрите детали
+            Flex Query ниже и включите перечисленные разделы, поля и параметры конфигурации.
+          step_4: Сохраните запрос, запомните ваш "Query ID", затем используйте значок
+            шестерёнки в разделе "Flex Web Service Configuration", чтобы сгенерировать
+            токен доступа.
+          step_5: Вставьте ваш Query ID и токен ниже, сохраните конфигурацию, затем
+            перейдите в Счета, чтобы связать обнаруженные счета IBKR.
+        sync: Синхронизировать
+        token_label: Токен
+        token_placeholder_existing: Оставьте пустым, чтобы сохранить текущий токен
+        token_placeholder_new: Введите ваш токен веб-сервиса IBKR Flex
+        update_configuration: Обновить конфигурацию

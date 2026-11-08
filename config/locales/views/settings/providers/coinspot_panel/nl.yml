@@ -1,0 +1,28 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        coinspot: "Synchroniseer CoinSpot-saldi, AUD-waarden, overboekingen, stortingen, opnames en ordergeschiedenis met een alleen-lezen API-sleutel."
+      coinspot_panel:
+        step1_html: "Ga naar <a href=\"https://www.coinspot.com.au/my/api\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">CoinSpot API settings</a>"
+        step2: "Maak een API-sleutel aan met alleen-lezentoegang tot saldi en geschiedenis."
+        step3: "Plak hieronder de API-sleutel en het geheim."
+        read_only_title: "Uitsluitend alleen-lezensynchronisatie van de beurs"
+        read_only_body: "Verleen geen rechten voor verzenden, opnemen, handelen of overboekingen. Sure importeert alleen saldi, AUD-waarden, overboekingen, stortingen, opnames en de geschiedenis van voltooide orders."
+        default_connection_name: "CoinSpot"
+        add_connection: "CoinSpot-koppeling toevoegen"
+        update_connection: "Koppeling bijwerken"
+        connection_name_label: "Naam van koppeling"
+        connection_name_placeholder: "CoinSpot (hoofd)"
+        api_key_label: "API-sleutel"
+        api_key_placeholder: "Plak uw CoinSpot-API-sleutel"
+        keep_api_key_placeholder: "Laat leeg om de bestaande API-sleutel te behouden"
+        api_secret_label: "API-geheim"
+        api_secret_placeholder: "Plak uw CoinSpot-API-geheim"
+        keep_api_secret_placeholder: "Laat leeg om het bestaande API-geheim te behouden"
+        setup_accounts: "Account instellen"
+        syncing: "Synchroniseren..."
+        sync: "Synchroniseren"
+        disconnect: "Loskoppelen"
+        disconnect_confirm: "Weet u zeker dat u %{name} wilt loskoppelen?"

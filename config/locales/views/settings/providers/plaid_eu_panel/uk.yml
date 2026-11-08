@@ -1,0 +1,8 @@
+---
+uk:
+  settings:
+    providers:
+      taglines:
+        plaid_eu: Підключайте європейські фінансові установи через Plaid (PSD2 / Open Banking).
+      plaid_eu_panel:
+        step_1_html: "Відкрийте %{link} і скопіюйте свій ідентифікатор клієнта ЄС та секретний ключ."

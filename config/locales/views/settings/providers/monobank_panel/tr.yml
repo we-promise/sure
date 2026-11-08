@@ -1,0 +1,10 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        monobank: Ukrayna Monobank kartlarını ve kumbaralarını kişisel bir API token ile senkronize edin.
+      monobank_panel:
+        step_1_html: '%{link} adresine gidin, Monobank uygulamasıyla giriş yapın ve kişisel bir token oluşturun.'
+        step_2: Token'ı kopyalayın — yalnızca bir kez gösterilir.
+        step_3: Token'ı aşağıya yapıştırıp kaydedin, ardından takip etmek istediğiniz kartları ve kumbaraları bağlayın.

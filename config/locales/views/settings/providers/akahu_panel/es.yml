@@ -1,0 +1,10 @@
+---
+es:
+  settings:
+    providers:
+      taglines:
+        akahu: Sincroniza instituciones financieras de Nueva Zelanda a través de Akahu.
+      akahu_panel:
+        step_1_html: Ve a %{link} y crea una aplicación personal.
+        step_2: Copia tu token de aplicación y tu token de usuario.
+        step_3: Pega los tokens abajo, guarda y luego vincula tus cuentas sincronizadas.

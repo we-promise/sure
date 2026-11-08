@@ -1,0 +1,8 @@
+---
+ca:
+  settings:
+    providers:
+      up_panel:
+        step_1_html: Ves a %{link} i genera un token d'accés personal.
+        step_2: Copia el teu token d'accés personal.
+        step_3: Enganxa el token a continuació, desa i després enllaça els comptes sincronitzats.

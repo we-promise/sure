@@ -1,0 +1,10 @@
+---
+it:
+  settings:
+    providers:
+      taglines:
+        akahu: Sincronizza gli istituti finanziari neozelandesi tramite Akahu.
+      akahu_panel:
+        step_1_html: "Vai su %{link} e crea un'app personale."
+        step_2: "Copia il token dell'app e il token utente."
+        step_3: "Incolla i token qui sotto, salva, poi collega i tuoi conti sincronizzati."
