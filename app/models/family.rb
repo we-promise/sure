@@ -883,8 +883,6 @@ class Family < ApplicationRecord
   end
 
   private
-    # Currencies used by the given accounts that are visible, by their entries,
-    # their trades and their holdings.
     # Currencies of the given visible accounts' balances, and of each
     # account's holdings on its latest holding date.
     def currencies_held_now(scope)
@@ -897,8 +895,9 @@ class Family < ApplicationRecord
       ).compact.uniq
     end
 
-    # Memoised per scope, so repeated reads in one render share one set of
-    # queries.
+    # Currencies used by the given accounts that are visible, by their entries,
+    # their trades and their holdings. Memoised per scope, so repeated reads in
+    # one render share one set of queries.
     def currencies_in_use(scope)
       account_ids = self.accounts.visible.where(id: scope.select(:id)).pluck(:id).sort
       @currencies_in_use ||= {}
