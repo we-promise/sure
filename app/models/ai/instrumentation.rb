@@ -12,8 +12,6 @@
 # The mode follows from the variables an operator already sets, so no AI variable is added:
 # Langfuse keys mean content, OTLP_ENDPOINT alone means metadata.
 module Ai::Instrumentation
-  MODES = %i[content metadata off].freeze
-
   module_function
 
   def mode(env: ENV)

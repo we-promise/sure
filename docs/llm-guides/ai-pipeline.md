@@ -1,15 +1,13 @@
 # AI pipeline
 
-Sure's AI layer is moving onto one path: routing, consent, generations, a sequencer and chat on
-thin transports over RubyLLM. The design and the order of the pull requests are in
-`docs/proposals/v0.8/ai-plumbing-redesign.md` (PR #4440). This guide covers what has landed. It
-grows with each part.
+Sure's AI calls go through thin transports over RubyLLM. The design is in
+`docs/proposals/v0.8/ai-plumbing-redesign.md`.
 
-## Transports and instrumentation (PR 2a)
+## Transports and instrumentation
 
 ```mermaid
 flowchart LR
-  Caller["AiHealth::Probe today;<br/>generations from 2c"] --> T["Ai::Transport.for(endpoint)<br/>Compatible | Anthropic"]
+  Caller["AiHealth::Probe"] --> T["Ai::Transport.for(endpoint)<br/>Compatible | Anthropic"]
   T --> CC["Ai::CallContext.call<br/>usage owner + workflow"]
   CC --> R["RubyLLM.context per endpoint"]
   R --> I["Ai::Transport::Instrumenter<br/>attempt budget"]
@@ -33,8 +31,7 @@ flowchart LR
 **Rules**
 
 - **A transport never reads ENV, `Setting` or ActiveRecord.** It takes an `Ai::Config::Endpoint`
-  and an `Ai::Config::Model`. Configuration reaches them through `Ai::Config` (2b) and the
-  `ai_*` tables (PR 7).
+  and an `Ai::Config::Model`, built by its caller.
 - **Build clients only in `Ai::Transport::Http`.** It applies the endpoint's timeout and
   headers, TLS options and the proxy. RubyLLM builds its own connections and takes no TLS
   options, so its contexts use `Http.ruby_llm_adapter`, a Net::HTTP adapter that adds them. The

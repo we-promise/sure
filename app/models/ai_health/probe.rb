@@ -77,10 +77,8 @@ class AiHealth
       @cache = cache
     end
 
-    # Whether the model is up, by the endpoint's probe check: :models lists the
-    # server's models and makes no chat call (the default for every endpoint);
-    # :chat sends one tiny request. Which one is the endpoint's
-    # `probe_check`, :models unless the endpoint asks for a chat request.
+    # Whether the model is up, by the endpoint's `probe_check`
+    # (Ai::Config::Endpoint::PROBE_CHECKS).
     def llm(provider:, endpoint:, access_token:, model:)
       probe_endpoint = config_endpoint(provider:, base_url: endpoint, api_key: access_token)
 
