@@ -29,7 +29,7 @@ class Settings::AiProviderConfigurationTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       get settings_ai_prompts_path
       assert_response :success
-      assert_select "select#provider_configuration_provider option[selected][value='openrouter']", text: "OpenRouter/OpenAI-compatible API"
+      assert_select "select#provider_configuration_provider option[selected][value='openrouter']", text: "OpenAI-compatible API"
       assert_select "input#provider_configuration_model:not([name])[value='anthropic/claude-sonnet-4']:not([disabled])"
       assert_select "label[for='provider_configuration_model']", text: I18n.t("onboardings.tools.provider_setup.model_label")
       assert_select "input#provider_configuration_api_key" do |inputs|
@@ -75,12 +75,22 @@ class Settings::AiProviderConfigurationTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "managed mode keeps prompt editing without family provider controls" do
+  test "managed mode exposes family provider controls to admins alongside prompt editing" do
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     get settings_ai_prompts_path
     assert_response :success
-    assert_select "[data-controller='onboarding-provider']", count: 0
+    assert_select "[data-controller='onboarding-provider']"
     assert_select "textarea#family_ai_prompt_chat_system"
+
+    configuration = mock("configuration", save: true, provider: "anthropic")
+    OnboardingAiConfiguration.expects(:new).with(family: @user.family, provider: "anthropic", api_key: "synthetic-key", model: nil).returns(configuration)
+    post configure_provider_settings_ai_prompts_path, as: :json, params: payload
+    assert_response :success
+  end
+
+  test "managed mode keeps provider configuration away from members" do
+    sign_in users(:family_member)
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
 
     OnboardingAiConfiguration.expects(:new).never
     post configure_provider_settings_ai_prompts_path, as: :json, params: payload

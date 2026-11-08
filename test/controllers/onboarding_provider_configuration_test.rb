@@ -21,12 +21,23 @@ class OnboardingProviderConfigurationTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "managed installations reject credential configuration even for super admins" do
-    @user.update!(role: :super_admin)
+  test "managed installations let family admins override the hosted default" do
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    configuration = mock("configuration", save: true, provider: "anthropic")
+    OnboardingAiConfiguration.expects(:new).with(family: @user.family, provider: "anthropic", api_key: "synthetic-key", model: nil).returns(configuration)
+    post configure_provider_onboarding_url, as: :json, params: payload
+    assert_response :success
+    assert_equal({ "status" => "saved", "provider" => "anthropic" }, response.parsed_body)
+  end
+
+  test "managed installations still reject members and guests" do
     Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
     OnboardingAiConfiguration.expects(:new).never
-    post configure_provider_onboarding_url, as: :json, params: payload
-    assert_response :forbidden
+    [ users(:family_member), users(:intro_user) ].each do |user|
+      sign_in user
+      post configure_provider_onboarding_url, as: :json, params: payload
+      assert_response :forbidden
+    end
   end
 
   test "family administrators save through the checked configuration flow" do
@@ -65,7 +76,7 @@ class OnboardingProviderConfigurationTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_select "p", text: I18n.t("onboardings.tools.tools_question")
       assert_select "legend", text: I18n.t("onboardings.tools.ai_question", product_name: Rails.configuration.x.product_name)
-      assert_select "select#provider_configuration_provider option[selected][value='openrouter']", text: "OpenRouter/OpenAI-compatible API"
+      assert_select "select#provider_configuration_provider option[selected][value='openrouter']", text: "OpenAI-compatible API"
       assert_select "input#provider_configuration_model:not([name]):not([required])[value='openai/gpt-4.1-mini'][aria-required='true']"
       assert_select "label[for='provider_configuration_model']", text: I18n.t("onboardings.tools.provider_setup.model_label")
       assert_select "[data-onboarding-provider-target='modelFields']:not([hidden])"
@@ -123,12 +134,25 @@ class OnboardingProviderConfigurationTest < ActionDispatch::IntegrationTest
       assert_select "input#provider_configuration_model:not([name]):not([required])[disabled]" do |inputs|
         assert inputs.all? { |input| input["value"].blank? }
       end
+      assert_select "[data-testid='provider-current-summary']", text: I18n.t("onboardings.tools.provider_setup.current_family", provider: "Anthropic")
       assert_not_includes response.body, "family-secret-key"
       assert_not_includes response.body, "installation-secret-key"
       assert_select "[data-onboarding-provider-options-value]" do |elements|
         options = JSON.parse(elements.first["data-onboarding-provider-options-value"])
         assert options.values.none? { |option| option.key?("locked") }
       end
+    end
+  end
+
+  test "families without an override see the installation default they would replace" do
+    Setting.stubs(:llm_provider).returns("openai")
+    Setting.stubs(:openai_access_token).returns("installation-secret-key")
+
+    with_self_hosting do
+      get tools_onboarding_url
+      assert_response :success
+      assert_select "[data-testid='provider-current-summary']", text: I18n.t("onboardings.tools.provider_setup.current_default", provider: "OpenAI")
+      assert_not_includes response.body, "installation-secret-key"
     end
   end
 

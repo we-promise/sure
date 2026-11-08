@@ -15,6 +15,30 @@ module OnboardingsHelper
     configuration.model if configuration&.provider == "openrouter"
   end
 
+  # Shown above the provider form so admins know what their family uses now:
+  # an explicit family key, the installation default, or nothing.
+  def onboarding_provider_current_summary
+    scope = "onboardings.tools.provider_setup"
+    configuration = Current.family.ai_configuration
+
+    if configuration
+      t("#{scope}.current_family", provider: t("#{scope}.providers.#{configuration.provider}"))
+    elsif (default_provider = installation_llm_provider)
+      t("#{scope}.current_default", provider: t("#{scope}.providers.#{default_provider}"))
+    else
+      t("#{scope}.current_none")
+    end
+  end
+
+  def installation_llm_provider
+    Provider::Registry.llm_provider_order.find do |name|
+      case name
+      when :openai then Provider::Openai.configured?
+      when :anthropic then Provider::Anthropic.configured?
+      end
+    end
+  end
+
   def onboarding_provider_options
     OnboardingAiConfiguration::PROVIDERS.to_h do |provider|
       label = t("onboardings.tools.provider_setup.providers.#{provider}")

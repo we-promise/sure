@@ -37,8 +37,8 @@
       <% end %>
 
       <div class="space-y-4">
-        <%= render DS::Card.new(class: "p-6 space-y-3", data: { controller: "onboarding-tools" }) do %>
-          <p class="text-primary font-medium"><%= t(".tools_question") %></p>
+        <%= render DS::Card.new(padding: "p-4", class: "space-y-2", role: "region", aria: { labelledby: "starting-point-title" }, data: { controller: "onboarding-tools" }) do %>
+          <p id="starting-point-title" class="text-sm font-medium text-primary"><%= t(".tools_question") %></p>
           <%= form.hidden_field :starting_tools, multiple: true, value: "" %>
           <%= render DS::Disclosure.new(title: t(".select_tools"), summary_class: "px-3 py-3 rounded-lg border border-primary cursor-pointer flex items-center justify-between bg-container focus-ring min-h-11", data: { onboarding_tools_target: "picker" }) do |disclosure| %>
             <% disclosure.with_summary_content do %>
@@ -71,20 +71,20 @@
           <% end %>
         <% end %>
 
-        <%= render DS::Card.new(class: "p-6 space-y-3") do %>
-          <fieldset class="space-y-3">
-            <legend class="text-primary font-medium"><%= t(".ai_question", product_name: product_name) %></legend>
+        <%= render DS::Card.new(padding: "p-4", class: "space-y-3", role: "region", aria: { labelledby: "ai-preference-title" }) do %>
+          <fieldset class="space-y-2">
+            <legend id="ai-preference-title" class="text-sm font-medium text-primary mb-2"><%= t(".ai_question", product_name: product_name) %></legend>
             <% onboarding_ai_modes.each do |mode| %>
-              <label class="flex items-start gap-3 p-4 rounded-lg border border-primary cursor-pointer hover:bg-surface has-[:checked]:bg-surface has-[:checked]:border-solid">
-                <%= form.radio_button :onboarding_ai_mode, mode, checked: (@user.onboarding_ai_mode.presence || "none") == mode, aria: { expanded: (@user.onboarding_ai_mode.presence || "none") == mode, controls: "ai-panel-#{mode}", describedby: "ai-description-#{mode}" }, data: { action: "change->onboarding-choices#selectMode" } %>
+              <label class="flex items-start gap-2 text-sm text-primary cursor-pointer">
+                <%= form.radio_button :onboarding_ai_mode, mode, class: "mt-0.5", checked: (@user.onboarding_ai_mode.presence || "none") == mode, aria: { expanded: (@user.onboarding_ai_mode.presence || "none") == mode, controls: "ai-panel-#{mode}", describedby: "ai-description-#{mode}" }, data: { action: "change->onboarding-choices#selectMode" } %>
                 <span>
-                  <span class="flex items-center gap-2 text-sm font-medium text-primary">
+                  <span class="flex items-center gap-2">
                     <%= t(".ai_modes.#{mode}.label") %>
                     <% if mode == "none" %>
                       <%= render DS::Pill.new(label: t(".default_badge"), tone: :neutral, marker: false) %>
                     <% end %>
                   </span>
-                  <span id="ai-description-<%= mode %>" class="block text-sm text-secondary"><%= t(".ai_modes.#{mode}.description") %></span>
+                  <span id="ai-description-<%= mode %>" class="block text-secondary"><%= t(".ai_modes.#{mode}.description") %></span>
                 </span>
               </label>
             <% end %>

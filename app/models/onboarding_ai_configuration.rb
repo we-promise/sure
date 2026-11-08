@@ -4,8 +4,12 @@ class OnboardingAiConfiguration
 
   attr_reader :provider, :error
 
+  # Family admins may configure their family's own provider key in any app
+  # mode. A family configuration is always an explicit override: it never
+  # falls back to installation credentials, and on managed installations it
+  # replaces the hosted default for that family only.
   def self.allowed_for?(user)
-    Rails.application.config.app_mode.self_hosted? && user&.admin?
+    user&.admin? == true
   end
 
   def initialize(family:, provider:, api_key:, model: nil)

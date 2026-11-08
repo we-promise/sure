@@ -4,6 +4,7 @@
      data-onboarding-provider-messages-value="<%= t("onboardings.tools.provider_setup.messages").to_json %>"
      data-action="turbo:before-cache@document->onboarding-provider#beforeCache change@document->onboarding-provider#modeChanged"
      class="space-y-3">
+  <p class="text-sm text-secondary" data-testid="provider-current-summary"><%= onboarding_provider_current_summary %></p>
   <%= render DS::Disclosure.new(variant: :inline, body_class: "space-y-2 mt-2") do |disclosure| %>
     <% disclosure.with_summary_content do %>
       <span class="text-xs text-secondary hover:text-primary flex items-center gap-1 py-1">

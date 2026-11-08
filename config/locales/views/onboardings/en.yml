@@ -65,7 +65,7 @@ en:
           title: Set up AI without leaving onboarding
           help: Choose a provider and save a key for your family below. Your in-app assistant is enabled when you continue.
         external:
-          label: Bring your own AI agent
+          label: External Agent harness (OpenClaw, Instinct, etc.)
           description: Let your preferred assistant guide setup, with your permission.
           title: Give your agent a starting point
           help: Copy these instructions into your assistant. Selecting this option does not connect an agent or grant access to your instance. Your in-app assistant stays off. Other LLM-powered features and provider settings are unchanged.
@@ -74,29 +74,32 @@ en:
         providers:
           openai: OpenAI
           anthropic: Anthropic
-          openrouter: OpenRouter/OpenAI-compatible API
+          openrouter: OpenAI-compatible API
         key_names:
-          openrouter: OpenRouter/OpenAI-compatible
+          openrouter: OpenAI-compatible
         key_label: "%{provider} API key"
         key_placeholder: "Enter your %{provider} API key"
-        model_label: OpenRouter/OpenAI-compatible API model ID (required)
+        model_label: OpenAI-compatible API model ID (required)
         model_placeholder: "For example, openai/gpt-4.1-mini"
-        model_help: Enter the exact model ID from OpenRouter/OpenAI-compatible API. No model is selected automatically. Model capabilities vary.
-        openrouter_document_search: OpenRouter/OpenAI-compatible API document search is not configured here. PDF analysis can use extracted text with the selected model; native PDF and vision support are not assumed.
+        model_help: Enter the exact model ID from your OpenAI-compatible API. No model is selected automatically. Model capabilities vary.
+        openrouter_document_search: OpenAI-compatible API document search is not configured here. PDF analysis can use extracted text with the selected model; native PDF and vision support are not assumed.
         document_index_notice: Document search is available here only with OpenAI. A different OpenAI API key starts a separate index. Existing files and indexes are kept, storage charges may continue, and you may need to upload originals again. Documents are not migrated automatically.
         save_and_test: Save and test connection
         details: How saving and testing works
         key_hidden: A saved key is never displayed here. Saving a new key replaces it.
-        scope: Saving changes the provider, model, and encrypted API key only for your family, including its LLM-powered features. Other families and installation defaults are unchanged. The access check sends your key to the selected provider’s official API (OpenAI, Anthropic, or OpenRouter/OpenAI-compatible API). No financial data is sent for this check.
+        scope: Saving changes the provider, model, and encrypted API key only for your family, including its LLM-powered features. Other families and installation defaults are unchanged. The access check sends your key to the selected provider’s official API (OpenAI, Anthropic, or OpenAI-compatible API). No financial data is sent for this check.
         continue_help: Saving is optional — you can continue without configuring a provider.
-        unavailable: A family administrator can configure your family’s provider key on a self-hosted installation. Ask your family administrator for help.
+        unavailable: A family administrator can configure your family’s provider key. Ask your family administrator for help.
+        current_family: Your family currently uses its own %{provider} key. Saving replaces it for your family only.
+        current_default: Your family currently uses this installation’s default AI setup (%{provider}). Saving a key overrides it for your family only.
+        current_none: No AI provider is configured for your family yet. Saving a key enables LLM-powered features for your family only.
         messages:
           checking: Checking provider access…
           saved: Provider access checked and encrypted key saved for your family.
-          invalid_provider: Choose OpenAI, Anthropic, or OpenRouter/OpenAI-compatible API.
+          invalid_provider: Choose OpenAI, Anthropic, or OpenAI-compatible API.
           missing_key: Enter an API key for the selected provider.
-          missing_model: Enter an OpenRouter/OpenAI-compatible API model ID before saving.
-          invalid_model: Enter a valid OpenRouter/OpenAI-compatible API model ID, such as openai/gpt-4.1-mini.
+          missing_model: Enter an OpenAI-compatible API model ID before saving.
+          invalid_model: Enter a valid OpenAI-compatible API model ID, such as openai/gpt-4.1-mini.
           configuration_changed: Your family’s provider settings changed while this check was running. Review the current settings and try again.
           timed_out: The request timed out. Your family’s provider settings may still have been saved. Reload to review the selected provider and model before trying again.
           connection_failed: Provider access could not be confirmed. The new key was not saved. Check the key and provider model access, then try again.

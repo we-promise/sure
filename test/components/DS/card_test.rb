@@ -13,6 +13,13 @@ class DS::CardTest < ViewComponent::TestCase
     assert_selector "section.bg-container.items-center"
   end
 
+  test "replaces the default padding when padding is provided" do
+    render_inline(DS::Card.new(padding: "p-4")) { "Panel body" }
+
+    assert_selector "section.bg-container.p-4"
+    assert_no_selector "section.p-5"
+  end
+
   test "forwards non-class options to the section tag" do
     render_inline(DS::Card.new(id: "budget-card")) { "Panel body" }
 
