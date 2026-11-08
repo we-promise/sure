@@ -249,10 +249,11 @@ class Security < ApplicationRecord
     self.class.exchange_name_for(exchange_operating_mic)
   end
 
+  # Return the latest usable quote, excluding legacy unrecognized currencies.
   def current_price
     @current_price ||= find_or_fetch_price
     return nil if @current_price.nil?
-    Money.new(@current_price.price, @current_price.currency)
+    Money.new(@current_price.price, Security::Price.normalized_currency(@current_price.currency))
   end
 
   # Stores user-supplied closes for a security no provider tracks. See Security::ManualPriceImport.
@@ -267,6 +268,7 @@ class Security < ApplicationRecord
     splits.where(ex_date: (from + 1)..to).reduce(Rational(1)) { |factor, split| factor * split.ratio }
   end
 
+  # Build a security choice using only prices that can be formatted as Money.
   def to_combobox_option
     ComboboxOption.new(
       symbol: ticker,
