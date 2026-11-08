@@ -43,7 +43,6 @@ class Ai::Instrumentation::UsageSubscriber
         estimated_cost: cost(tokens, model),
         metadata: {
           route: { endpoint: call["endpoint"], model: },
-          correlation_id: call["correlation_id"],
           tokens_unknown: (true unless tokens.known?)
         }.compact
       )

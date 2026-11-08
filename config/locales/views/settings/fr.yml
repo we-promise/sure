@@ -148,8 +148,6 @@ fr:
         title: Journal des événements de débogage
     llm_usages:
       show:
-        avg_cost_per_request: Coût moyen/demande
-        based_on_requests: Basé sur %{with_cost} requêtes sur %{total} avec données de coût
         col_cost: Coût
         col_date: Date
         col_model: Modèle
@@ -170,7 +168,6 @@ fr:
         start_date: Date de début
         subtitle: Suivez votre utilisation de l'IA et les coûts estimés
         total_cost: Coût total
-        total_requests: Total demandes
         total_tokens: Total jetons
     mcp:
       revoke:

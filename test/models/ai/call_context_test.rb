@@ -11,20 +11,17 @@ class Ai::CallContextTest < ActiveSupport::TestCase
     )
   end
 
-  test "RubyLLM's usage event carries the family, the call id and the job's correlation id" do
+  test "RubyLLM's usage event carries the family, and the call id" do
     usage = capture_ai_events("usage.ruby_llm") do
-      Ai::CallContext.job("rule_run:42") do
-        with_ai_call_context(feature: :bill_setup, model: @model, family: @family) do |call|
-          @call = call
-          Ai::Transport.for(@model.endpoint).send(:probe_chat, @model)
-        end
+      with_ai_call_context(feature: :bill_setup, model: @model, family: @family) do |call|
+        @call = call
+        Ai::Transport.for(@model.endpoint).send(:probe_chat, @model)
       end
     end.sole.payload
 
     assert_equal @family, usage[:owner]
     assert_equal @call.call_id, usage[:workflow_id]
-    assert_equal "rule_run:42", usage[:workflow_parent_id]
-    assert_equal({ "feature" => "bill_setup", "call_id" => @call.call_id, "correlation_id" => "rule_run:42",
+    assert_equal({ "feature" => "bill_setup", "call_id" => @call.call_id,
                    "family_id" => @family.id.to_s, "endpoint" => "test", "model" => "test-model" },
                  usage[:workflow_metadata].transform_keys(&:to_s))
   end

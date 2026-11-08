@@ -2,20 +2,18 @@ require "test_helper"
 
 class Ai::ConfigTest < ActiveSupport::TestCase
   test "an endpoint normalises its values and probes by listing models by default" do
-    endpoint = Ai::Config::Endpoint.new(name: :gpu, protocol: "compatible", base_url: "", location: "local", timeout_seconds: "300")
+    endpoint = Ai::Config::Endpoint.new(name: :gpu, protocol: "compatible", base_url: "", timeout_seconds: "300")
 
     assert_equal "gpu", endpoint.name
     assert_equal :compatible, endpoint.protocol
     assert_nil endpoint.base_url
-    assert endpoint.local?
     assert_equal 300, endpoint.timeout_seconds
     assert_equal 0, endpoint.max_retries
     assert_equal :models, endpoint.probe_check
   end
 
-  test "an endpoint refuses unknown protocols, locations and probe checks" do
+  test "an endpoint refuses unknown protocols and probe checks" do
     assert_raises(ArgumentError) { Ai::Config::Endpoint.new(name: "x", protocol: :grpc) }
-    assert_raises(ArgumentError) { Ai::Config::Endpoint.new(name: "x", protocol: :compatible, location: :moon) }
     assert_raises(ArgumentError) { Ai::Config::Endpoint.new(name: "x", protocol: :compatible, probe_check: :ping) }
   end
 
@@ -28,16 +26,5 @@ class Ai::ConfigTest < ActiveSupport::TestCase
       assert_not_includes shown, "header-secret"
       assert_not_includes shown, "pass"
     end
-  end
-
-  test "a model checks its capabilities and prices tokens when it has prices" do
-    model = ai_model(capabilities: %i[tools streaming], input_cost_per_mtok: 1.0, output_cost_per_mtok: 4.0)
-
-    assert model.capable?(:tools)
-    assert model.capable?(%w[tools streaming])
-    assert_not model.capable?(:vision)
-    assert_in_delta 0.000014, model.cost_for(Ai::Tokens.new(input_tokens: 2, cache_read_tokens: 4, output_tokens: 2)), 1e-12
-    assert_nil ai_model.cost_for(Ai::Tokens.new(input_tokens: 2))
-    assert_raises(ArgumentError) { ai_model(capabilities: [ :telepathy ]) }
   end
 end

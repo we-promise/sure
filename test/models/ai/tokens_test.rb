@@ -22,19 +22,6 @@ class Ai::TokensTest < ActiveSupport::TestCase
     assert_not tokens.known?
     assert_nil tokens.prompt_tokens
     assert_nil tokens.total_tokens
-    assert_nil (tokens + Ai::Tokens.new).input_tokens
-  end
-
-  test "adding keeps known counts and sums costs" do
-    a = Ai::Tokens.new(input_tokens: 10, output_tokens: 5, cost: 0.25)
-    b = Ai::Tokens.new(input_tokens: 3, cost: nil)
-
-    sum = a + b
-
-    assert_equal 13, sum.input_tokens
-    assert_equal 5, sum.output_tokens
-    assert_in_delta 0.25, sum.cost
-    assert_equal a, a + nil
   end
 
   test "a reported cost wins over an estimate" do

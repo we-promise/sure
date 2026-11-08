@@ -111,9 +111,6 @@ ru:
         not_authorized: Доступ запрещён
     llm_usages:
       show:
-        avg_cost_per_request: Средняя стоимость/запрос
-        based_on_requests: Основано на %{with_cost} из %{total} запросов с данными
-          о стоимости
         col_cost: Стоимость
         col_date: Дата
         col_model: Модель
@@ -134,7 +131,6 @@ ru:
         start_date: Дата начала
         subtitle: Отслеживайте использование ИИ и предполагаемые затраты
         total_cost: Общая стоимость
-        total_requests: Всего запросов
         total_tokens: Всего токенов
     mcp:
       revoke:

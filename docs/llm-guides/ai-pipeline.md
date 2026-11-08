@@ -51,15 +51,13 @@ flowchart LR
 - **Wrap every call in `Ai::CallContext.call`.** RubyLLM's `usage.ruby_llm` event then carries
   the family (the usage owner) and the call (the workflow), and `UsageSubscriber` writes one
   `llm_usages` row per request. A failed request's row takes its own error from the
-  `request.ruby_llm` event (`Ai::Transport::Instrumenter`). A job opens `Ai::CallContext.job(correlation_id)` first, with
-  the id from its arguments.
+  `request.ruby_llm` event (`Ai::Transport::Instrumenter`).
 - **Never create `ruby_llm_usages`.** RubyLLM's ledger would then record every call a second time.
 
 **Tests**
 
-- `test/support/ai_test_helper.rb`: `ai_endpoint`, `ai_model`, `with_ai_call_context`,
-  `capture_ai_events`, `stub_ai_transport`, and `with_ai_cassette(preset, name)` for cassettes
-  under `test/vcr_cassettes/ai/<preset>/` (record with `RECORD_CASSETTES=1`).
+- `test/support/ai_test_helper.rb`: `ai_endpoint`, `ai_model`, `with_ai_call_context` and
+  `capture_ai_events`.
 - A new transport, or a new transport call, passes `ai_transport_contract_test.rb`: every HTTP
   status maps onto `Ai::Error`, retries follow the endpoint, usage counts cached tokens, and the
   proxy is resolved by `Http`.
