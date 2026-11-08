@@ -2826,7 +2826,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    until then embedding requests send none, as on `main` (call by @josh-sanders during development
    of PR #4440, after #4774's review). RubyLLM's `embed` takes no headers, on 2.1.1 or `main`,
    unlike `complete`; the public way is a provider's `headers` override, merged into every request,
-   unless RubyLLM adds per-call headers to `embed` by then. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
+   unless RubyLLM adds headers per context by then (requested in crmne/ruby_llm#1556). `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
    The test helpers switch to the new fixtures. Adds the config and consent tests.
    *Still on old code:* nothing; from here every process reads the same rows.
 8. **Health and settings pages.** The health page (lanes, down marks, AI threads per worker,
