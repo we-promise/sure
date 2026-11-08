@@ -4,8 +4,17 @@
      data-onboarding-provider-messages-value="<%= t("onboardings.tools.provider_setup.messages").to_json %>"
      data-action="turbo:before-cache@document->onboarding-provider#beforeCache change@document->onboarding-provider#modeChanged"
      class="space-y-3">
-  <p class="text-xs text-secondary"><%= t("onboardings.tools.provider_setup.scope") %></p>
-  <p class="text-xs text-secondary"><%= t("onboardings.tools.provider_setup.document_index_notice") %></p>
+  <%= render DS::Disclosure.new(variant: :inline, body_class: "space-y-2 mt-2") do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <span class="text-xs text-secondary hover:text-primary flex items-center gap-1 py-1">
+        <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
+        <%= t("onboardings.tools.provider_setup.details") %>
+      </span>
+    <% end %>
+    <p class="text-xs text-secondary"><%= t("onboardings.tools.provider_setup.key_hidden") %></p>
+    <p class="text-xs text-secondary"><%= t("onboardings.tools.provider_setup.scope") %></p>
+    <p class="text-xs text-secondary"><%= t("onboardings.tools.provider_setup.document_index_notice") %></p>
+  <% end %>
   <%= tag.fieldset disabled: !enabled, class: "space-y-3" do %>
     <%= fields_for :provider_configuration, nil, builder: StyledFormBuilder do |provider_form| %>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -32,5 +41,5 @@
     <% end %>
     <%= render DS::Button.new(text: t("onboardings.tools.provider_setup.save_and_test"), variant: :primary, data: { onboarding_provider_target: "button", action: "onboarding-provider#save" }) %>
   <% end %>
-  <p role="status" aria-live="polite" class="text-sm text-secondary" data-onboarding-provider-target="status"><%= t("onboardings.tools.provider_setup.messages.unchecked") %></p>
+  <p role="status" aria-live="polite" class="text-sm text-secondary" data-onboarding-provider-target="status"></p>
 </div>

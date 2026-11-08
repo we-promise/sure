@@ -63,7 +63,7 @@ en:
           label: Built-in AI
           description: Use the assistant available inside Sure.
           title: Set up AI without leaving onboarding
-          help: Choose a provider and save a key for your family below. Your in-app assistant preference is enabled when you continue. Its availability and type still depend on your instance and household assistant settings.
+          help: Choose a provider and save a key for your family below. Your in-app assistant is enabled when you continue.
         external:
           label: Bring your own AI agent
           description: Let your preferred assistant guide setup, with your permission.
@@ -85,11 +85,12 @@ en:
         openrouter_document_search: OpenRouter/OpenAI-compatible API document search is not configured here. PDF analysis can use extracted text with the selected model; native PDF and vision support are not assumed.
         document_index_notice: Document search is available here only with OpenAI. A different OpenAI API key starts a separate index. Existing files and indexes are kept, storage charges may continue, and you may need to upload originals again. Documents are not migrated automatically.
         save_and_test: Save and test connection
+        details: How saving and testing works
+        key_hidden: A saved key is never displayed here. Saving a new key replaces it.
         scope: Saving changes the provider, model, and encrypted API key only for your family, including its LLM-powered features. Other families and installation defaults are unchanged. The access check sends your key to the selected provider’s official API (OpenAI, Anthropic, or OpenRouter/OpenAI-compatible API). No financial data is sent for this check.
-        continue_help: Saving is separate from Next. You can continue without configuring a provider. Existing household assistant settings are not changed.
+        continue_help: Saving is optional — you can continue without configuring a provider.
         unavailable: A family administrator can configure your family’s provider key on a self-hosted installation. Ask your family administrator for help.
         messages:
-          unchecked: Not checked here. Any existing saved key is hidden.
           checking: Checking provider access…
           saved: Provider access checked and encrypted key saved for your family.
           invalid_provider: Choose OpenAI, Anthropic, or OpenRouter/OpenAI-compatible API.

@@ -188,8 +188,11 @@ export default class extends Controller {
   }
 
   showStatus(key, failed = false) {
+    // "unchecked" is the idle state: no message, just an empty live region.
     this.statusTarget.textContent =
-      this.messagesValue[key] || this.messagesValue.request_failed;
+      key === "unchecked"
+        ? ""
+        : this.messagesValue[key] || this.messagesValue.request_failed;
     this.statusTarget.classList.toggle("text-destructive", failed);
     this.statusTarget.classList.toggle("text-secondary", !failed);
   }

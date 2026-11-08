@@ -424,7 +424,7 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     %w[openai/gpt-4.1-mini anthropic/claude-sonnet-4].each do |model|
       fill_in "OpenRouter/OpenAI-compatible API model ID (required)", with: model
-      assert_text "Not checked here. Any existing saved key is hidden."
+      assert_no_text "Provider access checked and encrypted key saved for your family."
       fill_in "OpenRouter/OpenAI-compatible API key", with: "replacement-family-key"
       click_button "Save and test connection"
       assert_button "Save and test connection", disabled: true
