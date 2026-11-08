@@ -46,7 +46,7 @@ class Family::AutoCategorizer
 
   def apply_ai(result)
     decisions = result.value[:categorizations]
-    shadow = run_shadow(result.route)
+    shadow = run_shadow(result.route, batch_input(result))
     modified_count = 0
     categorized_transaction_ids = []
     withheld = []
@@ -104,10 +104,10 @@ class Family::AutoCategorizer
   def ai_correlation_id = @rule_run ? "rule_run:#{@rule_run.id}" : nil
 
   # Jev's decisions as the generation's hashes, or nil when Jev failed.
-  def jev_decisions(provider = jev_provider)
+  def jev_decisions(provider = jev_provider, input = transactions_input)
     return unless provider
 
-    response = provider.auto_categorize(transactions: transactions_input, user_categories: categories_input, family:)
+    response = provider.auto_categorize(transactions: input, user_categories: categories_input, family:)
     return unless response.success?
 
     response.data.map do |decision|
@@ -182,15 +182,15 @@ class Family::AutoCategorizer
     # real data before anyone switches; its answers are never applied. Sampled per run, and any
     # failure is swallowed: a diagnostic must never break the categorization it observes. It runs
     # inline, in the categorization job.
-    def run_shadow(primary_route)
+    def run_shadow(primary_route, input)
       rate = family.effective_categorization_shadow_rate
       return unless rate.positive? && rand < rate
 
       decisions, route_key =
         if primary_route&.judge?
-          shadow_on_llm
+          shadow_on_llm(input)
         elsif (provider = shadow_jev_provider)
-          [ jev_decisions(provider), "jev" ]
+          [ jev_decisions(provider, input), "jev" ]
         end
       decisions && { decisions:, provider: route_key }
     rescue => error
@@ -199,12 +199,12 @@ class Family::AutoCategorizer
     end
 
     # A Jev family's shadow: the LLM entries of its categorize route.
-    def shadow_on_llm
+    def shadow_on_llm(input)
       plan = Ai.plan(:categorize, family:)
       llm = plan&.routes&.reject(&:judge?)
       return if llm.blank?
 
-      result = Ai::Generations::CategorizeTransactions.new(transactions: transactions_input, categories: categories_input, family:)
+      result = Ai::Generations::CategorizeTransactions.new(transactions: input, categories: categories_input, family:)
                                                        .call(plan: plan.with(routes: llm))
       [ result.value[:categorizations], provider_key(result.route) ] if result.success?
     end
@@ -260,6 +260,13 @@ class Family::AutoCategorizer
       @categories_input ||= family.categories.map do |category|
         { id: category.id, name: category.name, is_subcategory: category.subcategory?, parent_id: category.parent_id }
       end
+    end
+
+    # The transactions this job's batch covered: the shadow compares those, not the ones later
+    # jobs will send.
+    def batch_input(result)
+      left = result.remaining_ids
+      transactions_input.reject { left.include?(_1[:id]) }
     end
 
     def transactions_input

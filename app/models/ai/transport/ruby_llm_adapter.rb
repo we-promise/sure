@@ -55,11 +55,14 @@ module Ai::Transport::RubyLlmAdapter
     end
 
     # A parsed answer, or the error that ends the call: an answer cut at the output limit is
-    # OutputCut (the generation splits the batch); anything else unparseable is InvalidOutput.
+    # OutputCut (the generation splits the batch), parseable or not; anything else unparseable is
+    # InvalidOutput.
     def parsed!(text, finish_reason, json_mode)
+      # Checked first: a list cut short can still parse, and would drop the items it never reached.
+      raise Ai::Error::OutputCut, "the answer stopped at the output limit (#{json_mode})" if cut_at_limit?(finish_reason)
+
       json = parse_json(text)
       return json if json
-      raise Ai::Error::OutputCut, "the answer stopped at the output limit (#{json_mode})" if cut_at_limit?(finish_reason)
 
       raise Ai::Error::InvalidOutput, "the answer isn't JSON (#{json_mode})"
     end

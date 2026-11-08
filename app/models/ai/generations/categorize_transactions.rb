@@ -68,7 +68,7 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
 
       names.find do |candidate|
         other = candidate.downcase.gsub(/[^a-z0-9]/, "")
-        squeezed.include?(other) || other.include?(squeezed) ||
+        (other.present? && (squeezed.include?(other) || other.include?(squeezed))) ||
           NAME_VARIATIONS.any? { |group| group.include?(name.downcase) && group.include?(candidate.downcase) }
       end
     end

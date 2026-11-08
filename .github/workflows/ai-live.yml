@@ -81,11 +81,13 @@ jobs:
         run: |
           set -euo pipefail
           : > tmp/ai-live-evals.md
+          failed=0
           for dataset in categorization_golden_v1_light merchant_detection_golden_v1; do
             bundle exec rake "evals:import_dataset[db/eval_data/${dataset}.yml]"
             echo "### ${dataset}" >> tmp/ai-live-evals.md
-            EVAL_DATASET="${dataset}" bundle exec rake evals:ci_regression | tee -a tmp/ai-live-evals.md || true
+            EVAL_DATASET="${dataset}" bundle exec rake evals:ci_regression | tee -a tmp/ai-live-evals.md || failed=1
           done
+          echo "failed=${failed}" >> "$GITHUB_OUTPUT"
 
       - name: Post the results
         if: steps.evals.outcome == 'success'
@@ -95,3 +97,8 @@ jobs:
         run: |
           { echo "## AI live evals"; echo; echo '```'; cat tmp/ai-live-evals.md; echo '```'; } > tmp/ai-live-comment.md
           gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file tmp/ai-live-comment.md
+
+      # After the comment, so the results are posted either way.
+      - name: Fail on an eval below its threshold
+        if: steps.evals.outputs.failed == '1'
+        run: exit 1

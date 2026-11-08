@@ -401,6 +401,22 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_in_delta 0.88, comparison.shadow_confidence, 0.001
   end
 
+  test "the shadow compares only the transactions in this job's batch" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    category = @family.categories.create!(name: "Coffee")
+    txns = Array.new(3) { create_transaction(account: @account, name: "Blue Bottle #{_1}").transaction }
+    stub_ai(:categorize) { |request| { categorizations: request.input.scan(/ID: (\S+),/).flatten.map { { transaction_id: _1, category_name: category.name } } } }
+
+    jev = Provider::Jev.allocate
+    Provider::Registry.stubs(:get_provider).with(:jev).returns(jev)
+    shadowed = []
+    jev.stubs(:auto_categorize).with { |transactions:, **| shadowed << transactions.map { _1[:id] } }.returns(provider_success_response([]))
+
+    with_ai_model_settings(batch_size: 2) { categorize(txns.map(&:id)) }
+
+    assert_equal [ 2 ], shadowed.map(&:size), "the first job's batch only"
+  end
+
   test "does not score a missing shadow answer as agreement" do
     # The comparison rows come from the union of both providers' decisions, so
     # one side can be absent entirely. When the other side abstained, both

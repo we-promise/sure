@@ -44,13 +44,20 @@ class Eval::ProviderFactory
       raise Error, "OpenAI access token not configured" unless access_token.present?
 
       uri_base = config[:uri_base].presence || installed&.base_url
-      endpoint = Ai::Config::Endpoint.new(
-        name: uri_base ? "openai_compatible" : "openai", protocol: :compatible, preset: (:openai unless uri_base),
-        base_url: uri_base, api_key: access_token, responses_api: uri_base.nil?,
-        location: uri_base.to_s.start_with?("http:") ? :local : :cloud, timeout_seconds: installed&.timeout_seconds || 60,
-        json_mode: installed&.json_mode || :auto
-      )
-      Eval::GenerationClient.new(endpoint:, model:, chat_provider: Provider::Openai.new(access_token, uri_base:, model:))
+      endpoint =
+        if installed && uri_base == installed.base_url
+          # The install's own server: its headers, API choice and timeout, as production calls it.
+          installed.with(api_key: access_token)
+        else
+          Ai::Config::Endpoint.new(
+            name: uri_base ? "openai_compatible" : "openai", protocol: :compatible, preset: (:openai unless uri_base),
+            base_url: uri_base, api_key: access_token, responses_api: uri_base.nil?,
+            location: uri_base.to_s.start_with?("http:") ? :local : :cloud, timeout_seconds: installed&.timeout_seconds || 60,
+            json_mode: installed&.json_mode || :auto
+          )
+        end
+      budget = Ai::Config.current.models.find { _1.endpoint == installed }
+      Eval::GenerationClient.new(endpoint:, model:, budget:, chat_provider: Provider::Openai.new(access_token, uri_base:, model:))
     end
 
     def build_jev

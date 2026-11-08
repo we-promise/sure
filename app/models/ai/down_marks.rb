@@ -40,7 +40,8 @@ module Ai::DownMarks
     "ai/down/server/#{endpoint.name}"
   end
 
-  def key_key(endpoint) = "ai/down/key/#{endpoint.name}"
+  # A short digest of the key, so a replaced key isn't skipped for the old one's mark.
+  def key_key(endpoint) = "ai/down/key/#{endpoint.name}/#{Digest::SHA256.hexdigest(endpoint.api_key.to_s).first(12)}"
 
   def model_key(route) = "ai/down/model/#{route.endpoint.name}/#{route.model.name}"
 end
