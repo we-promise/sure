@@ -485,6 +485,23 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_equal "AAA", last_holdings_log.metadata["entry"]
   end
 
+  # Postgres refuses a NUL in a text column, so one in a ticker or a name would
+  # raise out of the insert and roll the fund back unstamped. The log entry
+  # is stored without it, as a jsonb column refuses it too.
+  test "a NUL in a ticker or a name skips that row and stores the rest" do
+    [ constituent("AA\u0000A", "Nul ticker", 4), constituent("CCC", "Nul\u0000name", 4) ].each do |bad|
+      @security.update_columns(constituents_fetched_at: nil)
+
+      assert_difference -> { holdings_log_count }, 1, "for #{bad.inspect}" do
+        import(info(constituents: [ bad, constituent("BBB", "Other", 2) ]))
+      end
+
+      assert_not_nil @security.reload.constituents_fetched_at, "unstamped for #{bad.inspect}"
+      assert_equal %w[BBB], @security.constituents.pluck(:ticker), "for #{bad.inspect}"
+      assert_equal "nul_character", last_holdings_log.metadata["reason"]
+    end
+  end
+
   test "a padded name is stored stripped" do
     import(info(constituents: [ constituent("AAA", "  Padded Inc  ", 5) ]))
 

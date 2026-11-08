@@ -493,6 +493,7 @@ module Security::Provided
       end
 
       ticker = (entry[:ticker] || entry["ticker"]).to_s.strip
+      name = (entry[:name] || entry["name"]).to_s.strip.presence
       raw_weight = entry[:weight] || entry["weight"]
       weight = begin
         raw_weight.present? ? BigDecimal(raw_weight.to_s) : nil
@@ -501,7 +502,9 @@ module Security::Provided
       end
       weight = :non_numeric if weight.is_a?(BigDecimal) && !weight.finite?
 
+      # Postgres refuses a NUL in a text column, as it would the rows below.
       reason = if ticker.blank? then "blank_ticker"
+      elsif ticker.include?("\0") || name&.include?("\0") then "nul_character"
       elsif weight == :non_numeric then "non_numeric_weight"
       elsif weight&.negative? then "negative_weight"
       elsif weight && weight.round(constituent_weight_scale) >= constituent_weight_limit then "out_of_range_weight"
@@ -512,7 +515,7 @@ module Security::Provided
         skipped << [ reason, entry ]
       else
         seen << ticker
-        rows << { ticker: ticker, name: (entry[:name] || entry["name"]).to_s.strip.presence, weight: weight }
+        rows << { ticker: ticker, name: name, weight: weight }
       end
     end
 
@@ -537,17 +540,28 @@ module Security::Provided
       message: "Skipped a fund holding the provider reported in a form that cannot be stored",
       source: "Security#store_constituents",
       provider: price_data_provider,
-      metadata: {
+      # Without NULs: the metadata column is jsonb, which refuses them as the
+      # constituents table does, and the entry is logged because it is malformed.
+      metadata: without_nul(
         security_id: id,
         security_ticker: ticker,
         ticker: entry.is_a?(Hash) ? (entry[:ticker] || entry["ticker"]) : nil,
         reason: reason,
         entry: entry.is_a?(Hash) ? entry.to_h : entry
-      }
+      )
     )
   end
+
+  def without_nul(value)
+    case value
+    when String then value.delete("\0")
+    when Hash then value.to_h { |key, inner| [ without_nul(key), without_nul(inner) ] }
+    when Array then value.map { |inner| without_nul(inner) }
+    else value
+    end
+  end
   private :store_constituents, :constituent_rows_from, :constituent_weight_limit,
-    :constituent_weight_scale, :log_skipped_constituent
+    :constituent_weight_scale, :log_skipped_constituent, :without_nul
 
   # A provider's type says what the wrapper is, not what it holds. "Common
   # stock" is an equity whatever else is true of it, so it maps. An ETF or a
