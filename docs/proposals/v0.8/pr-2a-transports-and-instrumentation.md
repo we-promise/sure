@@ -26,8 +26,9 @@ clients.
 
 A transport call arrives only with its first caller (§19), so 2a implements only `probe`. The
 same rule holds for values and helpers (call by @josh-sanders, 2026-11-08): `Ai::Result`, the
-correlation id, `stub_ai_transport` and `with_ai_cassette` arrive in 2c; model capabilities,
-prices and endpoint location in 2b.
+correlation id, `with_ai_cassette` and the model's context window, output limit and batch size
+arrive in 2c; model capabilities, endpoint location and the `jev` protocol in 2b; model prices
+and `cost_for` with PR 7's presets. `stub_ai_transport` is dropped: 2c's tests use `stub_ai`.
 `generate` comes in 2c, `judge` in 2d, `embed` in 2e and `converse` in PR 6. The subscribers and
 the new usage columns get their production traffic from 2c on. Until then, today's recorders
 write rows with a null `call_id`, which count as calls of one request each.
@@ -322,8 +323,8 @@ Nothing here blocks 2a on 2.1.1.
       scheme-only lookup and its CIDR `NO_PROXY` bug.
 12. **`test/support/ai_test_helper.rb`.**
     - `ai_endpoint` and `ai_model`, `with_ai_call_context`, `capture_ai_events`.
-    - Later parts add their own: 2b `with_ai_routes`/`without_ai`; 2c `stub_ai`,
-      `stub_ai_transport` and `with_ai_cassette(preset, name)` (cassettes under
+    - Later parts add their own: 2b `with_ai_routes`/`without_ai`; 2c `stub_ai`
+      and `with_ai_cassette(preset, name)` (cassettes under
       `test/vcr_cassettes/ai/<preset>/`, keys filtered, `RECORD_CASSETTES=1`); PR 3
       `with_ai_capsule`.
 13. **Contract test** (`test/architecture/ai_transport_contract_test.rb`), run over every

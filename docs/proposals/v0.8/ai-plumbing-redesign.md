@@ -2688,11 +2688,13 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      tracing modes, and the proxy fix (with loopback skipped). `AiHealth::Probe` calls `transport.probe`, which fixes
      drift bug 6. Adds the transport contract test and the AI test helpers (section 17). Each
      value or helper lands with its first caller (call by @josh-sanders, 2026-11-08): model
-     capabilities, prices and endpoint location with 2b's `Ai::Config`; `Ai::Result`, the
-     correlation id, `stub_ai_transport` and `with_ai_cassette` with 2c.
+     capabilities, endpoint location and the `jev` protocol with 2b's `Ai::Config`;
+     `Ai::Result`, the correlation id, `with_ai_cassette`, the model's context window, output
+     limit and batch size with 2c; model prices and `cost_for` with PR 7's presets, which first
+     carry prices.
      *Deletes:* `AiHealth::Probe`'s own clients.
      PR #4773. Implementation plan: [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md).
-   - **2b. Routing and consent.** `Ai::Config` (adding model capabilities and prices and the
+   - **2b. Routing and consent.** `Ai::Config` (adding model capabilities and the
      endpoint's location to 2a's value types), built in memory in each process by
      `Ai::LegacyEnvConfig` from today's ENV and `Setting` fields with the table in section 4.5
      (so the web and the workers can disagree, as they do today, until PR 7);
