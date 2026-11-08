@@ -4,3 +4,48 @@ nl:
     demo_banner_title: "Demo Modus Actief"
     demo_banner_message: "Gratis LLM-tokens dankzij Vercel AI Gateway. Resultaten kunnen variëren omdat we de modelgewichten vaak wijzigen voor testdoeleinden. Raadpleeg de documentatie van Vercel om te zien waar uw gesprekken naartoe gaan! 🤖"
     thinking: "Bezig ..."
+    ai_busy: "Ik rond nog even een achtergrondtaak af, daarna ga ik direct met uw bericht aan de slag."
+    reservation:
+      ready_html: "Ik heb wat achtergrondtaken uitgesteld, zodat ik direct met uw bericht aan de slag kan. Over %{countdown} s gaan ze weer verder, dus typ gerust door!"
+      busy: "Ik rond nog even een achtergrondtaak af, daarna ben ik helemaal voor u beschikbaar. Typ gerust door!"
+    worker_unhealthy_warning: "AI-antwoorden worden mogelijk nu niet afgeleverd — de achtergrondworker lijkt niet actief of overbelast te zijn. Controleer of uw Sidekiq-worker draait."
+    ai_greeting:
+      greeting: "Hallo %{name}! Ik ben een AI/groot taalmodel dat u kan helpen met uw financiën. Ik heb toegang tot het web en uw accountgegevens."
+      there: "daar"
+      commands_hint_html: "U kunt <span class=\"bg-container border border-secondary px-1.5 py-0.5 rounded font-mono text-xs\">/</span> gebruiken om opdrachten te openen"
+      questions_intro: "Hier zijn een paar vragen die u kunt stellen:"
+      evaluate_portfolio: "Beleggingsportefeuille beoordelen"
+      spending_insights: "Inzichten in uitgaven tonen"
+      unusual_patterns: "Ongebruikelijke patronen vinden"
+    chat:
+      edit_chat_title: "Chattitel bewerken"
+      delete_chat: "Chat verwijderen"
+    chat_nav:
+      all_chats: "Alle chats"
+      start_new_chat: "Nieuwe chat starten"
+      edit_chat_title: "Chattitel bewerken"
+      delete_chat: "Chat verwijderen"
+    error:
+      retry: "Opnieuw proberen"
+    destroy:
+      notice: "Chat is verwijderd"
+    index:
+      chats: "Chats"
+      new_chat: "Nieuwe chat"
+    new:
+      default_title: "Nieuwe chat %{timestamp}"
+    update:
+      success: "Chat bijgewerkt"
+    ai_consent:
+      title: "AI-chats inschakelen"
+      available_description: "AI-chat kan financiële vragen beantwoorden en inzichten geven op basis van uw gegevens. Om deze functie te gebruiken, moet u deze uitdrukkelijk inschakelen."
+      unavailable_description_html: "Om de AI-assistent te gebruiken, moet u de omgevingsvariabele <code class=\"bg-surface-inset px-1 py-0.5 rounded font-mono text-xs\">OPENAI_ACCESS_TOKEN</code> instellen of deze configureren in de zelfhostinginstellingen van uw instantie."
+      enable_button: "AI-chats inschakelen"
+      disable_note: "Op elk moment uit te schakelen. Alle gegevens die naar onze LLM-providers worden verzonden, zijn geanonimiseerd."
+  assistant_messages:
+    assistant_message:
+      assistant_reasoning: "Redenering van de assistent"
+    tool_calls:
+      tool_calls: "Toolaanroepen"
+      function: "Functie:"
+      arguments: "Argumenten:"

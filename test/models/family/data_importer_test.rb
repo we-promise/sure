@@ -31,6 +31,50 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "restores the Brandfetch logo choice so no fetched icon replaces it" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Test Checking",
+          balance: "1500.00",
+          currency: "USD",
+          institution_domain: "tbank.ru",
+          logo_selection: "brandfetch",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" }
+        }
+      }
+    ])
+
+    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+
+    assert account.reload.logo_brandfetch?
+    assert_not account.logo_auto_fetchable?
+  end
+
+  test "an unknown logo selection imports as the automatic one" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Test Checking",
+          balance: "1500.00",
+          currency: "USD",
+          logo_selection: "some-future-source",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" }
+        }
+      }
+    ])
+
+    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+
+    assert account.reload.logo_automatic?
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
@@ -1987,6 +2031,128 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not @family.rules.find_by(name: "Second").stop_processing
   end
 
+  test "imports rule groups by name and keeps each group in one block" do
+    existing = @family.rule_groups.create!(name: "Food")
+    rule_record = ->(name, position, group) do
+      data = {
+        name: name,
+        resource_type: "transaction",
+        active: true,
+        position: position,
+        conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+        actions: [ { action_type: "exclude_transaction" } ]
+      }
+      data[:group] = group unless group == :absent
+      { type: "Rule", version: 1, data: data }
+    end
+    ndjson = build_ndjson([
+      rule_record.call("Loose", 1, nil),
+      rule_record.call("Groceries", 2, "Food"),
+      rule_record.call("Restaurants", 3, "Food"),
+      rule_record.call("Rent", 4, "Housing"),
+      rule_record.call("Old export", 5, :absent)
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    rules = @family.rules.index_by(&:name)
+    assert_nil rules["Loose"].rule_group
+    assert_equal existing, rules["Groceries"].rule_group
+    assert_equal existing, rules["Restaurants"].rule_group
+    assert_equal "Housing", rules["Rent"].rule_group.name
+    assert_nil rules["Old export"].rule_group
+    # Rules joining a group that already exists run where that group stands.
+    assert_equal [ "Groceries", "Restaurants", "Loose", "Rent", "Old export" ], @family.rules.ordered.pluck(:name).last(5)
+  end
+
+  test "session rule reimport keeps the run order of rules leaving a group" do
+    group = @family.rule_groups.create!(name: "Food")
+    build_rule = ->(name) do
+      rule = @family.rules.build(name: name, resource_type: "transaction", active: true, rule_group: group)
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: name)
+      rule.actions.build(action_type: "exclude_transaction")
+      rule.tap(&:save!)
+    end
+    first = build_rule.call("First")
+    second = build_rule.call("Second")
+    build_rule.call("Staying")
+
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    { "rule-1" => first, "rule-2" => second }.each do |source_id, rule|
+      session.source_mappings.create!(family: @family, source_type: "Rule", source_id: source_id, target: rule)
+    end
+    rule_record = ->(id, name, position) do
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          id: id,
+          name: name,
+          resource_type: "transaction",
+          active: true,
+          position: position,
+          group: nil,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+          actions: [ { action_type: "exclude_transaction" } ]
+        }
+      }
+    end
+    ndjson = build_ndjson([ rule_record.call("rule-1", "First", 1), rule_record.call("rule-2", "Second", 2) ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert_nil first.reload.rule_group
+    assert_nil second.reload.rule_group
+    assert_equal [ "Staying", "First", "Second" ], @family.rules.ordered.pluck(:name).last(3)
+  end
+
+  test "session rule reimport keeps the run order of rules leaving a group across chunks" do
+    group = @family.rule_groups.create!(name: "Food")
+    build_rule = ->(name) do
+      rule = @family.rules.build(name: name, resource_type: "transaction", active: true, rule_group: group)
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: name)
+      rule.actions.build(action_type: "exclude_transaction")
+      rule.tap(&:save!)
+    end
+    first = build_rule.call("First")
+    second = build_rule.call("Second")
+    third = build_rule.call("Third")
+    build_rule.call("Staying")
+
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    { "rule-1" => first, "rule-2" => second, "rule-3" => third }.each do |source_id, rule|
+      session.source_mappings.create!(family: @family, source_type: "Rule", source_id: source_id, target: rule)
+    end
+    rule_record = ->(id, name, position) do
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          id: id,
+          name: name,
+          resource_type: "transaction",
+          active: true,
+          position: position,
+          group: nil,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+          actions: [ { action_type: "exclude_transaction" } ]
+        }
+      }
+    end
+
+    Family::DataImporter.new(@family, build_ndjson([ rule_record.call("rule-1", "First", 1) ]), import_session: session).import!
+    Family::DataImporter.new(
+      @family,
+      build_ndjson([ rule_record.call("rule-2", "Second", 2), rule_record.call("rule-3", "Third", 3) ]),
+      import_session: session
+    ).import!
+
+    assert_nil first.reload.rule_group
+    assert_nil second.reload.rule_group
+    assert_nil third.reload.rule_group
+    assert_equal [ "Staying", "First", "Second", "Third" ], @family.rules.ordered.pluck(:name).last(4)
+  end
+
   test "imports rules with conditions and actions" do
     ndjson = build_ndjson([
       {
@@ -2173,6 +2339,41 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     second_rule = @family.rules.find_by!(name: "Second coffee rule")
     assert_equal category.id, first_rule.actions.first.value
     assert_equal category.id, second_rule.actions.first.value
+  end
+
+  test "points imported merchant rules at a reused provider merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Grocer", source: "plaid", provider_merchant_id: "plaid_synced_grocer")
+    value_ref = { type: "Merchant", id: "old-provider-merchant", name: "Synced Grocer" }
+
+    ndjson = build_ndjson([
+      {
+        type: "ProviderMerchant",
+        data: { id: "old-provider-merchant", name: "Synced Grocer", source: "plaid", provider_merchant_id: "plaid_synced_grocer" }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Grocer rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_merchant", operator: "=", value: "Synced Grocer", value_ref: value_ref }
+          ],
+          actions: [
+            { action_type: "set_transaction_merchant", value: "Synced Grocer", value_ref: value_ref }
+          ]
+        }
+      }
+    ])
+
+    assert_no_difference -> { @family.merchants.count } do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
+
+    rule = @family.rules.find_by!(name: "Grocer rule")
+    assert_equal provider_merchant.id, rule.conditions.first.value
+    assert_equal provider_merchant.id, rule.actions.first.value
   end
 
   test "reuses a merchant created for an earlier rule within the same import" do

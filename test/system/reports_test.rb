@@ -92,6 +92,24 @@ class ReportsTest < ApplicationSystemTestCase
     assert_operator saved_order.index(moved), :<, saved_order.index(above)
   end
 
+  # The collapse control sends the page's CSRF token and saves nothing without
+  # one, and the test environment renders none unless forgery protection is on.
+  test "collapsing a section saves it under the reports keys" do
+    original = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+    user = users(:family_admin)
+    visit reports_path(period_type: :monthly)
+    record_saved_section_order
+
+    find("section[data-section-key='transactions_breakdown'] button[data-reports-section-target='button']").click
+
+    assert_selector "section[data-section-key='transactions_breakdown'] button[aria-expanded='false']"
+    assert_selector "html[data-order-saved='200']"
+    assert_equal true, user.reload.preferences.dig("reports_collapsed_sections", "transactions_breakdown")
+  ensure
+    ActionController::Base.allow_forgery_protection = original
+  end
+
   private
     def clicked_hotkeys
       page.evaluate_script("window.clickedHotkeys")
