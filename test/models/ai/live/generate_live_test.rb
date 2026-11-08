@@ -1,12 +1,12 @@
 require "test_helper"
 
-# `generate` against real providers (2c plan, step 13): replayed from cassettes under
+# `generate` against real providers: replayed from cassettes under
 # test/vcr_cassettes/ai/<preset>/, recorded with RECORD_CASSETTES=1 and the keys in ENV, or run
 # live with AI_LIVE=1 (the `ai-live` label). A test with no cassette and no key is skipped,
 # saying so, so a fresh checkout stays green.
 #
-# Anthropic's three models are the check behind decision 7: every current Claude model, the
-# ones that refuse a forced tool included, must accept native structured output.
+# Anthropic's three models check that every current Claude model, the ones that refuse a
+# forced tool included, accepts native structured output.
 class AiGenerateLiveTest < ActiveSupport::TestCase
   ROUTES = {
     "openai/gpt-4.1-mini" => { key: "OPENAI_ACCESS_TOKEN", protocol: :compatible, preset: :openai, responses_api: true },

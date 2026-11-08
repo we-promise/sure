@@ -1,4 +1,4 @@
-# The prompt a generation sends (section 8.3). Every prompt is a folder in app/prompts:
+# The prompt a generation sends. Every prompt is a folder in app/prompts:
 #
 #   app/prompts/<name>/instructions.txt.erb   the system prompt
 #   app/prompts/<name>/input.txt.erb          the user message, filled with the request's items
@@ -17,7 +17,7 @@ class Ai::Prompt
   ROOT = Rails.root.join("app/prompts")
 
   # Features whose instructions a family can override, and the Family::AiPromptable key: one per
-  # feature, whichever provider serves it (section 8.3).
+  # feature, whichever provider serves it.
   OVERRIDES = { categorize: :categorize_transactions, detect_merchants: :detect_merchants }.freeze
 
   Rendered = Data.define(:name, :instructions, :input, :locale, :override) do

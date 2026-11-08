@@ -100,7 +100,7 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_equal "ai_low_priority", Ai::Routes.queue_for(:categorize)
   end
 
-  # Section 17's ai_batch_fairness_test: on one AI thread against a cloud endpoint, two families'
+  # Fairness: on one AI thread against a cloud endpoint, two families'
   # large runs take turns, so each gets its first result before either finishes.
   test "two families' runs on one thread each get a result before either finishes" do
     other = families(:empty)

@@ -48,7 +48,7 @@ class RecurringTransaction
     end
 
     private
-      # On the web thread until PR 3 moves smart-fill and smart-configure into a job.
+      # Runs on the web thread: smart-fill and smart-configure wait for the answer.
       def run(charges:, current_config:)
         raise Error, "No LLM provider configured" unless Ai.available?(:bill_setup, family:, user:)
         raise Error, "No charge history to analyze" if charges.empty?

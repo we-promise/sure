@@ -26,8 +26,7 @@ module Ai::Routes
                          sends: %i[merchant_names] }
   }.freeze
 
-  # Each lane's queue. Until PR 4 brings the three lane queues and the ai_chat capsule, lanes
-  # map onto today's two: interactive work first, as chat is today.
+  # Each lane's queue, on the two AI queues: interactive work on the high-priority one, with chat.
   QUEUES = { interactive: "ai_high_priority", prompt: "ai_low_priority", background: "ai_low_priority" }.freeze
 
   module_function

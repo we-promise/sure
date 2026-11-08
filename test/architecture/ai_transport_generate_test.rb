@@ -1,9 +1,9 @@
 require "test_helper"
 
-# The `generate` half of the transport contract (section 17): what each JSON mode sends, the
+# The `generate` half of the transport contract: what each JSON mode sends, the
 # `auto` chain, the 400 retry without format and effort (#3605), reasoning effort in both API
 # forms, tolerant parsing, an answer cut at the output limit, and Anthropic's native structured
-# output (2c plan, decision 7). Stubbed through WebMock; the live cassettes are in
+# output. Stubbed through WebMock; the live cassettes are in
 # test/models/ai/live/.
 class AiTransportGenerateTest < ActiveSupport::TestCase
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze

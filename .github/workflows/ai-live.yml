@@ -1,7 +1,6 @@
 name: AI live
 
-# What a maintainer runs by adding the `ai-live` label (ai-plumbing-redesign.md, section 17),
-# with keys from repository secrets:
+# What a maintainer runs by adding the `ai-live` label, with keys from repository secrets:
 # - the eval datasets against live models, with the accuracy posted as a PR comment: the gate
 #   for prompt changes;
 # - the transport tests' live mode (AI_LIVE=1), required before merging a transport change or a

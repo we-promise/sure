@@ -31,7 +31,7 @@ module Provider::Openai::Concerns::JsonMode
   private
     # The OpenAI endpoint's JSON mode in Ai::Config, which Ai::LegacyEnvConfig resolves from
     # LLM_JSON_MODE, then Setting.openai_json_mode, then auto. Only the PDF workers still read
-    # it here; they move onto the transports in PR 2e.
+    # it here.
     def default_json_mode
       endpoint = Ai::Config.current.endpoints.find { _1.protocol == :compatible && _1.name.start_with?("openai") }
       mode = endpoint&.json_mode&.to_s

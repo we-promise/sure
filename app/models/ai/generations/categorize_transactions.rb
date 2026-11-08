@@ -1,6 +1,5 @@
-# Picks a category for each transaction from the family's own, or none. Replaces
-# Provider::{Openai,Anthropic}::AutoCategorizer. Jev answers the same feature as a judgement
-# (PR 2d); until then Family::AutoCategorizer calls Provider::Jev itself on a Jev route.
+# Picks a category for each transaction from the family's own, or none. On a Jev route,
+# Family::AutoCategorizer calls Provider::Jev itself instead.
 class Ai::Generations::CategorizeTransactions < Ai::Generation
   feature :categorize
   prompt "categorize_transactions"

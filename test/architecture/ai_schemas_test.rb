@@ -1,6 +1,6 @@
 require "test_helper"
 
-# Section 17: every generation's schema is valid JSON Schema and compatible with OpenAI's strict
+# Every generation's schema is valid JSON Schema and compatible with OpenAI's strict
 # mode, so the one schema works on every transport (strict response_format, the Responses API,
 # Anthropic's output_config).
 class AiSchemasTest < ActiveSupport::TestCase

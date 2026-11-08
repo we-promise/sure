@@ -1,6 +1,6 @@
 require "test_helper"
 
-# Section 17: a batch that overflows is halved on the same route until every item is answered;
+# A batch that overflows is halved on the same route until every item is answered;
 # only an item that can't fit on its own escalates to the next route.
 class AiBatchSplitTest < ActiveSupport::TestCase
   setup do

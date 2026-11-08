@@ -1,7 +1,7 @@
 # What an eval run calls for categorization and merchant detection: the same generations
 # production runs (Ai::Generations::*), on the run's own endpoint and model, so an eval measures
 # today's prompts, JSON policy and coercion. Answers come back as the Provider::Response the
-# runners read. Chat evals still go through Provider::Openai until chat moves (PR 6).
+# runners read. Chat evals go through Provider::Openai, as chat does.
 class Eval::GenerationClient
   Categorization = Data.define(:transaction_id, :category_name)
   DetectedMerchant = Data.define(:transaction_id, :business_name, :business_url)

@@ -3,7 +3,7 @@
 module RuboCop
   module Cop
     module Sure
-      # Flags long heredocs in the AI layer and controllers (ai-plumbing-redesign.md, section 17):
+      # Flags long heredocs in the AI layer and controllers:
       # a prompt is a file in app/prompts/<name>/ (instructions.txt.erb, input.txt.erb), rendered
       # by Ai::Prompt, so it's reviewed like code, can be overridden per route entry and per
       # locale, and is checked by test/architecture/ai_prompts_test.rb.

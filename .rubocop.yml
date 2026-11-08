@@ -57,9 +57,8 @@ Layout/SpaceInsideArrayLiteralBrackets:
   Exclude:
     - "db/schema.rb"
 
-# Prompts live in app/prompts, not in heredocs (docs/proposals/v0.8/ai-plumbing-redesign.md,
-# section 17). Nothing is allowlisted; test/lib/rubocop/cop/sure/no_prompt_heredoc_test.rb keeps
-# it that way.
+# Prompts live in app/prompts, not in heredocs. Nothing is allowlisted;
+# test/lib/rubocop/cop/sure/no_prompt_heredoc_test.rb keeps it that way.
 Sure/NoPromptHeredoc:
   Enabled: true
   Include:

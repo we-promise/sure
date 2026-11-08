@@ -26,8 +26,8 @@ class AiConfigTest < ActiveSupport::TestCase
     end
   end
 
-  # Today's family-level rule (Family#resolved_categorization_provider until 2c): Jev for families
-  # that chose it, when it can be built; the preferred LLM otherwise.
+  # The family-level rule: Jev for families that chose it, when it can be built; the preferred
+  # LLM otherwise.
   test "a family that chose Jev categorizes on Jev; another on the preferred LLM" do
     jev_family = families(:empty)
     jev_family.update!(categorization_provider: "jev")

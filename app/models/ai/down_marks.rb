@@ -1,10 +1,10 @@
-# Down marks (section 5.4): the smallest thing an error proves broken is skipped for 60 seconds,
+# Down marks: the smallest thing an error proves broken is skipped for 60 seconds,
 # so the next call doesn't wait for the same timeout. Kept in Rails.cache, so every process on
 # the instance sees them.
 #
 # - The server (host and port) when no response came back, or a local endpoint timed out or
 #   failed as a whole: every endpoint row on it is skipped.
-# - The key on Unauthorized or NoCredit: that endpoint row. PR 9 adds the family's own keys.
+# - The key on Unauthorized or NoCredit: that endpoint row.
 # - The model on that key otherwise: a gateway's 503 or 429 usually belongs to one upstream model.
 #
 # Escalation (InvalidOutput, ContextTooLong) marks nothing: the endpoint is fine.

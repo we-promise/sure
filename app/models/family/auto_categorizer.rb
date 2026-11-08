@@ -3,8 +3,7 @@
 # one batch at a time.
 #
 # The route's first entry decides who answers: an LLM through
-# Ai::Generations::CategorizeTransactions, or Jev through Provider::Jev (JevCall) until PR 2d
-# makes it a judgement. Jev's answers carry calibrated confidence, so the family's threshold can
+# Ai::Generations::CategorizeTransactions, or Jev through Provider::Jev (JevCall). Jev's answers carry calibrated confidence, so the family's threshold can
 # withhold them; the LLMs' don't, so they always apply.
 class Family::AutoCategorizer
   include Ai::Requester
@@ -118,7 +117,7 @@ class Family::AutoCategorizer
     end
   end
 
-  # Jev until PR 2d: one Provider::Jev call per batch, answered in the generation's shape, with
+  # Jev: one Provider::Jev call per batch, answered in the generation's shape, with
   # each answer's calibrated confidence. No failover from Jev, as today.
   class JevCall
     def initialize(categorizer, route)
@@ -181,8 +180,8 @@ class Family::AutoCategorizer
 
     # Asks the provider that is NOT in use to categorize the same batch, so it can be judged on
     # real data before anyone switches; its answers are never applied. Sampled per run, and any
-    # failure is swallowed: a diagnostic must never break the categorization it observes. Inline
-    # in the job as today; PR 2d moves it to Ai::ShadowJob on the shadow_categorize route.
+    # failure is swallowed: a diagnostic must never break the categorization it observes. It runs
+    # inline, in the categorization job.
     def run_shadow(primary_route)
       rate = family.effective_categorization_shadow_rate
       return unless rate.positive? && rand < rate

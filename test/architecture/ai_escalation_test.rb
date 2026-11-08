@@ -1,6 +1,6 @@
 require "test_helper"
 
-# Section 17's escalation checks that don't need the sequencer (PR 4 adds the gate's cases):
+# The escalation checks that don't need a sequencer:
 # failover marks the smallest broken thing and moves down the list, escalation moves on without
 # a mark, and other refusals aren't retried.
 class AiEscalationTest < ActiveSupport::TestCase
