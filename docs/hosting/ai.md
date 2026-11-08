@@ -37,7 +37,7 @@ Background jobs that classify transactions and detect merchants. These use the L
 
 If you use an external agent for chat, you still need an LLM provider configured (`OPENAI_ACCESS_TOKEN` or `ANTHROPIC_API_KEY`) for auto-categorization and merchant detection to work. The two systems are fully independent.
 
-With `mcp_only`, Sure also skips the features that need a user's AI consent: the bills AI shortcuts (review, smart fill, smart configuration). Insights never use AI: their text comes from templates.
+With `mcp_only`, the buttons that start a chat go too, including the bills AI review. Smart fill and smart configuration don't start a chat, so they follow each member's own AI switch, like the other AI features. Insights never use AI: their text comes from templates.
 
 ### Where AI jobs run (Sidekiq lanes)
 

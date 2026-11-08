@@ -34,4 +34,12 @@ class Ai::Generations::CategorizeTransactionsTest < ActiveSupport::TestCase
     assert_equal %w[t1], item.dig(:transaction_id, :enum)
     assert_equal [ "Restaurants", "Coffee Shops", "Gas & Fuel", "null", nil ], item.dig(:category_name, :enum)
   end
+
+  test "a family category with no ASCII letters isn't a fuzzy match for every unknown name" do
+    generation = Ai::Generations::CategorizeTransactions.new(transactions: [ { id: "t1" } ], family: nil,
+                                                             categories: [ { id: "c1", name: "食品" }, { id: "c2", name: "Restaurants" } ])
+    value = generation.coerce({ "categorizations" => [ { "transaction_id" => "t1", "category_name" => "Groceries" } ] })
+
+    assert_nil value[:categorizations].first[:category_name]
+  end
 end

@@ -131,6 +131,12 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
     assert_raises(Ai::Error::OutputCut) { generate(json_mode: :strict) }
   end
 
+  test "an answer cut at the output limit is OutputCut even when what came back parses" do
+    stub_chat(answer('{"items": [{"id": "a", "name": "A"}]}', finish_reason: "length"))
+
+    assert_raises(Ai::Error::OutputCut) { generate(json_mode: :strict) }
+  end
+
   test "an answer that never parses is InvalidOutput" do
     stub_chat(answer("no"), answer("nope"))
 

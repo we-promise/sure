@@ -15,8 +15,9 @@ class Eval::GenerationClient
 
   # endpoint: the Ai::Config::Endpoint the run measures; model: its model name; json_mode: an
   # override for every request (the Langfuse runner forces strict on null-heavy batches).
-  def initialize(endpoint:, model:, chat_provider: nil)
-    @endpoint, @model_name, @chat_provider = endpoint, model, chat_provider
+  # budget: the installed model whose context window, output limit and batch size the run keeps.
+  def initialize(endpoint:, model:, budget: nil, chat_provider: nil)
+    @endpoint, @model_name, @budget, @chat_provider = endpoint, model, budget, chat_provider
   end
 
   def auto_categorize(transactions:, user_categories:, json_mode: nil, **)
@@ -39,7 +40,9 @@ class Eval::GenerationClient
     judge = @endpoint.protocol == :jev
     model = Ai::Config::Model.new(endpoint: @endpoint, name: @model_name,
                                   capabilities: judge ? %i[judge calibrated_confidence] : %i[structured_output],
-                                  context_window: (Assistant::TokenBudget.context_window unless judge))
+                                  context_window: (@budget&.context_window || Assistant::TokenBudget.context_window unless judge),
+                                  max_output_tokens: @budget&.max_output_tokens,
+                                  batch_size: @budget&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE)
     route = Ai::Route.new(feature:, position: 0, model:, json_mode: json_mode.presence,
                           prompt: Ai::LegacyEnvConfig.prompt_for(feature, @endpoint))
     Ai::Config.new(endpoints: [ @endpoint ], models: [ model ], routes: { feature => [ route ] })

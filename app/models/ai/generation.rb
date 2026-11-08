@@ -184,7 +184,7 @@ class Ai::Generation
 
     # Runs `slice` (nil for a feature without items) down the routes: failover and escalation
     # move on, an overflow is split on the same route. Returns [[route, value], ...], one pair
-    # per piece the slice was split into.
+    # per piece the slice was split into; items no route could fit are left out.
     def on_routes(routes, slice)
       pending = slice
       answers = []
@@ -205,6 +205,10 @@ class Ai::Generation
           last_error = error
         end
       end
+
+      # Part of the slice was answered and the rest fits no route: keep the answers, and leave the
+      # rest unanswered rather than lose both.
+      return answers if answers.any?
 
       raise last_error || Ai::Error::Unreachable.new("every route for #{feature_key} is marked down")
     end

@@ -62,6 +62,11 @@ class Ai::LegacyEnvConfig
     end
   end
 
+  # The OpenAI endpoint's JSON mode: LLM_JSON_MODE, then the saved setting, then auto.
+  def self.openai_json_mode
+    [ ENV["LLM_JSON_MODE"].presence, Setting.openai_json_mode.presence ].find { JSON_MODES.include?(_1) } || "auto"
+  end
+
   def self.fingerprint
     [ ENV.to_h.select { |name, _| name.start_with?(*ENV_PREFIXES) }.sort, SETTING_FIELDS.map { Setting.public_send(_1) } ].hash
   end
@@ -171,9 +176,7 @@ class Ai::LegacyEnvConfig
 
     def batch_size = positive(env("LLM_MAX_ITEMS_PER_CALL"), Setting.llm_max_items_per_call) || Ai::Config::Model::DEFAULT_BATCH_SIZE
 
-    def openai_json_mode
-      [ env("LLM_JSON_MODE"), Setting.openai_json_mode.presence ].find { JSON_MODES.include?(_1) } || "auto"
-    end
+    def openai_json_mode = self.class.openai_json_mode
 
     def positive(*values) = values.map(&:to_i).find(&:positive?)
 

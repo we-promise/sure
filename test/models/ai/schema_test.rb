@@ -67,4 +67,18 @@ class Ai::SchemaTest < ActiveSupport::TestCase
     assert_raises(Ai::Error::InvalidOutput) { Ai::Schema.coerce("text", BILL) }
     assert_raises(Ai::Error::InvalidOutput) { Ai::Schema.coerce({ "something" => [] }, LIST) }
   end
+
+  test "a number too large for a float is nil, not an error" do
+    value = Ai::Schema.coerce(JSON.parse('{"name": "Gym", "amount": 1e400, "day_of_month": 1e400, "bill_type": null, "autopay": null}'), BILL)
+
+    assert_nil value[:amount]
+    assert_nil value[:day_of_month]
+  end
+
+  test "an object with none of the schema's fields is invalid output; explicit nulls aren't" do
+    assert_raises(Ai::Error::InvalidOutput) { Ai::Schema.coerce({ "error" => "unable to analyze" }, BILL) }
+
+    nulls = { "name" => nil, "amount" => nil, "day_of_month" => nil, "bill_type" => nil, "autopay" => nil }
+    assert_equal({ name: nil, amount: nil, day_of_month: nil, bill_type: nil, autopay: nil }, Ai::Schema.coerce(nulls, BILL))
+  end
 end

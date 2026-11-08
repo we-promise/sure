@@ -20,6 +20,8 @@ module Ai::Schema
     json = wrap(json, schema, options[:aliases])
     raise Ai::Error::InvalidOutput, "expected a JSON object, got #{json.class.name.downcase}" unless json.is_a?(Hash)
 
+    unrelated!(json, schema, options[:aliases])
+
     object(json, schema, options).tap do |value|
       list = array_property(schema)
       raise Ai::Error::InvalidOutput, "no #{list} in the answer" if list && !value[list.to_sym].is_a?(Array)
@@ -85,9 +87,8 @@ module Ai::Schema
   end
 
   def number(raw)
-    return raw if raw.is_a?(Numeric)
-
-    Float(raw.to_s)
+    value = raw.is_a?(Numeric) ? raw : Float(raw.to_s)
+    value.finite? ? value : nil   # 1e400 parses to Infinity, which no field takes
   rescue ArgumentError, TypeError
     nil
   end
@@ -95,6 +96,15 @@ module Ai::Schema
   def integer(raw)
     number = number(raw)
     number && number == number.floor ? number.to_i : nil
+  end
+
+  # An answer with fields but none the schema knows ({"error": "unable to analyze"}) isn't an
+  # answer to coerce into all nils. Explicit nulls for the schema's own fields still are.
+  def unrelated!(json, schema, aliases)
+    return if json.empty? || array_property(schema)
+
+    known = schema[:properties].to_h.keys.map(&:to_s) + aliases.values.flatten
+    raise Ai::Error::InvalidOutput, "the answer has none of the schema's fields" if (json.keys.map(&:to_s) & known).empty?
   end
 
   def stringify(aliases) = aliases.to_h { |key, names| [ key.to_s, Array(names).map(&:to_s) ] }
