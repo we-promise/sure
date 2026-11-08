@@ -4,9 +4,10 @@
 #   categorizer_openai, categorizer_anthropic -> categorize_transactions
 #   merchant_openai,    merchant_anthropic    -> detect_merchants
 #
-# Where a family has both and they differ, the one for the provider this install uses today
-# (LLM_PROVIDER or the saved setting) is kept, and the other goes to a DebugLogEntry that the
-# prompts page shows until the family admin next saves.
+# Where a family has both and they differ, the one for the provider this install calls is kept:
+# LLM_PROVIDER or the saved setting, unless that provider has no key and the other has, as
+# Provider::Registry.preferred_llm_provider falls back. The other goes to a DebugLogEntry that
+# the prompts page shows until the family admin next saves.
 class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
   PAIRS = {
     "categorize_transactions" => %w[categorizer_openai categorizer_anthropic],
@@ -19,7 +20,7 @@ class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
   end
 
   def up
-    anthropic = llm_provider == "anthropic"
+    anthropic = provider_in_use == "anthropic"
 
     Family.where("ai_prompt_overrides ?| array[:keys]", keys: PAIRS.values.flatten).find_each do |family|
       overrides = family.ai_prompt_overrides.to_h.dup
@@ -49,6 +50,24 @@ class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
   end
 
   private
+    def provider_in_use
+      order = llm_provider == "anthropic" ? %w[anthropic openai] : %w[openai anthropic]
+      order.find { key?(_1) } || order.first
+    end
+
+    def key?(provider)
+      if provider == "anthropic"
+        ENV["ANTHROPIC_ACCESS_TOKEN"].present? || ENV["ANTHROPIC_API_KEY"].present? || setting?("anthropic_access_token")
+      else
+        ENV["OPENAI_ACCESS_TOKEN"].present? || setting?("openai_access_token")
+      end
+    end
+
+    def setting?(var)
+      value = select_value(ActiveRecord::Base.sanitize_sql([ "SELECT value FROM settings WHERE var = ?", var ]))
+      !value.to_s.delete_prefix("---").strip.in?([ "", "null", "~", "''" ])
+    end
+
     def llm_provider
       ENV["LLM_PROVIDER"].presence ||
         select_value("SELECT value FROM settings WHERE var = 'llm_provider'").to_s.delete_prefix("--- ").strip.presence ||

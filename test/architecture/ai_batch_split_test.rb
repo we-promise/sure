@@ -49,4 +49,17 @@ class AiBatchSplitTest < ActiveSupport::TestCase
     assert_equal %w[t0 t1 t2 t3], result.value[:merchants].map { _1[:transaction_id] }.sort
     assert_equal [ %w[t2] ], requests.select { _1.model.endpoint.name == "openai" }.map { ids_in(_1) }
   end
+
+  test "items that fit no route are left unanswered, and the ones answered are kept" do
+    stub_ai do |request|
+      raise Ai::Error::ContextTooLong, "too long" if ids_in(request).include?("t2")
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = AiTestGeneration.new(transactions: transactions(4), family: @family).call
+
+    assert result.success?
+    assert_equal %w[t0 t1 t3], result.value[:merchants].map { _1[:transaction_id] }.sort
+  end
 end

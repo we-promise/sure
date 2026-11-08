@@ -28,13 +28,22 @@ class CollapseAiPromptOverrideKeysMigrationTest < ActiveSupport::TestCase
   test "two different overrides keep the one for the provider in use and record the other" do
     overrides!("categorizer_openai" => "OpenAI version", "categorizer_anthropic" => "Claude version")
 
-    with_env_overrides("LLM_PROVIDER" => "anthropic") do
+    with_env_overrides("LLM_PROVIDER" => "anthropic", "ANTHROPIC_API_KEY" => "k") do
       assert_equal({ "categorize_transactions" => "Claude version" }, run_migration)
     end
 
     entry = dropped.sole
     assert_equal({ "key" => "categorize_transactions", "text" => "OpenAI version" }, entry.metadata)
     assert_equal [ { key: "categorize_transactions", text: "OpenAI version" } ], @family.dropped_ai_prompt_overrides
+  end
+
+  test "the chosen provider without a key falls back to the one with a key, as the calls do" do
+    overrides!("categorizer_openai" => "OpenAI version", "categorizer_anthropic" => "Claude version")
+
+    with_env_overrides("LLM_PROVIDER" => "anthropic", "ANTHROPIC_API_KEY" => nil, "ANTHROPIC_ACCESS_TOKEN" => nil, "OPENAI_ACCESS_TOKEN" => "k") do
+      ActiveRecord::Base.connection.execute("DELETE FROM settings WHERE var = 'anthropic_access_token'")
+      assert_equal({ "categorize_transactions" => "OpenAI version" }, run_migration)
+    end
   end
 
   test "OpenAI's is kept by default, and identical overrides drop nothing" do

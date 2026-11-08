@@ -79,8 +79,12 @@ class AiEscalationTest < ActiveSupport::TestCase
   test "a 401 or a spent balance marks only the key that got it" do
     route = Ai::Route.new(feature: :detect_merchants, position: 0, model: @models["gateway/vendor-a/model"])
 
-    assert_equal "ai/down/key/gateway", Ai::DownMarks.key_for(route, Ai::Error::Unauthorized.new("401"))
-    assert_equal "ai/down/key/gateway", Ai::DownMarks.key_for(route, Ai::Error::NoCredit.new("402"))
+    key = Ai::DownMarks.key_for(route, Ai::Error::Unauthorized.new("401"))
+    assert_match %r{\Aai/down/key/gateway/\h{12}\z}, key
+    assert_equal key, Ai::DownMarks.key_for(route, Ai::Error::NoCredit.new("402"))
+    assert_not_includes key, route.endpoint.api_key.to_s
+    replaced = route.with(model: route.model.with(endpoint: route.endpoint.with(api_key: "a-new-key")))
+    assert_not_equal key, Ai::DownMarks.key_for(replaced, Ai::Error::Unauthorized.new("401")), "a replaced key isn't marked down"
     assert_equal "ai/down/model/gateway/vendor-a/model", Ai::DownMarks.key_for(route, Ai::Error::ModelMissing.new("404"))
   end
 

@@ -34,7 +34,8 @@ module Provider::Openai::Concerns::JsonMode
     # it here.
     def default_json_mode
       endpoint = Ai::Config.current.endpoints.find { _1.protocol == :compatible && _1.name.start_with?("openai") }
-      mode = endpoint&.json_mode&.to_s
+      # A caller with its own client and no OpenAI endpoint configured still gets the operator's mode.
+      mode = endpoint ? endpoint.json_mode.to_s : Ai::LegacyEnvConfig.openai_json_mode
       VALID_JSON_MODES.include?(mode) ? mode : JSON_MODE_AUTO
     end
 

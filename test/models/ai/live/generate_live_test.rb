@@ -50,6 +50,7 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
       result = with_ai_cassette(preset, name) { generation.call(plan: plan_for(:bill_setup, preset, model_name, spec)) }
 
       assert result.success?, result.error&.message
+      assert result.value[:name].present?, "two Netflix charges should name the bill"
       assert_includes [ nil, *RecurringTransaction::FrequencyPreset::PRESETS ], result.value[:frequency]
     end
   end

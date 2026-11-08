@@ -95,6 +95,37 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_empty Requester.log
   end
 
+  test "a timeout that outlasts every retry tells the requester once" do
+    stub_ai(:detect_merchants, raises: Ai::Error::Timeout.new("slow"))
+
+    Ai::GenerationJob.perform_later(:detect_merchants, { ids: %w[a], family_id: @family.id })
+    run_queue
+
+    assert_equal [ [ :failed, @family.id, Ai::Error::Timeout ] ], Requester.log
+  end
+
+  test "any other error ends the run and tells the requester once" do
+    stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    Requester.any_instance.stubs(:apply_ai).raises(ActiveRecord::StatementInvalid, "connection lost")
+
+    assert_no_enqueued_jobs only: Ai::GenerationJob do
+      Ai::GenerationJob.perform_now(:detect_merchants, { ids: %w[a], family_id: @family.id })
+    end
+    assert_equal [ [ :failed, @family.id, ActiveRecord::StatementInvalid ] ], Requester.log
+  end
+
+  test "a job queued under an old class is handed to Ai::GenerationJob" do
+    assert_enqueued_with(job: Ai::GenerationJob, args: [ :categorize, { ids: %w[a], family_id: @family.id, rule_run_id: "r1" } ]) do
+      AutoCategorizeJob.perform_now(@family, transaction_ids: %w[a], rule_run_id: "r1")
+    end
+    assert_enqueued_with(job: Ai::GenerationJob, args: [ :detect_merchants, { ids: %w[b], family_id: @family.id } ]) do
+      AutoDetectMerchantsJob.perform_now(@family, transaction_ids: %w[b])
+    end
+    assert_enqueued_with(job: Ai::GenerationJob, args: [ :enhance_merchants, { family_id: @family.id, ids: %w[m] } ]) do
+      EnhanceProviderMerchantsJob.perform_now(@family, merchant_ids: %w[m])
+    end
+  end
+
   test "an interactive feature's job goes to today's high-priority queue" do
     assert_equal "ai_high_priority", Ai::Routes.queue_for(:bill_setup)
     assert_equal "ai_low_priority", Ai::Routes.queue_for(:categorize)

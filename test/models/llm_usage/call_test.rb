@@ -48,6 +48,12 @@ class LlmUsage::CallTest < ActiveSupport::TestCase
     assert_in_delta 0.02, stats[:avg_cost]
   end
 
+  test "the average cost comes from the unrounded total" do
+    usage(estimated_cost: 0.002)
+
+    assert_in_delta 0.002, LlmUsage.statistics_for_family(@family)[:avg_cost]
+  end
+
   test "a row the old recorders write with an error in metadata is a failed request" do
     row = usage(metadata: { error: "HTTP 500", http_status_code: 500 })
 

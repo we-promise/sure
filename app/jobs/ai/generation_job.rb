@@ -4,7 +4,8 @@
 #
 # On a failure, the transport has already retried 429s and 5xxs and the generation
 # has failed over and escalated; what's left is retried later when it may pass, and discarded
-# when it can't. Either way the requester hears once, so a RuleRun never stays pending.
+# when it can't. Any other error ends the run. Either way the requester hears once, so a RuleRun
+# never stays pending.
 class Ai::GenerationJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(arguments.first) }
 
@@ -13,6 +14,7 @@ class Ai::GenerationJob < ApplicationJob
                 Ai::Error::ModelMissing, Ai::Error::ContextTooLong, Ai::Error::InvalidOutput, Ai::Error::Cancelled ].freeze
 
   retry_on(*RETRIED, wait: :polynomially_longer, attempts: 5) { |job, error| job.give_up(error) }
+  retry_on(ActiveRecord::Deadlocked, attempts: 5) { |job, error| job.give_up(error) }
   discard_on(*DISCARDED) { |job, error| job.give_up(error) }
 
   # feature: a key in Ai::Requesters; args: the requester's own (`ids:` the items left); applied:
@@ -32,6 +34,13 @@ class Ai::GenerationJob < ApplicationJob
         requester.ai_finished(applied)
       end
     end
+  rescue *RETRIED, *DISCARDED, ActiveRecord::Deadlocked
+    raise
+  rescue StandardError => error
+    # Anything else (a database error while applying, a bug) ends the run here: reported, and the
+    # requester told once, so a RuleRun doesn't stay pending through Sidekiq's retries.
+    Rails.error.report(error, handled: true, context: { feature: arguments.first })
+    give_up(error)
   end
 
   def give_up(error)
