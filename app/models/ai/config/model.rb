@@ -9,7 +9,7 @@ class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :context_
                                       :batch_size, :embedding_dimensions, :input_cost_per_mtok, :output_cost_per_mtok,
                                       :ocr_prompt)
   CAPABILITIES = %w[tools vision documents ocr thinking streaming structured_output embedding judge calibrated_confidence].freeze
-  DEFAULT_BATCH_SIZE = 25   # today's LLM_MAX_ITEMS_PER_CALL default
+  DEFAULT_BATCH_SIZE = 25   # LLM_MAX_ITEMS_PER_CALL's default
   # OCR prompt folders (app/prompts/ocr_<name>): `markdown` asks a general vision model for a
   # Markdown transcription; `unlimited_ocr_2` is the model card's "<PAGE>" per page, then
   # "Multi page parsing.", for GGUF templates that don't write it themselves.

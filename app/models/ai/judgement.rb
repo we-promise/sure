@@ -1,4 +1,4 @@
-# The base class of a feature answered by a decision model (Jev, section 8): typed questions about
+# The base class of a feature answered by a decision model (Jev): typed questions about
 # each item instead of a prompt and a schema. A judgement is the other half of a generation that
 # declares `judged_by`: Ai::Generation's loop builds it on a `judge` route, with the same slice of
 # items, so batching, failover and down marks stay in one place, and failover from a judge model

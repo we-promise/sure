@@ -71,8 +71,4 @@ class Ai::ErrorTest < ActiveSupport::TestCase
     assert_equal :not_configured, error.reason
     assert_equal "AI unavailable: not_configured", error.message
   end
-
-  test "only rate limits, 5xx and timeouts are retried by a transport" do
-    assert_equal [ Ai::Error::RateLimited, Ai::Error::Upstream, Ai::Error::Timeout ], Ai::Error::RETRYABLE
-  end
 end

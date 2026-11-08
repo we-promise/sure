@@ -1,7 +1,7 @@
 require "test_helper"
 
-# `judge` against a real System One server (2d plan, step 9): OpenCode Zen's free Jev, reached at a
-# TypeSafe-style path with its anonymous key (`public`), as the spike's judge_jev_live_test was.
+# `judge` against a real System One server: OpenCode Zen's free Jev, reached at a
+# TypeSafe-style path with its anonymous key (`public`).
 # Replayed from test/vcr_cassettes/ai/jev/, recorded with RECORD_CASSETTES=1 and JEV_LIVE_API_KEY
 # set, or run live with AI_LIVE=1 (the `ai-live` label). With neither, it's skipped, saying so.
 class AiJudgeLiveTest < ActiveSupport::TestCase

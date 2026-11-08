@@ -520,7 +520,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # One choice for every family on the instance (2d, until PR 7 lists routes per feature).
+  # One choice for every family on the instance.
   test "saves the instance's categorization provider when opted into preview features" do
     with_self_hosting do
       enable_preview_features!
@@ -715,7 +715,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # RubyLLM 2.1.1 reaches only TypeSafe-style paths; OpenRouter's needs 2.2 (PR 5).
+  # RubyLLM 2.1.1 reaches only TypeSafe-style paths; OpenRouter's needs 2.2.
   test "rejects an OpenRouter or other-path jev endpoint" do
     with_self_hosting do
       Setting.jev_endpoint = nil

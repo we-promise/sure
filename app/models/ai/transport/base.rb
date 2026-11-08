@@ -77,8 +77,7 @@ class Ai::Transport::Base
     def to_event = { texts: texts.size, characters: texts.sum(&:size) }
   end
 
-  # `auto` moves on when more than this share of items came back blank or missing (today's
-  # AUTO_MODE_NULL_THRESHOLD).
+  # `auto` moves on when more than this share of items came back blank or missing.
   BLANK_RATIO_LIMIT = 0.5
   # Health checks a probe can make. Which one AiHealth runs for "is the model up" is the
   # endpoint's `probe_check`; tools and embedding are their own probes.
@@ -114,7 +113,6 @@ class Ai::Transport::Base
     end
   end
 
-  def converse(request, &on_chunk) = raise NotImplementedError, "#{self.class.name}#converse isn't implemented"
   # Answers a JudgeRequest and returns a JudgeResponse, or raises an Ai::Error. The budget covers
   # every round of the fan-out: the endpoint's timeout per round of `parallel_requests`.
   def judge(request)

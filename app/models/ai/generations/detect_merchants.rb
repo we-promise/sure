@@ -10,7 +10,7 @@ class Ai::Generations::DetectMerchants < Ai::Generation
   required :transaction_id
   aliases merchants: %w[results], transaction_id: %w[id txn_id], business_name: %w[name merchant_name merchant],
           business_url: %w[url website]
-  # Today's auto-mode heuristic: an answer without both a name and a website is a failed one.
+  # An answer without both a name and a website is a failed one.
   blank_item { _1[:business_name].blank? || _1[:business_url].blank? }
 
   # transactions: [{ id:, amount:, classification:, description:, merchant: }];
@@ -24,7 +24,7 @@ class Ai::Generations::DetectMerchants < Ai::Generation
 
   # A name matching one of the family's merchants, case aside, takes that merchant's spelling.
   def matchers
-    { business_name: ->(name) { @merchants.find { _1[:name] == name || _1[:name].to_s.casecmp?(name) }&.dig(:name) || name } }
+    { business_name: ->(name) { @merchants.find { _1[:name].to_s.casecmp?(name) }&.dig(:name) || name } }
   end
 
   def schema

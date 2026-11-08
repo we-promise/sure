@@ -10,7 +10,7 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   aliases categorizations: %w[results], transaction_id: %w[id txn_id], category_name: %w[category name]
   blank_item { _1[:category_name].nil? }
   judged_by Ai::Judgements::CategorizeTransaction
-  # Category ids, not names, so renamed or duplicate categories still compare (section 8.2).
+  # Category ids, not names, so renamed or duplicate categories still compare.
   shadow subject: "Transaction",
          compare: ->(value) { value[:categorizations].to_h { [ _1[:transaction_id].to_s, [ category_id_for(_1[:category_name]), _1[:confidence] ] ] } }
 
@@ -35,7 +35,7 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   def arguments = { transactions: items, categories: @categories }
 
   # The family's spelling of the category the model named: exact, then ignoring case, then a
-  # fuzzy match (today's OpenAI normaliser, now on every protocol). Nil when nothing matches.
+  # fuzzy match. Nil when nothing matches.
   def matchers = { category_name: ->(name) { category_name_for(name.to_s.strip) } }
 
   def schema

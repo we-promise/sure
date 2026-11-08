@@ -1,9 +1,9 @@
-# A shadow run (section 8.2): the primary's generation, rebuilt from the input it was sent, run on
+# A shadow run: the primary's generation, rebuilt from the input it was sent, run on
 # the `shadow_<feature>` route. Its calls are recorded under shadow_<feature>, so usage shows
 # shadow spend apart, and its answer goes only to the `compare.ai_shadow` event, which
 # Ai::Instrumentation::ComparisonSubscriber writes to Ai::Comparison. Nothing is applied.
 #
-# Never retried: a diagnostic that failed is skipped, as the inline shadow run was.
+# Never retried: a diagnostic that failed is skipped.
 class Ai::ShadowJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(Ai::Shadow.feature_for(arguments.first.constantize.feature_key)) }
 

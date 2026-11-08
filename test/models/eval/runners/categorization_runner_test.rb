@@ -213,7 +213,7 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
     assert_includes error_result.actual_output["error"], "API Error"
   end
 
-  # Jev runs through the generation's judgement (2d) and keeps each answer's calibrated confidence.
+  # Jev runs through the generation's judgement and keeps each answer's calibrated confidence.
   test "a Jev run records each answer's confidence" do
     dataset = Eval::Dataset.create!(name: "test_cat_jev_#{SecureRandom.hex(4)}", eval_type: "categorization", version: "1.0")
     dataset.samples.create!(

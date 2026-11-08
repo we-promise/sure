@@ -103,6 +103,13 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
     assert_includes scrubbed, "api_key=[REDACTED]"
   end
 
+  test "a secret that contains another of the endpoint's secrets is masked whole" do
+    scrubbed = Ai::Instrumentation::Redactor.scrub("tenant tenant-opaque-123-region-eu",
+                                                   secrets: [ "tenant-opaque-123", "tenant-opaque-123-region-eu" ])
+
+    assert_equal "tenant [REDACTED]", scrubbed
+  end
+
   private
     def event(name, payload)
       now = Process.clock_gettime(Process::CLOCK_MONOTONIC)

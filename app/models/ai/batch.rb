@@ -7,7 +7,7 @@
 # output limit) is halved by Ai::Generation and sent again on the same route; only a single item
 # that can't fit escalates.
 module Ai::Batch
-  # Reserved for the answer when the model has no max_output_tokens: today's 512-token budget.
+  # Reserved for the answer when the model has no max_output_tokens.
   OUTPUT_RESERVE = 512
 
   module_function

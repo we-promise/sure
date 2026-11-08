@@ -1,14 +1,14 @@
-# Jev and other servers that speak TypeSafe's System One protocol (section 7), through RubyLLM's
-# `judge` on its `typesafe` provider. Jev judges, it doesn't generate.
+# Jev and other servers that speak TypeSafe's System One protocol, through RubyLLM's `judge` on
+# its `typesafe` provider. Jev judges, it doesn't generate.
 #
 # Jev takes one state per request, and each request is latency-bound (~400-550 ms), so `judge`
-# fans a batch out on a pool of the endpoint's `parallel_requests`: 8 for cloud Jev, today's
-# DEFAULT_CONCURRENCY, and 1 for a self-hosted server, whose GPU or CPU 8 at once would overload.
-# Above the transport it's one call, as for an LLM. Every request goes through RubyLLM and Sure's
-# instrumenter, so it writes a usage row and, from PR 4, passes its host's gate.
+# fans a batch out on a pool of the endpoint's `parallel_requests`: 8 for cloud Jev, and 1 for a
+# self-hosted server, whose GPU or CPU 8 at once would overload. Above the transport it's one
+# call, as for an LLM. Every request goes through RubyLLM and Sure's instrumenter, so it writes a
+# usage row.
 #
 # RubyLLM 2.1.1 posts to `<base>/v1/systemone`; the endpoint's base_url is that base. OpenRouter's
-# decisions gateway needs RubyLLM 2.2 (#1264, PR 5).
+# decisions gateway needs RubyLLM 2.2 (#1264).
 class Ai::Transport::Jev < Ai::Transport::Base
   include Ai::Transport::RubyLlmAdapter
 

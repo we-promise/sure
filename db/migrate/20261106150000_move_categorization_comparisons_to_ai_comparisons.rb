@@ -1,4 +1,4 @@
-# Shadow comparisons for any feature (section 8.2): `ai_comparisons` replaces
+# Shadow comparisons for any feature: `ai_comparisons` replaces
 # `categorization_comparisons`. Each old row is copied as a `categorize` comparison: the
 # providers become the routes' endpoints, the category names become the family's category ids
 # where one has that name, and the names and Jev's probabilities stay in `metadata`.

@@ -21,7 +21,7 @@ class Settings::CategorizationProviderTest < ApplicationSystemTestCase
     assert_no_text "Transaction Categorization"
   end
 
-  # One choice for the instance until PR 7 lists routes per feature (2d).
+  # One choice for every family on the instance.
   test "an opted-in super admin switches the instance onto Jev and back" do
     @user.update!(role: :super_admin)
     set_preview_features(true)

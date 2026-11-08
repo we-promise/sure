@@ -1,11 +1,12 @@
 # Deprecated: reads the AI ENV and `Setting` fields as an AI configuration, so
 # installs configured either way keep working while the router replaces today's lookups.
 #
-# Each value resolves the way today's code resolves it. Wherever today's code has a resolver
-# (Provider::Registry, Provider::*.effective_*, Assistant::External.config, Ai::LegacyEnvConfig::Jev), this calls it, so
-# the router and the calls not yet on the router can't disagree. test/architecture/ai_config_test
-# checks that over every documented setup. The one deliberate difference is drift bug 5:
-# embeddings fall back to the OpenAI values saved in Settings, as every other AI setting does.
+# Each value resolves the way the provider code resolves it. Wherever that code has a resolver
+# (Provider::Registry, Provider::*.effective_*, Assistant::External.config,
+# Ai::LegacyEnvConfig::Jev), this calls it, so the router and the calls not yet on the router
+# can't disagree. test/architecture/ai_config_test
+# checks that over every documented setup. The one deliberate difference: embeddings fall back
+# to the OpenAI values saved in Settings, as every other AI setting does.
 #
 # It's built in every process. The release that stops reading the old variables deletes this file.
 class Ai::LegacyEnvConfig
@@ -20,15 +21,10 @@ class Ai::LegacyEnvConfig
     enhance_merchants: "enhance_merchants", bill_setup: "bill_setup"
   }.freeze
   SIMPLE_PROMPTS = %i[categorize detect_merchants enhance_merchants].freeze   # bill setup has one OpenAI prompt
-  JSON_MODES = %w[strict json_object none auto].freeze   # LLM_JSON_MODE values today
+  JSON_MODES = Ai::Config::Endpoint::JSON_MODES.map(&:to_s).freeze
   ANTHROPIC_MAX_TOKENS = 4096
   EMBEDDING_TIMEOUT = 120         # VectorStore::Embeddable's client
   EXTERNAL_ASSISTANT_TIMEOUT = 120 # Assistant::External::Client::TIMEOUT_READ
-  JEV_RETRIES = 3                  # what the hand-written Jev client retried
-  JEV_UNSUPPORTED = {
-    openrouter: "OpenRouter's Jev needs RubyLLM 2.2 (PR 5)",
-    path: "only TypeSafe-style …/v1/systemone endpoints are supported"
-  }.freeze
 
   # The inputs a snapshot depends on, so Ai::Config rebuilds when one changes.
   ENV_PREFIXES = %w[OPENAI_ ANTHROPIC_ LLM_ JEV_ EMBEDDING_ VECTOR_STORE_ EXTERNAL_ASSISTANT_ CATEGORIZATION_PROVIDER].freeze
@@ -43,14 +39,13 @@ class Ai::LegacyEnvConfig
   def self.build = new.build
 
   # Which model categorizes every family's transactions: CATEGORIZATION_PROVIDER, then the
-  # instance's setting, else the LLM. Until 2d this was a family column; with one family its
-  # choice was copied to the setting (2d plan, decision 2).
+  # instance's setting, else the LLM.
   def self.categorization_provider
     [ ENV["CATEGORIZATION_PROVIDER"].presence, Setting.categorization_provider.presence ]
       .find { CATEGORIZATION_PROVIDERS.include?(_1) } || "llm"
   end
 
-  # The prompt variant today's code sends for `feature` to this kind of endpoint: Anthropic's own,
+  # The prompt variant the providers send for `feature` to this kind of endpoint: Anthropic's own,
   # the simplified one on a custom OpenAI-compatible server, otherwise OpenAI's detailed one.
   def self.prompt_for(feature, endpoint)
     base = PROMPTS[Ai::Routes.source_of(feature)]
@@ -85,12 +80,12 @@ class Ai::LegacyEnvConfig
     # provider.
     preferred = llm_models.first(1)
     routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
-    # Today's rule for PDF import: only a provider whose PDF support is on (supports_pdf_processing?,
+    # PDF import uses only a provider whose PDF support is on (supports_pdf_processing?,
     # which `vision` carries), so OPENAI_SUPPORTS_PDF_PROCESSING=false keeps it off.
     routes[:extract_pdf] = route_list(:extract_pdf, preferred.select { _1.capable?(:vision) }.map { pdf_model(_1) })
     routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
-    # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM (2d plan,
-    # decision 3); the shadow route runs the other one, as the family's shadow provider did.
+    # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM; the shadow
+    # route runs the other one.
     jev_first = jev_model && self.class.categorization_provider == "jev"
     routes[:categorize] = route_list(:categorize, jev_first ? [ jev_model ] : preferred)
     routes[:shadow_categorize] = route_list(:shadow_categorize, jev_first ? preferred : [ jev_model ].compact)
@@ -104,7 +99,7 @@ class Ai::LegacyEnvConfig
 
   private
     # [endpoint, model or nil]. A custom URL without a model gets an endpoint and no model, as
-    # today's registry builds no client for it (Setting.validate_openai_config!, #4408).
+    # Provider::Registry builds no client for it (Setting.validate_openai_config!, #4408).
     def openai(vector_store:)
       token = env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.presence
       return unless token
@@ -137,7 +132,7 @@ class Ai::LegacyEnvConfig
         name: "anthropic", protocol: :anthropic, preset: (:anthropic unless base_url), base_url:, api_key: token,
         location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       )
-      # Today's Anthropic batches aren't token-sliced, so its window is known only when set.
+      # Anthropic batches were never token-sliced, so its window is known only when set.
       name = Provider::Anthropic.effective_model
       vision = base_url.present? || Provider::Anthropic::VISION_CAPABLE_MODEL_PREFIXES.any? { name.to_s.start_with?(_1) }
       model = provider && llm_model(endpoint, provider, name,
@@ -147,12 +142,12 @@ class Ai::LegacyEnvConfig
       [ endpoint, model ]
     end
 
-    # What today's providers accept: chat's prefix allow-list decides `tools` and `streaming`, and
-    # today's PDF support decides `vision` (a custom server is trusted with images, as today, unless
-    # OPENAI_SUPPORTS_PDF_PROCESSING is off, which also keeps it out of PDF import). `documents`, a PDF sent as a file, only where the
-    # provider reads one natively: Anthropic and OpenAI's own API. llama.cpp and Gemini's
-    # compatible API refuse RubyLLM's file part, and OpenRouter bills parsing it.
-    # Every LLM model does structured output.
+    # What the providers accept: chat's prefix allow-list decides `tools` and `streaming`, and PDF
+    # support decides `vision` (a custom server is trusted with images unless
+    # OPENAI_SUPPORTS_PDF_PROCESSING is off, which also keeps it out of PDF import). `documents`, a
+    # PDF sent as a file, only where the provider reads one natively: Anthropic and OpenAI's own
+    # API. llama.cpp and Gemini's compatible API refuse RubyLLM's file part, and OpenRouter bills
+    # parsing it. Every LLM model does structured output.
     def llm_model(endpoint, provider, name, context_window:, max_output_tokens:, vision:, documents:)
       capabilities = %i[structured_output]
       capabilities += %i[tools streaming] if provider.supports_model?(name)
@@ -161,7 +156,7 @@ class Ai::LegacyEnvConfig
       Ai::Config::Model.new(endpoint:, name:, capabilities:, context_window:, max_output_tokens:, batch_size:)
     end
 
-    # Today's budgets: Assistant::TokenBudget's window (2048 by default), the response cap only
+    # The deprecated budgets: Assistant::TokenBudget's window (2048 by default), the response cap only
     # when someone set one, and LLM_MAX_ITEMS_PER_CALL items per call.
     def context_window = Assistant::TokenBudget.context_window
 
@@ -179,28 +174,21 @@ class Ai::LegacyEnvConfig
 
     def positive(*values) = values.map(&:to_i).find(&:positive?)
 
-    # Jev, when RubyLLM can reach it: a TypeSafe-style `…/v1/systemone` URL, http only for a server on a private network
-    # (section 7). An endpoint it can't reach is left out with a warning, so `categorize` uses
-    # the LLM, as today when Jev can't be built.
+    # Jev, when RubyLLM can reach it (Jev.unreachable_reason). An endpoint it can't reach is left
+    # out with a warning, so `categorize` uses the LLM.
     def jev
       return unless Jev.configured?
 
       url = Jev.effective_endpoint
-      reason = Jev.unreachable_reason(url)
-      if reason
-        Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{JEV_UNSUPPORTED.fetch(reason)}")
+      if (reason = Jev.unreachable_reason(url))
+        Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{Jev::UNSUPPORTED.fetch(reason)}")
         return
       end
 
-      base_url = Jev.base_url(url)
-      location = location_for(base_url)
-      endpoint = Ai::Config::Endpoint.new(
-        name: "jev", protocol: :jev, preset: location == :cloud ? :jev : :jev_local, base_url:, api_key: Jev.api_key,
-        location:, timeout_seconds: ENV.fetch("JEV_REQUEST_TIMEOUT", 30).to_i, max_retries: JEV_RETRIES,
-        parallel_requests: positive(env("JEV_CONCURRENCY"))
-      )
+      endpoint = Jev.endpoint(url, api_key: Jev.api_key, timeout_seconds: ENV.fetch("JEV_REQUEST_TIMEOUT", 30).to_i,
+                                   parallel_requests: positive(env("JEV_CONCURRENCY")))
       Ai::Config::Model.new(endpoint:, name: Jev.effective_model,
-                            capabilities: location == :cloud ? %i[judge calibrated_confidence] : %i[judge])
+                            capabilities: endpoint.local? ? %i[judge] : %i[judge calibrated_confidence])
     end
 
     def external_assistant
@@ -216,7 +204,7 @@ class Ai::LegacyEnvConfig
       Ai::Config::Model.new(endpoint:, name: config.model)
     end
 
-    # Today's VectorStore::Registry.adapter_name: VECTOR_STORE_PROVIDER, else pgvector on
+    # The vector store rule VectorStore::Registry used: VECTOR_STORE_PROVIDER, else pgvector on
     # Anthropic installs, else OpenAI's store when there's an OpenAI key.
     def vector_store_backend
       explicit = env("VECTOR_STORE_PROVIDER")&.to_sym
@@ -226,7 +214,7 @@ class Ai::LegacyEnvConfig
       :openai if env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.present?
     end
 
-    # The `embed` route's model, present exactly when today's registry would build an adapter.
+    # The `embed` route's model, present exactly when VectorStore::Registry can build an adapter.
     # pgvector without the extension keeps its embedding model in the config, for the health page.
     def embed_route(backend, openai, embed_model)
       case backend
@@ -239,7 +227,7 @@ class Ai::LegacyEnvConfig
       end
     end
 
-    # Drift bug 5: the URL and key fall back to the OpenAI values saved in Settings too.
+    # The URL and key fall back to the OpenAI values saved in Settings too.
     def embedding_model
       base_url = env("EMBEDDING_URI_BASE") || openai_uri_base || VectorStore::DEFAULT_EMBEDDING_URI_BASE
       api_key = env("EMBEDDING_ACCESS_TOKEN") || env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.presence

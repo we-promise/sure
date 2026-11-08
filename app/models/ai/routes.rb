@@ -1,4 +1,4 @@
-# THE routing table: each AI feature's lane, what its models need, its consent
+# The routing table: each AI feature's lane, what its models need, its consent
 # level and the data it sends. Changing any of these changes what data leaves the box, so it
 # goes through review and the architecture tests and can't be changed at runtime.
 #

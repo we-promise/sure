@@ -1,8 +1,7 @@
 require "test_helper"
 
 # Categorization on a decision model: the question Jev is asked, what comes back, and the
-# generation's loop switching class on a `judge` route (section 8). Moved from
-# test/models/provider/jev_test.rb with Provider::Jev.
+# generation's loop switching class on a `judge` route.
 class Ai::Judgements::CategorizeTransactionTest < ActiveSupport::TestCase
   TRANSACTIONS = [
     { id: "txn_1", amount: 4.5, classification: "expense", description: "STARBUCKS 1234", merchant: nil },

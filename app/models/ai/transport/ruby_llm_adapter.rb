@@ -132,13 +132,12 @@ module Ai::Transport::RubyLlmAdapter
     def ruby_llm_error(error)
       status = error.respond_to?(:response) && error.response.respond_to?(:status) ? error.response.status : nil
       body = error.respond_to?(:response) && error.response.respond_to?(:body) ? error.response.body : nil
-      text = [ error.message, body.is_a?(String) ? body : body.to_json ].join(" ")
 
       klass =
         case error
         when RubyLLM::PaymentRequiredError then Ai::Error::NoCredit
         when RubyLLM::UnauthorizedError, RubyLLM::ForbiddenError then Ai::Error::Unauthorized
-        when RubyLLM::RateLimitError then Ai::Error::NO_CREDIT.any? { text.match?(_1) } ? Ai::Error::NoCredit : Ai::Error::RateLimited
+        when RubyLLM::RateLimitError then Ai::Error.for_status(429, error.message, body:)
         when RubyLLM::ContextLengthExceededError then Ai::Error::ContextTooLong
         when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError
           Ai::Error::UNSUPPORTED_INPUT.any? { text.match?(_1) } ? Ai::Error::Refused : Ai::Error::Upstream

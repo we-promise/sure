@@ -1,9 +1,8 @@
 require "test_helper"
 
-# Shadow runs (section 8.2): a categorize batch that the family's rate samples enqueues
-# Ai::ShadowJob, which runs the same generation on shadow_categorize with the input actually sent.
-# Its answer reaches only Ai::Comparison, never the transaction. Moved from the inline shadow run
-# in Family::AutoCategorizer's tests.
+# Shadow runs: a categorize batch that the family's rate samples enqueues Ai::ShadowJob, which
+# runs the same generation on shadow_categorize with the input actually sent. Its answer reaches
+# only Ai::Comparison, never the transaction.
 class Ai::ShadowJobTest < ActiveJob::TestCase
   include EntriesTestHelper
 

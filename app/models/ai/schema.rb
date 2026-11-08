@@ -5,9 +5,8 @@
 # - numbers in strings become numbers; integers expected as strings become strings;
 # - a value outside an `enum`, or outside `minimum`/`maximum`, becomes nil, unless the generation
 #   matches that field itself (`match:`, such as categorize's fuzzy category names);
-# - field names models use instead of the schema's are mapped (`aliases:`, today's
-#   TRANSACTION_ID_KEYS and the rest), and so is a top-level array or another wrapper key
-#   (`{"results": [...]}`), as today's parsers accept;
+# - field names models use instead of the schema's are mapped (`aliases:`), and so is a
+#   top-level array or another wrapper key (`{"results": [...]}`);
 # - array items that aren't objects, or lack a required id (`required:`), are dropped: they
 #   can't be matched to an input item.
 #

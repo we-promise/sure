@@ -50,19 +50,20 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_includes rule_run.error_message, "no JSON"
   end
 
-  test "logs when no categories are available, and asks no model" do
+  test "no categories fails the rule run's job, logs why, and asks no model" do
     @family.categories.destroy_all
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 1, executed_at: Time.current)
     stub_ai(:categorize) { flunk "the model shouldn't be asked" }
 
-    assert_difference "DebugLogEntry.count", 1 do
-      categorize([ txn.id ])
-    end
+    Ai::GenerationJob.perform_now(:categorize, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
 
-    log_entry = DebugLogEntry.order(:created_at).last
+    assert_equal "failed", rule_run.reload.status
+    assert_includes rule_run.error_message, "No categories available"
+    log_entry = DebugLogEntry.find_by!(message: "AI categorization failed: no categories available")
     assert_equal "auto_categorization", log_entry.category
     assert_equal "error", log_entry.level
-    assert_equal "AI categorization failed: no categories available", log_entry.message
     assert_equal "Family::AutoCategorizer", log_entry.source
     assert_equal @family, log_entry.family
     assert_equal [ txn.id ], log_entry.metadata["requested_transaction_ids"]
@@ -160,7 +161,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal [ llm_txn.id ], ai_entry.metadata["categorized_transaction_ids"]
   end
 
-  # Jev answers when the categorize route lists it: the instance's choice (2d, until PR 7), read
+  # Jev answers when the categorize route lists it: the instance's choice, read
   # by the deprecated ENV path. Preview gates whether the selector is offered (see
   # docs/llm-guides/gating-a-preview-feature.md), never what gets used.
 
@@ -250,7 +251,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
 
   # Confidence has to change behaviour, not just appear in logs. Below the threshold the answer
   # is withheld and the transaction is left unlocked, so a later run can still correct it. Only
-  # a model with calibrated confidence is gated (section 6).
+  # a model with calibrated confidence is gated.
 
   test "withholds a calibrated answer that carries no confidence at all" do
     @family.update!(categorization_confidence_threshold: 0.7)

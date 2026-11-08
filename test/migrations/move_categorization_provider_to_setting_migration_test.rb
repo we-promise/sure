@@ -3,7 +3,7 @@
 require "test_helper"
 require Rails.root.join("db/migrate/20261106140000_move_categorization_provider_to_setting")
 
-# The Jev choice moves from the family to the instance (2d plan, decision 2). The test schema
+# The Jev choice moves from the family to the instance. The test schema
 # already lacks the column, so each test puts it back with `down`, sets the families' choices,
 # and runs `up`.
 class MoveCategorizationProviderToSettingMigrationTest < ActiveSupport::TestCase

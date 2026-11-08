@@ -89,18 +89,12 @@ class AiRoutingMatrixTest < ActiveSupport::TestCase
     end
   end
 
-  # Called on the web thread, not from Ai::GenerationJob.
-  NOT_YET_IN_A_JOB = %i[bill_setup].freeze
-
   test "every requester declares the feature it's listed under" do
     Ai::Requesters::CLASSES.each do |feature, class_name|
       klass = class_name.constantize
       assert klass.include?(Ai::Requester), "#{class_name} should include Ai::Requester"
       assert_equal feature, klass.ai_feature, class_name
-      next if NOT_YET_IN_A_JOB.include?(feature)
-
       assert klass.respond_to?(:from_ai_job), "#{class_name} should define .from_ai_job"
     end
-    NOT_YET_IN_A_JOB.each { assert_not Ai::Requesters.fetch(_1).respond_to?(:from_ai_job), "#{_1} runs in a job now; take it off the list" }
   end
 end

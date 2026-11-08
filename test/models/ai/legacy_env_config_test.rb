@@ -188,7 +188,7 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_empty build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic").routes_for(:embed)
   end
 
-  test "embeddings fall back to the OpenAI URL and key saved in Settings (drift bug 5)" do
+  test "embeddings fall back to the OpenAI URL and key saved in Settings" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
     Setting.openai_access_token = "sk-setting"
     Setting.openai_uri_base = "http://llama.local:8080/v1"

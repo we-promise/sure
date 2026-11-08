@@ -61,24 +61,18 @@ class Eval::ProviderFactory
     end
 
     # The run's Jev endpoint, else the install's: categorization through the generation's
-    # judgement, as production runs it (2d). Only TypeSafe-style …/v1/systemone endpoints are
-    # reachable until RubyLLM 2.2 (PR 5).
+    # judgement, as production runs it.
     def build_jev
       jev = Ai::LegacyEnvConfig::Jev
       api_key = config[:api_key].presence || jev.api_key # pipelock:ignore
       raise Error, "Jev API key not configured" unless api_key.present?
 
       url = config[:endpoint].presence || jev.effective_endpoint
-      if jev.unreachable_reason(url)
-        raise Error, "Jev endpoint not supported: #{jev.redacted_endpoint(url)} (only …/v1/systemone until RubyLLM 2.2)"
+      if (reason = jev.unreachable_reason(url))
+        raise Error, "Jev endpoint not supported: #{jev.redacted_endpoint(url)}: #{jev::UNSUPPORTED.fetch(reason)}"
       end
 
-      base_url = jev.base_url(url)
-      local = base_url.start_with?("http:")
-      endpoint = Ai::Config::Endpoint.new(
-        name: "jev", protocol: :jev, preset: local ? :jev_local : :jev, base_url:, api_key:, location: local ? :local : :cloud,
-        timeout_seconds: 30, max_retries: Ai::LegacyEnvConfig::JEV_RETRIES, parallel_requests: config[:concurrency]
-      )
+      endpoint = jev.endpoint(url, api_key:, timeout_seconds: 30, parallel_requests: config[:concurrency])
       Eval::GenerationClient.new(endpoint:, model:)
     end
 end

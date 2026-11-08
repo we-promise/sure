@@ -9,8 +9,6 @@ Ai::Availability = Data.define(:feature, :reason) do
 
   def available? = reason.nil?
 
-  def unavailable? = !available?
-
   # What to tell this user, worded for someone who can act on it: the instance admin is told what
   # to set up, anyone else only that it isn't available. Nil when the feature is available.
   def message_for(user)
