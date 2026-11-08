@@ -37,6 +37,27 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_in_delta 0.10, returns.last.to_f, 0.000001
   end
 
+  # A Contribution-labelled trade with a cash amount is a buy to the balance
+  # calculators: cash down 500, holdings up 500, the account flat. It is no
+  # flow, so the day is flat. Counted at -amount it was a 500 outflow, a
+  # 500 denominator, and a flat day read as +100%.
+  test "a contribution trade that settles in cash is not an external flow" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+
+    @account.entries.create!(
+      name: "Contribution", date: @day_two, amount: 500, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 5, price: 100,
+                           currency: @account.currency, investment_activity_label: "Contribution")
+    )
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("0"), second.external_flow
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, daily_returns.returns.last.last.to_f, 0.000001
+  end
+
   # The account does not move in its own currency; the rate does.
   # Because returns are quoted in the family's currency, that is a real 10% day
   # for this family, and it must appear as one.

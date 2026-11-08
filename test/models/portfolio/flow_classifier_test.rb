@@ -384,9 +384,10 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_inflow, including.classify_ids([ excluded.id ])[excluded.id]
   end
 
+  # An in-kind contribution or withdrawal moves units and no cash (amount 0).
   test "direction follows the trade quantity sign or the transaction amount sign" do
-    inflow_trade = create_portfolio_trade(account: @brokerage, qty: 5, price: 10, label: "Contribution")
-    outflow_trade = create_portfolio_trade(account: @brokerage, qty: -5, price: 10, label: "Withdrawal")
+    inflow_trade = create_portfolio_trade(account: @brokerage, qty: 5, price: 10, label: "Contribution").tap { |e| e.update!(amount: 0) }
+    outflow_trade = create_portfolio_trade(account: @brokerage, qty: -5, price: 10, label: "Withdrawal").tap { |e| e.update!(amount: 0) }
     inflow_transaction = create_labelled_transaction(account: @brokerage, label: "Withdrawal", amount: -20)
 
     assert_equal :external_inflow, @family_scope.classify(inflow_trade)
@@ -394,6 +395,25 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     # The label says withdrawal but money came in: the sign wins, so a
     # mislabelled row cannot flip the direction of a return.
     assert_equal :external_inflow, @family_scope.classify(inflow_transaction)
+  end
+
+  # The trades form and API keep a Contribution or Withdrawal label on a trade
+  # whose amount is qty x price. The balance calculators apply it as a buy or
+  # a sale: cash out, units in at the same value. Nothing crossed the scope,
+  # so it is internal. Read by direction, it was an inflow summed from
+  # -amount as an outflow, and a flat day read as a large return.
+  test "a Contribution or Withdrawal trade that settles in cash is internal in both forms" do
+    bought = create_portfolio_trade(account: @brokerage, qty: 5, price: 100, label: "Contribution")
+    sold = create_portfolio_trade(account: @brokerage, qty: -5, price: 100, label: "Withdrawal")
+    cash_only = create_portfolio_trade(account: @brokerage, qty: 0, price: 0, label: "Contribution").tap { |e| e.update!(amount: -500) }
+
+    [ @family_scope, @brokerage_scope ].each do |scope|
+      assert_equal :internal, scope.classify(bought)
+      assert_equal :internal, scope.classify(sold)
+      assert_equal :external_inflow, scope.classify(cash_only), "a qty 0 cash contribution stays external"
+      assert_equal({ bought.id => :internal, sold.id => :internal, cash_only.id => :external_inflow },
+                   scope.classify_ids([ bought.id, sold.id, cash_only.id ]))
+    end
   end
 
   test "every activity label has a rule" do
@@ -527,6 +547,8 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
       entries << create_labelled_transaction(account: @ira, label: "Contribution", amount: -300, kind: "funds_movement")
       entries << create_portfolio_trade(account: @brokerage, qty: 5, price: 10, label: "Contribution")
       entries << create_portfolio_trade(account: @brokerage, qty: -5, price: 10, label: "Withdrawal")
+      entries << create_portfolio_trade(account: @brokerage, qty: 5, price: 10, label: "Contribution").tap { |e| e.update!(amount: 0) }
+      entries << create_portfolio_trade(account: @brokerage, qty: -5, price: 10, label: "Withdrawal").tap { |e| e.update!(amount: 0) }
 
       internal_transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400, source_fee_amount: 1)
       entries << internal_transfer.outflow_transaction.entry
