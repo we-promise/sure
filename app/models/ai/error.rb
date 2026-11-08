@@ -22,8 +22,6 @@ module Ai::Error
   end
 
   Cancelled      = Class.new(Base)
-  Busy           = Class.new(Base)   # a background call found its host's gate taken; re-enqueued, not a failure
-  Preempted      = Class.new(Base)   # an interactive call took the host; the request is sent again
   Unreachable    = Class.new(Base)   # connection refused, DNS, TLS: no response came back
   Timeout        = Class.new(Base)
   RateLimited    = Class.new(Base)   # 429
