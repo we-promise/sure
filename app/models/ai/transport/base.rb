@@ -1,5 +1,4 @@
-# The transport interface. Every transport implements `probe` (AiHealth::Probe); a call a
-# transport doesn't implement raises NotImplementedError.
+# The transport interface: health probes, with retries and one `.ai` event per call.
 class Ai::Transport::Base
   # Health checks a probe can make. Which one AiHealth runs for "is the model up" is the
   # endpoint's `probe_check`; tools and embedding are their own probes.
@@ -25,10 +24,6 @@ class Ai::Transport::Base
     @endpoint = endpoint
   end
 
-  def generate(request)            = raise NotImplementedError, "#{self.class.name}#generate isn't implemented"
-  def judge(state:, questions:)    = raise NotImplementedError, "#{self.class.name}#judge isn't implemented"
-  def embed(texts, model:)         = raise NotImplementedError, "#{self.class.name}#embed isn't implemented"
-
   # Health probes reuse the production path, so they can't drift from it: the same client settings,
   # headers, timeout, proxy and error mapping. Returns what the check found, or raises an
   # Ai::Error:
@@ -47,18 +42,16 @@ class Ai::Transport::Base
   private
     def run_probe(model, check, timeout:) = raise(NotImplementedError)
 
-    # Sure retries, not RubyLLM (whose contexts all have max_retries 0): RubyLLM retries inside
-    # one `request.ruby_llm`, with no hook before a retry, so only here can a spent balance
-    # (OpenAI's 429 insufficient_quota) stop the retries and the attempt budget be checked
-    # between tries, wait included: no retry starts after the budget runs out. Each try is one
-    # HTTP request and one `usage.ruby_llm` event.
+    # Sure retries, not RubyLLM: RubyLLM has no hook before a retry, so only here can a spent
+    # balance (OpenAI's 429 insufficient_quota) stop retrying and the attempt budget, wait
+    # included, be checked between tries.
     def attempt
       tries = 0
       begin
         tries += 1
         yield
       rescue *Ai::Error::RETRYABLE => error
-        delay = retry_delay(tries, error)
+        delay = retry_delay(tries)
         remaining = Ai::CallContext.current&.remaining
         raise if tries > endpoint.max_retries || (remaining && remaining <= delay)
 
@@ -67,13 +60,13 @@ class Ai::Transport::Base
       end
     end
 
-    def retry_delay(tries, _error) = [ 0.5 * (2**(tries - 1)), 8 ].min * (0.75 + rand * 0.5)
+    def retry_delay(tries) = [ 0.5 * (2**(tries - 1)), 8 ].min * (0.75 + rand * 0.5)
 
     # One `.ai` event per call, carrying what subscribers need: the route, the
     # request (files by name and size, never their bytes), the output, usage and error class.
     def instrument(name, model:, request:)
       call = Ai::CallContext.current
-      payload = { feature: call&.feature, call_id: call&.call_id, correlation_id: call&.correlation_id,
+      payload = { feature: call&.feature, call_id: call&.call_id,
                   family_id: call&.family_id, endpoint: endpoint.to_event, route: model.to_event, request:,
                   scrub: scrubber }
 

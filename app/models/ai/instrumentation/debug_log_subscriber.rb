@@ -22,8 +22,7 @@ class Ai::Instrumentation::DebugLogSubscriber
         error_class: payload[:error],
         error_message: payload[:error_message],
         http_status: payload[:http_status],
-        call_id: payload[:call_id],
-        correlation_id: payload[:correlation_id]
+        call_id: payload[:call_id]
       }.compact
     )
   end

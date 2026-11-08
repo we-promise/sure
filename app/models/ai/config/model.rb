@@ -1,10 +1,8 @@
 # A model on an endpoint, with what it can do.
-class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :context_window, :max_output_tokens,
-                                      :embedding_dimensions, :input_cost_per_mtok, :output_cost_per_mtok)
+class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :embedding_dimensions)
   CAPABILITIES = %w[tools vision documents ocr thinking streaming structured_output embedding judge calibrated_confidence].freeze
 
-  def initialize(endpoint:, name:, capabilities: [], context_window: nil, max_output_tokens: nil, embedding_dimensions: nil,
-                 input_cost_per_mtok: nil, output_cost_per_mtok: nil)
+  def initialize(endpoint:, name:, capabilities: [], embedding_dimensions: nil)
     capabilities = Array(capabilities).map(&:to_s).uniq.freeze
     unknown = capabilities - CAPABILITIES
     raise ArgumentError, "unknown capabilities: #{unknown.join(", ")}" if unknown.any?
@@ -13,14 +11,6 @@ class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :context_
   end
 
   def capable?(*needed) = needed.flatten.all? { capabilities.include?(_1.to_s) }
-
-  # The cost from this model's own prices, or nil when it has none (local models, and any
-  # model configured without prices).
-  def cost_for(tokens)
-    return if input_cost_per_mtok.nil? || output_cost_per_mtok.nil? || !tokens&.known?
-
-    (tokens.prompt_tokens.to_i * input_cost_per_mtok + tokens.output_tokens.to_i * output_cost_per_mtok) / 1_000_000.0
-  end
 
   def inspect = "#<Ai::Config::Model #{endpoint&.name}/#{name}>"
   alias_method :to_s, :inspect

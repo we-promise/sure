@@ -1098,7 +1098,7 @@ health page. The mode follows the variables you already set:
 
 | You set | Mode | What leaves the server |
 |---|---|---|
-| `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | `content` | Prompts, outputs, token usage, the model and endpoint, Sure's error class, and the job's correlation id as the Langfuse session |
+| `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | `content` | Prompts, outputs, token usage, the model and endpoint, and Sure's error class |
 | Only `OTLP_ENDPOINT` (and `OTLP_HEADERS` for authentication) | `metadata` | Model, settings, finish reason, token counts and latency, as OpenTelemetry spans to any OTLP backend (Langfuse, Tempo, Jaeger, OpenObserve). No prompts, tool results or answers |
 | Both | `content`, with a warning in the log | As `content` |
 | Neither | off | Nothing |

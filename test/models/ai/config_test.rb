@@ -30,14 +30,12 @@ class Ai::ConfigTest < ActiveSupport::TestCase
     end
   end
 
-  test "a model checks its capabilities and prices tokens when it has prices" do
-    model = ai_model(capabilities: %i[tools streaming], input_cost_per_mtok: 1.0, output_cost_per_mtok: 4.0)
+  test "a model checks its capabilities" do
+    model = ai_model(capabilities: %i[tools streaming])
 
     assert model.capable?(:tools)
     assert model.capable?(%w[tools streaming])
     assert_not model.capable?(:vision)
-    assert_in_delta 0.000014, model.cost_for(Ai::Tokens.new(input_tokens: 2, cache_read_tokens: 4, output_tokens: 2)), 1e-12
-    assert_nil ai_model.cost_for(Ai::Tokens.new(input_tokens: 2))
     assert_raises(ArgumentError) { ai_model(capabilities: [ :telepathy ]) }
   end
 

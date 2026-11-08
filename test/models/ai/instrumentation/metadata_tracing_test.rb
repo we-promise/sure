@@ -19,19 +19,18 @@ class Ai::Instrumentation::MetadataTracingTest < ActiveSupport::TestCase
     OpenTelemetry.tracer_provider = @previous_provider
   end
 
-  test "spans carry the model, tokens and session, and none of the content" do
+  test "spans carry the model and tokens, and none of the content" do
     stub_request(:post, URL).to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: {
       id: "c1", model: "test-model", choices: [ { index: 0, message: { role: "assistant", content: SECRET_ANSWER }, finish_reason: "stop" } ],
       usage: { prompt_tokens: 9, completion_tokens: 4, total_tokens: 13 }
     }.to_json)
 
-    Ai::CallContext.job("sync:99") { chat_call }
+    chat_call
 
     spans = @exporter.finished_spans
     chat = spans.find { _1.attributes["gen_ai.operation.name"] == "chat" }
     assert chat, "a chat span: #{spans.map(&:name)}"
     assert_equal "test-model", chat.attributes["gen_ai.request.model"]
-    assert_equal "sync:99", chat.attributes["session.id"]
 
     everything = spans.flat_map { [ _1.name, _1.attributes.to_a, _1.events.to_a.map { |e| [ e.name, e.attributes.to_a ] }, _1.status.description ] }.to_s
     assert_not_includes everything, SECRET_PROMPT

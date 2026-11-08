@@ -1,12 +1,7 @@
-# One llm_usages row per request. RubyLLM publishes `usage.ruby_llm` for every
-# HTTP attempt, retries and failures included, in the caller's process, so this reads the
-# family from the usage owner and the call from the workflow Ai::CallContext opened:
-# `workflow_id` is the call id, and `workflow_metadata` names the feature and route.
-#
-# A failed request's usage event carries no error. Its `request.ruby_llm` event, which finishes
-# after the row is written, carries the transport's error (Ai::Transport::Instrumenter), and the
-# row takes it. The call's `.ai` event, which finishes last, adds the call's error to any failed
-# row still without one.
+# One llm_usages row per HTTP request, retries and failures included, from RubyLLM's
+# `usage.ruby_llm`: the family is the usage owner and the call is the workflow Ai::CallContext
+# opened. That event carries no error, so a failed row takes it from the `request.ruby_llm` event
+# that finishes next, or else from the call's `.ai` event, which finishes last.
 #
 # Requests outside a call context with a family (health probes, eval runs) write nothing.
 class Ai::Instrumentation::UsageSubscriber
@@ -48,7 +43,6 @@ class Ai::Instrumentation::UsageSubscriber
         estimated_cost: cost(tokens, model),
         metadata: {
           route: { endpoint: call["endpoint"], model: },
-          correlation_id: call["correlation_id"],
           tokens_unknown: (true unless tokens.known?)
         }.compact
       )

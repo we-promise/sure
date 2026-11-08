@@ -1,5 +1,5 @@
 # Helpers for testing AI code: the transport level (endpoints, models, call contexts, captured
-# events, cassettes) and routing (with_ai_routes, without_ai).
+# events) and routing (with_ai_routes, without_ai).
 module AiTestHelper
   LLM_CAPABILITIES = %i[tools vision documents streaming structured_output].freeze
 
@@ -68,7 +68,6 @@ module AiTestHelper
   def without_ai(&block)
     Ai::Config.with(Ai::Config.new, &block)
   end
-  AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY].freeze
 
   def ai_endpoint(name: "test", protocol: :compatible, base_url: "https://llm.example.test/v1", api_key: "test-key", **attributes)
     Ai::Config::Endpoint.new(name:, protocol:, base_url:, api_key:, **attributes)
@@ -91,34 +90,5 @@ module AiTestHelper
     events
   ensure
     ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
-  end
-
-  # Makes every transport for `protocol` answer `probe` with `returns` (or raise `raises`),
-  # without HTTP. Returns the recorded [model, check] pairs.
-  def stub_ai_transport(protocol = :compatible, returns: nil, raises: nil)
-    calls = []
-    klass = protocol == :anthropic ? Ai::Transport::Anthropic : Ai::Transport::Compatible
-    expectation = klass.any_instance.stubs(:run_probe).with { |model, check, **| calls << [ model, check ] }
-    raises ? expectation.raises(raises) : expectation.returns(returns)
-    calls
-  end
-
-  # Replays (or, with RECORD_CASSETTES=1 and the keys in ENV, records) a cassette under
-  # test/vcr_cassettes/ai/<preset>/. Local servers listen on localhost, which Sure's VCR setup
-  # ignores, so localhost is recorded inside the block only. Keys are filtered.
-  def with_ai_cassette(preset, name, match: %i[method uri], &)
-    recording = ENV["RECORD_CASSETTES"] == "1"
-    path = "ai/#{preset}/#{name}"
-    FileUtils.rm_f(Rails.root.join("test/vcr_cassettes/#{path}.yml")) if recording
-    VCR.configuration.ignore_localhost = false
-    VCR.use_cassette(path, record: recording ? :all : :none, match_requests_on: match, &)
-  ensure
-    VCR.configuration.ignore_localhost = true
-  end
-end
-
-VCR.configure do |config|
-  AiTestHelper::AI_CASSETTE_KEYS.each do |key|
-    config.filter_sensitive_data("<#{key}>") { ENV[key].presence }
   end
 end

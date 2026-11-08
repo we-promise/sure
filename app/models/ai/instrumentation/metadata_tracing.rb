@@ -10,15 +10,6 @@ require "opentelemetry-exporter-otlp"
 # off by default; `content: false` is passed explicitly whenever the gem accepts it, and
 # test/models/ai/instrumentation/metadata_tracing_test.rb fails if any span carries content.
 module Ai::Instrumentation::MetadataTracing
-  # RubyLLM can't set a session, and Langfuse doesn't copy a parent span's session to its
-  # children, so every span gets the job's correlation id when it starts.
-  class CorrelationProcessor < OpenTelemetry::SDK::Trace::SpanProcessor
-    def on_start(span, _parent_context)
-      id = Ai::CallContext.current&.correlation_id || Ai::CallContext.correlation_id
-      span.set_attribute("session.id", id.to_s) if id.present?
-    end
-  end
-
   # Health probes carry no family data and aren't traced (docs/hosting/ai.md), so every span
   # started inside a probe call is dropped; any other span is sampled as the SDK's default does.
   class ProbeSampler
@@ -45,7 +36,6 @@ module Ai::Instrumentation::MetadataTracing
       OpenTelemetry::Exporter::OTLP::Exporter.new(endpoint:, headers: parse_headers(headers))
     )
     provider = OpenTelemetry::SDK::Trace::TracerProvider.new(sampler: ProbeSampler.new)
-    provider.add_span_processor(CorrelationProcessor.new)
     provider.add_span_processor(processor)
     OpenTelemetry.tracer_provider = provider
 

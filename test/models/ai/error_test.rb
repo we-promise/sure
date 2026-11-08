@@ -57,11 +57,4 @@ class Ai::ErrorTest < ActiveSupport::TestCase
 
     assert_nil Ai::Error.from_exception(RuntimeError.new("ours"))
   end
-
-  test "Unavailable carries its reason" do
-    error = Ai::Error::Unavailable.new(:not_configured)
-
-    assert_equal :not_configured, error.reason
-    assert_equal "AI unavailable: not_configured", error.message
-  end
 end

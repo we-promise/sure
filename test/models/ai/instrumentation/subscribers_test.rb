@@ -39,10 +39,10 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
     [ *content, *off ].each { ActiveSupport::Notifications.unsubscribe(_1) }
   end
 
-  test "Langfuse gets one trace per call with the session, route and scrubbed output; probes aren't traced" do
+  test "Langfuse gets one trace per call with the route and scrubbed output; probes aren't traced" do
     log = []
     subscriber = Ai::Instrumentation::LangfuseSubscriber.new(client: FakeLangfuse.new(log))
-    payload = { feature: "bill_setup", correlation_id: "rule_run:7", call_id: "c1", route: { endpoint: "openai", model: "gpt-4.1" },
+    payload = { feature: "bill_setup", call_id: "c1", route: { endpoint: "openai", model: "gpt-4.1" },
                 request: { input: "charges" }, output: { name: "Netflix", notes: [ "billed with sk-live-abcdef123456" ] },
                 usage: Ai::Tokens.new(input_tokens: 512, cache_read_tokens: 11_945, output_tokens: 20) }
 
@@ -51,7 +51,6 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
 
     trace = log.find { _1.first == :trace }.last
     assert_equal "bill_setup.generate", trace[:name]
-    assert_equal "rule_run:7", trace[:session_id]
     generation_end = log.select { _1.first == :end }.first.last
     assert_equal({ input_tokens: 12_457, output_tokens: 20, prompt_tokens_details: { cached_tokens: 11_945 } }, generation_end[:usage])
     assert_equal 1, log.count { _1.first == :trace }, "probe.ai is skipped"
@@ -75,8 +74,8 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
   end
 
   test "a failed call writes a debug log entry with its route and error, never its key" do
-    payload = { feature: "categorize", call_id: "c1", correlation_id: "rule_run:7", family_id: families(:dylan_family).id,
-                endpoint: { name: "gpu", protocol: :compatible, location: :local }, route: { endpoint: "gpu", model: "qwen3-8b" },
+    payload = { feature: "categorize", call_id: "c1", family_id: families(:dylan_family).id,
+                endpoint: { name: "gpu", protocol: :compatible }, route: { endpoint: "gpu", model: "qwen3-8b" },
                 error: "Ai::Error::Upstream", error_message: "busy", http_status: 503 }
 
     assert_difference -> { DebugLogEntry.where(category: "ai").count }, 1 do
