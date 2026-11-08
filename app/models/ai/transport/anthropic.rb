@@ -33,6 +33,7 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
         raise Ai::Error::InvalidOutput, "the model lookup didn't answer with JSON" unless body.is_a?(Hash)
         raise Ai::Error::ModelMissing, "#{model.name} isn't listed" if body["id"].blank?
 
+        check_answering_model!(model.name, body["id"])   # a gateway may answer with another model
         body["id"]
       end
     end

@@ -326,8 +326,9 @@ class LlmUsage < ApplicationRecord
     scope_with_cost = scope.where.not(estimated_cost: nil)
 
     calls_with_cost = scope_with_cost.distinct.count(Arel.sql(CALL_KEY))
-    total_cost = scope_with_cost.sum(:estimated_cost).to_f.round(2)
-    avg_cost = calls_with_cost > 0 ? (total_cost / calls_with_cost).round(4) : 0.0
+    cost = scope_with_cost.sum(:estimated_cost).to_f
+    total_cost = cost.round(2)
+    avg_cost = calls_with_cost > 0 ? (cost / calls_with_cost).round(4) : 0.0   # from the unrounded total
 
     {
       total_calls: scope.distinct.count(Arel.sql(CALL_KEY)),
