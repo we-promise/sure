@@ -201,6 +201,8 @@ class Portfolio::FlowClassifier
         WHEN #{label_sql} IN (#{quote_list(INCOME_LABELS)}) THEN 'income'
         WHEN #{label_sql} IN (#{quote_list(FEE_LABELS)}) THEN 'fee'
         WHEN #{label_sql} IN (#{quote_list(INTERNAL_LABELS)}) THEN 'internal'
+        WHEN entries.entryable_type = 'Trade' AND #{label_sql} IN (#{quote_list(EXTERNAL_LABELS)})
+          AND trades.qty * entries.amount > 0 THEN 'internal'
         WHEN #{label_sql} IN (#{quote_list(EXTERNAL_LABELS)}) THEN #{transfer_resolution_sql}
         WHEN #{label_sql} = '#{TRANSFER_LABEL}' AND entries.entryable_type = 'Trade'
           THEN CASE WHEN #{security_transfer_counterpart_in_scope_sql} THEN 'internal' ELSE #{direction_sql} END
@@ -218,7 +220,7 @@ class Portfolio::FlowClassifier
 
       case rule
       when nil then :internal
-      when :external then trade_direction(trade)
+      when :external then cash_settled?(entry, trade) ? :internal : trade_direction(trade)
       when :transfer then security_transfer_counterpart_in_scope?(entry, trade) ? :internal : trade_direction(trade)
       else rule
       end
@@ -245,6 +247,15 @@ class Portfolio::FlowClassifier
       when :transfer then transfer_resolution(entry, transaction)
       else rule
       end
+    end
+
+    # A Contribution or Withdrawal trade whose amount is signed like its
+    # quantity (qty x price, as the trades form and API write it). The balance
+    # calculators apply it as a buy or a sale, cash for units at the same
+    # value, so nothing crosses the scope. In kind (amount 0) or cash only
+    # (qty 0), it is an external flow by direction.
+    def cash_settled?(entry, trade)
+      (trade.qty * entry.amount).positive?
     end
 
     def trade_direction(trade)
@@ -320,11 +331,11 @@ class Portfolio::FlowClassifier
     end
 
     # A Trade's direction is its quantity's sign, and a summing caller takes
-    # the magnitude from -entries.amount. Those agree for every writer today:
-    # a Contribution or Withdrawal is written as a Transaction, and a
-    # Transfer-labelled Trade as a journal or a cash amount signed like its
-    # quantity. A Contribution Trade written as amount = qty x price would be
-    # classed an inflow and summed as an outflow; nothing writes that shape.
+    # the magnitude from -entries.amount. For a Contribution or Withdrawal
+    # trade the two would disagree when the amount is signed like the
+    # quantity, which the trades form and API write; that shape is internal
+    # (#cash_settled?) and never reaches here. A Transfer-labelled trade
+    # carrying cash still does; how to classify it is an open question.
     def direction_sql
       <<~SQL.squish
         CASE
