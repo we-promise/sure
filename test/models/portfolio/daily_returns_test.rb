@@ -1023,8 +1023,8 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), second.unexplained
   end
 
-  # The unpriced half of the case above. On a journal date with no stored
-  # price, Holding::PortfolioCache keeps the journal trade's zero price and the
+  # The unpriced half of the case above. With no price for the security,
+  # Holding::PortfolioCache keeps the journal trade's zero price and the
   # forward calculator writes the emptied position as a qty-0, price-0 row, so
   # the balance still drops by what it carried the position at the day before
   # (5 x 100). That value left through net_market_flows, and it is the flow:
@@ -1147,12 +1147,11 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
 
   # The reason suppression keys on the PRICE rather than on the row.
   #
-  # Holding::PortfolioCache deliberately keeps zero-price journal trades and
-  # matches the exact date only, so a journal on a day with no price for that
-  # date -- a weekend, a holiday, an instance with no feed -- still writes a
-  # holding row, valued at qty x 0. A fallback keyed on "no row exists" would
-  # never fire, and the phantom gain would simply move to the day the price
-  # appears.
+  # When Holding::PortfolioCache finds no other price for a journal date -- an
+  # instance with no feed, a security never priced -- it prices the day at the
+  # journal trade's zero, so the journal still writes a holding row, valued at
+  # qty x 0. A fallback keyed on "no row exists" would never fire, and the
+  # phantom gain would simply move to the day the price appears.
   test "a journal with no usable price suppresses the day rather than valuing it at nothing" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, market_flow: 500

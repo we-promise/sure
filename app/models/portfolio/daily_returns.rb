@@ -526,13 +526,12 @@ class Portfolio::DailyReturns
                                  AND #{fragment(:journal_predicate)}
                                  AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))), false) AS flow_rate_missing,
             -- The journal suppression condition, and it keys on the PRICE rather
-            -- than on the row. Holding::PortfolioCache deliberately keeps zero-price
-            -- journal trades (Holding::PortfolioCache#load_prices) and matches the exact
-            -- date only, so on a journal date with no price for that date --
-            -- a weekend, a holiday, an instance with no feed -- `build_holdings`
-            -- still writes a row, valued at qty x 0. Keying on "no row exists"
-            -- would never fire and the phantom gain would simply move to the
-            -- day the price appears.
+            -- than on the row. When Holding::PortfolioCache#load_prices finds no
+            -- other price for a journal date -- an instance with no feed, a
+            -- security never priced -- it prices the day at the journal trade's
+            -- zero, so `build_holdings` still writes a row, valued at qty x 0.
+            -- Keying on "no row exists" would never fire and the phantom gain
+            -- would simply move to the day the price appears.
             --
             -- Keyed on the JOURNAL predicate, not on `entryable_type` alone:
             -- the flow classifier makes a Contribution or Withdrawal labelled
@@ -937,10 +936,10 @@ class Portfolio::DailyReturns
     # that day's holding price.
     #
     # A journal OUT on a day with no price is valued from the day before.
-    # Holding::PortfolioCache keeps the journal trade's zero price, so the
-    # forward calculator writes the day's row at price 0, and the balance drops
-    # by what it carried the units at the day before; that drop is in
-    # net_market_flows. Valued at the zero price instead, the departing value
+    # When Holding::PortfolioCache has no other price for the day, it keeps the
+    # journal trade's zero, so the forward calculator writes the day's row at
+    # price 0, and the balance drops by what it carried the units at the day
+    # before; that drop is in net_market_flows. Valued at the zero price instead, the departing value
     # stayed in `market` as a loss. NULL when there is no earlier row, and the
     # day is then suppressed (journal_unpriced). A journal in on such a day is
     # carried to its first priced day instead, and what either leaves at the
