@@ -5,6 +5,24 @@ selection and `Provided` concerns. For a new securities price provider, follow
 [the complete workflow](adding-a-securities-provider.md), including response
 types, MIC mapping, currency handling, settings encryption, UI, locales and tests.
 
+## Files a provider owns
+
+Keep a provider's routes and settings text in files of its own, so adding one does
+not edit the shared files every other provider edits too, and two provider branches
+do not conflict. The provider generator (`bin/rails g provider:family`) writes them:
+
+- Routes: `config/routes/providers/<x>.rb`, drawn by
+  [`config/routes.rb`](../../config/routes.rb).
+- Settings > Providers tagline and panel text:
+  `config/locales/views/settings/providers/<x>_panel/<locale>.yml`, under
+  `settings.providers.taglines.<x>` and `settings.providers.<x>_panel`.
+- The Accounts page finds a provider's connections through
+  `AccountsController#visible_provider_items`; pass the provider's collection through
+  it rather than adding to a list in the view.
+
+Lists that every provider still extends are marked `# sorted` and kept alphabetical
+by the `Sure/SortedList` cop.
+
 ## Provider logos
 
 A provider's logo comes from [`ProviderLogo`](../../app/components/provider_logo.rb): the

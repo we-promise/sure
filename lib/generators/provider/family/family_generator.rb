@@ -304,34 +304,17 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     end
   end
 
+  # Each provider's routes live in config/routes/providers/<provider>.rb,
+  # which routes.rb draws, so a new provider leaves routes.rb alone.
   def add_routes
     return if options[:skip_routes]
 
-    route_content = <<~RUBY.strip
-          resources :#{file_name}_items, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
-            collection do
-              get :preload_accounts
-              get :select_accounts
-              post :link_accounts
-              get :select_existing_account
-              post :link_existing_account
-            end
-
-            member do
-              post :sync
-              get :setup_accounts
-              post :complete_account_setup
-            end
-          end
-        RUBY
-
-    # Check if routes already exist
-    routes_file = "config/routes.rb"
-    if File.read(routes_file).include?("resources :#{file_name}_items")
+    path, content = self.class.provider_routes_file(file_name)
+    if File.exist?(path) || File.read("config/routes.rb").include?("resources :#{file_name}_items")
       say "Routes already exist for :#{file_name}_items", :skip
     else
-      route route_content
-      say "Added routes for :#{file_name}_items", :green
+      create_file path, content
+      say "Created #{path}", :green
     end
   end
 
@@ -403,23 +386,12 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       return
     end
 
-    # Add to index action - find the last @*_items line and insert after it
-    lines = content.lines
-    last_items_index = nil
-    lines.each_with_index do |line, index|
-      if line =~ /@\w+_items = family\.\w+_items\.ordered/
-        last_items_index = index
-      end
-    end
-
-    if last_items_index
-      indentation = lines[last_items_index][/^\s*/]
-      new_line = "#{indentation}#{items_var} = family.#{file_name}_items.ordered.includes(:syncs, :#{file_name}_accounts)\n"
-      lines.insert(last_items_index + 1, new_line)
-      write_file(controller_path, lines.join)
+    result = self.class.insert_accounts_controller_items(content, file_name)
+    if result
+      write_file(controller_path, result)
       say "Added #{items_var} to accounts controller index", :green
     else
-      say "Could not find @*_items assignments in accounts controller", :yellow
+      say "Could not find visible_provider_items assignments in accounts controller", :yellow
     end
 
     # Add sync stats map
@@ -438,13 +410,9 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       return
     end
 
-    # Add to empty check - find the existing pattern and append our check
-    content = content.gsub(
-      /@coinstats_items\.empty\? %>/,
-      "@coinstats_items.empty? && #{items_var}.empty? %>"
-    )
-
-    # Add provider section before manual_accounts
+    # Only the provider's section is added, before the manual accounts: the
+    # empty-page check reads every provider from the collections the
+    # controller loads (visible_provider_items).
     section = <<~ERB
 
     <% if #{items_var}.any? %>
@@ -476,6 +444,18 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     FileUtils.mkdir_p(locale_dir) unless options[:pretend]
     template "locale.en.yml.tt", locale_path
     say "Created locale file: #{locale_path}", :green
+  end
+
+  # The provider's tagline in Settings > Providers, in a locale file of its
+  # own like every provider's settings text, rather than the shared one.
+  def create_settings_tagline_file
+    path, content = self.class.settings_tagline_locale(file_name, class_name)
+    if File.exist?(path)
+      say "Settings tagline file already exists: #{path}", :skip
+    else
+      create_file path, content
+      say "Created #{path}", :green
+    end
   end
 
   def update_source_enums
@@ -526,7 +506,8 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "  🧪 Tests:"
     say "     - test/models/#{file_name}_account/data_helpers_test.rb"
     say "     - test/models/#{file_name}_account/processor_test.rb"
-    say "  🛣️  Routes: Updated config/routes.rb"
+    say "  🛣️  Routes: config/routes/providers/#{file_name}.rb"
+    say "  🏷️  Settings tagline: config/locales/views/settings/providers/#{file_name}_panel/en.yml"
     say "  🌐 Locale: config/locales/views/#{file_name}_items/en.yml"
     say "  ⚙️  Settings: Updated controllers, settings helper and Family model"
 
@@ -684,6 +665,63 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   end
 
   # Appends `"key" => value` to a multi-line hash, lining its arrow up with the last entry's.
+  def self.provider_routes_file(file_name)
+    path = "config/routes/providers/#{file_name}.rb"
+    content = <<~RUBY
+      resources :#{file_name}_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
+        collection do
+          get :preload_accounts
+          get :select_accounts
+          post :link_accounts
+          get :select_existing_account
+          post :link_existing_account
+        end
+
+        member do
+          post :sync
+          get :setup_accounts
+          post :complete_account_setup
+        end
+      end
+    RUBY
+    [ path, content ]
+  end
+
+  # Inserts the provider's collection after the last provider's in the index
+  # action, through visible_provider_items like the others: it filters the
+  # connections the user may see and records them for the empty-page check
+  # and the sync preload. A call spanning lines ends where its parentheses
+  # balance. Nil when there is no such assignment to follow.
+  def self.insert_accounts_controller_items(content, file_name)
+    lines = content.lines
+    last = lines.rindex { |line| line.match?(/^\s*@\w+_items = visible_provider_items\(/) }
+    return nil unless last
+
+    finish = last
+    depth = lines[last].count("(") - lines[last].count(")")
+    while depth.positive? && finish + 1 < lines.size
+      finish += 1
+      depth += lines[finish].count("(") - lines[finish].count(")")
+    end
+
+    indentation = lines[last][/^\s*/]
+    lines.insert(finish + 1, "#{indentation}@#{file_name}_items = visible_provider_items(family.#{file_name}_items.ordered.includes(:syncs, :#{file_name}_accounts))\n")
+    lines.join
+  end
+
+  def self.settings_tagline_locale(file_name, class_name)
+    path = "config/locales/views/settings/providers/#{file_name}_panel/en.yml"
+    content = <<~YAML
+      ---
+      en:
+        settings:
+          providers:
+            taglines:
+              #{file_name}: Sync your #{class_name.titleize} accounts.
+    YAML
+    [ path, content ]
+  end
+
   def self.append_hash_entry(content, pattern, key, value)
     last = content[pattern, 2]&.rstrip&.lines&.last
     return nil unless last&.include?("=>")
