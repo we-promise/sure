@@ -727,6 +727,50 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/\$100\.00/, other_investments_rows.first.text)
   end
 
+  # The summary leaves out an amount in a currency with no rate; the
+  # breakdown under it and the CSV export must leave it out too, not count
+  # ₩130,000 as $130,000.
+  test "the activity breakdown leaves out an expense in a currency with no rate" do
+    category = @family.categories.create!(name: "Won Rent", color: "#111111")
+    krw = @family.accounts.create!(owner: @user, name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, name: "Rent", amount: 130_000, currency: "KRW", category: category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "tr[data-category='category-#{category.id}']", count: 0
+    assert_no_match(/130,000/, @response.body)
+  end
+
+  test "the export leaves out an expense in a currency with no rate" do
+    category = @family.categories.create!(name: "Won Export Rent", color: "#111111")
+    krw = @family.accounts.create!(owner: @user, name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, name: "Rent", amount: 130_000, currency: "KRW", category: category)
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly,
+                                         start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    assert_response :ok
+
+    assert_no_match(/Won Export Rent/, @response.body)
+    assert_no_match(/130000/, @response.body)
+  end
+
+  # The summary uses the latest stored rate however old; the breakdown used
+  # Money#exchange_to, which looks back five days and then converts at 1.
+  test "the activity breakdown converts at a stored rate older than five days" do
+    category = @family.categories.create!(name: "Yen Rent", color: "#111111")
+    jpy = @family.accounts.create!(owner: @user, name: "Tokyo", balance: 0, currency: "JPY", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 30.days.ago.to_date, rate: 0.0067)
+    create_transaction(account: jpy, name: "Rent", amount: 10_000, currency: "JPY", category: category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    row = css_select("tr[data-category='category-#{category.id}']").first
+    assert row, "the converted expense is listed"
+    assert_match(/\$67\.00/, row.text)
+  end
+
   test "monthly period navigation shows previous month link" do
     get reports_path(period_type: :monthly)
     assert_response :ok

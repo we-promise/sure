@@ -377,6 +377,23 @@ class ReportsController < ApplicationController
       trends
     end
 
+    # An entry's amount in family currency at the rate the summary totals use
+    # (ExchangeRate.rates_for at the entry's date: the stored rate nearest that
+    # date, however old), or nil when there is none. An entry with no rate is
+    # left out, as the summary leaves it out, rather than counted at 1.
+    def report_amount_converter(family_currency)
+      rates = {}
+      lambda do |entry|
+        amount = entry.amount.abs
+        next amount if entry.currency == family_currency
+
+        key = [ entry.date, entry.currency ]
+        rates[key] = ExchangeRate.rates_for([ entry.currency ], to: family_currency, date: entry.date)[entry.currency] unless rates.key?(key)
+        rate = rates[key]
+        rate && amount * rate
+      end
+    end
+
     def build_transactions_breakdown
       # Base query: all transactions in the period
       # Exclude transfers, one-time, and CC payments (matching income_statement logic)
@@ -449,13 +466,11 @@ class ReportsController < ApplicationController
       end
 
       # Helper to process an entry (transaction or trade)
+      convert = report_amount_converter(family_currency)
       process_entry = ->(category, entry, is_trade) do
         type = entry.amount > 0 ? "expense" : "income"
-        begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
-        rescue Money::ConversionError
-          converted_amount = entry.amount.abs
-        end
+        converted_amount = convert.call(entry)
+        next if converted_amount.nil?
 
         if category.nil?
           # Uncategorized or Other Investments (for trades)
@@ -854,6 +869,7 @@ class ReportsController < ApplicationController
       # Group by category, type, and month
       breakdown = {}
       family_currency = Current.family.currency
+      convert = report_amount_converter(family_currency)
 
       # Process transactions
       transactions.each do |transaction|
@@ -863,12 +879,9 @@ class ReportsController < ApplicationController
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 
-        # Convert to family currency
-        begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
-        rescue Money::ConversionError
-          converted_amount = entry.amount.abs
-        end
+        # Convert to family currency, leaving out what has no rate
+        converted_amount = convert.call(entry)
+        next if converted_amount.nil?
 
         key = [ category_name, type ]
         breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
