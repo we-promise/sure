@@ -140,7 +140,7 @@ module Ai::Transport::RubyLlmAdapter
         when RubyLLM::RateLimitError then Ai::Error.for_status(429, error.message, body:)
         when RubyLLM::ContextLengthExceededError then Ai::Error::ContextTooLong
         when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError
-          Ai::Error::UNSUPPORTED_INPUT.any? { text.match?(_1) } ? Ai::Error::Refused : Ai::Error::Upstream
+          Ai::Error.for_status(status || 500, error.message, body:)
         when RubyLLM::CancelledError then Ai::Error::Cancelled
         when RubyLLM::ModelNotFoundError then Ai::Error::ModelMissing   # not a RubyLLM::Error
         end
