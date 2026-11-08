@@ -660,7 +660,11 @@ class Provider::Openai < Provider
         }
         params[:tools] = tools if tools.present?
         params[:tool_choice] = "none" if tool_choice == :none && tools.present?
-        params[:max_tokens] = explicit_max_response_tokens if explicit_max_response_tokens
+        response_limit = explicit_max_response_tokens
+        if response_limit
+          limit_parameter = custom_provider? ? :max_tokens : :max_completion_tokens
+          params[limit_parameter] = response_limit
+        end
 
         start_time = Time.current
 

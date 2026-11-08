@@ -13,7 +13,7 @@ class Provider::Registry
     end
 
     def get_provider(name, family: nil)
-      if name.to_s.in?(Family::AiConfiguration::PROVIDERS) && (configuration = family&.ai_configuration)
+      if name.to_s.in?(Family::AiConfiguration::PROVIDERS) && (configuration = configuration_for_family(family))
         return configuration.provider_instance(name)
       end
 
@@ -25,7 +25,9 @@ class Provider::Registry
     # Explicit family configuration never falls back to installation credentials.
     # Families without an override keep the installation's legacy provider order.
     def preferred_llm_provider(family: nil)
-      return family.ai_configuration.provider_instance if family&.ai_configuration
+      if (configuration = configuration_for_family(family))
+        return configuration.provider_instance
+      end
 
       llm_provider_order.each do |name|
         provider = get_provider(name)
@@ -35,7 +37,7 @@ class Provider::Registry
     end
 
     def llm_provider_order(family: nil)
-      if (configuration = family&.ai_configuration)
+      if (configuration = configuration_for_family(family))
         return Family::AiConfiguration::PROVIDERS.include?(configuration.provider) ? [ configuration.provider.to_sym ] : []
       end
 
@@ -43,7 +45,7 @@ class Provider::Registry
     end
 
     def default_llm_model(family: nil)
-      if (configuration = family&.ai_configuration)
+      if (configuration = configuration_for_family(family))
         return configuration.model.presence || Family::AiConfiguration.default_model(configuration.provider)
       end
 
@@ -56,6 +58,14 @@ class Provider::Registry
       else
         Provider::Openai.effective_model
       end
+    end
+
+    # Resolve once per selection so retained families cannot reuse stale
+    # credentials, while an in-flight provider keeps its original snapshot.
+    def configuration_for_family(family)
+      return unless family
+
+      Family::AiConfiguration.uncached { Family::AiConfiguration.find_by(family_id: family.id) }
     end
 
     def plaid_provider_for_region(region)
@@ -241,33 +251,41 @@ class Provider::Registry
   end
 
   def providers
-    available_providers.map { |name| get_provider(name) }.compact
+    configuration = family_configuration
+    available_providers(configuration: configuration).map do |name|
+      configuration ? configuration.provider_instance(name) : self.class.get_provider(name)
+    end.compact
   end
 
   # Returns the list of provider key names (symbols) registered for this concept.
   def provider_keys
-    available_providers
+    available_providers(configuration: family_configuration)
   end
 
   def get_provider(name)
-    provider_method = available_providers.find { |p| p == name.to_sym }
+    configuration = family_configuration
+    provider_method = available_providers(configuration: configuration).find { |p| p == name.to_sym }
 
     raise Error.new("Provider '#{name}' not found for concept: #{concept}") unless provider_method.present?
 
-    self.class.get_provider(provider_method, family: family)
+    configuration ? configuration.provider_instance(provider_method) : self.class.get_provider(provider_method)
   end
 
   private
     attr_reader :concept, :family
 
-    def available_providers
+    def family_configuration
+      self.class.configuration_for_family(family) if concept == :llm
+    end
+
+    def available_providers(configuration: nil)
       case concept
       when :exchange_rates
         %i[twelve_data yahoo_finance moex_public frankfurter]
       when :securities
         %i[twelve_data yahoo_finance tiingo eodhd alpha_vantage mfapi binance_public moex_public tinkoff_invest mansa]
       when :llm
-        family&.ai_configuration ? Family::AiConfiguration::PROVIDERS.map(&:to_sym) : %i[openai anthropic]
+        configuration ? Family::AiConfiguration::PROVIDERS.map(&:to_sym) : %i[openai anthropic]
       when :classification
         # Only providers implementing Provider::ClassificationConcept#decide
         # belong here. OpenAI and Anthropic can auto-categorize but cannot
