@@ -86,6 +86,11 @@ class BitcoinWalletAccount::SnapshotTest < ActiveSupport::TestCase
     end
   end
 
+  test "a coinbase input adds nothing to the spent amount" do
+    tx = { "vin" => [ { "is_coinbase" => true } ], "vout" => [ { "scriptpubkey_address" => RECEIVE, "value" => 5_000 } ] }
+    assert_equal 5_000, BitcoinWalletAccount::Snapshot.net_sats(tx, Set[RECEIVE])
+  end
+
   test "unused HD lookahead is not reread inside the stable-tip window" do
     source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
     @wallet.bitcoin_wallet_addresses.update_all(bitcoin_wallet_source_id: source.id)

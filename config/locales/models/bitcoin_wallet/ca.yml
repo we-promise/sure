@@ -3,6 +3,10 @@ ca:
   activerecord:
     errors:
       models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: segueix una cartera Bitcoin. Elimina la cartera abans de vincular un altre proveïdor.
         bitcoin_wallet_account:
           attributes:
             account:

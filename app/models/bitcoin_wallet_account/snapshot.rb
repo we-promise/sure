@@ -16,8 +16,9 @@ class BitcoinWalletAccount::Snapshot
   # only when they belong to tracked addresses. Deduplicate pending movements
   # and reject incomplete or conflicting reads before returning a Result.
   # Used-address markers are returned for publication, not persisted here.
-  def fetch
-    before = provider.tip_hash
+  # Pass the tip taken before discovery so a block paying an address that
+  # discovery has just seen unused also forces a retry.
+  def fetch(before: provider.tip_hash)
     height = provider.tip_height
     # Discovery already probes the unused lookahead. Including those thousands
     # of zero-balance rows again would make a stable-tip read unfinishable.

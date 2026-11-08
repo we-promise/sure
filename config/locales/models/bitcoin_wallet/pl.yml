@@ -3,6 +3,10 @@ pl:
   activerecord:
     errors:
       models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: śledzi portfel Bitcoin. Usuń portfel przed połączeniem innego dostawcy.
         bitcoin_wallet_account:
           attributes:
             account:

@@ -3,6 +3,10 @@ uk:
   activerecord:
     errors:
       models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: відстежує гаманець Bitcoin. Видаліть гаманець, перш ніж під'єднувати іншого постачальника.
         bitcoin_wallet_account:
           attributes:
             account:

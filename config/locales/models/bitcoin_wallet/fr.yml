@@ -3,6 +3,10 @@ fr:
   activerecord:
     errors:
       models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: suit un portefeuille Bitcoin. Supprimez le portefeuille avant de lier un autre fournisseur.
         bitcoin_wallet_account:
           attributes:
             account:

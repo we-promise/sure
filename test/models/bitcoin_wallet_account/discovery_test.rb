@@ -27,12 +27,17 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
   end
 
   test "an unrelated manual address does not validate the wrong xpub" do
-    manual_bitcoin_source(@wallet, "1BoatSLRHtKNngkdXEeobR76b53LETtpyT")
-    @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB,
-      receive_address: "1BoatSLRHtKNngkdXEeobR76b53LETtpyT")
+    manual = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT"
+    manual_bitcoin_source(@wallet, manual)
+    # Two branches of 120 exceed one run's budget, so the first run's batch is already saved.
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB,
+      receive_address: manual, gap_limit: 120)
+    refute BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+    assert @wallet.bitcoin_wallet_addresses.where(bitcoin_wallet_source: source).exists?
     assert_raises(BitcoinWalletAccount::Discovery::AddressMismatch) do
       BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
     end
+    assert_equal [ manual ], @wallet.bitcoin_wallet_addresses.pluck(:address)
   end
 
   test "bounds work and resumes at the saved cursor" do
@@ -61,8 +66,28 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
 
     assert_equal 2 * BitcoinWalletAccount::ROUTINE_LOOKAHEAD, rescan.call
     assert_equal 2 * BitcoinWalletAccount::ROUTINE_LOOKAHEAD, rescan.call
+    # The daily rescan starts from index 0, so the used receive address is read again.
     travel 25.hours do
-      assert_equal 100, rescan.call
+      assert_equal 101, rescan.call
+    end
+  end
+
+  test "the daily rescan finds a deposit to a skipped address below the highest used one" do
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    skipped = source.public_key.address(0, 1)
+    @provider.fund(RECEIVE, 1)
+    @provider.fund(source.public_key.address(0, 2), 1)
+    assert BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+
+    @provider.fund(skipped, 1)
+    rescan = lambda do
+      @wallet.reload.restart_discovery!
+      assert BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+      @wallet.bitcoin_wallet_addresses.find_by!(address: skipped).used?
+    end
+    refute rescan.call
+    travel 25.hours do
+      assert rescan.call
     end
   end
 
@@ -86,6 +111,16 @@ class BitcoinWalletAccount::DiscoveryTest < ActiveSupport::TestCase
     end
     refute BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
     assert_equal reset, source.reload.discovery
+  end
+
+  test "a scan does not save addresses for a key replaced during its reads" do
+    source = @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    @provider.define_singleton_method(:get_address) do |address|
+      BitcoinWalletSource.where(id: source.id).update_all(fingerprint: "replaced") if reads.empty?
+      super(address)
+    end
+    refute BitcoinWalletAccount::Discovery.new(@wallet, provider: @provider).perform
+    assert_empty @wallet.bitcoin_wallet_addresses.reload
   end
 
   test "an address tracked by another account in this family is rejected" do

@@ -3,6 +3,10 @@ tr:
   activerecord:
     errors:
       models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: bir Bitcoin cüzdanını takip ediyor. Başka bir sağlayıcı bağlamadan önce cüzdanı kaldırın.
         bitcoin_wallet_account:
           attributes:
             account:

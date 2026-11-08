@@ -67,6 +67,7 @@ class BitcoinWalletAccount::Syncer
     # source membership before committing the read.
     def perform_read
       @source_signature = source_signature
+      tip = provider.tip_hash
       complete = BitcoinWalletAccount::Discovery.new(wallet, provider: provider).perform
       unless complete
         wallet.with_lock do
@@ -78,7 +79,7 @@ class BitcoinWalletAccount::Syncer
         return
       end
 
-      snapshot = BitcoinWalletAccount::Snapshot.new(wallet, provider: provider).fetch
+      snapshot = BitcoinWalletAccount::Snapshot.new(wallet, provider: provider).fetch(before: tip)
       statuses = missing_statuses(snapshot)
 
       wallet.with_lock do

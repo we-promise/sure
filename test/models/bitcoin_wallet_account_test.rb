@@ -16,6 +16,12 @@ class BitcoinWalletAccountTest < ActiveSupport::TestCase
     assert_includes wallet.errors.details[:account], { error: :linked }
   end
 
+  test "a wallet's account cannot be linked to another provider" do
+    link = @wallet.account.account_providers.new(provider: kraken_accounts(:one))
+    refute link.valid?
+    assert_includes link.errors.details[:account], { error: :bitcoin_wallet }
+  end
+
   test "a wallet cannot track another family's account" do
     other = accounts(:crypto).dup
     other.family = families(:empty)

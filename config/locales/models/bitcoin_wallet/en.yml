@@ -3,6 +3,10 @@ en:
   activerecord:
     errors:
       models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: tracks a Bitcoin wallet. Remove the wallet before linking another provider.
         bitcoin_wallet_account:
           attributes:
             account:

@@ -58,17 +58,20 @@ class BitcoinWalletAccount::Discovery
       end
       return unless publish(source, original, found) { source.update!(discovery: state) }
       return unless source.discovery_complete?
-      return if wallet.bitcoin_wallet_addresses.exists?(address: source.receive_address, bitcoin_wallet_source_id: source.id)
+      claims = wallet.bitcoin_wallet_addresses.where(bitcoin_wallet_source_id: source.id)
+      return if claims.exists?(address: source.receive_address)
 
+      # Earlier runs already committed this key's addresses; a wrong key must not keep them.
+      claims.delete_all
       raise AddressMismatch, "The receive address does not match this BIP84 account within the selected gap limit"
     end
 
     # Write a scan's addresses and checkpoint only while its source still exists
-    # unchanged, so a source removed or reset during provider reads stays so.
+    # unchanged, so a source removed, reset or rekeyed during provider reads stays so.
     def publish(source, original, found)
       wallet.with_lock do
-        current = BitcoinWalletSource.where(id: source.id).pick(:discovery)
-        return false if current.nil? || (original && current != original)
+        current, fingerprint = BitcoinWalletSource.where(id: source.id).pick(:discovery, :fingerprint)
+        return false if current.nil? || (original && current != original) || fingerprint != source.fingerprint
 
         found.each { |address, attributes| remember(address, **attributes) }
         yield if block_given?

@@ -32,6 +32,19 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     assert_equal 150_000, @wallet.reload.balance_sats
   end
 
+  test "a block found while discovery reads forces a retry" do
+    @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    tip = "before"
+    @provider.define_singleton_method(:tip_hash) { tip }
+    @provider.define_singleton_method(:get_address) do |address|
+      tip = "after" if reads.empty?
+      super(address)
+    end
+    assert_raises(BitcoinWalletAccount::Snapshot::ChangedTip) do
+      BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
+    end
+  end
+
   test "a failed read preserves the last complete amount" do
     @wallet.update!(balance_sats: 123)
     @provider.stubs(:get_address).raises(Provider::MempoolSpace::ApiError)

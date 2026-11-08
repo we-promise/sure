@@ -12,11 +12,16 @@ class BitcoinWalletSource < ApplicationRecord
   validates :fingerprint, uniqueness: { scope: :bitcoin_wallet_account_id }
   validate :valid_source
   before_validation :normalize_source
+  before_destroy :release_addresses
 
   # Parse the encrypted-at-rest public key locally and cache its derivation
-  # object for this source instance. Invalid key material raises InvalidKey.
+  # object until the key changes. Invalid key material raises InvalidKey.
   def public_key
-    @public_key ||= Onchain::BitcoinPublicKey.new(extended_public_key)
+    unless @public_key && @parsed_key == extended_public_key
+      @public_key = Onchain::BitcoinPublicKey.new(extended_public_key)
+      @parsed_key = extended_public_key
+    end
+    @public_key
   end
 
   # Manual addresses need no HD scan; extended-key sources require completed
@@ -26,6 +31,15 @@ class BitcoinWalletSource < ApplicationRecord
   end
 
   private
+    # The schema only nullifies derived rows, and a manual address row has no
+    # source, so a removed source's addresses would keep counting otherwise.
+    # Rows another source still claims are recreated by the next discovery.
+    def release_addresses
+      rows = bitcoin_wallet_account.bitcoin_wallet_addresses
+      rows = kind == "address" ? rows.where(bitcoin_wallet_source_id: nil, address: receive_address) : rows.where(bitcoin_wallet_source_id: id)
+      rows.delete_all
+    end
+
     # Canonicalize address/key whitespace and derive a duplicate-source identity
     # shared by equivalent xpub/zpub encodings. Validation reports invalid keys.
     def normalize_source

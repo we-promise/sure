@@ -3,6 +3,10 @@ ru:
   activerecord:
     errors:
       models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: отслеживает кошелёк Bitcoin. Удалите кошелёк, прежде чем привязывать другого поставщика.
         bitcoin_wallet_account:
           attributes:
             account:

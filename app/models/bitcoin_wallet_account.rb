@@ -27,7 +27,8 @@ class BitcoinWalletAccount < ApplicationRecord
 
   # Reopen each HD branch after its highest used address, preserving cached
   # addresses so later receives and change are found. Routine syncs probe a
-  # standard-size window; the full configured gap is rescanned once a day.
+  # standard-size window. Once a day the branch is rescanned from its start,
+  # so a deposit to a skipped address below the highest used one is found.
   def restart_discovery!(full: false)
     bitcoin_wallet_sources.where(kind: "bip84").each do |source|
       last_full = source.discovery["full_scan_at"]&.then { |value| Time.zone.parse(value) }
@@ -35,7 +36,7 @@ class BitcoinWalletAccount < ApplicationRecord
       skipped = full_scan ? 0 : [ source.gap_limit - ROUTINE_LOOKAHEAD, 0 ].max
       state = [ 0, 1 ].to_h do |branch|
         highest = bitcoin_wallet_addresses.where(bitcoin_wallet_source: source, branch: branch, used: true).maximum(:address_index)
-        [ branch.to_s, { "index" => highest ? highest + 1 : 0, "gap" => skipped } ]
+        [ branch.to_s, { "index" => full_scan || highest.nil? ? 0 : highest + 1, "gap" => skipped } ]
       end
       state["full_scan_at"] = full_scan ? Time.current.iso8601 : source.discovery["full_scan_at"]
       source.update!(discovery: state)

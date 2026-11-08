@@ -3,6 +3,10 @@ de:
   activerecord:
     errors:
       models:
+        account_provider:
+          attributes:
+            account:
+              bitcoin_wallet: verfolgt eine Bitcoin-Wallet. Entferne die Wallet, bevor du einen anderen Anbieter verbindest.
         bitcoin_wallet_account:
           attributes:
             account:
