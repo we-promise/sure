@@ -483,6 +483,22 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal "EUR", totals_eur.expense_money.currency.iso_code
   end
 
+  # An amount with no rate is left out of the totals. A rate stored after the
+  # first render must reach them, or the totals stay short once the
+  # missing-rate notice has gone.
+  test "totals include an amount once its rate is stored after the first render" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    krw = @family.accounts.create!(name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, amount: 130_000, currency: "KRW", category: categories(:food_and_drink), kind: "standard")
+
+    before = Transaction::Search.new(@family, filters: {}).totals.expense_money
+
+    ExchangeRate.create!(from_currency: "KRW", to_currency: "USD", date: Date.current, rate: 0.00075)
+    after = Transaction::Search.new(@family.reload, filters: {}).totals.expense_money
+
+    assert_equal Money.new(97.5, "USD"), after - before, "the KRW expense at its new rate"
+  end
+
   test "totals is served from cache when nothing has changed" do
     cache = ActiveSupport::Cache::MemoryStore.new
     Rails.stubs(:cache).returns(cache)

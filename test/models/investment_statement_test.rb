@@ -793,6 +793,20 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     InvestmentStatement.new(@family.reload).totals(period: period)
   end
 
+  test "totals cache invalidates when an exchange rate is stored" do
+    create_investment_account(balance: 500)
+    period = Period.last_30_days
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    dummy_result = { contributions: 0, withdrawals: 0, dividends: 0, interest: 0, trades_count: 0 }
+    InvestmentStatement::Totals.expects(:new).twice.returns(stub(call: dummy_result))
+
+    InvestmentStatement.new(@family).totals(period: period)
+
+    ExchangeRate.create!(from_currency: "KRW", to_currency: "USD", date: Date.current, rate: 0.00075)
+    InvestmentStatement.new(@family.reload).totals(period: period)
+  end
+
   private
     def create_investment_account(balance:, cash_balance: 0, currency: "USD")
       @family.accounts.create!(
