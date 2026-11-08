@@ -136,6 +136,12 @@
       <% end %>
     <% end %>
 
+    <% if @sharesight_items.any? %>
+      <% @sharesight_items.each do |item| %>
+        <%= render item, visible_accounts: visible_card_accounts(item) %>
+      <% end %>
+    <% end %>
+
     <% if @wise_items.any? %>
       <% @wise_items.sort_by(&:created_at).each do |item| %>
         <%= render item, visible_accounts: visible_card_accounts(item) %>

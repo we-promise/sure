@@ -2,7 +2,7 @@ class AccountsController < ApplicationController
   include StreamExtensions
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
-  before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
+  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
@@ -46,6 +46,7 @@ class AccountsController < ApplicationController
     @coinspot_items = visible_provider_items(family.coinspot_items.ordered.with_attached_logo.includes(:coinspot_accounts, :accounts))
     @trading212_items = visible_provider_items(family.trading212_items.ordered.with_attached_logo.includes(:trading212_accounts)).sort_by(&:created_at)
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
+    @sharesight_items = visible_provider_items(family.sharesight_items.ordered.with_attached_logo.includes(sharesight_accounts: [ :account, :linked_account ])).sort_by(&:created_at)
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
     @trade_republic_items = visible_provider_items(
       family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
@@ -235,14 +236,29 @@ class AccountsController < ApplicationController
   end
 
   def sparkline
-    etag_key = @account.family.build_cache_key("#{@account.id}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
-
     # Short-circuit with 304 Not Modified when the client already has the latest version.
     # We defer the expensive series computation until we know the content is stale.
-    if stale?(etag: etag_key, last_modified: @account.family.latest_sync_completed_at)
+    # A URL carrying the current version can't go stale, so the browser may reuse it.
+    expires_in 1.day if params[:v] == @account.sparkline_version
+    if stale?(etag: @account.sparkline_cache_key)
       @sparkline_series = @account.sparkline_series
       render layout: false
     end
+  end
+
+  # Loads the icons found for the domain into the account form's icon block,
+  # so the rest of the form keeps what the user typed. Nothing is saved here.
+  def logo_options
+    return redirect_to account_path(@account) unless turbo_frame_request?
+
+    render_logo_options(@account)
+  end
+
+  # The same for the form of an account that is not created yet.
+  def new_logo_options
+    return redirect_to accounts_path unless turbo_frame_request?
+
+    render_logo_options(Current.family.accounts.build)
   end
 
   # Saves the drag-and-drop order of one account group for the current user.
@@ -379,6 +395,12 @@ class AccountsController < ApplicationController
   end
 
   private
+    # The form may hold a domain or name that is not saved yet.
+    def render_logo_options(account)
+      account.assign_attributes(params.permit(:institution_domain, :institution_name))
+      render partial: "accounts/logo_field", locals: { account: account, candidates: Account::LogoFetcher.new(account).candidates }
+    end
+
     # Built here rather than in the template: assembling a chart payload is
     # domain work, and `show` asks for it exactly once per request, so there
     # is nothing to memoise.
@@ -526,6 +548,7 @@ class AccountsController < ApplicationController
         @coinspot_items,
         @trading212_items,
         @questrade_items,
+        @sharesight_items,
         @wise_items,
         @trade_republic_items,
         @onchain_wallet_items,

@@ -83,7 +83,6 @@ class PasskeySessionsController < ApplicationController
       @session = create_session_for(user)
       return false unless @session
 
-      flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
       true
     end
 

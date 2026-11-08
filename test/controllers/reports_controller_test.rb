@@ -9,6 +9,34 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     @family = @user.family
   end
 
+  test "renders sections in the order and collapse state stored under the reports keys" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge(
+      "reports_section_order" => %w[transactions_breakdown trends_insights],
+      "reports_collapsed_sections" => { "trends_insights" => true }
+    ))
+
+    get reports_path
+
+    assert_response :success
+    keys = css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[transactions_breakdown trends_insights], keys.first(2)
+    assert_select "[data-section-key=trends_insights][data-reports-section-collapsed-value=?]", "true"
+    assert_select "[data-section-key=transactions_breakdown][data-reports-section-collapsed-value=?]", "false"
+  end
+
+  test "the reports preferences endpoint stores order and collapse under the reports keys" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_collapsed_sections" => { "net_worth" => true }))
+
+    patch update_preferences_reports_path,
+      params: { preferences: { reports_section_order: %w[trends_insights net_worth], reports_collapsed_sections: { trends_insights: true } } },
+      as: :json
+
+    assert_response :ok
+    @user.reload
+    assert_equal %w[trends_insights net_worth], @user.preferences["reports_section_order"]
+    assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+  end
+
   # The per-trade line under the realised-gains card rendered
   # `Money.new(gain.value, Current.family.currency)` -- taking the number out of
   # the Trend and re-labelling it as family currency with no conversion at all.
