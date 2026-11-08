@@ -23,7 +23,7 @@ module IncomeStatement::ScopedTransactionsQuery
     # Entry amount converted to the family currency (see ExchangeRate.rate_sql).
     # Contribution/loan-payment outflows are flipped positive so they add to
     # expense totals. NULL for a currency with no rate at all, so the entry is
-    # left out of a SUM rather than counted at 1 (#3640). Totals wrap their SUM
+    # left out of a SUM rather than counted at 1. Totals wrap their SUM
     # in COALESCE so a group with nothing convertible reads 0; the stats leave
     # it NULL, so a period with nothing convertible is skipped by the median
     # and average rather than counted as a period with no spending.

@@ -151,7 +151,7 @@ class Balance::ChartSeriesBuilder
 
     # 1 for an account already in the target currency, else the rate the
     # lateral join below found. NULL when the currency has no usable rate, so
-    # the account drops out of the day's sum rather than counting at 1 (#3640).
+    # the account drops out of the day's sum rather than counting at 1.
     # Strict conversion raises on that same gap instead (see missing_currency).
     def balance_rate_sql
       "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END"

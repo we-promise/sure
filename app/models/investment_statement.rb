@@ -280,7 +280,7 @@ class InvestmentStatement
     # wrong currency label, corrupting downstream sums.
     #
     # A currency with no rate at all converts to 0: the amount is left out of
-    # every sum here rather than counted at 1 (#3640). Both sides of a trend
+    # every sum here rather than counted at 1. Both sides of a trend
     # come from the same holding, so they drop out together.
     def convert_to_family_currency(amount, from_currency)
       return amount if amount.nil?

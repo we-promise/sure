@@ -214,7 +214,7 @@ class Transaction::Search
         tax_advantaged_ids = family.tax_advantaged_account_ids
         scope = scope.where.not(accounts: { id: tax_advantaged_ids }) if tax_advantaged_ids.present?
 
-        # Left out, not counted at 1, when the currency has no rate (#3640).
+        # Left out, not counted at 1, when the currency has no rate.
         rate = ExchangeRate.rate_sql(
           from: "entries.currency",
           to: ActiveRecord::Base.connection.quote(family.currency),

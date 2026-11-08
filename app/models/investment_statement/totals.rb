@@ -62,8 +62,8 @@ class InvestmentStatement::Totals
     # relying on qty: 0 to keep the buckets disjoint. Without this guard such
     # a row would be counted twice: once by direction and once as income.
     #
-    # A row in a currency with no rate at all is left out, not counted at 1
-    # (#3640), as in InvestmentStatement; ExchangeRate.rate_sql gives the
+    # A row in a currency with no rate at all is left out, not counted at 1,
+    # as in InvestmentStatement; ExchangeRate.rate_sql gives the
     # nearest stored rate otherwise.
     #
     # account_ids is already scoped to the family's visible (draft/active)

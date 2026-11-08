@@ -717,7 +717,7 @@ class Family < ApplicationRecord
 
   # Currencies the family's accounts, entries or holdings use that have no
   # stored exchange rate into the family currency on any date. Totals built on
-  # #rate_sql leave amounts in them out rather than counting them at 1 (#3640);
+  # #rate_sql leave amounts in them out rather than counting them at 1;
   # totals built on #rates_for include them only if the provider supplies a
   # rate, which is then stored. The pages that show those totals say so.
   #

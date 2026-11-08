@@ -169,7 +169,7 @@ class Trade < ApplicationRecord
   # True when #realized_gain_loss is nil only because the proceeds' currency
   # has no usable rate into the basis currency for the disposal's day, as
   # opposed to a buy, a transfer or an unknown cost basis. A caller summing
-  # gains counts these as left out (#3640).
+  # gains counts these as left out.
   def realized_gain_unconvertible?
     realized_gain_loss
     @realized_gain_unconvertible

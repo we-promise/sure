@@ -99,7 +99,7 @@ module Accountable
         if account.currency == family.currency
           account.balance
         else
-          # No rate at all: left out, not counted at 1 (#3640).
+          # No rate at all: left out, not counted at 1.
           rate = rates[account.currency]
           rate ? account.balance * rate : 0
         end

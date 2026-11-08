@@ -79,8 +79,8 @@ module ExchangeRate::Provided
     # however old, then the earliest stored one after the day (as the balance
     # chart does). A currency with no stored rate at all is left out rather
     # than given 1: "no rate" and "parity" are different facts, and a caller
-    # that cannot tell them apart reports a ¥1,000,000 gain as $1,000,000
-    # (#3640). Each caller decides what an absent rate means for its figure.
+    # that cannot tell them apart reports a ¥1,000,000 gain as $1,000,000.
+    # Each caller decides what an absent rate means for its figure.
     #
     # A stored rate of zero or below is no rate: multiplying by it books an
     # amount as nothing, or flips its sign. `to` itself converts at 1.

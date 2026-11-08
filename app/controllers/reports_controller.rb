@@ -596,8 +596,8 @@ class ReportsController < ApplicationController
       to_numeric = ->(value) { value.is_a?(Money) ? value.amount : value }
 
       # Unrealized gains mark holdings to market, so convert at today's FX.
-      # Both conversions return nil when there is no rate. Converting at 1
-      # instead reported a ¥1,000,000 gain as $1,000,000 (#3640); a figure that
+      # Both conversions return nil when there is no rate, since converting
+      # at 1 would report a ¥1,000,000 gain as $1,000,000. A figure that
       # cannot be converted is left out of the total and counted, so the card
       # can say the total is partial.
       foreign_holding_currencies = current_holdings.map(&:currency).compact.uniq.reject { |c| c == currency }
