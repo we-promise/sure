@@ -32,17 +32,26 @@ class BitcoinWalletAccount::SyncerTest < ActiveSupport::TestCase
     assert_equal 150_000, @wallet.reload.balance_sats
   end
 
-  test "a block found while discovery reads forces a retry" do
+  test "a deposit in a block found while discovery reads is in the retried read" do
+    @wallet.bitcoin_wallet_sources.destroy_all
     @wallet.bitcoin_wallet_sources.create!(kind: "bip84", extended_public_key: ZPUB, receive_address: RECEIVE)
+    @provider.fund(RECEIVE, 100_000)
     tip = "before"
     @provider.define_singleton_method(:tip_hash) { tip }
+    # The block pays SECOND right after discovery has read it as unused.
     @provider.define_singleton_method(:get_address) do |address|
-      tip = "after" if reads.empty?
-      super(address)
+      super(address).tap do
+        next unless address == SECOND && tip == "before"
+
+        tip = "after"
+        fund(SECOND, 50_000)
+      end
     end
     assert_raises(BitcoinWalletAccount::Snapshot::ChangedTip) do
       BitcoinWalletAccount::Syncer.new(@wallet, provider: @provider).perform
     end
+    BitcoinWalletAccount::Syncer.new(@wallet.reload, provider: @provider).perform
+    assert_equal 150_000, @wallet.reload.balance_sats
   end
 
   test "a failed read preserves the last complete amount" do

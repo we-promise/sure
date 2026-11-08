@@ -79,8 +79,15 @@ class BitcoinWalletAccount::Syncer
         return
       end
 
-      snapshot = BitcoinWalletAccount::Snapshot.new(wallet, provider: provider).fetch(before: tip)
-      statuses = missing_statuses(snapshot)
+      begin
+        snapshot = BitcoinWalletAccount::Snapshot.new(wallet, provider: provider).fetch(before: tip)
+        statuses = missing_statuses(snapshot)
+      rescue BitcoinWalletAccount::Snapshot::ChangedTip
+        # Discovery is complete, so without reopening it the retry would skip
+        # addresses it saw unused before the new block.
+        wallet.with_lock { wallet.restart_discovery! if source_signature == @source_signature }
+        raise
+      end
 
       wallet.with_lock do
         if source_signature != @source_signature

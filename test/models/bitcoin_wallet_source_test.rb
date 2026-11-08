@@ -27,6 +27,14 @@ class BitcoinWalletSourceTest < ActiveSupport::TestCase
     assert_includes source.errors.details[:extended_public_key], { error: :invalid }
   end
 
+  test "a saved source keeps its key and address" do
+    source = build_bitcoin_wallet.bitcoin_wallet_sources.create!(kind: "bip84", receive_address: RECEIVE, extended_public_key: ZPUB)
+    assert_raises(ActiveRecord::ReadonlyAttributeError) { source.extended_public_key = ZPUB.sub("zpub", "xpub") }
+    assert_raises(ActiveRecord::ReadonlyAttributeError) { source.receive_address = SECOND }
+    source.update!(gap_limit: 40)
+    assert_equal ZPUB, source.reload.extended_public_key
+  end
+
   test "removing a source releases the addresses it claimed" do
     wallet = build_bitcoin_wallet
     manual = manual_bitcoin_source(wallet, "1BoatSLRHtKNngkdXEeobR76b53LETtpyT")

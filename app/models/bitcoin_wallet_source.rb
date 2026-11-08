@@ -5,13 +5,16 @@ class BitcoinWalletSource < ApplicationRecord
 
   belongs_to :bitcoin_wallet_account
   encrypts :extended_public_key
+  # A source is replaced by removing it and adding another, which releases the
+  # old key's addresses; editing it in place would keep them.
+  attr_readonly :kind, :extended_public_key, :receive_address, :fingerprint
 
   validates :kind, inclusion: { in: %w[address bip84] }
   validates :gap_limit, numericality: { only_integer: true, greater_than_or_equal_to: 20, less_than_or_equal_to: 1000 }
   validates :receive_address, presence: true
   validates :fingerprint, uniqueness: { scope: :bitcoin_wallet_account_id }
   validate :valid_source
-  before_validation :normalize_source
+  before_validation :normalize_source, on: :create
   before_destroy :release_addresses
 
   # Parse the encrypted-at-rest public key locally and cache its derivation
