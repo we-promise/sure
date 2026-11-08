@@ -47,11 +47,9 @@ class Ai::Transport::Base
   private
     def run_probe(model, check, timeout:) = raise(NotImplementedError)
 
-    # Sure retries, not RubyLLM (whose contexts all have max_retries 0): RubyLLM retries inside
-    # one `request.ruby_llm`, with no hook before a retry, so only here can a spent balance
-    # (OpenAI's 429 insufficient_quota) stop the retries and the attempt budget be checked
-    # between tries, wait included: no retry starts after the budget runs out. Each try is one
-    # HTTP request and one `usage.ruby_llm` event.
+    # Sure retries, not RubyLLM: RubyLLM has no hook before a retry, so only here can a spent
+    # balance (OpenAI's 429 insufficient_quota) stop retrying and the attempt budget, wait
+    # included, be checked between tries.
     def attempt
       tries = 0
       begin
