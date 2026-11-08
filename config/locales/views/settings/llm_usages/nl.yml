@@ -1,0 +1,26 @@
+---
+nl:
+  settings:
+    llm_usages:
+      show:
+        page_title: "LLM-gebruik en kosten"
+        subtitle: "Volg uw AI-gebruik en geschatte kosten"
+        start_date: "Startdatum"
+        end_date: "Einddatum"
+        filter: "Filteren"
+        total_tokens: "Totaal aantal tokens"
+        prompt: "prompt"
+        completion: "voltooiing"
+        total_cost: "Totale kosten"
+        cost_by_operation: "Kosten per bewerking"
+        cost_by_model: "Kosten per model"
+        recent_usage: "Recent gebruik"
+        col_date: "Datum"
+        col_operation: "Bewerking"
+        col_model: "Model"
+        col_tokens: "Tokens"
+        col_cost: "Kosten"
+        failed: "Mislukt"
+        no_usage_data: "Geen gebruiksgegevens gevonden voor de geselecteerde periode"
+        cost_estimates_title: "Over kostenschattingen"
+        cost_estimates_description: "Kosten worden geschat op basis van gepubliceerde prijzen van providers, laatst gecontroleerd op %{date}. Werkelijke kosten kunnen afwijken. Prijzen gelden per 1 miljoen tokens en verschillen per model. Aangepaste of zelfgehoste modellen tonen \"N.v.t.\" en worden niet meegenomen in de totale kosten."
