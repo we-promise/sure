@@ -20,7 +20,7 @@ class ExchangeRate::UsdCross
   def rates(from:, to:, start_date:, end_date:, error: nil)
     return [] if from == to || [ from, to ].include?("USD")
     return [] if error.class.name.to_s.demodulize.in?(PROVIDER_FAILURES)
-    # shortcut: a pair whose very first fetch fails transiently keeps the rates derived then; flag derived rows if that shows up.
+    # shortcut: until the provider answers a pair once, a transient failure keeps the rates derived then; flag derived rows if that shows up.
     return [] if ExchangeRatePair.for_pair(from: from, to: to).quoted_directly?
 
     to_usd = leg(from, "USD", start_date, end_date)
