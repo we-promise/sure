@@ -18,7 +18,9 @@
 # raises the Ai::Error, for jobs.
 class Ai::Generation
   class_attribute :feature_key, :prompt_key, :static_schema, :schema_label, :batch_key, :merge_key, :merge_by,
-                  :blank_item_check, :key_aliases, :required_keys, instance_writer: false
+                  :blank_item_check, instance_writer: false
+  class_attribute :key_aliases, default: {}, instance_writer: false
+  class_attribute :required_keys, default: [], instance_writer: false
 
   class << self
     def feature(key) = self.feature_key = key.to_sym
@@ -98,7 +100,7 @@ class Ai::Generation
   end
 
   def coerce(json)
-    Ai::Schema.coerce(json, schema, aliases: key_aliases || {}, match: matchers, required: required_keys || [])
+    Ai::Schema.coerce(json, schema, aliases: key_aliases, match: matchers, required: required_keys)
   end
 
   private

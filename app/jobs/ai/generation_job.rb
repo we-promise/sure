@@ -20,6 +20,8 @@ class Ai::GenerationJob < ApplicationJob
   # feature: a key in Ai::Requesters; args: the requester's own (`ids:` the items left); applied:
   # the count the earlier batches applied.
   def perform(feature, args, applied = 0)
+    return if requester.nil?
+
     Ai::CallContext.job(correlation_id) do
       generation = requester.ai_generation
       next requester.ai_finished(applied) if generation.nil?
@@ -45,12 +47,18 @@ class Ai::GenerationJob < ApplicationJob
 
   def give_up(error)
     Rails.logger.info("[Ai::GenerationJob] #{arguments.first} gave up: #{error.class.name.demodulize} #{error.message.truncate(200)}")
-    requester.ai_failed(error)
+    requester&.ai_failed(error)
   end
 
   private
     def requester
-      @requester ||= Ai::Requesters.fetch(arguments.first).from_ai_job(**arguments.second.to_h.symbolize_keys)
+      return @requester if defined?(@requester)
+
+      @requester = Ai::Requesters.fetch(arguments.first).from_ai_job(**arguments.second.to_h.symbolize_keys)
+    rescue ActiveRecord::RecordNotFound => error
+      # The family the job names was deleted while it waited: nothing to run, and no one to tell.
+      Rails.logger.info("[Ai::GenerationJob] #{arguments.first} dropped: #{error.message}")
+      @requester = nil
     end
 
     def correlation_id

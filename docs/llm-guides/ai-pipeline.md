@@ -134,7 +134,7 @@ flowchart LR
   model today's code uses; `ai_feature_guard_test.rb` that every action starting an AI feature
   declares `requires_ai`.
 
-## Generations (PR 2c)
+## Generations
 
 Every structured-output feature (categorization, merchant detection and enhancement, bill setup)
 is one small `Ai::Generation` file, a prompt folder and a domain requester. Jobs, failover and
@@ -184,16 +184,16 @@ flowchart LR
   Anthropic.
 - **JSON modes** apply to chat-completions servers: `auto` walks strict, json_object, none, moving
   on when the answer doesn't parse or, for a list, when more than half the items are blank. A
-  400 about the JSON mode or the reasoning effort retries once in `none` without the effort; any
-  other 400 ends the call.
+  400 about the JSON mode or the reasoning effort, or any 400 to a request that sent an effort,
+  retries once in `none` without the effort; any other 400 ends the call.
 - **Overflow splits, invalid output escalates.** `ContextTooLong` or an answer cut at the output
   limit halves the batch on the same route; `InvalidOutput` moves to the next route; a
   timeout, 5xx, 429, refused connection, bad key or missing model marks the smallest broken thing
   down for 60 seconds and moves on.
 - **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
   `app/models/ai/**` and controllers.
-- **Prompts change only with evals.** The prompts are today's, word for word
-  (`test/architecture/ai_prompts_test.rb` renders each against its golden text); a change is its
+- **Prompts change only with evals.** `test/architecture/ai_prompts_test.rb` renders each prompt
+  folder against its golden text in `test/fixtures/files/ai_prompts/`; a change to the text is its
   own PR, run with the `ai-live` label.
 
 **Tests**

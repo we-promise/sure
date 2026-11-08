@@ -57,7 +57,7 @@ AI work runs in the Sidekiq `worker`, in its own capsule ("lane"), so a slow mod
 - **System health:** AI backlog doesn't count towards "queue backed up" (a large merchant-detection run can queue for hours), but "Oldest job age" still includes it. Check the queue table or `/sidekiq` to see which queue is waiting.
 - **Upgrading:** AI jobs moved from `high_priority` (chat), `medium_priority` and `scheduled` to the AI queues. Jobs already queued under the old names still run once, in the default lane.
 - **Large batches:** Sure doesn't limit `LLM_MAX_ITEMS_PER_CALL`. A batch is cut to fit the context window (`LLM_CONTEXT_WINDOW` minus the reply limit and the prompt itself), and a batch that still overflows, or whose answer stops at the reply limit, is halved and sent again. On Anthropic the window counts only when `LLM_CONTEXT_WINDOW` is set; raise `ANTHROPIC_MAX_TOKENS` (default `4096`) with the batch size so fewer answers get cut.
-- **Upgrading to 2c:** the old background job classes (`AutoCategorizeJob`, `AutoDetectMerchantsJob`, `EnhanceProviderMerchantsJob`) are gone; every background AI feature runs as `Ai::GenerationJob`. Let the `ai_high_priority` and `ai_low_priority` queues drain before upgrading: a job still queued under an old class ends up in Sidekiq's dead set, and a rule run waiting on it stays pending.
+- **Upgrading:** every background AI feature now runs as `Ai::GenerationJob`. Jobs queued before the upgrade under the old classes (`AutoCategorizeJob`, `AutoDetectMerchantsJob`, `EnhanceProviderMerchantsJob`) still run: each hands its work to `Ai::GenerationJob`.
 
 ## Quickstart: OpenAI Token
 

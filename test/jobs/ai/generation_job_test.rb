@@ -110,6 +110,16 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_equal [ [ :failed, @family.id, ActiveRecord::StatementInvalid ] ], Requester.log
   end
 
+  test "a job whose family was deleted while it waited is dropped, not retried" do
+    requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+
+    assert_nothing_raised do
+      Ai::GenerationJob.perform_now(:detect_merchants, { ids: %w[a], family_id: SecureRandom.uuid })
+    end
+    assert_empty Requester.log
+    assert_empty requests
+  end
+
   test "a job queued under an old class is handed to Ai::GenerationJob" do
     assert_enqueued_with(job: Ai::GenerationJob, args: [ :categorize, { ids: %w[a], family_id: @family.id, rule_run_id: "r1" } ]) do
       AutoCategorizeJob.perform_now(@family, transaction_ids: %w[a], rule_run_id: "r1")
