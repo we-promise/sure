@@ -20,7 +20,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       raise Ai::Error::InvalidOutput, "the models list has no data" unless response.is_a?(Hash) && response["data"].is_a?(Array)
       raise Ai::Error::InvalidOutput, "the models list has entries that aren't objects" unless response["data"].all?(Hash)
 
-      ids = response["data"].filter_map { _1["id"] || _1[:id] }
+      ids = response["data"].filter_map { _1["id"] }
       raise Ai::Error::ModelMissing, "#{model.name} isn't listed" unless ids.include?(model.name)
 
       model.name
