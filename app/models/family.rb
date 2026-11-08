@@ -5,7 +5,7 @@ class Family < ApplicationRecord
 
   include FioConnectable
   include Syncable, AutoTransferMatchable, Subscribeable, VectorSearchable
-  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable
+  include PlaidConnectable, SimplefinConnectable, LunchflowConnectable, AkahuConnectable, EnableBankingConnectable, TruelayerConnectable
   include CoinbaseConnectable, BinanceConnectable, KrakenConnectable, CoinspotConnectable, CoinstatsConnectable, SnaptradeConnectable, MercuryConnectable, BrexConnectable, SophtronConnectable
   include IndexaCapitalConnectable, IbkrConnectable, WiseConnectable
   include UpConnectable
@@ -15,6 +15,7 @@ class Family < ApplicationRecord
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable
+  include SharesightConnectable
   include AiPromptable
 
   DATE_FORMATS = [
@@ -59,6 +60,7 @@ class Family < ApplicationRecord
   has_many :entries, through: :accounts
   has_many :transactions, through: :accounts
   has_many :rules, dependent: :destroy
+  has_many :rule_groups, dependent: :destroy
   has_many :trades, through: :accounts
   has_many :holdings, through: :accounts
 
@@ -254,10 +256,21 @@ class Family < ApplicationRecord
   validates :default_account_sharing, inclusion: { in: SHARING_DEFAULTS }
   validates :personal_budgets, inclusion: { in: [ true, false ] }
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
+  validates :auto_generate_transaction_names, inclusion: { in: [ true, false ] }
   validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
+  # The searchable timezone select submits "" while no zone is saved yet;
+  # store nil so provider date parsing keeps its default instead of raising.
+  # Rails' friendly names (e.g. "Pacific Time (US & Canada)") are stored as
+  # their IANA identifier, the value the timezone select offers.
+  normalizes :timezone, with: ->(timezone) {
+    timezone = timezone.strip
+    ActiveSupport::TimeZone::MAPPING[timezone] || timezone.presence
+  }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
+  validate :currency_must_be_known, if: :currency_changed?
 
+  before_validation :normalize_currency
   before_validation :normalize_enabled_currencies!
   after_create_commit :add_classifier_rules
 
@@ -373,8 +386,8 @@ class Family < ApplicationRecord
   #
   # This is the single entry point for "a member just joined, give them the
   # accounts the family shares by default." It self-guards on the sharing policy
-  # and family membership so every membership path (invitation accept, SSO JIT
-  # sign-up, token registration, mobile SSO) can call it without reintroducing
+  # and family membership so every membership path (SSO JIT sign-up, token
+  # registration, mobile SSO) can call it without reintroducing
   # the "member joined but sees nothing" bug. No-op when sharing is disabled or
   # there is nothing to share, and idempotent on re-run.
   def auto_share_existing_accounts_with(user)
@@ -392,6 +405,15 @@ class Family < ApplicationRecord
     end
 
     AccountShare.insert_all(records, unique_by: %i[account_id user_id]) if records.any?
+  end
+
+  # The calendar date `time` falls on where the family lives. A background job
+  # runs in the app's zone (UTC unless configured), so a sync that dates what it
+  # finds by `Date.current` can land a day off the user's calendar. A blank or
+  # unknown zone falls back to the app's, as Localize#resolved_timezone does.
+  def local_date(time = Time.current)
+    zone = timezone.present? ? ActiveSupport::TimeZone[timezone] : nil
+    time.in_time_zone(zone || Time.zone).to_date
   end
 
   def uses_custom_month_start?
@@ -463,6 +485,17 @@ class Family < ApplicationRecord
       .distinct
       .pluck(:merchant_id)
     Merchant.where(id: merchant_ids)
+  end
+
+  # Merchants a rule can set on transactions: the family's own plus the
+  # provider merchants already on transactions the user can see. Unlike
+  # available_merchants_for, recently unlinked merchants are left out, since a
+  # rule that set one again would undo the unlink.
+  def assignable_merchants_for(user)
+    assigned_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
+      .select(:merchant_id)
+    Merchant.where(id: merchants.select(:id)).or(Merchant.where(type: "ProviderMerchant", id: assigned_ids))
   end
 
   def available_merchants_for(user)
@@ -560,11 +593,13 @@ class Family < ApplicationRecord
   end
 
   # A rule with no conditions at the top of the order, the others moving
-  # down one.
+  # down one. Rule groups share the rules' positions (see Rule::Layout), so
+  # they move too.
   def add_classifier_rule!(action_type, active: true)
     Rule.transaction do
       Rule.lock_positions!(self)
       rules.update_all("position = position + 1")
+      rule_groups.update_all("position = position + 1")
       rules.create!(name: self.class.classifier_rule_name(action_type), resource_type: "transaction", active: active, position: 1,
                     actions_attributes: [ { action_type: action_type } ])
     end
@@ -952,6 +987,14 @@ class Family < ApplicationRecord
       all_codes = Money::Currency.as_options.map(&:iso_code)
       all_selected = normalized_codes.size == all_codes.size && (normalized_codes - all_codes).empty?
       self.enabled_currencies = all_selected ? nil : normalized_codes
+    end
+
+    def normalize_currency
+      self.currency = self.class.normalize_currency_code(currency) || currency
+    end
+
+    def currency_must_be_known
+      errors.add(:currency, :invalid) if self.class.normalize_currency_code(currency).nil?
     end
 
     def normalize_currency_codes(values)

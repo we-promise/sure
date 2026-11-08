@@ -9,6 +9,34 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     @family = @user.family
   end
 
+  test "renders sections in the order and collapse state stored under the reports keys" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge(
+      "reports_section_order" => %w[transactions_breakdown trends_insights],
+      "reports_collapsed_sections" => { "trends_insights" => true }
+    ))
+
+    get reports_path
+
+    assert_response :success
+    keys = css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[transactions_breakdown trends_insights], keys.first(2)
+    assert_select "[data-section-key=trends_insights][data-reports-section-collapsed-value=?]", "true"
+    assert_select "[data-section-key=transactions_breakdown][data-reports-section-collapsed-value=?]", "false"
+  end
+
+  test "the reports preferences endpoint stores order and collapse under the reports keys" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_collapsed_sections" => { "net_worth" => true }))
+
+    patch update_preferences_reports_path,
+      params: { preferences: { reports_section_order: %w[trends_insights net_worth], reports_collapsed_sections: { trends_insights: true } } },
+      as: :json
+
+    assert_response :ok
+    @user.reload
+    assert_equal %w[trends_insights net_worth], @user.preferences["reports_section_order"]
+    assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+  end
+
   # The per-trade line under the realised-gains card rendered
   # `Money.new(gain.value, Current.family.currency)` -- taking the number out of
   # the Trend and re-labelling it as family currency with no conversion at all.
@@ -108,6 +136,37 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
         assert_equal section["data-sortable-list-id"], section["data-section-key"]
       end
     end
+  end
+
+  test "spending vs normal is a preview section" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
+    get reports_path
+    assert_select "section[data-section-key='spending_vs_normal']", count: 0
+
+    @user.update!(preferences: @user.preferences.merge("preview_features_enabled" => true))
+    # The treemap only draws spending inside the period, which for the current
+    # month runs up to today; fixture transactions are dated a few days ago, so
+    # on the 1st there would be nothing to draw.
+    create_transaction(date: Date.current, amount: 50, category: categories(:food_and_drink))
+    get reports_path
+    assert_response :ok
+    assert_select "section[data-section-key='spending_vs_normal']" do
+      assert_select "[data-controller='spending-treemap']"
+    end
+  end
+
+  test "the spending baseline starts at the first transaction in the user's own finances" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    @family.entries.where(entryable_type: "Transaction").destroy_all
+    hidden = Account.create!(family: @family, owner: users(:family_member), name: "Not shared", currency: @family.currency, balance: 0, accountable: Depository.new)
+    create_transaction(account: hidden, date: 200.days.ago.to_date, amount: 10)
+    own_first = 100.days.ago.to_date
+    create_transaction(account: accounts(:depository), date: own_first, amount: 10)
+
+    get reports_path
+
+    baseline = controller.instance_variable_get(:@spending_comparison).baseline_period
+    assert_equal own_first, baseline.start_date
   end
 
   # The desktop app clones these into the tray when a download such as the CSV

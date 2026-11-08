@@ -32,6 +32,9 @@ fr:
       brokerage:
         long: Courtier
         short: Courtier
+      cash_management:
+        long: Compte de gestion de trésorerie
+        short: CMA
       corporate_bond:
         long: Obligation d'entreprise
         short: Obligation d'entreprise

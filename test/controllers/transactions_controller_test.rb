@@ -12,6 +12,16 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   # Bills has always linked out to transactions. Until now nothing linked back,
   # so a transaction that settled a bill was a dead end. The link-back is part
   # of the preview-gated bills surface, so the viewer needs the flag.
+  test "index loads the merchant list on demand and keeps selected merchants in the form" do
+    get transactions_url(q: { merchants: [ "Amazon" ] })
+
+    assert_response :success
+    assert_select "#transactions-search turbo-frame#merchant_filter_options[loading=lazy][data-action=?]", "turbo:frame-load->list-filter#filter" do
+      assert_select "input[type=hidden][name='q[merchants][]'][value=?]", "Amazon"
+    end
+    assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
+  end
+
   test "a German transaction shows the bill it paid with localized copy" do
     @user.update!(locale: "de")
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
@@ -88,6 +98,92 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_no_match bill_path(series), response.body,
       "the preview-gated bill link must not render for a user without the flag"
+  end
+
+  test "index explains a pending transfer match in its tooltip and opens the transfer" do
+    outflow = create_transaction(account: accounts(:depository), name: "Match outflow", amount: 320, date: Date.current)
+    inflow = create_transaction(account: accounts(:credit_card), name: "Match inflow", amount: -320, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get transactions_url
+
+    assert_response :success
+    match = "##{dom_id(outflow.transaction, :transfer_match)}"
+    assert_select "#{match} a[href='#{transfer_path(transfer)}'][data-turbo-frame=drawer]" do
+      assert_select "span", text: I18n.t("transactions.transfer_match.auto_matched"), minimum: 1
+    end
+    tooltip = "$320.00 in #{accounts(:credit_card).name} on #{I18n.l(Date.current, format: :long)}. Click to review."
+    assert_select "#{match} [role=tooltip]", text: tooltip
+    # The amount is blurred in privacy mode, which a native title would escape.
+    assert_select "#{match} [role=tooltip] span.privacy-sensitive", text: "$320.00"
+    assert_select "#{match} [title*='320']", count: 0
+    # The link, which takes focus, is described by the tooltip itself.
+    tooltip_id = css_select("#{match} [role=tooltip]").first["id"]
+    assert_select "#{match} a[href='#{transfer_path(transfer)}'][aria-describedby=?]", tooltip_id
+
+    # The index shows one leg of a pair; the other leg's row is on its own account's page.
+    get account_url(accounts(:credit_card))
+
+    assert_response :success
+    assert_select "##{dom_id(inflow.transaction, :transfer_match)} a[href='#{transfer_path(transfer)}']"
+    assert_select "##{dom_id(inflow.transaction, :transfer_match)} [role=tooltip]", text: /#{Regexp.escape(accounts(:depository).name)}/
+  end
+
+  test "index does not name or link a pending match's other side in an account the viewer cannot see" do
+    # depository is shared with family_member; investment is not.
+    outflow = create_transaction(account: accounts(:depository), name: "Private match outflow", amount: 320, date: Date.current)
+    inflow = create_transaction(account: accounts(:investment), name: "Private match inflow", amount: -320, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    sign_in users(:family_member)
+
+    get transactions_url
+
+    assert_response :success
+    match = "##{dom_id(outflow.transaction, :transfer_match)}"
+    assert_select "#{match} [role=tooltip]", text: I18n.t("transactions.transfer_match.auto_matched_tooltip_hidden")
+    assert_select "#{match} a[href='#{transfer_path(transfer)}']", count: 0
+    assert_select "#{match} span[tabindex='0'] [data-testid='transfer-match-pill']", minimum: 1
+    assert_select "#{match} span[tabindex='0'][aria-describedby=?]", css_select("#{match} [role=tooltip]").first["id"]
+    assert_select match, text: /#{Regexp.escape(accounts(:investment).name)}/, count: 0
+  end
+
+  test "index gives a pending match on a transfer row no second link to the transfer" do
+    outflow = create_transaction(account: accounts(:depository), name: "Moved match outflow", amount: 320, date: Date.current, kind: "funds_movement")
+    inflow = create_transaction(account: accounts(:credit_card), name: "Moved match inflow", amount: -320, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get transactions_url
+
+    assert_response :success
+    match = "##{dom_id(outflow.transaction, :transfer_match)}"
+    assert_select "#{match} a[href='#{transfer_path(transfer)}']", count: 0
+    assert_select "#{match} [role=tooltip]", text: /#{Regexp.escape(accounts(:credit_card).name)}/
+  end
+
+  test "index points an unmatched transaction with a counterpart to the transfer matcher" do
+    outflow = create_transaction(account: accounts(:depository), name: "Hint outflow", amount: 500, date: Date.current)
+    inflow = create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
+    lone = create_transaction(account: accounts(:depository), name: "Hint lone", amount: 77, date: Date.current)
+
+    get transactions_url
+
+    assert_response :success
+    [ outflow, inflow ].each do |entry|
+      assert_select "a[href='#{new_transaction_transfer_match_path(entry)}'][data-turbo-frame=modal]",
+                    text: I18n.t("transactions.transaction.transfer_hint")
+    end
+    assert_select "a[href='#{new_transaction_transfer_match_path(lone)}']", count: 0
+    assert_select "##{dom_id(outflow.transaction, :transfer_hint)} form[action='#{transaction_transfer_match_path(outflow)}'] input[name=_method][value=delete]"
+  end
+
+  test "index links a transaction's merchant to its page" do
+    merchant = merchants(:netflix)
+    create_transaction(account: accounts(:depository), name: "Netflix", merchant: merchant, date: Date.current)
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "a[href='#{merchant_path(merchant)}'][data-turbo-frame=_top][title=?]", I18n.t("transactions.transaction.view_merchant")
   end
 
   test "the investment activity badge shows translated labels" do
@@ -325,6 +421,86 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "a blank auto-generated name is not silently kept when another field fails validation" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    # Name is blank but a category is selected, so Entry#set_default_name
+    # fills it in during validation; the date is deliberately out of the
+    # supported range so the record still fails to save for an unrelated
+    # reason (an invalid currency would break rendering the money field
+    # itself, not just validation). The re-rendered form must show the name
+    # field blank again (not the generated text), or a resubmission after
+    # changing the category would save that now-stale name instead of a
+    # fresh one.
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "",
+        date: 40.years.ago.to_date,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        entryable_attributes: { category_id: categories(:food_and_drink).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='entry[name]'][value='']"
+  end
+
+  test "an explicitly provided name survives a failed submission unchanged" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    post transactions_url, params: {
+      entry: {
+        account_id: @entry.account_id,
+        name: "Explicit name",
+        date: 40.years.ago.to_date,
+        currency: "USD",
+        amount: 100,
+        nature: "inflow",
+        entryable_type: "Transaction",
+        entryable_attributes: { category_id: categories(:food_and_drink).id }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='entry[name]'][value='Explicit name']"
+  end
+
+  test "recent name suggestions never include entries from accounts inaccessible to the current user" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    private_account = Account.create!(
+      family: @entry.account.family,
+      owner: users(:family_member),
+      name: "Family Member Private Account",
+      balance: 100,
+      currency: "USD",
+      accountable: Depository.new,
+      status: "active"
+    )
+    create_transaction(account: private_account, name: "Private Merchant XYZ")
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "Private Merchant XYZ", response.body
+  end
+
+  test "recent name suggestions exclude the unknown-name fallback in every supported locale, not just the current one" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    create_transaction(account: @entry.account, name: I18n.t("transactions.unknown_name", locale: :en))
+    create_transaction(account: @entry.account, name: I18n.t("transactions.unknown_name", locale: :de))
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match I18n.t("transactions.unknown_name", locale: :de), response.body
+  end
+
   # Regression: the sync window must start at the old date, or the incremental
   # balance calculation counts the moved transaction twice.
   test "moving a transaction later syncs from its original date" do
@@ -338,6 +514,59 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_equal 2.days.ago.to_date, @entry.reload.date
+  end
+
+  test "name_suggestions returns matching past transaction names with their usual category" do
+    get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
+
+    assert_response :success
+    assert_match "Starbucks", response.body
+    assert_match "data-category-id=\"#{categories(:food_and_drink).id}\"", response.body
+  end
+
+  test "name_suggestions starts with recent names and categories when auto naming is enabled" do
+    @entry.account.family.update!(auto_generate_transaction_names: true)
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_match "Starbucks", response.body
+    assert_match "data-category-id=\"#{categories(:food_and_drink).id}\"", response.body
+
+    get name_suggestions_transactions_url(q: "zz"), as: :turbo_stream
+    assert_no_match "Starbucks", response.body
+  end
+
+  test "name_suggestions does not load recent names when auto naming is disabled" do
+    @entry.account.family.update!(auto_generate_transaction_names: false)
+
+    get name_suggestions_transactions_url, as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "Starbucks", response.body
+  end
+
+  test "name_suggestions returns no options when no past transaction matches" do
+    get name_suggestions_transactions_url(q: "no such merchant"), as: :turbo_stream
+
+    assert_response :success
+    assert_no_match "no such merchant", response.body
+  end
+
+  test "name_suggestions only considers transactions from accounts accessible to the current user" do
+    # accounts(:investment) is owned by family_admin and not shared with family_member
+    create_transaction(account: accounts(:investment), name: "Private Yacht Purchase", category: categories(:income))
+
+    sign_in users(:family_member)
+
+    get name_suggestions_transactions_url(q: "Private Yacht"), as: :turbo_stream
+    assert_response :success
+    assert_no_match "Private Yacht", response.body
+
+    # depository is shared with family_member, so its transactions remain suggestible
+    get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
+    assert_response :success
+    assert_match "Starbucks", response.body
   end
 
   test "updates with transaction details" do
@@ -613,6 +842,33 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     patch tags_transaction_url(read_only_entry), params: { toggle_tag_id: tags(:one).id }, as: :turbo_stream
 
     assert_equal original_tag_ids, read_only_entry.reload.entryable.tag_ids
+  end
+
+  # The category and tag dropdowns are fetched when their popover opens, so
+  # rows carry no <turbo-frame> markup for them.
+  test "transaction rows defer the category and tag dropdown frames until opened" do
+    get transactions_url
+
+    assert_response :success
+    assert_select "turbo-frame#category_dropdown", count: 0
+    assert_select "turbo-frame#tag_dropdown", count: 0
+
+    transaction = @entry.entryable
+    %w[desktop mobile].each do |variant|
+      assert_select "##{dom_id(transaction, "category_menu_#{variant}")} [data-ds--popover-frame-id-value='category_dropdown'][data-ds--popover-frame-src-value=?]",
+        category_dropdown_path(category_id: transaction.category_id, transaction_id: transaction.id, grouped: false)
+    end
+    assert_select "[data-ds--popover-frame-id-value='tag_dropdown'][data-ds--popover-frame-src-value=?]",
+      tag_dropdown_path(entry_id: @entry.id), count: 2
+  end
+
+  test "the mobile category cell renders only the icon badge, the desktop cell both" do
+    get transactions_url
+
+    assert_response :success
+    transaction = @entry.entryable
+    assert_select "##{dom_id(transaction, "category_menu_mobile")} [data-testid='category-name']", count: 0
+    assert_select "##{dom_id(transaction, "category_menu_desktop")} [data-testid='category-name']", count: 1
   end
 
   test "transaction rows show tags" do
@@ -2019,6 +2275,22 @@ end
     assert_select "#entry_#{@entry.id}", count: 0
   end
 
+  test "index names the account on an account_ids filter chip" do
+    account = @entry.account
+
+    get transactions_url(q: { account_ids: [ account.id ] })
+
+    assert_response :success
+    assert_select "#transaction-search-filters li p", text: account.name, count: 1
+    assert_select "#transaction-search-filters li p", text: account.id, count: 0
+  end
+
+  test "index renders a blank account filter value without failing" do
+    get transactions_url(q: { account_ids: [ "" ], accounts: [ "" ] })
+
+    assert_response :success
+  end
+
   test "index offers the attachment filter in the filter menu" do
     get transactions_url
 
@@ -2054,7 +2326,7 @@ end
     get transactions_url
 
     assert_response :success
-    assert_select "##{dom_id(outflow, "category_menu_desktop")} turbo-frame#category_dropdown"
+    assert_select "##{dom_id(outflow, "category_menu_desktop")} [data-ds--popover-frame-id-value='category_dropdown']"
   end
 
   test "update drops a category sent for a matched transfer's inflow leg" do

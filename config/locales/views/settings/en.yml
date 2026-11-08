@@ -6,6 +6,7 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    encryption_migration_guide: Encryption setup and migration guide
     background_jobs:
       show:
         page_title: "Background jobs"
@@ -188,6 +189,8 @@ en:
         dashboard_account_groups_description: These account sections will start expanded on the dashboard and in the account sidebar. You can still collapse them manually at any time.
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
+        auto_generate_transaction_names_title: Auto-generate transaction names
+        auto_generate_transaction_names_description: When a manually entered transaction's name is left blank, fill it in from the selected category and merchant (e.g. "Entertainment - Netflix"). A name is still required if neither is selected. Applies to the whole family, and only affects new transactions.
     preferences:
       show:
         country: Country
@@ -359,6 +362,7 @@ en:
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
+      auto_matches_label: Auto Matches
       classifier_label: Classifier
       background_jobs_label: Background jobs
       api_key_label: API Keys
@@ -475,6 +479,7 @@ en:
         monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
         fio: Sync a Fio banka account with a read-only API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
+        truelayer: Sync UK bank accounts and credit cards via TrueLayer open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
         mercury: Sync your Mercury business banking accounts automatically.
@@ -486,6 +491,7 @@ en:
         onchain_wallet: Track self-custody Bitcoin, EVM, Solana, Cosmos and Polkadot wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
+        sharesight: Sync the portfolios you track in Sharesight using its API.
         trade_republic: Sync your Trade Republic investment account via secure read-only web login.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         questrade: Sync your Questrade investment accounts directly via the Questrade API.
@@ -643,6 +649,8 @@ en:
         api_key_placeholder_update: "Enter new API key to update"
         base_url_label: "Base URL (Optional)"
         base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
+        sync_start_date_label: "Import transactions from"
+        sync_start_date_help: "Leave blank to import everything Lunch Flow has. Moving the date earlier imports the missing period on the next sync. Moving it later doesn't affect transactions already imported."
         save_and_connect: "Save and connect"
         update_connection: "Update connection"
       akahu_panel:
@@ -791,6 +799,22 @@ en:
           other: "%{count} Trade Republic accounts discovered."
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
+      sharesight_panel:
+        steps:
+          step_1: Ask Sharesight support to enable API access. It's available on paid plans.
+          step_2: In your Sharesight account settings, open the API page and copy the client ID and client secret.
+          step_3: Paste both below and save. Sure then finds your portfolios so you can link them.
+        client_id_label: Client ID
+        client_id_placeholder_new: Paste your Sharesight client ID
+        client_id_placeholder_existing: Leave blank to keep the current client ID
+        client_secret_label: Client secret
+        client_secret_placeholder_new: Paste your Sharesight client secret
+        client_secret_placeholder_existing: Leave blank to keep the current client secret
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        status_configured_prefix: "Configured. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to link your portfolios.
       trading212_panel:
         steps:
           step_1: Go to Trading 212 → Settings → API (web or mobile app).

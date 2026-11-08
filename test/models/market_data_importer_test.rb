@@ -61,7 +61,8 @@ class MarketDataImporterTest < ActiveSupport::TestCase
   end
 
   test "syncs account exchange rates into the primary currency when the family currency is blank or NULL" do
-    blank_family = Family.create!(name: "Blank", currency: "")
+    blank_family = Family.create!(name: "Blank", currency: "USD")
+    blank_family.update_column(:currency, "")
     null_family = Family.create!(name: "Null", currency: "USD")
     null_family.update_column(:currency, nil)
 

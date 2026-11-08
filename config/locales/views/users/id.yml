@@ -1,0 +1,29 @@
+---
+id:
+  users:
+    destroy:
+      success: Akun Anda telah dihapus.
+    update:
+      email_change_failed: Gagal mengubah alamat email.
+      email_change_initiated: Silakan periksa alamat email baru Anda untuk petunjuk konfirmasi.
+      success: Profil Anda telah diperbarui.
+    resend_confirmation_email:
+      success: Email konfirmasi baru sedang dalam antrean untuk dikirimkan.
+      no_pending_change: Tidak ada perubahan email yang sedang tertunda!
+    reset:
+      success: Akun Anda telah diatur ulang. Data akan dihapus di latar belakang beberapa saat lagi.
+      unauthorized: Anda tidak memiliki izin untuk melakukan tindakan ini
+    reset_with_sample_data:
+      success: Akun Anda telah diatur ulang dan data contoh sedang disiapkan. Anda akan melihat data demo sebentar lagi.
+    roles:
+      admin: Admin
+      member: Anggota
+      super_admin: Super admin
+    user_menu:
+      aria_label: Buka menu akun
+      version: Versi
+      settings: Pengaturan
+      changelog: Catatan rilis
+      feedback: Umpan balik
+      contact: Kontak
+      log_out: Keluar

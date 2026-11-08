@@ -1,0 +1,35 @@
+<%# locals: (rule:, sortable_id:, list_filter:, list: "sortable-list", foldable: false) %>
+<div class="flex items-center"
+     data-<%= list %>-target="item"
+     data-sortable-list-id="<%= sortable_id %>"
+     draggable="true"
+     role="listitem"
+     aria-grabbed="false"
+     data-action="dragstart-><%= list %>#dragStart dragend-><%= list %>#dragEnd"
+     data-rules-filter-target="rule"
+     data-rule-id="<%= rule.id %>"
+     data-rule-search="<%= list_filter.search_text(rule) %>"
+     data-rule-active="<%= rule.active? %>"
+     data-rule-actions="<%= list_filter.action_types(rule).join(" ") %>"
+     data-rule-conditions="<%= list_filter.condition_types(rule).join(" ") %>"
+     data-rule-accounts="<%= list_filter.account_ids(rule).join(" ") %>"
+     data-rule-group="<%= rule.rule_group_id || "none" %>">
+  <% rule_label = rule.name.presence || rule.primary_condition_title %>
+  <%= render "rules/drag_handle", list: list, label: t("rules.index.reorder_rule", name: rule_label) %>
+  <%# A rule outside a group folds to one line, like a group does. %>
+  <% if foldable %>
+    <%= render DS::Button.new(
+      variant: "icon",
+      size: "sm",
+      icon: "chevron-down",
+      title: t("rules.index.fold_rule", name: rule_label),
+      aria_label: t("rules.index.fold_rule", name: rule_label),
+      class: "shrink-0 motion-safe:transition-transform",
+      aria: { expanded: "true", controls: dom_id(rule, :details) },
+      data: { rules_filter_target: "ruleToggle", action: "rules-filter#toggleRule" }
+    ) %>
+  <% end %>
+  <div class="grow min-w-0">
+    <%= render "rules/rule", rule: rule %>
+  </div>
+</div>

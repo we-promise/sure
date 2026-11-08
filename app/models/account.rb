@@ -1,5 +1,5 @@
 class Account < ApplicationRecord
-  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable
+  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Logoable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
 
@@ -171,7 +171,9 @@ class Account < ApplicationRecord
       .distinct
   }
 
-  has_one_attached :logo, dependent: :purge_later
+  # People paste whole URLs ("https://www.tbank.ru/") into the domain field,
+  # but the Brandfetch logo URL needs the bare host ("tbank.ru").
+  normalizes :institution_domain, with: ->(value) { normalize_institution_domain(value) }
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
 
@@ -265,6 +267,15 @@ class Account < ApplicationRecord
   end
 
   class << self
+    def normalize_institution_domain(value)
+      host = value.to_s.strip.downcase
+        .sub(%r{\A[a-z][a-z0-9+.-]*://}, "")
+        .split(%r{[/?#]}, 2).first.to_s
+        .sub(/:\d+\z/, "")
+        .delete_prefix("www.")
+      host.presence
+    end
+
     def human_attribute_name(attribute, options = {})
       options = { moniker: Current.family&.moniker_label || "Family" }.merge(options)
       super(attribute, options)
@@ -421,7 +432,7 @@ class Account < ApplicationRecord
     def create_from_wise_account(wise_account)
       family = wise_account.wise_item.family
 
-      create_and_sync(
+      account = create_and_sync(
         {
           family: family,
           name: wise_account.name || "Wise #{wise_account.currency}",
@@ -433,6 +444,21 @@ class Account < ApplicationRecord
         },
         skip_initial_sync: true
       )
+
+      # When Sure imports a balance's whole history, it opens at 0 the day
+      # before Wise opened it, not at today's balance two years back.
+      if (opening_date = wise_account.opening_date)
+        manager = Account::OpeningBalanceManager.new(account)
+        date = [ opening_date, manager.oldest_entry_date&.prev_day ].compact.min
+        result = manager.set_opening_balance(balance: 0, date: date)
+        Rails.logger.warn "Account.create_from_wise_account - Opening balance kept for account #{account.id}: #{result.error}" if result.error
+        # So later syncs may move it again (WiseAccount::Processor).
+        if result.changes_made?
+          wise_account.remember_opening_anchor!(account.valuations.opening_anchor.includes(:entry).first.entry)
+        end
+      end
+
+      account
     end
 
     def create_from_coinbase_account(coinbase_account)
@@ -497,6 +523,24 @@ class Account < ApplicationRecord
         balance: 0,
         cash_balance: 0,
         currency: trading212_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
+    def create_from_sharesight_account(sharesight_account)
+      family = sharesight_account.sharesight_item.family
+
+      attributes = {
+        family: family,
+        name: sharesight_account.name.presence || I18n.t("sharesight_items.defaults.name"),
+        balance: 0,
+        cash_balance: 0,
+        currency: sharesight_account.currency.presence || family.currency,
         accountable_type: "Investment",
         accountable_attributes: {
           subtype: "brokerage"
@@ -655,7 +699,8 @@ class Account < ApplicationRecord
   end
 
   def institution_domain
-    read_attribute(:institution_domain).presence || provider&.institution_domain
+    # Normalized on read too, so domains saved before normalization existed still resolve a logo.
+    self.class.normalize_institution_domain(read_attribute(:institution_domain)) || provider&.institution_domain
   end
 
   def manual_crypto_exchange?
@@ -678,10 +723,10 @@ class Account < ApplicationRecord
   # decision in one place so the new-pledge controller / preview helper
   # can't disagree on what they're going to save.
   def default_pledge_kind
-    # Investment accounts never use manual_save: a positive valuation delta on a
-    # brokerage is usually a market move, not a deposit, and would false-match a
-    # pledge. They resolve on transfer (cash-inflow) entries only.
-    manual? && !investment? ? "manual_save" : "transfer"
+    # Investment and crypto accounts never use manual_save: a positive valuation
+    # delta there is usually a market move, not a deposit, and would false-match
+    # a pledge. They resolve on transfer (cash-inflow) entries only.
+    manual? && balance_type != :investment ? "manual_save" : "transfer"
   end
 
   # Total fixed earmark this account currently has reserved across every goal
@@ -704,18 +749,6 @@ class Account < ApplicationRecord
   # Budget#available_to_allocate.
   def free_to_earmark
     balance.to_d - goal_earmarked_total
-  end
-
-  def logo_url
-    if institution_domain.present? && Setting.brand_fetch_client_id.present?
-      logo_size = Setting.brand_fetch_logo_size
-
-      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
-    elsif provider&.logo_url.present?
-      provider.logo_url
-    elsif logo.attached?
-      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
-    end
   end
 
   # Marks the account pending_deletion and enqueues DestroyJob. If the enqueue
@@ -754,16 +787,38 @@ class Account < ApplicationRecord
   # Override destroy to handle error recovery for accounts
   def destroy
     super
+  rescue ActiveRecord::Deadlocked
+    # DestroyJob retries a deadlock, so the account stays pending_deletion (and
+    # out of the user's reach) until it gives up and restores it.
+    raise
   rescue => e
-    # If destruction fails, leave the account disabled so it stays visible and
-    # can be deleted again. DestroyJob's scheduled_for_deletion reset is for
-    # provider items; accounts track deletion in `status`.
-    if may_restore_after_failed_deletion?
-      restore_after_failed_deletion!
-    elsif may_disable?
-      disable!
-    end
+    # An error after the delete committed leaves a frozen record to restore.
+    restore_after_failed_destroy unless destroyed?
     raise e
+  end
+
+  # Leaves the account disabled so it stays visible and can be deleted again.
+  # DestroyJob's scheduled_for_deletion reset is for provider items; accounts
+  # track deletion in `status`.
+  #
+  # Mirrors the restore_after_failed_deletion and disable events, but written
+  # directly: an unrelated validation (an owner who has since left the family,
+  # say) must not leave the account hidden in pending_deletion or replace the
+  # destroy error with its own. Only while the row still holds the status this
+  # record saw, so a newer write (another worker's restore the user has since
+  # re-enabled, say) is not overwritten.
+  def restore_after_failed_destroy
+    return unless may_restore_after_failed_deletion? || may_disable?
+
+    restored = {
+      status: "disabled",
+      disabled_at: (disabled_at_in_database if pending_deletion?) || Time.current,
+      updated_at: Time.current
+    }
+    return unless Account.where(id: id, status: status_in_database).update_all(restored) == 1
+
+    assign_attributes(restored)
+    clear_attribute_changes(restored.keys)
   end
 
   def current_holdings

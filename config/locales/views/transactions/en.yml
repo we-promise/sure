@@ -41,6 +41,7 @@ en:
       date: Date
       description: Description
       description_placeholder: Describe transaction
+      description_placeholder_optional: Leave blank to use the category/merchant name, or select one of those first
       expense: Expense
       income: Income
       merchant_label: Merchant
@@ -167,8 +168,10 @@ en:
     split_parent_row:
       split_label: "Split"
     transfer_match:
-      auto_matched: Auto-matched
-      auto_matched_short: Auto
+      auto_matched: Match?
+      auto_matched_short: Match?
+      auto_matched_tooltip_html: "%{amount} in %{account} on %{date}. Click to review."
+      auto_matched_tooltip_hidden: A transaction in an account you cannot see.
       confirm_match: Confirm match
       payment_confirmed: Payment is confirmed
       reject_match: Reject match
@@ -187,6 +190,10 @@ en:
       split: Split
       split_tooltip: This transaction has been split into multiple entries
       split_child_tooltip: Part of a split transaction
+      transfer_hint: Transfer?
+      transfer_hint_dismiss: Not a transfer
+      transfer_hint_tooltip: A matching transaction in another account looks like the other side of a transfer — click to match them
+      view_merchant: View merchant
     merge_duplicate:
       success: Transactions merged successfully
       failure: Could not merge transactions

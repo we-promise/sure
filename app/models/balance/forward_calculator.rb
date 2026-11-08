@@ -130,6 +130,10 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
         .find_by(date: @window_start_date - 1)
     end
 
+    def sync_cache
+      @sync_cache ||= Balance::SyncCache.new(account, start_date: (@window_start_date if incremental?))
+    end
+
     def calc_start_date
       incremental? ? @window_start_date : calculation_start_date
     end
