@@ -1,6 +1,7 @@
 # Helpers for testing AI code: the transport level (endpoints, models, call contexts, captured
 # events, cassettes) and routing (with_ai_routes, without_ai).
 module AiTestHelper
+  AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY].freeze
   LLM_CAPABILITIES = %i[tools vision documents streaming structured_output].freeze
 
   # One configured setup for every test: a cloud `openai` endpoint, a local `gpu`, an `embed`
@@ -130,7 +131,6 @@ module AiTestHelper
   def without_ai(&block)
     Ai::Config.with(Ai::Config.new, &block)
   end
-  AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY].freeze
 
   def ai_endpoint(name: "test", protocol: :compatible, base_url: "https://llm.example.test/v1", api_key: "test-key", **attributes)
     Ai::Config::Endpoint.new(name:, protocol:, base_url:, api_key:, **attributes)
@@ -153,16 +153,6 @@ module AiTestHelper
     events
   ensure
     ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
-  end
-
-  # Makes every transport for `protocol` answer `probe` with `returns` (or raise `raises`),
-  # without HTTP. Returns the recorded [model, check] pairs.
-  def stub_ai_transport(protocol = :compatible, returns: nil, raises: nil)
-    calls = []
-    klass = protocol == :anthropic ? Ai::Transport::Anthropic : Ai::Transport::Compatible
-    expectation = klass.any_instance.stubs(:run_probe).with { |model, check, **| calls << [ model, check ] }
-    raises ? expectation.raises(raises) : expectation.returns(returns)
-    calls
   end
 
   # Replays (or, with RECORD_CASSETTES=1 and the keys in ENV, records) a cassette under

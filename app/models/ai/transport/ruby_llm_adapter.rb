@@ -4,6 +4,8 @@
 module Ai::Transport::RubyLlmAdapter
   OPENROUTER_APP_NAME = "Sure".freeze
   OPENROUTER_APP_URL = "https://sure.am".freeze
+  RUBY_LLM_PATH = Gem.loaded_specs.fetch("ruby_llm").full_gem_path.freeze
+  ARITY_ERROR = /wrong number of arguments|(?:missing|unknown) keywords?/
 
   private
     # Settings RubyLLM would otherwise choose:
@@ -99,12 +101,19 @@ module Ai::Transport::RubyLlmAdapter
     rescue Ai::Error::Base => error
       raise scrubbed(error)
     rescue ArgumentError => error
-      # RubyLLM 2.2 raises ArgumentError for an option a protocol can't carry (RubyLLM #1379, #1382):
-      # a request Sure built wrong, which every model would refuse.
+      raise unless refused_by_ruby_llm?(error)
+
       raise scrubbed(Ai::Error::Refused.new(error.message))
     rescue StandardError => error
       mapped = ruby_llm_error(error)
       raise mapped ? scrubbed(mapped) : error
+    end
+
+    # RubyLLM 2.2 raises ArgumentError for an option a protocol can't carry (RubyLLM #1379, #1382):
+    # a request every model would refuse. Any other ArgumentError, such as a wrong call from Sure's
+    # own code, is a bug and stays one.
+    def refused_by_ruby_llm?(error)
+      error.backtrace_locations&.first&.path.to_s.start_with?(RUBY_LLM_PATH) && !error.message.match?(ARITY_ERROR)
     end
 
     # A raised error as mapping_errors would raise it, or nil when it has no Ai::Error.

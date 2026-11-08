@@ -4,40 +4,57 @@ en:
     securities:
       show:
         disable_mfa: Disable 2FA
-        disable_mfa_confirm: Are you sure you want to disable two-factor authentication?
-          This will make your account less secure.
+        disable_mfa_confirm: Are you sure you want to disable two-factor authentication? This will make your account less secure.
         enable_mfa: Enable 2FA
-        mfa_enabled_status_html: "Two-factor authentication is <span class=\"font-medium text-green-600\">enabled</span>"
+        mfa_enabled_status_html: Two-factor authentication is <span class="font-medium text-green-600">enabled</span>
         mfa_enabled_description: Your account is protected with an additional layer of security.
-        mfa_disabled_status_html: "Two-factor authentication is <span class=\"font-medium text-red-600\">disabled</span>"
+        mfa_disabled_status_html: Two-factor authentication is <span class="font-medium text-red-600">disabled</span>
         mfa_disabled_description: Enable 2FA to add an extra layer of security to your account.
-        mfa_description: Add an extra layer of security to your account by requiring
-          a code from your authenticator app when signing in
+        mfa_description: Add an extra layer of security to your account by requiring a code from your authenticator app when signing in
         mfa_title: Two-Factor Authentication
         webauthn_add: Add passkey or security key
         webauthn_added: Added %{date}
         webauthn_code_label: Authenticator or backup code
         webauthn_code_placeholder: Current authenticator code or an unused backup code
-        webauthn_description: Use a passkey, Touch ID, Windows Hello, or a hardware
-          security key as a second factor when signing in.
+        webauthn_description: Use a passkey, Touch ID, Windows Hello, or a hardware security key as a second factor when signing in.
         webauthn_empty: No passkeys or security keys are registered yet.
         webauthn_last_used: Last used %{time_ago} ago
         webauthn_name_label: Key name
         webauthn_name_placeholder: MacBook Touch ID, YubiKey, etc.
         webauthn_remove: Remove
-        webauthn_remove_confirm: Are you sure you want to remove this passkey or
-          security key?
-        webauthn_remove_confirm_body: You will need to register this passkey or
-          security key again before it can be used for sign-in verification.
+        webauthn_remove_confirm: Are you sure you want to remove this passkey or security key?
+        webauthn_remove_confirm_body: You will need to register this passkey or security key again before it can be used for sign-in verification.
         webauthn_title: Passkeys and security keys
-        webauthn_unsupported: This browser does not support passkeys or security
-          keys.
+        webauthn_unsupported: This browser does not support passkeys or security keys.
+        page_title: Security
+        encryption_warning:
+          title: Encryption keys missing
+          intro: 'Sensitive data (API keys, provider tokens, MFA secrets, and PII) are being stored unencrypted at rest. To enable encryption, set the following keys in your environment variables or Rails credentials:'
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 'Generate a set with: bin/rails db:encryption:init'
+        disable_mfa_password_label: Confirm with your password
+        disable_mfa_password_placeholder: Enter your password
+        mfa_sso_only: Two-factor authentication is managed through your identity provider.
+        sso_title: Connected Accounts
+        sso_subtitle: Manage your single sign-on account connections
+        sso_disconnect: Disconnect
+        sso_last_used: Last used
+        sso_never: Never
+        sso_no_email: No email
+        sso_no_identities: No SSO accounts connected
+        sso_connect_hint: Log out and sign in with an SSO provider to connect an account.
+        sso_confirm_title: Disconnect Account?
+        sso_confirm_body: Are you sure you want to disconnect your %{provider} account? You can reconnect it later by signing in with that provider again.
+        sso_confirm_button: Disconnect
+        sso_warning_message: This is your only login method. You should set a password in your security settings before disconnecting, otherwise you may be locked out of your account.
   webauthn_credentials:
     code_already_used: That code was already used. Wait for the next code from your authenticator app.
     default_name: Security key
     failure: Could not save that passkey or security key. Please try again.
     invalid_code: That code is not valid. Enter a current code from your authenticator app or an unused backup code.
-    mfa_required: Enable two-factor authentication before adding a passkey or security
-      key.
+    mfa_required: Enable two-factor authentication before adding a passkey or security key.
     rate_limited: Too many attempts. Please wait a minute and try again.
     success: Passkey or security key removed.

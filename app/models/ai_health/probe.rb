@@ -21,17 +21,6 @@ class AiHealth
     # request": a retry, a payment, or a fixed credential clears them, so they
     # are never worth re-asking without the tools.
     TRANSIENT_HTTP_STATUSES = [ 401, 402, 403, 408, 429 ].freeze
-    PDF_TEST_INSTITUTION = "SUREHEALTHCHECKBANK"
-    PDF_TEST_LINES = [
-      "Bank Statement",
-      "Institution: #{PDF_TEST_INSTITUTION}",
-      "Account holder: Health Check",
-      "Statement period: 2026-01-01 to 2026-01-31",
-      "Opening balance: USD 100.00",
-      "Closing balance: USD 125.00",
-      "Transactions: 2",
-      "Synthetic data only. No customer data."
-    ].freeze
     PDF_MAX_RESPONSE_TOKENS = 512
 
     Result = Data.define(:status, :checked_at, :failure_code, :http_status) do
@@ -77,10 +66,8 @@ class AiHealth
       @cache = cache
     end
 
-    # Whether the model is up, by the endpoint's probe check: :models lists the
-    # server's models and makes no chat call (the default for every endpoint);
-    # :chat sends one tiny request. Which one is the endpoint's
-    # `probe_check`, :models unless the endpoint asks for a chat request.
+    # Whether the model is up, by the endpoint's `probe_check`
+    # (Ai::Config::Endpoint::PROBE_CHECKS).
     def llm(provider:, endpoint:, access_token:, model:)
       probe_endpoint = config_endpoint(provider:, base_url: endpoint, api_key: access_token)
 
@@ -210,7 +197,7 @@ class AiHealth
               Provider::Openai::PdfProcessor.new(
                 Ai::Transport::Http.openai_client(config_endpoint(provider:, base_url: endpoint, api_key: access_token), timeout:),
                 model: model,
-                pdf_content: synthetic_pdf,
+                pdf_content: SyntheticPdf.bytes,
                 custom_provider: openai_compatible,
                 max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
                 processing_mode: processing_mode
@@ -221,14 +208,14 @@ class AiHealth
               Provider::Anthropic::PdfProcessor.new(
                 Ai::Transport::Http.anthropic_client(config_endpoint(provider:, base_url: endpoint, api_key: access_token), timeout:),
                 model: model,
-                pdf_content: synthetic_pdf
+                pdf_content: SyntheticPdf.bytes
               ).process
             else
               raise Failure, :unsupported_provider
             end
           end
 
-          raise Failure, :invalid_response unless valid_pdf_result?(result)
+          raise Failure, :invalid_response unless SyntheticPdf.valid_result?(result)
         end
       end
 
@@ -318,41 +305,6 @@ class AiHealth
         status.between?(400, 499) && !status.in?(TRANSIENT_HTTP_STATUSES)
       end
 
-      def valid_pdf_result?(result)
-        result.is_a?(Provider::LlmConcept::PdfProcessingResult) &&
-          result.document_type == "bank_statement" &&
-          result.extracted_data.is_a?(Hash) &&
-          result.extracted_data["institution_name"] == PDF_TEST_INSTITUTION
-      end
-
-      def synthetic_pdf
-        return @synthetic_pdf if defined?(@synthetic_pdf)
-
-        text = PDF_TEST_LINES.map { |line| "(#{line}) Tj T*" }.join("\n")
-        content = "BT /F1 14 Tf 24 190 Td 22 TL\n#{text}\nET\n".b
-        objects = [
-          "<< /Type /Catalog /Pages 2 0 R >>",
-          "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-          "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 480 216] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
-          "<< /Length #{content.bytesize} >>\nstream\n#{content}endstream",
-          "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
-        ]
-
-        pdf = "%PDF-1.4\n".b
-        offsets = [ 0 ]
-        objects.each_with_index do |object, index|
-          offsets << pdf.bytesize
-          pdf << "#{index + 1} 0 obj\n#{object}\nendobj\n".b
-        end
-
-        xref_offset = pdf.bytesize
-        pdf << "xref\n0 #{objects.size + 1}\n".b
-        pdf << "0000000000 65535 f \n".b
-        offsets.drop(1).each { |offset| pdf << format("%010d 00000 n \n", offset).b }
-        pdf << "trailer\n<< /Size #{objects.size + 1} /Root 1 0 R >>\nstartxref\n#{xref_offset}\n%%EOF\n".b
-        @synthetic_pdf = pdf.freeze
-      end
-
       # The configured endpoint's static headers count too, so a changed gateway credential
       # header isn't answered from the cache.
       def cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
@@ -403,7 +355,7 @@ class AiHealth
         message = "AI health #{component.tr('_', ' ')} liveness probe failed"
         metadata = {
           component: component,
-          endpoint: AiHealth.redact_endpoint(endpoint),
+          endpoint: Ai::Instrumentation::Redactor.url(endpoint),
           model: model,
           failure_code: result.failure_code,
           exception_class: error.class.name,
