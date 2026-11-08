@@ -37,5 +37,10 @@ en:
               regex_too_long: "is too long (maximum is %{count} characters)"
               regex_backreference: "cannot use back-references (\\1 to \\9)"
   rule:
+    actions:
+      set_transaction_merchant:
+        not_accessible: "Merchant on an account you can't access"
+        unassigned: "%{name} (no longer assigned)"
+        unavailable: "Merchant no longer available"
     conditions:
       unsupported_label: "Unsupported (%{type})"

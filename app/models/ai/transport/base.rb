@@ -55,7 +55,6 @@ class Ai::Transport::Base
     end
   end
 
-  def converse(request, &on_chunk) = raise NotImplementedError, "#{self.class.name}#converse isn't implemented"
   def judge(state:, questions:)    = raise NotImplementedError, "#{self.class.name}#judge isn't implemented"
   def embed(texts, model:)         = raise NotImplementedError, "#{self.class.name}#embed isn't implemented"
 
@@ -163,8 +162,6 @@ class Ai::Transport::Base
       secrets = endpoint.secrets
       ->(text) { Ai::Instrumentation::Redactor.scrub(text, secrets:) }
     end
-
-    def event_attachments(attachments) = Array(attachments).map { { filename: _1.filename, bytes: _1.data.bytesize } }
 
     # The model that answered differs from the one asked for: LM Studio answers a request for a
     # model it doesn't have with whichever model is loaded, and a 200.

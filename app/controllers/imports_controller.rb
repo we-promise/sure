@@ -252,12 +252,7 @@ class ImportsController < ApplicationController
     end
 
     def create_document_import(file)
-      unless Ai.available?(:embed, family: Current.family, user: Current.user)
-        redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
-        return
-      end
-      # The route can be configured while the store can't be built (pgvector without its extension).
-      adapter = VectorStore.adapter
+      adapter = document_store
       unless adapter
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
         return
@@ -300,12 +295,15 @@ class ImportsController < ApplicationController
     end
 
     def document_upload_supported_extensions
-      return [] unless Ai.available?(:embed, family: Current.family, user: Current.user)
-
-      adapter = VectorStore.adapter
+      adapter = document_store
       return [] unless adapter
 
       adapter.supported_extensions.map(&:downcase).uniq.sort
+    end
+
+    # Nil when `embed` isn't available, or when its store can't be built (pgvector without its extension).
+    def document_store
+      VectorStore.adapter if Ai.available?(:embed, family: Current.family, user: Current.user)
     end
 
     def document_upload_request?

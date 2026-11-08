@@ -100,6 +100,66 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
       "the preview-gated bill link must not render for a user without the flag"
   end
 
+  test "index explains a pending transfer match in its tooltip and opens the transfer" do
+    outflow = create_transaction(account: accounts(:depository), name: "Match outflow", amount: 320, date: Date.current)
+    inflow = create_transaction(account: accounts(:credit_card), name: "Match inflow", amount: -320, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get transactions_url
+
+    assert_response :success
+    match = "##{dom_id(outflow.transaction, :transfer_match)}"
+    assert_select "#{match} a[href='#{transfer_path(transfer)}'][data-turbo-frame=drawer]" do
+      assert_select "span", text: I18n.t("transactions.transfer_match.auto_matched"), minimum: 1
+    end
+    tooltip = "$320.00 in #{accounts(:credit_card).name} on #{I18n.l(Date.current, format: :long)}. Click to review."
+    assert_select "#{match} [role=tooltip]", text: tooltip
+    # The amount is blurred in privacy mode, which a native title would escape.
+    assert_select "#{match} [role=tooltip] span.privacy-sensitive", text: "$320.00"
+    assert_select "#{match} [title*='320']", count: 0
+    # The link, which takes focus, is described by the tooltip itself.
+    tooltip_id = css_select("#{match} [role=tooltip]").first["id"]
+    assert_select "#{match} a[href='#{transfer_path(transfer)}'][aria-describedby=?]", tooltip_id
+
+    # The index shows one leg of a pair; the other leg's row is on its own account's page.
+    get account_url(accounts(:credit_card))
+
+    assert_response :success
+    assert_select "##{dom_id(inflow.transaction, :transfer_match)} a[href='#{transfer_path(transfer)}']"
+    assert_select "##{dom_id(inflow.transaction, :transfer_match)} [role=tooltip]", text: /#{Regexp.escape(accounts(:depository).name)}/
+  end
+
+  test "index does not name or link a pending match's other side in an account the viewer cannot see" do
+    # depository is shared with family_member; investment is not.
+    outflow = create_transaction(account: accounts(:depository), name: "Private match outflow", amount: 320, date: Date.current)
+    inflow = create_transaction(account: accounts(:investment), name: "Private match inflow", amount: -320, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    sign_in users(:family_member)
+
+    get transactions_url
+
+    assert_response :success
+    match = "##{dom_id(outflow.transaction, :transfer_match)}"
+    assert_select "#{match} [role=tooltip]", text: I18n.t("transactions.transfer_match.auto_matched_tooltip_hidden")
+    assert_select "#{match} a[href='#{transfer_path(transfer)}']", count: 0
+    assert_select "#{match} span[tabindex='0'] [data-testid='transfer-match-pill']", minimum: 1
+    assert_select "#{match} span[tabindex='0'][aria-describedby=?]", css_select("#{match} [role=tooltip]").first["id"]
+    assert_select match, text: /#{Regexp.escape(accounts(:investment).name)}/, count: 0
+  end
+
+  test "index gives a pending match on a transfer row no second link to the transfer" do
+    outflow = create_transaction(account: accounts(:depository), name: "Moved match outflow", amount: 320, date: Date.current, kind: "funds_movement")
+    inflow = create_transaction(account: accounts(:credit_card), name: "Moved match inflow", amount: -320, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get transactions_url
+
+    assert_response :success
+    match = "##{dom_id(outflow.transaction, :transfer_match)}"
+    assert_select "#{match} a[href='#{transfer_path(transfer)}']", count: 0
+    assert_select "#{match} [role=tooltip]", text: /#{Regexp.escape(accounts(:credit_card).name)}/
+  end
+
   test "index points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: accounts(:depository), name: "Hint outflow", amount: 500, date: Date.current)
     inflow = create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
