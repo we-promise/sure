@@ -102,7 +102,9 @@ class AccountsProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    unawaited(WidgetBridgeService.instance.pushConfig());
+    // Read before any awaits, so a logout during the fetch drops these writes.
+    final widgetEpoch = WidgetBridgeService.instance.epoch;
+    unawaited(WidgetBridgeService.instance.pushConfig(sinceEpoch: widgetEpoch));
 
     try {
       // Always load from local storage first for instant display
@@ -156,12 +158,15 @@ class AccountsProvider with ChangeNotifier {
       }
 
       // Cached accounts are shared too, so the widget has data even when it
-      // can't fetch on its own; they never replace newer widget data.
-      if (_accounts.isNotEmpty) {
+      // can't fetch on its own; they never replace newer widget data. A server
+      // result is always shared, even when empty, so removed accounts leave
+      // the widget too.
+      if (fetchedFromServer || _accounts.isNotEmpty) {
         unawaited(WidgetBridgeService.instance.syncAccounts(
           _accounts,
           fromServer: fetchedFromServer,
           netWorth: _isBalanceSheetStale ? null : _netWorthFormatted,
+          sinceEpoch: widgetEpoch,
         ));
       }
 

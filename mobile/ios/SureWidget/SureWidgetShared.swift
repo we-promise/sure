@@ -92,7 +92,13 @@ enum SureWidgetStore {
         return snapshot
     }
 
-    static func saveSnapshot(_ snapshot: SureWidgetSnapshot) { write(snapshot, to: snapshotFile) }
+    /// Saves a snapshot unless the user logged out since it was fetched. The
+    /// snapshot keeps its generation, so even a save that races a logout is
+    /// ignored by `loadSnapshot` afterwards.
+    static func saveSnapshot(_ snapshot: SureWidgetSnapshot) {
+        guard (snapshot.generation ?? 0) == currentGeneration() else { return }
+        write(snapshot, to: snapshotFile)
+    }
 
     private static func read<T: Decodable>(_ type: T.Type, from name: String) -> T? {
         guard let url = containerURL()?.appendingPathComponent(name),
@@ -197,6 +203,9 @@ enum SureWidgetAPI {
             SureWidgetStore.saveSnapshot(snapshot)
             return (snapshot, true, false)
         } catch {
+            // Same check on failure: after a logout, don't fall back to the
+            // previous account's saved balances.
+            guard SureWidgetStore.currentGeneration() == generation else { return (nil, false, true) }
             return (saved, false, false)
         }
     }

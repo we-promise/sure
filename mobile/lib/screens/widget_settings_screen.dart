@@ -52,26 +52,38 @@ class _WidgetSettingsScreenState extends State<WidgetSettingsScreen> {
   Future<void> _save() async {
     final key = _controller.text.trim();
     if (key.isEmpty) return;
+    // Read before testing the key, so a logout during the test drops the save.
+    final epoch = _bridge.epoch;
     setState(() {
       _saving = true;
       _message = null;
     });
 
-    final error = await _bridge.testApiKey(key);
+    var error = await _bridge.testApiKey(key);
     if (error == null) {
-      await _bridge.setWidgetApiKey(key);
-      if (context.mounted) {
-        final provider = Provider.of<AccountsProvider>(context, listen: false);
-        final accounts = provider.accounts;
-        // With a key saved the widget fetches fresh data itself; this only
-        // fills it if it has nothing yet.
-        if (accounts.isNotEmpty) {
-          await _bridge.syncAccounts(
-            accounts,
-            fromServer: false,
-            netWorth: provider.isBalanceSheetStale ? null : provider.netWorthFormatted,
-          );
+      try {
+        if (await _bridge.setWidgetApiKey(key, sinceEpoch: epoch)) {
+          if (mounted) {
+            final provider = Provider.of<AccountsProvider>(context, listen: false);
+            final accounts = provider.accounts;
+            // With a key saved the widget fetches fresh data itself; this only
+            // fills it if it has nothing yet.
+            if (accounts.isNotEmpty) {
+              await _bridge.syncAccounts(
+                accounts,
+                fromServer: false,
+                netWorth: provider.isBalanceSheetStale ? null : provider.netWorthFormatted,
+                sinceEpoch: epoch,
+              );
+            }
+          }
+        } else {
+          error = epoch == _bridge.epoch
+              ? 'The key was saved, but the widget couldn\'t be updated. Try again.'
+              : 'You were logged out, so the key wasn\'t saved.';
         }
+      } catch (_) {
+        error = 'Couldn\'t save the key on this device.';
       }
     }
 
@@ -91,7 +103,16 @@ class _WidgetSettingsScreenState extends State<WidgetSettingsScreen> {
   }
 
   Future<void> _remove() async {
-    await _bridge.setWidgetApiKey(null);
+    try {
+      await _bridge.setWidgetApiKey(null);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _message = 'Couldn\'t remove the key on this device.';
+        _messageIsError = true;
+      });
+      return;
+    }
     // When logged in with an API key, the widget falls back to that key.
     final stillRefreshing = await _bridge.effectiveApiKey() != null;
     if (!mounted) return;
@@ -122,7 +143,8 @@ class _WidgetSettingsScreenState extends State<WidgetSettingsScreen> {
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
                         'The widget can only reach this server over HTTPS. Plain HTTP '
-                        'works for IP addresses and .local names only.',
+                        'works only for IP addresses, .local names and single-word '
+                        'hostnames such as http://myserver.',
                         style: theme.textTheme.bodyMedium
                             ?.copyWith(color: theme.colorScheme.error),
                       ),

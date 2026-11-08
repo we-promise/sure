@@ -36,7 +36,12 @@ enum WidgetBridge {
   static func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case "isAvailable":
-      result(containerURL() != nil)
+      // The widget extension needs iOS 17.
+      if #available(iOS 17.0, *) {
+        result(containerURL() != nil)
+      } else {
+        result(false)
+      }
 
     case "update":
       guard let args = call.arguments as? [String: Any], let dir = containerURL() else {
@@ -44,33 +49,51 @@ enum WidgetBridge {
         return
       }
       let generation = currentGeneration(in: dir)
+      let snapshotURL = dir.appendingPathComponent(snapshotFile)
+      var ok = true
       if var config = args["config"] as? [String: Any] {
+        // Balances saved under another key or server belong to that login, so
+        // drop them instead of showing them as current.
+        if let old = readObject(at: dir.appendingPathComponent(configFile)),
+           (old["generation"] as? Int ?? 0) == generation,
+           old["apiKey"] as? String != config["apiKey"] as? String
+            || old["baseUrl"] as? String != config["baseUrl"] as? String {
+          try? FileManager.default.removeItem(at: snapshotURL)
+        }
         config["generation"] = generation
-        write(config, to: dir.appendingPathComponent(configFile))
+        ok = write(config, to: dir.appendingPathComponent(configFile)) && ok
       }
       if var snapshot = args["snapshot"] as? [String: Any] {
         // Cached data only fills an empty widget; it never replaces newer data.
         let replaceExisting = args["replaceExisting"] as? Bool ?? true
         if replaceExisting || !hasSnapshot(in: dir, generation: generation) {
           snapshot["generation"] = generation
-          write(snapshot, to: dir.appendingPathComponent(snapshotFile))
+          ok = write(snapshot, to: snapshotURL) && ok
+        } else if let netWorth = snapshot["netWorth"] as? String,
+                  var existing = readObject(at: snapshotURL) {
+          // Keep the saved accounts but take the newer net worth.
+          existing["netWorth"] = netWorth
+          ok = write(existing, to: snapshotURL) && ok
         }
       }
       WidgetCenter.shared.reloadAllTimelines()
-      result(true)
+      result(ok)
 
     case "clear":
-      if let dir = containerURL() {
-        // Invalidate first, so a widget fetch already in progress can't save
-        // the old account's data after the files are deleted.
-        let next: [String: Any] = ["generation": currentGeneration(in: dir) + 1]
-        write(next, to: dir.appendingPathComponent(generationFile))
-        for name in [configFile, snapshotFile] {
-          try? FileManager.default.removeItem(at: dir.appendingPathComponent(name))
-        }
+      guard let dir = containerURL() else {
+        result(true)  // No shared storage, so nothing to clear.
+        return
+      }
+      // Invalidate first, so a widget fetch already in progress can't save
+      // the old account's data after the files are deleted. If that fails,
+      // report it: the files are still deleted, but the caller retries.
+      let next: [String: Any] = ["generation": currentGeneration(in: dir) + 1]
+      let invalidated = write(next, to: dir.appendingPathComponent(generationFile))
+      for name in [configFile, snapshotFile] {
+        try? FileManager.default.removeItem(at: dir.appendingPathComponent(name))
       }
       WidgetCenter.shared.reloadAllTimelines()
-      result(true)
+      result(invalidated)
 
     default:
       result(FlutterMethodNotImplemented)
@@ -91,10 +114,16 @@ enum WidgetBridge {
     return (snapshot["generation"] as? Int ?? 0) == generation
   }
 
-  private static func write(_ object: Any, to url: URL) {
+  @discardableResult
+  private static func write(_ object: Any, to url: URL) -> Bool {
     guard JSONSerialization.isValidJSONObject(object),
-          let data = try? JSONSerialization.data(withJSONObject: object) else { return }
-    try? data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+          let data = try? JSONSerialization.data(withJSONObject: object) else { return false }
+    do {
+      try data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+      return true
+    } catch {
+      return false
+    }
   }
 
   /// Re-signing tools such as AltStore and SideStore rename the App Group and

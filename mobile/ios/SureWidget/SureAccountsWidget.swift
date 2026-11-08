@@ -224,9 +224,17 @@ private struct AccountRow: View {
 private struct LockScreenView: View {
     let entry: AccountsEntry
 
+    /// Same indicators as the home screen layout: a key when auto refresh is
+    /// off, no signal when the last refresh failed.
+    private var statusIcon: String? {
+        if entry.needsSetup { return "key" }
+        if !entry.isLive { return "wifi.slash" }
+        return nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(entry.accounts.prefix(3))) { account in
+            ForEach(Array(entry.accounts.prefix(statusIcon == nil ? 3 : 2))) { account in
                 HStack {
                     Text(account.name)
                         .lineLimit(1)
@@ -239,6 +247,14 @@ private struct LockScreenView: View {
                         .privacySensitive()
                 }
                 .font(.caption)
+            }
+            if let statusIcon, let updated = entry.snapshot?.updatedAt {
+                HStack(spacing: 4) {
+                    Image(systemName: statusIcon)
+                    Text(updated, style: .time)
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             }
         }
     }
