@@ -531,13 +531,18 @@ class Portfolio::DailyReturns
             -- previous day's row, and with nothing left there is no unit at
             -- the zero price to misread. Part of a position leaving still
             -- suppresses the day, for the units that stayed.
+            --
+            -- A quantity of 0 moves no units and has nothing to value, as the
+            -- carried pass also reads it, so it never suppresses the day. A
+            -- NULL quantity is unknown and does.
             COALESCE(BOOL_OR(#{fragment(:journal_predicate)}
                              AND (trades.qty IS NULL
-                                  OR NOT COALESCE((journal_holdings.price > 0 AND journal_fx.rate IS NOT NULL)
-                                                  OR (#{journal_out_unpriced_sql}
-                                                      AND journal_holdings.qty = 0
-                                                      AND journal_prior.price IS NOT NULL
-                                                      AND journal_prior_fx.rate IS NOT NULL), false))), false) AS journal_unpriced
+                                  OR (trades.qty <> 0
+                                      AND NOT COALESCE((journal_holdings.price > 0 AND journal_fx.rate IS NOT NULL)
+                                                       OR (#{journal_out_unpriced_sql}
+                                                           AND journal_holdings.qty = 0
+                                                           AND journal_prior.price IS NOT NULL
+                                                           AND journal_prior_fx.rate IS NOT NULL), false)))), false) AS journal_unpriced
           FROM entries
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
           -- The same active-until window the balances use: a flow dated after

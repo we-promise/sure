@@ -1207,6 +1207,21 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
            "a journal with no quantity is a journal that could not be valued"
   end
 
+  # A quantity of 0 is not a missing quantity: it moves no units, writes no
+  # holding row and has nothing to value, so the day is computable and
+  # nothing is reported missing. The carried pass already skips it.
+  test "a zero-quantity journal does not suppress the day" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    security_journal(account: @account, date: @day_two, qty: 0)
+
+    second = daily_returns.rows.last
+
+    assert_not second.suppressed
+    assert_not second.unvalued_journal
+    assert_equal BigDecimal("0"), second.external_flow
+  end
+
   # Carried, the same journal is still one that could not be valued. Its
   # zero-priced row left the position at nothing, so the first priced day's
   # jump is the zero price undoing itself; dropped from the carry, that jump
