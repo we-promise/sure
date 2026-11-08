@@ -180,6 +180,26 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
   # The importers walk every security on every sync, so a caller that has not
   # opted in must not inherit that cost -- the same reason
   # `include_classification:` defaults to false.
+  # A fund's holdings change as it rebalances, and the stamp otherwise closes
+  # the gate for good, so a forced refresh is how a stored set is re-read.
+  test "a forced refresh asks a stamped fund again and replaces its holdings" do
+    import(info(constituents: [ constituent("AAA", "Old", 5) ]))
+    first_stamp = @security.reload.constituents_fetched_at
+
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
+    provider.expects(:fetch_security_info).once.returns(
+      provider_success_response(info(constituents: [ constituent("BBB", "New", 5) ]))
+    )
+    @security.stubs(:price_data_provider).returns(provider)
+    travel 1.minute do
+      @security.import_provider_details(clear_cache: true, include_constituents: true)
+    end
+
+    assert_equal %w[BBB], @security.reload.constituents.pluck(:ticker)
+    assert_operator @security.constituents_fetched_at, :>, first_stamp
+  end
+
   test "a caller that has not opted in makes no provider call" do
     provider = capable_provider("provider")
     provider.expects(:fetch_security_info).never

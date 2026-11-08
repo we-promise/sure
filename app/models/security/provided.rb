@@ -312,8 +312,11 @@ module Security::Provided
     # resolved now, as the classification stamp is, so a different provider
     # -- assigned, or the enabled default for a security with no
     # `price_provider` -- is asked once.
+    #
+    # A forced refresh (`clear_cache`) asks again too: a fund's holdings change
+    # as it rebalances, and the stamp otherwise closes the gate for good.
     wants_constituents = include_constituents && price_data_provider.supplies_constituents? &&
-      (constituents_fetched_at.nil? || constituents_fetched_from != provider_key)
+      (clear_cache || constituents_fetched_at.nil? || constituents_fetched_from != provider_key)
 
     unless has_metadata && !wants_classification && !wants_constituents && !clear_cache
       response = price_data_provider.fetch_security_info(
