@@ -290,6 +290,20 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(200), @amzn.avg_cost
   end
 
+  test "a holding saved after the preload reads its own cost, not the preloaded one" do
+    earlier = 400.days.ago.to_date
+    create_trade(@amzn.security, account: @account, qty: 10, price: 200.00, date: earlier)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100.00, date: Date.current)
+    Holding.preload_avg_costs([ @amzn ])
+    assert_equal Money.new(150), @amzn.avg_cost, "the preload answers for today's date"
+    assert_equal Money.new(150 * @amzn.qty), @amzn.trend.previous, "the trend is built on the preloaded cost"
+
+    @amzn.update!(date: earlier)
+
+    assert_equal Money.new(200), @amzn.avg_cost
+    assert_equal Money.new(200 * @amzn.qty), @amzn.trend.previous
+  end
+
   test "calculates total return trend" do
     @amzn.stubs(:avg_cost).returns(Money.new(214.00))
     @nvda.stubs(:avg_cost).returns(Money.new(126.00))
