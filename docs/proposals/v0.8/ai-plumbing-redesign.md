@@ -663,7 +663,7 @@ migration (each variable's `Setting` field, where it has one, maps the same way)
 | `CATEGORIZATION_PROVIDER` (`Setting.categorization_provider`, from 2d) | The instance's Jev choice until the deprecated ENV path goes: `categorize` lists Jev and `shadow_categorize` the LLM, or the other way round. 2d's migration copies a single-family instance's `families.categorization_provider` into the setting (call by @josh-sanders during development of PR #4440, in 2d's plan) |
 | `CATEGORIZATION_CONFIDENCE_THRESHOLD` | Dropped: it overrode a family setting, which ENV no longer does. Upgrade note: set it on the categorization page |
 | `CATEGORIZATION_SHADOW_RATE` | `Setting.ai_shadow_rates["categorize"]` from PR 7; until then it overrides the family's rate, as today |
-| `EMBEDDING_URI_BASE`, `EMBEDDING_ACCESS_TOKEN` | A `compatible` endpoint named `embed` and its key; `location: local` for http, `cloud` for https |
+| `EMBEDDING_URI_BASE`, `EMBEDDING_ACCESS_TOKEN` | A `compatible` endpoint named `embed` and its key; `location: local` for http, `cloud` for https. No `extra_headers`: embedding requests send none, as today, even when the endpoint falls back to the OpenAI URL whose requests carry `OPENAI_EXTRA_HEADERS`. A gateway that needs a header on every request rejects them until PR 7 |
 | `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS` | A model on `embed` with `capabilities: [embedding]` and `embedding_dimensions` |
 | `VECTOR_STORE_PROVIDER` | `openai`: the `embed` route uses the OpenAI endpoint's vector store. `pgvector` or `qdrant`: `Setting.vector_store_backend` |
 | `EXTERNAL_ASSISTANT_URL`, `_TOKEN`, `_MODEL` (`external_assistant_*`) | A `compatible` endpoint with `agent: true`, its key and model, listed in the `chat` route |
@@ -2820,7 +2820,13 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    provider's JSON-schema dialect, so Sure drops what a provider's strict mode refuses (Cohere
    refuses nullable objects and integer `minimum`; 2c's `auto` then falls to `none`), rather than
    2c's fallback changing (call by @josh-sanders during development of PR #4440, after 2e's live
-   testing). That fixes drift bug 4. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
+   testing). That fixes drift bug 4. The `embed` endpoint has its own `extra_headers`, sent on
+   embedding requests and by its health probe alike, so an embedding server behind a gateway that
+   needs a header on every request (Cloudflare AI Gateway's authenticated mode, Helicone) works;
+   until then embedding requests send none, as on `main` (call by @josh-sanders during development
+   of PR #4440, after #4774's review). RubyLLM's `embed` takes no headers, on 2.1.1 or `main`,
+   unlike `complete`; the public way is a provider's `headers` override, merged into every request,
+   unless RubyLLM adds per-call headers to `embed` by then. `families.chat_mode` (built-in or external) replaces `assistant_type`, which is dropped.
    The test helpers switch to the new fixtures. Adds the config and consent tests.
    *Still on old code:* nothing; from here every process reads the same rows.
 8. **Health and settings pages.** The health page (lanes, down marks, AI threads per worker,

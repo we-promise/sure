@@ -183,6 +183,7 @@ to survive them, and this table is the upgrade checklist for PR 5.
 | #1268, #1353 | `config.redact_error_messages` moves provider text to `Error#provider_message`, `#response_body` and `#error_code`; credentials are kept out of errors | On 2.2, turn it on and classify from `error_code` and `response_body`. In 2a, the `Redactor` scrubs messages before logs and Langfuse | 2a step 7; PR 5 |
 | #1191 `6fc0a7ea` | Connection settings are resolved per request | Revisit the spike's note on the 64-entry connection cache before any per-call timeout | PR 4, PR 6 |
 | #1297, #1160, #1092 | `embed` raises on too few vectors, pairs vectors by row index and keeps the Array shape | 2a's one-vector-per-text check becomes redundant on 2.2; it stays until then | 2a step 6; 2e |
+| None | `embed` still takes no `headers:` (`complete` does) | An embedding endpoint's static headers need a provider `headers` override, or an upstream change | PR 7 |
 | `9c05bff2` | Bedrock's and vLLM's context-length wording recognised | Both join the `ContextTooLong` contract cases | 2a step 13 |
 | #1380 `277b23c2` | `tool_calls` becomes a collection of `ToolCall` | Read it either way | 2a step 6; PR 6 |
 | #1438 `873fc2b4` | Internal helpers hidden from the documented API | A "RubyLLM surface" test lists every RubyLLM method Sure calls and fails if one goes | 2a step 13 |
