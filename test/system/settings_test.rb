@@ -29,7 +29,7 @@ class SettingsTest < ApplicationSystemTestCase
       merchants_index = @settings_links.index([ "Merchants", family_merchants_path ])
       @settings_links.insert(merchants_index + 1, [ "Statement Vault", account_statements_path ])
       @settings_links += [
-        [ "AI Prompts", settings_ai_prompts_path ],
+        [ I18n.t("settings.settings_nav.ai_prompts_label"), settings_ai_prompts_path ],
         [ "API Keys", settings_api_keys_path ]
       ]
     end
@@ -109,7 +109,7 @@ class SettingsTest < ApplicationSystemTestCase
       visit accounts_path
 
       # Assert that admin-only settings are not present in the navigation
-      assert_no_selector "li", text: "AI Prompts"
+      assert_no_selector "li", text: I18n.t("settings.settings_nav.ai_prompts_label")
       assert_no_selector "li", text: "API Keys"
       assert_no_selector "li", text: "Bank sync"
       assert_no_selector "li", text: "Statement Vault"
