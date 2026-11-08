@@ -25,10 +25,7 @@ uk:
           cancel: Скасувати
           confirm: Підтвердити
       prompt_field:
-        provider_label: Постачальник
-        prompt_label: Промпт
         provider_openai: OpenAI
-        provider_anthropic: Anthropic
         reset: Скинути до стандартного
         reset_confirm_title: Повернути стандартний промпт?
         reset_confirm_body: Ваш власний промпт буде видалено, а вбудовані стандартні інструкції — відновлено.

@@ -6,9 +6,6 @@ pl:
         format_risk: 'Twoje polecenie dla %{provider} usunęło przykład {"%{key}":
           ...}. Każde żądanie nadal oczekuje tego kształtu, więc parsowanie zwykle
           działa, ale nadpisanie proszące o inny format wyjścia je zepsuje.'
-        prompt_label: Polecenie
-        provider_anthropic: Anthropic
-        provider_label: Dostawca
         provider_openai: OpenAI
         reset: Przywróć domyślne
         reset_confirm_body: Spowoduje to odrzucenie Twojego niestandardowego polecenia

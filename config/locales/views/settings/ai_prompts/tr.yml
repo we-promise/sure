@@ -27,10 +27,7 @@ tr:
           cancel: İptal
           confirm: Onayla
       prompt_field:
-        provider_label: Sağlayıcı
-        prompt_label: İstem
         provider_openai: OpenAI
-        provider_anthropic: Anthropic
         reset: Varsayılana sıfırla
         reset_confirm_title: Varsayılan isteme sıfırlansın mı?
         reset_confirm_body: Bu işlem özel isteminizi silecek ve yerleşik varsayılan talimatları geri yükleyecektir.

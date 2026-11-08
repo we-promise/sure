@@ -3,10 +3,7 @@ en:
   settings:
     ai_prompts:
       prompt_field:
-        provider_label: Provider
-        prompt_label: Prompt
         provider_openai: OpenAI
-        provider_anthropic: Anthropic
         reset: Reset to default
         reset_confirm_title: Reset to default prompt?
         reset_confirm_body: This will discard your custom prompt and restore the built-in default instructions.

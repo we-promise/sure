@@ -4,9 +4,6 @@ fr:
     ai_prompts:
       prompt_field:
         format_risk: 'Votre prompt %{provider} ne contient plus l''exemple {"%{key}": ...}. Chaque requête demande toujours ce format, donc l''analyse de la réponse fonctionne en général, mais un prompt qui demande un autre format de sortie la fera échouer.'
-        prompt_label: Prompt
-        provider_anthropic: Anthropic
-        provider_label: Fournisseur
         provider_openai: OpenAI
         reset: Rétablir la valeur par défaut
         reset_confirm_body: Votre prompt personnalisé sera supprimé et les instructions intégrées par défaut seront restaurées.
