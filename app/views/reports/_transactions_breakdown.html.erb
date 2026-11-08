@@ -1,18 +1,18 @@
+<%# locals: (transactions:, period_type:, start_date:, end_date:) %>
 <div>
+  <%
+    # Params every link back to this report keeps.
+    base_params = {
+      period_type: period_type,
+      start_date: start_date,
+      end_date: end_date,
+      sort_by: params[:sort_by],
+      sort_direction: params[:sort_direction]
+    }.compact
+  %>
+
   <%# Export Controls %>
   <div class="flex items-center justify-end mb-4 flex-wrap gap-3">
-    <%
-      # Build params hash for links
-      base_params = {
-        period_type: period_type,
-        start_date: start_date,
-        end_date: end_date,
-        sort_by: params[:sort_by],
-        sort_direction: params[:sort_direction]
-      }.compact
-    %>
-
-    <%# Export Options %>
     <div class="flex items-center gap-2">
       <%= link_to export_transactions_reports_path(base_params.merge(format: :csv)),
                   class: "font-medium whitespace-nowrap inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary border border-secondary bg-transparent hover:bg-surface-hover" do %>
@@ -46,8 +46,9 @@
       # Toggle sort direction: if currently sorting by amount desc, switch to asc; otherwise default to desc
       next_sort_direction = (current_sort_by == "amount" && current_sort_direction == "desc") ? "asc" : "desc"
 
-      # Build params for amount sort link
-      amount_sort_params = base_params.merge(sort_by: "amount", sort_direction: next_sort_direction)
+      # Build params for amount sort link. The helper keeps the period, trend
+      # selection, and granularity, so sorting does not drop the chart.
+      amount_sort_params = { sort_by: "amount", sort_direction: next_sort_direction }
     %>
 
     <div class="space-y-8">
