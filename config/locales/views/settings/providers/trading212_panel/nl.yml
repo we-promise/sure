@@ -1,0 +1,33 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        trading212: "Synchroniseer uw Trading 212-beleggingsportfolio met een alleen-lezen API-sleutel."
+      trading212_panel:
+        steps:
+          step_1: "Ga naar Trading 212 → Settings → API (web of mobiele app)."
+          step_2: "Genereer een nieuwe API-sleutel — Trading 212 toont u een API ID en een Secret Key."
+          step_3: "Plak beide hieronder, kies uw omgeving en accountvaluta en sla op."
+        api_key_label: "API ID"
+        api_key_placeholder_new: "Plak uw Trading 212 API ID"
+        api_key_placeholder_existing: "Laat leeg om de huidige API ID te behouden"
+        api_secret_label: "Secret Key"
+        api_secret_placeholder_new: "Plak uw Trading 212 Secret Key"
+        api_secret_placeholder_existing: "Laat leeg om de huidige Secret Key te behouden"
+        environment_label: "Omgeving"
+        environment_live: "Live-account"
+        environment_demo: "Demoaccount"
+        currency_label: "Accountvaluta"
+        save_configuration: "Configuratie opslaan"
+        update_configuration: "Configuratie bijwerken"
+        sync: "Synchroniseren"
+        syncing: "Synchroniseren..."
+        disconnect: "Trading 212-account loskoppelen"
+        disconnect_confirm: "Trading 212 loskoppelen?"
+        default_account_name: "Trading 212-account"
+        add_account: "Nog een account toevoegen"
+        status_configured_prefix: "Geconfigureerd. Ga naar het tabblad"
+        accounts_tab: "Accounts"
+        status_configured_suffix: "om gevonden accounts te beheren."
+        not_configured: "Niet geconfigureerd."

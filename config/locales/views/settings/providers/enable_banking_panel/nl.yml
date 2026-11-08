@@ -1,0 +1,37 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        enable_banking: "Synchroniseer Europese bankrekeningen via PSD2 open banking."
+      enable_banking_panel:
+        callback_url_instruction: "Gebruik %{callback_url} als callback-URL."
+        connection_error: "Verbindingsfout"
+        step_1_html: "Ga naar %{link} en haal uw ontwikkelaarsgegevens op."
+        step_2: "Kies uw land en plak hieronder de Application ID en het Client Certificate."
+        step_3: "Sla op en gebruik daarna Koppeling toevoegen om uw bank te koppelen."
+        config_locked_title: "Configuratie vergrendeld"
+        config_locked_message: "Koppel alle gekoppelde banken los voordat u deze gegevens wijzigt."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Voer de Application ID in"
+        application_id_placeholder_update: "Voer een nieuwe ID in om bij te werken"
+        client_certificate_label: "Client Certificate (met private key)"
+        keep_client_certificate_hint: "Laat leeg om het huidige certificaat te behouden"
+        save_and_connect: "Opslaan en koppelen"
+        update_connection: "Koppeling bijwerken"
+        connected_bank: "Gekoppelde bank"
+        session_expires: "Sessie verloopt: %{date}"
+        unknown: "Onbekend"
+        connection: "Koppeling"
+        session_expired_reconnect: "Sessie verlopen - opnieuw koppelen"
+        configured: "Geconfigureerd"
+        ready_to_link: "Klaar om accounts te koppelen"
+        sync: "Synchroniseren"
+        reconnect: "Opnieuw koppelen"
+        connect_bank: "Bank koppelen"
+        remove: "Verwijderen"
+        remove_confirm: "Weet u zeker dat u deze koppeling wilt verwijderen?"
+        add_connection: "Koppeling toevoegen"
+        syncing: "Synchroniseren"
+        select_country: "Selecteer land..."
+        country_label: "Land"

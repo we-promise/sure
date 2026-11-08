@@ -1,0 +1,10 @@
+---
+fr:
+  settings:
+    providers:
+      taglines:
+        up: Synchronisez des comptes bancaires australiens Up avec un jeton d'accès personnel.
+      up_panel:
+        step_1_html: Allez sur %{link} et générez un jeton d'accès personnel.
+        step_2: Copiez votre jeton d'accès personnel.
+        step_3: Collez le jeton ci-dessous, enregistrez, puis liez vos comptes synchronisés.

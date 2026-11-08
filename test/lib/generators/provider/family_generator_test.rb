@@ -269,6 +269,56 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "writes the provider's routes to a file of their own, which routes.rb draws" do
+    path, content = Provider::FamilyGenerator.provider_routes_file("gocardless")
+
+    assert_equal "config/routes/providers/gocardless.rb", path
+    assert_parses content
+    assert_match(/\Aresources :gocardless_items, only: \[ /, content)
+    assert_includes Rails.root.join("config/routes.rb").read, %(Dir[Rails.root.join("config/routes/providers/*.rb")])
+  end
+
+  test "inserts the provider's collection after the last one in the real accounts controller" do
+    source = Rails.root.join("app/controllers/accounts_controller.rb").read
+    result = Provider::FamilyGenerator.insert_accounts_controller_items(source, "gocardless")
+
+    assert_parses result
+    inserted = "@gocardless_items = visible_provider_items(family.gocardless_items.ordered.includes(:syncs, :gocardless_accounts))"
+    assert_equal 1, result.scan(inserted).size
+    lines = result.lines
+    at = lines.index { |line| line.include?(inserted) }
+    last_existing = lines[0...at].rindex { |line| line.match?(/@\w+_items = visible_provider_items\(/) }
+    assert last_existing, "follows the providers already listed"
+    assert_no_match(/@\w+_items = visible_provider_items\(/, lines[(at + 1)..].take(40).join, "inserted after the last provider's collection")
+  end
+
+  test "inserts after a provider call spanning several lines without splitting it" do
+    source = <<~RUBY
+      def index
+        @plaid_items = visible_provider_items(family.plaid_items.ordered)
+        @wallet_items = visible_provider_items(
+          family.wallet_items.ordered.includes(:accounts)
+        )
+      end
+    RUBY
+    result = Provider::FamilyGenerator.insert_accounts_controller_items(source, "gocardless")
+
+    assert_parses result
+    assert_match(/\n  \)\n  @gocardless_items = visible_provider_items/, result)
+  end
+
+  test "returns nil when there is no provider collection to follow" do
+    assert_nil Provider::FamilyGenerator.insert_accounts_controller_items("def index\nend\n", "gocardless")
+  end
+
+  test "the settings tagline file sits where I18n loads it and names the provider" do
+    path, content = Provider::FamilyGenerator.settings_tagline_locale("gocardless", "Gocardless")
+
+    assert_equal "config/locales/views/settings/providers/gocardless_panel/en.yml", path
+    assert File.fnmatch?("config/locales/**/*en.yml", path, File::FNM_PATHNAME), "i18n-tasks reads config/locales/**/*%{locale}.yml"
+    assert_equal "Sync your Gocardless accounts.", YAML.safe_load(content).dig("en", "settings", "providers", "taglines", "gocardless")
+  end
+
   # Bank sync builds its connection rows and drawers from FAMILY_PANELS, so a
   # section injected into show.html.erb would render outside both.
   test "adds the provider to the family panels of the real providers controller" do

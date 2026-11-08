@@ -1,0 +1,66 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        trade_republic: 通过安全只读网页登录同步您的 Trade Republic 投资账户。
+      trade_republic_panel:
+        encryption_warning:
+          title: 未配置加密
+          message: 在配置 Active Record 加密之前，无法安全存储 Trade Republic 凭据和会话数据。
+        steps:
+          step_1: 输入您在 Trade Republic 应用程序中使用的手机号和 PIN 或密码，然后保存。
+          step_2: 根据提示输入来自身份验证器应用程序的验证码。
+          step_3: 在 Trade Republic 应用程序中弹出提示时批准登录。
+        phone_number_label: 手机号
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: 留空以保留当前手机号
+        pin_label: PIN 或密码
+        pin_placeholder_new: 您的 Trade Republic PIN 或密码
+        pin_placeholder_existing: 留空以保留当前 PIN 或密码
+        currency_label: 账户货币
+        connect: 登录
+        confirm_login: 检查登录
+        complete_login: 继续
+        authenticator_code_label: 身份验证器代码（如提示）
+        authenticator_code_placeholder: 6 位代码
+        push_login_notice: 请立即在 Trade Republic 应用程序中批准登录。Sure 会在后台自动检查。您也可以手动检查状态。
+        check_login_status: 立即检查状态
+        authenticator_code_notice: 请输入来自身份验证器应用程序的代码。
+        approval_pending: 登录已发起。请在 Trade Republic 应用程序中批准；Sure 正在自动检查。
+        awaiting_confirmation: 正在等待在 Trade Republic 应用程序中批准。
+        awaiting_authenticator_code: 需要输入身份验证器代码。
+        login_expired: 批准请求已过期。
+        restart_login: 重新开始登录
+        connection_success:
+          title: Trade Republic 连接成功
+          message: 您的 Trade Republic 连接已就绪。
+          description: Sure 正在后台同步您的 Trade Republic 数据。
+          close: 完成
+        qr_login: 二维码登录
+        qr_cancel: 取消二维码登录
+        qr_back_to_credentials: 返回手机号和 PIN 或密码
+        qr_loading: 正在准备二维码…
+        qr_instruction: 使用手机相机扫描二维码，然后在 Trade Republic 应用程序中批准登录。
+        qr_success: 登录已批准。Sure 正在刷新提供商页面。
+        qr_error: 无法启动二维码登录。请重试。
+        requires_update: 重新登录以恢复同步。
+        session_expires_in: "登录将于 %{time}（%{at}）后过期。"
+        add_account: 添加其他连接
+        save_configuration: 保存并开始登录
+        update_configuration: 更新配置
+        sync: 同步
+        syncing: 同步中...
+        disconnect: 断开 Trade Republic 连接
+        disconnect_confirm: 断开 Trade Republic 连接？您已同步的账户将转为手动管理账户。
+        disconnect_confirm_with_identifier: "断开尾号为 %{last4} 的 Trade Republic 连接？您已同步的账户将转为手动管理账户。"
+        identifier_phone: 手机号
+        identifier_account: 账户
+        status_configured_prefix: 已连接。请访问
+        accounts_tab: 账户管理
+        setup_accounts: 设置账户
+        accounts_discovered:
+          one: 1 个 Trade Republic 账户。
+          other: "%{count} 个 Trade Republic 账户。"
+        status_configured_suffix: 标签页以管理已发现的账户。
+        not_configured: 尚未配置。

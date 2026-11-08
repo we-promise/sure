@@ -1,0 +1,28 @@
+---
+it:
+  settings:
+    providers:
+      taglines:
+        binance: Sincronizza i tuoi saldi spot Binance usando una chiave API in sola lettura.
+      binance_panel:
+        setup_instructions: "Per connettere Binance, crea una chiave API in sola lettura:"
+        step1_html: 'Vai alla <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestione API Binance</a>'
+        step2: "Crea una nuova chiave API con solo il permesso Abilita lettura"
+        step3: "Incolla la tua chiave API e il segreto qui sotto"
+        no_withdraw_title: "Solo chiave in sola lettura"
+        no_withdraw_body: "Non abilitare i permessi di prelievo quando crei la tua chiave API Binance. Sure ha bisogno solo dell'accesso in lettura."
+        ip_hint_title: "Whitelist IP richiesta"
+        ip_hint_body: "Aggiungi l'IP di uscita del server app alla whitelist della chiave API Binance:"
+        ip_hint_contact_admin: "Contatta il tuo amministratore per ottenere l'indirizzo IP di uscita del server app."
+        api_key_label: Chiave API
+        api_key_placeholder: Incolla la tua chiave API Binance
+        api_secret_label: Segreto API
+        api_secret_placeholder: Incolla il tuo segreto API Binance
+        connect_button: Connetti Binance
+        syncing: Sincronizzazione...
+        sync: Sincronizza
+        historical_import: "Impostazioni importazione storica"
+        sync_start_date_label: "Importa dati da"
+        sync_start_date_help: "Seleziona fino a quando indietro recuperare le operazioni storiche."
+        disconnect: Disconnetti
+        disconnect_confirm: "Sei sicuro di voler disconnettere Binance?"

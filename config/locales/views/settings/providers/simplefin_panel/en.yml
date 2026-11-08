@@ -1,0 +1,13 @@
+---
+en:
+  settings:
+    providers:
+      taglines:
+        simplefin: Connect US bank accounts via the open SimpleFIN protocol.
+      simplefin_panel:
+        step_1_html: "Go to %{link} for a one-time setup token."
+        step_2: "Paste the token below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+        setup_token_label: "Setup Token"
+        setup_token_placeholder: "Paste SimpleFIN setup token"
+        save_and_connect: "Save and connect"

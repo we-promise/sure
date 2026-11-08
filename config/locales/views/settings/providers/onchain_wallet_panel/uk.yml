@@ -1,0 +1,21 @@
+---
+uk:
+  settings:
+    providers:
+      taglines:
+        onchain_wallet: Відстежуйте некастодіальні гаманці Bitcoin, EVM, Solana, Cosmos і Polkadot за їхніми публічними адресами.
+      onchain_wallet_panel:
+        add_wallet: Додати гаманець
+        advanced: Додатково
+        disconnect_all: Відключити всі гаманці
+        disconnect_all_confirm: Буде видалено всі відстежувані адреси та їхні рахунки. Продовжити?
+        etherscan_api_key_label: Ключ API Etherscan (необов'язково)
+        etherscan_api_key_placeholder: Вставте ключ API Etherscan
+        etherscan_hint: Дані Ethereum можна зчитувати без ключа. Ключ Etherscan лише підвищує ліміт запитів для Ethereum.
+        keep_etherscan_api_key: Залиште порожнім, щоб зберегти наявний ключ
+        manage_wallets: Керувати гаманцями
+        keyless_body: Sure лише зчитує публічні дані блокчейну. Жодні ключі, сид-фрази чи підписи не використовуються, і нічого не може бути витрачено.
+        keyless_title: Лише читання, ключі не потрібні
+        save: Зберегти
+        sync_start_date_hint: Перекази до цієї дати ігноруються. Залиште порожнім, щоб імпортувати все, що повідомляє оглядач блоків.
+        sync_start_date_label: Ігнорувати перекази до

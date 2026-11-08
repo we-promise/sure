@@ -1,0 +1,8 @@
+---
+zh-TW:
+  settings:
+    providers:
+      up_panel:
+        step_1_html: 前往 %{link} 並產生 Personal Access Token。
+        step_2: 複製您的 Personal Access Token。
+        step_3: 將 Token 貼到下方並儲存，然後連結您已同步的帳戶。

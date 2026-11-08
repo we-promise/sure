@@ -1,0 +1,20 @@
+---
+pt-PT:
+  settings:
+    providers:
+      taglines:
+        coinbase: Importe as suas posições cripto Coinbase e acompanhe o desempenho.
+      coinbase_panel:
+        setup_instructions: "Para ligar a Coinbase:"
+        step1_html: Aceda a <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Definições da API Coinbase</a>
+        step2: Crie uma nova chave de API com permissões apenas de leitura (ver contas, ver transações)
+        step3: Copie a sua chave de API e segredo de API e cole-os abaixo
+        api_key_label: Chave de API
+        api_key_placeholder: Introduza a sua chave de API Coinbase
+        api_secret_label: Segredo de API
+        api_secret_placeholder: Introduza o seu segredo de API Coinbase
+        connect_button: Ligar Coinbase
+        syncing: A sincronizar...
+        sync: Sincronizar
+        disconnect: Desligar
+        disconnect_confirm: Tem a certeza de que pretende desligar esta ligação Coinbase? As suas contas sincronizadas tornar-se-ão contas manuais.

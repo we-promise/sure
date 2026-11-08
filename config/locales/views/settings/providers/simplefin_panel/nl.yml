@@ -1,0 +1,13 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        simplefin: "Koppel Amerikaanse bankrekeningen via het open SimpleFIN-protocol."
+      simplefin_panel:
+        step_1_html: "Ga naar %{link} voor een eenmalig setuptoken."
+        step_2: "Plak het token hieronder en koppel."
+        step_3: "Ga daarna naar Accounts om uw gesynchroniseerde accounts te koppelen."
+        setup_token_label: "Setuptoken"
+        setup_token_placeholder: "Plak het SimpleFIN-setuptoken"
+        save_and_connect: "Opslaan en koppelen"

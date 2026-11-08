@@ -1,0 +1,19 @@
+---
+en:
+  settings:
+    providers:
+      taglines:
+        lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
+      lunchflow_panel:
+        step_1_html: "Go to %{link} and create an API key."
+        step_2: "Paste your key below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+        api_key_label: "API Key"
+        api_key_placeholder_new: "Paste API key here"
+        api_key_placeholder_update: "Enter new API key to update"
+        base_url_label: "Base URL (Optional)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
+        sync_start_date_label: "Import transactions from"
+        sync_start_date_help: "Leave blank to import everything Lunch Flow has. Moving the date earlier imports the missing period on the next sync. Moving it later doesn't affect transactions already imported."
+        save_and_connect: "Save and connect"
+        update_connection: "Update connection"

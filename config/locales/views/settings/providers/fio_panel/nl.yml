@@ -1,0 +1,10 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        fio: "Synchroniseer een Fio banka-rekening met een alleen-lezen API-token."
+      fio_panel:
+        step_1_html: "Meld u aan bij %{link} internetbankieren en open Settings → API."
+        step_2: "Maak een token aan met alleen-lezentoegang (\"Sledování účtu\"). Hiervoor is sterke autorisatie nodig en het token is maximaal 180 dagen geldig."
+        step_3: "Plak het token hieronder en sla op. Eén token geeft toegang tot één rekening, dus voeg per Fio-rekening een koppeling toe."

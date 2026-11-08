@@ -1,0 +1,13 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        simplefin: Açık SimpleFIN protokolü üzerinden ABD banka hesaplarını bağlayın.
+      simplefin_panel:
+        save_and_connect: Kaydet ve bağlan
+        setup_token_label: Kurulum Anahtarı
+        setup_token_placeholder: SimpleFIN kurulum anahtarını yapıştırın
+        step_1_html: Tek seferlik kurulum anahtarı için %{link} adresine gidin.
+        step_2: Anahtarı aşağıya yapıştırın ve bağlanın.
+        step_3: Ardından senkronize hesaplarınızı bağlamak için Hesaplar'a gidin.

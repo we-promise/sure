@@ -1,0 +1,61 @@
+---
+uk:
+  settings:
+    providers:
+      taglines:
+        ibkr: Синхронізуйте інвестиційні рахунки Interactive Brokers за допомогою імпорту Flex Query.
+      ibkr_panel:
+        steps:
+          step_1: 'У вашому клієнтському порталі IBKR перейдіть до "Продуктивність та звіти" > "Flex Queries".'
+          step_2: 'Натисніть значок "+" у розділі "Activity Flex Query", щоб створити новий запит.'
+          step_3: 'Назвіть свій запит (наприклад, "Sure Sync"), потім перегляньте деталі Flex Query нижче та ввімкніть перелічені розділи, поля та параметри конфігурації.'
+          step_4: 'Збережіть запит, запишіть свій "ID запиту", потім використовуйте значок шестірні в розділі "Конфігурація веб-служби Flex", щоб згенерувати токен доступу.'
+          step_5: "Вставте свій ID запиту та токен нижче, збережіть конфігурацію, а потім перейдіть до розділу «Рахунки», щоб пов'язати виявлені рахунки IBKR."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Розділи, поля та конфігурація
+          summary: Розгорніть, щоб побачити точні розділи, поля та налаштування, які має містити ваш запит IBKR Activity Flex Query.
+          sections_heading: Увімкніть ці розділи та поля
+          configuration_heading: Встановіть ці параметри запиту
+        sections:
+          account_information: "Інформація про рахунок: ID рахунку, валюта"
+          cash_report: "Звіт про готівку:"
+          cash_report_options: "Опції: Немає"
+          cash_report_fields: "Поля: Валюта, Кінцева готівка"
+          cash_transactions: "Готівкові транзакції:"
+          cash_transactions_options: "Опції: Дивіденди, Депозити та зняття, Детально"
+          cash_transactions_fields: "Поля: Сума, Conid, Валюта, Курс FX до базової, Дата звіту, ID транзакції, Тип"
+          change_in_position_value_summary: "Зведення про зміну вартості позиції: Валюта, Вартість на кінець періоду"
+          net_asset_value: "Чиста вартість активів (NAV) у базовій валюті:"
+          net_asset_value_options: "Опції: Немає"
+          net_asset_value_fields: "Поля: Валюта, Дата звіту, Усього"
+          open_positions: "Відкриті позиції:"
+          open_positions_options: "Опції: Зведення"
+          open_positions_fields: "Поля: Клас активу, Conid, Ціна бази витрат, Валюта, Курс FX до базової, Ринкова ціна, Кількість, Дата звіту, ID цінного паперу, Тип ID цінного паперу, Сторона, Символ"
+          trades: "Угоди:"
+          trades_options: "Опції: Виконання"
+          trades_fields: "Поля: Клас активу, Купівля/Продаж, Conid, Валюта, Курс FX до базової, Комісія IB, Валюта комісії IB, Кількість, Символ, Дата угоди, ID угоди, Ціна угоди, ID транзакції"
+        configuration:
+          models: "Моделі: Необов'язково"
+          format: "Формат: XML"
+          period: "Період: Останні 365 календарних днів"
+          date_format: "Формат дати: yyyy-MM-dd"
+          time_format: "Формат часу: HH:mm:ss"
+          date_time_separator: "Роздільник дати/часу: ; (крапка з комою)"
+          profit_and_loss: "Прибуток і збиток: За замовчуванням"
+          all_other_options: 'Усі інші параметри конфігурації: "Ні"'
+        report_window_note: "Звіти IBKR Flex обмежені вікном запиту, яке ви налаштували в IBKR. Sure імпортує повні поточні активи плюс до останніх 365 днів активності з цього звіту."
+        sync: Синхронізувати
+        disconnect_confirm: Відключити Interactive Brokers?
+        query_id_label: ID запиту
+        query_id_placeholder_new: Введіть свій ID запиту IBKR Flex
+        query_id_placeholder_existing: Залиште порожнім, щоб зберегти поточний ID запиту
+        token_label: Токен
+        token_placeholder_new: Введіть свій токен веб-служби IBKR Flex
+        token_placeholder_existing: Залиште порожнім, щоб зберегти поточний токен
+        save_configuration: Зберегти конфігурацію
+        update_configuration: Оновити конфігурацію
+        status_configured_prefix: "%{summary}. Відвідайте"
+        accounts_tab: Рахунки
+        status_configured_suffix: вкладку для керування виявленими рахунками.
+        not_configured: Не налаштовано.

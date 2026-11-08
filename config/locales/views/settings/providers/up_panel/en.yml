@@ -1,0 +1,10 @@
+---
+en:
+  settings:
+    providers:
+      taglines:
+        up: Sync Australian Up bank accounts with a personal access token.
+      up_panel:
+        step_1_html: "Go to %{link} and generate a personal access token."
+        step_2: "Copy your personal access token."
+        step_3: "Paste the token below, save, then link your synced accounts."

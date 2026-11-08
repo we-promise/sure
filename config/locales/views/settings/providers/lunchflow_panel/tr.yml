@@ -1,0 +1,18 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        lunchflow: 40'tan fazla ülkeden 20 bin+ bankayı bağlayın (İngiltere, AB, ABD
+          ve daha fazlası!)
+      lunchflow_panel:
+        api_key_label: API Anahtarı
+        api_key_placeholder_new: API anahtarını buraya yapıştırın
+        api_key_placeholder_update: Güncellemek için yeni API anahtarı girin
+        base_url_label: Temel URL (İsteğe Bağlı)
+        base_url_placeholder: https://lunchflow.app/api/v1 (varsayılan)
+        save_and_connect: Kaydet ve bağlan
+        step_1_html: "%{link} adresine gidin ve bir API anahtarı oluşturun."
+        step_2: Anahtarınızı aşağıya yapıştırın ve bağlanın.
+        step_3: Ardından senkronize hesaplarınızı bağlamak için Hesaplar'a gidin.
+        update_connection: Bağlantıyı güncelle

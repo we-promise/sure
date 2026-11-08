@@ -1,0 +1,21 @@
+---
+en:
+  settings:
+    providers:
+      taglines:
+        onchain_wallet: Track self-custody Bitcoin, EVM, Solana, Cosmos and Polkadot wallets from their public addresses.
+      onchain_wallet_panel:
+        add_wallet: Add wallet
+        advanced: Advanced
+        disconnect_all: Disconnect all wallets
+        disconnect_all_confirm: This removes every tracked address and its accounts. Continue?
+        etherscan_api_key_label: Etherscan API key (optional)
+        etherscan_api_key_placeholder: Paste an Etherscan API key
+        etherscan_hint: Ethereum reads work without a key. Adding an Etherscan key only raises the rate limit for Ethereum.
+        keep_etherscan_api_key: Leave blank to keep the existing key
+        manage_wallets: Manage wallets
+        keyless_body: Sure only ever reads public chain data. No keys, seed phrases or signatures are involved, and nothing can be spent.
+        keyless_title: Read-only, no keys required
+        save: Save
+        sync_start_date_hint: Transfers before this date are ignored. Leave blank to import everything the explorer reports.
+        sync_start_date_label: Ignore transfers before

@@ -1,0 +1,20 @@
+---
+vi:
+  settings:
+    providers:
+      taglines:
+        coinbase: Nhập danh mục tiền mã hóa Coinbase và theo dõi hiệu suất.
+      coinbase_panel:
+        setup_instructions: "Để kết nối Coinbase:"
+        step1_html: Vào <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Cài đặt API Coinbase</a>
+        step2: Tạo khóa API mới với quyền chỉ đọc (xem tài khoản, xem giao dịch)
+        step3: Sao chép khóa API và bí mật API, dán vào bên dưới
+        api_key_label: Khóa API
+        api_key_placeholder: Nhập khóa API Coinbase
+        api_secret_label: Bí mật API
+        api_secret_placeholder: Nhập bí mật API Coinbase
+        connect_button: Kết nối Coinbase
+        syncing: Đang đồng bộ...
+        sync: Đồng bộ
+        disconnect: Ngắt kết nối
+        disconnect_confirm: Bạn có chắc muốn ngắt kết nối Coinbase? Các tài khoản đã đồng bộ sẽ trở thành tài khoản thủ công.

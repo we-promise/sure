@@ -1,0 +1,8 @@
+---
+zh-TW:
+  settings:
+    providers:
+      taglines:
+        plaid_eu: 透過 Plaid 連結歐洲金融機構（PSD2／開放銀行）。
+      plaid_eu_panel:
+        step_1_html: 開啟 %{link} 並複製您的 EU Client ID 與 Secret Key。

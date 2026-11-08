@@ -1,0 +1,28 @@
+---
+fr:
+  settings:
+    providers:
+      taglines:
+        coinspot: Synchronisez les soldes CoinSpot, les valeurs en AUD, les transferts, les dépôts, les retraits et l'historique des ordres avec une clé API en lecture seule.
+      coinspot_panel:
+        add_connection: Ajouter une connexion CoinSpot
+        api_key_label: Clé API
+        api_key_placeholder: Collez votre clé API CoinSpot
+        api_secret_label: Secret API
+        api_secret_placeholder: Collez votre secret API CoinSpot
+        connection_name_label: Nom de la connexion
+        connection_name_placeholder: CoinSpot principal
+        default_connection_name: CoinSpot
+        disconnect: Déconnecter
+        disconnect_confirm: Voulez-vous vraiment déconnecter %{name} ?
+        keep_api_key_placeholder: Laissez vide pour conserver la clé API existante
+        keep_api_secret_placeholder: Laissez vide pour conserver le secret API existant
+        read_only_body: N'accordez pas d'autorisations d'envoi, de retrait, de trading ou de transfert. Sure importe uniquement les soldes, les valeurs en AUD, les transferts, les dépôts, les retraits et l'historique des ordres exécutés.
+        read_only_title: Synchronisation d'échange en lecture seule uniquement
+        setup_accounts: Configurer le compte
+        step1_html: Accédez aux <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">paramètres API de CoinSpot</a>
+        step2: Créez une clé API avec un accès en lecture seule aux soldes et à l'historique.
+        step3: Collez la clé API et le secret ci-dessous.
+        sync: Synchroniser
+        syncing: Synchronisation...
+        update_connection: Mettre à jour la connexion

@@ -1,0 +1,34 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        kraken: Salt okunur bir API anahtarı kullanarak Kraken bakiyelerinizi ve spot
+          işlem gerçekleşmelerinizi senkronize edin.
+      kraken_panel:
+        add_connection: Kraken bağlantısı ekle
+        api_key_label: API Anahtarı
+        api_key_placeholder: Kraken API anahtarınızı yapıştırın
+        api_secret_label: Özel Anahtar
+        api_secret_placeholder: Kraken özel anahtarınızı yapıştırın
+        connection_name_label: Bağlantı adı
+        connection_name_placeholder: Ana Kraken
+        default_connection_name: Kraken
+        disconnect: Bağlantıyı kes
+        disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?"
+        keep_api_key_placeholder: Mevcut API anahtarını korumak için boş bırakın
+        keep_api_secret_placeholder: Mevcut özel anahtarı korumak için boş bırakın
+        read_only_body: İşlem yapma, iptal etme, çekme, dışa aktarma, defter, Earn,
+          stake etme veya transfer izinleri vermeyin. Sure yalnızca bakiyeleri, varlıkları
+          ve spot işlem gerçekleşmelerini içe aktarır.
+        read_only_title: Salt okunur borsa senkronizasyonu
+        setup_accounts: Hesabı kur
+        step1_html: <a href="https://pro.kraken.com/app/settings/api" target="_blank"
+          rel="noopener noreferrer" class="underline">Kraken API ayarları</a> sayfasına
+          gidin
+        step2: Yalnızca Query Funds ve Query Closed Orders & Trades izinleriyle bir
+          API anahtarı oluşturun.
+        step3: API anahtarını ve özel anahtarı aşağıya yapıştırın.
+        sync: Senkronize et
+        syncing: Senkronize ediliyor...
+        update_connection: Bağlantıyı güncelle

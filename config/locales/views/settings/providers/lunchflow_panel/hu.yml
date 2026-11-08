@@ -1,0 +1,17 @@
+---
+hu:
+  settings:
+    providers:
+      taglines:
+        lunchflow: 40+ ország 20 000+ bankjának csatlakoztatása (Egyesült Királyság, EU, USA stb.!)
+      lunchflow_panel:
+        step_1_html: "Menj a(z) %{link} oldalra és hozz létre egy API-kulcsot."
+        step_2: "Illeszd be a kulcsodat alább és csatlakozz."
+        step_3: "Ezután menj a Számlák menübe a szinkronizált számlák összekapcsolásához."
+        api_key_label: "API-kulcs"
+        api_key_placeholder_new: "Illeszd be ide az API-kulcsot"
+        api_key_placeholder_update: "Add meg az új API-kulcsot a frissítéshez"
+        base_url_label: "Alap URL (nem kötelező)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (alapértelmezett)"
+        save_and_connect: "Mentés és csatlakozás"
+        update_connection: "Kapcsolat frissítése"

@@ -312,99 +312,15 @@ tr:
           ettiniz. Değişikliğin geçerli olması için lütfen e-postanıza gidip onaylayın.
           E-postayı almadıysanız lütfen spam klasörünüzü kontrol edin veya %{resend_link}.
     providers:
-      akahu_panel:
-        step_1_html: "%{link} adresine gidin ve kişisel bir uygulama oluşturun."
-        step_2: Uygulama token'ınızı ve kullanıcı token'ınızı kopyalayın.
-        step_3: Token'ları aşağıya yapıştırın, kaydedin, ardından senkronize hesaplarınızı
-          bağlayın.
       bank_sync:
         lede: İşlemlerin, bakiyelerin ve varlıkların otomatik olarak Sure'a akması
           için harici hesapları bağlayın.
         page_title: Banka senkronizasyonu
-      binance_panel:
-        api_key_label: API Anahtarı
-        api_key_placeholder: Binance API Anahtarınızı yapıştırın
-        api_secret_label: API Gizli Anahtarı
-        api_secret_placeholder: Binance API Gizli Anahtarınızı yapıştırın
-        connect_button: Binance'a Bağlan
-        disconnect: Bağlantıyı kes
-        disconnect_confirm: Binance bağlantısını kesmek istediğinizden emin misiniz?
-        historical_import: Geçmiş İçe Aktarma Ayarları
-        ip_hint_body: 'Uygulama sunucusunun çıkış IP adresini Binance API Anahtarı
-          beyaz listesine ekleyin:'
-        ip_hint_contact_admin: Uygulama sunucusunun çıkış IP adresini almak için yöneticinizle
-          iletişime geçin.
-        ip_hint_title: IP beyaz listeye alma gerekli
-        no_withdraw_body: Binance API anahtarınızı oluştururken çekme izinlerini etkinleştirmeyin.
-          Sure yalnızca okuma erişimine ihtiyaç duyar.
-        no_withdraw_title: Yalnızca salt okunur anahtar
-        setup_instructions: 'Binance''ı bağlamak için salt okunur bir API anahtarı
-          oluşturun:'
-        step1_html: <a href="https://www.binance.com/en/my/settings/api-management"
-          target="_blank" rel="noopener noreferrer" class="underline">Binance API
-          Yönetimi</a> sayfasına gidin
-        step2: Yalnızca Okumayı Etkinleştir izniyle yeni bir API anahtarı oluşturun
-        step3: API Anahtarınızı ve Gizli Anahtarınızı aşağıya yapıştırın
-        sync: Senkronize et
-        sync_start_date_help: Geçmiş işlemlerin ne kadar geriye gidilerek alınacağını
-          seçin.
-        sync_start_date_label: Verileri içe aktar
-        syncing: Senkronize ediliyor...
       clear_filter: Filtreleri temizle
-      coinbase_panel:
-        api_key_label: API Anahtarı
-        api_key_placeholder: Coinbase API anahtarınızı girin
-        api_secret_label: API Gizli Anahtarı
-        api_secret_placeholder: Coinbase API gizli anahtarınızı girin
-        connect_button: Coinbase'e Bağlan
-        disconnect: Bağlantıyı kes
-        disconnect_confirm: Bu Coinbase bağlantısını kesmek istediğinizden emin misiniz?
-          Senkronize hesaplarınız manuel hesaplara dönüşecektir.
-        setup_instructions: 'Coinbase''i bağlamak için:'
-        step1_html: <a href="https://portal.cdp.coinbase.com/projects/api-keys"
-          target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase
-          API Ayarları</a> sayfasına gidin
-        step2: Salt okunur izinlerle (hesapları görüntüleme, işlemleri görüntüleme)
-          yeni bir API anahtarı oluşturun
-        step3: API anahtarınızı ve API gizli anahtarınızı kopyalayıp aşağıya yapıştırın
-        sync: Senkronize et
-        syncing: Senkronize ediliyor...
       connect: Bağlan
       drawer_trust_statement: Salt okunur erişim. Sure asla para transferi yapamaz
         ve kimlik bilgileriniz şifrelenmiş olarak saklanır.
       empty_filter: Filtrenizle eşleşen sağlayıcı yok.
-      enable_banking_panel:
-        add_connection: Bağlantı Ekle
-        application_id_label: Uygulama ID
-        application_id_placeholder_new: Uygulama ID girin
-        application_id_placeholder_update: Güncellemek için yeni ID girin
-        callback_url_instruction: Geri çağırma URL'si için %{callback_url} kullanın.
-        client_certificate_label: İstemci Sertifikası (Özel Anahtar ile)
-        keep_client_certificate_hint: "Mevcut sertifikayı korumak için boş bırakın"
-        config_locked_message: Bu kimlik bilgilerini değiştirmeden önce bağlı tüm
-          bankaların bağlantısını kesin.
-        config_locked_title: Yapılandırma kilitli
-        configured: Yapılandırıldı
-        connect_bank: Banka bağla
-        connected_bank: Bağlı Banka
-        connection: Bağlantı
-        connection_error: Bağlantı Hatası
-        country_label: Ülke
-        ready_to_link: Hesapları bağlamaya hazır
-        reconnect: Yeniden bağlan
-        remove: Kaldır
-        remove_confirm: Bu bağlantıyı kaldırmak istediğinizden emin misiniz?
-        save_and_connect: Kaydet ve bağlan
-        select_country: Ülke seçin...
-        session_expired_reconnect: Oturum süresi doldu - yeniden bağlan
-        session_expires: 'Oturum sona eriyor: %{date}'
-        step_1_html: "%{link} adresine gidin ve geliştirici kimlik bilgilerinizi alın."
-        step_2: Ülkenizi seçin ve Uygulama ID + İstemci Sertifikasını aşağıya yapıştırın.
-        step_3: Kaydedin, ardından bankanızı bağlamak için Bağlantı Ekle'yi kullanın.
-        sync: Senkronize et
-        syncing: Senkronize ediliyor
-        unknown: Bilinmiyor
-        update_connection: Bağlantıyı güncelle
       encryption_error:
         message: Banka senkronizasyonu için Active Record şifrelemesinin yapılandırılması
           gerekir. Rails kimlik bilgilerinizde veya ortam değişkenlerinizde primary_key,
@@ -419,117 +335,6 @@ tr:
         connected: bağlı
         last_synced: Son senkronizasyon %{time} önce
         needs_attention: dikkat gerekiyor
-      ibkr_panel:
-        accounts_tab: Hesaplar
-        configuration:
-          all_other_options: 'Diğer tüm yapılandırma seçenekleri: "No"'
-          date_format: 'Tarih Formatı: yyyy-MM-dd'
-          date_time_separator: 'Tarih/Saat Ayırıcı: ; (noktalı virgül)'
-          format: 'Format: XML'
-          models: 'Modeller: İsteğe Bağlı'
-          period: 'Dönem: Son 365 Takvim Günü'
-          profit_and_loss: 'Kar ve Zarar: Varsayılan'
-          time_format: 'Saat Formatı: HH:mm:ss'
-        disconnect_confirm: Interactive Brokers bağlantısı kesilsin mi?
-        flex_query_details:
-          configuration_heading: Bu sorgu seçeneklerini ayarlayın
-          eyebrow: Flex Query
-          sections_heading: Bu bölümleri ve alanları etkinleştirin
-          summary: IBKR Activity Flex Query'nizin içermesi gereken tam bölümleri,
-            alanları ve ayarları görmek için genişletin.
-          title: Bölümler, alanlar ve yapılandırma
-        not_configured: Yapılandırılmadı.
-        query_id_label: Sorgu ID
-        query_id_placeholder_existing: Mevcut Sorgu ID'sini korumak için boş bırakın
-        query_id_placeholder_new: IBKR Flex Query ID'nizi girin
-        report_window_note: IBKR Flex raporları, IBKR'de yapılandırdığınız sorgu penceresiyle
-          sınırlıdır. Sure, bu rapordan mevcut tüm varlıkları ve son 365 güne kadar
-          olan işlem geçmişini içe aktaracaktır.
-        save_configuration: Yapılandırmayı Kaydet
-        sections:
-          account_information: 'Hesap Bilgileri: Account ID, Currency'
-          cash_report: 'Nakit Raporu:'
-          cash_report_fields: 'Alanlar: Currency, Ending Cash'
-          cash_report_options: 'Seçenekler: None'
-          cash_transactions: 'Nakit İşlemleri:'
-          cash_transactions_fields: 'Alanlar: Amount, Conid, Currency, FX Rate To
-            Base, Report Date, Transaction ID, Type'
-          cash_transactions_options: 'Seçenekler: Dividends, Deposits & Withdrawals,
-            Detail'
-          change_in_position_value_summary: 'Pozisyon Değeri Değişim Özeti: Currency,
-            End Of Period Value'
-          net_asset_value: 'Ana Para Biriminde Net Varlık Değeri (NAV):'
-          net_asset_value_fields: 'Alanlar: Currency, Report Date, Total'
-          net_asset_value_options: 'Seçenekler: None'
-          open_positions: 'Açık Pozisyonlar:'
-          open_positions_fields: 'Alanlar: Asset Class, Conid, Cost Basis Price, Currency,
-            FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security
-            ID Type, Side, Symbol'
-          open_positions_options: 'Seçenekler: Summary'
-          trades: 'İşlemler:'
-          trades_fields: 'Alanlar: Asset Class, Buy/Sell, Conid, Currency, FX Rate
-            To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
-            Date, Trade ID, TradePrice, Transaction ID'
-          trades_options: 'Seçenekler: Execution'
-        status_configured_prefix: "%{summary}. Şuraya gidin:"
-        status_configured_suffix: sekmesine giderek keşfedilen hesapları yönetin.
-        steps:
-          step_1: IBKR Client Portal'ınızda "Performance & Reports" > "Flex Queries"
-            bölümüne gidin.
-          step_2: Yeni bir sorgu oluşturmak için "Activity Flex Query" bölümündeki
-            "+" simgesine tıklayın.
-          step_3: Sorgunuza bir ad verin (ör. "Sure Sync"), ardından aşağıdaki Flex
-            Query ayrıntılarını inceleyin ve listelenen bölümleri, alanları ve yapılandırma
-            seçeneklerini etkinleştirin.
-          step_4: Sorguyu kaydedin, "Query ID"nizi not edin, ardından bir erişim Token'ı
-            oluşturmak için "Flex Web Service Configuration" bölümündeki dişli simgesini
-            kullanın.
-          step_5: Sorgu ID'nizi ve Token'ınızı aşağıya yapıştırın, yapılandırmayı
-            kaydedin, ardından keşfedilen IBKR hesaplarını bağlamak için Hesaplar'a
-            gidin.
-        sync: Senkronize et
-        token_label: Token
-        token_placeholder_existing: Mevcut Token'ı korumak için boş bırakın
-        token_placeholder_new: IBKR Flex Web Service Token'ınızı girin
-        update_configuration: Yapılandırmayı Güncelle
-      kraken_panel:
-        add_connection: Kraken bağlantısı ekle
-        api_key_label: API Anahtarı
-        api_key_placeholder: Kraken API anahtarınızı yapıştırın
-        api_secret_label: Özel Anahtar
-        api_secret_placeholder: Kraken özel anahtarınızı yapıştırın
-        connection_name_label: Bağlantı adı
-        connection_name_placeholder: Ana Kraken
-        default_connection_name: Kraken
-        disconnect: Bağlantıyı kes
-        disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?"
-        keep_api_key_placeholder: Mevcut API anahtarını korumak için boş bırakın
-        keep_api_secret_placeholder: Mevcut özel anahtarı korumak için boş bırakın
-        read_only_body: İşlem yapma, iptal etme, çekme, dışa aktarma, defter, Earn,
-          stake etme veya transfer izinleri vermeyin. Sure yalnızca bakiyeleri, varlıkları
-          ve spot işlem gerçekleşmelerini içe aktarır.
-        read_only_title: Salt okunur borsa senkronizasyonu
-        setup_accounts: Hesabı kur
-        step1_html: <a href="https://pro.kraken.com/app/settings/api" target="_blank"
-          rel="noopener noreferrer" class="underline">Kraken API ayarları</a> sayfasına
-          gidin
-        step2: Yalnızca Query Funds ve Query Closed Orders & Trades izinleriyle bir
-          API anahtarı oluşturun.
-        step3: API anahtarını ve özel anahtarı aşağıya yapıştırın.
-        sync: Senkronize et
-        syncing: Senkronize ediliyor...
-        update_connection: Bağlantıyı güncelle
-      lunchflow_panel:
-        api_key_label: API Anahtarı
-        api_key_placeholder_new: API anahtarını buraya yapıştırın
-        api_key_placeholder_update: Güncellemek için yeni API anahtarı girin
-        base_url_label: Temel URL (İsteğe Bağlı)
-        base_url_placeholder: https://lunchflow.app/api/v1 (varsayılan)
-        save_and_connect: Kaydet ve bağlan
-        step_1_html: "%{link} adresine gidin ve bir API anahtarı oluşturun."
-        step_2: Anahtarınızı aşağıya yapıştırın ve bağlanın.
-        step_3: Ardından senkronize hesaplarınızı bağlamak için Hesaplar'a gidin.
-        update_connection: Bağlantıyı güncelle
       maturity:
         alpha: Alfa
         beta: Beta
@@ -546,15 +351,6 @@ tr:
         sync_error: Senkronizasyon hatası
       not_authorized: Yetkiniz yok
       not_found: Sağlayıcı bulunamadı.
-      plaid_eu_panel:
-        step_1_html: "%{link} sayfasını açın ve AB İstemci ID'nizi ve Gizli Anahtarınızı
-          kopyalayın."
-      plaid_panel:
-        step_1_html: "%{link} sayfasını açın ve İstemci ID'nizi ve Gizli Anahtarınızı
-          kopyalayın."
-        step_2: Bir ortam seçin. Test için sandbox, gerçek hesaplar için production
-          kullanın.
-        step_3: Kimlik bilgilerinizi aşağıya yapıştırın ve bağlanın.
       provider_form:
         save_and_connect: Kaydet ve bağlan
       recently_synced: Yakın zamanda senkronize edildi. Biraz sonra tekrar deneyin.
@@ -569,13 +365,6 @@ tr:
       setup_steps:
         eyebrow: Kurulum
         need_help: Yardıma mı ihtiyacınız var?
-      simplefin_panel:
-        save_and_connect: Kaydet ve bağlan
-        setup_token_label: Kurulum Anahtarı
-        setup_token_placeholder: SimpleFIN kurulum anahtarını yapıştırın
-        step_1_html: Tek seferlik kurulum anahtarı için %{link} adresine gidin.
-        step_2: Anahtarı aşağıya yapıştırın ve bağlanın.
-        step_3: Ardından senkronize hesaplarınızı bağlamak için Hesaplar'a gidin.
       status:
         err: Hata
         "off": Yapılandırılmadı
@@ -588,47 +377,19 @@ tr:
       sync_provider_in_progress: Senkronizasyon başladı.
       sync_provider_no_items: Senkronize edilecek bağlantı yok.
       taglines:
-        akahu: Akahu üzerinden Yeni Zelanda finans kurumlarını senkronize edin.
-        binance: Salt okunur bir API anahtarı kullanarak Binance spot bakiyelerinizi
-          senkronize edin.
         brex: Salt okunur erişimle Brex nakit ve kurumsal kart hareketlerinizi senkronize
           edin.
-        coinbase: Coinbase kripto varlıklarınızı içe aktarın ve performansı takip
-          edin.
         coinstats: Tüm kripto portföyünüzü cüzdanlar ve borsalar genelinde takip edin.
-        enable_banking: PSD2 açık bankacılığı üzerinden Avrupa banka hesaplarınızı
-          senkronize edin.
-        ibkr: Flex Query içe aktarmaları yoluyla Interactive Brokers yatırım hesaplarınızı
-          senkronize edin.
         indexa_capital: Indexa Capital otomatik yatırım portföyünüzü takip edin.
-        kraken: Salt okunur bir API anahtarı kullanarak Kraken bakiyelerinizi ve spot
-          işlem gerçekleşmelerinizi senkronize edin.
-        lunchflow: 40'tan fazla ülkeden 20 bin+ bankayı bağlayın (İngiltere, AB, ABD
-          ve daha fazlası!)
         mercury: Mercury işletme bankacılığı hesaplarınızı otomatik olarak senkronize
           edin.
-        plaid: Plaid üzerinden binlerce ABD finans kurumunu bağlayın.
-        plaid_eu: Plaid üzerinden (PSD2 / Açık Bankacılık) Avrupa finans kurumlarını
-          bağlayın.
         questrade: Questrade API'si aracılığıyla Questrade yatırım hesaplarınızı doğrudan
           senkronize edin.
-        simplefin: Açık SimpleFIN protokolü üzerinden ABD banka hesaplarını bağlayın.
         snaptrade: SnapTrade birleştirme ağı üzerinden aracı kurum hesaplarını bağlayın.
         sophtron: ABD ve Kanada bankalarını ve kurumlarını bağlayın.
         wise: Wise çoklu para birimi bakiyelerinizi ve uluslararası transferlerinizi
           otomatik olarak senkronize edin.
         redbark: Avustralya banka hesaplarını Redbark açık bankacılık ile senkronize edin.
-        monobank: Ukrayna Monobank kartlarını ve kumbaralarını kişisel bir API token ile senkronize edin.
-        fio: Bir Fio banka hesabını salt okunur bir API token ile senkronize edin.
-        coinspot: CoinSpot bakiyelerini, AUD değerlerini, transferleri, para yatırma, para çekme ve emir geçmişini salt okunur bir API anahtarıyla senkronize edin.
-        onchain_wallet: Gözetimsiz Bitcoin, EVM, Solana, Cosmos ve Polkadot cüzdanlarını herkese açık adresleri üzerinden takip edin.
-        trading212: Trading 212 yatırım portföyünüzü salt okunur bir API anahtarıyla senkronize edin.
-        trade_republic: Trade Republic yatırım hesabınızı güvenli, salt okunur web girişiyle senkronize edin.
-      up_panel:
-        step_1_html: "%{link} adresine gidin ve kişisel bir erişim token'ı oluşturun."
-        step_2: Kişisel erişim token'ınızı kopyalayın.
-        step_3: Token'ı aşağıya yapıştırın, kaydedin, ardından senkronize hesaplarınızı
-          bağlayın.
       update:
         no_changes: Herhangi bir değişiklik yapılmadı
         updated_successfully: Sağlayıcı ayarları başarıyla güncellendi
@@ -636,138 +397,6 @@ tr:
       provider_setup_encryption_warning:
         title: Şifreleme anahtarları eksik
         message: Bu kendi sunucunuzda barındırılan kurulumda açık Active Record şifreleme anahtarları yapılandırılmamış. Üretim ortamında sağlayıcı kimlik bilgilerini kaydetmeden önce primary_key, deterministic_key ve key_derivation_salt değerlerini yapılandırın.
-      coinspot_panel:
-        step1_html: <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API ayarlarına</a> gidin
-        step2: Bakiyelere ve geçmişe salt okunur erişimi olan bir API anahtarı oluşturun.
-        step3: API anahtarını ve gizli anahtarı aşağıya yapıştırın.
-        read_only_title: Salt okunur borsa senkronizasyonu
-        read_only_body: Gönderme, para çekme, alım satım veya transfer izinleri vermeyin. Sure yalnızca bakiyeleri, AUD değerlerini, transferleri, para yatırma, para çekme ve tamamlanmış emir geçmişini içe aktarır.
-        default_connection_name: CoinSpot
-        add_connection: CoinSpot bağlantısı ekle
-        update_connection: Bağlantıyı güncelle
-        connection_name_label: Bağlantı adı
-        connection_name_placeholder: Ana CoinSpot
-        api_key_label: API Anahtarı
-        api_key_placeholder: CoinSpot API anahtarınızı yapıştırın
-        keep_api_key_placeholder: Mevcut API anahtarını korumak için boş bırakın
-        api_secret_label: API Gizli Anahtarı
-        api_secret_placeholder: CoinSpot API gizli anahtarınızı yapıştırın
-        keep_api_secret_placeholder: Mevcut API gizli anahtarını korumak için boş bırakın
-        setup_accounts: Hesabı kur
-        syncing: Senkronize ediliyor...
-        sync: Senkronize et
-        disconnect: Bağlantıyı kes
-        disconnect_confirm: '%{name} bağlantısını kesmek istediğinizden emin misiniz?'
-      onchain_wallet_panel:
-        add_wallet: Cüzdan ekle
-        advanced: Gelişmiş
-        disconnect_all: Tüm cüzdanların bağlantısını kes
-        disconnect_all_confirm: Bu işlem takip edilen tüm adresleri ve bunlara ait hesapları kaldırır. Devam edilsin mi?
-        etherscan_api_key_label: Etherscan API anahtarı (isteğe bağlı)
-        etherscan_api_key_placeholder: Bir Etherscan API anahtarı yapıştırın
-        etherscan_hint: Ethereum verileri anahtar olmadan da okunabilir. Etherscan anahtarı eklemek yalnızca Ethereum için hız sınırını yükseltir.
-        keep_etherscan_api_key: Mevcut anahtarı korumak için boş bırakın
-        manage_wallets: Cüzdanları yönet
-        keyless_body: Sure yalnızca herkese açık zincir verilerini okur. Hiçbir anahtar, kurtarma ifadesi veya imza kullanılmaz ve hiçbir şey harcanamaz.
-        keyless_title: Salt okunur, anahtar gerekmez
-        save: Kaydet
-        sync_start_date_hint: Bu tarihten önceki transferler yok sayılır. Blok gezgininin bildirdiği her şeyi içe aktarmak için boş bırakın.
-        sync_start_date_label: Şu tarihten önceki transferleri yok say
-      monobank_panel:
-        step_1_html: '%{link} adresine gidin, Monobank uygulamasıyla giriş yapın ve kişisel bir token oluşturun.'
-        step_2: Token'ı kopyalayın — yalnızca bir kez gösterilir.
-        step_3: Token'ı aşağıya yapıştırıp kaydedin, ardından takip etmek istediğiniz kartları ve kumbaraları bağlayın.
-      fio_panel:
-        step_1_html: '%{link} internet bankacılığına giriş yapın ve Settings → API bölümünü açın.'
-        step_2: Salt okunur erişimli bir token oluşturun ("Sledování účtu"). Bu işlem güçlü kimlik doğrulama gerektirir ve token en fazla 180 gün geçerlidir.
-        step_3: Token'ı aşağıya yapıştırıp kaydedin. Bir token yalnızca bir hesaba erişir; bu nedenle her Fio hesabı için ayrı bir bağlantı ekleyin.
-      trade_republic_panel:
-        encryption_warning:
-          title: Şifreleme yapılandırılmamış
-          message: Active Record Encryption yapılandırılana kadar Trade Republic kimlik bilgileri ve oturum verileri güvenli şekilde saklanamaz.
-        steps:
-          step_1: Trade Republic uygulamasında kullandığınız telefon numarasını ve PIN'i veya şifreyi girip kaydedin.
-          step_2: İstendiğinde doğrulama uygulamanızdaki kodu girin.
-          step_3: İstendiğinde girişi Trade Republic uygulamanızda onaylayın.
-        phone_number_label: Telefon numarası
-        phone_number_placeholder_new: +49 170 1234567
-        phone_number_placeholder_existing: Mevcut telefon numarasını korumak için boş bırakın
-        pin_label: PIN veya şifre
-        pin_placeholder_new: Trade Republic uygulama PIN'iniz veya şifreniz
-        pin_placeholder_existing: Mevcut PIN'i veya şifreyi korumak için boş bırakın
-        currency_label: Hesap para birimi
-        connect: Giriş yap
-        confirm_login: Girişi kontrol et
-        complete_login: Devam et
-        authenticator_code_label: Doğrulama kodu (istenirse)
-        authenticator_code_placeholder: 6 haneli kod
-        push_login_notice: Girişi şimdi Trade Republic uygulamanızda onaylayın. Sure arka planda otomatik olarak kontrol eder. Durumu kendiniz de kontrol edebilirsiniz.
-        check_login_status: Durumu şimdi kontrol et
-        authenticator_code_notice: Doğrulama uygulamanızdaki kodu girin.
-        approval_pending: Giriş başlatıldı. Trade Republic uygulamasında onaylayın; Sure otomatik olarak kontrol ediyor.
-        awaiting_confirmation: Trade Republic uygulamasında onay bekleniyor.
-        awaiting_authenticator_code: Doğrulama kodu gerekli.
-        login_expired: Onay isteğinin süresi doldu.
-        restart_login: Girişi yeniden başlat
-        connection_success:
-          title: Trade Republic başarıyla bağlandı
-          message: Trade Republic bağlantınız hazır.
-          description: Sure, Trade Republic verilerinizi arka planda senkronize ediyor.
-          close: Bitti
-        qr_login: QR kodla giriş yap
-        qr_cancel: QR girişini iptal et
-        qr_back_to_credentials: Telefon numarası ve PIN'e veya şifreye dön
-        qr_loading: QR kod hazırlanıyor …
-        qr_instruction: QR kodu telefonunuzun kamerasıyla tarayın, ardından girişi Trade Republic uygulamasında onaylayın.
-        qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
-        qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
-        requires_update: "Senkronizasyona devam etmek için yeniden giriş yapın."
-        session_expires_in: "Girişin süresi %{time} içinde doluyor (%{at})."
-        add_account: "Başka bir bağlantı ekle"
-        save_configuration: Kaydet ve Girişi Başlat
-        update_configuration: Yapılandırmayı Güncelle
-        sync: Senkronize et
-        syncing: "Senkronize ediliyor..."
-        disconnect: Trade Republic bağlantısını kes
-        disconnect_confirm: Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir.
-        disconnect_confirm_with_identifier: "%{last4} ile biten Trade Republic bağlantısı kesilsin mi? Senkronize hesaplarınız manuel hesaplara dönüşecektir."
-        identifier_phone: Telefon
-        identifier_account: Hesap
-        status_configured_prefix: Bağlandı. Keşfedilen hesapları yönetmek için
-        accounts_tab: Hesaplar
-        setup_accounts: Hesapları kur
-        accounts_discovered:
-          one: '%{count} Trade Republic hesabı keşfedildi.'
-          other: '%{count} Trade Republic hesabı keşfedildi.'
-        status_configured_suffix: sekmesine gidin.
-        not_configured: Yapılandırılmadı.
-      trading212_panel:
-        steps:
-          step_1: Trading 212 → Settings → API bölümüne gidin (web veya mobil uygulama).
-          step_2: Yeni bir API anahtarı oluşturun — Trading 212 size bir API ID ve bir Secret Key gösterecektir.
-          step_3: İkisini de aşağıya yapıştırın, ortamınızı ve hesap para biriminizi seçin, ardından kaydedin.
-        api_key_label: API ID
-        api_key_placeholder_new: Trading 212 API ID'nizi yapıştırın
-        api_key_placeholder_existing: Mevcut API ID'yi korumak için boş bırakın
-        api_secret_label: Gizli Anahtar
-        api_secret_placeholder_new: Trading 212 Gizli Anahtarınızı yapıştırın
-        api_secret_placeholder_existing: Mevcut Gizli Anahtarı korumak için boş bırakın
-        environment_label: Ortam
-        environment_live: Gerçek hesap
-        environment_demo: Demo hesap
-        currency_label: Hesap para birimi
-        save_configuration: Yapılandırmayı Kaydet
-        update_configuration: Yapılandırmayı Güncelle
-        sync: Senkronize et
-        syncing: Senkronize ediliyor...
-        disconnect: Trading 212 hesabının bağlantısını kes
-        disconnect_confirm: Trading 212 bağlantısı kesilsin mi?
-        default_account_name: Trading 212 Hesabı
-        add_account: Başka bir hesap ekle
-        status_configured_prefix: Yapılandırıldı. Keşfedilen hesapları yönetmek için
-        accounts_tab: Hesaplar
-        status_configured_suffix: sekmesine gidin.
-        not_configured: Yapılandırılmadı.
     securities:
       show:
         disable_mfa: 2FA'yı devre dışı bırak

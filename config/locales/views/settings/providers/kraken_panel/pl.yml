@@ -1,0 +1,33 @@
+---
+pl:
+  settings:
+    providers:
+      taglines:
+        kraken: Synchronizuj salda i zrealizowane transakcje spot z Kraken za pomocą
+          klucza API tylko do odczytu.
+      kraken_panel:
+        add_connection: Dodaj połączenie z Kraken
+        api_key_label: API Key
+        api_key_placeholder: Wklej swój API Key z Kraken
+        api_secret_label: Private Key
+        api_secret_placeholder: Wklej swój Private Key z Kraken
+        connection_name_label: Nazwa połączenia
+        connection_name_placeholder: Główny Kraken
+        default_connection_name: Kraken
+        disconnect: Rozłącz
+        disconnect_confirm: Czy na pewno chcesz rozłączyć %{name}?
+        keep_api_key_placeholder: Zostaw puste, aby zachować obecny API Key
+        keep_api_secret_placeholder: Zostaw puste, aby zachować obecny Private Key
+        read_only_body: Nie nadawaj uprawnień do handlu, anulowania, wypłat, eksportu,
+          rejestru, Earn, stakingu ani przelewów. Sure importuje wyłącznie salda,
+          posiadane aktywa i zrealizowane transakcje spot.
+        read_only_title: Tylko synchronizacja giełdy w trybie odczytu
+        setup_accounts: Skonfiguruj konto
+        step1_html: Przejdź do <a href="https://pro.kraken.com/app/settings/api" target="_blank"
+          rel="noopener noreferrer" class="underline">ustawień API Kraken</a>
+        step2: Utwórz klucz API z uprawnieniami wyłącznie "Query Funds" oraz "Query
+          Closed Orders & Trades".
+        step3: Wklej poniżej API Key i Private Key.
+        sync: Synchronizuj
+        syncing: Synchronizowanie...
+        update_connection: Zaktualizuj połączenie

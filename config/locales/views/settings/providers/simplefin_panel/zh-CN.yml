@@ -1,0 +1,13 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        simplefin: 通过开放的 SimpleFIN 协议连接美国银行账户。
+      simplefin_panel:
+        step_1_html: 前往 %{link} 获取一次性设置令牌。
+        step_2: 将令牌粘贴到下方并连接。
+        step_3: 然后前往账户，将同步到账户进行关联。
+        setup_token_label: Setup Token
+        setup_token_placeholder: 粘贴 SimpleFIN setup token
+        save_and_connect: 保存并连接

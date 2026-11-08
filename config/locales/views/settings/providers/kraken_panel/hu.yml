@@ -1,0 +1,28 @@
+---
+hu:
+  settings:
+    providers:
+      taglines:
+        kraken: Kraken egyenlegek és spot ügyletek szinkronizálása csak olvasási API-kulccsal.
+      kraken_panel:
+        step1_html: 'Nyisd meg a <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API-beállításait</a>'
+        step2: "Hozz létre egy API-kulcsot csak Lekérdezési alapok és Lekérdezési zárt megbízások & ügyletek jogosultsággal."
+        step3: "Illeszd be az API-kulcsot és a privát kulcsot az alábbiakba."
+        read_only_title: "Csak olvasási tőzsdei szinkronizálás"
+        read_only_body: "Ne adj kereskedési, visszavonási, kifizetési, exportálási, főkönyvi, Earn, staking vagy átutalási jogosultságot. A Sure csak egyenlegeket, pozíciókat és spot ügyletek adatait importálja."
+        default_connection_name: Kraken
+        add_connection: Kraken-kapcsolat hozzáadása
+        update_connection: Kapcsolat frissítése
+        connection_name_label: Kapcsolat neve
+        connection_name_placeholder: Fő Kraken
+        api_key_label: API-kulcs
+        api_key_placeholder: Illeszd be a Kraken API-kulcsodat
+        keep_api_key_placeholder: Hagyd üresen a meglévő API-kulcs megtartásához
+        api_secret_label: Privát kulcs
+        api_secret_placeholder: Illeszd be a Kraken privát kulcsodat
+        keep_api_secret_placeholder: Hagyd üresen a meglévő privát kulcs megtartásához
+        setup_accounts: Számla beállítása
+        syncing: Szinkronizálás...
+        sync: Szinkronizálás
+        disconnect: Lecsatlakozás
+        disconnect_confirm: "Biztosan le szeretnéd választani a(z) %{name}-t?"

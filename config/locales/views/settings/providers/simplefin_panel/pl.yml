@@ -1,0 +1,13 @@
+---
+pl:
+  settings:
+    providers:
+      taglines:
+        simplefin: Połącz amerykańskie konta bankowe przez otwarty protokół SimpleFIN.
+      simplefin_panel:
+        save_and_connect: Zapisz i połącz
+        setup_token_label: Setup Token
+        setup_token_placeholder: Wklej Setup Token z SimpleFIN
+        step_1_html: Przejdź do %{link}, aby uzyskać jednorazowy Setup Token.
+        step_2: Wklej token poniżej i połącz.
+        step_3: Następnie przejdź do Kont, aby połączyć zsynchronizowane konta.

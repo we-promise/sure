@@ -1,0 +1,10 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        fio: 使用只读 API 令牌同步 Fio banka 账户。
+      fio_panel:
+        step_1_html: 登录 %{link} 网银并打开 设置 → API。
+        step_2: 创建一个具有只读访问权限（“Sledování účtu”）的令牌。它需要强身份认证，有效期最长为 180 天。
+        step_3: 将令牌粘贴在下方并保存。一个令牌对应一个账户，因此每个 Fio 账户需添加一个连接。

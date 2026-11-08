@@ -1,0 +1,28 @@
+---
+fr:
+  settings:
+    providers:
+      taglines:
+        kraken: Synchronisez vos soldes Kraken et transactions spot à l'aide d'une clé API en lecture seule.
+      kraken_panel:
+        add_connection: Ajouter une connexion Kraken
+        api_key_label: Clé API
+        api_key_placeholder: Collez votre clé API Kraken
+        api_secret_label: Clé privée
+        api_secret_placeholder: Collez votre clé privée Kraken
+        connection_name_label: Nom de la connexion
+        connection_name_placeholder: Kraken principal
+        default_connection_name: Kraken
+        disconnect: Déconnecter
+        disconnect_confirm: Voulez-vous vraiment déconnecter %{name} ?
+        keep_api_key_placeholder: Laissez vide pour conserver la clé API existante
+        keep_api_secret_placeholder: Laissez vide pour conserver la clé privée existante
+        read_only_body: N'accordez pas de droits de trading, d'annulation, de retrait, d'exportation, de grand livre, de gain, de jalonnement ou de transfert. Sure importe uniquement les soldes, actifs et transactions spot exécutées.
+        read_only_title: Synchronisation d'échange en lecture seule uniquement
+        setup_accounts: Configurer le compte
+        step1_html: Allez dans les <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">paramètres d'API Kraken</a>
+        step2: Créez une clé API avec uniquement les droits Query Funds et Query Closed Orders & Trades.
+        step3: Collez la clé API et la clé privée ci-dessous.
+        sync: Synchroniser
+        syncing: Synchronisation...
+        update_connection: Mettre à jour la connexion

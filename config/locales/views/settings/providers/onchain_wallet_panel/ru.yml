@@ -1,0 +1,21 @@
+---
+ru:
+  settings:
+    providers:
+      taglines:
+        onchain_wallet: Отслеживайте некастодиальные кошельки Bitcoin, EVM, Solana, Cosmos и Polkadot по их публичным адресам.
+      onchain_wallet_panel:
+        add_wallet: Добавить кошелёк
+        advanced: Дополнительно
+        disconnect_all: Отключить все кошельки
+        disconnect_all_confirm: Все отслеживаемые адреса и их счета будут удалены. Продолжить?
+        etherscan_api_key_label: API-ключ Etherscan (необязательно)
+        etherscan_api_key_placeholder: Вставьте API-ключ Etherscan
+        etherscan_hint: Данные Ethereum читаются и без ключа. Ключ Etherscan лишь повышает лимит запросов для Ethereum.
+        keep_etherscan_api_key: Оставьте пустым, чтобы сохранить текущий ключ
+        manage_wallets: Управление кошельками
+        keyless_body: Sure только читает публичные данные блокчейна. Ключи, сид-фразы и подписи не используются, и ничего не может быть потрачено.
+        keyless_title: Только чтение, ключи не нужны
+        save: Сохранить
+        sync_start_date_hint: Переводы до этой даты игнорируются. Оставьте пустым, чтобы импортировать всё, что показывает обозреватель блокчейна.
+        sync_start_date_label: Игнорировать переводы до

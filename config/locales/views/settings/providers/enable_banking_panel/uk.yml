@@ -1,0 +1,37 @@
+---
+uk:
+  settings:
+    providers:
+      taglines:
+        enable_banking: Синхронізуйте європейські банківські рахунки через PSD2 open banking.
+      enable_banking_panel:
+        callback_url_instruction: "Для URL-адреси зворотного виклику використовуйте %{callback_url}."
+        connection_error: Помилка з'єднання
+        step_1_html: "Перейдіть до %{link} і отримайте свої облікові дані розробника."
+        step_2: "Виберіть свою країну та вставте ідентифікатор програми + сертифікат клієнта нижче."
+        step_3: "Збережіть, а потім використовуйте Додати з'єднання, щоб пов'язати свій банк."
+        config_locked_title: "Конфігурацію заблоковано"
+        config_locked_message: "Відключіть усі пов'язані банки перед зміною цих облікових даних."
+        application_id_label: "Ідентифікатор програми"
+        application_id_placeholder_new: "Введіть ідентифікатор програми"
+        application_id_placeholder_update: "Введіть новий ID для оновлення"
+        client_certificate_label: "Сертифікат клієнта (з приватним ключем)"
+        keep_client_certificate_hint: "Залиште порожнім, щоб зберегти поточний сертифікат"
+        save_and_connect: "Зберегти та підключити"
+        update_connection: "Оновити з'єднання"
+        connected_bank: "Підключений банк"
+        session_expires: "Сеанс закінчується: %{date}"
+        unknown: "Невідомо"
+        connection: "З'єднання"
+        session_expired_reconnect: "Сеанс закінчився - перепідключіться"
+        configured: "Налаштовано"
+        ready_to_link: "Готово до пов'язування рахунків"
+        sync: "Синхронізувати"
+        reconnect: "Перепідключити"
+        connect_bank: "Підключити банк"
+        remove: "Видалити"
+        remove_confirm: "Ви впевнені, що хочете видалити це з'єднання?"
+        add_connection: "Додати з'єднання"
+        syncing: "Синхронізація"
+        select_country: "Вибрати країну..."
+        country_label: "Країна"

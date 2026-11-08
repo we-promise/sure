@@ -1,0 +1,28 @@
+---
+vi:
+  settings:
+    providers:
+      taglines:
+        kraken: Đồng bộ số dư Kraken và giao dịch giao ngay bằng khóa API chỉ đọc.
+      kraken_panel:
+        step1_html: 'Vào <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Cài đặt API Kraken</a>'
+        step2: "Tạo khóa API chỉ với Truy vấn Quỹ và Truy vấn Lệnh & Giao dịch Đã Đóng."
+        step3: "Dán khóa API và khóa riêng vào bên dưới."
+        read_only_title: "Chỉ đồng bộ sàn giao dịch chỉ đọc"
+        read_only_body: "Không cấp quyền giao dịch, hủy, rút tiền, xuất, sổ cái, Earn, đặt cược hoặc chuyển. Sure chỉ nhập số dư, danh mục nắm giữ và giao dịch giao ngay."
+        default_connection_name: Kraken
+        add_connection: Thêm kết nối Kraken
+        update_connection: Cập nhật kết nối
+        connection_name_label: Tên kết nối
+        connection_name_placeholder: Kraken chính
+        api_key_label: Khóa API
+        api_key_placeholder: Dán khóa API Kraken
+        keep_api_key_placeholder: Để trống để giữ khóa API hiện tại
+        api_secret_label: Khóa riêng
+        api_secret_placeholder: Dán khóa riêng Kraken
+        keep_api_secret_placeholder: Để trống để giữ khóa riêng hiện tại
+        setup_accounts: Thiết lập tài khoản
+        syncing: Đang đồng bộ...
+        sync: Đồng bộ
+        disconnect: Ngắt kết nối
+        disconnect_confirm: "Bạn có chắc muốn ngắt kết nối %{name}?"

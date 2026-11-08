@@ -1,0 +1,8 @@
+---
+pt-PT:
+  settings:
+    providers:
+      up_panel:
+        step_1_html: "Aceda a %{link} e gere um token de acesso pessoal."
+        step_2: "Copie o seu token de acesso pessoal."
+        step_3: "Cole abaixo o token, guarde e, em seguida, ligue as suas contas sincronizadas."

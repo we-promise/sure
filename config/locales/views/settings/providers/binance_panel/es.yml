@@ -1,0 +1,28 @@
+---
+es:
+  settings:
+    providers:
+      taglines:
+        binance: Sincroniza tus saldos spot de Binance con una clave API de solo lectura.
+      binance_panel:
+        setup_instructions: 'Para conectar Binance, crea una clave API de solo lectura:'
+        step1_html: Ve a <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>
+        step2: Crea una nueva clave API solo con el permiso Enable Reading (lectura)
+        step3: Pega tu API Key y tu Secret abajo
+        no_withdraw_title: Solo claves de lectura
+        no_withdraw_body: No actives permisos de retirada al crear tu clave API de Binance. Sure solo necesita acceso de lectura.
+        ip_hint_title: Se requiere lista blanca de IP
+        ip_hint_body: 'Añade la IP de salida del servidor de la aplicación a la lista blanca de la clave API de Binance:'
+        ip_hint_contact_admin: Contacta con tu administrador para obtener la IP de salida del servidor de la aplicación.
+        api_key_label: API Key
+        api_key_placeholder: Pega tu API Key de Binance
+        api_secret_label: API Secret
+        api_secret_placeholder: Pega tu API Secret de Binance
+        connect_button: Conectar Binance
+        syncing: Sincronizando...
+        sync: Sincronizar
+        historical_import: Ajustes de importación histórica
+        sync_start_date_label: Importar datos desde
+        sync_start_date_help: Selecciona hasta cuándo retroceder para obtener operaciones históricas.
+        disconnect: Desconectar
+        disconnect_confirm: ¿Seguro que quieres desconectar Binance?

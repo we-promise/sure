@@ -1,0 +1,10 @@
+---
+fr:
+  settings:
+    providers:
+      taglines:
+        fio: Synchronisez un compte Fio banka avec un jeton d'API en lecture seule.
+      fio_panel:
+        step_1_html: Connectez-vous à la banque en ligne %{link} et ouvrez Settings → API.
+        step_2: Créez un jeton avec un accès en lecture seule (« Sledování účtu »). Il nécessite une authentification forte et reste valable jusqu'à 180 jours.
+        step_3: 'Collez le jeton ci-dessous et enregistrez. Un jeton donne accès à un seul compte : ajoutez donc une connexion par compte Fio.'

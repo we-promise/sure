@@ -1,0 +1,21 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        onchain_wallet: 通过链上公开地址追踪比特币、EVM、Solana、Cosmos 和 Polkadot 自托管钱包。
+      onchain_wallet_panel:
+        keyless_title: 只读访问，无需私钥
+        keyless_body: Sure 仅读取链上公开数据。绝不涉及私钥、助记词或签名，也无法进行任何资金转出。
+        add_wallet: 添加钱包
+        manage_wallets: 管理钱包
+        disconnect_all: 断开所有钱包连接
+        disconnect_all_confirm: 这将移除所有被追踪的地址及其账户。是否继续？
+        sync_start_date_label: 忽略此日期之前的转账
+        sync_start_date_hint: 此日期之前的转账将被忽略。留空以导入区块链浏览器报告的所有内容。
+        advanced: 高级设置
+        etherscan_api_key_label: Etherscan API 密钥（可选）
+        etherscan_api_key_placeholder: 粘贴 Etherscan API 密钥
+        keep_etherscan_api_key: 留空以保留现有密钥
+        etherscan_hint: 以太坊数据读取无需密钥即可使用。添加 Etherscan 密钥仅可提高以太坊的请求频率限制。
+        save: 保存

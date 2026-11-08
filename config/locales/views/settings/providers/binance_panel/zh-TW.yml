@@ -1,0 +1,28 @@
+---
+zh-TW:
+  settings:
+    providers:
+      taglines:
+        binance: 使用唯讀 API 金鑰同步您的 Binance 現貨餘額。
+      binance_panel:
+        setup_instructions: 要連結 Binance，請建立一組唯讀 API 金鑰：
+        step1_html: 前往 <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>
+        step2: 建立一組新的 API 金鑰，只勾選 Enable Reading 權限
+        step3: 將您的 API Key 與 Secret 貼到下方
+        no_withdraw_title: 只用唯讀金鑰
+        no_withdraw_body: 建立 Binance API 金鑰時，請不要啟用提領權限。Sure 只需要讀取權限。
+        ip_hint_title: 需要設定 IP 白名單
+        ip_hint_body: 請將這台應用程式伺服器的對外 IP 加入 Binance API 金鑰的白名單：
+        ip_hint_contact_admin: 請聯絡您的管理員取得應用程式伺服器的對外 IP 位址。
+        api_key_label: API 金鑰
+        api_key_placeholder: 貼上您的 Binance API Key
+        api_secret_label: API 密鑰 (API Secret)
+        api_secret_placeholder: 貼上您的 Binance API Secret
+        connect_button: 連結 Binance
+        syncing: 同步中...
+        sync: 同步
+        historical_import: 歷史資料匯入設定
+        sync_start_date_label: 匯入資料起始日
+        sync_start_date_help: 選擇要往回抓多久的歷史交易。
+        disconnect: 中斷連線
+        disconnect_confirm: 確定要中斷 Binance 連線嗎？

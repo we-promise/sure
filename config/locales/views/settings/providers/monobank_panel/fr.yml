@@ -1,0 +1,10 @@
+---
+fr:
+  settings:
+    providers:
+      taglines:
+        monobank: Synchronisez des cartes et cagnottes Monobank (Ukraine) avec un jeton d'API personnel.
+      monobank_panel:
+        step_1_html: Rendez-vous sur %{link}, connectez-vous avec l'app Monobank et générez un jeton personnel.
+        step_2: 'Copiez le jeton : il n''est affiché qu''une seule fois.'
+        step_3: Collez le jeton ci-dessous, enregistrez, puis liez les cartes et cagnottes que vous souhaitez suivre.

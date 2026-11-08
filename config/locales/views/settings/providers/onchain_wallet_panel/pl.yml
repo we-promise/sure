@@ -1,0 +1,25 @@
+---
+pl:
+  settings:
+    providers:
+      taglines:
+        onchain_wallet: Śledź portfele Bitcoin, EVM, Solana, Cosmos i Polkadot z samodzielną kontrolą
+          kluczy na podstawie ich publicznych adresów.
+      onchain_wallet_panel:
+        add_wallet: Dodaj portfel
+        advanced: Zaawansowane
+        disconnect_all: Rozłącz wszystkie portfele
+        disconnect_all_confirm: To usunie wszystkie śledzone adresy i ich konta. Kontynuować?
+        etherscan_api_key_label: Klucz API Etherscan (opcjonalnie)
+        etherscan_api_key_placeholder: Wklej klucz API Etherscan
+        etherscan_hint: Odczyt danych Ethereum działa bez klucza. Dodanie klucza Etherscan
+          tylko podnosi limit zapytań dla Ethereum.
+        keep_etherscan_api_key: Zostaw puste, aby zachować obecny klucz
+        keyless_body: Sure wyłącznie odczytuje publiczne dane blockchaina. Nie są
+          potrzebne żadne klucze, frazy seed ani podpisy, i nic nie może zostać wydane.
+        keyless_title: Tylko odczyt, bez wymaganych kluczy
+        manage_wallets: Zarządzaj portfelami
+        save: Zapisz
+        sync_start_date_hint: Przelewy sprzed tej daty są ignorowane. Zostaw puste,
+          aby zaimportować wszystko, co zgłasza eksplorator.
+        sync_start_date_label: Ignoruj przelewy sprzed

@@ -1,0 +1,37 @@
+---
+es:
+  settings:
+    providers:
+      taglines:
+        enable_banking: Sincroniza cuentas bancarias europeas mediante open banking PSD2.
+      enable_banking_panel:
+        callback_url_instruction: Para la URL de retorno (callback), utiliza %{callback_url}.
+        connection_error: Error de conexión
+        step_1_html: Ve a %{link} y consigue tus credenciales de desarrollador.
+        step_2: Elige tu país y pega abajo el Application ID y el certificado de cliente.
+        step_3: Guarda y luego usa Añadir conexión para vincular tu banco.
+        config_locked_title: Configuración bloqueada
+        config_locked_message: Desconecta todos los bancos vinculados antes de cambiar estas credenciales.
+        application_id_label: Application ID
+        application_id_placeholder_new: Introduce el Application ID
+        application_id_placeholder_update: Introduce un nuevo ID para actualizarlo
+        client_certificate_label: Certificado de cliente (con clave privada)
+        keep_client_certificate_hint: "Déjalo en blanco para conservar el certificado actual"
+        save_and_connect: Guardar y conectar
+        update_connection: Actualizar conexión
+        connected_bank: Banco conectado
+        session_expires: 'La sesión caduca: %{date}'
+        unknown: Desconocido
+        connection: Conexión
+        session_expired_reconnect: 'Sesión caducada: vuelve a conectar'
+        configured: Configurado
+        ready_to_link: Listo para vincular cuentas
+        sync: Sincronizar
+        reconnect: Reconectar
+        connect_bank: Conectar banco
+        remove: Quitar
+        remove_confirm: ¿Seguro que quieres quitar esta conexión?
+        add_connection: Añadir conexión
+        syncing: Sincronizando
+        select_country: Selecciona un país...
+        country_label: País

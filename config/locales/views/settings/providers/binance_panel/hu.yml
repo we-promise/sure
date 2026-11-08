@@ -1,0 +1,26 @@
+---
+hu:
+  settings:
+    providers:
+      taglines:
+        binance: Binance spot egyenlegek szinkronizálása csak olvasási API-kulccsal.
+      binance_panel:
+        setup_instructions: "A Binance csatlakoztatásához hozz létre egy csak olvasási jogosultsággal rendelkező API-kulcsot:"
+        step1_html: 'Nyisd meg a <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API-kezelőjét</a>'
+        step2: "Hozz létre egy új API-kulcsot, csak olvasási engedéllyel"
+        step3: "Illeszd be az API-kulcsodat és az API-titkodat az alábbiakba"
+        no_withdraw_warning: "Figyelmeztetés: NE engedélyezd a kifizetési jogosultságot"
+        no_withdraw_title: "Csak olvasható kulcs"
+        no_withdraw_body: "Ne engedélyezd a kifizetési jogosultságot a Binance API-kulcs létrehozásakor. A Sure csak olvasási hozzáférést igényel."
+        ip_hint_title: "IP-cím-engedélyezési lista szükséges"
+        ip_hint_body: "Add hozzá az alkalmazásszerver kimenő IP-címét a Binance API-kulcs engedélyezési listájához:"
+        ip_hint_contact_admin: "Az alkalmazásszerver kimenő IP-címéért fordulj a rendszergazdádhoz."
+        api_key_label: API-kulcs
+        api_key_placeholder: Illeszd be a Binance API-kulcsodat
+        api_secret_label: API-titok
+        api_secret_placeholder: Illeszd be a Binance API-titkodat
+        connect_button: Binance csatlakoztatása
+        syncing: Szinkronizálás...
+        sync: Szinkronizálás
+        disconnect: Lecsatlakozás
+        disconnect_confirm: "Biztosan le szeretnéd választani a Binance-t?"

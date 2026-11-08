@@ -1,0 +1,10 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        up: 使用个人访问令牌同步澳大利亚 Up 银行账户。
+      up_panel:
+        step_1_html: 前往 %{link} 并生成个人访问令牌。
+        step_2: 复制您的个人访问令牌。
+        step_3: 将令牌粘贴在下方并保存，然后关联已同步的账户。

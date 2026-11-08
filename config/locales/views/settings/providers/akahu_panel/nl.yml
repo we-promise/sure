@@ -1,0 +1,10 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        akahu: "Synchroniseer Nieuw-Zeelandse financiële instellingen via Akahu."
+      akahu_panel:
+        step_1_html: "Ga naar %{link} en maak een persoonlijke app aan."
+        step_2: "Kopieer uw app-token en gebruikerstoken."
+        step_3: "Plak de tokens hieronder, sla op en koppel daarna uw gesynchroniseerde accounts."

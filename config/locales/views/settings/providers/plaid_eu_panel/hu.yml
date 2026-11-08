@@ -1,0 +1,8 @@
+---
+hu:
+  settings:
+    providers:
+      taglines:
+        plaid_eu: Európai pénzintézetek csatlakoztatása Plaid-en keresztül (PSD2 / Open Banking).
+      plaid_eu_panel:
+        step_1_html: "Nyisd meg a(z) %{link} oldalt, és másold ki az EU ügyfél-azonosítódat és titkos kulcsodat."

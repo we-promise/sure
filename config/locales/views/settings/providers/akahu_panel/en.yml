@@ -1,0 +1,10 @@
+---
+en:
+  settings:
+    providers:
+      taglines:
+        akahu: Sync New Zealand financial institutions via Akahu.
+      akahu_panel:
+        step_1_html: "Go to %{link} and create a personal app."
+        step_2: "Copy your app token and user token."
+        step_3: "Paste the tokens below, save, then link your synced accounts."

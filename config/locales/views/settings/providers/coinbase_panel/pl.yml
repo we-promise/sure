@@ -1,0 +1,24 @@
+---
+pl:
+  settings:
+    providers:
+      taglines:
+        coinbase: Zaimportuj swoje aktywa krypto z Coinbase i śledź wyniki.
+      coinbase_panel:
+        api_key_label: Klucz API
+        api_key_placeholder: Wprowadź klucz API Coinbase
+        api_secret_label: Sekret API
+        api_secret_placeholder: Wprowadź sekret API Coinbase
+        connect_button: Połącz Coinbase
+        disconnect: Rozłącz
+        disconnect_confirm: Czy na pewno chcesz odłączyć to połączenie Coinbase? Twoje
+          zsynchronizowane konta staną się kontami ręcznymi.
+        setup_instructions: 'Aby połączyć Coinbase:'
+        step1_html: Przejdź do <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" rel="noopener noreferrer" class="text-primary underline">Ustawień
+          API Coinbase</a>
+        step2: Utwórz nowy klucz API z uprawnieniami tylko do odczytu (podgląd kont,
+          podgląd transakcji)
+        step3: Skopiuj klucz API i sekret API, a następnie wklej je poniżej
+        sync: Synchronizuj
+        syncing: Synchronizacja...

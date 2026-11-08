@@ -1,0 +1,28 @@
+---
+uk:
+  settings:
+    providers:
+      taglines:
+        kraken: Синхронізуйте баланси Kraken та виконання спотових угод за допомогою ключа API лише для читання.
+      kraken_panel:
+        step1_html: 'Перейдіть до <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Налаштування API Kraken</a>'
+        step2: "Створіть ключ API лише з Query Funds та Query Closed Orders & Trades."
+        step3: "Вставте ключ API та приватний ключ нижче."
+        read_only_title: "Лише синхронізація біржі для читання"
+        read_only_body: "Не надавайте дозволи на торгівлю, скасування, зняття коштів, експорт, книгу, Earn, стейкінг або перекази. Sure імпортує лише баланси, активи та виконання спотових угод."
+        default_connection_name: Kraken
+        add_connection: Додати з'єднання Kraken
+        update_connection: Оновити з'єднання
+        connection_name_label: Назва з'єднання
+        connection_name_placeholder: Основний Kraken
+        api_key_label: Ключ API
+        api_key_placeholder: Вставте свій ключ API Kraken
+        keep_api_key_placeholder: Залиште порожнім, щоб зберегти існуючий ключ API
+        api_secret_label: Приватний ключ
+        api_secret_placeholder: Вставте свій приватний ключ Kraken
+        keep_api_secret_placeholder: Залиште порожнім, щоб зберегти існуючий приватний ключ
+        setup_accounts: Налаштувати рахунок
+        syncing: Синхронізація...
+        sync: Синхронізувати
+        disconnect: Відключити
+        disconnect_confirm: "Ви впевнені, що хочете відключити %{name}?"

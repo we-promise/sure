@@ -1,0 +1,17 @@
+---
+vi:
+  settings:
+    providers:
+      taglines:
+        lunchflow: Kết nối 20.000+ ngân hàng từ 40+ quốc gia (Anh, EU, Mỹ và nhiều hơn!)
+      lunchflow_panel:
+        step_1_html: "Vào %{link} và tạo khóa API."
+        step_2: "Dán khóa vào bên dưới và kết nối."
+        step_3: "Sau đó vào Tài khoản để liên kết các tài khoản đã đồng bộ."
+        api_key_label: "Khóa API"
+        api_key_placeholder_new: "Dán khóa API tại đây"
+        api_key_placeholder_update: "Nhập khóa API mới để cập nhật"
+        base_url_label: "URL cơ sở (Tùy chọn)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (mặc định)"
+        save_and_connect: "Lưu và kết nối"
+        update_connection: "Cập nhật kết nối"

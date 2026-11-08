@@ -1,0 +1,28 @@
+---
+ru:
+  settings:
+    providers:
+      taglines:
+        coinspot: Синхронизируйте балансы CoinSpot, стоимость в AUD, переводы, пополнения, выводы и историю ордеров с помощью API-ключа только для чтения.
+      coinspot_panel:
+        step1_html: Перейдите в <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">настройки API CoinSpot</a>
+        step2: Создайте API-ключ с доступом только для чтения к балансам и истории.
+        step3: Вставьте API-ключ и секретный ключ ниже.
+        read_only_title: Только синхронизация биржи для чтения
+        read_only_body: Не предоставляйте разрешения на отправку, вывод средств, торговлю или переводы. Sure импортирует только балансы, стоимость в AUD, переводы, пополнения, выводы и историю исполненных ордеров.
+        default_connection_name: CoinSpot
+        add_connection: Добавить подключение CoinSpot
+        update_connection: Обновить подключение
+        connection_name_label: Название подключения
+        connection_name_placeholder: Основной CoinSpot
+        api_key_label: API-ключ
+        api_key_placeholder: Вставьте ваш API-ключ CoinSpot
+        keep_api_key_placeholder: Оставьте пустым, чтобы сохранить текущий API-ключ
+        api_secret_label: Секретный ключ API
+        api_secret_placeholder: Вставьте ваш секретный ключ API CoinSpot
+        keep_api_secret_placeholder: Оставьте пустым, чтобы сохранить текущий секретный ключ API
+        setup_accounts: Настроить счёт
+        syncing: Синхронизация...
+        sync: Синхронизировать
+        disconnect: Отключить
+        disconnect_confirm: Вы уверены, что хотите отключить %{name}?

@@ -1,0 +1,20 @@
+---
+zh-TW:
+  settings:
+    providers:
+      taglines:
+        coinbase: 匯入您的 Coinbase 加密貨幣持倉並追蹤績效。
+      coinbase_panel:
+        setup_instructions: 要連結 Coinbase：
+        step1_html: 前往 <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API 設定</a>
+        step2: 建立一組只有唯讀權限的新 API 金鑰（檢視帳戶、檢視交易）
+        step3: 複製您的 API 金鑰與 API Secret，貼到下方
+        api_key_label: API 金鑰
+        api_key_placeholder: 輸入您的 Coinbase API 金鑰
+        api_secret_label: API 密鑰 (API Secret)
+        api_secret_placeholder: 輸入您的 Coinbase API Secret
+        connect_button: 連結 Coinbase
+        syncing: 同步中...
+        sync: 同步
+        disconnect: 中斷連線
+        disconnect_confirm: 確定要中斷這個 Coinbase 連線嗎？已同步的帳戶會變成手動帳戶。

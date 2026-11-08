@@ -1,0 +1,25 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        coinbase: Importa les teves posicions cripto de Coinbase i fes el seguiment
+          del rendiment.
+      coinbase_panel:
+        api_key_label: Clau API
+        api_key_placeholder: Introdueix la teva clau API de Coinbase
+        api_secret_label: Secret de l'API
+        api_secret_placeholder: Introdueix el teu secret de l'API de Coinbase
+        connect_button: Connecta Coinbase
+        disconnect: Desconnecta
+        disconnect_confirm: Segur que vols desconnectar aquesta connexió de Coinbase?
+          Els teus comptes sincronitzats passaran a ser comptes manuals.
+        setup_instructions: 'Per connectar Coinbase:'
+        step1_html: Ves a <a href="https://portal.cdp.coinbase.com/projects/api-keys"
+          target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase
+          API Settings</a>
+        step2: Crea una nova clau API amb permisos de només lectura (veure comptes,
+          veure transaccions)
+        step3: Copia la teva clau API i secret de l'API i enganxa'ls a sota
+        sync: Sincronitza
+        syncing: Sincronitzant...

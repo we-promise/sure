@@ -1,0 +1,28 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        kraken: "Synchroniseer Kraken-saldi en uitgevoerde spottrades met een alleen-lezen API-sleutel."
+      kraken_panel:
+        step1_html: "Ga naar <a href=\"https://pro.kraken.com/app/settings/api\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"underline\">Kraken API settings</a>"
+        step2: "Maak een API-sleutel aan met alleen Query Funds en Query Closed Orders & Trades."
+        step3: "Plak hieronder de API-sleutel en de private key."
+        read_only_title: "Uitsluitend alleen-lezensynchronisatie van de beurs"
+        read_only_body: "Verleen geen rechten voor handelen, annuleren, opnemen, exporteren, ledger, Earn, staking of overboekingen. Sure importeert alleen saldi, posities en uitgevoerde spottrades."
+        default_connection_name: "Kraken"
+        add_connection: "Kraken-koppeling toevoegen"
+        update_connection: "Koppeling bijwerken"
+        connection_name_label: "Naam van koppeling"
+        connection_name_placeholder: "Kraken (hoofd)"
+        api_key_label: "API-sleutel"
+        api_key_placeholder: "Plak uw Kraken-API-sleutel"
+        keep_api_key_placeholder: "Laat leeg om de bestaande API-sleutel te behouden"
+        api_secret_label: "Private key"
+        api_secret_placeholder: "Plak uw Kraken private key"
+        keep_api_secret_placeholder: "Laat leeg om de bestaande private key te behouden"
+        setup_accounts: "Account instellen"
+        syncing: "Synchroniseren..."
+        sync: "Synchroniseren"
+        disconnect: "Loskoppelen"
+        disconnect_confirm: "Weet u zeker dat u %{name} wilt loskoppelen?"

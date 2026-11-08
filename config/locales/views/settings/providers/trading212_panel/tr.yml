@@ -1,0 +1,33 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        trading212: Trading 212 yatırım portföyünüzü salt okunur bir API anahtarıyla senkronize edin.
+      trading212_panel:
+        steps:
+          step_1: Trading 212 → Settings → API bölümüne gidin (web veya mobil uygulama).
+          step_2: Yeni bir API anahtarı oluşturun — Trading 212 size bir API ID ve bir Secret Key gösterecektir.
+          step_3: İkisini de aşağıya yapıştırın, ortamınızı ve hesap para biriminizi seçin, ardından kaydedin.
+        api_key_label: API ID
+        api_key_placeholder_new: Trading 212 API ID'nizi yapıştırın
+        api_key_placeholder_existing: Mevcut API ID'yi korumak için boş bırakın
+        api_secret_label: Gizli Anahtar
+        api_secret_placeholder_new: Trading 212 Gizli Anahtarınızı yapıştırın
+        api_secret_placeholder_existing: Mevcut Gizli Anahtarı korumak için boş bırakın
+        environment_label: Ortam
+        environment_live: Gerçek hesap
+        environment_demo: Demo hesap
+        currency_label: Hesap para birimi
+        save_configuration: Yapılandırmayı Kaydet
+        update_configuration: Yapılandırmayı Güncelle
+        sync: Senkronize et
+        syncing: Senkronize ediliyor...
+        disconnect: Trading 212 hesabının bağlantısını kes
+        disconnect_confirm: Trading 212 bağlantısı kesilsin mi?
+        default_account_name: Trading 212 Hesabı
+        add_account: Başka bir hesap ekle
+        status_configured_prefix: Yapılandırıldı. Keşfedilen hesapları yönetmek için
+        accounts_tab: Hesaplar
+        status_configured_suffix: sekmesine gidin.
+        not_configured: Yapılandırılmadı.

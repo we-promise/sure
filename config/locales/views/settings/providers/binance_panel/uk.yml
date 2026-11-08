@@ -1,0 +1,28 @@
+---
+uk:
+  settings:
+    providers:
+      taglines:
+        binance: Синхронізуйте свої спотові баланси Binance за допомогою ключа API лише для читання.
+      binance_panel:
+        setup_instructions: "Щоб підключити Binance, створіть ключ API лише для читання:"
+        step1_html: 'Перейдіть до <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Керування API Binance</a>'
+        step2: "Створіть новий ключ API лише з дозволом на читання"
+        step3: "Вставте свій ключ API та секрет нижче"
+        no_withdraw_title: "Лише ключ для читання"
+        no_withdraw_body: "Не вмикайте дозволи на зняття коштів під час створення ключа API Binance. Sure потрібен лише доступ для читання."
+        ip_hint_title: "Потрібен білий список IP"
+        ip_hint_body: "Додайте вихідний IP-адресу сервера програми до білого списку ключів API Binance:"
+        ip_hint_contact_admin: "Зверніться до свого адміністратора, щоб отримати вихідну IP-адресу сервера програми."
+        api_key_label: Ключ API
+        api_key_placeholder: Вставте свій ключ API Binance
+        api_secret_label: Секрет API
+        api_secret_placeholder: Вставте свій секрет API Binance
+        connect_button: Підключити Binance
+        syncing: Синхронізація...
+        sync: Синхронізувати
+        historical_import: "Налаштування історичного імпорту"
+        sync_start_date_label: "Імпортувати дані з"
+        sync_start_date_help: "Виберіть, наскільки далеко назад отримувати історичні угоди."
+        disconnect: Відключити
+        disconnect_confirm: "Ви впевнені, що хочете відключити Binance?"

@@ -1,0 +1,10 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        plaid: 通过 Plaid 连接数千家美国金融机构。
+      plaid_panel:
+        step_1_html: 打开 %{link} 并复制您的 Client ID 和 Secret Key。
+        step_2: 选择环境。测试请使用 sandbox，真实账户请使用 production。
+        step_3: 将凭据粘贴到下方并连接。

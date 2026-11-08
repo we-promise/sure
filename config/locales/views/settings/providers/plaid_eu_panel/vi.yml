@@ -1,0 +1,8 @@
+---
+vi:
+  settings:
+    providers:
+      taglines:
+        plaid_eu: Kết nối tổ chức tài chính châu Âu qua Plaid (PSD2 / Open Banking).
+      plaid_eu_panel:
+        step_1_html: "Mở %{link} và sao chép ID khách hàng EU và Khóa bí mật."

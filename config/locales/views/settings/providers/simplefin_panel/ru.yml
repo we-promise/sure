@@ -1,0 +1,13 @@
+---
+ru:
+  settings:
+    providers:
+      taglines:
+        simplefin: Подключите банковские счета США через открытый протокол SimpleFIN.
+      simplefin_panel:
+        save_and_connect: Сохранить и подключить
+        setup_token_label: Токен настройки
+        setup_token_placeholder: Вставьте токен настройки SimpleFIN
+        step_1_html: Перейдите на %{link} для получения одноразового токена настройки.
+        step_2: Вставьте токен ниже и подключитесь.
+        step_3: Затем перейдите в Счета, чтобы связать ваши синхронизированные счета.

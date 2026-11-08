@@ -1,0 +1,37 @@
+---
+fr:
+  settings:
+    providers:
+      taglines:
+        enable_banking: Synchronisez les comptes bancaires européens via l'open banking PSD2.
+      enable_banking_panel:
+        add_connection: Ajouter une connexion
+        application_id_label: Application ID
+        application_id_placeholder_new: Saisissez l'identifiant de l'application
+        application_id_placeholder_update: Saisissez le nouvel identifiant pour mettre à jour
+        callback_url_instruction: Pour l'URL de rappel, utilisez %{callback_url}.
+        client_certificate_label: Certificat client (avec clé privée)
+        keep_client_certificate_hint: "Laissez vide pour conserver le certificat actuel"
+        config_locked_message: Déconnectez toutes les banques liées avant de modifier ces identifiants.
+        config_locked_title: Configuration verrouillée
+        configured: Configuré
+        connect_bank: Connecter la banque
+        connected_bank: Banque connectée
+        connection: Connexion
+        connection_error: Erreur de connexion
+        country_label: Pays
+        ready_to_link: Prêt à lier les comptes
+        reconnect: Reconnecter
+        remove: Supprimer
+        remove_confirm: Voulez-vous vraiment supprimer cette connexion ?
+        save_and_connect: Enregistrer et connecter
+        select_country: Sélectionner le pays...
+        session_expired_reconnect: Session expirée - reconnecter
+        session_expires: "La session expire le : %{date}"
+        step_1_html: Allez sur %{link} et récupérez vos identifiants de développeur.
+        step_2: Choisissez votre pays et collez l'identifiant de l'application (Application ID) et le certificat client ci-dessous.
+        step_3: Enregistrez, puis utilisez Ajouter une connexion pour lier votre banque.
+        sync: Synchroniser
+        syncing: Synchronisation...
+        unknown: Inconnu
+        update_connection: Mettre à jour la connexion

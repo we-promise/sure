@@ -1,0 +1,13 @@
+---
+hu:
+  settings:
+    providers:
+      taglines:
+        simplefin: US bankszámlák csatlakoztatása az open SimpleFIN protokollon keresztül.
+      simplefin_panel:
+        step_1_html: "Menj a(z) %{link} oldalra egy egyszeri beállítási tokenért."
+        step_2: "Illeszd be a tokent alább és csatlakozz."
+        step_3: "Ezután menj a Számlák menübe a szinkronizált számlák összekapcsolásához."
+        setup_token_label: "Beállítási token"
+        setup_token_placeholder: "SimpleFIN beállítási token beillesztése"
+        save_and_connect: "Mentés és csatlakozás"

@@ -1,0 +1,33 @@
+---
+fr:
+  settings:
+    providers:
+      taglines:
+        trading212: Synchronisez votre portefeuille d'investissement Trading 212 à l'aide d'une clé d'API en lecture seule.
+      trading212_panel:
+        accounts_tab: Comptes
+        add_account: Ajouter un autre compte
+        api_key_label: Identifiant d'API
+        api_key_placeholder_existing: Laissez vide pour conserver l'identifiant d'API actuel
+        api_key_placeholder_new: Collez votre identifiant d'API Trading 212
+        api_secret_label: Clé secrète
+        api_secret_placeholder_existing: Laissez vide pour conserver la clé secrète actuelle
+        api_secret_placeholder_new: Collez votre clé secrète Trading 212
+        currency_label: Devise du compte
+        default_account_name: Compte Trading 212
+        disconnect: Déconnecter le compte Trading 212
+        disconnect_confirm: Déconnecter Trading 212 ?
+        environment_demo: Compte de démonstration
+        environment_label: Environnement
+        environment_live: Compte réel
+        not_configured: Non configuré.
+        save_configuration: Enregistrer la configuration
+        status_configured_prefix: Configuré. Ouvrez l'onglet
+        status_configured_suffix: pour gérer les comptes détectés.
+        steps:
+          step_1: Ouvrez Trading 212 → Paramètres → API (application web ou mobile).
+          step_2: "Générez une nouvelle clé d'API : Trading 212 vous affichera un identifiant d'API et une clé secrète."
+          step_3: Collez les deux ci-dessous, sélectionnez votre environnement et la devise du compte, puis enregistrez.
+        sync: Synchroniser
+        syncing: Synchronisation...
+        update_configuration: Mettre à jour la configuration

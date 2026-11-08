@@ -1,0 +1,33 @@
+---
+ru:
+  settings:
+    providers:
+      taglines:
+        trading212: Синхронизируйте инвестиционный портфель Trading 212 с помощью API-ключа только для чтения.
+      trading212_panel:
+        steps:
+          step_1: Откройте Trading 212 → Settings → API (в веб-версии или мобильном приложении).
+          step_2: Сгенерируйте новый API-ключ — Trading 212 покажет API ID и Secret Key.
+          step_3: Вставьте оба значения ниже, выберите среду и валюту счёта, затем сохраните.
+        api_key_label: API ID
+        api_key_placeholder_new: Вставьте ваш API ID Trading 212
+        api_key_placeholder_existing: Оставьте пустым, чтобы сохранить текущий API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Вставьте ваш Secret Key Trading 212
+        api_secret_placeholder_existing: Оставьте пустым, чтобы сохранить текущий Secret Key
+        environment_label: Среда
+        environment_live: Реальный счёт
+        environment_demo: Демо-счёт
+        currency_label: Валюта счёта
+        save_configuration: Сохранить конфигурацию
+        update_configuration: Обновить конфигурацию
+        sync: Синхронизировать
+        syncing: Синхронизация...
+        disconnect: Отключить счёт Trading 212
+        disconnect_confirm: Отключить Trading 212?
+        default_account_name: Счёт Trading 212
+        add_account: Добавить ещё один счёт
+        status_configured_prefix: Настроено. Перейдите на
+        accounts_tab: Счета
+        status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
+        not_configured: Не настроено.

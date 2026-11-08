@@ -1,0 +1,61 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        ibkr: 通过 Flex Query 导入同步盈透证券投资账户。
+      ibkr_panel:
+        steps:
+          step_1: 在您的 IBKR Client Portal 中，前往“Performance & Reports” > “Flex Queries”。
+          step_2: 在“Activity Flex Query”区域点击“+”图标创建一个新查询。
+          step_3: 为查询命名（例如“Sure Sync”），然后查看下方的 Flex Query 详情并启用列出的部分、字段和配置选项。
+          step_4: 保存查询，记下您的“Query ID”，然后使用“Flex Web Service Configuration”区域中的齿轮图标生成访问 Token。
+          step_5: 将您的 Query ID 和 Token 粘贴到下方，保存配置，然后前往账户以链接发现的 IBKR 账户。
+        flex_query_details:
+          eyebrow: Flex Query
+          title: 部分、字段与配置
+          summary: 展开以查看您的 IBKR Activity Flex Query 必须包含的精确部分、字段和设置。
+          sections_heading: 启用这些部分和字段
+          configuration_heading: 设置这些查询选项
+        sections:
+          account_information: 账户信息：Account ID、Currency
+          cash_report: 现金报表：
+          cash_report_options: 选项：无
+          cash_report_fields: 字段：Currency、Ending Cash
+          cash_transactions: 现金交易：
+          cash_transactions_options: 选项：Dividends、Deposits & Withdrawals、Detail
+          cash_transactions_fields: 字段：Amount、Conid、Currency、FX Rate To Base、Report Date、Transaction ID、Type
+          change_in_position_value_summary: 仓位价值变动汇总：Currency、End Of Period Value
+          net_asset_value: 基础币种下的净资产值（NAV）：
+          net_asset_value_options: 选项：无
+          net_asset_value_fields: 字段：Currency、Report Date、Total
+          open_positions: 未平仓位：
+          open_positions_options: 选项：Summary
+          open_positions_fields: 字段：Asset Class、Conid、Cost Basis Price、Currency、FX Rate To Base、Mark Price、Quantity、Report Date、Security ID、Security ID Type、Side、Symbol
+          trades: 交易：
+          trades_options: 选项：Execution
+          trades_fields: 字段：Asset Class、Buy/Sell、Conid、Currency、FX Rate To Base、IB Commission、IB Commission Currency、Quantity、Symbol、Trade Date、Trade ID、TradePrice、Transaction ID
+        configuration:
+          models: Models：可选
+          format: Format：XML
+          period: Period：最近 365 个自然日
+          date_format: Date Format：yyyy-MM-dd
+          time_format: Time Format：HH:mm:ss
+          date_time_separator: Date/Time Separator：；（分号）
+          profit_and_loss: Profit and Loss：默认
+          all_other_options: 其他所有配置选项：“No”
+        report_window_note: IBKR Flex reports 受您在 IBKR 中配置的查询窗口限制。Sure 将从此报告导入完整的当前持仓，以及最多最近 365 天的活动。
+        sync: 同步
+        disconnect_confirm: 断开 Interactive Brokers？
+        query_id_label: Query ID
+        query_id_placeholder_new: 输入您的 IBKR Flex Query ID
+        query_id_placeholder_existing: 留空以保留当前 Query ID
+        token_label: Token
+        token_placeholder_new: 输入您的 IBKR Flex Web Service Token
+        token_placeholder_existing: 留空以保留当前 Token
+        save_configuration: 保存配置
+        update_configuration: 更新配置
+        status_configured_prefix: "%{summary}。请访问"
+        accounts_tab: 账户
+        status_configured_suffix: 标签页以管理已发现的账户。
+        not_configured: 未配置。

@@ -1,0 +1,28 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        coinspot: CoinSpot bakiyelerini, AUD değerlerini, transferleri, para yatırma, para çekme ve emir geçmişini salt okunur bir API anahtarıyla senkronize edin.
+      coinspot_panel:
+        step1_html: <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API ayarlarına</a> gidin
+        step2: Bakiyelere ve geçmişe salt okunur erişimi olan bir API anahtarı oluşturun.
+        step3: API anahtarını ve gizli anahtarı aşağıya yapıştırın.
+        read_only_title: Salt okunur borsa senkronizasyonu
+        read_only_body: Gönderme, para çekme, alım satım veya transfer izinleri vermeyin. Sure yalnızca bakiyeleri, AUD değerlerini, transferleri, para yatırma, para çekme ve tamamlanmış emir geçmişini içe aktarır.
+        default_connection_name: CoinSpot
+        add_connection: CoinSpot bağlantısı ekle
+        update_connection: Bağlantıyı güncelle
+        connection_name_label: Bağlantı adı
+        connection_name_placeholder: Ana CoinSpot
+        api_key_label: API Anahtarı
+        api_key_placeholder: CoinSpot API anahtarınızı yapıştırın
+        keep_api_key_placeholder: Mevcut API anahtarını korumak için boş bırakın
+        api_secret_label: API Gizli Anahtarı
+        api_secret_placeholder: CoinSpot API gizli anahtarınızı yapıştırın
+        keep_api_secret_placeholder: Mevcut API gizli anahtarını korumak için boş bırakın
+        setup_accounts: Hesabı kur
+        syncing: Senkronize ediliyor...
+        sync: Senkronize et
+        disconnect: Bağlantıyı kes
+        disconnect_confirm: '%{name} bağlantısını kesmek istediğinizden emin misiniz?'

@@ -1,0 +1,19 @@
+---
+zh-CN:
+  settings:
+    providers:
+      taglines:
+        lunchflow: 连接来自 40 多个国家/地区的 2 万多家银行（英国、欧盟、美国等）！
+      lunchflow_panel:
+        step_1_html: 前往 %{link} 并创建一个 API key。
+        step_2: 将您的 key 粘贴到下方并连接。
+        step_3: 然后前往账户，将同步到账户进行关联。
+        api_key_label: API Key
+        api_key_placeholder_new: 在此粘贴 API key
+        api_key_placeholder_update: 输入新的 API key 以更新
+        base_url_label: Base URL（可选）
+        base_url_placeholder: https://lunchflow.app/api/v1（默认）
+        save_and_connect: 保存并连接
+        update_connection: 更新连接
+        sync_start_date_label: 导入交易起始日期
+        sync_start_date_help: 留空以导入 Lunch Flow 中的全部交易。将日期提前将在下次同步时补全缺失时段。将日期推后不会影响已导入的交易。

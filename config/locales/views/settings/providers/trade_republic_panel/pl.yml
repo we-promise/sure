@@ -1,0 +1,76 @@
+---
+pl:
+  settings:
+    providers:
+      taglines:
+        trade_republic: Synchronizuj swoje konto inwestycyjne Trade Republic przez
+          bezpieczne logowanie internetowe tylko do odczytu.
+      trade_republic_panel:
+        accounts_discovered:
+          few: Wykryto %{count} konta Trade Republic.
+          many: Wykryto %{count} kont Trade Republic.
+          one: Wykryto 1 konto Trade Republic.
+          other: Wykryto %{count} kont Trade Republic.
+        accounts_tab: Konta
+        approval_pending: Logowanie rozpoczęte. Zatwierdź je w aplikacji Trade Republic
+          — Sure sprawdza to automatycznie.
+        authenticator_code_label: Kod z aplikacji uwierzytelniającej (jeśli wymagany)
+        authenticator_code_notice: Wpisz kod z aplikacji uwierzytelniającej.
+        authenticator_code_placeholder: Kod 6-cyfrowy
+        awaiting_authenticator_code: Wymagany kod z aplikacji uwierzytelniającej.
+        awaiting_confirmation: Oczekiwanie na zatwierdzenie w aplikacji Trade Republic.
+        check_login_status: Sprawdź status teraz
+        complete_login: Kontynuuj
+        confirm_login: Sprawdź logowanie
+        connect: Zaloguj się
+        connection_success:
+          close: Gotowe
+          description: Sure synchronizuje teraz Twoje dane z Trade Republic w tle.
+          message: Twoje połączenie z Trade Republic jest gotowe.
+          title: Trade Republic połączono pomyślnie
+        currency_label: Waluta konta
+        disconnect: Odłącz Trade Republic
+        disconnect_confirm: Odłączyć Trade Republic? Twoje zsynchronizowane konta
+          staną się kontami ręcznymi.
+        disconnect_confirm_with_identifier: "Odłączyć połączenie Trade Republic kończące się na %{last4}? Twoje zsynchronizowane konta staną się kontami ręcznymi."
+        identifier_phone: Telefon
+        identifier_account: Konto
+        encryption_warning:
+          message: Danych logowania i sesji Trade Republic nie można bezpiecznie przechowywać,
+            dopóki nie skonfigurowano Active Record Encryption.
+          title: Szyfrowanie nie jest skonfigurowane
+        login_expired: Żądanie zatwierdzenia wygasło.
+        not_configured: Nie skonfigurowano.
+        phone_number_label: Numer telefonu
+        phone_number_placeholder_existing: Zostaw puste, aby zachować bieżący numer
+          telefonu
+        phone_number_placeholder_new: "+49 170 1234567"
+        pin_label: PIN lub hasło
+        pin_placeholder_existing: Zostaw puste, aby zachować bieżący PIN lub hasło
+        pin_placeholder_new: Twój PIN lub hasło z aplikacji Trade Republic
+        push_login_notice: Zatwierdź teraz logowanie w aplikacji Trade Republic. Sure
+          sprawdza to automatycznie w tle. Możesz też sprawdzić status samodzielnie.
+        qr_back_to_credentials: Wróć do numeru telefonu i PIN-u lub hasła
+        qr_cancel: Anuluj logowanie kodem QR
+        qr_error: Nie udało się rozpocząć logowania kodem QR. Spróbuj ponownie.
+        requires_update: "Zaloguj się ponownie, aby wznowić synchronizację."
+        session_expires_in: "Logowanie wygasa za %{time} (%{at})."
+        qr_instruction: Zeskanuj kod QR aparatem telefonu, a następnie zatwierdź logowanie w aplikacji Trade Republic.
+        qr_loading: Przygotowywanie kodu QR…
+        qr_login: Zaloguj się kodem QR
+        qr_success: Logowanie zatwierdzone. Sure odświeża stronę dostawcy.
+        restart_login: Rozpocznij logowanie ponownie
+        add_account: "Dodaj kolejne połączenie"
+        save_configuration: Zapisz i rozpocznij logowanie
+        setup_accounts: Skonfiguruj konta
+        status_configured_prefix: Połączono. Przejdź do zakładki
+        status_configured_suffix: ", aby zarządzać wykrytymi kontami."
+        steps:
+          step_1: Wpisz numer telefonu i PIN lub hasło używane w aplikacji Trade Republic, a
+            następnie zapisz.
+          step_2: Gdy zostaniesz o to poproszony, wpisz kod z aplikacji uwierzytelniającej.
+          step_3: Gdy zostaniesz o to poproszony, zatwierdź logowanie w aplikacji
+            Trade Republic.
+        sync: Synchronizuj
+        syncing: "Synchronizowanie..."
+        update_configuration: Zaktualizuj konfigurację

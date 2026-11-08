@@ -1,0 +1,37 @@
+---
+en:
+  settings:
+    providers:
+      taglines:
+        enable_banking: Sync European bank accounts via PSD2 open banking.
+      enable_banking_panel:
+        callback_url_instruction: "For the callback URL, use %{callback_url}."
+        connection_error: Connection Error
+        step_1_html: "Go to %{link} and grab your developer credentials."
+        step_2: "Pick your country and paste the Application ID + Client Certificate below."
+        step_3: "Save, then use Add Connection to link your bank."
+        config_locked_title: "Configuration locked"
+        config_locked_message: "Disconnect all linked banks before changing these credentials."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Enter application ID"
+        application_id_placeholder_update: "Enter new ID to update"
+        client_certificate_label: "Client Certificate (with Private Key)"
+        keep_client_certificate_hint: "Leave blank to keep the current certificate"
+        save_and_connect: "Save and connect"
+        update_connection: "Update connection"
+        connected_bank: "Connected Bank"
+        session_expires: "Session expires: %{date}"
+        unknown: "Unknown"
+        connection: "Connection"
+        session_expired_reconnect: "Session expired - reconnect"
+        configured: "Configured"
+        ready_to_link: "Ready to link accounts"
+        sync: "Sync"
+        reconnect: "Reconnect"
+        connect_bank: "Connect bank"
+        remove: "Remove"
+        remove_confirm: "Are you sure you want to remove this connection?"
+        add_connection: "Add Connection"
+        syncing: "Syncing"
+        select_country: "Select country..."
+        country_label: "Country"

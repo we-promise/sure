@@ -1,0 +1,10 @@
+---
+nl:
+  settings:
+    providers:
+      taglines:
+        monobank: "Synchroniseer Oekraïense Monobank-kaarten en -spaarpotten met een persoonlijk API-token."
+      monobank_panel:
+        step_1_html: "Ga naar %{link}, meld u aan met de Monobank-app en genereer een persoonlijk token."
+        step_2: "Kopieer het token — het wordt maar één keer getoond."
+        step_3: "Plak het token hieronder, sla op en koppel daarna de kaarten en spaarpotten die u wilt volgen."

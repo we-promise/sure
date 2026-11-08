@@ -1,0 +1,61 @@
+---
+es:
+  settings:
+    providers:
+      taglines:
+        ibkr: Sincroniza cuentas de inversión de Interactive Brokers mediante importaciones de Flex Query.
+      ibkr_panel:
+        steps:
+          step_1: En tu Client Portal de IBKR, ve a "Performance & Reports" > "Flex Queries".
+          step_2: Haz clic en el icono "+" de la sección "Activity Flex Query" para crear una nueva consulta.
+          step_3: Ponle un nombre a tu consulta (p. ej. "Sure Sync"), luego revisa los detalles de la Flex Query más abajo y activa las secciones, campos y opciones de configuración indicados.
+          step_4: Guarda la consulta, anota tu "Query ID" y usa el icono del engranaje en la sección "Flex Web Service Configuration" para generar un token de acceso.
+          step_5: Pega tu Query ID y tu token abajo, guarda la configuración y luego ve a Cuentas para vincular las cuentas de IBKR detectadas.
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Secciones, campos y configuración
+          summary: Despliega para ver exactamente las secciones, campos y ajustes que debe incluir tu Activity Flex Query de IBKR.
+          sections_heading: Activa estas secciones y campos
+          configuration_heading: Configura estas opciones de la consulta
+        sections:
+          account_information: 'Account Information: Account ID, Currency'
+          cash_report: 'Cash Report:'
+          cash_report_options: 'Opciones: ninguna'
+          cash_report_fields: 'Campos: Currency, Ending Cash'
+          cash_transactions: 'Cash Transactions:'
+          cash_transactions_options: 'Opciones: Dividends, Deposits & Withdrawals, Detail'
+          cash_transactions_fields: 'Campos: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type'
+          change_in_position_value_summary: 'Change In Position Value Summary: Currency, End Of Period Value'
+          net_asset_value: 'Net Asset Value (NAV) in Base:'
+          net_asset_value_options: 'Opciones: ninguna'
+          net_asset_value_fields: 'Campos: Currency, Report Date, Total'
+          open_positions: 'Open Positions:'
+          open_positions_options: 'Opciones: Summary'
+          open_positions_fields: 'Campos: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol'
+          trades: 'Trades:'
+          trades_options: 'Opciones: Execution'
+          trades_fields: 'Campos: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
+        configuration:
+          models: 'Models: Optional'
+          format: 'Formato: XML'
+          period: 'Periodo: Last 365 Calendar Days'
+          date_format: 'Formato de fecha: yyyy-MM-dd'
+          time_format: 'Formato de hora: HH:mm:ss'
+          date_time_separator: 'Separador fecha/hora: ; (punto y coma)'
+          profit_and_loss: 'Profit and Loss: Default'
+          all_other_options: 'Todas las demás opciones de configuración: "No"'
+        report_window_note: Los informes Flex de IBKR se limitan a la ventana de consulta que configuraste en IBKR. Sure importará todas las posiciones actuales más hasta los últimos 365 días de actividad de este informe.
+        sync: Sincronizar
+        disconnect_confirm: ¿Desconectar Interactive Brokers?
+        query_id_label: Query ID
+        query_id_placeholder_new: Introduce tu Flex Query ID de IBKR
+        query_id_placeholder_existing: Deja en blanco para conservar el Query ID actual
+        token_label: Token
+        token_placeholder_new: Introduce tu token del Flex Web Service de IBKR
+        token_placeholder_existing: Deja en blanco para conservar el token actual
+        save_configuration: Guardar configuración
+        update_configuration: Actualizar configuración
+        status_configured_prefix: '%{summary}. Visita la pestaña'
+        accounts_tab: Cuentas
+        status_configured_suffix: para gestionar las cuentas detectadas.
+        not_configured: Sin configurar.

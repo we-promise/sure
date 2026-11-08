@@ -1,0 +1,28 @@
+---
+vi:
+  settings:
+    providers:
+      taglines:
+        binance: Đồng bộ số dư giao ngay Binance bằng khóa API chỉ đọc.
+      binance_panel:
+        setup_instructions: "Để kết nối Binance, tạo khóa API chỉ đọc:"
+        step1_html: 'Vào <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Quản lý API Binance</a>'
+        step2: "Tạo khóa API mới chỉ với quyền Bật Đọc"
+        step3: "Dán Khóa API và Bí mật vào bên dưới"
+        no_withdraw_title: "Chỉ khóa chỉ đọc"
+        no_withdraw_body: "Không bật quyền rút tiền khi tạo khóa API Binance. Sure chỉ cần quyền đọc."
+        ip_hint_title: "Yêu cầu danh sách trắng IP"
+        ip_hint_body: "Thêm IP đầu ra của máy chủ ứng dụng vào danh sách trắng Khóa API Binance:"
+        ip_hint_contact_admin: "Liên hệ quản trị viên để lấy địa chỉ IP đầu ra của máy chủ ứng dụng."
+        api_key_label: Khóa API
+        api_key_placeholder: Dán Khóa API Binance
+        api_secret_label: Bí mật API
+        api_secret_placeholder: Dán Bí mật API Binance
+        connect_button: Kết nối Binance
+        syncing: Đang đồng bộ...
+        sync: Đồng bộ
+        historical_import: "Cài đặt nhập dữ liệu lịch sử"
+        sync_start_date_label: "Nhập dữ liệu từ"
+        sync_start_date_help: "Chọn khoảng thời gian lịch sử cần tải."
+        disconnect: Ngắt kết nối
+        disconnect_confirm: "Bạn có chắc muốn ngắt kết nối Binance?"

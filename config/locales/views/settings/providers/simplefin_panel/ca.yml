@@ -1,0 +1,14 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        simplefin: Connecta comptes bancaris dels EUA mitjançant el protocol obert
+          SimpleFIN.
+      simplefin_panel:
+        save_and_connect: Desa i connecta
+        setup_token_label: Token de configuració
+        setup_token_placeholder: Enganxa el token de configuració de SimpleFIN
+        step_1_html: Ves a %{link} per obtenir un token d'un sol ús.
+        step_2: Enganxa el token a sota i connecta.
+        step_3: Després ves a Comptes per enllaçar els teus comptes sincronitzats.

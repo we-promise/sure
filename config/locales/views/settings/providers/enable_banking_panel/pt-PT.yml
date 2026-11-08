@@ -1,0 +1,37 @@
+---
+pt-PT:
+  settings:
+    providers:
+      taglines:
+        enable_banking: Sincronize contas bancárias europeias através do open banking PSD2.
+      enable_banking_panel:
+        callback_url_instruction: "Para o URL de callback, utilize %{callback_url}."
+        connection_error: Erro de Ligação
+        step_1_html: "Aceda a %{link} e obtenha as suas credenciais de programador."
+        step_2: "Escolha o seu país e cole abaixo o Application ID + Client Certificate."
+        step_3: "Guarde e, em seguida, utilize Adicionar Ligação para ligar o seu banco."
+        config_locked_title: "Configuração bloqueada"
+        config_locked_message: "Desligue todos os bancos ligados antes de alterar estas credenciais."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Introduza o application ID"
+        application_id_placeholder_update: "Introduza o novo ID para atualizar"
+        client_certificate_label: "Client Certificate (com Chave Privada)"
+        keep_client_certificate_hint: "Deixe em branco para manter o certificado atual"
+        save_and_connect: "Guardar e ligar"
+        update_connection: "Atualizar ligação"
+        connected_bank: "Banco Ligado"
+        session_expires: "A sessão expira: %{date}"
+        unknown: "Desconhecido"
+        connection: "Ligação"
+        session_expired_reconnect: "Sessão expirada - voltar a ligar"
+        configured: "Configurado"
+        ready_to_link: "Pronto para ligar contas"
+        sync: "Sincronizar"
+        reconnect: "Voltar a ligar"
+        connect_bank: "Ligar banco"
+        remove: "Remover"
+        remove_confirm: "Tem a certeza de que pretende remover esta ligação?"
+        add_connection: "Adicionar Ligação"
+        syncing: "A sincronizar"
+        select_country: "Selecione o país..."
+        country_label: "País"

@@ -1,0 +1,10 @@
+---
+tr:
+  settings:
+    providers:
+      taglines:
+        plaid_eu: Plaid üzerinden (PSD2 / Açık Bankacılık) Avrupa finans kurumlarını
+          bağlayın.
+      plaid_eu_panel:
+        step_1_html: "%{link} sayfasını açın ve AB İstemci ID'nizi ve Gizli Anahtarınızı
+          kopyalayın."

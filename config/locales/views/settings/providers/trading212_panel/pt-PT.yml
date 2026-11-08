@@ -1,0 +1,29 @@
+---
+pt-PT:
+  settings:
+    providers:
+      taglines:
+        trading212: Sincronize a sua carteira de investimento Trading 212 utilizando uma chave de API apenas de leitura.
+      trading212_panel:
+        steps:
+          step_1: Aceda a Trading 212 → Definições → API (aplicação web ou móvel).
+          step_2: Gere uma nova chave de API — a Trading 212 mostrar-lhe-á um API ID e um Secret Key.
+          step_3: Cole ambos abaixo, selecione o seu ambiente e moeda da conta e guarde.
+        api_key_label: API ID
+        api_key_placeholder_new: Cole o seu Trading 212 API ID
+        api_key_placeholder_existing: Deixe em branco para manter o API ID atual
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Cole o seu Trading 212 Secret Key
+        api_secret_placeholder_existing: Deixe em branco para manter o Secret Key atual
+        environment_label: Ambiente
+        environment_live: Conta ao vivo
+        environment_demo: Conta de demonstração
+        currency_label: Moeda da conta
+        save_configuration: Guardar Configuração
+        update_configuration: Atualizar Configuração
+        sync: Sincronizar
+        disconnect_confirm: Desligar Trading 212?
+        status_configured_prefix: "Configurado. Visite o"
+        accounts_tab: Contas
+        status_configured_suffix: separador para gerir as contas descobertas.
+        not_configured: Não configurado.

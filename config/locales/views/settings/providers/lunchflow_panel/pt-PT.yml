@@ -1,0 +1,17 @@
+---
+pt-PT:
+  settings:
+    providers:
+      taglines:
+        lunchflow: Ligue 20 mil+ bancos de 40+ países (RU, UE, EUA e mais!)
+      lunchflow_panel:
+        step_1_html: "Aceda a %{link} e crie uma chave de API."
+        step_2: "Cole abaixo a sua chave e ligue."
+        step_3: "Depois, aceda a Contas para ligar as suas contas sincronizadas."
+        api_key_label: "Chave de API"
+        api_key_placeholder_new: "Cole aqui a chave de API"
+        api_key_placeholder_update: "Introduza a nova chave de API para atualizar"
+        base_url_label: "URL Base (Opcional)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (predefinido)"
+        save_and_connect: "Guardar e ligar"
+        update_connection: "Atualizar ligação"

@@ -1,0 +1,20 @@
+---
+de:
+  settings:
+    providers:
+      taglines:
+        coinbase: Importiert deine Krypto-Bestände von Coinbase und verfolgt ihre Entwicklung.
+      coinbase_panel:
+        setup_instructions: "So verbindest du Coinbase:"
+        step1_html: Gehe zu <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API-Einstellungen</a>
+        step2: Erstelle einen neuen API-Schlüssel mit Leseberechtigung (Konten anzeigen, Transaktionen anzeigen)
+        step3: Kopiere deinen API-Schlüssel und dein API-Geheimnis und füge sie unten ein
+        api_key_label: API-Schlüssel
+        api_key_placeholder: Gib deinen Coinbase-API-Schlüssel ein
+        api_secret_label: API-Geheimnis
+        api_secret_placeholder: Gib dein Coinbase-API-Geheimnis ein
+        connect_button: Coinbase verbinden
+        syncing: Wird synchronisiert…
+        sync: Synchronisieren
+        disconnect: Trennen
+        disconnect_confirm: Bist du sicher, dass du diese Coinbase-Verbindung trennen möchtest? Deine synchronisierten Konten werden zu manuellen Konten.

@@ -1,0 +1,18 @@
+---
+ru:
+  settings:
+    providers:
+      taglines:
+        lunchflow: Подключите более 20 000 банков из более чем 40 стран (Великобритания,
+          ЕС, США и другие!)
+      lunchflow_panel:
+        api_key_label: API-ключ
+        api_key_placeholder_new: Вставьте API-ключ здесь
+        api_key_placeholder_update: Введите новый API-ключ для обновления
+        base_url_label: Базовый URL (необязательно)
+        base_url_placeholder: https://lunchflow.app/api/v1 (по умолчанию)
+        save_and_connect: Сохранить и подключить
+        step_1_html: Перейдите на %{link} и создайте API-ключ.
+        step_2: Вставьте ваш ключ ниже и подключитесь.
+        step_3: Затем перейдите в Счета, чтобы связать ваши синхронизированные счета.
+        update_connection: Обновить подключение

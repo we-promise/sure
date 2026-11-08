@@ -1,0 +1,21 @@
+---
+ca:
+  settings:
+    providers:
+      taglines:
+        onchain_wallet: Fes el seguiment de carteres Bitcoin, EVM, Solana, Cosmos i Polkadot d'autocustòdia a partir de les seves adreces públiques.
+      onchain_wallet_panel:
+        add_wallet: Afegeix una cartera
+        advanced: Avançat
+        disconnect_all: Desconnecta totes les carteres
+        disconnect_all_confirm: Això elimina totes les adreces seguides i els seus comptes. Vols continuar?
+        etherscan_api_key_label: Clau API d'Etherscan (opcional)
+        etherscan_api_key_placeholder: Enganxa una clau API d'Etherscan
+        etherscan_hint: Les lectures d'Ethereum funcionen sense clau. Afegir una clau d'Etherscan només augmenta el límit de sol·licituds per a Ethereum.
+        keep_etherscan_api_key: Deixa-ho en blanc per mantenir la clau existent
+        manage_wallets: Gestiona les carteres
+        keyless_body: Sure només llegeix dades públiques de la cadena de blocs. No intervenen claus, frases de recuperació ni signatures, i no es pot gastar res.
+        keyless_title: Només lectura, sense claus
+        save: Desa
+        sync_start_date_hint: Les transferències anteriors a aquesta data s'ignoren. Deixa-ho en blanc per importar tot el que mostri l'explorador.
+        sync_start_date_label: Ignora les transferències anteriors al
