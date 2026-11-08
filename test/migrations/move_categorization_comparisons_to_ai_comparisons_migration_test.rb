@@ -3,7 +3,7 @@
 require "test_helper"
 require Rails.root.join("db/migrate/20261106150000_move_categorization_comparisons_to_ai_comparisons")
 
-# CategorizationComparison rows become categorize comparisons in ai_comparisons (section 8.2).
+# CategorizationComparison rows become categorize comparisons in ai_comparisons.
 # The test schema already has the new table, so each test runs `down` to get the old one back.
 class MoveCategorizationComparisonsToAiComparisonsMigrationTest < ActiveSupport::TestCase
   setup do

@@ -10,7 +10,7 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   aliases categorizations: %w[results], transaction_id: %w[id txn_id], category_name: %w[category name]
   blank_item { _1[:category_name].nil? }
   judged_by Ai::Judgements::CategorizeTransaction
-  # Category ids, not names, so renamed or duplicate categories still compare (section 8.2).
+  # Category ids, not names, so renamed or duplicate categories still compare.
   shadow subject: "Transaction",
          compare: ->(value) { value[:categorizations].to_h { [ _1[:transaction_id].to_s, [ category_id_for(_1[:category_name]), _1[:confidence] ] ] } }
 

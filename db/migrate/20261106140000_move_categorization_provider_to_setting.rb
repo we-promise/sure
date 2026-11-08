@@ -1,7 +1,6 @@
-# The Jev choice moves from the family to the instance (2d plan, decision 2): one setting, which
-# the deprecated AI ENV path reads, until PR 7 lists routes per feature. An instance with one
-# family keeps that family's choice; on any other, every family goes back to the LLM, and an
-# instance admin who picks Jev picks it for every family (upgrade note).
+# The Jev choice moves from the family to the instance: one setting, which the deprecated AI ENV
+# path reads. An instance with one family keeps that family's choice; on any other, every family
+# goes back to the LLM, and an instance admin who picks Jev picks it for every family.
 class MoveCategorizationProviderToSetting < ActiveRecord::Migration[8.1]
   CONSTRAINT = "chk_families_categorization_provider".freeze
 

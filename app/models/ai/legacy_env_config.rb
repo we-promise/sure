@@ -24,11 +24,6 @@ class Ai::LegacyEnvConfig
   ANTHROPIC_MAX_TOKENS = 4096
   EMBEDDING_TIMEOUT = 120         # VectorStore::Embeddable's client
   EXTERNAL_ASSISTANT_TIMEOUT = 120 # Assistant::External::Client::TIMEOUT_READ
-  JEV_RETRIES = 3                  # what the hand-written Jev client retried
-  JEV_UNSUPPORTED = {
-    openrouter: "OpenRouter's Jev needs RubyLLM 2.2 (PR 5)",
-    path: "only TypeSafe-style …/v1/systemone endpoints are supported"
-  }.freeze
 
   # The inputs a snapshot depends on, so Ai::Config rebuilds when one changes.
   ENV_PREFIXES = %w[OPENAI_ ANTHROPIC_ LLM_ JEV_ EMBEDDING_ VECTOR_STORE_ EXTERNAL_ASSISTANT_ CATEGORIZATION_PROVIDER].freeze
@@ -43,8 +38,7 @@ class Ai::LegacyEnvConfig
   def self.build = new.build
 
   # Which model categorizes every family's transactions: CATEGORIZATION_PROVIDER, then the
-  # instance's setting, else the LLM. Until 2d this was a family column; with one family its
-  # choice was copied to the setting (2d plan, decision 2).
+  # instance's setting, else the LLM.
   def self.categorization_provider
     [ ENV["CATEGORIZATION_PROVIDER"].presence, Setting.categorization_provider.presence ]
       .find { CATEGORIZATION_PROVIDERS.include?(_1) } || "llm"
@@ -86,8 +80,8 @@ class Ai::LegacyEnvConfig
     preferred = llm_models.first(1)
     routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
     routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
-    # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM (2d plan,
-    # decision 3); the shadow route runs the other one, as the family's shadow provider did.
+    # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM; the shadow
+    # route runs the other one.
     jev_first = jev_model && self.class.categorization_provider == "jev"
     routes[:categorize] = route_list(:categorize, jev_first ? [ jev_model ] : preferred)
     routes[:shadow_categorize] = route_list(:shadow_categorize, jev_first ? preferred : [ jev_model ].compact)
@@ -155,28 +149,21 @@ class Ai::LegacyEnvConfig
 
     def positive(*values) = values.map(&:to_i).find(&:positive?)
 
-    # Jev, when RubyLLM can reach it: a TypeSafe-style `…/v1/systemone` URL, http only for a server on a private network
-    # (section 7). An endpoint it can't reach is left out with a warning, so `categorize` uses
-    # the LLM, as today when Jev can't be built.
+    # Jev, when RubyLLM can reach it (Jev.unreachable_reason). An endpoint it can't reach is left
+    # out with a warning, so `categorize` uses the LLM.
     def jev
       return unless Jev.configured?
 
       url = Jev.effective_endpoint
-      reason = Jev.unreachable_reason(url)
-      if reason
-        Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{JEV_UNSUPPORTED.fetch(reason)}")
+      if (reason = Jev.unreachable_reason(url))
+        Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{Jev::UNSUPPORTED.fetch(reason)}")
         return
       end
 
-      base_url = Jev.base_url(url)
-      location = location_for(base_url)
-      endpoint = Ai::Config::Endpoint.new(
-        name: "jev", protocol: :jev, preset: location == :cloud ? :jev : :jev_local, base_url:, api_key: Jev.api_key,
-        location:, timeout_seconds: ENV.fetch("JEV_REQUEST_TIMEOUT", 30).to_i, max_retries: JEV_RETRIES,
-        parallel_requests: positive(env("JEV_CONCURRENCY"))
-      )
+      endpoint = Jev.endpoint(url, api_key: Jev.api_key, timeout_seconds: ENV.fetch("JEV_REQUEST_TIMEOUT", 30).to_i,
+                                   parallel_requests: positive(env("JEV_CONCURRENCY")))
       Ai::Config::Model.new(endpoint:, name: Jev.effective_model,
-                            capabilities: location == :cloud ? %i[judge calibrated_confidence] : %i[judge])
+                            capabilities: endpoint.local? ? %i[judge] : %i[judge calibrated_confidence])
     end
 
     def external_assistant

@@ -1,4 +1,4 @@
-# One item answered twice: by the route that was applied and by its shadow (section 8.2). Written
+# One item answered twice: by the route that was applied and by its shadow. Written
 # only by Ai::Instrumentation::ComparisonSubscriber, never to the item itself. Values are ids (a
 # category's, for categorize), and a confidence is null when a model gives none. Each route is
 # stored with its endpoint, model and overrides, so a comparison reads "strict vs json_object"

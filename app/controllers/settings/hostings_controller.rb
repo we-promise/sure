@@ -460,8 +460,8 @@ class Settings::HostingsController < ApplicationController
       raise Setting::ValidationError, t("settings.hostings.assistant_settings.agent_discovery_error", error: error.message)
     end
 
-    # The instance's choice, for every family (2d, until PR 7 lists routes per
-    # feature): `update` already requires whoever manages instance settings.
+    # The instance's choice, for every family: `update` already requires
+    # whoever manages instance settings.
     # Guarded by the preview gate because the selector that submits it is only
     # rendered for opted-in users.
     def update_categorization_provider

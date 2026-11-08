@@ -2,7 +2,7 @@
 
 A decision model answers *typed questions about a state* and returns calibrated probabilities.
 It does not generate text. Jev (TypeSafe) is the one Sure uses, and `categorize` the one feature
-it answers, through `Ai::Judgements::CategorizeTransaction`. Since PR 2d it runs on the same
+it answers, through `Ai::Judgements::CategorizeTransaction`. It runs on the same
 plumbing as every LLM call ([AI pipeline](ai-pipeline.md)): a route entry, a transport over
 RubyLLM, the usage path and failover.
 
@@ -77,8 +77,8 @@ Without it, that row would have been assigned a real category at low confidence.
 
 ## Confidence and the threshold
 
-The family's confidence threshold gates only answers from a model with `calibrated_confidence`
-(section 6 of the redesign): cloud Jev has it; a self-hosted judge (`jev_local`) doesn't until an
+The family's confidence threshold gates only answers from a model with `calibrated_confidence`:
+cloud Jev has it; a self-hosted judge (`jev_local`) doesn't until an
 admin has checked its confidence against agreement. The requester reads it off the result's
 route. Clamp a reported confidence to 0..1: the threshold is in that range, and an out-of-range
 value would clear any threshold.

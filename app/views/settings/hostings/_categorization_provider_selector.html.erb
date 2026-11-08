@@ -19,8 +19,8 @@
     <% end %>
   </div>
 
-  <%# The instance's choice, for every family, until PR 7 lists routes per
-      feature. Only whoever manages instance settings can save it. %>
+  <%# The instance's choice, for every family. Only whoever manages instance
+      settings can save it. %>
   <%= styled_form_with model: Setting.new,
                        url: settings_hosting_path,
                        method: :patch,

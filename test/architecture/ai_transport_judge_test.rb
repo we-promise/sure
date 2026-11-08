@@ -1,6 +1,6 @@
 require "test_helper"
 
-# The `judge` half of the transport contract (section 17): what the Jev transport sends through
+# The `judge` half of the transport contract: what the Jev transport sends through
 # RubyLLM's `typesafe` provider, its fan-out, error mapping, malformed answers and usage rows.
 # Stubbed through WebMock; the live recording is test/models/ai/live/judge_live_test.rb.
 class AiTransportJudgeTest < ActiveSupport::TestCase

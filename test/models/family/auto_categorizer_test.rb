@@ -160,7 +160,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal [ llm_txn.id ], ai_entry.metadata["categorized_transaction_ids"]
   end
 
-  # Jev answers when the categorize route lists it: the instance's choice (2d, until PR 7), read
+  # Jev answers when the categorize route lists it: the instance's choice, read
   # by the deprecated ENV path. Preview gates whether the selector is offered (see
   # docs/llm-guides/gating-a-preview-feature.md), never what gets used.
 
@@ -250,7 +250,7 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
 
   # Confidence has to change behaviour, not just appear in logs. Below the threshold the answer
   # is withheld and the transaction is left unlocked, so a later run can still correct it. Only
-  # a model with calibrated confidence is gated (section 6).
+  # a model with calibrated confidence is gated.
 
   test "withholds a calibrated answer that carries no confidence at all" do
     @family.update!(categorization_confidence_threshold: 0.7)

@@ -38,7 +38,7 @@ class Family::AutoCategorizer
     end
 
     log_jev_fallback
-    generation
+    Ai::Generations::CategorizeTransactions.new(transactions: transactions_input, categories: categories_input, family:)
   end
 
   def apply_ai(result)
@@ -99,10 +99,6 @@ class Family::AutoCategorizer
   private
     attr_reader :family, :transaction_ids
 
-    def generation
-      Ai::Generations::CategorizeTransactions.new(transactions: transactions_input, categories: categories_input, family:)
-    end
-
     # The instance chose Jev, but the config left it out because RubyLLM can't reach its endpoint.
     # Without this the only symptom is categorization silently running on the LLM. The endpoint is
     # redacted, because a gateway URL can carry a key.
@@ -117,7 +113,7 @@ class Family::AutoCategorizer
         category: "auto_categorization", level: "error", message: "Jev is misconfigured; falling back to the LLM provider",
         source: self.class.name, family:, provider: "jev",
         metadata: { endpoint: Ai::LegacyEnvConfig::Jev.redacted_endpoint(endpoint), reason:,
-                    detail: Ai::LegacyEnvConfig::JEV_UNSUPPORTED.fetch(reason) }
+                    detail: Ai::LegacyEnvConfig::Jev::UNSUPPORTED.fetch(reason) }
       )
     end
 
@@ -129,7 +125,7 @@ class Family::AutoCategorizer
       )
     end
 
-    # Only answers from a model with calibrated confidence can be gated (section 6), and one that
+    # Only answers from a model with calibrated confidence can be gated, and one that
     # arrives without a confidence is malformed, so it's withheld: nil becomes 0, below any
     # positive threshold.
     def withhold?(decision, route)

@@ -2,8 +2,7 @@ require "test_helper"
 
 # Section 17's shadow checks: every class that declares `shadow` declares how its values compare
 # and has a `shadow_<feature>` row, every shadow row has a class that runs it, and shadow results
-# reach only ComparisonSubscriber. (No Ai::Conversation can declare `shadow`; conversations arrive
-# with chat in PR 6, which extends this test.)
+# reach only ComparisonSubscriber.
 class AiShadowTest < ActiveSupport::TestCase
   APP = Rails.root.join("app")
 

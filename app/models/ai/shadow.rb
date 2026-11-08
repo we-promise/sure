@@ -1,10 +1,10 @@
-# Shadow runs (section 8.2): after a successful call, the same feature on its `shadow_<feature>`
-# route, as its own job in the background lane, compared and never applied. Any generation or
-# judgement can declare `shadow`; `categorize` is the only one that does.
+# Shadow runs: after a successful call, the same feature on its `shadow_<feature>` route, as its
+# own job in the background lane, compared and never applied. Any generation can declare
+# `shadow`; `categorize` is the only one that does.
 #
-# Until PR 7 the rate is the family's (`effective_categorization_shadow_rate`, with
-# CATEGORIZATION_SHADOW_RATE over it), as today, which is enough while categorize is the only
-# feature with a shadow. PR 7 moves it to `Setting.ai_shadow_rates`, with each family's opt-in.
+# The rate is the family's (`effective_categorization_shadow_rate`, with
+# CATEGORIZATION_SHADOW_RATE over it), which is enough while categorize is the only feature with
+# a shadow.
 module Ai::Shadow
   EVENT = "compare.ai_shadow".freeze
 
@@ -26,7 +26,6 @@ module Ai::Shadow
   def enqueue(generation, result, sent:)
     feature = generation.feature_key
     return unless result.success? && result.route && Ai::Routes::MATRIX.key?(feature_for(feature))
-    return if shadow?(generation.send(:request_feature))   # a shadow run isn't shadowed again
 
     rate = rate(feature, generation.family)
     return unless rate.positive? && rand < rate

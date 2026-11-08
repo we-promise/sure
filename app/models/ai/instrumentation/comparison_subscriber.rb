@@ -1,4 +1,4 @@
-# Writes Ai::Comparison rows from a shadow run's `compare.ai_shadow` event (section 8.2): one row
+# Writes Ai::Comparison rows from a shadow run's `compare.ai_shadow` event: one row
 # per item either side answered. An item both answered agrees when the values match, a shared
 # abstention included; an item only one side answered never agrees, or a missing answer would
 # count as agreement.

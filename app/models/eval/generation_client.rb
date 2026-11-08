@@ -1,6 +1,6 @@
 # What an eval run calls for categorization and merchant detection: the same generations
 # production runs (Ai::Generations::*), on the run's own endpoint and model, so an eval measures
-# today's prompts, JSON policy and coercion. On a Jev endpoint, the generation's judgement answers,
+# the production prompts, JSON policy and coercion. On a Jev endpoint, the generation's judgement answers,
 # with each answer's confidence. Answers come back as the Provider::Response the runners read.
 # Chat evals go through Provider::Openai, as chat does.
 class Eval::GenerationClient

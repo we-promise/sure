@@ -19,7 +19,7 @@ module Ai::CallContext
 
     def expired? = !deadline.nil? && remaining <= 0
 
-    # A shadow run's calls carry `shadow`, so usage shows shadow spend apart (section 8.2).
+    # A shadow run's calls carry `shadow`, so usage shows shadow spend apart.
     def shadow? = Ai::Shadow.shadow?(feature)
 
     def metadata
@@ -57,7 +57,7 @@ module Ai::CallContext
     Fiber[CALL_KEY] = previous
   end
 
-  # Re-enters `call` on another thread, for a transport that fans one call out (Jev, section 7).
+  # Re-enters `call` on another thread, for a transport that fans one call out (Jev).
   # RubyLLM 2.1.1 keeps the workflow per thread, so a pool thread's requests would otherwise reach
   # `usage.ruby_llm` without the call's id and write no usage row.
   def within(call, owner: nil)

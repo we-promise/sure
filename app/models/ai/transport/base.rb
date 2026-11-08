@@ -21,7 +21,7 @@ class Ai::Transport::Base
   Response = Data.define(:json, :usage, :raw_id, :finish_reason, :json_mode)
 
   # One judgement request: the same questions about each state, keyed by the item's id. Jev takes
-  # one state per request, so the transport fans the states out (section 7). Questions are plain
+  # one state per request, so the transport fans the states out. Questions are plain
   # Hashes in RubyLLM's form ({ name => { type:, instructions:, options: } }), never blocks.
   JudgeRequest = Data.define(:feature, :family, :model, :states, :questions) do
     def initialize(feature:, model:, states:, questions:, family: nil)
