@@ -79,7 +79,7 @@ class Ai::RouterTest < ActiveSupport::TestCase
                                      agent_settings: { allowed_emails: [ "someone@example.com" ] })
     model = Ai::Config::Model.new(endpoint: agent, name: "openclaw/main")
     config = Ai::Config.new(endpoints: [ agent ], models: [ model ],
-                            routes: { chat: [ Ai::Route.new(feature: :chat, position: 0, model:) ] })
+                            routes: { chat: [ Ai::Route.new(feature: :chat, model:) ] })
     @family.update!(assistant_type: "external")
 
     assert_equal :not_configured, Ai::Router.new(family: @family, user: @user, config:).resolve(:chat).reason
@@ -91,8 +91,8 @@ class Ai::RouterTest < ActiveSupport::TestCase
     jev = AiTestHelper.test_config.model(:jev, "jev-latest")
     llm = AiTestHelper.test_config.model(:openai, "gpt-4.1-mini")
     config = Ai::Config.new(routes: { categorize: [
-      Ai::Route.new(feature: :categorize, position: 0, model: jev, condition: :jev_family),
-      Ai::Route.new(feature: :categorize, position: 1, model: llm)
+      Ai::Route.new(feature: :categorize, model: jev, condition: :jev_family),
+      Ai::Route.new(feature: :categorize, model: llm)
     ] })
 
     @family.update!(categorization_provider: "llm")

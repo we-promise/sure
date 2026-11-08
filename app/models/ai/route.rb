@@ -3,9 +3,9 @@
 #
 # `condition` limits who an entry serves: a Jev entry serves only families that chose Jev
 # (`:jev_family`).
-Ai::Route = Data.define(:feature, :position, :model, :condition) do
-  def initialize(feature:, position:, model:, condition: nil)
-    super(feature: feature.to_sym, position:, model:, condition:)
+Ai::Route = Data.define(:feature, :model, :condition) do
+  def initialize(feature:, model:, condition: nil)
+    super(feature: feature.to_sym, model:, condition:)
   end
 
   def endpoint = model.endpoint
@@ -33,6 +33,6 @@ Ai::Route = Data.define(:feature, :position, :model, :condition) do
     end
   end
 
-  def inspect = "#<Ai::Route #{feature}[#{position}] #{endpoint.name}/#{model.name}>"
+  def inspect = "#<Ai::Route #{feature} #{endpoint.name}/#{model.name}>"
   alias_method :to_s, :inspect
 end

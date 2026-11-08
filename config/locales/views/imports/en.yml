@@ -546,7 +546,6 @@ en:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Processing failed: %{error}"
       errors:
-        provider_not_configured: AI provider not configured
         provider_no_pdf_support: AI provider does not support PDF processing
       ready_for_review_title: Ready for Review
       ready_for_review_description:

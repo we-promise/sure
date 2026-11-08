@@ -35,7 +35,7 @@ module AiTestHelper
   def self.build_ai_config(models, routes, vector_store_backend: nil)
     lookup = models.index_by { "#{_1.endpoint.name}/#{_1.name}" }
     built = routes.to_h do |feature, names|
-      [ feature, names.each_with_index.map { |name, position| Ai::Route.new(feature:, position:, model: lookup.fetch(name)) } ]
+      [ feature, names.map { |name| Ai::Route.new(feature:, model: lookup.fetch(name)) } ]
     end
     Ai::Config.new(endpoints: models.map(&:endpoint).uniq, models:, routes: built, vector_store_backend:)
   end

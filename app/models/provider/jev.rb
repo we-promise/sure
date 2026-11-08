@@ -79,6 +79,9 @@ class Provider::Jev < Provider
     end
   end
 
+  # The model a call uses when it doesn't name one.
+  attr_reader :default_model
+
   def initialize(api_key, endpoint: nil, model: nil, concurrency: nil)
     @api_key = api_key # pipelock:ignore
     @endpoint = endpoint.presence || DEFAULT_ENDPOINT

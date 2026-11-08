@@ -451,11 +451,11 @@ class PdfImport < Import
   end
 
   private
-    # Asks the router whether a statement can be read, before the job calls a model.
+    # Asks the router whether a statement can be read, before the job calls a model. The
+    # message is the router's reason, worded for the family member who uploaded it.
     def require_ai_for_extraction!
-      return if Ai.available?(:extract_pdf, family:)
-
-      raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured")
+      availability = Ai.availability(:extract_pdf, family:)
+      raise Provider::Error, availability.message_for(nil) unless availability.available?
     end
 
     # A statement's posting date routinely differs by a day or two from the date
