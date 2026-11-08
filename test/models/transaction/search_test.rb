@@ -406,6 +406,18 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal Money.new(5100, "USD"), totals.expense_money
   end
 
+  test "totals includes scheduled transactions when start_date is after today" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard", date: Date.current)
+    create_transaction(account: @checking_account, amount: 200, kind: "standard", date: 10.days.from_now.to_date)
+
+    search = Transaction::Search.new(@family, filters: { start_date: 1.day.from_now.to_date.to_s })
+    totals = search.totals
+
+    assert_equal 1, totals.count
+    assert_equal 0, totals.excluded_scheduled_count
+    assert_equal Money.new(200, "USD"), totals.expense_money
+  end
+
   test "totals handles multi-currency transactions with exchange rates" do
     # Create EUR transaction
     eur_entry = create_transaction(

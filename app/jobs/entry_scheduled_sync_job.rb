@@ -18,7 +18,9 @@ class EntryScheduledSyncJob < ApplicationJob
 
     # A few minutes past midnight on the entry's date, so Date.current has
     # definitively rolled over (avoids clock-skew edge cases) by run time.
-    run_at = entry.date.beginning_of_day + 5.minutes
+    # Midnight in the family's zone, as Sync#perform judges the date there --
+    # imports and bulk updates call this from jobs running in the app's zone.
+    run_at = entry.date.in_time_zone(entry.account.family.resolved_time_zone) + 5.minutes
     set(wait_until: run_at).perform_later(entry.id)
   end
 

@@ -214,15 +214,16 @@ class Transaction::Search
 
         # Exclude scheduled (future-dated) entries from totals by default -- they
         # haven't happened yet, so they shouldn't count toward this period's
-        # income/expenses (see Entry#scheduled?). An explicit end_date filter is
-        # a deliberate request to look ahead (e.g. "next 30 days"), so it's
-        # left untouched in that case.
+        # income/expenses (see Entry#scheduled?). An explicit end_date filter, or
+        # a start_date after today, is a deliberate request to look ahead (e.g.
+        # "next 30 days", "everything from next month"), so it's left untouched
+        # in that case.
         #
         # The list still shows them, so count how many were left out -- the
         # summary uses it to say how many of the listed rows are scheduled.
         # (Tax-advantaged accounts, filtered below, also stay out of the
         # money figures; this count deliberately ignores that.)
-        if end_date.blank?
+        unless look_ahead?
           excluded_scheduled_count = scope.where("entries.date > ?", Date.current).count
           scope = scope.where("entries.date <= ?", Date.current)
         end
@@ -286,6 +287,14 @@ class Transaction::Search
 
   private
     Totals = Data.define(:count, :excluded_scheduled_count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+
+    def look_ahead?
+      return true if end_date.present?
+
+      start_date.present? && Date.parse(start_date.to_s) > Date.current
+    rescue Date::Error
+      false
+    end
 
     # Filter query to include only active accounts if requested
     def apply_active_accounts_filter(query, active_accounts_only_filter)
