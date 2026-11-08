@@ -195,16 +195,6 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end
   end
 
-  test "synthetic PDF is valid and contains no customer data" do
-    pdf = @probe.send(:synthetic_pdf)
-    reader = PDF::Reader.new(StringIO.new(pdf))
-
-    assert_equal 1, reader.page_count
-    AiHealth::Probe::PDF_TEST_LINES.each do |line|
-      assert_includes reader.pages.first.text, line
-    end
-  end
-
   test "PDF text-extraction probe exercises only the OpenAI text processor and validates its result" do
     response = {
       "choices" => [
@@ -214,7 +204,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
               document_type: "bank_statement",
               summary: "A synthetic bank statement containing no customer data.",
               extracted_data: {
-                institution_name: AiHealth::Probe::PDF_TEST_INSTITUTION
+                institution_name: AiHealth::Probe::SyntheticPdf::INSTITUTION
               }
             }.to_json
           }
@@ -241,8 +231,8 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert result.passing?
     instructions = captured.dig(:parameters, :messages, 0, :content)
     document_text = captured.dig(:parameters, :messages, 1, :content)
-    assert_not_includes instructions, AiHealth::Probe::PDF_TEST_INSTITUTION
-    assert_includes document_text, AiHealth::Probe::PDF_TEST_INSTITUTION
+    assert_not_includes instructions, AiHealth::Probe::SyntheticPdf::INSTITUTION
+    assert_includes document_text, AiHealth::Probe::SyntheticPdf::INSTITUTION
   end
 
   test "PDF vision probe exercises only the OpenAI vision processor and validates its result" do
@@ -254,7 +244,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
               document_type: "bank_statement",
               summary: "A synthetic bank statement containing no customer data.",
               extracted_data: {
-                institution_name: AiHealth::Probe::PDF_TEST_INSTITUTION
+                institution_name: AiHealth::Probe::SyntheticPdf::INSTITUTION
               }
             }.to_json
           }
@@ -280,7 +270,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
 
     assert result.passing?
     instructions = captured.dig(:parameters, :messages, 0, :content)
-    assert_not_includes instructions, AiHealth::Probe::PDF_TEST_INSTITUTION
+    assert_not_includes instructions, AiHealth::Probe::SyntheticPdf::INSTITUTION
   end
 
   test "PDF processing probes require the expected institution in the standard result fields" do
@@ -322,7 +312,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
         "document_type" => "bank_statement",
         "summary" => "A synthetic bank statement containing no customer data.",
         "extracted_data" => {
-          "institution_name" => AiHealth::Probe::PDF_TEST_INSTITUTION
+          "institution_name" => AiHealth::Probe::SyntheticPdf::INSTITUTION
         }
       }
     )
@@ -332,10 +322,10 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       source = params.dig(:messages, 0, :content, 0, :source)
       extracted_data_schema = params.dig(:tools, 0, :input_schema, :properties, :extracted_data)
       source[:media_type] == "application/pdf" &&
-        Base64.strict_decode64(source[:data]) == @probe.send(:synthetic_pdf) &&
+        Base64.strict_decode64(source[:data]) == AiHealth::Probe::SyntheticPdf.bytes &&
         extracted_data_schema[:properties].key?(:institution_name) &&
         extracted_data_schema[:required].empty? &&
-        !params[:system_].include?(AiHealth::Probe::PDF_TEST_INSTITUTION)
+        !params[:system_].include?(AiHealth::Probe::SyntheticPdf::INSTITUTION)
     end.returns(response)
     Ai::Transport::Http.stubs(:anthropic_client).returns(stub(messages: messages))
 
