@@ -728,11 +728,13 @@ class Family < ApplicationRecord
     ExchangeRate.currencies_without_rate(currencies_in_use(accounts), to: currency)
   end
 
-  # Currencies in use whose newest rate into the family currency is too old to
-  # count as today's, mapped to that rate's date. Today's totals use it, and
-  # the same pages say so.
+  # Currencies today's totals convert whose newest rate into the family
+  # currency is too old to count as today's, mapped to that rate's date. Today's
+  # totals use it, and the same pages say so. Only balances and current holdings
+  # count: a currency only old entries use is converted at its own date's rate,
+  # so an old newest rate is not out of date for it.
   def stale_exchange_rate_dates(accounts: self.accounts)
-    ExchangeRate.stale_rate_dates(currencies_in_use(accounts), to: currency)
+    ExchangeRate.stale_rate_dates(currencies_held_now(accounts), to: currency)
   end
 
   # Returns securities with plan restrictions for a specific provider
@@ -883,7 +885,19 @@ class Family < ApplicationRecord
   private
     # Currencies used by the given accounts that are visible, by their entries,
     # their trades and their holdings.
-    # Memoised per scope, so the missing and stale notes share one set of
+    # Currencies of the given visible accounts' balances, and of each
+    # account's holdings on its latest holding date.
+    def currencies_held_now(scope)
+      account_ids = self.accounts.visible.where(id: scope.select(:id)).select(:id)
+      latest = Holding.where(account_id: account_ids).group(:account_id).select("account_id, MAX(date) AS date")
+      (
+        Account.where(id: account_ids).distinct.pluck(:currency) +
+          Holding.joins("JOIN (#{latest.to_sql}) latest ON latest.account_id = holdings.account_id AND latest.date = holdings.date")
+            .distinct.pluck(:currency)
+      ).compact.uniq
+    end
+
+    # Memoised per scope, so repeated reads in one render share one set of
     # queries.
     def currencies_in_use(scope)
       account_ids = self.accounts.visible.where(id: scope.select(:id)).pluck(:id).sort

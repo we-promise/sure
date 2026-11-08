@@ -734,6 +734,30 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal({ "JPY" => 30.days.ago.to_date }, family.stale_exchange_rate_dates)
   end
 
+  # The stale note says today's totals use the old rate, so it names only
+  # currencies today's totals convert: account balances and current holdings.
+  # A trip's yen spending from long ago still has an old newest rate, but
+  # nothing converts it today.
+  test "stale_exchange_rate_dates ignores a currency only old entries use" do
+    family = families(:empty)
+    home = family.accounts.create!(name: "Home", balance: 1, currency: family.currency, accountable: Depository.new)
+    home.entries.create!(name: "Tokyo dinner", date: 400.days.ago.to_date, amount: 5_000, currency: "JPY",
+                         entryable: Transaction.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 400.days.ago.to_date, rate: 0.0067)
+
+    assert_empty family.stale_exchange_rate_dates
+  end
+
+  test "stale_exchange_rate_dates names the currency of a current holding" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Brokerage", balance: 1, currency: family.currency, accountable: Investment.new)
+    security = Security.create!(ticker: "JPH#{SecureRandom.hex(2)}", name: "Tokyo Listed")
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 1_000, amount: 1_000, currency: "JPY")
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+
+    assert_equal({ "JPY" => 30.days.ago.to_date }, family.stale_exchange_rate_dates)
+  end
+
   # A trade can be priced in a currency neither its entry nor its account
   # uses, and holding cost converts that currency.
   test "currencies_without_exchange_rate includes currencies only a trade uses" do
