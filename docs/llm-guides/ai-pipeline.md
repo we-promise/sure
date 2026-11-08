@@ -122,9 +122,9 @@ flowchart LR
 
 **Tests**
 
-- `with_ai_routes(categorize: %w[gpu/qwen3-8b openai/gpt-4.1-mini]) { }` runs the block with the
-  test setup (`AiTestHelper.test_config`), the named features' routes replaced; `without_ai { }`
-  with nothing configured. `use_ai_routes` and `use_no_ai` do the same for the rest of a test.
+- `use_ai_routes(categorize: %w[gpu/qwen3-8b openai/gpt-4.1-mini])` routes the rest of the test
+  through the test setup (`AiTestHelper.test_config`), the named features' routes replaced;
+  `use_no_ai` configures nothing.
 - `test/architecture/ai_agreement_test.rb` asks every entry point in each setup today's code
   supports (`test/support/ai_legacy_setups.rb`) and fails when one disagrees with the router.
   Chat's entry points are on its allowlist until PR 6.

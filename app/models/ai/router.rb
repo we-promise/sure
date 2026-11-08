@@ -17,7 +17,7 @@ class Ai::Router
                     .select { |route| route.agent? == agent_chat?(feature) && route.serves_user?(@user) && route.serves?(@family) }
     return Ai::Availability.unavailable(feature, :not_configured) if listed.empty?   # first: nothing to consent to
 
-    if (reason = Ai::Consent.denial(feature, family: @family, user: @user))
+    if (reason = Ai::Consent.denial(feature, user: @user))
       return Ai::Availability.unavailable(feature, reason)
     end
 

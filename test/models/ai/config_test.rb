@@ -50,9 +50,12 @@ class Ai::ConfigTest < ActiveSupport::TestCase
     end
   end
 
-  test "with uses another snapshot inside the block only" do
+  test "an override is used instead of the built snapshot until it's reset" do
     other = Ai::Config.new
-    Ai::Config.with(other) { assert_same other, Ai::Config.current }
+    Ai::Config.override = other
+    assert_same other, Ai::Config.current
+
+    Ai::Config.override = nil
     assert_not_same other, Ai::Config.current
   end
 

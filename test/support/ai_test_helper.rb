@@ -1,5 +1,5 @@
 # Helpers for testing AI code: the transport level (endpoints, models, call contexts, captured
-# events) and routing (with_ai_routes, without_ai).
+# events) and routing (use_ai_routes, use_no_ai).
 module AiTestHelper
   LLM_CAPABILITIES = %i[tools vision documents streaming structured_output].freeze
 
@@ -44,30 +44,19 @@ module AiTestHelper
     base.teardown { Ai::Config.override = nil } if base.respond_to?(:teardown)
   end
 
-  # For the rest of a test (integration tests, setup blocks), instead of a block:
-  #   use_ai_routes(bill_setup: %w[gpu/qwen3-8b])
-  #   use_no_ai
-  def use_ai_routes(**routes) = Ai::Config.override = ai_routes_config(**routes)
-
-  def use_no_ai = Ai::Config.override = Ai::Config.new
-
-  # Runs the block with the test setup, its named features' routes replaced:
-  #   with_ai_routes(categorize: ["gpu/qwen3-8b", "openai/gpt-4.1-mini"]) { ... }
-  #   with_ai_routes(chat: []) { ... }   # chat :not_configured, everything else routed
-  def with_ai_routes(**routes, &block)
-    Ai::Config.with(ai_routes_config(**routes), &block)
-  end
-
-  def ai_routes_config(vector_store_backend: :pgvector, **routes)
+  # Routes AI through the test setup for the rest of the test, with the named features' routes
+  # replaced; the teardown restores the built config.
+  #   use_ai_routes
+  #   use_ai_routes(categorize: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+  #   use_ai_routes(chat: [])   # chat :not_configured, everything else routed
+  def use_ai_routes(vector_store_backend: :pgvector, **routes)
     base = AiTestHelper.test_config
     names = base.routes.transform_values { |list| list.map { "#{_1.endpoint.name}/#{_1.model.name}" } }
-    AiTestHelper.build_ai_config(base.models, names.merge(routes.transform_keys(&:to_sym)), vector_store_backend:)
+    Ai::Config.override = AiTestHelper.build_ai_config(base.models, names.merge(routes), vector_store_backend:)
   end
 
-  # Runs the block with no AI configured: every feature is :not_configured.
-  def without_ai(&block)
-    Ai::Config.with(Ai::Config.new, &block)
-  end
+  # No AI configured for the rest of the test: every feature is :not_configured.
+  def use_no_ai = Ai::Config.override = Ai::Config.new
 
   def ai_endpoint(name: "test", protocol: :compatible, base_url: "https://llm.example.test/v1", api_key: "test-key", **attributes)
     Ai::Config::Endpoint.new(name:, protocol:, base_url:, api_key:, **attributes)
