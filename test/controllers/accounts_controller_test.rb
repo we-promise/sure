@@ -17,6 +17,29 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "the index shows the empty state when a family has no accounts and no connections" do
+    family = without_connections(families(:empty))
+    assert_empty family.accounts, "precondition: the family has no accounts"
+    sign_in users(:empty)
+
+    get accounts_url
+
+    assert_select "p", text: I18n.t("accounts.empty.no_accounts")
+  end
+
+  # The empty-page check reads every provider from the connections the index
+  # loads, so a connection that has synced no account yet still counts.
+  test "a connection with no accounts yet keeps the index off the empty state" do
+    family = without_connections(families(:empty))
+    SimplefinItem.create!(family: family, name: "Bank linked moments ago", access_url: "https://example.com/access_token")
+    sign_in users(:empty)
+
+    get accounts_url
+
+    assert_select "p", text: I18n.t("accounts.empty.no_accounts"), count: 0
+    assert_match "Bank linked moments ago", response.body
+  end
+
   test "show points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
     create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
@@ -1873,6 +1896,12 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       shared.account_shares.create!(user: member, permission: "read_only")
 
       [ shared, unshared ]
+    end
+    def without_connections(family)
+      Family.reflect_on_all_associations(:has_many)
+        .select { |association| association.name.to_s.end_with?("_items") }
+        .each { |association| family.public_send(association.name).destroy_all }
+      family
     end
 end
 

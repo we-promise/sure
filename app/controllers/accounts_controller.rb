@@ -502,10 +502,13 @@ class AccountsController < ApplicationController
       item.accounts.select { |account| @accessible_account_id_set.include?(account.id) }
     end
 
+    # Also records each provider's visible connections as the index loads
+    # them, so the empty-page check and the sync preload read every provider
+    # from @provider_item_collections without a provider list of their own.
     def visible_provider_items(items)
       accessible_ids = @accessible_account_ids.to_a
 
-      items.select do |item|
+      visible = items.select do |item|
         next true if Current.user.admin?
 
         account_ids = item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
@@ -520,38 +523,12 @@ class AccountsController < ApplicationController
 
         (account_ids & accessible_ids).any?
       end
+      (@provider_item_collections ||= []) << visible
+      visible
     end
 
     def preload_latest_sync_metadata_for_index!
-      items = [
-        @plaid_items,
-        @simplefin_items,
-        @lunchflow_items,
-        @redbark_items,
-        @akahu_items,
-        @up_items,
-        @monobank_items,
-        @fio_items,
-        @enable_banking_items,
-        @truelayer_items,
-        @coinstats_items,
-        @mercury_items,
-        @brex_items,
-        @coinbase_items,
-        @snaptrade_items,
-        @ibkr_items,
-        @indexa_capital_items,
-        @sophtron_items,
-        @binance_items,
-        @kraken_items,
-        @coinspot_items,
-        @trading212_items,
-        @questrade_items,
-        @sharesight_items,
-        @wise_items,
-        @trade_republic_items,
-        @onchain_wallet_items
-      ].flatten.compact
+      items = @provider_item_collections.to_a.flatten.compact
 
       accounts = @manual_accounts.to_a + @financekit_accounts.to_a
       items.each do |item|
