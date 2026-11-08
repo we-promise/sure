@@ -25,7 +25,7 @@ class LlmPricingUpdater
 
   PROVIDER_LINE = /\A  (?<provider>[a-z]+):\s*\z/
   KEY_LINE = /\A {4}(?<model>[\w.\-]+):/
-  MODEL_LINE = /\A(?<indent> {4})(?<model>[\w.\-]+): (?<anchor>&[\w.\-]+ )?(?<row>\{.*\})(?<comment> +#.*)?\z/
+  MODEL_LINE = /\A(?<indent> {4})(?<model>[\w.\-]+): (?<anchor>&[\w.\-]+ )?(?<row>\{[^#]*\})(?<comment> +#.*)?\z/
   # Anything above this per 1M tokens is treated as bad source data.
   MAX_PRICE = 10_000
 

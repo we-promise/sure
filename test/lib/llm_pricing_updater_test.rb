@@ -7,7 +7,7 @@ class LlmPricingUpdaterTest < ActiveSupport::TestCase
     providers:
       openai:
         # GPT-6
-        gpt-6.1-sol: &gpt-6-1-sol { prompt: 2.0, completion: 10.0 } # promotion
+        gpt-6.1-sol: &gpt-6-1-sol { prompt: 2.0, completion: 10.0 } # promotion {ends Q4}
         gpt-4.1: { prompt: 2.0, completion: 8.0 }
         gpt-sol: *gpt-6-1-sol
       anthropic:
@@ -23,7 +23,7 @@ class LlmPricingUpdaterTest < ActiveSupport::TestCase
     )
 
     assert_includes result.yaml, "    gpt-6.1-sol: &gpt-6-1-sol { prompt: 3.0, completion: 12.0, " \
-      "long_context: { threshold: 272000, prompt: 6.0, completion: 18.0 } } # promotion\n"
+      "long_context: { threshold: 272000, prompt: 6.0, completion: 18.0 } } # promotion {ends Q4}\n"
     assert_includes result.yaml, "    # GPT-6\n"
     assert_includes result.yaml, "    gpt-4.1: { prompt: 2.0, completion: 8.0 }\n"
     assert_equal 1, result.changed.size
