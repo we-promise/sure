@@ -25,7 +25,7 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
 
     within "#cta" do
       assert_text "Updated to #{@categories.first.name}"
-      assert_text "Hide for today pauses these suggestions for 24 hours."
+      assert_text "Always categorize similar transactions?"
     end
 
     # The X sits in the toast's top-right corner (not pushed down by the content stack).
@@ -49,11 +49,11 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     assert_selector "#cta", text: "Updated to #{@categories.second.name}"
   end
 
-  test "hide for today snoozes rule prompts" do
+  test "not now snoozes rule prompts" do
     visit transactions_url
     assign_category @categories.first
 
-    within("#cta") { click_button "Hide for today" }
+    within("#cta") { click_button "Not now" }
 
     assert_no_text "Updated to #{@categories.first.name}"
     assert_not_nil @user.reload.rule_prompt_dismissed_at
@@ -73,7 +73,7 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     @user.update!(locale: "fr")
     visit transactions_url
     assign_category category
-    assert_selector "#cta form button", text: "Masquer pour aujourd'hui"
+    assert_selector "#cta form button", text: "Plus tard"
     assert_selector "#cta form a", text: "Créer une règle"
 
     overflow = page.evaluate_script(<<~JS)
