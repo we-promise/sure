@@ -61,7 +61,6 @@ class Family::AutoMerchantDetector
 
   def ai_finished(count) = @rule_run&.complete_job!(modified_count: count)
 
-  # Today's detector returned 0 on a provider failure without a trace (drift bug 3).
   def ai_failed(error)
     @rule_run&.fail_job!(error:, source: self.class.name, transaction_ids:)
     DebugLogEntry.capture(
@@ -77,7 +76,7 @@ class Family::AutoMerchantDetector
     attr_reader :family, :transaction_ids
 
     def user_merchants_input
-      family.merchants.map do |merchant|
+      @user_merchants_input ||= family.merchants.map do |merchant|
         {
           id: merchant.id,
           name: merchant.name

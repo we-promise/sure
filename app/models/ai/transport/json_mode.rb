@@ -12,8 +12,8 @@
 #   anything else (an attachment, a missing model) ends the call, after that one retry if an
 #   effort was sent: the next mode would resend the same request. OpenRouter's "reasoning is
 #   mandatory" isn't a JSON-mode rejection.
-# - No schema example is appended in `none` mode: today's prompts for custom servers already
-#   show the shape, and the prompts stay word for word.
+# - No schema example is appended in `none` mode: the prompts for custom servers already show
+#   the shape.
 module Ai::Transport::JsonMode
   CHAINS = {
     auto: %i[strict json_object none], strict: %i[strict none], json_object: %i[json_object none], none: %i[none]

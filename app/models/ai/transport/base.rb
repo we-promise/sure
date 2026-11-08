@@ -20,8 +20,7 @@ class Ai::Transport::Base
   # the JSON mode that produced it.
   Response = Data.define(:json, :usage, :raw_id, :finish_reason, :json_mode)
 
-  # `auto` moves on when more than this share of items came back blank or missing (today's
-  # AUTO_MODE_NULL_THRESHOLD).
+  # `auto` moves on when more than this share of items came back blank or missing.
   BLANK_RATIO_LIMIT = 0.5
   # Health checks a probe can make. Which one AiHealth runs for "is the model up" is the
   # endpoint's `probe_check`; tools and embedding are their own probes.

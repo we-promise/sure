@@ -41,10 +41,10 @@ class Ai::Generation
       self.merge_by = by.to_sym
     end
 
-    # An item the model left blank, for `auto` JSON mode's fallback (today's null heuristics).
+    # An item the model left blank, for `auto` JSON mode's fallback.
     def blank_item(&check) = self.blank_item_check = check
 
-    # Field names models use instead of the schema's, as today's parsers accept them.
+    # Field names models use instead of the schema's.
     def aliases(map) = self.key_aliases = map
 
     # Item fields without which an answer can't be matched to its input.

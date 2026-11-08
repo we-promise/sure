@@ -13,9 +13,6 @@ module Family::AiPromptable
   # cost problem, not just a storage one. Generous next to the ~4KB defaults.
   MAX_LENGTH = 20_000
 
-  # Which feature each generation key overrides (Ai::Prompt::OVERRIDES the other way).
-  FEATURES = { categorize_transactions: :categorize, detect_merchants: :detect_merchants }.freeze
-
   # Each key's stock text, lazily. A generation key's default is the prompt this install's route
   # sends (the simplified one on a custom OpenAI-compatible server, Anthropic's own on
   # Anthropic), so editing it never swaps a small local model's terse rules for a prompt
@@ -75,7 +72,7 @@ module Family::AiPromptable
   # The prompt folder this family's route sends for a generation key: its first LLM entry's
   # prompt, else the feature's default.
   def ai_prompt_folder(key)
-    feature = FEATURES.fetch(key.to_sym)
+    feature = Ai::Prompt::OVERRIDES.key(key.to_sym) || raise(KeyError, "no AI feature reads the #{key} override")
     route = Ai.plan(feature, family: self)&.routes&.find { !_1.judge? }
     route&.prompt.presence || key.to_s
   end

@@ -1,6 +1,6 @@
 class RecurringTransaction
   # Turns charge history into a reviewed bill-configuration proposal through
-  # Ai::Generations::SuggestBillSetup, the requester of :bill_setup. Two modes:
+  # Ai::Generations::SuggestBillSetup, on the web thread. Two modes:
   #
   #   suggest_from_entries  -- from candidate entries (the add dialog's
   #                            smart-fill; nothing exists yet)
@@ -12,9 +12,6 @@ class RecurringTransaction
   # ranges, category resolved to this family's own id -- so callers can trust
   # the shape without re-validating LLM output.
   class AiSetupSuggester
-    include Ai::Requester
-    ai_feature :bill_setup
-
     Error = Class.new(StandardError)
     MAX_CHARGES = 40
 
@@ -86,7 +83,7 @@ class RecurringTransaction
       end
 
       # Ai::Schema has already turned nulls, numeric strings and values outside the presets
-      # into nil; this resolves the category to the family's own and keeps today's clamps.
+      # into nil; this resolves the category to the family's own and clamps the ranges.
       def normalize(raw)
         category = resolve_category(raw[:category_name])
 

@@ -55,7 +55,6 @@ class ProviderMerchant::Enhancer
 
   def ai_finished(_count) = Rails.cache.delete(self.class.lock_key(@family))
 
-  # Today's enhancer skipped a failed batch without a word (drift bug 3).
   def ai_failed(error)
     Rails.cache.delete(self.class.lock_key(@family))
     DebugLogEntry.capture(

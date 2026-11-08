@@ -20,7 +20,7 @@ class Ai::LegacyEnvConfig
     enhance_merchants: "enhance_merchants", bill_setup: "bill_setup"
   }.freeze
   SIMPLE_PROMPTS = %i[categorize detect_merchants enhance_merchants].freeze   # bill setup has one OpenAI prompt
-  JSON_MODES = %w[strict json_object none auto].freeze   # Provider::Openai::Concerns::JsonMode's
+  JSON_MODES = Ai::Config::Endpoint::JSON_MODES.map(&:to_s).freeze
   ANTHROPIC_MAX_TOKENS = 4096
   EMBEDDING_TIMEOUT = 120         # VectorStore::Embeddable's client
   EXTERNAL_ASSISTANT_TIMEOUT = 120 # Assistant::External::Client::TIMEOUT_READ
@@ -36,7 +36,7 @@ class Ai::LegacyEnvConfig
 
   def self.build = new.build
 
-  # The prompt variant today's code sends for `feature` to this kind of endpoint: Anthropic's own,
+  # The prompt variant the providers send for `feature` to this kind of endpoint: Anthropic's own,
   # the simplified one on a custom OpenAI-compatible server, otherwise OpenAI's detailed one.
   def self.prompt_for(feature, endpoint)
     base = PROMPTS[feature.to_sym]
@@ -111,7 +111,7 @@ class Ai::LegacyEnvConfig
         name: "anthropic", protocol: :anthropic, preset: (:anthropic unless base_url), base_url:, api_key: token,
         location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       )
-      # Today's Anthropic batches aren't token-sliced, so its window is known only when set.
+      # Anthropic batches were never token-sliced, so its window is known only when set.
       model = provider && llm_model(endpoint, provider, Provider::Anthropic.effective_model,
                                     context_window: positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window),
                                     max_output_tokens: positive(env("ANTHROPIC_MAX_TOKENS")) || ANTHROPIC_MAX_TOKENS)
@@ -127,7 +127,7 @@ class Ai::LegacyEnvConfig
       Ai::Config::Model.new(endpoint:, name:, capabilities:, context_window:, max_output_tokens:, batch_size:)
     end
 
-    # Today's budgets: Assistant::TokenBudget's window (2048 by default), the response cap only
+    # The deprecated budgets: Assistant::TokenBudget's window (2048 by default), the response cap only
     # when someone set one, and LLM_MAX_ITEMS_PER_CALL items per call.
     def context_window = Assistant::TokenBudget.context_window
 

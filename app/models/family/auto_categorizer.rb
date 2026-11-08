@@ -9,6 +9,8 @@ class Family::AutoCategorizer
   include Ai::Requester
   ai_feature :categorize
 
+  Error = Class.new(StandardError)
+
   def self.from_ai_job(ids:, family_id:, rule_run_id: nil)
     new(Family.find(family_id), transaction_ids: ids, rule_run: (RuleRun.find_by(id: rule_run_id) if rule_run_id))
   end
@@ -33,7 +35,7 @@ class Family::AutoCategorizer
 
     if categories_input.empty?
       log_no_categories
-      return
+      raise Error, "No categories available for auto-categorization"
     end
 
     plan = Ai.plan(:categorize, family:)
@@ -118,7 +120,7 @@ class Family::AutoCategorizer
   end
 
   # Jev: one Provider::Jev call per batch, answered in the generation's shape, with
-  # each answer's calibrated confidence. No failover from Jev, as today.
+  # each answer's calibrated confidence. No failover from Jev.
   class JevCall
     def initialize(categorizer, route)
       @categorizer, @route = categorizer, route
@@ -156,7 +158,7 @@ class Family::AutoCategorizer
       )
     end
 
-    # The family chose Jev but its route has none: say why, as today, when Jev can't be built.
+    # The family chose Jev but its route has none: say why when Jev can't be built.
     def log_jev_fallback
       Provider::Registry.get_provider(:jev)
     rescue Provider::Error => error
@@ -209,7 +211,7 @@ class Family::AutoCategorizer
       [ result.value[:categorizations], provider_key(result.route) ] if result.success?
     end
 
-    # An LLM family's shadow is Jev, when it can be built, as today's shadow_categorization_provider.
+    # An LLM family's shadow is Jev, when it can be built.
     def shadow_jev_provider
       family.shadow_categorization_provider { |error| log_jev_misconfiguration(error, "skipping the shadow comparison") }
             .then { _1.is_a?(Provider::Jev) ? _1 : nil }
