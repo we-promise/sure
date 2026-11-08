@@ -1,6 +1,7 @@
 <%# locals: (family:, classes: nil) %>
-<% missing = family.currencies_without_exchange_rate %>
-<% stale = family.stale_exchange_rate_dates %>
+<% accounts = Current.accessible_accounts || family.accounts %>
+<% missing = family.currencies_without_exchange_rate(accounts: accounts) %>
+<% stale = family.stale_exchange_rate_dates(accounts: accounts) %>
 <% if missing.any? || stale.any? %>
   <div class="space-y-2 <%= classes %>">
     <% if missing.any? %>

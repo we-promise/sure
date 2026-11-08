@@ -746,6 +746,24 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal %w[SEK], family.currencies_without_exchange_rate
   end
 
+  test "a disabled account's currency is not named" do
+    family = families(:empty)
+    family.accounts.create!(name: "Old KRW", balance: 1, currency: "KRW", accountable: Depository.new, status: "disabled")
+
+    assert_empty family.currencies_without_exchange_rate
+  end
+
+  # The pages pass the viewer's accounts, so a member is not told about an
+  # account they cannot see, and the note matches the totals they get.
+  test "currencies_without_exchange_rate names only the given accounts' currencies" do
+    family = families(:empty)
+    home = family.accounts.create!(name: "Home", balance: 1, currency: family.currency, accountable: Depository.new)
+    family.accounts.create!(name: "KRW", balance: 1, currency: "KRW", accountable: Depository.new)
+
+    assert_equal %w[KRW], family.currencies_without_exchange_rate
+    assert_empty family.currencies_without_exchange_rate(accounts: family.accounts.where(id: home.id))
+  end
+
   test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
     family = families(:empty)
     account = family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)

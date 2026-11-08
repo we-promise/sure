@@ -720,15 +720,19 @@ class Family < ApplicationRecord
   # #rate_sql leave amounts in them out rather than counting them at 1 (#3640);
   # totals built on #rates_for include them only if the provider supplies a
   # rate, which is then stored. The pages that show those totals say so.
-  def currencies_without_exchange_rate
-    @currencies_without_exchange_rate ||= ExchangeRate.currencies_without_rate(currencies_in_use, to: currency)
+  #
+  # Pass the viewer's accounts so the note covers the totals they see: only
+  # visible accounts count, and a member is not told about the currency of an
+  # account shared with someone else.
+  def currencies_without_exchange_rate(accounts: self.accounts)
+    ExchangeRate.currencies_without_rate(currencies_in_use(accounts), to: currency)
   end
 
   # Currencies in use whose newest rate into the family currency is too old to
   # count as today's, mapped to that rate's date. Today's totals use it, and
   # the same pages say so.
-  def stale_exchange_rate_dates
-    @stale_exchange_rate_dates ||= ExchangeRate.stale_rate_dates(currencies_in_use, to: currency)
+  def stale_exchange_rate_dates(accounts: self.accounts)
+    ExchangeRate.stale_rate_dates(currencies_in_use(accounts), to: currency)
   end
 
   # Returns securities with plan restrictions for a specific provider
@@ -877,10 +881,15 @@ class Family < ApplicationRecord
   end
 
   private
-    def currencies_in_use
-      @currencies_in_use ||= (
-        accounts.distinct.pluck(:currency) + entries.distinct.pluck(:currency) +
-          trades.distinct.pluck(:currency) + holdings.distinct.pluck(:currency)
+    # Currencies used by the given accounts that are visible, by their entries,
+    # their trades and their holdings.
+    def currencies_in_use(scope)
+      account_ids = self.accounts.visible.where(id: scope.select(:id)).select(:id)
+      (
+        Account.where(id: account_ids).distinct.pluck(:currency) +
+          Entry.where(account_id: account_ids).distinct.pluck(:currency) +
+          Trade.joins(:entry).where(entries: { account_id: account_ids }).distinct.pluck("trades.currency") +
+          Holding.where(account_id: account_ids).distinct.pluck(:currency)
       ).compact.uniq
     end
 

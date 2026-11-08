@@ -1019,6 +1019,16 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from KRW to USD is stored yet, so some totals may leave out amounts in KRW/
   end
 
+  test "dashboard does not name the currency of an account the member cannot see" do
+    @family.accounts.create!(name: "Admin KRW", owner: users(:family_admin), balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+    sign_in users(:family_member)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
+  end
+
   test "dashboard shows no exchange rate notes when every rate is current" do
     @family.accounts.create!(name: "EUR Savings", balance: 100, currency: "EUR", accountable: Depository.new)
     ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: Date.current, rate: 1.1)
