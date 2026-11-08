@@ -152,7 +152,7 @@ class Holding < ApplicationRecord
     as_of_sql = as_of == :joined ? "holdings.date" : sanitize_sql_array([ "?", as_of ])
     split_factor = <<~SQL.squish
       COALESCE((
-        SELECT ROUND(EXP(SUM(LN(security_splits.numerator::float8 / security_splits.denominator)))::numeric, 12)
+        SELECT EXP(SUM(LN(security_splits.numerator::float8 / security_splits.denominator)))::numeric
         FROM security_splits
         WHERE security_splits.security_id = trades.security_id
           AND security_splits.ex_date > entries.date
@@ -164,7 +164,7 @@ class Holding < ApplicationRecord
 
     [
       Arel.sql("SUM((trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END)"),
-      Arel.sql("SUM(trades.qty * #{split_factor})"),
+      Arel.sql("SUM(ROUND(trades.qty * #{split_factor}, 9))"),
       Arel.sql("BOOL_OR(#{foreign} AND (#{rate} IS NULL OR #{rate} <= 0))")
     ]
   end

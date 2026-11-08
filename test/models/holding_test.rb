@@ -71,6 +71,14 @@ class HoldingTest < ActiveSupport::TestCase
     assert_cost expected, batch.first.avg_cost, "batch"
   end
 
+  test "a 1-for-3 split of three shares leaves exactly one share, so the average is exact" do
+    security = @amzn.security
+    create_trade(security, account: @account, qty: 3, price: 30.00, date: 10.days.ago.to_date)
+    security.splits.create!(ex_date: 5.days.ago.to_date, numerator: 1, denominator: 3, source: "manual")
+
+    assert_cost Money.new(90), Holding.find(@amzn.id).avg_cost, "single"
+  end
+
   test "a split after the holding's date or on the purchase's own day leaves the average alone" do
     security = @amzn.security
     create_trade(security, account: @account, qty: 10, price: 100.00, date: 3.days.ago.to_date)

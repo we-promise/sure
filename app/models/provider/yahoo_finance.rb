@@ -387,6 +387,8 @@ class Provider::YahooFinance < Provider
   def fetch_security_splits(symbol:, exchange_operating_mic: nil, start_date:, end_date:)
     with_provider_response do
       symbol = normalize_symbol(symbol, exchange_operating_mic)
+      # Yahoo serves a bounded history; ask for what it has instead of failing.
+      start_date = [ start_date.to_date, Date.current - max_history_days + 1 ].max if start_date.present? && end_date.present?
       validate_date_params!(start_date, end_date)
 
       throttle_request
@@ -400,6 +402,8 @@ class Provider::YahooFinance < Provider
       chart_data = data.dig("chart", "result", 0)
       raise Error, "No chart data found for #{symbol}" unless chart_data
 
+      timezone = ActiveSupport::TimeZone[chart_data.dig("meta", "exchangeTimezoneName").to_s] || ActiveSupport::TimeZone["UTC"]
+
       (chart_data.dig("events", "splits") || {}).values.filter_map do |event|
         numerator = event["numerator"].to_i
         denominator = event["denominator"].to_i
@@ -407,7 +411,7 @@ class Provider::YahooFinance < Provider
 
         Split.new(
           symbol: symbol,
-          ex_date: Time.at(event["date"].to_i).utc.to_date,
+          ex_date: Time.at(event["date"].to_i).in_time_zone(timezone).to_date,
           numerator: numerator,
           denominator: denominator,
           exchange_operating_mic: exchange_operating_mic

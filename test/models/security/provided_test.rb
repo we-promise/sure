@@ -460,6 +460,28 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     assert_no_difference -> { @security.splits.count } do
       assert_equal 0, @security.import_provider_splits(start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 10, 9))
     end
-    assert_nil @cache.read("security_split_check:#{@security.id}")
+    assert_nil @cache.read("security_split_check:#{@security.id}:2026-01-01:2026-10-09")
+  end
+
+  test "import_provider_splits checks each date range on its own" do
+    @cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(@cache)
+    provider = stub_split_provider(provider_success_response([]))
+    provider.expects(:fetch_security_splits).twice.returns(provider_success_response([]))
+
+    @security.import_provider_splits(start_date: Date.new(2026, 9, 1), end_date: Date.new(2026, 10, 9))
+    @security.import_provider_splits(start_date: Date.new(2020, 1, 1), end_date: Date.new(2026, 10, 9))
+  end
+
+  test "import_provider_splits leaves a split the broker already booked as a trade" do
+    ex_date = Date.new(2026, 10, 9)
+    account = accounts(:investment)
+    trade = Trade.new(qty: 10, security: @security, price: 0, currency: "USD", investment_activity_label: "Other")
+    account.entries.create!(name: "Split", date: ex_date, amount: 0, currency: "USD", entryable: trade)
+    stub_split_provider(provider_success_response([ split_value(ex_date, 2, 1) ]))
+
+    assert_no_difference -> { @security.splits.count } do
+      @security.import_provider_splits(start_date: ex_date - 30, end_date: ex_date, clear_cache: true)
+    end
   end
 end
