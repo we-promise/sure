@@ -377,20 +377,26 @@ class ReportsController < ApplicationController
       trends
     end
 
-    # An entry's amount in family currency at the rate the summary totals use
-    # (ExchangeRate.rates_for at the entry's date: the stored rate nearest that
-    # date, however old), or nil when there is none. An entry with no rate is
-    # left out, as the summary leaves it out, rather than counted at 1.
+    # An entry's amount in family currency at the rate the summary totals use:
+    # ExchangeRate.rate_sql, the stored rate nearest the entry's date, however
+    # old, as IncomeStatement::ScopedTransactionsQuery reads it. Nil when there
+    # is none, so the entry is left out, as the summary leaves it out, rather
+    # than counted at 1. No provider is called.
     def report_amount_converter(family_currency)
       rates = {}
+      connection = ExchangeRate.connection
       lambda do |entry|
         amount = entry.amount.abs
         next amount if entry.currency == family_currency
 
         key = [ entry.date, entry.currency ]
-        rates[key] = ExchangeRate.rates_for([ entry.currency ], to: family_currency, date: entry.date)[entry.currency] unless rates.key?(key)
-        rate = rates[key]
-        rate && amount * rate
+        unless rates.key?(key)
+          sql = ExchangeRate.rate_sql(from: connection.quote(entry.currency), to: connection.quote(family_currency),
+                                      on: "#{connection.quote(entry.date.iso8601)}::date")
+          value = connection.select_value("SELECT #{sql}")
+          rates[key] = value && BigDecimal(value.to_s)
+        end
+        rates[key] && amount * rates[key]
       end
     end
 
@@ -637,12 +643,14 @@ class ReportsController < ApplicationController
         # Sum unrealized gains from holdings (only those with known cost basis
         # and a rate into family currency)
         unconverted = 0
+        unrealized_by_holding = {}
         unrealized = holdings.sum do |h|
           trend = h.trend
           next 0 unless trend
 
           converted = convert_current.call(trend.value, h.currency)
           unconverted += 1 if converted.nil?
+          unrealized_by_holding[h.id] = Money.new(converted, currency) if converted
           converted || 0
         end
 
@@ -680,6 +688,9 @@ class ReportsController < ApplicationController
           # and the card's own total are the same arithmetic. The partial used
           # to re-label `gain.value` as family currency without converting it.
           realized_gain_by_trade: realized_by_trade,
+          # The same for each holding's unrealised gain; one with no rate has
+          # no entry, and its line says so.
+          unrealized_gain_by_holding: unrealized_by_holding,
           # Holdings and sells left out of the totals for want of a rate.
           unconverted_count: unconverted,
           total_gain: Money.new(unrealized + realized, currency)

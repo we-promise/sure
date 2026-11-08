@@ -145,6 +145,30 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from JPY to USD is stored yet, so some totals may leave out amounts in JPY/
   end
 
+  # Each holding's line under the card is the same arithmetic as the card's
+  # total: converted into family currency, or "no data" without a rate. It
+  # used to re-label the yen figure as dollars.
+  test "a holding's gain line is converted, or shows no data without a rate" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 1_000_000,
+                                       currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPL#{SecureRandom.hex(3)}", name: "Tokyo Listed")
+    account.holdings.create!(security: security, date: Date.current, qty: 5, price: 150_000,
+                             amount: BigDecimal(750_000), currency: "JPY", cost_basis: 100_000)
+    ExchangeRate.where(from_currency: "JPY", to_currency: "USD").delete_all
+
+    get reports_path
+    line = css_select("div.pl-2").find { |div| div.text.include?(security.ticker) }
+    assert line, "the holding is listed"
+    assert_match(/#{Regexp.escape(I18n.t("reports.investment_performance.no_data"))}/, line.text)
+    assert_no_match(/\$250,000\.00/, line.text, "the yen gain re-labelled as dollars")
+
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0.0067)
+    get reports_path
+    line = css_select("div.pl-2").find { |div| div.text.include?(security.ticker) }
+    assert_match(/\$1,675\.00/, line.text, "250,000 JPY at 0.0067")
+  end
+
   # The rates a page of disposals needs come from one query, not one per
   # foreign disposal. The conversion itself is covered in TradeTest, which
   # counts the queries directly; what has to hold HERE is that the card asks
