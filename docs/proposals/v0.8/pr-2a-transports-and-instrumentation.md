@@ -13,9 +13,9 @@ PR 2 comes in five parts, merged in order, all in v0.7.7. 2a is the foundation:
 
 - the `compatible` and `anthropic` transports with `probe`;
 - `Ai::Transport::Http`;
-- `Ai::Result`, and `Ai::Error` with `NoCredit` and `ModelMissing`;
+- `Ai::Error` with `NoCredit` and `ModelMissing`;
 - a time budget for each attempt;
-- the instrumentation subscribers, with the correlation id;
+- the instrumentation subscribers;
 - usage per request, with the usage page grouped per call (`llm_usages.call_id` and `status`);
 - both tracing modes;
 - the proxy fix, which skips loopback;
@@ -24,7 +24,10 @@ PR 2 comes in five parts, merged in order, all in v0.7.7. 2a is the foundation:
 `AiHealth::Probe` calls `transport.probe`, which fixes drift bug 6. *Deletes:* the probe's own
 clients.
 
-A transport call arrives only with its first caller (§19), so 2a implements only `probe`.
+A transport call arrives only with its first caller (§19), so 2a implements only `probe`. The
+same rule holds for values and helpers (call by @josh-sanders, 2026-11-08): `Ai::Result`, the
+correlation id, `stub_ai_transport` and `with_ai_cassette` arrive in 2c; model capabilities,
+prices and endpoint location in 2b.
 `generate` comes in 2c, `judge` in 2d, `embed` in 2e and `converse` in PR 6. The subscribers and
 the new usage columns get their production traffic from 2c on. Until then, today's recorders
 write rows with a null `call_id`, which count as calls of one request each.
@@ -226,14 +229,12 @@ Nothing here blocks 2a on 2.1.1.
    - `Ai::Tokens` (`Data`: `input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
      cost`): `+`, `prompt_tokens`, `.from_ruby_llm(tokens, cost)`. Nil-safe: an unknown count
      stays `nil`, as on 2.2.
-   - `Ai::Result`, as in §9.
-   - `Ai::Config::Endpoint`: `name, protocol, preset, base_url, api_key, extra_headers, location,
-     timeout_seconds, max_retries, responses_api, probe_check`, with `local?`.
-   - `Ai::Config::Model`: `endpoint, name, capabilities, context_window, max_output_tokens,
-     embedding_dimensions, input_cost_per_mtok, output_cost_per_mtok`, with `capable?`.
+   - `Ai::Config::Endpoint`: `name, protocol, preset, base_url, api_key, extra_headers,
+     timeout_seconds, max_retries, responses_api, probe_check`.
+   - `Ai::Config::Model`: `endpoint, name, embedding_dimensions`.
 
-   2b's `Ai::Config` holds these, and PR 7's snapshot copies AR rows into them. In 2a, prices
-   default from `LlmUsage.find_pricing` until presets carry them (PR 7).
+   2b's `Ai::Config` holds these and adds what routing needs; PR 7's snapshot copies AR rows
+   into them.
 4. **`Ai::Transport::Http`.**
    - `proxy_for`: HTTPS, then HTTP; `NO_PROXY` through `URI::Generic.use_proxy?`; loopback
      skipped (`127.0.0.0/8`, `::1`, `localhost`).
@@ -245,8 +246,6 @@ Nothing here blocks 2a on 2.1.1.
      `net_http_proxy`.
    - The `pipelock:ignore` tags move here.
 5. **`Ai::CallContext`**, a thin layer over RubyLLM's documented scopes.
-   - `.job(correlation_id) { }` → `RubyLLM.workflow("sure.job", id: correlation_id)`, for 2c's
-     jobs.
    - `.call(feature:, model:, family:, budget:) { }` → `RubyLLM.with_usage_owner(family)` around
      `RubyLLM.workflow("ai.#{feature}", id: call_id, metadata: { feature:, endpoint:, model:,
      family_id: })`.
@@ -280,15 +279,15 @@ Nothing here blocks 2a on 2.1.1.
        `workflow_metadata`; `model`;
      - tokens with the cached split, cost and `status`;
      - `call_id` = `workflow_id`;
-     - `metadata`: `{ route:, error_class:, correlation_id: workflow_parent_id }`.
+     - `metadata`: `{ route:, error_class: }`.
    - `LangfuseSubscriber` (`/\.ai\z/`, `content` mode, through the existing
-     `Rails.configuration.x.langfuse`): the correlation id is the session, cached tokens are
+     `Rails.configuration.x.langfuse`): cached tokens are
      counted, `probe.ai` is skipped.
    - `DebugLogSubscriber`: `DebugLogEntry.capture` on failure or unavailable, with
      provider/source metadata. It skips `probe.ai`, which `AiHealth::Probe` already logs.
    - `Ai::Instrumentation::Redactor`: one helper that all three use.
    - `MetadataTracing`: an app-owned `TracerProvider` and an OTLP exporter on
-     `OTLP_ENDPOINT`/`OTLP_HEADERS`; `CorrelationProcessor` sets `session.id`; then
+     `OTLP_ENDPOINT`/`OTLP_HEADERS`; then
      `RubyLLM::OpenTelemetry.enable`, with `content: false` passed explicitly once the gem takes
      it (2.2). A test fails if any span carries content.
    - `Ai::Instrumentation.mode`: decision 3.
@@ -322,11 +321,10 @@ Nothing here blocks 2a on 2.1.1.
     - `Assistant::External::Client#resolve_proxy` becomes `Http.proxy_for`. This fixes its
       scheme-only lookup and its CIDR `NO_PROXY` bug.
 12. **`test/support/ai_test_helper.rb`.**
-    - `ai_endpoint` and `ai_model`, `with_ai_call_context`, `capture_ai_events`,
-      `stub_ai_transport`.
-    - `with_ai_cassette(preset, name)`: cassettes under `test/vcr_cassettes/ai/<preset>/`,
-      localhost recorded inside the block, keys filtered, recording with `RECORD_CASSETTES=1`.
-    - Later parts add their own: 2b `with_ai_routes`/`without_ai`, 2c `stub_ai`, PR 3
+    - `ai_endpoint` and `ai_model`, `with_ai_call_context`, `capture_ai_events`.
+    - Later parts add their own: 2b `with_ai_routes`/`without_ai`; 2c `stub_ai`,
+      `stub_ai_transport` and `with_ai_cassette(preset, name)` (cassettes under
+      `test/vcr_cassettes/ai/<preset>/`, keys filtered, `RECORD_CASSETTES=1`); PR 3
       `with_ai_capsule`.
 13. **Contract test** (`test/architecture/ai_transport_contract_test.rb`), run over every
     transport.

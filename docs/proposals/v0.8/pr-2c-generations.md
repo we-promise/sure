@@ -397,7 +397,7 @@ flowchart LR
      7. on an overflow, split and retry the halves on the same route;
      8. on a failover error, mark down and take the next route;
      9. on `InvalidOutput` or `ContextTooLong` with a single item, escalate.
-   - `Ai::Result` carries `route`, `failed_over_from` and `remaining`.
+   - `Ai::Result` (§9; new here, not in 2a) carries `route`, `failed_over_from` and `remaining`.
    - `Ai::Batch` holds the slicing rule moved from `Provider::Openai::BatchSlicer`, with each
      item costed by `Assistant::TokenEstimator`.
    - `Ai::DownMarks` keeps the three keys of §5.4 in `Rails.cache` for 60 s.
@@ -407,8 +407,9 @@ flowchart LR
    - The job is §8.1's: the queue comes from the lane (mapped onto today's two queues), with
      `retry_on` and `discard_on` as §9 lists them.
    - `requester.ai_failed` runs on a discard or once the retries run out.
-   - `Ai::CallContext.job` wraps it with the correlation id: `rule_run_id`, else
-     `family:<id>:<feature>`.
+   - `Ai::CallContext.job` (new here, not in 2a) wraps it with the correlation id: `rule_run_id`,
+     else `family:<id>:<feature>`. 2c also carries the id into `Call`, the `.ai` payload, the
+     Langfuse session, OTel `session.id` (a span processor) and `llm_usages.metadata`.
    - A requester whose `ai_generation` is nil (nothing to do) finishes with 0.
    - `AutoCategorizeJob`, `AutoDetectMerchantsJob` and `EnhanceProviderMerchantsJob` are
      deleted, with no shims (decision 6), along with their tests and their entries in

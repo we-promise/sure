@@ -138,7 +138,7 @@ Within each group, splits go in order of open-PR overlap, because that is where 
 
 **a. Before the refactor**
 1. **F-H2 / F-R1:** the `family.rb` AI/ML facade into `Family::Classification` (S10). 20 open PRs.
-2. **F-H3:** one settings locale file per page. 16 open PRs.
+2. **F-H3:** one settings locale file per page. 16 open PRs. Done in 2a (#4773): `config/locales/views/settings/<page>/<lang>.yml`.
 3. **F-H4:** tool self-registration. The list stays identical, with a test that compares old and new. 14 open PRs.
 4. **F-H5 / F-M2:** one hostings controller and form per section. 12 open PRs.
 5. **F-R6:** chat transport out of `provider/openai.rb`.

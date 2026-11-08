@@ -190,7 +190,10 @@ commits read for 2a changes them.
 2. **`Ai::Config` and `Ai::LegacyEnvConfig`.**
    - `Ai::Config::Endpoint` gains `vector_store`, `agent` and `agent_settings` (allowed emails,
      agent id, session key), with redacted `inspect`.
-   - `Ai::Config::Model` gains `batch_size` (from `LLM_MAX_ITEMS_PER_CALL`), unused until 2c.
+   - `Ai::Config::Endpoint` gains `location` with `local?`/`cloud?` (not in 2a).
+   - `Ai::Config::Model` gains `capabilities` with `capable?`, `context_window`,
+     `max_output_tokens`, prices with `cost_for` (not in 2a), and `batch_size` (from
+     `LLM_MAX_ITEMS_PER_CALL`), unused until 2c.
    - `Ai::Route` is `Data(feature, position, model, condition)`. It has `endpoint`, `agent?`,
      `model_capable?(needs)` (a hash of needs: either set qualifies), `serves_user?(user)` (agent
      allowed emails) and `serves?(family)` (the Jev family filter).

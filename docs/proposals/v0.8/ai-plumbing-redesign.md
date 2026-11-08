@@ -2682,14 +2682,18 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    stacked on 2d (#4765) and #3422, and moves #3422's pieces onto the plumbing (call by @josh-sanders
    during development of PR #4440; section 5.5).
    - **2a. Transports and instrumentation.** The `compatible` and `anthropic` transports with
-     `probe`, `Http`, `Ai::Result`, `Ai::Error` (with `NoCredit` and `ModelMissing`), the
-     per-attempt time budget, the instrumentation subscribers with the correlation id, usage per
+     `probe`, `Http`, `Ai::Error` (with `NoCredit` and `ModelMissing`), the
+     per-attempt time budget, the instrumentation subscribers, usage per
      request with the usage page grouped per call (`llm_usages.call_id` and `status`), both
      tracing modes, and the proxy fix (with loopback skipped). `AiHealth::Probe` calls `transport.probe`, which fixes
-     drift bug 6. Adds the transport contract test and the AI test helpers (section 17).
+     drift bug 6. Adds the transport contract test and the AI test helpers (section 17). Each
+     value or helper lands with its first caller (call by @josh-sanders, 2026-11-08): model
+     capabilities, prices and endpoint location with 2b's `Ai::Config`; `Ai::Result`, the
+     correlation id, `stub_ai_transport` and `with_ai_cassette` with 2c.
      *Deletes:* `AiHealth::Probe`'s own clients.
      PR #4773. Implementation plan: [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md).
-   - **2b. Routing and consent.** `Ai::Config`, built in memory in each process by
+   - **2b. Routing and consent.** `Ai::Config` (adding model capabilities and prices and the
+     endpoint's location to 2a's value types), built in memory in each process by
      `Ai::LegacyEnvConfig` from today's ENV and `Setting` fields with the table in section 4.5
      (so the web and the workers can disagree, as they do today, until PR 7);
      `Ai::Routes` with its `sends:` manifest, `Ai::Router`, `Ai::Consent` with the user switch,
@@ -2699,7 +2703,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `Ai.available?(:embed)` with the uploader's switch (section 5.5). Adds the agreement test, with chat's entry points on its allowlist until PR 6.
      *Deletes:* the non-chat availability checks and their test stubs.
      PR #4774. Implementation plan: [`pr-2b-routing-and-consent.md`](pr-2b-routing-and-consent.md).
-   - **2c. Generations.** `transport.generate` with the JSON-mode policy, `Ai::Generation`,
+   - **2c. Generations.** `transport.generate` with the JSON-mode policy, `Ai::Result`, the
+     correlation id (`Ai::CallContext.job`, the Langfuse session, OTel `session.id` and
+     `llm_usages.metadata`), `Ai::Generation`,
      `Ai::Requester`, `Ai::Batch` with per-item costs and splitting on overflow,
      `Ai::GenerationJob` with small batches, failover and escalation down the list (section 5.4), the ERB prompt files with the key collapse (section
      8.3), and reasoning effort on route entries (#3605) with its per-preset mapping. Features:
