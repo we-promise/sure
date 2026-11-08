@@ -32,7 +32,7 @@ module Ai::Transport::RubyLlmAdapter
     end
 
     # One completion for a generation, without running tools (`Chat#generate`). The schema
-    # goes through `with_schema` on every protocol (2c plan, decision 7): `response_format` on
+    # goes through `with_schema` on every protocol: `response_format` on
     # chat completions and the Responses API, Anthropic's native `output_config`. Returns
     # [text, Ai::Tokens, raw id, finish reason].
     def complete_json(request, schema: true, response_format: nil, effort: nil, provider_options: {})

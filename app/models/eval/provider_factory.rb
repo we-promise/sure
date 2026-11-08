@@ -36,8 +36,8 @@ class Eval::ProviderFactory
     attr_reader :provider, :model, :config
 
     # The run's OpenAI-compatible endpoint: its own token and URL, else the install's (Ai::Config,
-    # from the deprecated ENV or Settings until PR 7). Categorization and merchant detection run
-    # through the generations; chat through Provider::Openai until PR 6.
+    # from the deprecated ENV or Settings). Categorization and merchant detection run through the
+    # generations; chat through Provider::Openai.
     def build_openai
       installed = Ai::Config.current.endpoints.find { _1.protocol == :compatible && _1.name.start_with?("openai") }
       access_token = config[:access_token].presence || installed&.api_key

@@ -1,4 +1,4 @@
-# The base class of every structured-output feature (section 8.1). A feature is declared, not
+# The base class of every structured-output feature. A feature is declared, not
 # implemented: its key, its prompt folder, its schema and, when it takes a list, how the list is
 # batched and merged. `call` is the only place that does the rest, in this order:
 #
@@ -7,7 +7,7 @@
 #   3. Take the first route not marked down (Ai::DownMarks). Render its prompt (Ai::Prompt), take
 #      the next batch sized for its model (Ai::Batch), call its transport's `generate`, and
 #      coerce the answer (Ai::Schema). On a `judge` model, the feature's judgement (`judged_by`)
-#      answers the same batch instead (section 8). PR 4's sequencer takes this step's route choice.
+#      answers the same batch instead.
 #   4. On a failover error (Ai::DownMarks::FAILOVER), mark it down and take the next route. On
 #      InvalidOutput, escalate to the next route. On ContextTooLong or an answer cut at the
 #      output limit, halve the batch on the same route; a single item that still can't fit
@@ -17,7 +17,7 @@
 #      with the items actually sent (section 8.2).
 #
 # `call(batches: 1)` runs one batch, which is what Ai::GenerationJob does (small batches,
-# section 11); plain `call` runs them all and merges the answers. `call!` returns the value or
+# so other work takes turns); plain `call` runs them all and merges the answers. `call!` returns the value or
 # raises the Ai::Error, for jobs.
 class Ai::Generation
   class_attribute :feature_key, :prompt_key, :static_schema, :schema_label, :batch_key, :merge_key, :merge_by,
@@ -27,7 +27,7 @@ class Ai::Generation
   class << self
     def feature(key) = self.feature_key = key.to_sym
 
-    # The default prompt folder in app/prompts (section 8.3); a route entry can name another.
+    # The default prompt folder in app/prompts; a route entry can name another.
     def prompt(name) = self.prompt_key = name.to_s
 
     # A constant schema; features whose enum depends on the input define #schema instead.
@@ -36,7 +36,7 @@ class Ai::Generation
     # The schema's name in a strict response_format.
     def schema_name(name) = self.schema_label = name.to_s
 
-    # The initializer keyword that holds the items, which are batched (section 8.1).
+    # The initializer keyword that holds the items, which are batched.
     def batch(key) = self.batch_key = key.to_sym
 
     # How batch answers combine: the list key in the schema, and the id each item carries.
@@ -267,7 +267,7 @@ class Ai::Generation
     # The feature the call is recorded under: shadow_<feature> on a shadow run.
     def request_feature = @plan_feature || feature_key
 
-    # The user's locale when a user started the work, otherwise the family's (section 8.3).
+    # The user's locale when a user started the work, otherwise the family's.
     def prompt_locale = locale || user&.locale.presence || family&.locale.presence
 
     def result(value:, route:, remaining: [])

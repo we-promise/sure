@@ -1,9 +1,8 @@
-# The one job every generation feature runs in (section 8.1). It runs one batch, applies it
-# through the requester and enqueues the rest at the back of its queue, so one family's large
-# run takes turns with other families' work (section 11). The queue comes from the feature's
-# lane (Ai::Routes.queue_for).
+# The one job every generation feature runs in. It runs one batch, applies it through the
+# requester and enqueues the rest at the back of its queue, so one family's large run takes turns
+# with other families' work. The queue comes from the feature's lane (Ai::Routes.queue_for).
 #
-# Failures follow section 9: the transport has already retried 429s and 5xxs and the generation
+# On a failure, the transport has already retried 429s and 5xxs and the generation
 # has failed over and escalated; what's left is retried later when it may pass, and discarded
 # when it can't. Either way the requester hears once, so a RuleRun never stays pending.
 class Ai::GenerationJob < ApplicationJob

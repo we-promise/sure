@@ -1,7 +1,7 @@
 require "test_helper"
 
-# Section 17's prompt checks: every prompt folder renders today's text byte for byte (2c's golden
-# files, captured from the workers before they moved), every folder is complete and used, and
+# The prompt checks: every prompt folder renders its golden text byte for byte (golden files
+# captured from the per-provider workers the prompts came from), every folder is complete and used, and
 # no prompt text lives in locale YAML.
 class AiPromptsTest < ActiveSupport::TestCase
   GOLDEN = Rails.root.join("test/fixtures/files/ai_prompts")
@@ -22,9 +22,8 @@ class AiPromptsTest < ActiveSupport::TestCase
   ].freeze
   CURRENT_CONFIG = { name: "Netflix", amount: "15.99", frequency: "monthly", day_of_month: 1 }.freeze
 
-  # The one change to prompt text in 2c: Anthropic's prompts no longer name the tool they
-  # returned their answer through, because both transports now use with_schema (2c plan,
-  # decision 7). Everything else is today's text.
+  # Where the prompts differ from the golden files: Anthropic's don't name a tool to return the
+  # answer through, because both transports use with_schema. Everything else matches.
   TOOL_SENTENCE_REMOVED = {
     "categorize_transactions_anthropic" => [ "Your job is to auto-categorize each transaction\nand return the result via the report_categorizations tool.", "Your job is to auto-categorize each transaction." ],
     "detect_merchants_anthropic" => [ "for each transaction and return the result via the report_merchants tool.", "for each transaction." ],

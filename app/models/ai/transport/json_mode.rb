@@ -1,4 +1,4 @@
-# How a compatible endpoint is asked for JSON (section 7), the one copy of what the three
+# How a compatible endpoint is asked for JSON, the one copy of what the three
 # workers' auto modes and bill setup's fallback did.
 #
 # - The Responses API always takes the strict schema.
@@ -8,12 +8,12 @@
 #   apart from the 400 retry below.
 # - A 400 about the JSON mode or the effort is retried once in `none` mode without the effort
 #   (#3605). So is any 400 to a request that sent an effort: Gemini refuses an effort it doesn't
-#   take with "Request contains an invalid argument", which names neither (live, 2e). A 400 about
+#   take with "Request contains an invalid argument", which names neither (seen live). A 400 about
 #   anything else (an attachment, a missing model) ends the call, after that one retry if an
 #   effort was sent: the next mode would resend the same request. OpenRouter's "reasoning is
 #   mandatory" isn't a JSON-mode rejection.
 # - No schema example is appended in `none` mode: today's prompts for custom servers already
-#   show the shape, and the prompts stay word for word (section 8.3).
+#   show the shape, and the prompts stay word for word.
 module Ai::Transport::JsonMode
   CHAINS = {
     auto: %i[strict json_object none], strict: %i[strict none], json_object: %i[json_object none], none: %i[none]
@@ -21,9 +21,8 @@ module Ai::Transport::JsonMode
   REJECTION = /response_format|json_schema|json_object|json mode|structured output|\bschema\b|reasoning_effort|reasoning\.effort|\beffort\b|unsupported (?:value|parameter)/i
   NOT_A_REJECTION = /mandatory/i
 
-  # Turning reasoning off where a server ignores `reasoning_effort: none` (spike: "Turning
-  # reasoning off, server by server"), keyed by preset. PR 7's presets name them; the deprecated
-  # ENV's endpoints have none of these presets.
+  # Turning reasoning off where a server ignores `reasoning_effort: none`, keyed by preset. The
+  # endpoints the deprecated ENV builds have none of these presets.
   EFFORT_NONE = { llama_cpp: { chat_template_kwargs: { enable_thinking: false } } }.freeze
 
   private

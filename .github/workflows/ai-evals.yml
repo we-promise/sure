@@ -1,6 +1,6 @@
 name: AI evals (recorded)
 
-# The free gate on every AI change (ai-plumbing-redesign.md, section 17): the eval datasets run
+# The free gate on every AI change: the eval datasets run
 # against recorded model answers, which catches parsing, coercion and mapping regressions. A
 # changed prompt can't be judged this way, since the model never saw it; the `ai-live` label
 # runs the live evals for that.

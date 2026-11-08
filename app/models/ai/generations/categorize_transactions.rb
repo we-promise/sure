@@ -1,6 +1,5 @@
-# Picks a category for each transaction from the family's own, or none. Replaces
-# Provider::{Openai,Anthropic}::AutoCategorizer. On a `judge` model (Jev),
-# Ai::Judgements::CategorizeTransaction answers instead, in the same shape.
+# Picks a category for each transaction from the family's own, or none. On a `judge` model
+# (Jev), Ai::Judgements::CategorizeTransaction answers instead, in the same shape.
 class Ai::Generations::CategorizeTransactions < Ai::Generation
   feature :categorize
   prompt "categorize_transactions"

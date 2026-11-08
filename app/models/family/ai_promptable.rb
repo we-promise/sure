@@ -1,7 +1,7 @@
 # Per-family overrides for the built-in AI prompts, editable from
 # /settings/ai_prompts so tuning them no longer needs a fork + redeploy.
 #
-# Every override is stored in one jsonb column, one per feature (section 8.3), and resolved
+# Every override is stored in one jsonb column, one per feature, and resolved
 # where the prompt is chosen: Ai::Prompt for categorization and merchant detection,
 # `Assistant::Configurable#default_instructions` for chat. An override replaces the
 # instructions as plain text and is never compiled. A blank value is deleted on save, so

@@ -2,7 +2,7 @@
 # production runs (Ai::Generations::*), on the run's own endpoint and model, so an eval measures
 # today's prompts, JSON policy and coercion. On a Jev endpoint, the generation's judgement answers,
 # with each answer's confidence. Answers come back as the Provider::Response the runners read.
-# Chat evals still go through Provider::Openai until chat moves (PR 6).
+# Chat evals go through Provider::Openai, as chat does.
 class Eval::GenerationClient
   Categorization = Data.define(:transaction_id, :category_name, :confidence, :probabilities) do
     def initialize(transaction_id:, category_name:, confidence: nil, probabilities: nil) = super
