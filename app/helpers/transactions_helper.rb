@@ -351,4 +351,13 @@ module TransactionsHelper
   rescue StandardError
     value.to_s
   end
+
+  # A pending transfer match as the viewer may see it from `transaction`'s
+  # row. The accounts and transactions pages set @accessible_account_ids;
+  # a view that does not, such as the turbo stream that redraws a match,
+  # looks the viewer's accessible accounts up once per request.
+  def pending_transfer_match(transaction)
+    @transfer_match_visible_account_ids ||= (@accessible_account_ids || accessible_accounts.pluck(:id)).to_set
+    Transfer::PendingMatch.new(transaction, visible_account_ids: @transfer_match_visible_account_ids)
+  end
 end
