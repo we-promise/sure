@@ -5,7 +5,7 @@
 class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :context_window, :max_output_tokens,
                                       :batch_size, :embedding_dimensions, :input_cost_per_mtok, :output_cost_per_mtok)
   CAPABILITIES = %w[tools vision documents ocr thinking streaming structured_output embedding judge calibrated_confidence].freeze
-  DEFAULT_BATCH_SIZE = 25   # today's LLM_MAX_ITEMS_PER_CALL default
+  DEFAULT_BATCH_SIZE = 25   # LLM_MAX_ITEMS_PER_CALL's default
 
   def initialize(endpoint:, name:, capabilities: [], context_window: nil, max_output_tokens: nil,
                  batch_size: DEFAULT_BATCH_SIZE, embedding_dimensions: nil, input_cost_per_mtok: nil, output_cost_per_mtok: nil)

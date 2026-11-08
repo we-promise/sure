@@ -38,11 +38,7 @@ class Ai::Instrumentation::LangfuseSubscriber
         prompt_tokens_details: { cached_tokens: tokens.cache_read_tokens.to_i } }
     end
 
-    def event_start(event)
-      Time.current - (event.duration.to_f / 1000)
-    rescue StandardError
-      Time.current
-    end
+    def event_start(event) = Time.current - (event.duration.to_f / 1000)
 
     # Value objects become plain hashes, all the way down; the endpoint's key and header values,
     # and anything shaped like a key, are scrubbed from strings.

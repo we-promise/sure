@@ -15,10 +15,12 @@ module Ai::Instrumentation::Redactor
   module_function
 
   # Masks known key shapes, plus every exact secret the caller passes (an endpoint's key).
+  # Longest first: a secret that contains a shorter one would otherwise keep the rest visible.
   def scrub(text, secrets: [])
     return text if text.blank?
 
-    scrubbed = Array(secrets).compact_blank.reduce(text.to_s) { |memo, secret| memo.gsub(secret.to_s, MASK) }
+    exact = Array(secrets).compact_blank.map(&:to_s).sort_by { -_1.length }
+    scrubbed = exact.reduce(text.to_s) { |memo, secret| memo.gsub(secret, MASK) }
     PATTERNS.reduce(scrubbed) { |memo, (pattern, replacement)| memo.gsub(pattern, replacement) }
   end
 

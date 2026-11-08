@@ -10,6 +10,8 @@ class Family::AutoCategorizer
   include Ai::Requester
   ai_feature :categorize
 
+  Error = Class.new(StandardError)
+
   def self.from_ai_job(ids:, family_id:, rule_run_id: nil)
     new(Family.find(family_id), transaction_ids: ids, rule_run: (RuleRun.find_by(id: rule_run_id) if rule_run_id))
   end
@@ -34,7 +36,7 @@ class Family::AutoCategorizer
 
     if categories_input.empty?
       log_no_categories
-      return
+      raise Error, "No categories available for auto-categorization"
     end
 
     log_jev_fallback

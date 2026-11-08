@@ -21,7 +21,7 @@ class Ai::Generations::SuggestBillSetup < Ai::Generation
       category_name: { type: %w[string null] },
       bill_type:     { type: %w[string null], enum: [ "bill", "subscription", "installment", nil ] },
       autopay:       { type: %w[boolean null] },
-      confidence:    { type: %w[number null] },   # clamped into 0..1 by the suggester, as today
+      confidence:    { type: %w[number null] },   # clamped into 0..1 by the suggester
       rationale:     { type: %w[string null] }
     },
     required: %w[name amount frequency day_of_month weekday month_of_year category_name bill_type autopay confidence rationale],

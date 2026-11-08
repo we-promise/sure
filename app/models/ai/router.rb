@@ -1,4 +1,4 @@
-# THE resolution path: for this feature, family and user, what may run, and if
+# The resolution path: for this feature, family and user, what may run, and if
 # nothing may, why. Every feature asks it, through Ai.available? and Ai.availability, instead of
 # looking for a provider itself.
 #

@@ -1,11 +1,12 @@
 # Deprecated: reads the AI ENV and `Setting` fields as an AI configuration, so
 # installs configured either way keep working while the router replaces today's lookups.
 #
-# Each value resolves the way today's code resolves it. Wherever today's code has a resolver
-# (Provider::Registry, Provider::*.effective_*, Assistant::External.config, Ai::LegacyEnvConfig::Jev), this calls it, so
-# the router and the calls not yet on the router can't disagree. test/architecture/ai_config_test
-# checks that over every documented setup. The one deliberate difference is drift bug 5:
-# embeddings fall back to the OpenAI values saved in Settings, as every other AI setting does.
+# Each value resolves the way the provider code resolves it. Wherever that code has a resolver
+# (Provider::Registry, Provider::*.effective_*, Assistant::External.config,
+# Ai::LegacyEnvConfig::Jev), this calls it, so the router and the calls not yet on the router
+# can't disagree. test/architecture/ai_config_test
+# checks that over every documented setup. The one deliberate difference: embeddings fall back
+# to the OpenAI values saved in Settings, as every other AI setting does.
 #
 # It's built in every process. The release that stops reading the old variables deletes this file.
 class Ai::LegacyEnvConfig
@@ -20,7 +21,7 @@ class Ai::LegacyEnvConfig
     enhance_merchants: "enhance_merchants", bill_setup: "bill_setup"
   }.freeze
   SIMPLE_PROMPTS = %i[categorize detect_merchants enhance_merchants].freeze   # bill setup has one OpenAI prompt
-  JSON_MODES = %w[strict json_object none auto].freeze   # Provider::Openai::Concerns::JsonMode's
+  JSON_MODES = Ai::Config::Endpoint::JSON_MODES.map(&:to_s).freeze
   ANTHROPIC_MAX_TOKENS = 4096
   EMBEDDING_TIMEOUT = 120         # VectorStore::Embeddable's client
   EXTERNAL_ASSISTANT_TIMEOUT = 120 # Assistant::External::Client::TIMEOUT_READ
@@ -44,7 +45,7 @@ class Ai::LegacyEnvConfig
       .find { CATEGORIZATION_PROVIDERS.include?(_1) } || "llm"
   end
 
-  # The prompt variant today's code sends for `feature` to this kind of endpoint: Anthropic's own,
+  # The prompt variant the providers send for `feature` to this kind of endpoint: Anthropic's own,
   # the simplified one on a custom OpenAI-compatible server, otherwise OpenAI's detailed one.
   def self.prompt_for(feature, endpoint)
     base = PROMPTS[Ai::Routes.source_of(feature)]
@@ -95,7 +96,7 @@ class Ai::LegacyEnvConfig
 
   private
     # [endpoint, model or nil]. A custom URL without a model gets an endpoint and no model, as
-    # today's registry builds no client for it (Setting.validate_openai_config!, #4408).
+    # Provider::Registry builds no client for it (Setting.validate_openai_config!, #4408).
     def openai(vector_store:)
       token = env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.presence
       return unless token
@@ -123,14 +124,14 @@ class Ai::LegacyEnvConfig
         name: "anthropic", protocol: :anthropic, preset: (:anthropic unless base_url), base_url:, api_key: token,
         location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       )
-      # Today's Anthropic batches aren't token-sliced, so its window is known only when set.
+      # Anthropic batches were never token-sliced, so its window is known only when set.
       model = provider && llm_model(endpoint, provider, Provider::Anthropic.effective_model,
                                     context_window: positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window),
                                     max_output_tokens: positive(env("ANTHROPIC_MAX_TOKENS")) || ANTHROPIC_MAX_TOKENS)
       [ endpoint, model ]
     end
 
-    # What today's providers accept: chat's prefix allow-list decides `tools` and `streaming`, and
+    # What the providers accept: chat's prefix allow-list decides `tools` and `streaming`, and
     # PDF support decides `vision` and `documents`. Every LLM model does structured output.
     def llm_model(endpoint, provider, name, context_window:, max_output_tokens:)
       capabilities = %i[structured_output]
@@ -139,7 +140,7 @@ class Ai::LegacyEnvConfig
       Ai::Config::Model.new(endpoint:, name:, capabilities:, context_window:, max_output_tokens:, batch_size:)
     end
 
-    # Today's budgets: Assistant::TokenBudget's window (2048 by default), the response cap only
+    # The deprecated budgets: Assistant::TokenBudget's window (2048 by default), the response cap only
     # when someone set one, and LLM_MAX_ITEMS_PER_CALL items per call.
     def context_window = Assistant::TokenBudget.context_window
 
@@ -179,7 +180,7 @@ class Ai::LegacyEnvConfig
       Ai::Config::Model.new(endpoint:, name: config.model)
     end
 
-    # Today's VectorStore::Registry.adapter_name: VECTOR_STORE_PROVIDER, else pgvector on
+    # The vector store rule VectorStore::Registry used: VECTOR_STORE_PROVIDER, else pgvector on
     # Anthropic installs, else OpenAI's store when there's an OpenAI key.
     def vector_store_backend
       explicit = env("VECTOR_STORE_PROVIDER")&.to_sym
@@ -189,7 +190,7 @@ class Ai::LegacyEnvConfig
       :openai if env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.present?
     end
 
-    # The `embed` route's model, present exactly when today's registry would build an adapter.
+    # The `embed` route's model, present exactly when VectorStore::Registry can build an adapter.
     # pgvector without the extension keeps its embedding model in the config, for the health page.
     def embed_route(backend, openai, embed_model)
       case backend
@@ -202,7 +203,7 @@ class Ai::LegacyEnvConfig
       end
     end
 
-    # Drift bug 5: the URL and key fall back to the OpenAI values saved in Settings too.
+    # The URL and key fall back to the OpenAI values saved in Settings too.
     def embedding_model
       base_url = env("EMBEDDING_URI_BASE") || openai_uri_base || VectorStore::DEFAULT_EMBEDDING_URI_BASE
       api_key = env("EMBEDDING_ACCESS_TOKEN") || env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.presence

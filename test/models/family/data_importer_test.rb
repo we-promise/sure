@@ -2341,6 +2341,41 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal category.id, second_rule.actions.first.value
   end
 
+  test "points imported merchant rules at a reused provider merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Grocer", source: "plaid", provider_merchant_id: "plaid_synced_grocer")
+    value_ref = { type: "Merchant", id: "old-provider-merchant", name: "Synced Grocer" }
+
+    ndjson = build_ndjson([
+      {
+        type: "ProviderMerchant",
+        data: { id: "old-provider-merchant", name: "Synced Grocer", source: "plaid", provider_merchant_id: "plaid_synced_grocer" }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Grocer rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_merchant", operator: "=", value: "Synced Grocer", value_ref: value_ref }
+          ],
+          actions: [
+            { action_type: "set_transaction_merchant", value: "Synced Grocer", value_ref: value_ref }
+          ]
+        }
+      }
+    ])
+
+    assert_no_difference -> { @family.merchants.count } do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
+
+    rule = @family.rules.find_by!(name: "Grocer rule")
+    assert_equal provider_merchant.id, rule.conditions.first.value
+    assert_equal provider_merchant.id, rule.actions.first.value
+  end
+
   test "reuses a merchant created for an earlier rule within the same import" do
     ndjson = build_ndjson([
       {

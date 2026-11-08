@@ -34,12 +34,10 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
 
   setup do
     Requester.log = []
-    Ai::Requesters.overrides[:detect_merchants] = Requester
+    Ai::Requesters.stubs(:fetch).returns(Requester)
     @family = families(:dylan_family)
     use_ai_routes
   end
-
-  teardown { Ai::Requesters.overrides.clear }
 
   def run_queue
     until enqueued_jobs.empty?

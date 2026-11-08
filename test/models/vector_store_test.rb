@@ -33,7 +33,7 @@ class VectorStoreTest < ActiveSupport::TestCase
     end
   end
 
-  # Drift bug 5: the fallbacks include the OpenAI values saved in Settings.
+  # The fallbacks include the OpenAI values saved in Settings.
   test "embedding credentials fall back to the OpenAI settings" do
     Setting.openai_access_token = "setting-token"
     Setting.openai_uri_base = "http://llama.local:8080/v1"

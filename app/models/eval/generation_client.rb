@@ -1,8 +1,8 @@
 # What an eval run calls for categorization and merchant detection: the same generations
 # production runs (Ai::Generations::*), on the run's own endpoint and model, so an eval measures
-# the production prompts, JSON policy and coercion. On a Jev endpoint, the generation's judgement answers,
-# with each answer's confidence. Answers come back as the Provider::Response the runners read.
-# Chat evals go through Provider::Openai, as chat does.
+# the shipped prompts, JSON policy and coercion. On a Jev endpoint, the generation's judgement
+# answers, with each answer's confidence. Answers come back as the Provider::Response the runners
+# read. Chat evals go through Provider::Openai, as chat does.
 class Eval::GenerationClient
   Categorization = Data.define(:transaction_id, :category_name, :confidence, :probabilities) do
     def initialize(transaction_id:, category_name:, confidence: nil, probabilities: nil) = super
@@ -34,8 +34,8 @@ class Eval::GenerationClient
     end
   end
 
-  # A one-route config for `feature` on the run's model, with the prompt variant today's code
-  # sends to this kind of endpoint.
+  # A one-route config for `feature` on the run's model, with the prompt variant for this kind
+  # of endpoint.
   def ai_config(feature, json_mode: nil)
     judge = @endpoint.protocol == :jev
     model = Ai::Config::Model.new(endpoint: @endpoint, name: @model_name,

@@ -35,7 +35,7 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   def arguments = { transactions: items, categories: @categories }
 
   # The family's spelling of the category the model named: exact, then ignoring case, then a
-  # fuzzy match (today's OpenAI normaliser, now on every protocol). Nil when nothing matches.
+  # fuzzy match. Nil when nothing matches.
   def matchers = { category_name: ->(name) { category_name_for(name.to_s.strip) } }
 
   def schema
