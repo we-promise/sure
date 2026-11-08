@@ -44,7 +44,7 @@ module AiTestHelper
     base.teardown { Ai::Config.override = nil } if base.respond_to?(:teardown)
   end
 
-  # The block forms below, for a whole test (integration tests, setup blocks):
+  # For the rest of a test (integration tests, setup blocks), instead of a block:
   #   use_ai_routes(bill_setup: %w[gpu/qwen3-8b])
   #   use_no_ai
   def use_ai_routes(**routes) = Ai::Config.override = ai_routes_config(**routes)

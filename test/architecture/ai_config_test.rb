@@ -25,7 +25,7 @@ class AiConfigTest < ActiveSupport::TestCase
     end
   end
 
-  test "Settings-only installs get the same embedding server as their LLM (drift bug 5)" do
+  test "Settings-only installs get the same embedding server as their LLM" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
 
     in_ai_setup("M3", family: @family) do

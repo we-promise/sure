@@ -29,10 +29,6 @@ class Ai::Config
       Current.config
     end
 
-    def expire
-      Current.config = Current.fingerprint = nil
-    end
-
     # Uses `config` instead of the built snapshot inside the block, across requests and jobs.
     # For tests (AiTestHelper#with_ai_routes, #without_ai).
     def with(config)

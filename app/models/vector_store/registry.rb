@@ -7,7 +7,7 @@ class VectorStore::Registry
 
   class << self
     # Returns the configured adapter instance. Which store is used comes from
-    # Ai::Config (Ai::LegacyEnvConfig keeps today's rule: VECTOR_STORE_PROVIDER,
+    # Ai::Config (Ai::LegacyEnvConfig keeps the rule: VECTOR_STORE_PROVIDER,
     # else pgvector on Anthropic installs, else OpenAI's store with an OpenAI key).
     def adapter
       name = adapter_name

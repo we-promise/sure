@@ -209,7 +209,6 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert flash[:alert].present?
   end
 
-  # Drift bug 1: the button asked for OpenAI only, though the enhancer also runs on Anthropic.
   test "the Enhance button shows whenever enhance_merchants has a model, Anthropic included" do
     merchant = ProviderMerchant.create!(name: "Enhanceable Shop", source: "plaid")
     transactions(:one).update_columns(merchant_id: merchant.id)
