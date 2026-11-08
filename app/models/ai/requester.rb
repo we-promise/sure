@@ -1,4 +1,4 @@
-# The domain side of a generation feature (section 8.1): a domain class that rebuilds itself
+# The domain side of a generation feature: a domain class that rebuilds itself
 # from job arguments, makes the generation and applies the result. Ai::GenerationJob talks only
 # to the requester, so it never knows what categorizing or detecting merchants means.
 #
@@ -11,7 +11,7 @@
 #     def apply_ai(result)                         # writes through the domain; returns a count
 #     def ai_finished(count)                       # once, after the last batch
 #     def ai_failed(error)                         # once, when the job gives up
-#     def ai_cancelled?                            # true when the user cancelled (PR 3)
+#     def ai_cancelled?                            # true when the user cancelled
 #   end
 module Ai::Requester
   extend ActiveSupport::Concern
@@ -30,6 +30,6 @@ module Ai::Requester
 
   def ai_failed(_error) = nil
 
-  # The correlation id the job's calls carry (section 10).
+  # The correlation id the job's calls carry.
   def ai_correlation_id = nil
 end

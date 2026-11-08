@@ -1,5 +1,5 @@
-# One way to fit the model, for every batched feature (section 8.1; was
-# Provider::Openai::BatchSlicer). A batch holds at most the model's `batch_size` items, and at most
+# One way to fit the model, for every batched feature. A batch holds at most the model's
+# `batch_size` items, and at most
 # the tokens left once the rendered prompt and the output reserve are taken from its
 # `context_window`. A model with no known window is capped by count only.
 #

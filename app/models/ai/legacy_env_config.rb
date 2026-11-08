@@ -13,8 +13,8 @@ class Ai::LegacyEnvConfig
   # model on the OpenAI endpoint.
   VECTOR_STORE_MODEL = "vector_store".freeze
   LLM_FEATURES = %i[bill_setup extract_pdf detect_merchants enhance_merchants].freeze
-  # Each generation feature's prompt folder (section 8.3). Today's code sends OpenAI's detailed
-  # prompt on native OpenAI, the simplified one on custom servers, and Anthropic's own.
+  # Each generation feature's prompt folder: OpenAI's detailed prompt on native OpenAI, the
+  # simplified one on custom servers, and Anthropic's own.
   PROMPTS = {
     categorize: "categorize_transactions", detect_merchants: "detect_merchants",
     enhance_merchants: "enhance_merchants", bill_setup: "bill_setup"
@@ -75,9 +75,9 @@ class Ai::LegacyEnvConfig
     embed_route_model = embed_route(backend, llm[:openai], embed_model)
 
     llm_models = Provider::Registry.llm_provider_order.filter_map { |name| llm[name]&.last }
-    # Generation routes list only the preferred LLM, as today's preferred_llm_provider picks one:
-    # failover never sends a family's data to the provider today's code wouldn't use (2c's plan,
-    # decision 2). Chat keeps both until PR 6, which resolves its own provider.
+    # Generation routes list only the preferred LLM, as preferred_llm_provider picks one: failover
+    # never sends a family's data to a provider the install doesn't use for that feature. Chat
+    # keeps both, as it resolves its own provider.
     preferred = llm_models.first(1)
     routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
     routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)

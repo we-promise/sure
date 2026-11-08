@@ -110,7 +110,7 @@ class Ai::Transport::Base
     def run_generate(request) = raise(NotImplementedError, "#{self.class.name} doesn't generate")
     def run_judge(request) = raise(NotImplementedError, "#{self.class.name} doesn't judge")
 
-    # Tolerant parsing, the one copy of what each worker did (section 7): a reasoning model's
+    # Tolerant parsing, the one copy of what each worker did: a reasoning model's
     # <think> block, fenced JSON (closed or not), prose around the object, or a bare array.
     # Returns a Hash or an Array, or nil when nothing parses.
     def parse_json(text)

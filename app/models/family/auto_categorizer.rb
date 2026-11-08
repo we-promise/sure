@@ -5,7 +5,7 @@
 # Ai::Generations::CategorizeTransactions answers on an LLM, and its judgement
 # (Ai::Judgements::CategorizeTransaction) on Jev, in one shape. Answers from a model with
 # `calibrated_confidence` (cloud Jev) can be withheld by the family's threshold; the others
-# always apply (section 6). Shadow runs are the generation's own (Ai::ShadowJob, section 8.2).
+# always apply. Shadow runs are the generation's own (Ai::ShadowJob).
 class Family::AutoCategorizer
   include Ai::Requester
   ai_feature :categorize

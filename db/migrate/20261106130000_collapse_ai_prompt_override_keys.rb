@@ -1,4 +1,4 @@
-# Prompt overrides become one per feature (ai-plumbing-redesign.md, section 8.3): the provider
+# Prompt overrides become one per feature: the provider
 # no longer decides which override a family's categorization or merchant detection reads.
 #
 #   categorizer_openai, categorizer_anthropic -> categorize_transactions

@@ -23,7 +23,7 @@ Ai::Route = Data.define(:feature, :position, :model, :prompt, :json_mode, :reaso
 
   def effective_json_mode = json_mode || endpoint.json_mode
 
-  # Jev and other decision models: they judge, they don't generate (2d).
+  # Jev and other decision models: they judge, they don't generate.
   def judge? = model.capable?(:judge)
 
   # The transport for this entry's endpoint.

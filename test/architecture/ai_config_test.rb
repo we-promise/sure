@@ -26,7 +26,7 @@ class AiConfigTest < ActiveSupport::TestCase
     end
   end
 
-  # The instance's choice (2d, until PR 7): Jev for every family when it's chosen and reachable,
+  # The instance's choice: Jev for every family when it's chosen and reachable,
   # the preferred LLM otherwise, and the shadow route runs the other one.
   test "the instance's Jev choice categorizes every family on Jev, shadowed by the preferred LLM" do
     in_ai_setup("M1", family: @family) do

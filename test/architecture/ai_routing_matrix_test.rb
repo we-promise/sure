@@ -58,7 +58,7 @@ class AiRoutingMatrixTest < ActiveSupport::TestCase
     assert_includes guide, Ai::Routes.doc_table, "regenerate it: bin/rails ai:routes_doc"
   end
 
-  # Section 17: every generation declares a feature in the table and has its own test file; every
+  # Every generation declares a feature in the table and has its own test file; every
   # requester declares the key Ai::Requesters lists it under.
   test "every generation declares a routed feature and has a test file" do
     generations = Rails.root.glob("app/models/ai/generations/*.rb").map { "Ai::Generations::#{_1.basename(".rb").to_s.camelize}".constantize }
@@ -72,7 +72,7 @@ class AiRoutingMatrixTest < ActiveSupport::TestCase
     end
   end
 
-  # Section 8: a judgement answers its generation's feature on a judge model, in the same shape,
+  # A judgement answers its generation's feature on a judge model, in the same shape,
   # so it declares the same feature, and the generation names it.
   test "every judgement declares its generation's feature and has a test file" do
     judgements = Rails.root.glob("app/models/ai/judgements/*.rb").map { "Ai::Judgements::#{_1.basename(".rb").to_s.camelize}".constantize }
@@ -89,7 +89,7 @@ class AiRoutingMatrixTest < ActiveSupport::TestCase
     end
   end
 
-  # Called on the web thread, not from Ai::GenerationJob, until PR 3 moves it into a job.
+  # Called on the web thread, not from Ai::GenerationJob.
   NOT_YET_IN_A_JOB = %i[bill_setup].freeze
 
   test "every requester declares the feature it's listed under" do

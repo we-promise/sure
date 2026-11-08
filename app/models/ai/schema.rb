@@ -1,4 +1,4 @@
-# Coerces a model's parsed JSON against a generation's schema (section 8.1, step 4), so feature
+# Coerces a model's parsed JSON against a generation's schema (Ai::Generation's step 3), so feature
 # code gets one shape whatever the model or JSON mode produced:
 #
 # - "null", "" and missing values become nil;
@@ -11,7 +11,7 @@
 # - array items that aren't objects, or lack a required id (`required:`), are dropped: they
 #   can't be matched to an input item.
 #
-# Anything else raises Ai::Error::InvalidOutput, which escalates (section 5.4).
+# Anything else raises Ai::Error::InvalidOutput, which escalates.
 module Ai::Schema
   module_function
 

@@ -2,8 +2,8 @@ require "test_helper"
 require "ostruct"
 
 # The `auto` path (models that reject a forced tool_choice) may get a text-only
-# end_turn answer. The PDF and statement helpers, still on Provider::Anthropic until PR 2e,
-# retry that once.
+# end_turn answer. The PDF and statement helpers on
+# Provider::Anthropic retry that once.
 class Provider::Anthropic::StructuredOutputRetryTest < ActiveSupport::TestCase
   PDF = "%PDF-1.4 fake bytes".b
   AUTO_MODEL = "claude-sonnet-5-5"
