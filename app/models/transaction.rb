@@ -113,7 +113,7 @@ class Transaction < ApplicationRecord
 
   # Providers that support pending transaction flags
   # sorted
-  PENDING_PROVIDERS = %w[akahu enable_banking financekit lunchflow mercury monobank plaid redbark simplefin up].freeze
+  PENDING_PROVIDERS = %w[akahu enable_banking financekit gocardless lunchflow mercury monobank plaid redbark simplefin up].freeze
 
   # Slice size for the entry touch in reassign_category! — bounds the UPDATE
   # statement size when a merge or category destroy hits many transactions.

@@ -1,0 +1,63 @@
+<div id="gocardless-providers-panel" class="space-y-4">
+  <div class="prose prose-sm text-secondary">
+    <p class="text-primary font-medium"><%= t("gocardless_items.panel.setup_instructions") %></p>
+    <ol>
+      <li><%= t("gocardless_items.panel.step_1") %></li>
+      <li><%= t("gocardless_items.panel.step_2") %></li>
+      <li><%= t("gocardless_items.panel.step_3") %></li>
+    </ol>
+
+    <p class="text-primary font-medium"><%= t("gocardless_items.panel.field_descriptions") %></p>
+    <ul>
+      <li><strong><%= t("gocardless_items.panel.fields.secret_id.label") %>:</strong> <%= t("gocardless_items.panel.fields.secret_id.description") %> <%= t("gocardless_items.panel.required") %></li>
+      <li><strong><%= t("gocardless_items.panel.fields.secret_key.label") %>:</strong> <%= t("gocardless_items.panel.fields.secret_key.description") %> <%= t("gocardless_items.panel.required") %></li>
+    </ul>
+  </div>
+
+  <% error_msg = local_assigns[:error_message] || @error_message %>
+  <% if error_msg.present? %>
+    <%= render DS::Alert.new(message: error_msg, variant: :error) %>
+  <% end %>
+
+  <%
+    # Get or initialize a gocardless_item for this family
+    # - If family has an item WITH credentials, use it (for updates)
+    # - If family has an item WITHOUT credentials, use it (to add credentials)
+    # - If family has no items at all, create a new one
+    gocardless_item = Current.family.gocardless_items.first_or_initialize(name: "Gocardless Connection")
+    is_new_record = gocardless_item.new_record?
+  %>
+
+  <%= styled_form_with model: gocardless_item,
+                       url: is_new_record ? gocardless_items_path : gocardless_item_path(gocardless_item),
+                       scope: :gocardless_item,
+                       method: is_new_record ? :post : :patch,
+                       data: { turbo: true },
+                       class: "space-y-3" do |form| %>
+    <%= form.text_field :secret_id,
+                        label: t("gocardless_items.panel.fields.secret_id.label"),
+                        placeholder: is_new_record ? t("gocardless_items.panel.fields.secret_id.placeholder_new") : t("gocardless_items.panel.fields.secret_id.placeholder_update"),
+                        type: :password %>
+
+    <%= form.text_field :secret_key,
+                        label: t("gocardless_items.panel.fields.secret_key.label"),
+                        placeholder: is_new_record ? t("gocardless_items.panel.fields.secret_key.placeholder_new") : t("gocardless_items.panel.fields.secret_key.placeholder_update"),
+                        type: :password %>
+
+    <div class="flex justify-end">
+      <%= form.submit is_new_record ? t("gocardless_items.panel.save_button") : t("gocardless_items.panel.update_button"),
+                      class: "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium btn btn--primary" %>
+    </div>
+  <% end %>
+
+  <% items = local_assigns[:gocardless_items] || @gocardless_items || Current.family.gocardless_items.where.not(secret_id: [nil, ""]) %>
+  <div class="flex items-center gap-2">
+    <% if items&.any? %>
+      <div class="w-2 h-2 bg-success rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("gocardless_items.panel.status_configured_html", accounts_path: accounts_path).html_safe %></p>
+    <% else %>
+      <div class="w-2 h-2 bg-secondary rounded-full"></div>
+      <p class="text-sm text-secondary"><%= t("gocardless_items.panel.status_not_configured") %></p>
+    <% end %>
+  </div>
+</div>
