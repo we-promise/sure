@@ -134,8 +134,9 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
         .find_by(date: @window_start_date - 1)
     end
 
+    # Cash anchors rebase against the full ledger total, so anchored accounts load every entry.
     def sync_cache
-      @sync_cache ||= Balance::SyncCache.new(account, start_date: (@window_start_date if incremental?))
+      @sync_cache ||= Balance::SyncCache.new(account, start_date: (@window_start_date if incremental? && !account.accounting_start_date))
     end
 
     def calc_start_date
