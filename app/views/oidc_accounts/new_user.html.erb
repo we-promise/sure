@@ -10,6 +10,16 @@
   ) %>
 </div>
 
+<% if @user.errors.any? %>
+  <div class="mb-6">
+    <%= render DS::Alert.new(
+      message: @user.errors.full_messages.to_sentence,
+      variant: :destructive,
+      live: :alert
+    ) %>
+  </div>
+<% end %>
+
 <%= styled_form_with model: @user, url: create_user_oidc_account_path, class: "space-y-4", data: { turbo: false } do |form| %>
   <div class="p-4 bg-container border border-secondary rounded-md">
     <p class="text-sm text-secondary mb-1"><%= t("oidc_accounts.new_user.email_label") %></p>

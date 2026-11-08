@@ -22,6 +22,85 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test "link recognizes existing users with symbol-keyed pending auth" do
+    session[:pending_oidc_auth] = pending_auth.symbolize_keys
+
+    get :link
+
+    assert_response :success
+    assert_select "input[name=email][value=?]", @user.email
+    assert_select "input[name=password]"
+  end
+
+  test "new_user prefills details with symbol-keyed pending auth" do
+    session[:pending_oidc_auth] = new_user_auth.symbolize_keys
+
+    get :new_user
+
+    assert_response :success
+    assert_select "input[name='user[first_name]'][value=?]", new_user_auth["first_name"]
+    assert_select "input[name='user[last_name]'][value=?]", new_user_auth["last_name"]
+    assert_match new_user_auth["email"], response.body
+  end
+
+  test "create_user accepts symbol-keyed pending auth from cache-backed sessions" do
+    session[:pending_oidc_auth] = new_user_auth.symbolize_keys
+
+    assert_difference [ "User.count", "OidcIdentity.count", "Family.count" ], 1 do
+      post :create_user, params: { user: { first_name: "Custom", last_name: "Name" } }
+    end
+
+    assert_redirected_to root_path
+    user = User.find_by!(email: new_user_auth["email"])
+    assert_equal "Custom", user.first_name
+    assert_equal "admin", user.role
+    assert_nil user.password_digest
+    assert_equal new_user_auth["uid"], user.oidc_identities.find_by!(provider: "openid_connect").uid
+    assert Session.exists?(user: user)
+    assert_nil session[:pending_oidc_auth]
+  end
+
+  test "create_link accepts symbol-keyed pending auth" do
+    session[:pending_oidc_auth] = pending_auth.symbolize_keys
+
+    assert_difference "OidcIdentity.count", 1 do
+      post :create_link, params: { email: @user.email, password: user_password_test }
+    end
+
+    assert_redirected_to root_path
+    assert @user.oidc_identities.exists?(provider: "openid_connect", uid: pending_auth["uid"])
+  end
+
+  test "symbol-keyed pending auth cannot bypass removed identity checks" do
+    SsoIdentityBlock.create!(
+      provider: new_user_auth["provider"],
+      uid_digest: SsoIdentityBlock.digest(new_user_auth["uid"]),
+      identity_label: new_user_auth["email"]
+    )
+    session[:pending_oidc_auth] = new_user_auth.symbolize_keys
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+      post :create_user
+    end
+
+    assert_redirected_to new_session_path
+    assert_nil session[:pending_oidc_auth]
+  end
+
+  test "create_user displays validation errors and preserves entered names" do
+    session[:pending_oidc_auth] = new_user_auth.merge("email" => "invalid-email")
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+      post :create_user, params: { user: { first_name: "Custom", last_name: "Name" } }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "[role=alert]", text: /Email is invalid/
+    assert_select "input[name='user[first_name]'][value=?]", "Custom"
+    assert_select "input[name='user[last_name]'][value=?]", "Name"
+    assert session[:pending_oidc_auth].present?
+  end
+
   test "should redirect to login when no pending auth" do
     get :link
     assert_redirected_to new_session_path
@@ -360,6 +439,25 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     assert_response :unprocessable_entity
     assert_nil User.find_by(email: auth["email"])
+  end
+
+  test "create_user hides database details when a unique index is violated" do
+    session[:pending_oidc_auth] = new_user_auth
+    OidcIdentity.stubs(:create_from_omniauth).raises(
+      ActiveRecord::RecordNotUnique,
+      'PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint "index_oidc_identities_on_provider_and_uid" ' \
+      "DETAIL:  Key (provider, uid)=(openid_connect, oidc-race-uid) already exists."
+    )
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+      post :create_user
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "[role=alert]", text: /#{Regexp.escape(I18n.t("oidc_accounts.create_user.duplicate_account"))}/
+    assert_not_includes response.body, "index_oidc_identities"
+    assert_not_includes response.body, "oidc-race-uid"
+    assert_not_includes response.body, "PG::UniqueViolation"
   end
 
   test "create_user rolls back onboarding when session creation fails" do
