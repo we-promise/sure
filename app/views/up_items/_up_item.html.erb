@@ -48,6 +48,7 @@
         <% if Current.user&.admin? %>
           <div class="flex items-center gap-2">
             <%= render DS::Menu.new do |menu| %>
+              <% sync_schedule_menu_item(menu, up_item) %>
               <% menu.with_item(
                 variant: "button",
                 text: t(".delete"),

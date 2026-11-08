@@ -15,6 +15,7 @@ class Family < ApplicationRecord
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable
+  include SharesightConnectable
   include AiPromptable
 
   DATE_FORMATS = [
@@ -385,8 +386,8 @@ class Family < ApplicationRecord
   #
   # This is the single entry point for "a member just joined, give them the
   # accounts the family shares by default." It self-guards on the sharing policy
-  # and family membership so every membership path (invitation accept, SSO JIT
-  # sign-up, token registration, mobile SSO) can call it without reintroducing
+  # and family membership so every membership path (SSO JIT sign-up, token
+  # registration, mobile SSO) can call it without reintroducing
   # the "member joined but sees nothing" bug. No-op when sharing is disabled or
   # there is nothing to share, and idempotent on re-run.
   def auto_share_existing_accounts_with(user)
@@ -484,6 +485,17 @@ class Family < ApplicationRecord
       .distinct
       .pluck(:merchant_id)
     Merchant.where(id: merchant_ids)
+  end
+
+  # Merchants a rule can set on transactions: the family's own plus the
+  # provider merchants already on transactions the user can see. Unlike
+  # available_merchants_for, recently unlinked merchants are left out, since a
+  # rule that set one again would undo the unlink.
+  def assignable_merchants_for(user)
+    assigned_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
+      .select(:merchant_id)
+    Merchant.where(id: merchants.select(:id)).or(Merchant.where(type: "ProviderMerchant", id: assigned_ids))
   end
 
   def available_merchants_for(user)

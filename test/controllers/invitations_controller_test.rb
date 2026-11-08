@@ -35,28 +35,49 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("invitations.create.success"), flash[:notice]
   end
 
-  test "should add existing user to household when inviting their email" do
+  test "inviting an email that already belongs to an account answers like any invitation and moves no one" do
     existing_user = users(:empty)
-    assert existing_user.family_id != @admin.family_id
+    original_family_id = existing_user.family_id
 
-    assert_difference("Invitation.count") do
-      assert_no_enqueued_jobs only: ActionMailer::MailDeliveryJob do
-        post invitations_url, params: {
-          invitation: {
-            email: existing_user.email,
-            role: "member"
-          }
-        }
-      end
+    assert_difference("Invitation.count", 1) do
+      post invitations_url, params: { invitation: { email: existing_user.email, role: "member" } }
     end
 
-    invitation = Invitation.order(created_at: :desc).first
-    assert invitation.accepted_at.present?, "Invitation should be accepted"
     existing_user.reload
-    assert_equal @admin.family_id, existing_user.family_id
-    assert_equal "member", existing_user.role
+    assert_equal original_family_id, existing_user.family_id
+    assert_equal "admin", existing_user.role
     assert_redirected_to settings_profile_path
-    assert_equal I18n.t("invitations.create.existing_user_added"), flash[:notice]
+    assert_equal I18n.t("invitations.create.success"), flash[:notice]
+  end
+
+  test "admin cannot invite their own email and keeps the admin role" do
+    assert_no_difference("Invitation.count") do
+      post invitations_url, params: { invitation: { email: " #{@admin.email.upcase} ", role: "member" } }
+    end
+
+    assert_equal "admin", @admin.reload.role
+    assert_equal I18n.t("invitations.create.own_email"), flash[:alert]
+  end
+
+  test "inviting a current household member does not change their role" do
+    member = users(:family_member)
+
+    post invitations_url, params: { invitation: { email: member.email, role: "admin" } }
+
+    assert_equal "member", member.reload.role
+    assert_equal I18n.t("invitations.create.success"), flash[:notice]
+  end
+
+  test "super admin cannot invite their own email and keeps the super admin role" do
+    sign_in staff = users(:sure_support_staff)
+
+    assert_no_difference("Invitation.count") do
+      post invitations_url, params: { invitation: { email: staff.email, role: "member" } }
+    end
+
+    assert_redirected_to settings_profile_path
+    assert_equal "super_admin", staff.reload.role
+    assert_equal I18n.t("invitations.create.own_email"), flash[:alert]
   end
 
   test "non-admin cannot create invitations" do
@@ -105,33 +126,6 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "guest", invitation.role
     assert_equal @admin.family, invitation.family
     assert_equal @admin, invitation.inviter
-  end
-
-  test "inviting an existing user as guest applies intro defaults" do
-    existing_user = users(:empty)
-    existing_user.update!(
-      role: :member,
-      ui_layout: :dashboard,
-      show_sidebar: true,
-      show_ai_sidebar: true,
-      ai_enabled: false
-    )
-
-    assert_difference("Invitation.count") do
-      post invitations_url, params: {
-        invitation: {
-          email: existing_user.email,
-          role: "guest"
-        }
-      }
-    end
-
-    existing_user.reload
-    assert_equal "guest", existing_user.role
-    assert existing_user.ui_layout_intro?
-    assert_not existing_user.show_sidebar?
-    assert_not existing_user.show_ai_sidebar?
-    assert existing_user.ai_enabled?
   end
 
   test "re-inviting an email whose prior invitation expired succeeds instead of 500ing" do
@@ -187,11 +181,25 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("invitations.create.failure"), flash[:alert]
   end
 
-  test "should accept invitation and show choice between sign in and create account" do
+  test "accepting an invitation offers account creation only" do
     get accept_invitation_url(@invitation.token)
     assert_response :success
     assert_select "a[href=?]", new_registration_path(invitation: @invitation.token), text: /Create new account/i
-    assert_select "a[href=?]", new_session_path(invitation: @invitation.token), text: /already have an account/i
+    assert_select "a[href=?]", new_session_path(invitation: @invitation.token), count: 0
+    assert_select "p", text: I18n.t("invitations.accept_choice.existing_account_hint")
+  end
+
+  test "accept page looks the same when the invited email already has an account" do
+    # Dialogs get random element ids on every render.
+    page = -> { response.body.gsub(/dialog-title-\h+/, "") }
+    get accept_invitation_url(@invitation.token)
+    new_email_page = page.call
+
+    @invitation.update_columns(email: users(:family_member).email)
+    get accept_invitation_url(@invitation.token)
+
+    assert_response :success
+    assert_equal new_email_page, page.call
   end
 
   test "should not accept invalid invitation token" do
