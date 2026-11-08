@@ -79,6 +79,19 @@ class HoldingTest < ActiveSupport::TestCase
     assert_cost Money.new(90), Holding.find(@amzn.id).avg_cost, "single"
   end
 
+  test "split-adjusted quantity stays exact for a large position and a tiny one" do
+    security = @amzn.security
+    create_trade(security, account: @account, qty: 30_000_000, price: 1.00, date: 10.days.ago.to_date)
+    security.splits.create!(ex_date: 5.days.ago.to_date, numerator: 1, denominator: 3, source: "manual")
+
+    assert_cost Money.new(3), Holding.find(@amzn.id).avg_cost, "large"
+
+    @account.entries.destroy_all
+    3.times { |i| create_trade(security, account: @account, qty: BigDecimal("0.000000001"), price: 1.00, date: (10 - i).days.ago.to_date) }
+
+    assert_not_nil Holding.find(@amzn.id).avg_cost, "tiny"
+  end
+
   test "a split after the holding's date or on the purchase's own day leaves the average alone" do
     security = @amzn.security
     create_trade(security, account: @account, qty: 10, price: 100.00, date: 3.days.ago.to_date)

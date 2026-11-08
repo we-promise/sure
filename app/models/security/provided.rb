@@ -349,39 +349,11 @@ module Security::Provided
       return 0
     end
 
-    response = provider.fetch_security_splits(
-      symbol: ticker,
-      exchange_operating_mic: exchange_operating_mic,
-      start_date: start_date,
-      end_date: end_date
-    )
-
-    unless response.success?
+    begin
+      record_provider_splits(provider, start_date, end_date)
+    rescue StandardError
       Rails.cache.delete(split_check_key(start_date, end_date))
-      DebugLogEntry.capture(
-        category: "security_split_fetch",
-        level: "warn",
-        message: "Split fetch failed",
-        source: self.class.name,
-        provider: provider,
-        metadata: { security_id: id, ticker: ticker, provider_error: response.error&.message }
-      )
-      return 0
-    end
-
-    known_ex_dates = splits.where(ex_date: start_date..end_date).pluck(:ex_date).to_set
-    response.data.count do |split|
-      next false if known_ex_dates.include?(split.ex_date)
-      next false if broker_booked_split?(split.ex_date)
-
-      splits.create!(
-        ex_date: split.ex_date,
-        numerator: split.numerator,
-        denominator: split.denominator,
-        source: provider.class.name.demodulize.underscore
-      )
-    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
-      false
+      raise
     end
   end
 
@@ -413,5 +385,42 @@ module Security::Provided
            .where("COALESCE(trades.price, 0) = 0")
            .where(entries: { date: (ex_date - BROKER_SPLIT_WINDOW)..(ex_date + BROKER_SPLIT_WINDOW) })
            .exists?
+    end
+
+    def record_provider_splits(provider, start_date, end_date)
+      response = provider.fetch_security_splits(
+        symbol: ticker,
+        exchange_operating_mic: exchange_operating_mic,
+        start_date: start_date,
+        end_date: end_date
+      )
+
+      unless response.success?
+        Rails.cache.delete(split_check_key(start_date, end_date))
+        DebugLogEntry.capture(
+          category: "security_split_fetch",
+          level: "warn",
+          message: "Split fetch failed",
+          source: self.class.name,
+          provider: provider,
+          metadata: { security_id: id, ticker: ticker, provider_error: response.error&.message }
+        )
+        return 0
+      end
+
+      known_ex_dates = splits.where(ex_date: start_date..end_date).pluck(:ex_date).to_set
+      response.data.count do |split|
+        next false if known_ex_dates.include?(split.ex_date)
+        next false if broker_booked_split?(split.ex_date)
+
+        splits.create!(
+          ex_date: split.ex_date,
+          numerator: split.numerator,
+          denominator: split.denominator,
+          source: provider.class.name.demodulize.underscore
+        )
+      rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+        false
+      end
     end
 end

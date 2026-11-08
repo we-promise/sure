@@ -484,4 +484,17 @@ class Security::ProvidedTest < ActiveSupport::TestCase
       @security.import_provider_splits(start_date: ex_date - 30, end_date: ex_date, clear_cache: true)
     end
   end
+
+  test "import_provider_splits releases its cache claim when the import raises" do
+    @cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(@cache)
+    ex_date = Date.new(2026, 10, 9)
+    stub_split_provider(provider_success_response([ split_value(ex_date, 2, 1) ]))
+    @security.splits.stubs(:create!).raises(ActiveRecord::StatementInvalid)
+
+    assert_raises(ActiveRecord::StatementInvalid) do
+      @security.import_provider_splits(start_date: ex_date - 30, end_date: ex_date)
+    end
+    assert_nil @cache.read("security_split_check:#{@security.id}:#{ex_date - 30}:#{ex_date}")
+  end
 end
