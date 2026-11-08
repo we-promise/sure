@@ -6,10 +6,10 @@ class Ai::Transport::Compatible < Ai::Transport::Base
 
   # Document OCR services RubyLLM reaches with its own providers (`RubyLLM.ocr`): one page image
   # per request, because 2.1.1's Cohere call takes one image, and so both bill and record per
-  # page. Untested live: the spike had no key (2e plan, decision 2).
+  # page. Mistral's hasn't been run live.
   OCR_PRESETS = { mistral: "https://api.mistral.ai/v1", cohere: "https://api.cohere.com" }.freeze
-  # Tokens llama-server leaks when started with --special, which OCR models' table tags need
-  # (spike: "OCR on llama.cpp"): <｜end▁of▁sentence｜> and its kin.
+  # Tokens llama-server leaks when started with --special, which OCR models' table tags need:
+  # <｜end▁of▁sentence｜> and its kin.
   SPECIAL_TOKENS = /<｜[^｜<>]{1,40}｜>|<\|(?:im_end|endoftext|end)\|>/
 
   private
@@ -114,9 +114,13 @@ class Ai::Transport::Compatible < Ai::Transport::Base
     end
 
     def configure_provider(config)
-      if (base = OCR_PRESETS[endpoint.preset])
-        config.public_send(:"#{endpoint.preset}_api_key=", endpoint.api_key)
-        config.public_send(:"#{endpoint.preset}_api_base=", endpoint.base_url.presence || base)
+      case endpoint.preset
+      when :mistral
+        config.mistral_api_key = endpoint.api_key
+        config.mistral_api_base = ruby_llm_api_base
+      when :cohere
+        config.cohere_api_key = endpoint.api_key
+        config.cohere_api_base = ruby_llm_api_base
       end
       config.openai_use_system_role = true   # both providers read it; otherwise system prompts go as "developer"
       if ruby_llm_provider == :openrouter

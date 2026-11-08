@@ -1,6 +1,6 @@
 require "test_helper"
 
-# Waiting for an OpenAI vector store to index a document (2e plan, step 8).
+# Waiting for an OpenAI vector store to index a document.
 class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
   setup do
     @family = families(:dylan_family)

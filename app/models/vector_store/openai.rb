@@ -1,20 +1,13 @@
 # Adapter that delegates to OpenAI's hosted vector-store and file-search APIs, on the `embed`
-# route's vector-store endpoint (section 5.5). OpenAI chunks, embeds and retrieves; Sure uploads
-# files and searches. With the spike's fixes (2e):
+# route's vector-store endpoint. OpenAI chunks, embeds and retrieves; Sure uploads files and
+# searches.
 #
-# - the client is built by Ai::Transport::Http, so it gets the proxy, TLS settings and headers;
-# - a file is uploaded under the document's own name, which search results show the model;
-# - indexing is asynchronous, so an upload answers `processing` and VectorStore::IndexStatusJob
-#   records the outcome: ready, `unreadable` for an empty index (a scan, which file search can't
-#   read), or error;
-# - removing a file, or the store, deletes it from the Files API too, where it would otherwise
-#   stay after the document or the family is gone;
-# - a search drops results under MIN_SCORE: every search used to return the one indexed file.
+# - A file is uploaded under the document's own name, which search results show the model.
+# - Indexing is asynchronous: an upload answers `processing`, and VectorStore::IndexStatusJob
+#   records the outcome.
+# - Removing a file, or the store, deletes it from the Files API too, where it would otherwise
+#   stay after the document or the family is gone.
 class VectorStore::Openai < VectorStore::Base
-  # The spike's relevant hit scored 0.84 and the wrong ones 0.14-0.17. The default; a setting per
-  # embedding model from PR 7 (call by @josh-sanders during development of PR #4440).
-  MIN_SCORE = 0.3
-
   def initialize(endpoint:)
     @client = Ai::Transport::Http.openai_client(endpoint)
   end

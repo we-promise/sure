@@ -1,6 +1,6 @@
 require "test_helper"
 
-# Files on `generate` (section 7, 2e): what each transport sends for a PDF and for page images,
+# Files on `generate`: what each transport sends for a PDF and for page images,
 # the capability check before anything is sent, the preset's PDF limit, and that a `.ai` event
 # names files without their bytes. Stubbed through WebMock.
 class AiTransportAttachmentsTest < ActiveSupport::TestCase

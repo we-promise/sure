@@ -1,6 +1,6 @@
 require "test_helper"
 
-# `embed` against a real embedding server (2e plan, step 3): venus's llama.cpp embedding instance,
+# `embed` against a real embedding server: venus's llama.cpp embedding instance,
 # granite-embedding-small-english-r2 (384 dimensions), as the spike's embed_test was. Replayed
 # from test/vcr_cassettes/ai/llama_cpp/, recorded with RECORD_CASSETTES=1 and LLAMA_CPP_API_KEY
 # set, or run live with AI_LIVE=1. With neither, it's skipped, saying so.

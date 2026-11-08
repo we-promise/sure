@@ -1,6 +1,6 @@
 require "test_helper"
 
-# The `embed` half of the transport contract (section 17, 2e): what the compatible transport
+# The `embed` half of the transport contract: what the compatible transport
 # sends, the vector checks RubyLLM 2.1.1 doesn't make, error mapping, the `embed.ai` event and
 # usage rows; and Ai::Embeddings on the `embed` route. Stubbed through WebMock.
 class AiTransportEmbedTest < ActiveSupport::TestCase

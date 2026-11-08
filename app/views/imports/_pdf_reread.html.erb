@@ -1,5 +1,5 @@
 <%# locals: (import:) %>
-<%# "Read again as…" (section 8.1): a badly read statement, read another way without changing the config. %>
+<%# "Read again as…": a badly read statement, read another way without changing the config. %>
 <% if ai_feature_available?(:extract_pdf) && import.imported_count.zero? && import.pdf_uploaded? %>
   <%= styled_form_with url: reread_import_path(import), scope: :import, method: :post, class: "space-y-2" do |form| %>
     <%= form.select :read_as, pdf_read_as_options(selected: import.read_as), { label: t("imports.pdf_import.reread.label") } %>

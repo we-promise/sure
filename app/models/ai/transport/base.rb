@@ -5,7 +5,7 @@ class Ai::Transport::Base
   # One structured-output request. `failed_ratio` (optional) takes the parsed JSON and returns
   # the share of items the model left blank or missed, for `auto` JSON mode's fallback; nil
   # means blanks are a normal answer (bill setup). `attachments` are Ai::Attachment files sent
-  # after the input: a PDF or page images (2e).
+  # after the input: a PDF or page images.
   Request = Data.define(:feature, :family, :model, :instructions, :input, :schema, :schema_name, :max_tokens,
                         :reasoning_effort, :json_mode, :failed_ratio, :attachments) do
     def initialize(feature:, model:, instructions:, input:, schema:, schema_name:, family: nil, max_tokens: nil,
@@ -28,7 +28,7 @@ class Ai::Transport::Base
   Response = Data.define(:json, :usage, :raw_id, :finish_reason, :json_mode)
 
   # One judgement request: the same questions about each state, keyed by the item's id. Jev takes
-  # one state per request, so the transport fans the states out (section 7). Questions are plain
+  # one state per request, so the transport fans the states out. Questions are plain
   # Hashes in RubyLLM's form ({ name => { type:, instructions:, options: } }), never blocks.
   JudgeRequest = Data.define(:feature, :family, :model, :states, :questions) do
     def initialize(feature:, model:, states:, questions:, family: nil)
@@ -45,7 +45,7 @@ class Ai::Transport::Base
     def to_event = answers.transform_values { _1&.transform_values(&:to_h) }
   end
 
-  # One embedding request (2e): a vector per text, in order. `task_type` is the provider's
+  # One embedding request: a vector per text, in order. `task_type` is the provider's
   # retrieval hint (RETRIEVAL_DOCUMENT, RETRIEVAL_QUERY): Gemini and Vertex read it, the OpenAI
   # API ignores it.
   EmbedRequest = Data.define(:feature, :family, :model, :texts, :task_type) do
@@ -61,7 +61,7 @@ class Ai::Transport::Base
     def to_event = { vectors: vectors.size, dimensions: vectors.first&.size }
   end
 
-  # One transcription request (section 8.1): page images, in order, to an `ocr` model.
+  # One transcription request: page images, in order, to an `ocr` model.
   OcrRequest = Data.define(:feature, :family, :model, :pages) do
     def initialize(feature:, model:, pages:, family: nil)
       super(feature: feature.to_sym, family:, model:, pages: Array(pages).freeze)
@@ -126,7 +126,7 @@ class Ai::Transport::Base
   end
 
   # Transcribes an OcrRequest's pages and returns an OcrResponse, or raises an Ai::Error. A
-  # local OCR model takes ~45 s a page on CPU (spike), so the budget is the timeout per page.
+  # local OCR model takes ~45 s a page on CPU, so the budget is the timeout per page.
   def ocr(request)
     raise Ai::Error::Refused, "#{request.model.name} isn't an OCR model" unless request.model.capable?(:ocr)
     raise Ai::Error::Refused, "OCR reads page images" unless request.pages.all?(&:image?)
@@ -271,7 +271,7 @@ class Ai::Transport::Base
     end
 
     # Refused before sending, not after: llama.cpp answers an image it can't read with a 500,
-    # which would count as an outage (spike: "Bank statements as PDFs"), and RubyLLM sends a PDF
+    # which would count as an outage, and RubyLLM sends a PDF
     # as a file part to every compatible server, which most refuse. A PDF over the preset's
     # inline limits would make RubyLLM upload it to the provider's Files API, which is off.
     def check_attachments!(model, attachments)

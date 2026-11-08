@@ -1,7 +1,7 @@
 class PdfImport < Import
   has_one_attached :pdf_file, dependent: :purge_later
 
-  # "Read as", per upload (section 8.1): Auto, or one way of reading the PDF.
+  # "Read as", per upload: Auto, or one way of reading the PDF.
   READ_AS = Ai::PdfReading::READ_AS.map(&:to_s).freeze
   # What ReadPdf says the document is.
   Analysis = Data.define(:summary, :document_type, :extracted_data)
@@ -234,7 +234,7 @@ class PdfImport < Import
 
   # The statement's rows (Ai::Generations::ExtractBankStatement), read the way the upload asked
   # for, or by Auto starting from the way that last passed for this account and model. A failing
-  # extraction is kept and flagged for review, never dropped (section 8.1).
+  # extraction is kept and flagged for review, never dropped.
   def extract_transactions
     return unless statement_with_transactions?
 
@@ -248,7 +248,7 @@ class PdfImport < Import
     data
   end
 
-  # Auto tunes itself per account (section 8.1): the way the last passing extraction for this
+  # Auto tunes itself per account: the way the last passing extraction for this
   # account and model used. A lookup, not a model.
   def self.last_passing_way(account:, model:)
     return if account.nil? || model.blank?
@@ -261,12 +261,7 @@ class PdfImport < Import
   def failed_checks
     return [] unless extraction_flagged?
 
-    checks = extraction_checks
-    failed = []
-    failed << "reconciles" unless checks["reconciles"]
-    failed << "amounts_in_source" if checks["amounts_in_source"] == false
-    failed << "dates_anchored" if checks["dates_anchored"] && checks["dates_anchored"] < Ai::Generations::ExtractBankStatement::MIN_DATES_ANCHORED
-    failed
+    Ai::Generations::ExtractBankStatement::Checks.from_h(extraction_checks).failed.map(&:to_s)
   end
 
   def extraction_flagged? = extraction_checks.present? && extraction_checks["passed"] == false

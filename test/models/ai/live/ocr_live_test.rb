@@ -1,6 +1,6 @@
 require "test_helper"
 
-# `ocr` against real servers (2e plan, decision 2): Mistral and Cohere through RubyLLM.ocr, and a
+# `ocr` against real servers: Mistral and Cohere through RubyLLM.ocr, and a
 # local OCR model through chat, on the spike's scanned sample statement. Mistral and Cohere are
 # untested live until someone records these with a key: replayed from
 # test/vcr_cassettes/ai/{mistral,cohere,llama_cpp}/, recorded with RECORD_CASSETTES=1 and the key

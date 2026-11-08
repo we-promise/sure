@@ -1,6 +1,6 @@
 require "test_helper"
 
-# The statement generation's merge and its answer-free checks (2e plan, step 6), on the spike's
+# The statement generation's merge and its answer-free checks, on the spike's
 # BAC sample: one page, an OCR'd text layer with errors, 13 transactions.
 class Ai::Generations::ExtractBankStatementTest < ActiveSupport::TestCase
   BAC_ROWS = [

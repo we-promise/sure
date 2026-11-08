@@ -1,6 +1,6 @@
 require "test_helper"
 
-# The OpenAI vector store adapter with the spike's fixes (2e plan, step 8), against WebMock: the
+# The OpenAI vector store adapter with the spike's fixes, against WebMock: the
 # client from Ai::Transport::Http, the original filename, indexing status, deleting files with the
 # document and the store, and the score threshold.
 class VectorStore::OpenaiTest < ActiveSupport::TestCase

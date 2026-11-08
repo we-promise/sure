@@ -4,6 +4,12 @@ class VectorStore::Base
     .md .pdf .php .png .pptx .py .rb .sh .tar .tex .ts .txt .xlsx .xml .zip
   ].freeze
 
+  # The score under which a search result isn't a match; without it every search returned
+  # something. Calibrated on OpenAI's store (the relevant hit scored 0.84, unrelated ones
+  # 0.14-0.17). Embedding models score differently (unrelated text: 0.47 on gemini-embedding-001,
+  # 0.77 on granite), so it's meant to become a setting per embedding model.
+  MIN_SCORE = 0.3
+
   # Create a new vector store / collection / namespace
   # @param name [String] human-readable name
   # @return [Hash] { id: "store-identifier" }

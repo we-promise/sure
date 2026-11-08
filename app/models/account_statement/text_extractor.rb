@@ -11,7 +11,7 @@ class AccountStatement
   # PDFs are read through Pdf::TextExtractor, the same extraction that backs
   # VectorStore::Embeddable and the statement metadata detector. This makes no
   # AI call. Image-only PDFs return no text, which is reported rather than
-  # hidden, with the way PDF import could read the scan on this install (2e):
+  # hidden, with the way PDF import could read the scan on this install:
   # images on a vision model, OCR on an OCR model, or nothing, so an assistant
   # never hunts for figures that were never extracted.
   class TextExtractor

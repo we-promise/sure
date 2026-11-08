@@ -194,7 +194,7 @@ class AiHealth
     private
       attr_reader :cache, :force
 
-      # The synthetic statement through ReadPdf on a one-entry plan, the production path (2e):
+      # The synthetic statement through ReadPdf on a one-entry plan, the production path:
       # its text layer, or for the vision check the page as an image (the PDF itself on Anthropic,
       # which reads PDFs natively, as today's check did).
       def pdf_processing(provider:, endpoint:, access_token:, model:, openai_compatible:, component:, verification:,

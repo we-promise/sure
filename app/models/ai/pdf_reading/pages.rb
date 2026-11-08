@@ -1,4 +1,4 @@
-# What the two `extract_pdf` generations share (section 8.1): they read Ai::PdfReading::Unit
+# What the two `extract_pdf` generations share: they read Ai::PdfReading::Unit
 # items, batched by cost, and send each batch as text, page images or the PDF itself.
 module Ai::PdfReading::Pages
   extend ActiveSupport::Concern

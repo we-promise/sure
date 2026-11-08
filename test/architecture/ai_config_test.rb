@@ -13,8 +13,8 @@ class AiConfigTest < ActiveSupport::TestCase
     @user = users(:family_admin)   # AI switch on
   end
 
-  # Setups where today's PDF import refuses to run: its model has no PDF support
-  # (supports_pdf_processing?, deleted in 2e and kept as extract_pdf's route rule).
+  # Setups where PDF import refuses to run: its model has no PDF support (extract_pdf's route
+  # lists only a model with `vision`).
   PDF_IMPORT_OFF = %w[C8].freeze
 
   SETUPS.each_key do |id|

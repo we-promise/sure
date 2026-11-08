@@ -1,4 +1,4 @@
-# The one input step before `extract_pdf`'s generations (section 8.1), replacing today's three
+# The one input step before `extract_pdf`'s generations, replacing today's three
 # per-provider classes: which way a PDF is read, and in which order.
 #
 #   :pdf     the PDF itself, when the model has `documents` and the file is within the preset's
@@ -85,12 +85,12 @@ class Ai::PdfReading
       checks = Ai::Generations::ExtractBankStatement.checks(result.value, source:, balances: printed_balances)
       outcome = Outcome.new(value: result.value, way:, model: result.route&.model&.name, checks:, usage: result.usage, attempts:)
       attempts << { way:, checks: checks.to_h }
-      return outcome.with(attempts:) if checks.passed?
+      return outcome if checks.passed?
 
       best = outcome if best.nil? || checks.score > best.checks.score
       nil
     end
-    best&.with(attempts:) || raise_unavailable(attempts)
+    best || raise_unavailable(attempts)
   end
 
   # What the document is (ReadPdf), from the first way that answers.
@@ -148,7 +148,7 @@ class Ai::PdfReading
       end
     end
 
-    # A scan nothing on the route can read is `no_text_layer` (section 8.1); otherwise the last
+    # A scan nothing on the route can read is `no_text_layer`; otherwise the last
     # way's reason.
     def raise_unavailable(attempts)
       reason = text_layer? ? attempts.filter_map { _1[:error] }.last || ways.values.compact.first : :no_text_layer

@@ -168,7 +168,7 @@ class AiHealth
       @probe_request_timeout = probe_request_timeout_value
       @openai_uses_responses_endpoint = @effective_llm_protocol == :openai &&
         safely(false) { @llm_provider.supports_responses_endpoint? }
-      # What extract_pdf's first model can read (2e): every model reads a text layer; images need
+      # What extract_pdf's first model can read: every model reads a text layer; images need
       # vision, and Anthropic's check sends the PDF itself.
       pdf_model = safely(nil) { Ai::Config.current.routes_for(:extract_pdf).map(&:model).find { _1.capable?(:structured_output) } }
       @pdf_processing_capable = pdf_model.present?

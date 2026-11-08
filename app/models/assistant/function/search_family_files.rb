@@ -1,4 +1,4 @@
-# Always listed (section 14): it searches documents' contents when `search_documents` is
+# Always listed: it searches documents' contents when `search_documents` is
 # available, and otherwise falls back to #3422's metadata search over the vault, saying why with
 # the router's reason, never "no documents have been uploaded". The query's embedding is an
 # `embed.ai` call, traced and recorded like any other.

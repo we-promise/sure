@@ -1,4 +1,4 @@
-# Reads an uploaded PDF (section 8.1): what it is (ReadPdf), its search copy (embed), and for a
+# Reads an uploaded PDF: what it is (ReadPdf), its search copy (embed), and for a
 # statement its rows (ExtractBankStatement), through Ai::PdfReading. On extract_pdf's lane.
 class ProcessPdfJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(:extract_pdf) }

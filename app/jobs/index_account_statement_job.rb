@@ -5,7 +5,7 @@
 # PdfImport. Failing here must never fail the upload, which has already
 # succeeded and whose bytes are safely stored.
 #
-# Indexing is an `embed` call (section 5.5), so it runs on embed's lane, in the
+# Indexing is an `embed` call, so it runs on embed's lane, in the
 # AI capsule alongside ProcessPdfJob rather than competing with syncs.
 class IndexAccountStatementJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(:embed) }

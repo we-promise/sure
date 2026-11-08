@@ -1,7 +1,7 @@
-# Embeddings for the vector store (section 5.5): `index` for a document's chunks (`embed`) and
+# Embeddings for the vector store: `index` for a document's chunks (`embed`) and
 # `query` for a search (`search_documents`, recorded under its own feature). Both run the first
 # embedding model on the `embed` route, with no failover: a vector from another model doesn't
-# compare with the stored ones (section 5.2). An `embed` route on an OpenAI vector store has no
+# compare with the stored ones. An `embed` route on an OpenAI vector store has no
 # embedding model here; the store embeds for itself.
 module Ai::Embeddings
   BATCH_SIZE = 50   # VectorStore::Embeddable's EMBED_BATCH_SIZE

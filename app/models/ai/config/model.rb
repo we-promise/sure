@@ -3,8 +3,8 @@
 # - context_window: the tokens one request may use, nil when unknown (no token slicing);
 # - max_output_tokens: sent as the request's limit; nil sends none;
 # - ocr_prompt: for an `ocr` model read through chat, its prompt folder (app/prompts/ocr_<name>),
-#   because OCR models differ in the prompt and chat template they expect (section 8.1). Built
-#   in 2e with no UI or ENV; PR 7's tables set it.
+#   because OCR models differ in the prompt and chat template they expect. No UI or ENV sets
+#   it yet.
 class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :context_window, :max_output_tokens,
                                       :batch_size, :embedding_dimensions, :input_cost_per_mtok, :output_cost_per_mtok,
                                       :ocr_prompt)
@@ -12,7 +12,7 @@ class Ai::Config::Model < Data.define(:endpoint, :name, :capabilities, :context_
   DEFAULT_BATCH_SIZE = 25   # today's LLM_MAX_ITEMS_PER_CALL default
   # OCR prompt folders (app/prompts/ocr_<name>): `markdown` asks a general vision model for a
   # Markdown transcription; `unlimited_ocr_2` is the model card's "<PAGE>" per page, then
-  # "Multi page parsing.", for GGUF templates that don't write it themselves (spike).
+  # "Multi page parsing.", for GGUF templates that don't write it themselves.
   OCR_PROMPTS = %w[markdown unlimited_ocr_2].freeze
 
   def initialize(endpoint:, name:, capabilities: [], context_window: nil, max_output_tokens: nil,

@@ -1,5 +1,5 @@
 module ImportsHelper
-  # "Read as" options for a PDF upload (section 8.1): a way the family's route can't do is
+  # "Read as" options for a PDF upload: a way the family's route can't do is
   # greyed out with the reason.
   def pdf_read_as_options(selected: nil)
     reasons = Ai::PdfReading.route_reasons(family: Current.family, user: Current.user)

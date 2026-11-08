@@ -1,4 +1,4 @@
-# What an uploaded PDF is and what it says (section 8.1): its document type, a summary and the
+# What an uploaded PDF is and what it says: its document type, a summary and the
 # statement's key figures, from the first batch of its pages. Replaces
 # Provider::{Openai,Anthropic}::PdfProcessor.
 class Ai::Generations::ReadPdf < Ai::Generation

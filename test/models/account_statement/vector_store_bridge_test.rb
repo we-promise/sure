@@ -34,7 +34,7 @@ class AccountStatement::VectorStoreBridgeTest < ActiveSupport::TestCase
   end
 
   # Indexing is an `embed` call: queued only when embed is available for the uploader and the
-  # uploader's own AI switch is on (2e, section 5.5).
+  # uploader's own AI switch is on.
   def upload_as(ai_enabled:, embed: true)
     user = users(:family_admin)
     user.stubs(:ai_enabled?).returns(ai_enabled)

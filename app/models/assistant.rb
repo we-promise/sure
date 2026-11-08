@@ -48,8 +48,7 @@ module Assistant
 
   class << self
     # The first LLM provider today's chat can use, or nil: what "Dig in with AI" and the bills
-    # AI review check before offering a chat. Every other feature asks the router; this goes
-    # with chat's own provider lookup in PR 6.
+    # AI review check before offering a chat. Every other feature asks the router.
     def builtin_provider
       Provider::Registry.llm_provider_order.each do |name|
         provider = Provider::Registry.get_provider(name)

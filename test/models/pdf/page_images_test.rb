@@ -1,6 +1,6 @@
 require "test_helper"
 
-# The hardened pdftoppm (2e plan, step 5), ported from the spike's page_images_test with PDFs
+# The hardened pdftoppm, ported from the spike's page_images_test with PDFs
 # built to misbehave and stand-in pdftoppm scripts.
 class Pdf::PageImagesTest < ActiveSupport::TestCase
   setup do

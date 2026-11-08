@@ -50,7 +50,7 @@ module Ai::Transport::RubyLlmAdapter
     end
 
     # Files inline, page images at high detail: today's OpenAI path sent `detail: "low"`, which
-    # shrinks a page to 512 pixels (section 8.1). A fresh StringIO each time, because RubyLLM
+    # shrinks a page to 512 pixels. A fresh StringIO each time, because RubyLLM
     # reads the source once per request and a retry sends it again.
     def ruby_llm_attachments(attachments)
       attachments.map do |file|

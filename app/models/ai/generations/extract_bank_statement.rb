@@ -1,9 +1,8 @@
-# A bank statement's transactions, period and balances (section 8.1), from every page, batched by
+# A bank statement's transactions, period and balances, from every page, batched by
 # Ai::Batch with no page limit. Replaces Provider::{Openai,Anthropic}::BankStatementExtractor.
 #
-# #checks says, without knowing the answer, whether an extraction looks right (spike: "Checks on
-# an extraction"). On every recorded extraction they passed all 14 right ones and failed all 12
-# wrong ones:
+# #checks says, without knowing the answer, whether an extraction looks right. On every recorded
+# extraction they passed all 14 right ones and failed all 12 wrong ones:
 # - reconciles: the opening balance plus every row makes the closing balance. It catches
 #   missing, merged, invented and sign-flipped rows, not dates. The balances come from the text
 #   (#4054's parser) when it found them, the model's otherwise, since models write figures to fit;
@@ -62,10 +61,20 @@ class Ai::Generations::ExtractBankStatement < Ai::Generation
   aliases transactions: %w[rows entries], description: %w[name merchant]
 
   Checks = Data.define(:reconciles, :amounts_in_source, :dates_anchored) do
-    def passed? = reconciles && amounts_in_source != false && (dates_anchored.nil? || dates_anchored >= MIN_DATES_ANCHORED)
+    # From the hash PdfImport#extraction_checks stores.
+    def self.from_h(hash) = new(**members.index_with { hash.to_h.symbolize_keys[_1] })
+
+    # The names of the checks that failed. nil (nothing to check against) never fails.
+    def failed
+      results = { reconciles: reconciles.present?, amounts_in_source: amounts_in_source != false,
+                  dates_anchored: dates_anchored.nil? || dates_anchored >= MIN_DATES_ANCHORED }
+      results.reject { |_, passed| passed }.keys
+    end
+
+    def passed? = failed.empty?
 
     # How many checks passed, to pick the best of several failing extractions.
-    def score = [ reconciles, amounts_in_source != false, dates_anchored.nil? || dates_anchored >= MIN_DATES_ANCHORED ].count(true)
+    def score = members.size - failed.size
 
     def to_h = super.merge(passed: passed?)
   end

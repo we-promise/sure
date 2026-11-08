@@ -10,7 +10,7 @@ class Provider::Anthropic < Provider
   DEFAULT_MODEL = "claude-sonnet-4-6"
 
   # Models that read images and PDFs, which Ai::LegacyEnvConfig reads for `vision` and
-  # `documents` (2e).
+  # `documents`.
   VISION_CAPABLE_MODEL_PREFIXES = %w[claude].freeze
 
   def self.effective_model

@@ -1,9 +1,9 @@
 require "test_helper"
 
-# The `ocr` half of the transport contract (section 8.1, 2e): a local OCR model read through
+# The `ocr` half of the transport contract: a local OCR model read through
 # chat with its own prompt folder, and Mistral and Cohere through RubyLLM.ocr, one page image per
 # request. Stubbed through WebMock: Mistral and Cohere are untested live until someone records
-# test/models/ai/live/ocr_live_test.rb with a key (2e plan, decision 2).
+# test/models/ai/live/ocr_live_test.rb with a key.
 class AiTransportOcrTest < ActiveSupport::TestCase
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
   CHAT_URL = "http://ocr.local:8080/v1/chat/completions".freeze

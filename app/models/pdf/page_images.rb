@@ -1,7 +1,6 @@
-# Pages of a PDF as PNGs at 150 dpi, rendered by `pdftoppm` in a child process (section 8.1,
-# keeping #3275's choice of poppler-utils). The child process is what keeps poppler, C code
-# parsing an upload, out of the worker's memory, and it only does that when it's hardened
-# (spike: "Rendering pages"):
+# Pages of a PDF as PNGs at 150 dpi, rendered by `pdftoppm` in a child process (#3275's choice
+# of poppler-utils). The child process is what keeps poppler, C code parsing an upload, out of
+# the worker's memory, and it only does that when it's hardened:
 #
 # - an empty environment, so the worker's API keys and database URL never reach poppler;
 # - its own process group, killed with every child after `timeout` seconds;

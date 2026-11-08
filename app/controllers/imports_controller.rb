@@ -55,7 +55,7 @@ class ImportsController < ApplicationController
     raise ActiveRecord::RecordNotFound unless @import.is_a?(PdfImport)
   end
 
-  # "Read again as…" on a PDF import (section 8.1): reads the statement another way, before
+  # "Read again as…" on a PDF import: reads the statement another way, before
   # anything is published.
   def reread
     read_as = params.dig(:import, :read_as).to_s

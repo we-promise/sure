@@ -62,7 +62,7 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert first_model(config, :chat).capable?(:tools)
   end
 
-  # A PDF as a file only where the provider reads one natively (2e plan); images as today.
+  # A PDF as a file only where the provider reads one natively; images as today.
   test "documents only on OpenAI's own API and Anthropic, vision as today" do
     openai = first_model(build("OPENAI_ACCESS_TOKEN" => "sk-test"), :extract_pdf)
     assert openai.capable?(:vision, :documents)

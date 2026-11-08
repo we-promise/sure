@@ -4,7 +4,7 @@ module Family::VectorSearchable
   included do
     has_many :family_documents, dependent: :destroy
     # The store and its files go with the family: on OpenAI they would otherwise stay in the
-    # Files API (spike, 2e).
+    # Files API.
     before_destroy :delete_vector_store
   end
 

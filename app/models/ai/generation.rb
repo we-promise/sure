@@ -84,10 +84,10 @@ class Ai::Generation
   def items = batch_key ? Array(instance_variable_get(:"@#{batch_key}")) : nil
 
   # What one item costs a request, in tokens, for Ai::Batch: its text by default. A page image
-  # costs a fixed estimate (PDF import, 2e).
+  # costs a fixed estimate (PDF import).
   def item_cost(item) = Assistant::TokenEstimator.estimate(item)
 
-  # Files sent with this request's input (Ai::Attachment): a PDF or page images (2e).
+  # Files sent with this request's input (Ai::Attachment): a PDF or page images.
   def attachments = []
 
   # Capabilities this call needs beyond the feature's own, such as `vision` for page images: a

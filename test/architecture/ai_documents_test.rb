@@ -1,10 +1,9 @@
 require "test_helper"
 
-# Section 17's documents checks (2e): a vault upload is indexed only when `embed` is available
-# for its uploader and the uploader's own AI switch is on; the indexing job re-checks the route;
-# a search returns only documents the asking user may read; and search_family_files is always
-# listed, falling back to the vault's metadata with the router's reason. From PR 7: turning
-# Documents on indexes each stored statement once.
+# A vault upload is indexed only when `embed` is available for its uploader and the uploader's
+# own AI switch is on; the indexing job re-checks the route; a search returns only documents the
+# asking user may read; and search_family_files is always listed, falling back to the vault's
+# metadata with the router's reason.
 class AiDocumentsTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 

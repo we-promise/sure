@@ -109,7 +109,7 @@ class LangfuseTracingTest < ActiveSupport::TestCase
     client&.shutdown
   end
 
-  # LangfuseTraceable, which chat's providers keep until PR 6; the AI plumbing traces through
+  # LangfuseTraceable, which chat's providers keep; the AI plumbing traces through
   # Ai::Instrumentation::LangfuseSubscriber.
   TracedThing = Class.new do
     include LangfuseTraceable

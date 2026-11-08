@@ -1,6 +1,6 @@
 require "test_helper"
 
-# How a PDF import is read (2e plan, step 7): "Read as" per upload, Auto's tuning per account
+# How a PDF import is read: "Read as" per upload, Auto's tuning per account
 # and model, the review flag for an extraction that failed its checks, and reading again.
 class PdfImportReadingTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper

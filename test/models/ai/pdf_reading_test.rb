@@ -1,6 +1,6 @@
 require "test_helper"
 
-# PDF reading, the input step before extract_pdf's generations (2e plan, step 6): Auto's order,
+# PDF reading, the input step before extract_pdf's generations: Auto's order,
 # its tuning, the ways a route can't use, falling back on failed checks, flagging the best when
 # nothing passes, batches with no page limit, and OCR's two steps. Model calls through stub_ai.
 class Ai::PdfReadingTest < ActiveSupport::TestCase

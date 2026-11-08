@@ -1,6 +1,6 @@
 require "test_helper"
 
-# What a PDF is (2e plan, step 6): today's analysis instructions, the first batch only, and a
+# What a PDF is: today's analysis instructions, the first batch only, and a
 # document type outside Import::DOCUMENT_TYPES coerced to nil.
 class Ai::Generations::ReadPdfTest < ActiveSupport::TestCase
   setup do

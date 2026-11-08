@@ -494,8 +494,7 @@ class AccountStatement < ApplicationRecord
     # still reads the file directly.
     # A vault upload isn't an AI action, so indexing it (on an OpenAI store, sending the whole
     # statement to OpenAI) needs `embed` available to the uploader and the uploader's own AI
-    # switch, checked here because Ai::Consent checks the switch only for chat and bills until
-    # PR 7 (section 5.5).
+    # switch, checked here because Ai::Consent checks the switch only for chat and bills.
     def index_in_vector_store_later
       user = Current.user
       return unless user&.ai_enabled? && Ai.available?(:embed, family:, user:)

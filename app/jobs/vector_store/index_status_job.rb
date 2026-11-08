@@ -1,7 +1,7 @@
-# Waits for an asynchronous vector store (OpenAI's) to index a document, and records how it went
-# (section 5.5): `ready` once it can be found, `unreadable` for an empty index (a scan, which file
-# search can't read), `error` when indexing failed. Indexing took ~6 s a statement in the spike;
-# the job looks again every POLL_INTERVAL, MAX_POLLS times, on `embed`'s lane.
+# Waits for an asynchronous vector store (OpenAI's) to index a document, and records how it went:
+# `ready` once it can be found, `unreadable` for an empty index (a scan, which file search can't
+# read), `error` when indexing failed. Indexing takes ~6 s a statement; the job looks again every
+# POLL_INTERVAL, MAX_POLLS times, on `embed`'s lane.
 class VectorStore::IndexStatusJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(:embed) }
 
