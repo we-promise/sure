@@ -2,6 +2,8 @@
 es:
   providers:
     ibkr:
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "Vincula las cuentas de tu consulta Flex %{name}"
       name: Interactive Brokers
       connection_description: Conecta un informe del Flex Web Service de Interactive Brokers
       institution_name: Interactive Brokers

@@ -70,6 +70,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(kraken_item)}"
   end
 
+  test "index titles each ibkr connection with its own name" do
+    first = ibkr_items(:configured_item)
+    first.update!(name: "IBKR Ireland")
+    second = @user.family.ibkr_items.create!(name: "IBKR US", query_id: "Q2", token: "T2")
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(first)}", text: /IBKR Ireland/
+    assert_select "##{dom_id(second)}", text: /IBKR US/
+  end
+
   test "index renders on-chain wallet items" do
     register_fake_chain!
     item = create_onchain_wallet_item(family: @user.family)
