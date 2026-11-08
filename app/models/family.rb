@@ -883,9 +883,12 @@ class Family < ApplicationRecord
   private
     # Currencies used by the given accounts that are visible, by their entries,
     # their trades and their holdings.
+    # Memoised per scope, so the missing and stale notes share one set of
+    # queries.
     def currencies_in_use(scope)
-      account_ids = self.accounts.visible.where(id: scope.select(:id)).select(:id)
-      (
+      account_ids = self.accounts.visible.where(id: scope.select(:id)).pluck(:id).sort
+      @currencies_in_use ||= {}
+      @currencies_in_use[account_ids] ||= (
         Account.where(id: account_ids).distinct.pluck(:currency) +
           Entry.where(account_id: account_ids).distinct.pluck(:currency) +
           Trade.joins(:entry).where(entries: { account_id: account_ids }).distinct.pluck("trades.currency") +
