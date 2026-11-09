@@ -1,0 +1,19 @@
+<%# locals: (bundle:, reconciliation_indicators: {}) %>
+<%= render DS::Card.new(padding: :panel) do %>
+  <%= tag.h2 t(".title"), class: "font-medium text-lg mb-4" %>
+
+  <ul class="space-y-1" id="institution-group-accounts">
+    <% bundle.accounts.each do |account| %>
+      <li>
+        <%= link_to account_path(account), class: "flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-surface-hover", title: account.name do %>
+          <%= render "accounts/logo", account: account, size: "sm", reconciliation_indicator: reconciliation_indicators[account.id] %>
+          <div class="min-w-0 grow">
+            <%= tag.p account.name, class: class_names("text-sm text-primary font-medium truncate", "animate-pulse" => account.syncing?) %>
+            <%= tag.p account.short_subtype_label, class: "text-sm text-secondary truncate" %>
+          </div>
+          <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>

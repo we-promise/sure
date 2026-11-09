@@ -1,0 +1,21 @@
+<%# locals: (form:, account:, label:, hint:, name_field: "institution_name") %>
+<%# The icon picker of the account form, also in an institution's settings,
+    which give the icon to each of its accounts. `account` is the account
+    whose icon it shows; `name_field` is the form's field holding the
+    institution's name, which the icon search uses with the domain typed in
+    the form's `institution_domain`. Render accounts/_logo_forms after the
+    form, with the same account. %>
+<div class="space-y-2"
+     data-controller="account-logo-picker"
+     data-account-logo-picker-pending-value="<%= t("accounts.logo_field.pending") %>"
+     data-account-logo-picker-removal-value="<%= t("accounts.logo_field.removal") %>"
+     data-account-logo-picker-provider-domain-value="<%= account.provider&.institution_domain %>"
+     data-account-logo-picker-domain-field-value="<%= "#{form.object_name}[institution_domain]" %>"
+     data-account-logo-picker-name-field-value="<%= "#{form.object_name}[#{name_field}]" %>">
+  <%= form.label :logo, label, class: "form-field__label" %>
+  <%= render "accounts/logo_field", account: account %>
+  <%= hidden_field_tag "#{form.object_name}[logo_choice]", nil, id: nil, data: { account_logo_picker_target: "choice" } %>
+  <%= form.file_field :logo, accept: Account::LOGO_CONTENT_TYPES.join(","), class: "form-field__input",
+                      data: { account_logo_picker_target: "file", action: "account-logo-picker#showFile" } %>
+  <p class="text-xs text-secondary"><%= hint %></p>
+</div>

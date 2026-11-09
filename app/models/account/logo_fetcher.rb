@@ -73,7 +73,7 @@ class Account::LogoFetcher
 
     fetched_for = domain
     logo_before = logo_state
-    icon = source ? icon_for(source) : candidates(for_picker: false).find(&:auto)
+    icon = source ? icon(source) : candidates(for_picker: false).find(&:auto)
     return false unless icon
 
     # The search takes seconds. Under the row lock, which the account form's
@@ -88,16 +88,28 @@ class Account::LogoFetcher
         # Attachment and flags go into one save: attach saves on its own only
         # when the record has no other pending changes.
         account.assign_attributes(logo_selection: :automatic, updated_at: Time.current)
-        account.logo.attach(
-          io: StringIO.new(icon.body),
-          filename: "#{fetched_for}.#{icon.extension}",
-          content_type: icon.content_type,
-          metadata: { "logo_source" => icon.source, "logo_key" => icon.key, "logo_name" => icon.name,
-                      "logo_domain" => fetched_for, "logo_auto" => auto }.compact
-        )
+        account.logo.attach(attachable(icon, auto:))
         account.save
       end
     end
+  end
+
+  # The icon with `source` key (as the picker offers it) for the account's
+  # domain, or nil when there is no domain or no such icon.
+  def icon(source)
+    icon_for(source) if domain
+  end
+
+  # What Active Storage attaches for `icon`, found for the account's domain:
+  # the image and what it is (see Account::Logoable#logo_source, #logo_key).
+  def attachable(icon, auto: false)
+    {
+      io: StringIO.new(icon.body),
+      filename: "#{domain}.#{icon.extension}",
+      content_type: icon.content_type,
+      metadata: { "logo_source" => icon.source, "logo_key" => icon.key, "logo_name" => icon.name,
+                  "logo_domain" => domain, "logo_auto" => auto }.compact
+    }
   end
 
   private

@@ -41,7 +41,15 @@ class Account::MarketDataImporter
       pair_dates[key] = [ pair_dates[key], account.start_date ].compact.min
     end
 
-    # 3. SECURITY PRICE PAIRS – holdings convert each security price into the
+    # 3. INSTITUTION PAIR – an institution's entry can show its accounts in a
+    # currency of its own (InstitutionGroup#currency), charted from each
+    # account's history, which needs the account currency's rates into it.
+    if (institution_currency = institution_display_currency) && institution_currency != account.currency
+      key = [ account.currency, institution_currency ]
+      pair_dates[key] = [ pair_dates[key], account.start_date ].compact.min
+    end
+
+    # 4. SECURITY PRICE PAIRS – holdings convert each security price into the
     # account currency, so every foreign price currency needs rates from the
     # first date a price for that security is required.
     security_price_currency_start_dates.each do |source_currency, date|
@@ -108,7 +116,17 @@ class Account::MarketDataImporter
     end
 
     def needs_exchange_rates?
-      has_multi_currency_entries? || foreign_account? || security_price_currency_start_dates.any?
+      has_multi_currency_entries? || foreign_account? || security_price_currency_start_dates.any? ||
+        institution_display_currency.present?
+    end
+
+    # The currency the account's institution entry is shown in, when its
+    # settings choose one.
+    def institution_display_currency
+      return @institution_display_currency if defined?(@institution_display_currency)
+
+      key = InstitutionGroup.key_for(account)
+      @institution_display_currency = (account.family.institution_groups.where.not(currency: nil).find_by(key: key)&.currency if key && account.family)
     end
 
     def has_multi_currency_entries?

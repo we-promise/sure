@@ -113,6 +113,22 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     assert Category.exists?(@other_category.id)
   end
 
+  test "destructive reset removes the family's institution settings and their icons" do
+    group = @family.institution_groups.create!(key: "wise|wise.com", name: "My Wise", currency: "EUR")
+    group.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "wise.png", content_type: "image/png")
+    other = @other_family.institution_groups.create!(key: "wise|wise.com")
+
+    dry = Family::FinancialDataReset.new(user: @user).call
+    assert_equal 1, dry.before_counts[:institution_groups]
+
+    result = Family::FinancialDataReset.new(user: @user, dry_run: false, confirmed: true).call
+
+    assert_equal 0, result.after_counts[:institution_groups]
+    assert_not InstitutionGroup.exists?(group.id)
+    assert_not ActiveStorage::Attachment.exists?(record_type: "InstitutionGroup", record_id: group.id)
+    assert InstitutionGroup.exists?(other.id), "another family's settings must stay"
+  end
+
   test "destructive reset revokes provider item and clears provider account attachments" do
     account = @other_family.accounts.create!(
       name: "Provider Reset Checking",
