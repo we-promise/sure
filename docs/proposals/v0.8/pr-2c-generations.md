@@ -179,16 +179,22 @@ flowchart LR
   on both protocols.
 - **Token budgets on legacy models:**
   - `batch_size` comes from `LLM_MAX_ITEMS_PER_CALL`, else 25.
-  - `context_window` comes from `LLM_CONTEXT_WINDOW`, else 2048, on OpenAI models: today's
-    `Assistant::TokenBudget`.
-  - On Anthropic, `context_window` is set only when `LLM_CONTEXT_WINDOW` is set explicitly.
-    Today's Anthropic batches aren't token-sliced, and a 2048 default would cut them to a
-    few rows.
+  - On a custom OpenAI-compatible server (`OPENAI_URI_BASE`), `context_window` comes from
+    `LLM_CONTEXT_WINDOW`, else 2048: today's `Assistant::TokenBudget`, a guard for small local
+    models.
+  - On native OpenAI and on Anthropic, `context_window` is set only when `LLM_CONTEXT_WINDOW` is
+    set explicitly, so their batches are capped by `batch_size` alone. Today's Anthropic batches
+    aren't token-sliced. Native OpenAI's were, against the 2048 default, but a cloud model's
+    window is far larger, and once the budget counts the prompt and schema (below) the default
+    would cut a categorize batch from 16 transactions to 7 (call by @josh-sanders during review
+    of #4775, 2026-11-09).
   - `max_output_tokens` is `LLM_MAX_RESPONSE_TOKENS` when set, as today's
     `explicit_max_response_tokens`. Batching reserves 512 tokens when it's unset. On Anthropic
     it's `ANTHROPIC_MAX_TOKENS`, else 4096.
-  - The budget is estimated from the rendered prompt, not a flat 256-token reserve, as §8.1
-    says. On a 2048 window that means slightly smaller batches. The upgrade notes say so.
+  - The budget is estimated from the rendered prompt and the schema, not a flat 256-token
+    reserve, as §8.1 says. On a custom server's 2048 window that means smaller batches: 9
+    transactions instead of 16 on the simplified categorize prompt with 20 categories. The
+    upgrade notes say so.
 - **JSON mode on legacy endpoints:** OpenAI's endpoint gets `json_mode` from `LLM_JSON_MODE`,
   then `Setting.openai_json_mode`, then `auto`. `Provider::Openai::Concerns::JsonMode` reads it
   there for the PDF workers until 2e, which clears its `Sure/NoAiEnv` entry.
@@ -562,8 +568,12 @@ flowchart LR
 
 - Bill setup honours `LLM_JSON_MODE`, and on native OpenAI it uses a strict schema.
 - `auto` JSON mode tries `json_object` between strict and none.
-- On small context windows, batches are sized from the actual prompt, so there can be slightly
-  more calls.
+- On native OpenAI, batches are no longer cut to fit a 2048-token window unless
+  `LLM_CONTEXT_WINDOW` is set: they hold up to `LLM_MAX_ITEMS_PER_CALL` items (default 25), so a
+  stock install makes fewer, larger calls.
+- On a custom OpenAI-compatible server, batches are sized from the actual prompt and schema
+  within `LLM_CONTEXT_WINDOW` (default 2048), so a small window means smaller batches and more
+  calls.
 - Anthropic batches are token-sliced when `LLM_CONTEXT_WINDOW` is set.
 - `OPENAI_SUPPORTS_RESPONSES_ENDPOINT=true` on a custom server now applies to background AI as
   well as chat.
