@@ -1,0 +1,29 @@
+---
+zh-TW:
+  settings:
+    llm_usages:
+      show:
+        page_title: LLM 使用量與費用
+        subtitle: 追蹤您的 AI 使用量與預估費用
+        start_date: 開始日期
+        end_date: 結束日期
+        filter: 篩選
+        total_calls: "總呼叫數"
+        avg_cost_per_call: "平均每次呼叫費用"
+        based_on_calls: "根據 %{total} 次呼叫中有費用資料的 %{with_cost} 次計算"
+        total_tokens: Token 總數
+        prompt: 提示 Token
+        completion: 輸出 Token
+        total_cost: 總費用
+        cost_by_operation: 各作業費用
+        cost_by_model: 各模型費用
+        recent_usage: 近期使用量
+        col_date: 日期
+        col_operation: 作業
+        col_model: 模型
+        col_tokens: Token 數
+        col_cost: 費用
+        failed: 已失敗
+        no_usage_data: 所選期間內查無使用資料
+        cost_estimates_title: 關於費用預估
+        cost_estimates_description: 費用依各供應商公布的價格預估，最近核實日期為 %{date}。實際費用可能有所不同。價格以每 100 萬個 Token 計算，並依模型而異。自訂或自行代管的模型會顯示「N/A」，且不列入費用總計。

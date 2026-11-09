@@ -28,13 +28,15 @@ class Provider::Openai::Concerns::JsonModeTest < ActiveSupport::TestCase
   end
 
   test "defaults to auto when no OpenAI endpoint is configured" do
-    without_ai { assert_equal "auto", @subject.default_json_mode }
+    use_no_ai
+    assert_equal "auto", @subject.default_json_mode
   end
 
   test "without an OpenAI endpoint, the operator's mode still applies" do
     Setting.openai_json_mode = "none"
 
-    without_ai { assert_equal "none", @subject.default_json_mode }
+    use_no_ai
+    assert_equal "none", @subject.default_json_mode
   end
 
   test "none omits response_format so strict runtimes are not rejected" do

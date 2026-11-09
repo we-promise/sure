@@ -77,6 +77,7 @@ class Ai::SchemaTest < ActiveSupport::TestCase
 
   test "an object with none of the schema's fields is invalid output; explicit nulls aren't" do
     assert_raises(Ai::Error::InvalidOutput) { Ai::Schema.coerce({ "error" => "unable to analyze" }, BILL) }
+    assert_raises(Ai::Error::InvalidOutput) { Ai::Schema.coerce({}, BILL) }
 
     nulls = { "name" => nil, "amount" => nil, "day_of_month" => nil, "bill_type" => nil, "autopay" => nil }
     assert_equal({ name: nil, amount: nil, day_of_month: nil, bill_type: nil, autopay: nil }, Ai::Schema.coerce(nulls, BILL))

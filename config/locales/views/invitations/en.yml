@@ -7,6 +7,30 @@ en:
       joined_household: You have joined the household.
       message: "%{inviter} has invited you to join as %{role}."
       title: Join %{family}
+    bulk_create:
+      download: Download report
+      errors:
+        email_not_queued: Invitation saved, but the email could not be queued. Remove it and try again.
+        processing_failed: Invitation could not be processed. Check for an existing pending invitation before retrying.
+      invalid_role: Bulk invitations can only be sent to members and guests.
+      invite_more: Invite more
+      no_emails: Enter at least one email address.
+      status:
+        invalid: Could not invite
+        link_only: Ready to share
+        sent: Invitation sent
+      summary: "%{sent} sent, %{link_only} ready to share, %{invalid} failed."
+      title: Invitation results
+      too_many: You can invite up to %{max} people at a time. Please send fewer.
+    bulk_new:
+      emails_label: Email Addresses
+      emails_placeholder: Enter email addresses separated by commas or new lines
+      role_guest: Guest
+      role_label: Role
+      role_member: Member
+      submit: Send Invitations
+      subtitle: Invite several people to join your %{moniker} account on %{product_name}
+      title: Invite Multiple People
     create:
       failure: Could not send invitation
       own_email: "You can't invite yourself."

@@ -40,8 +40,12 @@ module Ai::DownMarks
     "ai/down/server/#{endpoint.name}"
   end
 
-  # A short digest of the key, so a replaced key isn't skipped for the old one's mark.
-  def key_key(endpoint) = "ai/down/key/#{endpoint.name}/#{Digest::SHA256.hexdigest(endpoint.api_key.to_s).first(12)}"
+  # A short digest of the key and static headers (a gateway may authenticate by either), so a
+  # replaced credential isn't skipped for the old one's mark.
+  def key_key(endpoint)
+    credential = [ endpoint.api_key.to_s, endpoint.extra_headers.sort ].to_json
+    "ai/down/key/#{endpoint.name}/#{Digest::SHA256.hexdigest(credential).first(12)}"
+  end
 
   def model_key(route) = "ai/down/model/#{route.endpoint.name}/#{route.model.name}"
 end

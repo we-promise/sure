@@ -9,6 +9,7 @@ class Settings::AiPromptsController < ApplicationController
       [ t("breadcrumbs.ai_prompts"), nil ]
     ]
     @family ||= Current.family
+    @dropped_overrides = @family.dropped_ai_prompt_overrides
   end
 
   def update

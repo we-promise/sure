@@ -1,5 +1,6 @@
-# The transport interface: `probe` (AiHealth::Probe), `generate` (Ai::Generation) and `judge`
-# (Ai::Judgement). A call a transport doesn't implement raises NotImplementedError.
+# The transport interface: health probes (AiHealth::Probe), structured generation
+# (Ai::Generation) and judgements (Ai::Judgement), with retries and one `.ai` event per call. A
+# call a transport doesn't implement raises NotImplementedError.
 class Ai::Transport::Base
   # One structured-output request. `failed_ratio` (optional) takes the parsed JSON and returns
   # the share of items the model left blank or missed, for `auto` JSON mode's fallback; nil
@@ -86,8 +87,6 @@ class Ai::Transport::Base
   # How many requests one call may have in flight.
   def parallel_requests = endpoint.parallel_requests || 1
 
-  def embed(texts, model:)         = raise NotImplementedError, "#{self.class.name}#embed isn't implemented"
-
   # Health probes reuse the production path, so they can't drift from it: the same client settings,
   # headers, timeout, proxy and error mapping. Returns what the check found, or raises an
   # Ai::Error:
@@ -99,7 +98,7 @@ class Ai::Transport::Base
     raise ArgumentError, "unknown probe check #{check.inspect}" unless PROBE_CHECKS.include?(check)
 
     Ai::CallContext.call(feature: :probe, model:, budget: timeout) do
-      instrument("probe", model:, request: { check: }) { attempt { run_probe(model, check, timeout:) } }
+      instrument("probe", model:, request: { check: }) { attempt { run_probe(model, check, timeout: within_budget(timeout)) } }
     end
   end
 
@@ -143,18 +142,19 @@ class Ai::Transport::Base
     # protocols, :max_tokens on Anthropic's.
     def cut_at_limit?(finish_reason) = %i[length max_tokens].include?(finish_reason&.to_sym)
 
-    # Sure retries, not RubyLLM (whose contexts all have max_retries 0): RubyLLM retries inside
-    # one `request.ruby_llm`, with no hook before a retry, so only here can a spent balance
-    # (OpenAI's 429 insufficient_quota) stop the retries and the attempt budget be checked
-    # between tries, wait included: no retry starts after the budget runs out. Each try is one
-    # HTTP request and one `usage.ruby_llm` event.
+    # Sure retries, not RubyLLM: RubyLLM has no hook before a retry, so only here can a spent
+    # balance (OpenAI's 429 insufficient_quota) stop retrying and the attempt budget, wait
+    # included, be checked between tries.
     def attempt
       tries = 0
       begin
         tries += 1
-        yield
+        check_budget!
+        result = yield
+        check_budget!(after: true)
+        result
       rescue *Ai::Error::RETRYABLE => error
-        delay = retry_delay(tries, error)
+        delay = retry_delay(tries)
         remaining = Ai::CallContext.current&.remaining
         raise if tries > endpoint.max_retries || (remaining && remaining <= delay)
 
@@ -163,7 +163,21 @@ class Ai::Transport::Base
       end
     end
 
-    def retry_delay(tries, _error) = [ 0.5 * (2**(tries - 1)), 8 ].min * (0.75 + rand * 0.5)
+    # Requests RubyLLM doesn't send, such as the models list, aren't checked by its instrumenter.
+    # After an attempt too, so an answer that arrives late isn't taken as a pass.
+    def check_budget!(after: false)
+      return unless Ai::CallContext.current&.expired?
+
+      raise Ai::Error::Timeout, "the attempt's time budget was spent #{after ? "before the answer arrived" : "before the request was sent"}"
+    end
+
+    # A request's timeout, cut to what's left of the call's budget, so a retry can't outlast it.
+    def within_budget(timeout)
+      remaining = Ai::CallContext.current&.remaining
+      remaining ? [ timeout, remaining ].min : timeout
+    end
+
+    def retry_delay(tries) = [ 0.5 * (2**(tries - 1)), 8 ].min * (0.75 + rand * 0.5)
 
     # One `.ai` event per call, carrying what subscribers need: the route, the
     # request (files by name and size, never their bytes), the output, usage and error class.
@@ -209,10 +223,16 @@ class Ai::Transport::Base
     # The same model under a vendor prefix (openai/gpt-4.1), a snapshot date (gpt-4.1-2025-04-14,
     # claude-sonnet-4-5-20250929, gpt-4-0613) or for a `latest` alias. Any other difference is
     # another model: gpt-4.1-mini isn't gpt-4.1, nor gpt-4o gpt-4.
+    # Two qualified ids (org-a/model, org-b/model) keep their namespaces.
     def same_model?(asked, answered)
-      short, long = [ asked, answered ].map { model_stem(_1) }.minmax_by(&:length)
+      qualified = [ asked, answered ].all? { _1.to_s.include?("/") }
+      short, long = [ asked, answered ].map { model_stem(_1, qualified:) }.sort_by(&:length)
       short == long || (long.start_with?(short) && long.delete_prefix(short).match?(SNAPSHOT_SUFFIX))
     end
 
-    def model_stem(name) = name.to_s.downcase.split("/").last.to_s.delete_suffix(":latest").delete_suffix("-latest")
+    def model_stem(name, qualified: false)
+      stem = name.to_s.downcase
+      stem = stem.split("/").last.to_s unless qualified
+      stem.delete_suffix(":latest").delete_suffix("-latest")
+    end
 end

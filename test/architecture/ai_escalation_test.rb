@@ -60,7 +60,7 @@ class AiEscalationTest < ActiveSupport::TestCase
   end
 
   test "a local server's timeout or 5xx marks the server" do
-    route = Ai::Route.new(feature: :detect_merchants, position: 0, model: @models["gpu/qwen3-3b"])
+    route = Ai::Route.new(feature: :detect_merchants, model: @models["gpu/qwen3-3b"])
 
     assert_equal Ai::DownMarks.server_key(route.endpoint), Ai::DownMarks.key_for(route, Ai::Error::Timeout.new("slow"))
     assert_equal Ai::DownMarks.server_key(route.endpoint), Ai::DownMarks.key_for(route, Ai::Error::Upstream.new("500"))
@@ -77,7 +77,7 @@ class AiEscalationTest < ActiveSupport::TestCase
   end
 
   test "a 401 or a spent balance marks only the key that got it" do
-    route = Ai::Route.new(feature: :detect_merchants, position: 0, model: @models["gateway/vendor-a/model"])
+    route = Ai::Route.new(feature: :detect_merchants, model: @models["gateway/vendor-a/model"])
 
     key = Ai::DownMarks.key_for(route, Ai::Error::Unauthorized.new("401"))
     assert_match %r{\Aai/down/key/gateway/\h{12}\z}, key

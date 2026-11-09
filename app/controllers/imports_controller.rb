@@ -252,7 +252,13 @@ class ImportsController < ApplicationController
     end
 
     def create_document_import(file)
-      adapter = document_store
+      availability = Ai.availability(:embed, family: Current.family, user: Current.user)
+      unless availability.available?
+        redirect_to new_import_path, alert: availability.message_for(Current.user)
+        return
+      end
+
+      adapter = VectorStore.adapter
       unless adapter
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
         return

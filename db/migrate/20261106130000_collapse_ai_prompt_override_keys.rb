@@ -59,7 +59,10 @@ class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
       if provider == "anthropic"
         ENV["ANTHROPIC_ACCESS_TOKEN"].present? || ENV["ANTHROPIC_API_KEY"].present? || setting?("anthropic_access_token")
       else
-        ENV["OPENAI_ACCESS_TOKEN"].present? || setting?("openai_access_token")
+        openai_token = ENV["OPENAI_ACCESS_TOKEN"].present? || setting?("openai_access_token")
+        # A custom URL without a model builds no OpenAI route (LegacyEnvConfig#openai).
+        custom_url = ENV["OPENAI_URI_BASE"].present? || setting?("openai_uri_base")
+        openai_token && (!custom_url || ENV["OPENAI_MODEL"].present? || setting?("openai_model"))
       end
     end
 

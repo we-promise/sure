@@ -53,9 +53,9 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     txns = Array.new(3) { create_transaction(account: @account, name: "Coffee #{_1}").transaction }
     requests = answer_both(llm: txns.to_h { [ _1.id, category.name ] }, jev: txns.to_h { [ _1.id, [ category.name, 0.9 ] ] })
 
-    with_ai_model_settings(batch_size: 2) do
-      perform_enqueued_jobs(only: Ai::ShadowJob) { categorize(txns.map(&:id)) }
-    end
+    use_ai_model_settings(batch_size: 2)
+
+    perform_enqueued_jobs(only: Ai::ShadowJob) { categorize(txns.map(&:id)) }
 
     shadow = requests.select { _1.feature == :shadow_categorize }.sole
     assert_equal 2, shadow.states.size

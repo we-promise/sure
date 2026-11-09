@@ -13,12 +13,11 @@
   </div>
 <% end %>
 
-<% dropped = @family.dropped_ai_prompt_overrides %>
-<% if dropped.any? %>
+<% if @dropped_overrides.any? %>
   <div class="mb-4">
     <%= render DS::Alert.new(title: t(".dropped.title"), variant: :warning) do %>
       <p><%= t(".dropped.body") %></p>
-      <% dropped.each do |override| %>
+      <% @dropped_overrides.each do |override| %>
         <%= render DS::Disclosure.new(title: t(".dropped.#{override[:key]}", default: override[:key].to_s.humanize), variant: :inline) do %>
           <pre class="mt-2 whitespace-pre-wrap font-mono text-xs text-secondary"><%= override[:text] %></pre>
         <% end %>
@@ -42,7 +41,7 @@
                          open: @family.errors[:ai_prompt_chat_system].present? } do %>
       <%= render "settings/ai_prompts/prompt_field",
                  form: form, family: @family,
-                 prompts: [ { key: :chat_system, label: t("settings.ai_prompts.show.main_system_prompt.label") } ],
+                 key: :chat_system, label: t("settings.ai_prompts.show.main_system_prompt.label"),
                  textarea_id: "family_ai_prompt_chat_system" %>
     <% end %>
 
@@ -53,7 +52,7 @@
                          open: @family.errors[:ai_prompt_categorize_transactions].present? } do %>
       <%= render "settings/ai_prompts/prompt_field",
                  form: form, family: @family,
-                 prompts: [ { key: :categorize_transactions, label: t("settings.ai_prompts.show.transaction_categorizer.label") } ],
+                 key: :categorize_transactions, label: t("settings.ai_prompts.show.transaction_categorizer.label"),
                  textarea_id: "family_ai_prompt_categorizer" %>
     <% end %>
 
@@ -64,7 +63,7 @@
                          open: @family.errors[:ai_prompt_detect_merchants].present? } do %>
       <%= render "settings/ai_prompts/prompt_field",
                  form: form, family: @family,
-                 prompts: [ { key: :detect_merchants, label: t("settings.ai_prompts.show.merchant_detector.label") } ],
+                 key: :detect_merchants, label: t("settings.ai_prompts.show.merchant_detector.label"),
                  textarea_id: "family_ai_prompt_merchant" %>
     <% end %>
 
@@ -75,7 +74,7 @@
                          open: @family.errors[:ai_prompt_insight_dig_in].present? } do %>
       <%= render "settings/ai_prompts/prompt_field",
                  form: form, family: @family,
-                 prompts: [ { key: :insight_dig_in, label: t("settings.ai_prompts.show.insight_dig_in.label") } ],
+                 key: :insight_dig_in, label: t("settings.ai_prompts.show.insight_dig_in.label"),
                  textarea_id: "family_ai_prompt_insight_dig_in" %>
     <% end %>
 

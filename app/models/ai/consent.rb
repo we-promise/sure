@@ -4,7 +4,7 @@ module Ai::Consent
   USER_SWITCH = %i[chat bill_setup].freeze
 
   # @return [Symbol, nil] the reason the feature is denied, or nil when it's allowed
-  def self.denial(feature, family:, user:)
+  def self.denial(feature, user:)
     return :user_disabled if USER_SWITCH.include?(Ai::Routes.consent_key(feature)) && !user&.ai_enabled
 
     nil

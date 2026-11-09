@@ -80,39 +80,39 @@ class Ai::Judgements::CategorizeTransactionTest < ActiveSupport::TestCase
   end
 
   test "batches a judge model by its batch size, with no prompt to cost" do
-    with_ai_routes(categorize: %w[jev/jev-latest]) do
-      requests = stub_ai(:categorize) { |request| request.states.keys.index_with { { category: "Salary" } } }
-      transactions = Array.new(30) { |i| { id: "t#{i}", description: "ROW #{i}" } }
+    use_ai_routes(categorize: %w[jev/jev-latest])
 
-      result = generation(transactions).call
+    requests = stub_ai(:categorize) { |request| request.states.keys.index_with { { category: "Salary" } } }
+    transactions = Array.new(30) { |i| { id: "t#{i}", description: "ROW #{i}" } }
 
-      assert_equal [ 25, 5 ], requests.map { _1.states.size }
-      assert_equal 30, result.value[:categorizations].size
-    end
+    result = generation(transactions).call
+
+    assert_equal [ 25, 5 ], requests.map { _1.states.size }
+    assert_equal 30, result.value[:categorizations].size
   end
 
   test "failover from a judge model to an LLM switches class, in the same shape" do
-    with_ai_routes(categorize: %w[jev/jev-latest openai/gpt-4.1-mini]) do
-      requests = stub_ai(:categorize) do |request|
-        raise Ai::Error::Upstream, "jev is down" if request.is_a?(Ai::Transport::Base::JudgeRequest)
+    use_ai_routes(categorize: %w[jev/jev-latest openai/gpt-4.1-mini])
 
-        { categorizations: [ { transaction_id: "txn_1", category_name: "Coffee Shops" }, { transaction_id: "txn_2", category_name: "Salary" } ] }
-      end
+    requests = stub_ai(:categorize) do |request|
+      raise Ai::Error::Upstream, "jev is down" if request.is_a?(Ai::Transport::Base::JudgeRequest)
 
-      result = generation.call
-
-      assert_equal [ Ai::Transport::Base::JudgeRequest, Ai::Transport::Base::Request ], requests.map(&:class)
-      assert_equal "openai", result.route.endpoint.name
-      assert_equal [ "jev" ], result.failed_over_from.map { _1.endpoint.name }
-      assert_equal %w[Coffee\ Shops Salary], result.value[:categorizations].map { _1[:category_name] }
+      { categorizations: [ { transaction_id: "txn_1", category_name: "Coffee Shops" }, { transaction_id: "txn_2", category_name: "Salary" } ] }
     end
+
+    result = generation.call
+
+    assert_equal [ Ai::Transport::Base::JudgeRequest, Ai::Transport::Base::Request ], requests.map(&:class)
+    assert_equal "openai", result.route.endpoint.name
+    assert_equal [ "jev" ], result.failed_over_from.map { _1.endpoint.name }
+    assert_equal %w[Coffee\ Shops Salary], result.value[:categorizations].map { _1[:category_name] }
   end
 
   test "a feature without a judgement can't be served by a judge model" do
-    with_ai_routes(detect_merchants: %w[jev/jev-latest]) do
-      result = AiTestGeneration.new(transactions: [ { id: "t1", description: "SHOP" } ], family: @family).call
+    use_ai_routes(detect_merchants: %w[jev/jev-latest])
 
-      assert_equal :capability_missing, result.availability.reason
-    end
+    result = AiTestGeneration.new(transactions: [ { id: "t1", description: "SHOP" } ], family: @family).call
+
+    assert_equal :capability_missing, result.availability.reason
   end
 end

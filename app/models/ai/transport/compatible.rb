@@ -24,14 +24,23 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       raise Ai::Error::InvalidOutput, "the models list has entries that aren't objects" unless response["data"].all?(Hash)
 
       ids = response["data"].filter_map { _1["id"] }
-      raise Ai::Error::ModelMissing, "#{model.name} isn't listed" unless ids.include?(model.name)
+      # Ollama lists `llama3` as `llama3:latest`.
+      unless ids.include?(model.name) || ids.include?("#{model.name}:latest")
+        raise Ai::Error::ModelMissing, "#{model.name} isn't listed"
+      end
 
       model.name
     end
 
     # One vector per text, with the model's dimensions. RubyLLM 2.1.1 doesn't check the row
     # count itself (2.2 does, RubyLLM #1297).
+    # RubyLLM 2.1.1's embed takes no headers (crmne/ruby_llm#1556), so an endpoint that needs
+    # them is refused rather than probed without them.
     def probe_embedding(model, timeout:)
+      if Ai::Transport::Http.headers(endpoint).any?
+        raise Ai::Error::Refused, "embedding requests can't carry the endpoint's static headers yet"
+      end
+
       embedding = mapping_errors do
         ruby_llm_context(timeout:).embed(Ai::Transport::Base::PROBE_EMBEDDING_INPUT, model: model.name, provider: ruby_llm_provider,
                                                                        assume_model_exists: true)

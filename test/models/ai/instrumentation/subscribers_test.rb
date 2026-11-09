@@ -60,6 +60,18 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
     ends.each { assert_equal({ name: "Netflix", notes: [ "billed with [REDACTED]" ] }, _1[:output]) }
   end
 
+  test "Langfuse masks a field named like a credential, whatever its value looks like" do
+    log = []
+    subscriber = Ai::Instrumentation::LangfuseSubscriber.new(client: FakeLangfuse.new(log))
+    payload = { feature: "bill_setup", call_id: "c1", route: { endpoint: "gateway", model: "m" },
+                request: { input: "hi", options: { api_key: "opaque", "Authorization" => "opaque too" } }, output: { text: "ok" } }
+
+    subscriber.call(event("generate.ai", payload))
+
+    assert_equal({ input: "hi", options: { api_key: "[REDACTED]", "Authorization" => "[REDACTED]" } },
+                 log.find { _1.first == :trace }.last[:input])
+  end
+
   test "Langfuse content is scrubbed of the endpoint's own secrets, whatever their shape" do
     log = []
     subscriber = Ai::Instrumentation::LangfuseSubscriber.new(client: FakeLangfuse.new(log))

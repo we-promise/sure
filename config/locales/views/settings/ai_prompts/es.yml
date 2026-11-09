@@ -1,0 +1,16 @@
+---
+es:
+  settings:
+    ai_prompts:
+      show:
+        page_title: Indicaciones de IA
+        disable_ai: Desactivar Asistente de IA
+        main_system_prompt:
+          title: Indicaciones del Sistema Principal
+          subtitle: Instrucciones principales que definen cómo se comporta el asistente de IA en todas las conversaciones de chat
+        transaction_categorizer:
+          title: Categorizador de Transacciones
+          subtitle: La IA categoriza automáticamente tus transacciones según tus categorías definidas
+        merchant_detector:
+          title: Detector de Comerciantes
+          subtitle: La IA identifica y enriquece los datos de transacciones con información de comerciantes

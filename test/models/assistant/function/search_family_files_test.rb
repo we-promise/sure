@@ -42,14 +42,15 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal "no_documents", result[:error]
   end
 
-  test "returns provider_not_configured when document search is unavailable" do
+  test "answers with the router's reason when document search is unavailable" do
     @user.family.update!(vector_store_id: "vs_test123")
     use_no_ai
 
     result = @function.call("query" => "tax return")
 
     assert_equal false, result[:success]
-    assert_equal "provider_not_configured", result[:error]
+    assert_equal "ai_unavailable", result[:error]
+    assert_equal "not_configured", result[:reason]
   end
 
   test "returns search results on success" do

@@ -1,19 +1,14 @@
-# RubyLLM's `config.instrumenter` on every context Sure builds (a public setting). RubyLLM runs
-# each HTTP request inside `instrument("request.ruby_llm")`, so this is the one place every
-# request passes, streamed or not: generations, probes, embeddings and a chat tool's nested call.
-#
-# It enforces the attempt budget: a request that would start after the call's deadline raises
-# Ai::Error::Timeout instead of being sent.
-#
-# When a request fails, it puts the error, mapped and scrubbed by the transport, on the
-# `request.ruby_llm` payload as `:ai_error` before the event finishes. RubyLLM has written the
-# request's failed usage row by then, with no error, so UsageSubscriber adds this one to it and
-# each retry's row shows its own cause.
+# RubyLLM's `config.instrumenter` on every context Sure builds. RubyLLM wraps each HTTP request
+# in `instrument("request.ruby_llm")`, so every request passes here: a request that would start
+# after the call's deadline isn't sent, and a failed request's mapped, scrubbed error goes on the
+# payload as `:ai_error`, which UsageSubscriber adds to that request's usage row.
 class Ai::Transport::Instrumenter
-  # map_error: turns a raised error into the Ai::Error the transport raises, scrubbed.
-  def initialize(delegate = ActiveSupport::Notifications, map_error: ->(error) { error })
+  # map_error: turns a raised error into the Ai::Error the transport raises, scrubbed, or nil.
+  # scrub: removes the endpoint's secrets from an error that has no Ai::Error.
+  def initialize(delegate = ActiveSupport::Notifications, map_error: ->(error) { error }, scrub: ->(text) { text })
     @delegate = delegate
     @map_error = map_error
+    @scrub = scrub
   end
 
   def instrument(name, payload = {}, &block)
@@ -40,7 +35,9 @@ class Ai::Transport::Instrumenter
     end
 
     def failure_details(error)
-      mapped = @map_error.call(error) || error
+      mapped = @map_error.call(error)
+      return { error: @scrub.call(error.message), error_class: error.class.name } if mapped.nil?
+
       { error: mapped.message, error_class: mapped.class.name, http_status_code: mapped.try(:status) }.compact
     rescue StandardError
       nil

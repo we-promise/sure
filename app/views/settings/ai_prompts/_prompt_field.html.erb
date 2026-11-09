@@ -1,48 +1,29 @@
-<%# locals: form:, family:, prompts: [{ key:, label: (single-prompt only) }], textarea_id:
-    Shared textarea for provider prompts. Pre-fills with the family override
-    or built-in default. Saving an unedited default acts as a reset in the controller.
-    A format warning names OpenAI: only the simplified prompt for OpenAI-compatible servers carries a wrapper key. %>
-<% multi = prompts.size > 1 %>
-<% initial = prompts.find { |p| family.errors[:"ai_prompt_#{p[:key]}"].present? } || prompts.first %>
-<% initial_value = family.ai_prompt(initial[:key]) || family.ai_prompt_default(initial[:key]) %>
+<%# locals: form:, family:, key:, label:, textarea_id:
+    The textarea for one prompt override. Pre-fills with the family override
+    or built-in default. Saving an unedited default acts as a reset in the controller. %>
+<% override = family.ai_prompt(key) %>
+<% initial_value = override || family.ai_prompt_default(key) %>
 <% initial_length = initial_value.to_s.length %>
 <% over_limit = initial_length > Family::AiPromptable::MAX_LENGTH %>
-<% provider_label = ->(key) { key.to_s.end_with?("anthropic") ? t(".provider_anthropic") : t(".provider_openai") } %>
 <% reset_confirm = { title: t(".reset_confirm_title"), body: t(".reset_confirm_body") }.to_json %>
 <div class="space-y-2"
      data-controller="ai-prompt-editor"
      data-ai-prompt-editor-confirm-dialog-outlet="#confirm-dialog"
-     data-action="dropdown:select->ai-prompt-editor#change"
      data-ai-prompt-editor-reset-confirm-value="<%= reset_confirm %>"
      data-ai-prompt-editor-status-custom-value="<%= t(".status_custom") %>"
      data-ai-prompt-editor-status-default-value="<%= t(".status_default") %>"
      data-ai-prompt-editor-max-length-value="<%= Family::AiPromptable::MAX_LENGTH %>">
-  <% prompts.each do |prompt| %>
-    <%= form.hidden_field :"ai_prompt_#{prompt[:key]}",
-                          value: family.ai_prompt(prompt[:key]),
-                          data: { "ai-prompt-editor-target": "prompt",
-                                  key: prompt[:key],
-                                  default: family.ai_prompt_default(prompt[:key]) } %>
-  <% end %>
+  <%= form.hidden_field :"ai_prompt_#{key}",
+                        value: override,
+                        data: { "ai-prompt-editor-target": "prompt",
+                                key: key,
+                                default: family.ai_prompt_default(key) } %>
 
-  <div class="flex items-end <%= multi ? "justify-between gap-3" : "justify-end" %>">
-    <% if multi %>
-      <div class="w-48 sm:w-56">
-        <%= render DS::Select.new(
-          form: form,
-          method: :"#{textarea_id}_provider",
-          items: prompts.map { |prompt| { value: prompt[:key].to_s, label: provider_label.call(prompt[:key]) } },
-          selected: initial[:key].to_s,
-          label: t(".provider_label"),
-          html_options: { data: { "ai-prompt-editor-target": "provider" } }
-        ) %>
-      </div>
-    <% end %>
-
+  <div class="flex items-end justify-end">
     <%= render DS::Button.new(
       text: t(".reset"),
       variant: :primary,
-      disabled: family.ai_prompt(initial[:key]).blank?,
+      disabled: override.blank?,
       data: {
         "ai-prompt-editor-target": "reset",
         action: "ai-prompt-editor#reset"
@@ -52,7 +33,7 @@
 
   <div class="form-field">
     <div class="form-field__body">
-      <label for="<%= textarea_id %>" class="form-field__label"><%= multi ? t(".prompt_label") : initial[:label] %></label>
+      <label for="<%= textarea_id %>" class="form-field__label"><%= label %></label>
       <textarea id="<%= textarea_id %>"
                 rows="12"
                 spellcheck="false"
@@ -64,7 +45,7 @@
 
   <div class="flex items-center justify-between text-xs mt-1">
     <p class="text-secondary" data-ai-prompt-editor-target="status">
-      <%= family.ai_prompt(initial[:key]).present? ? t(".status_custom") : t(".status_default") %>
+      <%= override.present? ? t(".status_custom") : t(".status_default") %>
     </p>
     <p data-ai-prompt-editor-target="counter" class="tabular-nums font-mono <%= over_limit ? "text-destructive" : "text-secondary" %>">
       <%= number_with_delimiter(initial_length) %> / <%= number_with_delimiter(Family::AiPromptable::MAX_LENGTH) %>
@@ -72,14 +53,12 @@
   </div>
 
   <%# Server-rendered so it persists while the override does, rather than
-      vanishing with a one-shot flash. Names the provider because one textarea
-      is shared between them. %>
-  <% prompts.select { |prompt| family.ai_prompt_format_risk?(prompt[:key]) }.each do |prompt| %>
+      vanishing with a one-shot flash. Only the simplified prompt for
+      OpenAI-compatible servers carries a wrapper key, so it names OpenAI. %>
+  <% if family.ai_prompt_format_risk?(key) %>
     <p class="flex items-start gap-1.5 text-xs text-warning">
       <%= icon "circle-alert", size: "sm", class: "!w-3.5 !h-3.5 text-warning shrink-0 mt-0.5" %>
-      <span><%= t(".format_risk",
-                  provider: provider_label.call(prompt[:key]),
-                  key: Family::AiPromptable::WRAPPER_KEYS.fetch(prompt[:key].to_sym)) %></span>
+      <span><%= t(".format_risk", provider: t(".provider_openai"), key: Family::AiPromptable::WRAPPER_KEYS.fetch(key.to_sym)) %></span>
     </p>
   <% end %>
 </div>

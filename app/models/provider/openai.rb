@@ -70,6 +70,9 @@ class Provider::Openai < Provider
     {}
   end
 
+  # The model a call uses when it doesn't name one.
+  attr_reader :default_model
+
   # Builds a client that uses the effective request timeout for every OpenAI call.
   # Static extra headers from OPENAI_EXTRA_HEADERS are attached at construction;
   # session-valued headers are withheld for per-request resolution.

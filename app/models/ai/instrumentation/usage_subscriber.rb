@@ -1,12 +1,7 @@
-# One llm_usages row per request. RubyLLM publishes `usage.ruby_llm` for every
-# HTTP attempt, retries and failures included, in the caller's process, so this reads the
-# family from the usage owner and the call from the workflow Ai::CallContext opened:
-# `workflow_id` is the call id, and `workflow_metadata` names the feature and route.
-#
-# A failed request's usage event carries no error. Its `request.ruby_llm` event, which finishes
-# after the row is written, carries the transport's error (Ai::Transport::Instrumenter), and the
-# row takes it. The call's `.ai` event, which finishes last, adds the call's error to any failed
-# row still without one.
+# One llm_usages row per HTTP request, retries and failures included, from RubyLLM's
+# `usage.ruby_llm`: the family is the usage owner and the call is the workflow Ai::CallContext
+# opened. That event carries no error, so a failed row takes it from the `request.ruby_llm` event
+# that finishes next, or else from the call's `.ai` event, which finishes last.
 #
 # Requests outside a call context with a family (health probes, eval runs) write nothing.
 class Ai::Instrumentation::UsageSubscriber
@@ -23,9 +18,21 @@ class Ai::Instrumentation::UsageSubscriber
   end
 
   private
-    def record_request(payload)
-      family = payload[:owner]
+    # RubyLLM 2.1.1 keeps the usage owner and workflow in Thread.current, so a request from a thread
+    # started inside a call has neither (2.2 moves them to fiber storage, RubyLLM #1327). Sure's
+    # own call context is in fiber storage, which threads inherit, so it fills the gap.
+    def owner_and_call(payload)
       call = (payload[:workflow_metadata] || {}).to_h.stringify_keys
+      return [ payload[:owner], call ] if call["call_id"].present?
+
+      context = Ai::CallContext.current
+      return [ payload[:owner], call ] if context.nil?
+
+      [ payload[:owner] || (Family.find_by(id: context.family_id) if context.family_id), context.metadata.stringify_keys ]
+    end
+
+    def record_request(payload)
+      family, call = owner_and_call(payload)
       return unless family.is_a?(Family) && call["call_id"].present?
 
       status = STATUSES.fetch(payload[:status], nil)
@@ -69,7 +76,8 @@ class Ai::Instrumentation::UsageSubscriber
 
     # The request that just failed is the call's newest failed row without an error.
     def record_request_error(payload)
-      call_id = (payload[:workflow_metadata] || {}).to_h.stringify_keys["call_id"]
+      _family, call = owner_and_call(payload)
+      call_id = call["call_id"]
       return if payload[:ai_error].blank? || call_id.blank?
 
       LlmUsage.where(id: unexplained_failures(call_id).order(created_at: :desc).limit(1).select(:id))

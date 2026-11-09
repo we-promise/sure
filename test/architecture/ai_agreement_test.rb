@@ -69,7 +69,7 @@ class AiAgreementTest < ActionDispatch::IntegrationTest
 
       offered = Rule::Registry::TransactionResource.new(Rule.new(family: @family, resource_type: "transaction")).action_executors.map(&:key)
       tools = Assistant.function_classes(@user)
-      diagnostic = Assistant::Function::GetUncategorizedTransactions.new(@user).send(:enrichment_diagnostic)
+      diagnostic = Assistant::Function::GetUncategorizedTransactions.new(@user).call.fetch(:enrichment)
 
       {
         enhance_button: [ :enhance_merchants, enhance_shown ],

@@ -9,9 +9,11 @@
 #      coerce the answer (Ai::Schema). On a `judge` model, the feature's judgement (`judged_by`)
 #      answers the same batch instead.
 #   4. On a failover error (Ai::DownMarks::FAILOVER), mark it down and take the next route. On
-#      InvalidOutput, escalate to the next route. On ContextTooLong or an answer cut at the
-#      output limit, halve the batch on the same route; a single item that still can't fit
-#      escalates. Nothing else is retried here; the transport has retried 429s and 5xxs.
+#      InvalidOutput, escalate to the next route; when every route fails it, halve the batch on
+#      the first route (BISECT_DEPTH times at most) and skip what still fails. On ContextTooLong
+#      or an answer cut at the output limit, halve the batch on the same route; a single item
+#      that still can't fit escalates. Skipped items are logged. Nothing else is retried here;
+#      the transport has retried 429s and 5xxs.
 #   5. Return an Ai::Result with the route that answered and the items not reached. When the
 #      feature declares `shadow` and the family's rate samples this call, enqueue Ai::ShadowJob
 #      with the items actually sent.
@@ -20,9 +22,14 @@
 # so other work takes turns); plain `call` runs them all and merges the answers. `call!` returns the value or
 # raises the Ai::Error, for jobs.
 class Ai::Generation
+  # How many times a batch whose answer is unusable on every route is halved to find the
+  # transactions that break it.
+  BISECT_DEPTH = 2
+
   class_attribute :feature_key, :prompt_key, :static_schema, :schema_label, :batch_key, :merge_key, :merge_by,
-                  :blank_item_check, :key_aliases, :required_keys, :judgement_class, :shadow_compare,
-                  :shadow_subject, instance_writer: false
+                  :blank_item_check, :judgement_class, :shadow_compare, :shadow_subject, instance_writer: false
+  class_attribute :key_aliases, default: {}, instance_writer: false
+  class_attribute :required_keys, default: [], instance_writer: false
 
   class << self
     def feature(key) = self.feature_key = key.to_sym
@@ -125,7 +132,7 @@ class Ai::Generation
   end
 
   def coerce(json)
-    Ai::Schema.coerce(json, schema, aliases: key_aliases || {}, match: matchers, required: required_keys || [])
+    Ai::Schema.coerce(json, schema, aliases: key_aliases, match: matchers, required: required_keys)
   end
 
   private
@@ -136,7 +143,7 @@ class Ai::Generation
     def call_single(routes, cancelled:)
       raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
 
-      route, value = on_routes(routes, nil).first
+      route, value = on_routes(routes, nil).first.first
       result(value:, route:)
     end
 
@@ -151,21 +158,24 @@ class Ai::Generation
 
         route = routes.find { !Ai::DownMarks.down?(_1) } || routes.first
         slice = Ai::Batch.first_slice(remaining, model: route.model, fixed_tokens: fixed_tokens(route))
-        on_routes(routes, slice).each do |answered_by, value|
+        answers, unanswered = on_routes(routes, slice)
+        answers.each do |answered_by, value|
           served = answered_by
           answered.concat(Array(value[merge_key]))
         end
-        @sent.concat(slice)
-        remaining -= slice
+        @sent.concat(slice - unanswered)
+        remaining = unanswered + (remaining - slice)
         done += 1
+        break if unanswered.any?   # the routes failed over; a later job retries these
       end
 
       result(value: { merge_key => answered.index_by { _1[merge_by] }.values }, route: served, remaining:)
     end
 
     # Runs `slice` (nil for a feature without items) down the routes: failover and escalation
-    # move on, an overflow is split on the same route. Returns [[route, value], ...], one pair
-    # per piece the slice was split into; items no route could fit are left out.
+    # move on, an overflow is split on the same route. Returns [[[route, value], ...], unanswered]:
+    # one pair per piece the slice was split into, and the items to retry later because the
+    # routes failed over after answering part. Items no route could fit are left out.
     def on_routes(routes, slice)
       pending = slice
       answers = []
@@ -177,7 +187,7 @@ class Ai::Generation
         begin
           done, pending = split_on(route, pending)
           answers.concat(done.map { [ route, _1 ] })
-          return answers if pending.empty?
+          return [ answers, [] ] if pending.empty?
         rescue *Ai::DownMarks::FAILOVER => error
           Ai::DownMarks.mark(route, error)
           @failed_over_from << route
@@ -187,9 +197,22 @@ class Ai::Generation
         end
       end
 
-      # Part of the slice was answered and the rest fits no route: keep the answers, and leave the
-      # rest unanswered rather than lose both.
-      return answers if answers.any?
+      # Every route found the answer unusable: one odd transaction can derail a model, so look
+      # for it by halving on the first route, rather than lose the whole batch.
+      if last_error.is_a?(Ai::Error::InvalidOutput) && pending && pending.size > 1 && (route = routes.find { !Ai::DownMarks.down?(_1) })
+        done, pending = bisect(route, pending)
+        answers.concat(done.map { [ route, _1 ] })
+      end
+
+      # Part of the slice was answered: keep the answers. The rest is retried later when the
+      # routes failed over (a timeout, an outage), and left unanswered when it fits no route or
+      # breaks every answer.
+      if answers.any?
+        return [ answers, pending ] if Ai::DownMarks::FAILOVER.any? { last_error.is_a?(_1) }
+
+        log_unfit(pending)
+        return [ answers, [] ]
+      end
 
       raise last_error || Ai::Error::Unreachable.new("every route for #{feature_key} is marked down")
     end
@@ -211,6 +234,27 @@ class Ai::Generation
       raise Ai::Error::ContextTooLong, "no item of the batch fits #{route.model.name}" if values.empty?
 
       [ values, unfit ]
+    end
+
+    # Answers what it can of `items` on one route by halving them at most BISECT_DEPTH times.
+    # Returns [values, items left unanswered]. A model that answers nothing usable stops at the
+    # cap, so it costs a few calls, not one per item.
+    def bisect(route, items, depth = 1)
+      Ai::Batch.halves(items).each_with_object([ [], [] ]) do |half, (done, left)|
+        answered, rest = split_on(route, half)
+        done.concat(answered)
+        left.concat(rest)
+      rescue Ai::Error::InvalidOutput
+        if depth < BISECT_DEPTH && half.size > 1
+          answered, rest = bisect(route, half, depth + 1)
+          done.concat(answered)
+          left.concat(rest)
+        else
+          left.concat(half)
+        end
+      rescue Ai::Error::ContextTooLong
+        left.concat(half)
+      end
     end
 
     def run(route, slice)
@@ -235,6 +279,14 @@ class Ai::Generation
     end
 
     def add_usage(usage) = @usage = [ @usage, usage ].compact.reduce(:+)
+
+    # Ids only: the items themselves hold the family's data.
+    def log_unfit(items)
+      DebugLogEntry.capture(
+        category: "ai_generation", level: "warn", message: "Items too large for every route were left unanswered",
+        source: self.class.name, family:, metadata: { feature: feature_key.to_s, item_ids: items.map { _1[:id] } }
+      )
+    end
 
     # The tokens the prompt takes before any item: rendered once per route with no items. A judge
     # model has no prompt.

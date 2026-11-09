@@ -42,10 +42,7 @@ class Api::V1::RuleRunsController < Api::V1::BaseController
     end
 
     def rule_runs_scope
-      RuleRun
-        .joins(:rule)
-        .where(rules: { family_id: current_resource_owner.family.id })
-        .includes(:rule)
+      RuleRun.for_family(current_resource_owner.family).includes(:rule)
     end
 
     def apply_filters(query)
