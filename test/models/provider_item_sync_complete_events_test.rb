@@ -49,6 +49,7 @@ class ProviderItemSyncCompleteEventsTest < ActiveSupport::TestCase
     "coinbase_item" => { api_key: "key", api_secret: "secret" },
     "coinstats_item" => { api_key: "key" },
     "sophtron_item" => { user_id: "user", access_key: "key" },
+    "tricount_item" => { sharing_tokens: "tTestToken123" },
     "up_item" => { access_token: "token" }
   }.each do |provider, attributes|
     test "a #{provider} sync completion sends the toast, not the card" do
