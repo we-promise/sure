@@ -62,7 +62,7 @@ class MonarchImport::Exports
     def parse_transactions(csv)
       parse_csv(csv, TRANSACTION_COLUMNS, :transactions).map do |row|
         {
-          id: row["Id"].to_s,
+          id: row["Id"].to_s.strip.presence || raise(Error, I18n.t("activerecord.errors.models.monarch_import.blank_transaction_id")),
           date: parse_date(row["Date"]),
           account: parse_account(row["Account"]),
           amount: parse_amount(row["Amount"]),

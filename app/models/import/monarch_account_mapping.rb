@@ -11,8 +11,14 @@ class Import::MonarchAccountMapping < Import::Mapping
   validate :target_is_a_manual_family_account
   validate :target_takes_one_monarch_account
 
+  # Manual accounts without holdings or trades: the import reproduces
+  # balances from transactions and valuations only, so it can't account for
+  # holdings.
   def self.target_accounts_for(import)
-    import.family.accounts.listable_manual.alphabetically
+    import.family.accounts.listable_manual
+      .where.not(id: Holding.select(:account_id))
+      .where.not(id: Entry.where(entryable_type: "Trade").select(:account_id))
+      .alphabetically
   end
 
   def choices

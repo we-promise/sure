@@ -167,6 +167,37 @@ class MonarchImport::ConverterTest < ActiveSupport::TestCase
     assert_equal 1, result.overlapping_transactions["Checking"]
   end
 
+  test "a source that only resembles the tool's isn't taken as one" do
+    account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
+    account.entries.create!(date: Date.new(2024, 1, 3), amount: 25, currency: "USD", name: "Other",
+      source: "sure-import-session-abc", external_id: "Transaction:monarch-transaction:1", entryable: Transaction.new)
+
+    assert record_ids(convert("Checking" => { target: account }), "Transaction").include?("monarch-transaction:1")
+  end
+
+  test "an entry matched by Monarch ID isn't matched again by date and amount" do
+    account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
+    account.entries.create!(date: Date.new(2024, 1, 2), amount: 10, currency: "USD", name: "Grocer",
+      entryable: Transaction.new(extra: { "monarch" => { "transaction_id" => "1" } }))
+    @exports = MonarchImport::Exports.new(
+      balances_csv: file_fixture("imports/monarch_balances.csv").read,
+      transactions_csv: file_fixture("imports/monarch_transactions.csv").read +
+        "2024-01-02,Grocer,Groceries,Checking,GROCER #12,,-10.00,,Me,false,,,false,6\n"
+    )
+    result = convert("Checking" => { target: account })
+
+    assert_not record_ids(result, "Transaction").include?("monarch-transaction:1")
+    assert record_ids(result, "Transaction").include?("monarch-transaction:6")
+  end
+
+  test "a new account's balance is today's, with later valuations still imported" do
+    @exports = MonarchImport::Exports.new(balances_csv: "Date,Balance,Account\n2024-01-01,100.00,Checking\n2024-01-10,200.00,Checking\n")
+    result = convert(today: Date.new(2024, 1, 4))
+
+    assert_equal "100.00", records_of(result, "Account")["monarch-account:Checking"]["balance"]
+    assert records_of(result, "Valuation").key?("monarch-valuation:Checking:2024-01-10")
+  end
+
   test "transactions from the Monarch to Sure tool don't count as unmatched" do
     account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
     account.entries.create!(date: Date.new(2024, 1, 3), amount: 25, currency: "USD", name: "Older export",
@@ -216,6 +247,10 @@ class MonarchImport::ConverterTest < ActiveSupport::TestCase
 
     def records(type, overrides = {}, **options)
       convert(overrides, **options).records.select { |r| r["type"] == type }.to_h { |r| [ r["data"]["id"], r["data"] ] }
+    end
+
+    def records_of(result, type)
+      result.records.select { |r| r["type"] == type }.to_h { |r| [ r["data"]["id"], r["data"] ] }
     end
 
     def record_ids(result, type)

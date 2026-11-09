@@ -882,6 +882,15 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_not response_data.key?("errors")
   end
 
+  test "should reject Monarch imports in preflight" do
+    post preflight_api_v1_imports_url,
+         params: { type: "MonarchImport", raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test Transaction" },
+         headers: api_headers(@read_only_api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "invalid_import_type", JSON.parse(response.body)["error"]
+  end
+
   test "should reject import types excluded from preflight" do
     assert_no_difference("Import.count") do
       post preflight_api_v1_imports_url,

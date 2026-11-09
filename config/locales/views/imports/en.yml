@@ -48,7 +48,7 @@ en:
         title: Check each Monarch account
         description: Choose where each account goes, what type it is, and what to bring over.
         help_title: How each choice works
-        help_account: "Import into a new account, named as you like, or into one of your manual accounts. An existing account keeps its name, type and own entries, and its opening balance moves to the start of the Monarch history if it falls inside it."
+        help_account: "Import into a new account, named as you like, or into one of your manual accounts. An existing account keeps its name, type and own entries, and its opening balance moves to the start of the Monarch history if it falls inside it. Its status follows the Status you choose. Accounts with holdings or trades can't be imported into."
         help_closed: "Switch Status to Closed for accounts you've closed. They drop to zero the day after their last Monarch balance and are hidden from current balances, but stay in your net worth history. Accounts marked inactive had no activity in the last %{days} days, which doesn't always mean they're closed."
         help_transactions: Turn transactions off to import only an account's balance history.
         help_balance: "Balance today starts at Monarch's latest balance. Change it if that's out of date, and it's recorded as today's balance. Enter amounts owed on cards and loans as positive numbers."

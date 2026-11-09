@@ -10,8 +10,10 @@ class MonarchImport < Import
   has_one_attached :balances_file, dependent: :purge_later
 
   # Deleting a published import removes its entries, so it also has to put
-  # back what publishing changed in accounts it didn't create.
-  before_destroy :restore_existing_accounts!, if: :complete?
+  # back what publishing changed in accounts it didn't create. That includes
+  # a failed import whose data committed before the failure.
+  before_destroy :restore_existing_accounts!, if: :changed_existing_accounts?
+  after_destroy_commit -> { family.sync_later }, unless: :pending?
 
   def requires_csv_workflow?
     false
@@ -131,22 +133,60 @@ class MonarchImport < Import
     cleaned? && account_mappings.any? { |mapping| mapping.to_converter_choice.include }
   end
 
-  # Moving an existing account's opening balance is worth publishing even
-  # when no new records come with it.
+  def publishable_from_validation_stats?(invalid_rows_count:)
+    super && publishable?
+  end
+
+  # Moving an existing account's opening balance or changing its status is
+  # worth publishing even when no new records come with it.
   def changes_existing_records?
-    configured? && conversion.opening_balance_moves.any?
+    configured? && (conversion.opening_balance_moves.any? || target_status_changes.any?)
   end
 
-  # A move-only import commits no entries or accounts, but records its moves
-  # in the same transaction.
+  # An import that only changes existing accounts commits no entries or
+  # accounts, but records its changes in the same transaction.
   def data_committed?
-    super || summary["moved_opening_balances"].present?
+    super || changed_existing_accounts?
   end
 
-  # Existing accounts it imports into, which the publisher must be able to
-  # write to.
+  # A lost job may have died after its transaction committed. Then the import
+  # is done, as Import.clean decides, and failing it would let a retry import
+  # everything again.
+  def force_fail!(error_message = self.class.lost_error_message)
+    completed = with_lock do
+      next false unless importing? && presumed_lost? && data_committed?
+
+      update!(status: :complete, error: nil)
+    end
+    return super unless completed
+
+    family.sync_later
+    true
+  end
+
+  # Existing accounts the publisher must be able to write to: the ones it
+  # imports into, and the ones it has already changed.
   def preexisting_target_account_ids
-    account_mappings.where(mappable_type: "Account").where.not(mappable_id: nil).pluck(:mappable_id)
+    included = account_mappings.includes(:mappable).select { |mapping| mapping.target && mapping.to_converter_choice.include }
+    changed = Array(summary["moved_opening_balances"]).map { |moved| moved["account_id"] } +
+      Array(summary["status_changes"]).map { |change| change["account_id"] }
+    (included.map { |mapping| mapping.target.id } + changed.compact).uniq
+  end
+
+  # Existing accounts whose status follows the Monarch account's: Closed
+  # disables an active account, and Open enables a disabled one.
+  def target_status_changes
+    account_mappings.includes(:mappable).filter_map do |mapping|
+      account = mapping.target
+      choice = mapping.to_converter_choice
+      next unless account && choice.include
+
+      if choice.closed && account.may_disable?
+        [ account, "disabled" ]
+      elsif !choice.closed && account.disabled?
+        [ account, "active" ]
+      end
+    end
   end
 
   def conversion
@@ -197,8 +237,8 @@ class MonarchImport < Import
     transaction do
       move_opening_balances!(result.opening_balance_moves)
 
+      change_target_statuses!
       included_targets = account_mappings.includes(:mappable).select { |mapping| mapping.target && mapping.to_converter_choice.include }
-      disable_closed_targets!(included_targets)
       targets = included_targets.to_h { |mapping| [ MonarchImport::Converter.source_id(mapping.key), mapping.target ] }
       imported = Family::DataImporter.new(family, ndjson(result.records), import: self, account_targets: targets).import!
 
@@ -213,51 +253,82 @@ class MonarchImport < Import
       records.map { |record| record.to_json }.join("\n")
     end
 
+    def changed_existing_accounts?
+      summary["moved_opening_balances"].present? || summary["status_changes"].present?
+    end
+
     # Opening balances moved for imported-into accounts, saved with their
-    # values before and after the import so reverting can put them back.
+    # values before and after the import so reverting can put them back. The
+    # moved balance is in the account's currency, so the entry takes it too.
     def move_opening_balances!(moves)
       moved = moves.map do |move|
-        before = { "date" => move.entry.date.iso8601, "amount" => move.entry.amount.to_s }
-        move.entry.update!(date: move.date, amount: move.balance)
-        after = { "date" => move.entry.date.iso8601, "amount" => move.entry.amount.to_s }
-        { "entry_id" => move.entry.id, "account" => move.account.name, "before" => before, "after" => after }
+        entry = move.entry
+        before = opening_values(entry)
+        # Locked, and checked against what the conversion read, so an edit
+        # made since then isn't overwritten.
+        entry.lock!
+        raise I18n.t("activerecord.errors.models.monarch_import.opening_balance_changed", account: move.account.name) if opening_values(entry) != before
+
+        entry.update!(date: move.date, amount: move.balance, currency: move.account.currency)
+        { "entry_id" => entry.id, "account_id" => move.account.id, "account" => move.account.name,
+          "before" => before, "after" => opening_values(entry) }
       end
       update!(summary: summary.except("opening_balances_kept").merge("moved_opening_balances" => moved))
     end
 
-    # Existing accounts marked Closed are disabled like new closed ones, and
-    # saved so reverting can enable them again.
-    def disable_closed_targets!(mappings)
-      disabled = mappings.select { |mapping| mapping.to_converter_choice.closed && mapping.target.may_disable? }.map do |mapping|
-        mapping.target.disable!
-        mapping.target.id
+    def opening_values(entry)
+      { "date" => entry.date.iso8601, "amount" => entry.amount.to_s, "currency" => entry.currency }
+    end
+
+    # Saved so reverting can undo each change while it is still the latest.
+    def change_target_statuses!
+      changes = target_status_changes.map do |account, status|
+        previous_disabled_at = account.disabled_at
+        status == "disabled" ? account.disable! : account.enable!
+        { "account_id" => account.id, "status" => status, "disabled_at" => account.disabled_at&.iso8601(6),
+          "previous_disabled_at" => previous_disabled_at&.iso8601(6) }
       end
-      update!(summary: summary.merge("disabled_account_ids" => disabled))
+      update!(summary: summary.merge("status_changes" => changes))
     end
 
     def revert_derived_state!
       kept = restore_existing_accounts!
-      update!(summary: summary.except("moved_opening_balances", "disabled_account_ids", "records").merge("opening_balances_kept" => kept))
+      update!(summary: summary.except("moved_opening_balances", "status_changes", "records").merge("opening_balances_kept" => kept))
     end
 
-    # Enables the accounts it disabled and puts moved opening balances back,
-    # unless they were edited after the import: then the edit is kept, since
-    # restoring would undo it. Returns the names of accounts whose edit was
-    # kept.
+    # Undoes status changes and puts moved opening balances back, unless they
+    # were changed again after the import: then the later change is kept,
+    # since restoring would undo it. Returns the names of accounts whose
+    # opening balance edit was kept.
     def restore_existing_accounts!
-      family.accounts.disabled.where(id: Array(summary["disabled_account_ids"])).find_each(&:enable!)
+      restore_target_statuses!
 
       Array(summary["moved_opening_balances"]).filter_map do |moved|
         # Locked, so an edit can't land between the comparison and the restore.
         entry = family.entries.lock.find_by(id: moved["entry_id"])
         next if entry.nil?
 
-        current = { "date" => entry.date.iso8601, "amount" => entry.amount.to_s }
-        if current == moved["after"]
-          entry.update!(date: moved["before"]["date"], amount: moved["before"]["amount"])
+        if opening_values(entry).slice(*moved["after"].keys) == moved["after"]
+          entry.update!(moved["before"])
           nil
         else
           moved["account"]
+        end
+      end
+    end
+
+    # An enable clears disabled_at, so a disabled account that was reopened
+    # and closed again shows a different disabled_at and stays as it is.
+    def restore_target_statuses!
+      Array(summary["status_changes"]).each do |change|
+        account = family.accounts.lock.find_by(id: change["account_id"])
+        next if account.nil? || account.status != change["status"]
+
+        if change["status"] == "disabled"
+          account.enable! if account.disabled_at&.iso8601(6) == change["disabled_at"]
+        else
+          account.disable!
+          account.update!(disabled_at: change["previous_disabled_at"]) if change["previous_disabled_at"]
         end
       end
     end

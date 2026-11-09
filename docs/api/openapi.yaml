@@ -2300,12 +2300,9 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
-          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
-          - PdfImport
-          - QifImport
           - SureImport
         valid:
           type: boolean

@@ -60,6 +60,14 @@ class MonarchImport::ExportsTest < ActiveSupport::TestCase
     assert_match "no account name", error.message
   end
 
+  test "rejects transactions without an Id" do
+    transactions = "Date,Merchant,Category,Account,Amount,Id\n2024-01-02,Grocer,Groceries,Checking,-10.00, \n"
+    error = assert_raises(MonarchImport::Exports::Error) do
+      MonarchImport::Exports.new(balances_csv: file_fixture("imports/monarch_balances.csv").read, transactions_csv: transactions)
+    end
+    assert_match "no Id", error.message
+  end
+
   test "rejects exports without any accounts" do
     error = assert_raises(MonarchImport::Exports::Error) do
       MonarchImport::Exports.new(balances_csv: "Date,Balance,Account\n")

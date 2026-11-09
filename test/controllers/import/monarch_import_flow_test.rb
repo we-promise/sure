@@ -82,10 +82,13 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
 
   test "saving with no accounts submitted changes nothing" do
     upload_exports
+    checking = @import.account_mappings.find_by!(key: "Checking")
+    checking.update!(choices: { "name" => "Everyday", "transactions" => false })
 
     patch import_configuration_url(@import), params: { other: "1" }
 
     assert_redirected_to import_url(@import)
+    assert_equal [ "Everyday", false ], checking.reload.choices.values_at("name", "transactions")
   end
 
   test "the confirm step goes back to the accounts step" do

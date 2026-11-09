@@ -1261,7 +1261,7 @@ RSpec.configure do |config|
             type: :object,
             required: %w[type valid content stats errors warnings],
             properties: {
-              type: { type: :string, enum: Import::TYPES },
+              type: { type: :string, enum: Import::Preflight::IMPORT_TYPES },
               valid: { type: :boolean },
               content: { '$ref' => '#/components/schemas/ImportPreflightContent' },
               stats: { '$ref' => '#/components/schemas/ImportPreflightStats' },

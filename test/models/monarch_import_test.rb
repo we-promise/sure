@@ -62,13 +62,87 @@ class MonarchImportTest < ActiveSupport::TestCase
     account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
     account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "USD", name: "Opening balance",
       entryable: Valuation.new(kind: "opening_anchor"))
+    @import.attach_exports!(balances_csv: "Date,Balance,Account\n2024-01-01,100.00,Checking\n")
     mapping("Checking").update!(mappable: account)
 
     assert @import.changes_existing_records?
     assert_not @import.data_committed?
     publish!
-    @import.entries.delete_all
+    assert_empty @import.entries
+    assert_empty @import.accounts
     assert @import.reload.data_committed?
+  end
+
+  test "deleting an import that failed after committing puts the opening balance back" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "USD", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    mapping("Checking").update!(mappable: account)
+    publish!
+    @import.update!(status: :failed)
+
+    @import.destroy!
+    assert_equal [ Date.new(2024, 1, 3), 500 ], [ opening.reload.date, opening.amount ]
+  end
+
+  test "an opening balance in another currency moves in the account's and comes back in its own" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "EUR", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    ExchangeRate.create!(date: Date.new(2024, 1, 3), from_currency: "EUR", to_currency: "USD", rate: 1)
+    mapping("Checking").update!(mappable: account)
+    publish!
+
+    assert_equal [ Date.new(2024, 1, 1), 100, "USD" ], [ opening.reload.date, opening.amount, opening.currency ]
+    @import.revert
+    assert_equal [ Date.new(2024, 1, 3), 500, "EUR" ], [ opening.reload.date, opening.amount, opening.currency ]
+  end
+
+  test "an opening balance edited after the conversion read it stops the import" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "USD", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    mapping("Checking").update!(mappable: account)
+    @import.conversion
+    opening.update_column(:amount, 1)
+
+    @import.publish
+    assert @import.reload.failed?
+    assert_match "My Checking", @import.error
+    assert_equal 1, opening.reload.amount
+  end
+
+  test "a lost job that committed is completed, not failed" do
+    publish!
+    @import.update_columns(status: "importing", updated_at: 2.hours.ago)
+
+    assert @import.force_fail!
+    assert @import.reload.complete?
+  end
+
+  test "the API reports an import with every account skipped as not publishable" do
+    @import.account_mappings.each { |m| m.update!(choices: { "include" => false }) }
+
+    assert_not @import.reload.publishable_from_validation_stats?(invalid_rows_count: 0)
+  end
+
+  test "accounts with holdings or trades can't be destinations" do
+    plain = @family.accounts.create!(name: "Plain", balance: 0, currency: "USD", accountable: Investment.new)
+    traded = @family.accounts.create!(name: "Traded", balance: 0, currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "MONA", name: "Monarch Test")
+    traded.entries.create!(date: Date.new(2024, 1, 2), amount: 10, currency: "USD", name: "Buy",
+      entryable: Trade.new(security: security, qty: 1, price: 10, currency: "USD"))
+
+    targets = Import::MonarchAccountMapping.target_accounts_for(@import)
+    assert_includes targets, plain
+    assert_not_includes targets, traded
+  end
+
+  test "a skipped mapping's destination doesn't need write access" do
+    account = @family.accounts.create!(name: "Private", balance: 0, currency: "USD", accountable: Depository.new, owner: users(:empty))
+    mapping("Checking").update!(mappable: account, choices: { "include" => false })
+
+    assert_empty @import.preexisting_target_account_ids
   end
 
   test "publishing needs write access to the existing accounts it imports into" do
@@ -83,11 +157,38 @@ class MonarchImportTest < ActiveSupport::TestCase
   test "an existing account marked closed is disabled, and enabled again on undo" do
     account = @family.accounts.create!(name: "My Savings", balance: 10, currency: "USD", accountable: Depository.new)
     mapping("Old Savings").update!(mappable: account, choices: { "closed" => true })
+    assert @import.changes_existing_records?
     publish!
 
     assert account.reload.disabled?
     @import.revert
     assert account.reload.active?
+  end
+
+  test "undo leaves an account that was reopened and closed again" do
+    account = @family.accounts.create!(name: "My Savings", balance: 10, currency: "USD", accountable: Depository.new)
+    mapping("Old Savings").update!(mappable: account, choices: { "closed" => true })
+    publish!
+    account.reload.enable!
+    travel 1.minute do
+      account.disable!
+    end
+
+    @import.revert
+    assert account.reload.disabled?
+  end
+
+  test "a disabled destination marked Open is enabled, and disabled again on undo" do
+    account = @family.accounts.create!(name: "My Savings", balance: 10, currency: "USD", accountable: Depository.new)
+    account.disable!
+    disabled_at = account.reload.disabled_at
+    mapping("Old Savings").update!(mappable: account, choices: { "closed" => false })
+    publish!
+
+    assert account.reload.active?
+    @import.revert
+    assert account.reload.disabled?
+    assert_in_delta disabled_at, account.disabled_at, 1.second
   end
 
   test "deleting a published import puts a moved opening balance back" do

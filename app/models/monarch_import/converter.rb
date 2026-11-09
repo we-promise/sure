@@ -146,23 +146,29 @@ class MonarchImport::Converter
     # Whether an existing account already holds this Monarch transaction:
     # first by its Monarch ID from an earlier import (natively or through the
     # API tool), then by Sure's own duplicate matcher (same date, amount and
-    # currency). Each existing entry matches at most one row, so two genuine
-    # identical purchases stay two. A skipped row is already in the account's
-    # balance, so it adds no flow.
+    # currency). Entries with a Monarch ID only match by it, and each other
+    # entry matches at most one row, so two genuine identical purchases stay
+    # two. A skipped row is already in the account's balance, so it adds no
+    # flow.
     def already_in_sure?(account, row)
       return false if account.nil?
 
-      return true if imported_monarch_ids(account).include?(row[:id])
+      return true if imported_monarch_ids(account).key?(row[:id])
 
-      @claimed_entry_ids ||= Hash.new { |claimed, target| claimed[target] = [] }
       duplicate = Account::ProviderImportAdapter.new(account).find_duplicate_transaction(
         date: row[:date], amount: -row[:amount], currency: account.currency,
-        exclude_entry_ids: @claimed_entry_ids[account]
+        exclude_entry_ids: claimed_entry_ids(account)
       )
-      @claimed_entry_ids[account] << duplicate.id if duplicate
+      claimed_entry_ids(account) << duplicate.id if duplicate
       duplicate.present?
     end
 
+    def claimed_entry_ids(account)
+      @claimed_entry_ids ||= {}
+      @claimed_entry_ids[account.id] ||= imported_monarch_ids(account).values
+    end
+
+    # { Monarch transaction ID => entry ID } for the account's entries.
     def imported_monarch_ids(account)
       @imported_monarch_ids ||= {}
       @imported_monarch_ids[account.id] ||= load_imported_monarch_ids(account)
@@ -171,16 +177,16 @@ class MonarchImport::Converter
     def load_imported_monarch_ids(account)
       native = Transaction.joins(:entry).where(entries: { account_id: account.id })
         .where("transactions.extra -> ? ->> 'transaction_id' IS NOT NULL", EXTRA_KEY)
-        .pluck(Arel.sql(ActiveRecord::Base.sanitize_sql([ "transactions.extra -> ? ->> 'transaction_id'", EXTRA_KEY ])))
-      tool = session_entries(account.entries).pluck(:external_id).map { |id| id.delete_prefix(SESSION_EXTERNAL_ID_PREFIX) }
-      (native + tool).to_set
+        .pluck(Arel.sql(ActiveRecord::Base.sanitize_sql([ "transactions.extra -> ? ->> 'transaction_id'", EXTRA_KEY ])), "entries.id")
+      tool = session_entries(account.entries).pluck(:external_id, :id).map { |external_id, id| [ external_id.delete_prefix(SESSION_EXTERNAL_ID_PREFIX), id ] }
+      (native + tool).to_h
     end
 
     # Entries the API tool imported. Both the source and the ID prefix must
     # match, since any API client can choose an external ID.
     def session_entries(scope)
-      scope.where("entries.source LIKE ?", "#{SESSION_SOURCE_PREFIX}%")
-        .where("entries.external_id LIKE ?", "#{SESSION_EXTERNAL_ID_PREFIX}%")
+      scope.where("entries.source LIKE ?", "#{ActiveRecord::Base.sanitize_sql_like(SESSION_SOURCE_PREFIX)}%")
+        .where("entries.external_id LIKE ?", "#{ActiveRecord::Base.sanitize_sql_like(SESSION_EXTERNAL_ID_PREFIX)}%")
     end
 
     def monarch_id_of(entry)
@@ -203,13 +209,15 @@ class MonarchImport::Converter
       else
         balance_history = MonarchImport::BalanceHistory.new(history: history, flows: flows, closed: choice.closed)
         anchors = anchors_for(balance_history, choice, current_balance)
+        # Later valuations are imported, but the balance is today's.
+        balance = balance_history.replay(anchors, through: today).select { |date, _| date <= today }.values.last
         @records["Account"] << record("Account", {
           "id" => self.class.source_id(choice.name),
           "name" => choice.account_name,
           "accountable_type" => choice.type,
           "accountable" => {},
           "subtype" => nil,
-          "balance" => money((balance_history.replay(anchors).values.last || 0) * sign),
+          "balance" => money((balance || 0) * sign),
           "status" => choice.closed ? "disabled" : "active",
           # The opening balance and history come from the valuations.
           "skip_opening_balance_import" => true
@@ -227,7 +235,8 @@ class MonarchImport::Converter
       # Balances come from the entries Sure's calculator uses, in the
       # account's currency.
       calculated_valuations, calculated_others = Balance::SyncCache.new(account).entries.partition(&:valuation?)
-      existing_valuations = calculated_valuations.to_h { |entry| [ entry.date, entry.amount * sign ] }
+      # The calculator takes a day's first valuation.
+      existing_valuations = calculated_valuations.each_with_object({}) { |entry, values| values[entry.date] ||= entry.amount * sign }
       existing_flows = Hash.new(BigDecimal("0"))
       if choice.transactions_move_balance?
         calculated_others.each { |entry| existing_flows[entry.date] -= entry.amount }
@@ -236,7 +245,7 @@ class MonarchImport::Converter
       monarch_dates = history.keys + flows.keys
       start_date, end_date = monarch_dates.minmax
       if start_date
-        claimed = @claimed_entry_ids ? @claimed_entry_ids[account] : []
+        claimed = claimed_entry_ids(account)
         @overlapping_transactions[choice.name] = others.count do |entry|
           entry.date.between?(start_date, end_date) && !claimed.include?(entry.id) && monarch_id_of(entry).nil?
         end
