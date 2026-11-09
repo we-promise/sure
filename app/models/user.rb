@@ -110,9 +110,9 @@ class User < ApplicationRecord
   # through authenticate_by, which stays timing-safe for wrong passwords and
   # unknown emails. The legacy lookup runs first on every login (one indexed
   # query) so that legacy and encrypted rows cost the same single password
-  # check. Blank passwords are rejected up front, as authenticate_by does.
+  # check. Nil and empty passwords are rejected up front, as authenticate_by does.
   def self.authenticate_by_email(email:, password:)
-    return nil if password.blank?
+    return nil if password.nil? || password.empty?
 
     normalized = email.to_s.strip.downcase
     legacy_user = find_by_legacy_plaintext_email(normalized)

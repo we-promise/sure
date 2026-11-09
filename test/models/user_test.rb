@@ -83,6 +83,13 @@ class UserTest < ActiveSupport::TestCase
     assert_nil User.authenticate_by_email(email: email, password: nil)
   end
 
+  test "authenticate_by_email accepts a whitespace-only password like authenticate_by" do
+    email = store_legacy_plaintext_email(@user)
+    @user.update_column(:password_digest, BCrypt::Password.create("        "))
+
+    assert_equal @user, User.authenticate_by_email(email: email, password: "        ")
+  end
+
   # email
   test "email must be present" do
     potential_user = User.new(
