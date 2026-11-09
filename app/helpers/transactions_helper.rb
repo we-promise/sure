@@ -123,6 +123,8 @@ module TransactionsHelper
       view_ctx,
       in_split_group,
       split_parent,
+      # The "Transfer?" hint is drawn inside the cached row.
+      @transfer_hint_transaction_ids&.include?(transaction.id) || false,
       can_annotate_account?(entry.account),
       counterpart.present? && @accessible_account_ids&.include?(counterpart.id),
       Setting.brand_fetch_logo_size,
@@ -365,5 +367,14 @@ module TransactionsHelper
     JSON.pretty_generate(value)
   rescue StandardError
     value.to_s
+  end
+
+  # A pending transfer match as the viewer may see it from `transaction`'s
+  # row. The accounts and transactions pages set @accessible_account_ids;
+  # a view that does not, such as the turbo stream that redraws a match,
+  # looks the viewer's accessible accounts up once per request.
+  def pending_transfer_match(transaction)
+    @transfer_match_visible_account_ids ||= (@accessible_account_ids || accessible_accounts.pluck(:id)).to_set
+    Transfer::PendingMatch.new(transaction, visible_account_ids: @transfer_match_visible_account_ids)
   end
 end
