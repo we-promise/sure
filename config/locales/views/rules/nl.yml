@@ -8,8 +8,8 @@ nl:
       close: "Sluiten"
       create_rule: "Regel aanmaken"
       description: "Dit soort transacties altijd categoriseren?"
-      hide_for_24h: "24 uur verbergen"
-      never_suggest: "Niet meer voorstellen"
+      not_today: "Niet vandaag"
+      turn_off_suggestions: "Regelsuggesties uitschakelen"
       message: "Bijgewerkt naar %{category_name}"
     classifier_rules:
       category_classifier: "Categorieclassificatie"

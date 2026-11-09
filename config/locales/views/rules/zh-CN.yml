@@ -8,8 +8,8 @@ zh-CN:
       close: 关闭
       create_rule: 创建规则
       description: 您可以创建规则来自动分类类似于此交易的交易
-      hide_for_24h: "隐藏 24 小时"
-      never_suggest: "不再建议"
+      not_today: "今天不要"
+      turn_off_suggestions: "关闭规则建议"
       message: 已更新为 %{category_name}
     classifier_rules:
       category_classifier: 交易分类器
