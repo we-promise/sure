@@ -73,8 +73,20 @@ class Ai::CallContextTest < ActiveSupport::TestCase
     model = ai_model(name: "test-model")
     transport = Ai::Transport.for(model.endpoint)
 
-    with_ai_call_context(model:, budget: 3) { assert_operator transport.send(:within_budget, 60), :<=, 3 }
+    with_ai_call_context(model:, budget: 0.2) { assert_operator transport.send(:within_budget, 60), :<=, 0.2 }
     assert_equal 60, transport.send(:within_budget, 60)
+  end
+
+  test "an answer that arrives after the budget is spent is a Timeout, not a pass" do
+    model = ai_model(name: "test-model")
+    transport = Ai::Transport.for(model.endpoint)
+
+    with_ai_call_context(model:, budget: 1) do |call|
+      error = assert_raises(Ai::Error::Timeout) do
+        transport.send(:attempt) { Ai::CallContext.stubs(:now).returns(call.deadline + 0.1); :ok }
+      end
+      assert_match(/before the answer arrived/, error.message)
+    end
   end
 
   test "the instrumenter forwards every event to RubyLLM's own instrumenter" do

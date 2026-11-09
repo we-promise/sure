@@ -50,7 +50,9 @@ class Ai::Transport::Base
       begin
         tries += 1
         check_budget!
-        yield
+        result = yield
+        check_budget!(after: true)
+        result
       rescue *Ai::Error::RETRYABLE => error
         delay = retry_delay(tries)
         remaining = Ai::CallContext.current&.remaining
@@ -62,16 +64,17 @@ class Ai::Transport::Base
     end
 
     # Requests RubyLLM doesn't send, such as the models list, aren't checked by its instrumenter.
-    def check_budget!
+    # After an attempt too, so an answer that arrives late isn't taken as a pass.
+    def check_budget!(after: false)
       return unless Ai::CallContext.current&.expired?
 
-      raise Ai::Error::Timeout, "the attempt's time budget was spent before the request was sent"
+      raise Ai::Error::Timeout, "the attempt's time budget was spent #{after ? "before the answer arrived" : "before the request was sent"}"
     end
 
     # A request's timeout, cut to what's left of the call's budget, so a retry can't outlast it.
     def within_budget(timeout)
       remaining = Ai::CallContext.current&.remaining
-      remaining ? [ timeout, remaining.ceil ].min : timeout
+      remaining ? [ timeout, remaining ].min : timeout
     end
 
     def retry_delay(tries) = [ 0.5 * (2**(tries - 1)), 8 ].min * (0.75 + rand * 0.5)
