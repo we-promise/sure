@@ -62,6 +62,11 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     # While snoozed, the next eligible category change doesn't prompt either.
     assign_category @categories.second
     assert_no_text "Updated to #{@categories.second.name}"
+
+    # Once the snooze is over a day old, prompts come back.
+    @user.update!(rule_prompt_dismissed_at: 25.hours.ago)
+    assign_category @categories.first
+    assert_selector "#cta", text: "Updated to #{@categories.first.name}"
   end
 
   test "the prompt's buttons stay inside the toast when their labels are long" do
@@ -106,6 +111,12 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     # The preferences form saves itself after the change, so give it a moment.
     Timeout.timeout(5) { sleep 0.1 while @user.reload.rule_prompts_disabled }
     assert_not @user.rule_prompts_disabled
+    assert_nil @user.rule_prompt_dismissed_at, "turning suggestions off must not start the 24-hour snooze"
+
+    # Back on, suggestions show again right away.
+    visit transactions_url
+    assign_category @categories.first
+    assert_selector "#cta", text: "Updated to #{@categories.first.name}"
   end
 
   test "a prompt from the transaction drawer waits until the drawer closes" do
