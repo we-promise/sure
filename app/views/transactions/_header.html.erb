@@ -17,7 +17,7 @@
         </span>
       <% end %>
     </h3>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <span class="text-sm text-secondary">
         <%= entry.date ? I18n.l(entry.date, format: :long) : "—" %>
       </span>
@@ -30,6 +30,7 @@
           title: t("transactions.transaction.pending_tooltip")
         ) %>
       <% end %>
+      <%= render "transactions/reconcile_badge", entry: entry %>
     </div>
   </div>
 </div>
