@@ -20,14 +20,14 @@ class UserTest < ActiveSupport::TestCase
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end
 
-  test "find_by_email matches encrypted and legacy plaintext email rows" do
-    assert_equal @user, User.find_by_email(" #{@user.email.upcase} ")
+  test "find_by_email_with_legacy_fallback matches encrypted and legacy plaintext email rows" do
+    assert_equal @user, User.find_by_email_with_legacy_fallback(" #{@user.email.upcase} ")
 
     email = store_legacy_plaintext_email(@user)
 
-    assert_equal @user, User.find_by_email(email.upcase)
-    assert_nil User.find_by_email("")
-    assert_nil User.find_by_email("missing@example.com")
+    assert_equal @user, User.find_by_email_with_legacy_fallback(email.upcase)
+    assert_nil User.find_by_email_with_legacy_fallback("")
+    assert_nil User.find_by_email_with_legacy_fallback("missing@example.com")
   end
 
   test "authenticate_by_email checks the password for legacy plaintext email rows" do
@@ -46,13 +46,41 @@ class UserTest < ActiveSupport::TestCase
     assert_nil User.authenticate_by_email(email: "missing@example.com", password: "x")
   end
 
-  test "find_by_email does not match a row by its stored ciphertext" do
+  test "find_by_email_with_legacy_fallback does not match a row by its stored ciphertext" do
     ciphertext = User.connection.select_value(
       User.sanitize_sql([ "SELECT email FROM users WHERE id = ?", @user.id ])
     )
 
-    assert_nil User.find_by_email(ciphertext)
+    assert_nil User.find_by_email_with_legacy_fallback(ciphertext)
     assert_nil User.authenticate_by_email(email: ciphertext, password: user_password_test)
+  end
+
+  test "email uniqueness covers legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+
+    duplicate = User.new(
+      family: @user.family,
+      email: " #{email.upcase} ",
+      password: user_password_test,
+      password_confirmation: user_password_test
+    )
+
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:email, :taken)
+  end
+
+  test "a legacy plaintext email row stays valid on its own" do
+    store_legacy_plaintext_email(@user)
+
+    assert User.find(@user.id).valid?
+  end
+
+  test "authenticate_by_email rejects a blank password for legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+    @user.update_column(:password_digest, BCrypt::Password.create(""))
+
+    assert_nil User.authenticate_by_email(email: email, password: "")
+    assert_nil User.authenticate_by_email(email: email, password: nil)
   end
 
   # email

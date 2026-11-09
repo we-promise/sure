@@ -16,7 +16,7 @@ class DemoFamilyRefreshJob < ApplicationJob
       period_start = period_end - 24.hours
 
       demo_email = Rails.application.config_for(:demo).with_indifferent_access.fetch(:email)
-      demo_user = User.find_by_email(demo_email)
+      demo_user = User.find_by_email_with_legacy_fallback(demo_email)
       old_family = demo_user&.family
 
       if Rails.application.config.app_mode.self_hosted?
@@ -42,7 +42,8 @@ class DemoFamilyRefreshJob < ApplicationJob
 
         Demo::Generator.new.generate_default_data!(skip_clear: true, email: demo_email)
         if Rails.application.config.app_mode.self_hosted?
-          new_family = User.find_by!(email: demo_email).family
+          new_user = User.find_by_email_with_legacy_fallback(demo_email) || raise(ActiveRecord::RecordNotFound, "Demo user missing after regeneration")
+          new_family = new_user.family
           Setting.demo_family_refresh_family_id = new_family.id.to_s
           retire_old_family!(old_family) if old_family
         end
