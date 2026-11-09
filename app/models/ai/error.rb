@@ -78,6 +78,9 @@ module Ai::Error
     when Faraday::ConnectionFailed, Faraday::SSLError, SocketError, Errno::ECONNREFUSED,
          Errno::EHOSTUNREACH, Errno::ENETUNREACH, Errno::ECONNRESET, OpenSSL::SSL::SSLError
       Unreachable.new(error.message)
+    when Faraday::ParsingError
+      # A body that isn't JSON. Its status is often 200, which from_status would call a refusal.
+      InvalidOutput.new(error.message)
     else
       status, body = status_and_body(error)
       from_status(status, error.message, body:) if status
