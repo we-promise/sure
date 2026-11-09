@@ -3,13 +3,11 @@ fr:
   invitations:
     accept_choice:
       create_account: Créer un nouveau compte
+      existing_account_hint: "Vous avez déjà un compte ? Les comptes existants ne peuvent pas rejoindre un autre foyer via une invitation."
       joined_household: Vous avez rejoint le foyer.
       message: "%{inviter} vous a invité(e) à rejoindre en tant que %{role}."
-      sign_in_existing: J'ai déjà un compte
       title: Rejoindre %{family}
     create:
-      existing_user_added: L'utilisateur a été ajouté à votre foyer.
-      existing_user_has_family_data: Cet utilisateur possède déjà un foyer avec des comptes. Il doit supprimer ou transférer ces comptes avant de rejoindre le vôtre.
       failure: Impossible d'envoyer l'invitation
       success: Invitation envoyée avec succès
     destroy:

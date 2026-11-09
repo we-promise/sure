@@ -215,6 +215,9 @@ class TransactionsController < ApplicationController
         format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
         format.turbo_stream do
           in_split_group = helpers.in_split_group?(@entry, params[:grouped])
+          # The row draws the "Transfer?" hint, and its cache key records
+          # whether it applies, so the hint is worked out as the list does.
+          @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates([ @entry.transaction ], user: Current.user)
           render turbo_stream: [
             turbo_stream.replace(
               dom_id(@entry, :header),

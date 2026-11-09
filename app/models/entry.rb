@@ -119,6 +119,11 @@ class Entry < ApplicationRecord
     SQL
   }
 
+  # Future-dated entries haven't happened yet, so "actual" reporting (budgets,
+  # income statement, insights) should not count them until their date
+  # arrives -- see Entry#scheduled?.
+  scope :excluding_scheduled, -> { where("entries.date <= ?", Date.current) }
+
   # Find stale pending transactions (pending for more than X days with no matching posted version)
   scope :stale_pending, ->(days: 8) {
     pending.where("entries.date < ?", days.days.ago.to_date)
@@ -394,6 +399,8 @@ class Entry < ApplicationRecord
     sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed?
     @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
+
+    EntryScheduledSyncJob.schedule_for(self) if !destroyed? && scheduled?
   end
 
   # Whether the last save changed anything a sync depends on. Call it right
@@ -434,6 +441,14 @@ class Entry < ApplicationRecord
 
   def linked?
     external_id.present?
+  end
+
+  # A manually entered entry dated after today (e.g. an upcoming bill or
+  # expected paycheck). Scheduled entries are excluded from balance
+  # calculations until their date arrives -- see Balance::SyncCache and
+  # Balance::ForwardCalculator#calc_end_date.
+  def scheduled?
+    date > Date.current
   end
 
   # Reconciliation state, following the Quicken uncleared / cleared / reconciled
@@ -709,6 +724,10 @@ class Entry < ApplicationRecord
 
       return 0 unless has_updates
 
+      # account_id => earliest of old/new date, for entries whose date moved
+      sync_windows = {}
+      rescheduled_ids = []
+
       transaction do
         all.each do |entry|
           changed = false
@@ -728,6 +747,12 @@ class Entry < ApplicationRecord
               # Before the tag save below, which replaces the saved changes this reads.
               entry.lock_saved_attributes!
               changed = true
+
+              if entry.saved_change_to_date?
+                window_start = entry.saved_change_to_date.compact.min
+                sync_windows[entry.account] = [ sync_windows[entry.account], window_start ].compact.min
+                rescheduled_ids << entry.id
+              end
             end
           end
 
@@ -742,6 +767,11 @@ class Entry < ApplicationRecord
           entry.mark_user_modified! if changed
         end
       end
+
+      # Moving a date changes balances (and may make an entry scheduled), so
+      # mirror Entry#sync_account_later -- once per account, not per entry.
+      sync_windows.each { |account, window_start| account.sync_later(window_start_date: window_start) }
+      EntryScheduledSyncJob.schedule_for_entries(Entry.where(id: rescheduled_ids)) if rescheduled_ids.any?
 
       all.size
     end
