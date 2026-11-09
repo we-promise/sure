@@ -4,54 +4,44 @@ ca:
     securities:
       show:
         disable_mfa: Desactiva la 2FA
-        disable_mfa_confirm: Segur que vols desactivar l'autenticació en dos passos? Això farà que el teu compte sigui menys segur.
+        disable_mfa_confirm: Segur que vols desactivar l'autenticació en dos passos?
+          Això farà que el teu compte sigui menys segur.
         enable_mfa: Activa la 2FA
-        mfa_description: Afegeix una capa extra de seguretat al teu compte requerint un codi de la teva app d'autenticació en iniciar sessió
-        mfa_disabled_description: Activa la 2FA per afegir una capa extra de seguretat al teu compte.
-        mfa_disabled_status_html: L'autenticació en dos passos està <span class="font-medium text-red-600">desactivada</span>
-        mfa_enabled_description: El teu compte està protegit amb una capa addicional de seguretat.
-        mfa_enabled_status_html: L'autenticació en dos passos està <span class="font-medium text-green-600">activada</span>
+        mfa_description: Afegeix una capa extra de seguretat al teu compte requerint
+          un codi de la teva app d'autenticació en iniciar sessió
+        mfa_disabled_description: Activa la 2FA per afegir una capa extra de seguretat
+          al teu compte.
+        mfa_disabled_status_html: L'autenticació en dos passos està <span class="font-medium
+          text-red-600">desactivada</span>
+        mfa_enabled_description: El teu compte està protegit amb una capa addicional
+          de seguretat.
+        mfa_enabled_status_html: L'autenticació en dos passos està <span class="font-medium
+          text-green-600">activada</span>
         mfa_title: Autenticació en dos passos
         webauthn_add: Afegeix una clau d'accés o de seguretat
         webauthn_added: Afegida el %{date}
-        webauthn_description: Utilitza una clau d'accés, Touch ID, Windows Hello o una clau de seguretat de maquinari com a segon factor en iniciar sessió.
+        webauthn_description: Utilitza una clau d'accés, Touch ID, Windows Hello o una
+          clau de seguretat de maquinari com a segon factor en iniciar sessió.
         webauthn_empty: Encara no hi ha cap clau d'accés ni de seguretat registrada.
         webauthn_last_used: Última utilització fa %{time_ago}
         webauthn_name_label: Nom de la clau
-        webauthn_code_label: Codi d'autenticador o de recuperació
-        webauthn_code_placeholder: Codi actual de l'autenticador o un codi de recuperació sense utilitzar
+        webauthn_code_label: "Codi d'autenticador o de recuperació"
+        webauthn_code_placeholder: "Codi actual de l'autenticador o un codi de recuperació sense utilitzar"
         webauthn_name_placeholder: Touch ID MacBook, YubiKey, etc.
         webauthn_remove: Elimina
-        webauthn_remove_confirm: Segur que vols eliminar aquesta clau d'accés o de seguretat?
-        webauthn_remove_confirm_body: Hauràs de tornar a registrar aquesta clau d'accés o de seguretat abans de poder utilitzar-la per a la verificació d'inici de sessió.
+        webauthn_remove_confirm: Segur que vols eliminar aquesta clau d'accés o de
+          seguretat?
+        webauthn_remove_confirm_body: Hauràs de tornar a registrar aquesta clau d'accés
+          o de seguretat abans de poder utilitzar-la per a la verificació d'inici
+          de sessió.
         webauthn_title: Claus d'accés i claus de seguretat
         webauthn_unsupported: Aquest navegador no admet claus d'accés ni de seguretat.
-        page_title: Seguretat
-        sso_confirm_body: Segur que vols desconnectar el teu compte de %{provider}? Pots tornar-lo a connectar més tard iniciant sessió amb aquest proveïdor una altra vegada.
-        sso_confirm_button: Desconnecta
-        sso_confirm_title: Vols desconnectar el compte?
-        sso_connect_hint: Tanca sessió i inicia amb un proveïdor SSO per connectar un compte.
-        sso_disconnect: Desconnecta
-        sso_last_used: Darrer ús
-        sso_never: Mai
-        sso_no_email: Sense correu electrònic
-        sso_no_identities: No hi ha comptes SSO connectats
-        sso_subtitle: Gestiona les teves connexions de compte amb inici de sessió únic
-        sso_title: Comptes connectats
-        sso_warning_message: Aquesta és l'única forma d'inici de sessió. Hauries de configurar una contrasenya a la teva configuració de seguretat abans de desconnectar, altrament podries quedar bloquejat/da fora del teu compte.
-        encryption_warning:
-          title: Falten les claus de xifratge
-          intro: 'Les dades sensibles (claus API, tokens de proveïdors, secrets de MFA i dades personals) s''emmagatzemen sense xifrar. Per activar el xifratge, defineix les claus següents a les variables d''entorn o a les credencials de Rails:'
-          keys:
-          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
-          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
-          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
-          generate: 'Genera''n un joc amb: bin/rails db:encryption:init'
   webauthn_credentials:
-    code_already_used: Aquest codi ja s'ha utilitzat. Espera el codi següent de l'aplicació d'autenticació.
-    invalid_code: Aquest codi no és vàlid. Introdueix un codi actual de l'aplicació d'autenticació o un codi de recuperació sense utilitzar.
-    rate_limited: Massa intents. Espera un minut i torna-ho a provar.
+    code_already_used: "Aquest codi ja s'ha utilitzat. Espera el codi següent de l'aplicació d'autenticació."
+    invalid_code: "Aquest codi no és vàlid. Introdueix un codi actual de l'aplicació d'autenticació o un codi de recuperació sense utilitzar."
+    rate_limited: "Massa intents. Espera un minut i torna-ho a provar."
     default_name: Clau de seguretat
     failure: No s'ha pogut desar aquesta clau d'accés o de seguretat. Torna-ho a provar.
-    mfa_required: Activa l'autenticació en dos passos abans d'afegir una clau d'accés o de seguretat.
+    mfa_required: Activa l'autenticació en dos passos abans d'afegir una clau d'accés o
+      de seguretat.
     success: Clau d'accés o de seguretat eliminada.

@@ -4,7 +4,7 @@ es:
     securities:
       show:
         disable_mfa: Deshabilitar 2FA
-        disable_mfa_confirm: "¿Estás seguro de que deseas deshabilitar la autenticación de 2FA? Esto hará que tu cuenta sea menos segura."
+        disable_mfa_confirm: ¿Estás seguro de que deseas deshabilitar la autenticación de 2FA? Esto hará que tu cuenta sea menos segura.
         enable_mfa: Habilitar 2FA
         mfa_enabled_status_html: La autenticación en dos pasos está <span class="font-medium text-green-600">activada</span>
         mfa_enabled_description: Tu cuenta está protegida con una capa adicional de seguridad.
@@ -18,39 +18,18 @@ es:
         webauthn_empty: Aún no hay passkeys ni llaves de seguridad registradas.
         webauthn_last_used: Último uso hace %{time_ago}
         webauthn_name_label: Nombre de la llave
-        webauthn_code_label: Código del autenticador o de respaldo
-        webauthn_code_placeholder: Código actual del autenticador o un código de respaldo sin usar
+        webauthn_code_label: "Código del autenticador o de respaldo"
+        webauthn_code_placeholder: "Código actual del autenticador o un código de respaldo sin usar"
         webauthn_name_placeholder: Touch ID del MacBook, YubiKey, etc.
         webauthn_remove: Eliminar
-        webauthn_remove_confirm: "¿Seguro que quieres eliminar esta passkey o llave de seguridad?"
+        webauthn_remove_confirm: ¿Seguro que quieres eliminar esta passkey o llave de seguridad?
         webauthn_remove_confirm_body: Tendrás que volver a registrar esta passkey o llave de seguridad antes de poder usarla para verificar el inicio de sesión.
         webauthn_title: Passkeys y llaves de seguridad
         webauthn_unsupported: Este navegador no admite passkeys ni llaves de seguridad.
-        page_title: Seguridad
-        encryption_warning:
-          title: Faltan las claves de cifrado
-          intro: 'Los datos sensibles (claves API, tokens de proveedores, secretos MFA y datos personales) se están almacenando sin cifrar en reposo. Para activar el cifrado, define las siguientes claves en tus variables de entorno o en las credenciales de Rails:'
-          keys:
-          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
-          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
-          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
-          generate: 'Genera un juego de claves con: bin/rails db:encryption:init'
-        sso_title: Cuentas Conectadas
-        sso_subtitle: Gestiona tus conexiones de inicio de sesión único (SSO)
-        sso_disconnect: Desconectar
-        sso_last_used: Último uso
-        sso_never: Nunca
-        sso_no_email: Sin correo
-        sso_no_identities: No hay cuentas de SSO conectadas
-        sso_connect_hint: Cierra sesión e iníciala con un proveedor de SSO para conectar una cuenta.
-        sso_confirm_title: "¿Desconectar cuenta?"
-        sso_confirm_body: "¿Estás seguro de que deseas desconectar tu cuenta de %{provider}? Podrás volver a conectarla más tarde iniciando sesión de nuevo con ese proveedor."
-        sso_confirm_button: Desconectar
-        sso_warning_message: Este es tu único método de acceso. Deberías establecer una contraseña en tus ajustes de seguridad antes de desconectarlo, de lo contrario podrías perder el acceso a tu cuenta.
   webauthn_credentials:
-    code_already_used: Ese código ya se ha usado. Espera al siguiente código de tu app de autenticación.
-    invalid_code: Ese código no es válido. Introduce un código actual de tu app de autenticación o un código de respaldo sin usar.
-    rate_limited: Demasiados intentos. Espera un minuto e inténtalo de nuevo.
+    code_already_used: "Ese código ya se ha usado. Espera al siguiente código de tu app de autenticación."
+    invalid_code: "Ese código no es válido. Introduce un código actual de tu app de autenticación o un código de respaldo sin usar."
+    rate_limited: "Demasiados intentos. Espera un minuto e inténtalo de nuevo."
     default_name: Llave de seguridad
     failure: No se pudo guardar esa passkey o llave de seguridad. Inténtalo de nuevo.
     mfa_required: Activa la autenticación de dos factores antes de añadir una passkey o llave de seguridad.

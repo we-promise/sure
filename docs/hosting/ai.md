@@ -1781,7 +1781,10 @@ endpoint**.
 
 Results are cached for 60 seconds by default. **Run checks again** bypasses the
 cache. Set `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request
-timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
+timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Five
+seconds is too short for a model running on CPU, such as llama.cpp without a GPU:
+the function-calling check can take 20 seconds there and shows as a timeout, so
+set `AI_HEALTH_PROBE_TIMEOUT=60` or more. Failed
 checks are written as system-wide entries in **Settings → Debug logs** and to
 `Rails.logger`; endpoints are redacted and credentials are never included.
 
