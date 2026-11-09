@@ -12,9 +12,7 @@ ru:
         merchant_detector:
           subtitle: AI идентифицирует и обогащает данные операций информацией о продавцах
           title: Определитель продавцов
-        openai_label: OpenAI
         page_title: Запросы ИИ
-        prompt_instructions: Инструкции по запросу
         transaction_categorizer:
           subtitle: AI автоматически категоризирует ваши операции на основе заданных
             категорий

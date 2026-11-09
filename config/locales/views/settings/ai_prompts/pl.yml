@@ -23,9 +23,7 @@ pl:
         merchant_detector:
           subtitle: AI identyfikuje i wzbogaca dane transakcji o informacje o sprzedawcy
           title: Wykrywanie sprzedawcy
-        openai_label: OpenAI
         page_title: Prompty AI
-        prompt_instructions: Instrukcje promptów
         save: Zapisz polecenia
         save_confirm:
           body: Niestandardowe nadpisania poleceń zastępują wbudowane instrukcje systemowe

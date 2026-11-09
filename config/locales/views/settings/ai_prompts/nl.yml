@@ -34,8 +34,6 @@ nl:
           title: "Inzicht verdiepen"
           subtitle: "Eerste chatbericht wanneer u met AI dieper op een inzicht ingaat"
           label: "Verdiepingsbericht"
-        openai_label: "OpenAI"
-        prompt_instructions: "Prompt Instructies"
       update:
         success: "AI-prompts bijgewerkt"
         multiple_errors: "Meerdere prompts zijn te lang (maximaal %{count} tekens)"

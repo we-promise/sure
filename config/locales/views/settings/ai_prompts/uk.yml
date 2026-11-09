@@ -4,9 +4,7 @@ uk:
     ai_prompts:
       show:
         page_title: Промпти ШІ
-        openai_label: OpenAI
         disable_ai: Вимкнути ШІ-помічника
-        prompt_instructions: Інструкції до промптів
         main_system_prompt:
           title: Основний системний промпт
           subtitle: Основні інструкції, що визначають поведінку ШІ-помічника у всіх чатах
