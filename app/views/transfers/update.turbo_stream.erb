@@ -1,6 +1,10 @@
 <% unless @transfer.destroyed? %>
-  <%= turbo_stream.replace @transfer.inflow_transaction.entry %>
-  <%= turbo_stream.replace @transfer.outflow_transaction.entry %>
+  <%= turbo_stream.replace @transfer.inflow_transaction.entry,
+                          partial: "entries/entry",
+                          locals: { entry: @transfer.inflow_transaction.entry, view_ctx: @view_ctx } %>
+  <%= turbo_stream.replace @transfer.outflow_transaction.entry,
+                          partial: "entries/entry",
+                          locals: { entry: @transfer.outflow_transaction.entry, view_ctx: @view_ctx } %>
 
   <%= turbo_stream.replace dom_id(@transfer.inflow_transaction, "category_menu_mobile"),
                           partial: "transactions/transaction_category",

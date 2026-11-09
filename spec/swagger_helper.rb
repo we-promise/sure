@@ -53,6 +53,15 @@ RSpec.configure do |config|
           }
         },
         schemas: {
+          Version: {
+            type: :object,
+            additionalProperties: false,
+            required: %w[version commit_sha],
+            properties: {
+              version: { type: :string, description: 'Running Sure version, without a v prefix.' },
+              commit_sha: { type: :string, nullable: true, description: 'Build commit SHA, or null when unavailable.' }
+            }
+          },
           SplitRequest: {
             type: :object,
             required: %w[split],
@@ -1819,6 +1828,59 @@ RSpec.configure do |config|
                 items: { '$ref' => '#/components/schemas/SecurityPrice' }
               },
               pagination: { '$ref' => '#/components/schemas/Pagination' }
+            }
+          },
+          SecurityPriceImportRequest: {
+            type: :object,
+            required: %w[security_id prices],
+            properties: {
+              security_id: { type: :string, format: :uuid, description: 'An offline security no provider has ever matched (no offline_reason or price_provider), traded in an account the caller can write to, or held in a linked one' },
+              prices: {
+                type: :array,
+                minItems: 1,
+                maxItems: 1000,
+                description: 'Daily closes, all in one currency. A date already stored is replaced.',
+                items: {
+                  type: :object,
+                  required: %w[date price currency],
+                  properties: {
+                    date: { type: :string, format: :date, description: 'Not after today in the family time zone' },
+                    price: { type: :string, description: 'Positive decimal with at most 4 decimal places', example: '12.3400' },
+                    currency: { type: :string, description: "ISO 4217 code; must match the security's existing prices, or the caller's trades in it" }
+                  }
+                }
+              }
+            }
+          },
+          SecurityPriceImportResult: {
+            type: :object,
+            required: %w[security_id currency created updated start_date end_date],
+            properties: {
+              security_id: { type: :string, format: :uuid },
+              currency: { type: :string },
+              created: { type: :integer },
+              updated: { type: :integer },
+              start_date: { type: :string, format: :date },
+              end_date: { type: :string, format: :date }
+            }
+          },
+          SecurityPriceImportError: {
+            type: :object,
+            required: %w[error errors],
+            properties: {
+              error: { type: :string },
+              message: { type: :string },
+              errors: {
+                type: :array,
+                items: {
+                  type: :object,
+                  required: %w[index message],
+                  properties: {
+                    index: { type: :integer, nullable: true, description: 'Position of the offending row in prices, or null for the request as a whole' },
+                    message: { type: :string }
+                  }
+                }
+              }
             }
           },
           Money: {

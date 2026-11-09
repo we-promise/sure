@@ -32,6 +32,20 @@ components:
             read: Read access
             read_write: Read and write access
   schemas:
+    Version:
+      type: object
+      additionalProperties: false
+      required:
+      - version
+      - commit_sha
+      properties:
+        version:
+          type: string
+          description: Running Sure version, without a v prefix.
+        commit_sha:
+          type: string
+          nullable: true
+          description: Build commit SHA, or null when unavailable.
     SplitRequest:
       type: object
       required:
@@ -3353,6 +3367,93 @@ components:
             "$ref": "#/components/schemas/SecurityPrice"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    SecurityPriceImportRequest:
+      type: object
+      required:
+      - security_id
+      - prices
+      properties:
+        security_id:
+          type: string
+          format: uuid
+          description: An offline security no provider has ever matched (no offline_reason
+            or price_provider), traded in an account the caller can write to, or held
+            in a linked one
+        prices:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          description: Daily closes, all in one currency. A date already stored is
+            replaced.
+          items:
+            type: object
+            required:
+            - date
+            - price
+            - currency
+            properties:
+              date:
+                type: string
+                format: date
+                description: Not after today in the family time zone
+              price:
+                type: string
+                description: Positive decimal with at most 4 decimal places
+                example: '12.3400'
+              currency:
+                type: string
+                description: ISO 4217 code; must match the security's existing prices,
+                  or the caller's trades in it
+    SecurityPriceImportResult:
+      type: object
+      required:
+      - security_id
+      - currency
+      - created
+      - updated
+      - start_date
+      - end_date
+      properties:
+        security_id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+        created:
+          type: integer
+        updated:
+          type: integer
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+    SecurityPriceImportError:
+      type: object
+      required:
+      - error
+      - errors
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+            - index
+            - message
+            properties:
+              index:
+                type: integer
+                nullable: true
+                description: Position of the offending row in prices, or null for
+                  the request as a whole
+              message:
+                type: string
     Money:
       type: object
       required:
@@ -3838,6 +3939,7 @@ components:
           - balances
           - recurring_transactions
           - rules
+          - rule_groups
           - rule_actions
           - rule_conditions
           - rule_runs
@@ -3913,6 +4015,9 @@ components:
               type: integer
               minimum: 0
             rules:
+              type: integer
+              minimum: 0
+            rule_groups:
               type: integer
               minimum: 0
             rule_actions:
@@ -8419,6 +8524,46 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/insights/{id}/acknowledge":
+    patch:
+      summary: Acknowledge a proactive insight
+      tags:
+      - Insights
+      description: Marks a visible family insight read and acknowledged, removing
+        it from the feed. Requires read_write scope and preview access. Repeated requests
+        are idempotent.
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      parameters:
+      - name: id
+        in: path
+        schema:
+          type: string
+          format: uuid
+        required: true
+      responses:
+        '204':
+          description: insight acknowledged
+        '401':
+          description: authentication required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: write scope, member access or preview features required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: insight not found or not visible to the family
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/merchants":
     get:
       summary: List merchants
@@ -9425,6 +9570,51 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Import closing prices for a security no provider tracks
+      description: Self-hosted instances only. Stores daily closes for an offline
+        security no provider has ever matched (no offline_reason, no price_provider)
+        that is traded in an account the caller can write to, or held in a linked
+        one. All rows are validated first and stored together, or none are. A date
+        already stored is replaced. Security prices are shared, so the closes also
+        value any other family holding the same security. The caller's affected accounts
+        are synced afterwards. Requires the read_write scope.
+      tags:
+      - Security Prices
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: closes imported
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SecurityPriceImportResult"
+        '403':
+          description: insufficient scope, a guest, or a managed instance
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: security not found among the caller's writable accounts
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: online security or invalid rows; nothing was stored
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SecurityPriceImportError"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/SecurityPriceImportRequest"
+        required: true
   "/api/v1/security_prices/{id}":
     parameters:
     - name: id
@@ -10302,7 +10492,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Transaction"
         '422':
-          description: validation error - missing required fields
+          description: validation error - missing required fields, malformed tag_ids,
+            or a tag, category or merchant id the family cannot use
           content:
             application/json:
               schema:
@@ -10425,6 +10616,13 @@ paths:
                 "$ref": "#/components/schemas/Transaction"
         '404':
           description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error - malformed tag_ids, or a tag, category or
+            merchant id the family cannot use
           content:
             application/json:
               schema:
@@ -10910,3 +11108,26 @@ paths:
                       type: string
                       description: Additional notes
         required: true
+  "/api/v1/version":
+    get:
+      summary: Get the running Sure version
+      tags:
+      - Version
+      description: Requires read or read_write access. Operators may explicitly enable
+        anonymous access with PUBLIC_VERSION_ENDPOINT=true. Responses are not cacheable.
+        Supplied credentials are still validated in public mode.
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          description: running version
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Version"
+        '401':
+          description: missing or invalid credentials (default configuration)
+        '403':
+          description: insufficient scope

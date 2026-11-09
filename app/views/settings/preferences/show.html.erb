@@ -8,9 +8,11 @@
           { label: t(".language"), include_blank: t(".language_auto") },
           { data: { auto_submit_form_target: "auto" } } %>
       <%= form.fields_for :family do |family_form| %>
-        <%= family_form.select :timezone,
-            timezone_options,
-            { label: t(".timezone") },
+        <%= family_form.collection_select :timezone,
+            timezone_options(family_form.object.timezone),
+            :last,
+            :first,
+            { label: t(".timezone"), searchable: true },
             { data: { auto_submit_form_target: "auto" } } %>
         <%= family_form.select :date_format,
             Family::DATE_FORMATS,

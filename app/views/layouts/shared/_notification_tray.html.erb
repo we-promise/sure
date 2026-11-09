@@ -26,3 +26,10 @@
 <template id="desktop-download-failed" data-message="<%= t(".download_failed") %>">
   <%= render "shared/notifications/alert", message: t(".download_failed") %>
 </template>
+
+<%# sortable_list_controller.js clones this when a new order cannot reach
+    the server and the list goes back to the saved one, and reads the message
+    for #aria-announcer. %>
+<template id="sortable-list-save-failed" data-message="<%= t(".order_save_failed") %>">
+  <%= render "shared/notifications/alert", message: t(".order_save_failed") %>
+</template>

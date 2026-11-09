@@ -344,7 +344,12 @@ de:
         last_synced: Sync vor %{time}
         needs_attention: mit Problemen
       ibkr_panel:
-        accounts_tab: Konten
+        add_connection: "Interactive-Brokers-Verbindung hinzufügen"
+        connection_name_label: "Name der Verbindung"
+        connection_name_placeholder: "z. B. IBKR Irland, IBKR USA"
+        disconnect: "Trennen"
+        disconnect_confirm_named: "%{name} trennen?"
+        setup_accounts: "Konten einrichten"
         configuration:
           all_other_options: 'Alle übrigen Optionen: „No“'
           date_format: 'Date Format: yyyy-MM-dd'
@@ -354,7 +359,6 @@ de:
           period: 'Period: Last 365 Calendar Days'
           profit_and_loss: 'Profit and Loss: Default'
           time_format: 'Time Format: HH:mm:ss'
-        disconnect_confirm: Interactive Brokers trennen?
         flex_query_details:
           configuration_heading: Diese Abfrageoptionen setzen
           eyebrow: Flex Query
@@ -366,7 +370,6 @@ de:
         query_id_placeholder_existing: Leer lassen, um die bisherige Query ID zu behalten
         query_id_placeholder_new: IBKR-Flex-Query-ID eintragen
         report_window_note: IBKR-Flex-Berichte sind auf den Zeitraum begrenzt, den du in IBKR eingestellt hast. Sure importiert die vollständigen aktuellen Bestände und bis zu 365 Tage Aktivität aus diesem Bericht.
-        save_configuration: Konfiguration speichern
         sections:
           account_information: 'Account Information: Account ID, Currency'
           cash_report: 'Cash Report:'
@@ -385,8 +388,6 @@ de:
           trades: 'Trades:'
           trades_fields: 'Felder: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
           trades_options: 'Optionen: Execution'
-        status_configured_prefix: "%{summary}. Im Reiter"
-        status_configured_suffix: verwaltest du die gefundenen Konten.
         steps:
           step_1: Öffne im IBKR Client Portal „Performance & Reports“ > „Flex Queries“.
           step_2: Klick im Bereich „Activity Flex Query“ auf das Plus-Symbol, um eine neue Abfrage anzulegen.

@@ -5,6 +5,25 @@ import { Controller } from "@hotwired/stimulus";
 // data-sortable-list-target="item" and data-sortable-list-id. On every change
 // the ids are sent as JSON to urlValue, nested under paramValue
 // ("a.b" sends { a: { b: [...] } }).
+//
+// A list can hold another list (rule groups inside the rules list). The inner
+// one uses this controller as "sortable-sublist": Stimulus does not pass a
+// controller events from inside a nested controller of the same name, and
+// the outer list needs the dragover and drop events over the inner one to
+// move a whole group. Each list handles only drags of its own items.
+// A second finger anywhere on the page means a pinch zoom, not a reorder,
+// also when it lands outside the items. One document listener serves every
+// connected list.
+const connectedLists = new Set();
+
+function cancelOnSecondFinger(event) {
+  if (event.touches.length < 2) return;
+
+  for (const list of connectedLists) {
+    if (list.pendingSection || list.isTouching) list.touchCancel();
+  }
+}
+
 export default class extends Controller {
   static targets = ["item"];
 
@@ -42,9 +61,36 @@ export default class extends Controller {
     this.keyboardGrabbedElement = null;
     this.holdTimer = null;
     this.holdActivated = false;
+    // What the server has; a save that cannot reach it puts this back.
+    this.savedOrder = this.currentOrder();
+
+    if (connectedLists.size === 0) {
+      document.addEventListener("touchstart", cancelOnSecondFinger, {
+        capture: true,
+        passive: true,
+      });
+    }
+    connectedLists.add(this);
+
+    // A morph (a page refresh, a broadcast) can reorder the items without
+    // reconnecting this controller; the new order is what the server has.
+    this.refreshSavedOrder = () => {
+      const queue = this.queueController();
+      if (queue.saving || queue.pendingOrder || this.isMoving()) return;
+      this.savedOrder = this.currentOrder();
+      queue.savedOrder = this.savedOrder;
+    };
+    document.addEventListener("turbo:morph", this.refreshSavedOrder);
   }
 
   disconnect() {
+    connectedLists.delete(this);
+    if (connectedLists.size === 0) {
+      document.removeEventListener("touchstart", cancelOnSecondFinger, {
+        capture: true,
+      });
+    }
+    document.removeEventListener("turbo:morph", this.refreshSavedOrder);
     this.cancelHold();
   }
 
@@ -53,6 +99,9 @@ export default class extends Controller {
     // A drag starting inside a row that is not draggable itself (an image,
     // selected text) is not a reorder.
     if (!event.currentTarget.draggable) return;
+    // A drag that started on an item of a nested list bubbles up to this
+    // list's item around it; the nested list handles it.
+    if (!this.ownsItem(event.target, event.currentTarget)) return;
 
     // If a touch interaction is in progress, cancel native drag —
     // use touch events with hold delay instead.
@@ -61,6 +110,10 @@ export default class extends Controller {
       event.preventDefault();
       return;
     }
+
+    // Selected text, a link or an image inside the item drags as usual;
+    // only a drag of the item itself reorders.
+    if (event.target !== event.currentTarget) return;
 
     this.draggedElement = event.currentTarget;
     this.draggedElement.classList.add("opacity-50");
@@ -79,6 +132,7 @@ export default class extends Controller {
     event.currentTarget.setAttribute("aria-grabbed", "false");
     this.clearPlaceholders();
     this.draggedElement = null;
+    this.finishDeferredRollback();
   }
 
   // Only a drag that started on one of the items is a reorder; a file or
@@ -99,9 +153,9 @@ export default class extends Controller {
     event.preventDefault();
     event.stopPropagation();
 
-    this.moveDraggedTo(event.clientX, event.clientY);
+    const moved = this.moveDraggedTo(event.clientX, event.clientY);
     this.clearPlaceholders();
-    this.saveOrder();
+    if (moved) this.saveOrder();
   }
 
   // ===== Touch Events =====
@@ -109,10 +163,11 @@ export default class extends Controller {
   // (finger moves before the hold delay elapses) cancels it.
 
   touchStart(event) {
+    // The second finger of a pinch; the document listener cancelled the hold.
+    if (event.touches.length > 1) return;
+
     // Find the parent item element from the handle
-    const section = event.currentTarget.closest(
-      "[data-sortable-list-target='item']",
-    );
+    const section = event.currentTarget.closest(this.itemSelector);
     if (!section) return;
 
     // Another controller may switch dragging off for a while, e.g. the
@@ -181,17 +236,19 @@ export default class extends Controller {
 
     if (!this.holdActivated || !this.isTouching || !this.draggedElement) {
       this.resetTouchState();
+      this.finishDeferredRollback();
       return;
     }
 
-    this.moveDraggedTo(this.currentTouchX, this.currentTouchY);
+    const moved = this.moveDraggedTo(this.currentTouchX, this.currentTouchY);
 
     this.draggedElement.classList.remove("opacity-50", "scale-[1.02]");
     this.draggedElement.setAttribute("aria-grabbed", "false");
     this.clearPlaceholders();
-    this.saveOrder();
+    if (moved) this.saveOrder();
 
     this.resetTouchState();
+    this.finishDeferredRollback();
   }
 
   touchCancel() {
@@ -204,6 +261,7 @@ export default class extends Controller {
 
     this.clearPlaceholders();
     this.resetTouchState();
+    this.finishDeferredRollback();
   }
 
   // Belt-and-suspenders alongside the `[-webkit-touch-callout:none]` class:
@@ -243,9 +301,7 @@ export default class extends Controller {
   // Bound either on the item itself or on a handle inside it. Focus returns
   // to the bound element after each move.
   handleKeyDown(event) {
-    const currentSection = event.currentTarget.closest(
-      "[data-sortable-list-target='item']",
-    );
+    const currentSection = event.currentTarget.closest(this.itemSelector);
     if (!currentSection) return;
     // Keys pressed on a control inside the item (a header button, a widget's
     // own inputs) belong to that control, not to the reorder grab.
@@ -345,27 +401,56 @@ export default class extends Controller {
     }
   }
 
+  get itemSelector() {
+    return `[data-${this.identifier}-target='item']`;
+  }
+
+  // Whether the drag started on `item` itself rather than on a draggable item
+  // of a list nested in it. A text drag starts on a text node, so look from
+  // its parent element.
+  ownsItem(target, item) {
+    const element =
+      target.nodeType === Node.ELEMENT_NODE ? target : target.parentElement;
+    return element?.closest("[draggable='true']") === item;
+  }
+
   // ===== Drop Position =====
   // Measures the items before touching any classes, so a drag event does
   // not force an extra layout pass.
   showDropPosition(pointerX, pointerY) {
-    const { element, position } = this.dropSlot(pointerX, pointerY);
+    const slot = this.dropSlot(pointerX, pointerY);
     this.clearPlaceholders();
-    this.showPlaceholder(element, position);
+    if (slot) this.showPlaceholder(slot.element, slot.position);
   }
 
+  // Returns whether the order changed, so a drop back into the same place
+  // saves nothing.
   moveDraggedTo(pointerX, pointerY) {
-    const { element, position } = this.dropSlot(pointerX, pointerY);
+    const slot = this.dropSlot(pointerX, pointerY);
+    if (!slot) return false;
 
-    if (position === "after") {
-      element.after(this.draggedElement);
+    const before = JSON.stringify(this.currentOrder());
+    if (slot.position === "after") {
+      slot.element.after(this.draggedElement);
     } else {
-      element.before(this.draggedElement);
+      slot.element.before(this.draggedElement);
     }
+    return JSON.stringify(this.currentOrder()) !== before;
   }
 
-  // The item the dragged one lands next to, and on which side.
+  // The item the dragged one lands next to, and on which side. None while
+  // the pointer is over the dragged item itself: it stays where it is.
   dropSlot(pointerX, pointerY) {
+    const own = this.draggedElement.getBoundingClientRect();
+    if (
+      pointerX >= own.left &&
+      pointerX <= own.right &&
+      pointerY >= own.top &&
+      pointerY <= own.bottom
+    ) {
+      return null;
+    }
+
     const draggableElements = this.itemTargets.filter(
       (section) => section !== this.draggedElement,
     );
@@ -454,7 +539,7 @@ export default class extends Controller {
   // never land after a newer one and restore an earlier order. Resolves once
   // the queue has sent everything.
   saveOrder() {
-    const order = this.itemTargets.map((item) => item.dataset.sortableListId);
+    const order = this.currentOrder();
     const queue = this.mirrorListsValue ? this.mirrorOrder(order) : this;
     queue.pendingOrder = order;
     if (!queue.saving) queue.savesFinished = queue.flushSaves();
@@ -465,13 +550,7 @@ export default class extends Controller {
   // controller whose queue saves for all copies, so their saves also run one
   // at a time.
   mirrorOrder(order) {
-    const lists = [
-      ...document.querySelectorAll(`[data-controller~='${this.identifier}']`),
-    ].filter(
-      (list) =>
-        list.dataset.sortableListUrlValue === this.urlValue &&
-        list.dataset.sortableListParamValue === this.paramValue,
-    );
+    const lists = this.mirroredLists();
 
     lists.forEach((list) => {
       if (list === this.element) return;
@@ -484,12 +563,46 @@ export default class extends Controller {
       });
     });
 
+    return this.queueController();
+  }
+
+  // The controller whose queue saves for this list and all its copies.
+  queueController() {
+    if (!this.mirrorListsValue) return this;
+
     return (
       this.application.getControllerForElementAndIdentifier(
-        lists[0],
+        this.mirroredLists()[0],
         this.identifier,
       ) ?? this
     );
+  }
+
+  mirroredListControllers() {
+    if (!this.mirrorListsValue) return [this];
+
+    return this.mirroredLists()
+      .map((list) =>
+        this.application.getControllerForElementAndIdentifier(
+          list,
+          this.identifier,
+        ),
+      )
+      .filter(Boolean);
+  }
+
+  mirroredLists() {
+    return [
+      ...document.querySelectorAll(`[data-controller~='${this.identifier}']`),
+    ].filter(
+      (list) =>
+        list.dataset.sortableListUrlValue === this.urlValue &&
+        list.dataset.sortableListParamValue === this.paramValue,
+    );
+  }
+
+  currentOrder() {
+    return this.itemTargets.map((item) => item.dataset.sortableListId);
   }
 
   async flushSaves() {
@@ -522,7 +635,10 @@ export default class extends Controller {
             : undefined,
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        this.savedOrder = order;
+        this.rollbackPending = false;
+      } else {
         const errorData = await response.json().catch(() => ({}));
         console.error(
           "[Sortable List] Failed to save order:",
@@ -536,10 +652,99 @@ export default class extends Controller {
       }
     } catch (error) {
       console.error("[Sortable List] Network error saving order:", error);
-      // A newer order still gets sent; otherwise show what is actually saved.
-      if (!this.pendingOrder) {
+      // A newer order still gets sent.
+      if (this.pendingOrder) return;
+
+      // A timed-out request may still have been saved, so show what the
+      // server has.
+      if (error?.name === "TimeoutError") {
         Turbo.visit(window.location.href, { action: "replace" });
+        return;
       }
+
+      // No response: the order may or may not have been saved, and
+      // reloading would fail too while offline. Put back the last order the
+      // server confirmed and say the save could not be confirmed. A move the
+      // user has not released yet stays; its release sends the order again,
+      // and a gesture that ends without a move puts the order back then.
+      const lists = this.mirroredListControllers();
+      if (lists.some((list) => list.isMoving())) {
+        this.rollbackPending = true;
+      } else {
+        this.rollBack(lists);
+      }
+      this.showSaveFailed();
     }
+  }
+
+  rollBack(lists = this.mirroredListControllers()) {
+    this.rollbackPending = false;
+    lists.forEach((list) => {
+      list.restoreOrder(this.savedOrder);
+    });
+  }
+
+  // Called when a gesture ends. A save that failed while it was going on put
+  // nothing back; if the gesture saved no new order, do that now.
+  finishDeferredRollback() {
+    const queue = this.queueController();
+    if (!queue.rollbackPending || queue.saving || queue.pendingOrder) return;
+    if (queue.mirroredListControllers().some((list) => list.isMoving())) return;
+
+    queue.rollBack();
+  }
+
+  isMoving() {
+    return Boolean(
+      this.draggedElement ||
+        this.keyboardGrabbedElement ||
+        this.isTouching ||
+        this.pendingSection,
+    );
+  }
+
+  // Puts the items back in the given order. Items the order does not know
+  // keep their order behind the known ones. Only items out of place move, so
+  // the controllers inside the others do not reconnect.
+  restoreOrder(order) {
+    const rank = (item) => {
+      const index = order.indexOf(item.dataset.sortableListId);
+      return index === -1 ? order.length : index;
+    };
+    const sorted = [...this.itemTargets].sort((a, b) => rank(a) - rank(b));
+    const focused = document.activeElement;
+
+    sorted.forEach((item, index) => {
+      const current = this.itemTargets[index];
+      if (current !== item) current.before(item);
+    });
+
+    // Moving the focused item drops its focus; give it back.
+    if (focused !== document.activeElement && focused?.isConnected) {
+      focused.focus();
+    }
+  }
+
+  // The alert is rendered by the server into a template in the
+  // notification tray, so its text is translated. The list moving back is
+  // announced too, since the toast itself is not a live region.
+  showSaveFailed() {
+    const template = document.getElementById("sortable-list-save-failed");
+    const tray = document.getElementById("notification-tray");
+    if (!template || !tray) return;
+
+    // One alert, however often the save fails.
+    tray.querySelector("[data-sortable-list-save-failed]")?.remove();
+    const alert = template.content.firstElementChild.cloneNode(true);
+    alert.dataset.sortableListSaveFailed = "";
+    tray.append(alert);
+
+    // Cleared first, so the same message is read out again the next time.
+    const announcer = document.getElementById("aria-announcer");
+    if (!announcer) return;
+    announcer.textContent = "";
+    requestAnimationFrame(() => {
+      announcer.textContent = template.dataset.message;
+    });
   }
 }
