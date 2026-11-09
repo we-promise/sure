@@ -937,6 +937,10 @@ class Family::DataImporter
           merchant_id: new_merchant_id,
           kind: data["kind"] || "standard"
         )
+        # Source-system metadata, such as the ID that lets a later import from
+        # that system recognise the transaction, kept out of external_id so
+        # provider sync can still claim the entry.
+        transaction.extra = transaction.extra.merge(data["extra"]) if data["extra"].is_a?(Hash)
 
         entry ||= Entry.new(entryable: transaction)
         entry.assign_attributes(
@@ -951,12 +955,10 @@ class Family::DataImporter
         if @import_session
           entry.external_id = session_entry_external_id("Transaction", old_id)
           entry.source = session_entry_source
-        elsif data["external_id"].present? && data["source"].present?
-          # A record may carry its source system's identity, so a later import
-          # from that system can recognise the transaction.
-          entry.external_id = data["external_id"]
-          entry.source = data["source"]
         end
+        # Records from another system may lock the entry against provider sync
+        # overwrites, as the CSV importer does.
+        entry.import_locked = true if truthy?(data["import_locked"])
 
         entry.save!
 

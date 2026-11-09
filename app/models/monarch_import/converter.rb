@@ -16,9 +16,13 @@ class MonarchImport::Converter
     "Credit Card Payment" => "cc_payment"
   }.freeze
   RECORD_ORDER = %w[Account Category Tag Merchant Transaction Valuation].freeze
-  # Imported transactions carry this source and their Monarch ID, so a later
-  # import into the same account can recognise them.
-  ENTRY_SOURCE = "monarch".freeze
+  # Imported transactions keep their Monarch ID in extra under this key, so a
+  # later import into the same account can recognise them. It stays out of
+  # external_id: provider sync only claims entries without one, so a bank
+  # connection linked later matches these entries instead of duplicating them.
+  EXTRA_KEY = "monarch".freeze
+  # How the Monarch to Sure API tool's import sessions identify transactions.
+  SESSION_EXTERNAL_ID_PREFIX = "Transaction:monarch-transaction:".freeze
   LIABILITY_TYPES = %w[CreditCard Loan OtherLiability].freeze
 
   # What the person picked for one Monarch account. name is Monarch's, and
@@ -111,8 +115,10 @@ class MonarchImport::Converter
           "name" => row[:merchant].presence || row[:original_statement].presence || "Imported transaction",
           "notes" => row[:notes].presence,
           "kind" => kind,
-          "external_id" => external_id(row),
-          "source" => ENTRY_SOURCE
+          "extra" => { EXTRA_KEY => { "transaction_id" => row[:id] } },
+          # Like the CSV importer: a provider that later claims the entry links
+          # to it without overwriting what was imported.
+          "import_locked" => true
         }
         if row[:category].present? && kind == "standard"
           data["category_id"] = @categories[row[:category]] ||= "monarch-category:#{row[:category]}"
@@ -129,22 +135,16 @@ class MonarchImport::Converter
       flows
     end
 
-    def external_id(row)
-      "monarch-transaction:#{row[:id]}"
-    end
-
     # Whether an existing account already holds this Monarch transaction:
-    # first by its Monarch ID from an earlier import, then by Sure's own
-    # duplicate matcher (same date, amount and currency). Each existing entry
-    # matches at most one row, so two genuine identical purchases stay two.
-    # A skipped row is already in the account's balance, so it adds no flow.
+    # first by its Monarch ID from an earlier import (natively or through the
+    # API tool), then by Sure's own duplicate matcher (same date, amount and
+    # currency). Each existing entry matches at most one row, so two genuine
+    # identical purchases stay two. A skipped row is already in the account's
+    # balance, so it adds no flow.
     def already_in_sure?(account, row)
       return false if account.nil?
 
-      @imported_ids ||= Hash.new do |ids, target|
-        ids[target] = target.entries.where(source: ENTRY_SOURCE).pluck(:external_id).to_set
-      end
-      return true if @imported_ids[account].include?(external_id(row))
+      return true if imported_monarch_ids(account).include?(row[:id])
 
       @claimed_entry_ids ||= Hash.new { |claimed, target| claimed[target] = [] }
       duplicate = Account::ProviderImportAdapter.new(account).find_duplicate_transaction(
@@ -153,6 +153,20 @@ class MonarchImport::Converter
       )
       @claimed_entry_ids[account] << duplicate.id if duplicate
       duplicate.present?
+    end
+
+    def imported_monarch_ids(account)
+      @imported_monarch_ids ||= {}
+      @imported_monarch_ids[account.id] ||= load_imported_monarch_ids(account)
+    end
+
+    def load_imported_monarch_ids(account)
+      native = Transaction.joins(:entry).where(entries: { account_id: account.id })
+        .where("transactions.extra -> ? ->> 'transaction_id' IS NOT NULL", EXTRA_KEY)
+        .pluck(Arel.sql(ActiveRecord::Base.sanitize_sql([ "transactions.extra -> ? ->> 'transaction_id'", EXTRA_KEY ])))
+      tool = account.entries.where("external_id LIKE ?", "#{SESSION_EXTERNAL_ID_PREFIX}%")
+        .pluck(:external_id).map { |id| id.delete_prefix(SESSION_EXTERNAL_ID_PREFIX) }
+      (native + tool).to_set
     end
 
     def convert_account(choice, flows)
@@ -195,7 +209,8 @@ class MonarchImport::Converter
       if start_date
         claimed = @claimed_entry_ids ? @claimed_entry_ids[account] : []
         @overlapping_transactions[choice.name] = others.count do |entry|
-          entry.date.between?(start_date, end_date) && entry.source != ENTRY_SOURCE && !claimed.include?(entry.id)
+          entry.date.between?(start_date, end_date) && !claimed.include?(entry.id) &&
+            !imported_monarch_ids(account).include?(entry.entryable.try(:extra).to_h.dig(EXTRA_KEY, "transaction_id"))
         end
       end
 

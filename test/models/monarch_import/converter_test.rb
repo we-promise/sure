@@ -108,21 +108,31 @@ class MonarchImport::ConverterTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2024, 1, 2) ], result.conflicts["Checking"]
   end
 
-  test "transactions carry their Monarch ID" do
+  test "transactions keep their Monarch ID outside external_id, and are import locked" do
     transaction = records("Transaction")["monarch-transaction:1"]
 
-    assert_equal [ "monarch-transaction:1", "monarch" ], transaction.values_at("external_id", "source")
+    assert_equal({ "monarch" => { "transaction_id" => "1" } }, transaction["extra"])
+    assert transaction["import_locked"]
+    assert_not transaction.key?("external_id")
   end
 
   test "transactions already imported from Monarch are skipped" do
     account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
     account.entries.create!(date: Date.new(2024, 1, 2), amount: 10, currency: "USD", name: "Grocer",
-      source: "monarch", external_id: "monarch-transaction:1", entryable: Transaction.new)
+      external_id: "sfin-1", source: "simplefin", entryable: Transaction.new(extra: { "monarch" => { "transaction_id" => "1" } }))
     result = convert("Checking" => { target: account })
 
     assert_not record_ids(result, "Transaction").include?("monarch-transaction:1")
     assert_equal 1, result.stats["transactions_skipped_already_in_sure"]
     assert_equal 0, result.overlapping_transactions["Checking"]
+  end
+
+  test "transactions imported earlier through the Monarch to Sure tool are recognised" do
+    account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
+    account.entries.create!(date: Date.new(2024, 1, 2), amount: 10, currency: "USD", name: "Grocer",
+      source: "sure_import_session:abc", external_id: "Transaction:monarch-transaction:1", entryable: Transaction.new)
+
+    assert_equal 1, convert("Checking" => { target: account }).stats["transactions_skipped_already_in_sure"]
   end
 
   test "Sure's matcher skips a transaction already entered by hand, once" do

@@ -98,6 +98,33 @@ class MonarchImportTest < ActiveSupport::TestCase
     assert_balances_match monarch_history["Checking"], @family.accounts.find_by!(name: "Checking"), 1
   end
 
+  # Provider handoff: an account imported from Monarch and later linked to a
+  # bank connection. The sync claims the imported transaction instead of adding
+  # a copy, keeps what Monarch imported, and a repeat Monarch import still
+  # recognises it by its Monarch ID.
+  test "a later provider sync claims imported transactions instead of duplicating them" do
+    publish!
+    checking = @family.accounts.find_by!(name: "Checking")
+    imported = checking.entries.find_by!(name: "Grocer")
+    transactions_before = checking.entries.where(entryable_type: "Transaction").count
+
+    synced = Account::ProviderImportAdapter.new(checking).import_transaction(
+      external_id: "sfin-1", amount: 10, currency: "USD", date: Date.new(2024, 1, 2), name: "GROCER #12 POS", source: "simplefin"
+    )
+
+    assert_equal imported.id, synced.id
+    assert_equal transactions_before, checking.entries.where(entryable_type: "Transaction").count
+    imported.reload
+    assert_equal [ "sfin-1", "simplefin", "Grocer" ], [ imported.external_id, imported.source, imported.name ]
+    assert_equal "1", imported.transaction.extra.dig("monarch", "transaction_id")
+
+    second = @family.imports.create!(type: "MonarchImport")
+    second.attach_exports!(balances_csv: file_fixture("imports/monarch_balances.csv").read,
+      transactions_csv: file_fixture("imports/monarch_transactions.csv").read)
+    second.account_mappings.find_by!(key: "Checking").update!(mappable: checking)
+    assert_equal 3, second.conversion.stats["transactions_skipped_already_in_sure"]
+  end
+
   test "an existing account takes only one Monarch account" do
     account = @family.accounts.create!(name: "My Checking", balance: 0, currency: "USD", accountable: Depository.new)
     mapping("Checking").update!(mappable: account)
