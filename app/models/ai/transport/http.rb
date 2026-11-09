@@ -26,10 +26,23 @@ module Ai::Transport::Http
       return if proxy.nil?
 
       no_proxy = env["NO_PROXY"].presence || env["no_proxy"].presence
-      return if no_proxy && (no_proxy.strip == "*" || !URI::Generic.use_proxy?(uri.host, uri.host, uri.port, no_proxy))
+      return if no_proxy && (no_proxy.strip == "*" || !URI::Generic.use_proxy?(uri.host, address(uri.host, no_proxy), uri.port, no_proxy))
 
       proxy
     end
+
+    # The host's address, for NO_PROXY's IP and CIDR entries, as Ruby's own lookup resolves it
+    # (URI#find_proxy). Names are resolved only when NO_PROXY has such an entry.
+    def address(host, no_proxy)
+      return host if ip?(host.delete("[]"))
+      return host unless no_proxy.split(",").any? { ip?(_1.strip) }
+
+      IPSocket.getaddress(host)
+    rescue SocketError
+      host
+    end
+
+    def ip?(value) = IPAddr.new(value).present? rescue false
 
     # The proxy for Net::HTTP.new, which takes host, port, user and password.
     def net_http_proxy(url, env: ENV)
