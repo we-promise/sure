@@ -13,12 +13,11 @@
   </div>
 <% end %>
 
-<% dropped = @family.dropped_ai_prompt_overrides %>
-<% if dropped.any? %>
+<% if @dropped_overrides.any? %>
   <div class="mb-4">
     <%= render DS::Alert.new(title: t(".dropped.title"), variant: :warning) do %>
       <p><%= t(".dropped.body") %></p>
-      <% dropped.each do |override| %>
+      <% @dropped_overrides.each do |override| %>
         <%= render DS::Disclosure.new(title: t(".dropped.#{override[:key]}", default: override[:key].to_s.humanize), variant: :inline) do %>
           <pre class="mt-2 whitespace-pre-wrap font-mono text-xs text-secondary"><%= override[:text] %></pre>
         <% end %>
