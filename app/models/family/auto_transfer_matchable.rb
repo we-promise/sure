@@ -85,6 +85,17 @@ module Family::AutoTransferMatchable
     end
   end
 
+  # Both sides of every pair the "Transfer?" hint offers for any of
+  # `transactions`: rows that show the hint once these transactions are free
+  # to pair, such as after a match between them was rejected.
+  #
+  # @return [Set<String>] transaction ids, including ones outside `transactions`
+  def transfer_hint_pair_ids(transactions, user:)
+    transfer_hint_candidates(transactions, user:).each_with_object(Set.new) do |candidate, ids|
+      ids << candidate.inflow_transaction_id << candidate.outflow_transaction_id
+    end
+  end
+
   # "Not a transfer" on a hint: rejects every pair the hint offered for this
   # transaction, the same record a rejected auto-match leaves behind, so neither
   # the hint nor the automatic matcher suggests them again. The manual dialog

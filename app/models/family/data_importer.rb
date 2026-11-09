@@ -1519,7 +1519,7 @@ class Family::DataImporter
 
       # Map merchant names to IDs
       if condition_type == "transaction_merchant"
-        return find_or_create_rule_merchant(value).id
+        return resolve_rule_merchant_id(condition_data, value)
       end
 
       # Map tag names to IDs
@@ -1551,7 +1551,7 @@ class Family::DataImporter
 
       # Map merchant names to IDs
       if action_type == "set_transaction_merchant"
-        return find_or_create_rule_merchant(value).id
+        return resolve_rule_merchant_id(action_data, value)
       end
 
       value
@@ -1627,6 +1627,18 @@ class Family::DataImporter
         classification_unused: "expense",
         lucide_icon: "shapes"
       )
+    end
+
+    # A merchant this import already mapped (a FamilyMerchant, or a reused
+    # ProviderMerchant, see import_provider_merchants) keeps the rule on the same
+    # record as the restored transactions. Anything else is found or created by
+    # name.
+    def resolve_rule_merchant_id(data, name)
+      value_ref = data["value_ref"]
+      ref_id = value_ref["id"] if value_ref.is_a?(Hash) && value_ref["type"] == "Merchant"
+      mapped = mapped_id(:merchants, ref_id.to_s, record_type: "Rule", required: false) if ref_id.present?
+
+      mapped || find_or_create_rule_merchant(name).id
     end
 
     def find_or_create_rule_merchant(name)

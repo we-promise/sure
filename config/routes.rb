@@ -214,6 +214,20 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :sharesight_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   # Trade Republic routes (login steps are TR-specific: web login needs a
   # two-phase initiate/confirm handshake with the Trade Republic app)
   resources :trade_republic_items, only: [ :show, :create, :update, :destroy ] do
@@ -348,6 +362,9 @@ Rails.application.routes.draw do
     end
   end
 
+  # Per-connection sync cadence; the connection is given as ?syncable_type=&syncable_id=
+  resource :sync_schedule, only: %i[edit update]
+
   get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
 
   get "changelog", to: "pages#changelog"
@@ -411,6 +428,7 @@ Rails.application.routes.draw do
     end
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
+      delete :reset_market_data, on: :collection
       delete :disconnect_external_assistant, on: :collection
     end
     resource :payment, only: :show
@@ -776,11 +794,16 @@ Rails.application.routes.draw do
 
   resources :invitations, only: [ :new, :create, :destroy ] do
     get :accept, on: :member
+    collection do
+      get  :bulk_new,    path: "bulk"
+      post :bulk_create, path: "bulk"
+    end
   end
 
   # API routes
   namespace :api do
     namespace :v1 do
+      resource :version, only: :show
       namespace :financekit do
         get "capabilities", to: "connections#capabilities"
         resources :connections, only: [ :create, :show, :destroy ] do
@@ -813,7 +836,7 @@ Rails.application.routes.draw do
       resources :rules, only: [ :index, :show ]
       resources :rule_runs, only: [ :index, :show ]
       resources :securities, only: [ :index, :show ]
-      resources :security_prices, only: [ :index, :show ]
+      resources :security_prices, only: [ :index, :show, :create ]
       resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ] do
@@ -840,7 +863,9 @@ Rails.application.routes.draw do
       resource :cash_flow, only: [ :show ], controller: :cash_flows
       resource :spending_vs_normal, only: [ :show ], controller: :spending_vs_normal
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
-      resources :insights, only: [ :index ]
+      resources :insights, only: [ :index ] do
+        patch :acknowledge, on: :member
+      end
       resources :push_subscriptions, only: [ :create, :destroy ]
       resource :family_settings, only: [ :show ], controller: :family_settings
       post :sync, to: "sync#create", as: :sync_job
