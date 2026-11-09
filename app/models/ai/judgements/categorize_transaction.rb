@@ -1,6 +1,5 @@
 # Categorizes each transaction with a decision model: one Choice question over the family's
-# categories, one request per transaction. Replaces Provider::Jev#auto_categorize; the
-# instructions, the opt-out, the hierarchy hints and the confidence rules are unchanged.
+# categories, one request per transaction.
 class Ai::Judgements::CategorizeTransaction < Ai::Judgement
   feature :categorize
 

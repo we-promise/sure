@@ -70,7 +70,7 @@ flowchart LR
 flowchart LR
   Caller["a view, controller, job or tool"] -->|"Ai.available?(feature, family:, user:)"| R["Ai::Router"]
   R --> C["Ai::Config.current<br/>endpoints, models, routes"]
-  C --> L["Ai::LegacyEnvConfig<br/>today's ENV + Setting (until PR 7)"]
+  C --> L["Ai::LegacyEnvConfig<br/>deprecated ENV + Setting"]
   R --> M["Ai::Routes::MATRIX<br/>lane, needs, consent, sends"]
   R --> K["Ai::Consent<br/>the user's AI switch"]
   R -->|"Ai::Plan or Ai::Availability(reason)"| Caller
@@ -95,18 +95,18 @@ flowchart LR
   check `Ai.available?(:feature, family:, user:)` in a model or job. Don't test
   `Provider::Registry`, `Setting` or `VectorStore` for availability.
 - **No AI ENV.** The cop `Sure/NoAiEnv` flags `ENV` reads of AI-looking names outside
-  `Ai::LegacyEnvConfig`. Add a column, a preset field or a config file key instead (PR 7). The
+  `Ai::LegacyEnvConfig`. Add a column, a preset field or a config file key instead. The
   files on its allowlist in `.rubocop.yml` still read ENV until their part replaces them; the list
   only shrinks.
 - **A new feature is a row in `Ai::Routes::MATRIX`**, with `sends:` keys described in
   `config/locales/models/ai/en.yml`, and its key is permanent once released. Regenerate the table
   below with `bin/rails ai:routes_doc`; `ai_routing_matrix_test` fails when it's stale.
-- **Consent, until PR 7:** chat and bills need the user's own AI switch (`users.ai_enabled`);
-  nothing else needs consent. PR 7 adds the family's consent per row.
+- **Consent:** chat and bills need the user's own AI switch (`users.ai_enabled`); nothing else
+  needs consent yet.
 - **An AI tool declares its feature** (`ai_feature :extract_pdf` on an `Assistant::Function`), so
   chat and MCP list it only while the feature is available.
-- **`Ai::Config` is built in each process from its own ENV** until PR 7, so give the web and the
-  worker containers the same AI variables.
+- **`Ai::Config` is built in each process from its own ENV**, so give the web and the worker
+  containers the same AI variables.
 
 <!-- ai:routes_doc -->
 | Feature | Lane | Needs | Consent row | Sends |
@@ -129,7 +129,7 @@ flowchart LR
   `use_no_ai` configures nothing.
 - `test/architecture/ai_agreement_test.rb` asks every entry point in each setup today's code
   supports (`test/support/ai_legacy_setups.rb`) and fails when one disagrees with the router.
-  Chat's entry points are on its allowlist until PR 6.
+  Chat's entry points are on its allowlist, as chat doesn't go through the router yet.
 - `ai_config_test.rb` checks that the deprecated ENV path routes each feature to the provider and
   model today's code uses; `ai_feature_guard_test.rb` that every action starting an AI feature
   declares `requires_ai`.
@@ -215,7 +215,7 @@ flowchart LR
 - CI: `ai-evals.yml` runs the eval datasets against recorded answers on any AI change; the
   `ai-live` label runs the live tests and evals with repository secrets.
 
-## Judgements and shadow runs (PR 2d)
+## Judgements and shadow runs
 
 **Judgements.** A decision model (Jev) answers a feature through an `Ai::Judgement`, which the
 feature's generation declares with `judged_by`. The generation's loop builds it on a `judge`
@@ -230,7 +230,7 @@ shadow subject: "Transaction",
        compare: ->(value) { value[:categorizations].to_h { [ _1[:transaction_id].to_s, [ category_id_for(_1[:category_name]), _1[:confidence] ] ] } }
 ```
 
-is sampled after each successful call at the family's rate (until PR 7). On a hit, `Ai::Shadow`
+is sampled after each successful call at the family's rate. On a hit, `Ai::Shadow`
 enqueues `Ai::ShadowJob` with the items the call was sent and the primary's compared answer. The
 job runs the same class on the `shadow_<feature>` route; its calls are recorded under
 `shadow_<feature>` and tagged `shadow`, and its answer goes only to the `compare.ai_shadow`

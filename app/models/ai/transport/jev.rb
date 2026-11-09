@@ -36,7 +36,8 @@ class Ai::Transport::Jev < Ai::Transport::Base
     end
 
     # One state's answers and usage. A malformed answer (an option not asked for, a choice with no
-    # confidence) fails only that state: RubyLLM rejects the whole response, so its usage is lost.
+    # confidence) fails only that state: RubyLLM rejects the whole response, so its usage is lost
+    # (crmne/ruby_llm#1614).
     def judge_one(request, state)
       judgment = attempt do
         mapping_errors do

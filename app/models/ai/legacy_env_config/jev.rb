@@ -7,7 +7,7 @@
 module Ai::LegacyEnvConfig::Jev
   DEFAULT_ENDPOINT = "https://api.typesafe.ai/v1/systemone".freeze
   DEFAULT_MODEL = "jev-latest".freeze
-  RETRIES = 3   # what the hand-written Jev client retried
+  RETRIES = 3
   UNSUPPORTED = {
     openrouter: "OpenRouter's Jev needs RubyLLM 2.2",
     path: "only TypeSafe-style …/v1/systemone endpoints are supported"
