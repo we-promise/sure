@@ -139,7 +139,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           type: {
             type: :string,
             enum: Import::TYPES,
-            description: 'Import type (defaults to TransactionImport)'
+            description: 'Import type (defaults to TransactionImport). MonarchImport is listed for imports made in the web app; creating one here returns 422 unsupported_type.'
           },
           account_id: {
             type: :string,

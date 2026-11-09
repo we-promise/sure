@@ -25,6 +25,26 @@
     ) %>
   <% end %>
 
+  <% if import.is_a?(MonarchImport) %>
+    <% review = import.review %>
+    <% if review[:existing_account_names].any? %>
+      <%= render DS::Alert.new(variant: :warning, title: t(".monarch_existing_names_title"),
+            message: t(".monarch_existing_names_description", names: review[:existing_account_names].to_sentence)) %>
+    <% end %>
+    <% if review[:conflicting_days] > 0 %>
+      <%= render DS::Alert.new(variant: :warning, title: t(".monarch_conflicts_title"),
+            message: t(".monarch_conflicts_description", count: review[:conflicting_days])) %>
+    <% end %>
+    <% if review[:overlapping_transactions] > 0 %>
+      <%= render DS::Alert.new(variant: :warning, title: t(".monarch_overlap_title"),
+            message: t(".monarch_overlap_description", count: review[:overlapping_transactions])) %>
+    <% end %>
+    <% if review[:moved_opening_balances] > 0 %>
+      <%= render DS::Alert.new(variant: :info, title: t(".monarch_opening_title"),
+            message: t(".monarch_opening_description", count: review[:moved_opening_balances])) %>
+    <% end %>
+  <% end %>
+
   <% if reused_taxonomy_count > 0 %>
     <%= render DS::Alert.new(
       variant: :info,

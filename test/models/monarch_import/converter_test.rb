@@ -1,0 +1,146 @@
+require "test_helper"
+
+class MonarchImport::ConverterTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:empty)
+    @exports = MonarchImport::Exports.new(
+      balances_csv: file_fixture("imports/monarch_balances.csv").read,
+      transactions_csv: file_fixture("imports/monarch_transactions.csv").read
+    )
+  end
+
+  test "transactions flip sign and link their category, merchant and tags" do
+    transaction = records("Transaction")["monarch-transaction:1"]
+
+    assert_equal "10.00", transaction["amount"]
+    assert_equal "monarch-category:Groceries", transaction["category_id"]
+    assert_equal "monarch-merchant:Grocer", transaction["merchant_id"]
+    assert_equal [ "monarch-tag:Food" ], transaction["tag_ids"]
+  end
+
+  test "transfers and card payments become transaction kinds without a category" do
+    payment = records("Transaction")["monarch-transaction:4"]
+
+    assert_equal "cc_payment", payment["kind"]
+    assert_nil payment["category_id"]
+  end
+
+  test "pending transactions are left out" do
+    assert_not records("Transaction").key?("monarch-transaction:5")
+  end
+
+  test "liability balances are positive in Sure" do
+    assert_equal "70.00", records("Account")["monarch-account:Card"]["balance"]
+  end
+
+  test "new accounts open with the first Monarch balance" do
+    opening = records("Valuation")["monarch-valuation:Checking:2024-01-01"]
+
+    assert_equal [ "opening_anchor", "100.00" ], opening.values_at("kind", "amount")
+    assert records("Account")["monarch-account:Checking"]["skip_opening_balance_import"]
+  end
+
+  test "a new account takes the chosen name but keeps Monarch's for matching" do
+    account = records("Account", "Checking" => { account_name: "Everyday" })["monarch-account:Checking"]
+
+    assert_equal "Everyday", account["name"]
+    assert records("Transaction", "Checking" => { account_name: "Everyday" }).values.any? { |t| t["account_id"] == "monarch-account:Checking" }
+  end
+
+  test "closed accounts drop to zero and are disabled" do
+    valuations = records("Valuation", "Old Savings" => { closed: true })
+
+    assert_equal "0.00", valuations["monarch-valuation:Old Savings:2024-01-02"]["amount"]
+    assert_equal "disabled", records("Account", "Old Savings" => { closed: true })["monarch-account:Old Savings"]["status"]
+  end
+
+  test "skipped accounts and their transactions are left out" do
+    result = convert("Card" => { include: false })
+
+    assert_not record_ids(result, "Account").include?("monarch-account:Card")
+    assert_equal 1, result.stats["transactions_skipped_excluded_account"]
+  end
+
+  test "balances-only accounts keep their history without transactions" do
+    result = convert("Checking" => { transactions: false })
+    checking = result.records.select { |r| r["type"] == "Valuation" && r["data"]["account_id"] == "monarch-account:Checking" }
+
+    assert_equal %w[100.00 90.00 95.00], checking.map { |r| r["data"]["amount"] }
+    assert_equal 3, result.stats["transactions_skipped_balances_only"]
+  end
+
+  test "a changed current balance adds a valuation today" do
+    valuations = records("Valuation", { "Checking" => { current_balance: BigDecimal("120") }, "Card" => { current_balance: BigDecimal("80") } },
+      today: Date.new(2024, 1, 10))
+
+    assert_equal "120.00", valuations["monarch-valuation:Checking:2024-01-10"]["amount"]
+    assert_equal "80.00", valuations["monarch-valuation:Card:2024-01-10"]["amount"]
+  end
+
+  test "existing categories and merchants keep their look" do
+    @family.categories.create!(name: "Groceries", color: "#123456", lucide_icon: "carrot", classification_unused: "expense")
+    @family.merchants.create!(name: "Grocer", color: "#abcdef")
+    result = convert
+
+    category = result.records.find { |r| r["type"] == "Category" && r["data"]["name"] == "Groceries" }["data"]
+    merchant = result.records.find { |r| r["type"] == "Merchant" && r["data"]["name"] == "Grocer" }["data"]
+    assert_equal [ "#123456", "carrot" ], category.values_at("color", "lucide_icon")
+    assert_equal "#abcdef", merchant["color"]
+    assert_equal 1, result.stats["categories_reusing_existing"]
+  end
+
+  test "importing into an existing account moves its opening balance to the start of the history" do
+    account = existing_account(opening_date: Date.new(2024, 1, 3), opening_balance: 500)
+    result = convert("Checking" => { target: account })
+
+    assert_not record_ids(result, "Account").include?("monarch-account:Checking")
+    move = result.opening_balance_moves.sole
+    assert_equal [ Date.new(2024, 1, 1), BigDecimal("100") ], [ move.date, move.balance ]
+    assert_not record_ids(result, "Valuation").include?("monarch-valuation:Checking:2024-01-01")
+  end
+
+  test "an earlier opening balance stays, and disagreeing balance updates are reported" do
+    account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
+    account.entries.create!(date: Date.new(2024, 1, 2), amount: 70, currency: "USD", name: "Manual", entryable: Valuation.new(kind: "reconciliation"))
+    result = convert("Checking" => { target: account })
+
+    assert_empty result.opening_balance_moves
+    assert_equal [ Date.new(2024, 1, 2) ], result.conflicts["Checking"]
+  end
+
+  test "existing transactions in the same period are counted" do
+    account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
+    account.entries.create!(date: Date.new(2024, 1, 2), amount: 10, currency: "USD", name: "Grocer", entryable: Transaction.new)
+
+    assert_equal 1, convert("Checking" => { target: account }).overlapping_transactions["Checking"]
+  end
+
+  private
+    def choices(overrides = {})
+      @exports.suggestions.map do |suggestion|
+        MonarchImport::Converter::Choice.new(
+          name: suggestion.name, type: suggestion.type, closed: false, include: true, transactions: true,
+          current_balance: nil, target: nil, **overrides.fetch(suggestion.name, {})
+        )
+      end
+    end
+
+    def convert(overrides = {}, today: Date.new(2024, 1, 4), **by_name)
+      MonarchImport::Converter.new(exports: @exports, choices: choices(overrides.merge(by_name)), family: @family, today: today).result
+    end
+
+    def records(type, overrides = {}, **options)
+      convert(overrides, **options).records.select { |r| r["type"] == type }.to_h { |r| [ r["data"]["id"], r["data"] ] }
+    end
+
+    def record_ids(result, type)
+      result.records.select { |r| r["type"] == type }.map { |r| r["data"]["id"] }
+    end
+
+    def existing_account(opening_date:, opening_balance:)
+      account = @family.accounts.create!(name: "Sure Checking", balance: opening_balance, currency: "USD", accountable: Depository.new)
+      account.entries.create!(date: opening_date, amount: opening_balance, currency: "USD", name: "Opening balance",
+        entryable: Valuation.new(kind: "opening_anchor"))
+      account
+    end
+end

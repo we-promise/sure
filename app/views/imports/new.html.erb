@@ -30,7 +30,7 @@
     <% end %>
 
     <%
-      financial_tool_types = %w[MintImport ActualImport YnabImport QifImport SureImport DocumentImport PdfImport]
+      financial_tool_types = %w[MintImport ActualImport YnabImport MonarchImport QifImport SureImport DocumentImport PdfImport]
       import_type = params[:type].presence || @pending_import&.type
       active_tab = import_type.present? && !import_type.in?(financial_tool_types) ? "raw_data" : "financial_tools"
     %>
@@ -125,6 +125,16 @@
                 type: "YnabImport",
                 image: "ynab-logo.png",
                 label: t(".import_ynab"),
+                enabled: true %>
+            <% end %>
+
+            <% if (params[:type].nil? || params[:type] == "MonarchImport") && !Current.user&.guest? %>
+              <%= render "imports/import_option",
+                type: "MonarchImport",
+                icon_name: "line-chart",
+                icon_bg_class: "bg-info/10",
+                icon_text_class: "text-info",
+                label: t(".import_monarch"),
                 enabled: true %>
             <% end %>
 

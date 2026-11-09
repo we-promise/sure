@@ -2300,6 +2300,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -2392,6 +2393,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -2449,6 +2451,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -7801,6 +7804,7 @@ paths:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -7872,13 +7876,16 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
+                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport)
+                  description: Import type (defaults to TransactionImport). MonarchImport
+                    is listed for imports made in the web app; creating one here returns
+                    422 unsupported_type.
                 account_id:
                   type: string
                   format: uuid
@@ -7983,13 +7990,16 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
+                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport)
+                  description: Import type (defaults to TransactionImport). MonarchImport
+                    is listed for imports made in the web app; creating one here returns
+                    422 unsupported_type.
                 account_id:
                   type: string
                   format: uuid
@@ -8225,6 +8235,7 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
+                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
@@ -8340,6 +8351,7 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
+                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport

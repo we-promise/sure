@@ -43,6 +43,40 @@ en:
     configurations:
       update:
         success: Import configured successfully.
+        monarch_success: Account choices saved.
+      monarch:
+        title: Check each Monarch account
+        description: Choose where each account goes, what type it is, and what to bring over.
+        help_title: How each choice works
+        help_account: "Import into a new account, named as you like, or into one of your manual accounts. An existing account keeps its name, type and own entries, and its opening balance moves to the start of the Monarch history if it falls inside it."
+        help_closed: "Switch Status to Closed for accounts you've closed. They drop to zero the day after their last Monarch balance and are hidden from current balances, but stay in your net worth history. Accounts marked inactive had no activity in the last %{days} days, which doesn't always mean they're closed."
+        help_transactions: Turn transactions off to import only an account's balance history.
+        help_balance: "Balance today starts at Monarch's latest balance. Change it if that's out of date, and it's recorded as today's balance. Enter amounts owed on cards and loans as positive numbers."
+        table_label: Monarch accounts
+        import_column: Import
+        account_column: Account name
+        destination_column: Import into
+        type_column: Type
+        status_column: Status
+        status_open: Open
+        status_closed: Closed
+        toggle_all_label: "%{column} for every account"
+        transactions_column: Transactions
+        balance_column: Balance today
+        import_label: "Import %{name}"
+        destination_label: "Where to import %{name}"
+        name_label: "Name in Sure for %{name}"
+        monarch_name: "In Monarch: %{name}"
+        type_label: "Type of %{name}"
+        status_label: "%{name} is open"
+        transactions_label: "Import the transactions of %{name}"
+        balance_label: "Balance today for %{name}"
+        new_account: New account
+        inactive: Inactive
+        last_activity: "Last activity %{date}"
+        no_activity: No activity
+        no_transactions: None
+        submit: Review import
       account_import:
         leave_empty: Leave empty
         default: Default
@@ -208,7 +242,22 @@ en:
         qif_account_required: Please select an account for the QIF import
       update:
         qif_uploaded: "QIF file uploaded successfully."
+        monarch_uploaded: Monarch exports uploaded.
+        monarch_balances_required: Choose the Monarch balances export.
       show:
+        monarch_title: Upload your Monarch exports
+        monarch_description: Bring your accounts, transactions and balance history over from Monarch.
+        monarch_export_title: Download your data from Monarch
+        monarch_export_step_settings_html: "Log in to Monarch on the web and open %{link}."
+        monarch_export_settings_link: Settings → Data
+        monarch_export_step_download: Download your transactions and your account balance history, each as a CSV file.
+        monarch_export_step_upload: Choose the files below.
+        monarch_export_help_html: "Monarch explains each download in %{link}."
+        monarch_export_help_link: its help article
+        monarch_balances_label: Balances export
+        monarch_transactions_label: Transactions export
+        monarch_transactions_hint: Leave the transactions export out to import balance history only.
+        monarch_upload_button: Upload exports
         csv_invalid: "Must be valid CSV with headers and at least one row of data"
         drop_csv_title: Drop CSV to upload
         drop_csv_subtitle: Your file will be uploaded automatically
@@ -361,6 +410,7 @@ en:
       mint_import: "Mint import"
       actual_import: "Actual import"
       ynab_import: "YNAB import"
+      monarch_import: "Monarch import"
       qif_import: "QIF import"
       category_import: "Category import"
       rule_import: "Rule import"
@@ -370,6 +420,7 @@ en:
       sure_import: "Sure import"
     steps:
       upload: Upload
+      accounts: Accounts
       configure: Configure
       clean: Clean
       map: Map
@@ -424,6 +475,7 @@ en:
       tab_financial_tools: Financial Tools & Files
       tab_raw_data: Raw Data
       import_ynab: Import from YNAB
+      import_monarch: Import from Monarch
       import_accounts: Import accounts
       import_categories: Import categories
       import_merchants: Import merchants
@@ -463,6 +515,20 @@ en:
     ready:
       description: Here's a summary of the new items that will be added to your account
         once you publish this import.
+      monarch_existing_names_title: Accounts with these names already exist
+      monarch_existing_names_description: "You already have accounts named %{names}. Publishing creates new accounts beside them. To import into one of them instead, choose it on the Accounts step."
+      monarch_conflicts_title: Some existing balances differ from Monarch
+      monarch_conflicts_description:
+        one: "On 1 day, an account you're importing into already has a balance update that differs from Monarch's. Your existing value is kept."
+        other: "On %{count} days, accounts you're importing into already have balance updates that differ from Monarch's. Your existing values are kept."
+      monarch_overlap_title: Possible duplicate transactions
+      monarch_overlap_description:
+        one: "1 existing transaction falls within the Monarch history of an account you're importing into. It counts toward the balance, and may duplicate a Monarch transaction."
+        other: "%{count} existing transactions fall within the Monarch history of accounts you're importing into. They count toward the balance, and may duplicate Monarch transactions."
+      monarch_opening_title: Opening balances will move
+      monarch_opening_description:
+        one: "1 existing account's opening balance moves to the start of its Monarch history. Undoing the import puts it back."
+        other: "%{count} existing accounts' opening balances move to the start of their Monarch history. Undoing the import puts them back."
       title: Confirm your import data
       summary_item_label: Item
       summary_count_label: Count

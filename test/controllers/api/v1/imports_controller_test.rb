@@ -78,6 +78,17 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "refuses to create a Monarch import" do
+    assert_no_difference -> { @family.imports.count } do
+      post api_v1_imports_url,
+        params: { type: "MonarchImport", raw_file_content: "Date,Balance,Account\n2024-01-01,1.00,Checking\n" },
+        headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "unsupported_type", JSON.parse(response.body)["error"]
+  end
+
   test "should list imports" do
     get api_v1_imports_url, headers: api_headers(@api_key)
     assert_response :success

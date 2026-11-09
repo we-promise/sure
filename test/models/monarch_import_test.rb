@@ -1,0 +1,128 @@
+require "test_helper"
+
+class MonarchImportTest < ActiveSupport::TestCase
+  setup do
+    @family = families(:empty)
+    @import = @family.imports.create!(type: "MonarchImport")
+    @import.attach_exports!(
+      balances_csv: file_fixture("imports/monarch_balances.csv").read,
+      transactions_csv: file_fixture("imports/monarch_transactions.csv").read
+    )
+  end
+
+  test "attaching the exports suggests a choice for every account" do
+    mappings = @import.ordered_account_mappings
+
+    assert_equal [ "Checking", "Card", "Old Savings" ], mappings.map(&:key)
+    assert_equal %w[Depository CreditCard Investment], mappings.map(&:type)
+    assert @import.publishable?
+  end
+
+  test "an invalid choice stops the import from being publishable" do
+    mapping("Checking").update_column(:value, { "type" => "Boat" })
+
+    assert_not @import.reload.publishable?
+  end
+
+  test "Sure's recalculated balances match the Monarch history" do
+    mapping("Old Savings").update!(choices: { "closed" => true })
+    publish!
+
+    history = monarch_history
+    { "Checking" => 1, "Card" => -1, "Old Savings" => 1 }.each do |name, sign|
+      account = @family.accounts.find_by!(name: name)
+      assert_balances_match history[name], account, sign
+    end
+
+    old_savings = @family.accounts.find_by!(name: "Old Savings")
+    assert old_savings.disabled?
+    assert_equal 0, old_savings.balances.find_by(date: Date.new(2024, 1, 2)).balance
+    assert_equal 4, @family.entries.where(entryable_type: "Transaction").count
+  end
+
+  test "importing into an existing account keeps it, reproduces the history and reverts cleanly" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "USD", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    mapping("Checking").update!(mappable: account)
+    publish!
+
+    assert_not @family.accounts.exists?(name: "Checking")
+    assert_equal Date.new(2024, 1, 1), opening.reload.date
+    assert_balances_match monarch_history["Checking"], account, 1
+
+    @import.revert
+    assert @import.reload.pending?
+    assert @family.accounts.exists?(account.id)
+    assert_equal [ Date.new(2024, 1, 3), 500 ], [ opening.reload.date, opening.amount ]
+    assert_equal [ opening.id ], account.entries.pluck(:id)
+  end
+
+  test "renamed accounts are created with the new name" do
+    @import.apply_account_choices!(
+      { mapping("Checking").id => { name: "Everyday", type: "Depository", include: "1", transactions: "1" } },
+      target_accounts: @family.accounts
+    )
+    publish!
+
+    assert @family.accounts.exists?(name: "Everyday")
+    assert_not @family.accounts.exists?(name: "Checking")
+  end
+
+  test "an unchanged or blank name keeps Monarch's" do
+    @import.apply_account_choices!(
+      { mapping("Checking").id => { name: "Checking", type: "Depository", include: "1" },
+        mapping("Card").id => { name: " ", type: "CreditCard", include: "1" } },
+      target_accounts: @family.accounts
+    )
+
+    assert_nil mapping("Checking").choices["name"]
+    assert_equal "Card", mapping("Card").account_name
+  end
+
+  test "existing categories and merchants are reused unchanged" do
+    category = @family.categories.create!(name: "Groceries", color: "#123456", lucide_icon: "carrot", classification_unused: "expense")
+    merchant = @family.merchants.create!(name: "Grocer", color: "#abcdef")
+    publish!
+
+    assert_equal [ "#123456", "carrot" ], [ category.reload.color, category.lucide_icon ]
+    assert_equal "#abcdef", merchant.reload.color
+    transaction = @family.entries.find_by!(name: "Grocer").entryable
+    assert_equal [ category.id, merchant.id ], [ transaction.category_id, transaction.merchant_id ]
+  end
+
+  test "reverting removes the accounts it created" do
+    publish!
+    @import.revert
+
+    assert_empty @family.accounts.reload
+    assert @import.reload.pending?
+  end
+
+  private
+    def mapping(name)
+      @import.account_mappings.find_by!(key: name)
+    end
+
+    def publish!
+      @import.reload.publish
+      assert @import.reload.complete?, @import.error
+    end
+
+    def monarch_history
+      MonarchImport::Exports.new(balances_csv: file_fixture("imports/monarch_balances.csv").read).balances
+    end
+
+    # Runs Sure's own balance calculation, then checks every day of the
+    # Monarch history against what Sure stored.
+    def assert_balances_match(history, account, sign)
+      Balance::Materializer.new(account, strategy: :forward).materialize_balances
+      stored = account.balances.where(currency: account.currency).pluck(:date, :balance).to_h
+
+      history.each do |date, balance|
+        expected = balance * sign
+        actual = stored.fetch(date) { stored.select { |day, _| day < date }.max_by(&:first)&.last }
+        assert_equal expected, actual, "#{account.name} on #{date}"
+      end
+    end
+end

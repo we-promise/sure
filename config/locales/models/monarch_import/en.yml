@@ -1,0 +1,13 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        monarch_import:
+          missing_columns: "The %{file} file is missing the columns %{columns}. Is it the right Monarch export?"
+          malformed_csv: "The %{file} file isn't a readable CSV: %{error}"
+          invalid_number: "%{value} isn't a number"
+          invalid_date: "%{value} isn't a date in the form 2024-01-31"
+          files:
+            balances: balances
+            transactions: transactions
