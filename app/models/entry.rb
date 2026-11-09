@@ -744,8 +744,6 @@ class Entry < ApplicationRecord
               attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
               entry.update! attrs
               entry.transaction.record_category_usage! if entry.transaction?
-              # Before the tag save below, which replaces the saved changes this reads.
-              entry.lock_saved_attributes!
               changed = true
 
               if entry.saved_change_to_date?
@@ -753,6 +751,10 @@ class Entry < ApplicationRecord
                 sync_windows[entry.account] = [ sync_windows[entry.account], window_start ].compact.min
                 rescheduled_ids << entry.id
               end
+
+              # After the date check and before the tag save below: saving the
+              # locks replaces the saved changes both of them read.
+              entry.lock_saved_attributes!
             end
           end
 
