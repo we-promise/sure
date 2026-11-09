@@ -200,6 +200,26 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_operator @security.constituents_fetched_at, :>, first_stamp
   end
 
+  # A forced refresh that gets no answer must leave the stored set and its
+  # stamp exactly as they were: it asked again but got nothing, so nothing is
+  # replaced and the stamp is not advanced. The ordinary failed-answer test does
+  # not use `clear_cache`, and this is the path a forced refresh takes.
+  test "a failed forced refresh keeps the stored holdings and their stamp" do
+    import(info(constituents: [ constituent("AAA", "Old", 5) ]))
+    first_stamp = @security.reload.constituents_fetched_at
+
+    provider = capable_provider("provider")
+    provider.stubs(:class).returns(Provider::TwelveData)
+    provider.expects(:fetch_security_info).once.returns(
+      provider_error_response(Provider::Error.new("fundamentals unavailable"))
+    )
+    @security.stubs(:price_data_provider).returns(provider)
+    @security.import_provider_details(clear_cache: true, include_constituents: true)
+
+    assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker), "a failed forced refresh wiped the stored set"
+    assert_equal first_stamp, @security.constituents_fetched_at, "a failed forced refresh advanced the stamp"
+  end
+
   test "a caller that has not opted in makes no provider call" do
     provider = capable_provider("provider")
     provider.expects(:fetch_security_info).never

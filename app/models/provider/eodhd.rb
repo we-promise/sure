@@ -214,22 +214,32 @@ class Provider::Eodhd < Provider
   # bare one in `Code`. The bare ticker is what matches anything in `securities`,
   # so the key is used only as a fallback for a malformed entry.
   #
-  # An absent or empty block means the fund lists nothing. Any other shape is
-  # a response this cannot read, and raises: answered as "no holdings", it
-  # would replace the fund's stored set with nothing and stamp it as asked.
+  # An absent or empty block means the fund lists nothing. Any other shape, or a
+  # non-empty map whose entries are all malformed, is a response this cannot
+  # read and raises: answered as "no holdings", it would replace the fund's
+  # stored set with nothing and stamp it as asked.
   def etf_constituents(parsed)
     holdings = parsed.dig("ETF_Data", "Holdings")
     return nil if holdings.blank?
     raise Error, "Unexpected holdings format from fundamentals API" unless holdings.is_a?(Hash)
 
-    holdings.filter_map do |key, holding|
+    readable = holdings.filter_map do |key, holding|
       next unless holding.is_a?(Hash)
 
       ticker = holding["Code"].presence || key.to_s.split(".").first
       next if ticker.blank?
 
       { ticker: ticker, name: holding["Name"].presence, weight: holding["Assets_%"] }
-    end.presence
+    end
+
+    # A non-empty holdings block that yields no readable entry is an answer this
+    # cannot read. Returned as nil it is answered as "no holdings": the stored
+    # set wiped and the fund stamped, and the gate would not ask again. Fail
+    # instead, so the stored set survives and the next sync asks again. A partial
+    # read (some entries malformed) still returns the readable subset.
+    raise Error, "Holdings block has no readable entries from fundamentals API" if readable.empty?
+
+    readable
   end
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)

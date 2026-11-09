@@ -61,6 +61,30 @@ class Provider::EtfConstituentsTest < ActiveSupport::TestCase
     end
   end
 
+  # A map that is present but whose entries are all malformed is the same
+  # failure as one that is not a map: answered as "no holdings" it would wipe
+  # the stored set and stamp the fund, and the gate would not ask again. A
+  # partial read, by contrast, keeps the readable entries and drops the rest.
+  test "a holdings map whose entries are all malformed fails the request" do
+    [ { "AAPL.US" => "not a hash", "MSFT.US" => 42 },
+      { "AAPL.US" => nil, "MSFT.US" => [ "nested" ] } ].each do |holdings|
+      body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => holdings } }.to_json
+      response = fetch_response(body)
+
+      assert_not response.success?, "for #{holdings.inspect}"
+      assert_kind_of Provider::Eodhd::Error, response.error
+    end
+  end
+
+  test "a holdings map with some malformed entries keeps the readable subset" do
+    body = {
+      "General" => { "Type" => "ETF" },
+      "ETF_Data" => { "Holdings" => { "AAPL.US" => { "Code" => "AAPL", "Assets_%" => 1 }, "MSFT.US" => "garbage" } }
+    }.to_json
+
+    assert_equal [ "AAPL" ], fetch(body).constituents.map { |c| c[:ticker] }
+  end
+
   # The ticker EODHD keys the hash by carries its exchange suffix; `Code` is the
   # bare ticker. Keying on the hash key would store "AAPL.US", which matches
   # nothing in `securities`.
