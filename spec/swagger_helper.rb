@@ -53,6 +53,15 @@ RSpec.configure do |config|
           }
         },
         schemas: {
+          Version: {
+            type: :object,
+            additionalProperties: false,
+            required: %w[version commit_sha],
+            properties: {
+              version: { type: :string, description: 'Running Sure version, without a v prefix.' },
+              commit_sha: { type: :string, nullable: true, description: 'Build commit SHA, or null when unavailable.' }
+            }
+          },
           SplitRequest: {
             type: :object,
             required: %w[split],
@@ -1814,6 +1823,59 @@ RSpec.configure do |config|
               pagination: { '$ref' => '#/components/schemas/Pagination' }
             }
           },
+          SecurityPriceImportRequest: {
+            type: :object,
+            required: %w[security_id prices],
+            properties: {
+              security_id: { type: :string, format: :uuid, description: 'An offline security no provider has ever matched (no offline_reason or price_provider), traded in an account the caller can write to, or held in a linked one' },
+              prices: {
+                type: :array,
+                minItems: 1,
+                maxItems: 1000,
+                description: 'Daily closes, all in one currency. A date already stored is replaced.',
+                items: {
+                  type: :object,
+                  required: %w[date price currency],
+                  properties: {
+                    date: { type: :string, format: :date, description: 'Not after today in the family time zone' },
+                    price: { type: :string, description: 'Positive decimal with at most 4 decimal places', example: '12.3400' },
+                    currency: { type: :string, description: "ISO 4217 code; must match the security's existing prices, or the caller's trades in it" }
+                  }
+                }
+              }
+            }
+          },
+          SecurityPriceImportResult: {
+            type: :object,
+            required: %w[security_id currency created updated start_date end_date],
+            properties: {
+              security_id: { type: :string, format: :uuid },
+              currency: { type: :string },
+              created: { type: :integer },
+              updated: { type: :integer },
+              start_date: { type: :string, format: :date },
+              end_date: { type: :string, format: :date }
+            }
+          },
+          SecurityPriceImportError: {
+            type: :object,
+            required: %w[error errors],
+            properties: {
+              error: { type: :string },
+              message: { type: :string },
+              errors: {
+                type: :array,
+                items: {
+                  type: :object,
+                  required: %w[index message],
+                  properties: {
+                    index: { type: :integer, nullable: true, description: 'Position of the offending row in prices, or null for the request as a whole' },
+                    message: { type: :string }
+                  }
+                }
+              }
+            }
+          },
           Money: {
             type: :object,
             required: %w[amount currency formatted],
@@ -1835,7 +1897,7 @@ RSpec.configure do |config|
             type: :object, required: %w[basis income spending net_savings nodes links],
             description: 'Refunds net within each category. Parent direct amounts exclude child totals before partitioning by direction. Graph income/spending may differ from gross monthly totals; net savings agrees. Decimal strings retain FX precision. Empty flow has empty nodes and links.',
             properties: {
-              basis: { type: :string, enum: %w[net_by_category net_by_account], description: 'net_by_account (group_by=account) replaces the Cash Flow node with one account node per account, each balanced by Surplus or Deficit' },
+              basis: { type: :string, enum: %w[net_by_category net_by_account], description: 'net_by_account (group_by=account) replaces the Cash Flow node with one account node per account, each balanced by Surplus or Deficit. Where an account in surplus paid one in deficit by confirmed transfer in the period, that amount is a link between the two account nodes instead' },
               income: { type: :string }, spending: { type: :string }, net_savings: { type: :string },
               invested: { type: :string, description: "Money moved into investment accounts, shown as its own node. Zero unless the family does not count investing as spending" },
               nodes: { type: :array, items: {
