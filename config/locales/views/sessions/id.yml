@@ -1,0 +1,38 @@
+---
+id:
+  sessions:
+    create:
+      invalid_credentials: Email atau kata sandi tidak valid.
+      local_login_disabled: Masuk dengan kata sandi lokal dinonaktifkan. Silakan gunakan single sign-on.
+      account_deactivated: Akun ini telah dinonaktifkan. Silakan hubungi administrator.
+    destroy:
+      logout_successful: Anda telah berhasil keluar.
+    post_logout:
+      logout_successful: Anda telah berhasil keluar.
+    openid_connect:
+      account_linked: "Akun berhasil ditautkan ke %{provider}"
+      failed: Tidak dapat mengautentikasi melalui OpenID Connect.
+    failure:
+      failed: Tidak dapat mengautentikasi.
+      sso_provider_unavailable: "Penyedia SSO saat ini tidak tersedia. Silakan coba lagi nanti atau hubungi administrator."
+      sso_invalid_response: "Menerima respons tidak valid dari penyedia SSO. Silakan coba lagi."
+      sso_failed: "Autentikasi single sign-on gagal. Silakan coba lagi."
+    mobile_sso_start:
+      redirecting_html: "Mengarahkan untuk masuk... <a href=\"%{url}\">Klik di sini</a> jika tidak dialihkan secara otomatis."
+    new:
+      email: Alamat email
+      email_placeholder: nama@contoh.com
+      forgot_password: Lupa kata sandi?
+      password: Kata sandi
+      submit: Masuk
+      title: Sure
+      password_placeholder: Masukkan kata sandi Anda
+      openid_connect: Masuk dengan OpenID Connect
+      oidc: Masuk dengan OpenID Connect
+      google_auth_connect: Masuk dengan Google
+      local_login_admin_only: Masuk lokal dibatasi hanya untuk administrator.
+      passkey_button: Masuk dengan passkey
+      passkey_unsupported: Browser ini tidak mendukung passkey.
+      no_auth_methods_enabled: Tidak ada metode autentikasi yang diaktifkan saat ini. Silakan hubungi administrator.
+      demo_banner_title: "Mode Demo Aktif"
+      demo_banner_message: "Ini adalah lingkungan demonstrasi. Kredensial masuk telah diisi sebelumnya untuk kemudahan Anda. Mohon jangan memasukkan informasi asli atau sensitif."

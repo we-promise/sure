@@ -61,6 +61,25 @@ class RedbarkItem::SyncerTest < ActiveSupport::TestCase
                  "the import stamped one date and the processing dated its findings by another"
   end
 
+  # The processing date is the family's, read from the same clock as the stamp.
+  # 19:00 UTC on the 20th is the 21st in Sydney.
+  test "the processing date is the family's date for the sync's clock" do
+    @family.update!(timezone: "Australia/Sydney")
+    dated = nil
+
+    travel_to Time.utc(2026, 9, 20, 19, 0, 0) do
+      @redbark_item.stubs(:import_latest_redbark_data).returns({})
+      @redbark_item.expects(:process_accounts).with { |**kwargs|
+        dated = kwargs[:as_of]
+        true
+      }.returns([])
+
+      @syncer.perform_sync(mock_sync)
+    end
+
+    assert_equal Date.new(2026, 9, 21), dated
+  end
+
   private
 
     def mock_sync

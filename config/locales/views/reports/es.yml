@@ -6,7 +6,6 @@ es:
       subtitle: Información completa sobre tu salud financiera
       export: Exportar CSV
       print_report: Imprimir informe
-      drag_to_reorder: Arrastra para reordenar la sección
       toggle_section: Mostrar / Ocultar sección
       periods:
         monthly: Mensual
@@ -177,25 +176,14 @@ es:
       net_flow: Flujo neto
       net_flow_description: Variación neta total
     google_sheets_instructions:
-      title_with_key: ✅ Copiar URL para Google Sheets
-      title_no_key: ⚠️ Se requiere clave API
-      ready: Tu URL de CSV (con clave API) está lista.
-      steps: 'Para importar en Google Sheets:
-
-        1. Crea una nueva hoja de cálculo
-
-        2. En la celda A1, introduce la fórmula que se muestra abajo
-
-        3. Pulsa Enter'
-      security_warning: Esta URL incluye tu clave API. ¡Mantenla segura!
+      title_no_key: Se requiere clave API
       need_key: Para importar los datos en Google Sheets necesitas una clave API.
       step1: Ve a Ajustes → Claves API
       step2: Crea una nueva clave API con permiso de lectura ("read")
       step3: Copia la clave API
-      step4: 'Añádela a esta URL como: ?api_key=TU_CLAVE'
+      step4: 'Añádela a esta URL como: &api_key=TU_CLAVE'
       example: Ejemplo
       then_use: Después usa la URL completa con =IMPORTDATA() en Google Sheets.
-      open_sheets: Abrir Google Sheets
       go_to_api_keys: Ir a Claves API
       close: Entendido
     print:
