@@ -23,6 +23,13 @@ class FilterParameterLoggingTest < ActiveSupport::TestCase
     assert_equal "[FILTERED]", filtered.dig(:simplefin_item, :access_url)
   end
 
+  # A Tricount sharing link grants write access and can't be revoked.
+  test "filters Tricount sharing links" do
+    filtered = @filter.filter(tricount_item: { sharing_links: "https://tricount.com/tAbCdEf123" })
+
+    assert_equal "[FILTERED]", filtered.dig(:tricount_item, :sharing_links)
+  end
+
   test "keeps descriptive codes readable" do
     filtered = @filter.filter(currency_code: "EUR", country_code: "DE", postal_code: "10115")
 

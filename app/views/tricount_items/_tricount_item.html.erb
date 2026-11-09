@@ -1,0 +1,139 @@
+<%# locals: (tricount_item:, visible_accounts:) %>
+
+<%= tag.div id: dom_id(tricount_item) do %>
+  <%= render DS::Disclosure.new(variant: :card, open: true, body_class: nil) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+
+          <%= render ProviderLogo.new(provider_key: :tricount) %>
+
+          <div class="pl-1 text-sm">
+            <div class="flex items-center gap-2">
+              <%= tag.p tricount_item.name, class: "font-medium text-primary" %>
+              <% if tricount_item.scheduled_for_deletion? %>
+                <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
+              <% end %>
+            </div>
+            <p class="text-xs text-secondary"><%= t(".provider_name") %></p>
+            <% if tricount_item.syncing? %>
+              <div class="text-secondary flex items-center gap-1">
+                <%= icon "loader", size: "sm", class: "animate-spin" %>
+                <%= tag.span t(".syncing") %>
+              </div>
+            <% elsif tricount_item.requires_update? %>
+              <div class="text-warning flex items-center gap-1">
+                <%= icon "alert-triangle", size: "sm", color: "warning" %>
+                <%= tag.span t(".requires_update") %>
+              </div>
+            <% else %>
+              <p class="text-secondary">
+                <% if tricount_item.last_synced_at %>
+                  <% if tricount_item.sync_status_summary %>
+                    <%= t(".status_with_summary", timestamp: time_ago_in_words(tricount_item.last_synced_at), summary: tricount_item.sync_status_summary) %>
+                  <% else %>
+                    <%= t(".status", timestamp: time_ago_in_words(tricount_item.last_synced_at)) %>
+                  <% end %>
+                <% else %>
+                  <%= t(".status_never") %>
+                <% end %>
+              </p>
+            <% end %>
+          </div>
+        </div>
+
+        <%# Its actions are an admin's (TricountItemsController#require_admin!). %>
+        <% if Current.user&.admin? %>
+          <div class="flex items-center gap-2">
+            <% if tricount_item.requires_update? %>
+              <%= render DS::Link.new(
+                text: t(".update_credentials"),
+                icon: "refresh-cw",
+                variant: "secondary",
+                href: settings_providers_path,
+                frame: "_top"
+              ) %>
+            <% else %>
+              <%= icon(
+                "refresh-cw",
+                as_button: true,
+                href: sync_tricount_item_path(tricount_item),
+                disabled: tricount_item.syncing?
+              ) %>
+            <% end %>
+
+            <%= render DS::Menu.new do |menu| %>
+              <% sync_schedule_menu_item(menu, tricount_item) %>
+              <% menu.with_item(
+                variant: "button",
+                text: t(".delete"),
+                icon: "trash-2",
+                href: tricount_item_path(tricount_item),
+                method: :delete,
+                confirm: CustomConfirm.for_resource_deletion(tricount_item.name, high_severity: true)
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% unless tricount_item.scheduled_for_deletion? %>
+      <div class="space-y-4 mt-4">
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
+        <% end %>
+
+        <%# Sync summary (collapsible) - using shared ProviderSyncSummary component %>
+        <% stats = if defined?(@tricount_sync_stats_map) && @tricount_sync_stats_map
+             @tricount_sync_stats_map[tricount_item.id] || {}
+           else
+             tricount_item.syncs.ordered.first&.sync_stats || {}
+           end %>
+        <%= render ProviderSyncSummary.new(
+          stats: stats,
+          provider_item: tricount_item,
+          show_account_details: visible_accounts.size == tricount_item.accounts.size
+        ) %>
+
+        <%# Compute unlinked accounts (no AccountProvider link) %>
+        <% unlinked_count = tricount_item.unlinked_tricount_accounts&.count || 0 %>
+
+        <%# Setting accounts up is an admin's too (require_admin!). %>
+        <% if unlinked_count.to_i > 0 && !Current.user&.admin? %>
+        <% elsif unlinked_count.to_i > 0 && tricount_item.accounts.empty? %>
+          <%# No accounts imported yet - show prominent setup prompt %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".setup_needed") %></p>
+            <p class="text-secondary text-sm"><%= t(".setup_description", linked: tricount_item.accounts.count, total: tricount_item.tricount_accounts.count) %></p>
+            <%= render DS::Link.new(
+              text: t(".setup_action"),
+              icon: "plus",
+              variant: "primary",
+              href: setup_accounts_tricount_item_path(tricount_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif unlinked_count.to_i > 0 %>
+          <%# Some accounts imported, more available - show subtle link %>
+          <div class="pt-2 border-t border-primary">
+            <%= render DS::Link.new(
+              text: t(".more_accounts_available", count: unlinked_count),
+              variant: :default,
+              icon: "plus",
+              href: setup_accounts_tricount_item_path(tricount_item),
+              frame: :modal
+            ) %>
+          </div>
+        <% elsif tricount_item.accounts.empty? && tricount_item.tricount_accounts.none? %>
+          <%# No provider accounts at all - waiting for sync %>
+          <div class="p-4 flex flex-col gap-3 items-center justify-center">
+            <p class="text-primary font-medium text-sm"><%= t(".no_accounts_title") %></p>
+            <p class="text-secondary text-sm"><%= t(".no_accounts_description") %></p>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

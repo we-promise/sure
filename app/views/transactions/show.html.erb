@@ -283,6 +283,47 @@
       <% end %>
     <% end %>
 
+    <%# A part of a split Tricount payment: like a split transaction's part,
+        it shows the whole payment and offers to edit or undo the split. %>
+    <% if can_edit_entry? && (payment_split = TricountAccount::PaymentSplit.for(@entry))&.part? %>
+      <% dialog.with_section(title: t("splits.child.title"), open: true) do %>
+        <div class="px-3 py-2">
+          <div class="p-3 rounded-lg border border-secondary space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-primary"><%= payment_split.name %></p>
+                <p class="text-xs text-secondary"><%= payment_split.date.strftime("%b %d, %Y") %></p>
+              </div>
+              <p class="text-sm font-medium privacy-sensitive text-primary">
+                <%= format_money(payment_split.display_total) %>
+              </p>
+            </div>
+            <div class="flex items-center gap-3 border-t border-primary pt-2">
+              <%= render DS::Link.new(
+                text: t("splits.child.edit_split"),
+                icon: "pencil",
+                variant: "ghost",
+                size: :sm,
+                href: edit_tricount_payment_split_path(@entry),
+                frame: :modal
+              ) %>
+              <%= render DS::Button.new(
+                text: t("splits.child.unsplit"),
+                icon: "undo-2",
+                variant: "ghost",
+                size: :sm,
+                class: "text-destructive",
+                href: tricount_payment_split_path(@entry),
+                method: :delete,
+                confirm: CustomConfirm.new(title: t("splits.show.unsplit_title"), body: t("tricount_items.payment_split.unsplit_confirm"), btn_text: t("splits.show.unsplit_button"), destructive: true),
+                frame: "_top"
+              ) %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+
     <% if can_edit_entry? %>
       <% dialog.with_section(title: t(".settings")) do %>
         <% unless @entry.split_parent? %>
@@ -348,6 +389,24 @@
                 </div>
               <% end %>
             <% end %>
+          </div>
+        <% end %>
+        <%# A Tricount payment is a transfer leg, which can't be split, and its
+            rows are rebuilt on each sync: it splits into parts kept on the
+            tricount instead, through the same dialog. %>
+        <% if (payment_split = TricountAccount::PaymentSplit.for(@entry)) && !payment_split.part? %>
+          <div class="flex items-center justify-between gap-4 p-3">
+            <div class="text-sm space-y-1">
+              <h4 class="text-primary"><%= t("splits.show.button_title") %></h4>
+              <p class="text-secondary"><%= t("tricount_items.payment_split.description") %></p>
+            </div>
+            <%= render DS::Link.new(
+              text: t("splits.show.button"),
+              icon: "split",
+              variant: "outline",
+              href: new_tricount_payment_split_path(@entry),
+              frame: :modal
+            ) %>
           </div>
         <% end %>
         <%# Split Transaction %>

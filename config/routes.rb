@@ -2,6 +2,25 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :tricount_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :preload_accounts
+      get :select_accounts
+      post :link_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+  # Dividing what you paid for a Tricount entry into parts (one per charge),
+  # keyed by the payment row: the split dialog (new/edit), saving and undoing it.
+  resources :tricount_payment_splits, only: [ :edit, :update, :destroy ], param: :entry_id
+  get "tricount_payment_splits/:entry_id/new", to: "tricount_payment_splits#new", as: :new_tricount_payment_split
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts
