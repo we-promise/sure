@@ -204,12 +204,14 @@ class Ai::LegacyEnvConfig
       Ai::Config::Model.new(endpoint:, name: config.model)
     end
 
-    # The vector store rule VectorStore::Registry used: VECTOR_STORE_PROVIDER, else pgvector on
-    # Anthropic installs, else OpenAI's store when there's an OpenAI key.
+    # VECTOR_STORE_PROVIDER, else pgvector on Anthropic installs, else OpenAI's store when the
+    # OpenAI key is for OpenAI itself. A custom URL (OpenRouter, llama.cpp, Ollama) has no vector
+    # stores, so documents stay off until VECTOR_STORE_PROVIDER names a store.
     def vector_store_backend
       explicit = env("VECTOR_STORE_PROVIDER")&.to_sym
       return explicit if explicit && VectorStore::Registry::ADAPTERS.key?(explicit)
       return :pgvector if Setting.llm_provider == "anthropic"
+      return if openai_uri_base
 
       :openai if env("OPENAI_ACCESS_TOKEN") || Setting.openai_access_token.present?
     end
@@ -221,10 +223,16 @@ class Ai::LegacyEnvConfig
       when :openai
         Ai::Config::Model.new(endpoint: openai.first, name: VECTOR_STORE_MODEL, capabilities: %i[embedding]) if openai
       when :pgvector
-        embed_model if VectorStore::Pgvector.available?
+        embed_model if VectorStore::Pgvector.available? && usable_embedding_server?(embed_model)
       when :qdrant
-        embed_model
+        embed_model if usable_embedding_server?(embed_model)
       end
+    end
+
+    # The default embedding server is OpenAI's, which needs a key: an Anthropic-only install
+    # has none, so it gets no `embed` route until EMBEDDING_URI_BASE names a server.
+    def usable_embedding_server?(model)
+      model.endpoint.base_url != VectorStore::DEFAULT_EMBEDDING_URI_BASE || model.endpoint.api_key.present?
     end
 
     # The URL and key fall back to the OpenAI values saved in Settings too.

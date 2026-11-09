@@ -188,6 +188,27 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_empty build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic").routes_for(:embed)
   end
 
+  test "Anthropic only gets no embed route without an embedding server" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    config = build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic")
+
+    assert_equal :pgvector, config.vector_store_backend, "the chunks table is still provisioned"
+    assert_empty config.routes_for(:embed), "api.openai.com without a key can't embed"
+    assert_empty build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic", "VECTOR_STORE_PROVIDER" => "qdrant").routes_for(:embed)
+  end
+
+  test "a custom OpenAI URL gets no OpenAI vector store" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-or", "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1", "OPENAI_MODEL" => "google/gemma-4-31b-it")
+
+    assert_nil config.vector_store_backend
+    assert_empty config.routes_for(:embed)
+
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    named = build("OPENAI_ACCESS_TOKEN" => "sk-or", "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1", "OPENAI_MODEL" => "google/gemma-4-31b-it",
+                  "VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://llama.local:8081/v1")
+    assert_equal "http://llama.local:8081/v1", first_model(named, :embed).endpoint.base_url
+  end
+
   test "embeddings fall back to the OpenAI URL and key saved in Settings" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
     Setting.openai_access_token = "sk-setting"
