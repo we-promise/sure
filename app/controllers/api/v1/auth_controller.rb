@@ -82,7 +82,7 @@ module Api
       end
 
       def login
-        user = User.find_by_email(params[:email])
+        user = User.find_by_email_with_legacy_fallback(params[:email])
 
         unless local_login_permitted_for?(user)
           render json: { error: "Local login is disabled. Please use SSO." }, status: :forbidden

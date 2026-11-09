@@ -50,7 +50,7 @@ class SessionsController < ApplicationController
       # Local login is disabled. Only allow attempts when an emergency super-admin
       # override is enabled and the email belongs to a super-admin.
       if AuthConfig.local_admin_override_enabled?
-        candidate = User.find_by_email(params[:email])
+        candidate = User.find_by_email_with_legacy_fallback(params[:email])
         unless candidate&.super_admin?
           redirect_to new_session_path, alert: t("sessions.create.local_login_disabled")
           return

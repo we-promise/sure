@@ -14,7 +14,7 @@ class OidcAccountsController < ApplicationController
     end
 
     @email = @pending_auth["email"]
-    @user_exists = User.find_by_email(@email).present? if @email.present?
+    @user_exists = User.find_by_email_with_legacy_fallback(@email).present? if @email.present?
 
     # Check for a pending invitation for this email
     @pending_invitation = Invitation.pending.find_by(email: @email) if @email.present?
@@ -72,7 +72,7 @@ class OidcAccountsController < ApplicationController
       end
     else
       @email = params[:email]
-      @user_exists = User.find_by_email(@email).present? if @email.present?
+      @user_exists = User.find_by_email_with_legacy_fallback(@email).present? if @email.present?
       flash.now[:alert] = "Invalid email or password"
       render :link, status: :unprocessable_entity
     end

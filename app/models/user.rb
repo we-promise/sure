@@ -99,7 +99,7 @@ class User < ApplicationRecord
   # active and not yet re-encrypted by `bin/rails security:backfill_encryption`):
   # extend_queries does not cover attributes that also use `normalizes`. The
   # fallback matches those rows by their literal column value.
-  def self.find_by_email(email)
+  def self.find_by_email_with_legacy_fallback(email)
     normalized = email.to_s.strip.downcase
     return nil if normalized.blank?
 
@@ -108,8 +108,12 @@ class User < ApplicationRecord
 
   # Takes the legacy path only for a plaintext row; every other case goes
   # through authenticate_by, which stays timing-safe for wrong passwords and
-  # unknown emails.
+  # unknown emails. The legacy lookup runs first on every login (one indexed
+  # query) so that legacy and encrypted rows cost the same single password
+  # check. Nil and empty passwords are rejected up front, as authenticate_by does.
   def self.authenticate_by_email(email:, password:)
+    return nil if password.nil? || password.empty?
+
     normalized = email.to_s.strip.downcase
     legacy_user = find_by_legacy_plaintext_email(normalized)
     return authenticate_by(email: normalized, password: password) unless legacy_user
