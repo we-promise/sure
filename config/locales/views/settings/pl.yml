@@ -476,7 +476,12 @@ pl:
         last_synced: Ostatnio zsynchronizowano %{time} temu
         needs_attention: wymaga uwagi
       ibkr_panel:
-        accounts_tab: Konta
+        add_connection: "Dodaj połączenie Interactive Brokers"
+        connection_name_label: "Nazwa połączenia"
+        connection_name_placeholder: "np. IBKR Irlandia, IBKR USA"
+        disconnect: "Rozłącz"
+        disconnect_confirm_named: "Rozłączyć %{name}?"
+        setup_accounts: "Skonfiguruj konta"
         configuration:
           all_other_options: 'Wszystkie pozostałe opcje konfiguracji: "Nie"'
           date_format: 'Format daty: yyyy-MM-dd'
@@ -486,7 +491,6 @@ pl:
           period: 'Okres: Ostatnie 365 dni kalendarzowych'
           profit_and_loss: 'Zysk i strata: Domyślne'
           time_format: 'Format godziny: HH:mm:ss'
-        disconnect_confirm: Rozłączyć Interactive Brokers?
         flex_query_details:
           configuration_heading: Ustaw te opcje zapytania
           eyebrow: Flex Query
@@ -501,7 +505,6 @@ pl:
         report_window_note: Raporty IBKR Flex są ograniczone do okresu zapytania skonfigurowanego
           w IBKR. Sure zaimportuje pełny bieżący stan posiadania oraz do 365 ostatnich
           dni aktywności z tego raportu.
-        save_configuration: Zapisz konfigurację
         sections:
           account_information: 'Account Information: Account ID, Currency'
           cash_report: 'Cash Report:'
@@ -527,8 +530,6 @@ pl:
             To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
             Date, Trade ID, TradePrice, Transaction ID'
           trades_options: 'Options: Execution'
-        status_configured_prefix: "%{summary}. Przejdź do zakładki"
-        status_configured_suffix: aby zarządzać wykrytymi kontami.
         steps:
           step_1: W IBKR Client Portal przejdź do "Performance & Reports" > "Flex
             Queries".
