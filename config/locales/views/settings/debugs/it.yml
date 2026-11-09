@@ -1,0 +1,39 @@
+---
+it:
+  settings:
+    debugs:
+      show:
+        page_title: "Debug"
+        title: "Registro eventi debug"
+        subtitle: "Eventi operativi significativi per super amministratori. Dal più recente."
+        empty: "Nessun evento debug trovato."
+        missing_value: "-"
+        filters:
+          all: "Tutti"
+          category: "Categoria"
+          level: "Livello"
+          source: "Sorgente"
+          provider: "Provider"
+          start_date: "Da"
+          end_date: "A"
+          family_id: "ID famiglia"
+          account_id: "ID conto"
+          user_id: "ID utente"
+          account_provider_id: "ID provider conto"
+          submit: "Filtra"
+          reset: "Reimposta"
+        table:
+          time: "Ora"
+          level: "Livello"
+          category: "Categoria"
+          source: "Sorgente"
+          message: "Messaggio"
+          context: "Contesto"
+          metadata: "Metadati"
+          view_metadata: "Vedi"
+        context:
+          provider: "provider=%{value}"
+          family: "famiglia=%{value}"
+          account: "conto=%{value}"
+          user: "utente=%{value}"
+          account_provider: "account_provider=%{value}"
