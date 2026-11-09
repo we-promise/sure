@@ -53,7 +53,8 @@ fr:
       close: Fermer
       create_rule: Créer une règle
       description: "Toujours catégoriser les transactions similaires ?"
-      not_now: "Plus tard"
+      hide_for_24h: "Masquer 24 h"
+      never_suggest: "Ne plus suggérer"
       message: Catégorie changée en %{category_name}
     classifier_rules:
       category_classifier: Classifieur de catégories

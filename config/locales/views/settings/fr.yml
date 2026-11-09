@@ -264,6 +264,8 @@ fr:
         sharing_title: Partage de %{moniker}
         timezone: Fuseau horaire
         translations_notice: Veuillez noter que nous travaillons toujours sur des traductions dans différentes langues.
+        rule_suggestions: "Suggestions de règles"
+        rule_suggestions_hint: "Proposer de créer une règle après un changement de catégorie"
         default_account_order_hint: Avec Manuel, faites glisser les comptes dans la barre latérale pour définir leur ordre.
         investment_contributions_as_spending: Compter l'investissement comme une dépense
         investment_contributions_as_spending_hint: L'argent versé sur des comptes d'investissement compte comme une dépense dans les budgets, les rapports et le graphique des flux de trésorerie. Désactivez cette option pour l'afficher plutôt comme investi.

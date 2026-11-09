@@ -49,11 +49,11 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     assert_selector "#cta", text: "Updated to #{@categories.second.name}"
   end
 
-  test "not now snoozes rule prompts" do
+  test "hide for 24h snoozes rule prompts" do
     visit transactions_url
     assign_category @categories.first
 
-    within("#cta") { click_button "Not now" }
+    within("#cta") { click_button "Hide for 24h" }
 
     assert_no_text "Updated to #{@categories.first.name}"
     assert_not_nil @user.reload.rule_prompt_dismissed_at
@@ -73,7 +73,7 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     @user.update!(locale: "fr")
     visit transactions_url
     assign_category category
-    assert_selector "#cta form button", text: "Plus tard"
+    assert_selector "#cta form button", text: /Masquer 24.h/
     assert_selector "#cta form a", text: "Créer une règle"
 
     overflow = page.evaluate_script(<<~JS)
@@ -85,6 +85,27 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
       })()
     JS
     assert_equal 0, overflow, "every button must stay inside the toast"
+  end
+
+  test "never suggest turns rule prompts off until they are turned back on in preferences" do
+    visit transactions_url
+    assign_category @categories.first
+
+    within("#cta") { click_button "Never suggest this" }
+
+    assert_no_text "Updated to #{@categories.first.name}"
+    assert @user.reload.rule_prompts_disabled
+
+    assign_category @categories.second
+    assert_no_text "Updated to #{@categories.second.name}"
+
+    visit settings_preferences_url
+    assert_not find("#user_rule_suggestions", visible: :all).checked?
+    find("label[for='user_rule_suggestions']").click
+    assert_selector "#user_rule_suggestions:checked", visible: :all
+    # The preferences form saves itself after the change, so give it a moment.
+    Timeout.timeout(5) { sleep 0.1 while @user.reload.rule_prompts_disabled }
+    assert_not @user.rule_prompts_disabled
   end
 
   test "a prompt from the transaction drawer waits until the drawer closes" do

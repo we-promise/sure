@@ -8,7 +8,8 @@ en:
       close: Close
       create_rule: Create rule
       description: "Always categorize similar transactions?"
-      not_now: "Not now"
+      hide_for_24h: "Hide for 24h"
+      never_suggest: "Never suggest this"
       message: Updated to %{category_name}
     classifier_rules:
       category_classifier: Category classifier
