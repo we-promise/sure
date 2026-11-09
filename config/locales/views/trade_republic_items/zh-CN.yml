@@ -15,7 +15,7 @@ zh-CN:
     defaults:
       name: Trade Republic
     trade_republic_item:
-      deletion_in_progress: "正在删除"
+      deletion_in_progress: "正在删除..."
       syncing: "正在同步"
       requires_update: "需要重新认证"
       session_expires_in: "登录将在 %{time}后过期（%{at}）。"
@@ -50,13 +50,13 @@ zh-CN:
           one: "过去 30 天 %{count} 笔支出（%{amount}）"
           other: "过去 30 天 %{count} 笔支出（%{amount}）"
         reconciliation: "%{matched}/%{total} 个账户余额已核对"
-        sync_history: 最近同步
+        sync_history: "最近同步"
         sync_status:
-          completed: 已完成
-          failed: 失败
-          pending: 待处理
-          syncing: 同步中
-          stale: 已过期
+          completed: "已完成"
+          failed: "失败"
+          pending: "待处理"
+          syncing: "同步中"
+          stale: "已过期"
     setup_accounts:
       page_title: "设置 Trade Republic 账户"
       dialog_title: "设置您的 Trade Republic 账户"
@@ -64,13 +64,13 @@ zh-CN:
       info_box:
         title: "Trade Republic 导入"
         items:
-          item_1: "当前持仓及其价格和数量"
+          item_1: "包含当前价格和数量的持仓"
           item_2: "已执行的交易（买入和卖出）"
-          item_3: "入金、出金和利息发放"
+          item_3: "充值、提现及利息派发"
       status:
         fetching_accounts: "正在从 Trade Republic 获取账户..."
         no_accounts_found_title: "未找到账户。"
-        no_accounts_found_description: "Sure 未能找到 Trade Republic 账户。请检查您的会话是否仍然有效。"
+        no_accounts_found_description: "Sure 无法找到 Trade Republic 账户。请检查您的会话是否仍然有效。"
       available_accounts:
         title: "可用账户"
         account_type_investment: "投资组合"
@@ -79,12 +79,12 @@ zh-CN:
         account_summary: "%{account_type} • 余额：%{balance}"
         account_id: "账户 ID：%{account_id}"
       link_existing:
-        description: "或将发现的 Trade Republic 账户关联到现有的手动投资账户。"
-        manual_account_option: "%{name}（%{balance}）"
-        select_prompt: "选择账户..."
+        description: "或者将发现的 Trade Republic 账户关联到现有手动投资账户。"
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: "选择一个账户..."
       linked_accounts:
         title: "已关联"
-        linked_to_html: "已关联到：%{account}"
+        linked_to_html: "已关联至：%{account}"
       buttons:
         refresh: "刷新"
         cancel: "取消"
@@ -112,45 +112,45 @@ zh-CN:
       all_linked:
         one: "已关联 1 个账户"
         other: "已关联 %{count} 个账户"
-      partial: "%{linked} 个已关联，%{unlinked} 个需要设置"
+      partial: "已关联 %{linked} 个，%{unlinked} 个需要设置"
     select_existing_account:
       title: "关联 Trade Republic 账户"
-      no_accounts_available: "暂无未关联的 Trade Republic 账户。"
-      run_sync_hint: "请完成登录，然后从设置 > 提供商运行同步。"
-      wait_for_sync: "请等待账户发现同步完成。"
+      no_accounts_available: "暂无未关联的 Trade Republic 账户可用。"
+      run_sync_hint: "完成登录并在“设置 > 提供商”中运行同步。"
+      wait_for_sync: "等待账户发现同步完成。"
       balance: "余额"
       link: "关联"
       cancel: "取消"
     update:
       success: "已成功更新 Trade Republic 配置。"
-      pin_required: "请输入您的 Trade Republic PIN 或密码以重新认证。"
+      pin_required: "输入您的 Trade Republic PIN 或密码以重新认证。"
     destroy:
       success: "已安排删除 Trade Republic 连接。"
-      unlink_failed: "无法完全断开 Trade Republic 连接。连接已保留，以便安全地重试。"
+      unlink_failed: "无法完全断开 Trade Republic 连接。已保留该连接以便安全重试。"
     select_accounts:
       not_configured: "Trade Republic 尚未配置。"
     initiate_login:
-      pin_required: "请输入您的 Trade Republic PIN 或密码以开始新的登录。"
+      pin_required: "输入您的 Trade Republic PIN 或密码以开始新的登录。"
     initiate_qr_login:
       not_configured: "Trade Republic 尚未配置。"
     poll_login:
-      no_pending_login: "当前没有待处理的登录。请先开始新的登录。"
+      no_pending_login: "当前没有待处理的登录。请先发起新的登录。"
       login_expired: "登录请求已过期。请重新开始。"
     poll_qr_login:
-      no_pending_login: "没有待处理的 QR 登录。"
+      no_pending_login: "没有待处理的二维码登录。"
       success: "Trade Republic 已成功连接。"
     complete_login:
-      no_pending_login: "当前没有待处理的登录。请先开始新的登录。"
+      no_pending_login: "当前没有待处理的登录。请先发起新的登录。"
       approval_pending: "尚未确认。请在 Trade Republic 应用中批准登录，然后重试。"
       still_pending: "尚未确认。请在 Trade Republic 应用中批准登录，然后重试。"
       success: "Trade Republic 已成功连接。"
       login_expired: "登录请求已过期。请重新开始。"
     link_existing_account:
       not_found: "未找到账户或 Trade Republic 配置。"
-      only_manual_investment: "只有手动投资账户可以关联到 Trade Republic。"
+      only_manual_investment: "只有手动投资账户才能关联到 Trade Republic。"
       already_linked: "此 Trade Republic 账户已关联。"
       success: "已成功关联 Trade Republic 账户。"
-      processing_failed: "账户已关联，但初始数据处理失败。已安排同步；如果数据仍不完整，请检查调试日志。"
+      processing_failed: "账户已关联，但初始数据处理失败。已安排同步；如果仍未完成，请检查调试日志。"
       failed: "关联 Trade Republic 账户失败。"
     complete_account_setup:
       success:
@@ -163,13 +163,13 @@ zh-CN:
         other: "无法完全设置所选的 %{count} 个 Trade Republic 账户。请检查调试日志并重试。"
     activities:
       labels:
-        contribution: 入金
-        withdrawal: 出金
-        interest: 利息
-        dividend: 股息
-        card_payment: 刷卡支付
-        cash_withdrawal: 现金取款
-        card_fee: 卡费
-        card_refund: 卡退款
-        tax_refund: 退税
+        contribution: "入金"
+        withdrawal: "出金"
+        interest: "利息"
+        dividend: "股息"
+        card_payment: "刷卡支付"
+        cash_withdrawal: "现金取款"
+        card_fee: "卡费"
+        card_refund: "卡退款"
+        tax_refund: "退税"
         round_up: "Round up"
