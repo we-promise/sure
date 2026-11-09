@@ -14,12 +14,32 @@ module FamilyDebounce
       "#{debounce_key_prefix}:#{family_id}"
     end
 
-    # Stores and returns the token of the family's newest scheduled run.
-    def claim_debounce_token(family_id, expires_in:)
-      SecureRandom.uuid.tap do |token|
-        Rails.cache.write(debounce_key(family_id), token, expires_in: expires_in)
+    # Enqueues a run with a fresh token once all open transactions committed,
+    # and stores that token only when the queue accepted the job. A rolled-back
+    # transaction or a failed enqueue therefore never cancels runs that are
+    # already waiting. on_failure runs when the job could not be enqueued.
+    def enqueue_debounced(family_id, wait:, expires_in:, &on_failure)
+      ActiveRecord.after_all_transactions_commit do
+        next if enqueue_with_token(family_id, wait: wait, expires_in: expires_in)
+
+        on_failure&.call
+      rescue => e
+        Rails.logger.error("#{name} debounce fallback failed: #{e.message}\n#{e.backtrace&.join("\n")}")
       end
     end
+
+    private
+      def enqueue_with_token(family_id, wait:, expires_in:)
+        token = SecureRandom.uuid
+        job = set(wait: wait).perform_later(family_id, token)
+        return false unless job&.successfully_enqueued?
+
+        Rails.cache.write(debounce_key(family_id), token, expires_in: expires_in)
+        true
+      rescue => e
+        Rails.logger.error("#{name} enqueue failed: #{e.message}\n#{e.backtrace&.join("\n")}")
+        false
+      end
   end
 
   private

@@ -47,13 +47,12 @@ class Family::SyncCompleteEvent
   end
 
   private
-    # Scheduled after commit: this runs inside the finalizing sync's locked
-    # transaction, and a rolled-back sync must not leave a toast job behind.
+    # FamilySyncToastJob enqueues after commit: this runs inside the finalizing
+    # sync's locked transaction, and a rolled-back sync must not leave a toast
+    # job behind.
     def schedule_sync_toast
-      ActiveRecord.after_all_transactions_commit do
-        FamilySyncToastJob.schedule_for(family)
-      rescue => e
-        Rails.logger.error("Family::SyncCompleteEvent sync toast scheduling failed: #{e.message}\n#{e.backtrace&.join("\n")}")
-      end
+      FamilySyncToastJob.schedule_for(family)
+    rescue => e
+      Rails.logger.error("Family::SyncCompleteEvent sync toast scheduling failed: #{e.message}\n#{e.backtrace&.join("\n")}")
     end
 end

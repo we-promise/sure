@@ -5,6 +5,12 @@
 # it waits while other syncs of the family are still visibly running. The
 # decision does not depend on any other sync ever reporting back, so a sync
 # whose worker died can delay the toast by at most Sync::VISIBLE_FOR.
+#
+# A single sync therefore shows its toast DEBOUNCE_DELAY after it finishes
+# instead of immediately. Sync.visible counts a sync only for Sync::VISIBLE_FOR
+# after it was created, so a sync running longer than that no longer holds the
+# toast back: the batch toast may then arrive before that sync ends, and its
+# own toast follows when it does.
 class FamilySyncToastJob < ApplicationJob
   include FamilyDebounce
 
@@ -24,9 +30,19 @@ class FamilySyncToastJob < ApplicationJob
   # delivery still finds the newest token and stands down. The key is tiny.
   TOKEN_TTL = 1.day
 
+  # Without a queued run the toast would be lost, so it is sent right away.
   def self.schedule_for(family)
-    token = claim_debounce_token(family.id, expires_in: TOKEN_TTL)
-    set(wait: DEBOUNCE_DELAY).perform_later(family.id, token)
+    enqueue_debounced(family.id, wait: DEBOUNCE_DELAY, expires_in: TOKEN_TTL) do
+      broadcast_toast(family)
+    end
+  end
+
+  def self.broadcast_toast(family)
+    family.broadcast_replace_to(
+      family,
+      target: "sync-toast",
+      partial: "shared/notifications/sync_toast"
+    )
   end
 
   def perform(family_id, token, recheck = 0)
@@ -44,10 +60,6 @@ class FamilySyncToastJob < ApplicationJob
       return
     end
 
-    family.broadcast_replace_to(
-      family,
-      target: "sync-toast",
-      partial: "shared/notifications/sync_toast"
-    )
+    self.class.broadcast_toast(family)
   end
 end

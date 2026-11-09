@@ -87,4 +87,20 @@ class FamilySyncToastJobTest < ActiveJob::TestCase
       FamilySyncToastJob.schedule_for(@family)
     end
   end
+
+  test "schedule_for sends the toast right away when the queue refuses the job" do
+    FamilySyncToastJob.any_instance.stubs(:successfully_enqueued?).returns(false)
+    Family.any_instance.expects(:broadcast_replace_to).with(
+      @family, target: "sync-toast", partial: "shared/notifications/sync_toast"
+    ).once
+
+    FamilySyncToastJob.schedule_for(@family)
+  end
+
+  test "schedule_for sends the toast right away when enqueueing raises" do
+    FamilySyncToastJob.any_instance.stubs(:enqueue).raises(StandardError, "queue down")
+    Family.any_instance.expects(:broadcast_replace_to).once
+
+    assert_nothing_raised { FamilySyncToastJob.schedule_for(@family) }
+  end
 end

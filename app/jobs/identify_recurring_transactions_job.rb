@@ -30,10 +30,7 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
   def self.schedule_for(family)
     return if family.recurring_transactions_disabled?
 
-    token = claim_debounce_token(family.id, expires_in: DEBOUNCE_DELAY + 10.seconds)
-
-    # Schedule the job with delay
-    set(wait: DEBOUNCE_DELAY).perform_later(family.id, token)
+    enqueue_debounced(family.id, wait: DEBOUNCE_DELAY, expires_in: DEBOUNCE_DELAY + 10.seconds)
   end
 
   private
