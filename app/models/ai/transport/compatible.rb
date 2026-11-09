@@ -32,6 +32,10 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       embedding = mapping_errors do
         ruby_llm_context(timeout:).embed(Ai::Transport::Base::PROBE_EMBEDDING_INPUT, model: model.name, provider: ruby_llm_provider,
                                                                        assume_model_exists: true)
+      rescue NoMethodError, TypeError => error
+        raise unless raised_in_ruby_llm?(error)
+
+        raise Ai::Error::InvalidOutput, "the embedding response isn't the expected shape"
       end
       vectors = embedding.vectors
       vectors = [ vectors ] if vectors.first.is_a?(Numeric)

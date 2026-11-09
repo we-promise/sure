@@ -38,14 +38,11 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
       end
     end
 
-    # Anthropic answers an unknown model with a 404 `not_found_error` whose message is
-    # "model: <name>"; any other 404 (a wrong base URL, a gateway's own page) maps by its status.
     # A body that isn't Anthropic's error shape still maps by its status.
     def models_error(status, body)
       error = body.is_a?(Hash) ? body["error"] : nil
-      type, message = error.is_a?(Hash) ? error.values_at("type", "message") : [ nil, error&.to_s ]
-      message = message.presence || "HTTP #{status}"
-      return Ai::Error::ModelMissing.new(message, status:) if status == 404 && type == "not_found_error" && message.start_with?("model:")
+      message = (error.is_a?(Hash) ? error["message"] : error&.to_s).presence || "HTTP #{status}"
+      return Ai::Error::ModelMissing.new(message, status:) if missing_model?(status, body)
 
       Ai::Error.from_status(status, message, body:)
     end

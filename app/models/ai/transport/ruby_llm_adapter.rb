@@ -77,8 +77,10 @@ module Ai::Transport::RubyLlmAdapter
     # a request every model would refuse. Any other ArgumentError, such as a wrong call from Sure's
     # own code, is a bug and stays one.
     def refused_by_ruby_llm?(error)
-      error.backtrace_locations&.first&.path.to_s.start_with?(RUBY_LLM_PATH) && !error.message.match?(ARITY_ERROR)
+      raised_in_ruby_llm?(error) && !error.message.match?(ARITY_ERROR)
     end
+
+    def raised_in_ruby_llm?(error) = error.backtrace_locations&.first&.path.to_s.start_with?(RUBY_LLM_PATH)
 
     # A raised error as mapping_errors would raise it, or nil when it has no Ai::Error.
     def mapped_error(error)
@@ -110,9 +112,18 @@ module Ai::Transport::RubyLlmAdapter
       klass ||= connection_error_class(error)
       return klass.new(error.message, status:) if klass
 
+      return Ai::Error::ModelMissing.new(error.message, status:) if missing_model?(status, body)
       return Ai::Error.from_status(status || 400, error.message, body:) if error.is_a?(RubyLLM::Error)
 
       Ai::Error.from_exception(error)
+    end
+
+    # Anthropic answers an unknown model with a 404 `not_found_error` whose message is
+    # "model: <name>"; any other 404 (a wrong base URL, a gateway's own page) maps by its status.
+    def missing_model?(status, body)
+      body = JSON.parse(body) rescue nil if body.is_a?(String)
+      error = body.is_a?(Hash) ? body["error"] : nil
+      status == 404 && error.is_a?(Hash) && error["type"] == "not_found_error" && error["message"].to_s.start_with?("model:")
     end
 
     # RubyLLM 2.2 raises RubyLLM::ConnectionError (with `timeout?`) where 2.1.1 lets Faraday's
