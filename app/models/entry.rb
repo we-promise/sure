@@ -669,6 +669,8 @@ class Entry < ApplicationRecord
               attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
               entry.assign_attributes(attrs)
               # Moving a sale to another date can take the position below zero.
+              # The edit is all or nothing: one refused sale rolls back every
+              # entry in the batch.
               Trade::SaleLimit.save!(entry)
               entry.transaction.record_category_usage! if entry.transaction?
               changed = true

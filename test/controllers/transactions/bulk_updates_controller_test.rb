@@ -23,6 +23,24 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal Date.current, sale.reload.date
   end
 
+  test "one refused sale rolls back the whole bulk edit" do
+    account = accounts(:investment)
+    sale = account.entries.create!(
+      name: "Sell 5 shares of AAPL", date: Date.current, amount: -1000, currency: "USD",
+      entryable: Trade.new(security: securities(:aapl), qty: -5, price: 200, currency: "USD", investment_activity_label: "Sell")
+    )
+    transaction = create_transaction(account: account, amount: 10, date: 2.days.ago.to_date)
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: { entry_ids: [ transaction.id, sale.id ], date: 1.month.ago.to_date }
+    }
+
+    assert_redirected_to transactions_url
+    assert_match "holds only 0", flash[:alert]
+    assert_equal Date.current, sale.reload.date
+    assert_equal 2.days.ago.to_date, transaction.reload.date
+  end
+
   test "bulk update" do
     transactions = @user.family.entries.transactions
 

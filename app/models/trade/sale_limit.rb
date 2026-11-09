@@ -20,19 +20,20 @@ class Trade::SaleLimit
   attr_reader :entry
 
   # Checks and saves under a lock on the account, so two sales at the same
-  # moment cannot both count the same units as available.
+  # moment cannot both count the same units as available. Any trade takes the
+  # lock, a purchase too: moving a purchase later while a sale is checked
+  # would let the sale count units that are no longer there on its date.
+  # Ordinary transactions and trades on linked accounts stay lock-free.
   def self.save(entry)
     entry.account.transaction do
-      entry.account.lock!
-      new(entry).validate && entry.save
+      limit = new(entry)
+      entry.account.lock! if limit.guards_account?
+      limit.validate && entry.save
     end
   end
 
   # Same as save, but raises ActiveRecord::RecordInvalid, for callers that
-  # update several entries in one transaction (bulk edit). Any trade takes the
-  # lock, a purchase too: moving a purchase later while a sale is checked
-  # would let the sale count units that are no longer there on its date.
-  # Bulk edits of ordinary transactions stay lock-free.
+  # update several entries in one transaction (bulk edit).
   def self.save!(entry)
     entry.account.transaction do
       limit = new(entry)

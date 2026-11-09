@@ -199,6 +199,13 @@ class Trade::SaleLimitTest < ActiveSupport::TestCase
     end
   end
 
+  test "save takes no lock on a linked account" do
+    @account.stubs(:linked?).returns(true)
+    @account.expects(:lock!).never
+
+    assert Trade::SaleLimit.save(build_sale(qty: 10, date: Date.current))
+  end
+
   private
     def build_sale(qty:, date:)
       @account.entries.new(
