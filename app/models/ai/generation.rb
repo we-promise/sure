@@ -165,7 +165,7 @@ class Ai::Generation
 
       # Every route found the answer unusable: one odd transaction can derail a model, so look
       # for it by halving on the first route, rather than lose the whole batch.
-      if last_error.is_a?(Ai::Error::InvalidOutput) && pending.size > 1 && (route = routes.find { !Ai::DownMarks.down?(_1) })
+      if last_error.is_a?(Ai::Error::InvalidOutput) && pending && pending.size > 1 && (route = routes.find { !Ai::DownMarks.down?(_1) })
         done, pending = bisect(route, pending)
         answers.concat(done.map { [ route, _1 ] })
       end
