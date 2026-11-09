@@ -791,6 +791,20 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert @entry.entryable.locked?(:tag_ids)
   end
 
+  test "tag-only endpoint replaces a bare tag set under the row lock" do
+    other_family_tag = users(:empty).family.tags.create!(name: "Other family")
+    @entry.entryable.update!(tag_ids: [ tags(:one).id ], locked_attributes: {})
+
+    assert_queries_match(/FROM "transactions" WHERE .* FOR UPDATE/) do
+      patch tags_transaction_url(@entry, format: :json), params: {
+        tag_ids: [ tags(:two).id, other_family_tag.id ]
+      }, as: :json
+    end
+
+    assert_response :success
+    assert_equal [ tags(:two).id ], @entry.reload.entryable.tag_ids
+  end
+
   test "tag-only endpoint keeps tags added since the drawer last saved" do
     other_family_tag = users(:empty).family.tags.create!(name: "Other family")
     rule_tag = @user.family.tags.create!(name: "Added by a rule")

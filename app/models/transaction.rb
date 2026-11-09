@@ -427,6 +427,15 @@ class Transaction < ApplicationRecord
     end
   end
 
+  # Replaces the whole tag set with the given ids, limited to available_tags,
+  # under the same row lock as toggle_tag! and merge_tag_changes!, so the
+  # replacement can't interleave with another writer's tag change.
+  def replace_tags!(tag_ids, available_tags:)
+    with_lock do
+      self.tag_ids = available_tags.where(id: tag_ids).pluck(:id)
+    end
+  end
+
   # Marks a category as recently used. Called explicitly from the manual
   # category-assignment controllers (picker, edit form, categorization
   # wizard, create-and-assign) after a successful save — not wired to a

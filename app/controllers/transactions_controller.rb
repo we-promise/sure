@@ -272,7 +272,7 @@ class TransactionsController < ApplicationController
       previous_ids = Array(params[:previous_tag_ids]).reject(&:blank?)
       @entry.transaction.merge_tag_changes!(tag_ids_param, previous_ids, available_tags: Current.family.tags)
     else
-      @entry.transaction.tag_ids = Current.family.tags.where(id: tag_ids_param).pluck(:id)
+      @entry.transaction.replace_tags!(tag_ids_param, available_tags: Current.family.tags)
     end
 
     @entry.lock_saved_attributes!

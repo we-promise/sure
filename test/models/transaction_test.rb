@@ -500,6 +500,17 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tags(:two).id ], transaction.reload.tag_ids
   end
 
+  test "replace_tags! sets exactly the available tags under the row lock" do
+    transaction = transactions(:one)
+    transaction.update!(tag_ids: [ tags(:one).id ])
+
+    assert_queries_match(/FOR UPDATE/) do
+      transaction.replace_tags!([ tags(:two).id, tags(:one).id ], available_tags: Tag.where(id: tags(:two).id))
+    end
+
+    assert_equal [ tags(:two).id ], transaction.reload.tag_ids
+  end
+
   test "name_suggestions_for ranks names and each name's category by frequency" do
     family = families(:dylan_family)
     account = accounts(:depository)
