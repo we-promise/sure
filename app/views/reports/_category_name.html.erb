@@ -1,0 +1,35 @@
+<%
+  href = item[:href]
+  is_sub = item[:level] == :subcategory
+  content = capture do
+    concat tag.div(icon("corner-down-right"), class: "text-subdued") if is_sub
+    if item[:category_icon]
+      concat tag.div(
+        icon(item[:category_icon], color: "current", size: "sm"),
+        class: "h-7 w-7 flex-shrink-0 rounded-full flex justify-center items-center #{"group-hover/category-row:scale-105 transition-all duration-300" if href}",
+        style: "background-color: color-mix(in oklab, #{item[:category_color]} 10%, transparent); border-color: color-mix(in oklab, #{item[:category_color]} 10%, transparent); color: #{item[:category_color]};"
+      )
+    else
+      concat render(DS::FilledIcon.new(
+        variant: :text,
+        hex_color: item[:category_color],
+        text: item[:category_name],
+        size: "md",
+        rounded: true
+      ))
+    end
+    concat tag.span(item[:category_name], class: "font-medium text-primary #{"hover:underline" if href}")
+    concat tag.span("(#{t("reports.transactions_breakdown.table.entries", count: item[:count])})", class: "text-xs text-subdued whitespace-nowrap")
+  end
+  classes = class_names("flex items-center gap-2", "pl-3" => is_sub)
+%>
+
+<%# The link wraps the whole cluster (icon, name, count) in normal flex flow —
+    deliberately NOT the `position: relative`/`absolute` stretched-link trick,
+    which inside a <table> row is a known source of WebKit table-layout
+    scrollHeight miscalculation (see #3093 investigation). %>
+<% if href %>
+  <%= link_to content, href, class: classes, data: { turbo_frame: "_top", turbo_prefetch: false } %>
+<% else %>
+  <%= tag.div content, class: classes %>
+<% end %>

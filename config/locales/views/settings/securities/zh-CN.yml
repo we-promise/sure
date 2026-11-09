@@ -3,9 +3,9 @@ zh-CN:
   settings:
     securities:
       show:
-        disable_mfa: 停用双重认证
-        disable_mfa_confirm: 确定要停用双重认证吗？这可能会降低您的账户安全性。
-        enable_mfa: 启用双重认证
+        disable_mfa: 停用 2FA
+        disable_mfa_confirm: 确定要停用双重认证吗？
+        enable_mfa: 启用 2FA
         mfa_description: 在登录时要求输入身份验证器应用中的代码，为账户增加额外安全层
         mfa_title: 双重认证
         mfa_enabled_status_html: 双重认证已<span class="font-medium text-green-600">启用</span>
@@ -18,18 +18,42 @@ zh-CN:
         webauthn_empty: 暂未注册通行密钥或安全密钥。
         webauthn_last_used: 上次使用于 %{time_ago} 前
         webauthn_name_label: 密钥名称
-        webauthn_code_label: "验证器代码或备用代码"
-        webauthn_code_placeholder: "当前验证器代码或未使用的备用代码"
+        webauthn_code_label: 验证器代码或备用代码
+        webauthn_code_placeholder: 当前验证器代码或未使用的备用代码
         webauthn_name_placeholder: MacBook Touch ID、YubiKey 等
         webauthn_remove: 移除
         webauthn_remove_confirm: 确定要移除此通行密钥或安全密钥？
         webauthn_remove_confirm_body: 移除后，你需要重新注册才能再次用于登录验证。
         webauthn_title: 通行密钥和安全密钥
         webauthn_unsupported: 此浏览器不支持通行密钥或安全密钥。
+        page_title: 安全性
+        encryption_warning:
+          title: 缺少加密密钥
+          intro: 敏感数据（API 密钥、提供商令牌、MFA 密钥和个人身份信息）当前未加密存储。要启用加密，请在环境变量或 Rails 凭据中设置以下密钥：
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 使用以下命令生成一组密钥：bin/rails db:encryption:init
+        disable_mfa_password_label: 输入密码确认
+        disable_mfa_password_placeholder: 输入您的密码
+        mfa_sso_only: 双重认证由您的身份提供商管理。
+        sso_title: 已连接账户
+        sso_subtitle: 管理您的单点登录账户连接
+        sso_disconnect: 断开连接
+        sso_last_used: 最后使用
+        sso_never: 从未
+        sso_no_email: 无邮箱
+        sso_no_identities: 尚未连接任何 SSO 账户
+        sso_connect_hint: 请先退出登录，再使用 SSO 提供商登录以连接账户。
+        sso_confirm_title: 断开账户连接？
+        sso_confirm_body: 确定要断开您的 %{provider} 账户吗？您之后仍可再次使用该提供商登录并重新连接。
+        sso_confirm_button: 断开连接
+        sso_warning_message: 这是您唯一的登录方式。断开前应先在安全设置中设置密码，否则您可能无法再登录账户。
   webauthn_credentials:
-    code_already_used: "该代码已被使用。请等待验证器应用生成下一个代码。"
-    invalid_code: "该代码无效。请输入验证器应用中的当前代码或未使用的备用代码。"
-    rate_limited: "尝试次数过多。请等待一分钟后重试。"
+    code_already_used: 该代码已被使用。请等待验证器应用生成下一个代码。
+    invalid_code: 该代码无效。请输入验证器应用中的当前代码或未使用的备用代码。
+    rate_limited: 尝试次数过多。请等待一分钟后重试。
     default_name: 安全密钥
     failure: 无法保存该通行密钥或安全密钥。请重试。
     mfa_required: 添加通行密钥或安全密钥前，请先启用双重认证。
