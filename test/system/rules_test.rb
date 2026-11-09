@@ -45,12 +45,12 @@ class RulesTest < ApplicationSystemTestCase
 
     visit rules_path
 
-    grip = find("[data-sortable-list-id='#{first.id}'] button[data-action*='handleKeyDown']")
+    grip = find("[data-sortable-list-id='rule:#{first.id}'] button[data-action*='handleKeyDown']")
     grip.send_keys(:enter)
     grip.send_keys(:arrow_down)
     grip.send_keys(:enter)
 
-    assert_selector "[data-sortable-list-target='item']:first-child[data-sortable-list-id='#{second.id}']"
+    assert_selector "[data-sortable-list-target='item']:first-child[data-sortable-list-id='rule:#{second.id}']"
     # The order is saved by a fetch Capybara cannot wait on, so poll for it.
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + Capybara.default_max_wait_time
     sleep 0.05 until family.rules.ordered.pluck(:id) == [ second.id, first.id ] ||
@@ -185,6 +185,137 @@ class RulesTest < ApplicationSystemTestCase
     assert rule.actions.first.value.present?
   end
 
+  test "moves a group with its rules and the rules inside it with the keyboard" do
+    family = @user.family
+    family.rules.destroy_all
+    loose = create_exclude_rule("Loose rule")
+    group = family.rule_groups.create!(name: "Food")
+    first_in_group = create_exclude_rule("First in group", group: group)
+    second_in_group = create_exclude_rule("Second in group", group: group)
+
+    visit rules_path
+
+    group_grip = find("[data-sortable-list-id='group:#{group.id}'] summary button[data-action*='handleKeyDown']")
+    group_grip.send_keys(:enter)
+    group_grip.send_keys(:arrow_up)
+    group_grip.send_keys(:enter)
+    wait_for_order(family, [ first_in_group.id, second_in_group.id, loose.id ])
+
+    rule_grip = find("[data-sortable-list-id='#{second_in_group.id}'] button[data-action*='handleKeyDown']")
+    rule_grip.send_keys(:enter)
+    rule_grip.send_keys(:arrow_up)
+    rule_grip.send_keys(:enter)
+    wait_for_order(family, [ second_in_group.id, first_in_group.id, loose.id ])
+  end
+
+  test "drags a group past a rule and a rule inside its group with the mouse" do
+    family = @user.family
+    family.rules.destroy_all
+    group = family.rule_groups.create!(name: "Food")
+    first_in_group = create_exclude_rule("First in group", group: group)
+    second_in_group = create_exclude_rule("Second in group", group: group)
+    loose = create_exclude_rule("Loose rule")
+
+    visit rules_path
+
+    drag("[data-sortable-list-id='group:#{group.id}']", onto: "[data-sortable-list-id='rule:#{loose.id}']", side: :bottom)
+    wait_for_order(family, [ loose.id, first_in_group.id, second_in_group.id ])
+
+    # The drag starts on a rule of the nested list; only that list moves it.
+    drag("[data-sortable-list-id='#{second_in_group.id}']", onto: "[data-sortable-list-id='#{first_in_group.id}']", side: :top)
+    wait_for_order(family, [ loose.id, second_in_group.id, first_in_group.id ])
+  end
+
+  test "searches and filters rules and turns sorting off meanwhile" do
+    family = @user.family
+    family.rules.destroy_all
+    group = family.rule_groups.create!(name: "Housing")
+    groceries = create_exclude_rule("Groceries", active: false)
+    rent = create_exclude_rule("Rent", group: group)
+
+    visit rules_path
+    find("input[type='search']").fill_in(with: "rent")
+
+    assert_selector "[data-sortable-list-id='#{rent.id}']"
+    assert_no_selector "[data-sortable-list-id='rule:#{groceries.id}']"
+    assert_text "Sorting is off while a search or filter is active"
+    assert_selector "[data-sortable-list-id='#{rent.id}'][draggable='false'] button[data-action*='handleKeyDown']:disabled", visible: :all
+    assert_current_path(/q=rent/)
+
+    click_on "Filter"
+    click_on "Reset"
+    assert_no_current_path(/q=rent/)
+    click_on "Filter"
+    within("#rule-filters-menu") do
+      click_on "Status"
+      choose "Inactive"
+      click_on "Done"
+    end
+
+    assert_selector "[data-sortable-list-id='rule:#{groceries.id}']"
+    assert_no_selector "[data-sortable-list-id='group:#{group.id}']"
+    assert_current_path(/status=inactive/)
+
+    within("[data-rules-filter-target='badge'][data-filter-param='status']") do
+      assert_text(/Status:\s+Inactive/)
+      find("button[aria-label='Remove filter Status']").click
+    end
+
+    assert_selector "[data-sortable-list-id='group:#{group.id}']"
+    assert_no_current_path(/status=/)
+  end
+
+  test "folds a group and keeps it folded after a reload" do
+    family = @user.family
+    group = family.rule_groups.create!(name: "Food")
+    rule = create_exclude_rule("Folded rule", group: group)
+
+    visit rules_path
+    find("[data-sortable-list-id='group:#{group.id}'] [data-rules-group-header]").click
+
+    assert_no_selector "[data-sortable-list-id='#{rule.id}']"
+    visit rules_path
+    assert_selector "[data-sortable-list-id='group:#{group.id}'] details:not([open])"
+    assert_no_selector "[data-sortable-list-id='#{rule.id}']"
+  end
+
+  test "keeps a folded group folded when switching another rule refreshes the page" do
+    group = @user.family.rule_groups.create!(name: "Food")
+    folded = create_exclude_rule("Folded rule", group: group)
+    loose = create_exclude_rule("Loose rule")
+
+    visit rules_path
+    find("[data-sortable-list-id='group:#{group.id}'] [data-rules-group-header]").click
+    assert_no_selector "[data-sortable-list-id='#{folded.id}']"
+
+    # The switch saves the rule and refreshes the page with a morph.
+    find("##{ActionView::RecordIdentifier.dom_id(loose)} input[type='checkbox'][name='rule[active]']", visible: :all).execute_script("this.click()")
+    assert_text "Rule updated"
+
+    assert_selector "[data-sortable-list-id='group:#{group.id}'] details:not([open])"
+    assert_no_selector "[data-sortable-list-id='#{folded.id}']"
+    visit rules_path
+    assert_selector "[data-sortable-list-id='group:#{group.id}'] details:not([open])"
+  end
+
+  test "folds a rule outside a group to its title and keeps it folded after a reload" do
+    rule = create_exclude_rule("Loose rule")
+
+    visit rules_path
+    within("[data-sortable-list-id='rule:#{rule.id}']") do
+      assert_text "THEN"
+      find("button[aria-controls='#{ActionView::RecordIdentifier.dom_id(rule, :details)}']").click
+      assert_text "Loose rule"
+      assert_no_text "THEN"
+    end
+
+    visit rules_path
+    within("[data-sortable-list-id='rule:#{rule.id}']") do
+      assert_selector "button[aria-expanded='false']"
+      assert_no_text "THEN"
+    end
+  end
+
   test "keeps a rule with long text inside a phone-width screen" do
     @user.family.rules.destroy_all
     rule = @user.family.rules.create!(
@@ -202,6 +333,10 @@ class RulesTest < ApplicationSystemTestCase
     visit rules_path
 
     row = find("##{ActionView::RecordIdentifier.dom_id(rule)}")
+    # Search, filters and the group controls sit above the list and push the
+    # row below the fold of a phone screen, where Selenium does not count it
+    # as visible.
+    scroll_to(row)
     viewport_width = page.evaluate_script("document.documentElement.clientWidth")
 
     row_right = row.native.rect.x + row.native.rect.width
@@ -222,4 +357,37 @@ class RulesTest < ApplicationSystemTestCase
     new_rule = find("a", text: I18n.t("rules.index.new_rule"))
     assert_operator new_rule.native.rect.x + new_rule.native.rect.width, :<=, viewport_width
   end
+
+  private
+    def create_exclude_rule(name, group: nil, active: true)
+      @user.family.rules.create!(name: name, resource_type: "transaction", rule_group: group, active: active,
+        actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+
+    # Selenium cannot drive native HTML drag and drop, so the drag events are
+    # dispatched with the pointer near the top or bottom edge of the target.
+    def drag(source, onto:, side:)
+      page.execute_script(<<~JS, source, onto, side.to_s)
+        const [sourceSelector, targetSelector, side] = arguments;
+        const source = document.querySelector(sourceSelector);
+        const target = document.querySelector(targetSelector);
+        const box = target.getBoundingClientRect();
+        const pointer = { clientX: box.left + box.width / 2, clientY: side === "top" ? box.top + 2 : box.bottom - 2 };
+        const dataTransfer = new DataTransfer();
+        const fire = (element, type, extra = {}) =>
+          element.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer, ...extra }));
+        fire(source, "dragstart");
+        fire(target, "dragover", pointer);
+        fire(target, "drop", pointer);
+        fire(source, "dragend");
+      JS
+    end
+
+    # The order is saved by a fetch Capybara cannot wait on, so poll for it.
+    def wait_for_order(family, ids)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + Capybara.default_max_wait_time
+      sleep 0.05 until family.rules.ordered.pluck(:id) == ids ||
+        Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+      assert_equal ids, family.rules.ordered.pluck(:id)
+    end
 end
