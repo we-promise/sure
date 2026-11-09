@@ -7,6 +7,7 @@
 # withhold them; the LLMs' don't, so they always apply.
 class Family::AutoCategorizer
   include Ai::Requester
+  include RuleRun::AiProgress
   ai_feature :categorize
 
   Error = Class.new(StandardError)
@@ -89,19 +90,18 @@ class Family::AutoCategorizer
       }.compact
     )
 
-    @handled = transaction_ids.size - result.remaining.size
-    @rule_run&.ai_handled!(handled: @handled, modified: modified_count)
+    report_batch(result, modified: modified_count)
     modified_count
   end
 
   # The modified counts reached the run per batch (apply_ai); this releases the rest.
   def ai_finished(_count)
-    @rule_run&.ai_handled!(handled: unhandled_count)
+    release_unhandled
     @rule_run&.complete_job!
   end
 
   def ai_failed(error)
-    @rule_run&.ai_handled!(handled: unhandled_count)
+    release_unhandled
     @rule_run&.fail_job!(error:, source: self.class.name, transaction_ids:)
     DebugLogEntry.capture(
       category: "auto_categorization", level: "error", message: "AI categorization failed",
@@ -109,8 +109,6 @@ class Family::AutoCategorizer
       metadata: { error_class: error.class.name, error_message: error.message.truncate(500), requested_transaction_ids: transaction_ids }
     )
   end
-
-  def ai_correlation_id = @rule_run ? "rule_run:#{@rule_run.id}" : nil
 
   # Jev's decisions as the generation's hashes, or nil when Jev failed.
   def jev_decisions(provider = jev_provider, input = transactions_input)
@@ -143,9 +141,6 @@ class Family::AutoCategorizer
 
   private
     attr_reader :family, :transaction_ids
-
-    # This job's transactions that no batch has reported to the run yet.
-    def unhandled_count = transaction_ids.size - @handled.to_i
 
     def jev_provider
       Provider::Registry.get_provider(:jev)
