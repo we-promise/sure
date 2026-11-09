@@ -1418,6 +1418,8 @@ class Family::DataImporter
         [ position || Float::INFINITY, index ]
       end.map(&:first)
       with_stored_email_action = Rule.ids_with_stored_email_notification_action(@family.rules)
+      # The last rule each group lost in this import, keyed by group id.
+      left_group_last = {}
 
       records.each do |record|
         data = record["data"]
@@ -1436,6 +1438,9 @@ class Family::DataImporter
           effective_date: data["effective_date"].present? ? Date.parse(data["effective_date"].to_s) : nil,
           stop_processing: data["stop_processing"] || false
         )
+        # Exports from before rule groups have no group key; an existing rule
+        # then keeps its group.
+        rule.rule_group = find_or_create_rule_group(data["group"]) if data.key?("group")
 
         # An email action replacing the rule's own keeps the baseline it recorded
         # (see Rule::Action#keep_notification_baseline), as stored before this
@@ -1457,10 +1462,44 @@ class Family::DataImporter
           build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
 
+        left_group_id = rule.rule_group_id_was if rule.will_save_change_to_rule_group_id? && rule.rule_group.nil?
+
         rule.save!
+        if left_group_id
+          # Each rule leaving a group lands right below it (Rule#place_in_rule_group),
+          # so one that left the same group earlier in this import would end up
+          # after it. Keep the exported run order instead.
+          previous = left_group_last[left_group_id] || session_rule_left_earlier(rule)
+          Rule::Layout.new(@family).place_after_rule!(rule, previous) if previous
+          left_group_last[left_group_id] = rule
+        end
         map_source!(:rules, old_id, rule)
         increment_summary("Rule", created ? :created : :updated)
       end
+    end
+
+    # Session imports arrive in chunks, each through a fresh importer, so a rule
+    # that left the same group in an earlier chunk is not in the importer's own
+    # map. Rules this session has already imported come earlier in the run
+    # order, and those that left the group now sit right below this one: the
+    # last of that run is where this rule belongs.
+    def session_rule_left_earlier(rule)
+      return unless @import_session
+
+      session_rule_ids = @import_session.source_mappings.where(source_type: "Rule").pluck(:target_id).to_set
+      items = Rule::Layout.new(@family).items
+      index = items.index { |item| !item.group? && item.rule.id == rule.id }
+      return unless index
+
+      items.drop(index + 1).take_while { |item| !item.group? && session_rule_ids.include?(item.rule.id) }.last&.rule
+    end
+
+    def find_or_create_rule_group(name)
+      validate_rule_text!(name, field: "group")
+      name = name.to_s.strip
+      return if name.empty?
+
+      @family.rule_groups.find_or_create_named!(name)
     end
 
     def build_rule_condition(rule, condition_data, parent: nil)
@@ -1510,7 +1549,7 @@ class Family::DataImporter
 
       # Map merchant names to IDs
       if condition_type == "transaction_merchant"
-        return find_or_create_rule_merchant(value).id
+        return resolve_rule_merchant_id(condition_data, value)
       end
 
       # Map tag names to IDs
@@ -1542,7 +1581,7 @@ class Family::DataImporter
 
       # Map merchant names to IDs
       if action_type == "set_transaction_merchant"
-        return find_or_create_rule_merchant(value).id
+        return resolve_rule_merchant_id(action_data, value)
       end
 
       value
@@ -1618,6 +1657,18 @@ class Family::DataImporter
         classification_unused: "expense",
         lucide_icon: "shapes"
       )
+    end
+
+    # A merchant this import already mapped (a FamilyMerchant, or a reused
+    # ProviderMerchant, see import_provider_merchants) keeps the rule on the same
+    # record as the restored transactions. Anything else is found or created by
+    # name.
+    def resolve_rule_merchant_id(data, name)
+      value_ref = data["value_ref"]
+      ref_id = value_ref["id"] if value_ref.is_a?(Hash) && value_ref["type"] == "Merchant"
+      mapped = mapped_id(:merchants, ref_id.to_s, record_type: "Rule", required: false) if ref_id.present?
+
+      mapped || find_or_create_rule_merchant(name).id
     end
 
     def find_or_create_rule_merchant(name)

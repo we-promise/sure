@@ -114,6 +114,7 @@ class ProviderMerchant < Merchant
 
       # Update only this family's transactions to point to new merchant
       scope.update_all(merchant_id: family_merchant.id)
+      Rule.replace_merchant_references!(family, from: id, to: family_merchant.id)
 
       family_merchant
     end

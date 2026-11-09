@@ -58,6 +58,43 @@ class Account < ApplicationRecord
 
   monetize :balance, :cash_balance
 
+  # Sum of scheduled (future-dated) entries, signed and converted the same way
+  # Balance::BaseCalculator#signed_entry_flows treats real flows -- so the
+  # projection stays consistent with what the balance will actually become
+  # once these entries land. Non-cash valuation-only accounts (Property,
+  # Vehicle, etc.) ignore transactions entirely for balance purposes, same as
+  # Balance::BaseCalculator#flows_for_date -- see Entry#scheduled?.
+  #
+  # Trades are included only when qty is 0 (Dividend/Interest): those are pure
+  # cash flows with no offsetting holdings change, same shape as a Transaction.
+  # A Buy/Sell/Transfer/etc. moves value between cash and holdings rather than
+  # into or out of the account, so summing its raw amount here would
+  # double-count against Balance::BaseCalculator#market_value_change_on_date
+  # once the trade lands.
+  # `through_date` bounds the scheduled window to entries dated on or before
+  # it (inclusive) -- used to project the balance as of a specific future
+  # date (see Account::ActivityFeedData) instead of the account's fully
+  # projected total.
+  #
+  # The flows are loaded and converted once per instance (see
+  # #scheduled_entry_flows), so the chart tooltip and every projected date
+  # group in the activity feed share one query and one FX pass.
+  def scheduled_entries_total_money(through_date: nil)
+    flows = scheduled_entry_flows
+    flows = flows.select { |date, _| date <= through_date } if through_date
+
+    Money.new(flows.sum { |_, amount| amount }, currency)
+  end
+
+  def reload(*)
+    @scheduled_entry_flows = nil
+    super
+  end
+
+  def projected_balance_money
+    balance_money + scheduled_entries_total_money
+  end
+
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
   VISIBLE_STATUSES = %w[draft active].freeze
@@ -414,7 +451,7 @@ class Account < ApplicationRecord
     def create_from_wise_account(wise_account)
       family = wise_account.wise_item.family
 
-      create_and_sync(
+      account = create_and_sync(
         {
           family: family,
           name: wise_account.name || "Wise #{wise_account.currency}",
@@ -426,6 +463,21 @@ class Account < ApplicationRecord
         },
         skip_initial_sync: true
       )
+
+      # When Sure imports a balance's whole history, it opens at 0 the day
+      # before Wise opened it, not at today's balance two years back.
+      if (opening_date = wise_account.opening_date)
+        manager = Account::OpeningBalanceManager.new(account)
+        date = [ opening_date, manager.oldest_entry_date&.prev_day ].compact.min
+        result = manager.set_opening_balance(balance: 0, date: date)
+        Rails.logger.warn "Account.create_from_wise_account - Opening balance kept for account #{account.id}: #{result.error}" if result.error
+        # So later syncs may move it again (WiseAccount::Processor).
+        if result.changes_made?
+          wise_account.remember_opening_anchor!(account.valuations.opening_anchor.includes(:entry).first.entry)
+        end
+      end
+
+      account
     end
 
     def create_from_coinbase_account(coinbase_account)
@@ -490,6 +542,24 @@ class Account < ApplicationRecord
         balance: 0,
         cash_balance: 0,
         currency: trading212_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
+    def create_from_sharesight_account(sharesight_account)
+      family = sharesight_account.sharesight_item.family
+
+      attributes = {
+        family: family,
+        name: sharesight_account.name.presence || I18n.t("sharesight_items.defaults.name"),
+        balance: 0,
+        cash_balance: 0,
+        currency: sharesight_account.currency.presence || family.currency,
         accountable_type: "Investment",
         accountable_attributes: {
           subtype: "brokerage"
@@ -916,6 +986,42 @@ class Account < ApplicationRecord
   private
     def clear_unsupported_iban
       self.iban = nil if iban.present? && !supports_iban?
+    end
+
+    # [date, signed amount in account currency] for each scheduled entry that
+    # contributes to the projection.
+    def scheduled_entry_flows
+      @scheduled_entry_flows ||= if balance_type == :non_cash && accountable_type != "Loan"
+        []
+      else
+        entries.excluding_pending.excluding_split_parents
+          .where(entryable_type: [ "Transaction", "Trade" ])
+          .where("entries.date > ?", Date.current)
+          .includes(:entryable)
+          .filter_map { |entry| (amount = convert_scheduled_entry_amount(entry)) && [ entry.date, amount ] }
+      end
+    end
+
+    # Converts a scheduled entry's amount into this account's currency, signed
+    # the same way flows_for_date treats it (see Balance::BaseCalculator).
+    # Returns nil when the entry should not contribute -- a Buy/Sell trade
+    # (moves value between cash and holdings, not into/out of the account) or
+    # an unconvertible currency pair. Dropping the latter instead of using the
+    # raw, unconverted amount matches Balance::SyncCache#converted_entries,
+    # which drops the same entry outright once it materializes (see #1143) --
+    # a projection that doesn't drop it would disagree with the balance it's
+    # supposed to preview.
+    def convert_scheduled_entry_amount(entry)
+      return nil if entry.entryable_type == "Trade" && entry.entryable.qty.nonzero?
+
+      custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
+      converted = begin
+        entry.amount_money.exchange_to(currency, date: entry.date, custom_rate: custom_rate).amount
+      rescue Money::ConversionError
+        return nil
+      end
+
+      asset? ? -converted : converted
     end
 
     # perform_later raises (the Sidekiq adapter re-raises RedisClient errors) or

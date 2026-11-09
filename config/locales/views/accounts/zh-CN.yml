@@ -28,6 +28,36 @@ zh-CN:
       data_not_available: 所选时间段内无可用数据
     create:
       success: 已创建 %{type} 账户
+    logo_caption:
+      appstore: 来自 App Store
+      brandfetch: 来自 Brandfetch
+      duckduckgo: 来自 DuckDuckGo
+      google: 来自 Google
+      googleplay: 来自 Google Play
+      none: 暂无图标
+      rustore: 来自 RuStore
+      uploaded: 由您上传
+      yandex: 来自 Yandex
+    logo_field:
+      current: 当前
+      domain_needed: 输入金融机构域名（例如 tbank.ru）以选择图标。
+      empty: 未找到此域名的图标。您可在下方上传自定义图标。
+      pick: 选择图标
+      pending: 保存后生效
+      remove: 移除
+      removal: 保存后移除；将恢复自动图标
+      searching: 正在搜索…
+    logo_options:
+      size: "%{size} 像素"
+      sources:
+        appstore: App Store
+        brandfetch: Brandfetch
+        duckduckgo: DuckDuckGo
+        google: Google
+        googleplay: Google Play
+        rustore: RuStore
+        yandex: Yandex
+      stored: 已保存的图标
     set_default:
       depository_only: 只有现金和信用卡账户才能设为默认。
     destroy:
@@ -48,15 +78,20 @@ zh-CN:
       institution_name_placeholder: 例如：Chase Bank
       institution_domain_label: 金融机构域名
       institution_domain_placeholder: 例如：chase.com
-      iban_label: "IBAN"
-      iban_placeholder: "例如：DE89370400440532013000" # pipelock:ignore IBAN
-      iban_set_placeholder: "•••• •••• •••• •••• — 已保存 IBAN，输入新值以替换"
-      iban_remove_label: "移除 IBAN"
+      institution_domain_hint: 用于查找金融机构的图标。
+      institution_domain_missing_logo_key_hint: 用于查找金融机构的图标。由于未配置 Brandfetch 客户端 ID，Brandfetch 图标不可用。
+      institution_domain_settings_link: 在自托管设置中添加
+      logo_label: 图标
+      logo_hint: 或上传您自己的 PNG、JPEG、GIF、WebP 或 ICO 格式图片（最大 1 MB），将替换 Brandfetch 图标。
       notes_label: 备注
       notes_placeholder: 存储其他信息，例如账号、排序码、IBAN、路由号码等。
       exclude_from_reports: 从所有报表中排除
       enable_category_matcher_label: 启用分类匹配器
       enable_category_matcher_hint: 启用后，提供商建议的分类将应用于导入的交易。禁用则新交易保持未分类。
+      iban_label: "IBAN"
+      iban_placeholder: "例如：DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — 已保存 IBAN，输入新值以替换"
+      iban_remove_label: "移除 IBAN"
     index:
       accounts: 账户
       financekit_accounts:
@@ -89,6 +124,7 @@ zh-CN:
       limited_fx_history_warning: 汇率历史仅从 %{date} 起可用。该日期之前的交易将使用近似货币换算——当外汇提供商仅提供有限历史窗口时会出现这种情况。
       tabs:
         activity: 活动
+        extra_repayments: 额外还款
         holdings: 持仓
         overview: 概览
         schedule: 时间表
@@ -135,6 +171,7 @@ zh-CN:
         include_in_reports: 包含在报表中
     update:
       success: 已更新 %{type} 账户
+      logo_not_applied: 账户已保存，但无法下载所选图标。请重试或上传您自己的图标。
     sidebar:
       missing_data: 缺少历史数据
       missing_data_description: "%{product} 使用第三方提供商获取历史汇率、证券价格等数据。这些数据是计算准确历史账户余额所必需的。"

@@ -1,0 +1,7 @@
+---
+id:
+  other_liabilities:
+    edit:
+      edit: Edit %{account}
+    new:
+      title: Masukkan detail liabilitas
