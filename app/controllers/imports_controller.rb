@@ -130,7 +130,9 @@ class ImportsController < ApplicationController
 
       # Stream reading is not fully applicable here as we store the raw string in the DB,
       # but we have validated size beforehand to prevent memory exhaustion from massive files.
-      import.update!(raw_file_str: file.read)
+      import.raw_file_str = file.read
+      import.preset_for_uploaded_csv
+      import.save!
 
       redirect_to import_configuration_path(import), notice: t("imports.create.csv_uploaded")
     else

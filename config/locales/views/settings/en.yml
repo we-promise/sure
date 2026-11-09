@@ -296,6 +296,7 @@ en:
         household_title: Household
         invitation_link: Invitation link
         invite_member: Add member
+        invite_multiple: Add multiple members
         last_name: Last Name
         page_title: Profile Info
         pending: Pending
@@ -495,6 +496,7 @@ en:
         onchain_wallet: Track self-custody Bitcoin, EVM, Solana, Cosmos and Polkadot wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
+        sharesight: Sync the portfolios you track in Sharesight using its API.
         trade_republic: Sync your Trade Republic investment account via secure read-only web login.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         questrade: Sync your Questrade investment accounts directly via the Questrade API.
@@ -688,6 +690,12 @@ en:
       not_found: Provider not found.
       sync_provider_no_items: No connections available to sync.
       ibkr_panel:
+        add_connection: Add Interactive Brokers connection
+        connection_name_label: Connection name
+        connection_name_placeholder: e.g. IBKR Ireland, IBKR US
+        disconnect: Disconnect
+        disconnect_confirm_named: Disconnect %{name}?
+        setup_accounts: Set up accounts
         steps:
           step_1: 'In your IBKR Client Portal, navigate to "Performance & Reports" > "Flex Queries".'
           step_2: 'Click the "+" icon in the "Activity Flex Query" section to create a new query.'
@@ -729,18 +737,13 @@ en:
           all_other_options: 'All other configuration options: "No"'
         report_window_note: "IBKR Flex reports are limited to the query window you configured in IBKR. Sure will import full current holdings plus up to the last 365 days of activity from this report."
         sync: Sync
-        disconnect_confirm: Disconnect Interactive Brokers?
         query_id_label: Query ID
         query_id_placeholder_new: Enter your IBKR Flex Query ID
         query_id_placeholder_existing: Leave blank to keep the current Query ID
         token_label: Token
         token_placeholder_new: Enter your IBKR Flex Web Service Token
         token_placeholder_existing: Leave blank to keep the current Token
-        save_configuration: Save Configuration
         update_configuration: Update Configuration
-        status_configured_prefix: "%{summary}. Visit the"
-        accounts_tab: Accounts
-        status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
       trade_republic_panel:
         encryption_warning:
@@ -802,6 +805,22 @@ en:
           other: "%{count} Trade Republic accounts discovered."
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
+      sharesight_panel:
+        steps:
+          step_1: Ask Sharesight support to enable API access. It's available on paid plans.
+          step_2: In your Sharesight account settings, open the API page and copy the client ID and client secret.
+          step_3: Paste both below and save. Sure then finds your portfolios so you can link them.
+        client_id_label: Client ID
+        client_id_placeholder_new: Paste your Sharesight client ID
+        client_id_placeholder_existing: Leave blank to keep the current client ID
+        client_secret_label: Client secret
+        client_secret_placeholder_new: Paste your Sharesight client secret
+        client_secret_placeholder_existing: Leave blank to keep the current client secret
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        status_configured_prefix: "Configured. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to link your portfolios.
       trading212_panel:
         steps:
           step_1: Go to Trading 212 → Settings → API (web or mobile app).

@@ -96,6 +96,8 @@ fr:
       success: La configuration d'Interactive Brokers a été mise à jour avec succès.
   providers:
     ibkr:
+      named_connection: Interactive Brokers (%{name})
+      named_connection_description: Associer les comptes de votre requête Flex %{name}
       connection_description: Connecter un rapport de service Web Flex d'Interactive
         Brokers
       institution_name: Courtiers interactifs
