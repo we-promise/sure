@@ -6,6 +6,7 @@ hu:
         renewal: "A hozzájárulásod %{date}-én megújul."
         cancellation: "A hozzájárulásod %{date}-én lejár."
   settings:
+    encryption_migration_guide: Titkosítási beállítási és migrációs útmutató
     llm_usages:
       show:
         page_title: "LLM-használat és -költségek"
@@ -423,6 +424,12 @@ hu:
       not_found: Szolgáltató nem található.
       sync_provider_no_items: Nincs elérhető kapcsolat a szinkronizáláshoz.
       ibkr_panel:
+        add_connection: "Interactive Brokers kapcsolat hozzáadása"
+        connection_name_label: "Kapcsolat neve"
+        connection_name_placeholder: "pl. IBKR Írország, IBKR USA"
+        disconnect: "Lecsatlakozás"
+        disconnect_confirm_named: "Lecsatlakoztatja ezt: %{name}?"
+        setup_accounts: "Számlák beállítása"
         steps:
           step_1: 'Az IBKR ügyfélportálon menj a „Teljesítmény és Jelentések" > „Flex lekérdezések" menübe.'
           step_2: 'Kattints a „+" ikonra az „Activity Flex Query" részben egy új lekérdezés létrehozásához.'
@@ -464,16 +471,11 @@ hu:
           all_other_options: 'Minden egyéb konfigurációs opció: „Nem"'
         report_window_note: "Az IBKR Flex-jelentések az IBKR-ben konfigurált lekérdezési ablakra korlátozódnak. A Sure a teljes aktuális pozíciókat, valamint a jelentésből legfeljebb 365 nap tevékenységet importál."
         sync: Szinkronizálás
-        disconnect_confirm: Leválasztja az Interactive Brokers-t?
         query_id_label: Lekérdezés azonosítója
         query_id_placeholder_new: Add meg az IBKR Flex lekérdezés azonosítóját
         query_id_placeholder_existing: Hagyd üresen a meglévő azonosító megtartásához
         token_label: Token
         token_placeholder_new: Add meg az IBKR Flex Web Service tokenedet
         token_placeholder_existing: Hagyd üresen a meglévő token megtartásához
-        save_configuration: Konfiguráció mentése
         update_configuration: Konfiguráció frissítése
-        status_configured_prefix: "%{summary}. Látogasd meg a"
-        accounts_tab: Számlák
-        status_configured_suffix: fület a felderített számlák kezeléséhez.
         not_configured: Nincs konfigurálva.

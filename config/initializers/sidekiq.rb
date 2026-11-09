@@ -1,4 +1,5 @@
 require "sidekiq/web"
+require Rails.root.join("lib/job_usage_tracking")
 
 # Optional second authentication layer for /sidekiq. The route itself only
 # exists for signed-in super admins (see SuperAdminConstraint in routes.rb);
@@ -62,6 +63,15 @@ end
 
 Sidekiq.configure_server do |config|
   config.redis = redis_config
+  config.server_middleware do |chain|
+    chain.add JobUsageTracking
+  end
+
+  # At startup: app classes aren't loadable yet when this file runs.
+  config.on(:startup) do
+    config[:fetch_class] = ChatReservation::Fetch
+    config[:labels] << BackgroundJobHealth::ONE_AI_THREAD_LABEL if BackgroundJobHealth.one_ai_thread_worker?(config)
+  end
 
   # Initialize auto-sync scheduler when Sidekiq server starts
   config.on(:startup) do

@@ -3,13 +3,11 @@ it:
   invitations:
     accept_choice:
       create_account: Crea nuovo account
+      existing_account_hint: "Hai già un account? Gli account esistenti non possono unirsi a un altro nucleo familiare tramite invito."
       joined_household: Hai aderito alla famiglia.
       message: "%{inviter} ti ha invitato a unirti come %{role}."
-      sign_in_existing: Ho già un account
       title: Unisciti a %{family}
     create:
-      existing_user_added: L'utente è stato aggiunto alla tua famiglia.
-      existing_user_has_family_data: Quell'utente possiede già una famiglia con conti. Deve rimuovere o trasferire quei conti prima di unirsi alla tua.
       failure: Impossibile inviare l'invito
       success: Invito inviato con successo
     destroy:

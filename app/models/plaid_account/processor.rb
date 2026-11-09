@@ -3,10 +3,13 @@ class PlaidAccount::Processor
 
   BalanceError = Class.new(StandardError)
 
-  attr_reader :plaid_account
+  attr_reader :plaid_account, :as_of
 
-  def initialize(plaid_account)
+  # `as_of` is the sync's date. Only the loan liability processors read it, to
+  # date a variable rate change.
+  def initialize(plaid_account, as_of: Date.current)
     @plaid_account = plaid_account
+    @as_of = as_of
   end
 
   # Each step represents a different Plaid API endpoint / "product"
@@ -161,9 +164,9 @@ class PlaidAccount::Processor
       if type == "credit"
         PlaidAccount::Liabilities::CreditProcessor.new(plaid_account).process
       elsif type == "loan" && subtype == "mortgage"
-        PlaidAccount::Liabilities::MortgageProcessor.new(plaid_account).process
+        PlaidAccount::Liabilities::MortgageProcessor.new(plaid_account, as_of: as_of).process
       elsif type == "loan" && subtype == "student"
-        PlaidAccount::Liabilities::StudentLoanProcessor.new(plaid_account).process
+        PlaidAccount::Liabilities::StudentLoanProcessor.new(plaid_account, as_of: as_of).process
       end
     rescue => e
       report_exception(e)

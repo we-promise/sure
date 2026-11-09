@@ -6,6 +6,7 @@ zh-TW:
         renewal: 您的貢獻將於 %{date}繼續。
         cancellation: 您的貢獻將於 %{date}結束。
   settings:
+    encryption_migration_guide: 加密設定與資料遷移指南
     background_jobs:
       show:
         page_title: 背景工作
@@ -560,6 +561,12 @@ zh-TW:
       not_found: 找不到供應商。
       sync_provider_no_items: 沒有可同步的連線。
       ibkr_panel:
+        add_connection: "新增 Interactive Brokers 連線"
+        connection_name_label: "連線名稱"
+        connection_name_placeholder: "例如：IBKR 愛爾蘭、IBKR 美國"
+        disconnect: "中斷連線"
+        disconnect_confirm_named: "要中斷 %{name} 的連線嗎？"
+        setup_accounts: "設定帳戶"
         steps:
           step_1: 在您的 IBKR Client Portal 中，前往「Performance & Reports」>「Flex Queries」。
           step_2: 點選「Activity Flex Query」區塊中的「+」圖示，建立一個新查詢。
@@ -601,18 +608,13 @@ zh-TW:
           all_other_options: 其他所有設定選項：「No」
         report_window_note: IBKR Flex 報表的範圍受限於您在 IBKR 設定的查詢區間。Sure 會從這份報表匯入完整的目前持股，以及最多近 365 天的活動。
         sync: 同步
-        disconnect_confirm: 要中斷 Interactive Brokers 連線嗎？
         query_id_label: Query ID
         query_id_placeholder_new: 輸入您的 IBKR Flex Query ID
         query_id_placeholder_existing: 留白即維持目前的 Query ID
         token_label: 權杖 (Token)
         token_placeholder_new: 輸入您的 IBKR Flex Web Service Token
         token_placeholder_existing: 留白即維持目前的 Token
-        save_configuration: 儲存設定
         update_configuration: 更新設定
-        status_configured_prefix: '%{summary}。請前往'
-        accounts_tab: 帳戶管理
-        status_configured_suffix: 分頁管理已偵測到的帳戶。
         not_configured: 尚未設定。
       trading212_panel:
         steps:

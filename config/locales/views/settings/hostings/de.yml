@@ -29,6 +29,11 @@ de:
         confirm_clear_cache:
           title: Daten-Cache leeren?
           body: Bist du sicher, dass du den Daten-Cache leeren möchtest? Dadurch werden alle Wechselkurse, Wertpapierpreise, Kontostände und andere Daten entfernt. Diese Aktion kann nicht rückgängig gemacht werden.
+        reset_market_data: Marktdaten für alle Familien zurücksetzen
+        reset_market_data_warning: Löscht die Wechselkurse und Wertpapierpreise, die deine Anbieter neu laden können, lädt sie neu und synchronisiert danach jedes Konto. Bis der Import fertig ist, werden Fremdwährungsbeträge eventuell unumgerechnet angezeigt.
+        confirm_reset_market_data:
+          title: Marktdaten für alle Familien zurücksetzen?
+          body: Dadurch werden die Wechselkurse und Wertpapierpreise, die deine Anbieter neu laden können, für jede Familie dieser Instanz gelöscht und neu geladen. Bis der Import fertig ist, werden Fremdwährungsbeträge eventuell unumgerechnet angezeigt. Diese Aktion kann nicht rückgängig gemacht werden.
         ai_assistant: KI-Assistent
         property_valuation_providers: Anbieter für Immobilienbewertung
       provider_selection:
@@ -80,8 +85,10 @@ de:
         access_token_placeholder: Gib hier dein Zugriffstoken ein
         uri_base_label: API-Basis-URL (optional)
         uri_base_placeholder: "https://api.openai.com/v1 (Standard)"
+        uri_base_local_help: "Für ein Modell auf deinem eigenen Rechner gib dessen OpenAI-kompatiblen Endpunkt ein, zum Beispiel Ollama unter http://localhost:11434/v1, oder http://ollama:11434/v1, wenn Sure und Ollama als Docker-Compose-Dienste laufen."
         model_label: Modell (optional)
         model_placeholder: "gpt-4.1 (Standard)"
+        model_required_help: "Erforderlich, wenn du eine API-Basis-URL festlegst: Gib den Modellnamen ein, den dein Server verwendet, etwa llama3.1 für Ollama."
         model_function_calling_help: Der KI-Assistent liest deine Daten mithilfe von Funktionsaufrufen. Wähl daher ein Modell, das laut Dokumentation deines Anbieters Tools beziehungsweise Function Calling unterstützt. Ohne diese Unterstützung schlägt der Chat mit einer wenig aussagekräftigen Fehlermeldung des Anbieters fehl.
         model_function_calling_link: Konfiguriertes Modell prüfen
         json_mode_label: JSON-Modus
@@ -147,6 +154,10 @@ de:
         invalid_llm_budget: "%{field} muss eine ganze Zahl ≥ %{minimum} sein."
       clear_cache:
         cache_cleared: Daten-Cache wurde geleert. Dies kann einige Augenblicke dauern.
+      reset_market_data:
+        market_data_reset: Zurücksetzen der Marktdaten eingeplant. Kurse und Preise werden neu geladen, danach werden alle Konten synchronisiert.
+        market_data_reset_already_queued: Ein Zurücksetzen der Marktdaten ist bereits eingeplant oder läuft.
+        market_data_reset_failed: Das Zurücksetzen der Marktdaten konnte nicht eingeplant werden. Es wurde nichts gelöscht, bitte versuche es erneut.
       not_authorized: Du bist nicht berechtigt, diese Aktion auszuführen.
       sync_settings:
         auto_sync_label: Automatische Synchronisierung aktivieren

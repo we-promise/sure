@@ -48,7 +48,6 @@ tr:
         loading: Nakit akışı yükleniyor…
         load_error: Nakit akışı yüklenemedi. Lütfen tekrar deneyin.
         retry: Tekrar dene
-      drag_to_reorder: Bölümü yeniden sıralamak için sürükleyin
       insights_feed:
         title: İçgörüler
       investment_summary:

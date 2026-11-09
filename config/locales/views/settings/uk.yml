@@ -5,6 +5,7 @@ uk:
         renewal: "Ваш внесок продовжується %{date}."
         cancellation: "Ваш внесок закінчується %{date}."
   settings:
+    encryption_migration_guide: Посібник із налаштування шифрування та міграції
     background_jobs:
       show:
         page_title: "Фонові завдання"
@@ -611,6 +612,12 @@ uk:
       not_found: Постачальника не знайдено.
       sync_provider_no_items: Немає доступних з'єднань для синхронізації.
       ibkr_panel:
+        add_connection: "Додати підключення Interactive Brokers"
+        connection_name_label: "Назва підключення"
+        connection_name_placeholder: "напр. IBKR Ірландія, IBKR США"
+        disconnect: "Відключити"
+        disconnect_confirm_named: "Відключити %{name}?"
+        setup_accounts: "Налаштувати рахунки"
         steps:
           step_1: 'У вашому клієнтському порталі IBKR перейдіть до "Продуктивність та звіти" > "Flex Queries".'
           step_2: 'Натисніть значок "+" у розділі "Activity Flex Query", щоб створити новий запит.'
@@ -652,18 +659,13 @@ uk:
           all_other_options: 'Усі інші параметри конфігурації: "Ні"'
         report_window_note: "Звіти IBKR Flex обмежені вікном запиту, яке ви налаштували в IBKR. Sure імпортує повні поточні активи плюс до останніх 365 днів активності з цього звіту."
         sync: Синхронізувати
-        disconnect_confirm: Відключити Interactive Brokers?
         query_id_label: ID запиту
         query_id_placeholder_new: Введіть свій ID запиту IBKR Flex
         query_id_placeholder_existing: Залиште порожнім, щоб зберегти поточний ID запиту
         token_label: Токен
         token_placeholder_new: Введіть свій токен веб-служби IBKR Flex
         token_placeholder_existing: Залиште порожнім, щоб зберегти поточний токен
-        save_configuration: Зберегти конфігурацію
         update_configuration: Оновити конфігурацію
-        status_configured_prefix: "%{summary}. Відвідайте"
-        accounts_tab: Рахунки
-        status_configured_suffix: вкладку для керування виявленими рахунками.
         not_configured: Не налаштовано.
       drawer_trust_statement_encryption_unconfigured: Доступ лише для читання. Sure ніколи не може переміщувати гроші. Перш ніж зберігати облікові дані постачальників у робочому середовищі, налаштуйте явні ключі шифрування.
       provider_setup_encryption_warning:
