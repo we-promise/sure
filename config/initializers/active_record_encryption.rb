@@ -96,7 +96,7 @@ end
 # records work). Fixing this generically would mean patching the shared
 # ActiveModel normalization type, which is used for unrelated attributes
 # across the app - too invasive for this fix. Instead, the user-facing email
-# lookups (web and API login, SSO linking, password reset, invitations, MCP,
+# lookups (web and API login, SSO linking, password reset, MCP,
 # demo refresh) go through User.find_by_email / User.authenticate_by_email,
 # which fall back to a literal match for legacy plaintext rows, so existing
 # users can still sign in after upgrading. Operators should still run

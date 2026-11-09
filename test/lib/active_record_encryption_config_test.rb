@@ -170,6 +170,13 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     refute ActiveRecordEncryptionConfig.backfill_completed?(required_version: 2)
   end
 
+  test "backfill_completed? skips the database during asset builds" do
+    Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+    ActiveRecord::Base.connection.expects(:select_value).never
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?(env: { "SECRET_KEY_BASE_DUMMY" => "1" })
+  end
+
   test "backfill_completed? defaults to false when the settings table can't be read" do
     # backfill_completed? deliberately bypasses the Setting model (see its
     # comment for why) and queries the settings table directly via

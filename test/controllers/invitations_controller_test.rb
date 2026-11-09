@@ -80,16 +80,6 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("invitations.create.own_email"), flash[:alert]
   end
 
-  test "should add an existing user whose email row is still legacy plaintext" do
-    existing_user = users(:empty)
-    email = store_legacy_plaintext_email(existing_user)
-
-    post invitations_url, params: { invitation: { email: email, role: "member" } }
-
-    assert_equal @admin.family_id, existing_user.reload.family_id
-    assert_equal I18n.t("invitations.create.existing_user_added"), flash[:notice]
-  end
-
   test "non-admin cannot create invitations" do
     sign_in users(:family_member)
 

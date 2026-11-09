@@ -469,6 +469,8 @@ If a release note mentions a fix to Active Record encryption configuration, any 
 docker compose exec web bin/rails security:backfill_encryption
 ```
 
+Run it only after every `web` and `worker` container is on the new version (`docker compose up -d` above replaces both). A process still on the old version may keep writing plaintext into columns the backfill has just encrypted.
+
 This is idempotent (safe to re-run) and defaults to a dry run — pass `dry_run=0` to actually write changes:
 
 ```bash
