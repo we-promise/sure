@@ -153,9 +153,12 @@ class AiTransportContractTest < ActiveSupport::TestCase
     test "#{protocol}: requests go through the resolved proxy" do
       stub_request(:post, spec[:url]).to_return(status: 200, headers: JSON_HEADERS, body: spec[:ok].to_json)
 
-      with_env_overrides("HTTPS_PROXY" => "http://proxy.internal:8888", "HTTP_PROXY" => nil) do
+      with_env_overrides("HTTPS_PROXY" => "http://proxy.internal:8888", "HTTP_PROXY" => nil, "NO_PROXY" => nil, "no_proxy" => nil) do
         transport = Ai::Transport.for(endpoint(protocol))
         assert_equal "http://proxy.internal:8888", transport.send(:ruby_llm_context).config.http_proxy
+        # The proxy RubyLLM's own Faraday connection uses (Provider#connection is :nodoc:, read here only).
+        chat = transport.send(:ruby_llm_chat, ai_model(endpoint: endpoint(protocol)))
+        assert_equal "http://proxy.internal:8888", chat.instance_variable_get(:@provider).connection.connection.proxy.uri.to_s
 
         host = URI(spec[:url]).host
         with_env_overrides("NO_PROXY" => host) do
@@ -211,6 +214,19 @@ class AiTransportContractTest < ActiveSupport::TestCase
 
     assert_raises(Ai::Error::ModelMissing) { probe(:anthropic, :chat) }
     assert_raises(Ai::Error::ModelMissing) { probe(:anthropic, :tools) }
+  end
+
+  test "a chat answer that isn't the API's shape, such as an HTML page with a 200, is InvalidOutput" do
+    stub_request(:post, TRANSPORTS[:compatible][:url]).to_return(status: 200, headers: { "Content-Type" => "text/html" }, body: "<html>login</html>")
+
+    assert_raises(Ai::Error::InvalidOutput) { probe(:compatible, :chat) }
+  end
+
+  test "an embedding endpoint with static headers is refused, since RubyLLM 2.1.1 can't send them" do
+    model_endpoint = ai_endpoint(name: "embed", base_url: "https://llm.example.test/v1", extra_headers: { "X-Gateway-Key" => "k" })
+
+    assert_raises(Ai::Error::Refused) { Ai::Transport.for(model_endpoint).probe(ai_model(endpoint: model_endpoint), :embedding) }
+    assert_not_requested :post, "https://llm.example.test/v1/embeddings"
   end
 
   test "an embedding response that isn't the expected shape is InvalidOutput" do
