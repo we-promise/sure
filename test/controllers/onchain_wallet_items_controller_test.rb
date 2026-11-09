@@ -30,6 +30,31 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("onchain_wallet_items.new_wallet.read_only_note"), response.body
   end
 
+  test "the first-link key field warns when self-hosted encryption keys are not explicitly configured" do
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    with_self_hosting do
+      get new_wallet_onchain_wallet_items_url
+      assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    end
+
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    with_self_hosting do
+      get new_wallet_onchain_wallet_items_url
+      assert_not_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    end
+  end
+
+  test "the settings panel's key form warns when self-hosted encryption keys are not explicitly configured" do
+    create_onchain_wallet_item(family: @family)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+
+    with_self_hosting do
+      get settings_providers_url
+      assert_response :success
+      assert_includes response.body, I18n.t("settings.providers.provider_setup_encryption_warning.title")
+    end
+  end
+
   test "before the first link the address form takes a SoChain key" do
     get new_wallet_onchain_wallet_items_url
     assert_select "input[type=password][name=sochain_api_key]"

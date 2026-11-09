@@ -41,6 +41,18 @@
       <div class="pt-2 space-y-3">
         <p class="text-sm text-secondary"><%= t("settings.providers.onchain_wallet_panel.etherscan_hint") %></p>
 
+        <%# The connect drawer shows this warning above the panel; the settings
+            page renders the panel on its own, so the key forms carry it here. %>
+        <% if @provider_setup_encryption_warning && action_name != "connect_form" %>
+          <%= render DS::Alert.new(
+                variant: :warning,
+                title: t("settings.providers.provider_setup_encryption_warning.title")
+              ) do %>
+            <p><%= t("settings.providers.provider_setup_encryption_warning.message") %></p>
+            <%= render "settings/encryption_migration_guide" %>
+          <% end %>
+        <% end %>
+
         <%= styled_form_with model: connection,
                              url: onchain_wallet_item_path(connection),
                              scope: :onchain_wallet_item,

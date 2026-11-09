@@ -10,7 +10,7 @@ class OnchainWalletItemsController < ApplicationController
                          disconnect_wallet disconnect_asset]
   before_action :set_wallet, only: %i[review_tokens update_tokens disconnect_wallet]
 
-  helper_method :first_sochain_api_key
+  helper_method :first_sochain_api_key, :credential_encryption_warning?
 
   def update
     if @onchain_wallet_item.update(onchain_wallet_item_params)
@@ -239,6 +239,12 @@ class OnchainWalletItemsController < ApplicationController
     # the first link there is no connection to hold it, yet the keyless daily
     # limit may already be spent, so the linking form takes one and carries it
     # through to the link, where the new connection keeps it.
+    # The same condition the provider settings warn on: a self-hosted install
+    # without explicit encryption keys may store credentials in plaintext.
+    def credential_encryption_warning?
+      Rails.configuration.app_mode.self_hosted? && !ActiveRecordEncryptionConfig.explicitly_configured?
+    end
+
     def first_sochain_api_key
       params[:sochain_api_key].to_s.strip.presence unless Current.family.onchain_wallet_item.present?
     end
