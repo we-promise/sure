@@ -1,0 +1,46 @@
+---
+en:
+  settings:
+    ai_prompts:
+      prompt_field:
+        provider_openai: OpenAI
+        reset: Reset to default
+        reset_confirm_title: Reset to default prompt?
+        reset_confirm_body: This will discard your custom prompt and restore the built-in default instructions.
+        status_custom: Using your custom prompt
+        status_default: Using the built-in default
+        format_risk: 'Your %{provider} prompt dropped the {"%{key}": ...} example. Each request still asks for that shape, so parsing usually holds, but an override that asks for a different output format will break it.'
+      show:
+        page_title: AI Prompts
+        disable_ai: Disable AI Assistant
+        save: Save prompts
+        save_confirm:
+          title: "Save custom AI prompts?"
+          body: "Custom prompt overrides replace the built-in system instructions and safety guardrails (such as financial advice restrictions) for your family."
+          dont_show_again: "Don't show this warning again"
+          cancel: "Cancel"
+          confirm: "Confirm"
+        main_system_prompt:
+          title: Main System Prompt
+          subtitle: Core instructions that define how the AI assistant behaves in all chat conversations
+          label: Chat system prompt
+        transaction_categorizer:
+          title: Transaction Categorizer
+          subtitle: AI automatically categorizes your transactions based on your defined categories
+          label: Categorization prompt
+        merchant_detector:
+          title: Merchant Detector
+          subtitle: AI identifies and enriches transaction data with merchant information
+          label: Merchant detection prompt
+        dropped:
+          title: A prompt override was set aside
+          body: Categorization and merchant detection now keep one override each, whichever provider runs them. You had two different overrides, so the one for the provider this install uses was kept. The other is below until you save this page.
+          categorize_transactions: Your other categorization override
+          detect_merchants: Your other merchant detection override
+        insight_dig_in:
+          title: Insight Dig In
+          subtitle: First chat message when you dig into an insight with AI
+          label: Dig in message
+      update:
+        success: AI prompts updated
+        multiple_errors: "Multiple prompts are too long (maximum is %{count} characters)"

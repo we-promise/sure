@@ -1,0 +1,56 @@
+---
+en:
+  settings:
+    profiles:
+      destroy:
+        cannot_remove_self: You cannot remove yourself from the account.
+        member_owns_other_family_data: This member still owns accounts in another household and cannot be removed. Transfer or remove those accounts first.
+        member_removal_failed: There was a problem removing the member.
+        member_removed: Member was successfully removed.
+        not_authorized: You are not authorized to remove members.
+      show:
+        confirm_delete:
+          body: Are you sure you want to permanently delete your account? This action
+            is irreversible.
+          title: Delete account?
+        confirm_reset:
+          body: Are you sure you want to reset your account? This will delete all your accounts, categories, merchants, tags, and other data. This action cannot be undone.
+          title: Reset account?
+        confirm_reset_with_sample_data:
+          body: Are you sure you want to reset your account and load sample data? This will delete your existing data and replace it with demo data so you can explore Sure safely.
+          title: Reset account and load sample data?
+        confirm_remove_invitation:
+          body: Are you sure you want to remove the invitation for %{email}?
+          title: Remove Invitation
+        confirm_remove_member:
+          body: Are you sure you want to remove %{name} from your account?
+          title: Remove Member
+        danger_zone_title: Danger Zone
+        delete_account: Delete account
+        delete_account_warning: Deleting your account will permanently remove all
+          your data and cannot be undone.
+        reset_account: Reset account
+        reset_account_warning: Resetting your account will delete all your accounts, categories, merchants, tags, and other data, but keep your user account intact.
+        reset_account_with_sample_data: Reset and preload
+        reset_account_with_sample_data_warning: Delete all your existing data and then load fresh sample data so you can explore with a pre-filled environment.
+        email: Email
+        first_name: First Name
+        group_form_input_placeholder: Enter group name
+        group_form_label: Group name
+        group_title: Group Members
+        household_form_input_placeholder: Enter household name
+        household_form_label: Household name
+        household_subtitle: Invitees can login to your %{moniker} account and access shared resources.
+        household_title: Household
+        invitation_link: Invitation link
+        invite_member: Add member
+        last_name: Last Name
+        page_title: Profile Info
+        pending: Pending
+        profile_subtitle: Customize how you appear on %{product_name}
+        profile_title: Personal
+        remove_invitation: Remove Invitation
+        remove_member: Remove Member
+        resend_confirmation_link: request a new confirmation email
+        save: Save
+        unconfirmed_email_notice_html: You have requested to change your email to %{email}. Please go to your email and confirm for the change to take effect. If you haven't received the email, please check your spam folder, or %{resend_link}.
