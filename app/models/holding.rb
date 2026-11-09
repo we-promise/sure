@@ -161,16 +161,17 @@ class Holding < ApplicationRecord
     SQL
     # The factor goes through float8, good to about 16 significant digits, so
     # the summed quantity is rounded to 12 significant digits (judged by the
-    # unadjusted total's magnitude, capped at the column's scale): enough to
-    # land 30,000,000 shares through a 1-for-3 split on exactly 10,000,000, and
-    # fine enough to keep a position of a billionth of a share.
-    qty_scale = "LEAST(18, GREATEST(0, 11 - FLOOR(LOG(GREATEST(ABS(SUM(trades.qty)), 1e-18)))::int))"
+    # adjusted total's magnitude, capped at the column's scale): enough to land
+    # 30,000,000 shares through a 1-for-3 split on exactly 10,000,000, and fine
+    # enough to keep a position of a billionth of a share.
+    adjusted_qty = "SUM(trades.qty * #{split_factor})"
+    qty_scale = "LEAST(18, GREATEST(0, 11 - FLOOR(LOG(GREATEST(ABS(#{adjusted_qty}), 1e-18)))::int))"
     foreign = currency != :joined ? sanitize_sql_array([ "trades.currency <> ?", currency ]) : "trades.currency <> accounts.currency"
     rate = AVG_COST_TRADE_RATE_SQL
 
     [
       Arel.sql("SUM((trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END)"),
-      Arel.sql("ROUND(SUM(trades.qty * #{split_factor}), #{qty_scale})"),
+      Arel.sql("ROUND(#{adjusted_qty}, #{qty_scale})"),
       Arel.sql("BOOL_OR(#{foreign} AND (#{rate} IS NULL OR #{rate} <= 0))")
     ]
   end
