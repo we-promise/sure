@@ -166,6 +166,19 @@ class Api::V1::AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "guest cannot read a statement on an account shared with them" do
+    guest = family_guest
+    @account.account_shares.create!(user: guest, permission: "read_only")
+    statement = AccountStatement.create_from_upload!(family: @family, account: @account, file: statement_upload)
+    assert statement.viewable_by?(guest)
+    @guest_api_key = create_api_key(guest, "read")
+
+    get api_v1_account_statement_url(statement), headers: api_headers(@guest_api_key)
+
+    assert_response :forbidden
+    refute_includes response.body, statement.id
+  end
+
   test "lists statements the caller can see" do
     linked = AccountStatement.create_from_upload!(family: @family, account: @account, file: statement_upload)
     unlinked = AccountStatement.create_from_upload!(family: @family, account: nil, file: statement_upload(content: "date,amount\n2024-02-01,2\n"))

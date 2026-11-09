@@ -5019,6 +5019,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guests cannot use the Statement Vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: invalid filter
           content:
@@ -5052,6 +5058,25 @@ paths:
                 "$ref": "#/components/schemas/AccountStatementResponse"
         '401':
           description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guest, or API key without write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account_id is not an account the caller can write to
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '409':
+          description: file already in the vault, linked to an account the caller
+            cannot see
           content:
             application/json:
               schema:
@@ -5100,6 +5125,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/AccountStatementResponse"
+        '403':
+          description: guests cannot use the Statement Vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: statement not found
           content:

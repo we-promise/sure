@@ -5,7 +5,7 @@ class Api::V1::AccountStatementsController < Api::V1::BaseController
 
   before_action :ensure_read_scope, only: [ :index, :show ]
   before_action :ensure_write_scope, only: [ :create ]
-  before_action :ensure_statement_manager, only: [ :index, :create ]
+  before_action :ensure_statement_manager
   before_action :set_statement, only: [ :show ]
 
   def index

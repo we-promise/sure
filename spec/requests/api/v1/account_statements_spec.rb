@@ -25,6 +25,17 @@ RSpec.describe 'API V1 Account Statements', type: :request do
     )
   end
   let(:'X-Api-Key') { api_key.plain_key }
+  let(:guest) do
+    family.users.create!(
+      email: 'api-guest@example.com',
+      password: 'password123',
+      password_confirmation: 'password123',
+      role: 'guest'
+    )
+  end
+  let(:guest_api_key) do
+    ApiKey.create!(user: guest, name: 'Guest Docs Key', key: ApiKey.generate_secure_key, scopes: %w[read_write], source: 'web')
+  end
   let(:account) do
     Account.create!(
       family: family,
@@ -79,6 +90,12 @@ RSpec.describe 'API V1 Account Statements', type: :request do
         run_test!
       end
 
+      response '403', 'guests cannot use the Statement Vault' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { guest_api_key.plain_key }
+        run_test!
+      end
+
       response '422', 'invalid filter' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:start_date) { 'not-a-date' }
@@ -106,6 +123,9 @@ RSpec.describe 'API V1 Account Statements', type: :request do
                     account_id: { type: :string, format: :uuid, description: 'Account to link the statement to' }
                   }
                 }
+      parameter name: :account_id, in: :formData, required: false,
+                description: 'Account to link the statement to (needs write access to it)',
+                schema: { type: :string, format: :uuid }
 
       response '201', 'statement stored' do
         schema '$ref' => '#/components/schemas/AccountStatementResponse'
@@ -123,6 +143,43 @@ RSpec.describe 'API V1 Account Statements', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         let(:'X-Api-Key') { nil }
         let(:file) { statement_file }
+        run_test!
+      end
+
+      response '403', 'guest, or API key without write scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:'X-Api-Key') { guest_api_key.plain_key }
+        let(:file) { statement_file }
+        run_test!
+      end
+
+      response '404', 'account_id is not an account the caller can write to' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:file) { statement_file }
+        let(:account_id) { SecureRandom.uuid }
+        run_test!
+      end
+
+      response '409', 'file already in the vault, linked to an account the caller cannot see' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:hidden_account) do
+          Account.create!(family: family, owner: user, name: 'Private', balance: 0, currency: 'USD', accountable: Depository.new)
+        end
+        let(:member) do
+          family.users.create!(
+            email: 'api-member@example.com',
+            password: 'password123',
+            password_confirmation: 'password123',
+            role: 'member'
+          )
+        end
+        let(:'X-Api-Key') do
+          ApiKey.create!(user: member, name: 'Member Docs Key', key: ApiKey.generate_secure_key, scopes: %w[read_write], source: 'web').plain_key
+        end
+        let(:file) do
+          AccountStatement.create_from_upload!(family: family, account: hidden_account, file: statement_file(content: "date,amount\n2024-04-01,4\n"))
+          statement_file(content: "date,amount\n2024-04-01,4\n")
+        end
         run_test!
       end
 
@@ -145,6 +202,13 @@ RSpec.describe 'API V1 Account Statements', type: :request do
       response '200', 'statement found' do
         schema '$ref' => '#/components/schemas/AccountStatementResponse'
         let(:id) { statement.id }
+        run_test!
+      end
+
+      response '403', 'guests cannot use the Statement Vault' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        let(:id) { statement.id }
+        let(:'X-Api-Key') { guest_api_key.plain_key }
         run_test!
       end
 
