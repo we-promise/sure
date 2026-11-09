@@ -131,9 +131,7 @@
             <% if (params[:type].nil? || params[:type] == "MonarchImport") && !Current.user&.guest? %>
               <%= render "imports/import_option",
                 type: "MonarchImport",
-                icon_name: "line-chart",
-                icon_bg_class: "bg-info/10",
-                icon_text_class: "text-info",
+                image: "monarch-logo.png",
                 label: t(".import_monarch"),
                 enabled: true %>
             <% end %>
