@@ -16,7 +16,7 @@
 #      the transport has retried 429s and 5xxs.
 #   5. Return an Ai::Result with the route that answered and the items not reached. When the
 #      feature declares `shadow` and the family's rate samples this call, enqueue Ai::ShadowJob
-#      with the items actually sent.
+#      with every item sent, answered or not, apart from those left for a later job.
 #
 # `call(batches: 1)` runs one batch, which is what Ai::GenerationJob does (small batches,
 # so other work takes turns); plain `call` runs them all and merges the answers. `call!` returns the value or
@@ -112,9 +112,8 @@ class Ai::Generation
 
     @usage = nil
     @failed_over_from = []
-    @sent = []
     result = batch_key ? call_batched(routes, batches:, cancelled:) : call_single(routes, cancelled:)
-    Ai::Shadow.enqueue(self, result, sent: @sent) if shadow_compare && !shadow_run?
+    Ai::Shadow.enqueue(self, result) if shadow_compare && !shadow_run?
     result
   rescue Ai::Error::Base => error
     Ai::Result.failure(error, usage: @usage, failed_over_from: @failed_over_from.presence, correlation_id: Ai::CallContext.correlation_id)
@@ -163,7 +162,6 @@ class Ai::Generation
           served = answered_by
           answered.concat(Array(value[merge_key]))
         end
-        @sent.concat(slice - unanswered)
         remaining = unanswered + (remaining - slice)
         done += 1
         break if unanswered.any?   # the routes failed over; a later job retries these

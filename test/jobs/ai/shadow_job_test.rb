@@ -62,6 +62,20 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     assert_equal 2, Ai::Comparison.where(agreed: true).count
   end
 
+  test "the shadow gets the transactions the primary left unanswered" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    category = @family.categories.create!(name: "Coffee")
+    answered, missed = 2.times.map { create_transaction(account: @account, name: "Coffee #{_1}").transaction }
+    answer_both(llm: { answered.id => category.name }, jev: [ answered, missed ].to_h { [ _1.id, [ category.name, 0.9 ] ] })
+
+    perform_enqueued_jobs { categorize([ answered.id, missed.id ]) }
+
+    shadow_only = Ai::Comparison.find_by!(subject_id: missed.id)
+    assert_nil shadow_only.primary_value
+    assert_equal category.id, shadow_only.shadow_value
+    assert_nil missed.reload.category
+  end
+
   test "does not score a missing shadow answer as agreement" do
     @family.update!(categorization_shadow_rate: 1.0)
     txn = create_transaction(account: @account, name: "ACH DEBIT 4471920").transaction
