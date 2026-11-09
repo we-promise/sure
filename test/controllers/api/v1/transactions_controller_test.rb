@@ -74,11 +74,7 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
       assert_response :success
     end
 
-    # Rails reuses already loaded records when preloading the transfer
-    # counterparts' accounts. Whether that saves the accounts query depends on
-    # the row order Postgres returns, which can change with the query plan, so
-    # allow that one query. A per-transaction lookup would add at least five.
-    assert_operator expanded_queries, :<=, baseline_queries + 1
+    assert_equal baseline_queries, expanded_queries
   end
 
   test "should get index with read-only API key" do
@@ -1085,7 +1081,9 @@ end
     def count_db_queries(&block)
       queries = 0
       callback = lambda do |_name, _started, _finished, _unique_id, payload|
-        return if payload[:cached]
+        # Query-cache hits count too: whether a repeated preload query is served
+        # from the cache depends on the order of the ids in its IN list, which
+        # follows the row order Postgres returns.
         return if payload[:name].in?(%w[SCHEMA TRANSACTION])
 
         queries += 1
