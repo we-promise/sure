@@ -179,10 +179,10 @@ module LanguagesHelper
 
   # Every supported locale's translation of an i18n key, case-folded. Names
   # saved under one locale are matched under any other, and building this once
-  # per key keeps per-row checks in long lists from repeating the I18n lookups.
+  # per key and request keeps per-row checks in long lists from repeating the
+  # I18n lookups.
   def self.folded_translations(key)
-    @folded_translations ||= {}
-    @folded_translations[key] ||= SUPPORTED_LOCALES.filter_map { |locale| I18n.t(key, locale: locale, default: nil).presence&.downcase(:fold) }.to_set.freeze
+    Current.folded_translations[key] ||= SUPPORTED_LOCALES.filter_map { |locale| I18n.t(key, locale: locale, default: nil).presence&.downcase(:fold) }.to_set.freeze
   end
 
   COUNTRY_MAPPING = {

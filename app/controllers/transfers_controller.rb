@@ -205,9 +205,9 @@ class TransfersController < ApplicationController
       # (reject/destroy) only needs access to one side, so a user can undo a
       # match against an account that is not shared with them. Any other
       # update edits both entries, so it needs access to both sides.
-      # Account ids are materialized first so each leg's subquery is a plain
-      # entries lookup, without joining accounts and shares again.
-      accessible_transaction_ids = Entry.where(entryable_type: "Transaction", account_id: Current.user.accessible_accounts.ids)
+      # Filters entries by an accessible-account subquery instead of joining
+      # transactions to entries, accounts and shares for every transfer leg.
+      accessible_transaction_ids = Entry.where(entryable_type: "Transaction", account_id: Current.user.accessible_accounts.select(:id))
         .select(:entryable_id)
 
       scope = Transfer.where(id: params[:id])
