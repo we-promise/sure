@@ -721,6 +721,18 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Query ID/i, response.body)
   end
 
+  test "GET connect_form lists every Interactive Brokers connection" do
+    families(:dylan_family).ibkr_items.create!(name: "IBKR Ireland", query_id: "Q1", token: "T1")
+    families(:dylan_family).ibkr_items.create!(name: "IBKR US", query_id: "Q2", token: "T2")
+
+    get connect_form_settings_providers_path(provider_key: "ibkr")
+
+    assert_response :success
+    assert_includes response.body, "IBKR Ireland"
+    assert_includes response.body, "IBKR US"
+    assert_includes response.body, I18n.t("settings.providers.ibkr_panel.add_connection")
+  end
+
   test "GET connect_form warns when self-hosted encryption keys are not explicitly configured" do
     with_self_hosting do
       ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)

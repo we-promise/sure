@@ -16,7 +16,6 @@ class SessionsController < ApplicationController
   end
 
   def new
-    store_pending_invitation_if_valid
     # Clear any stale mobile/desktop SSO session flag from an abandoned flow
     session.delete(:mobile_sso)
     session.delete(:desktop_sso)
@@ -84,7 +83,6 @@ class SessionsController < ApplicationController
         @session = create_session_for(user)
 
         if @session
-          flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
           redirect_to root_path
         else
           redirect_to new_session_path, alert: t("sessions.create.account_deactivated")
@@ -235,7 +233,6 @@ class SessionsController < ApplicationController
         redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
         return
       end
-      flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
       redirect_to root_path
     end
   end
@@ -318,7 +315,6 @@ class SessionsController < ApplicationController
           redirect_to new_session_path, alert: t("sessions.openid_connect.failed")
           return
         end
-        flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
         redirect_to root_path
       end
     else

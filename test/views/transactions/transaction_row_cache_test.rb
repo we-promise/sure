@@ -126,6 +126,14 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
     assert_includes row_key, TransactionsHelper::TRANSACTION_ROW_SOURCES_DIGEST
   end
 
+  test "a row cached with a transfer hint is drawn without it once the hint no longer applies" do
+    @transfer_hint_transaction_ids = Set[@transaction.id]
+    assert_includes render_row, dom_id(@transaction, :transfer_hint)
+
+    @transfer_hint_transaction_ids = Set.new
+    assert_not_includes render_row, dom_id(@transaction, :transfer_hint)
+  end
+
   test "the key changes with the BUILD_COMMIT_SHA of the deployed image" do
     base = row_key
 
