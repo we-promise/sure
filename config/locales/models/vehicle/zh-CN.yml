@@ -1,0 +1,14 @@
+---
+zh-CN:
+  activerecord:
+    attributes:
+      account/accountable:
+        purchase_date: "购买日期"
+      vehicle:
+        purchase_date: "购买日期"
+    errors:
+      models:
+        vehicle:
+          attributes:
+            purchase_date:
+              must_precede_entries: "必须早于该账户最早的明细条目"
