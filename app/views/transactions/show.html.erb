@@ -77,7 +77,6 @@
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
           <%= f.date_field :date,
                 label: t(".date_label"),
-                max: Date.current,
                 disabled: @entry.linked? || split_locked || edit_locked,
                 "data-auto-submit-form-target": "auto" %>
           <% unless @entry.transaction.transfer? %>

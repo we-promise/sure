@@ -622,6 +622,33 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports provider merchant rule operands by name" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Grocer", source: "plaid")
+    @account.entries.create!(
+      date: Date.current, amount: 10, name: "Groceries", currency: "USD",
+      entryable: Transaction.new(merchant: provider_merchant)
+    )
+    rule = @family.rules.build(name: "Provider Merchant Rule", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_merchant", operator: "=", value: provider_merchant.id)
+    rule.actions.build(action_type: "set_transaction_merchant", value: provider_merchant.id)
+    rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").filter_map do |line|
+        parsed = JSON.parse(line)
+        parsed if parsed["type"] == "Rule" && parsed["data"]["name"] == "Provider Merchant Rule"
+      end.first
+
+      expected_ref = { "type" => "Merchant", "id" => provider_merchant.id, "name" => "Synced Grocer" }
+      assert_equal "Synced Grocer", rule_data["data"]["conditions"].first["value"]
+      assert_equal expected_ref, rule_data["data"]["conditions"].first["value_ref"]
+      assert_equal "Synced Grocer", rule_data["data"]["actions"].first["value"]
+      assert_equal expected_ref, rule_data["data"]["actions"].first["value_ref"]
+    end
+  end
+
   test "rule operand lookup matches uppercase UUID values" do
     operand = @exporter.send(
       :rule_operand,

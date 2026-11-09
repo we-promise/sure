@@ -27,9 +27,11 @@ class McpController < ApplicationController
 
     request_id = body["id"]
 
-    # JSON-RPC notifications omit the id field — server must not respond
+    # JSON-RPC notifications omit the id field, so there's nothing to answer. MCP's Streamable
+    # HTTP transport says a server that accepts one returns 202 Accepted with no body; proxies
+    # such as Pipelock's MCP reverse proxy reject any other status, which ends the handshake.
     unless body.key?("id")
-      return head(:no_content)
+      return head(:accepted)
     end
 
     result = dispatch_jsonrpc(request_id, body["method"], body["params"])
