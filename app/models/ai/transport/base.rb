@@ -66,7 +66,7 @@ class Ai::Transport::Base
     raise ArgumentError, "unknown probe check #{check.inspect}" unless PROBE_CHECKS.include?(check)
 
     Ai::CallContext.call(feature: :probe, model:, budget: timeout) do
-      instrument("probe", model:, request: { check: }) { attempt { run_probe(model, check, timeout:) } }
+      instrument("probe", model:, request: { check: }) { attempt { run_probe(model, check, timeout: within_budget(timeout)) } }
     end
   end
 
@@ -116,7 +116,10 @@ class Ai::Transport::Base
       tries = 0
       begin
         tries += 1
-        yield
+        check_budget!
+        result = yield
+        check_budget!(after: true)
+        result
       rescue *Ai::Error::RETRYABLE => error
         delay = retry_delay(tries)
         remaining = Ai::CallContext.current&.remaining
@@ -125,6 +128,20 @@ class Ai::Transport::Base
         sleep(delay)
         retry
       end
+    end
+
+    # Requests RubyLLM doesn't send, such as the models list, aren't checked by its instrumenter.
+    # After an attempt too, so an answer that arrives late isn't taken as a pass.
+    def check_budget!(after: false)
+      return unless Ai::CallContext.current&.expired?
+
+      raise Ai::Error::Timeout, "the attempt's time budget was spent #{after ? "before the answer arrived" : "before the request was sent"}"
+    end
+
+    # A request's timeout, cut to what's left of the call's budget, so a retry can't outlast it.
+    def within_budget(timeout)
+      remaining = Ai::CallContext.current&.remaining
+      remaining ? [ timeout, remaining ].min : timeout
     end
 
     def retry_delay(tries) = [ 0.5 * (2**(tries - 1)), 8 ].min * (0.75 + rand * 0.5)
@@ -169,10 +186,16 @@ class Ai::Transport::Base
     # The same model under a vendor prefix (openai/gpt-4.1), a snapshot date (gpt-4.1-2025-04-14,
     # claude-sonnet-4-5-20250929, gpt-4-0613) or for a `latest` alias. Any other difference is
     # another model: gpt-4.1-mini isn't gpt-4.1, nor gpt-4o gpt-4.
+    # Two qualified ids (org-a/model, org-b/model) keep their namespaces.
     def same_model?(asked, answered)
-      short, long = [ asked, answered ].map { model_stem(_1) }.minmax_by(&:length)
+      qualified = [ asked, answered ].all? { _1.to_s.include?("/") }
+      short, long = [ asked, answered ].map { model_stem(_1, qualified:) }.sort_by(&:length)
       short == long || (long.start_with?(short) && long.delete_prefix(short).match?(SNAPSHOT_SUFFIX))
     end
 
-    def model_stem(name) = name.to_s.downcase.split("/").last.to_s.delete_suffix(":latest").delete_suffix("-latest")
+    def model_stem(name, qualified: false)
+      stem = name.to_s.downcase
+      stem = stem.split("/").last.to_s unless qualified
+      stem.delete_suffix(":latest").delete_suffix("-latest")
+    end
 end

@@ -38,6 +38,17 @@ class Ai::CallContextTest < ActiveSupport::TestCase
     assert_nil Ai::CallContext.current
   end
 
+  test "a RubyLLM request from a thread started inside a call is recorded for the family and the call" do
+    call_id = with_ai_call_context(feature: :chat, model: @model, family: @family) do |call|
+      Thread.new { Ai::Transport.for(@model.endpoint).send(:probe_chat, @model) }.join
+      call.call_id
+    end
+
+    row = @family.llm_usages.sole
+    assert_equal call_id, row.call_id
+    assert_equal "chat", row.operation
+  end
+
   test "a request that would start after the attempt's budget raises Timeout and isn't sent" do
     error = assert_raises(Ai::Error::Timeout) do
       with_ai_call_context(model: @model, budget: 0) do
@@ -61,6 +72,43 @@ class Ai::CallContextTest < ActiveSupport::TestCase
     end
 
     assert_equal 1, tries
+  end
+
+  test "a request outside RubyLLM, such as the models list, isn't sent once the budget is spent" do
+    model = ai_model(name: "test-model")
+    Ai::Transport::Http.expects(:openai_client).never
+
+    with_ai_call_context(model:, budget: 0) do
+      assert_raises(Ai::Error::Timeout) { Ai::Transport.for(model.endpoint).send(:attempt) { Ai::Transport::Http.openai_client(model.endpoint) } }
+    end
+  end
+
+  test "each attempt's request timeout is cut to what's left of the budget" do
+    model = ai_model(name: "test-model")
+    transport = Ai::Transport.for(model.endpoint)
+
+    with_ai_call_context(model:, budget: 0.2) { assert_operator transport.send(:within_budget, 60), :<=, 0.2 }
+    assert_equal 60, transport.send(:within_budget, 60)
+  end
+
+  test "an answer that arrives after the budget is spent is a Timeout, not a pass" do
+    model = ai_model(name: "test-model")
+    transport = Ai::Transport.for(model.endpoint)
+
+    with_ai_call_context(model:, budget: 1) do |call|
+      error = assert_raises(Ai::Error::Timeout) do
+        transport.send(:attempt) { Ai::CallContext.stubs(:now).returns(call.deadline + 0.1); :ok }
+      end
+      assert_match(/before the answer arrived/, error.message)
+    end
+  end
+
+  test "an error with no Ai::Error is scrubbed before it goes on the request event" do
+    instrumenter = Ai::Transport::Instrumenter.new(nil, map_error: ->(_) { }, scrub: ->(text) { text.gsub("sk-secret", "[REDACTED]") })
+    payload = {}
+
+    assert_raises(RuntimeError) { instrumenter.instrument("request.ruby_llm", payload) { raise "failed with sk-secret" } }
+    assert_equal({ error: "failed with [REDACTED]", error_class: "RuntimeError" }, payload[:ai_error])
   end
 
   test "the instrumenter forwards every event to RubyLLM's own instrumenter" do

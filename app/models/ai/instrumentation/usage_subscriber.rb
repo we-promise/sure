@@ -18,9 +18,21 @@ class Ai::Instrumentation::UsageSubscriber
   end
 
   private
-    def record_request(payload)
-      family = payload[:owner]
+    # RubyLLM 2.1.1 keeps the usage owner and workflow in Thread.current, so a request from a thread
+    # started inside a call has neither (2.2 moves them to fiber storage, RubyLLM #1327). Sure's
+    # own call context is in fiber storage, which threads inherit, so it fills the gap.
+    def owner_and_call(payload)
       call = (payload[:workflow_metadata] || {}).to_h.stringify_keys
+      return [ payload[:owner], call ] if call["call_id"].present?
+
+      context = Ai::CallContext.current
+      return [ payload[:owner], call ] if context.nil?
+
+      [ payload[:owner] || (Family.find_by(id: context.family_id) if context.family_id), context.metadata.stringify_keys ]
+    end
+
+    def record_request(payload)
+      family, call = owner_and_call(payload)
       return unless family.is_a?(Family) && call["call_id"].present?
 
       status = STATUSES.fetch(payload[:status], nil)

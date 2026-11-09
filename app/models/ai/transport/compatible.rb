@@ -31,7 +31,13 @@ class Ai::Transport::Compatible < Ai::Transport::Base
 
     # One vector per text, with the model's dimensions. RubyLLM 2.1.1 doesn't check the row
     # count itself (2.2 does, RubyLLM #1297).
+    # RubyLLM 2.1.1's embed takes no headers (crmne/ruby_llm#1556), so an endpoint that needs
+    # them is refused rather than probed without them.
     def probe_embedding(model, timeout:)
+      if Ai::Transport::Http.headers(endpoint).any?
+        raise Ai::Error::Refused, "embedding requests can't carry the endpoint's static headers yet"
+      end
+
       embedding = mapping_errors do
         ruby_llm_context(timeout:).embed(Ai::Transport::Base::PROBE_EMBEDDING_INPUT, model: model.name, provider: ruby_llm_provider,
                                                                        assume_model_exists: true)
