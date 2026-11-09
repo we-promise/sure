@@ -529,10 +529,15 @@ module Security::Provided
     BigDecimal(10)**(column.precision - column.scale)
   end
 
+  # The scale half of `weight`'s numeric(precision, scale) bound, read from the
+  # column like `constituent_weight_limit` so the two cannot drift apart.
   def constituent_weight_scale
     Security::Constituent.columns_hash["weight"].scale
   end
 
+  # Records a fund holding the provider reported in a form that cannot be
+  # stored, so a skip stays traceable: the reason, the holding's ticker, and its
+  # shape. The metadata runs through `without_nul` for the same jsonb reason.
   def log_skipped_constituent(reason, entry)
     DebugLogEntry.capture(
       category: "security_holdings",
@@ -552,6 +557,9 @@ module Security::Provided
     )
   end
 
+  # Postgres jsonb and the constituents table both refuse NUL bytes, so a
+  # malformed entry carrying one cannot be logged or stored as-is. Strip them
+  # recursively through strings, hashes, and arrays.
   def without_nul(value)
     case value
     when String then value.delete("\0")
