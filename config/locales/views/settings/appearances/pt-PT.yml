@@ -1,0 +1,25 @@
+---
+pt-PT:
+  settings:
+    appearances:
+      show:
+        page_title: Aparência
+        theme_title: Tema
+        theme_subtitle: Escolha um tema preferido para a aplicação
+        theme_dark: Escuro
+        theme_light: Claro
+        theme_system: Sistema
+        modals_title: Modais
+        modals_subtitle: Personalize o comportamento dos modais
+        disable_modal_click_outside_title: Manter os modais abertos ao clicar fora
+        disable_modal_click_outside_description: Impede que os modais fechem ao clicar fora. Útil para evitar perder alterações não guardadas acidentalmente.
+        transactions_title: Transações
+        transactions_subtitle: Personalize como as transações são apresentadas
+        dashboard_title: Visão geral
+        dashboard_subtitle: Personalize a apresentação da sua visão geral
+        dashboard_two_column_title: Disposição de duas colunas
+        dashboard_two_column_description: Apresenta os widgets da visão geral em duas colunas em ecrãs grandes, com controlos de largura e altura por widget no cabeçalho de cada widget. Quando desativado, os widgets são empilhados numa única coluna.
+        split_grouped_title: Agrupar transações divididas
+        auto_generate_transaction_names_title: "Gerar nomes de transações automaticamente"
+        auto_generate_transaction_names_description: "Quando o nome de uma transação introduzida manualmente fica em branco, é preenchido a partir da categoria e do comerciante selecionados (ex.: \"Entretenimento - Netflix\"). O nome continua obrigatório se nenhum dos dois for selecionado. Aplica-se a todo o agregado familiar e apenas a novas transações."
+        split_grouped_description: Apresenta as transações divididas agrupadas pela transação principal. Quando desativado, cada transação dividida é apresentada individualmente.
