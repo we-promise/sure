@@ -186,10 +186,17 @@ flowchart LR
   on when the answer doesn't parse or, for a list, when more than half the items are blank. A
   400 about the JSON mode or the reasoning effort, or any 400 to a request that sent an effort,
   retries once in `none` without the effort; any other 400 ends the call.
-- **Overflow splits, invalid output escalates.** `ContextTooLong` or an answer cut at the output
-  limit halves the batch on the same route; `InvalidOutput` moves to the next route; a
+- **Overflow splits, invalid output escalates, then bisects.** `ContextTooLong` or an answer cut
+  at the output limit halves the batch on the same route; `InvalidOutput` moves to the next route,
+  and when every route fails it the batch is halved on the first route (`BISECT_DEPTH`, twice) to
+  find the transactions that break it. Items still unanswered are skipped and logged
+  (`ai_generation` debug entries, ids only), and the run goes on. A
   timeout, 5xx, 429, refused connection, bad key or missing model marks the smallest broken thing
   down for 60 seconds and moves on.
+- **Rule runs get one job per AI action.** The rule action counts the transactions onto
+  `RuleRun#transactions_awaiting_ai` and queues one `Ai::GenerationJob` with every id; the
+  requester reports each batch (`RuleRun#ai_handled!`) and completes the run once.
+  `GET /api/v1/rule_runs/:id/progress` lets a client watch the count reach 0.
 - **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
   `app/models/ai/**` and controllers.
 - **Prompts change only with evals.** `test/architecture/ai_prompts_test.rb` renders each prompt

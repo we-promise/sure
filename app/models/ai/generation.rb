@@ -8,15 +8,21 @@
 #      the next batch sized for its model (Ai::Batch), call its transport's `generate`, and
 #      coerce the answer (Ai::Schema).
 #   4. On a failover error (Ai::DownMarks::FAILOVER), mark it down and take the next route. On
-#      InvalidOutput, escalate to the next route. On ContextTooLong or an answer cut at the
-#      output limit, halve the batch on the same route; a single item that still can't fit
-#      escalates. Nothing else is retried here; the transport has retried 429s and 5xxs.
+#      InvalidOutput, escalate to the next route; when every route fails it, halve the batch on
+#      the first route (BISECT_DEPTH times at most) and skip what still fails. On ContextTooLong
+#      or an answer cut at the output limit, halve the batch on the same route; a single item
+#      that still can't fit escalates. Skipped items are logged. Nothing else is retried here;
+#      the transport has retried 429s and 5xxs.
 #   5. Return an Ai::Result with the route that answered and the items not reached.
 #
 # `call(batches: 1)` runs one batch, which is what Ai::GenerationJob does (small batches,
 # so other work takes turns); plain `call` runs them all and merges the answers. `call!` returns the value or
 # raises the Ai::Error, for jobs.
 class Ai::Generation
+  # How many times a batch whose answer is unusable on every route is halved to find the
+  # transactions that break it.
+  BISECT_DEPTH = 2
+
   class_attribute :feature_key, :prompt_key, :static_schema, :schema_label, :batch_key, :merge_key, :merge_by,
                   :blank_item_check, instance_writer: false
   class_attribute :key_aliases, default: {}, instance_writer: false
@@ -157,8 +163,15 @@ class Ai::Generation
         end
       end
 
-      # Part of the slice was answered and the rest fits no route: keep the answers, and leave the
-      # rest unanswered rather than lose both.
+      # Every route found the answer unusable: one odd transaction can derail a model, so look
+      # for it by halving on the first route, rather than lose the whole batch.
+      if last_error.is_a?(Ai::Error::InvalidOutput) && pending.size > 1 && (route = routes.find { !Ai::DownMarks.down?(_1) })
+        done, pending = bisect(route, pending)
+        answers.concat(done.map { [ route, _1 ] })
+      end
+
+      # Part of the slice was answered and the rest fits no route or breaks every answer: keep the
+      # answers, and leave the rest unanswered rather than lose both.
       if answers.any?
         log_unfit(pending)
         return answers
@@ -184,6 +197,27 @@ class Ai::Generation
       raise Ai::Error::ContextTooLong, "no item of the batch fits #{route.model.name}" if values.empty?
 
       [ values, unfit ]
+    end
+
+    # Answers what it can of `items` on one route by halving them at most BISECT_DEPTH times.
+    # Returns [values, items left unanswered]. A model that answers nothing usable stops at the
+    # cap, so it costs a few calls, not one per item.
+    def bisect(route, items, depth = 1)
+      Ai::Batch.halves(items).each_with_object([ [], [] ]) do |half, (done, left)|
+        answered, rest = split_on(route, half)
+        done.concat(answered)
+        left.concat(rest)
+      rescue Ai::Error::InvalidOutput
+        if depth < BISECT_DEPTH && half.size > 1
+          answered, rest = bisect(route, half, depth + 1)
+          done.concat(answered)
+          left.concat(rest)
+        else
+          left.concat(half)
+        end
+      rescue Ai::Error::ContextTooLong
+        left.concat(half)
+      end
     end
 
     def run(route, slice)

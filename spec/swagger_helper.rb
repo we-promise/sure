@@ -845,6 +845,26 @@ RSpec.configure do |config|
               data: { '$ref' => '#/components/schemas/RuleRun' }
             }
           },
+          RuleRunProgress: {
+            type: :object,
+            required: %w[data],
+            properties: {
+              data: {
+                type: :object,
+                required: %w[rule_run_id status transactions_queued transactions_awaiting_ai transactions_modified finished updated_at],
+                properties: {
+                  rule_run_id: { type: :string, format: :uuid },
+                  status: { type: :string, enum: %w[pending success failed] },
+                  transactions_queued: { type: :integer, minimum: 0 },
+                  transactions_awaiting_ai: { type: :integer, minimum: 0,
+                                              description: 'Transactions still waiting for an AI answer; counts down to 0 as batches are applied' },
+                  transactions_modified: { type: :integer, minimum: 0 },
+                  finished: { type: :boolean, description: 'True once the run is no longer pending' },
+                  updated_at: { type: :string, format: :'date-time' }
+                }
+              }
+            }
+          },
           RuleRunCollection: {
             type: :object,
             required: %w[data meta],

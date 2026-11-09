@@ -65,4 +65,39 @@ class AiBatchSplitTest < ActiveSupport::TestCase
     assert_equal "warn", entry.level
     assert_equal({ "feature" => "detect_merchants", "item_ids" => %w[t2] }, entry.metadata.slice("feature", "item_ids"))
   end
+
+  test "a transaction that breaks the answer on every route is found by halving, skipped and logged" do
+    requests = stub_ai do |request|
+      raise Ai::Error::InvalidOutput, "not JSON" if ids_in(request).include?("t2")
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = AiTestGeneration.new(transactions: transactions(4), family: @family).call
+
+    assert result.success?
+    assert_equal %w[t0 t1 t3], result.value[:merchants].map { _1[:transaction_id] }.sort
+    assert_equal %w[t2], DebugLogEntry.find_by!(category: "ai_generation", family: @family).metadata["item_ids"]
+    # Both routes first, then halves and quarters on the first route.
+    assert_equal [ %w[t0 t1 t2 t3], %w[t0 t1 t2 t3], %w[t0 t1], %w[t2 t3], %w[t2], %w[t3] ], requests.map { ids_in(_1) }
+  end
+
+  test "a model that can't answer anything stops after two halvings and fails the batch" do
+    requests = stub_ai(raises: Ai::Error::InvalidOutput.new("not JSON"))
+
+    result = AiTestGeneration.new(transactions: transactions(8), family: @family).call
+
+    assert_kind_of Ai::Error::InvalidOutput, result.error
+    assert_equal 2 + 2 + 4, requests.size   # each route once, then halves, then quarters
+    assert_not DebugLogEntry.exists?(category: "ai_generation", family: @family)
+  end
+
+  test "a configuration error isn't bisected" do
+    requests = stub_ai(raises: Ai::Error::Unauthorized.new("bad key"))
+
+    result = AiTestGeneration.new(transactions: transactions(4), family: @family).call
+
+    assert_kind_of Ai::Error::Unauthorized, result.error
+    assert_equal 2, requests.size
+  end
 end

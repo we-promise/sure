@@ -1505,6 +1505,48 @@ components:
       properties:
         data:
           "$ref": "#/components/schemas/RuleRun"
+    RuleRunProgress:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: object
+          required:
+          - rule_run_id
+          - status
+          - transactions_queued
+          - transactions_awaiting_ai
+          - transactions_modified
+          - finished
+          - updated_at
+          properties:
+            rule_run_id:
+              type: string
+              format: uuid
+            status:
+              type: string
+              enum:
+              - pending
+              - success
+              - failed
+            transactions_queued:
+              type: integer
+              minimum: 0
+            transactions_awaiting_ai:
+              type: integer
+              minimum: 0
+              description: Transactions still waiting for an AI answer; counts down
+                to 0 as batches are applied
+            transactions_modified:
+              type: integer
+              minimum: 0
+            finished:
+              type: boolean
+              description: True once the run is no longer pending
+            updated_at:
+              type: string
+              format: date-time
     RuleRunCollection:
       type: object
       required:
@@ -9192,6 +9234,49 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/RuleRunResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: rule run not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/rule_runs/{rule_run_id}/progress":
+    parameters:
+    - name: rule_run_id
+      in: path
+      required: true
+      description: Rule run ID
+      schema:
+        type: string
+        format: uuid
+    get:
+      summary: Retrieve a rule run's progress
+      description: 'Poll a rule run while its AI actions work: transactions_awaiting_ai
+        counts down to 0 as each batch is applied, and finished turns true when the
+        run ends.'
+      tags:
+      - Rule Runs
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: progress retrieved
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/RuleRunProgress"
         '401':
           description: unauthorized
           content:

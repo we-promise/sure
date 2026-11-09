@@ -89,12 +89,19 @@ class Family::AutoCategorizer
       }.compact
     )
 
+    @handled = transaction_ids.size - result.remaining.size
+    @rule_run&.ai_handled!(handled: @handled, modified: modified_count)
     modified_count
   end
 
-  def ai_finished(count) = @rule_run&.complete_job!(modified_count: count)
+  # The modified counts reached the run per batch (apply_ai); this releases the rest.
+  def ai_finished(_count)
+    @rule_run&.ai_handled!(handled: unhandled_count)
+    @rule_run&.complete_job!
+  end
 
   def ai_failed(error)
+    @rule_run&.ai_handled!(handled: unhandled_count)
     @rule_run&.fail_job!(error:, source: self.class.name, transaction_ids:)
     DebugLogEntry.capture(
       category: "auto_categorization", level: "error", message: "AI categorization failed",
@@ -136,6 +143,9 @@ class Family::AutoCategorizer
 
   private
     attr_reader :family, :transaction_ids
+
+    # This job's transactions that no batch has reported to the run yet.
+    def unhandled_count = transaction_ids.size - @handled.to_i
 
     def jev_provider
       Provider::Registry.get_provider(:jev)
