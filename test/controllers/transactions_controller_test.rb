@@ -516,6 +516,17 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2.days.ago.to_date, @entry.reload.date
   end
 
+  test "editing a transaction that pairs with another redraws its row with the transfer hint" do
+    outflow = accounts(:depository).entries.create!(name: "To card", date: 1.day.ago.to_date, amount: 75, currency: "USD", entryable: Transaction.new)
+    accounts(:credit_card).entries.create!(name: "From checking", date: 1.day.ago.to_date, amount: -75, currency: "USD", entryable: Transaction.new)
+
+    patch transaction_url(outflow), params: { entry: { notes: "Card payment", entryable_type: "Transaction" } }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(outflow)
+    assert_select "##{dom_id(outflow.entryable, :transfer_hint)}"
+  end
+
   test "name_suggestions returns matching past transaction names with their usual category" do
     get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
 
