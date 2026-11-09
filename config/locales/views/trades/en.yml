@@ -32,6 +32,9 @@ en:
       held_security: "%{name} (%{ticker}), %{qty} held"
       held_security_prompt: Choose a holding
       held_security_hint: Not listed? Add the purchase first.
+    trade:
+      scheduled: Scheduled
+      scheduled_tooltip: Dated in the future — won't affect your balance until then
     header:
       buy: Buy
       sell: Sell

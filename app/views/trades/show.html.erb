@@ -29,7 +29,6 @@
           <% end %>
           <%= f.date_field :date,
                 label: t(".date_label"),
-                max: Date.current,
                 disabled: @entry.linked?,
                 "data-auto-submit-form-target": "auto" %>
           <% if trade.qty.zero? %>
