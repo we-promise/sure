@@ -71,6 +71,23 @@ class Ai::Instrumentation::UsageSubscriberTest < ActiveSupport::TestCase
     assert_nil rows.last.error_message
   end
 
+  test "a request from a thread started inside the call still gets its error" do
+    stub_request(:post, URL).to_return({ status: 503, body: { error: { message: "busy" } }.to_json, headers: json },
+                                       { status: 200, body: OK.to_json, headers: json })
+
+    call_id = Ai::CallContext.call(feature: :bill_setup, model: @model, family: @family, budget: 30) do |call|
+      Thread.new do
+        @transport.send(:instrument, "generate", model: @model, request: {}) do
+          @transport.send(:attempt) { @transport.send(:probe_chat, @model) }
+        end
+      end.join
+      call.call_id
+    end
+
+    failed = @family.llm_usages.find_by!(call_id:, status: "failed")
+    assert_equal [ "Ai::Error::Upstream", 503 ], [ failed.metadata["error_class"], failed.metadata["http_status_code"] ]
+  end
+
   test "a credential in a static header is scrubbed from the error, as the key is" do
     @endpoint = ai_endpoint(name: "gateway", extra_headers: { "X-Tenant-Key" => "tenant-opaque-123" })
     @model = ai_model(name: "gpt-4.1", endpoint: @endpoint)

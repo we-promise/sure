@@ -320,7 +320,8 @@ class AiHealth
         code = error.failure_code if error.respond_to?(:failure_code)
         return code if code
 
-        case error
+        # The vector store and PDF probes call client gems directly, whose errors aren't mapped yet.
+        case Ai::Error.from_exception(error) || error
         when Ai::Error::ModelMissing then :model_not_available
         when Ai::Error::NoCredit then :no_credit
         when Ai::Error::Unauthorized then :unauthorized

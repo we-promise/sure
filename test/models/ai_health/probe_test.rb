@@ -27,6 +27,35 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_requested request
   end
 
+  test "Ollama's `:latest` listing counts as the model it aliases; another tag doesn't" do
+    stub_request(:get, "https://ollama.example.test/v1/models")
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" },
+                 body: { data: [ { id: "llama3:latest" }, { id: "qwen3:8b" } ] }.to_json)
+
+    probe = ->(model) { @probe.llm(provider: :openai, endpoint: "https://ollama.example.test/v1", access_token: "t", model:) }
+
+    assert probe.call("llama3").passing?
+    assert_equal "model_not_available", probe.call("qwen3").failure_code.to_s
+  end
+
+  test "a 200 whose body isn't JSON is an invalid response, not a refusal" do
+    stub_request(:get, "https://api.openai.example.test/v1/models")
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: "<html>login</html>")
+
+    result = @probe.llm(provider: :openai, endpoint: "https://api.openai.example.test/v1", access_token: "t", model: "gpt-4.1")
+
+    assert_equal "invalid_response", result.failure_code.to_s
+  end
+
+  test "a rejected key on the vector store is reported by name" do
+    stub_request(:get, "https://api.openai.example.test/v1/vector_stores?limit=1")
+      .to_return(status: 401, headers: { "Content-Type" => "application/json" }, body: { error: { message: "bad key" } }.to_json)
+
+    result = @probe.openai_vector_store(endpoint: "https://api.openai.example.test/v1", access_token: "t")
+
+    assert_equal [ "unauthorized", 401 ], [ result.failure_code.to_s, result.http_status ]
+  end
+
   test "an unsupported provider is a failing result, not an exception" do
     result = @probe.llm(provider: :mistral, endpoint: "https://api.mistral.example.test/v1", access_token: "token", model: "small")
 
