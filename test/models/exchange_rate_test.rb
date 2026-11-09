@@ -10,6 +10,25 @@ class ExchangeRateTest < ActiveSupport::TestCase
     ExchangeRate.stubs(:provider).returns(@provider)
   end
 
+  test "falls back to Frankfurter when the configured provider has no API key" do
+    ExchangeRate.unstub(:provider)
+    Setting.stubs(:exchange_rate_provider).returns("twelve_data")
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => nil) do
+      assert_instance_of Provider::Frankfurter, ExchangeRate.provider
+    end
+  end
+
+  test "uses the configured provider when it has an API key" do
+    ExchangeRate.unstub(:provider)
+    Setting.stubs(:exchange_rate_provider).returns("twelve_data")
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => "test-key") do
+      assert_instance_of Provider::TwelveData, ExchangeRate.provider
+    end
+  end
+
   test "finds rate in DB" do
     existing_rate = exchange_rates(:one)
 

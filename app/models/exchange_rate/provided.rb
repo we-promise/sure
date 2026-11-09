@@ -5,7 +5,9 @@ module ExchangeRate::Provided
     def provider
       provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
       registry = Provider::Registry.for_concept(:exchange_rates)
-      registry.get_provider(provider.to_sym)
+      # The default, Twelve Data, needs an API key. Without one, use keyless Frankfurter
+      # rather than no provider, which would convert foreign amounts at 1:1.
+      registry.get_provider(provider.to_sym) || registry.get_provider(:frankfurter)
     end
 
     # Maximum number of days to look back for a cached rate before calling the provider.
