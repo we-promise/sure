@@ -402,7 +402,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes generated, "<%= tag.div id: dom_id(gocardless_item) do %>"
   end
 
-  test "the generated item card renders the visible accounts it is given" do
+  test "the generated item card renders sync frequency and the visible accounts it is given" do
     Current.session = Session.create!(user: users(:family_admin))
     item = redbark_items(:one)
     linked = accounts(:depository)
@@ -418,6 +418,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     other = render_card.call(-> { [ accounts(:investment) ] })
 
     assert_includes after, item.name
+    assert_includes after, I18n.t("sync_schedules.menu_item")
     assert_not_includes before, linked.name
     assert_includes after, linked.name
     assert_not_includes after, accounts(:investment).name

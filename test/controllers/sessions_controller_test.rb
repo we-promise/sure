@@ -174,6 +174,23 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "password sign-in leaves a pending invitation for the user's address unaccepted" do
+    invitation = Invitation.create!(
+      email: "invitee-before-signup@example.com",
+      role: "member",
+      family: @user.family,
+      inviter: @user
+    )
+    invitation.update_columns(email: @user.email)
+
+    get new_session_url(invitation: invitation.token)
+    post sessions_url, params: { email: @user.email, password: user_password_test }
+
+    assert_redirected_to root_url
+    assert_nil invitation.reload.accepted_at
+    assert_equal "admin", @user.reload.role
+  end
+
   test "does not issue a session when user is deleted before row locking" do
     @user.stubs(:with_lock).raises(ActiveRecord::RecordNotFound)
     User.stubs(:authenticate_by).returns(@user)

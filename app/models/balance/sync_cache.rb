@@ -74,6 +74,10 @@ class Balance::SyncCache
     end
 
     def converted_entries
+      # Scheduled (future-dated) entries are excluded from balance calculations
+      # entirely -- they must not affect the account's current balance until
+      # their date arrives. A daily sync naturally picks them up once "today"
+      # reaches their date (see Entry#scheduled?).
       @converted_entries ||= begin
         missing_rate_pairs = []
 
@@ -119,7 +123,7 @@ class Balance::SyncCache
     end
 
     def entries_scope
-      scope = account.entries.excluding_pending.excluding_split_parents.includes(:entryable).order(:date)
+      scope = account.entries.excluding_pending.excluding_split_parents.where(date: ..Date.current).includes(:entryable).order(:date)
       @start_date ? scope.where(date: @start_date..) : scope
     end
 
