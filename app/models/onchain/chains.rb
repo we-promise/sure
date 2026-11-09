@@ -33,7 +33,15 @@ module Onchain
 
     NativeAsset = Data.define(:symbol, :name, :decimals)
 
-    Definition = Data.define(:key, :native, :token_kind, :adapter_class_name, :adapter_options) do
+    # `detectable: false` keeps a chain out of address auto-detection: it is
+    # only linked when the user picks it. For chains that share an address
+    # format with an ordinary wallet chain, where probing both on every paste
+    # would turn each plain wallet into a question.
+    Definition = Data.define(:key, :native, :token_kind, :adapter_class_name, :adapter_options, :detectable) do
+      def initialize(detectable: true, **attributes)
+        super
+      end
+
       def label
         I18n.t("onchain.chains.#{key}", default: key.to_s.titleize)
       end
@@ -96,6 +104,26 @@ module Onchain
 
     POLKADOT = "polkadot"
 
+    # The P-Chain, where AVAX staking/delegation happens — not EVM-compatible,
+    # so it shares nothing with the EVM C-Chain definitions above and needs
+    # its own adapter/provider (Onchain::AvalanchePChainAdapter,
+    # Provider::AvalanchePChain).
+    AVALANCHE_P = "avalanche_p"
+
+    SOLANA_STAKE = "solana_stake"
+
+    POLYGON_STAKE = "polygon_stake"
+
+    ETHEREUM_VALIDATOR = "ethereum_validator"
+
+    # AVAX/token balances on Avalanche's actual EVM chain — not part of the
+    # EVM array above because that array assumes every entry can share
+    # Onchain::EvmAdapter's Blockscout-backed balance/token reads, and no
+    # Blockscout instance exists for Avalanche C-Chain (see
+    # Onchain::AvalancheCChainAdapter, which reads Avalanche's own public RPC
+    # instead).
+    AVALANCHE_C = "avalanche_c"
+
     BUILTIN = [
       Definition.new(
         key: BITCOIN,
@@ -136,6 +164,54 @@ module Onchain
         native: NativeAsset.new(symbol: "DOT", name: "Polkadot", decimals: 10),
         token_kind: nil,
         adapter_class_name: "Onchain::PolkadotAdapter",
+        adapter_options: {}
+      ),
+      Definition.new(
+        key: AVALANCHE_P,
+        native: NativeAsset.new(symbol: "AVAX", name: "Avalanche", decimals: 9),
+        token_kind: nil,
+        adapter_class_name: "Onchain::AvalanchePChainAdapter",
+        adapter_options: {}
+      ),
+      Definition.new(
+        key: AVALANCHE_C,
+        native: NativeAsset.new(symbol: "AVAX", name: "Avalanche", decimals: 18),
+        token_kind: nil,
+        adapter_class_name: "Onchain::AvalancheCChainAdapter",
+        adapter_options: {}
+      ),
+      # A single Solana stake account, separate from the `solana` wallet
+      # chain above - see Onchain::SolanaStakeAdapter for why a delegated
+      # position can't be reached through the normal wallet balance read.
+      Definition.new(
+        key: SOLANA_STAKE,
+        native: NativeAsset.new(symbol: "SOL", name: "Solana", decimals: 9),
+        token_kind: nil,
+        adapter_class_name: "Onchain::SolanaStakeAdapter",
+        adapter_options: {},
+        detectable: false
+      ),
+      # Native POL staked with Polygon validators, separate from the
+      # `polygon` L2 wallet chain above - staking happens on Ethereum L1, see
+      # Onchain::PolygonStakeAdapter.
+      Definition.new(
+        key: POLYGON_STAKE,
+        native: NativeAsset.new(symbol: "POL", name: "Polygon", decimals: 18),
+        token_kind: nil,
+        adapter_class_name: "Onchain::PolygonStakeAdapter",
+        adapter_options: {},
+        detectable: false
+      ),
+      # A single Ethereum beacon-chain validator (native 32-ETH staking),
+      # identified by its BLS pubkey rather than a wallet address - see
+      # Onchain::EthereumValidatorAdapter. Liquid staking tokens (stETH,
+      # rETH, etc.) need nothing new since they're already ordinary ERC-20s
+      # the `ethereum` chain above picks up automatically.
+      Definition.new(
+        key: ETHEREUM_VALIDATOR,
+        native: NativeAsset.new(symbol: "ETH", name: "Ethereum", decimals: 18),
+        token_kind: nil,
+        adapter_class_name: "Onchain::EthereumValidatorAdapter",
         adapter_options: {}
       )
     ].freeze
