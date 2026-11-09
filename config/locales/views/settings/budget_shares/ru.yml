@@ -1,6 +1,0 @@
----
-ru:
-  settings:
-    budget_shares:
-      update:
-        success: Настройки общего доступа к бюджету обновлены
