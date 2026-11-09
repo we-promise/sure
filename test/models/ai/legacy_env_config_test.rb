@@ -88,6 +88,16 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "claude-sonnet-4-6", first_model(config, :bill_setup).name
   end
 
+  test "a preferred provider that can't be built routes nothing after it, as callers raise there" do
+    broken = { "OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test", "ANTHROPIC_BASE_URL" => "https://gateway.example.test" }
+
+    with_env_overrides(broken.merge("LLM_PROVIDER" => "anthropic")) do
+      assert_raises(Provider::Error) { Provider::Registry.preferred_llm_provider }
+    end
+    assert_empty build(broken.merge("LLM_PROVIDER" => "anthropic")).routes_for(:bill_setup)
+    assert_equal %w[openai], build(broken).routes_for(:bill_setup).map { _1.endpoint.name }
+  end
+
   test "Anthropic only defaults the vector store to pgvector when the extension is there" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
     config = build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic", "EMBEDDING_URI_BASE" => "http://ollama:11434/v1",

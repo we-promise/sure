@@ -31,6 +31,7 @@ class Ai::LegacyEnvConfig
   end
 
   def build
+    @unbuildable = []
     backend = vector_store_backend
     llm = { openai: openai(vector_store: backend == :openai), anthropic: anthropic }.compact
     jev_model = jev
@@ -38,7 +39,7 @@ class Ai::LegacyEnvConfig
     embed_model = embedding_model if %i[pgvector qdrant].include?(backend)
     embed_route_model = embed_route(backend, llm[:openai], embed_model)
 
-    llm_models = Provider::Registry.llm_provider_order.filter_map { |name| llm[name]&.last }
+    llm_models = reachable_llm_models(llm)
     routes = LLM_FEATURES.index_with { |feature| route_list(feature, llm_models) }
     routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
     routes[:categorize] = route_list(:categorize, [ jev_model, *llm_models ].compact, conditions: { jev_model => :jev_family })
@@ -73,7 +74,7 @@ class Ai::LegacyEnvConfig
       return unless token
 
       base_url = env("ANTHROPIC_BASE_URL") || Setting.anthropic_base_url.presence
-      provider = buildable { Provider::Registry.get_provider(:anthropic) }
+      provider = buildable(:anthropic) { Provider::Registry.get_provider(:anthropic) }
       endpoint = Ai::Config::Endpoint.new(
         name: "anthropic", protocol: :anthropic, preset: (:anthropic unless base_url), base_url:, api_key: token,
         location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
@@ -94,7 +95,7 @@ class Ai::LegacyEnvConfig
     # Jev serves only families that chose it (Ai::Route#serves?), and only when it can be built:
     # its constructor refuses a cleartext endpoint off localhost.
     def jev
-      provider = buildable { Provider::Registry.get_provider(:jev) }
+      provider = buildable(:jev) { Provider::Registry.get_provider(:jev) }
       return unless provider
 
       base_url = Provider::Jev.effective_endpoint
@@ -175,9 +176,20 @@ class Ai::LegacyEnvConfig
       :cloud
     end
 
-    def buildable
+    # Provider::Registry.preferred_llm_provider walks the same order and raises at a provider
+    # that can't be built, so the providers after it are never reached and get no route.
+    def reachable_llm_models(llm)
+      Provider::Registry.llm_provider_order.each_with_object([]) do |name, models|
+        break models if @unbuildable.include?(name)
+
+        models << llm[name].last if llm[name]&.last
+      end
+    end
+
+    def buildable(name)
       yield
     rescue Provider::Error
+      @unbuildable << name
       nil
     end
 
