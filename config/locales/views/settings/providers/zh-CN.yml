@@ -363,6 +363,12 @@ zh-CN:
       not_found: 未找到提供商。
       sync_provider_no_items: 没有可同步的连接。
       ibkr_panel:
+        add_connection: "添加 Interactive Brokers 连接"
+        connection_name_label: "连接名称"
+        connection_name_placeholder: "例如：IBKR 爱尔兰、IBKR 美国"
+        disconnect: "断开连接"
+        disconnect_confirm_named: "要断开 %{name} 吗？"
+        setup_accounts: "设置账户"
         steps:
           step_1: 在您的 IBKR Client Portal 中，前往“Performance & Reports” > “Flex Queries”。
           step_2: 在“Activity Flex Query”区域点击“+”图标创建一个新查询。
@@ -404,18 +410,13 @@ zh-CN:
           all_other_options: 其他所有配置选项：“No”
         report_window_note: IBKR Flex reports 受您在 IBKR 中配置的查询窗口限制。Sure 将从此报告导入完整的当前持仓，以及最多最近 365 天的活动。
         sync: 同步
-        disconnect_confirm: 断开 Interactive Brokers？
         query_id_label: Query ID
         query_id_placeholder_new: 输入您的 IBKR Flex Query ID
         query_id_placeholder_existing: 留空以保留当前 Query ID
         token_label: Token
         token_placeholder_new: 输入您的 IBKR Flex Web Service Token
         token_placeholder_existing: 留空以保留当前 Token
-        save_configuration: 保存配置
         update_configuration: 更新配置
-        status_configured_prefix: "%{summary}。请访问"
-        accounts_tab: 账户
-        status_configured_suffix: 标签页以管理已发现的账户。
         not_configured: 未配置。
       akahu_panel:
         step_1_html: 前往 %{link} 并创建个人应用。

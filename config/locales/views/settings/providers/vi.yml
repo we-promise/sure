@@ -194,6 +194,12 @@ vi:
       not_found: Không tìm thấy nhà cung cấp.
       sync_provider_no_items: Không có kết nối nào để đồng bộ.
       ibkr_panel:
+        add_connection: "Thêm kết nối Interactive Brokers"
+        connection_name_label: "Tên kết nối"
+        connection_name_placeholder: "vd: IBKR Ireland, IBKR Mỹ"
+        disconnect: "Ngắt kết nối"
+        disconnect_confirm_named: "Ngắt kết nối %{name}?"
+        setup_accounts: "Thiết lập tài khoản"
         steps:
           step_1: 'Trong Client Portal IBKR, điều hướng đến "Hiệu suất & Báo cáo" > "Flex Queries".'
           step_2: 'Nhấn biểu tượng "+" trong phần "Activity Flex Query" để tạo truy vấn mới.'
@@ -235,16 +241,11 @@ vi:
           all_other_options: 'Tất cả tùy chọn cấu hình khác: "Không"'
         report_window_note: "Báo cáo IBKR Flex bị giới hạn trong cửa sổ truy vấn bạn cấu hình trong IBKR. Sure sẽ nhập toàn bộ danh mục nắm giữ hiện tại cộng với tối đa 365 ngày hoạt động gần nhất từ báo cáo này."
         sync: Đồng bộ
-        disconnect_confirm: Ngắt kết nối Interactive Brokers?
         query_id_label: Query ID
         query_id_placeholder_new: Nhập Query ID IBKR Flex của bạn
         query_id_placeholder_existing: Để trống để giữ Query ID hiện tại
         token_label: Token
         token_placeholder_new: Nhập Token dịch vụ web IBKR Flex của bạn
         token_placeholder_existing: Để trống để giữ Token hiện tại
-        save_configuration: Lưu cấu hình
         update_configuration: Cập nhật cấu hình
-        status_configured_prefix: "%{summary}. Vào tab"
-        accounts_tab: Tài khoản
-        status_configured_suffix: để quản lý các tài khoản đã phát hiện.
         not_configured: Chưa cấu hình.
