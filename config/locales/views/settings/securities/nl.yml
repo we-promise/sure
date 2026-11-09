@@ -3,58 +3,34 @@ nl:
   settings:
     securities:
       show:
-        disable_mfa: 2FA uitschakelen
-        disable_mfa_confirm: Weet u zeker dat u tweefactorauthenticatie wilt uitschakelen? Dit maakt uw account minder veilig.
-        enable_mfa: 2FA inschakelen
-        mfa_enabled_status_html: Tweefactorauthenticatie is <span class="font-medium text-green-600">ingeschakeld</span>
-        mfa_enabled_description: Uw account is beschermd met een extra beveiligingslaag.
-        mfa_disabled_status_html: Tweefactorauthenticatie is <span class="font-medium text-red-600">uitgeschakeld</span>
-        mfa_disabled_description: Schakel 2FA in om een extra beveiligingslaag aan uw account toe te voegen.
-        mfa_description: Voeg een extra beveiligingslaag toe aan uw account door een code van uw authenticatie-app te vereisen bij het inloggen
-        mfa_title: Tweefactorauthenticatie
-        webauthn_add: Passkey of beveiligingssleutel toevoegen
-        webauthn_added: Toegevoegd op %{date}
-        webauthn_code_label: Authenticator- of back-upcode
-        webauthn_code_placeholder: Huidige authenticatorcode of een ongebruikte back-upcode
-        webauthn_description: Gebruik een passkey, Touch ID, Windows Hello of een hardwarematige beveiligingssleutel als tweede factor bij het inloggen.
-        webauthn_empty: Er zijn nog geen passkeys of beveiligingssleutels geregistreerd.
+        disable_mfa: "2FA uitschakelen"
+        disable_mfa_confirm: "Weet u zeker dat u tweefactorauthenticatie wilt uitschakelen? Dit maakt uw account minder veilig."
+        enable_mfa: "2FA inschakelen"
+        mfa_enabled_status_html: "Tweefactorauthenticatie is <span class=\"font-medium text-green-600\">ingeschakeld</span>"
+        mfa_enabled_description: "Uw account is beschermd met een extra beveiligingslaag."
+        mfa_disabled_status_html: "Tweefactorauthenticatie is <span class=\"font-medium text-red-600\">uitgeschakeld</span>"
+        mfa_disabled_description: "Schakel 2FA in om een extra beveiligingslaag aan uw account toe te voegen."
+        mfa_description: "Voeg een extra beveiligingslaag toe aan uw account door een code van uw authenticatie-app te vereisen bij het inloggen"
+        mfa_title: "Tweefactorauthenticatie"
+        webauthn_add: "Passkey of beveiligingssleutel toevoegen"
+        webauthn_added: "Toegevoegd op %{date}"
+        webauthn_code_label: "Authenticator- of back-upcode"
+        webauthn_code_placeholder: "Huidige authenticatorcode of een ongebruikte back-upcode"
+        webauthn_description: "Gebruik een passkey, Touch ID, Windows Hello of een hardwarematige beveiligingssleutel als tweede factor bij het inloggen."
+        webauthn_empty: "Er zijn nog geen passkeys of beveiligingssleutels geregistreerd."
         webauthn_last_used: "%{time_ago} geleden voor het laatst gebruikt"
-        webauthn_name_label: Naam van de sleutel
-        webauthn_name_placeholder: MacBook Touch ID, YubiKey, enz.
-        webauthn_remove: Verwijderen
-        webauthn_remove_confirm: Weet u zeker dat u deze passkey of beveiligingssleutel wilt verwijderen?
-        webauthn_remove_confirm_body: U moet deze passkey of beveiligingssleutel opnieuw registreren voordat u hem kunt gebruiken voor verificatie bij het inloggen.
-        webauthn_title: Passkeys en beveiligingssleutels
-        webauthn_unsupported: Deze browser ondersteunt geen passkeys of beveiligingssleutels.
-        page_title: Beveiliging
-        encryption_warning:
-          title: Versleutelingssleutels ontbreken
-          intro: 'Gevoelige gegevens (API-sleutels, providertokens, MFA-geheimen en persoonsgegevens) worden onversleuteld opgeslagen. Stel de volgende sleutels in via uw omgevingsvariabelen of Rails credentials om versleuteling in te schakelen:'
-          keys:
-          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
-          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
-          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
-          generate: 'Genereer een set met: bin/rails db:encryption:init'
-        disable_mfa_password_label: Bevestig met uw wachtwoord
-        disable_mfa_password_placeholder: Voer uw wachtwoord in
-        mfa_sso_only: Tweefactorauthenticatie wordt beheerd via uw identiteitsprovider.
-        sso_title: Gekoppelde accounts
-        sso_subtitle: Beheer uw single sign-on accountkoppelingen
-        sso_disconnect: Loskoppelen
-        sso_last_used: Laatst gebruikt
-        sso_never: Nooit
-        sso_no_email: Geen e-mail
-        sso_no_identities: Geen SSO-accounts gekoppeld
-        sso_connect_hint: Log uit en log in met een SSO-provider om een account te koppelen.
-        sso_confirm_title: Account loskoppelen?
-        sso_confirm_body: Weet u zeker dat u uw %{provider}-account wilt loskoppelen? U kunt het later opnieuw koppelen door in te loggen met die provider.
-        sso_confirm_button: Loskoppelen
-        sso_warning_message: Dit is uw enige inlogmethode. U zou een wachtwoord moeten instellen in uw beveiligingsinstellingen voordat u loskoppelt, anders kunt u worden buitengesloten van uw account.
+        webauthn_name_label: "Naam van de sleutel"
+        webauthn_name_placeholder: "MacBook Touch ID, YubiKey, enz."
+        webauthn_remove: "Verwijderen"
+        webauthn_remove_confirm: "Weet u zeker dat u deze passkey of beveiligingssleutel wilt verwijderen?"
+        webauthn_remove_confirm_body: "U moet deze passkey of beveiligingssleutel opnieuw registreren voordat u hem kunt gebruiken voor verificatie bij het inloggen."
+        webauthn_title: "Passkeys en beveiligingssleutels"
+        webauthn_unsupported: "Deze browser ondersteunt geen passkeys of beveiligingssleutels."
   webauthn_credentials:
-    code_already_used: Die code is al gebruikt. Wacht op de volgende code van uw authenticator-app.
-    default_name: Beveiligingssleutel
-    failure: Kon die passkey of beveiligingssleutel niet opslaan. Probeer het opnieuw.
-    invalid_code: Die code is ongeldig. Voer een huidige code uit uw authenticator-app of een ongebruikte back-upcode in.
-    mfa_required: Schakel tweefactorauthenticatie in voordat u een passkey of beveiligingssleutel toevoegt.
-    rate_limited: Te veel pogingen. Wacht een minuut en probeer het opnieuw.
-    success: Passkey of beveiligingssleutel verwijderd.
+    code_already_used: "Die code is al gebruikt. Wacht op de volgende code van uw authenticator-app."
+    default_name: "Beveiligingssleutel"
+    failure: "Kon die passkey of beveiligingssleutel niet opslaan. Probeer het opnieuw."
+    invalid_code: "Die code is ongeldig. Voer een huidige code uit uw authenticator-app of een ongebruikte back-upcode in."
+    mfa_required: "Schakel tweefactorauthenticatie in voordat u een passkey of beveiligingssleutel toevoegt."
+    rate_limited: "Te veel pogingen. Wacht een minuut en probeer het opnieuw."
+    success: "Passkey of beveiligingssleutel verwijderd."

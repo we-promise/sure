@@ -1,6 +1,0 @@
----
-ca:
-  settings:
-    budget_shares:
-      update:
-        success: S'ha actualitzat la configuració de compartició del pressupost
