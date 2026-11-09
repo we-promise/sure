@@ -532,6 +532,27 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "CO", security.country_code
   end
 
+  test "search_securities maps Yahoo's Xetra exchange code to XETR" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({
+      quotes: [
+        { symbol: "SXR8.DE", shortname: "iShares Core S&P 500", exchange: "GER", exchDisp: "XETRA" },
+        { symbol: "SXR8.AS", shortname: "iShares Core S&P 500", exchange: "AMS", exchDisp: "Amsterdam" }
+      ]
+    }.to_json)
+
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    response = @provider.search_securities("SXR8")
+
+    assert response.success?
+    xetra = response.data.index_by(&:symbol).fetch("SXR8.DE")
+    assert_equal "XETR", xetra.exchange_operating_mic
+    assert_equal "DE", xetra.country_code
+    assert_equal "EUR", @provider.send(:default_currency_for_exchange, "GER")
+  end
+
   test "search_securities preserves catalog countries and display-name fallback" do
     mock_response = mock
     mock_response.stubs(:body).returns({
