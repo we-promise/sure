@@ -37,6 +37,20 @@ module Account::Logoable
     end
   end
 
+  # Names what #logo_url shows with a value that stays the same from one
+  # render to the next. A stored logo's URL carries an expiry when
+  # config.active_storage.urls_expire_in is set (as in production), so it
+  # changes every time it is built; its blob's checksum doesn't.
+  def logo_identity
+    if logo_brandfetch? && brandfetch_logo_url
+      brandfetch_logo_url
+    elsif logo.attached? && logo.blob.persisted?
+      "blob:#{logo.blob.checksum}"
+    else
+      fallback_logo_url
+    end
+  end
+
   # What shows without a stored logo, and so what removing it brings back.
   def fallback_logo_url
     brandfetch_logo_url || provider&.logo_url.presence

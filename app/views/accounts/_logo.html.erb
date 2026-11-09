@@ -15,6 +15,10 @@
   rounded: true
 } %>
 
+<%# A sidebar logo sits in a wrapper Turbo carries across visits; a failed
+    image must not be carried as its initials, so it drops the permanence
+    and the next page tries the image again. %>
+<% on_error = "this.closest('[data-turbo-permanent]')?.removeAttribute('data-turbo-permanent'); #{ProviderLogo::REMOVE_ON_ERROR}" %>
 <div class="relative shrink-0">
   <% if url.present? %>
     <%# The ProviderLogo recipe: the initials sit under the image, and a logo the
@@ -26,7 +30,7 @@
             class: "absolute inset-0 w-full h-full rounded-full object-contain bg-container",
             alt: "",
             loading: "lazy",
-            onerror: ProviderLogo::REMOVE_ON_ERROR %>
+            onerror: on_error %>
     <% end %>
   <% else %>
     <%= render DS::FilledIcon.new(**initials) %>

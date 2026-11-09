@@ -11,6 +11,30 @@ class AccountsHelperTest < ActionView::TestCase
 
   teardown { Current.session = nil }
 
+  test "a sidebar logo's wrapper id stays the same while its stored logo's URL expires and changes" do
+    account = accounts(:depository)
+    account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png", content_type: "image/png")
+    ActiveStorage.stubs(:urls_expire_in).returns(7.days)
+
+    first_url, first_id = account.logo_url, sidebar_logo_wrapper_id("asset_depository", account, "#000")
+    travel 1.minute do
+      assert_not_equal first_url, Account.find(account.id).logo_url, "the stored logo's URL carries its expiry"
+      assert_equal first_id, sidebar_logo_wrapper_id("asset_depository", Account.find(account.id), "#000")
+    end
+
+    account.logo.attach(io: file_fixture("profile_image.png").open, filename: "other.png", content_type: "image/png")
+    assert_not_equal first_id, sidebar_logo_wrapper_id("asset_depository", account.reload, "#000"), "another image is another logo"
+  end
+
+  # The wrapper is carried across visits as it is, reconciliation dot included,
+  # so a changed status has to replace it.
+  test "a sidebar logo's wrapper id changes with its reconciliation status" do
+    account = accounts(:depository)
+    ids = [ nil, :needs_attention, :matched ].map { |status| sidebar_logo_wrapper_id("asset_depository", account, "#000", status) }
+
+    assert_equal 3, ids.uniq.size
+  end
+
   test "sidebar cache key changes with the Brandfetch client id" do
     Setting.stubs(:brand_fetch_client_id).returns(nil)
     without_key = account_sidebar_tabs_cache_key(family: @family, active_tab: "all", mobile: false)
