@@ -562,6 +562,33 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # The Wise sync links a conversion's legs again on its own, so removing
+  # that link rejects it, and the legs stay unlinked.
+  test "rejects a link the Wise sync makes, so it stays removed" do
+    family = users(:family_admin).family
+    wise_item = WiseItem.create!(family: family, name: "Wise", token: "test_token", profile_id: "123", profile_type: :business)
+    legs = { "EUR" => -117.5, "GBP" => 100 }.to_h do |currency, amount|
+      wise_account = wise_item.wise_accounts.create!(balance_id: "1000000#{currency == 'EUR' ? 1 : 2}", name: "Wise #{currency}",
+                                                     currency: currency, raw_payload: { "type" => "STANDARD" })
+      account = Account.create!(family: family, name: "Wise #{currency}", balance: 0, currency: currency,
+                                accountable: Depository.new(subtype: "checking"))
+      AccountProvider.create!(account: account, provider: wise_account)
+      side = amount.negative? ? "inflow" : "outflow"
+      [ currency, account.entries.create!(external_id: "wise_interbalance_8001_#{side}", source: "wise", amount: amount, currency: currency,
+                                          date: Date.current, name: "Conversion", entryable: Transaction.new) ]
+    end
+    wise_item.link_jar_transfers!
+    transfer = Transfer.find_by!(inflow_transaction_id: legs["EUR"].entryable_id)
+
+    delete transfer_url(transfer)
+
+    assert RejectedTransfer.exists?(inflow_transaction_id: legs["EUR"].entryable_id, outflow_transaction_id: legs["GBP"].entryable_id)
+    assert_no_difference -> { Transfer.count } do
+      wise_item.link_jar_transfers!
+    end
+    assert_equal %w[standard standard], legs.values.map { |entry| entry.entryable.reload.kind }
+  end
+
   test "can create transfer with tags on both sides" do
     tag = tags(:one)
 
@@ -728,6 +755,199 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_raises(ActiveRecord::RecordNotFound) do
       transfer.reload
     end
+  end
+
+  test "rejecting a pending match from an account page redraws both rows in place" do
+    transfer = transfers(:one)
+    assert transfer.pending?, "precondition: the fixture is a pending match"
+    inflow_entry = transfer.inflow_transaction.entry
+    outflow_entry = transfer.outflow_transaction.entry
+
+    assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+        headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+    end
+
+    assert_response :success
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(inflow_entry)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(outflow_entry)
+    assert_select "turbo-stream[action=redirect]", count: 0
+    assert_no_match transfer_path(transfer), response.body, "the redrawn rows still offer the rejected match"
+  end
+
+  test "rejecting a pending match redraws only the rows the user can see" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.outflow_transaction.entry)
+    assert_select "turbo-stream[target=?]", dom_id(transfer.inflow_transaction.entry), count: 0
+  end
+
+  test "rejecting a pending match with fees reloads the page, as the fees go with it" do
+    transfer = transfers(:one)
+    attach_fee(transfer, account: accounts(:depository))
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=redirect][target=?]", transactions_url
+  end
+
+  test "rejecting a pending match with a leg in a split group reloads the page, which draws the group" do
+    transfer = transfers(:one)
+    outflow_entry = transfer.outflow_transaction.entry
+    parent = create_transaction(account: outflow_entry.account, amount: 250, name: "Split parent")
+    outflow_entry.update_columns(parent_entry_id: parent.id)
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=redirect][target=?]", transactions_url
+  end
+
+  test "a redrawn leg that still pairs with another transaction offers the transfer hint" do
+    transfer = transfers(:one)
+    inflow_entry = transfer.inflow_transaction.entry
+    create_transaction(account: accounts(:depository), amount: -inflow_entry.amount, date: inflow_entry.date, name: "Another payment")
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+
+      headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(inflow_entry)
+    assert_select "##{dom_id(transfer.inflow_transaction, :transfer_hint)}"
+  end
+
+  # A pair touching a transfer is never offered, so destroying the match can
+  # free another visible row to pair with one of its legs.
+  test "a row the rejection frees to pair with a leg is redrawn with the transfer hint" do
+    transfer = transfers(:one)
+    inflow_entry = transfer.inflow_transaction.entry
+    other = create_transaction(account: accounts(:depository), amount: -inflow_entry.amount, date: inflow_entry.date, name: "Another payment")
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+
+      headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(other)
+    assert_select "##{dom_id(other.transaction, :transfer_hint)}"
+  end
+
+  test "a rejection freeing a row inside a split group to pair reloads the page, which draws the group" do
+    transfer = transfers(:one)
+    inflow_entry = transfer.inflow_transaction.entry
+    other = create_transaction(account: accounts(:depository), amount: -inflow_entry.amount, date: inflow_entry.date, name: "Another payment")
+    parent = create_transaction(account: accounts(:depository), amount: 500, name: "Split parent")
+    other.update_columns(parent_entry_id: parent.id)
+
+    account_page = account_url(transfer.outflow_transaction.entry.account)
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => account_page }
+
+    assert_select "turbo-stream[action=redirect][target=?]", account_page
+  end
+
+  test "a rejection freeing more rows than the bound to pair reloads the page" do
+    transfer = transfers(:one)
+    inflow_entry = transfer.inflow_transaction.entry
+    (TransfersController::MAX_REDRAWN_PAIRED_ROWS + 1).times do |i|
+      create_transaction(account: accounts(:depository), amount: -inflow_entry.amount, date: inflow_entry.date, name: "Candidate #{i}")
+    end
+
+    account_page = account_url(transfer.outflow_transaction.entry.account)
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => account_page }
+
+    assert_select "turbo-stream[action=redirect][target=?]", account_page
+  end
+
+  test "a rejection leaving no row the user can see reloads the page" do
+    transfer = transfers(:one)
+    TransfersController.any_instance.stubs(:accessible_transaction_entries).returns([])
+
+    account_page = account_url(transfer.outflow_transaction.entry.account)
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => account_page }
+
+    assert_select "turbo-stream[action=redirect][target=?]", account_page
+  end
+
+  # The transactions list draws a transfer once, by its outflow, so the
+  # inflow has no row there to redraw.
+  test "rejecting a pending match whose legs are both on the transactions list reloads the page" do
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=redirect][target=?]", transactions_url
+    assert_not Transfer.exists?(transfer.id)
+  end
+
+  test "rows redrawn on an account page keep the account view's signed amounts" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update_columns(kind: "funds_movement")
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+
+      headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.outflow_transaction.entry)
+    assert_no_match "+/-", response.body
+  end
+
+  test "an account page's reject button carries no view of its own" do
+    transfer = transfers(:one)
+
+    get account_url(transfer.outflow_transaction.entry.account)
+
+    assert_select "##{dom_id(transfer.outflow_transaction, :transfer_match)} form[action=?]",
+      transfer_path(transfer, transfer: { status: "rejected" })
+  end
+
+  # The page a request comes from decides the view, so a client flag cannot
+  # claim the account view on the transactions list.
+  test "a view_ctx param does not make the transactions list redraw a rejection in place" do
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer, view_ctx: "account"), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=redirect][target=?]", transactions_url
+  end
+
+  test "editing a pending transfer on an account page redraws its rows in the account view" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update_columns(kind: "funds_movement")
+
+    patch transfer_url(transfer), params: { transfer: { notes: "Rent" } }, as: :turbo_stream,
+      headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.outflow_transaction.entry)
+    assert_no_match "+/-", response.body
+  end
+
+  test "editing a pending transfer on the transactions list redraws its rows in the list's view" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update_columns(kind: "funds_movement")
+
+    patch transfer_url(transfer), params: { transfer: { notes: "Rent" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.outflow_transaction.entry)
+    assert_match "+/-", response.body
+  end
+
+  test "rejecting a confirmed transfer reloads the page, whose totals it moves" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan, status: "confirmed")
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=redirect][target=?]", transactions_url
   end
 
   test "can reject a match when only the outflow account is accessible" do

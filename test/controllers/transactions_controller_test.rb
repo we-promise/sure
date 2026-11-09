@@ -132,6 +132,16 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   # Bills has always linked out to transactions. Until now nothing linked back,
   # so a transaction that settled a bill was a dead end. The link-back is part
   # of the preview-gated bills surface, so the viewer needs the flag.
+  test "index loads the merchant list on demand and keeps selected merchants in the form" do
+    get transactions_url(q: { merchants: [ "Amazon" ] })
+
+    assert_response :success
+    assert_select "#transactions-search turbo-frame#merchant_filter_options[loading=lazy][data-action=?]", "turbo:frame-load->list-filter#filter" do
+      assert_select "input[type=hidden][name='q[merchants][]'][value=?]", "Amazon"
+    end
+    assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
+  end
+
   test "a German transaction shows the bill it paid with localized copy" do
     @user.update!(locale: "de")
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
@@ -208,6 +218,66 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_no_match bill_path(series), response.body,
       "the preview-gated bill link must not render for a user without the flag"
+  end
+
+  test "index explains a pending transfer match in its tooltip and opens the transfer" do
+    outflow = create_transaction(account: accounts(:depository), name: "Match outflow", amount: 320, date: Date.current)
+    inflow = create_transaction(account: accounts(:credit_card), name: "Match inflow", amount: -320, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get transactions_url
+
+    assert_response :success
+    match = "##{dom_id(outflow.transaction, :transfer_match)}"
+    assert_select "#{match} a[href='#{transfer_path(transfer)}'][data-turbo-frame=drawer]" do
+      assert_select "span", text: I18n.t("transactions.transfer_match.auto_matched"), minimum: 1
+    end
+    tooltip = "$320.00 in #{accounts(:credit_card).name} on #{I18n.l(Date.current, format: :long)}. Click to review."
+    assert_select "#{match} [role=tooltip]", text: tooltip
+    # The amount is blurred in privacy mode, which a native title would escape.
+    assert_select "#{match} [role=tooltip] span.privacy-sensitive", text: "$320.00"
+    assert_select "#{match} [title*='320']", count: 0
+    # The link, which takes focus, is described by the tooltip itself.
+    tooltip_id = css_select("#{match} [role=tooltip]").first["id"]
+    assert_select "#{match} a[href='#{transfer_path(transfer)}'][aria-describedby=?]", tooltip_id
+
+    # The index shows one leg of a pair; the other leg's row is on its own account's page.
+    get account_url(accounts(:credit_card))
+
+    assert_response :success
+    assert_select "##{dom_id(inflow.transaction, :transfer_match)} a[href='#{transfer_path(transfer)}']"
+    assert_select "##{dom_id(inflow.transaction, :transfer_match)} [role=tooltip]", text: /#{Regexp.escape(accounts(:depository).name)}/
+  end
+
+  test "index does not name or link a pending match's other side in an account the viewer cannot see" do
+    # depository is shared with family_member; investment is not.
+    outflow = create_transaction(account: accounts(:depository), name: "Private match outflow", amount: 320, date: Date.current)
+    inflow = create_transaction(account: accounts(:investment), name: "Private match inflow", amount: -320, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+    sign_in users(:family_member)
+
+    get transactions_url
+
+    assert_response :success
+    match = "##{dom_id(outflow.transaction, :transfer_match)}"
+    assert_select "#{match} [role=tooltip]", text: I18n.t("transactions.transfer_match.auto_matched_tooltip_hidden")
+    assert_select "#{match} a[href='#{transfer_path(transfer)}']", count: 0
+    assert_select "#{match} span[tabindex='0'] [data-testid='transfer-match-pill']", minimum: 1
+    assert_select "#{match} span[tabindex='0'][aria-describedby=?]", css_select("#{match} [role=tooltip]").first["id"]
+    assert_select match, text: /#{Regexp.escape(accounts(:investment).name)}/, count: 0
+  end
+
+  test "index gives a pending match on a transfer row no second link to the transfer" do
+    outflow = create_transaction(account: accounts(:depository), name: "Moved match outflow", amount: 320, date: Date.current, kind: "funds_movement")
+    inflow = create_transaction(account: accounts(:credit_card), name: "Moved match inflow", amount: -320, date: Date.current)
+    transfer = Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: "pending")
+
+    get transactions_url
+
+    assert_response :success
+    match = "##{dom_id(outflow.transaction, :transfer_match)}"
+    assert_select "#{match} a[href='#{transfer_path(transfer)}']", count: 0
+    assert_select "#{match} [role=tooltip]", text: /#{Regexp.escape(accounts(:credit_card).name)}/
   end
 
   test "index points an unmatched transaction with a counterpart to the transfer matcher" do
@@ -566,6 +636,17 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2.days.ago.to_date, @entry.reload.date
   end
 
+  test "editing a transaction that pairs with another redraws its row with the transfer hint" do
+    outflow = accounts(:depository).entries.create!(name: "To card", date: 1.day.ago.to_date, amount: 75, currency: "USD", entryable: Transaction.new)
+    accounts(:credit_card).entries.create!(name: "From checking", date: 1.day.ago.to_date, amount: -75, currency: "USD", entryable: Transaction.new)
+
+    patch transaction_url(outflow), params: { entry: { notes: "Card payment", entryable_type: "Transaction" } }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(outflow)
+    assert_select "##{dom_id(outflow.entryable, :transfer_hint)}"
+  end
+
   test "name_suggestions returns matching past transaction names with their usual category" do
     get name_suggestions_transactions_url(q: "Starbucks"), as: :turbo_stream
 
@@ -750,6 +831,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     # Only finds 1 transaction that matches filter
     assert_dom "#" + dom_id(searchable_transaction), count: 1
     assert_dom "#total-transactions", count: 1, text: "1"
+    assert_dom "#scheduled-transactions-count", count: 0
+  end
+
+  test "transaction count includes scheduled entries shown in the list" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    create_transaction(account: account)
+    scheduled = create_transaction(account: account, date: 1.day.from_now.to_date, name: "Scheduled bill")
+
+    get transactions_url
+
+    # The scheduled entry is excluded from totals.count (see Transaction::Search#totals)
+    # but still rendered in the list below -- the headline must match the list, not the totals.
+    assert_dom "#" + dom_id(scheduled), count: 1
+    assert_dom "#total-transactions", count: 1, text: "2"
+    assert_dom "#scheduled-transactions-count", count: 1, text: "including 1 scheduled"
   end
 
   test "can update notes on split child transaction" do
@@ -1092,6 +1191,7 @@ end
     search = Transaction::Search.new(family)
     totals = OpenStruct.new(
       count: 1,
+      excluded_scheduled_count: 0,
       expense_money: Money.new(10000, "USD"),
       income_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(0, "USD"),
@@ -1116,6 +1216,7 @@ end
     search = Transaction::Search.new(family, filters: { "categories" => [ "Food" ], "types" => [ "expense" ] })
     totals = OpenStruct.new(
       count: 1,
+      excluded_scheduled_count: 0,
       expense_money: Money.new(10000, "USD"),
       income_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(0, "USD"),
@@ -1139,6 +1240,7 @@ end
     search = Transaction::Search.new(family, filters: { "types" => [ "transfer" ] })
     totals = OpenStruct.new(
       count: 2,
+      excluded_scheduled_count: 0,
       expense_money: Money.new(0, "USD"),
       income_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(5000, "USD"),

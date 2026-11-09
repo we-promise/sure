@@ -1,4 +1,13 @@
 module ReportsHelper
+  # Where a breakdown row links: its category's transactions in the period.
+  # /transactions only lists Transaction rows, so trade-only rows (e.g. Other
+  # Investments) link nowhere rather than to an empty list.
+  def breakdown_transactions_path(item, start_date, end_date)
+    return unless item[:has_transactions] && start_date.present? && end_date.present?
+
+    transactions_path(q: { categories: [ item[:category_filter_value] ], start_date: start_date, end_date: end_date })
+  end
+
   # Returns the DS::Pill tone for a given tax treatment. Mirrors the
   # mapping used by `accounts/_tax_treatment_badge.html.erb` so the
   # report and the per-account badge stay visually aligned.
