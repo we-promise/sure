@@ -97,10 +97,10 @@ module Ai::Schema
     number && number == number.floor ? number.to_i : nil
   end
 
-  # An answer with fields but none the schema knows ({"error": "unable to analyze"}) isn't an
-  # answer to coerce into all nils. Explicit nulls for the schema's own fields still are.
+  # An answer with no fields ({}) or none the schema knows ({"error": "unable to analyze"}) isn't
+  # an answer to coerce into all nils. Explicit nulls for the schema's own fields still are.
   def unrelated!(json, schema, aliases)
-    return if json.empty? || array_property(schema)
+    return if array_property(schema)
 
     known = schema[:properties].to_h.keys.map(&:to_s) + aliases.values.flatten
     raise Ai::Error::InvalidOutput, "the answer has none of the schema's fields" if (json.keys.map(&:to_s) & known).empty?

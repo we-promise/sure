@@ -281,8 +281,10 @@ class Family::AutoCategorizer
       transactions_input.reject { left.include?(_1[:id]) }
     end
 
+    # Kept from the generation, so the shadow sees what the primary saw, not a transaction that
+    # became eligible since.
     def transactions_input
-      scope.map do |transaction|
+      @transactions_input ||= scope.map do |transaction|
         {
           id: transaction.id,
           amount: transaction.entry.amount.abs,

@@ -46,6 +46,16 @@ class CollapseAiPromptOverrideKeysMigrationTest < ActiveSupport::TestCase
     end
   end
 
+  test "an OpenAI key with a custom URL but no model builds no route, so Anthropic's is kept" do
+    overrides!("categorizer_openai" => "OpenAI version", "categorizer_anthropic" => "Claude version")
+
+    with_env_overrides("LLM_PROVIDER" => "openai", "OPENAI_ACCESS_TOKEN" => "k", "OPENAI_URI_BASE" => "http://llm.local/v1",
+                       "OPENAI_MODEL" => nil, "ANTHROPIC_API_KEY" => "k") do
+      ActiveRecord::Base.connection.execute("DELETE FROM settings WHERE var = 'openai_model'")
+      assert_equal({ "categorize_transactions" => "Claude version" }, run_migration)
+    end
+  end
+
   test "OpenAI's is kept by default, and identical overrides drop nothing" do
     overrides!("merchant_openai" => "Same", "merchant_anthropic" => "Same", "categorizer_openai" => "A", "categorizer_anthropic" => "B")
 

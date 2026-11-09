@@ -44,8 +44,9 @@ class Eval::ProviderFactory
       raise Error, "OpenAI access token not configured" unless access_token.present?
 
       uri_base = config[:uri_base].presence || installed&.base_url
+      own_server = installed && uri_base == installed.base_url
       endpoint =
-        if installed && uri_base == installed.base_url
+        if own_server
           # The install's own server: its headers, API choice and timeout, as production calls it.
           installed.with(api_key: access_token)
         else
@@ -56,7 +57,8 @@ class Eval::ProviderFactory
             json_mode: installed&.json_mode || :auto
           )
         end
-      budget = Ai::Config.current.models.find { _1.endpoint == installed }
+      # The installed model's limits only when the eval runs that model on that server.
+      budget = Ai::Config.current.models.find { _1.endpoint == installed && _1.name == model } if own_server
       Eval::GenerationClient.new(endpoint:, model:, budget:, chat_provider: Provider::Openai.new(access_token, uri_base:, model:))
     end
 
