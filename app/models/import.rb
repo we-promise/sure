@@ -252,6 +252,12 @@ class Import < ApplicationRecord
     ImportJob.perform_later(self)
   end
 
+  # Whether publishing would change existing records even when the dry run
+  # counts nothing new. Subclasses that do this override it.
+  def changes_existing_records?
+    false
+  end
+
   # Whether import! already committed rows for this import. Distinguishes a
   # job that died mid-import (single transaction → rolled back, nothing
   # attached) from one that died after the data landed but before the status

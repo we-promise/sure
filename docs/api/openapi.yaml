@@ -7876,7 +7876,6 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
-                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
@@ -7884,7 +7883,7 @@ paths:
                   - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport). MonarchImport
-                    is listed for imports made in the web app; creating one here returns
+                    imports are created in the web app; requesting one here returns
                     422 unsupported_type.
                 account_id:
                   type: string
@@ -7990,7 +7989,6 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
-                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
@@ -7998,7 +7996,7 @@ paths:
                   - QifImport
                   - SureImport
                   description: Import type (defaults to TransactionImport). MonarchImport
-                    is listed for imports made in the web app; creating one here returns
+                    imports are created in the web app; requesting one here returns
                     422 unsupported_type.
                 account_id:
                   type: string
@@ -8235,12 +8233,9 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
-                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
-                  - PdfImport
-                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -8351,12 +8346,9 @@ paths:
                   - MintImport
                   - ActualImport
                   - YnabImport
-                  - MonarchImport
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
-                  - PdfImport
-                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:

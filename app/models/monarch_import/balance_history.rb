@@ -35,24 +35,24 @@ class MonarchImport::BalanceHistory
     return anchors if replay(through: as_of)[as_of] == balance
 
     if @existing_valuations.key?(as_of)
-      @conflicts << as_of unless @existing_valuations[as_of] == balance
+      @conflicts << as_of unless @existing_valuations[as_of] == balance || @conflicts.include?(as_of)
       return anchors
     end
 
     (anchors.reject { |date, _| date == as_of } + [ [ as_of, balance ] ]).sort_by(&:first)
   end
 
-  # { date => balance } the way Sure's forward calculator derives it, from the
-  # first entry through the last (or through, when later).
+  # { date => balance } the way Sure's forward calculator derives it, on every
+  # date with an entry and on through. Between those dates the balance holds.
   def replay(anchors = self.anchors, through: nil)
     valuations = @existing_valuations.merge(anchors.to_h)
     flows = combined_flows
-    dates = valuations.keys + flows.keys
+    dates = valuations.keys | flows.keys
     return {} if dates.empty?
 
-    last = [ dates.max, through ].compact.max
+    dates |= [ through ] if through && through >= dates.min
     running = BigDecimal("0")
-    dates.min.upto(last).each_with_object({}) do |date, balances|
+    dates.sort.each_with_object({}) do |date, balances|
       running = valuations.fetch(date) { running + flows.fetch(date, 0) }
       balances[date] = running
     end
@@ -71,7 +71,9 @@ class MonarchImport::BalanceHistory
       running = nil
 
       first_balance_date = @history.keys.min
-      first_flow_date = @flows.keys.min
+      # Existing transactions count too: an opening placed after one of them
+      # would override it.
+      first_flow_date = flows.keys.min
 
       if first_flow_date && (first_balance_date.nil? || first_flow_date < first_balance_date) &&
           no_existing_valuation_through?(first_balance_date)

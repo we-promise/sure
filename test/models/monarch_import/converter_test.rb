@@ -77,6 +77,28 @@ class MonarchImport::ConverterTest < ActiveSupport::TestCase
     assert_equal "80.00", valuations["monarch-valuation:Card:2024-01-10"]["amount"]
   end
 
+  test "accounts whose balance ignores transactions get a valuation for every change" do
+    result = convert("Checking" => { type: "Property" })
+    checking = result.records.select { |r| r["type"] == "Valuation" && r["data"]["account_id"] == "monarch-account:Checking" }
+
+    assert_equal %w[100.00 90.00 95.00], checking.map { |r| r["data"]["amount"] }
+    assert record_ids(result, "Transaction").include?("monarch-transaction:1")
+  end
+
+  test "existing entries count in the account's currency, without split parents" do
+    account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
+    ExchangeRate.create!(date: Date.new(2024, 1, 2), from_currency: "EUR", to_currency: "USD", rate: 1.1)
+    account.entries.create!(date: Date.new(2024, 1, 2), amount: 10, currency: "EUR", name: "Paris", entryable: Transaction.new)
+    parent = account.entries.create!(date: Date.new(2024, 1, 2), amount: 4, currency: "USD", name: "Shop", entryable: Transaction.new)
+    parent.split!([ { name: "One", amount: 1, category_id: nil }, { name: "Two", amount: 3, category_id: nil } ])
+    exports = MonarchImport::Exports.new(balances_csv: "Date,Balance,Account\n2024-01-01,100.00,Checking\n2024-01-02,85.00,Checking\n")
+    choice = MonarchImport::Converter::Choice.new(name: "Checking", type: "Depository", closed: false, include: true,
+      transactions: true, current_balance: nil, target: account)
+
+    result = MonarchImport::Converter.new(exports: exports, choices: [ choice ], family: @family, today: Date.new(2024, 1, 4)).result
+    assert_empty record_ids(result, "Valuation")
+  end
+
   test "existing categories and merchants keep their look" do
     @family.categories.create!(name: "Groceries", color: "#123456", lucide_icon: "carrot", classification_unused: "expense")
     @family.merchants.create!(name: "Grocer", color: "#abcdef")
@@ -133,6 +155,24 @@ class MonarchImport::ConverterTest < ActiveSupport::TestCase
       source: "sure_import_session:abc", external_id: "Transaction:monarch-transaction:1", entryable: Transaction.new)
 
     assert_equal 1, convert("Checking" => { target: account }).stats["transactions_skipped_already_in_sure"]
+  end
+
+  test "a tool-style external ID from another source is not taken as a Monarch import" do
+    account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
+    account.entries.create!(date: Date.new(2024, 1, 3), amount: 25, currency: "USD", name: "Other",
+      source: "some_api_client", external_id: "Transaction:monarch-transaction:1", entryable: Transaction.new)
+    result = convert("Checking" => { target: account })
+
+    assert record_ids(result, "Transaction").include?("monarch-transaction:1")
+    assert_equal 1, result.overlapping_transactions["Checking"]
+  end
+
+  test "transactions from the Monarch to Sure tool don't count as unmatched" do
+    account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
+    account.entries.create!(date: Date.new(2024, 1, 3), amount: 25, currency: "USD", name: "Older export",
+      source: "sure_import_session:abc", external_id: "Transaction:monarch-transaction:99", entryable: Transaction.new)
+
+    assert_equal 0, convert("Checking" => { target: account }).overlapping_transactions["Checking"]
   end
 
   test "Sure's matcher skips a transaction already entered by hand, once" do

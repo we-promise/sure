@@ -22,8 +22,12 @@ class MonarchImport::Converter
   # connection linked later matches these entries instead of duplicating them.
   EXTRA_KEY = "monarch".freeze
   # How the Monarch to Sure API tool's import sessions identify transactions.
+  SESSION_SOURCE_PREFIX = "sure_import_session:".freeze
   SESSION_EXTERNAL_ID_PREFIX = "Transaction:monarch-transaction:".freeze
   LIABILITY_TYPES = %w[CreditCard Loan OtherLiability].freeze
+  # Sure's balance calculator ignores transactions in these accounts (see
+  # Balance::BaseCalculator), so only valuations set their balance.
+  VALUATION_ONLY_TYPES = %w[Property Vehicle OtherAsset OtherLiability].freeze
 
   # What the person picked for one Monarch account. name is Monarch's, and
   # account_name what a new Sure account is called. target is an existing
@@ -36,6 +40,10 @@ class MonarchImport::Converter
 
     def liability?
       LIABILITY_TYPES.include?(type)
+    end
+
+    def transactions_move_balance?
+      !VALUATION_ONLY_TYPES.include?(type)
     end
   end
 
@@ -103,7 +111,7 @@ class MonarchImport::Converter
         next @stats["transactions_skipped_#{skipped}"] += 1 if skipped
         next @stats["transactions_skipped_already_in_sure"] += 1 if already_in_sure?(choice.target, row)
 
-        flows[row[:account]][row[:date]] += row[:amount]
+        flows[row[:account]][row[:date]] += row[:amount] if choice.transactions_move_balance?
 
         kind = TRANSFER_CATEGORY_KINDS.fetch(row[:category], "standard")
         data = {
@@ -164,9 +172,23 @@ class MonarchImport::Converter
       native = Transaction.joins(:entry).where(entries: { account_id: account.id })
         .where("transactions.extra -> ? ->> 'transaction_id' IS NOT NULL", EXTRA_KEY)
         .pluck(Arel.sql(ActiveRecord::Base.sanitize_sql([ "transactions.extra -> ? ->> 'transaction_id'", EXTRA_KEY ])))
-      tool = account.entries.where("external_id LIKE ?", "#{SESSION_EXTERNAL_ID_PREFIX}%")
-        .pluck(:external_id).map { |id| id.delete_prefix(SESSION_EXTERNAL_ID_PREFIX) }
+      tool = session_entries(account.entries).pluck(:external_id).map { |id| id.delete_prefix(SESSION_EXTERNAL_ID_PREFIX) }
       (native + tool).to_set
+    end
+
+    # Entries the API tool imported. Both the source and the ID prefix must
+    # match, since any API client can choose an external ID.
+    def session_entries(scope)
+      scope.where("entries.source LIKE ?", "#{SESSION_SOURCE_PREFIX}%")
+        .where("entries.external_id LIKE ?", "#{SESSION_EXTERNAL_ID_PREFIX}%")
+    end
+
+    def monarch_id_of(entry)
+      if entry.source.to_s.start_with?(SESSION_SOURCE_PREFIX) && entry.external_id.to_s.start_with?(SESSION_EXTERNAL_ID_PREFIX)
+        entry.external_id.delete_prefix(SESSION_EXTERNAL_ID_PREFIX)
+      else
+        entry.entryable.try(:extra).to_h.dig(EXTRA_KEY, "transaction_id")
+      end
     end
 
     def convert_account(choice, flows)
@@ -198,19 +220,25 @@ class MonarchImport::Converter
 
     def convert_into_existing(choice, history, flows, sign, current_balance)
       account = choice.target
-      entries = account.entries.excluding_pending.includes(:entryable).to_a
-      valuations, others = entries.partition { |entry| entry.entryable_type == "Valuation" }
-      opening = valuations.find { |entry| entry.entryable.opening_anchor? }
-      existing_valuations = valuations.to_h { |entry| [ entry.date, entry.amount * sign ] }
-      existing_flows = others.each_with_object(Hash.new(BigDecimal("0"))) { |entry, sums| sums[entry.date] -= entry.amount }
+      entries = account.entries.excluding_pending.excluding_split_parents.includes(:entryable).to_a
+      opening = entries.find { |entry| entry.valuation? && entry.entryable.opening_anchor? }
+      others = entries.reject(&:valuation?)
+
+      # Balances come from the entries Sure's calculator uses, in the
+      # account's currency.
+      calculated_valuations, calculated_others = Balance::SyncCache.new(account).entries.partition(&:valuation?)
+      existing_valuations = calculated_valuations.to_h { |entry| [ entry.date, entry.amount * sign ] }
+      existing_flows = Hash.new(BigDecimal("0"))
+      if choice.transactions_move_balance?
+        calculated_others.each { |entry| existing_flows[entry.date] -= entry.amount }
+      end
 
       monarch_dates = history.keys + flows.keys
       start_date, end_date = monarch_dates.minmax
       if start_date
         claimed = @claimed_entry_ids ? @claimed_entry_ids[account] : []
         @overlapping_transactions[choice.name] = others.count do |entry|
-          entry.date.between?(start_date, end_date) && !claimed.include?(entry.id) &&
-            !imported_monarch_ids(account).include?(entry.entryable.try(:extra).to_h.dig(EXTRA_KEY, "transaction_id"))
+          entry.date.between?(start_date, end_date) && !claimed.include?(entry.id) && monarch_id_of(entry).nil?
         end
       end
 

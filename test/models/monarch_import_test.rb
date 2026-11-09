@@ -58,6 +58,62 @@ class MonarchImportTest < ActiveSupport::TestCase
     assert_equal [ opening.id ], account.entries.pluck(:id)
   end
 
+  test "only a move of an opening balance is still worth publishing, and counts as committed" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "USD", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    mapping("Checking").update!(mappable: account)
+
+    assert @import.changes_existing_records?
+    assert_not @import.data_committed?
+    publish!
+    @import.entries.delete_all
+    assert @import.reload.data_committed?
+  end
+
+  test "publishing needs write access to the existing accounts it imports into" do
+    account = @family.accounts.create!(name: "Private", balance: 0, currency: "USD", accountable: Depository.new, owner: users(:empty))
+    mapping("Checking").update!(mappable: account)
+
+    assert_equal [ account.id ], @import.preexisting_target_account_ids
+    assert @import.accounts_writable_by?(users(:empty))
+    assert_not @import.accounts_writable_by?(users(:josh))
+  end
+
+  test "an existing account marked closed is disabled, and enabled again on undo" do
+    account = @family.accounts.create!(name: "My Savings", balance: 10, currency: "USD", accountable: Depository.new)
+    mapping("Old Savings").update!(mappable: account, choices: { "closed" => true })
+    publish!
+
+    assert account.reload.disabled?
+    @import.revert
+    assert account.reload.active?
+  end
+
+  test "deleting a published import puts a moved opening balance back" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "USD", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    mapping("Checking").update!(mappable: account)
+    publish!
+
+    @import.destroy!
+    assert_equal [ Date.new(2024, 1, 3), 500 ], [ opening.reload.date, opening.amount ]
+  end
+
+  test "an unchanged balance is compared with what the form showed for the saved destination" do
+    loan = @family.accounts.create!(name: "My Loan", balance: 0, currency: "USD", accountable: Loan.new)
+    mapping("Checking").update!(mappable: loan)
+    shown = @import.suggested_current_balance(mapping("Checking"))
+
+    @import.apply_account_choices!(
+      { mapping("Checking").id => { type: "Depository", include: "1", target_id: loan.id, current_balance: shown } },
+      target_accounts: @family.accounts
+    )
+
+    assert_nil mapping("Checking").current_balance
+  end
+
   test "renamed accounts are created with the new name" do
     @import.apply_account_choices!(
       { mapping("Checking").id => { name: "Everyday", type: "Depository", include: "1", transactions: "1" } },

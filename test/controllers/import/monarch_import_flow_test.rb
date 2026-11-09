@@ -64,6 +64,37 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
     assert_nil checking.reload.target
   end
 
+  test "a read-only shared account can't be a target, or be published into" do
+    upload_exports
+    checking = @import.account_mappings.find_by!(key: "Checking")
+    read_only = accounts(:credit_card)
+    sign_in users(:family_member)
+
+    patch import_configuration_url(@import), params: { accounts: { checking.id => { type: "CreditCard", target_id: read_only.id, include: "1" } } }
+    assert_response :not_found
+
+    checking.update!(mappable: read_only)
+    assert_no_enqueued_jobs(only: ImportJob) do
+      post publish_import_url(@import)
+    end
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+  end
+
+  test "saving with no accounts submitted changes nothing" do
+    upload_exports
+
+    patch import_configuration_url(@import), params: { other: "1" }
+
+    assert_redirected_to import_url(@import)
+  end
+
+  test "the confirm step goes back to the accounts step" do
+    upload_exports
+    get import_url(@import)
+
+    assert_select "header > a[href='#{import_configuration_path(@import)}']"
+  end
+
   test "two Monarch accounts can't go into the same account" do
     upload_exports
     checking, card = %w[Checking Card].map { |name| @import.account_mappings.find_by!(key: name) }

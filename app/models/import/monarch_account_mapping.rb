@@ -72,7 +72,10 @@ class Import::MonarchAccountMapping < Import::Mapping
 
     def parsed_current_balance
       raw = current_balance.to_s.delete(",$").strip
-      BigDecimal(raw) if raw.present?
+      return if raw.empty?
+
+      balance = BigDecimal(raw)
+      balance if balance.finite?
     rescue ArgumentError
       nil
     end

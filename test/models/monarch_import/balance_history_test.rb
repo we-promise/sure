@@ -21,6 +21,14 @@ class MonarchImport::BalanceHistoryTest < ActiveSupport::TestCase
       anchors(history: history, flows: amounts("2024-01-01" => -10, "2024-01-02" => 5))
   end
 
+  test "opens before existing transactions that predate the imported ones" do
+    balance_history = MonarchImport::BalanceHistory.new(history: history_for("2024-01-03" => 50),
+      flows: amounts("2024-01-02" => 5), existing_flows: amounts("2024-01-01" => -10))
+
+    assert_equal [ [ day("2023-12-31"), 55 ] ], balance_history.anchors
+    assert_equal 50, balance_history.replay(through: day("2024-01-03"))[day("2024-01-03")]
+  end
+
   test "a closed account drops to zero the day after its last balance" do
     assert_equal [ [ day("2024-01-01"), 100 ], [ day("2024-01-02"), 0 ] ],
       anchors(history: history_for("2024-01-01" => 100), closed: true)
@@ -41,6 +49,21 @@ class MonarchImport::BalanceHistoryTest < ActiveSupport::TestCase
     assert_equal balance_history.anchors, balance_history.anchors_with_current_balance(day("2024-01-10"), 100)
     assert_equal [ [ day("2024-01-01"), 100 ], [ day("2024-01-10"), 120 ] ],
       balance_history.anchors_with_current_balance(day("2024-01-10"), 120)
+  end
+
+  test "replay only visits the dates with entries" do
+    balance_history = MonarchImport::BalanceHistory.new(history: history_for("1970-01-01" => 100, "2030-01-01" => 90))
+
+    assert_equal [ day("1970-01-01"), day("2030-01-01"), day("2031-01-01") ],
+      balance_history.replay(through: day("2031-01-01")).keys
+  end
+
+  test "a day that conflicts with both the history and the current balance is reported once" do
+    balance_history = MonarchImport::BalanceHistory.new(history: history_for("2024-01-01" => 100, "2024-01-10" => 100),
+      existing_valuations: amounts("2024-01-10" => 70))
+
+    balance_history.anchors_with_current_balance(day("2024-01-10"), 120)
+    assert_equal [ day("2024-01-10") ], balance_history.conflicts
   end
 
   test "existing transactions count toward the balance" do
@@ -78,6 +101,6 @@ class MonarchImport::BalanceHistoryTest < ActiveSupport::TestCase
     alias_method :history_for, :amounts
 
     def anchors(**options)
-      MonarchImport::BalanceHistory.new(**options).anchors.map { |date, balance| [ date, balance.to_i ] }
+      MonarchImport::BalanceHistory.new(**options).anchors
     end
 end

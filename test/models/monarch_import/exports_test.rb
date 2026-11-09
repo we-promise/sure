@@ -40,6 +40,33 @@ class MonarchImport::ExportsTest < ActiveSupport::TestCase
     assert_equal %w[Card Checking Old\ Savings], exports.account_names
   end
 
+  test "rejects dates outside the range Sure imports" do
+    error = assert_raises(MonarchImport::Exports::Error) do
+      MonarchImport::Exports.new(balances_csv: "Date,Balance,Account\n9999-12-31,5.00,Checking\n")
+    end
+    assert_match "9999-12-31", error.message
+  end
+
+  test "rejects amounts that aren't finite" do
+    assert_raises(MonarchImport::Exports::Error) do
+      MonarchImport::Exports.new(balances_csv: "Date,Balance,Account\n2024-01-01,Infinity,Checking\n")
+    end
+  end
+
+  test "rejects rows without an account name" do
+    error = assert_raises(MonarchImport::Exports::Error) do
+      MonarchImport::Exports.new(balances_csv: "Date,Balance,Account\n2024-01-01,5.00, \n")
+    end
+    assert_match "no account name", error.message
+  end
+
+  test "rejects exports without any accounts" do
+    error = assert_raises(MonarchImport::Exports::Error) do
+      MonarchImport::Exports.new(balances_csv: "Date,Balance,Account\n")
+    end
+    assert_match "don't contain any accounts", error.message
+  end
+
   test "rejects a file that isn't the right export" do
     error = assert_raises(MonarchImport::Exports::Error) do
       MonarchImport::Exports.new(balances_csv: file_fixture("imports/monarch_transactions.csv").read)

@@ -127,7 +127,7 @@
     </div>
   </div>
 
-  <% if import_summary_empty %>
+  <% if import_summary_empty && !import.changes_existing_records? %>
     <%= render DS::Link.new(text: t(".back_to_imports"), href: imports_path, variant: :secondary, full_width: true) %>
   <% else %>
     <%= render DS::Button.new(text: t(".publish_import"), href: publish_import_path(import), method: :post, full_width: true) %>

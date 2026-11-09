@@ -9,6 +9,10 @@
 class MonarchImport < Import
   has_one_attached :balances_file, dependent: :purge_later
 
+  # Deleting a published import removes its entries, so it also has to put
+  # back what publishing changed in accounts it didn't create.
+  before_destroy :restore_existing_accounts!, if: :complete?
+
   def requires_csv_workflow?
     false
   end
@@ -83,6 +87,9 @@ class MonarchImport < Import
   # stored as no change.
   def apply_account_choices!(choices, target_accounts:)
     transaction do
+      # The balances the form showed, before the destinations they depend on
+      # are cleared.
+      shown_balances = account_mappings.includes(:mappable).to_h { |mapping| [ mapping.id, suggested_current_balance(mapping) ] }
       # Cleared first, so a destination can move between rows in one save.
       account_mappings.where(id: choices.keys).update_all(mappable_id: nil, mappable_type: nil)
       account_mappings.reload.each do |mapping|
@@ -90,7 +97,7 @@ class MonarchImport < Import
         next if choice.nil?
 
         balance = choice[:current_balance].to_s.strip
-        balance = nil if balance.empty? || balance == suggested_current_balance(mapping)
+        balance = nil if balance.empty? || balance == shown_balances[mapping.id]
         name = choice[:name].to_s.strip
         mapping.update!(
           mappable: choice[:target_id].presence && target_accounts.find(choice[:target_id]),
@@ -122,6 +129,24 @@ class MonarchImport < Import
 
   def publishable?
     cleaned? && account_mappings.any? { |mapping| mapping.to_converter_choice.include }
+  end
+
+  # Moving an existing account's opening balance is worth publishing even
+  # when no new records come with it.
+  def changes_existing_records?
+    configured? && conversion.opening_balance_moves.any?
+  end
+
+  # A move-only import commits no entries or accounts, but records its moves
+  # in the same transaction.
+  def data_committed?
+    super || summary["moved_opening_balances"].present?
+  end
+
+  # Existing accounts it imports into, which the publisher must be able to
+  # write to.
+  def preexisting_target_account_ids
+    account_mappings.where(mappable_type: "Account").where.not(mappable_id: nil).pluck(:mappable_id)
   end
 
   def conversion
@@ -172,9 +197,9 @@ class MonarchImport < Import
     transaction do
       move_opening_balances!(result.opening_balance_moves)
 
-      targets = account_mappings.includes(:mappable).filter_map do |mapping|
-        [ MonarchImport::Converter.source_id(mapping.key), mapping.target ] if mapping.target && mapping.to_converter_choice.include
-      end.to_h
+      included_targets = account_mappings.includes(:mappable).select { |mapping| mapping.target && mapping.to_converter_choice.include }
+      disable_closed_targets!(included_targets)
+      targets = included_targets.to_h { |mapping| [ MonarchImport::Converter.source_id(mapping.key), mapping.target ] }
       imported = Family::DataImporter.new(family, ndjson(result.records), import: self, account_targets: targets).import!
 
       Account.where(id: imported[:accounts].map(&:id)).update_all(import_id: id)
@@ -188,8 +213,6 @@ class MonarchImport < Import
       records.map { |record| record.to_json }.join("\n")
     end
 
-    # Opening balances moved for imported-into accounts, saved so reverting
-    # can put them back.
     # Opening balances moved for imported-into accounts, saved with their
     # values before and after the import so reverting can put them back.
     def move_opening_balances!(moves)
@@ -202,11 +225,31 @@ class MonarchImport < Import
       update!(summary: summary.except("opening_balances_kept").merge("moved_opening_balances" => moved))
     end
 
-    # Puts moved opening balances back, unless they were edited after the
-    # import: then the edit is kept and listed, since restoring would undo it.
+    # Existing accounts marked Closed are disabled like new closed ones, and
+    # saved so reverting can enable them again.
+    def disable_closed_targets!(mappings)
+      disabled = mappings.select { |mapping| mapping.to_converter_choice.closed && mapping.target.may_disable? }.map do |mapping|
+        mapping.target.disable!
+        mapping.target.id
+      end
+      update!(summary: summary.merge("disabled_account_ids" => disabled))
+    end
+
     def revert_derived_state!
-      kept = Array(summary["moved_opening_balances"]).filter_map do |moved|
-        entry = family.entries.find_by(id: moved["entry_id"])
+      kept = restore_existing_accounts!
+      update!(summary: summary.except("moved_opening_balances", "disabled_account_ids", "records").merge("opening_balances_kept" => kept))
+    end
+
+    # Enables the accounts it disabled and puts moved opening balances back,
+    # unless they were edited after the import: then the edit is kept, since
+    # restoring would undo it. Returns the names of accounts whose edit was
+    # kept.
+    def restore_existing_accounts!
+      family.accounts.disabled.where(id: Array(summary["disabled_account_ids"])).find_each(&:enable!)
+
+      Array(summary["moved_opening_balances"]).filter_map do |moved|
+        # Locked, so an edit can't land between the comparison and the restore.
+        entry = family.entries.lock.find_by(id: moved["entry_id"])
         next if entry.nil?
 
         current = { "date" => entry.date.iso8601, "amount" => entry.amount.to_s }
@@ -217,6 +260,5 @@ class MonarchImport < Import
           moved["account"]
         end
       end
-      update!(summary: summary.except("moved_opening_balances", "records").merge("opening_balances_kept" => kept))
     end
 end

@@ -43,15 +43,17 @@ class Import::ConfigurationsController < ApplicationController
     end
 
     # Existing accounts a Monarch account can go into: the manual ones this
-    # user can access.
+    # user can write to.
     def monarch_target_accounts
-      Import::MonarchAccountMapping.target_accounts_for(@import).where(id: accessible_accounts.select(:id))
+      Import::MonarchAccountMapping.target_accounts_for(@import).where(id: Account.writable_by(Current.user).select(:id))
     end
 
     MONARCH_CHOICE_FIELDS = %i[name type target_id closed include transactions current_balance].freeze
 
     def monarch_choices
-      accounts = params.fetch(:accounts, {})
+      accounts = params[:accounts]
+      return {} unless accounts.is_a?(ActionController::Parameters)
+
       accounts.permit(accounts.keys.index_with { MONARCH_CHOICE_FIELDS }).to_h.transform_values(&:symbolize_keys)
     end
 

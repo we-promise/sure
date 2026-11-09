@@ -75,7 +75,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
     if type == "MonarchImport"
       return render json: {
         error: "unsupported_type",
-        message: "Monarch imports need the balances and transactions exports together. Use the import flow in the web app."
+        message: "Monarch imports need per-account choices that only the web app collects. Use the import flow in the web app."
       }, status: :unprocessable_entity
     end
 

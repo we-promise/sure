@@ -18,6 +18,7 @@ class MonarchImport::Exports
   def initialize(balances_csv:, transactions_csv: nil)
     @balances = parse_balances(balances_csv)
     @transactions = transactions_csv.present? ? parse_transactions(transactions_csv) : []
+    raise Error, I18n.t("activerecord.errors.models.monarch_import.no_accounts") if account_names.empty?
   end
 
   def balances_only?
@@ -54,7 +55,7 @@ class MonarchImport::Exports
         amount = parse_amount(row["Balance"])
         next if amount.nil?
 
-        balances[row["Account"].to_s][parse_date(row["Date"])] = amount
+        balances[parse_account(row["Account"])][parse_date(row["Date"])] = amount
       end.to_h { |name, history| [ name, history.sort.to_h ] }
     end
 
@@ -63,7 +64,7 @@ class MonarchImport::Exports
         {
           id: row["Id"].to_s,
           date: parse_date(row["Date"]),
-          account: row["Account"].to_s,
+          account: parse_account(row["Account"]),
           amount: parse_amount(row["Amount"]),
           merchant: row["Merchant"].to_s.strip,
           original_statement: row["Original Statement"].to_s.strip,
@@ -91,15 +92,30 @@ class MonarchImport::Exports
       raw = value.to_s.delete(",$").strip
       return if raw.empty?
 
-      BigDecimal(raw)
+      amount = BigDecimal(raw)
+      raise ArgumentError unless amount.finite?
+
+      amount
     rescue ArgumentError
       raise Error, I18n.t("activerecord.errors.models.monarch_import.invalid_number", value: value)
     end
 
+    # Limited to the dates other imports accept, which also bounds how many
+    # days a balance history can span.
     def parse_date(value)
-      Date.iso8601(value.to_s)
+      date = Date.iso8601(value.to_s)
+      range = Import.reasonable_date_range
+      unless range.cover?(date)
+        raise Error, I18n.t("activerecord.errors.models.monarch_import.date_out_of_range", value: value, from: range.begin.iso8601, to: range.end.iso8601)
+      end
+
+      date
     rescue Date::Error
       raise Error, I18n.t("activerecord.errors.models.monarch_import.invalid_date", value: value)
+    end
+
+    def parse_account(value)
+      value.to_s.strip.presence || raise(Error, I18n.t("activerecord.errors.models.monarch_import.blank_account"))
     end
 
     def suggest(name, history, transaction_dates)
