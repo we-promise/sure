@@ -145,7 +145,11 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
 
     # Exclude future positions from the current balance in cash-anchor accounting.
     def calc_end_date
-      finish = [ account.entries.excluding_pending.maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
+      # Scheduled (future-dated) entries must not extend the calculation window --
+      # otherwise their flows would materialize a balance dated in the future,
+      # and Balance::Materializer#update_account_info would surface that as the
+      # account's *current* balance. See Entry#scheduled? and Balance::SyncCache.
+      finish = [ account.entries.excluding_pending.where(date: ..Date.current).maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
       account.accounting_start_date ? [ finish, Date.current ].min : finish
     end
 

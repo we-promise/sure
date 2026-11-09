@@ -296,6 +296,7 @@ en:
         household_title: Household
         invitation_link: Invitation link
         invite_member: Add member
+        invite_multiple: Add multiple members
         last_name: Last Name
         page_title: Profile Info
         pending: Pending
@@ -685,6 +686,12 @@ en:
       not_found: Provider not found.
       sync_provider_no_items: No connections available to sync.
       ibkr_panel:
+        add_connection: Add Interactive Brokers connection
+        connection_name_label: Connection name
+        connection_name_placeholder: e.g. IBKR Ireland, IBKR US
+        disconnect: Disconnect
+        disconnect_confirm_named: Disconnect %{name}?
+        setup_accounts: Set up accounts
         steps:
           step_1: 'In your IBKR Client Portal, navigate to "Performance & Reports" > "Flex Queries".'
           step_2: 'Click the "+" icon in the "Activity Flex Query" section to create a new query.'
@@ -726,18 +733,13 @@ en:
           all_other_options: 'All other configuration options: "No"'
         report_window_note: "IBKR Flex reports are limited to the query window you configured in IBKR. Sure will import full current holdings plus up to the last 365 days of activity from this report."
         sync: Sync
-        disconnect_confirm: Disconnect Interactive Brokers?
         query_id_label: Query ID
         query_id_placeholder_new: Enter your IBKR Flex Query ID
         query_id_placeholder_existing: Leave blank to keep the current Query ID
         token_label: Token
         token_placeholder_new: Enter your IBKR Flex Web Service Token
         token_placeholder_existing: Leave blank to keep the current Token
-        save_configuration: Save Configuration
         update_configuration: Update Configuration
-        status_configured_prefix: "%{summary}. Visit the"
-        accounts_tab: Accounts
-        status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
       trade_republic_panel:
         encryption_warning:

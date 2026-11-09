@@ -86,6 +86,19 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
       "Recalculated balance for 2.days.ago should be persisted"
   end
 
+  # Regression: account.balance must never surface a future-dated balance row,
+  # even if one exists in the table (e.g. left behind by a race between
+  # overlapping syncs). purge_stale_balances is the primary defense, but
+  # update_account_info must not rely on it exclusively -- see Entry#scheduled?.
+  test "update_account_info ignores future-dated balance rows even if one exists" do
+    create_balance(account: @account, date: Date.current, balance: 20000)
+    create_balance(account: @account, date: 3.days.from_now.to_date, balance: 99000)
+
+    Balance::Materializer.new(@account, strategy: :forward).send(:update_account_info)
+
+    assert_equal 20000, @account.reload.balance
+  end
+
   # Regression: a prior full sync materializes balances for entries dated BEFORE
   # the opening anchor; a later incremental sync (window after the anchor) must
   # preserve them. The purge lower bound uses calculation_start_date — the same
