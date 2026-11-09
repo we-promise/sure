@@ -66,18 +66,19 @@ class Ai::LegacyEnvConfig
     embed_model = embedding_model if %i[pgvector qdrant].include?(backend)
     embed_route_model = embed_route(backend, llm[:openai], embed_model)
 
-    llm_models = reachable_llm_models(llm)
-    # Generation routes list only the preferred LLM, as preferred_llm_provider picks one: failover
-    # never sends a family's data to a provider the install doesn't use for that feature. Chat
-    # keeps both, as it resolves its own provider.
-    preferred = llm_models.first(1)
-    routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
-    routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
-    routes[:categorize] = route_list(:categorize, [ jev_model, *preferred ].compact, conditions: { jev_model => :jev_family })
+    # Both mirror Provider::Registry.preferred_llm_provider, which walks the LLM order and raises at
+    # a provider it can't build. Generations list only the provider it picks, so failover never
+    # sends a family's data to a provider the install doesn't use; chat lists every provider the
+    # walk reaches, as it resolves its own provider.
+    reached = reachable_llm_models(llm)
+    preferred = reached.first
+    routes = LLM_FEATURES.index_with { |feature| route_list(feature, [ preferred ].compact) }
+    routes[:chat] = route_list(:chat, reached + [ agent_model ].compact)
+    routes[:categorize] = route_list(:categorize, [ jev_model, preferred ].compact, conditions: { jev_model => :jev_family })
     routes[:embed] = route_list(:embed, [ embed_route_model ].compact)
 
     endpoints = (llm.values.map(&:first) + [ jev_model, agent_model, embed_model ].compact.map(&:endpoint)).uniq
-    models = (llm_models + [ jev_model, agent_model, embed_model, embed_route_model ]).compact.uniq
+    models = (reached + [ jev_model, agent_model, embed_model, embed_route_model ]).compact.uniq
 
     Ai::Config.new(endpoints:, models:, routes: routes.reject { |_, list| list.empty? }, vector_store_backend: backend)
   end
@@ -229,8 +230,6 @@ class Ai::LegacyEnvConfig
       :cloud
     end
 
-    # Provider::Registry.preferred_llm_provider walks the same order and raises at a provider
-    # that can't be built, so the providers after it are never reached and get no route.
     def reachable_llm_models(llm)
       Provider::Registry.llm_provider_order.each_with_object([]) do |name, models|
         break models if @unbuildable.include?(name)
