@@ -974,6 +974,215 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # Categories and merchants are used through the family: another family's id
+  # is never linked.
+  test "update with another family's category is refused and changes nothing" do
+    own_category = @family.categories.first
+    @transaction.update!(category: own_category)
+    name_before = @transaction.entry.reload.name
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { name: "Renamed", category_id: foreign_category.id } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal own_category.id, @transaction.reload.category_id
+    assert_equal name_before, @transaction.entry.reload.name
+  end
+
+  test "update with another family's merchant is refused and changes nothing" do
+    own_merchant = @family.merchants.create!(name: "Own Merchant")
+    @transaction.update!(merchant: own_merchant)
+    name_before = @transaction.entry.reload.name
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { name: "Renamed", merchant_id: foreign_merchant.id } },
+        headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal own_merchant.id, @transaction.reload.merchant_id
+    assert_equal name_before, @transaction.entry.reload.name
+  end
+
+  %w[category_id merchant_id].each do |attribute|
+    test "update with a #{attribute} that does not exist is refused" do
+      before = @transaction.reload.public_send(attribute)
+
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { attribute => SecureRandom.uuid } },
+          headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity
+      assert_equal before, @transaction.reload.public_send(attribute)
+    end
+
+    test "create with a #{attribute} that does not exist is refused and creates nothing" do
+      assert_no_difference -> { Entry.count } do
+        post api_v1_transactions_url,
+             params: { transaction: reference_create_params(attribute => SecureRandom.uuid) },
+             headers: api_headers(@api_key)
+      end
+
+      assert_response :unprocessable_entity
+    end
+
+    test "update with #{attribute} omitted or blank keeps its value" do
+      own = { "category_id" => @family.categories.first.id,
+              "merchant_id" => @family.merchants.create!(name: "Kept Merchant").id }.fetch(attribute)
+      @transaction.update!(attribute => own)
+
+      [ { name: "Omitted" }, { name: "Blank", attribute => "" } ].each do |fields|
+        put api_v1_transaction_url(@transaction),
+            params: { transaction: fields },
+            headers: api_headers(@api_key)
+
+        assert_response :success
+        assert_equal fields[:name], @transaction.entry.reload.name
+        assert_equal own, @transaction.reload.public_send(attribute)
+      end
+    end
+  end
+
+  test "create with another family's category is refused and creates nothing" do
+    assert_no_difference -> { Entry.count } do
+      post api_v1_transactions_url,
+           params: { transaction: reference_create_params(category_id: foreign_category.id) },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "create with another family's merchant is refused and creates nothing" do
+    assert_no_difference -> { Entry.count } do
+      post api_v1_transactions_url,
+           params: { transaction: reference_create_params(merchant_id: foreign_merchant.id) },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+  end
+
+  test "create and update still assign the family's own category and merchant" do
+    category = @family.categories.first
+    merchant = @family.merchants.create!(name: "Assigned Merchant")
+
+    post api_v1_transactions_url,
+         params: { transaction: reference_create_params(category_id: category.id, merchant_id: merchant.id) },
+         headers: api_headers(@api_key)
+
+    assert_response :created
+    created = Transaction.find(JSON.parse(response.body)["id"])
+    assert_equal category.id, created.category_id
+    assert_equal merchant.id, created.merchant_id
+
+    @transaction.update!(category: nil, merchant: nil)
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { category_id: category.id, merchant_id: merchant.id } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal category.id, @transaction.reload.category_id
+    assert_equal merchant.id, @transaction.merchant_id
+  end
+
+  test "a provider merchant the user can reach still assigns, and one they cannot is refused" do
+    reachable = ProviderMerchant.create!(name: "Reachable Provider", source: "plaid")
+    unreachable = ProviderMerchant.create!(name: "Unreachable Provider", source: "plaid")
+    other_transaction = @family.transactions.where.not(id: @transaction.id).first
+    other_transaction.update!(merchant: reachable)
+    @transaction.update!(merchant: nil)
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { merchant_id: unreachable.id } },
+        headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_nil @transaction.reload.merchant_id
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { merchant_id: reachable.id } },
+        headers: api_headers(@api_key)
+    assert_response :success
+    assert_equal reachable.id, @transaction.reload.merchant_id
+
+    post api_v1_transactions_url,
+         params: { transaction: reference_create_params(merchant_id: reachable.id) },
+         headers: api_headers(@api_key)
+    assert_response :created
+    assert_equal reachable.id, Transaction.find(JSON.parse(response.body)["id"]).merchant_id
+  end
+
+  # A client re-sends the ids it read back, so a row already holding a foreign
+  # category must stay editable. No new link is made.
+  test "update re-sending a foreign category the transaction already holds still saves" do
+    @transaction.update_columns(category_id: foreign_category.id)
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { name: "Still editable", category_id: foreign_category.id } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal "Still editable", @transaction.entry.reload.name
+  end
+
+  test "update re-sending a held foreign category or merchant in upper case still saves" do
+    @transaction.update_columns(category_id: foreign_category.id, merchant_id: foreign_merchant.id)
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { name: "Still editable", category_id: foreign_category.id.upcase,
+                                 merchant_id: foreign_merchant.id.upcase } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal "Still editable", @transaction.entry.reload.name
+  end
+
+  test "a category or merchant id that is not a UUID is refused" do
+    { category_id: "not-a-uuid", merchant_id: "not-a-uuid" }.each do |key, value|
+      put api_v1_transaction_url(@transaction),
+          params: { transaction: { name: "Renamed", key => value } },
+          headers: api_headers(@api_key)
+
+      assert_response :unprocessable_entity, "#{key} was accepted"
+    end
+    assert_not_equal "Renamed", @transaction.entry.reload.name
+  end
+
+  test "update re-sending a foreign merchant the transaction already holds still saves" do
+    @transaction.update_columns(merchant_id: foreign_merchant.id)
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { name: "Still editable", merchant_id: foreign_merchant.id } },
+        headers: api_headers(@api_key)
+
+    assert_response :success
+    assert_equal "Still editable", @transaction.entry.reload.name
+  end
+
+  test "a foreign merchant already on one transaction cannot be linked to another" do
+    holder = @family.transactions.where.not(id: @transaction.id).first
+    holder.update_columns(merchant_id: foreign_merchant.id)
+    @transaction.update!(merchant: nil)
+
+    put api_v1_transaction_url(@transaction),
+        params: { transaction: { merchant_id: foreign_merchant.id } },
+        headers: api_headers(@api_key)
+    assert_response :unprocessable_entity
+    assert_nil @transaction.reload.merchant_id
+
+    assert_no_difference -> { Entry.count } do
+      post api_v1_transactions_url,
+           params: { transaction: reference_create_params(merchant_id: foreign_merchant.id) },
+           headers: api_headers(@api_key)
+    end
+    assert_response :unprocessable_entity
+  end
+
   test "should clear tags when empty tag_ids explicitly provided in update" do
     # Set up transaction with existing tags
     @transaction.tags = [ Tag.first, Tag.second ]
@@ -1244,6 +1453,19 @@ end
   end
 
   private
+
+    def foreign_category
+      @foreign_category ||= families(:empty).categories.create!(name: "Foreign", color: "#e99537", lucide_icon: "circle")
+    end
+
+    def foreign_merchant
+      @foreign_merchant ||= families(:empty).merchants.create!(name: "Foreign")
+    end
+
+    def reference_create_params(references)
+      { account_id: @account.id, name: "With references", amount: 10, date: Date.current,
+        currency: "USD", nature: "expense" }.merge(references)
+    end
 
     def api_headers(api_key)
       { "X-Api-Key" => api_key.display_key }
