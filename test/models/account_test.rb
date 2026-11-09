@@ -16,6 +16,23 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  test "destroying an account deletes its balances in a single query" do
+    3.times do |i|
+      @account.balances.create!(date: (i + 500).days.ago.to_date, balance: 100, currency: @account.currency)
+    end
+    balance_ids = @account.balances.pluck(:id)
+    assert balance_ids.size >= 3
+
+    balance_deletes = []
+    callback = ->(*, payload) { balance_deletes << payload[:sql] if payload[:sql].match?(/\ADELETE FROM "balances"/) }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      @account.destroy!
+    end
+
+    assert_equal 1, balance_deletes.size
+    assert_equal 0, Balance.where(id: balance_ids).count
+  end
+
   test "a destroy that raises leaves a pending_deletion account disabled" do
     @account.mark_for_deletion!
     @account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
