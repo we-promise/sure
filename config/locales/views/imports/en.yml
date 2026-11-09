@@ -521,10 +521,16 @@ en:
       monarch_conflicts_description:
         one: "On 1 day, an account you're importing into already has a balance update that differs from Monarch's. Your existing value is kept."
         other: "On %{count} days, accounts you're importing into already have balance updates that differ from Monarch's. Your existing values are kept."
-      monarch_overlap_title: Possible duplicate transactions
+      monarch_overlap_title: Existing transactions in the same period
       monarch_overlap_description:
-        one: "1 existing transaction falls within the Monarch history of an account you're importing into. It counts toward the balance, and may duplicate a Monarch transaction."
-        other: "%{count} existing transactions fall within the Monarch history of accounts you're importing into. They count toward the balance, and may duplicate Monarch transactions."
+        one: "1 existing transaction falls within the Monarch history of an account you're importing into and doesn't match a Monarch transaction. It's kept and counts toward the balance."
+        other: "%{count} existing transactions fall within the Monarch history of accounts you're importing into and don't match a Monarch transaction. They're kept and count toward the balance."
+      monarch_duplicates_title: Transactions already in Sure are skipped
+      monarch_duplicates_description:
+        one: "1 Monarch transaction is already in the account it's going into, from an earlier import or with the same date and amount, so it's skipped."
+        other: "%{count} Monarch transactions are already in the accounts they're going into, from an earlier import or with the same date and amount, so they're skipped."
+      monarch_kept_title: Some opening balances were left as you edited them
+      monarch_kept_description: "Undoing the import didn't restore the opening balance of %{names}, because it was changed after the import. Check it before importing again."
       monarch_opening_title: Opening balances will move
       monarch_opening_description:
         one: "1 existing account's opening balance moves to the start of its Monarch history. Undoing the import puts it back."

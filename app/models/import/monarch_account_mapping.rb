@@ -9,6 +9,7 @@ class Import::MonarchAccountMapping < Import::Mapping
   validates :key, presence: true
   validate :choices_are_valid
   validate :target_is_a_manual_family_account
+  validate :target_takes_one_monarch_account
 
   def self.target_accounts_for(import)
     import.family.accounts.listable_manual.alphabetically
@@ -80,6 +81,17 @@ class Import::MonarchAccountMapping < Import::Mapping
       errors.add(:value, :inclusion) unless Accountable::TYPES.include?(type)
       raw = current_balance.to_s.delete(",$").strip
       errors.add(:value, :not_a_number) if raw.present? && parsed_current_balance.nil?
+    end
+
+    # Each source would reconcile its history against the account
+    # separately, so two of them would compete for its balance.
+    def target_takes_one_monarch_account
+      return if target.nil? || !boolean(include)
+
+      others = import.account_mappings.where(mappable_type: "Account", mappable_id: mappable_id).where.not(id: id)
+      if others.any? { |other| other.to_converter_choice.include }
+        errors.add(:base, :target_taken, account: target.name, monarch: key)
+      end
     end
 
     def target_is_a_manual_family_account

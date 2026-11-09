@@ -108,9 +108,44 @@ class MonarchImport::ConverterTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2024, 1, 2) ], result.conflicts["Checking"]
   end
 
-  test "existing transactions in the same period are counted" do
+  test "transactions carry their Monarch ID" do
+    transaction = records("Transaction")["monarch-transaction:1"]
+
+    assert_equal [ "monarch-transaction:1", "monarch" ], transaction.values_at("external_id", "source")
+  end
+
+  test "transactions already imported from Monarch are skipped" do
     account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
-    account.entries.create!(date: Date.new(2024, 1, 2), amount: 10, currency: "USD", name: "Grocer", entryable: Transaction.new)
+    account.entries.create!(date: Date.new(2024, 1, 2), amount: 10, currency: "USD", name: "Grocer",
+      source: "monarch", external_id: "monarch-transaction:1", entryable: Transaction.new)
+    result = convert("Checking" => { target: account })
+
+    assert_not record_ids(result, "Transaction").include?("monarch-transaction:1")
+    assert_equal 1, result.stats["transactions_skipped_already_in_sure"]
+    assert_equal 0, result.overlapping_transactions["Checking"]
+  end
+
+  test "Sure's matcher skips a transaction already entered by hand, once" do
+    account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
+    account.entries.create!(date: Date.new(2024, 1, 2), amount: 10, currency: "USD", name: "Groceries", entryable: Transaction.new)
+    exports = MonarchImport::Exports.new(
+      balances_csv: file_fixture("imports/monarch_balances.csv").read,
+      transactions_csv: file_fixture("imports/monarch_transactions.csv").read +
+        "2024-01-02,Grocer,Groceries,Checking,GROCER #12,,-10.00,,Me,false,,,false,6\n"
+    )
+    choices = exports.suggestions.map do |s|
+      MonarchImport::Converter::Choice.new(name: s.name, type: s.type, closed: false, include: true, transactions: true,
+        current_balance: nil, target: (account if s.name == "Checking"))
+    end
+    result = MonarchImport::Converter.new(exports: exports, choices: choices, family: @family, today: Date.new(2024, 1, 4)).result
+
+    assert_equal 1, result.stats["transactions_skipped_already_in_sure"]
+    assert_equal 1, record_ids(result, "Transaction").count { |id| id.in?(%w[monarch-transaction:1 monarch-transaction:6]) }
+  end
+
+  test "existing transactions in the same period that match nothing are counted" do
+    account = existing_account(opening_date: Date.new(2023, 12, 1), opening_balance: 100)
+    account.entries.create!(date: Date.new(2024, 1, 2), amount: 7, currency: "USD", name: "Bakery", entryable: Transaction.new)
 
     assert_equal 1, convert("Checking" => { target: account }).overlapping_transactions["Checking"]
   end

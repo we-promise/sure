@@ -39,6 +39,14 @@
       <%= render DS::Alert.new(variant: :warning, title: t(".monarch_overlap_title"),
             message: t(".monarch_overlap_description", count: review[:overlapping_transactions])) %>
     <% end %>
+    <% if review[:opening_balances_kept].any? %>
+      <%= render DS::Alert.new(variant: :warning, title: t(".monarch_kept_title"),
+            message: t(".monarch_kept_description", names: review[:opening_balances_kept].to_sentence)) %>
+    <% end %>
+    <% if review[:already_in_sure] > 0 %>
+      <%= render DS::Alert.new(variant: :info, title: t(".monarch_duplicates_title"),
+            message: t(".monarch_duplicates_description", count: review[:already_in_sure])) %>
+    <% end %>
     <% if review[:moved_opening_balances] > 0 %>
       <%= render DS::Alert.new(variant: :info, title: t(".monarch_opening_title"),
             message: t(".monarch_opening_description", count: review[:moved_opening_balances])) %>

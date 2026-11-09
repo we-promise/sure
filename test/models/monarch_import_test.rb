@@ -80,6 +80,58 @@ class MonarchImportTest < ActiveSupport::TestCase
     assert_equal "Card", mapping("Card").account_name
   end
 
+  test "importing the same exports into the accounts they created skips every transaction" do
+    publish!
+    second = @family.imports.create!(type: "MonarchImport")
+    second.attach_exports!(
+      balances_csv: file_fixture("imports/monarch_balances.csv").read,
+      transactions_csv: file_fixture("imports/monarch_transactions.csv").read
+    )
+    %w[Checking Card Old\ Savings].each do |name|
+      second.account_mappings.find_by!(key: name).update!(mappable: @family.accounts.find_by!(name: name))
+    end
+
+    assert_no_difference -> { @family.entries.where(entryable_type: "Transaction").count } do
+      second.reload.publish
+    end
+    assert second.reload.complete?, second.error
+    assert_balances_match monarch_history["Checking"], @family.accounts.find_by!(name: "Checking"), 1
+  end
+
+  test "an existing account takes only one Monarch account" do
+    account = @family.accounts.create!(name: "My Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    mapping("Checking").update!(mappable: account)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) { mapping("Card").update!(mappable: account) }
+    assert_match "already the destination", error.message
+  end
+
+  test "a destination can move between Monarch accounts in one save" do
+    account = @family.accounts.create!(name: "My Checking", balance: 0, currency: "USD", accountable: Depository.new)
+    mapping("Checking").update!(mappable: account)
+
+    @import.apply_account_choices!({
+      mapping("Checking").id => { type: "Depository", include: "1", target_id: "" },
+      mapping("Card").id => { type: "CreditCard", include: "1", target_id: account.id }
+    }, target_accounts: @family.accounts)
+
+    assert_equal [ nil, account ], [ mapping("Checking").target, mapping("Card").target ]
+  end
+
+  test "undo keeps an opening balance edited after the import" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "USD", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    mapping("Checking").update!(mappable: account)
+    publish!
+    opening.reload.update!(amount: 123)
+
+    @import.revert
+
+    assert_equal 123, opening.reload.amount
+    assert_equal [ "My Checking" ], @import.reload.opening_balances_kept_after_revert
+  end
+
   test "existing categories and merchants are reused unchanged" do
     category = @family.categories.create!(name: "Groceries", color: "#123456", lucide_icon: "carrot", classification_unused: "expense")
     merchant = @family.merchants.create!(name: "Grocer", color: "#abcdef")

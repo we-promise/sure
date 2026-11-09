@@ -59,6 +59,14 @@ class MonarchImport::BalanceHistoryTest < ActiveSupport::TestCase
     assert_equal [ day("2024-01-02") ], balance_history.conflicts
   end
 
+  test "a closed account reuses an existing closing balance" do
+    balance_history = MonarchImport::BalanceHistory.new(history: history_for("2024-01-01" => 100), closed: true,
+      existing_valuations: amounts("2024-01-01" => 100, "2024-01-02" => 0))
+
+    assert_empty balance_history.anchors
+    assert_empty balance_history.conflicts
+  end
+
   private
     def day(value)
       Date.iso8601(value)

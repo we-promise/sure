@@ -83,7 +83,9 @@ class MonarchImport < Import
   # stored as no change.
   def apply_account_choices!(choices, target_accounts:)
     transaction do
-      account_mappings.each do |mapping|
+      # Cleared first, so a destination can move between rows in one save.
+      account_mappings.where(id: choices.keys).update_all(mappable_id: nil, mappable_type: nil)
+      account_mappings.reload.each do |mapping|
         choice = choices[mapping.id]
         next if choice.nil?
 
@@ -152,8 +154,16 @@ class MonarchImport < Import
       existing_account_names: family.accounts.where(name: new_names).distinct.order(:name).pluck(:name),
       conflicting_days: result.conflicts.values.sum(&:size),
       overlapping_transactions: result.overlapping_transactions.values.sum,
-      moved_opening_balances: result.opening_balance_moves.size
+      moved_opening_balances: result.opening_balance_moves.size,
+      already_in_sure: result.stats.fetch("transactions_skipped_already_in_sure", 0),
+      opening_balances_kept: opening_balances_kept_after_revert
     }
+  end
+
+  # Accounts whose opening balance was edited after the import, so undoing
+  # it left the edit in place.
+  def opening_balances_kept_after_revert
+    Array(summary["opening_balances_kept"])
   end
 
   def import!
@@ -180,19 +190,33 @@ class MonarchImport < Import
 
     # Opening balances moved for imported-into accounts, saved so reverting
     # can put them back.
+    # Opening balances moved for imported-into accounts, saved with their
+    # values before and after the import so reverting can put them back.
     def move_opening_balances!(moves)
-      previous = moves.map do |move|
-        { "entry_id" => move.entry.id, "date" => move.entry.date.iso8601, "amount" => move.entry.amount.to_s }.tap do
-          move.entry.update!(date: move.date, amount: move.balance)
-        end
+      moved = moves.map do |move|
+        before = { "date" => move.entry.date.iso8601, "amount" => move.entry.amount.to_s }
+        move.entry.update!(date: move.date, amount: move.balance)
+        after = { "date" => move.entry.date.iso8601, "amount" => move.entry.amount.to_s }
+        { "entry_id" => move.entry.id, "account" => move.account.name, "before" => before, "after" => after }
       end
-      update!(summary: summary.merge("moved_opening_balances" => previous))
+      update!(summary: summary.except("opening_balances_kept").merge("moved_opening_balances" => moved))
     end
 
+    # Puts moved opening balances back, unless they were edited after the
+    # import: then the edit is kept and listed, since restoring would undo it.
     def revert_derived_state!
-      Array(summary["moved_opening_balances"]).each do |previous|
-        family.entries.find_by(id: previous["entry_id"])&.update!(date: previous["date"], amount: previous["amount"])
+      kept = Array(summary["moved_opening_balances"]).filter_map do |moved|
+        entry = family.entries.find_by(id: moved["entry_id"])
+        next if entry.nil?
+
+        current = { "date" => entry.date.iso8601, "amount" => entry.amount.to_s }
+        if current == moved["after"]
+          entry.update!(date: moved["before"]["date"], amount: moved["before"]["amount"])
+          nil
+        else
+          moved["account"]
+        end
       end
-      update!(summary: summary.except("moved_opening_balances", "records"))
+      update!(summary: summary.except("moved_opening_balances", "records").merge("opening_balances_kept" => kept))
     end
 end

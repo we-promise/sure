@@ -16,6 +16,9 @@ class MonarchImport::Converter
     "Credit Card Payment" => "cc_payment"
   }.freeze
   RECORD_ORDER = %w[Account Category Tag Merchant Transaction Valuation].freeze
+  # Imported transactions carry this source and their Monarch ID, so a later
+  # import into the same account can recognise them.
+  ENTRY_SOURCE = "monarch".freeze
   LIABILITY_TYPES = %w[CreditCard Loan OtherLiability].freeze
 
   # What the person picked for one Monarch account. name is Monarch's, and
@@ -94,6 +97,7 @@ class MonarchImport::Converter
         elsif row[:amount].nil? then "no_amount"
         end
         next @stats["transactions_skipped_#{skipped}"] += 1 if skipped
+        next @stats["transactions_skipped_already_in_sure"] += 1 if already_in_sure?(choice.target, row)
 
         flows[row[:account]][row[:date]] += row[:amount]
 
@@ -106,7 +110,9 @@ class MonarchImport::Converter
           "amount" => money(-row[:amount]),
           "name" => row[:merchant].presence || row[:original_statement].presence || "Imported transaction",
           "notes" => row[:notes].presence,
-          "kind" => kind
+          "kind" => kind,
+          "external_id" => external_id(row),
+          "source" => ENTRY_SOURCE
         }
         if row[:category].present? && kind == "standard"
           data["category_id"] = @categories[row[:category]] ||= "monarch-category:#{row[:category]}"
@@ -121,6 +127,32 @@ class MonarchImport::Converter
       end
 
       flows
+    end
+
+    def external_id(row)
+      "monarch-transaction:#{row[:id]}"
+    end
+
+    # Whether an existing account already holds this Monarch transaction:
+    # first by its Monarch ID from an earlier import, then by Sure's own
+    # duplicate matcher (same date, amount and currency). Each existing entry
+    # matches at most one row, so two genuine identical purchases stay two.
+    # A skipped row is already in the account's balance, so it adds no flow.
+    def already_in_sure?(account, row)
+      return false if account.nil?
+
+      @imported_ids ||= Hash.new do |ids, target|
+        ids[target] = target.entries.where(source: ENTRY_SOURCE).pluck(:external_id).to_set
+      end
+      return true if @imported_ids[account].include?(external_id(row))
+
+      @claimed_entry_ids ||= Hash.new { |claimed, target| claimed[target] = [] }
+      duplicate = Account::ProviderImportAdapter.new(account).find_duplicate_transaction(
+        date: row[:date], amount: -row[:amount], currency: account.currency,
+        exclude_entry_ids: @claimed_entry_ids[account]
+      )
+      @claimed_entry_ids[account] << duplicate.id if duplicate
+      duplicate.present?
     end
 
     def convert_account(choice, flows)
@@ -160,7 +192,12 @@ class MonarchImport::Converter
 
       monarch_dates = history.keys + flows.keys
       start_date, end_date = monarch_dates.minmax
-      @overlapping_transactions[choice.name] = others.count { |entry| entry.date.between?(start_date, end_date) } if start_date
+      if start_date
+        claimed = @claimed_entry_ids ? @claimed_entry_ids[account] : []
+        @overlapping_transactions[choice.name] = others.count do |entry|
+          entry.date.between?(start_date, end_date) && entry.source != ENTRY_SOURCE && !claimed.include?(entry.id)
+        end
+      end
 
       # The opening balance can move to the start of the history when it falls
       # inside it and nothing else in the account comes earlier.

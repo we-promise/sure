@@ -951,6 +951,11 @@ class Family::DataImporter
         if @import_session
           entry.external_id = session_entry_external_id("Transaction", old_id)
           entry.source = session_entry_source
+        elsif data["external_id"].present? && data["source"].present?
+          # A record may carry its source system's identity, so a later import
+          # from that system can recognise the transaction.
+          entry.external_id = data["external_id"]
+          entry.source = data["source"]
         end
 
         entry.save!

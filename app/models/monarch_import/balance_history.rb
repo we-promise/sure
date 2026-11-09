@@ -106,8 +106,11 @@ class MonarchImport::BalanceHistory
 
       if @closed && @history.any?
         last_date = @history.keys.max
-        if @history[last_date].nonzero? && flows.keys.none? { |date| date > last_date }
-          anchors << [ last_date + 1, BigDecimal("0") ]
+        closing_date = last_date + 1
+        if @existing_valuations.key?(closing_date)
+          @conflicts << closing_date if @existing_valuations[closing_date].nonzero?
+        elsif @history[last_date].nonzero? && flows.keys.none? { |date| date > last_date }
+          anchors << [ closing_date, BigDecimal("0") ]
         end
       end
 

@@ -64,6 +64,21 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
     assert_nil checking.reload.target
   end
 
+  test "two Monarch accounts can't go into the same account" do
+    upload_exports
+    checking, card = %w[Checking Card].map { |name| @import.account_mappings.find_by!(key: name) }
+    target = accounts(:depository)
+
+    patch import_configuration_url(@import), params: { accounts: {
+      checking.id => { type: "Depository", target_id: target.id, include: "1" },
+      card.id => { type: "CreditCard", target_id: target.id, include: "1" }
+    } }
+
+    assert_redirected_to import_configuration_url(@import)
+    assert_match "already the destination", flash[:alert]
+    assert_nil checking.reload.target
+  end
+
   test "confirm shows the summary and publishes" do
     upload_exports
     get import_url(@import)

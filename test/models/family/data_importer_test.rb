@@ -43,6 +43,18 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal [ "Grocer" ], account.entries.pluck(:name)
   end
 
+  test "keeps a transaction's own source and external ID" do
+    account = @family.accounts.create!(name: "Existing", balance: 0, currency: "USD", accountable: Depository.new)
+    ndjson = build_ndjson([
+      { type: "Transaction", data: { id: "old-txn", account_id: "old-account", date: "2024-01-02", amount: "10.00",
+        name: "Grocer", external_id: "monarch-transaction:1", source: "monarch" } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, account_targets: { "old-account" => account }).import!
+
+    assert_equal [ [ "monarch", "monarch-transaction:1" ] ], account.entries.pluck(:source, :external_id)
+  end
+
   test "restores the Brandfetch logo choice so no fetched icon replaces it" do
     ndjson = build_ndjson([
       {

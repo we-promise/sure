@@ -11,3 +11,5 @@ en:
           files:
             balances: balances
             transactions: transactions
+        import/monarch_account_mapping:
+          target_taken: "%{account} is already the destination of another Monarch account. Choose a different account for %{monarch}, or import it as a new account."
