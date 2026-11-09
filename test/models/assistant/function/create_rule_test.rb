@@ -38,6 +38,37 @@ class Assistant::Function::CreateRuleTest < ActiveSupport::TestCase
     assert_equal 1, result[:preview][:match_count]
   end
 
+  test "accepts a provider merchant on the user's transactions for the set merchant action" do
+    provider_merchant = ProviderMerchant.create!(name: "ZXQ Synced Merchant", source: "plaid")
+    create_transaction(name: "ZXQ Synced", merchant: provider_merchant)
+
+    result = @fn.call(
+      "conditions" => [ { "condition_type" => "transaction_name", "operator" => "like", "value" => "zxq" } ],
+      "actions" => [ { "action_type" => "set_transaction_merchant", "value" => provider_merchant.id } ]
+    )
+
+    assert result[:success], result.inspect
+    assert_equal provider_merchant.id, @family.rules.find(result[:rule][:id]).actions.first.value
+  end
+
+  test "rejects a provider merchant only on accounts the user can't access" do
+    provider_merchant = ProviderMerchant.create!(name: "ZXQ Hidden Merchant", source: "plaid")
+    hidden_account = @family.accounts.create!(name: "Admin only", balance: 0, currency: "USD", accountable: Depository.new, owner: @user)
+    create_transaction(account: hidden_account, name: "ZXQ Hidden", merchant: provider_merchant)
+    member = users(:family_member)
+    assert_not Account.accessible_by(member).exists?(hidden_account.id), "precondition: the member can't see the account"
+
+    result = nil
+    assert_no_difference "@family.rules.count" do
+      result = Assistant::Function::CreateRule.new(member).call(
+        "conditions" => [ { "condition_type" => "transaction_name", "operator" => "like", "value" => "zxq" } ],
+        "actions" => [ { "action_type" => "set_transaction_merchant", "value" => provider_merchant.id } ]
+      )
+    end
+
+    assert_not result[:success], result.inspect
+  end
+
   test "points split actions at the rules settings" do
     split = { splits: [ { type: "percentage", name: "A", share: "50" }, { type: "percentage", name: "B", share: "50" } ] }
 

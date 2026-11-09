@@ -13,6 +13,11 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     user ? family.accounts.writable_by(user) : family.accounts
   end
 
+  # Keeps showing a target another member saved, which this user can't pick.
+  def option_for(value)
+    family.accounts.where(id: value).pick(:name, :id) if UuidFormat.valid?(value)
+  end
+
   def claimed_attributes
     [ :transfer ]
   end

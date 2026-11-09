@@ -30,5 +30,10 @@ de:
               fixed_requires_exact_amount_condition: "Splits mit festen Beträgen benötigen eine Regel-Bedingung mit exaktem Transaktionsbetrag (z. B. Betrag = 42,00), sonst können die Anteile nicht zuverlässig für jede passende Transaktion aufgehen"
               fixed_shares_must_equal_condition_amount: "Die Split-Anteile müssen in Summe %{amount} ergeben – den exakten Betrag, den die Bedingung dieser Regel vorgibt"
   rule:
+    actions:
+      set_transaction_merchant:
+        not_accessible: "Händler auf einem Konto ohne Zugriff"
+        unassigned: "%{name} (nicht mehr zugeordnet)"
+        unavailable: "Händler nicht mehr verfügbar"
     conditions:
       unsupported_label: "Nicht unterstützt (%{type})"
