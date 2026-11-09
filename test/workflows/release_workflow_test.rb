@@ -21,15 +21,16 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
     end
   end
 
-  test "alpha and stable releases publish explicit versions without floating channels" do
+  test "alpha and stable releases publish only their matching floating channel" do
     with_repo do |dir|
       %w[2026.11.2-alpha 2026.11.2].each do |version|
         success, output = resolve(dir, version)
         assert success, version
         assert_includes output, "release=true"
         assert_includes output, "type=raw,value=#{version}"
-        assert_not_includes output, "type=raw,value=stable"
-        assert_not_includes output, "type=raw,value=latest"
+        channel, other_channel = version.end_with?("-alpha") ? %w[latest stable] : %w[stable latest]
+        assert_includes output, "type=raw,value=#{channel}"
+        assert_not_includes output, "type=raw,value=#{other_channel}"
       end
     end
   end
@@ -70,7 +71,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
 
   test "invalid dates and all canonical suffixes other than alpha are rejected" do
     with_repo do |dir|
-      %w[2026.11.02 2026.11.0 2026.2.29 2026.4.31 2026.10.28-hotfix.1 2026.10.28-1 2026.10.30-alpha.2 2026.10.30-alpha.0 2026.10.30-beta 2026.10.30-rc.1].each do |version|
+      %w[2026.11.02 2026.11.0 2026.2.29 2026.4.31 2026.10.28-hotfix.1 2026.10.28-1 2026.10.30-alpha.2 2026.10.30-alpha.0 2026.10.30-beta 2026.10.30-rc.1 2026.10.30-daily 2026.10.30-nightly].each do |version|
         assert_not resolve(dir, version).first, version
       end
     end
@@ -82,7 +83,8 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         success, output = resolve(dir, "2026.10.28", event: event, ref: "refs/heads/main")
         assert success
         assert_includes output, "release=false"
-        assert_includes output, "version=2026.10.28-alpha"
+        expected_version = event == "schedule" ? "2026.10.28-nightly" : "2026.10.28-alpha"
+        assert_includes output, "version=#{expected_version}\n"
         assert_not_includes output, "type=raw,value=latest"
         assert_not_includes output, "type=raw,value=stable"
         assert_not_includes output, "compatibility_version=0.7.7"
@@ -98,7 +100,7 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
       assert success
       assert_not_includes output, "type=raw,value=0.7.7"
       assert_includes output, "type=raw,value=2027.1.1"
-      assert_not_includes output, "type=raw,value=stable"
+      assert_includes output, "type=raw,value=stable"
       assert_not_includes output, "type=raw,value=latest"
     end
   end
@@ -120,6 +122,8 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
           assert_includes output, "type=raw,value=sha-#{selected_sha}"
           assert_not_includes output, "type=raw,value=sha-#{workflow_sha}"
           assert_not_includes output, "type=raw,value=#{version}"
+          assert_not_includes output, "type=raw,value=stable"
+          assert_not_includes output, "type=raw,value=latest"
         end
       end
       [ "main", "refs/heads/main", selected_sha ].each do |selected_ref|
@@ -134,6 +138,30 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         assert_not resolve(dir, "unused", event: "workflow_dispatch", ref: "refs/heads/main",
           extra_env: { "SELECTED_REF" => tag }).first
       end
+    end
+  end
+
+  test "nightly identity is shared by the dated tag embedded version and OCI metadata" do
+    with_repo do |dir|
+      success, output = resolve(dir, "unused", event: "schedule", ref: "refs/heads/main",
+        extra_env: { "BUILD_DATE" => "2026.11.3" })
+      assert success, output
+      version = output.lines.find { |line| line.start_with?("version=") }.strip.delete_prefix("version=")
+      assert_equal "2026.11.3-nightly", version
+      assert_includes output, "type=raw,value=#{version}\n"
+      assert_includes output, "compatibility_version=\n"
+      assert run_step(dir, "build", "version_file", "VERSION" => version).first
+      assert_equal "#{version}\n", File.read(File.join(dir, ".sure-version"))
+
+      build_steps = workflow.fetch("jobs").fetch("build").fetch("steps")
+      version_step = build_steps.find { |step| step["id"] == "version_file" }
+      metadata = build_steps.find { |step| step["id"] == "meta" }.fetch("with")
+      assert_equal "${{ needs.prepare.outputs.version }}", version_step.fetch("env").fetch("VERSION")
+      assert_includes metadata.fetch("labels"), "org.opencontainers.image.version=${{ needs.prepare.outputs.version }}"
+
+      merge_step = workflow.fetch("jobs").fetch("merge").fetch("steps").find { |step| step["name"] == "Merge and push Docker image" }
+      assert_equal "${{ needs.prepare.outputs.version }}", merge_step.fetch("env").fetch("VERSION")
+      assert_includes merge_step.fetch("run"), "--annotation=index:org.opencontainers.image.version=$VERSION"
     end
   end
 
@@ -185,6 +213,10 @@ class ReleaseWorkflowTest < ActiveSupport::TestCase
         2.times do
           success, output = resolve(dir, date, event: "schedule", ref: "refs/heads/main", extra_env: { "BUILD_DATE" => date })
           assert success
+          assert_includes output, "version=#{date}-nightly\n"
+          assert_includes output, "release=false\n"
+          assert_includes output, "stable=false\n"
+          assert_includes output, "alpha=false\n"
           assert_includes output, "type=raw,value=#{date}-nightly"
           assert_includes output, "type=raw,value=sha-#{git!(dir, 'rev-parse', 'HEAD').strip}"
           assert_includes output, "type=schedule,pattern=nightly"
