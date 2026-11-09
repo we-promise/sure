@@ -1,8 +1,8 @@
 class AccountsController < ApplicationController
   include StreamExtensions
 
-  before_action :set_account, only: %i[show sparkline sync set_default remove_default]
-  before_action :set_manageable_account, only: %i[toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
+  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
+  before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
@@ -29,6 +29,7 @@ class AccountsController < ApplicationController
     @monobank_items = visible_provider_items(family.monobank_items.ordered.with_attached_logo.includes(:monobank_accounts))
     @fio_items = visible_provider_items(family.fio_items.active.ordered.with_attached_logo.includes(:fio_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
+    @truelayer_items = visible_provider_items(family.truelayer_items.connected.ordered.with_attached_logo.includes(:truelayer_accounts))
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))
     @mercury_items = visible_provider_items(family.mercury_items.ordered.with_attached_logo.includes(:mercury_accounts))
     @brex_items = visible_provider_items(family.brex_items.ordered.with_attached_logo.includes(:accounts, brex_accounts: :account_provider))
@@ -45,6 +46,7 @@ class AccountsController < ApplicationController
     @coinspot_items = visible_provider_items(family.coinspot_items.ordered.with_attached_logo.includes(:coinspot_accounts, :accounts))
     @trading212_items = visible_provider_items(family.trading212_items.ordered.with_attached_logo.includes(:trading212_accounts)).sort_by(&:created_at)
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
+    @sharesight_items = visible_provider_items(family.sharesight_items.ordered.with_attached_logo.includes(sharesight_accounts: [ :account, :linked_account ])).sort_by(&:created_at)
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
     @trade_republic_items = visible_provider_items(
       family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
@@ -83,6 +85,11 @@ class AccountsController < ApplicationController
   end
 
   def show
+    @breadcrumbs = [
+      [ t("breadcrumbs.home"), root_path ],
+      [ t("breadcrumbs.accounts"), accounts_path ],
+      [ @account.name, nil ]
+    ]
     @chart_view = params[:chart_view] || "balance"
     @tab = params[:tab]
     # One reference date for everything on the page that is date-sensitive:
@@ -91,8 +98,8 @@ class AccountsController < ApplicationController
     # date beside a table shaded against another.
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
-    @q = params.fetch(:q, {}).permit(:search, :uncategorized, status: [])
-    entries = @account.entries.excluding_split_parents.search(@q).reverse_chronological.includes(:entryable)
+    @q = activity_search_params
+    entries = @account.entries.excluding_split_parents.search(@q, family).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?
@@ -105,9 +112,19 @@ class AccountsController < ApplicationController
     # turn for nothing. Same reasoning as the statements-frame return above.
     #
     # The chart and the Schedule tab's forecast card read the same projection,
-    # so it is built once here and handed to both.
-    @loan_projection = @account.loan.payoff_projection(as_of: @as_of) if @account.accountable.is_a?(Loan)
-    @loan_chart = loan_payoff_chart(@account, as_of: @as_of, period: @period, projection: @loan_projection) if chart_card_requested?
+    # so it is built once here and handed to both. The Extra repayments tab's
+    # projection is built on the same date, and only when there is an extra
+    # to model; the chart draws it beside the others.
+    if @account.accountable.is_a?(Loan)
+      @loan_projection = @account.loan.payoff_projection(as_of: @as_of)
+      @extra_repayment = loan_extra_repayment
+      if @extra_repayment.applied?
+        @loan_extra_projection = @account.loan.payoff_projection(as_of: @as_of, extra: @extra_repayment.amount,
+                                                                 extra_frequency: @extra_repayment.frequency)
+      end
+    end
+    @loan_chart = loan_payoff_chart(@account, as_of: @as_of, period: @period, projection: @loan_projection,
+                                    extra_projection: @loan_extra_projection) if chart_card_requested?
 
     per_page = safe_per_page(stored_per_page_default)
     store_per_page!(per_page) if params[:per_page].present?
@@ -138,7 +155,7 @@ class AccountsController < ApplicationController
     if transactions.any?
       ActiveRecord::Associations::Preloader.new(
         records: transactions,
-        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, :merchant, :tags ]
+        associations: [ :transfer_as_inflow, :transfer_as_outflow, :category, { merchant: { logo_attachment: :blob } }, :tags ]
       ).call
     end
 
@@ -150,19 +167,17 @@ class AccountsController < ApplicationController
       ).call
     end
 
+    @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates(transactions, user: Current.user)
+
     entry_ids = @entries.map(&:id)
-    @split_parent_entry_ids = if entry_ids.any?
-      Entry.where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
-    else
-      Set.new
-    end
+    @split_parent_entry_ids = Entry.split_parent_ids_among(entry_ids)
 
     # Load split parent entries for grouped display (only when grouping is enabled)
     @split_parents = if Current.user.show_split_grouped?
       split_parent_ids = @entries.filter_map(&:parent_entry_id).uniq
       if split_parent_ids.any?
         Entry.where(id: split_parent_ids)
-             .includes(:account, entryable: [ :category, :merchant ])
+             .includes(:account, entryable: [ :category, { merchant: { logo_attachment: :blob } } ])
              .index_by(&:id)
       else
         {}
@@ -198,14 +213,59 @@ class AccountsController < ApplicationController
     redirect_to account_path(@account)
   end
 
-  def sparkline
-    etag_key = @account.family.build_cache_key("#{@account.id}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}", invalidate_on_data_updates: true)
+  # Mirrors TransactionsController#clear_filter, but simpler: the account
+  # activity feed has no cross-request stored filters to update, so this only
+  # needs to redirect with one param removed from the current query string.
+  def clear_filter
+    q_params = activity_search_params.to_h
 
+    param_key = params[:param_key]
+    param_value = params[:param_value]
+
+    if q_params[param_key].is_a?(Array)
+      q_params[param_key].delete(param_value)
+      q_params.delete(param_key) if q_params[param_key].empty?
+    else
+      q_params.delete(param_key)
+    end
+
+    q_params.delete("amount_operator") unless q_params["amount"].present?
+
+    redirect_to account_path(@account, q: q_params.presence, tab: "activity", page: params[:page], per_page: params[:per_page])
+  end
+
+  def sparkline
     # Short-circuit with 304 Not Modified when the client already has the latest version.
     # We defer the expensive series computation until we know the content is stale.
-    if stale?(etag: etag_key, last_modified: @account.family.latest_sync_completed_at)
+    # A URL carrying the current version can't go stale, so the browser may reuse it.
+    expires_in 1.day if params[:v] == @account.sparkline_version
+    if stale?(etag: @account.sparkline_cache_key)
       @sparkline_series = @account.sparkline_series
       render layout: false
+    end
+  end
+
+  # Loads the icons found for the domain into the account form's icon block,
+  # so the rest of the form keeps what the user typed. Nothing is saved here.
+  def logo_options
+    return redirect_to account_path(@account) unless turbo_frame_request?
+
+    render_logo_options(@account)
+  end
+
+  # The same for the form of an account that is not created yet.
+  def new_logo_options
+    return redirect_to accounts_path unless turbo_frame_request?
+
+    render_logo_options(Current.family.accounts.build)
+  end
+
+  # Saves the drag-and-drop order of one account group for the current user.
+  def reorder
+    if Current.user.update_manual_account_order(params[:group], params[:account_ids])
+      head :ok
+    else
+      head :unprocessable_entity
     end
   end
 
@@ -246,8 +306,11 @@ class AccountsController < ApplicationController
       redirect_to account_path(@account), alert: t("accounts.destroy.cannot_delete_linked")
     else
       begin
-        @account.destroy_later
-        redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+        if @account.destroy_later == false
+          redirect_to accounts_path, alert: t("accounts.destroy.failed")
+        else
+          redirect_to accounts_path, notice: t("accounts.destroy.success", type: @account.accountable_type)
+        end
       rescue => e
         Rails.logger.error "Failed to schedule account #{@account.id} for deletion: #{e.message}"
         redirect_to accounts_path, alert: t("accounts.destroy.failed")
@@ -331,6 +394,12 @@ class AccountsController < ApplicationController
   end
 
   private
+    # The form may hold a domain or name that is not saved yet.
+    def render_logo_options(account)
+      account.assign_attributes(params.permit(:institution_domain, :institution_name))
+      render partial: "accounts/logo_field", locals: { account: account, candidates: Account::LogoFetcher.new(account).candidates }
+    end
+
     # Built here rather than in the template: assembling a chart payload is
     # domain work, and `show` asks for it exactly once per request, so there
     # is nothing to memoise.
@@ -342,14 +411,25 @@ class AccountsController < ApplicationController
     # nil is what the component already takes as "no chart", and the account
     # page then renders exactly as it did before the chart existed. Reported,
     # because a loan silently losing its chart is a bug someone has to see.
-    def loan_payoff_chart(account, as_of:, period:, projection: nil)
+    def loan_payoff_chart(account, as_of:, period:, projection: nil, extra_projection: nil)
       return nil unless account.accountable.is_a?(Loan)
 
-      Loan::PayoffChart.new(account.loan, as_of: as_of, period: period, projection: projection).payload
+      Loan::PayoffChart.new(account.loan, as_of: as_of, period: period, projection: projection,
+                            extra_projection: extra_projection).payload
     rescue StandardError => e
       Rails.logger.error("Loan payoff chart failed for account #{account.id}: #{e.class} - #{e.message}")
       Sentry.capture_exception(e) { |scope| scope.set_tags(record_type: "Account", record_id: account.id) } if defined?(Sentry)
       nil
+    end
+
+    # The Extra repayments tab's form submits `extra_payment[amount]` and
+    # `extra_payment[frequency]` over GET. Params of any other shape -- a scalar
+    # for the hash, an array for either field -- are no extra rather than an
+    # error.
+    def loan_extra_repayment
+      extra_payment = params[:extra_payment]
+      permitted = extra_payment.permit(:amount, :frequency) if extra_payment.is_a?(ActionController::Parameters)
+      Loan::ExtraRepayment.new(amount: permitted&.[](:amount), frequency: permitted&.[](:frequency), currency: @account.currency)
     end
 
     # A plain visit, or a frame request for one of the two frames the chart
@@ -372,6 +452,15 @@ class AccountsController < ApplicationController
 
     def family
       Current.family
+    end
+
+    def activity_search_params
+      q = params.fetch(:q, {}).permit(
+        :search, :start_date, :end_date, :amount, :amount_operator,
+        categories: [], tags: [], merchants: [], types: [], status: []
+      )
+      q.delete(:amount_operator) unless q[:amount].present?
+      q
     end
 
     # Shares the "per page" preference with TransactionsController's
@@ -444,6 +533,7 @@ class AccountsController < ApplicationController
         @monobank_items,
         @fio_items,
         @enable_banking_items,
+        @truelayer_items,
         @coinstats_items,
         @mercury_items,
         @brex_items,
@@ -457,6 +547,7 @@ class AccountsController < ApplicationController
         @coinspot_items,
         @trading212_items,
         @questrade_items,
+        @sharesight_items,
         @wise_items,
         @trade_republic_items,
         @onchain_wallet_items
@@ -605,6 +696,13 @@ class AccountsController < ApplicationController
         latest_sync = item.latest_sync_record
         @enable_banking_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
         @enable_banking_latest_sync_error_map[item.id] = latest_sync&.error
+      end
+
+      # TrueLayer sync stats
+      @truelayer_sync_stats_map = {}
+      @truelayer_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @truelayer_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
 
       # CoinStats sync stats

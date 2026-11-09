@@ -6,6 +6,7 @@ en:
         renewal: "Your contribution continues on %{date}."
         cancellation: "Your contribution ends on %{date}."
   settings:
+    encryption_migration_guide: Encryption setup and migration guide
     background_jobs:
       show:
         page_title: "Background jobs"
@@ -143,6 +144,10 @@ en:
         merchant_detector:
           title: Merchant Detector
           subtitle: AI identifies and enriches transaction data with merchant information
+        insight_dig_in:
+          title: Insight Dig In
+          subtitle: First chat message when you dig into an insight with AI
+          label: Dig in message
       update:
         success: AI prompts updated
         multiple_errors: "Multiple prompts are too long (maximum is %{count} characters)"
@@ -184,6 +189,8 @@ en:
         dashboard_account_groups_description: These account sections will start expanded on the dashboard and in the account sidebar. You can still collapse them manually at any time.
         split_grouped_title: Group split transactions
         split_grouped_description: Show split transactions grouped under their parent in the transaction list. When off, split children appear as individual rows.
+        auto_generate_transaction_names_title: Auto-generate transaction names
+        auto_generate_transaction_names_description: When a manually entered transaction's name is left blank, fill it in from the selected category and merchant (e.g. "Entertainment - Netflix"). A name is still required if neither is selected. Applies to the whole family, and only affects new transactions.
     preferences:
       show:
         country: Country
@@ -193,6 +200,7 @@ en:
         general_title: General
         default_period: Default Period
         default_account_order: Default Account Order
+        default_account_order_hint: With Manual, drag accounts in the sidebar to set their order.
         language: Language
         language_auto: Browser language
         page_title: Preferences
@@ -203,6 +211,8 @@ en:
         month_start_day: Budget month starts on
         month_start_day_hint: Set when your budget month starts (e.g., payday)
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
+        investment_contributions_as_spending: Count investing as spending
+        investment_contributions_as_spending_hint: Money moved into investment accounts counts as spending in budgets, reports and the cash flow chart. Turn off to show it as invested instead.
         personal_budgets: Personal budgets
         personal_budgets_hint: Enable individual budgets for each family member.
         household_budget_enabled: Household budget
@@ -286,6 +296,7 @@ en:
         household_title: Household
         invitation_link: Invitation link
         invite_member: Add member
+        invite_multiple: Add multiple members
         last_name: Last Name
         page_title: Profile Info
         pending: Pending
@@ -312,6 +323,10 @@ en:
         enable_mfa: Enable 2FA
         disable_mfa: Disable 2FA
         disable_mfa_confirm: Are you sure you want to disable two-factor authentication?
+        disable_mfa_password_label: Confirm with your password
+        disable_mfa_password_placeholder: Enter your password
+        mfa_sso_only: Two-factor authentication is managed through your identity
+          provider.
         sso_title: Connected Accounts
         sso_subtitle: Manage your single sign-on account connections
         sso_disconnect: Disconnect
@@ -348,6 +363,8 @@ en:
       accounts_label: Accounts
       advanced_section_title: Advanced
       ai_prompts_label: AI Prompts
+      auto_matches_label: Auto Matches
+      classifier_label: Classifier
       background_jobs_label: Background jobs
       api_key_label: API Keys
       payment_label: Payment
@@ -441,6 +458,8 @@ en:
         sync_error: Sync error
         no_recent_sync: Sync overdue
         reconsent_required: Re-consent required
+        login_required: Login required
+        login_expires_soon: "Login expires in %{time} (%{at})"
         reconsent_needed:
           one: Re-consent needed in 1 day
           other: Re-consent needed in %{count} days
@@ -461,6 +480,7 @@ en:
         monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
         fio: Sync a Fio banka account with a read-only API token.
         enable_banking: Sync European bank accounts via PSD2 open banking.
+        truelayer: Sync UK bank accounts and credit cards via TrueLayer open banking.
         coinstats: Track your entire crypto portfolio across wallets and exchanges.
         wise: Sync your Wise multi-currency balances and international transfers automatically.
         mercury: Sync your Mercury business banking accounts automatically.
@@ -472,6 +492,7 @@ en:
         onchain_wallet: Track self-custody Bitcoin, EVM, Solana, Cosmos and Polkadot wallets from their public addresses.
         snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
         trading212: Sync your Trading 212 investment portfolio using a read-only API key.
+        sharesight: Sync the portfolios you track in Sharesight using its API.
         trade_republic: Sync your Trade Republic investment account via secure read-only web login.
         ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
         questrade: Sync your Questrade investment accounts directly via the Questrade API.
@@ -629,6 +650,8 @@ en:
         api_key_placeholder_update: "Enter new API key to update"
         base_url_label: "Base URL (Optional)"
         base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
+        sync_start_date_label: "Import transactions from"
+        sync_start_date_help: "Leave blank to import everything Lunch Flow has. Moving the date earlier imports the missing period on the next sync. Moving it later doesn't affect transactions already imported."
         save_and_connect: "Save and connect"
         update_connection: "Update connection"
       akahu_panel:
@@ -663,6 +686,12 @@ en:
       not_found: Provider not found.
       sync_provider_no_items: No connections available to sync.
       ibkr_panel:
+        add_connection: Add Interactive Brokers connection
+        connection_name_label: Connection name
+        connection_name_placeholder: e.g. IBKR Ireland, IBKR US
+        disconnect: Disconnect
+        disconnect_confirm_named: Disconnect %{name}?
+        setup_accounts: Set up accounts
         steps:
           step_1: 'In your IBKR Client Portal, navigate to "Performance & Reports" > "Flex Queries".'
           step_2: 'Click the "+" icon in the "Activity Flex Query" section to create a new query.'
@@ -704,18 +733,13 @@ en:
           all_other_options: 'All other configuration options: "No"'
         report_window_note: "IBKR Flex reports are limited to the query window you configured in IBKR. Sure will import full current holdings plus up to the last 365 days of activity from this report."
         sync: Sync
-        disconnect_confirm: Disconnect Interactive Brokers?
         query_id_label: Query ID
         query_id_placeholder_new: Enter your IBKR Flex Query ID
         query_id_placeholder_existing: Leave blank to keep the current Query ID
         token_label: Token
         token_placeholder_new: Enter your IBKR Flex Web Service Token
         token_placeholder_existing: Leave blank to keep the current Token
-        save_configuration: Save Configuration
         update_configuration: Update Configuration
-        status_configured_prefix: "%{summary}. Visit the"
-        accounts_tab: Accounts
-        status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
       trade_republic_panel:
         encryption_warning:
@@ -754,9 +778,11 @@ en:
         qr_cancel: Cancel QR login
         qr_back_to_credentials: Back to phone number and PIN or password
         qr_loading: Preparing QR code …
-        qr_instruction: Scan the QR code with your Trade Republic app and approve the login.
+        qr_instruction: Scan the QR code with your phone's camera, then approve the login in the Trade Republic app.
         qr_success: Login approved. Sure is refreshing the provider page.
         qr_error: QR login could not be started. Please try again.
+        requires_update: Log in again to resume syncing.
+        session_expires_in: "Login expires in %{time} (%{at})."
         add_account: Add another connection
         save_configuration: Save & Start Login
         update_configuration: Update Configuration
@@ -775,6 +801,22 @@ en:
           other: "%{count} Trade Republic accounts discovered."
         status_configured_suffix: tab to manage discovered accounts.
         not_configured: Not configured.
+      sharesight_panel:
+        steps:
+          step_1: Ask Sharesight support to enable API access. It's available on paid plans.
+          step_2: In your Sharesight account settings, open the API page and copy the client ID and client secret.
+          step_3: Paste both below and save. Sure then finds your portfolios so you can link them.
+        client_id_label: Client ID
+        client_id_placeholder_new: Paste your Sharesight client ID
+        client_id_placeholder_existing: Leave blank to keep the current client ID
+        client_secret_label: Client secret
+        client_secret_placeholder_new: Paste your Sharesight client secret
+        client_secret_placeholder_existing: Leave blank to keep the current client secret
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        status_configured_prefix: "Configured. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to link your portfolios.
       trading212_panel:
         steps:
           step_1: Go to Trading 212 → Settings → API (web or mobile app).

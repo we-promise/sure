@@ -25,8 +25,10 @@ fr:
       category_label: Catégorie
       description: Divisez cette transaction en plusieurs entrées avec différentes
         catégories et montants.
+      merchant_label: Marchand
       name_label: Nom
       name_placeholder: Nom de la division
+      no_merchant: "(marchand de la transaction)"
       original_amount: Montant
       original_date: 'Date :'
       original_name: 'Nom :'
@@ -34,6 +36,7 @@ fr:
       remove_row: Retirer
       split_number: Division n°%{number}
       submit: Diviser la transaction
+      tags_label: Étiquettes
       title: Diviser la transaction
       uncategorized: "(sans catégorie)"
     show:

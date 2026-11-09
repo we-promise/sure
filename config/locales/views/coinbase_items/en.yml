@@ -8,6 +8,10 @@ en:
       success: Successfully updated Coinbase configuration.
     destroy:
       success: Scheduled Coinbase connection for deletion.
+    select_accounts:
+      connection_unavailable: That Coinbase connection isn't available. Choose one in Provider Settings.
+      no_credentials_configured: Connect Coinbase in Provider Settings before adding its wallets.
+      select_connection: Choose a Coinbase connection in Provider Settings.
     setup_accounts:
       title: Import Coinbase Wallets
       subtitle: Select which wallets to track

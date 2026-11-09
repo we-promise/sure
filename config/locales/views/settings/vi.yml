@@ -6,6 +6,7 @@ vi:
         renewal: "Đóng góp của bạn tiếp tục vào ngày %{date}."
         cancellation: "Đóng góp của bạn kết thúc vào ngày %{date}."
   settings:
+    encryption_migration_guide: Hướng dẫn thiết lập mã hóa và di chuyển dữ liệu
     debugs:
       show:
         page_title: "Gỡ lỗi"
@@ -118,6 +119,8 @@ vi:
         dashboard_two_column_title: Bố cục hai cột
         dashboard_two_column_description: Hiển thị các widget bảng điều khiển thành hai cột trên màn hình lớn. Khi tắt, các widget xếp chồng thành một cột.
         split_grouped_title: Nhóm giao dịch phân chia
+        auto_generate_transaction_names_title: "Tự động tạo tên giao dịch"
+        auto_generate_transaction_names_description: "Khi tên của giao dịch nhập thủ công để trống, tên sẽ được điền từ danh mục và nhà cung cấp đã chọn (ví dụ: \"Giải trí - Netflix\"). Nếu không chọn cái nào, tên vẫn là bắt buộc. Áp dụng cho cả hộ gia đình và chỉ cho giao dịch mới."
         split_grouped_description: Hiển thị giao dịch phân chia được nhóm dưới giao dịch cha trong danh sách. Khi tắt, các mục con phân chia xuất hiện như các hàng riêng biệt.
     preferences:
       show:
@@ -234,6 +237,7 @@ vi:
       accounts_label: Tài khoản
       advanced_section_title: Nâng cao
       ai_prompts_label: Câu lệnh AI
+      auto_matches_label: Tự động khớp lệnh chuyển khoản
       api_key_label: Khóa API
       payment_label: Thanh toán
       categories_label: Danh mục
@@ -305,6 +309,8 @@ vi:
         sync_error: Lỗi đồng bộ
         no_recent_sync: Đồng bộ quá hạn
         reconsent_required: Cần đồng ý lại
+        login_required: "Cần đăng nhập"
+        login_expires_soon: "Phiên đăng nhập hết hạn sau %{time} (%{at})"
         reconsent_needed:
           one: Cần đồng ý lại sau 1 ngày
           other: Cần đồng ý lại sau %{count} ngày
@@ -462,6 +468,12 @@ vi:
       not_found: Không tìm thấy nhà cung cấp.
       sync_provider_no_items: Không có kết nối nào để đồng bộ.
       ibkr_panel:
+        add_connection: "Thêm kết nối Interactive Brokers"
+        connection_name_label: "Tên kết nối"
+        connection_name_placeholder: "vd: IBKR Ireland, IBKR Mỹ"
+        disconnect: "Ngắt kết nối"
+        disconnect_confirm_named: "Ngắt kết nối %{name}?"
+        setup_accounts: "Thiết lập tài khoản"
         steps:
           step_1: 'Trong Client Portal IBKR, điều hướng đến "Hiệu suất & Báo cáo" > "Flex Queries".'
           step_2: 'Nhấn biểu tượng "+" trong phần "Activity Flex Query" để tạo truy vấn mới.'
@@ -503,16 +515,11 @@ vi:
           all_other_options: 'Tất cả tùy chọn cấu hình khác: "Không"'
         report_window_note: "Báo cáo IBKR Flex bị giới hạn trong cửa sổ truy vấn bạn cấu hình trong IBKR. Sure sẽ nhập toàn bộ danh mục nắm giữ hiện tại cộng với tối đa 365 ngày hoạt động gần nhất từ báo cáo này."
         sync: Đồng bộ
-        disconnect_confirm: Ngắt kết nối Interactive Brokers?
         query_id_label: Query ID
         query_id_placeholder_new: Nhập Query ID IBKR Flex của bạn
         query_id_placeholder_existing: Để trống để giữ Query ID hiện tại
         token_label: Token
         token_placeholder_new: Nhập Token dịch vụ web IBKR Flex của bạn
         token_placeholder_existing: Để trống để giữ Token hiện tại
-        save_configuration: Lưu cấu hình
         update_configuration: Cập nhật cấu hình
-        status_configured_prefix: "%{summary}. Vào tab"
-        accounts_tab: Tài khoản
-        status_configured_suffix: để quản lý các tài khoản đã phát hiện.
         not_configured: Chưa cấu hình.

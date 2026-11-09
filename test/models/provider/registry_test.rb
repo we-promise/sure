@@ -135,6 +135,20 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     assert_same openai, Provider::Registry.preferred_llm_provider
   end
 
+  test "preferred_llm_provider follows LLM_PROVIDER over a stored choice" do
+    original = Setting.raw_llm_provider
+    Setting.llm_provider = "openai"
+    anthropic = mock("anthropic")
+    Provider::Registry.stubs(:openai).returns(mock("openai"))
+    Provider::Registry.stubs(:anthropic).returns(anthropic)
+
+    with_env_overrides("LLM_PROVIDER" => "anthropic") do
+      assert_same anthropic, Provider::Registry.preferred_llm_provider
+    end
+  ensure
+    Setting.llm_provider = original
+  end
+
   test "preferred_llm_provider returns nil when no provider is configured" do
     Provider::Registry.stubs(:openai).returns(nil)
     Provider::Registry.stubs(:anthropic).returns(nil)

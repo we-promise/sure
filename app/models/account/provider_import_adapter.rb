@@ -1,4 +1,6 @@
 class Account::ProviderImportAdapter
+  SCHEDULED_MATCH_WINDOW_DAYS = 7
+
   attr_reader :account, :skipped_entries
 
   # @param account [Account] the account every import through this adapter lands on
@@ -110,8 +112,19 @@ class Account::ProviderImportAdapter
       # before linking their account to a provider
       # Note: We don't pass name here to allow matching even when provider formats names differently
       if entry.new_record? && allow_heuristic_matching
-        duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency)
-        if duplicate
+        scheduled = find_scheduled_transaction(date: date, amount: amount, currency: currency)
+        duplicate = find_duplicate_transaction(date: date, amount: amount, currency: currency) unless scheduled
+
+        if scheduled
+          # A bill or paycheck the user entered ahead of time has now been
+          # booked. Claim it even when the user's edits protect it: the
+          # enrichment below still respects their locks (name, category, notes),
+          # but the provider's date and pending state must apply -- otherwise
+          # the entry stays on its expected day, and a pending claim would never
+          # be recognized when the booked version arrives under a new id.
+          entry = scheduled
+          entry.assign_attributes(external_id: external_id, source: source, date: date)
+        elsif duplicate
           # Check if duplicate is protected - if so, link but don't modify
           if duplicate.protected_from_sync?
             duplicate.update!(external_id: external_id, source: source)
@@ -489,7 +502,15 @@ class Account::ProviderImportAdapter
           account_provider_id: account_provider_id
         )
       else
-        holding = account.holdings.find_or_initialize_by(
+        # A remapped row sits on the user's chosen security, so a lookup by the
+        # incoming security alone misses it and the save hits the unique index.
+        # Match it by provider_security first, as fallback 1a does, scoped by
+        # account_provider_id so another provider's row is not claimed.
+        remapped_attrs = { provider_security: security, date: date, currency: currency }
+        remapped_attrs[:account_provider_id] = account_provider_id if account_provider_id.present?
+        holding = account.holdings.find_by(remapped_attrs)
+
+        holding ||= account.holdings.find_or_initialize_by(
           security: security,
           date: date,
           currency: currency
@@ -786,10 +807,13 @@ class Account::ProviderImportAdapter
     # 5. Entry type is Transaction (not Trade or Valuation)
     # 6. Optionally same name (if name parameter is provided)
     # 7. Not in the excluded IDs list (if provided)
+    # 8. Not a part of a split entry: a person's share of another movement,
+    #    never a copy of the incoming one
     query = account.entries
                    .where(entryable_type: "Transaction")
                    .where(amount: amount)
                    .where(currency: currency)
+                   .where(parent_entry_id: nil)
 
     query = if date_window.to_i.zero?
       query.where(date: date)
@@ -814,6 +838,25 @@ class Account::ProviderImportAdapter
     # on a tie. Done in Ruby because the candidate set is already narrowed to one
     # account, one amount and one currency within a few days -- a handful of rows.
     candidates.to_a.min_by { |entry| [ (entry.date - date).abs, entry.created_at ] }
+  end
+
+  # Finds a manual transaction the user entered ahead of its date -- an
+  # upcoming bill or paycheck (see Entry#scheduled?) -- that the provider has
+  # now booked. Providers rarely book on exactly the expected day, so this
+  # allows a few days either side of it, but still requires the exact amount
+  # and currency. Only entries created before their own date qualify, so
+  # ordinary manual entries keep find_duplicate_transaction's exact-date rule.
+  #
+  # @return [Entry, nil] the closest-dated match, or nil
+  def find_scheduled_transaction(date:, amount:, currency:, date_window: SCHEDULED_MATCH_WINDOW_DAYS)
+    date = Date.parse(date.to_s) unless date.is_a?(Date)
+
+    account.entries
+      .where(entryable_type: "Transaction", external_id: nil, amount: amount, currency: currency)
+      .where(date: (date - date_window.days)..(date + date_window.days))
+      .where("entries.created_at < entries.date")
+      .to_a
+      .min_by { |entry| [ (entry.date - date).abs, entry.created_at ] }
   end
 
   # Finds a pending transaction that likely matches a newly posted transaction
@@ -1065,18 +1108,33 @@ class Account::ProviderImportAdapter
 
     # The latest earlier holding of the security the provider reports. A
     # remapped row records that security in provider_security_id; an
-    # unremapped one has it as its own security. Only the latest row counts, so
-    # a correction the user has since undone is not revived from an older day.
+    # unremapped one has it as its own security. A provider that reports the
+    # user's chosen security instead still finds the row the user locked to
+    # it. Only the latest row counts, so a correction the user has since
+    # undone is not revived from an older day.
+    #
+    # Within that day, a row recording this provider security is the position
+    # it came from, and wins over a correction locked to it: with chained
+    # remaps (A onto B, B onto C) an incoming B matches both the B->C row and
+    # the A->B row on the same date. `id` settles anything left, so the pick
+    # never depends on the query plan.
     def previous_holding_for(security:, currency:, date:, account_provider_id:)
       scope = account.holdings
         .where(currency: currency)
         .where("holdings.date < ?", date)
         .where(
-          "holdings.provider_security_id = :id OR (holdings.provider_security_id IS NULL AND holdings.security_id = :id)",
+          "holdings.provider_security_id = :id OR (holdings.provider_security_id IS NULL AND holdings.security_id = :id) " \
+          "OR (holdings.security_locked AND holdings.security_id = :id)",
           id: security.id
         )
       scope = scope.where(account_provider_id: account_provider_id) if account_provider_id.present?
-      scope.order(date: :desc).first
+
+      match_rank = ActiveRecord::Base.sanitize_sql_array([
+        "CASE WHEN holdings.provider_security_id = :id THEN 0 " \
+        "WHEN holdings.provider_security_id IS NULL AND holdings.security_id = :id THEN 1 ELSE 2 END",
+        id: security.id
+      ])
+      scope.order(date: :desc).order(Arel.sql(match_rank)).order(:id).first
     end
 
     # Loads the transfer together with both legs, their entries and accounts in

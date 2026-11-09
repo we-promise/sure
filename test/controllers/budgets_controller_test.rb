@@ -19,6 +19,14 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show renders when the budget has spending but no expected income" do
+    budgets(:one).update!(budgeted_spending: 4000, expected_income: nil)
+
+    get budget_url(Budget.date_to_param(Date.current))
+
+    assert_response :success
+  end
+
   test "show reconciles parent overage without marking shared children over budget" do
     budget = budgets(:one)
     parent_category = Category.create!(

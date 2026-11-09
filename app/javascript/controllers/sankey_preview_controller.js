@@ -75,6 +75,13 @@ export default class extends Controller {
     this.survey = null;
   }
 
+  // clear() runs before Turbo caches the page for a visit. A morph refresh
+  // keeps this controller, so it is told here that the page is live again
+  // and the graph fetched after the morph counts as displayed.
+  resume() {
+    this.active = true;
+  }
+
   update({ detail }) {
     if (detail.state === "loading") {
       this.displays.clear();
@@ -125,9 +132,7 @@ export default class extends Controller {
 
   expand() {
     if (this.state !== "content" || this.expandedDialogTarget.open) return;
-    this.section = this.element.closest(
-      "[data-dashboard-sortable-target='section']",
-    );
+    this.section = this.element.closest("[data-sortable-list-target='item']");
     this.originalDraggable = this.section?.getAttribute("draggable");
     this.section?.setAttribute("draggable", "false");
     this.expandedDialogTarget.showModal();

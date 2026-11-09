@@ -6,8 +6,11 @@ require "generators/provider/family/family_generator"
 # SyntaxError in data_enrichment.rb with nothing pointing back at the generator. So each
 # case asserts the result actually PARSES, not just that it looks right.
 class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
-  def append(content)
-    Provider::FamilyGenerator.append_source_enum_entry(content, "gocardless")
+  module GeneratedControllers
+  end
+
+  def append(content, name = "gocardless")
+    Provider::FamilyGenerator.append_source_enum_entry(content, name)
   end
 
   def assert_parses(source)
@@ -78,19 +81,57 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes job, "@gocardless_account.gocardless_item&.family&.broadcast_sync_complete"
   end
 
-  test "appends to a single-line enum" do
+  test "inserts into a single-line enum before the first source that sorts after it" do
     result = append(<<~RUBY)
       class ProviderMerchant < Merchant
-        enum :source, { plaid: "plaid", redbark: "redbark" }
+        enum :source, { akahu: "akahu", plaid: "plaid", redbark: "redbark" }
       end
     RUBY
 
     assert_parses result
-    assert_includes result, 'redbark: "redbark", gocardless: "gocardless" }'
+    assert_includes result, '{ akahu: "akahu", gocardless: "gocardless", plaid: "plaid", redbark: "redbark" }'
   end
 
-  test "appends to a multiline enum without putting the entry after the expression ends" do
+  test "inserts into a multiline enum on a line of its own, keeping the list sorted" do
     result = append(<<~RUBY)
+      class DataEnrichment < ApplicationRecord
+        enum :source, {
+          akahu: "akahu",
+          plaid: "plaid",
+          redbark: "redbark"
+        }
+      end
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(    akahu: "akahu",\n    gocardless: "gocardless",\n    plaid: "plaid",\n)
+  end
+
+  test "ignores commented-out keys and keeps a comment with the entry it describes" do
+    result = append(<<~RUBY)
+      class DataEnrichment < ApplicationRecord
+        enum :source, {
+          akahu: "akahu", # zopa: "zopa"
+          # plaid: imported from the Plaid API
+          plaid: "plaid",
+          redbark: "redbark"
+        }
+      end
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(    akahu: "akahu", # zopa: "zopa"\n    gocardless: "gocardless",\n    # plaid: imported from the Plaid API\n    plaid: "plaid",\n)
+  end
+
+  test "appends to a single-line enum a source that sorts last" do
+    result = append('enum :source, { plaid: "plaid", redbark: "redbark" }', "zopa")
+
+    assert_parses "x = #{result}"
+    assert_includes result, 'redbark: "redbark", zopa: "zopa" }'
+  end
+
+  test "appends to a multiline enum a source that sorts last without putting it after the expression ends" do
+    result = append(<<~RUBY, "zopa")
       class DataEnrichment < ApplicationRecord
         enum :source, {
           plaid: "plaid",
@@ -101,18 +142,33 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
     assert_parses result
     # The comma must attach to the previous entry, and the new entry take its indentation.
-    assert_includes result, %(    redbark: "redbark",\n    gocardless: "gocardless"\n)
+    assert_includes result, %(    redbark: "redbark",\n    zopa: "zopa"\n)
+  end
+
+  test "appends after a last entry with a trailing comment without putting the comma in the comment" do
+    result = append(<<~RUBY, "zopa")
+      class DataEnrichment < ApplicationRecord
+        enum :source, {
+          plaid: "plaid",
+          redbark: "redbark" # last one
+          # zebra: "zebra"
+        }
+      end
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(    redbark: "redbark", # last one\n    # zebra: "zebra"\n    zopa: "zopa"\n)
   end
 
   test "does not double the comma on a single-line enum with a trailing comma" do
-    result = append('enum :source, { plaid: "plaid", redbark: "redbark", }')
+    result = append('enum :source, { plaid: "plaid", redbark: "redbark", }', "zopa")
 
     assert_parses "x = #{result}"
     assert_not_includes result, ",,"
   end
 
   test "does not double the comma on a multiline enum with a trailing comma" do
-    result = append(<<~RUBY)
+    result = append(<<~RUBY, "zopa")
       class DataEnrichment < ApplicationRecord
         enum :source, {
           plaid: "plaid",
@@ -123,7 +179,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
     assert_parses result
     assert_not_includes result, ",,"
-    assert_includes result, 'gocardless: "gocardless"'
+    assert_includes result, 'zopa: "zopa"'
   end
 
   test "does not emit a leading comma into an empty single-line enum" do
@@ -168,6 +224,49 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes rendered, %(render_provider_panel("gocardless", alert: @gocardless_item.errors.full_messages.join(", ")))
     assert_includes rendered, 'render_provider_panel("gocardless", notice: t(".success"'
     assert_match(/if @gocardless_item\.save\n\s+redirect_to settings_providers_path, notice:/, rendered)
+  end
+
+  test "generated account entry points escape frames and preserve ordinary redirects" do
+    rendered = render_template("controller.rb.tt", class_name: "Gocardless", file_name: "gocardless",
+                               table_name: "gocardless_items", parsed_fields: [])
+    # Evaluate the actual scaffold in an isolated namespace, without installing a
+    # provider or altering the application's routes/models.
+    namespace = GeneratedControllers
+    namespace.module_eval(rendered)
+    controller_class = namespace.const_get(:GocardlessItemsController)
+    family = mock("family")
+    items = mock("items")
+    accounts = mock("accounts")
+    family.stubs(:gocardless_items).returns(items)
+    family.stubs(:accounts).returns(accounts)
+    items.stubs(:first).returns(nil)
+    accounts.stubs(:find).with("account-id").returns(accounts(:depository))
+    Current.stubs(:family).returns(family)
+
+    [ :preload_accounts, :select_accounts, :select_existing_account ].each do |action|
+      [ nil, "modal", "account-picker" ].each do |frame_id|
+        controller = controller_class.new
+        request = ActionDispatch::TestRequest.create
+        request.headers["Turbo-Frame"] = frame_id if frame_id
+        controller.set_request!(request)
+        controller.set_response!(ActionDispatch::TestResponse.new)
+        controller.params = { account_id: "account-id" }
+        controller.stubs(:settings_providers_path).returns("/settings/providers")
+        controller.stubs(:t).with(".no_credentials_configured").returns("Configure a connection first.")
+
+        controller.public_send(action)
+
+        assert_equal "Configure a connection first.", controller.flash[:alert]
+        if frame_id
+          assert_equal 200, controller.response.status
+          html = Nokogiri::HTML.fragment(controller.response.body)
+          assert html.at_css("turbo-frame##{frame_id} turbo-stream[action=redirect][target='/settings/providers']")
+        else
+          assert_equal 302, controller.response.status
+          assert_equal "http://test.host/settings/providers", controller.response.location
+        end
+      end
+    end
   end
 
   # Bank sync builds its connection rows and drawers from FAMILY_PANELS, so a
@@ -273,7 +372,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes generated, "<%= tag.div id: dom_id(gocardless_item) do %>"
   end
 
-  test "the generated item card renders the visible accounts it is given" do
+  test "the generated item card renders sync frequency and the visible accounts it is given" do
     Current.session = Session.create!(user: users(:family_admin))
     item = redbark_items(:one)
     linked = accounts(:depository)
@@ -289,6 +388,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     other = render_card.call(-> { [ accounts(:investment) ] })
 
     assert_includes after, item.name
+    assert_includes after, I18n.t("sync_schedules.menu_item")
     assert_not_includes before, linked.name
     assert_includes after, linked.name
     assert_not_includes after, accounts(:investment).name

@@ -1,6 +1,7 @@
 ---
 tr:
   settings:
+    encryption_migration_guide: Şifreleme kurulumu ve geçiş kılavuzu
     ai_prompts:
       show:
         disable_ai: Yapay Zeka Asistanını Devre Dışı Bırak
@@ -58,6 +59,8 @@ tr:
           altında gruplandırılmış olarak gösterin. Kapalıyken bölünen alt işlemler
           ayrı satırlar olarak görünür.
         split_grouped_title: Bölünmüş işlemleri grupla
+        auto_generate_transaction_names_title: "İşlem adlarını otomatik oluştur"
+        auto_generate_transaction_names_description: "Elle girilen bir işlemin adı boş bırakılırsa, seçilen kategori ve satıcıdan doldurulur (ör. \"Eğlence - Netflix\"). İkisi de seçilmezse ad yine zorunludur. Tüm hane için geçerlidir ve yalnızca yeni işlemleri etkiler."
         theme_dark: Koyu
         theme_light: Açık
         theme_subtitle: Uygulama için tercih edilen temayı seçin
@@ -417,7 +420,12 @@ tr:
         last_synced: Son senkronizasyon %{time} önce
         needs_attention: dikkat gerekiyor
       ibkr_panel:
-        accounts_tab: Hesaplar
+        add_connection: "Interactive Brokers bağlantısı ekle"
+        connection_name_label: "Bağlantı adı"
+        connection_name_placeholder: "ör. IBKR İrlanda, IBKR ABD"
+        disconnect: "Bağlantıyı kes"
+        disconnect_confirm_named: "%{name} bağlantısı kesilsin mi?"
+        setup_accounts: "Hesapları kur"
         configuration:
           all_other_options: 'Diğer tüm yapılandırma seçenekleri: "No"'
           date_format: 'Tarih Formatı: yyyy-MM-dd'
@@ -427,7 +435,6 @@ tr:
           period: 'Dönem: Son 365 Takvim Günü'
           profit_and_loss: 'Kar ve Zarar: Varsayılan'
           time_format: 'Saat Formatı: HH:mm:ss'
-        disconnect_confirm: Interactive Brokers bağlantısı kesilsin mi?
         flex_query_details:
           configuration_heading: Bu sorgu seçeneklerini ayarlayın
           eyebrow: Flex Query
@@ -442,7 +449,6 @@ tr:
         report_window_note: IBKR Flex raporları, IBKR'de yapılandırdığınız sorgu penceresiyle
           sınırlıdır. Sure, bu rapordan mevcut tüm varlıkları ve son 365 güne kadar
           olan işlem geçmişini içe aktaracaktır.
-        save_configuration: Yapılandırmayı Kaydet
         sections:
           account_information: 'Hesap Bilgileri: Account ID, Currency'
           cash_report: 'Nakit Raporu:'
@@ -468,8 +474,6 @@ tr:
             To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade
             Date, Trade ID, TradePrice, Transaction ID'
           trades_options: 'Seçenekler: Execution'
-        status_configured_prefix: "%{summary}. Şuraya gidin:"
-        status_configured_suffix: sekmesine giderek keşfedilen hesapları yönetin.
         steps:
           step_1: IBKR Client Portal'ınızda "Performance & Reports" > "Flex Queries"
             bölümüne gidin.
@@ -537,6 +541,8 @@ tr:
           one: "%{count} gün içinde yeniden onay gerekiyor"
           other: "%{count} gün içinde yeniden onay gerekiyor"
         reconsent_required: Yeniden onay gerekiyor
+        login_required: "Giriş gerekli"
+        login_expires_soon: "Girişin süresi %{time} içinde doluyor (%{at})"
         registration_needed: Kayıt gerekiyor
         sync_error: Senkronizasyon hatası
       not_authorized: Yetkiniz yok
@@ -713,9 +719,11 @@ tr:
         qr_cancel: QR girişini iptal et
         qr_back_to_credentials: Telefon numarası ve PIN'e veya şifreye dön
         qr_loading: QR kod hazırlanıyor …
-        qr_instruction: QR kodu Trade Republic uygulamanızla tarayın ve girişi onaylayın.
+        qr_instruction: QR kodu telefonunuzun kamerasıyla tarayın, ardından girişi Trade Republic uygulamasında onaylayın.
         qr_success: Giriş onaylandı. Sure sağlayıcı sayfasını yeniliyor.
         qr_error: QR girişi başlatılamadı. Lütfen tekrar deneyin.
+        requires_update: "Senkronizasyona devam etmek için yeniden giriş yapın."
+        session_expires_in: "Girişin süresi %{time} içinde doluyor (%{at})."
         add_account: "Başka bir bağlantı ekle"
         save_configuration: Kaydet ve Girişi Başlat
         update_configuration: Yapılandırmayı Güncelle
@@ -802,6 +810,7 @@ tr:
       accounts_label: Hesaplar
       advanced_section_title: Gelişmiş
       ai_prompts_label: Yapay Zeka İstemleri
+      auto_matches_label: Otomatik Eşleştirme
       api_key_label: API Anahtarı
       api_keys_label: API Anahtarları
       appearance_label: Görünüm

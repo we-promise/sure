@@ -1,10 +1,18 @@
 import { Controller } from "@hotwired/stimulus";
 
+// The collapse control for every page built on the Reports section
+// framework. It keeps the Reports name because renaming it would touch every
+// Reports data attribute for no behaviour change.
 export default class extends Controller {
   static targets = ["content", "chevron", "button"];
+  // `url` and `preferenceKey` default to the Reports literals, so the Reports
+  // page, which passes neither, posts to its own endpoint under its own key.
+  // Another page passes both.
   static values = {
     sectionKey: String,
     collapsed: Boolean,
+    url: { type: String, default: "/reports/update_preferences" },
+    preferenceKey: { type: String, default: "reports" },
   };
 
   connect() {
@@ -55,7 +63,7 @@ export default class extends Controller {
 
   async savePreference(collapsed) {
     const preferences = {
-      reports_collapsed_sections: {
+      [`${this.preferenceKeyValue}_collapsed_sections`]: {
         [this.sectionKeyValue]: collapsed,
       },
     };
@@ -70,7 +78,7 @@ export default class extends Controller {
     }
 
     try {
-      const response = await fetch("/reports/update_preferences", {
+      const response = await fetch(this.urlValue, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

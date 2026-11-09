@@ -68,6 +68,18 @@ Rails.application.configure do
   config.active_record.verbose_query_logs = true
   config.active_job.verbose_enqueue_logs = true
 
+  # Set Active Job queue adapter. Production (19cc63c8f) and test both set one
+  # explicitly, so development was the only environment inheriting ActiveJob's
+  # :async default -- which runs every job in-process instead of enqueuing it.
+  #
+  # Two consequences. Procfile.dev declares `worker: bundle exec sidekiq`, so
+  # that process received no work at all. And any job calling an LLM held a web
+  # thread, plus the ActiveRecord connection leased to it, for the length of the
+  # model call; enough overlapping jobs exhausted the pool and surfaced as
+  # ActiveRecord::ConnectionTimeoutError on an unrelated controller, because
+  # RulesController#index runs an ActiveRecord lookup in a before_action.
+  config.active_job.queue_adapter = :sidekiq
+
   # Raises error for missing translations.
   # config.i18n.raise_on_missing_translations = true
 

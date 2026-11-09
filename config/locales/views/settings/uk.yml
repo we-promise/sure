@@ -5,6 +5,7 @@ uk:
         renewal: "Ваш внесок продовжується %{date}."
         cancellation: "Ваш внесок закінчується %{date}."
   settings:
+    encryption_migration_guide: Посібник із налаштування шифрування та міграції
     background_jobs:
       show:
         page_title: "Фонові завдання"
@@ -184,6 +185,8 @@ uk:
         dashboard_two_column_title: Двоколонковий макет
         dashboard_two_column_description: Відображати віджети дашборду у двох колонках на великих екранах, з елементами керування шириною та висотою для кожного віджета в його заголовку. Коли вимкнено, віджети розташовуються в одній колонці.
         split_grouped_title: Групувати розділені транзакції
+        auto_generate_transaction_names_title: "Автоматично створювати назви транзакцій"
+        auto_generate_transaction_names_description: "Якщо назву вручну введеної транзакції залишено порожньою, її буде заповнено з вибраної категорії та продавця (наприклад, «Розваги - Netflix»). Якщо нічого не вибрано, назва залишається обов'язковою. Діє для всього домогосподарства й лише для нових транзакцій."
         split_grouped_description: Показувати розділені транзакції згрупованими під їхнім батьківським елементом у списку транзакцій. Коли вимкнено, дочірні елементи розділення відображаються як окремі рядки.
         dashboard_account_groups_title: Розгорнуті за замовчуванням
         dashboard_account_groups_description: Ці розділи рахунків будуть розгорнуті за замовчуванням на дашборді та в бічній панелі рахунків. Ви можете будь-коли згорнути їх вручну.
@@ -350,6 +353,7 @@ uk:
       accounts_label: Рахунки
       advanced_section_title: Розширені
       ai_prompts_label: Промпти ШІ
+      auto_matches_label: Автоматичне зіставлення
       background_jobs_label: Фонові завдання
       api_key_label: Ключі API
       payment_label: Оплата
@@ -425,6 +429,8 @@ uk:
         no_recent_sync: Синхронізація прострочена
         registration_needed: Потрібна реєстрація
         reconsent_required: Потрібна повторна згода
+        login_required: "Потрібен вхід"
+        login_expires_soon: "Вхід завершиться через %{time} (%{at})"
         reconsent_needed:
           one: Повторна згода потрібна через %{count} день
           other: Повторна згода потрібна через %{count} днів
@@ -606,6 +612,12 @@ uk:
       not_found: Постачальника не знайдено.
       sync_provider_no_items: Немає доступних з'єднань для синхронізації.
       ibkr_panel:
+        add_connection: "Додати підключення Interactive Brokers"
+        connection_name_label: "Назва підключення"
+        connection_name_placeholder: "напр. IBKR Ірландія, IBKR США"
+        disconnect: "Відключити"
+        disconnect_confirm_named: "Відключити %{name}?"
+        setup_accounts: "Налаштувати рахунки"
         steps:
           step_1: 'У вашому клієнтському порталі IBKR перейдіть до "Продуктивність та звіти" > "Flex Queries".'
           step_2: 'Натисніть значок "+" у розділі "Activity Flex Query", щоб створити новий запит.'
@@ -647,18 +659,13 @@ uk:
           all_other_options: 'Усі інші параметри конфігурації: "Ні"'
         report_window_note: "Звіти IBKR Flex обмежені вікном запиту, яке ви налаштували в IBKR. Sure імпортує повні поточні активи плюс до останніх 365 днів активності з цього звіту."
         sync: Синхронізувати
-        disconnect_confirm: Відключити Interactive Brokers?
         query_id_label: ID запиту
         query_id_placeholder_new: Введіть свій ID запиту IBKR Flex
         query_id_placeholder_existing: Залиште порожнім, щоб зберегти поточний ID запиту
         token_label: Токен
         token_placeholder_new: Введіть свій токен веб-служби IBKR Flex
         token_placeholder_existing: Залиште порожнім, щоб зберегти поточний токен
-        save_configuration: Зберегти конфігурацію
         update_configuration: Оновити конфігурацію
-        status_configured_prefix: "%{summary}. Відвідайте"
-        accounts_tab: Рахунки
-        status_configured_suffix: вкладку для керування виявленими рахунками.
         not_configured: Не налаштовано.
       drawer_trust_statement_encryption_unconfigured: Доступ лише для читання. Sure ніколи не може переміщувати гроші. Перш ніж зберігати облікові дані постачальників у робочому середовищі, налаштуйте явні ключі шифрування.
       provider_setup_encryption_warning:
@@ -742,9 +749,11 @@ uk:
         qr_cancel: Скасувати вхід за QR-кодом
         qr_back_to_credentials: Назад до номера телефону та PIN-коду або пароля
         qr_loading: Підготовка QR-коду…
-        qr_instruction: Відскануйте QR-код у застосунку Trade Republic і підтвердьте вхід.
+        qr_instruction: Відскануйте QR-код камерою телефона, а потім підтвердьте вхід у застосунку Trade Republic.
         qr_success: Вхід підтверджено. Sure оновлює сторінку постачальника.
         qr_error: Не вдалося розпочати вхід за QR-кодом. Спробуйте ще раз.
+        requires_update: "Увійдіть знову, щоб відновити синхронізацію."
+        session_expires_in: "Вхід завершиться через %{time} (%{at})."
         add_account: "Додати ще одне підключення"
         save_configuration: Зберегти й увійти
         update_configuration: Оновити конфігурацію

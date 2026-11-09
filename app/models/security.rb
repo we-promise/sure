@@ -274,6 +274,11 @@ class Security < ApplicationRecord
     @current_price_in[currency] = price && convert_quote(price, currency, rates)
   end
 
+  # Stores user-supplied closes for a security no provider tracks. See Security::ManualPriceImport.
+  def import_manual_prices!(rows, accounts:)
+    Security::ManualPriceImport.new(security: self, rows: rows, accounts: accounts).import!
+  end
+
   # How many shares one share held at the close of `from` has become by the
   # close of `to`: the product of the ratios of splits whose ex-date falls
   # after `from` and on or before `to`. 1 when there are none.

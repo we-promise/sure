@@ -1,12 +1,16 @@
 class Rule::ActionExecutor
-  TYPES = [ "select", "multi_select", "function", "text" ]
+  TYPES = [ "select", "multi_select", "function", "text", "split" ]
 
   def initialize(rule)
     @rule = rule
   end
 
+  def self.key
+    name.demodulize.underscore
+  end
+
   def key
-    self.class.name.demodulize.underscore
+    self.class.key
   end
 
   def label
@@ -18,6 +22,14 @@ class Rule::ActionExecutor
   end
 
   def options
+    nil
+  end
+
+  # The option for a saved value that options leaves out (e.g. a merchant only
+  # on accounts the current user can't see, or one no longer assigned), so
+  # editing the rule keeps the value instead of silently switching to the
+  # first option. nil if the value doesn't refer to a record at all.
+  def option_for(value)
     nil
   end
 
@@ -54,6 +66,13 @@ class Rule::ActionExecutor
       label: label,
       options: options
     }
+  end
+
+  # Executors with a non-trivial value format (e.g. structured JSON) can override this
+  # to provide a human-readable summary for the rule list view. Returning nil falls back
+  # to the default (options-based) display logic in Rule::Action#value_display.
+  def value_display(value)
+    nil
   end
 
   protected

@@ -1,8 +1,8 @@
 class PropertiesController < ApplicationController
   include AccountableResource, StreamExtensions
 
-  before_action :set_property, only: [ :balances, :address, :update_balances, :update_address, :refresh_valuation ]
-  before_action :require_property_write_permission!, only: [ :update_balances, :update_address, :refresh_valuation ]
+  before_action :set_property, only: [ :balances, :address, :update_balances, :update_address, :refresh_valuation, :link_valuation ]
+  before_action :require_property_write_permission!, only: [ :update_balances, :update_address, :refresh_valuation, :link_valuation ]
 
   helper_method :avm_provider_class
 
@@ -22,6 +22,9 @@ class PropertiesController < ApplicationController
         currency: property_params[:currency].presence || Current.family.currency
       )
     )
+    # Details typed into the manual wizard are user-set, so a later AVM link
+    # sends the user's area rather than deferring to the provider's record.
+    @account.accountable.lock_saved_attributes!
     @account.auto_share_with_family! if Current.family.share_all_by_default?
 
     redirect_to balances_property_path(@account)
@@ -29,6 +32,7 @@ class PropertiesController < ApplicationController
 
   def update
     if @account.update(property_params)
+      @account.accountable.lock_saved_attributes!
       @success_message = "Property details updated successfully."
 
       if @account.active?
@@ -84,6 +88,24 @@ class PropertiesController < ApplicationController
 
     SyncPropertyValuationsJob.perform_later(property_id: @property.id, force: true)
     redirect_back_or_to account_path(@account), notice: t(".queued")
+  end
+
+  # Links a manually created property to an AVM provider so its value is
+  # refreshed automatically. The first valuation runs during the request and
+  # the link is only kept if it succeeds.
+  def link_valuation
+    provider_key = params[:avm_provider].to_s
+
+    unless configured_avm_providers.map(&:to_s).include?(provider_key) && @property.avm_linkable?(provider_key)
+      redirect_back_or_to account_path(@account), alert: t(".not_linkable") and return
+    end
+
+    provider_name = t("properties.avm_providers.#{provider_key}")
+    if @property.link_avm_provider!(provider_key)
+      redirect_back_or_to account_path(@account), notice: t(".linked", provider: provider_name)
+    else
+      redirect_back_or_to account_path(@account), alert: t(".link_failed", provider: provider_name)
+    end
   end
 
   def address

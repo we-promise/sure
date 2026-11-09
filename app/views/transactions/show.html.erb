@@ -65,7 +65,6 @@
                 "data-auto-submit-form-target": "auto" %>
           <%= f.date_field :date,
                 label: t(".date_label"),
-                max: Date.current,
                 disabled: @entry.linked? || split_locked || edit_locked,
                 "data-auto-submit-form-target": "auto" %>
           <% unless @entry.transaction.transfer? %>
@@ -91,7 +90,8 @@
                     selected_id: ef.object.category_id,
                     disabled: @entry.split_child? || annotate_locked,
                     auto_submit: true,
-                    blank_label: t(".uncategorized")
+                    blank_label: t(".uncategorized"),
+                    locked: Current.family.categories_locked?
                   ) %>
             <% end %>
           <% elsif @entry.transaction.category_set_on_transfer_outflow? %>
@@ -132,7 +132,7 @@
               <%= render DS::MerchantSelect.new(
                     form: ef,
                     method: :merchant_id,
-                    merchants: Current.family.available_merchants_for(Current.user).alphabetically,
+                    merchants: Current.family.available_merchants_for(Current.user).with_attached_logo.alphabetically,
                     selected_id: ef.object.merchant_id,
                     include_blank: t(".none"),
                     label: t(".merchant_label"),

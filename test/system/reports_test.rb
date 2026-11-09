@@ -1,8 +1,14 @@
 require "application_system_test_case"
 
 class ReportsTest < ApplicationSystemTestCase
+  include EntriesTestHelper
+
   setup do
     sign_in users(:family_admin)
+    # The breakdown table, whose Amount link one test follows, only renders
+    # when the month has transactions; fixtures are dated a few days ago, which
+    # on the 1st is last month.
+    create_transaction(date: Date.current, amount: 50, category: categories(:food_and_drink))
     visit reports_path(period_type: :monthly)
 
     # The tooltip only shows once the page's controllers are connected, so
@@ -40,6 +46,14 @@ class ReportsTest < ApplicationSystemTestCase
     assert_equal %w[ArrowLeft], clicked_hotkeys
   end
 
+  test "the arrow keys scroll a focused breakdown table instead of changing the period" do
+    find("section[data-section-key='transactions_breakdown'] [role='region']", match: :first).send_keys(:arrow_left)
+    assert_empty clicked_hotkeys
+
+    find("body").send_keys(:arrow_left)
+    assert_equal %w[ArrowLeft], clicked_hotkeys
+  end
+
   test "a held arrow key steps one period" do
     page.execute_script(<<~JS)
       for (const repeat of [false, true, true]) {
@@ -48,6 +62,60 @@ class ReportsTest < ApplicationSystemTestCase
     JS
 
     assert_equal %w[ArrowLeft], clicked_hotkeys
+  end
+
+  test "a section moved with the keyboard keeps its new place" do
+    first, second = all("section[data-section-key]").first(2).map { |section| section["data-section-key"] }
+    record_saved_section_order
+
+    find("section[data-section-key='#{first}']").send_keys(:enter)
+    page.send_keys(:arrow_down)
+    page.send_keys(:enter)
+
+    assert_selector "html[data-order-saved='200']"
+    saved_order = users(:family_admin).reload.reports_section_order
+    assert_operator saved_order.index(second), :<, saved_order.index(first)
+  end
+
+  test "Enter on a link inside a section follows the link instead of grabbing the section" do
+    section = find("section[data-section-key='transactions_breakdown']")
+    section.find_link(I18n.t("reports.transactions_breakdown.export.google_sheets")).send_keys(:enter)
+
+    assert_selector "dialog[open]"
+    assert_equal "false", section["aria-grabbed"]
+  end
+
+  test "following a link while a section is held saves its new place first" do
+    keys = all("section[data-section-key]").map { |section| section["data-section-key"] }
+    moved = "transactions_breakdown"
+    above = keys[keys.index(moved) - 1]
+
+    section = find("section[data-section-key='#{moved}']")
+    section.send_keys(:enter)
+    page.send_keys(:arrow_up)
+    section.find_link(I18n.t("reports.transactions_breakdown.table.amount"), match: :first).send_keys(:enter)
+
+    assert_current_path(/sort_by=amount/)
+    saved_order = users(:family_admin).reload.reports_section_order
+    assert_operator saved_order.index(moved), :<, saved_order.index(above)
+  end
+
+  # The collapse control sends the page's CSRF token and saves nothing without
+  # one, and the test environment renders none unless forgery protection is on.
+  test "collapsing a section saves it under the reports keys" do
+    original = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+    user = users(:family_admin)
+    visit reports_path(period_type: :monthly)
+    record_saved_section_order
+
+    find("section[data-section-key='transactions_breakdown'] button[data-reports-section-target='button']").click
+
+    assert_selector "section[data-section-key='transactions_breakdown'] button[aria-expanded='false']"
+    assert_selector "html[data-order-saved='200']"
+    assert_equal true, user.reload.preferences.dig("reports_collapsed_sections", "transactions_breakdown")
+  ensure
+    ActionController::Base.allow_forgery_protection = original
   end
 
   private
