@@ -968,13 +968,32 @@ class EnableBankingItem::Importer
     # the sole dedup criterion. Including it in the composite key preserves
     # legitimately distinct transactions with identical content but different
     # transaction_ids (e.g. two laundromat payments on the same day). (Issue #954)
+    #
+    # Booked rows with a distinct entry_reference are never merged: Enable Banking
+    # documents it as the ASPSP's unique, immutable identifier, and the N26
+    # mapping that repeated one movement under several references (#954) was
+    # fixed in connector 0.16.7. Pending and reference-less copies of such a row
+    # still collapse into it. (Issue #2720)
     def deduplicate_api_transactions(transactions)
       seen = {}
       duplicates_removed = 0
+      referenced_keys = transactions.filter_map do |tx|
+        tx = tx.with_indifferent_access
+        build_transaction_content_key(tx) if booked_entry_reference(tx)
+      end.to_set
 
       result = transactions.select do |tx|
         tx = tx.with_indifferent_access
         key = build_transaction_content_key(tx)
+
+        if referenced_keys.include?(key)
+          reference = booked_entry_reference(tx)
+          if reference.nil? # pending or reference-less copy of a referenced booked row
+            duplicates_removed += 1
+            next false
+          end
+          key = [ key, reference ]
+        end
 
         if seen[key]
           duplicates_removed += 1
@@ -995,9 +1014,10 @@ class EnableBankingItem::Importer
       result
     end
 
-    # Build a composite key for deduplication. Two transactions with different
-    # entry_reference values but identical content fields (including
-    # transaction_id and credit_debit_indicator) are considered duplicates.
+    # Build a composite key for deduplication. Two transactions with identical
+    # content fields (including transaction_id and credit_debit_indicator) are
+    # considered duplicates unless deduplicate_api_transactions keeps them apart
+    # by entry_reference.
     # transaction_id is included as one component — not a standalone key —
     # because the Enable Banking API docs state it is not guaranteed to be
     # unique. credit_debit_indicator (CRDT/DBIT) is included because
@@ -1005,12 +1025,8 @@ class EnableBankingItem::Importer
     # and a same-day refund of the same amount would produce identical keys.
     # status (BOOK/PDNG) is intentionally excluded: the same logical transaction
     # may appear as PDNG then BOOK across imports and must not create duplicates.
-    # Known limitation: when transaction_id is nil for both, pure content
-    # comparison applies. This means two genuinely distinct transactions
-    # with identical content (same date, amount, direction, creditor, etc.)
-    # and no transaction_id would collapse to one. In practice, banks that
-    # omit transaction_id rarely produce such exact duplicates in the same
-    # API response; timestamps or remittance info usually differ. (Issue #954)
+    # When neither transaction_id nor a booked entry_reference is available,
+    # pure content comparison applies. (Issue #954)
     def build_transaction_content_key(tx)
       date = tx[:booking_date].presence || tx[:value_date].presence || tx[:transaction_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
@@ -1023,6 +1039,14 @@ class EnableBankingItem::Importer
       direction = tx[:credit_debit_indicator]
 
       [ date, amount, currency, creditor, debtor, remittance_key, tid, direction ].map(&:to_s).join("\x1F")
+    end
+
+    # entry_reference of a booked row without transaction_id, the rows that would
+    # otherwise collapse on content alone.
+    def booked_entry_reference(tx)
+      return if tx[:transaction_id].present? || EnableBankingEntry::Processor.pending_payload?(tx)
+
+      tx[:entry_reference].presence
     end
 
     class PaginationTruncatedError < StandardError; end

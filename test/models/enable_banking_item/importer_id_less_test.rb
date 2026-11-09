@@ -142,4 +142,20 @@ class EnableBankingItem::ImporterIdLessTest < ActiveSupport::TestCase
     assert_equal 1, stored.count, "Stale pending entry should have been removed"
     assert_nil stored.first["_pending"], "Remaining entry should be the booked row"
   end
+
+  test "imports identical same-day booked rows with distinct entry_references as separate entries" do
+    coffees = %w[ref-coffee-1 ref-coffee-2].map { |ref| id_less_tx(amount: "3.50", creditor: "Cafe").merge(entry_reference: ref) }
+
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns(coffees)
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([])
+    @importer.stubs(:include_pending?).returns(false)
+    @importer.stubs(:determine_sync_start_date).returns(1.month.ago.to_date)
+
+    assert_difference -> { @account.entries.where(source: "enable_banking").count }, 2 do
+      2.times do
+        @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+        EnableBankingAccount::Transactions::Processor.new(@enable_banking_account.reload).process
+      end
+    end
+  end
 end

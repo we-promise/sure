@@ -17,7 +17,9 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: mock_provider)
   end
 
-  test "removes content-level duplicates with different entry_reference IDs" do
+  # Two identical same-day payments (e.g. two coffees) from an ASPSP that sends
+  # no transaction_id but a unique entry_reference per row (Revolut). (#2720)
+  test "keeps identical booked transactions with different entry_reference IDs" do
     transactions = [
       {
         entry_reference: "ref_aaa",
@@ -41,8 +43,53 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
+    assert_equal %w[ref_aaa ref_bbb], result.map { |tx| tx[:entry_reference] }
+  end
+
+  test "removes the same booked entry_reference repeated in one response" do
+    tx = {
+      entry_reference: "ref_aaa",
+      booking_date: "2026-02-07",
+      transaction_amount: { amount: "11.65", currency: "EUR" },
+      creditor: { name: "Spar" },
+      status: "BOOK"
+    }
+
+    result = @importer.send(:deduplicate_api_transactions, [ tx, tx.dup ])
+
     assert_equal 1, result.count
-    assert_equal "ref_aaa", result.first[:entry_reference]
+  end
+
+  test "collapses pending copies into the booked row with a reference regardless of order" do
+    booked = {
+      entry_reference: "ref_booked",
+      booking_date: "2026-02-07",
+      transaction_amount: { amount: "4.20", currency: "EUR" },
+      creditor: { name: "Cafe" },
+      credit_debit_indicator: "DBIT",
+      status: "BOOK"
+    }
+    pending = booked.merge(entry_reference: "ref_pending", status: "PDNG", _pending: true)
+    reference_less = booked.except(:entry_reference)
+
+    [ [ pending, booked, reference_less ], [ booked, reference_less, pending ] ].each do |transactions|
+      result = @importer.send(:deduplicate_api_transactions, transactions)
+
+      assert_equal [ "ref_booked" ], result.map { |tx| tx[:entry_reference] }
+    end
+  end
+
+  test "still removes content-level duplicates without entry_reference" do
+    tx = {
+      booking_date: "2026-02-07",
+      transaction_amount: { amount: "11.65", currency: "EUR" },
+      creditor: { name: "Spar" },
+      status: "BOOK"
+    }
+
+    result = @importer.send(:deduplicate_api_transactions, [ tx, tx.dup ])
+
+    assert_equal 1, result.count
   end
 
   test "keeps transactions with different amounts" do
@@ -122,16 +169,11 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
       status: "BOOK"
     }
 
-    transactions = [
-      base.merge(entry_reference: "ref_1"),
-      base.merge(entry_reference: "ref_2"),
-      base.merge(entry_reference: "ref_3")
-    ]
+    transactions = [ base, base.dup, base.dup ]
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
     assert_equal 1, result.count
-    assert_equal "ref_1", result.first[:entry_reference]
   end
 
   test "handles string keys in transaction data" do
@@ -144,7 +186,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         "status" => "BOOK"
       },
       {
-        "entry_reference" => "ref_bbb",
+        "entry_reference" => "ref_aaa",
         "booking_date" => "2026-02-07",
         "transaction_amount" => { "amount" => "11.65", "currency" => "EUR" },
         "creditor" => { "name" => "Spar" },
@@ -193,7 +235,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         status: "BOOK"
       },
       {
-        entry_reference: "ref_bbb",
+        entry_reference: "ref_aaa",
         booking_date: "2026-02-07",
         transaction_amount: { amount: "11.65", currency: "EUR" },
         creditor: { name: "Spar" },
@@ -297,7 +339,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         status: "BOOK"
       },
       {
-        entry_reference: "ref_2",
+        entry_reference: "ref_1",
         transaction_id: nil,
         value_date: "2026-02-10",
         transaction_amount: { amount: "1.50", currency: "EUR" },
