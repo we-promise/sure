@@ -24,7 +24,10 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       raise Ai::Error::InvalidOutput, "the models list has entries that aren't objects" unless response["data"].all?(Hash)
 
       ids = response["data"].filter_map { _1["id"] }
-      raise Ai::Error::ModelMissing, "#{model.name} isn't listed" unless ids.include?(model.name)
+      # Ollama lists `llama3` as `llama3:latest`.
+      unless ids.include?(model.name) || ids.include?("#{model.name}:latest")
+        raise Ai::Error::ModelMissing, "#{model.name} isn't listed"
+      end
 
       model.name
     end

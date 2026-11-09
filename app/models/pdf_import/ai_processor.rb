@@ -7,8 +7,7 @@ class PdfImport::AiProcessor
 
   def process
     require_ai_for_extraction!
-    # The first provider in extract_pdf's route.
-    provider = Provider::Registry.preferred_llm_provider
+    provider = route_provider
     raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
 
     response = provider.process_pdf(
@@ -34,7 +33,7 @@ class PdfImport::AiProcessor
     return unless pdf_import.statement_with_transactions?
 
     require_ai_for_extraction!
-    provider = Provider::Registry.preferred_llm_provider
+    provider = route_provider
 
     response = provider.extract_bank_statement(
       pdf_content: pdf_import.pdf_file_content,
@@ -63,5 +62,12 @@ class PdfImport::AiProcessor
     def require_ai_for_extraction!
       availability = Ai.availability(:extract_pdf, family: pdf_import.family)
       raise Provider::Error, availability.message_for(nil) unless availability.available?
+    end
+
+    # The first provider in extract_pdf's route. Settings can clear the last key between the
+    # availability check and this lookup, so a missing provider is the same refusal.
+    def route_provider
+      Provider::Registry.preferred_llm_provider or
+        raise Provider::Error, Ai::Availability.unavailable(:extract_pdf, :not_configured).message_for(nil)
     end
 end

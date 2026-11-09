@@ -23,4 +23,7 @@ fr:
         start_date: Date de début
         subtitle: Suivez votre utilisation de l'IA et les coûts estimés
         total_cost: Coût total
+        total_calls: "Total des appels"
+        avg_cost_per_call: "Coût moyen/appel"
+        based_on_calls: "Basé sur %{with_cost} appels sur %{total} avec données de coût"
         total_tokens: Total jetons

@@ -75,7 +75,8 @@ class Ai::Instrumentation::UsageSubscriber
 
     # The request that just failed is the call's newest failed row without an error.
     def record_request_error(payload)
-      call_id = (payload[:workflow_metadata] || {}).to_h.stringify_keys["call_id"]
+      _family, call = owner_and_call(payload)
+      call_id = call["call_id"]
       return if payload[:ai_error].blank? || call_id.blank?
 
       LlmUsage.where(id: unexplained_failures(call_id).order(created_at: :desc).limit(1).select(:id))

@@ -18,6 +18,15 @@ class PdfImportTest < ActiveSupport::TestCase
     assert_equal Ai::Availability.unavailable(:extract_pdf, :capability_missing).message_for(nil), error.message
   end
 
+  test "a key cleared after the availability check is the same refusal, not a NoMethodError" do
+    Ai.stubs(:availability).returns(Ai::Availability.available(:extract_pdf))
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    error = assert_raises(Provider::Error) { @import.process_with_ai }
+
+    assert_equal Ai::Availability.unavailable(:extract_pdf, :not_configured).message_for(nil), error.message
+  end
+
   test "pdf_uploaded? returns false when no file attached" do
     assert_not @import.pdf_uploaded?
   end

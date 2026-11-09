@@ -26,4 +26,7 @@ pl:
         start_date: Data początkowa
         subtitle: Śledź swoje użycie AI i szacowane koszty
         total_cost: Łączny koszt
+        total_calls: "Łączna liczba wywołań"
+        avg_cost_per_call: "Śr. koszt/wywołanie"
+        based_on_calls: "Na podstawie %{with_cost} z %{total} wywołań z danymi o koszcie"
         total_tokens: Łączna liczba tokenów

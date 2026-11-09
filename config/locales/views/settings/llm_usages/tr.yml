@@ -26,4 +26,7 @@ tr:
         start_date: Başlangıç Tarihi
         subtitle: Yapay zeka kullanımınızı ve tahmini maliyetlerinizi takip edin
         total_cost: Toplam Maliyet
+        total_calls: "Toplam Çağrı"
+        avg_cost_per_call: "Ort. Maliyet/Çağrı"
+        based_on_calls: "Maliyet verisi bulunan %{total} çağrıdan %{with_cost} tanesine dayanmaktadır"
         total_tokens: Toplam Token

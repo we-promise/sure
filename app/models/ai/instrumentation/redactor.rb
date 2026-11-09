@@ -35,6 +35,6 @@ module Ai::Instrumentation::Redactor
     uri.fragment = nil if uri.respond_to?(:fragment=)
     uri.to_s
   rescue URI::InvalidURIError
-    value.to_s.sub(%r{\A([^:]+://)[^/@]+@}, "\\1").split(/[?#]/, 2).first
+    MASK # an unparseable URL may still hold credentials, so none of it is shown
   end
 end

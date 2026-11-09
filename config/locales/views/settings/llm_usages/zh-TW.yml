@@ -8,6 +8,9 @@ zh-TW:
         start_date: 開始日期
         end_date: 結束日期
         filter: 篩選
+        total_calls: "總呼叫數"
+        avg_cost_per_call: "平均每次呼叫費用"
+        based_on_calls: "根據 %{total} 次呼叫中有費用資料的 %{with_cost} 次計算"
         total_tokens: Token 總數
         prompt: 提示 Token
         completion: 輸出 Token
