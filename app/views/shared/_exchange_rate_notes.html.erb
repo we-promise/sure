@@ -1,5 +1,5 @@
-<%# locals: (family:, classes: nil) %>
-<% accounts = Current.accessible_accounts || family.accounts %>
+<%# locals: (family:, classes: nil, accounts: nil) %>
+<% accounts ||= Current.accessible_accounts || family.accounts %>
 <% missing = family.currencies_without_exchange_rate(accounts: accounts) %>
 <% stale = family.stale_exchange_rate_dates(accounts: accounts) %>
 <% if missing.any? || stale.any? %>

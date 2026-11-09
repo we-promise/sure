@@ -102,6 +102,23 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     Account::MarketDataImporter.new(account).import_exchange_rates
   end
 
+  test "fetches the account currency's rates into the currency its institution entry is shown in" do
+    family = Family.create!(name: "Smith", currency: "USD")
+    account = family.accounts.create!(name: "Wise GBP", currency: "GBP", balance: 100, accountable: Depository.new,
+                                      institution_name: "Wise", institution_domain: "wise.com")
+    family.institution_groups.create!(key: InstitutionGroup.key_for(account), currency: "EUR")
+
+    # GBP/EUR comes back empty, so GBP/USD is fetched again as its first USD leg.
+    { %w[GBP USD] => 2, %w[GBP EUR] => 1 }.each do |(from, to), calls|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: from, to: to, start_date: account.start_date - EXCHANGE_RATE_BUFFER, end_date: anything)
+               .times(calls)
+               .returns(provider_success_response([]))
+    end
+
+    Account::MarketDataImporter.new(account).import_all
+  end
+
   test "fetches rates from security price currencies into the account currency" do
     family = Family.create!(name: "Smith", currency: "EUR")
 

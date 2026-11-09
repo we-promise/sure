@@ -1,0 +1,26 @@
+<%# locals: (bundle:) %>
+<header class="flex items-center gap-4">
+  <div class="flex items-center gap-3 min-w-0">
+    <%= render "accounts/logo", account: bundle.lead_account, url: bundle.logo_url, name: bundle.name %>
+
+    <div class="min-w-0">
+      <h2 class="font-medium text-xl truncate <%= "animate-pulse" if bundle.syncing? %>"><%= bundle.name %></h2>
+      <p class="text-sm text-secondary"><%= t("accounts.sidebar.institution_accounts", count: bundle.accounts.size) %></p>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-2 ml-auto">
+    <%= tag.p format_money(bundle.total_money), class: "text-xl font-medium text-primary whitespace-nowrap privacy-sensitive", id: "institution-group-total" %>
+
+    <% unless Current.user.guest? %>
+      <%= render DS::Link.new(
+        variant: "icon",
+        icon: "settings-2",
+        href: edit_institution_group_path(bundle),
+        frame: :modal,
+        aria: { label: t(".settings") },
+        title: t(".settings")
+      ) %>
+    <% end %>
+  </div>
+</header>
