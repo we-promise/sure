@@ -229,6 +229,22 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal %w[Euros Dollars], names
   end
 
+  test "sorts by balance across family-currency and fractionally converted accounts" do
+    user = users(:empty)
+    ExchangeRate.stubs(:rates_for).returns({ "EUR" => BigDecimal("1.55") })
+    create_account(name: "Low", balance: 150, currency: "USD", accountable: Depository.new, owner: user)
+    create_account(name: "Euros", balance: 100, currency: "EUR", accountable: Depository.new, owner: user)
+    create_account(name: "High", balance: 160, currency: "USD", accountable: Depository.new, owner: user)
+
+    user.update!(default_account_order: "balance_asc")
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+    assert_equal %w[Low Euros High], names
+
+    user.update!(default_account_order: "balance_desc")
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+    assert_equal %w[High Euros Low], names
+  end
+
   test "breaks balance and name ties by id so the order stays fixed" do
     user = users(:empty)
     accounts = 3.times.map do
