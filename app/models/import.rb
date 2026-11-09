@@ -289,6 +289,7 @@ class Import < ApplicationRecord
     import!
 
     family.sync_later
+    EntryScheduledSyncJob.schedule_for_entries(entries)
 
     update! status: :complete
   rescue => error
@@ -522,6 +523,10 @@ class Import < ApplicationRecord
     family.accounts.empty? && has_unassigned_account?
   end
 
+  # Hook for subclasses that recognise a known file format on upload
+  def preset_for_uploaded_csv
+  end
+
   # Used to optionally pre-fill the configuration for the current import
   def suggested_template
     family.imports
@@ -532,16 +537,18 @@ class Import < ApplicationRecord
   end
 
   def apply_template!(import_template)
-    update!(
-      import_template.attributes.slice(
-        "date_col_label", "amount_col_label", "name_col_label",
-        "category_col_label", "tags_col_label", "account_col_label",
-        "qty_col_label", "ticker_col_label", "price_col_label",
-        "entity_type_col_label", "notes_col_label", "currency_col_label",
-        "date_format", "signage_convention", "number_format",
-        "exchange_operating_mic_col_label",
-        "rows_to_skip"
-      )
+    update!(template_attributes(import_template))
+  end
+
+  def template_attributes(import_template)
+    import_template.attributes.slice(
+      "date_col_label", "amount_col_label", "name_col_label",
+      "category_col_label", "tags_col_label", "account_col_label",
+      "qty_col_label", "ticker_col_label", "price_col_label",
+      "entity_type_col_label", "notes_col_label", "currency_col_label",
+      "date_format", "signage_convention", "number_format",
+      "exchange_operating_mic_col_label",
+      "rows_to_skip"
     )
   end
 
