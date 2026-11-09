@@ -101,13 +101,41 @@ Rails.application.configure do
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  # Skip DNS rebinding protection for the default health check endpoint.
-  # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  # DNS rebinding protection. Set APP_DOMAIN or ALLOWED_HOSTS to turn it on;
+  # AllowedHosts unions the two. Left unset the app answers to any Host, which
+  # is how it behaved before, so an upgrade cannot lock an operator out of an
+  # instance they reach by LAN address or Tailscale name.
+  #
+  # Turning it on returns 403 for any Host outside the list, so an operator who
+  # sets APP_DOMAIN for mail and reaches the app another way needs that address
+  # in ALLOWED_HOSTS too.
+  # Required explicitly: this file is evaluated while the environment is being
+  # configured, before the autoloader is set up, so a bare constant reference
+  # here raises NameError and the app never boots.
+  require_relative "../../lib/allowed_hosts"
+  allowed_hosts = AllowedHosts.list
+  rejected_hosts = AllowedHosts.rejected
+
+  if rejected_hosts.any?
+    config.after_initialize do
+      Rails.logger.warn("[SECURITY] Ignoring host entries that are not a single host: #{rejected_hosts.join(', ')}. Wildcards are not accepted; list each host.")
+    end
+  end
+
+  if allowed_hosts.any?
+    config.hosts = allowed_hosts
+
+    # Probes hit /up over the pod IP or localhost, neither of which matches a
+    # configured host, so without this exclusion every liveness and readiness
+    # check starts failing with a 403 the moment the list is set.
+    config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  else
+    # Deferred: this block runs while the environment is still being configured
+    # and Rails.logger is not final yet, so a warning emitted here goes nowhere.
+    config.after_initialize do
+      Rails.logger.warn("[SECURITY] Neither APP_DOMAIN nor ALLOWED_HOSTS is set, so DNS rebinding protection is off")
+    end
+  end
 
   # set REDIS_URL for Sidekiq to use Redis
   config.active_job.queue_adapter = :sidekiq
