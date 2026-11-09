@@ -245,10 +245,28 @@ class Transaction::Search
       #
       # Their entries are still written, so they get their own per-user key and
       # can never be served to a search without the unread filter.
-      totals_cache_key = "transaction_search_totals/v3/#{cache_key_base}"
+      # v4: Totals gained excluded_scheduled_count.
+      totals_cache_key = "transaction_search_totals/v4/#{cache_key_base}"
       totals_cache_key += "/unread/#{user.id}" if unread_filter?
       Rails.cache.fetch(totals_cache_key, force: unread_filter?) do
         scope = transactions_scope
+        excluded_scheduled_count = 0
+
+        # Exclude scheduled (future-dated) entries from totals by default -- they
+        # haven't happened yet, so they shouldn't count toward this period's
+        # income/expenses (see Entry#scheduled?). An explicit end_date filter, or
+        # a start_date after today, is a deliberate request to look ahead (e.g.
+        # "next 30 days", "everything from next month"), so it's left untouched
+        # in that case.
+        #
+        # The list still shows them, so count how many were left out -- the
+        # summary uses it to say how many of the listed rows are scheduled.
+        # (Tax-advantaged accounts, filtered below, also stay out of the
+        # money figures; this count deliberately ignores that.)
+        unless look_ahead?
+          excluded_scheduled_count = scope.where("entries.date > ?", Date.current).count
+          scope = scope.where("entries.date <= ?", Date.current)
+        end
 
         # Exclude tax-advantaged accounts from totals calculation
         tax_advantaged_ids = family.tax_advantaged_account_ids
@@ -284,6 +302,7 @@ class Transaction::Search
 
         Totals.new(
           count: result&.transactions_count.to_i,
+          excluded_scheduled_count: excluded_scheduled_count,
           income_money: Money.new((result&.income_total || 0), family.currency),
           expense_money: Money.new((result&.expense_total || 0), family.currency),
           transfer_inflow_money: Money.new((result&.transfer_inflow_total || 0), family.currency),
@@ -301,7 +320,8 @@ class Transaction::Search
       Digest::SHA256.hexdigest(attributes.sort.to_h.to_json), # cached by filters
       family.entries_cache_version,
       Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json), # stable across processes
-      accessible_account_ids ? Digest::SHA256.hexdigest(accessible_account_ids.sort.to_json) : "all"
+      accessible_account_ids ? Digest::SHA256.hexdigest(accessible_account_ids.sort.to_json) : "all",
+      Date.current # totals exclude scheduled entries as of "today" -- must roll over daily
     ].join("/")
   end
 
@@ -310,7 +330,15 @@ class Transaction::Search
   end
 
   private
-    Totals = Data.define(:count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+    Totals = Data.define(:count, :excluded_scheduled_count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+
+    def look_ahead?
+      return true if end_date.present?
+
+      start_date.present? && Date.parse(start_date.to_s) > Date.current
+    rescue Date::Error
+      false
+    end
 
     # Filter query to include only active accounts if requested
     def apply_active_accounts_filter(query, active_accounts_only_filter)

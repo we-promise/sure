@@ -688,6 +688,12 @@ nl:
       not_found: "Provider niet gevonden."
       sync_provider_no_items: "Geen koppelingen beschikbaar om te synchroniseren."
       ibkr_panel:
+        add_connection: "Interactive Brokers-koppeling toevoegen"
+        connection_name_label: "Naam koppeling"
+        connection_name_placeholder: "bijv. IBKR Ierland, IBKR VS"
+        disconnect: "Loskoppelen"
+        disconnect_confirm_named: "%{name} loskoppelen?"
+        setup_accounts: "Accounts instellen"
         steps:
           step_1: "Ga in uw IBKR Client Portal naar \"Performance & Reports\" > \"Flex Queries\"."
           step_2: "Klik op het \"+\"-pictogram in het onderdeel \"Activity Flex Query\" om een nieuwe query aan te maken."
@@ -729,18 +735,13 @@ nl:
           all_other_options: "Alle overige configuratieopties: \"No\""
         report_window_note: "IBKR Flex-rapporten zijn beperkt tot het queryvenster dat u in IBKR heeft ingesteld. Sure importeert de volledige huidige posities plus maximaal de laatste 365 dagen aan activiteit uit dit rapport."
         sync: "Synchroniseren"
-        disconnect_confirm: "Interactive Brokers loskoppelen?"
         query_id_label: "Query ID"
         query_id_placeholder_new: "Voer uw IBKR Flex Query ID in"
         query_id_placeholder_existing: "Laat leeg om de huidige Query ID te behouden"
         token_label: "Token"
         token_placeholder_new: "Voer uw IBKR Flex Web Service Token in"
         token_placeholder_existing: "Laat leeg om het huidige Token te behouden"
-        save_configuration: "Configuratie opslaan"
         update_configuration: "Configuratie bijwerken"
-        status_configured_prefix: "%{summary}. Ga naar het tabblad"
-        accounts_tab: "Accounts"
-        status_configured_suffix: "om gevonden accounts te beheren."
         not_configured: "Niet geconfigureerd."
       trade_republic_panel:
         encryption_warning:

@@ -70,6 +70,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(kraken_item)}"
   end
 
+  test "index titles each ibkr connection with its own name" do
+    first = ibkr_items(:configured_item)
+    first.update!(name: "IBKR Ireland")
+    second = @user.family.ibkr_items.create!(name: "IBKR US", query_id: "Q2", token: "T2")
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(first)}", text: /IBKR Ireland/
+    assert_select "##{dom_id(second)}", text: /IBKR US/
+  end
+
   test "index renders on-chain wallet items" do
     register_fake_chain!
     item = create_onchain_wallet_item(family: @user.family)
@@ -478,6 +490,32 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "should get show" do
     get account_url(@account)
     assert_response :success
+  end
+
+  test "show renders the scheduled balance tooltip when a scheduled transaction exists" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-controller='DS--tooltip']"
+  end
+
+  test "show adds the scheduled projection to the investment value tooltip" do
+    investment_account = accounts(:investment)
+    create_transaction(account: investment_account, amount: 200, date: 3.days.from_now.to_date)
+
+    get account_url(investment_account)
+
+    assert_response :success
+    assert_select "[role='tooltip']", text: /#{I18n.t("investments.value_tooltip.projected")}/
+  end
+
+  test "show omits the scheduled projection from the investment value tooltip without scheduled entries" do
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "[role='tooltip']", text: /#{I18n.t("investments.value_tooltip.projected")}/, count: 0
   end
 
   test "show renders the balance chart as drag-selectable for a custom date range" do
@@ -1296,6 +1334,52 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "sidebar sparkline URLs carry a version the browser may reuse" do
+    get account_url(@account)
+
+    [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ].each do |src|
+      assert_match(/[?&]v=\h{16}\z/, src)
+      get src
+      assert_response :success
+      assert_includes response.headers["Cache-Control"], "max-age=86400"
+    end
+  end
+
+  test "a sparkline URL with an outdated version must be revalidated" do
+    get sparkline_account_url(@account, v: "outdated")
+    assert_response :success
+    assert_includes response.headers["Cache-Control"], "max-age=0"
+
+    get accountable_sparkline_url("depository", v: "outdated")
+    assert_response :success
+    assert_includes response.headers["Cache-Control"], "max-age=0"
+  end
+
+  test "a sidebar sparkline URL changes when the account's balances do" do
+    get account_url(@account)
+    before = sidebar_sparkline_src(dom_id(@account, :sparkline))
+
+    travel 1.minute do
+      @account.balances.create!(date: 40.days.ago.to_date, balance: 1, currency: @account.currency)
+      get account_url(@account)
+    end
+
+    assert_not_equal before, sidebar_sparkline_src(dom_id(@account, :sparkline))
+  end
+
+  test "sidebar sparkline URLs change the next day" do
+    get account_url(@account)
+    before = [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ]
+
+    travel 1.day do
+      get account_url(@account)
+      after = [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ]
+
+      assert_not_equal before[0], after[0]
+      assert_not_equal before[1], after[1]
+    end
+  end
+
   test "sparkline renders an empty series without a trend" do
     empty_series = Series.new(
       start_date: 1.day.ago.to_date,
@@ -1830,6 +1914,10 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def sidebar_sparkline_src(frame_id)
+      css_select("turbo-frame##{frame_id}").first["src"]
+    end
+
     def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
       Account::LogoFetcher::Icon.new(key:, source:, name:, body:, size:, content_type: "image/png", extension: "png")
     end
