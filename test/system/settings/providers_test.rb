@@ -5,6 +5,10 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
   include FinancekitTestHelper
   setup do
     @user = users(:family_admin)
+    # Registry-driven provider forms (Plaid) edit instance-wide credentials and
+    # are only shown to a super admin; promote the fixture admin so the family
+    # panels below keep using dylan_family.
+    @user.update!(role: :super_admin)
     @family = families(:dylan_family)
     login_as @user
   end

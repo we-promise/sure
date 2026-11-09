@@ -5,6 +5,7 @@ de:
         renewal: Dein Beitrag wird am %{date} fortgesetzt.
         cancellation: Dein Beitrag endet am %{date}.
   settings:
+    encryption_migration_guide: Anleitung zur Einrichtung der Verschlüsselung und zur Migration
     ai_prompts:
       show:
         page_title: KI-Eingabeaufforderungen
@@ -101,6 +102,8 @@ de:
         page_title: Darstellung
         split_grouped_description: Zeigt geteilte Transaktionen in der Liste gebündelt unter ihrer Ursprungsbuchung. Ist die Option aus, erscheint jede Teilbuchung als eigene Zeile.
         split_grouped_title: Geteilte Transaktionen gruppieren
+        auto_generate_transaction_names_title: Transaktionsnamen automatisch erzeugen
+        auto_generate_transaction_names_description: Bleibt der Name einer manuell erfassten Transaktion leer, wird er aus der gewählten Kategorie und dem Händler gebildet (z. B. „Unterhaltung - Netflix“). Ist beides nicht gewählt, bleibt der Name Pflicht. Gilt für den ganzen Haushalt und nur für neue Transaktionen.
         theme_dark: Dunkel
         theme_light: Hell
         theme_subtitle: Wähle das Erscheinungsbild der App
@@ -191,6 +194,7 @@ de:
       accounts_label: Konten
       advanced_section_title: Erweitert
       ai_prompts_label: KI-Eingabeaufforderungen
+      auto_matches_label: Automatischer Abgleich
       api_key_label: API-Schlüssel
       payment_label: Zahlung
       categories_label: Kategorien
@@ -329,7 +333,12 @@ de:
         last_synced: Sync vor %{time}
         needs_attention: mit Problemen
       ibkr_panel:
-        accounts_tab: Konten
+        add_connection: "Interactive-Brokers-Verbindung hinzufügen"
+        connection_name_label: "Name der Verbindung"
+        connection_name_placeholder: "z. B. IBKR Irland, IBKR USA"
+        disconnect: "Trennen"
+        disconnect_confirm_named: "%{name} trennen?"
+        setup_accounts: "Konten einrichten"
         configuration:
           all_other_options: 'Alle übrigen Optionen: „No“'
           date_format: 'Date Format: yyyy-MM-dd'
@@ -339,7 +348,6 @@ de:
           period: 'Period: Last 365 Calendar Days'
           profit_and_loss: 'Profit and Loss: Default'
           time_format: 'Time Format: HH:mm:ss'
-        disconnect_confirm: Interactive Brokers trennen?
         flex_query_details:
           configuration_heading: Diese Abfrageoptionen setzen
           eyebrow: Flex Query
@@ -351,7 +359,6 @@ de:
         query_id_placeholder_existing: Leer lassen, um die bisherige Query ID zu behalten
         query_id_placeholder_new: IBKR-Flex-Query-ID eintragen
         report_window_note: IBKR-Flex-Berichte sind auf den Zeitraum begrenzt, den du in IBKR eingestellt hast. Sure importiert die vollständigen aktuellen Bestände und bis zu 365 Tage Aktivität aus diesem Bericht.
-        save_configuration: Konfiguration speichern
         sections:
           account_information: 'Account Information: Account ID, Currency'
           cash_report: 'Cash Report:'
@@ -370,8 +377,6 @@ de:
           trades: 'Trades:'
           trades_fields: 'Felder: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID'
           trades_options: 'Optionen: Execution'
-        status_configured_prefix: "%{summary}. Im Reiter"
-        status_configured_suffix: verwaltest du die gefundenen Konten.
         steps:
           step_1: Öffne im IBKR Client Portal „Performance & Reports“ > „Flex Queries“.
           step_2: Klick im Bereich „Activity Flex Query“ auf das Plus-Symbol, um eine neue Abfrage anzulegen.

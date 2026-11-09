@@ -1,6 +1,7 @@
 ---
 ru:
   settings:
+    encryption_migration_guide: Руководство по настройке шифрования и миграции
     ai_prompts:
       show:
         disable_ai: Отключить AI Ассистента
@@ -57,6 +58,8 @@ ru:
           под их родительской в списке операций. Если выключено, разделённые элементы
           отображаются как отдельные строки.
         split_grouped_title: Группировать разделённые операции
+        auto_generate_transaction_names_title: "Автоматически создавать названия транзакций"
+        auto_generate_transaction_names_description: "Если название вручную введённой транзакции оставлено пустым, оно заполняется по выбранной категории и продавцу (например, «Развлечения - Netflix»). Если ничего не выбрано, название по-прежнему обязательно. Действует для всего домохозяйства и только для новых транзакций."
         theme_dark: Тёмная
         theme_light: Светлая
         theme_subtitle: Выберите предпочитаемую тему для приложения
@@ -411,7 +414,12 @@ ru:
         last_synced: Последняя синхронизация %{time} назад
         needs_attention: требует внимания
       ibkr_panel:
-        accounts_tab: Счета
+        add_connection: "Добавить подключение Interactive Brokers"
+        connection_name_label: "Название подключения"
+        connection_name_placeholder: "напр. IBKR Ирландия, IBKR США"
+        disconnect: "Отключить"
+        disconnect_confirm_named: "Отключить %{name}?"
+        setup_accounts: "Настроить счета"
         configuration:
           all_other_options: 'Все остальные параметры конфигурации: "Нет"'
           date_format: 'Формат даты: yyyy-MM-dd'
@@ -421,7 +429,6 @@ ru:
           period: 'Период: Последние 365 календарных дней'
           profit_and_loss: 'Прибыль и убытки: По умолчанию'
           time_format: 'Формат времени: HH:mm:ss'
-        disconnect_confirm: Отключить Interactive Brokers?
         flex_query_details:
           configuration_heading: Установите эти параметры запроса
           eyebrow: Flex Query
@@ -437,7 +444,6 @@ ru:
         report_window_note: Отчёты IBKR Flex ограничены окном запроса, которое вы
           настроили в IBKR. Sure импортирует полные текущие активы плюс до последних
           365 дней активности из этого отчёта.
-        save_configuration: Сохранить конфигурацию
         sections:
           account_information: 'Информация о счёте: ID счёта, Валюта'
           cash_report: 'Отчёт о наличных:'
@@ -462,8 +468,6 @@ ru:
             к базовой валюте, Комиссия IB, Валюта комиссии IB, Количество, Символ,
             Дата сделки, ID сделки, Цена сделки, ID операции'
           trades_options: 'Опции: Исполнение'
-        status_configured_prefix: "%{summary}. Перейдите на"
-        status_configured_suffix: вкладку, чтобы управлять обнаруженными счетами.
         steps:
           step_1: В вашем клиентском портале IBKR перейдите в "Performance & Reports"
             > "Flex Queries".
@@ -788,6 +792,7 @@ ru:
       accounts_label: Счета
       advanced_section_title: Расширенные
       ai_prompts_label: Запросы ИИ
+      auto_matches_label: Автоматическое сопоставление
       api_key_label: API-ключи
       api_keys_label: API-ключи
       appearance_label: Внешний вид

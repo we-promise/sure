@@ -586,8 +586,9 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     ActiveRecord::Generators::Base.next_migration_number(dirname)
   end
 
-  # Appends `name` as the final entry of the `enum :source, { ... }` hash in `content`.
-  # Returns the updated source, or nil when no such hash is present.
+  # Adds `name` to the `enum :source, { ... }` hash in `content`, before the first entry
+  # that sorts after it, so the alphabetical list stays sorted; after the last entry
+  # when none does. Returns the updated source, or nil when no such hash is present.
   #
   # Pure string transformation, extracted from the generator so the comma and
   # indentation handling can be tested directly. Both are easy to get wrong and fail as
@@ -607,20 +608,40 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     trailing = body[/\s*\z/] || ""
     core = body[0...(body.length - trailing.length)]
     entry = "#{name}: \"#{name}\""
+    # The body with its comments blanked out, at the same offsets: text after a `#` is
+    # not an entry however much it looks like one, and a comma placed there is swallowed.
+    code = core.gsub(/#[^\n]*/) { |comment| " " * comment.length }
+
+    following = code.to_enum(:scan, /(\w+):/).map { Regexp.last_match }.find { |key| key[1] > name }
+    if following
+      at = following.begin(0)
+      # A comment on the lines above the following entry belongs to it, so insert above it.
+      while (comment = core[0...at].match(/\n[ \t]*(#[^\n]*\n[ \t]*)\z/))
+        at = comment.begin(1)
+      end
+      # Multi-line, the entry takes a line of its own at the following entry's indentation.
+      line_start = core[0...at][/\n[ \t]*\z/]
+      separator = line_start ? ",#{line_start}" : ", "
+      new_body = "#{core[0...at]}#{entry}#{separator}#{core[at..]}#{trailing}"
+      return content.sub(/(enum :source, \{)([^}]*)(\})/m) { prefix + new_body + suffix }
+    end
 
     # A hash written with a trailing comma already supplies the separator, and an empty
     # hash needs none at all. Emitting one regardless yields `redbark: "redbark",,` or
     # `{, gocardless: "gocardless"}`: the same class of syntax error this method exists
     # to prevent.
-    separator = (core.empty? || core.end_with?(",")) ? "" : ","
+    code_end = code.rstrip.length
+    separator = (code_end.zero? || code[code_end - 1] == ",") ? "" : ","
+    # The separator goes straight after the last entry, ahead of any comment that follows it.
+    core = core.dup.insert(code_end, separator)
 
     new_body =
       if trailing.include?("\n")
         # Multi-line: indent to match the last entry, not the closing brace.
         indent = core[/\n([ \t]*)[^\n]*\z/, 1] || "    "
-        "#{core}#{separator}\n#{indent}#{entry}#{trailing}"
+        "#{core}\n#{indent}#{entry}#{trailing}"
       else
-        "#{core}#{separator} #{entry}#{trailing}"
+        "#{core} #{entry}#{trailing}"
       end
 
     # Block form: a string replacement would interpret any backslash sequence in the

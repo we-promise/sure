@@ -6,6 +6,7 @@ it:
         renewal: "Il tuo contributo continua il %{date}."
         cancellation: "Il tuo contributo termina il %{date}."
   settings:
+    encryption_migration_guide: Guida alla configurazione della crittografia e alla migrazione
     debugs:
       show:
         page_title: "Debug"
@@ -118,6 +119,8 @@ it:
         dashboard_two_column_title: Layout a due colonne
         dashboard_two_column_description: Visualizza i widget del dashboard in due colonne su schermi grandi, con controlli larghezza e altezza per widget nell'intestazione di ciascun widget. Se disattivato, i widget si impilano in una singola colonna.
         split_grouped_title: Raggruppa transazioni suddivise
+        auto_generate_transaction_names_title: "Genera automaticamente i nomi delle transazioni"
+        auto_generate_transaction_names_description: "Se il nome di una transazione inserita manualmente viene lasciato vuoto, viene compilato con la categoria e l'esercente selezionati (es. «Intrattenimento - Netflix»). Il nome resta obbligatorio se nessuno dei due è selezionato. Vale per tutto il nucleo familiare e solo per le nuove transazioni."
         split_grouped_description: Mostra le transazioni suddivise raggruppate sotto la voce principale nell'elenco transazioni. Se disattivato, le voci figlie appaiono come righe individuali.
     preferences:
       show:
@@ -264,6 +267,7 @@ it:
       accounts_label: Conti
       advanced_section_title: Avanzate
       ai_prompts_label: Prompt AI
+      auto_matches_label: Corrispondenze automatiche
       api_key_label: Chiave API
       payment_label: Pagamento
       categories_label: Categorie
@@ -505,6 +509,12 @@ it:
       not_found: Provider non trovato.
       sync_provider_no_items: Nessuna connessione disponibile per la sincronizzazione.
       ibkr_panel:
+        add_connection: "Aggiungi connessione Interactive Brokers"
+        connection_name_label: "Nome connessione"
+        connection_name_placeholder: "es. IBKR Irlanda, IBKR USA"
+        disconnect: "Disconnetti"
+        disconnect_confirm_named: "Disconnettere %{name}?"
+        setup_accounts: "Configura conti"
         steps:
           step_1: 'Nel tuo portale clienti IBKR, vai su "Performance e rapporti" > "Flex Queries".'
           step_2: 'Clicca sull''icona "+" nella sezione "Activity Flex Query" per creare una nuova query.'
@@ -546,16 +556,11 @@ it:
           all_other_options: 'Tutte le altre opzioni: "No"'
         report_window_note: "I rapporti IBKR Flex sono limitati alla finestra di query configurata in IBKR. Sure importerà le posizioni attuali complete più fino agli ultimi 365 giorni di attività da questo rapporto."
         sync: Sincronizza
-        disconnect_confirm: Disconnettere Interactive Brokers?
         query_id_label: Query ID
         query_id_placeholder_new: Inserisci il tuo IBKR Flex Query ID
         query_id_placeholder_existing: Lascia vuoto per mantenere il Query ID attuale
         token_label: Token
         token_placeholder_new: Inserisci il tuo IBKR Flex Web Service Token
         token_placeholder_existing: Lascia vuoto per mantenere il Token attuale
-        save_configuration: Salva configurazione
         update_configuration: Aggiorna configurazione
-        status_configured_prefix: "%{summary}. Visita la scheda"
-        accounts_tab: Conti
-        status_configured_suffix: per gestire i conti scoperti.
         not_configured: Non configurato.
