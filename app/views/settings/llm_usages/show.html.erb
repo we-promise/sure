@@ -105,7 +105,8 @@
 
   <!-- Recent Usage Table -->
   <div>
-    <h2 class="text-lg font-semibold text-primary mb-3"><%= t(".recent_usage") %></h2>
+    <h2 class="text-lg font-semibold text-primary mb-1"><%= t(".recent_usage") %></h2>
+    <p class="text-xs text-secondary mb-3"><%= t(".recent_usage_scope") %></p>
     <div class="table-scroll rounded-lg" tabindex="0" role="region" aria-label="<%= t(".recent_usage") %>">
       <% if @llm_calls.any? %>
         <table class="w-full">

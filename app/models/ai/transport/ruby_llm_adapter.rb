@@ -22,7 +22,7 @@ module Ai::Transport::RubyLlmAdapter
         config.http_proxy = Ai::Transport::Http.proxy_for(ruby_llm_api_base)
         config.faraday_adapter = Ai::Transport::Http.ruby_llm_adapter
         config.auto_upload_large_files = false
-        config.instrumenter = Ai::Transport::Instrumenter.new(config.instrumenter, map_error: method(:mapped_error))
+        config.instrumenter = Ai::Transport::Instrumenter.new(config.instrumenter, map_error: method(:mapped_error), scrub: scrubber)
         configure_provider(config)
       end
     end
@@ -68,6 +68,11 @@ module Ai::Transport::RubyLlmAdapter
       raise unless refused_by_ruby_llm?(error)
 
       raise scrubbed(Ai::Error::Refused.new(error.message))
+    rescue NoMethodError, TypeError => error
+      # RubyLLM parsing a 200 that isn't the API's shape (`{}`, an HTML page); in Sure's own code it's a bug.
+      raise unless raised_in_ruby_llm?(error)
+
+      raise Ai::Error::InvalidOutput, "the response isn't the expected shape"
     rescue StandardError => error
       mapped = ruby_llm_error(error)
       raise mapped ? scrubbed(mapped) : error

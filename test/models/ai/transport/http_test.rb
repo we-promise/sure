@@ -28,6 +28,21 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
     assert_equal PROXY, Http.proxy_for("http://other.lan:8080", env:)
   end
 
+  test "a host named by DNS goes direct when its address is in a NO_PROXY CIDR block" do
+    IPSocket.stubs(:getaddress).with("llm.internal").returns("10.72.200.61")
+    env = { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "10.0.0.0/8" }
+
+    assert_nil Http.proxy_for("http://llm.internal:8180", env:)
+    IPSocket.stubs(:getaddress).with("api.openai.com").returns("162.159.140.245")
+    assert_equal PROXY, Http.proxy_for("https://api.openai.com", env:)
+  end
+
+  test "a name is never resolved when NO_PROXY lists only names" do
+    IPSocket.expects(:getaddress).never
+
+    assert_nil Http.proxy_for("http://llm.lan:8080", env: { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "llm.lan" })
+  end
+
   test "NO_PROXY=* sends every host direct" do
     assert_nil Http.proxy_for("https://api.openai.com", env: { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "*" })
     assert_nil Http.proxy_for("http://llm.lan:8080", env: { "HTTP_PROXY" => PROXY, "no_proxy" => " * " })
@@ -76,7 +91,7 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
   test "the ruby-openai client gets the endpoint's settings and the resolved proxy" do
     endpoint = ai_endpoint(base_url: "https://llm.example.test/v1", extra_headers: { "X-Team" => "home" }, timeout_seconds: 7)
 
-    with_env_overrides("HTTPS_PROXY" => PROXY) do
+    with_env_overrides("HTTPS_PROXY" => PROXY, "NO_PROXY" => nil, "no_proxy" => nil) do
       client = Http.openai_client(endpoint)
       connection = Faraday.new.tap { client.faraday_middleware.call(_1) }
 
