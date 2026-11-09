@@ -1,0 +1,67 @@
+<%# locals: (bundle:, entries:, pagy:, range: nil) %>
+<%= render DS::Card.new(padding: :panel, id: "institution-group-activity") do %>
+  <%= tag.h2 t(".title"), class: "font-medium text-lg mb-4" %>
+
+  <% if range %>
+    <ul class="flex items-center flex-wrap gap-2 mb-4" id="institution-group-activity-filters">
+      <li class="flex items-center gap-2 text-sm border border-secondary rounded-3xl p-1.5">
+        <%= icon "calendar", size: "sm" %>
+        <p><%= range.label_range %></p>
+        <%= link_to institution_group_path(bundle),
+              class: "flex items-center text-secondary hover:text-primary",
+              aria: { label: t(".clear_range") },
+              title: t(".clear_range") do %>
+          <%= icon "x", size: "sm" %>
+        <% end %>
+      </li>
+    </ul>
+  <% end %>
+
+  <% if entries.empty? %>
+    <%= tag.p t(range ? ".no_entries_in_range" : ".no_entries"), class: "text-secondary text-sm p-4" %>
+  <% else %>
+    <%= tag.div data: {
+          controller: "bulk-select checkbox-toggle",
+          bulk_select_singular_label_value: t(".entry"),
+          bulk_select_plural_label_value: t(".entries")
+        } do %>
+      <div id="entry-selection-bar" data-bulk-select-target="selectionBar" class="flex justify-center hidden">
+        <%= render "entries/selection_bar" %>
+      </div>
+
+      <div class="grid-cols-12 bg-container-inset rounded-xl px-5 py-3 text-xs uppercase font-medium text-secondary items-center mb-4 grid">
+        <div class="pl-0.5 col-span-5 flex items-center gap-4">
+          <%= check_box_tag "selection_entry",
+                class: "checkbox checkbox--light hidden lg:block",
+                data: { action: "bulk-select#togglePageSelection", checkbox_toggle_target: "selectionEntry" } %>
+          <p><%= t(".entry_column") %></p>
+        </div>
+        <p class="col-span-3 md:block hidden"><%= t("transactions.form.category_label") %></p>
+        <p class="col-span-2 md:block hidden"><%= t("transactions.form.tags_label") %></p>
+        <p class="col-span-2 col-start-11 md:col-start-auto justify-self-end md:block"><%= t("transactions.show.amount") %></p>
+      </div>
+
+      <div class="space-y-4">
+        <%= entries_by_date(entries, totals: true) do |date_entries| %>
+          <% if Current.user.show_split_grouped? %>
+            <% group_split_entries(date_entries, @split_parents).each do |item| %>
+              <% if item.is_a?(EntriesHelper::SplitGroup) %>
+                <%= render "entries/split_group", split_group: item %>
+              <% else %>
+                <%= render item %>
+              <% end %>
+            <% end %>
+          <% else %>
+            <% date_entries.each do |entry| %>
+              <%= render entry %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="pt-4">
+        <%= render "shared/pagination", pagy: pagy %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

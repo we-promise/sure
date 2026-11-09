@@ -178,6 +178,11 @@ en:
       success: "%{type} account updated"
       logo_not_applied: The account was saved, but the chosen icon could not be downloaded. Try again or upload your own.
     sidebar:
+      institution_accounts:
+        one: 1 account
+        other: "%{count} accounts"
+      institution_bundle_title: "%{institution}: %{count} accounts"
+      institution_bundle_toggle: Show or hide the accounts at %{institution}
       missing_data: Missing historical data
       missing_data_description: "%{product} uses third party providers to fetch historical exchange rates, security prices, and more. This data is required to calculate accurate historical account balances."
       configure_providers: Configure your providers here.

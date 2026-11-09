@@ -31,6 +31,67 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
   end
 
+  test "the sidebar shows accounts at one institution as one entry opening onto them" do
+    family = @user.family
+    first = family.accounts.create!(name: "Wise EUR", balance: 10, currency: family.currency, institution_name: "Wise", accountable: Depository.new)
+    second = family.accounts.create!(name: "Wise GBP", balance: 20, currency: family.currency, institution_name: "Wise", accountable: Depository.new)
+
+    get root_url
+
+    assert_select "details[data-institution-bundle='wise|']", minimum: 1 do
+      assert_select "summary", text: /Wise.*2 accounts/m
+      assert_select "a[href='#{account_path(first)}']"
+      assert_select "a[href='#{account_path(second)}']"
+    end
+  end
+
+  test "the sidebar shows each bundled account's reconciliation status beside its name" do
+    family = @user.family
+    family.update!(manual_reconciliation: true)
+    unreconciled = family.accounts.create!(name: "Wise EUR", balance: 10, currency: family.currency, institution_name: "Wise", accountable: Depository.new)
+    untouched = family.accounts.create!(name: "Wise GBP", balance: 20, currency: family.currency, institution_name: "Wise", accountable: Depository.new)
+    create_transaction(account: unreconciled, name: "Not yet reconciled", amount: 5, date: Date.current)
+    needs_attention = /#{Regexp.escape(I18n.t("accounts.reconciliation_indicator.needs_attention"))}/
+
+    get root_url
+
+    assert_select "details[data-institution-bundle='wise|'] a[href='#{account_path(unreconciled)}']", text: needs_attention, minimum: 1
+    assert_select "details[data-institution-bundle='wise|'] a[href='#{account_path(untouched)}']", text: needs_attention, count: 0
+  end
+
+  # The institution's icon heads the entry; the accounts under it, indented,
+  # carry none of their own. Accounts outside an institution keep theirs.
+  test "the sidebar shows no logo on the accounts under an institution's entry" do
+    family = @user.family
+    bundled = %w[EUR GBP].map { |currency| family.accounts.create!(name: "Wise #{currency}", balance: 10, currency: family.currency, institution_name: "Wise", accountable: Depository.new) }
+    logo = "div.relative.shrink-0"
+
+    get root_url
+
+    assert_select "details[data-institution-bundle='wise|'] > summary #{logo}", minimum: 1
+    bundled.each do |account|
+      assert_select "details[data-institution-bundle='wise|'] a[href='#{account_path(account)}']", minimum: 1
+      assert_select "details[data-institution-bundle='wise|'] a[href='#{account_path(account)}'] #{logo}", count: 0
+    end
+    solo = (family.accounts.visible.to_a - bundled).find { |account| css_select("a[href='#{account_path(account)}']").any? }
+    assert solo, "expected an account outside an institution entry in the sidebar"
+    assert_select "a[href='#{account_path(solo)}'] #{logo}", minimum: 1
+  end
+
+  test "the sidebar shows an institution's entry with its saved name and currency" do
+    family = @user.family
+    ExchangeRate.create!(from_currency: family.currency, to_currency: "CHF", date: Date.current, rate: 2)
+    2.times { |index| family.accounts.create!(name: "Wise #{index}", balance: 10, currency: family.currency, institution_name: "Wise", accountable: Depository.new) }
+    family.institution_groups.create!(key: "wise|", name: "My Wise", currency: "CHF")
+
+    get root_url
+
+    assert_select "details[data-institution-bundle='wise|'] summary", minimum: 1 do
+      assert_select "a[href^='/institution_groups/']", text: "My Wise"
+      assert_select "p.privacy-sensitive", text: Money.new(40, "CHF").format
+    end
+  end
+
   test "show points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
     create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)

@@ -11,6 +11,29 @@ class AccountsHelperTest < ActionView::TestCase
 
   teardown { Current.session = nil }
 
+  test "a sidebar group lists its accounts one by one when ordered by hand, else its entries" do
+    2.times { |index| @family.accounts.create!(name: "Wise #{index}", balance: 10, currency: @family.currency, institution_name: "Wise", accountable: Depository.new) }
+    group = @family.balance_sheet.account_groups.find { |account_group| account_group.key == "depository" }
+
+    assert_equal group.accounts, sidebar_group_entries(group, sortable: true)
+    assert_includes sidebar_group_entries(group, sortable: false).map(&:class), BalanceSheet::AccountGroup::InstitutionBundle
+  end
+
+  test "a sidebar group opens as asked, or for the institution page being viewed" do
+    2.times { |index| @family.accounts.create!(name: "Wise #{index}", balance: 10, currency: @family.currency, institution_name: "Wise", accountable: Depository.new) }
+    group = @family.balance_sheet.account_groups.find { |account_group| account_group.key == "depository" }
+    entries = sidebar_group_entries(group, sortable: false)
+    bundle = entries.find { |entry| entry.is_a?(BalanceSheet::AccountGroup::InstitutionBundle) }
+    stubs(:page_active?).returns(false)
+
+    assert sidebar_group_open?(group, entries, open: true)
+    assert_not sidebar_group_open?(group, entries)
+
+    stubs(:sidebar_active_institution_group_slug).returns(bundle.slug)
+    assert sidebar_group_open?(group, entries)
+    assert_not sidebar_group_open?(group, entries, open: false)
+  end
+
   test "sidebar cache key changes with the Brandfetch client id" do
     Setting.stubs(:brand_fetch_client_id).returns(nil)
     without_key = account_sidebar_tabs_cache_key(family: @family, active_tab: "all", mobile: false)
@@ -78,6 +101,18 @@ class AccountsHelperTest < ActionView::TestCase
     link.destroy!
 
     assert_not_equal before, sidebar_key
+  end
+
+  test "sidebar cache key changes when an institution's bundle settings are saved" do
+    before = sidebar_key
+    settings = @family.institution_groups.create!(key: "chase")
+    created = sidebar_key
+    assert_not_equal before, created
+
+    travel 1.second do
+      settings.update!(currency: "EUR")
+    end
+    assert_not_equal created, sidebar_key
   end
 
   private

@@ -34,6 +34,19 @@ class BalanceSheet
     [ assets.account_groups, liabilities.account_groups ].flatten
   end
 
+  # The institution bundles among the user's accounts, in every group.
+  def institution_bundles
+    account_groups.flat_map { |group| group.institution_bundles(institution_groups: family.institution_group_settings) }
+  end
+
+  # The institution bundle with that slug among the user's accounts, or nil.
+  # Only that bundle is built (a sidebar loads one sparkline per bundle).
+  def institution_bundle(slug)
+    group_key, _, digest = slug.to_s.rpartition("-")
+    account_groups.find { |group| group.key == group_key }
+      &.institution_bundle_by_digest(digest, institution_groups: family.institution_group_settings)
+  end
+
   def net_worth
     assets.total - liabilities.total
   end

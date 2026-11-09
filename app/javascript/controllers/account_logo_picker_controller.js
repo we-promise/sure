@@ -13,9 +13,10 @@ function normalizeDomain(value) {
     .replace(/^www\./, "");
 }
 
-// Previews the icon chosen in the account form. Nothing is saved until the
-// form is submitted: a picked or removed icon travels in a hidden field, an
-// upload in the file field.
+// Previews the icon chosen in the account form (or an institution's settings,
+// which share the picker). Nothing is saved until the form is submitted: a
+// picked or removed icon travels in a hidden field, an upload in the file
+// field. The domain and name fields are the form's, named by the values.
 export default class extends Controller {
   static targets = [
     "preview",
@@ -29,7 +30,13 @@ export default class extends Controller {
     "pick",
     "pickHint",
   ];
-  static values = { pending: String, removal: String, providerDomain: String };
+  static values = {
+    pending: String,
+    removal: String,
+    providerDomain: String,
+    domainField: { type: String, default: "account[institution_domain]" },
+    nameField: { type: String, default: "account[institution_name]" },
+  };
 
   // Stimulus connects targets before connect(), so the field is looked up
   // on demand and the button state is set again once listening.
@@ -42,7 +49,7 @@ export default class extends Controller {
   get domainField() {
     return this.element
       .closest("form")
-      ?.elements.namedItem("account[institution_domain]");
+      ?.elements.namedItem(this.domainFieldValue);
   }
 
   disconnect() {
@@ -84,7 +91,7 @@ export default class extends Controller {
     this.showFile();
   }
 
-  // The picker searches what the account form holds now, not what was saved.
+  // The picker searches what the form holds now, not what was saved.
   search(event) {
     if (!this.domainReady()) {
       event.preventDefault();
@@ -96,8 +103,12 @@ export default class extends Controller {
     const typed = this.element.closest("form").elements;
     const query = currentTarget.form.elements;
 
-    for (const name of ["institution_domain", "institution_name"]) {
-      const field = typed.namedItem(`account[${name}]`);
+    const fields = {
+      institution_domain: this.domainFieldValue,
+      institution_name: this.nameFieldValue,
+    };
+    for (const [name, fieldName] of Object.entries(fields)) {
+      const field = typed.namedItem(fieldName);
       const input = query.namedItem(name);
       if (field && input) input.value = field.value;
     }

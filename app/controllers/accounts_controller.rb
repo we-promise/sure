@@ -1,5 +1,5 @@
 class AccountsController < ApplicationController
-  include StreamExtensions
+  include StreamExtensions, AccountLogoOptions
   include FilterClearable
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
@@ -389,12 +389,6 @@ class AccountsController < ApplicationController
   end
 
   private
-    # The form may hold a domain or name that is not saved yet.
-    def render_logo_options(account)
-      account.assign_attributes(params.permit(:institution_domain, :institution_name))
-      render partial: "accounts/logo_field", locals: { account: account, candidates: Account::LogoFetcher.new(account).candidates }
-    end
-
     # Built here rather than in the template: assembling a chart payload is
     # domain work, and `show` asks for it exactly once per request, so there
     # is nothing to memoise.

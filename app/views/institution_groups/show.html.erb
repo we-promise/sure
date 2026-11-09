@@ -1,0 +1,9 @@
+<div class="space-y-4 pb-5 lg:pb-32">
+  <%= render "institution_groups/header", bundle: @bundle %>
+
+  <%= render "institution_groups/chart", bundle: @bundle, series: @series, period: @chart_period %>
+
+  <%= render "institution_groups/accounts", bundle: @bundle, reconciliation_indicators: @reconciliation_indicators %>
+
+  <%= render "institution_groups/activity", bundle: @bundle, entries: @entries, pagy: @pagy, range: @activity_range %>
+</div>
