@@ -131,6 +131,9 @@ ru:
         start_date: Дата начала
         subtitle: Отслеживайте использование ИИ и предполагаемые затраты
         total_cost: Общая стоимость
+        total_calls: "Всего вызовов"
+        avg_cost_per_call: "Средняя стоимость/вызов"
+        based_on_calls: "Основано на %{with_cost} из %{total} вызовов с данными о стоимости"
         total_tokens: Всего токенов
     mcp:
       revoke:

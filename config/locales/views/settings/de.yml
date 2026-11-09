@@ -691,6 +691,9 @@ de:
         start_date: Startdatum
         subtitle: Behalte deine KI-Nutzung und die geschätzten Kosten im Blick
         total_cost: Kosten gesamt
+        total_calls: "Aufrufe gesamt"
+        avg_cost_per_call: "Ø Kosten/Aufruf"
+        based_on_calls: "Grundlage sind %{with_cost} von %{total} Aufrufen mit Kostendaten"
         total_tokens: Tokens gesamt
     mcp:
       revoke:
