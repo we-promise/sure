@@ -251,6 +251,27 @@ class Api::V1::AccountStatementsControllerTest < ActionDispatch::IntegrationTest
     assert_nil body["data"]["match_confidence"]
   end
 
+  test "checks suggested accounts without a query per statement" do
+    3.times do |i|
+      statement = AccountStatement.create_from_upload!(
+        family: @family,
+        account: nil,
+        file: statement_upload(content: "date,amount\n2024-0#{i + 1}-01,#{i}\n")
+      )
+      statement.update_columns(suggested_account_id: accounts(:other_asset).id, match_confidence: 0.9)
+    end
+
+    share_queries = 0
+    counter = ->(*, payload) { share_queries += 1 if payload[:sql].include?("account_shares") }
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      get api_v1_account_statements_url, headers: api_headers(@member_api_key)
+    end
+
+    assert_response :success
+    assert JSON.parse(response.body)["data"].all? { |s| s["suggested_account"].nil? }
+    assert_operator share_queries, :<=, 3
+  end
+
   test "hides statements the caller cannot see" do
     private_statement = AccountStatement.create_from_upload!(family: @family, account: accounts(:other_asset), file: statement_upload)
 

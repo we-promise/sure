@@ -26,7 +26,7 @@ end
 
 # Only reveal a suggestion the caller could see on its own.
 suggested = account_statement.suggested_account
-if suggested && suggested.shared_with?(Current.user)
+if suggested && accessible_account_ids.include?(suggested.id)
   json.suggested_account do
     json.id suggested.id
     json.name suggested.name

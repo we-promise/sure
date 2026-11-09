@@ -8,6 +8,8 @@ class Api::V1::AccountStatementsController < Api::V1::BaseController
   before_action :ensure_statement_manager
   before_action :set_statement, only: [ :show ]
 
+  helper_method :accessible_account_ids
+
   def index
     # Mirrors AccountStatement#viewable_by? for a statement manager in SQL, so
     # pages are never underfilled: unlinked statements are visible, linked ones
@@ -66,6 +68,12 @@ class Api::V1::AccountStatementsController < Api::V1::BaseController
 
     def family
       current_resource_owner.family
+    end
+
+    # Loaded once per request so rendering a page of statements checks each
+    # suggested account without a query per row.
+    def accessible_account_ids
+      @accessible_account_ids ||= current_resource_owner.accessible_accounts.pluck(:id).to_set
     end
 
     def set_statement
