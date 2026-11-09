@@ -113,7 +113,7 @@ class Ai::Generation
     def call_single(routes, cancelled:)
       raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
 
-      route, value = on_routes(routes, nil).first
+      route, value = on_routes(routes, nil).first.first
       result(value:, route:)
     end
 
@@ -128,20 +128,23 @@ class Ai::Generation
 
         route = routes.find { !Ai::DownMarks.down?(_1) } || routes.first
         slice = Ai::Batch.first_slice(remaining, model: route.model, fixed_tokens: fixed_tokens(route))
-        on_routes(routes, slice).each do |answered_by, value|
+        answers, unanswered = on_routes(routes, slice)
+        answers.each do |answered_by, value|
           served = answered_by
           answered.concat(Array(value[merge_key]))
         end
-        remaining -= slice
+        remaining = unanswered + (remaining - slice)
         done += 1
+        break if unanswered.any?   # the routes failed over; a later job retries these
       end
 
       result(value: { merge_key => answered.index_by { _1[merge_by] }.values }, route: served, remaining:)
     end
 
     # Runs `slice` (nil for a feature without items) down the routes: failover and escalation
-    # move on, an overflow is split on the same route. Returns [[route, value], ...], one pair
-    # per piece the slice was split into; items no route could fit are left out.
+    # move on, an overflow is split on the same route. Returns [[[route, value], ...], unanswered]:
+    # one pair per piece the slice was split into, and the items to retry later because the
+    # routes failed over after answering part. Items no route could fit are left out.
     def on_routes(routes, slice)
       pending = slice
       answers = []
@@ -153,7 +156,7 @@ class Ai::Generation
         begin
           done, pending = split_on(route, pending)
           answers.concat(done.map { [ route, _1 ] })
-          return answers if pending.empty?
+          return [ answers, [] ] if pending.empty?
         rescue *Ai::DownMarks::FAILOVER => error
           Ai::DownMarks.mark(route, error)
           @failed_over_from << route
@@ -170,11 +173,14 @@ class Ai::Generation
         answers.concat(done.map { [ route, _1 ] })
       end
 
-      # Part of the slice was answered and the rest fits no route or breaks every answer: keep the
-      # answers, and leave the rest unanswered rather than lose both.
+      # Part of the slice was answered: keep the answers. The rest is retried later when the
+      # routes failed over (a timeout, an outage), and left unanswered when it fits no route or
+      # breaks every answer.
       if answers.any?
+        return [ answers, pending ] if Ai::DownMarks::FAILOVER.any? { last_error.is_a?(_1) }
+
         log_unfit(pending)
-        return answers
+        return [ answers, [] ]
       end
 
       raise last_error || Ai::Error::Unreachable.new("every route for #{feature_key} is marked down")

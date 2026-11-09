@@ -69,6 +69,21 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert result.cancelled?
   end
 
+  test "items left over when the next route times out stay remaining, for a later job to retry" do
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+    stub_ai(:detect_merchants) do |request|
+      raise Ai::Error::Timeout, "slow" if request.model.endpoint.name == "openai"
+      raise Ai::Error::ContextTooLong, "too long" unless request.input.include?("t0") && !request.input.include?("t1")
+
+      AiTestGeneration.answer(request)
+    end
+
+    result = generation(3).call
+
+    assert_equal %w[t0], result.value[:merchants].map { _1[:transaction_id] }
+    assert_equal %w[t1 t2], result.remaining_ids.sort
+  end
+
   test "an error after every route is the result's error, and call! raises it" do
     stub_ai(:detect_merchants, raises: Ai::Error::Refused.new("bad request", status: 400))
 
