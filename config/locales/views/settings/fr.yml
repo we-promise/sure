@@ -453,7 +453,12 @@ fr:
         last_synced: Dernière synchronisation il y a %{time}
         needs_attention: requiert de l'attention
       ibkr_panel:
-        accounts_tab: Comptes
+        add_connection: Ajouter une connexion Interactive Brokers
+        connection_name_label: Nom de la connexion
+        connection_name_placeholder: ex. IBKR Irlande, IBKR US
+        disconnect: Déconnecter
+        disconnect_confirm_named: Déconnecter %{name} ?
+        setup_accounts: Configurer les comptes
         configuration:
           all_other_options: 'All other configuration options : "No"'
           date_format: "Date Format : yyyy-MM-dd"
@@ -463,7 +468,6 @@ fr:
           period: "Period : Last 365 Calendar Days"
           profit_and_loss: "Profit and Loss : Default"
           time_format: "Time Format : HH:mm:ss"
-        disconnect_confirm: Déconnecter Interactive Brokers ?
         flex_query_details:
           configuration_heading: Définissez ces options de requête
           eyebrow: Requête Flex
@@ -475,7 +479,6 @@ fr:
         query_id_placeholder_existing: Laissez vide pour conserver l'ID de requête actuel
         query_id_placeholder_new: Saisissez votre ID de requête IBKR Flex
         report_window_note: Les rapports IBKR Flex sont limités à la fenêtre de requête que vous avez configurée dans IBKR. Sure importera la totalité des positions actuelles ainsi que jusqu'aux 365 derniers jours d'activité de ce rapport.
-        save_configuration: Enregistrer la configuration
         sections:
           account_information: "Account Information: Account ID, Currency"
           cash_report: "Cash Report :"
@@ -494,8 +497,6 @@ fr:
           trades: "Trades :"
           trades_fields: "Fields : Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
           trades_options: "Options : Execution"
-        status_configured_prefix: "%{summary}. Visitez l'onglet"
-        status_configured_suffix: pour gérer les comptes découverts.
         steps:
           step_1: Dans votre portail client IBKR, accédez à "Performance & Rapports" > "Requêtes Flex".
           step_2: Cliquez sur l'icône "+" dans la section "Activity Flex Query" pour créer une nouvelle requête.

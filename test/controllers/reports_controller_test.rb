@@ -594,6 +594,14 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-#{subcategory_games.id}']", text: /^Games/
   end
 
+  test "index lets keyboard users scroll the breakdown table" do
+    create_transaction(account: @family.accounts.first, name: "Lunch", amount: 15, category: categories(:food_and_drink))
+
+    get reports_path(period_type: :monthly)
+
+    assert_select "[role=region][tabindex='0'][aria-label=?] table", "Expenses"
+  end
+
   test "index links income and expense categories to filtered transactions" do
     start_date = Date.current.beginning_of_month
     end_date = Date.current.end_of_month

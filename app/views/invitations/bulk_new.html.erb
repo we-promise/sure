@@ -1,0 +1,23 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle", product_name: product_name, moniker: family_moniker_downcase)) %>
+
+  <% dialog.with_body do %>
+    <%= styled_form_with url: bulk_create_invitations_path, scope: :bulk_invitation, class: "space-y-4" do |form| %>
+      <%= form.text_area :emails,
+        required: true,
+        rows: 6,
+        placeholder: t(".emails_placeholder"),
+        label: t(".emails_label") %>
+
+      <%= form.select :role,
+        options_for_select([
+          (FeatureFlags.intro_ui? ? [t(".role_guest"), "guest"] : nil),
+          [t(".role_member"), "member"]
+        ].compact),
+        {},
+        { label: t(".role_label") } %>
+
+      <%= render DS::Button.new(text: t(".submit"), type: "submit", full_width: true) %>
+    <% end %>
+  <% end %>
+<% end %>
