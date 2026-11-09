@@ -21,6 +21,7 @@ en:
         cost_by_operation: "Cost by Operation"
         cost_by_model: "Cost by Model"
         recent_usage: "Recent Usage"
+        recent_usage_scope: "Each call shows all its requests, even ones outside the selected dates, so its total can differ from the totals above, which count only requests in the range."
         col_date: "Date"
         col_operation: "Operation"
         col_model: "Model"

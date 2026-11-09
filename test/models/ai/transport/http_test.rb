@@ -76,7 +76,7 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
   test "the ruby-openai client gets the endpoint's settings and the resolved proxy" do
     endpoint = ai_endpoint(base_url: "https://llm.example.test/v1", extra_headers: { "X-Team" => "home" }, timeout_seconds: 7)
 
-    with_env_overrides("HTTPS_PROXY" => PROXY) do
+    with_env_overrides("HTTPS_PROXY" => PROXY, "NO_PROXY" => nil, "no_proxy" => nil) do
       client = Http.openai_client(endpoint)
       connection = Faraday.new.tap { client.faraday_middleware.call(_1) }
 

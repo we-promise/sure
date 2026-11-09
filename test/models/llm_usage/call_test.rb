@@ -48,10 +48,11 @@ class LlmUsage::CallTest < ActiveSupport::TestCase
     assert_in_delta 0.02, stats[:avg_cost]
   end
 
-  test "the average cost comes from the unrounded total" do
+  test "the average cost comes from the unrounded total, over priced calls only" do
     usage(estimated_cost: 0.002)
+    usage(estimated_cost: nil)
 
-    assert_in_delta 0.002, LlmUsage.statistics_for_family(@family)[:avg_cost]
+    assert_in_delta 0.002, LlmUsage.statistics_for_family(@family)[:avg_cost], 0.00001
   end
 
   test "a row the old recorders write with an error in metadata is a failed request" do

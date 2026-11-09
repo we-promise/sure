@@ -3,10 +3,12 @@
 # after the call's deadline isn't sent, and a failed request's mapped, scrubbed error goes on the
 # payload as `:ai_error`, which UsageSubscriber adds to that request's usage row.
 class Ai::Transport::Instrumenter
-  # map_error: turns a raised error into the Ai::Error the transport raises, scrubbed.
-  def initialize(delegate = ActiveSupport::Notifications, map_error: ->(error) { error })
+  # map_error: turns a raised error into the Ai::Error the transport raises, scrubbed, or nil.
+  # scrub: removes the endpoint's secrets from an error that has no Ai::Error.
+  def initialize(delegate = ActiveSupport::Notifications, map_error: ->(error) { error }, scrub: ->(text) { text })
     @delegate = delegate
     @map_error = map_error
+    @scrub = scrub
   end
 
   def instrument(name, payload = {}, &block)
@@ -33,7 +35,9 @@ class Ai::Transport::Instrumenter
     end
 
     def failure_details(error)
-      mapped = @map_error.call(error) || error
+      mapped = @map_error.call(error)
+      return { error: @scrub.call(error.message), error_class: error.class.name } if mapped.nil?
+
       { error: mapped.message, error_class: mapped.class.name, http_status_code: mapped.try(:status) }.compact
     rescue StandardError
       nil
