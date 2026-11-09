@@ -74,7 +74,7 @@
     <% if investment_metrics[:top_holdings].any? %>
       <div class="space-y-3">
         <h4 class="text-lg font-medium"><%= t("reports.investment_performance.top_holdings") %></h4>
-        <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
+        <div class="bg-container-inset rounded-xl p-1 overflow-x-auto focus-ring" tabindex="0" role="region" aria-label="<%= t("reports.investment_performance.top_holdings") %>">
           <div class="w-max min-w-full">
           <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
           <table class="w-full">
