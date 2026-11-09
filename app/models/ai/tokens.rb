@@ -21,9 +21,13 @@ Ai::Tokens = Data.define(:input_tokens, :output_tokens, :cache_read_tokens, :cac
       output_tokens: tokens&.output,
       cache_read_tokens: tokens&.cache_read,
       cache_write_tokens: tokens&.cache_write,
-      cost: reported || total
+      cost: valid_cost(reported) || valid_cost(total)
     )
   end
+
+  # A negative or non-finite cost would fail LlmUsage's validation and lose the row; without
+  # one the subscriber estimates from the tokens.
+  def self.valid_cost(value) = value.is_a?(Numeric) && value.finite? && value >= 0 ? value : nil
 
   def known? = [ input_tokens, output_tokens, cache_read_tokens, cache_write_tokens ].any?
 

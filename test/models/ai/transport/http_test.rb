@@ -28,6 +28,11 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
     assert_equal PROXY, Http.proxy_for("http://other.lan:8080", env:)
   end
 
+  test "NO_PROXY=* sends every host direct" do
+    assert_nil Http.proxy_for("https://api.openai.com", env: { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "*" })
+    assert_nil Http.proxy_for("http://llm.lan:8080", env: { "HTTP_PROXY" => PROXY, "no_proxy" => " * " })
+  end
+
   test "the models list goes to the same server as the chat calls it checks" do
     full = Ai::Config::Endpoint.new(name: "gw", protocol: :compatible, base_url: "https://gw.example.test/v1/chat/completions", api_key: "k")
     openrouter = Ai::Config::Endpoint.new(name: "or", protocol: :compatible, preset: :openrouter, api_key: "or-key")

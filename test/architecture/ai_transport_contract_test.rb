@@ -104,7 +104,8 @@ class AiTransportContractTest < ActiveSupport::TestCase
     end
 
     test "#{protocol}: a dated snapshot of the model passes the probe; a sibling model doesn't" do
-      { "test-model-2025-04-14" => true, "vendor/test-model-20250929" => true, "test-model-mini" => false, "test-model2" => false }.each do |answered, same|
+      { "test-model-2025-04-14" => true, "vendor/test-model-20250929" => true, "test-model-mini" => false, "test-model2" => false,
+        "test-model-o" => false }.each do |answered, same|
         stub_request(:post, spec[:url]).to_return(status: 200, headers: JSON_HEADERS, body: spec[:ok].merge(model: answered).to_json)
 
         if same
@@ -186,6 +187,37 @@ class AiTransportContractTest < ActiveSupport::TestCase
       assert_equal "https://openrouter.ai/api/v1", transport.send(:ruby_llm_api_base)
       assert_nil transport.send(:ruby_llm_context).config.http_proxy
     end
+  end
+
+  test "two qualified ids are the same model only within one namespace" do
+    transport = Ai::Transport.for(ai_endpoint(name: "gw", base_url: "https://llm.example.test/v1"))
+
+    assert transport.send(:same_model?, "org-a/model-x", "org-a/model-x-2025-04-14")
+    assert_not transport.send(:same_model?, "org-a/model-x", "org-b/model-x")
+    assert transport.send(:same_model?, "model-x", "org-b/model-x")
+  end
+
+  test "two different names of the same length are different models" do
+    transport = Ai::Transport.for(ai_endpoint(name: "gw", base_url: "https://llm.example.test/v1"))
+
+    assert_not transport.send(:same_model?, "gpt-4o", "gpt-41")
+    assert_not transport.send(:same_model?, "test-model", "loaded-mod")
+  end
+
+  test "anthropic: a chat probe for a model the API doesn't have is ModelMissing" do
+    stub_request(:post, TRANSPORTS[:anthropic][:url]).to_return(
+      status: 404, headers: JSON_HEADERS, body: TRANSPORTS[:anthropic][:error].("model: test-model", "not_found_error").to_json
+    )
+
+    assert_raises(Ai::Error::ModelMissing) { probe(:anthropic, :chat) }
+    assert_raises(Ai::Error::ModelMissing) { probe(:anthropic, :tools) }
+  end
+
+  test "an embedding response that isn't the expected shape is InvalidOutput" do
+    model_endpoint = ai_endpoint(name: "embed", base_url: "https://llm.example.test/v1")
+    stub_request(:post, "https://llm.example.test/v1/embeddings").to_return(status: 200, headers: JSON_HEADERS, body: "{}")
+
+    assert_raises(Ai::Error::InvalidOutput) { Ai::Transport.for(model_endpoint).probe(ai_model(endpoint: model_endpoint), :embedding) }
   end
 
   test "a models list with an entry that isn't an object is InvalidOutput" do

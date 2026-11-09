@@ -60,6 +60,35 @@ class Ai::CallContextTest < ActiveSupport::TestCase
     assert_equal 1, tries
   end
 
+  test "a request outside RubyLLM, such as the models list, isn't sent once the budget is spent" do
+    model = ai_model(name: "test-model")
+    Ai::Transport::Http.expects(:openai_client).never
+
+    with_ai_call_context(model:, budget: 0) do
+      assert_raises(Ai::Error::Timeout) { Ai::Transport.for(model.endpoint).send(:attempt) { Ai::Transport::Http.openai_client(model.endpoint) } }
+    end
+  end
+
+  test "each attempt's request timeout is cut to what's left of the budget" do
+    model = ai_model(name: "test-model")
+    transport = Ai::Transport.for(model.endpoint)
+
+    with_ai_call_context(model:, budget: 0.2) { assert_operator transport.send(:within_budget, 60), :<=, 0.2 }
+    assert_equal 60, transport.send(:within_budget, 60)
+  end
+
+  test "an answer that arrives after the budget is spent is a Timeout, not a pass" do
+    model = ai_model(name: "test-model")
+    transport = Ai::Transport.for(model.endpoint)
+
+    with_ai_call_context(model:, budget: 1) do |call|
+      error = assert_raises(Ai::Error::Timeout) do
+        transport.send(:attempt) { Ai::CallContext.stubs(:now).returns(call.deadline + 0.1); :ok }
+      end
+      assert_match(/before the answer arrived/, error.message)
+    end
+  end
+
   test "the instrumenter forwards every event to RubyLLM's own instrumenter" do
     delegate = mock
     delegate.expects(:instrument).with("chat.ruby_llm", { a: 1 }).yields.returns(:done)
