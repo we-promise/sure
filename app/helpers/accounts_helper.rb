@@ -52,7 +52,8 @@ module AccountsHelper
   # same reason as the sparklines': a new <img> shows the initials beneath it
   # until the image loads, so every visit flashed them. It changes with what
   # the logo shows (the image, and the name and colour of the initials), not
-  # with its URL, which can change on every render (Account#logo_identity).
+  # with its URL, which changes at the daily rollover where stored URLs
+  # expire (Account#logo_identity).
   def sidebar_logo_wrapper_id(copy, account, color)
     "logo_keep_#{copy}_#{account.id}_#{Digest::MD5.hexdigest([ account.logo_identity, account.name, color ].join("|"))[0, 12]}"
   end

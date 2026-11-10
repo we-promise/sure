@@ -39,8 +39,9 @@ module Account::Logoable
 
   # Names what #logo_url shows with a value that stays the same from one
   # render to the next. A stored logo's URL carries an expiry when
-  # config.active_storage.urls_expire_in is set (as in production), so it
-  # changes every time it is built; its blob doesn't. The same image uploaded
+  # config.active_storage.urls_expire_in is set (as in production); that
+  # expiry is rounded to the end of the day, so the URL stays the same through
+  # the day and changes at the daily rollover, while its blob doesn't. The same image uploaded
   # again is a new blob, and the old one is purged, so the blob's id names it
   # rather than its checksum.
   #
@@ -63,8 +64,19 @@ module Account::Logoable
   end
 
   # A rejected upload re-rendered in the form is attached but unsaved and has no URL yet.
+  #
+  # With config.active_storage.urls_expire_in set, a blob URL carries its
+  # expiry, to the millisecond by default, so each render made a new URL and
+  # the browser fetched the logo again on every page, showing the initials
+  # until it arrived. The expiry is rounded to the end of that day instead:
+  # the URL stays the same all day, so the browser's cache serves it, and it
+  # still expires no sooner than configured (at most a day later). It changes
+  # on the same day boundary as #logo_identity.
   def stored_logo_url
-    Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true) if logo.attached? && logo.blob.persisted?
+    return unless logo.attached? && logo.blob.persisted?
+
+    expiry = ActiveStorage.urls_expire_in && { expires_in: nil, expires_at: (Time.current + ActiveStorage.urls_expire_in).end_of_day }
+    Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true, **expiry.to_h)
   end
 
   def brandfetch_logo_url

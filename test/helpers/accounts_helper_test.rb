@@ -11,7 +11,7 @@ class AccountsHelperTest < ActionView::TestCase
 
   teardown { Current.session = nil }
 
-  test "a sidebar logo's wrapper id stays the same while its stored logo's URL expires and changes" do
+  test "a sidebar logo's wrapper id stays the same through the day, as its stored logo's URL does" do
     account = accounts(:depository)
     account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png", content_type: "image/png")
     ActiveStorage.stubs(:urls_expire_in).returns(7.days)
@@ -20,8 +20,8 @@ class AccountsHelperTest < ActionView::TestCase
     travel_to Time.zone.local(2026, 11, 10, 9) do
       first_url, first_id = account.logo_url, sidebar_logo_wrapper_id("asset_depository", account, "#000")
 
-      travel 1.minute
-      assert_not_equal first_url, Account.find(account.id).logo_url, "the stored logo's URL carries its expiry"
+      travel 8.hours
+      assert_equal first_url, Account.find(account.id).logo_url
       assert_equal first_id, sidebar_logo_wrapper_id("asset_depository", Account.find(account.id), "#000")
     end
 
