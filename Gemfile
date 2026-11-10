@@ -9,6 +9,9 @@ gem "rails", "~> 8.1.0"
 gem "pg", "~> 1.5"
 gem "redis", "~> 5.4"
 
+# Bech32/Bech32m encoding for watch-only Bitcoin addresses.
+gem "bech32", "1.5.1"
+
 # Deployment
 gem "puma", ">= 7.2.1"
 gem "bootsnap", require: false
@@ -92,7 +95,7 @@ gem "rubyzip", "~> 3.4"
 gem "pdf-reader", "~> 2.12"
 
 # OpenID Connect, OAuth & SAML authentication
-gem "omniauth", "~> 2.1"
+gem "omniauth", "~> 2.2"
 gem "omniauth-rails_csrf_protection", ">= 2.0"
 gem "omniauth_openid_connect"
 gem "omniauth-google-oauth2"

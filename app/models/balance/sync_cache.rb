@@ -1,6 +1,8 @@
 class Balance::SyncCache
-  def initialize(account)
+  # start_date skips entries before it; only safe when the caller seeds balances from a persisted prior day.
+  def initialize(account, start_date: nil)
     @account = account
+    @start_date = start_date
     @unconvertible_entry_count = 0
     @unconvertible_holding_count = 0
   end
@@ -19,6 +21,12 @@ class Balance::SyncCache
   def unconvertible_holding_count
     holdings_value_by_date
     @unconvertible_holding_count
+  end
+
+  # Every entry the calculation uses: settled, without split parents or
+  # future-dated ones, and converted into the account's currency.
+  def entries
+    converted_entries
   end
 
   def get_valuation(date)
@@ -72,10 +80,14 @@ class Balance::SyncCache
     end
 
     def converted_entries
+      # Scheduled (future-dated) entries are excluded from balance calculations
+      # entirely -- they must not affect the account's current balance until
+      # their date arrives. A daily sync naturally picks them up once "today"
+      # reaches their date (see Entry#scheduled?).
       @converted_entries ||= begin
         missing_rate_pairs = []
 
-        converted = account.entries.excluding_pending.excluding_split_parents.excluding_planned_purchases.includes(:entryable).order(:date).to_a.filter_map do |e|
+        converted = entries_scope.to_a.filter_map do |e|
           custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 
           # Use Money#exchange_to with custom rate if available, standard lookup otherwise.
@@ -114,6 +126,11 @@ class Balance::SyncCache
 
         converted
       end
+    end
+
+    def entries_scope
+      scope = account.entries.excluding_pending.excluding_split_parents.excluding_planned_purchases.where(date: ..Date.current).includes(:entryable).order(:date)
+      @start_date ? scope.where(date: @start_date..) : scope
     end
 
     def report_missing_rates(message:, counts:, missing_rate_pairs:)
