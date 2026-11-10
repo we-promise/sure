@@ -1,0 +1,66 @@
+---
+ru:
+  settings:
+    preferences:
+      show:
+        additional_currencies_label: Дополнительные валюты
+        base_currency_badge: Базовая валюта
+        base_currency_label: Базовая валюта
+        country: Страна
+        currencies_more: "+%{count} ещё"
+        currencies_subtitle: Выберите, какие валюты будут отображаться в денежных полях (%{moniker})
+        currencies_title: '%{moniker}: валюты'
+        currency: Валюта
+        currency_search_placeholder: Поиск валют
+        date_format: Формат даты
+        default_account_order: Порядок счетов по умолчанию
+        default_period: Период по умолчанию
+        general_subtitle: Настройте ваши предпочтения
+        general_title: Общие
+        language: Язык
+        language_auto: Язык браузера
+        manage_currencies: Управление валютами
+        manage_currencies_subtitle: Уберите валюты, которые вы никогда не используете,
+          или сократите список до нескольких.
+        month_start_day: Начало бюджетного месяца
+        month_start_day_hint: Установите, когда начинается ваш бюджетный месяц (например,
+          день зарплаты)
+        month_start_day_warning: Ваши бюджеты и расчёты MTD будут использовать этот
+          пользовательский день начала вместо 1-го числа каждого месяца.
+        no_additional_currencies: Не выбрано
+        no_matching_currencies: Валюты не найдены
+        page_title: Предпочтения
+        preview:
+          description: Подключитесь к функциям в процессе разработки, отмеченным как
+            предварительный просмотр или canary.
+          title: Включить функции предварительного просмотра
+        save_currencies: Сохранить валюты
+        select_all_currencies: Выбрать все
+        select_base_only: Только базовая валюта
+        selected_currencies_count:
+          few: Выбрано %{count}
+          many: Выбрано %{count}
+          one: Выбрано %{count}
+          other: Выбрано %{count}
+        sharing_default_label: Совместное использование по умолчанию для новых счетов
+        sharing_private: Оставить приватным по умолчанию
+        sharing_shared: Делитесь со всеми участниками
+        sharing_subtitle: Управляйте тем, как счета доступны участникам (%{moniker})
+        sharing_title: '%{moniker}: совместный доступ'
+        timezone: Часовой пояс
+        translations_notice: Обратите внимание, что мы всё ещё работаем над переводами
+          на различные языки.
+        budget_title: Бюджет
+        budget_subtitle: Настройте работу ваших бюджетов
+        personal_budgets: Личные бюджеты
+        personal_budgets_hint: Включить отдельные бюджеты для каждого участника семьи.
+        household_budget_enabled: Общий бюджет
+        household_budget_enabled_hint: Вести общий бюджет домохозяйства наряду с личными. Отключите, чтобы использовать только личные бюджеты.
+        budget_sharing_title: Общий доступ к бюджету
+        budget_sharing_subtitle: Разрешите другим участникам просматривать или изменять ваш личный бюджет
+        budget_sharing_no_members: 'Нет других участников, с которыми можно поделиться: %{moniker} состоит только из вас'
+        budget_sharing_permission_label: Доступ для %{name}
+        budget_sharing_permissions:
+          none: Нет доступа
+          read_only: Только просмотр
+          read_write: Может изменять

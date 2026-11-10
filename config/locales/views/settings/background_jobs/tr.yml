@@ -1,0 +1,46 @@
+---
+tr:
+  settings:
+    background_jobs:
+      show:
+        page_title: Arka plan işleri
+        title: Çalışan durumu
+        subtitle: 'Canlı Sidekiq çalışma durumu: çalışan süreçleri, kuyruk derinlikleri ve yeniden deneme/başarısız kümeleri.'
+        redis_unreachable: Sidekiq durumu kullanılamıyor (Redis'e ulaşılamıyor). İşlerin canlılığı bilinmediği için eylemler devre dışı.
+        operations_title: Devam eden işlemler
+        operations_subtitle: Tüm ailelerde henüz son duruma ulaşmamış senkronizasyonlar, içe aktarmalar ve dışa aktarmalar. Görünür bir işi olmadan 30 dakikadan uzun süre boşta kalan işlemlerin kaybolduğu varsayılır ve bu şekilde işaretlenebilir.
+        empty: Devam eden işlem yok.
+        missing_value: '-'
+        stats:
+          workers: Çalışanlar
+          busy: Meşgul
+          enqueued: Kuyrukta
+          retries: Yeniden denenecek
+          scheduled: Zamanlanmış
+          dead: Başarısız
+          queue_label: '%{name}: %{size} · %{latency}s gecikme'
+        table:
+          type: İşlem
+          family: Aile
+          status: Durum
+          last_activity: Son etkinlik
+          liveness: Canlılık
+          action: Eylem
+      operation:
+        ago: '%{time} önce'
+        sync_label: Senkronizasyon · %{type}
+        running: Çalışıyor
+        queued: Kuyrukta
+        recent: Yakın zamanda etkin
+        unknown: Bilinmiyor
+        stuck: Takıldı — kaybolduğu varsayılıyor
+        confirm: Bu işlem kayıp olarak işaretlensin mi? Kayıt, yeniden denenebilmesi için son bir duruma taşınır. Asıl verilere dokunulmaz.
+        missing_value: '-'
+        actions:
+          mark_stale: Eskimiş olarak işaretle
+          mark_failed: Başarısız olarak işaretle
+          release_claim: Kilidi serbest bırak
+      cancel:
+        cancelled: '%{type} kayıp olarak işaretlendi.'
+        not_cancellable: Bu işlem şu anda değiştirilemez — işi hâlâ kuyrukta veya çalışıyor olabilir. 30 dakika boşta kaldıktan sonra tekrar deneyin.
+        cancelled_error: Bir yönetici tarafından başarısız olarak işaretlendi — arka plan işinin kaybolduğu varsayıldı.

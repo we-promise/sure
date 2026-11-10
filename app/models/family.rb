@@ -15,6 +15,7 @@ class Family < ApplicationRecord
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable
+  include SharesightConnectable
   include AiPromptable
 
   DATE_FORMATS = [
@@ -384,8 +385,8 @@ class Family < ApplicationRecord
   #
   # This is the single entry point for "a member just joined, give them the
   # accounts the family shares by default." It self-guards on the sharing policy
-  # and family membership so every membership path (invitation accept, SSO JIT
-  # sign-up, token registration, mobile SSO) can call it without reintroducing
+  # and family membership so every membership path (SSO JIT sign-up, token
+  # registration, mobile SSO) can call it without reintroducing
   # the "member joined but sees nothing" bug. No-op when sharing is disabled or
   # there is nothing to share, and idempotent on re-run.
   def auto_share_existing_accounts_with(user)
@@ -483,6 +484,17 @@ class Family < ApplicationRecord
       .distinct
       .pluck(:merchant_id)
     Merchant.where(id: merchant_ids)
+  end
+
+  # Merchants a rule can set on transactions: the family's own plus the
+  # provider merchants already on transactions the user can see. Unlike
+  # available_merchants_for, recently unlinked merchants are left out, since a
+  # rule that set one again would undo the unlink.
+  def assignable_merchants_for(user)
+    assigned_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
+      .select(:merchant_id)
+    Merchant.where(id: merchants.select(:id)).or(Merchant.where(type: "ProviderMerchant", id: assigned_ids))
   end
 
   def available_merchants_for(user)
@@ -881,7 +893,53 @@ class Family < ApplicationRecord
     Rails.application.message_verifier("bills-user-feed")
   end
 
+  # The family's timezone, validated and with a safe fallback -- used both by
+  # `Localize#switch_timezone` (request path) and `Sync#perform` (background
+  # path), so a scheduled entry's "has it arrived yet?" check (Entry#scheduled?)
+  # agrees with the family's own clock in both places instead of silently
+  # defaulting to the app's zone (UTC) only in the background.
+  #
+  # `timezone` is a free-text IANA name (e.g. from an older DB dump, or a zone
+  # the tzdata maintainers later renamed, like the historical "Europe/Kiev" ->
+  # "Europe/Kyiv" switch), so this re-validates rather than trusting the
+  # column -- see `timezone_must_be_a_known_zone` below.
+  def resolved_time_zone
+    return Time.zone if timezone.blank?
+
+    zone = ActiveSupport::TimeZone[timezone]
+    return zone if zone.present?
+
+    log_invalid_timezone_once
+    Time.zone
+  end
+
+  # How often to write a DebugLogEntry for the same (family, bad value)
+  # pair. `resolved_time_zone` runs on every request and every sync, so
+  # without this an affected family would write one row per call forever.
+  INVALID_TIMEZONE_LOG_INTERVAL = 1.day
+  private_constant :INVALID_TIMEZONE_LOG_INTERVAL
+
   private
+
+    def log_invalid_timezone_once
+      cache_key = [ "invalid_family_timezone", id, timezone ]
+
+      # `fetch` is read-then-write, not atomic -- two concurrent
+      # requests/jobs could both see a miss and both log. `write(unless_exist:
+      # true)` maps to Redis's atomic SET NX in production, so only one ever
+      # wins the lease and logs.
+      lease_acquired = Rails.cache.write(cache_key, true, expires_in: INVALID_TIMEZONE_LOG_INTERVAL, unless_exist: true)
+      return unless lease_acquired
+
+      DebugLogEntry.capture(
+        category: "other",
+        level: "warn",
+        message: "Invalid family timezone #{timezone.inspect}, falling back to #{Time.zone.name}",
+        source: "Family#resolved_time_zone",
+        family: self
+      )
+    end
+
     # Bayes first, so the matcher lands above it.
     def add_classifier_rules
       CLASSIFIER_ACTION_TYPES.reverse_each { |action_type| add_classifier_rule!(action_type) }
