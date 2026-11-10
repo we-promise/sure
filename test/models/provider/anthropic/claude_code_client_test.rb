@@ -62,6 +62,21 @@ class Provider::Anthropic::ClaudeCodeClientTest < ActiveSupport::TestCase
     assert_equal "end_turn", message.stop_reason
   end
 
+  test "keeps a text answer that came without structured output" do
+    expect_cli(result: "I need more detail.", structured_output: nil)
+
+    message = @client.messages.create(
+      model: "claude-sonnet-5-5",
+      messages: [ { role: "user", content: "Categorize" } ],
+      tools: [ { name: "report_categorizations", input_schema: { type: "object" } } ],
+      tool_choice: { type: "auto", disable_parallel_tool_use: true }
+    )
+
+    assert_equal [ :text ], message.content.map(&:type)
+    assert_equal "I need more detail.", message.content.first.text
+    assert_equal "end_turn", message.stop_reason
+  end
+
   test "raises when the CLI reports an error" do
     Provider::Anthropic::ClaudeCodeClient.any_instance.stubs(:capture).returns(
       [ { type: "result", subtype: "success", is_error: true, result: "Invalid API key" }.to_json, "", stub(success?: true) ]

@@ -224,8 +224,12 @@ class Provider::Anthropic::ClaudeCodeClient
     def build_message(result, model:, structured:, function_calls:)
       output = result["structured_output"]
 
+      # Without structured output the model answered in text: keep it, so chat
+      # shows it and a structured helper sees no tool call and retries.
       content =
-        if structured
+        if output.nil?
+          [ TextBlock.new(type: :text, text: result["result"].to_s) ]
+        elsif structured
           [ ToolUseBlock.new(type: :tool_use, id: "toolu_#{SecureRandom.hex(8)}", name: structured[:name], input: output || {}) ]
         elsif function_calls
           calls = Array(output&.dig("function_calls")).map do |call|
