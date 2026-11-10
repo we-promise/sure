@@ -235,6 +235,57 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a regular sync resumes from the last fully imported window after a failure" do
+    travel_to Time.zone.parse("2026-11-07 12:00") do
+      @item.stubs(:last_synced_at).returns(100.days.ago)
+      simplefin_account = link_simplefin_account("sf_resume_1")
+      provider, ranges = failing_provider(fail_on_request: 2, account_id: "sf_resume_1")
+
+      assert_raises(Provider::Simplefin::SimplefinError) do
+        SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_regular_sync)
+      end
+
+      # Only the first window was fetched and imported; its end is remembered.
+      assert_equal 2, ranges.size
+      assert_equal 85.days.ago.to_i, @item.reload.regular_sync_resume_at.to_i
+      assert_equal [ "tx_#{(130.days.ago).to_i}" ],
+        simplefin_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+
+      # The retry resumes from the remembered window end instead of the start.
+      healthy_provider, healthy_ranges = recording_provider(account_id: "sf_resume_1")
+      SimplefinItem::Importer.new(@item, simplefin_provider: healthy_provider).send(:import_regular_sync)
+
+      assert_equal 2, healthy_ranges.size
+      assert_equal 85.days.ago, healthy_ranges.first.first
+      assert_equal Time.current, healthy_ranges.last.last
+      assert_nil @item.reload.regular_sync_resume_at
+
+      # Order by id, not created_at: the frozen clock gives every log row in
+      # this test the same timestamp, so created_at ties are nondeterministic.
+      log = DebugLogEntry.where(provider_key: "simplefin", source: "SimplefinItem::Importer")
+        .order(id: :desc).first
+      assert_equal 2, log.metadata["requests"]
+      assert_equal 85.days.ago.to_date.to_s, log.metadata["resumed_from"]
+
+      imported = simplefin_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+      assert_equal 3, imported.size
+    end
+  end
+
+  test "a regular sync ignores a resume point older than the sync start" do
+    travel_to Time.zone.parse("2026-11-07 12:00") do
+      @item.stubs(:last_synced_at).returns(100.days.ago)
+      @item.update!(regular_sync_resume_at: 200.days.ago)
+      provider, ranges = recording_provider
+
+      SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_regular_sync)
+
+      assert_equal 3, ranges.size
+      assert_equal 130.days.ago, ranges.first.first
+      assert_nil @item.reload.regular_sync_resume_at
+    end
+  end
+
   test "the chunked history import keeps every request within the Bridge limit" do
     travel_to Time.zone.parse("2026-11-07 12:00") do
       @item.stubs(:sync_start_date).returns(100.days.ago.to_date)
@@ -276,6 +327,30 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
           transactions << { id: "tx_#{start_date.to_i}", posted: (start_date + 1.day).to_i,
                             amount: "-5.00", description: "Coffee", payee: "Coffee" }
         end
+        { accounts: [ { id: account_id, name: "Checking", currency: "USD", balance: "100.00",
+                        "balance-date": Time.current.to_i, transactions: transactions } ] }
+      end
+      [ provider, ranges ]
+    end
+
+    # Like recording_provider, but the Nth dated request raises a Bridge error
+    # instead of returning data, so the run fails partway through the windows.
+    def failing_provider(fail_on_request:, account_id: nil)
+      ranges = []
+      count = 0
+      provider = Object.new
+      provider.define_singleton_method(:get_accounts) do |_access_url, start_date: nil, end_date: nil, pending: nil|
+        next { accounts: [] } unless start_date
+
+        count += 1
+        ranges << [ start_date, end_date ]
+        if count == fail_on_request
+          raise Provider::Simplefin::SimplefinError.new("SimpleFIN Bridge unavailable", :api_error)
+        end
+        next { accounts: [] } unless account_id
+
+        transactions = [ { id: "tx_#{start_date.to_i}", posted: (start_date + 1.day).to_i,
+                           amount: "-5.00", description: "Coffee", payee: "Coffee" } ]
         { accounts: [ { id: account_id, name: "Checking", currency: "USD", balance: "100.00",
                         "balance-date": Time.current.to_i, transactions: transactions } ] }
       end
