@@ -77,7 +77,8 @@ class AiAgreementTest < ActionDispatch::IntegrationTest
         detect_merchants_rule_action: [ :detect_merchants, offered.include?("auto_detect_merchants") ],
         document_upload: [ :embed, document_upload_shown ],
         mcp_import_bank_statement: [ :extract_pdf, tools.include?(Assistant::Function::ImportBankStatement) ],
-        uncategorized_diagnostic: [ :detect_merchants, diagnostic[:llm_provider_configured] ],
+        uncategorized_categorize_diagnostic: [ :categorize, diagnostic[:llm_routes][:categorize] ],
+        uncategorized_diagnostic: [ :detect_merchants, diagnostic[:llm_routes][:detect_merchants] ],
         chat_page: [ :chat, @user.reload.ai_enabled? ],
         dig_in: [ :chat, insight_dig_in_available?(Insight.new(family: @family)) ],
         bills_chat: [ :chat, bills_ai_chat_available? ]

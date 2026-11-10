@@ -95,18 +95,13 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     end
 
     availability = Ai.availability(:extract_pdf, family:, user:)
-    unless availability.available?
-      return {
-        success: false,
-        error: "ai_unavailable",
-        reason: availability.reason.to_s,
-        message: availability.message_for(user)
-      }
-    end
+    return ai_unavailable(availability) unless availability.available?
 
-    # Extract transactions from the PDF using the configured LLM provider, the
-    # first in extract_pdf's route.
+    # The first provider in extract_pdf's route. Settings can clear the last key between the
+    # availability check and this lookup, so a missing provider is the same refusal
+    # (PdfImport::AiProcessor#route_provider refuses the same way).
     provider = Provider::Registry.preferred_llm_provider
+    return ai_unavailable(Ai::Availability.unavailable(:extract_pdf, :not_configured)) unless provider
 
     response = provider.extract_bank_statement(
       pdf_content: pdf_import.pdf_file_content,
@@ -172,6 +167,11 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   private
+
+    # The refusal every AI gate on this path returns: the router's reason and its message.
+    def ai_unavailable(availability)
+      { success: false, error: "ai_unavailable", reason: availability.reason.to_s, message: availability.message_for(user) }
+    end
 
     def generate_csv(transactions)
       CSV.generate do |csv|
