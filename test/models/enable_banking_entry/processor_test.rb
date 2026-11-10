@@ -257,6 +257,44 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Billa", entry.transaction.merchant&.name
   end
 
+  test "does not take the account holder's name at the end of a card payment as the merchant" do
+    @family.merchants.create!(name: "Jane Doe")
+    @enable_banking_account.update!(raw_payload: { "uid" => "eb_uid_1", "name" => "JANE DOE" })
+
+    tx = {
+      entry_reference: "ref_cardholder_name",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "12.50", currency: "EUR" },
+      bank_transaction_code: { code: "PMNT" },
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "EXAMPLE SHOP 1000 CITY Card payment 05-08-2026 13.07 1234 56XX XXXX 7890 JANE DOE" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+    entry = @account.entries.find_by!(external_id: "enable_banking_ref_cardholder_name")
+
+    assert_nil entry.transaction.merchant
+    assert_not_equal "Jane Doe", entry.name
+  end
+
+  test "does not match the paying side of a transaction as a known merchant" do
+    # The holder's name is the longer match, so only the holder check keeps it out.
+    @family.merchants.create!(name: "Jane Elizabeth Doe")
+    @family.merchants.create!(name: "Example Shop")
+
+    name = build_name_with_family(
+      credit_debit_indicator: "DBIT",
+      debtor: { name: "JANE ELIZABETH DOE" },
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "EXAMPLE SHOP 1000 CITY Card payment JANE ELIZABETH DOE" ]
+    )
+
+    assert_equal "Example Shop", name
+  end
+
   test "matches known merchants regardless of retailer chain" do
     %w[Bipa Spar Hofer Lidl Penny].each do |chain_name|
       @family.merchants.create!(name: chain_name)

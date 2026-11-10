@@ -486,7 +486,9 @@ class EnableBankingEntry::Processor
     # so e.g. "BILLA DANKT 0007114" resolves to "Billa", not "BILLA". Longest match
     # wins when multiple known names match (prefer the more specific one).
     def matched_known_merchant_name(line)
-      candidates = known_merchant_names.select { |name| name.length >= MIN_KNOWN_MERCHANT_MATCH_LENGTH }
+      candidates = known_merchant_names.select do |name|
+        name.length >= MIN_KNOWN_MERCHANT_MATCH_LENGTH && !account_holder_name?(name)
+      end
       # Lookaround instead of \b at both ends: \b only fires on a word/non-word
       # transition, so it silently fails to match right after a name that itself
       # ends in punctuation (e.g. "A+B (Café)" ends in ")" -- a non-word char next
@@ -501,6 +503,28 @@ class EnableBankingEntry::Processor
 
     def known_merchant_names
       @known_merchant_names ||= account&.family&.known_merchant_names || []
+    end
+
+    # Some banks end a card payment's remittance with the cardholder's name, and
+    # a transfer between the holder's own accounts can make that name a known
+    # merchant. The holder is never the payee, so their name is not matched.
+    def account_holder_name?(name)
+      account_holder_names.any? { |holder| holder.casecmp?(name) }
+    end
+
+    # The account holder as Enable Banking names the account, plus this
+    # transaction's own side: the debtor of a payment, the creditor of a credit.
+    def account_holder_names
+      @account_holder_names ||= begin
+        payload = enable_banking_account.raw_payload
+        own_side = credit_debit_indicator == "CRDT" ? :creditor : :debtor
+
+        [
+          payload.is_a?(Hash) ? (payload["name"] || payload[:name]) : nil,
+          data.dig(own_side, :name),
+          data[:"#{own_side}_name"]
+        ].filter_map { |value| value.to_s.strip.presence }
+      end
     end
 
     def identifierless_external_ids
