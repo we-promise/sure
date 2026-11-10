@@ -33,6 +33,14 @@ class Provider::Openai < Provider
     false
   end
 
+  # Whether a base URL points at an OpenAI-compatible provider other than
+  # OpenAI. A blank base URL means OpenAI's default endpoint.
+  # @param uri_base [String, nil] the configured base URL
+  # @return [Boolean]
+  def self.custom_endpoint?(uri_base)
+    uri_base.present? && !hosted_endpoint?(uri_base)
+  end
+
   # Keep the provider's response budget and the PDF request parameter in sync.
   # @return [Boolean] whether native PDF vision uses max_completion_tokens
   def self.native_pdf_completion_limit?(model:, custom_provider:)
@@ -145,7 +153,7 @@ class Provider::Openai < Provider
   end
 
   def custom_provider?
-    @uri_base.present? && !self.class.hosted_endpoint?(@uri_base)
+    self.class.custom_endpoint?(@uri_base)
   end
 
   # Token-budget knobs. Precedence: ENV > Setting > default. Defaults match
