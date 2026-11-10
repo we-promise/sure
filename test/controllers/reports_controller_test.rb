@@ -467,6 +467,51 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match /Category/, @response.body
   end
 
+  test "export transactions CSV neutralizes formula-leading category names" do
+    account = accounts(:depository)
+    [ [ "=HYPERLINK(\"http://example.invalid\",\"x\")", 25 ], [ "@SUM(1)", -40 ] ].each do |name, amount|
+      category = @family.categories.create!(name: name, color: "#000000", lucide_icon: "folder")
+      account.entries.create!(
+        name: "Formula export #{amount}",
+        date: Date.current,
+        amount: amount,
+        currency: "USD",
+        entryable: Transaction.new(category: category, kind: "standard")
+      )
+    end
+
+    get export_transactions_reports_path(
+      format: :csv,
+      period_type: :ytd,
+      start_date: Date.current.beginning_of_year,
+      end_date: Date.current
+    )
+
+    assert_response :ok
+    cells = CSV.parse(@response.body).flatten
+    assert_includes cells, "'=HYPERLINK(\"http://example.invalid\",\"x\")"
+    assert_includes cells, "'@SUM(1)"
+    refute cells.any? { |cell| cell.start_with?("=", "@") }
+  end
+
+  test "export transactions CSV quotes every cell so a separator inside a category name cannot split it" do
+    account = accounts(:depository)
+    category = @family.categories.create!(name: "Food;=1+1", color: "#000000", lucide_icon: "folder")
+    account.entries.create!(
+      name: "Separator export", date: Date.current, amount: 25, currency: "USD",
+      entryable: Transaction.new(category: category, kind: "standard")
+    )
+
+    get export_transactions_reports_path(
+      format: :csv, period_type: :ytd,
+      start_date: Date.current.beginning_of_year, end_date: Date.current
+    )
+
+    assert_response :ok
+    assert_includes @response.body, %q("Food;=1+1")
+    assert_includes CSV.parse(@response.body).flatten, "Food;=1+1"
+  end
+
   test "export transactions with API key does not inherit web session impersonation" do
     support_user = users(:sure_support_staff)
     support_user.api_keys.active.destroy_all
