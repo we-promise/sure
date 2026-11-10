@@ -768,7 +768,30 @@ class SimplefinItem::Importer
         end
       end
 
+      attach_connection_org_data!(accounts_data)
       accounts_data
+    end
+
+    # Protocol v2 accounts carry a conn_id instead of an org object, and the
+    # institution details sit in the top-level connections list. Give each
+    # such account the org hash that the rest of the import reads.
+    def attach_connection_org_data!(accounts_data)
+      connections = Array(accounts_data[:connections]).index_by { |connection| connection[:conn_id].to_s }
+      return if connections.empty?
+
+      Array(accounts_data[:accounts]).each do |account_data|
+        next if account_data[:org].present?
+
+        connection = connections[account_data[:conn_id].to_s]
+        next if connection.nil?
+
+        account_data[:org] = {
+          id: connection[:org_id],
+          name: connection[:org_name].presence || connection[:name],
+          url: connection[:org_url],
+          "sfin-url": connection[:sfin_url]
+        }.compact
+      end
     end
 
     def determine_sync_start_date
