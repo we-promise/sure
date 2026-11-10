@@ -70,8 +70,8 @@ class SharesightItem < ApplicationRecord
     end
   end
 
-  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil)
-    accounts.reject { |account| account.pending_deletion? || account.disabled? }.each_with_object([]) do |account, results|
+  def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil, extra_accounts: [])
+    (accounts + Array(extra_accounts)).uniq.reject { |account| account.pending_deletion? || account.disabled? }.each_with_object([]) do |account, results|
       begin
         account.sync_later(
           parent_sync: parent_sync,
