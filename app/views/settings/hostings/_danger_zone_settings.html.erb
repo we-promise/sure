@@ -16,5 +16,28 @@
               }}
       %>
     </div>
+
+    <% if Current.user.super_admin? %>
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="w-full md:w-2/3">
+          <h3 class="font-medium text-primary"><%= t("settings.hostings.show.reset_market_data") %></h3>
+          <p class="text-secondary text-sm"><%= t("settings.hostings.show.reset_market_data_warning") %></p>
+        </div>
+        <%= render DS::Button.new(
+              text: t("settings.hostings.show.reset_market_data"),
+              variant: :destructive,
+              href: reset_market_data_settings_hosting_path,
+              method: :delete,
+              class: "w-full md:w-auto",
+              confirm: CustomConfirm.new(
+                destructive: true,
+                high_severity: true,
+                title: t("settings.hostings.show.confirm_reset_market_data.title"),
+                body: t("settings.hostings.show.confirm_reset_market_data.body"),
+                btn_text: t("settings.hostings.show.reset_market_data")
+              )
+            ) %>
+      </div>
+    <% end %>
   </div>
 <% end %>

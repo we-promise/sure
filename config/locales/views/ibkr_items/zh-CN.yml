@@ -2,6 +2,8 @@
 zh-CN:
   providers:
     ibkr:
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "关联 %{name} Flex 查询中的账户"
       name: Interactive Brokers
       connection_description: 连接 Interactive Brokers Flex Web Service 报告
       institution_name: Interactive Brokers
