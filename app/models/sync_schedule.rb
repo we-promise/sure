@@ -37,10 +37,18 @@ class SyncSchedule < ApplicationRecord
     # `items` (a relation of one provider's items) without the connections
     # whose own schedule of a day or longer replaces the family sync.
     def without_own_daily_schedule(items)
-      items.where.not(
-        id: replacing_family_sync.where(syncable_type: items.klass.polymorphic_name).select(:syncable_id)
-      )
+      items.where.not(id: daily_scheduled_ids(items))
     end
+
+    # The opposite: only the items on such a schedule.
+    def with_own_daily_schedule(items)
+      items.where(id: daily_scheduled_ids(items))
+    end
+
+    def daily_scheduled_ids(items)
+      replacing_family_sync.where(syncable_type: items.klass.polymorphic_name).select(:syncable_id)
+    end
+    private :daily_scheduled_ids
 
     # The connections a schedule may point at, as { class name => Family
     # association }: every `*_items` association whose model is Syncable,

@@ -26,6 +26,7 @@ class DataCacheClearJob < ApplicationJob
         Holding.where(account_id: family.accounts.select(:id)).delete_all
 
         family.sync_later
+        sync_daily_scheduled_items(family)
       end
     end
   end
@@ -39,5 +40,14 @@ class DataCacheClearJob < ApplicationJob
 
     def retry_later(family)
       self.class.set(wait: SYNC_RETRY_WAIT).perform_later(family)
+    end
+
+    # The family sync leaves out connections on their own schedule of a day or
+    # longer, but their accounts' balances and holdings were just cleared too,
+    # so rebuild them now rather than when the schedule next comes due.
+    def sync_daily_scheduled_items(family)
+      Family::Syncer.syncable_item_associations.each do |association|
+        SyncSchedule.with_own_daily_schedule(family.public_send(association).syncable).find_each(&:sync_later)
+      end
     end
 end

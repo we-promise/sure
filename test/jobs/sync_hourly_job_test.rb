@@ -9,6 +9,7 @@ class SyncHourlyJobTest < ActiveJob::TestCase
     mock_relation.stubs(:find_each).yields(mock_item)
 
     CoinstatsItem.expects(:active).returns(mock_relation)
+    SyncSchedule.stubs(:without_own_daily_schedule).with(mock_relation).returns(mock_relation)
 
     SyncHourlyJob.perform_now
   end
@@ -25,9 +26,25 @@ class SyncHourlyJobTest < ActiveJob::TestCase
     mock_relation.stubs(:find_each).multiple_yields([ failing_item ], [ success_item ])
 
     CoinstatsItem.expects(:active).returns(mock_relation)
+    SyncSchedule.stubs(:without_own_daily_schedule).with(mock_relation).returns(mock_relation)
 
     assert_nothing_raised do
       SyncHourlyJob.perform_now
     end
+  end
+
+  test "leaves out items on their own schedule of a day or longer" do
+    family = families(:dylan_family)
+    hourly = family.coinstats_items.create!(name: "Hourly", api_key: "key-hourly")
+    weekly = family.coinstats_items.create!(name: "Weekly", api_key: "key-weekly")
+    weekly.create_sync_schedule!(interval_minutes: 10080)
+
+    CoinstatsItem.any_instance.expects(:sync_later).times(CoinstatsItem.active.count - 1)
+
+    SyncHourlyJob.perform_now
+
+    swept = SyncSchedule.without_own_daily_schedule(CoinstatsItem.active)
+    assert_includes swept, hourly
+    assert_not_includes swept, weekly
   end
 end
